@@ -1,0 +1,1671 @@
+\documentclass[11pt,letterpaper]{book}
+\setlength{\oddsidemargin}{0.5in}
+\setlength{\topmargin}{0in}
+\setlength{\evensidemargin}{0.3in}
+\setlength{\textwidth}{5.75in}
+\setlength{\textheight}{8.5in}
+%\setlength{\oddsidemargin}{1.25in}
+%\setlength{\evensidemargin}{0.5in}
+
+% don't do this \usepackage{times}    % Better fonts than Computer Modern
+\renewcommand{\sfdefault}{phv}
+\renewcommand{\rmdefault}{ptm}
+% don't replace tt -- old is better \renewcommand{\ttdefault}{pcr}
+%\usepackage{apalike}
+\usepackage{pslatex}
+\usepackage{techref}
+\usepackage{epsfig}
+\usepackage{verbatim}
+\usepackage{moreverb}
+\usepackage{graphicx}
+\usepackage{xspace}
+\usepackage{multicol}
+\usepackage{color}
+\usepackage{html}
+\usepackage{version}
+\usepackage{makeidx}
+%\usepackage{showidx}
+\usepackage[chapter]{algorithm}
+\floatname{algorithm}{Listing}
+
+\usepackage{syntax}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead[LE,RO]{\bfseries\thepage}
+\fancyhead[LO]{\bfseries\rightmark}
+\fancyhead[RE]{\bfseries\leftmark}
+\fancyfoot[C]{\bfseries Unnamed Shading Language Documentation}
+\renewcommand{\footrulewidth}{1pt}
+
+
+\def\langname{Unnamed Shading Language\xspace}
+\def\product{{\sffamily Unnamed Shading Language}\xspace}
+\def\versionnumber{0.1}
+\def\productver{\product\ {\sffamily \versionnumber}\xspace}
+
+
+\title{ 
+{\Huge{\bf \product}
+%\textregistered\ 
+{\bf\sffamily \versionnumber} \medskip \\ \huge 
+Language Specification
+\\ \large (draft in progress) 
+} \bigskip }
+\author{Editor: Editor's Name \\
+% email should go here
+ \bigskip \\
+}
+\date{{\large Date: 16 October, 2008}}
+
+
+\include{macros}
+
+\def\color{{\cf color}\xspace}
+\def\float{{\cf float}\xspace}
+\def\inttype{{\cf int}\xspace}
+\def\matrix{{\cf matrix}\xspace}
+\def\normal{{\cf normal}\xspace}
+\def\point{{\cf point}\xspace}
+\def\vector{{\cf vector}\xspace}
+\def\P{{\cf P}\xspace}
+\def\N{{\cf N}\xspace}
+\def\I{{\cf I}\xspace}
+\def\currentspace{{\cf "current"} space\xspace}
+\def\commonspace{{\cf "common"} space\xspace}
+\def\shaderspace{{\cf "shader"} space\xspace}
+\def\worldspace{{\cf "world"} space\xspace}
+\def\cameraspace{{\cf "camera"} space\xspace}
+\def\objectspace{{\cf "object"} space\xspace}
+\def\rgbspace{{\cf "rgb"} space\xspace}
+\def\noise{{\cf noise()}\xspace}
+\def\snoise{{\cf snoise()}\xspace}
+\def\pnoise{{\cf pnoise()}\xspace}
+\def\psnoise{{\cf psnoise()}\xspace}
+\def\cellnoise{{\cf cellnoise()}\xspace}
+
+
+
+
+
+\makeindex
+
+\begin{document}
+\frontmatter
+
+\maketitle
+
+%\include{speccopyr}
+
+\vspace*{2in}
+
+
+
+
+\setcounter{tocdepth}{1}
+\tableofcontents
+
+\mainmatter
+
+%\part{Part name}
+
+%\include{blah}
+
+
+\chapter{Basic Structure}
+\label{chap:name}
+
+shader types
+
+lexical issues
+
+identifiers
+
+comments
+
+preprocessor
+
+
+\chapter{Data types, variables, and parameters}
+
+\section{Data types}
+
+\langname provides several built-in data types for performing
+computations inside your shader:
+\smallskip
+
+\noindent\begin{tabular}{|p{1in}|p{4.5in}|}
+\hline
+{\cf int}	& Integer data \\
+\hline
+{\cf float}	& Scalar floating-point data (numbers) \\
+\hline
+{\cf point
+vector
+normal}		& Three-dimensional positions, directions, and surface
+		  orientations \\
+\hline
+{\cf color}	& Spectral reflectivities and light energy values \\
+\hline
+{\cf matrix}	& $4 \times 4$ transformation matrices \\
+\hline
+{\cf string}	& Character strings (such as filenames) \\
+\hline
+\end{tabular}
+
+
+\subsection{{\cf int}}
+
+The basic type for discrete numeric values is {\cf int}.  The size of
+the {\cf int} type is renderer-dependent, but is guaranteed to be at
+least 32 bits.
+
+Integer constants are constructed the same way as in C.  The following
+are examples of {\cf int} constants: {\cf 1}, {\cf -32}, etc.
+
+Unlike C, no unsigned, bool, char, short, or long types are supplied.
+This is to simplify the process of writing shaders (as well as
+implementing shading systems).
+
+The following operators may be used with \inttype values (in order of
+decreasing precedence, with each box holding operators of the same
+precedence):
+
+\smallskip
+
+\noindent \begin{tabular}{|p{1in}|p{0.5in}|p{3.75in}|}
+operation & result & ~ \\
+\hline
+\inttype\ {\ce ++} & \inttype & post-increment by 1 \\[0.5ex]
+\inttype\ {\ce --} & \inttype & post-decrement by 1 \\[0.5ex]
+\hline
+{\ce ++} \inttype & \inttype & pre-increment by 1 \\[0.5ex]
+{\ce --} \inttype & \inttype & pre-decrement by 1 \\[0.5ex]
+{\cf {\bfseries -} int} & \inttype & unary negation \\[0.5ex]
+\verb|~| {\cf int} & \inttype & bitwise complement (1 and 0 bits flipped) \\[0.5ex]
+{\cf {\bfseries !} int} & \inttype & boolean `not' (1 if operand is zero, otherwise 0) \\[0.5ex]
+\hline
+{\cf int {\bfseries *} int} & \inttype & multiplication \\[0.5ex]
+{\cf int {\bfseries /} int} & \inttype & division \\[0.5ex]
+{\cf int {\bfseries \%} int} & \inttype & modulus \\[0.5ex]
+\hline
+{\cf int {\bfseries +} int} & \inttype & addition \\[0.5ex]
+{\cf int {\bfseries -} int} & \inttype & subtraction \\[0.5ex]
+\hline
+{\cf int {\bfseries <<} int} & \inttype & shift left \\[0.5ex]
+{\cf int {\bfseries >>} int} & \inttype & shift right \\[0.5ex]
+\hline
+{\cf int {\bfseries <} int} & \inttype & 1 if the first value is less
+than the second, else 0 \\[0.5ex]
+{\cf int {\bfseries <=} int} & \inttype & 1 if the first value is less
+or equal to the second, else 0 \\[0.5ex]
+{\cf int {\bfseries >} int} & \inttype &  1 if the first value is
+greater than the second, else 0 \\[0.5ex]
+{\cf int {\bfseries >=} int} & \inttype & 1 if the first value is
+greater than or equal to the second, else 0 \\[0.5ex]
+\hline
+{\cf int {\bfseries ==} int} & \inttype & 1 if the two values are equal,
+else 0 \\[0.5ex]
+{\cf int {\bfseries !=} int} & \inttype & 1 if the two values are different,
+else 0 \\[0.5ex]
+\hline
+{\cf int {\bfseries \&} int} & \inttype & bitwise and \\[0.5ex]
+\hline
+{\cf int {\bfseries \verb|^|} int} & \inttype & bitwise exclusive or \\[0.5ex]
+\hline
+{\cf int {\bfseries |} int} & \inttype & bitwise or \\[0.5ex]
+\hline
+{\cf int {\bfseries \&\&} int} & \inttype & boolean and (1 if both operands are
+nonzero, otherwise 0) \\[0.5ex]
+\hline
+{\cf int {\bfseries ||} int} & \inttype & boolean or (1 if either operand is
+nonzero, otherwise 0) \\[0.5ex]
+\hline
+\end{tabular}
+
+
+
+\begin{annotate}
+Make sure to rearrange the table in order of operator precedence.
+\end{annotate}
+
+\subsection{{\cf float}}
+
+The basic type for scalar floating-point numeric values is \float.  The
+size of the {\cf float} type is renderer-dependent, but is guaranteed to
+be at least IEEE 32-bit float (the standard C \float data type).
+Individual renderer implementations may choose to implement \float with
+even more precision (such as using the C {\cf double} as the underlying
+representation).
+
+Floating-point constants are constructed the same way as in C.
+The following are examples of {\cf float} constants:  {\cf 1.0},
+{\cf 2.48}, {\cf -4.3e2}.
+
+The following operators may be used with \float values (in order of
+decreasing precedence, with each box holding operators of the same
+precedence):
+
+\smallskip
+
+\noindent \begin{tabular}{|p{1.25in}|p{0.5in}|p{3.5in}|}
+operation & result & ~ \\
+\hline
+\float\ {\ce ++} & \float & post-increment by 1 \\[0.5ex]
+\float\ {\ce --} & \float & post-decrement by 1 \\[0.5ex]
+\hline
+{\ce ++} \float & \float & pre-increment by 1 \\[0.5ex]
+{\ce --} \float & \float & pre-decrement by 1 \\[0.5ex]
+{\cf {\bfseries -} float} & \float & unary negation \\[0.5ex]
+\hline
+{\cf float {\bfseries *} float} & \float & multiplication \\[0.5ex]
+{\cf float {\bfseries /} float} & \float & division \\[0.5ex]
+\hline
+{\cf float {\bfseries +} float} & \float & addition \\[0.5ex]
+{\cf float {\bfseries -} float} & \float & subtraction \\[0.5ex]
+\hline
+{\cf float {\bfseries <} float} & \inttype & 1 if the first value is less
+than the second, else 0 \\[0.5ex]
+{\cf float {\bfseries <=} float} & \inttype & 1 if the first value is less
+or equal to the second, else 0 \\[0.5ex]
+{\cf float {\bfseries >} float} & \inttype &  1 if the first value is
+greater than the second, else 0 \\[0.5ex]
+{\cf float {\bfseries >=} float} & \inttype & 1 if the first value is
+greater than or equal to the second, else 0 \\[0.5ex]
+\hline
+{\cf float {\bfseries ==} float} & \inttype & 1 if the two values are equal,
+else 0 \\[0.5ex]
+{\cf float {\bfseries !=} float} & \inttype & 1 if the two values are different,
+else 0 \\[0.5ex]
+\hline
+\end{tabular}
+
+All of the binary operators may combine a \float with an \inttype,
+by promoting the \inttype to a \float.
+
+
+\subsection{{\cf color}}
+
+The \color type is used to represent 3-component (RGB) spectral
+reflectivities and light energies.  You can assemble a
+color out of three floats, either representing an RGB triple or some
+other color space known to the renderer, as well as from a single
+float (replicated for all three channels).  Following are some examples:
+
+\begin{code}
+    color (0, 0, 0)              // black
+    color ("rgb", .75, .5, .5)   // pinkish
+    color ("hsv", .2, .5, .63)   // specify in "hsv" space
+    color (0.5)                  // same as color (0.5, 0.5, 0.5)
+\end{code}
+
+All these expressions above return colors in \rgbspace.  Even
+the third example returns a color in \rgbspace\ --- specifically, the
+RGB value of the color that is equivalent to hue 0.2, saturation 0.5,
+and value 0.63.  In other words, when assembling a color from components
+given relative to a specific color space in this manner, there is an
+implied transformation to \rgbspace.  Table~\ref{tab:colorspacenames}
+lists the built-in color spaces.
+
+\begin{table}[htbp]
+\caption{Names of color spaces.}\label{tab:colorspacenames}
+\begin{tabular}{|p{0.7in}|p{4.7in}|}
+\hline
+{\cf "rgb"} & The coordinate system that all colors start out in, and
+in which the renderer expects to find colors that are set by
+your shader (such as {\cf C}, {\cf opacity}, and {\cf Cl}).   \\
+\hline 
+{\cf "hsv"} & hue, saturation, and value. \\
+\hline 
+{\cf "hsl"} & hue, saturation, and lightness. \\
+\hline 
+{\cf "YIQ"} & the color space used for the NTSC television standard. \\
+\hline 
+{\cf "xyz"} & CIE \emph{XYZ} coordinates. \\
+\hline 
+{\cf "xyY"} & CIE \emph{xyY} coordinates. \\
+\hline 
+\end{tabular}
+\end{table}
+
+Colors may be assigned another color or a \float value (which sets
+all three components to the value).  For example:
+
+\begin{code}
+    color C;
+    C = color (0, 0.3, 0.3);
+    C = 0.5;                    // same as C = color (0.5, 0.5, 0.5)
+\end{code}
+
+Colors can have their individual components examined and set using the
+{\cf []} array access notation.  For example:
+
+\begin{code}
+    color C;
+    float g = C[1];   // get the green component
+    C[0] = 0.5;       // set the red component
+\end{code}
+
+\noindent Components 0, 1, and 2 are red, green, and blue, respectively.
+It is an error to access a color component with an index outside the
+$[0...2]$ range.
+
+The following operators may be used with \color values (in order of
+decreasing precedence, with each box holding operators of the same
+precedence):
+
+\medskip
+
+\noindent \begin{tabular}{|p{1.5in}|p{0.5in}|p{3.25in}|}
+operation & result & ~ \\
+\hline
+\color\ {\ce [} \inttype {\ce ]} & \float & component access \\[0.5ex]
+\hline
+{\ce -} \color & \color & unary negation \\[0.5ex]
+\hline
+\color\ {\ce *} \color & \color & component-wise multiplication \\[0.5ex]
+\color\ {\ce *} \float & \color & scaling \\[0.5ex]
+\float\ {\ce *} \color & \color & scaling \\[0.5ex]
+\color\ {\ce /} \color & \color & component-wise division \\[0.5ex]
+\color\ {\ce /} \float & \color & scaling \\[0.5ex]
+\float\ {\ce /} \color & \color & scaling \\[0.5ex]
+\hline
+\color\ {\ce +} \color & \color & component-wise addition \\[0.5ex]
+\color\ {\ce -} \color & \color & component-wise subtraction \\[0.5ex]
+\hline
+\color\ {\ce ==} \color & \inttype & 1 if the two values are equal,
+else 0 \\[0.5ex]
+\color\ {\ce !=} \color & \inttype & 1 if the two values are different,
+else 0 \\[0.5ex]
+\hline
+\end{tabular}
+
+All of the binary operators may combine a scalar value (\float or
+\inttype) with a \color, treating the scalar if it were a \color with
+three identical components.
+
+
+\subsection{Point-like types: {\cf point}, {\cf vector}, {\cf normal}}
+
+Points, vectors, and normals are similar data types with identical
+structures but subtly different semantics.  We will frequently refer to
+them collectively as the ``point-like'' data types when making
+statements that apply to all three types.
+
+A \point is a position in 3D space.  A \vector has a length and
+direction, but does not exist in a particular location.  A \normal is a
+special type of vector that is \emph{perpendicular} to a surface, and
+thus describes the surface's orientation.  Such a perpendicular vector
+uses different transformation rules than ordinary vectors, as we will
+describe below.
+
+All of these point-like types are internally represented by three
+floating-point numbers that uniquely describe a position or
+direction relative to the three axes of some coordinate system.  
+
+All points, vectors, and normals are described relative to some
+coordinate system.  All data provided to a shader (surface information,
+graphics state, parameters, and vertex data) are relative to one
+particular coordinate system that we call the {\cf "common"} coordinate
+system.  The {\cf "common"} coordinate system is one that is convenient
+for the renderer's shading calculations.
+\label{sect:commonspace}
+
+You can ``assemble'' a point-like type out of three floats using a
+constructor:
+
+\begin{code}
+        point (0, 2.3, 1)
+        vector (a, b, c)
+        normal (0, 0, 1)
+\end{code}
+
+\noindent These expressions are interpreted as a point, vector, and normal
+whose three components are the floats given, relative to \commonspace\ .
+
+As with colors, you may also specify the coordinates relative to some other
+coordinate system:
+
+\begin{code}
+    Q = point ("object", 0, 0, 0);
+\end{code}
+
+This example assigns to {\cf Q} the point at the origin of
+\objectspace.  However, this statement does \emph{not} set the
+components of {\cf Q} to (0,0,0)!  Rather, {\cf Q} will contain the
+\commonspace\ coordinates of the point that is at the same location as
+the origin of \objectspace.  In other words, the point constructor that
+specifies a space name implicitly specifies a transformation
+to \commonspace.  This type of constructor also can be used for vectors
+and normals.
+
+The choice of \commonspace is renderer-dependent, though will usually
+be equivalent to either \cameraspace or \worldspace.
+
+Some computations may be easier in a coordinate system other than
+\currentspace.  For example, it is much more convenient to apply a
+``solid texture'' to a moving object in its \objectspace than in
+\currentspace.  For these reasons, SL provides built-in functions that
+allow you to transform points among different coordinate systems.  The
+built-in functions {\cf transform, vtransform, ntransform} can be used
+to transform points, vectors, and normals, respectively, from one
+coordinate system to another (see Section~\ref{chap:stdlibrary}).  Note,
+however, that \langname does not keep track of which point variables are
+in which coordinate systems.  It is the responsibility of the shader
+programmer to keep track of this and ensure that, for example, lighting
+computations are performed using quantities in \commonspace.
+
+Be very careful to use the right transformation routines for the right
+point-like types.  Transforming with the wrong matrix math will
+introduce subtle and difficult-to-fix errors in your code.  Therefore,
+it is important to always use {\cf transform} for points, {\cf
+  vtransform} for vectors, and {\cf ntransform} for normals.
+
+Several coordinate systems are predefined by name, listed in
+Table~\ref{tab:spacenames}.  Additionally, a renderer will probably
+allow for additional coordinate systems to be named in the scene
+description, and these names may also be referenced inside your shader
+to designate transformations.
+
+\begin{table}[htbp]
+\caption{Names of predeclared geometric spaces.\label{tab:spacenames}}
+\begin{tabular}{|p{0.7in}|p{4.7in}|}
+\hline
+{\cf "common"} & The coordinate system that all spatial values start out in and
+the one in which all lighting calculations are carried out.  Note that
+the choice of {\cf "common"} space may be different on each renderer. \\
+\hline 
+{\cf "object"} & The local coordinate system of the graphics primitive (sphere,
+patch, etc.) that we are shading. \\
+\hline 
+{\cf "shader"} & The local coordinate system active at the time that the shader
+was instanced. \\
+\hline 
+{\cf "world"} & The world coordinate system designated in the scene. \\
+\hline 
+{\cf "camera"} & The coordinate system with its origin at the center of
+the camera lens, $x$-axis pointing right, $y$-axis pointing up, and
+$z$-axis pointing into the screen. \\
+\hline 
+{\cf "screen"} & The coordinate system of the camera's image plane
+(after perspective transformation, if any).  Coordinate (0,0) of {\cf
+"screen"} space is looking along the $z$-axis of \cameraspace. \\
+\hline 
+{\cf "raster"} & 2D pixel coordinates, with (0,0) as the upper-left
+corner of the image and (xres, yres) as the lower-right corner. \\
+\hline 
+{\cf "NDC"} & 2D Normalized Device Coordinates --- like raster space, but
+normalized so that $x$ and $y$ both run from 0 to 1 across the whole
+image, with (0,0) being at the upper left of the image, and (1,1) being
+at the lower right. \\
+\hline 
+\end{tabular}
+\end{table}
+
+Point types can have their individual components examined and set using
+the {\cf []} array access notation.  For example:
+
+\begin{code}
+    point P;
+    float y = C[1];   // get the y component
+    C[0] = 0.5;       // set the x component
+\end{code}
+
+\noindent Components 0, 1, and 2 are $x$, $y$, and $z$, respectively.
+It is an error to access a point component with an index outside the
+$[0...2]$ range.
+
+The following operators may be used with point-like values (in order of
+decreasing precedence, with each box holding operators of the same
+precedence):
+
+\medskip
+
+\noindent \begin{tabular}{|p{1.5in}|p{0.5in}|p{3.25in}|}
+operation & result & ~ \\
+\hline
+\emph{ptype}\ {\ce [} \inttype {\ce ]} & \float & component access \\[0.5ex]
+\hline
+{\ce -} \emph{ptype} & \vector & component-wise unary negation \\[0.5ex]
+\hline
+\emph{ptype}\ {\ce *} \emph{ptype} & \emph{ptype} & component-wise multiplication \\[0.5ex]
+\float\ {\ce *} \emph{ptype} & \emph{ptype} & scaling of all components \\[0.5ex]
+\emph{ptype}\ {\ce *} \float & \emph{ptype} & scaling of all components \\[0.5ex]
+\emph{ptype}\ {\ce /} \emph{ptype} & \emph{ptype} & component-wise division \\[0.5ex]
+\emph{ptype}\ {\ce /} \float & \emph{ptype} & division of all components \\[0.5ex]
+\float\ {\ce /} \emph{ptype} & \emph{ptype} & division by all components \\[0.5ex]
+\hline
+\emph{ptype}\ {\ce +} \emph{ptype} & \emph{ptype} & component-wise addition \\[0.5ex]
+\emph{ptype}\ {\ce -} \emph{ptype} & \vector & component-wise subtraction \\[0.5ex]
+\hline
+\emph{ptype}\ {\ce ==} \emph{ptype} & \inttype & 1 if the two values are equal,
+else 0 \\[0.5ex]
+\emph{ptype}\ {\ce !=} \emph{ptype} & \inttype & 1 if the two values are different,
+else 0 \\[0.5ex]
+\hline
+\end{tabular}
+
+\smallskip
+
+\noindent The generic \emph{ptype} is listed in places where any
+of \point, \vector, or \normal may be used.
+
+All of the binary operators may combine a scalar value (\float or
+\inttype) with a point-like type, treating the scalar if it were
+point-like with three identical components.
+
+
+\subsection{{\cf matrix}}
+
+\langname has a \matrix type that represents the transformation matrix
+required to transform points and vectors between one coordinate system
+and another.  Matrices are represented internally by 16 floats (a $4
+\times 4$ homogeneous transformation matrix).
+
+A \matrix can be constructed from a single float or 16 floats.  For
+example:
+
+\begin{code}
+    matrix zero = 0;   // makes a matrix with all 0 components
+    matrix ident = 1;  // makes the identity matrix
+
+    // Construct a matrix from 16 floats
+    matrix m = matrix (m00, m01, m02, m03, m10, m11, m12, m13, 
+                       m20, m21, m22, m23, m30, m31, m32, m33);
+\end{code}
+
+\noindent Assigning a single floating-point number $x$ to a matrix will result
+in a matrix with diagonal components all being $x$ and other
+components being zero (i.e., $x$ times the identity matrix).
+Constructing a matrix with 16 floats will create the matrix whose
+components are those floats, in row-major order.  
+
+Similar to point-like types, a {\cf matrix} may be constructed in
+reference to a named space:
+
+\begin{code}
+    // Construct matrices relative to something other than "common"
+    matrix q = matrix ("shader", 1);
+    matrix m = matrix ("world", m00, m01, m02, m03, m10, m11, m12, m13, 
+                               m20, m21, m22, m23, m30, m31, m32, m33);
+\end{code}
+
+\noindent The first form creates the matrix that transforms points from
+\currentspace to \shaderspace.  Transforming points by this matrix
+is identical to calling {\cf transform("shader",...)}.
+The second form prepends the current-to-world transformation matrix
+onto the $4 \times 4$ matrix with components $m_{0,0} ... m_{3,3}$.
+Note that although we have used {\cf "shader"} and {\cf "world"}
+space in our examples, any named space is acceptable.
+
+Matrix variables can be tested for equality and inequality with the
+{\cf ==} and {\cf !=} boolean operators.  Also, the {\cf *} operator
+between matrices denotes matrix multiplication, while {\cf m1 / m2}
+denotes multiplying {\cf m1} by the inverse of matrix {\cf m2}.  Thus,
+a matrix can be inverted by writing {\cf 1/m}.  In addition, some
+functions will accept matrix variables as arguments, as described in
+Section~\ref{chap:stdlibrary}.
+
+Individual compoents of a matrix variable may be set or accessed
+using array notation, for example,
+
+\begin{code}
+    matrix M;
+    float x = M[row][col];
+    M[row][col] = 1;
+\end{code}
+
+Valid component indices are integers on $[0...3]$.  It is an error to
+access a matrix component with either a row or column outside this
+range.
+
+The following operators may be used with matrices (in order of
+decreasing precedence, with each box holding operators of the same
+precedence):
+
+\medskip
+\noindent \begin{tabular}{|p{1.5in}|p{0.5in}|p{3.25in}|}
+operation & result & ~ \\
+\hline
+\matrix\ {\ce [} \inttype {\ce ][} \inttype {\ce ]} & \float & component
+access (row, column) \\[0.5ex]
+\hline
+{\ce -} \matrix & \matrix & unary negation \\[0.5ex]
+\hline
+\matrix\ {\ce *} \matrix & \matrix & matrix multiplication \\[0.5ex]
+\matrix\ {\ce *} \float & \matrix & component-wise scaling \\[0.5ex]
+\float\ {\ce *} \matrix & \matrix & component-wise scaling \\[0.5ex]
+\matrix\ {\ce /} \matrix & \matrix & multiply the first matrix by the
+\emph{inverse} of the second \\[0.5ex]
+\matrix\ {\ce /} \float & \matrix & component-wise division \\[0.5ex]
+\float\ {\ce /} \matrix & \matrix & multiply the \float by the
+\emph{inverse} of the matrix \\[0.5ex]
+\hline
+\matrix\ {\ce +} \matrix & \matrix & component-wise addition \\[0.5ex]
+\matrix\ {\ce -} \matrix & \matrix & component-wise subtraction \\[0.5ex]
+\hline
+\matrix\ {\ce ==} \matrix & \inttype & 1 if the two values are equal,
+else 0 \\[0.5ex]
+\matrix\ {\ce !=} \matrix & \inttype & 1 if the two values are different,
+else 0 \\[0.5ex]
+\hline
+\end{tabular}
+
+
+\subsection{{\cf string}}
+
+The {\cf string} type may hold character strings.  The main application
+of strings is to provide the names of files where textures may be
+found.  Strings can be compared using {\cf ==} and {\cf !=}.
+
+String constants are denoted by surrounding the characters with double
+quotes, as in \qkw{I am a string literal}.  As in C programs, string
+literals may contain escape sequences such as \verb|\n| (newline),
+\verb|\r| (carriage return), \verb|\t| (tab), \verb|\"| (double quote),
+\verb|\\| (backslash).
+
+\section{Variables, arrays, and structures}
+
+\subsection{Variable declarations}
+
+The syntax for declaring a variable in \langname is:
+
+\vspace{12pt}
+\spc \emph{type} \emph{variablename} 
+
+\spc \emph{type} \emph{variablename} [ = \emph{initializer}]
+\vspace{12pt}
+
+\noindent where
+
+\begin{itemize}
+\item \emph{type} is one of the basic data types, described earlier.
+\item \emph{variablename} is the name of the variable you are declaring.
+\item If you wish to give your variable an initial value, you may do so
+by assigning an \emph{initializer}.
+\end{itemize}
+
+\noindent Some examples of variable declarations are
+
+\begin{code}
+    float a;          // Declare; current value is undefined
+    float b = 1;      // Declare and assign a constant initializer
+    float c = a*b;    // Computed initializer
+\end{code}
+
+\subsection{Arrays}
+
+Arrays are also supported, declared as follows:
+
+\vspace{12pt}
+\spc \emph{type} \emph{variablename}
+ {\cf [} \emph{arraylen} {\cf ]}
+
+\spc \emph{type} \emph{variablename}
+ {\cf [} \emph{arraylen} {\cf ]} = {\cf \{ }
+ \emph{init0}{\cf ,} \emph{init1} ... {\cf \}}
+\vspace{12pt}
+
+\noindent Arrays in \langname must have a constant length; they may not
+be dynamically sized, and only 1D arrays are allowed.  Other than
+that, however, the syntax of array usage in \langname is largely
+similar to C.  Some examples of array variable declarations are:
+
+\begin{code}
+    float d[10];                       // Declare an uninitilized array
+    float c[3] = { 0.1, 0.2, 3.14 };   // Initialize the array
+\end{code}
+
+\subsection{Structures}
+
+Structures are used to group several fields of potentially different
+types into a single object that can be referred to by name.  The syntax
+for declaring a structure type is:
+
+\vspace{12pt}
+\spc {\cf struct} \emph{structname} {\cf \{} 
+
+\spc\spc \emph{type1} \emph {fieldname1} {\cf ;}
+
+\spc\spc ...
+
+\spc\spc \emph{typeN} \emph {fieldnameN} {\cf ;}
+
+\spc {\cf \} ;}
+\vspace{12pt}
+
+You may then use the structure type name to declare structure variables
+as you would for any of the built-in types:
+
+\vspace{12pt}
+\spc \emph{structname} \emph{variablename} {\cf ;}
+
+\spc \emph{structname} \emph{variablename} {\cf = \{ }
+\emph{initializer1} {\cf ,} ... \emph{initializerN} {\cf \} ;}
+\vspace{12pt}
+
+If initializers are supplied, each field of the structure will be
+initialized with the initializer in the corresponding position, which
+is expected to be of the appropriate type.
+
+Structure elements are accessed in the same way as other C-like
+languages, using the `dot' operator: 
+
+\vspace{12pt}
+\spc \emph{variablename}{\cf .} \emph{fieldname}
+\vspace{12pt}
+
+Examples of declaration and use of structures:
+
+\begin{code}
+    struct ray {
+        point pos;
+        vector dir;
+        float maxhitdist;
+    };
+
+    ray r;   // Declare a structure
+    ray s = { point(0,0,0), vector(0,0,1), 1e6 };  // declare and initialize
+    r.pos = point (1, 0, 0);  // Assign to one field
+\end{code}
+
+It is permitted to have a structure field that is an array, as well as
+to have an array of structures.  But it is not permitted for one
+structure to have a field that is another structure.  For example:
+
+\begin{code}
+    struct A {
+        color a;
+        float b[4];   // struct may contain an array
+    };
+
+    A c;                  // Declare a structure
+    A d[5];               // Array of structures
+    color e = d[0].a;     // Field of one element of array of struct
+    d[2].b[4] = 0.25;     // Element of a field of a struct in an array
+\end{code}
+
+\begin{annotate}
+\QUESTION Is this restriction (no ``structure recrusion'') acceptable?
+It certainly makes the implementation of the language 
+
+\end{annotate
+
+\section{Shader parameters}
+
+    how shader parameters get their values
+
+shader metadata
+
+\chapter{Statements and control flow}
+
+language syntax
+
+variable declarations and assignments
+
+function calls
+
+control flow (conditionals, while, do, for)
+
+lighting
+
+    emit/illuminate
+
+    lights/illuminance
+
+trace, the hard way
+
+function definitions
+
+    return
+
+scoping
+
+expressions
+
+global variables
+
+\chapter{Standard Library Functions}
+\label{chap:stdlibrary}
+
+\def\floatcolorpoint{The \emph{type} may be any of \float, \color,
+  \point, \vector, or \normal.  For \color and \point-like types, the
+  computations are performed component-by-component (separately for $x$,
+  $y$, and $z$).\xspace}
+
+\section{Basic math functions}
+\label{sec:stdlib:math}
+
+\subsection{Mathematical constants}
+
+\langname defines several mathematical constants:
+
+\medskip
+
+\begin{tabular}{p{1in} p{3in}}
+{\cf M\_PI}       & $\pi$ \\ \\
+{\cf M\_PI\_2}    & $\pi/2$ \\ \\
+{\cf M\_PI\_4}    & $\pi/4$ \\ \\
+{\cf M\_E}        & $e$ \\ \\
+{\cf M\_LN2}      & $\ln 2$ \\ \\
+{\cf M\_LN10}     & $\ln 10$ \\ \\
+{\cf M\_SQRT2}    & $\sqrt{2}$ \\ \\
+{\cf M\_SQRT1\_2} & $\sqrt{1/2}$  \\ \\
+\end{tabular}
+
+\subsection{Mathematical functions}
+
+Most of these functions operate on a generic \emph{type} that my be any
+of \float, \color, \point, \vector, or \normal.  For \color and
+\point-like types, the computations are performed component-by-component
+(separately for $x$, $y$, and $z$).
+
+\medskip
+
+\apiitem{\emph{type} {\ce radians} (\emph{type} deg) \\
+\emph{type} {\ce degrees} (\emph{type} rad)}
+\indexapi{radians()} \indexapi{degrees()}
+Convert degrees to radians or radians to degrees.
+\apiend
+
+
+\apiitem{\emph{type} {\ce cos} (\emph{type} x) \\
+\emph{type} {\ce sin} (\emph{type} x) \\
+\emph{type} {\ce tan} (\emph{type} x) }
+\indexapi{cos()} \indexapi{sin()} \indexapi{tan()}
+Computes the cosine, sine, and tangent of $x$ (measured in radians).
+\apiend
+
+\apiitem{\emph{type} {\ce acos} (\emph{type} x) \\
+\emph{type} {\ce asin} (\emph{type} y) \\
+\emph{type} {\ce atan} (\emph{type} y\_over\_x) \\
+\emph{type} {\ce atan2} (\emph{type} y, \emph{type} x)}
+\indexapi{acos()} \indexapi{asin()} \indexapi{atan()} \indexapi{atan2()}
+Compute the principal value of the arc cosine, arc sine, and arc
+For {\cf acos()} and {\cf asin()}, the value of the argument
+will first be clamped to $[-1,1]$ to avoid invalid domain.
+
+For {\cf acos()}, the result will always be in the range of $[0, \pi]$,
+and for {\cf asin()} and {\cf atan()}, the result will always be in the
+range of $[-\pi/2, \pi/2]$.  For {\cf atan2()}, the signs of both
+arguments are used to determine the quadrant of the return value.
+\apiend
+
+\apiitem{\emph{type} {\ce cosh} (\emph{type} x) \\
+\emph{type} {\ce sinh} (\emph{type} x) \\
+\emph{type} {\ce tanh} (\emph{type} x) }
+\indexapi{cosh()} \indexapi{sinh()} \indexapi{tanh()}
+Computes the hyperbolic cosine, sine, and tangent of $x$ (measured in radians).
+\apiend
+
+\apiitem{\emph{type} {\ce pow} (\emph{type} x, \emph{type} y)}
+\indexapi{pow()}
+Computes $x^y$.  This function will return 0 for ``undefined''
+operations, such as {\cf pow(-1,0.5)}.
+\apiend
+
+\apiitem{\emph{type} {\ce exp} (\emph{type} x) \\
+\emph{type} {\ce exp2} (\emph{type} x) \\
+\emph{type} {\ce expm1} (\emph{type} x)}
+\indexapi{exp()} \indexapi{exp2()} \indexapi{expm1()}
+Computes $e^x$, $2^x$, and $e^x-1$, respectively.  Note that 
+{\cf expm1(x)} is accurate even for very small values of $x$.
+\apiend
+
+\apiitem{\emph{type} {\ce log} (\emph{type} x) \\
+\emph{type} {\ce log2} (\emph{type} x) \\
+\emph{type} {\ce log10} (\emph{type} x) \\
+\emph{type} {\ce log} (\emph{type} x, \emph{type} b)}
+\indexapi{log()} \indexapi{log2()} \indexapi{log10()}
+Computes the logarithm of $x$ in base $e$, 2, 10, or arbitrary base $b$,
+respectively.
+\apiend
+
+\apiitem{\emph{type} {\ce sqrt} (\emph{type} x) \\
+\emph{type} {\ce inversesqrt} (\emph{type} x)}
+\indexapi{sqrt()} \indexapi{inversesqrt()}
+Computes $\sqrt{x}$ and $1/\sqrt{x}$.  Returns 0 if $x<0$.
+\apiend
+
+\apiitem{\emph{type} {\ce hypot} (\emph{type} x, \emph{type} y) \\
+\emph{type} {\ce hypot} (\emph{type} x, \emph{type} y, \emph{type} x)}
+\indexapi{hypot()}
+Computes $\sqrt{x^2+y^2}$ and $\sqrt{x^2+y^2+z^z}$, respectively.
+\apiend
+
+\apiitem{\emph{type} {\ce abs} (\emph{type} x) \\
+\emph{type} {\ce fabs} (\emph{type} x)} 
+\indexapi{abs()} \indexapi{fabs()}
+Absolute value of $x$.  (The two functions are synonyms.)
+\apiend
+
+\begin{annotate}
+Should we fully return to C conventions, with abs() being for integers
+and fabs being for float?  Or should abs() simply be overloaded, like
+you'd do in C++ if we were starting from scratch today?
+\end{annotate}
+
+\apiitem{\emph{type} {\ce sign} (\emph{type} x)}
+\indexapi{sign()}
+Returns 1 if $x>0$, -1 if $x<0$, 0 if $x=0$.
+\apiend
+
+\apiitem{\emph{type} {\ce floor} (float x) \\
+\emph{type} {\ce ceil} (\emph{type} x) \\
+\emph{type} {\ce round} (\emph{type} x) \\
+\emph{type} {\ce trunc} (\emph{type} x) }
+\indexapi{floor()} \indexapi{ceil()} \indexapi{round()} \indexapi{trunc()}
+
+Various rouinding methods: {\cf floor} returns the highest integer less
+than or equal to $x$; {\cf ceil} returns the lowest integer greater than
+or equal to $x$; {\cf round} returns the the closest integer to $x$, in
+either direction; and {\cf trunc} returns the integer part of $x$
+(equivalent to {\cf floor} if $x>0$ and {\cf ceil} if $x<0$).
+\apiend
+
+\apiitem{\emph{type} {\ce mod} (\emph{type} a, \emph{type} b) \\
+\emph{type} {\ce fmod} (\emph{type} a, \emph{type} b)}
+\indexapi{mod()}
+\indexapi{fmod()}
+Computes $a - b*\mbox{floor}(a/b)$.  The two functions are synonyms.
+\apiend
+
+\apiitem{\emph{type} {\ce min} (\emph{type} a, \emph{type} b) \\
+\emph{type} {\ce max} (\emph{type} a, \emph{type} b) \\
+\emph{type} {\ce clamp} (\emph{type} x, \emph{type} minval, \emph{type} maxval)}
+\indexapi{min()} \indexapi{max()} \indexapi{clamp()}
+The {\cf min()} and {\cf max()} functions return the minimum or maximum,
+respectively, of a list of two or more values.  The {\cf clamp}
+function returns
+
+\hspace{2em} {\cf min(max(x,minval),maxval)},
+
+\noindent that is, the value $x$ clamped to the specified range.
+\apiend
+
+\apiitem{\emph{type} {\ce mix} (\emph{type} x, \emph{type} y, float alpha)}
+\indexapi{mix()}
+The {\cf mix} function returns a linear blending :
+$ x*(1-\alpha) + y*(\alpha) $
+\apiend
+
+\apiitem{float {\ce isnan} (float x) \\
+float {\ce isinf} (float x) \\
+float {\ce isfinite} (float x)}
+\indexapi{isnan()} \indexapi{isinf()} \indexapi{isfinite()}
+The {\cf isnan()} function returns 1 if $x$ is a not-a-number (NaN)
+value, 0 otherwise.  The {\cf isinf()} function returns 1 if $x$ is an
+infinite (Inf or --Inf) value, 0 otherwise.  The {\cf isfinite()}
+function returns 1 if $x$ is an ordinary number (neither infinite nor
+NaN), 0 otherwise.  \apiend
+
+\begin{annotate}
+Should these return int, like the C99 ones?
+\end{annotate}
+
+\apiitem{float {\ce erf} (float x) \\
+float {\ce erfc} (float x)}
+\indexapi{erf()} \indexapi{erfc()}
+The {\cf erf()} function returns the error function 
+${\mathrm{erf}(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2}} dt$.
+The {\cf erfc} returns the complementary error function {\cf 1-erf(x)}
+(useful in maintaining precision for large values of $x$).
+\apiend
+
+\section{Geometric functions}
+\label{sec:stdlib:geom}
+
+\apiitem{\emph{ptype} {\ce ptype} (float f) \\
+\emph{ptype} {\ce ptype} (float x, float y, float z)}
+\indexapi{point()}
+\indexapi{vector()}
+\indexapi{normal()}
+
+Constructs a point-like value (\emph{ptype} may be any of \point,
+\vector, or \normal) from individual \float values.  If constructed
+from a single \float, the value will be replicated for $x$, $y$, and $z$.
+
+\apiend
+
+\apiitem{\emph{ptype} {\ce ptype} (string space, f) \\
+\emph{ptype} {\ce ptype} (string space, float x, float y, float z)}
+\indexapi{point()} \indexapi{vector()} \indexapi{normal()}
+Constructs a point-like value (\emph{ptype} may be any of \point,
+\vector, or \normal) from individual \float coordinates, relative
+to the named coordinate system.  In other words,
+\begin{code}
+    point (space, x, y, z)
+\end{code}
+\noindent is equivalent to
+\begin{code}
+    transform (space, "common", point(x,y,z))
+\end{code}
+(And similarly for \vector/\normal and {\cf transformv}/{\cf
+transformn}, respectively.)
+\apiend
+
+\apiitem{float {\ce dot} (vector A, vector B)}
+\indexapi{dot()}
+Returns the inner product of the two vectors (or normals), i.e., 
+$A \cdot B = A_x B_x + A_y B_y + A_z C_z$.
+\apiend
+
+\apiitem{float {\ce cross} (vector A, vector B)}
+\indexapi{cross()}
+Returns the cross product of two vectors (or normals), i.e., 
+$A \times B$.
+\apiend
+
+\apiitem{float {\ce length} (vector V) \\
+float {\ce length} (normal V)}
+\indexapi{length()}
+Returns the length of a vector or normal.
+\apiend
+
+\apiitem{float {\ce distance} (point P0, point P1)}
+\indexapi{distance()}
+Returns the distance between two points.
+\apiend
+
+\apiitem{float {\ce distance} (point P0, point P1, point Q)}
+\indexapi{distance()}
+Returns the distance from {\cf Q} to the closest point on the line
+segment joining {\cf P0} and {\cf P1}.
+
+\begin{annotate}
+\QUESTION In RMan this was called `ptlined'.  Do we like that better, or `distance'?
+\end{annotate}
+\apiend
+
+\apiitem{vector {\ce normalize} (vector V) \\
+vector {\ce normalize} (normal V)}
+\indexapi{normalize()}
+Return a vector in the same direction as $V$ but with length 1,
+that is, {\cf V / length(V)} .
+\apiend
+
+\apiitem{vector {\ce faceforward} (vector N, vector I, vector Nref) \\
+vector {\ce faceforward} (vector N, vector I)}
+\indexapi{faceforward()}
+If {\cf dot (Nref, I)} $<0$, returns {\cf N}, otherwise returns {\cf -N}.
+For the version with only two arguments, {\cf Nref} is implicitly {\cf
+Ng}, the true surface normal.  The point of these routines is to
+return a version of {\cf N} that faces towards the camera --- in the
+direction ``opposite'' of {\cf I}.
+
+To further clarify the situation, here is the implementation of
+{\cf faceforward} expressed in \langname:
+
+\begin{code}
+vector faceforward (vector N, vector I, vector Nref)
+{
+    return (I.Nref > 0) ? -N : N;
+}
+
+vector faceforward (vector N, vector I)
+{
+    return faceforward (N, I, Ng);
+}
+\end{code}
+\apiend
+
+\apiitem{vector {\ce reflect} (vector I, vector N)}
+\indexapi{reflect()}
+For incident vector {\cf I} and surface orientation {\cf N}, returns the
+reflection direction {\cf R = I - 2*(N.I)*N}.  Note that {\cf N} must be
+normalized (unit length) for this formula to work properly.
+\apiend
+
+\apiitem{vector {\ce refract} (vector I, vector N, float eta)}
+\indexapi{refract()}
+For incident vector {\cf I} and surface orientation {\cf N}, 
+returns the refraction direction using Snell's law. The {\cf eta} 
+parameter is the ratio of the index of refraction of the volume containing
+{\cf I} divided by the index of refraction of the volume being entered.
+\apiend
+
+\apiitem {void {\ce fresnel} (vector I, normal N, float eta, \\
+ \mbox{\hspace{1in}}   output float Kr, output float Kt,  \\
+ \mbox{\hspace{1in}}   output vector R, output float T); }
+\indexapi{fresnel()}
+According to Snell's law and the Fresnel equations, {\cf fresnel}
+computes the reflection and transmission direction vectors {\cf R} and
+{\cf T}, respectively, as well as the scaling factors for reflected
+and transmitted light, {\cf Kr} and {\cf Kt}.  The {\cf I} parameter
+is the normalized incident ray, {\cf N} is the normalized surface normal,
+and {\cf eta} is the ratio of refractive index of the medium
+containing {\cf I} to that on the opposite side of the surface.
+\apiend
+
+\apiitem{point {\ce rotate} (point Q, float angle, point P0, point P1)}
+\indexapi{rotate()}
+Returns the point computed by rotating point {\cf Q} by {\cf angle} 
+radians about the axis that passes from point {\cf P0} to {\cf P1}.
+\apiend
+
+transform, transformv, transformn (m, p)
+transform, transformv, transformn (s, s, p)
+transform, transformv, transformn (s, p)
+transform, transformv, transformn (m, m, p)
+
+transformu (s, x)
+transformu (s, s, x)
+
+
+
+
+\section{Color functions}
+\label{sec:stdlib:color}
+
+\apiitem{color {\ce color} (float f) \\
+color {\ce color} (float r, float g, float b)}
+\indexapi{color()}
+Constructs a \color from individual \float values.  If constructed
+from a single \float, the value will be replicated for $r$, $g$, and $b$.
+\apiend
+
+\apiitem{color {\ce color} (string colorspace, f) \\
+color {\ce color} (string colorspace, float r, float g, float b)}
+\indexapi{color()}
+Constructs an RGB \color that is equivalent to the individual \float values in a
+named color space.  In other words,
+\begin{code}
+    color (colorspace, r, g, b)
+\end{code}
+\noindent is equivalent to
+\begin{code}
+    transformc (colorspace, "rgb", color(r, g, b))
+\end{code}
+\apiend
+
+\apiitem{float {\ce luminance} (color rgb)}
+\indexapi{luminance()}
+Returns the linear luminance of the color \emph{rgb}, which is
+implemented per the ITU-R standard as $0.2126 R + 0.7152 G + 0.0722 B$.
+\apiend
+
+\apiitem{color {\ce transformc} (string fromspace, string tospace, color Cfrom)\\
+color {\ce transformc} (string tospace, color Cfrom)}
+\indexapi{transformc()}
+Transforms color \emph{Cfrom} from color space \emph{fromspace} to
+color space \emph{tospace}.  If \emph{fromspace} is not supplied,
+it is assumed to be transforming from \rgbspace.
+
+\begin{annotate}
+\QUESTION Should this be renamed `ctransform' to match RMan?
+\end{annotate}
+\apiend
+
+
+\section{Matrix functions}
+\label{sec:stdlib:matrix}
+
+\apiitem{matrix {\ce matrix} (float m00, float m01, float m02, float  m03, \\
+\bigspc\spc float m10, float m11, float m12, float m13, \\
+\bigspc\spc float m20, float m21, float m22, float m23, \\
+\bigspc\spc float m30, float m31, float m32, float m33)}
+\indexapi{matrix()}
+Constructs a \matrix from 16 individual \float values, in row-major
+order.  
+\apiend
+
+\apiitem{matrix {\ce matrix} (float f)}
+\indexapi{matrix()}
+Constructs a \matrix with $f$ in all diagonal components, 0 in all other
+components.  In other words, {\cf matrix(1)} is the identity matrix, and
+{\cf matrix(f)} is {\cf f*matrix(1)}.
+\apiend
+
+\apiitem{matrix {\ce matrix} (string fromspace, float m00, ..., float m33) \\
+matrix {\ce matrix} (string fromspace, float f)}
+\indexapi{matrix()}
+Constructs a \matrix relative to the named space, multiplying it by the
+{\cf space}-to-{\cf common} transformation matrix.  
+
+Note that {\cf matrix (space, 1)} returns the 
+\emph{space}-to-{\cf common} transformation matrix.
+\apiend
+
+\apiitem{float {\ce determinant} (matrix M)}
+\indexapi{determinant()}
+Computes the determinant of matrix $M$.
+\apiend
+
+\apiitem{matrix {\ce transpose} (matrix M)}
+\indexapi{transpose()}
+Computes the transpose of matrix $M$.
+\apiend
+
+
+\begin{comment}
+translate
+rotate
+scale
+\end{comment}
+
+
+\section{Pattern generation}
+\label{sec:stdlib:pattern}
+
+\apiitem{float {\ce step} (float edge, float x)}
+\indexapi{step()}
+Returns 0 if $x < {\mathit edge}$ and 1 if $x \ge {\mathit edge}$.
+\apiend
+
+\apiitem{float {\ce smoothstep} (float edge0, float edge1, float x)}
+\indexapi{smoothstep()}
+Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
+and performs a smooth Hermite
+interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
+This is useful in cases where you would want a thresholding function
+with a smooth transition.
+\apiend
+
+%\section{Noise functions}
+%\label{sec:stdlib:noise}
+%
+%Noise functions (sometimes called ``Perlin noise'')
+
+\apiitem{\emph{type} {\ce noise} (float u) \\
+\emph{type} {\ce noise} (float u, float v) \\
+\emph{type} {\ce noise} (point p) \\
+\emph{type} {\ce noise} (point p, float t)}
+\indexapi{noise()}
+
+Returns a continuous, pseudo-random (but repeatable) scalar field
+defined on a domain of dimension 1 (\float), 2 (2 \float's), 3 (\point),
+or 4 (\point and \float).
+
+The range of \noise is $[0,1]$, its large-scale average is 0.5, it is 
+fairly isotropic and nonperiodic (or at least has an extremely large
+period), and mostly band-limited to frequences between 0.5 and 1.0.
+This makes it ideal to use as a basis function for pattern generation.
+
+The return \emph{type} may be any of \float, \color, \point, \vector, or
+\normal, depending on the type of the variable the result is assigned to
+(or based on an explicit type cast).  For multi-component return types
+(e.g., \point), each component is an uncorrelated \float \noise
+function.
+\apiend
+
+\apiitem{\emph{type} {\ce snoise} (float u) \\
+\emph{type} {\ce snoise} (float u, float v) \\
+\emph{type} {\ce snoise} (point p) \\
+\emph{type} {\ce snoise} (point p, float t)}
+\indexapi{snoise()}
+The \snoise function (\emph{signed} noise) is just like
+\noise, but scaled so that its range is $[-1,1]$ and its large-scale
+average is 0.
+\apiend
+
+\apiitem{\emph{type} {\ce pnoise} (float u, float uperiod) \\
+\emph{type} {\ce pnoise} (float u, float v, float uperiod, float vperiod) \\
+\emph{type} {\ce pnoise} (point p, point pperiod) \\
+\emph{type} {\ce pnoise} (point p, float t, point pperiod, float tperiod) 
+\smallskip \\
+\emph{type} {\ce psnoise} (float u, float uperiod) \\
+\emph{type} {\ce psnoise} (float u, float v, float uperiod, float vperiod) \\
+\emph{type} {\ce psnoise} (point p, point pperiod) \\
+\emph{type} {\ce psnoise} (point p, float t, point pperiod, float tperiod)}
+\indexapi{pnoise()}
+\indexapi{psnoise()}
+The \pnoise function is just like \noise, but is periodic with the given
+period.  In other words, {\cf pnoise(x,period) == pnoise(x+period,period)}.
+Periods are only meaningful if they are positive integers, so actually
+the period is rounded down to the nearest integer, and clamped to a
+minimum of 1.
+
+The \psnoise function a signed version of \pnoise, i.e., identical to
+\pnoise but having a range of $[-1,1]$ and average value of 0.
+\apiend
+
+\apiitem{\emph{type} {\ce cellnoise} (float u) \\
+\emph{type} {\ce cellnoise} (float u, float v) \\
+\emph{type} {\ce cellnoise} (point p) \\
+\emph{type} {\ce cellnoise} (point p, float t)}
+\indexapi{cellnoise()}
+Returns a discrete pseudo-random (but repeatable) scalar field
+defined on a domain of dimension 1 (\float), 2 (2 \float's), 3 (\point),
+or 4 (\point and \float).  
+
+The \cellnoise function is constant on $[i,i+1)$ for all
+integers $i$, in other words, {\cf cellnoise(x) == cellnoise(floor(x))},
+but has a different and uncorrelated value at every integer.  The range
+is $[0,1]$, its large-scale average is 0.5, and its values are evenly
+distributed over $[0,1]$.
+
+The return \emph{type} may be any of \float, \color, \point, \vector, or
+\normal, depending on the type of the variable the result is assigned to
+(or based on an explicit type cast).  For multi-component return types
+(e.g., \point), each component is an uncorrelated \float \cellnoise
+function.
+\apiend
+
+\apiitem{\emph{type} {\ce hash} (float u) \\
+\emph{type} {\ce hash} (float u, float v) \\
+\emph{type} {\ce hash} (point p) \\
+\emph{type} {\ce hash} (point p, float t)}
+\indexapi{hash()}
+Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
+4-D coordinates.  The return values will be evenly distributed on
+$[0,1]$ and be be completely repeatable when passed the same coordinates
+again, yet will be uncorrellated to hashes of any other positions
+(including nearby points).  This is like having a random value indexed
+spatially, but that will be repeatable from frame to frame of an
+animation (provided its input is \emph{precisely} identical).
+
+The return \emph{type} may be any of \float, \color, \point, \vector, or
+\normal, depending on the type of the variable the result is assigned to
+(or based on an explicit type cast).  For multi-component return types
+(e.g., \point), each component is an uncorrelated \float {\cf hash}
+function.
+\apiend
+
+\apiitem{\emph{type} {\ce random} ()}
+\indexapi{random()}
+Returns a pseudorandom value uniformly distributed on $[0,1]$.  Use with
+extreme caution --- the results are not necessarily repeatable from
+frame to frame.
+
+The return \emph{type} may be any of \float, \color, \point, \vector, or
+\normal, depending on the type of the variable the result is assigned to
+(or based on an explicit type cast).  For multi-component return types
+(e.g., \point), each component is an uncorrelated \float {\cf random()}
+function.
+\apiend
+
+\apiitem{\emph{type} {\ce spline} (string basis, float x, \emph{type} $\mathtt{y}_0$, \emph{type} $\mathtt{y}_1$, ... \emph{type} $\mathtt{y}_{n-1}$)\\
+\emph{type} {\ce spline} (string basis, float x, \emph{type} y[])}
+\indexapi{spline()}
+
+As $x$ varies from 0 to 1, {\cf spline} returns the value of a cubic
+interpolation of uniformly-spaced knots $y_0$...$y_{n-1}$, or
+$y[0]$...$y[n-1]$ for the array version of the call (where $n$ is the
+length of the array).  The input value $x$ will be clamped to lie
+on $[0,1]$.  The \emph{type} may be any of \float, \color,
+\point, \vector, or \normal; for multi-component types (e.g. \color),
+each component will be interpolated separately.
+
+The type of interpolation is specified by the \emph{basis} name,
+\emph{basis} parameter, which may be any of: \qkw{catmull-rom},
+\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, or \qkw{linear}.  Some basis
+types require particular numbers of knot values -- Bezier splines
+require $4n+3$ values, Hermite splines require $4n+2$ values,
+Catmull-Rom and linear splines may use any number of values $n\ge 4$.
+To maintain consistency with the other spline types, linear splines will
+ignore the first and last data value, interpolating piecewise-linearly
+between $y_1$ and $y_{n-2}$.
+\apiend
+
+\apiitem{float {\ce inversespline} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
+float {\ce inversespline} (string basis, float v, float y[])}
+\indexapi{inversespline()}
+
+Computes the \emph{inverse} of the {\cf spline()} function --- i.e., returns
+the value $x$ for which {\cf spline (basis, x, y...)} would return value
+$v$.  Results are undefined if the knots do not specifiy a monotonic
+(only increasing or only decreasing) spline.
+\apiend
+
+
+
+\section{Derivatives and area operators}
+\label{sec:stdlib:derivs}
+
+\apiitem{float {\ce deltau} (float x), {\ce deltav} (float x) \\
+vector {\ce deltau} (point x), {\ce deltav} (point x) \\
+vector {\ce deltau} (vector x), {\ce deltav} (vector x)\\
+color {\ce deltau} (color x), {\ce deltav} (color x)}
+\indexapi{deltau()} \indexapi{deltav()}
+Compute differentials of the argument $x$, i.e., the approximate change
+in $x$ between adjacent shading samples in each of two principal
+directions.  Depending on the renderer implementation, those directions
+may be $x$ and $y$ on the imaging plane, may be parametric $u$ and $v$
+on the surface, or something else.  Do not confuse the ``u'' and ``v''
+in the name with a guarantee that it is tied to the surface parameters.
+\apiend
+
+\apiitem{float {\ce Du} (float x), {\ce Dv} (float x) \\
+vector {\ce Du} (point x), {\ce Dv} (point x) \\
+vector {\ce Du} (vector x), {\ce Dv} (vector x)\\
+color {\ce Du} (color x), {\ce Dv} (color x)}
+\indexapi{Du()} \indexapi{Dv()}
+Compute an approximation to the derivatives of $x$ with respect to
+each of two principal directions.  Depending on the renderer
+implementation, those directions may be $x$ and $y$ on the imaging
+plane, may be parametric $u$ and $v$ on the surface, or something else.
+Do not confuse the ``u'' and ``v'' in the name with a guarantee that it
+is tied to the surface parameters.
+\apiend
+
+\begin{annotate}
+\QUESTION I'm uncomfortable with these definitions.  Does this make
+sense at all in a renderer-agnostic way?  Is it horribly confusing to
+call it ``u'' and ``v'' in a ray tracer that's probably computing
+derivatives with respect to screen x and y?  If we called it deltax,
+deltay, Dx, Dy, would that be confusing in a renderer that really was
+Reyes-like and shading in parameter space?
+
+For that matter, is there any legitimate use for differentials or
+derivatives along the principal directions, or is the only really
+useful quantity filterwidth()?
+\end{annotate}
+
+\apiitem{float {\ce filterwidth} (float x) \\
+vector {\ce filterwidth} (point x) \\
+vector {\ce filterwidth} (vector x)}
+\indexapi{filterwidth()}
+Compute differentials of the argument $x$, i.e., the approximate change
+in $x$ between adjacent shading samples.
+\apiend
+
+
+\apiitem{float {\ce area} (point p)}
+\indexapi{area()}
+Returns the differential area of position $p$ corresponding to this
+shading sample.  If $p$ is the actual surface position \P, then 
+{\ce area(P)} will return the surface area of the section of the
+surface that is ``covered'' by this shading sample.
+\apiend
+
+\apiitem{vector {\ce calculatenormal} (point p)}
+\indexapi{calculatenormal()}
+Returns a vector perpendicular to the surface that is defined by point
+$p$ (as $p$ is computed at all points on the currently-shading surface),
+taking into account surface orientation.
+\apiend
+
+\apiitem{float {\ce aastep} (float edge, float s) \\
+float {\ce aastep} (float edge, float s, float ds) \\
+float {\ce aastep} (float edge, float s, float dedge, float ds)
+\smallskip \\
+float {\ce aastep} (float edge, float s, string filter) \\
+float {\ce aastep} (float edge, float s, float ds, string filter) \\
+float {\ce aastep} (float edge, float s, float dedge, float ds, string filter)}
+\indexapi{aastep()}
+Computes an antialiased step function, similar to {\cf step(edge,s)} but
+filtering the edge to take into account how rapidly {\cf s} and {\cf edge}
+are changing over the surface.  If the differentials {\cf ds} and/or
+{\cf dedge} are not passed explicitly, they will be automatically 
+computed (using {\cf aastep()}).
+
+The optional {\cf filter} parameter specifies which filter should be
+used: \qkw{catmull-rom}, \qkw{box}, \qkw{triangle}, or \qkw{gaussian}.
+If no {\cf filter} parameter is supplied, a Catmull-Rom filter will be
+used.
+
+\begin{annotate}
+\QUESTION This is similar to RenderMan's ``filterstep'', but not quite.
+Is it better to call it ``filterstep'' even if it doesn't exactly match,
+or should we stick to the changed name to match the changed functionality?
+\end{annotate}
+\apiend
+
+
+\section{Displacement functions}
+\label{sec:stdlib:displace}
+
+displace
+bump
+
+\section{String functions}
+\label{sec:stdlib:string}
+
+\apiitem{void {\ce printf} (string fmt, ...)}
+\indexapi{printf()}
+
+Much as in C, {\cf printf()} takes a format string {\cf fmt} and an argument list, and
+prints the resulting formatted string to the console.  
+
+Where the
+fmt contains the characters {\cf \%f}, {\cf \%c}, {\cf \%p}, {\cf
+\%m}, and {\cf \%s}, {\cf printf} will substitute arguments, in order,
+from the argument list (assuming that the argument types are \float,
+\color, point-like, \matrix, and {\cf string}, respectively).  In addition,
+{\cf \%d} and {\cf \%i} will also print \float's, truncating and
+printing them as if they were integers.
+\apiend
+
+\apiitem{string {\ce format} (string fmt, ...)}
+\indexapi{format()}
+The {\cf format} function works similarly to {\cf printf}, except that
+instead of printing the results, it returns the formatted text as a
+\string.
+\apiend
+
+\apiitem{void {\ce error} (string fmt, ...)}
+\indexapi{error()}
+The {\cf error()} function works similarly to {\cf printf}, but the
+results will be printed as a renderer error message, possibly including
+information about the name of the shader and the object being shaded,
+and other diagnostic information.
+\apiend
+
+\apiitem{void {\ce fprintf} (string filename, string fmt, ...)}
+\indexapi{fprintf()}
+The {\cf fprintf()} function works similarly to {\cf printf}, but rather
+than printing to the default text output stream, the results will be
+concatentated onto the end of the text file named by {\cf filename}.
+\apiend
+
+\apiitem{string {\ce concat} (string s1, ..., string sN)}
+\indexapi{concat()}
+Concatenates a list of strings, returning the aggregate string.
+\apiend
+
+\begin{annotate}
+I'm still gathering requirements for regular expression matching
+functions.
+\end{annotate}
+
+\apiitem{int {\ce regex_match} (string subject, string regex)}
+\indexapi{match()}
+Returns 1 if the entire string \emph{subject} matches a standard POSIX 
+regular expression \emph{regex}, 0 if it does not.
+\apiend
+
+\apiitem{string {\ce substr} (string s, int start, int length)\\
+string {\ce substr} (string s, int start)}
+\indexapi{substr()}
+Return at most \emph{length} characters from \emph{s}, starting with the
+character indexed by \emph{start} (beginning with 0).  If \emph{length}
+is omitted, return the rest of \emph{s}, starting with \emph{start}.  If
+\emph{start} is negative, it counts backwards from the end of the string
+(for example, {\cf substr(s,-1)} returns just the last character of
+\emph{s}).
+\apiend
+
+
+\begin{annotate}
+Should we look at Pystring and add useful things here?
+\end{annotate}
+
+
+\section{Texture}
+\label{sec:stdlib:texture}
+
+texture
+texture3d
+spatialdbsave
+spatialdbquery
+
+\section{Light and Shadows}
+\label{sec:stdlib:light}
+
+environment
+shadow
+ambient
+diffuse
+specular
+specularbrdf
+indirect
+occlusion
+subsurface
+
+
+\section{Renderer state and message passing}
+\label{sec:stdlib:state}
+
+getattibute
+setmessage
+getmessage
+gettextureinfo
+raylevel
+isshadowray
+isindirectray
+
+
+\section{Miscellaneous}
+\label{sec:stdlib:misc}
+
+arraylength
+exit
+
+
+
+\chapter{Formal Language Syntax}
+\label{chap:formalsyntax}
+
+BNF
+
+keywords
+
+reserved words
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\part{Appendices}
+\begin{appendix}
+
+%\include{typedesc}
+%\chapter{Building Unnamed Shading Language}
+
+%\include{header}
+%\include{glossary}
+\end{appendix}
+
+\backmatter
+
+%\bibliographystyle{alpha}	%% Select for [FB95]
+\bibliographystyle{apalike}    %% Select for (Foo and Bar, 1995)
+%\addcontentsline{toc}{chapter}{Bibliography}
+%\bibliography{mybib}
+
+\addcontentsline{toc}{chapter}{Index}
+\printindex
+
+\end{document}
+
+
+% Canonical figure
+%\begin{figure}[ht]
+%\noindent
+%\includegraphics[width=5in]{Figures/bredow/foo} 
+%\caption{Caption
+%\label{fig:foo}}
+%\end{figure}

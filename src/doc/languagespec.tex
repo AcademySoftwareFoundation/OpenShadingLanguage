@@ -173,7 +173,7 @@ valid and invalid identifiers are:
     _foo          // valid - ok to start with an unberscore
 
     2smart        // invalid - starts with a numeral
-    bigbuck\$     // invalid - an illegal character
+    bigbuck$      // invalid - $ is an illegal character
 \end{code}
 
 
@@ -217,8 +217,7 @@ The following are \emph{keywords} that have special meaning in
 \langname: \index{keywords}
 
 \begin{code}
-
-
+FIXME
 \end{code}
 
 The following are \emph{reserved words} that currently have no special
@@ -227,7 +226,7 @@ becuase they are confusingly similar to keywords in related programming
 languages: \index{reserved words}
 
 \begin{code}
-
+FIXME
 \end{code}
 
 
@@ -277,22 +276,23 @@ directives, including:
 computations inside your shader:
 \smallskip
 
-\noindent\begin{tabular}{|p{1in}|p{4.5in}|}
+\noindent\begin{tabular}{|p{0.75in}|p{4.75in}|}
 \hline
-{\cf int}	& Integer data \\
-\hline
-{\cf float}	& Scalar floating-point data (numbers) \\
-\hline
+{\cf int}	& Integer data \\[1ex]
+%\hline
+{\cf float}	& Scalar floating-point data (numbers) \\[1ex]
+%\hline
 {\cf point
 vector
 normal}		& Three-dimensional positions, directions, and surface
-		  orientations \\
-\hline
-{\cf color}	& Spectral reflectivities and light energy values \\
-\hline
-{\cf matrix}	& $4 \times 4$ transformation matrices \\
-\hline
-{\cf string}	& Character strings (such as filenames) \\
+		  orientations \\[7ex]
+%\hline
+{\cf color}	& Spectral reflectivities and light energy values \\[1ex]
+%\hline
+{\cf matrix}	& $4 \times 4$ transformation matrices \\[1ex]
+%\hline
+{\cf string}	& Character strings (such as filenames) \\[1ex]
+{\cf void}      & Indicates functions that do not return a value \\[1ex]
 \hline
 \end{tabular}
 
@@ -663,8 +663,8 @@ the {\cf []} array access notation.  For example:
 
 \begin{code}
     point P;
-    float y = C[1];   // get the y component
-    C[0] = 0.5;       // set the x component
+    float y = P[1];   // get the y component
+    P[0] = 0.5;       // set the x component
 \end{code}
 
 \noindent Components 0, 1, and 2 are $x$, $y$, and $z$, respectively.
@@ -1034,11 +1034,11 @@ for declaring a structure type is:
 \vspace{12pt}
 \spc {\cf struct} \emph{structname} {\cf \{} 
 
-\spc\spc \emph{type1} \emph {fieldname1} {\cf ;}
+\spc\spc \emph{type1} \emph{fieldname1} {\cf ;}
 
 \spc\spc ...
 
-\spc\spc \emph{typeN} \emph {fieldnameN} {\cf ;}
+\spc\spc \emph{typeN} \emph{fieldnameN} {\cf ;}
 
 \spc {\cf \} ;}
 \vspace{12pt}
@@ -1739,8 +1739,7 @@ to the named coordinate system.  In other words,
 \begin{code}
     transform (space, "common", point(x,y,z))
 \end{code}
-(And similarly for \vector/\normal and {\cf transformv}/{\cf
-transformn}, respectively.)
+(And similarly for \vector/\normal.)
 \apiend
 
 \apiitem{float {\ce dot} (vector A, vector B)}
@@ -1842,14 +1841,57 @@ Returns the point computed by rotating point {\cf Q} by {\cf angle}
 radians about the axis that passes from point {\cf P0} to {\cf P1}.
 \apiend
 
-FIXME
-transform, transformv, transformn (m, p)
-transform, transformv, transformn (s, s, p)
-transform, transformv, transformn (s, p)
-transform, transformv, transformn (m, m, p)
+\apiitem{\emph{ptype} {\ce transform} (string tospace, \emph{ptype} p) \\
+\emph{ptype} {\ce transform} (string fromspace, string tospace, \emph{ptype} p) \\
+\emph{ptype} {\ce transform} (matrix Mto, \emph{ptype} p)}
+\indexapi{transform()}
 
-transformu (s, x)
-transformu (s, s, x)
+Transform a \point, \vector, or \normal (depending on the type of the
+\emph{ptype p} argument) from the coordinate system named by
+\emph{fromspace} to the one named by \emph{tospace}.  If 
+\emph{fromspace} is not supplied, $p$ is assumed to be in \commonspace
+coordinates, so the transformation will be from \commonspace to
+\emph{tospace}.  A $4 \times 4$ matrix may be passed directly rather
+than specifying coordinate systems by name.
+
+Depending on the type of the passed point $p$, different transformation
+semantics will be used.  A \point will transform as a position, a
+\vector as a direction without regard to positioning, and a \normal will
+transform subtly differently than a \vector in order to preserve
+orthogonality to the surface under nonlinear
+scaling.\footnote{Technically, what happens is this: The \emph{from} and
+  \emph{to} spaces determine a $4 \times 4$ matrix.  A \point $(x,y,z)$
+  will transform the 4-vector $(x,y,z,1)$ by the matrix; a \vector will
+  transform $(x,y,z,0)$ by the matrix; a \normal will transform
+  $(x,y,z,0)$ by the inverse of the transpose of the matrix.}
+
+\apiend
+
+
+\apiitem{float {\ce transformu} (string tounits, float x) \\
+float {\ce transformu} (string fromunits, string tounits, float x)}
+\indexapi{transformu()}
+\index{units}
+
+Transform a measurement from \emph{fromunits} to \emph{tounits}.  If
+\emph{fromunits} is not supplied, $x$ will be assumed to be in
+\commonspace units.
+
+For length conversions, unit names may be any of: \qkw{mm}, \qkw{cm},
+\qkw{m}, \qkw{km}, \qkw{in}, \qkw{ft}, \qkw{mi}, or the name of any
+coordinate system, including \qkw{common}, \qkw{world}, \qkw{shader}, or
+any other named coordinate system that the renderer knows about.
+
+For time conversions, units may be any of: \qkw{s}, \qkw{frames}, or
+\qkw{common} (which indicates whatever timing units the renderer is
+using).
+
+It is only valid to convert length units to other length units, or time
+units to other time units.  Attempts to convert length to time or vice
+versa will result in an error.  Don't even think about trying to convert
+monetary units to time.
+\apiend
+
 
 
 \section{Color functions}
@@ -2215,9 +2257,35 @@ or should we stick to the changed name to match the changed functionality?
 \index{bump mapping}
 \index{functions!displacement}
 
-FIXME
-displace
-bump
+\apiitem{void {\ce displace} (float amp) \\
+void {\ce displace} (string space, float amp) \\
+void {\ce displace} (vector offset)}
+\indexapi{displace()}
+
+Displace the surface in the direction of the shading normal \N by
+\emph{amp} units as measured in the named \emph{space} (or \currentspace
+if none is specified).  Alternately, the surface may be moved by a fully
+general \emph{offset}, which does not need to be in the direction of the
+surface normal.
+
+In either case, this function both displaces the surface and adjusts the
+shading normal \N to be the new surface normal of the displaced surface
+(properly handling both continuously smooth surfaces as well as
+interpolated normals on faceted geometry, without introducing faceting
+artifacts).
+\apiend
+
+\apiitem{void {\ce bump} (float amp) \\
+void {\ce bump} (string space, float amp) \\
+void {\ce bump} (vector offset)}
+\indexapi{bump()}
+
+Adjust the shading normal \N to be the surface normal as if the
+surface had been displaced by the given amount (see the {\cf displace()}
+function description), but without actually moving the surface
+positions.
+\apiend
+
 
 \section{String functions}
 \label{sec:stdlib:string}
@@ -2329,21 +2397,57 @@ subsurface
 \index{message passing}
 
 FIXME
-getattibute
+getattribute
 setmessage
 getmessage
 gettextureinfo
-raylevel
-isshadowray
-isindirectray
+
+\apiitem{int {\ce raylevel} ()}
+\indexapi{raylevel()}
+Returns the \emph{ray level} of the current shading sample --- {\cf 0}
+if the surface is viewed directly by the camera, {\cf 1} if it is a
+first-level reflection or refraction, {\cf 2} if it is a
+reflection/refraction visible in a reflection/refraction, etc.
+\apiend
+
+\apiitem{int {\ce isshadowray} ()}
+\indexapi{isshadowray()}
+Returns {\cf 1} if the shader is executing for the sole purpose of
+determining the object's opacity (typically for a shadow), in which case
+it may be prudent for the shader to avoid computations that are only
+needed to determine the surface color or other outputs.  This function
+returns {\cf 0} (indicating that the surface should be computing surface
+color, opacity, and all its other outputs).
+\apiend
+
+\apiitem{int {\ce isindirectray} ()}
+\indexapi{isindirectray()}
+Returns {\cf 1} if the shader is executing for the sole purpose of
+determining the object's appearance for an indirect (or global
+illumination) sample and therefore will not be seen distinctly in the
+final image, in which case it may be prudent for the shader to take
+shortcuts or avoid computing fine detail.  This function returns {\cf 0}
+if it is being run for ordinary visibility rays, in which case the
+results may be clearly seen and all details should be computed.
+\apiend
 
 
 \section{Miscellaneous}
 \label{sec:stdlib:misc}
 
-FIXME
-arraylength
-exit
+\apiitem{int {\ce arraylength} (\emph{type} A[])}
+\indexapi{arraylength()}
+Returns the length of the referenced array, which may be of any type.
+\apiend
+
+\apiitem{void {\ce exit} ()}
+\indexapi{exit()}
+Exits the shader without further execution.  Within the main body of a
+shader, this is equivalent to calling {\cf return}, but inside a
+function, {\cf exit()} will exit the entire shader, whereas {\cf return}
+would only exit the enclosing function.
+\apiend
+
 
 
 \index{standard library functions|(}   % end of chapter

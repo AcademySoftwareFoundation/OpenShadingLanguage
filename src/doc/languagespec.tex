@@ -68,9 +68,11 @@ Language Specification
 \def\normal{{\cf normal}\xspace}
 \def\point{{\cf point}\xspace}
 \def\vector{{\cf vector}\xspace}
-\def\P{{\cf P}\xspace}
-\def\N{{\cf N}\xspace}
+\def\void{{\cf void}\xspace}
 \def\I{{\cf I}\xspace}
+\def\N{{\cf N}\xspace}
+\def\Ng{{\cf N}\xspace}
+\def\P{{\cf P}\xspace}
 \def\currentspace{{\cf "current"} space\xspace}
 \def\commonspace{{\cf "common"} space\xspace}
 \def\shaderspace{{\cf "shader"} space\xspace}
@@ -83,7 +85,8 @@ Language Specification
 \def\pnoise{{\cf pnoise()}\xspace}
 \def\psnoise{{\cf psnoise()}\xspace}
 \def\cellnoise{{\cf cellnoise()}\xspace}
-
+\def\illuminance{{\cf illuminance}\xspace}
+\def\illuminate{{\cf illuminate}\xspace}
 
 
 
@@ -113,22 +116,162 @@ Language Specification
 
 
 \chapter{Basic Structure}
-\label{chap:name}
+\label{chap:shaderstructure}
 
-shader types
+\chapter{Shader types and structure}
+\label{chap:shadertypes}
 
-lexical issues
+\section{Shader types}
+\label{sec:shadertypes}
+\index{shader types} \index{types!shader}
 
-identifiers
+\section{Shader parameters}
+\label{sec:shaderparams}
+\index{shader parameters} \index{parameters!shader}
 
-comments
+    how shader parameters get their values
 
-preprocessor
+\section{Shader metadata}
+\label{sec:metadata}
+\index{metadata} \index{shader metadata}
+
+\chapter{Lexical structure}
+\label{chap:lexical}
+
+\section{Characters}
+\label{sec:lexical:chars}
+\index{character set}
+
+Source code for \langname consists of ASCII or UTF-8 characters.
+
+The characters for space, tab, carriage return, and linefeed are
+collectively referred to as \emph{whitespace}.  Whitespace characters
+delimit identifiers, keywords, or other symbols, but other than that
+have no syntactic meaning.  Multiple whitespace characters in a row
+are equivalent to a single whitespace character. \index{whitespace}
+
+Source code may be split into multiple lines, separated by end-of-line
+markers (carriage return and/or linefeed).  Lines may be of any length
+and end-of-line markers carry no significant difference from other 
+whitespace, except that they terminate {\cf //} comments and delimit
+preprocessor directives.
+
+\section{Identifiers}
+\label{sec:identifiers}
+\index{identifiers}
+
+\emph{Identifiers} are the names of variables, parameters, functions,
+and shaders.  In \langname, identifiers consist of one or more
+characters.  The first character may be a letter ({\cf A}-{\cf Z} or
+{\cf a}-{\cf z}) or underscore (\verb|_|), and subsequent characters may
+be letters, underscore, or numerals ({\cf 0}-{\cf 9}).  Examples of
+valid and invalid identifiers are:
+
+\begin{code}
+    opacity       // valid
+    Long_name42   // valid - letters, underscores, numbers are ok
+    _foo          // valid - ok to start with an unberscore
+
+    2smart        // invalid - starts with a numeral
+    bigbuck\$     // invalid - an illegal character
+\end{code}
 
 
-\chapter{Data types, variables, and parameters}
+\section{Comments}
+\label{sec:comments}
+\index{comments}
 
-\section{Data types}
+\emph{Comments} are text that are for the human reader of programs, and
+are ignored entirely by the \langname compiler.  Just like in C++, there
+are two ways to designate comments in \langname:
+
+\begin{enumerate}
+\item Any text enclused by {\cf /*} and {\cf */} will be considered
+a comment, even if the comment spans several lines.
+
+\begin{code}
+    /* this is a comment */
+
+    /* this is also
+       a comment, spanning
+       several lines */
+\end{code}
+
+\item Any text following {\cf //}, up to the end of the current line,
+will be considered a comment.
+
+\begin{code}
+    // This is a comment
+    a = 3;   // another comment
+\end{code}
+\end{enumerate}
+
+
+\section{Keywords and reserved words}
+\label{sec:lexical:keyreserved}
+
+There are two sets of names that you may not use as identifiers:
+keywords and reserved words.
+
+The following are \emph{keywords} that have special meaning in
+\langname: \index{keywords}
+
+\begin{code}
+
+
+\end{code}
+
+The following are \emph{reserved words} that currently have no special
+meaning in \langname, but we reserve them for possible future use, or
+becuase they are confusingly similar to keywords in related programming
+languages: \index{reserved words}
+
+\begin{code}
+
+\end{code}
+
+
+\section{Preprocessor}
+\label{sec:preprocessor}
+\index{preprocessor} \index{C preprocessor|see{preprocessor}}
+\indexapi{\#define}
+\indexapi{\#undef}
+\indexapi{\#if}
+\indexapi{\#ifdef}
+\indexapi{\#ifndef}
+\indexapi{\#elif}
+\indexapi{\#else}
+\indexapi{\#endif}
+\indexapi{\#include}
+
+Shader source code is passed through a standard C preprocessor as a
+first step in parsing.  
+
+Preprocessor directives are designated by a hash mark ({\cf \#}) as the
+first character on a line, followed by a preprocessor directive name.
+Whitespace may optionally appear between the hash and the directive
+name.
+
+\langname compilers support the full complement of C/C++ preprocessing
+directives, including:
+
+\begin{code}
+    #define
+    #undef
+    #if
+    #ifdef
+    #ifndef
+    #elif
+    #else
+    #endif
+    #include
+\end{code}
+
+
+
+\chapter{Data types}
+\label{chap:types}
+\index{types|(}
 
 \langname provides several built-in data types for performing
 computations inside your shader:
@@ -154,7 +297,9 @@ normal}		& Three-dimensional positions, directions, and surface
 \end{tabular}
 
 
-\subsection{{\cf int}}
+\section{{\cf int}}
+\label{sec:types:int}
+\indexapi{int} \index{types!{\cf int}}
 
 The basic type for discrete numeric values is {\cf int}.  The size of
 the {\cf int} type is renderer-dependent, but is guaranteed to be at
@@ -229,7 +374,9 @@ nonzero, otherwise 0) \\[0.5ex]
 Make sure to rearrange the table in order of operator precedence.
 \end{annotate}
 
-\subsection{{\cf float}}
+\section{{\cf float}}
+\label{sec:types:float}
+\indexapi{float} \index{types!{\cf float}}
 
 The basic type for scalar floating-point numeric values is \float.  The
 size of the {\cf float} type is renderer-dependent, but is guaranteed to
@@ -242,11 +389,17 @@ Floating-point constants are constructed the same way as in C.
 The following are examples of {\cf float} constants:  {\cf 1.0},
 {\cf 2.48}, {\cf -4.3e2}.
 
+An \inttype may be used in place of a \float when used with any valid
+\float operator.  In such cases, the \inttype will be promoted to a
+\float and the resulting expression will be \float.  An \inttype may
+also be passed to a function that expects a \float parameters, with the
+\inttype automatically promoted to \float.
+
 The following operators may be used with \float values (in order of
 decreasing precedence, with each box holding operators of the same
 precedence):
 
-\smallskip
+\medskip
 
 \noindent \begin{tabular}{|p{1.25in}|p{0.5in}|p{3.5in}|}
 operation & result & ~ \\
@@ -280,11 +433,11 @@ else 0 \\[0.5ex]
 \hline
 \end{tabular}
 
-All of the binary operators may combine a \float with an \inttype,
-by promoting the \inttype to a \float.
 
 
-\subsection{{\cf color}}
+\section{{\cf color}}
+\label{sec:types:color}
+\indexapi{color} \index{types!{\cf color}}
 
 The \color type is used to represent 3-component (RGB) spectral
 reflectivities and light energies.  You can assemble a
@@ -385,7 +538,10 @@ All of the binary operators may combine a scalar value (\float or
 three identical components.
 
 
-\subsection{Point-like types: {\cf point}, {\cf vector}, {\cf normal}}
+\section{Point-like types: {\cf point}, {\cf vector}, {\cf normal}}
+\label{sec:types:point}
+\indexapi{point} \indexapi{vector} \indexapi{normal}
+\index{types!{\cf point}} \index{types!{\cf vector}} \index{types!{\cf normal}}
 
 Points, vectors, and normals are similar data types with identical
 structures but subtly different semantics.  We will frequently refer to
@@ -555,7 +711,9 @@ All of the binary operators may combine a scalar value (\float or
 point-like with three identical components.
 
 
-\subsection{{\cf matrix}}
+\section{{\cf matrix}}
+\label{sec:types:matrix}
+\indexapi{matrix} \index{types!{\cf matrix}}
 
 \langname has a \matrix type that represents the transformation matrix
 required to transform points and vectors between one coordinate system
@@ -641,9 +799,9 @@ access (row, column) \\[0.5ex]
 \float\ {\ce /} \matrix & \matrix & multiply the \float by the
 \emph{inverse} of the matrix \\[0.5ex]
 \hline
-\matrix\ {\ce +} \matrix & \matrix & component-wise addition \\[0.5ex]
-\matrix\ {\ce -} \matrix & \matrix & component-wise subtraction \\[0.5ex]
-\hline
+%\matrix\ {\ce +} \matrix & \matrix & component-wise addition \\[0.5ex]
+%\matrix\ {\ce -} \matrix & \matrix & component-wise subtraction \\[0.5ex]
+%\hline
 \matrix\ {\ce ==} \matrix & \inttype & 1 if the two values are equal,
 else 0 \\[0.5ex]
 \matrix\ {\ce !=} \matrix & \inttype & 1 if the two values are different,
@@ -652,7 +810,9 @@ else 0 \\[0.5ex]
 \end{tabular}
 
 
-\subsection{{\cf string}}
+\section{{\cf string}}
+\label{sec:types:string}
+\indexapi{string} \index{types!{\cf string}}
 
 The {\cf string} type may hold character strings.  The main application
 of strings is to provide the names of files where textures may be
@@ -664,36 +824,185 @@ literals may contain escape sequences such as \verb|\n| (newline),
 \verb|\r| (carriage return), \verb|\t| (tab), \verb|\"| (double quote),
 \verb|\\| (backslash).
 
-\section{Variables, arrays, and structures}
+\section{\void}
+\label{sec:types:void}
+\indexapi{void} \index{types!{\cf void}}
+
+The \void type is used to designate a function that does not return
+a value.  No variable may have type \void.
+
+\section{Arrays}
+\label{sec:types:arrays}
+\index{arrays} \index{types!arrays}
+
+Arrays of any of the basic types are supported, provided that they
+are 1D and statically sized, using the usual syntax for C-like languages:
+
+\begin{code}
+    float d[10];                       // Declare an uninitilized array
+    float c[3] = { 0.1, 0.2, 3.14 };   // Initialize the array
+
+    float f = c[1];                    // Access one element
+\end{code}
+
+The built-in function {\cf arraylength()} returns the number of elements
+in an array.  For example:
+
+\begin{code}
+    float c[3];
+    int clen = arraylength(c);        // should return 3
+\end{code}
+
+There are two circumstances when arrays do not need to have a declared
+length --- an array parameter to a function, and a shader parameter that
+is an array.  This is indicated by empty array brackets, as shown in the
+following example:
+
+\begin{code}
+    float sum (float x[])
+    {
+        float s = 0;
+        for (int i = 0;  i < arraylength(x);  ++i)
+            s += x[i];
+        return s;
+    }
+\end{code}
+
+\section{Structures}
+\label{sec:types:struct}
+\indexapi{struct} \index{types!structures} \index{structures|see{{\cf struct}}}
+
+Structures are used to group several fields of potentially different
+types into a single object that can be referred to by name.  You may
+then use the structure type name to declare structure variables as you
+would for any of the built-in types.  Structure elements are accessed
+using the `dot' operator.  The syntax for declaring and using structures
+is similar to C or C++:
+
+\begin{code}
+    struct ray {                   // Define a structure type
+        point pos;
+        vector dir;
+    };
+
+    ray r;                         // Declare a structure
+    r.pos = point (1, 0, 0);       // Assign to one field
+    point p = r.pos;               // Read from a structure field
+\end{code}
+
+It is permitted to have a structure field that is an array, as well as
+to have an array of structures.  But it is not permitted for one
+structure to have a field that is another structure.  For example:
+
+\begin{code}
+    struct A {
+        color a;
+        float b[4];       // struct may contain an array
+    };
+
+    A d[5];               // Array of structures
+    color e = d[0].a;     // Field of one element of array of struct
+    d[2].b[4] = 0.25;     // Element of a field of a struct in an array
+\end{code}
+
+\begin{annotate}
+\QUESTION Is this restriction (no ``structure recursion'') acceptable?
+It certainly makes the implementation of the language easier.
+\end{annotate}
+
+\index{types|)}   % end of chapter
+
+
+
+\chapter{Language Syntax}
+\label{chap:syntax}
+
+The body of a shader is a sequence of individual \emph{statements}.
+This chapter describes the types of statements and control-flow patterns
+in \langname.
+
+Statements in \langname include the following types of constructs:
+
+\begin{itemize}
+\item Scoped statements.
+\item Variable declarations.
+\item Expressions.
+\item Assignments.
+\item Control flow: {\cf if, else, while, do, for, break, continue}
+\item Function declarations.
+\item Lighting statements: \illuminance, \illuminate
+\end{itemize}
+
+\subsection*{Scoping}
+
+Any place where it is legal to have a statement, it is legal to have
+multiple statements enclosed by curly braces {\cf \{ \}}.  This is
+called a \emph{scope}.  Any variables or functions declared declared
+within a scope are only visible within that scope, and only may be used
+after their declaration.  Variables or functions that are referenced
+will always resolve to the matching name in the innermost scope relative
+to its use.  For example
+
+\begin{code}
+    float a = 1;      // Call this the "outer" 'a'
+    float b = 2;
+    {
+        float a = 3;  // Call this the "inner" 'a'
+        float c = 1;
+        b = a;        // b gets 3, because a is resolved to the inner scope
+    }
+    b += c;           // ERROR -- c was only in the inner scope
+
+\end{code}
+
+
+
+\section{Variable declarations and assignments}
+\label{sec:vardeclsassignments}
 
 \subsection{Variable declarations}
+\label{sec:vardecls}
+\index{variable declarations}
 
 The syntax for declaring a variable in \langname is:
 
 \vspace{12pt}
-\spc \emph{type} \emph{variablename} 
+\spc \emph{type} \emph{name} 
 
-\spc \emph{type} \emph{variablename} [ = \emph{initializer}]
+\spc \emph{type} \emph{name} = \emph{value}
 \vspace{12pt}
 
 \noindent where
 
 \begin{itemize}
 \item \emph{type} is one of the basic data types, described earlier.
-\item \emph{variablename} is the name of the variable you are declaring.
-\item If you wish to give your variable an initial value, you may do so
-by assigning an \emph{initializer}.
+\item \emph{name} is the name of the variable you are declaring.
+\item If you wish to initialize your variable an initial value, you may
+immediately assign it a \emph{value}, which may be any valid expression.
 \end{itemize}
+
+You may declare several variables of the same type in a single
+declaration by separating multiple variable names by commas:
+
+\vspace{12pt}
+\spc \emph{type} \emph{name1} {\cf ,} ~ \emph{name2} ...
+
+\spc \emph{type} \emph{name1} [ = \emph{value1}] {\cf ,} ~ \emph{name2} [ =
+  \emph{value2} ] ...
+\vspace{12pt}
+
 
 \noindent Some examples of variable declarations are
 
 \begin{code}
-    float a;          // Declare; current value is undefined
-    float b = 1;      // Declare and assign a constant initializer
-    float c = a*b;    // Computed initializer
+    float a;           // Declare; current value is undefined
+    float b = 1;       // Declare and assign a constant initializer
+    float c = a*b;     // Computed initializer
+    float d, e = 2, f; // Declare several variables of the same type
 \end{code}
 
 \subsection{Arrays}
+\indexapi{arrays} \index{types!arrays}
 
 Arrays are also supported, declared as follows:
 
@@ -706,10 +1015,9 @@ Arrays are also supported, declared as follows:
  \emph{init0}{\cf ,} \emph{init1} ... {\cf \}}
 \vspace{12pt}
 
-\noindent Arrays in \langname must have a constant length; they may not
-be dynamically sized, and only 1D arrays are allowed.  Other than
-that, however, the syntax of array usage in \langname is largely
-similar to C.  Some examples of array variable declarations are:
+\noindent Array variables in \langname must have a constant length
+(though function parameters and shader parameters may have undetermined
+length).  Some examples of array variable declarations are:
 
 \begin{code}
     float d[10];                       // Declare an uninitilized array
@@ -717,6 +1025,7 @@ similar to C.  Some examples of array variable declarations are:
 \end{code}
 
 \subsection{Structures}
+\indexapi{struct}
 
 Structures are used to group several fields of potentially different
 types into a single object that can be referred to by name.  The syntax
@@ -761,7 +1070,6 @@ Examples of declaration and use of structures:
     struct ray {
         point pos;
         vector dir;
-        float maxhitdist;
     };
 
     ray r;   // Declare a structure
@@ -771,43 +1079,323 @@ Examples of declaration and use of structures:
 
 It is permitted to have a structure field that is an array, as well as
 to have an array of structures.  But it is not permitted for one
-structure to have a field that is another structure.  For example:
+structure to have a field that is another structure.
+
+Please refer to Section~\ref{sec:types:struct} for more information
+on using {\cf struct}.
+
+
+\section{Expressions}
+\label{sec:expressions}
+\index{expressions}
+
+The expressions available in \langname include the following:
+
+\begin{itemize}
+\item Constants: integer (e.g., {\cf 1}, {\cf 42}), floating-point
+  (e.g. {\cf 1.0}, {\cf 3}, {\cf -2.35e4}), or string literals (e.g., {\cf
+  "hello"})
+
+\item point, vector, normal, or matrix constructors, for example:
 
 \begin{code}
-    struct A {
-        color a;
-        float b[4];   // struct may contain an array
-    };
-
-    A c;                  // Declare a structure
-    A d[5];               // Array of structures
-    color e = d[0].a;     // Field of one element of array of struct
-    d[2].b[4] = 0.25;     // Element of a field of a struct in an array
+    color (1, 0.75, 0.5)
+    point ("object", 1, 2, 3)
 \end{code}
 
-\begin{annotate}
-\QUESTION Is this restriction (no ``structure recrusion'') acceptable?
-It certainly makes the implementation of the language 
+If all the arguments to a constructor are themselves constants, the
+constructed point is treated like a constant and has no runtime cost.
+That is, {\cf color(1,2,3)} is treated as a single constant entity, not
+assembled bit by bit at runtime.
 
-\end{annotate
+\item Variable or parameter references
 
-\section{Shader parameters}
+\item An individual element of an array (using {\cf [ ] })
 
-    how shader parameters get their values
+\item An individual component of a \color,
+\point, \vector, \normal (using {\cf [ ]}), 
+or of a \matrix (using {\cf [][]})
 
-shader metadata
+\item prefix and postfix increment and decrement operators:
 
-\chapter{Statements and control flow}
+\begin{tabbing}
+\hspace{.25in} \= \hspace{2in} \= (negation) \kill \\
+\> \emph{varref} {\cf ++} \hspace{1in} \= (post-increment) \\
+\> \emph{varref} {\cf --}  \hspace{1in} \= (post-decrement) \\
+\> {\cf ++} \emph{varref} \hspace{1in} \= (pre-increment) \\
+\> {\cf --} \emph{varref} \hspace{1in} \= (pre-decrement) \\
+\end{tabbing}
 
-language syntax
+The post-increment and post-decrement (e.g., {\cf a++}) returns the old
+value, then increments or decrements the variable; the pre-increment and
+pre-decrement ({\cf ++a}) will first increment or decrement the
+variable, then return the new value.
 
-variable declarations and assignments
+\item Unary and binary arithmetic operators on other expressions:
 
-function calls
+\begin{tabbing}
+\hspace{0.25in} {\cf -} \emph{expr} \hspace{1in} \= (negation) \\
+\hspace{0.25in} \verb|~| \emph{expr} \> (bitwise complement) \\
+\hspace{0.25in} \emph{expr} {\cf *} \emph{expr} \> (multiplication) \\
+\hspace{0.25in} \emph{expr} {\cf /} \emph{expr} \> (division) \\
+\hspace{0.25in} \emph{expr} {\cf +} \emph{expr} \> (addition) \\
+\hspace{0.25in} \emph{expr} {\cf -} \emph{expr} \> (subtraction) \\
+\hspace{0.25in} \emph{expr} {\cf \%} \emph{expr} \> (integer modulus) \\
+\hspace{0.25in} \emph{expr} {\cf <<} \emph{expr} \> (integer shift left) \\
+\hspace{0.25in} \emph{expr} {\cf >>} \emph{expr} \> (integer shift right) \\
+\hspace{0.25in} \emph{expr} {\cf \&} \emph{expr} \> (bitwise and) \\
+\hspace{0.25in} \emph{expr} {\cf |} \emph{expr} \> (bitwise or) \\
+\hspace{0.25in} \emph{expr} \verb|^| \emph{expr} \> (bitwise exclusive or) \\
+\end{tabbing}
 
-control flow (conditionals, while, do, for)
+The operators {\cf +}, {\cf -}, {\cf *}, {\cf /}, and the unary {\cf -}
+(negation) may be used on most of the numeric types.  For multicomponent
+types (\color, \point, \vector, \normal, \matrix), these operators
+combine their arguments on a component-by-component basis.
+The only operators that may be applied to the \matrix type are
+{\cf *} and {\cf /}, which respectively denote matrix-matrix
+multiplication and matrix multiplication by the inverse of another
+matrix.
 
-lighting
+The integer and bit-wise operators {\cf \%}, {\cf <<}, {\cf >>},
+{\cf \&}, {\cf \verb|^|}, and {\cf |} may only be used with expressions
+of type \inttype.
+
+For details on which operators are allowed, please consult the operator
+tables for each individual type in Chapter~\ref{chap:types}.
+
+\item Relational operators (all lower precedence than the arithmetic
+operators):
+
+\begin{tabbing}
+\hspace{0.25in} \emph{expr} {\cf ==} \emph{expr} \hspace{1in} \= (equal to) \\
+\hspace{0.25in} \emph{expr} {\cf !=} \emph{expr} \> (not equal to) \\
+\hspace{0.25in} \emph{expr} {\cf <} \emph{expr} \> (less then) \\
+\hspace{0.25in} \emph{expr} {\cf <=} \emph{expr} \> (less than or equal to) \\
+\hspace{0.25in} \emph{expr} {\cf >} \emph{expr} \> (greater than) \\
+\hspace{0.25in} \emph{expr} {\cf >=} \emph{expr} \> (greater than or equal) \\
+\end{tabbing}
+
+The {\cf ==} and {\cf !=} operators may be performed between any two
+values of equal type, and are performed component-by-component for
+multi-component types.  The {\cf <}, {\cf <=}, {\cf >}, {\cf >=} may not
+be used to compare multi-component types.
+
+An \inttype expression may be compared to a \float (and is treated as if
+they are both \float).  A \float expression may be compared to a
+multi-component type (and is treated as a multi-component type as if
+constructed from a single float).
+
+Relation comparisons produce Boolean (true/false) values.  These
+are implemented as \inttype values, 0 if false and 1 if true.
+
+\item Logical unary and binary operators:
+
+\hspace{0.5in}    {\cf !} \emph{expr}
+
+\hspace{0.5in}  \emph{expr1} {\cf \&\&} \emph{expr2}
+
+\hspace{0.5in}    \emph{expr1} {\cf ||} \emph{expr2}
+
+\item another expression enclosed in parenthesis: {\cf ( )}.
+  Parenthesis may be used to guarantee associativity of operations.
+
+\item Type casts, specified either by having the type name in 
+parentheses in front of the value to cast (C-style typecasts)
+or the type name called as a constructor (C++-style type constructors):
+\begin{code}
+        (vector) P            /* cast a point to a vector */
+        (point) f             /* cast a float to a point */
+        (color) P             /* cast a point to a color! */
+
+        vector (P)            /* Means the same thing */
+        point (f)
+        color (P)
+\end{code}
+
+The three-component types (\color, \point, \vector, \normal)
+may be cast to other three-component types.  A \float
+may be cast to any of the three-component types (by placing the
+float in all three components) or to a {\cf matrix} (which makes a
+matrix with all diagonal components being the {\cf float}).
+Obviously, there are some type casts that are not allowed because
+they make no sense, like casting a {\cf point} to a {\cf float}, or
+casting a {\cf string} to a numerical type.
+
+\item function calls
+
+\item assignment expressions:
+same thing as {\cf var = var OP expr} :
+
+\begin{tabbing}
+\hspace{0.25in} \emph{var} {\cf =} \emph{expr} \hspace{1in} \= (assign) \\
+\hspace{0.25in} \emph{var} {\cf +=} \emph{expr} \> (add) \\
+\hspace{0.25in} \emph{var} {\cf -=} \emph{expr} \> (subtract) \\
+\hspace{0.25in} \emph{var} {\cf *=} \emph{expr} \> (multiply) \\
+\hspace{0.25in} \emph{var} {\cf /=} \emph{expr} \> (divide) \\
+\hspace{0.25in} \emph{int-var} {\cf \&=} \emph{int-expr} \> (bitwise and) \\
+\hspace{0.25in} \emph{int-var} {\cf |=} \emph{int-expr} \> (bitwise or) \\
+\hspace{0.25in} \emph{int-var} \verb|^=| \emph{int-expr} \> (bitwise
+exclusive or) \\
+\hspace{0.25in} \emph{int-var} {\cf <<=} \emph{int-expr} \> (integer
+shift left) \\
+\hspace{0.25in} \emph{int-var} {\cf >>=} \emph{int-expr} \> (integer
+shift right) \\
+\end{tabbing}
+
+Note that the integer and bit-wise operators are only allowed with
+\inttype variables and expressions.  In general, {\cf var OP= expr} is
+allowed only if {\cf var = var OP expr} is allowed, and means exactly
+the same thing.  Please consult the operator tables for each individual
+type in Chapter~\ref{chap:types}.
+
+\item ternary operator, just like C: 
+
+\hspace{0.5in}  \emph{condition} {\cf ?} \emph{expr1} {\cf :} \emph{expr2}
+
+This expression takes on the value of \emph{expr1} if \emph{condition}
+is true (nonzero), or \emph{expr2} if \emph{condition} is false (zero).
+
+\end{itemize}
+
+Please refer to Chapter~\ref{chap:types}, where the section describing
+each data type describes the full complement of operators that may be
+used with the type.  Operator precedence in \langname is identical to
+that of C.
+
+
+\section{Control flow: {\cf if, while, do, for}}
+\label{sec:controlflow}
+
+Conditionals in \langname just like in C or C++:
+\indexapi{if}
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> {\cf if (} \emph{condition} {\cf )} \\
+\> \> \emph{truestatement}  
+\end{tabbing}
+
+\noindent and
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> {\cf if (} \emph{condition} {\cf )} \\
+\> \> \emph{truestatement}  \\
+\> {\cf else} \\
+\> \> \emph{falsestatement}  
+\end{tabbing}
+
+\noindent The statements can also be entire blocks, surrounded by curly
+braces.  For example,
+
+\begin{code}
+       if (s > 0.5) {
+           x = s;
+           y = 1;
+       } else {
+           x = s+t;
+       }
+\end{code}
+
+\noindent The \emph{condition} may be any valid expression, including:
+
+\begin{itemize}
+\item The result of any comparison operator (such as {\cf <}, {\cf ==},
+  etc.).
+\item Any numeric expression (\inttype, \color, \point, \vector,
+  \normal, \matrix), which is considered ``true'' if nonzero and
+  ``false'' if zero.
+\item Any string expression, which is considerd ``true'' if it is a
+  nonempty string, ``false'' if it is the empty string (\qkw{}).
+\item A logical combination of expressions using the operators {\cf !}
+  (not), {\cf \&\&} (logical ``and''), or {\cf ||} (logical ``or'').
+  Note that {\cf \&\&} and {\cf ||} \emph{short circuit} as in C,
+  i.e. {\cf A \&\& B} will only evaluate B if A is true, and {\cf A ||
+    B} will only evaluate B if A is false.
+\end{itemize}
+
+Repeated execution of statements for as long as a condition is true is
+possible with a {\cf while} statement:
+\indexapi{while}
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> {\cf while (} \emph{condition} {\cf )} \\
+\> \> \emph{statement}  
+\end{tabbing}
+
+Or the test may happen after the body of the loop, with a {\cf do/while}
+loop:
+\indexapi{do/while}
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> {\cf do } \\
+\> \> \emph{statement}  \\
+\> {\cf while (} \emph{condition} {\cf );} \\
+\end{tabbing}
+
+\noindent Also, {\cf for} loops are also allowed:
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> {\cf for (} \emph{initialization-statement} {\cf ;} \emph{condition} {\cf ;} \emph{iteration-statement} {\cf )} \\
+\> \> \emph{body}  
+\end{tabbing}
+
+\indexapi{for}
+As in C++, a {\cf for} loop's initialization may contain variable
+declarations and initializations, which are scoped locally to {\cf for}
+loop itself.  For example,
+
+\begin{code}
+      for (int i = 0;  i < 3;  ++i) {
+          ...
+      }
+\end{code}
+
+As with {\cf if} statements, loop conditions may be relations or
+numerical quantities (which are considered ``true'' if nonzero, 
+``false'' if zero), or strings (considered ``true'' if nonempty,
+``false'' if the empty string \qkw{}).
+
+Inside the body of a loop, the {\cf break} statement terminates the loop
+altogether, and the {\cf continue} statement skip to the end of the body
+and proceeds to the next iteration of the loop.
+
+\section{Functions}
+\label{sec:syntax:functions}
+
+\subsection{Function calls}
+\label{sec:syntax:functioncalls}
+\index{function calls}
+
+Function calls are very similar to C and similar programming languages:
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> \emph{functionname} {\cf (} \emph{arg1} {\cf ,} ... {\cf ,} \emph{argn} {\cf )} \\
+\end{tabbing}
+
+If the function returns a value (not \void), you may use its value as
+an expression.  It is fine to completely ignore the value of even
+a non-\void function.
+
+In \langname, all arguments are passed by reference.  This generally
+will not be noticeably different from C-style ``pass by value''
+semantics, except if you pass the same variable as two separate
+arguments to a function that modifies an argument's value.
+
+\subsection{Function definitions}
+\index{function definitions}
+
+function definitions
+
+    return
+
+\section{Lighting}
+\label{sec:syntax:lighting}
 
     emit/illuminate
 
@@ -815,15 +1403,119 @@ lighting
 
 trace, the hard way
 
-function definitions
 
-    return
+\section{Global variables}
+\label{sec:globalvars}
+\index{global variables|(}
 
-scoping
+\emph{Global variables} (sometimes called \emph{graphics state
+variables}) contain the basic information that the renderer knows
+about the point being shaded, such as position, surface orientation, and
+default surface color.  You need not declare these variables; they are
+simply available by default in your shader.  Global variables available
+in shaders are listed in Table~\ref{tab:globalvars}.
 
-expressions
+\begin{table}[H]
+\begin{tabular}{|p{1.5in}p{4in}|} 
+\hline
+{\bf Variable} & {\bf Description} \\
+\hline
+\point\ {\ce P} & Position of the point you are shading.  In a
+displacement shader, changing this variable displaces the surface. \\
+\hline
+\vector\ {\ce I} & The \emph{incident} ray direction, pointing from the
+  viewing position to the shading position \P. \\
+\hline
+\normal\ {\ce N} & The surface ``sShading'' normal of the surface at
+\P.  In a displacement shader, changing \N yields bump mapping. \\
+\hline
+\normal\ {\ce Ng} & The true surface normal at {\cf P}.  This can differ
+  from {\cf N}; {\cf N} can be overridden in various ways including bump
+  mapping and user-provided vertex normals, but {\cf Ng} is always the
+  true surface normal of the facet you are shading.True geometric normal
+  of the surface at \P. \\
+\hline
+\float\ {\ce u}, {\ce v} & The 2D parametric coordinates of \P (on the 
+		  particular geometric primitive you are shading). \\
+\hline
+\vector\ {\ce dPdu}, {\ce dPdv} & Partial derivatives $\partial
+P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
+\hline
+\vector\ {\ce L} & Direction of incoming light (points from {\cf Ps} to
+         {\cf Pl}). \\
+\hline
+\color\ {\ce Cl} & Incoming light color at P. \\
+\hline
+\point\ {\ce Ps} & Position at which the light is being queried (i.e., the
+position passed to \illuminance). \\
+\hline
+\normal\ {\ce Ns} & Axis about which the light is being queried (i.e., the
+axis passed to \illuminance), or the surface's \N if no axis was passed
+to \illuminance). \\
+\hline
+\point\ {\ce Pl} & Position of the light source. \\
+\hline
+\normal\ {\ce Nl} & Normal on the light (area light sources only). \\[1ex]
+\hline
+\color\ {\ce C} & Incident ray color --- the color of the light leaving the surface from \P in the direction {\cf -I}. \\
+\hline
+\color\ {\ce opacity} & Incident ray opacity --- the degree to which the viewer can ``see through'' the surface at \P. \\[1ex]
+\hline
+\float\ {\ce time} & Current shutter time for the point being shaded. \\
+\hline
+\float\ {\ce dtime} & The amount of time covered by this shading sample. \\
+\hline
+\vector\ {\ce dPdtime} & How the surface position \P is moving per unit time.\\
+\hline
+\end{tabular}
+\caption{Global variables available inside shaders.
+\label{tab:globalvars}}
+\end{table}
 
-global variables
+
+
+\begin{table}
+\begin{tabular}{|p{1in}p{0.75in}p{0.75in}p{0.75in}p{1.7in}|}
+\hline
+{\bf Variable} & surface & displacement & volume & light \\
+\hline
+\P            & R     & RW & R     & R \\
+\I            & R     &    & R$^1$ & R$^1$  \\
+\N            & RW    & RW & R$^1$ & R$^1$ \\
+{\cf Ng}      & R     & R  & R$^1$ & R$^1$ \\
+{\cf dPdu}    & R     & R  & R$^1$ & R$^1$ \\
+{\cf dPdv}    & R     & R  & R$^1$ & R$^1$ \\
+{\cf u, v}    & R     & R  & R$^1$ & R$^1$ \\
+{\cf L}       & R$^2$ &    & R$^2$ & RW \\
+{\cf Cl}      & R$^2$ &    & R$^2$ & RW \\
+{\cf Ps}      &       &    &       & R \\
+{\cf Ns}      &       &    &       & R \\
+{\cf Pl}      & R$^2$ &    & R$^2$ & R \\
+{\cf Nl}      & R$^2$ &    & R$^2$ & R \\
+{\cf C}       & RW    &    & RW    & \\
+{\cf opacity} & RW    &    & RW    & \\
+{\cf time}    & R     & R  & R     & R \\
+{\cf dtime}   & R     & R  & R     & R \\
+{\cf dPdtime} & R     & R  & R     & R \\
+\hline 
+\end{tabular}
+
+$^1$Certain surface variables (including \N, \Ng, \I, etc.) are readable
+in light or volume shaders, but in that case store the values for the
+surface whose shading triggered execution of the shader.  Use caution:
+light may be gathered from a completely different place (for example,
+when stepping through a volume).
+
+$^2$Light variables may be read in surface and volume shaders, but only
+inside \illuminance loops, and they refer to the current light being
+examined by the loop.
+
+\caption{Accessibility of variables by shader type
+\label{tab:globalvaraccess}}
+\end{table}
+
+\index{global variables|)}
+
 
 \chapter{Standard Library Functions}
 \label{chap:stdlibrary}
@@ -837,6 +1529,7 @@ global variables
 \label{sec:stdlib:math}
 
 \subsection{Mathematical constants}
+\index{mathematical constants}
 
 \langname defines several mathematical constants:
 
@@ -854,6 +1547,8 @@ global variables
 \end{tabular}
 
 \subsection{Mathematical functions}
+\index{mathematical functions}
+\index{functions!mathematical}
 
 Most of these functions operate on a generic \emph{type} that my be any
 of \float, \color, \point, \vector, or \normal.  For \color and
@@ -868,6 +1563,8 @@ of \float, \color, \point, \vector, or \normal.  For \color and
 Convert degrees to radians or radians to degrees.
 \apiend
 
+\index{trigonometry}
+\index{functions!trigonometric}
 
 \apiitem{\emph{type} {\ce cos} (\emph{type} x) \\
 \emph{type} {\ce sin} (\emph{type} x) \\
@@ -1014,6 +1711,8 @@ The {\cf erfc} returns the complementary error function {\cf 1-erf(x)}
 
 \section{Geometric functions}
 \label{sec:stdlib:geom}
+\index{geometric functions}
+\index{functions!geometric}
 
 \apiitem{\emph{ptype} {\ce ptype} (float f) \\
 \emph{ptype} {\ce ptype} (float x, float y, float z)}
@@ -1143,6 +1842,7 @@ Returns the point computed by rotating point {\cf Q} by {\cf angle}
 radians about the axis that passes from point {\cf P0} to {\cf P1}.
 \apiend
 
+FIXME
 transform, transformv, transformn (m, p)
 transform, transformv, transformn (s, s, p)
 transform, transformv, transformn (s, p)
@@ -1152,10 +1852,10 @@ transformu (s, x)
 transformu (s, s, x)
 
 
-
-
 \section{Color functions}
 \label{sec:stdlib:color}
+\index{color functions}
+\index{functions!color}
 
 \apiitem{color {\ce color} (float f) \\
 color {\ce color} (float r, float g, float b)}
@@ -1199,6 +1899,8 @@ it is assumed to be transforming from \rgbspace.
 
 \section{Matrix functions}
 \label{sec:stdlib:matrix}
+\index{matrix functions}
+\index{functions!matrix}
 
 \apiitem{matrix {\ce matrix} (float m00, float m01, float m02, float  m03, \\
 \bigspc\spc float m10, float m11, float m12, float m13, \\
@@ -1246,6 +1948,8 @@ scale
 
 \section{Pattern generation}
 \label{sec:stdlib:pattern}
+\index{pattern generation functions}
+\index{functions!pattern generation}
 
 \apiitem{float {\ce step} (float edge, float x)}
 \indexapi{step()}
@@ -1411,6 +2115,9 @@ $v$.  Results are undefined if the knots do not specifiy a monotonic
 
 \section{Derivatives and area operators}
 \label{sec:stdlib:derivs}
+\index{derivative functions}
+\index{functions!derivatives and area}
+\index{derivatives}
 
 \apiitem{float {\ce deltau} (float x), {\ce deltav} (float x) \\
 vector {\ce deltau} (point x), {\ce deltav} (point x) \\
@@ -1504,12 +2211,18 @@ or should we stick to the changed name to match the changed functionality?
 
 \section{Displacement functions}
 \label{sec:stdlib:displace}
+\index{displacement}
+\index{bump mapping}
+\index{functions!displacement}
 
+FIXME
 displace
 bump
 
 \section{String functions}
 \label{sec:stdlib:string}
+\index{string functions}
+\index{functions!string}
 
 \apiitem{void {\ce printf} (string fmt, ...)}
 \indexapi{printf()}
@@ -1583,7 +2296,11 @@ Should we look at Pystring and add useful things here?
 
 \section{Texture}
 \label{sec:stdlib:texture}
+\index{texture functions}
+\index{functions!texture}
+\index{texture mapping}
 
+FIXME
 texture
 texture3d
 spatialdbsave
@@ -1591,7 +2308,10 @@ spatialdbquery
 
 \section{Light and Shadows}
 \label{sec:stdlib:light}
+\index{light and shadow functions}
+\index{functions!light and shadows}
 
+FIXME
 environment
 shadow
 ambient
@@ -1605,7 +2325,10 @@ subsurface
 
 \section{Renderer state and message passing}
 \label{sec:stdlib:state}
+\index{functions!renderer state}
+\index{message passing}
 
+FIXME
 getattibute
 setmessage
 getmessage
@@ -1618,13 +2341,17 @@ isindirectray
 \section{Miscellaneous}
 \label{sec:stdlib:misc}
 
+FIXME
 arraylength
 exit
 
 
+\index{standard library functions|(}   % end of chapter
 
 \chapter{Formal Language Syntax}
 \label{chap:formalsyntax}
+
+FIXME
 
 BNF
 

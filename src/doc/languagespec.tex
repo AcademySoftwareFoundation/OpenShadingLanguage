@@ -2368,11 +2368,141 @@ Should we look at Pystring and add useful things here?
 \index{functions!texture}
 \index{texture mapping}
 
-FIXME
-texture
-texture3d
-spatialdbsave
-spatialdbquery
+\apiitem{\emph{type} \textbf{texture} (string filename, float s, float t, \emph{...params...}) \\
+\emph{type} \textbf{texture} (string filename, float s, float t, \\
+\spc\spc\spc float dsdx, float dtdx, float dsdy, float dtdy, \emph{...params...})}
+\indexapi{texture()}
+
+Perform a texture lookup of an image file, indexed by 2D coordinates
+$(s,t)$, antialiased over a region defined by the differentials
+\emph{dsdx, dtdx, dsty} and \emph{dtdy} (which are computed
+automatically from $s$ and $t$, if not supplied).  Whether the results
+are assigned to a \float or a \color (or type cast to one of those)
+determines whether the texture lookup is a single channel or three
+channels.
+
+The 2D lookup coordinate(s) may be followed by optional token/value
+arguments that control the behavior of {\cf texture()}:
+
+\apiitem{"blur", <float>}
+\vspace{12pt}
+Additional blur when looking up the texture value (default: 0).  The
+blur amount is relative to the size of the texture (i.e., 0.1 blurs by a
+kernel that is 10\% of the full width and height of the texture).
+
+The blur may be specified separately in the $s$ and $t$ directions by
+using the \qkw{sblur} and \qkw{tblur} parameters, respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"width", <float>}
+\vspace{12pt}
+Scale (multiply) the size of the filter as defined by the differentials
+(or implicitly by the differentials of $s$ and $t$).  The default is
+{\cf 1}, meaning that no special scaling is performed.  A width of
+{\cf 0} would effectively turn off texture filtering entirely.
+
+The width value may be specified separately in the $s$ and $t$
+directions by using the \qkw{swidth} and \qkw{twidth} parameters,
+respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"wrap", <string>}
+\vspace{12pt}
+
+Specifies how the texture \emph{wraps} coordinates outside the $[0,1]$
+range.  Supported wrap modes include: \qkw{black}, \qkw{periodic},
+\qkw{clamp}, \qkw{mirror}, and \qkw{default} (which is the default).  A
+value of \qkw{default} indicates that the renderer should use any wrap
+modes specified in the texture file itself (a non-\qkw{default} value
+overrides any wrap mode specified by the file).
+
+The wrap modes may be specified separately in the $s$ and $t$ directions
+by using the \qkw{swrap} and \qkw{twrap} parameters, respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"firstchannel", <int>}
+\vspace{12pt}
+The first channel to look up from the texture map (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"fill", <float>}
+\vspace{12pt}
+The value to return for any channels that are not present in the texture
+file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"alpha", <floatvariable>}
+\vspace{12pt}
+The alpha channel (presumed to be the next channel following the
+channels returned by the {\cf texture()} call) will be stored in the
+variable specified.  This allows for RGBA lookups in a single call to
+{\cf texture()}.
+\apiend
+\vspace{-16pt}
+
+\apiend
+
+%FIXME
+%texture3d
+%spatialdbsave
+%spatialdbquery
+
+
+\apiitem{int {\ce gettextureinfo} (string texturename, string paramname,\\
+\bigspc\bigspc output \emph{type} destination)}
+\indexapi{gettextureinfo()}
+
+Retrieves a parameter from a named texture file.  If the file is found,
+and has a parameter that matches the name and type specified, its value
+will be stored in \emph{destination} and {\cf gettextureinfo} will
+return {\cf 1}.  If the file is not found, or doesn't have a matching
+parameter (including if the type does not match), \emph{destination}
+will not be modified and {\cf getattribute} will return {\cf 0}.  Valid
+parameters recognized are listed below:
+
+\smallskip
+
+\begin{tabular}{p{1.2in} p{0.5in} p{3.2in}} 
+{\bf Name} & {\bf Type} & {\bf Description} \\
+\hline
+
+\qkw{resolution} & {\cf int[2]} & The resolution of the highest MIPmap
+level stored in the texture map. \\[0.75ex]
+
+\qkw{channels} & \inttype & The number of channels in the texture
+map. \\[0.75ex]
+
+\qkw{type} & {\cf string} & Returns the semantic type of the texture,
+one of: \qkw{texture}, \qkw{shadow}, \qkw{environment},
+\qkw{volume}. \\[0.75ex]
+
+\qkw{textureformat} & {\cf string} & Returns the texture format, one of:
+\qkw{Plain Texture}, \qkw{Shadow}, \qkw{CubeFace Shadow}, \qkw{Volume
+  Shadow}, \qkw{CubeFace Environment}, \qkw{LatLong Environment},
+\qkw{Volume Texture}. Note that this differs from \qkw{type} in that it
+specifically distinguishes between the different types of shadows and
+environment maps.  \\[0.75ex]
+
+\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
+transforms points from \commonspace to the \cameraspace from which the
+texture was created. \\[0.75ex]
+
+{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
+matrix that transforms points from \commonspace to a 2D coordinate
+system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
+
+\emph{anything else} & \emph{any} & Searches for matching name and
+type in the metadata or other header information of the texture file.
+%\hline
+\end{tabular}
+
+
+\apiend
 
 \section{Light and Shadows}
 \label{sec:stdlib:light}
@@ -2396,11 +2526,86 @@ subsurface
 \index{functions!renderer state}
 \index{message passing}
 
-FIXME
-getattribute
-setmessage
-getmessage
-gettextureinfo
+\apiitem{int {\ce getattribute} (string name, output \emph{type} destination)}
+\indexapi{getattribute()}
+Searches for the renderer attribute with the given \emph{name} (first
+searching per-object attributes on the current object, then if not found
+searching scene-wide attributes).  If found and it matches the type of
+\emph{destination}, the attribute's value will be stored in
+\emph{destination} and {\cf getattribute} will return {\cf 1}.  If not
+found, or the type does not match, \emph{destination} will not be
+modified and {\cf getattribute} will return {\cf 0}.
+\apiend
+
+\apiitem{void {\ce setmessage} (string name, output \emph{type} value)}
+\indexapi{setmessage()}
+Store a \emph{name}/\emph{value} pair in an area where it can later be
+retrieved by other shaders attached to the same objects.  If there is
+already a message with the same name attached to this shader invocation,
+it will be replaced by the new value.
+\apiend
+
+\apiitem{int {\ce getmessage} (string source, string name, output \emph{type} destination)}
+\indexapi{getmessage()}
+Retrieve a message from another shader attached to the same object.
+Specifically, it will try retrieve the value associated with the given
+\emph{name} from a specific \emph{source}.  If the source has a value
+with the given name, and whose type matches that of \emph{destination},
+the value will be stored in \emph{destination} and {\cf getmessage()}
+will return {\cf 1}.  If no message is found that matches both the name
+and type, \emph{destination} will be unchanged and {\cf getmessage()}
+will return {\cf 0}.
+
+The \emph{source} designates from where the message should be retrieved,
+and may have any of the following values:
+
+\vspace{-8pt}
+
+\apiitem{"surface", "displacement", "volume"}
+\vspace{10pt}
+Retrieve the message from the named shader type present on the object
+being shaded.
+\apiend
+\vspace{-20pt}
+
+\apiitem{"light"}
+\vspace{10pt}
+Valid only if {\cf getmessage()} is called from within an \illuminance
+loop, retrieves the message from current light source being examined.
+\apiend
+\vspace{-20pt}
+
+\apiitem{"parent"}
+\vspace{10pt}
+Retrieve the message from the shader (potentially on another object)
+that spawned the ray that caused the current shader to be executed.
+\apiend
+\vspace{-20pt}
+
+\apiitem{"trace"}
+\vspace{10pt}
+Valid only if {\cf getmessage()} is called within a {\cf trace} loop,
+retrieves the message from the object hit by the ray.  Note also
+that {\cf getmessage("trace",...)} may be used to get information
+about the individual ray sample itself.
+\apiend
+\vspace{-20pt}
+
+\apiitem{"primitive"}
+\vspace{10pt}
+Retrieve the value by interpolating the named user variable attached
+to the geometric primitive that is being shaded (regardless of whether
+it is a parameter to the shader).
+\apiend
+
+First, {\cf getmessage()} will search the source's message list as set
+by {\cf setmessage()} when that shader ran.  If not found, then the
+source's shader parameters will be searched.  If multiple shaders of
+the same type are present, they will be searched starting with the
+last one executed, and moving backwards in execution order (in other
+words, later-executed shaders in the network effectively take precedence
+over parameteters or messages from earlier-executed shaders).
+\apiend
 
 \apiitem{int {\ce raylevel} ()}
 \indexapi{raylevel()}

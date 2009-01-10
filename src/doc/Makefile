@@ -4,7 +4,7 @@ all: languagespec.pdf
 
 
 # document making rule: use pdflatex
-languagespec.pdf: *.tex *.aux
+languagespec.pdf: *.tex *.aux Figures/*.pdf
 	pdflatex languagespec
 
 

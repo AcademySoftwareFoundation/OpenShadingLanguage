@@ -52,11 +52,11 @@
 Language Specification
 \\ \large (draft in progress) 
 } \bigskip }
-\author{Editor: Editor's Name \\
+\author{Editor: Larry Gritz \\
 % email should go here
  \bigskip \\
 }
-\date{{\large Date: 16 October, 2008}}
+\date{{\large Date: 9 January, 2009}}
 
 
 \include{macros}
@@ -71,7 +71,7 @@ Language Specification
 \def\void{{\cf void}\xspace}
 \def\I{{\cf I}\xspace}
 \def\N{{\cf N}\xspace}
-\def\Ng{{\cf N}\xspace}
+\def\Ng{{\cf Ng}\xspace}
 \def\P{{\cf P}\xspace}
 \def\currentspace{{\cf "current"} space\xspace}
 \def\commonspace{{\cf "common"} space\xspace}
@@ -88,7 +88,8 @@ Language Specification
 \def\illuminance{{\cf illuminance}\xspace}
 \def\illuminate{{\cf illuminate}\xspace}
 
-
+\def\closure{{\cf closure}\xspace}
+\def\colorclosure{{\cf color closure}\xspace}
 
 
 \makeindex
@@ -115,25 +116,224 @@ Language Specification
 %\include{blah}
 
 
-\chapter{Basic Structure}
+
+
+\chapter{The Big Picture}
 \label{chap:shaderstructure}
+\label{chap:bigpicture}
 
-\chapter{Shader types and structure}
-\label{chap:shadertypes}
+\subsection*{A shader is code that performs a discrete task}
 
-\section{Shader types}
-\label{sec:shadertypes}
-\index{shader types} \index{types!shader}
+A shader is a program, with inputs and outputs, that performs
+a specific task.  The program code is written in \langname, the
+specification of which comprises this document.
 
-\section{Shader parameters}
-\label{sec:shaderparams}
-\index{shader parameters} \index{parameters!shader}
+For example, here is a simple {\cf gamma} shader that performs
+simple gamma correction on is {\cf Cin} input, storing the result
+in its output {\cf Cout}:
+\bigskip
 
-    how shader parameters get their values
+\includegraphics{Figures/shaderschematic}
 
-\section{Shader metadata}
-\label{sec:metadata}
-\index{metadata} \index{shader metadata}
+\medskip
+
+The shader's inputs and outputs are called \emph{parameters}.  Input
+parameters have default values, specified in the shader code, but may
+also be given new values by the renderer at runtime.
+
+\subsection*{Shader instances}
+
+A particular shader may be used many times in a scene, on different
+objects or as different layers in a shader group.  Each separate use of
+a shader is called a \emph{shader instance}.  Although all instances of
+a shader are comprised of the same program code, each instance may
+override any or all of its default parameter values with its own set of
+\emph{instance values}.
+
+
+\subsection*{Shader groups and layers}
+
+A \emph{shader group} is an ordered sequence of individual shaders
+called \emph{layers} that are executed in turn.  Output parameters of an
+earlier-executed layer may be \emph{connected} to an input parameter of
+a later-executed layer.  This connected network of layers is sometimes
+called a \emph{shader network} or a \emph{shader DAG} (directed acyclic
+graph).  Of course, it is fine for the shader group to consist of a
+single shader layer.
+
+Below is a schematic showing how several shader instances may be
+connected to form a shader group.
+
+\bigskip
+
+\includegraphics{Figures/groupschematic}
+
+\medskip
+
+\noindent And here is sample pseudo-code shows how the above network may
+be assembled using an API in the renderer:
+
+\begin{code}
+    ShaderGroupBegin ()
+    Shader ("texturemap",               /* shader name */
+            "tex1",                     /* layer name */
+            "string name", "rings.tx")  /* instance variable */
+    Shader ("texturemap", "tex2", "string name", "grain.tx")
+    Shader ("gamma", "gam1", "float gam", 2.2)
+    Shader ("gamma", "gam2", "float gam", 1)
+    Shader ("wood", "wood1")
+    ConnectShaders ("tex1",     /* layer name A */
+                    "Cout",     /* an output parameter of A */
+                    "gam1",     /* layer name B */
+                    "Cin")      /* Connect this layer of B to A's Cout */
+    ConnectShaders ("tex2", "Cout", "gam2", "Cin")
+    ConnectShaders ("gam1", "Cout", "wood1", "rings")
+    ConnectShaders ("gam2", "Cout", "wood1", "grain")
+    ShaderGroupEnd ()
+\end{code}
+
+
+\subsection*{Geometric primitives}
+
+The \emph{scene} consists of primarily of geometric primitives,
+light sources, and cameras.
+
+Geometric primitives are shapes such as NURBS, subdivision surfaces,
+polygons, and curves.  The exact set of supported primitives may vary
+from renderer to renderer.
+
+Each geometric primitive carries around a set of named \emph{primitive
+  variables}.  Nearly all shape types will have, among their primitive
+variables, control point positions that, when interpolated, actually
+designate the shape.  Some shapes will also allow the specification of
+normals or other shape-specific data.  Arbitrary user data may also be
+attached to a shape as primitive variables.  Primitive variables may be
+interpolated in a variety of ways: one constant value per primitive, one
+constant value per face, or per-vertex values that are interpolated
+across faces in various ways.
+
+If a shader input parameter's name and type match the name and type
+of a primitive variable on the object (and that input parameters is
+not already explicitly connected to another layer's output), the
+interpolated primitive variable will override the instance value or
+default.
+
+
+\subsection*{Attribute state and shader assignments}
+
+Every geometric primitive has a collection of \emph{attributes} (sometimes
+called the \emph{graphics state}) that includes its transformation
+matrix, the list of which lights illuminate it, whether it is one-sided
+or two-sided, shader assignments, etc.  There may also be a long list of
+renderer-specific or user-designated attributes associated with each
+object.  A particular attribute state may be shared among many geometric
+primitives.
+
+The attribute state also includes shader assignments --- the shaders or
+shader groups for each of several \emph{shader uses}, such as surface
+shaders that designate how light reflects from each point on the shape,
+displacement shaders that can add fine detail to the shape on a
+point-by-point basis, volume shaders that describe how light is
+scattered within a region of space, and light shaders that describe how
+light is emitted from a light source.  A particular renderer may have
+additional shader types that it supports.
+
+%\subsection*{Shader types}
+%
+%There are several types of shaders: surface, displacement, light,
+%volume.  The type of shader determines what it's allowed to do (for
+%example, only displacement shaders can alter the surface position).
+%There is also a generic kind of shader that can be used for any of the
+%shader uses.
+
+\subsection*{Shader execution state: parameter binding and global variables}
+
+When the body of code of an individual shader is about to execute, all
+its parameters are \emph{bound} --- that is, take on specific values
+(from connections from other layers, interpolated primitive variables,
+instance values, or defaults, in that order).
+
+Certain state about the position on the surface where the shading is
+being run is stored in so-called \emph{global variables}.  This includes
+such useful data as the 3D coordinates of the point being shaded, the
+surface normal and tangents at that point, etc.
+
+Additionally, the shader may query other information about other
+elements of the attribute state attached to the primitive, and
+information about the renderer as a whole (rendering options, etc.).
+
+\subsection*{Surface and volume shaders compute closures}
+
+Surface shaders (and volume shaders) do not by themselves compute the
+final color of light eminating from the surface (or along a volume).
+Rather, the compute a \emph{closure}, which is a symbolic representation
+describing the appearance of the surface, that may be more fully
+evaluated later.  This is in effect a parameterized formula, in which
+some inputs have definite numeric values, but others may depend on
+quantities not yet known (such as the direction from which the surface
+is being viewed, and the amount of light from each source that is
+arriving at the surface).
+
+For example, a surface shader may compute its result like this:
+
+\begin{code}
+    color paint = texture ("file.tx", u, v);
+    Ci = paint * lambert();
+\end{code}
+
+\noindent In this example, the variable {\cf paint} will take on a
+specific numeric value (by looking up from a texture map).  But the {\cf
+  lambert()} function returns a \colorclosure, not a definite numeric
+\color.  The output variable {\cf Ci} that represents the appearance of
+the surface is also a \colorclosure, whose numeric value is not known
+yet, except that it will be the product of {\cf paint} and a Lambertian
+reflectance.
+
+\bigskip
+
+\includegraphics{Figures/shaderexecschematic}
+
+\medskip
+
+The closures output by surface and volume shaders can do a number of
+interesting things that a mere number cannot:
+
+\begin{itemize}
+\item Sample: given just an input (or output) direction, choose a
+  scattering direction with a probability distribution that is
+  proportional to the amount of light that will end up going in various
+  directions.
+\item Evaluate: given input and input light directions, compute the
+  proportion of light propagating from input to output.
+\item Integrate: given all lights and a view direction, compute
+  the total amount of light leaving the surface in the view direction.
+\item Recompute: given changes only to lights (or only to one light),
+  recompute the integrated result without recomputing other lights or
+  any of the calculations that went into assembling constants in the
+  closure (such as texture lookups, noise functions, etc.).
+\end{itemize}
+
+
+\subsection*{Integrators}
+
+The renderer contains a number of \emph{integrator} (selectable via the
+renderer's API) which will combine the color closures computed by
+surfaces and volumes with the light sources and view-dependent
+information, to yield the amount of light visible to the camera.
+
+\bigskip
+
+\includegraphics{Figures/integratorschematic}
+
+\medskip
+
+\begin{annotate}
+At present, this spec is written as if the integrators are all built
+into the renderer itself.  At a later time, we will fully spec it
+out so that integrators themselves may be written in \langname and
+therefore users may expand the repertoire of integration techniques
+available to the renderer.
+\end{annotate}
 
 \chapter{Lexical structure}
 \label{chap:lexical}
@@ -216,18 +416,27 @@ keywords and reserved words.
 The following are \emph{keywords} that have special meaning in
 \langname: \index{keywords}
 
-\begin{code}
-FIXME
-\end{code}
+\begin{quote} {\cf
+
+break closure color continue do else emit float for if int lights matrix
+normal point output public return string struct trace vector void while
+
+}
+\end{quote}
 
 The following are \emph{reserved words} that currently have no special
 meaning in \langname, but we reserve them for possible future use, or
 becuase they are confusingly similar to keywords in related programming
 languages: \index{reserved words}
 
-\begin{code}
-FIXME
-\end{code}
+\begin{quote} {\cf
+
+bool case char class const default double enum extern false friend
+inline long private protected short signed sizeof static struct
+switch template this true typedef uniform union unsigned varying virtual
+
+}
+\end{quote}
 
 
 \section{Preprocessor}
@@ -268,11 +477,514 @@ directives, including:
 
 
 
+\chapter{Gross syntax, shader types, parameters, functions}
+\label{chap:grosssyntax}
+
+The overall structure of a shader is as follows:
+\medskip
+
+\begin{quote}
+\em
+optional-function-or-struct-declarations \\
+
+shader-type shader-name {\cf (} optional-parameters {\cf )} \\
+\rm
+{\cf \{ } \\
+\em
+\spc statements
+
+{\cf \} }
+\end{quote}
+
+Note that \emph{statements} may include function or structure
+definitions, local variable declarations, or public methods, as well as
+ordinary execution instructions (such as assignments, etc.).
+
+\section{Shader types}
+\label{sec:shadertypes}
+\index{shader types} \index{types!shader}
+
+Shader types include the following: {\cf surface}, {\cf displacement},
+{\cf light}, {\cf volume}, and generic {\cf shader}.  Some operations
+may only be performed from within certain types of shaders (e.g., one
+may only call {\cf displace()} or alter \P in a displacement shader),
+and some global variables may only be accessed from within certain types
+of shaders (e.g., {\cf dPdu} is not defined inside a volume shader).
+
+Following are brief descriptions of the basic types of shaders:
+
+
+\subsection*{{\cf surface} shaders}
+
+Surface shaders determine the basic material properties of a surface and
+how it reacts to light.  They are responsible for computing a
+\colorclosure that describes the material, and optionally setting
+opacity and other user-defined output variables.  They may not alter
+the position of the surface.
+
+Surface shaders are written as if they describe the behavior of a single
+point on the primitive, and the renderer will choose the positions
+surface at which the shader must be evaluated.
+
+\subsection*{{\cf displacement} shaders}
+
+Displacement shaders alter the position and shading normal (or,
+optionally, just the shading normal) to make a piece of geometry appear
+deformed, wrinkled, or bumpy.  They are the only kind of shader that
+is allowed to alter a primitive's position.
+
+\subsection*{{\cf volume} shaders}
+
+Volume shaders describe how a participating medium (air, smoke, glass,
+etc.) reacts to light and affects the appearance of objects on the other
+side of the medium.  They are similar to {\cf surface} shaders, except
+that they may be called from positions that do not lie upon (and are not
+necessarily associated with) any particular primitive.
+
+\subsection*{{\cf light} shaders}
+
+Light shaders describe how much energy a light source deposits at a
+given destination.
+
+\subsection*{{\cf shader} generic shaders}
+
+Generic shaders are used for utility code, generic routines that may be
+called as individual layers in a shader group.  Generic shaders need not
+specify a shader type, and therefore may be reused from inside surface,
+displacement, volume, or light shader groups.  But as a result, they may
+not contain any functionality that cannot be performed from inside all
+shader types (for example, they may not alter \P, which can only be done
+from within a displacement shader).
+
+
+\section{Shader parameters}
+\label{sec:shaderparams}
+\index{shader parameters} \index{parameters!shader}
+
+An individual shader has (optionally) many \emph{parameters} whose
+values may be set in a number of ways so that a single shader may have
+different behaviors or appearances when used on different objects.
+
+\subsection{Shader parameter syntax}
+
+Shader parameters are specified in the shader declaration, in
+parentheses after the shader's name.  This is much like the parameters
+to a \languagename function (or a function in C or similar languages),
+except that shader parameters must have an \emph{initializer}, giving a
+default value for the parameter.  Shader parameter default initializers
+may be expressions (i.e., may be computed rather than restricted to
+numeric constants), and are evalutated in the order that the parameters
+are declared, and may include references to previously-declared
+parameters.  Formally, the grammar for a simple parameter
+declaration looks like this:
+
+\medskip
+\spc \emph{type parametername = default-expression} 
+\medskip
+
+\noindent where \emph{type} is one of the data types described
+in Chapter~\ref{chap:types}, \emph{parametername} is the name of the
+parameter, and \emph{default-expression} is a valid expression
+(see Section~\ref{sec:expressions}).  Multiple parameters are 
+simply separated by parentheses:
+
+\medskip
+\spc \emph{type1 ~ parameter1 = expr1} {\cf ,} \emph{type2 ~ parameter2 = expr2} {\cf ,} ...
+\medskip
+
+
+Fixed-length, one-dimensional array parameters are declared as follows:
+
+\medskip
+\spc \emph{type parametername} {\cf [ } \emph{array-length} {\cf ] = \{ } \emph{expr0}
+  {\cf ,} \emph{expr1} ... {\cf \} }
+\medskip
+
+\noindent where \emph{array-length} is a positive integer constant
+giving the length of the array, and the initializer is a series of
+initializing expressions listed between curly braces.  The first
+initializing expression provides the initializer for the first element
+of the array, the second expression provides the initializer for the
+second element of the array, and so on.  If the number of initializing
+expressions is less than the length of the array, any additional array
+elements will have undefined values.
+
+Arrays may also be declared without a set length:
+
+\medskip
+\spc \emph{type parametername} {\cf [ ] = \{ } \emph{expr0}
+  {\cf ,} \emph{expr1} ... {\cf \} }
+\medskip
+
+\noindent where no array length is found between the square brackets.
+This indicates that the array's length will be determined based on
+whatever is passed in --- a connection from the output of another shader
+in the group (take on the length of that output), an instance value
+(take on the length specified by the declaration of the instance value),
+or a primitive variable (length determined by its declaration on the
+primitive).  If no instance value, primitive value, or connection is
+supplied, then the number of initializing expressions will determine the
+length, as well as the default values, of the array.
+
+Structure parameters are also straightforward to declare:
+
+\medskip
+\spc \emph{structure-type parametername} {\cf = \{ } \emph{expr0}
+  {\cf ,} \emph{expr1} ... {\cf \} }
+\medskip
+
+\noindent where \emph{structure-type} is the name of a
+previously-declared {\cf struct} type, and the \emph{expr} initializers
+correspond to each respective field within the structure.  An
+initializer of appropriate type is required for every field of the
+structure.
+
+\subsection{Shader output parameters}
+\index{shader output parameters} \index{output parameters!shader}
+
+Shader parameters are, by default, read-only in the body of the
+shader.  However, special \emph{output parameters} may be altered
+by execution of the shader.  Parameters may be designated outputs
+by use of the {\cf output} keyword immediately prior to the
+type declaration of the parameter:
+
+\medskip
+\spc {\cf output} \emph{type parametername} {\cf = } \emph{expr}
+\medskip
+
+\noindent (Output parameters may be arrays and structures, but we will
+omit spelling out the obvious syntax here.)
+
+Output parameters may be connected to inputs of later-run shader layers
+in the shader group, may be queried by later-run shaders in the group
+via message passing (i.e., {\cf getmessage()} calls), or used by the
+renderer as an output image channel (in a manner described through the
+renderer's API).
+
+\subsection{Shader parameter example}
+
+Here is an example of a shader declaration, with several parameters:
+
+\begin{code}
+    surface wood ( 
+               /* Simple params with constant initializers */
+                   float Kd = 0.5,
+                   color woodcolor = color (.7, .5, .3),
+                   string texturename = "wood.tx",
+               /* Computed from an earlier parameter */
+                   color ringcolor = 0.25 * woodcolor,
+               /* Fixed-length array */
+                   color paintcolors[3] = { color(0,.25,0.7), color(1,1,1),
+                                            color(0.75,0.5,0.2) },
+               /* variable-length array */
+                   int pattern[] = { 2, 4, 2, 1 },
+               /* output parameter */
+                   output color Cunlit = 0
+                 )
+    {
+       ...
+    }
+\end{code}
+
+\subsection{How shader parameters get their values}
+
+Shader parameters get their values in the following manner,
+in order of decreasing priority:
+
+\begin{itemize}
+\item If the parameter has been designated by the renderer to be
+  connected to an output parameter of a previously-executed shader layer
+  within the shader group, that is the value it will get.
+\item If the parameter matches the name and type of a per-primitive,
+  per-face, or per-vertex \emph{primitive variable} on the particular
+  piece of geometry being shaded, the paramter's value will be computed
+  by interpolating the primitive variable for each position that must be
+  shaded.
+\item If there is no connection or primitive variable, the parameter may
+  will take on an \emph{instance value}, if that parameter was given an
+  explicit per-instance value at the time that the renderer referenced
+  the shader (associating it with an object or set of objects).
+\item If none of these overrides is present, the parameter's value will
+  be determined by executing the parameter initialization code in the
+  shader.
+\end{itemize}
+
+This triage is performed per parameter, in order of declaration.  So,
+for example, in the code sample above where the default value for {\cf
+  ringcolor} is a scaled version of {\cf woodcolor}, this relationship
+would hold whether {\cf woodcolor} was the default, an instance value,
+an interpolated primitive value, or was connected to another layer's
+output.  Unless {\cf ringcolor} itself was given an instance, primitive,
+or connection value, in which case that's what would be used.
+
+
+
+\section{Shader metadata}
+\label{sec:metadata}
+\index{metadata} \index{shader metadata}
+
+A shader may optionally include \emph{metadata} (data \emph{about} the
+shader, as opposed to data \emph{used by} the shader).  Metadata may be
+used to annotate the shader or any of its individual parameters with
+additional hints or information that will be compiled into the shader
+and may be queried by applications.  A common use of metadata is to
+specify user interface hints about shader parameters --- for example,
+that a particular parameter should only take on integer values, should
+have an on/off checkbox, is intended to be a filename, etc.
+
+Metadata is specified inside double brackets {\cf [[} and {\cf ]]}
+enclosing a comma-separated list of metadata items.  Each metadatum
+looks like a parameter declaration --- having a data type, name, and
+initializer.  However, metadata may only be simple types (not arrays or
+closures) and their value initializers must be numeric or string
+constants (not computed expression).
+
+Metadata about the shader as a whole is placed between the shader name
+and the parameter list.  Metadata about shader parameters are placed
+immediately after the parameter's initializing expression, but before
+the comma or closing parenthesis that terminates the parameter
+description.
+
+Below is an example shader declaration showing the use of shader and
+parameter metadata:
+
+\begin{code}
+    surface wood 
+                [[ string description = "Realistic wood shader" ]]
+        ( 
+           float Kd = 0.5
+               [[ string description = "Diffuse reflectivity",
+                  float UImin = 0, float UImax = 1 ]] ,
+           color woodcolor = color (.7, .5, .3)
+               [[ string description = "Base color of the wood" ]],
+           color ringcolor = 0.25 * woodcolor
+               [[ string description = "Color of the dark rings" ]],
+           string texturename = "wood.tx"
+               [[ string description = "Texture map for the grain",
+                  string UItype = "filename" ]]
+        )
+    {
+       ...
+    }
+\end{code}
+
+The metadata are not semantically meaningful; that is, the metadata does
+not affect the actual execution of the shader.  Most metadata exist only
+to be embedded in the compiled shader and able to be queried by other
+applications, such as to construct user interfaces for shader assignment
+that allow usage tips, appropriate kinds of widgets for setting each
+parameter, etc.  
+
+The choice of metadata and their meaning is completely up to the shader
+writer and/or modeling system.  However, we propose some conventions
+below.  These conventions are not intended to be comprehensive, nor to
+meet all your needs --- merely to establish a common nomenclature for
+the most common metadata uses.
+
+\apiitem{string description}
+Describes the purpose and use of the shader or parameter.
+\apiend
+
+\apiitem{string URL}
+Provides a URL for full documentation of the shader or parameter.
+\apiend
+
+\apiitem{string units}
+Gives the assumed units, if any, for the parameter (e.g., \qkw{cm}).
+\apiend
+
+\apiitem{string UIlabel}
+A short label to be displayed in the UI for this parameter.  If not
+present, the parameter name itself should be used as the widget label.
+\apiend
+
+\apiitem{float UImin \\ float UImax}
+Minimum and maximum values for a parameter that should never be
+exceeded.  If either the minimum or maximum is not present, valid values
+for the parameter are assumed to be unbounded in one or both directions.
+(For an {\cf int} paramter, the {\cf UImin} and/or {\cf UImax} should
+also be declared as an {\cf int}.)
+\apiend
+
+\apiitem{float UIsoftmin \\ float UIsoftmax}
+``Soft'' minimum and maximum value for a \float parameter, that is, a
+default range for presentation in the UI, but which may be overridden by
+the user. (For an {\cf int} paramter, the {\cf UIsoftmin} and/or {\cf
+  UIsoftmax} should also be declared as an {\cf int}.)
+\apiend
+
+\apiitem{float UIstep}
+The suggested step size for incrementing or decrementing the value
+(within the appropriate min/max range).
+\apiend
+
+\apiitem{string UIenabler}
+The name of another parameter that, only if nonzero (or the
+non-empty string) unlocks adjustment of this parameter.  For example,
+a parameter called \qkw{Kr} (reflectivity) may be en enabler for
+the \qkw{reflectionblur} paramter; zero reflectivity would gray-out
+the blur controls, which would be ignored if there were no reflection.
+\apiend
+
+\apiitem{float UIseparator}
+If nonzero, hints that the application's GUI should draw a visual 
+separator immediately before this parameter.
+\apiend
+
+\apiitem{string UIgroupbegin \\ string UIgroupend}
+Denote the first and last parameters of a set of related paramters, as a
+hint that an application may wish to label or visually separate a
+collection of paramters.  The string value should be the name or brief
+description of the group.
+\apiend
+
+\apiitem{string UItype} 
+Provides a hint about exactly what kind of UI widget is appropriate for
+the given paramter (if not the obvious default, such as a slider for a
+\float paramter, or a color picker for a \color parameter).  Recommended
+values include:
+
+\vspace{-12pt}
+\begin{description}
+\item[] \spc
+\item[\rm \halfspc ~ \qkw{bool}] Indicates that a \float or {\cf int}
+  parameter should only take on a 0 or 1 value, and therefore a checkbox
+  may be a more appropriate UI widget.
+\item[\rm \qkw{string}] Indicates that the appropriate UI widget is a text
+  input box (default for string parameters).  A smart UI may also allow
+  a file selection dialog, since most strings (but not all) are used
+  for texture names.
+\item[\rm \qkw{texture}] Indicates a string variable whose value will be
+  used as the name of a texture map.  An appropriate GUI widget might
+  be a file selection dialog.
+\item[\rm \qkw{environment}] Indicates a string variable whose value may
+  either be an environment map or the name of a geometry set.  An
+  appropriate GUI widget might be a combination file selection and
+  pull-down menu of known geometry set names.
+\item[\rm \qkw{shadow}] Indicates a string variable whose value may
+  either be a shadow map or the name of a geometry set.
+\item[\rm \qkw{geometryset}] Indicates a string variable whose value must
+  be a geometry set.  An appropriate GUI widget may be a pull-down
+  menu of known geometry sets.
+\item[\rm \qkw{coordsys}] Indicates a string variable whose value will be
+  used as a coordinate system name.  An appropriate GUI widget may be
+  a pull-down menu of known coordinate systems.
+\item[\rm \qkw{enum:label0,label1,...}] Indicates that the appropriate UI
+  widget is a pulldown menu that selects among the strings \qkw{label0},
+  \qkw{label1}, and so on.
+  If the shader parameter is a {\cf string}, the selcted label should be
+  passed as the shader parameter value.  If the shader parameter is an
+  \inttype, the selected label should indicate that the value passed
+  should be 0, 1, 2, ..., the index of the selected label.
+  Labels may be associated with \float or {\cf int} values other than
+  their indices using the following syntax:
+  \begin{code}
+    float frequency = 0.5
+        [[ string UItype = "enum:low=0.2,medium=0.5,high=0.9" ]]
+    int pattern = 0
+        [[ string UItype = "enum:oak=0,elm=1,walnut=2" ]]
+  \end{code}
+\end{description}
+\apiend
+
+The use of metadata is entirely optional on the part of the shader
+writer, and any application that queries shader metadata is free to
+honor or ignore any metadata it finds.
+
+
+\newpage
+\section{Functions}
+\label{sec:functions}
+\index{functions!declarations}
+
+You may define functions much like in C or C++.
+
+\begin{quote}
+\em
+return-type ~ function-name ~ {\rm\cf (} optional-parameters {\rm\cf )} \\
+\rm
+{\cf \{ } \\
+\em
+\spc statements
+
+{\cf \} }
+\end{quote}
+
+Parameters to functions are similar to shader parameters, except that
+they do not permit initializers.  A function call must pass values for
+all formal parameters.  Function parameters in \langname are all
+\emph{passed by reference}, and are read-only within the body of the
+function unless they are also designated as {\cf output} (in the same
+manner as output shader parameters).
+
+Like for shaders, statements inside functions may be actual executions
+(assignments, function call, etc.), local variable declarations (visible
+only from within the body of the function), or local function
+declarations (callable only from within the body of the function).
+
+The return type may be any simple data type, a {\cf struct}, or a {\cf
+  closure}.  Functions may not return arrays.  The return type may be
+{\cf void}, indicating that the function does not return a value (and
+should not contain a {\cf return} statement).  A {\cf return} statement
+inside the body of the function will halt execution of the fuction at
+that point, and designates the value that will be returned (if not a
+{\cf void} function).
+
+Functions may be \emph{polymorphic}.  That is, multiple functions may be
+defined to have the same name, as long as they have differently-typed
+parameters, so that when the function is called the list of arguments
+can disambiguate which version of the function is desired.
+
+\section{Public methods}
+\label{sec:publicmethods}
+\indexapi{public}
+\index{public methods}
+
+Ordinary (non-public) functions inside a shader may be called only from
+within the shader; they do not generate entry points that the renderer
+is aware of.
+
+A \emph{public method} is a function that may be directly called by the
+renderer.  Only top-level local functions of a shader --- that is,
+declared within the braces that define the local scope of the shader,
+but not within any other such function --- may be public methods.  A
+function may be designated a public method by using the {\cf public}
+keyword immediately before the function declaration:
+
+\begin{quote}
+\em shader-type shader-name ( params ) \\
+{\rm\cf \{}
+
+\spc {\rm\cf public} \em ~ return-type ~ function-name ~ {\rm \cf (}
+optional-parameters {\rm \cf )} \\
+\spc {\rm \cf \{ } \\
+\spc\spc statements \\
+\spc {\rm \cf \} } \\
+
+\spc ...\\
+{\rm\cf \}}
+\end{quote}
+
+
+\begin{annotate}
+A given renderer will publish a list of public methods (names, arguments
+expected, and return value) that has particular meaning for that
+renderer.  For example, a renderer may honor a public method
+\begin{code}
+    public float maxdisplacement ()
+\end{code}
+\noindent that computes and returns the maximum distance 
+that a displacement shader will move any surface points.
+
+At some later point, this spec will recommend several ``standard''
+public methods that should be honored by most renderers.
+\end{annotate}
+
 \chapter{Data types}
 \label{chap:types}
 \index{types|(}
 
-\langname provides several built-in data types for performing
+\langname provides several built-in simple data types for performing
 computations inside your shader:
 \smallskip
 
@@ -296,6 +1008,11 @@ normal}		& Three-dimensional positions, directions, and surface
 \hline
 \end{tabular}
 
+In addition, you may create arrays and structures (much like C), and
+\langname has a new type of data structure called a \emph{closure}.
+
+The remainder of this chapter will describe the simple and aggregate
+data types available in \langname.
 
 \section{{\cf int}}
 \label{sec:types:int}
@@ -369,10 +1086,6 @@ nonzero, otherwise 0) \\[0.5ex]
 \end{tabular}
 
 
-
-\begin{annotate}
-Make sure to rearrange the table in order of operator precedence.
-\end{annotate}
 
 \section{{\cf float}}
 \label{sec:types:float}
@@ -913,6 +1626,47 @@ It certainly makes the implementation of the language easier.
 \index{types|)}   % end of chapter
 
 
+\section{Closures}
+\label{sec:types:closures}
+
+A \closure is an expression or function call that will be stored, along
+with necessary contextual information, to be evaluated at a later time.
+
+In general, the type ``\emph{gentype} \closure'' behaves exactly like a
+\emph{gentype}, except that its numeric values may not be examined or
+used for the duration of the shader's execution.  For example, a
+\colorclosure behaves mostly like a color --- you can multiply it by a
+scalar, assign it to a \colorclosure variable, etc. --- but you may not
+assign it to an ordinary \color or examine its individual component's
+numeric values.
+
+At present, the only type of \closure supported by \langname is the
+\colorclosure, and the only allowed operations are those that let you
+form a linear combination of \colorclosure's.  Additional closure types
+and operations are reserved for future use.
+
+Allowable operations on \colorclosure's include:
+
+\medskip
+\noindent \begin{tabular}{|p{2.25in}|p{1.25in}|p{1.75in}|}
+operation & result & ~ \\
+\hline
+{\ce -} \colorclosure & \colorclosure & unary negation \\[0.5ex]
+\hline
+\color\ {\ce *} \colorclosure & \colorclosure & component-wise scaling \\[0.5ex]
+\colorclosure\ {\ce *} \color & \colorclosure & component-wise scaling \\[0.5ex]
+\float\ {\ce *} \colorclosure & \colorclosure & scaling \\[0.5ex]
+\colorclosure\ {\ce *} \float & \colorclosure & scaling \\[0.5ex]
+\hline
+\colorclosure\ {\ce +} \colorclosure & \colorclosure & component-wise addition \\[0.5ex]
+\colorclosure\ {\ce -} \colorclosure & \colorclosure & component-wise subtraction \\[0.5ex]
+\hline
+\end{tabular}
+
+\medskip
+
+
+
 
 \chapter{Language Syntax}
 \label{chap:syntax}
@@ -1366,12 +2120,9 @@ and proceeds to the next iteration of the loop.
 
 \section{Functions}
 \label{sec:syntax:functions}
-
-\subsection{Function calls}
-\label{sec:syntax:functioncalls}
 \index{function calls}
 
-Function calls are very similar to C and similar programming languages:
+Function calls are very similar to C and related programming languages:
 
 \begin{tabbing}
 \hspace{0.5in} \= \hspace{0.3in} \= \kill
@@ -1387,13 +2138,10 @@ will not be noticeably different from C-style ``pass by value''
 semantics, except if you pass the same variable as two separate
 arguments to a function that modifies an argument's value.
 
-\subsection{Function definitions}
-\index{function definitions}
+Function definitions are described in detail in Section~\ref{sec:functions}.
 
-function definitions
 
-    return
-
+\begin{comment}
 \section{Lighting}
 \label{sec:syntax:lighting}
 
@@ -1402,6 +2150,7 @@ function definitions
     lights/illuminance
 
 trace, the hard way
+\end{comment}
 
 
 \section{Global variables}
@@ -1519,6 +2268,10 @@ examined by the loop.
 
 \chapter{Standard Library Functions}
 \label{chap:stdlibrary}
+
+%\apiitem{ret {\ce func} (args)}
+%\indexapi{func()}
+%\endapi
 
 \def\floatcolorpoint{The \emph{type} may be any of \float, \color,
   \point, \vector, or \normal.  For \color and \point-like types, the
@@ -2509,16 +3262,266 @@ type in the metadata or other header information of the texture file.
 \index{light and shadow functions}
 \index{functions!light and shadows}
 
+\apiitem{\colorclosure\ {\ce diffuse} ()}
+\indexapi{diffuse()}
+
+Returns a \colorclosure that represents the Lambertian diffuse
+reflectance of a smooth surface,
+$$ \int_{\Omega}{Cl(P,\omega) \max(0, N \cdot \omega) d\omega} $$
+where $N$ is the unit-length forward-facing surface normal at \P,
+$\Omega$ is the set of all outgoing directions in the hemisphere
+surrounding $N$, and $Cl(P,\omega)$ is the incident radiance at
+\P coming from the direction $-\omega$.
+
+Like all \colorclosure's, this ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf lambert()} was
+implemented as follows:
+
+\begin{code}
+    color C = 0;
+    normal Nf = faceforward (normalize(N), I);
+    for all lights within the hemisphere defined by (P, Nf, PI/2) {
+        /* L is the direction of light i, Cl is its incoming radiance */
+        C += Cl * dot (normalize(L), Nf);
+    }
+    return C;
+\end{code}
+\apiend
+
+\apiitem{\colorclosure\ {\ce orennayar} (float roughness)}
+\indexapi{orennayar()}
+
+Returns a \colorclosure that represents the diffuse reflectance of a
+rough surface, implementing the Oren-Nayar reflectance formula.  The
+\emph{roughness} parameter indicates how smooth or rough the
+microstructure of the material is, with 0 being perfectly smooth and
+giving an appearance identical to {\cf lambert()}.
+
+Like all \colorclosure's, this ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf orennayar()} was
+implemented as follows:
+
+\begin{code}
+    normal Nf = faceforward (normalize(N), I);
+    vector V = -normalize(I);
+    float sigma2 = roughness * roughness;
+    float A = 1 - 0.5 * sigma2 / (sigma2 + 0.33);
+    float B = 0.45 * sigma2 / (sigma2 + 0.09);
+    float  theta_r = acos (dot (V, Nf));         // Angle between V and N
+    vector V_perp_N = normalize(V-Nf*dot(V,Nf)); // Part of V perpendicular to N
+    color C = 0;
+    for all lights within the hemisphere defined by (P, Nf, PI/2) {
+        /* L is the direction of light i, Cl is its incoming radiance */
+        vector LN = normalize(L);
+        float cos_theta_i = dot(LN, N);
+        float cos_phi_diff = dot (V_perp_N, normalize(LN - Nf*cos_theta_i));
+        float theta_i = acos (cos_theta_i);
+        float alpha = max (theta_i, theta_r);
+        float beta = min (theta_i, theta_r);
+        C += Cl * cos_theta_i * 
+                (A + B * max(0,cos_phi_diff) * sin(alpha) * tan(beta));
+    }
+    return C;
+\end{code}
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce cooktorrance} (float roughness)}
+\indexapi{cooktorrance()}
+
+Returns a \colorclosure that represents specular reflectance of the
+surface using the Cook-Torrence BRDF.  The \emph{roughness} parameter
+indicates how smooth or rough the microstructure of the material is.
+
+Like all \colorclosure's, this ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf cooktorrance()} was
+implemented as follows:
+
+\begin{code}
+    code eventually will go here
+\end{code}
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce ward} (vector xdir, vector ydir, float xrough, float yrough)}
+\indexapi{ward()}
+
+Returns a \colorclosure that represents the anisotropic specular
+reflectance of the surface at \P.  The \emph{xdir} and \emph{ydir}
+vectors, both presumed to be unit-length and perpendicular to \N, 
+establish a local coordinate system for the anisotropic effects.
+The \emph{xrough} and \emph{yrough} specify the amount of roughness
+in the \emph{xdir} and \emph{ydir} directions, respectively.
+
+Like all \colorclosure's, this ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf diffuse()} was
+implemented as follows:
+
+\begin{code}
+    float sqr (float x) { return x*x; }
+
+    normal Nf = faceforward (normalize(N), I);
+    vector V = -normalize(I);
+    float cos_theta_r = clamp (dot(Nf,V), 0.0001, 1);
+    vector X = xdir / xroughness;
+    vector Y = ydir / yroughness;
+    color C = 0;
+    for all lights within the hemisphere defined by (P, Nf, PI/2) {
+        /* L is the direction of light i, Cl is its incoming radiance */
+        vector LN = normalize (L);
+        float cos_theta_i = dot (LN,Nf);
+        if (cos_theta_i > 0.0) {
+            vector H = normalize (V + LN);
+            float rho = exp (-2 * (sqr(dot(X,H)) +
+                                   sqr(dot(Y,H))) / (1 + dot(H,N)))
+                         / sqrt (cos_theta_i * cos_theta_r);
+            C += Cl * cos_theta_i * rho;
+        }
+    }
+    return C / (4 * xroughness * yroughness);
+\end{code}
+\apiend
+
+\apiitem{\colorclosure\ {\ce reflection} () \\
+\colorclosure\ {\ce reflection} (string source) \\
+\colorclosure\ {\ce reflection} (string source, float angle)}
+\indexapi{reflection()}
+
+Returns a \colorclosure that represents sharp mirror-like reflection
+from the surface.  The reflection direction will be automatically
+computed to be
+
+\begin{code}
+      reflect (normalize(I), normalize(faceforward(N,I)))
+\end{code}
+\vspace{-12pt}
+
+If \emph{source} is supplied, it indicates the name of a geometry set to
+ray-trace against, or of an environment map to read (if not set, the
+renderer will use a global default).  If \emph{angle} is supplied, it
+specifies the angle (in radians) of a cone of centered around the
+reflection direction, from which reflection information will be sampled
+(this results in a blurry reflection).
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce reflection} (vector R) \\
+\colorclosure\ {\ce reflection} (string source, vector R) \\
+\colorclosure\ {\ce reflection} (string source, vector R, float angle)}
+\indexapi{reflection()}
+
+These alternative versions of {\cf reflection()} explicitly specify a
+reflection direction \emph{R}.  These are only supplied for the rare
+case where you need to use a nonphysical reflection direction, and
+introduce an undesired view-dependence to the surface description that
+you can avoid by using the version of {\cf reflection()} that
+automatically calculates the reflection vector for you.  View-dependence
+may confuse or defeat clever renderer speedups or intelligent sampling
+strategies.  Use with caution!
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce refraction} (float eta) \\
+\colorclosure\ {\ce refraction} (string source, float eta) \\
+\colorclosure\ {\ce refraction} (string source, float eta, float angle)}
+\indexapi{refraction()}
+
+Returns a \colorclosure that represents sharp glass-like refraction of
+objects ``behind'' the surface.  The refraction direction will be
+automatically computed to be
+
+\begin{code}
+      normal Nf = normalize(faceforward(N,I));
+      return refract (normalize(I), Nf, dot(I,N) < 0 ? eta : 1/eta);
+\end{code}
+\vspace{-12pt}
+
+\noindent where \emph{eta} is the ratio of the index of refraction of
+the medium on the ``inside'' of the surface divided by the index of
+refration of the medium on the ``outside'' of the surface.  The
+``outside'' direction is the one in the direction of the geometric
+primitive's normals.
+
+If \emph{source} is supplied, it indicates the name of a geometry set to
+ray-trace against, or of an environment map to read (if not set, the
+renderer will use a global default).  If \emph{angle} is supplied, it
+specifies the angle (in radians) of a cone of centered around the
+refraction direction, from which refraction information will be sampled
+(this results in a blurred refraction).
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce refraction} (vector R) \\
+\colorclosure\ {\ce refraction} (string source, vector R) \\
+\colorclosure\ {\ce refraction} (string source, vector R, float angle)}
+\indexapi{refraction()}
+
+These alternative versions of {\cf refraction()} explicitly specify a
+refraction direction \emph{R}.  These are only supplied for the rare
+case where you need to use a nonphysical refraction direction, and
+introduce an undesired view-dependence to the surface description that
+you can avoid by using the version of {\cf refraction()} that
+automatically calculates the refraction vector for you.  View-dependence
+may confuse or defeat clever renderer speedups or intelligent sampling
+strategies.  Use with caution!
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce translucence} ()}
+\indexapi{translucence()}
+
+Returns a \colorclosure that represents the Lambertian diffuse
+translucence of a smooth surface, which is much like {\cf diffuse()}
+except that it gathers light from the \emph{far} side of the surface.
+
+\apiend
+
+
+
+\apiitem{\colorclosure\ {\ce ambient} () \\
+\colorclosure\ {\ce ambient} (vector N)}
+\indexapi{ambient}
+
+Returns a \colorclosure that represents the amount of light hitting the
+surfaces from \emph{ambient} light sources.  If the optional vector \N
+is supplied giving the surface normal, ambient lights that have
+positions will only be considered if they are in front of the surface
+geometry.
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce subsurface} (...)}
+\indexapi{subsurface}
+Returns a \colorclosure that represents the amount of \emph{subsurface
+scattering} exhibited by the surface.
+
+\begin{annotate}
+We'll determine later what the arguments to {\cf subsurface} need to be.
+FIXME
+\end{annotate}
+\apiend
+
+
 FIXME
 environment
 shadow
-ambient
-diffuse
-specular
-specularbrdf
 indirect
 occlusion
-subsurface
+
 
 
 \section{Renderer state and message passing}
@@ -2654,19 +3657,227 @@ would only exit the enclosing function.
 \apiend
 
 
+\index{standard library functions|)}   % end of chapter
 
-\index{standard library functions|(}   % end of chapter
+
 
 \chapter{Formal Language Syntax}
 \label{chap:formalsyntax}
 
-FIXME
+This section gives the complete syntax of \langname.  Syntactic
+structures that have a name ending in ``-opt'' are optional.  Structures
+surrounded by curly braces \{ \} may be repeated 0 or more times.  Text
+in {\cf typewriter} face indicates literal text.  The $\epsilon$
+character is used to indicate that it is acceptable for there to be
+nothing (empty, no token).
 
-BNF
+\setlength{\grammarindent}{2cm}
 
-keywords
+\section{Lexical elements}
 
-reserved words
+\begin{grammar}
+
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<digit-sequence> ::= <digit> \{ <digit> \}
+
+<integer> ::= <sign> <digit-sequence>
+
+<floating-point> ::= <digit-sequence> <decimal-part-opt> <exponent-opt>
+\alt <decimal-part> <exponent-opt>
+
+<decimal-part> ::= `.' \{ <digit> \}
+
+<exponent> ::= `e' <sign> <digit-sequence>
+
+<sign> ::= `-' | `+' | $\epsilon$
+
+<number> ::= <integer>
+\alt <floating-point>
+
+<char-sequence> ::= \{ <any-char> \} 
+
+<stringliteral> ::= `"' <char-sequence> `"'
+
+<identifier> ::= <letter-or-underscore> \{ <letter-or-underscore-or-digit> \}
+
+\end{grammar}
+
+\section{Overall structure}
+
+\begin{grammar}
+<shader-file> ::= \{ <global-declaration> \} <shader-declaration>
+
+<global-declaration> ::= <function-declaration> 
+\alt <struct-declaration>
+
+<shader-declaration> ::= \spc \\ 
+    <shadertype> <identifier> <metadata-block-opt> 
+    "(" <shader-formal-params-opt> ")" "{" <statement-list> "}"
+
+<shadertype> ::= "displacement" | "imager" | "integrator" | 
+    "light" | "shader" | "surface" | "volume"
+
+<shader-formal-params> ::= <shader-formal-param> \{ "," <shader-formal-param> \}
+
+<shader-formal-param> ::= <outputspec> <typename> <identifier>
+                               <initializer> <metadata-block-opt>
+\alt <outputspec> <typename> <identifier> <arrayspec>
+          <array-initializer> <metadata-block-opt>
+
+<metadata-block> ::= "[[" <metadata> \{ "," <metadata> \} "]]"
+
+<metadata> ::= <typename> <identifier> <initializer>
+
+\end{grammar}
+
+
+\subsection{Declarations}
+\begin{grammar}
+
+<function-declaration> ::= \spc \\ <typename> <identifier> 
+      "(" <function-formal-params-opt> ")" "{" <statement-list> "}"
+
+<function-formal-params> ::= <function-formal-param> \{ "," <function-formal-param> \}
+
+<function-formal-param> ::= <outputspec> <typename> <identifier> <arrayspec-opt>
+
+<outputspec> ::= "output" | $\epsilon$
+
+<struct-declaration> ::= "struct" <identifier> "{" <field-declarations> "}"
+
+<field-declarations> ::= <field-declaration> \{ "," <field-declaration> \}
+
+<field-declaration> ::= <typename> <identifier> ";"
+\alt <typename> <identifier> <arrayspec> ";"
+
+<local-declaration> ::= <function-declaration>
+\alt <variable-declaration>
+
+<arrayspec> ::= "[" <integer> "]"
+
+<variable-declaration> ::= <typename> <def-expressions> ";"
+
+<def-expressions> ::= <def-expression> \{ "," <def-expression> \}
+
+<def-expression> ::= <identifier> <initializer-opt>
+\alt <identifier> <arrayspec> <array-initializer-opt>
+
+<initializer> ::= "=" <expression>
+
+<array-initializer> ::= "=" "{" <expression-list> "}"
+
+<typename> ::= <simple-typename> | <identifier>
+
+<simple-typename> ::= "float"
+| "color"
+| "point"
+| "vector"
+| "normal"
+| "matrix"
+| "string"
+| "void"
+
+\end{grammar}
+
+
+\subsection{Statements}
+\begin{grammar}
+
+<statement-list> ::= <statement-list> <statement>
+
+<statement> ::= 
+<expression-opt> ";"
+\alt <scoped-statements>
+\alt <local-declaration>
+\alt <conditional-statement>
+\alt <loop-statement>
+\alt <loopmod-statement>
+\alt <lighting-statement>
+\alt <return-statement>
+
+<scoped-statements> ::= "{" <statement-list-opt> "}"
+
+<conditional-statement> ::= \spc \\ "if" "(" <expression> ")" <statement>
+\alt "if" "(" <expression> ")" <statement> "else" <statement>
+
+<loop-statement> ::= \spc \\ "while" "(" <expression> ")" <statement>
+\alt "do" <statement> "while" "(" <expression> ")" ";"
+\alt "for" "(" <for-init-statement-opt>  <expression-opt> ";" <expression-opt> ")" <statement>
+
+<for-init-statement> ::= \spc \\ <expression-opt> ";"
+\alt <variable-declaration>
+
+<loopmod-statement> ::= "break" ";"
+\alt "continue" ";"
+
+<lighting-statement> ::= \spc \\ "emit" "(" <expression-list-opt> ")" <statement>
+\alt "lights" "(" <expression-list-opt> ")" <statement>
+\alt "trace" "(" <expression-list-opt> ")" <statement>
+
+<return-statement> ::= "return" <expression-opt> ";"
+
+\end{grammar}
+
+
+\subsection{Expressions}
+\begin{grammar}
+
+<expression-list> ::= <expression> \{ "," <expression> \}
+
+<expression> ::= <number>
+\alt <stringliteral>
+\alt <type-constructor>
+\alt <incdec-op> <variable-ref>
+\alt <expression> <binary-op> <expression>
+\alt <unary-op> <expression>
+\alt "(" <expression> ")"
+\alt <function-call>
+\alt <assign-expression>
+\alt <ternary-expression>
+\alt <typecast-expression>
+\alt <variable-ref>
+
+<variable-lvalue> ::= <identifier> <array-deref-opt> <component-deref-opt>
+
+<variable-ref> ::= <identifier> <array-deref-opt> <component-deref-opt> <incdec-op-opt>
+
+<array-deref> ::= "[" <expression> "]"
+
+<component-deref> ::= "[" <expression> "]"
+\alt "[" <expression> "]" "[" <expression> "]"
+
+<binary-op> ::= "*" | "/" | "\%"
+\alt "+" | "-" 
+\alt "<<" | ">>"
+\alt "<" | "<=" | ">" | ">=" 
+\alt "==" | "!=" 
+\alt "&"
+\alt "^"
+\alt "|"
+\alt "&&" 
+\alt "||" 
+
+<unary-op> ::= "-" | "!" | "~"
+
+<incdec-op> ::= "++" | "--"
+
+<type-constructor> ::= <typename> "(" <expression-list> ")"
+
+<function-call> ::= <identifier> "(" <function-args-opt> ")"
+
+<function-args> ::= <expression> \{ "," <expression> \}
+
+<assign-expression> ::= <variable-lvalue> <assign-op> <expression>
+
+<assign-op> ::= "=" | "*=" | "/=" | "+=" | "-=" | "&=" | "|=" | "^=" |
+"<<=" | ">>="
+
+<ternary-expression> ::= <expression> "?" <expression> ":" <expression>
+
+<typecast-expression> ::= "(" <typename> ")" <expression>
+
+\end{grammar}
 
 
 
@@ -2701,7 +3912,12 @@ reserved words
 % Canonical figure
 %\begin{figure}[ht]
 %\noindent
-%\includegraphics[width=5in]{Figures/bredow/foo} 
+%\includegraphics[width=5in]{Figures/foo} 
 %\caption{Caption
 %\label{fig:foo}}
 %\end{figure}
+
+
+%\apiitem{ret {\ce func} (args)}
+%\indexapi{func()}
+%\endapi

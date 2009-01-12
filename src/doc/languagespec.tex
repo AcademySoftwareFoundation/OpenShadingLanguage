@@ -50,9 +50,13 @@
 %\textregistered\ 
 {\bf\sffamily \versionnumber} \medskip \\ \huge 
 Language Specification
-\\ \large (draft in progress) 
+\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
-\author{Editor: Larry Gritz \\
+\author{
+\copyright Copyright 2009 Sony Pictures Imageworks. All rights reserved.
+ \bigskip \\
+\vspace{1in} \\
+Editor: Larry Gritz \\
 % email should go here
  \bigskip \\
 }
@@ -69,6 +73,10 @@ Language Specification
 \def\point{{\cf point}\xspace}
 \def\vector{{\cf vector}\xspace}
 \def\void{{\cf void}\xspace}
+\def\C{{\cf Ci}\xspace}
+\def\Ci{{\cf Ci}\xspace}
+\def\opacity{{\cf Oi}\xspace}
+\def\Oi{{\cf Oi}\xspace}
 \def\I{{\cf I}\xspace}
 \def\N{{\cf N}\xspace}
 \def\Ng{{\cf Ng}\xspace}
@@ -138,8 +146,9 @@ has not yet been fully fleshed out.
 
 \subsection*{A shader is code that performs a discrete task}
 
-A shader is a program, with inputs and outputs, that performs
-a specific task.  The program code is written in \langname, the
+A shader is a program, with inputs and outputs, that performs a specific
+task when rendering a scene, such as determining the appearance behavior
+of a material or light.  The program code is written in \langname, the
 specification of which comprises this document.
 
 For example, here is a simple {\cf gamma} shader that performs
@@ -153,15 +162,7 @@ in its output {\cf Cout}:
 
 The shader's inputs and outputs are called \emph{parameters}.  Input
 parameters have default values, specified in the shader code, but may
-also be given new values by the renderer at runtime.  Below is a
-schematic showing a {\cf gamma} instance with the {\cf gam} parameter
-overridden with an instance-specific value of {\cf 2.2}.
-
-\bigskip
-
-\bigspc\spc \includegraphics{Figures/instanceschematic}
-
-\medskip
+also be given new values by the renderer at runtime.  
 
 \subsection*{Shader instances}
 
@@ -171,6 +172,17 @@ a shader is called a \emph{shader instance}.  Although all instances of
 a shader are comprised of the same program code, each instance may
 override any or all of its default parameter values with its own set of
 \emph{instance values}.
+
+Below is a
+schematic showing a {\cf gamma} instance with the {\cf gam} parameter
+overridden with an instance-specific value of {\cf 2.2}.
+
+\bigskip
+
+\bigspc\spc \includegraphics{Figures/instanceschematic}
+
+\medskip
+
 
 
 \subsection*{Shader groups and layers}
@@ -223,7 +235,7 @@ it might be done.}:
 The \emph{scene} consists of primarily of geometric primitives,
 light sources, and cameras.
 
-Geometric primitives are shapes such as NURBS, subdivision surfaces,
+\emph{Geometric primitives} are shapes such as NURBS, subdivision surfaces,
 polygons, and curves.  The exact set of supported primitives may vary
 from renderer to renderer.
 
@@ -341,7 +353,7 @@ interesting things that a mere number cannot:
 
 \subsection*{Integrators}
 
-The renderer contains a number of \emph{integrator} (selectable via the
+The renderer contains a number of \emph{integrators} (selectable via the
 renderer's API) which will combine the color closures computed by
 surfaces and volumes with the light sources and view-dependent
 information, to yield the amount of light visible to the camera.
@@ -353,7 +365,7 @@ information, to yield the amount of light visible to the camera.
 \medskip
 
 \begin{annotate}
-At present, this spec is written as if the integrators are all built
+At present, this document is written as if the integrators are all built
 into the renderer itself.  At a later time, we will fully spec it
 out so that integrators themselves may be written in \langname and
 therefore users may expand the repertoire of integration techniques
@@ -443,8 +455,9 @@ The following are \emph{keywords} that have special meaning in
 
 \begin{quote} {\cf
 
-break closure color continue do else emit float for if int lights matrix
-normal point output public return string struct trace vector void while
+break closure color continue do else emit float for if illuminance
+illuminate int matrix normal output point public return string struct
+trace vector void while
 
 }
 \end{quote}
@@ -544,7 +557,7 @@ Following are brief descriptions of the basic types of shaders:
 Surface shaders determine the basic material properties of a surface and
 how it reacts to light.  They are responsible for computing a
 \colorclosure that describes the material, and optionally setting
-opacity and other user-defined output variables.  They may not alter
+\opacity and other user-defined output variables.  They may not alter
 the position of the surface.
 
 Surface shaders are written as if they describe the behavior of a single
@@ -1204,7 +1217,7 @@ lists the built-in color spaces.
 \hline
 {\cf "rgb"} & The coordinate system that all colors start out in, and
 in which the renderer expects to find colors that are set by
-your shader (such as {\cf C}, {\cf opacity}, and {\cf Cl}).   \\
+your shader.   \\
 \hline 
 {\cf "hsv"} & hue, saturation, and value. \\
 \hline 
@@ -2231,9 +2244,9 @@ to \illuminance). \\
 \hline
 \normal\ {\ce Nl} & Normal on the light (area light sources only). \\[1ex]
 \hline
-\color\ {\ce C} & Incident ray color --- the color of the light leaving the surface from \P in the direction {\cf -I}. \\
+\color\ {\ce \Ci} & Incident ray color --- the color of the light leaving the surface from \P in the direction {\cf -I}. \\
 \hline
-\color\ {\ce opacity} & Incident ray opacity --- the degree to which the viewer can ``see through'' the surface at \P. \\[1ex]
+\color\ {\ce \opacity} & Incident ray opacity --- the degree to which the viewer can ``see through'' the surface at \P. \\[1ex]
 \hline
 \float\ {\ce time} & Current shutter time for the point being shaded. \\
 \hline
@@ -2266,8 +2279,8 @@ to \illuminance). \\
 {\cf Ns}      &       &    &       & R \\
 {\cf Pl}      & R$^2$ &    & R$^2$ & R \\
 {\cf Nl}      & R$^2$ &    & R$^2$ & R \\
-{\cf C}       & RW    &    & RW    & \\
-{\cf opacity} & RW    &    & RW    & \\
+\C            & RW    &    & RW    & \\
+\opacity      & RW    &    & RW    & \\
 {\cf time}    & R     & R  & R     & R \\
 {\cf dtime}   & R     & R  & R     & R \\
 {\cf dPdtime} & R     & R  & R     & R \\
@@ -3903,7 +3916,7 @@ nothing (empty, no token).
 
 <ternary-expression> ::= <expression> "?" <expression> ":" <expression>
 
-<typecast-expression> ::= "(" <typename> ")" <expression>
+<typecast-expression> ::= "(" <simple-typename> ")" <expression>
 
 \end{grammar}
 

@@ -35,7 +35,7 @@
 \fancyhead[LE,RO]{\bfseries\thepage}
 \fancyhead[LO]{\bfseries\rightmark}
 \fancyhead[RE]{\bfseries\leftmark}
-\fancyfoot[C]{\bfseries Unnamed Shading Language Documentation}
+\fancyfoot[C]{\bfseries Unnamed Shading Language Specification}
 \renewcommand{\footrulewidth}{1pt}
 
 
@@ -116,6 +116,20 @@ Language Specification
 %\include{blah}
 
 
+\chapter{Introduction}
+\label{chap:intro}
+
+Later there will be some words of wisdom here.
+
+\bigskip
+
+\begin{annotate}
+When you see text in this style, it's an annotation.  These annotations
+will not be in the final draft of this document.  They are notes to the
+readers of early drafts, sometimes questions, sometimes guideposts
+to uncertain areas, sometimes explanations of what is to come but that
+has not yet been fully fleshed out.
+\end{annotate}
 
 
 \chapter{The Big Picture}
@@ -139,7 +153,15 @@ in its output {\cf Cout}:
 
 The shader's inputs and outputs are called \emph{parameters}.  Input
 parameters have default values, specified in the shader code, but may
-also be given new values by the renderer at runtime.
+also be given new values by the renderer at runtime.  Below is a
+schematic showing a {\cf gamma} instance with the {\cf gam} parameter
+overridden with an instance-specific value of {\cf 2.2}.
+
+\bigskip
+
+\bigspc\spc \includegraphics{Figures/instanceschematic}
+
+\medskip
 
 \subsection*{Shader instances}
 
@@ -166,12 +188,15 @@ connected to form a shader group.
 
 \bigskip
 
-\includegraphics{Figures/groupschematic}
+\noindent \includegraphics{Figures/groupschematic}
 
-\medskip
+\bigskip
 
 \noindent And here is sample pseudo-code shows how the above network may
-be assembled using an API in the renderer:
+be assembled using an API in the renderer\footnote{This document does
+not dictate a specific renderer API for declaring shader instances,
+groups, and connections; the code above is just an example of how
+it might be done.}:
 
 \begin{code}
     ShaderGroupBegin ()
@@ -3727,7 +3752,7 @@ nothing (empty, no token).
 
 <metadata-block> ::= "[[" <metadata> \{ "," <metadata> \} "]]"
 
-<metadata> ::= <typename> <identifier> <initializer>
+<metadata> ::= <simple-typename> <identifier> <initializer>
 
 \end{grammar}
 
@@ -3767,15 +3792,18 @@ nothing (empty, no token).
 
 <array-initializer> ::= "=" "{" <expression-list> "}"
 
-<typename> ::= <simple-typename> | <identifier>
+<typename> ::= <simple-typename> 
+\alt <simple-typename> "closure"
+\alt <identifier-structname>
 
-<simple-typename> ::= "float"
-| "color"
-| "point"
-| "vector"
-| "normal"
+<simple-typename> ::= 
+"color"
+| "float"
 | "matrix"
+| "normal"
+| "point"
 | "string"
+| "vector"
 | "void"
 
 \end{grammar}
@@ -3793,7 +3821,7 @@ nothing (empty, no token).
 \alt <conditional-statement>
 \alt <loop-statement>
 \alt <loopmod-statement>
-\alt <lighting-statement>
+%\alt <lighting-statement>
 \alt <return-statement>
 
 <scoped-statements> ::= "{" <statement-list-opt> "}"
@@ -3811,9 +3839,9 @@ nothing (empty, no token).
 <loopmod-statement> ::= "break" ";"
 \alt "continue" ";"
 
-<lighting-statement> ::= \spc \\ "emit" "(" <expression-list-opt> ")" <statement>
-\alt "lights" "(" <expression-list-opt> ")" <statement>
-\alt "trace" "(" <expression-list-opt> ")" <statement>
+%<lighting-statement> ::= \spc \\ "emit" "(" <expression-list-opt> ")" <statement>
+%\alt "lights" "(" <expression-list-opt> ")" <statement>
+%\alt "trace" "(" <expression-list-opt> ")" <statement>
 
 <return-statement> ::= "return" <expression-opt> ";"
 

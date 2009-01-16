@@ -35,12 +35,12 @@
 \fancyhead[LE,RO]{\bfseries\thepage}
 \fancyhead[LO]{\bfseries\rightmark}
 \fancyhead[RE]{\bfseries\leftmark}
-\fancyfoot[C]{\bfseries Unnamed Shading Language Specification}
+\fancyfoot[C]{\bfseries Open Shading Language Specification}
 \renewcommand{\footrulewidth}{1pt}
 
 
-\def\langname{Unnamed Shading Language\xspace}
-\def\product{{\sffamily Unnamed Shading Language}\xspace}
+\def\langname{Open Shading Language\xspace}
+\def\product{{\sffamily Open Shading Language}\xspace}
 \def\versionnumber{0.1}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
@@ -3526,6 +3526,13 @@ Returns a \colorclosure that represents the Lambertian diffuse
 translucence of a smooth surface, which is much like {\cf diffuse()}
 except that it gathers light from the \emph{far} side of the surface.
 
+\begin{annotate}
+Is a general term such as ``translucence'' too presumptuous for a simple
+backfacing lambert?  Should we instead call this {\cf backdiffuse},
+{\cf backlambert}, or something more specific?  Since probably later we
+will add one or more physically-accurate, translucence function.
+\end{annotate}
+
 \apiend
 
 
@@ -3921,6 +3928,407 @@ nothing (empty, no token).
 \end{grammar}
 
 
+\chapter{Discussion}
+\begin{annotate}
+
+In this chapter, which will presumably not be included in the final
+language specicification document, we discuss some of the design choices
+we've made, as well as topics for which decisions have not yet been
+made.  
+
+Readers: this is your chance.  Any topic that makes it into this chapter
+really deserves careful thought and feedback.
+
+This specification is a living document.  Nothing is permanently set in
+stone.  There will someday be a 2.0 spec.  It's easier to add things we
+left out than to take out things that turned out to be unnecessary
+things or a bad idea.
+
+\section{Data types}
+
+\subsection{Should \color be spectral?}
+
+This spec is written assuming that \color should explicitly be
+3-component RGB.  Alternately, we could add global \inttype\ {\cf ncomps} that gives the
+numer of components in a \color, and eliminate any built-in operations
+and library functions that seem to require or imply a 3-component color
+model (including type casting between \color and the 3-component
+\point-like types).
+
+Spectral color is a nice abstraction.  It allows implementations to use
+a different number of color components if they choose to.  It allows
+shaders to potentially be more physically accurate or perform computions
+that require more spectral samples.
+
+On the other hand, \langname is designed for production rendering.
+Think about the vast number of things that shaders do that assume a
+3-channel model: convert back and forth to HSV, tweak the red channel,
+generate {\cf color noise} (that's really 3D noise underneath), read 3
+channels of texture, read channel \#4 and assume it's alpha, etc.  There
+are no scanners (outside the lab) to capture, and no paint programs to
+generate, $n$-channel textures.  No compositing software to handle
+spectral images.  No output media for $n$-channel images.  With
+3-channel input and 3-channel output, if the only $n$-channel operations
+are internal to shaders, users could do it with arrays if they really
+wanted to.
+
+Abstraction is nice, but so is concreteness and explicitness about what
+a shader is really doing and how the system really works.  If all
+implementations are likely to be 3-components underneath, why maintain
+the pretense of $n$-components and in the process sacrifice shader
+clarity and performance by pretending to support an abstraction that
+doesn't really exist?
+
+RenderMan was specified using spectral colors, but (1) nobody ever
+implemented it with ncomps != 3, and (2) if you really looked hard at
+what would be required to do so, you quickly realized that there were
+all sorts of ways that a 3-component model crept into other aspects of
+the language, the implementation, the renderer APIs, and the shaders
+themselves.  Actually implementing an $n$-component model would have
+been hugely disruptive.  When I designed and implemented Gelato's
+shading language (GSL), I decided that, after 15 years of RenderMan
+never implementing spectral colors nor users requesting it, I should
+drop the pretense.  So GSL explicitly had a 3-component color model.  It
+was easier to implement RGB (for example, certain internals that
+operated on \point-like types could be reused for \color without
+embarrassment), and no user ever complainted.
+
+It seems to me that after 20 years of RSL having $n$-colors that nobody
+has ever used, and 6 years of GSL leaving it out without negative
+consequence, we can probably assume that we can live without it for
+several more years, if not forever.
+
+Does anybody want to argue that we should nonetheless specify the
+language as $n$-component colors?  Should we use it for a while and
+later consider a 2.0 revision that either changes the definition of
+\color or else adds a new {\cf spectral} type that has a varying
+number of components, for those shaders that wish to operate that way?
+
+
+\subsection{4-channel colors, color/alpha combinations}
+
+Some shading languages have 4-channel colors (RGBA).  This spec
+(like RSL and GSL before it) does not.
+
+I strongly disagree with the notion of the basic \color type having an
+embedded alpha.  It mixes two concepts that don't belong together.  The
+\color type should be spectral (even if explicitly 3-channel).
+
+I feel less strongly about having a second type that combines a
+\color and an alpha value (for the sake of argument, let's call it
+a {\cf colora}).  The most important benefit of doing so
+would be to simplify the common operation of reading both color and
+alpha data from a 4-channel texture, which awkwardly required two
+separate texture reads in RenderMan's shading language.  Gelato's
+shading language avoided this in the same manner as OSL, namely by
+having an argument to the texture command that allows you to return
+an alpha:
+
+\begin{code}
+   float alphavalue;
+   color C = texture ("name.tx", s, t, "alpha", alphavalue);
+\end{code}
+
+\noindent This is slightly awkward inasmuch as it does not combine
+the color and alpha into a single ``return value,'' but at least it
+avoids two texure calls, as well as avoiding cluttering the language
+with another type that exists just to make this texture call simpler.
+
+But I can see that others may disagree.  Does anybody want to argue
+for a {\cf colora} type that explicitly combines color and alpha as a
+core type?
+
+
+\subsection{Array operations}
+
+As written, the only array operations allowed are element access (read
+and write), and passing an array by reference to a function.  This
+roughly corresponds to C's and C++'s array functionality.  Does
+anybody want to argue for any of the following to be included?
+
+\begin{itemize}
+\item Array assignment: {\cf A = B}, legal as long as {\cf A} and {\cf
+  B} are the same type and have the same number of elements length?
+\item Casting to built-in types: Ability to assign an array of length 3
+  to a \color, \point, \vector, or \normal, and vice versa?  
+\item Array arithmetic: {\cf A + B}, and so on, defined as
+  element-by-element addition, subtraction, etc., legal as long as the
+  two arrays are the same type and have the same number of elements?
+\item Anything else you feel strongly that arrays should be able to do?
+\end{itemize}
+
+
+\subsection{Recursive structures}
+
+We have defined structures as being allowed to consist only of basic
+types and arrays thereof --- not structures of structures.  This
+restriction makes for a simpler grammar and implementation, simplier
+renderer-side APIs for passing data to shaders, and simpler APIs for
+libraries that query parameters of compiled shaders.  But if people
+strongly feel like structures-of-structures is an important feature, we
+can consider generalizing in this way.  Or, if we discover later that
+it's more helpful than we had once thought, we can always add it in
+future version of the spec.
+
+
+\section{Syntax}
+
+\subsection{More C++-like overall syntax}
+
+I've considered that rather than 
+
+\begin{code}
+    surface plastic (float Kd = 0.5, float Ks = 0.5)
+    {
+        Ci = Kd * diffuse() + Ks * specular();
+    }
+\end{code}
+
+\noindent or its method-like equivalent:
+
+\begin{code}
+    surface plastic (float Kd = 0.5, float Ks = 0.5)
+    {
+        public void main () {
+            Ci = Kd * diffuse() + Ks * specular();
+        }
+    }
+\end{code}
+
+\noindent that we switch to a syntax that even more closely mimics C++,
+such as:
+
+\begin{code}
+    class plastic : public surface
+    {
+    public:
+        float Kd = 0.5;
+        float Ks = 0.5;
+
+        void main (output color Ci) {
+            Ci = Kd * diffuse() + Ks * specular();
+        }
+    }
+\end{code}
+
+So the idea is that instead of a shader type, you ``inherit'' from the
+kind of shader you want; instead of parameters, you have public member
+variables; and so on.
+
+But this is not really clean.  Notice that the assignment of default
+values to the ``parameters'' (now public data members) is not really
+correct C++ syntax.  I guess we could move to having a constructor:
+
+\begin{code}
+    class plastic : public surface
+    {
+        ...
+        plastic () : Kd(0.5), Ks(0.5)
+        {
+        }
+        ...
+    }
+\end{code}
+
+But is this really any better?  Are we just cluttering things up in a
+slavish attempt to exactly replicate C++?  And we leave behind the nice
+semantics we had before where one parameter's default value could
+actually depend on another parameter's actual value.  In a number of
+ways, OSL is NOT C++, and maybe it makes things more confusing if it
+looks just like C++ but doesn't act just like it, or if some things look
+just like C++ but others clearly aren't.
+
+I'm currently tempted to stick to the syntax in this document, and not
+to exactly replicate C++'s class structure.  But I think it's worth
+opening it to discussion, if others want to argue strongly for it.
+
+
+\section{Closures and Illumination}
+
+\subsection{Global variables and view-dependence}
+
+Should we allow access to \I (incident viewing ray) from anyplace except
+inside the integrator?  
+
+On one hand, it's just an invitation to inadvertently build
+view-dependence into material descriptions.
+
+On the other hand, view-independence is less important than
+light-direction-independence, and we can always warn (or optionally
+error, if a compiler flag is set) if view dependence is detected.  It's
+hard to tell if there are shader effects we will want that can only be
+done (or be drastically easier) using old fashioned view-dependent code.
+Perhaps we should allow it, and all due caveats and warnings to those
+who dare use it instead of the recommended view-independent closures.
+
+I'm leaning toward allowing \I, for when it's needed, but warning and
+making it easy to avoid using it.  Anybody want to argue that we should
+flat-out ban \I and other view-dependencies?
+
+\subsection{Normals}
+
+If you're not supposed to use \I or have explicit view-dependence in the
+shaders, then what becomes of {\cf faceforward()}?  Do we assume that \N
+is already frontfacing by the time the shader runs?  Do we add a {\cf
+  Nf} that's the faceforward-ed version?  Do we let \N be the natural
+normal and assume models will always be consistently-facing (which has
+never worked)?  Force the renderer to explicitly mark ``double-sided''
+geometry and potentially double-shade so that normals are always
+consistent for each ``side?''
+
+\subsection{Light loops -- to be, or not to be?}
+
+With closures, can we remove all facilities for an explicit loop over
+lights (i.e., what RenderMan calls {\cf illuminance})?  At least, 
+unless/until we allow people to code integrators in the language itself?
+
+Or does it makes sense to allow explicit light loops, in case somebody
+wants/needs them, but any shader that uses them loses all ability to
+cheaply re-evaluate itself under moving cameras or changing lights, and
+possibly loses the ability to interact with smart global illumination
+integrators that depend on sampling their BRDF's?
+
+My current inclination is to leave light loops out entirely, and
+consider adding them later if it turns out that we've made a mistake.
+
+\subsection{Integrators and closure implementations -- in the shading language?}
+
+For now, I'm assuming that the integrator itself, as well as the
+implementations of the ``primitive'' closure functions, are a hard-coded
+part of the renderer itself, or implemented as plug-ins in a way that's
+proprietary to the renderer.
+
+It's very tempting to extend the language itself to be able to express a
+primitive closure function or an integrator.  But I fear that (1) this
+will be more expensive than we want; and (2) we don't know the best way
+to do it yet; (3) it will require a variety of syntaxes, functions, and
+complications in the language that would not otherwise be needed.  
+
+So I'm currently leaning toward leaving this out of the language for
+now, and considering it for a future revision.  Comments?
+
+\section{Transparency, Opacity, and Holdout mattes}
+
+Transparency is a tricky subject.  There are at least four slightly
+different concepts at play here: (1) Gathering illumination from the
+back side of a surface; (2) Proper coherent refraction of objects
+``behind'' the primitive being shaded (usually employing ray tracing);
+(3) Seeing an undistored image (unrefracted) image of what's behind the
+primitive, usually employing a ``compositing'' method; (4) making an
+object ``disappear'' to form a ``stencil'' effect under shader control.
+
+It is clear that \#1 and \#2 are properly handled with our usual 
+material closures ({\cf translucence} and {\cf refraction()},
+respectively).
+
+The real question is how to handle the kind of compositing opacity of
+\#3 and \#4.  The ``usual'' way (in renderers I've written before,
+anyway), is to have a special variable that holds the opacity of the
+surface.  In RenderMan, this is called {\cf Oi}, in Gelato it was the
+less obscure {\cf opacity}.  It defaults to (1,1,1).  The shader is
+responsible for scaling reflectivities by this amount.  The renderer
+accumulates this for all subpixel samples, filters it, and reduces this
+to a single \emph{alpha} for each pixel (usually by averaging the
+channels, or using a luminance transformation).
+
+There is usually a special case for \emph{holdout mattes} --- objects
+that leave a ``hole'' with $\alpha = 0$ in the final image, yet still
+hide any in-render objects behind it.  In RenderMan and Gelato, objects
+were designated as holdouts via the renderer API, not under shader
+control (in fact, shaders generally aren't even run on holdout objects).
+In PRMan and Entropy, this was extended so that holdout objects would
+run their shaders, and the computed opacity (\Oi) was used to control
+\emph{partial matteness}, allowing shaders to ``fade'' matteness in, or
+use a pattern to programmatically define the matte area in the shader.
+It was still really hard to have full shader control over all aspects of
+matteing, such as wanting an object to completely block what's behind it
+in-scene but leave a non-zero and non-one value in the image's
+\emph{alpha} channel, and it still depended on the object being tagged
+as ``matte'' through the renderer API (a clever shader couldn't do it on
+its own).
+
+I've under-specified how this should work in this document, presumably
+falling back to the RenderMan-like behavior as our default position.
+But I want to throw a few additional options out here for debate:
+
+\begin{itemize}
+\item Default / RenderMan way: shader sets \Oi < 1 for ``compositing
+  transparency'', renderer auto-composites objects behind the surface
+  (without refraction), accumulated opacity directly translates into
+  alpha channel, holdout mattes designated through renderer API.
+\item Separate opacity/alpha controls: \Oi controls compositing
+  transparency; a separate {\cf alpha} global variable can be set that
+  becomes the opacity (if not set by the shader, it will be set to the
+  \Oi result).  In other words, a holdout matte could be controlled by
+  the shader with {\cf Oi=1, alpha=0}, that blocks visibility of
+  in-render objects, but puts a hole in the output image's alpha
+  channel.
+\item Similar to the last item, but instead of the confusing {\cf Oi,
+  alpha} nomenclature, use {\cf Oi} and {\cf holdout} (defaulting to 0,
+  i.e., the object is not a holdout object).  Partial holdoutness can be
+  set.  The renderer handles how the holdoutness affects the image
+  channels and compositing.  So a shader would make a holdout matte with
+  {\cf Oi=1, holdout=1}, transparency with {\cf Oi<1, holdout=0}.
+\item No explicit \Oi at all (!), but rather make a material closure
+  primitive function {\cf transparency()} that the renderer understands.
+  So compositing transparency could be explicit in the lighting
+  function:
+  \begin{code}
+      opac = ...compute...;
+      Ci = opac * diffuse() + (1-opac) * transparency();
+  \end{code}
+  Or even, {\cf refraction()} could serve the same purpose, and the
+  renderer could just know that if the index of refraction is 1, it
+  should use the compositing trick.  
+
+  Holdout mattes don't fall into this scheme especially well, so there's
+  an orthogonal problem of whether to have a {\cf holdout} variable to
+  set, or a renderer API function.
+\end{itemize}
+
+What do you guys think?  I'm kind of leaning toward the third solution
+--- having shaders set {\cf Oi} and {\cf holdout} variables, allowing
+full control in the shader.
+
+
+\begin{comment}
+the next thing was the global variables - you still have I, L, Cl in there, and a reference to illuminance loops
+
+Another thing I've alluded to, but not yet spelled out in the current draft, is ways to use multiple entry points. Obvious ones are an opacity-only entry point for shadows, a maxdisplacement entry point for disp bounds computation, etc. I figure we'll make the most obvious ones "standard" and document how implementations are expected to use them.
+Yeah, I think both in the docs and also with compiler warnings, we should be real clear about the consequences of breaking view-independence.
+It's pretty easy in the compiler, since the view dependence only comes in through a couple places. Basically using "camera" space, and I, and maybe just a couple more things.
+multiple entry points - isn't it better to just let the compiler figure those things out ?
+Let the compiler figure it out? What do you mean?
+well i guess for max-displacement you might get something thats not accurate enough
+(i was thinking just run the shader with intervals - but yeah, might not be ideal)
+I don't see how the compiler can figure out the max displacement. I think for most shaders it would end up with a hug interval.
+huge
+Actually, it's even worse than that. With a shader group/network, the inputs (like the scaling for displacement) can easily come from other layers, who don't even know that they're computing a displacement scale factor.
+but it had to do with alpha of things seen through refractions and reflections
+Well, yeah. We're dealing with two metaphors -- light propagation, and compositing of layers. Like relativity and quantum mechanics, you can get into areas where you realize they are incompatible. The whole notion of alpha has nothing whatsoever to do with light, so it breaks down when you start taking light propagation too seriously. Yet alpha is INCREDIBLY useful! It's maddening.
+hehe yep
+AOV's are like that, too. Do they propagate through reflections, or not? Depends on what the human wants it to mean, I suppose, so probably should not be a renderer policy one way or the other.
+Do we try to propagate alpha or AOVs through reflections currently?
+no
+although i suppose the shader can do things to try and do that
+It's really hard to sort out. If AOV is "N", clearly you want it to be the front object only. (Or do you, if it's transparent?) But if it's "key light contribution", then maybe you want it to propagate through reflections, so you can do comp-based light scaling.
+But how does it propagate through indirect rays? Ugh, again the clash of metaphors. There's no such thing as AOV's in lights and cameras.
+maybe AOVs is something the renderer has to implement ?
+but yeah .. i'm not sure how to resolve all this
+it feels a bit dangerous to get into this middle ground where some things are physically motivated, but others work around it
+but then again - we're making movies, if anything we need to be able to comp over plates
+
+and about the derivatives ... aren't those view-dependent quantities in a raytracer ?
+(that might be an argument for hiding them as much as possible)
+Yes, in a sense.
+Re-cast the problem. Imagine that it's just a layout of samples. Maybe at vertices (for displacement). Maybe at every sample (for RT). Maybe along grid lines (for Reyes). Maybe regularly spaced, maybe camera-dependent. You don't know. Derivatives just reflect the spacing of the shading samples. Whether or not that spacing is view-dependent is a black box to the shader, just a renderer implementation detail.
+
+but going back to derivatives - i see the point about Du/Dv vs. Dx/Dy
+i would be fine with just "filterwidth()"
+I think me too, but I'm hedging my bets while I think about it more.
+\end{comment}
+
+\end{annotate}
 
 
 

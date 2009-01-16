@@ -60,7 +60,7 @@ Editor: Larry Gritz \\
 % email should go here
  \bigskip \\
 }
-\date{{\large Date: 9 January, 2009}}
+\date{{\large Date: 16 January, 2009}}
 
 
 \include{macros}
@@ -81,6 +81,8 @@ Editor: Larry Gritz \\
 \def\N{{\cf N}\xspace}
 \def\Ng{{\cf Ng}\xspace}
 \def\P{{\cf P}\xspace}
+\def\dPdu{{\cf dPdu}\xspace}
+\def\dPdv{{\cf dPdv}\xspace}
 \def\currentspace{{\cf "current"} space\xspace}
 \def\commonspace{{\cf "common"} space\xspace}
 \def\shaderspace{{\cf "shader"} space\xspace}
@@ -137,12 +139,31 @@ will not be in the final draft of this document.  They are notes to the
 readers of early drafts, sometimes questions, sometimes guideposts
 to uncertain areas, sometimes explanations of what is to come but that
 has not yet been fully fleshed out.
+
+Short annotations will sometimes spring up anywhere, but there's also a
+full chapter of discussion of design choices
+(Chapter~\ref{chap:discussion}).  Opinionated readers should pay
+particular attention to this chapter, as these big decisions will be the
+hardest to change later.
+
 \end{annotate}
 
 
 \chapter{The Big Picture}
 \label{chap:shaderstructure}
 \label{chap:bigpicture}
+
+This chapter attempts to lay out the major concepts of \langname,
+define key nomenclature, and sketch out how individual shader fit 
+together in the context of a renderer as a whole.
+
+\begin{annotate}
+Other than the background material of this chapter, the rest of this
+specification deals strictly with the language itself.  There will, in
+the future, be separate (shorter) documents explaining in detail the use
+of the language compiler, the renderer-side issues, the library and APIs
+for how a renderer actually causes shaders to be evaluated, and so on.
+\end{annotate}
 
 \subsection*{A shader is code that performs a discrete task}
 
@@ -350,6 +371,16 @@ interesting things that a mere number cannot:
   closure (such as texture lookups, noise functions, etc.).
 \end{itemize}
 
+\begin{annotate}
+At present, we are assuming that the primitive closure functions (such
+as {\cf diffuse}, {\cf ward}, {\cf cooktorrance}, etc.) are all built
+into the renderer, or implemented as renderer plugins.  At a later time,
+possibly in a later draft or maybe not until a truely later version of
+the spec, we will fully spec it out so that closure primitive functions
+may be written in \langname.  But I fear that if we do it too soon,
+we'll screw it up.  But, yes, the eventual goal is for you to be able to
+write these primitive functions in the language itself.
+\end{annotate}
 
 \subsection*{Integrators}
 
@@ -365,12 +396,46 @@ information, to yield the amount of light visible to the camera.
 \medskip
 
 \begin{annotate}
-At present, this document is written as if the integrators are all built
-into the renderer itself.  At a later time, we will fully spec it
-out so that integrators themselves may be written in \langname and
-therefore users may expand the repertoire of integration techniques
-available to the renderer.
+At present, this document is written as if the integrators are built
+into the renderer itself (or implemented as renderer plug-ins).  At a
+later time, we may consider making it possibe for integrators themselves
+to be written in \langname.
 \end{annotate}
+
+\subsection*{Units}
+
+You can tell the renderer (through a global option) what units the scene
+is using for distance and time.  Then the shader has a built-in function
+called {\cf transformu()} that works a lot like {\cf transform()}, but
+instead of converting between coordinate systems, it converts among
+units.  For example,
+
+\begin{code}
+    displacement bumpy (float bumpdist = 1,
+                        string bumpunits = "cm")
+    {
+        // convert bumpdist to common units
+        float spacing = transformu (bumpunits, "common", bumpdist);
+        float n = noise (P / spacing);
+        displace (n);
+    }
+\end{code}
+
+So you can write a shader to achieve some effect in real world units,
+and that shader is totally reusable on another show that used different
+modeling units.
+
+It knows all the standard names like \qkw{cm}, \qkw{in}, \qkw{km}",
+etc., and can convert among any of those, as well as between named
+coordinate systems.  For example,
+
+\begin{code}
+    float x = transformu ("object", "mm", 1);
+\end{code}
+
+now {\cf x} is the number of millimeters per unit of \objectspace on
+that primitive.
+
 
 \chapter{Lexical structure}
 \label{chap:lexical}
@@ -2267,35 +2332,39 @@ to \illuminance). \\
 {\bf Variable} & surface & displacement & volume & light \\
 \hline
 \P            & R     & RW & R     & R \\
-\I            & R     &    & R$^1$ & R$^1$  \\
-\N            & RW    & RW & R$^1$ & R$^1$ \\
-{\cf Ng}      & R     & R  & R$^1$ & R$^1$ \\
-{\cf dPdu}    & R     & R  & R$^1$ & R$^1$ \\
-{\cf dPdv}    & R     & R  & R$^1$ & R$^1$ \\
-{\cf u, v}    & R     & R  & R$^1$ & R$^1$ \\
-{\cf L}       & R$^2$ &    & R$^2$ & RW \\
-{\cf Cl}      & R$^2$ &    & R$^2$ & RW \\
-{\cf Ps}      &       &    &       & R \\
-{\cf Ns}      &       &    &       & R \\
-{\cf Pl}      & R$^2$ &    & R$^2$ & R \\
-{\cf Nl}      & R$^2$ &    & R$^2$ & R \\
-\C            & RW    &    & RW    & \\
-\opacity      & RW    &    & RW    & \\
+\I            & R     &    & R &   \\
+\N            & RW    & RW &  &  \\
+{\cf Ng}      & R     & R  &  &  \\
+{\cf dPdu}    & R     & R  &  &  \\
+{\cf dPdv}    & R     & R  &  &  \\
+%{\cf u, v}    & R     & R  & R$^1$ & R$^1$ \\
+\Ci           & RW    &    & RW    & \\
+\Oi           & RW    &    & RW    & \\
 {\cf time}    & R     & R  & R     & R \\
 {\cf dtime}   & R     & R  & R     & R \\
 {\cf dPdtime} & R     & R  & R     & R \\
+%{\cf L}       & R$^2$ &    & R$^2$ & RW \\
+{\cf L}       &       &    &       & RW \\
+%{\cf Cl}      & R$^2$ &    & R$^2$ & RW \\
+{\cf Cl}      &       &    &       & RW \\
+{\cf Ps}      &       &    &       & R \\
+{\cf Ns}      &       &    &       & R \\
+%{\cf Pl}      &       &    & R$^2$ & R \\
+%{\cf Nl}      &       &    & R$^2$ & R \\
+{\cf Pl}      &       &    &  & R \\
+{\cf Nl}      &       &    &  & R \\
 \hline 
 \end{tabular}
 
-$^1$Certain surface variables (including \N, \Ng, \I, etc.) are readable
-in light or volume shaders, but in that case store the values for the
-surface whose shading triggered execution of the shader.  Use caution:
-light may be gathered from a completely different place (for example,
-when stepping through a volume).
+%$^1$Certain surface variables (including \N, \Ng, \I, etc.) are readable
+%in light or volume shaders, but in that case store the values for the
+%surface whose shading triggered execution of the shader.  Use caution:
+%light may be gathered from a completely different place (for example,
+%when stepping through a volume).
 
-$^2$Light variables may be read in surface and volume shaders, but only
-inside \illuminance loops, and they refer to the current light being
-examined by the loop.
+%$^2$Light variables may be read in surface and volume shaders, but only
+%inside \illuminance loops, and they refer to the current light being
+%examined by the loop.
 
 \caption{Accessibility of variables by shader type
 \label{tab:globalvaraccess}}
@@ -3706,8 +3775,8 @@ would only exit the enclosing function.
 
 
 
-\chapter{Formal Language Syntax}
-\label{chap:formalsyntax}
+\chapter{Formal Language Grammar}
+\label{chap:grammar}
 
 This section gives the complete syntax of \langname.  Syntactic
 structures that have a name ending in ``-opt'' are optional.  Structures
@@ -3718,7 +3787,7 @@ nothing (empty, no token).
 
 \setlength{\grammarindent}{2cm}
 
-\section{Lexical elements}
+\section*{Lexical elements}
 
 \begin{grammar}
 
@@ -3748,7 +3817,7 @@ nothing (empty, no token).
 
 \end{grammar}
 
-\section{Overall structure}
+\section*{Overall structure}
 
 \begin{grammar}
 <shader-file> ::= \{ <global-declaration> \} <shader-declaration>
@@ -3777,7 +3846,7 @@ nothing (empty, no token).
 \end{grammar}
 
 
-\subsection{Declarations}
+\section*{Declarations}
 \begin{grammar}
 
 <function-declaration> ::= \spc \\ <typename> <identifier> 
@@ -3829,7 +3898,7 @@ nothing (empty, no token).
 \end{grammar}
 
 
-\subsection{Statements}
+\section*{Statements}
 \begin{grammar}
 
 <statement-list> ::= <statement-list> <statement>
@@ -3868,7 +3937,7 @@ nothing (empty, no token).
 \end{grammar}
 
 
-\subsection{Expressions}
+\section*{Expressions}
 \begin{grammar}
 
 <expression-list> ::= <expression> \{ "," <expression> \}
@@ -3928,7 +3997,18 @@ nothing (empty, no token).
 \end{grammar}
 
 
+\chapter{Example Shaders}
+\label{chap:exampleshaders}
+
+\begin{annotate}
+Sorry, I haven't done this yet.  Eventually, this chapter will have
+several simple (but useful and fully functional) shaders to illustrate
+how all these concepts fit together.
+\end{annotate}
+
+
 \chapter{Discussion}
+\label{chap:discussion}
 \begin{annotate}
 
 In this chapter, which will presumably not be included in the final
@@ -3980,7 +4060,7 @@ clarity and performance by pretending to support an abstraction that
 doesn't really exist?
 
 RenderMan was specified using spectral colors, but (1) nobody ever
-implemented it with ncomps != 3, and (2) if you really looked hard at
+implemented it with ncomps $\ne 3$, and (2) if you really looked hard at
 what would be required to do so, you quickly realized that there were
 all sorts of ways that a 3-component model crept into other aspects of
 the language, the implementation, the renderer APIs, and the shaders
@@ -4143,7 +4223,23 @@ to exactly replicate C++'s class structure.  But I think it's worth
 opening it to discussion, if others want to argue strongly for it.
 
 
-\section{Closures and Illumination}
+\section{Global variables}
+
+\subsection{Nomenclature}
+
+Does anybody have a perference for \dPdu and \dPdv (borrowing the
+RenderMan names, but awkward for primitives without a consistent $u,v$
+parameterization?), versus something more generic such as {\cf T} and
+{\cf B} (tangent and bitangent, without explicitly saying how they are
+allegedly computed)?
+
+In this document, I'm tentatively using the RenderMan-inspired {\cf Ci}
+and {\cf Oi} for output color and opacity.  (The ``i'' is for
+\emph{incident}.)  In Gelato, I used {\cf C} and {\cf opacity}, which I
+think was slightly less obtuse (though loses the advantage of being
+familiar to RenderMan experts).  Other names are also up for grabs if
+people feel strongly.
+
 
 \subsection{Global variables and view-dependence}
 
@@ -4175,6 +4271,8 @@ normal and assume models will always be consistently-facing (which has
 never worked)?  Force the renderer to explicitly mark ``double-sided''
 geometry and potentially double-shade so that normals are always
 consistent for each ``side?''
+
+\section{Closures and Illumination}
 
 \subsection{Light loops -- to be, or not to be?}
 
@@ -4252,7 +4350,7 @@ falling back to the RenderMan-like behavior as our default position.
 But I want to throw a few additional options out here for debate:
 
 \begin{itemize}
-\item Default / RenderMan way: shader sets \Oi < 1 for ``compositing
+\item Default / RenderMan way: shader sets \Oi $< 1$ for ``compositing
   transparency'', renderer auto-composites objects behind the surface
   (without refraction), accumulated opacity directly translates into
   alpha channel, holdout mattes designated through renderer API.
@@ -4343,6 +4441,130 @@ I think me too, but I'm hedging my bets while I think about it more.
 
 %\include{header}
 %\include{glossary}
+
+\chapter{Glossary}
+\label{chap:glossary}
+
+\begin{description}
+
+\item[Attribute state.] The set of variables that determines all the
+  properties (other than shape) of a \emph{geometric primitive} --- such
+  as its local transformation matrix, the surface, displacement, and
+  volume shaders to be used, which light sources illuminate objects that
+  share the attribute state, whether surfaces are one-sided or
+  two-sided, etc.  Basically all of the options that determine the
+  behavior and appearance of the primitives, that are not determined by
+  the shape itself or the code of the shaders.  A single attribute state
+  may be shared among multiple geometric primitives.  Also sometimes
+  called \emph{graphics state}.
+
+\item[Built-in function.] A function callable from within a shader, where
+  the implementation of the function is provided by the renderer (as
+  opposed to a function that the shader author writes in \langname
+  itself).
+
+\item[Closure.] A symbolic representation of a function to be called,
+  and values for its parameters, that are packaged up to be be evaluated
+  at a later time to yield a final numeric value.
+
+\item[Connection.] A routing of the value of an \emph{output parameter}
+  of one \emph{shader layer} to an \emph{input paramter} of another
+  shader layer within the same \emph{shader group}.
+
+\item[Default parameter value.] The initial value of a \emph{shader
+  parameter}, if the renderer does not override it with an
+  \emph{instance value}, an interpolated \emph{primitive variable}, or a
+  \emph{connection} to an output parameter of another \emph{layer}
+  within the \emph{group}.  The default value of a shader parameter
+  is explicitly given in the code for that shader, and may either be
+  a constant or a computed expression.
+
+\item[Geometric primitive.] A single shape, such as a NURBS patch, a
+  polygon or subdivision mesh, a hair primitive, etc.
+
+\item[Global variables.] The set of ``built-in'' variables describing the
+  common renderer inputs to all shaders (as opposed to shader-specific
+  parameters).  These include position (\P), surface normal (\N),
+  surface tangents (\dPdu, \dPdv), as well as standard color (\Ci) and
+  opacity (\Oi) outputs.  Different \emph{shader types} support
+  different subsets of the global variables.
+
+\item[Graphics state.] See \emph{attribute state}.
+
+\item[Group.] See \emph{shader group}.
+
+\item[Input parameter.] A read-only \emph{shader parameter} that provides
+  a value to control a shader's behavior.  Can also refer to a read-only
+  parameter to a \emph{shader function}.
+
+\item[Instance value.] A constant value that overrides a \emph{default
+  parameter value} for a particular \emph{shader instance}.  Each
+  instance of a shader may have a completely different set of instance
+  values for its parameters.
+
+\item[Layer.] See \emph{shader layer}.
+
+\item[Output parameter.] A read/write \emph{shader parameter} allows a
+  shader to provide outputs beyond the \emph{global variables} such as
+  \Ci and \Oi.  Can also refer to a read/write parameter to a
+  \emph{shader function}, allowing a function to provide more outputs
+  than a simple return value.
+
+\item[Primitive.] Usually refers to a \emph{geometric primitive}.
+
+\item[Primitive variable.] A named variable, and values, attached to an
+  individual geometric primitive.  Primitive variables may have one of
+  serveral \emph{interpolation methods} --- such as a single value for
+  the whole primitive, a value for each piece or face of the primitive,
+  or per-vertex values that are smoothly interpolated across the
+  surface.
+
+\item[Public method.] A function within a shader that has an entry point
+  that is visible and directly callable by the renderer, as opposed to
+  merely being called from other code within the shader.  Public methods
+  must be \emph{top-level} (not defined within other functions) and must
+  be preceeded by the {\cf public} keyword.
+
+\item[Shader.] A small self-contained program written in \langname, used
+  to extend the functionality of a renderer with custom behavior of
+  materials and lights.  A particular shader may have multiple
+  \emph{shader instances} within a scene, each of which has ts unique
+  \emph{instance parameters}, transformation, etc.
+
+\item[Shader function.] A function written in \langname that may be
+  called from within a shader.
+
+\item[Shader group.] An ordered collection of \emph{shader instances}
+  (individually called the \emph{layers} of a group) that are executed
+  to collectively determine material properties or displacement of a
+  geometric primitive, emission of a light source, or scattering
+  properties of a volume.  In addition to executing sequentially, layers
+  within a group may optionally have any of their input parameters
+  explicitly connected to output parameters of other layers within the
+  group in an acyclic manner (thus, sometimes being referred to as a
+  \emph{shader network}).
+
+\item[Shader instance.] A particular reference to a \emph{shader}, with
+  a unique set of {\cf instance values}, transformation, and potentially
+  other attributes.  Each shader instance is a separate entity, despite
+  their sharing executable code.
+
+\item[Shader network.] See \emph{shader group}.
+
+\item[Shader layer.] An individual \emph{shader instance} within a
+  \emph{shader group}.
+
+\item[Shader parameter.] A named input or output variable of a shader.
+  \emph{Input parameters} provide ``knobs'' that control the behavior of
+  a shader; \emph{output parameters} additional provide a way for
+  shaders to produce additional output beyond the usual \emph{global
+    variables}.
+
+\item[Shading.] The computations within a renderer that implement the
+  behavior and visual appearance of materials and lights.
+
+\end{description}
+
 \end{appendix}
 
 \backmatter

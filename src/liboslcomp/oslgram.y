@@ -55,7 +55,7 @@ using namespace OSL::pvt;
 
 // Define the terminal symbols.
 %token <s> IDENTIFIER STRING_LITERAL
-%token <i> INTLITERAL
+%token <i> INT_LITERAL
 %token <f> FLOAT_LITERAL
 %token <i> COLOR FLOAT INT MATRIX NORMAL POINT STRING VECTOR VOID
 %token <i> CLOSURE OUTPUT PUBLIC STRUCT
@@ -66,6 +66,25 @@ using namespace OSL::pvt;
 // Define the nonterminals 
 %type <n> shader_file 
 %type <n> global_declarations_opt global_declarations global_declaration
+%type <n> shader_declaration 
+%type <n> shader_formal_params_opt shader_formal_params shader_formal_param
+%type <n> metadata_block_opt metadata metadatum
+%type <n> function_declaration function_formal_params_opt 
+%type <n> function_formal_params function_formal_param
+%type <n> struct_declaration field_declarations field_declaration
+%type <n> variable_declaration def_expressions def_expression
+%type <n> initializer_opt initializer array_initializer_opt array_initializer 
+%type <i> shadertype outputspec arrayspec simple_typename
+%type <n> typespec 
+%type <n> statement_list statement scoped_statements local_declaration
+%type <n> conditional_statement loop_statement loopmod_statement
+%type <n> return_statement
+%type <n> for_init_statement
+%type <n> expression_list expression_opt expression
+%type <n> variable_lvalue variable_ref array_deref_opt component_deref_opt
+%type <i> binary_op unary_op incdec_op assign_op
+%type <n> type_constructor function_call function_args_opt function_args
+%type <n> assign_expression ternary_expression typecast_expression
 
 
 // Define operator precedence, lowest-to-highest
@@ -86,7 +105,7 @@ using namespace OSL::pvt;
 %right <i> INCREMENT DECREMENT
 %left <i> '(' ')'
 %left <i> '[' ']'
-%left <i> META_BEGIN
+%left <i> METADATA_BEGIN
 
 
 // Define the starting nonterminal
@@ -95,12 +114,12 @@ using namespace OSL::pvt;
 
 %%
 
-shader_file : global_declarations_opt shader_declaration
+shader_file : global_declarations_opt
 	;
 
 global_declarations_opt
         : global_declarations
-        | /* empty */
+        | /* empty */                   { $$ = 0; }
         ;
 
 global_declarations
@@ -111,6 +130,282 @@ global_declarations
 global_declaration
         : function_declaration
         | struct_declaration
+        | shader_declaration
+        ;
+
+shader_declaration
+        : shadertype IDENTIFIER metadata_block_opt '(' shader_formal_params_opt ')' '{' statement_list '}' { $$ = 0; }
+        ;
+
+shader_formal_params_opt
+        : shader_formal_params
+        | /* empty */                   { $$ = 0; }
+        ;
+
+shader_formal_params
+        : shader_formal_param
+        | shader_formal_params ',' shader_formal_param
+        ;
+
+shader_formal_param
+        : outputspec typespec IDENTIFIER initializer metadata_block_opt { $$ = 0; }
+        | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt { $$ = 0; }
+        ;
+
+metadata_block_opt
+        : METADATA_BEGIN metadata ']' ']' { $$ = 0; }
+        | /* empty */                   { $$ = 0; }
+        ;
+
+metadata
+        : metadatum
+        | metadata ',' metadatum
+        ;
+
+metadatum
+        : simple_typename IDENTIFIER initializer { $$ = 0; }
+        | simple_typename IDENTIFIER arrayspec array_initializer { $$ = 0; }
+        ;
+
+function_declaration
+        : typespec IDENTIFIER '(' function_formal_params_opt ')' '{' statement_list '}'
+        ;
+
+function_formal_params_opt
+        : function_formal_params
+        | /* empty */                   { $$ = 0; }
+        ;
+
+function_formal_params
+        : function_formal_param
+        | function_formal_params ',' function_formal_param
+        ;
+
+function_formal_param
+        : outputspec typespec IDENTIFIER { $$ = 0; }
+        | outputspec typespec IDENTIFIER arrayspec { $$ = 0; }
+        ;
+
+struct_declaration
+        : STRUCT IDENTIFIER '{' field_declarations '}' { $$ = 0; }
+        ;
+
+field_declarations
+        : field_declaration
+        | field_declarations field_declaration
+        ;
+
+field_declaration
+        : typespec IDENTIFIER ';'
+        | typespec IDENTIFIER arrayspec ';'
+        ;
+
+local_declaration
+        : function_declaration
+        | variable_declaration
+        ;
+
+variable_declaration
+        : typespec def_expressions ';'
+        ;
+
+def_expressions
+        : def_expression
+        | def_expressions ',' def_expression
+        ;
+
+def_expression
+        : IDENTIFIER initializer_opt { $$ = 0; }
+        | IDENTIFIER arrayspec array_initializer_opt { $$ = 0; }
+        ;
+
+initializer_opt
+        : initializer
+        | /* empty */                   { $$ = 0; }
+        ;
+
+initializer
+        : '=' expression { $$ = 0; }
+        ;
+
+array_initializer_opt
+        : array_initializer
+        | /* empty */                   { $$ = 0; }
+        ;
+
+array_initializer
+        : '=' '{' expression_list '}' { $$ = 0; }
+        ;
+
+shadertype
+        : IDENTIFIER { $$ = 0; }
+        ;
+
+outputspec
+        : OUTPUT
+        | /* empty */                   { $$ = 0; }
+        ;
+
+simple_typename
+        : COLOR
+        | FLOAT
+        | MATRIX
+        | NORMAL
+        | POINT
+        | STRING
+        | VECTOR
+        | VOID
+        ;
+
+arrayspec
+        : '[' INT_LITERAL ']'
+        ;
+
+typespec
+        : simple_typename { $$ = 0; }
+        | simple_typename CLOSURE { $$ = 0; }
+        | IDENTIFIER /* struct name */ { $$ = 0; }
+        ;
+
+statement_list
+        : statement statement_list
+        | /* empty */                   { $$ = 0; }
+        ;
+
+statement
+        : scoped_statements
+        | conditional_statement
+        | loop_statement
+        | loopmod_statement
+        | return_statement
+        | local_declaration
+        | expression ';'
+        | ';'                           { $$ = 0; }
+        ;
+
+scoped_statements
+        : '{' statement_list '}' { $$ = 0; }
+        ;
+
+conditional_statement
+        : IF '(' expression ')' statement { $$ = 0; }
+        | IF '(' expression ')' statement ELSE statement { $$ = 0; }
+        ;
+
+loop_statement
+        : WHILE '(' expression ')' statement { $$ = 0; }
+        | DO statement WHILE '(' expression ')' ';' { $$ = 0; }
+        | FOR '(' for_init_statement expression_opt ';' expression_opt ')' statement { $$ = 0; }
+        ;
+
+loopmod_statement
+        : BREAK ';' { $$ = 0; }
+        | CONTINUE ';' { $$ = 0; }
+        ;
+
+return_statement
+        : RETURN expression_opt ';' { $$ = 0; }
+        ;
+
+for_init_statement
+        : expression_opt ';'
+        | variable_declaration
+        ;
+
+expression_list
+        : expression ',' expression_list
+        ;
+
+expression_opt
+        : expression
+        | /* empty */                   { $$ = 0; }
+        ;
+
+expression
+        : INT_LITERAL { $$ = 0; }
+        | FLOAT_LITERAL { $$ = 0; }
+        | STRING_LITERAL { $$ = 0; }
+        | incdec_op variable_ref { $$ = 0; }
+        | expression binary_op expression
+        | unary_op expression { $$ = 0; }
+        | '(' expression ')' { $$ = 0; }
+        | function_call
+        | assign_expression
+        | ternary_expression
+        | typecast_expression
+        | variable_ref
+        ;
+
+variable_lvalue
+        : IDENTIFIER array_deref_opt component_deref_opt component_deref_opt { $$ = 0; }
+        ;
+
+variable_ref
+        : variable_lvalue incdec_op
+        ;
+
+array_deref_opt
+        : '[' expression ']' { $$ = 0; }
+        | /* empty */                   { $$ = 0; }
+        ;
+
+component_deref_opt
+        : '[' expression ']' { $$ = 0; }
+        | /* empty */                   { $$ = 0; }
+        ;
+
+binary_op
+        : LOGIC_OR_OP | LOGIC_AND_OP
+        | '|' | '^' | '&'
+        | EQ_OP | NE_OP
+        | '>' | GE_OP | '<' | LE_OP
+        | SHL_OP | SHR_OP
+        | '+' | '-' | '*' | '/' | '%'
+        ;
+
+unary_op
+        : '-' | '+' | '!' | '~'
+        ;
+
+incdec_op
+        : INCREMENT | DECREMENT
+        ;
+
+type_constructor
+        : typespec '(' expression_list ')' { $$ = 0; }
+        ;
+
+function_call
+        : IDENTIFIER '(' function_args_opt ')' { $$ = 0; }
+        ;
+
+function_args_opt
+        : function_args
+        | /* empty */                   { $$ = 0; }
+        ;
+
+function_args
+        : expression
+        | function_args ',' expression
+        ;
+
+assign_expression
+        : variable_lvalue assign_op expression
+        ;
+
+assign_op
+        : '=' 
+        | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN
+        | BIT_AND_ASSIGN | BIT_OR_ASSIGN | BIT_XOR_ASSIGN 
+        | SHL_ASSIGN | SHR_ASSIGN
+        ;
+
+ternary_expression
+        : expression '?' expression ':' expression
+        ;
+
+typecast_expression
+        : '(' simple_typename ')' expression { $$ = 0; }
         ;
 
 %%

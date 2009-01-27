@@ -143,7 +143,7 @@ void preprocess (const char *yytext);
  /* Literal values */
 {INTEGER}               {
                             yylval.i = atoi (YYText());
-                            return INTLITERAL;
+                            return INT_LITERAL;
                         }
 
 {FLT}                   {
@@ -179,6 +179,9 @@ void preprocess (const char *yytext);
 ">="			{  return (yylval.i=GE_OP); }
 "=="			{  return (yylval.i=EQ_OP); }
 "!="			{  return (yylval.i=NE_OP); }
+
+ /* Beginning of metadata */
+"[["                    {  return (yylval.i=METADATA_BEGIN); }
 
  /* End of line */
 "\\\n"			|

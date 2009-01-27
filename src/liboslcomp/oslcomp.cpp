@@ -70,6 +70,7 @@ OSLCompilerImpl::compile (const std::string &filename,
     std::filebuf fb (cpppipe);
 #endif
 
+    bool ok = false;
     if (fb.is_open()) {
         std::istream in (&fb);
 #if 0
@@ -83,6 +84,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         oslcompiler = this;
         m_lexer = new oslFlexLexer (&in);
         bool err = oslparse ();
+        ok = !err;
         delete m_lexer;
         oslcompiler = NULL;
 #endif
@@ -90,7 +92,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         pclose (cpppipe);
     }
 
-    return false;
+    return ok;
 }
 
 

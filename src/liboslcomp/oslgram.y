@@ -82,10 +82,10 @@ using namespace OSL::pvt;
 %type <n> for_init_statement
 %type <n> expression_list expression_opt expression
 %type <n> variable_lvalue variable_ref array_deref_opt component_deref_opt
-%type <i> binary_op unary_op incdec_op assign_op
+%type <i> unary_op incdec_op 
 %type <n> type_constructor function_call function_args_opt function_args
 %type <n> assign_expression ternary_expression typecast_expression
-
+%type <n> binary_expression
 
 // Define operator precedence, lowest-to-highest
 %left <i> ','
@@ -249,6 +249,7 @@ outputspec
 simple_typename
         : COLOR
         | FLOAT
+        | INT
         | MATRIX
         | NORMAL
         | POINT
@@ -313,7 +314,8 @@ for_init_statement
         ;
 
 expression_list
-        : expression ',' expression_list
+        : expression
+        | expression_list ',' expression
         ;
 
 expression_opt
@@ -326,13 +328,14 @@ expression
         | FLOAT_LITERAL { $$ = 0; }
         | STRING_LITERAL { $$ = 0; }
         | incdec_op variable_ref { $$ = 0; }
-        | expression binary_op expression
-        | unary_op expression { $$ = 0; }
+        | binary_expression
+        | unary_op expression  %prec UMINUS_PREC { $$ = 0; }
         | '(' expression ')' { $$ = 0; }
         | function_call
         | assign_expression
         | ternary_expression
         | typecast_expression
+        | type_constructor
         | variable_ref
         ;
 
@@ -354,13 +357,25 @@ component_deref_opt
         | /* empty */                   { $$ = 0; }
         ;
 
-binary_op
-        : LOGIC_OR_OP | LOGIC_AND_OP
-        | '|' | '^' | '&'
-        | EQ_OP | NE_OP
-        | '>' | GE_OP | '<' | LE_OP
-        | SHL_OP | SHR_OP
-        | '+' | '-' | '*' | '/' | '%'
+binary_expression
+        : expression LOGIC_OR_OP expression
+        | expression LOGIC_AND_OP expression
+        | expression '|' expression
+        | expression '^' expression
+        | expression '&' expression
+        | expression EQ_OP expression
+        | expression NE_OP expression
+        | expression '>' expression
+        | expression GE_OP expression
+        | expression '<' expression
+        | expression LE_OP expression
+        | expression SHL_OP expression
+        | expression SHR_OP expression
+        | expression '+' expression
+        | expression '-' expression
+        | expression '*' expression
+        | expression '/' expression
+        | expression '%' expression
         ;
 
 unary_op
@@ -390,14 +405,16 @@ function_args
         ;
 
 assign_expression
-        : variable_lvalue assign_op expression
-        ;
-
-assign_op
-        : '=' 
-        | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN
-        | BIT_AND_ASSIGN | BIT_OR_ASSIGN | BIT_XOR_ASSIGN 
-        | SHL_ASSIGN | SHR_ASSIGN
+        : variable_lvalue '=' expression
+        | variable_lvalue MUL_ASSIGN expression
+        | variable_lvalue DIV_ASSIGN expression
+        | variable_lvalue ADD_ASSIGN expression
+        | variable_lvalue SUB_ASSIGN expression
+        | variable_lvalue BIT_AND_ASSIGN expression
+        | variable_lvalue BIT_OR_ASSIGN expression
+        | variable_lvalue BIT_XOR_ASSIGN expression
+        | variable_lvalue SHL_ASSIGN expression
+        | variable_lvalue SHR_ASSIGN expression
         ;
 
 ternary_expression

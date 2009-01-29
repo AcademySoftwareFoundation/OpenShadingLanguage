@@ -24,8 +24,8 @@
 #include <vector>
 #include <string>
 
-#include "ustring.h"
 #include "oslcomp_pvt.h"
+#include "ast.h"
 
 #undef yylex
 #define yyFlexLexer oslFlexLexer
@@ -124,7 +124,7 @@ global_declarations_opt
 
 global_declarations
         : global_declaration
-        | global_declarations global_declaration
+        | global_declarations global_declaration    { $$ = concat ($1, $2); }
         ;
 
 global_declaration
@@ -134,7 +134,11 @@ global_declaration
         ;
 
 shader_declaration
-        : shadertype IDENTIFIER metadata_block_opt '(' shader_formal_params_opt ')' '{' statement_list '}' { $$ = 0; }
+        : shadertype IDENTIFIER metadata_block_opt '(' shader_formal_params_opt ')' '{' statement_list '}'
+                {
+                    $$ = new ASTshader_declaration (oslcompiler, 0 /* stype */,
+                                                    ustring($2), $5, $8, $3);
+                }
         ;
 
 shader_formal_params_opt
@@ -145,6 +149,9 @@ shader_formal_params_opt
 shader_formal_params
         : shader_formal_param
         | shader_formal_params ',' shader_formal_param
+                {
+                    $$ = concat ($1, $3);
+                }
         ;
 
 shader_formal_param
@@ -159,7 +166,7 @@ metadata_block_opt
 
 metadata
         : metadatum
-        | metadata ',' metadatum
+        | metadata ',' metadatum        { $$ = concat ($1, $3); }
         ;
 
 metadatum
@@ -179,10 +186,13 @@ function_formal_params_opt
 function_formal_params
         : function_formal_param
         | function_formal_params ',' function_formal_param
+                {
+                    $$ = concat ($1, $3);
+                }
         ;
 
 function_formal_param
-        : outputspec typespec IDENTIFIER { $$ = 0; }
+        : outputspec typespec IDENTIFIER           { $$ = 0; }
         | outputspec typespec IDENTIFIER arrayspec { $$ = 0; }
         ;
 
@@ -192,7 +202,7 @@ struct_declaration
 
 field_declarations
         : field_declaration
-        | field_declarations field_declaration
+        | field_declarations field_declaration  { $$ = concat ($1, $2) }
         ;
 
 field_declaration
@@ -211,7 +221,7 @@ variable_declaration
 
 def_expressions
         : def_expression
-        | def_expressions ',' def_expression
+        | def_expressions ',' def_expression    { $$ = concat ($1, $3) }
         ;
 
 def_expression
@@ -285,7 +295,7 @@ statement
         ;
 
 scoped_statements
-        : '{' statement_list '}' { $$ = 0; }
+        : '{' statement_list '}'        { $$ = $2; }
         ;
 
 conditional_statement
@@ -315,7 +325,7 @@ for_init_statement
 
 expression_list
         : expression
-        | expression_list ',' expression
+        | expression_list ',' expression        { $$ = concat ($1, $3) }
         ;
 
 expression_opt
@@ -329,8 +339,8 @@ expression
         | STRING_LITERAL { $$ = 0; }
         | incdec_op variable_ref { $$ = 0; }
         | binary_expression
-        | unary_op expression  %prec UMINUS_PREC { $$ = 0; }
-        | '(' expression ')' { $$ = 0; }
+        | unary_op expression %prec UMINUS_PREC { $$ = 0; }
+        | '(' expression ')'                    { $$ = $2; }
         | function_call
         | assign_expression
         | ternary_expression
@@ -344,16 +354,16 @@ variable_lvalue
         ;
 
 variable_ref
-        : variable_lvalue incdec_op
+        : variable_lvalue incdec_op     { $$ = 0; }
         ;
 
 array_deref_opt
-        : '[' expression ']' { $$ = 0; }
+        : '[' expression ']'            { $$ = $2; }
         | /* empty */                   { $$ = 0; }
         ;
 
 component_deref_opt
-        : '[' expression ']' { $$ = 0; }
+        : '[' expression ']'            { $$ = $2; }
         | /* empty */                   { $$ = 0; }
         ;
 
@@ -401,7 +411,7 @@ function_args_opt
 
 function_args
         : expression
-        | function_args ',' expression
+        | function_args ',' expression          { $$ = concat ($1, $3) }
         ;
 
 assign_expression

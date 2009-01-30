@@ -11,37 +11,30 @@
  *
  *****************************************************************************/
 
-#ifndef OSLCOMP_H
-#define OSLCOMP_H
+#include <vector>
+#include <string>
+#include <fstream>
+#include <cstdio>
+#include <streambuf>
+
+#include "oslcomp_pvt.h"
+#include "ast.h"
 
 
 namespace OSL {
+namespace pvt {   // OSL::pvt
 
 
-enum ShaderType {
-    ShadTypeUnknown, ShadTypeGeneric, ShadTypeSurface, 
-    ShadTypeDisplacement, ShadTypeVolume, ShadTypeLight,
-    ShadTypeLast
-};
-
-
-
-class OSLCompiler {
-public:
-    static OSLCompiler *create ();
-
-    OSLCompiler (void) { }
-    virtual ~OSLCompiler (void) { }
-
-    /// Compile the given file, using the list of command-line options.
-    /// Return true if ok, false if the compile failed.
-    virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options) = 0;
-};
+ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler) 
+    : m_nodetype(nodetype), m_compiler(compiler),
+      m_sourcefile(compiler->filename()),
+      m_sourceline(compiler->lineno())
+{
+}
 
 
 
+
+
+}; // namespace pvt
 }; // namespace OSL
-
-
-#endif /* OSLCOMP_PVT_H */

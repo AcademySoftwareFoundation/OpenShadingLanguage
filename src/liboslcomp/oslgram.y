@@ -136,8 +136,17 @@ global_declaration
 shader_declaration
         : shadertype IDENTIFIER metadata_block_opt '(' shader_formal_params_opt ')' '{' statement_list '}'
                 {
-                    $$ = new ASTshader_declaration (oslcompiler, 0 /* stype */,
+                    $$ = new ASTshader_declaration (oslcompiler, $1,
                                                     ustring($2), $5, $8, $3);
+                    if (oslcompiler->shader_is_defined()) {
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Only one shader is allowed per file.");
+                        delete $$;
+                        $$ = NULL;
+                    } else {
+                        oslcompiler->shader ($$);
+                    }
                 }
         ;
 
@@ -248,7 +257,25 @@ array_initializer
         ;
 
 shadertype
-        : IDENTIFIER { $$ = 0; }
+        : IDENTIFIER
+                {
+                    if (! strcmp ($1, "shader"))
+                        $$ = OSL::ShadTypeGeneric;
+                    else if (! strcmp ($1, "surface"))
+                        $$ = OSL::ShadTypeSurface;
+                    else if (! strcmp ($1, "displacement"))
+                        $$ = OSL::ShadTypeDisplacement;
+                    else if (! strcmp ($1, "volume"))
+                        $$ = OSL::ShadTypeVolume;
+                    else if (! strcmp ($1, "light"))
+                        $$ = OSL::ShadTypeLight;
+                    else {
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Unknown shader type: %s", $1);
+                        $$ = OSL::ShadTypeUnknown;
+                    }
+                }
         ;
 
 outputspec
@@ -442,7 +469,8 @@ typecast_expression
 void
 yyerror (const char *err)
 {
-    oslcompiler->error (err);
+    oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
+                        "Syntax error: %s", err);
 }
 
 

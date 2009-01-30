@@ -28,6 +28,10 @@ namespace OSL {
 namespace pvt {
 
 
+class OSLCompilerImpl;  // Forward decl
+
+
+
 /// Base node for an abstract syntax tree for the OSL parser.
 ///
 class ASTNode : public RefCnt {
@@ -40,12 +44,7 @@ public:
         UnknownNode, ShaderDeclarationNode
     };
 
-    ASTNode (NodeType nodetype, OSLCompilerImpl *compiler) 
-        : m_nodetype(nodetype), m_compiler(compiler),
-          m_sourcefile(compiler->filename()),
-          m_sourceline(compiler->lineno())
-    {
-    }
+    ASTNode (NodeType nodetype, OSLCompilerImpl *compiler);
 
     virtual ~ASTNode () { }
 

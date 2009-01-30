@@ -17,6 +17,7 @@
 #include "OpenImageIO/ustring.h"
 
 #include "oslcomp.h"
+#include "ast.h"
 
 
 class oslFlexLexer;
@@ -32,9 +33,11 @@ class ASTNode;
 
 class OSLCompilerImpl : public OSL::OSLCompiler {
 public:
-    OSLCompilerImpl (void) : m_lexer(NULL) { }
+    OSLCompilerImpl (void) : m_lexer(NULL), m_err(false) { }
     virtual ~OSLCompilerImpl (void) { }
 
+    /// Fully compile a shader located in 'filename', with the command-line
+    /// options ("-I" and the like) in the options vector.
     virtual bool compile (const std::string &filename,
                           const std::vector<std::string> &options);
 
@@ -62,18 +65,35 @@ public:
     ///
     oslFlexLexer *lexer() const { return m_lexer; }
 
-    /// Syntax error
-    void error (const char *err=NULL) {
-        fprintf (stderr, "Compiler Error: \"%s\", line %d: %s\n", 
-                 filename().c_str(), lineno(),
-                 err ? err : "syntax error");
-    }
+    /// Error reporting
+    ///
+    void error (ustring filename, int line, const char *format, ...);
 
+    /// Warning reporting
+    ///
+    void warning (ustring filename, int line, const char *format, ...);
+
+    /// Have we hit an error?
+    ///
+    bool error_encountered () const { return m_err; }
+
+    /// Has a shader already been defined?
+    bool shader_is_defined () const { return m_shader; }
+
+    /// Define the shader we're compiling with the given AST root.
+    ///
+    void shader (ASTNode::ref s) { m_shader = s; }
+
+    /// Return the AST root of the main shader we're compiling.
+    ///
+    ASTNode::ref shader () const { return m_shader; }
 
 private:
-    oslFlexLexer *m_lexer;    /// Lexical scanner
-    ustring m_filename;       /// Current file we're parsing
-    int m_lineno;             /// Current line we're parsing
+    oslFlexLexer *m_lexer;    ///< Lexical scanner
+    ustring m_filename;       ///< Current file we're parsing
+    int m_lineno;             ///< Current line we're parsing
+    ASTNode::ref m_shader;    ///< The shader's syntax tree
+    bool m_err;               ///< Has an error occurred?
 };
 
 

@@ -21,6 +21,8 @@
 # include <ext/stdio_filebuf.h>
 #endif
 
+#include "OpenImageIO/strutil.h"
+
 #include "oslcomp_pvt.h"
 
 
@@ -60,7 +62,7 @@ OSLCompilerImpl::compile (const std::string &filename,
     cppcommand += filename;
     cppcommand += "\" ";
 
-    std::cout << "cpp command:\n>" << cppcommand << "<\n";
+    // std::cout << "cpp command:\n>" << cppcommand << "<\n";
 
     FILE *cpppipe = popen (cppcommand.c_str(), "r");
 
@@ -70,29 +72,53 @@ OSLCompilerImpl::compile (const std::string &filename,
     std::filebuf fb (cpppipe);
 #endif
 
-    bool ok = false;
     if (fb.is_open()) {
         std::istream in (&fb);
-#if 0
-        while (! in.eof()) {
-            std::string s;
-            in >> s;
-            std::cout << "line: " << s << "\n";
-        }
-#endif
-#if 1
         oslcompiler = this;
+
+        // Create a lexer, parse the file, delete the lexer
         m_lexer = new oslFlexLexer (&in);
-        bool err = oslparse ();
-        ok = !err;
+        oslparse ();
         delete m_lexer;
+
+        // Print the parse tree if there were no errors
+        if (! error_encountered())
+            oslcompiler->shader()->print ();
+
+        // All done, close the files
         oslcompiler = NULL;
-#endif
         fb.close ();
         pclose (cpppipe);
     }
 
-    return ok;
+    return ! error_encountered();
+}
+
+
+
+void
+OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
+    fprintf (stderr, "Error: \"%s\", line %d: %s\n", 
+             filename.c_str(), line, errmsg.c_str());
+    va_end (ap);
+    m_err = true;
+}
+
+
+
+void
+OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string errmsg = format ? Strutil::vformat (format, ap) : "";
+    fprintf (stderr, "Warning: \"%s\", line %d: %s\n", 
+             filename.c_str(), line, errmsg.c_str());
+    va_end (ap);
 }
 
 

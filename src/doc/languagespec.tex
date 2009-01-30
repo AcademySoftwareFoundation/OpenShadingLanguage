@@ -30,6 +30,9 @@
 
 \usepackage{syntax}
 
+\widowpenalty=1000
+\clubpenalty=1000
+
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhead[LE,RO]{\bfseries\thepage}
@@ -361,7 +364,7 @@ interesting things that a mere number cannot:
   scattering direction with a probability distribution that is
   proportional to the amount of light that will end up going in various
   directions.
-\item Evaluate: given input and input light directions, compute the
+\item Evaluate: given input and output light directions, compute the
   proportion of light propagating from input to output.
 \item Integrate: given all lights and a view direction, compute
   the total amount of light leaving the surface in the view direction.
@@ -534,9 +537,12 @@ languages: \index{reserved words}
 
 \begin{quote} {\cf
 
-bool case char class const default double enum extern false friend
-inline long private protected short signed sizeof static struct
-switch template this true typedef uniform union unsigned varying virtual
+bool case catch char class const delete default double 
+enum extern false friend
+goto inline long new operator private protected 
+short signed sizeof static 
+switch template this throw true try typedef 
+uniform union unsigned varying virtual volatile
 
 }
 \end{quote}
@@ -892,8 +898,22 @@ Describes the purpose and use of the shader or parameter.
 Provides a URL for full documentation of the shader or parameter.
 \apiend
 
+\NEW % 1/22/09
 \apiitem{string units}
-Gives the assumed units, if any, for the parameter (e.g., \qkw{cm}).
+Gives the assumed units, if any, for the parameter (e.g., \qkw{cm},
+\qkw{sec}, \qkw{degrees}).
+The compiler or renderer may issue a warning if it detects that this
+assumption is being violated (for example, the compiler can warn
+if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
+\apiend
+
+\NEW % 1/22/09
+\apiitem{int normalized}
+For a \vector or \normal, a nonzero value is a a hint that the shader
+expects the vector to be unit length.  The renderer may use this hint to
+print a warning if the parameter or value is not of unit length, and the
+compiler may warn if a \qkw{normalized} variable is assigned a non-unit
+value.
 \apiend
 
 \apiitem{string UIlabel}
@@ -1787,7 +1807,7 @@ Statements in \langname include the following types of constructs:
 \item Assignments.
 \item Control flow: {\cf if, else, while, do, for, break, continue}
 \item Function declarations.
-\item Lighting statements: \illuminance, \illuminate
+%\item Lighting statements: \illuminance, \illuminate
 \end{itemize}
 
 \subsection*{Scoping}
@@ -2298,12 +2318,14 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 \hline
 \color\ {\ce Cl} & Incoming light color at P. \\
 \hline
-\point\ {\ce Ps} & Position at which the light is being queried (i.e., the
-position passed to \illuminance). \\
+\point\ {\ce Ps} & Position at which the light is being queried 
+%(i.e., the position passed to \illuminance). 
+\\
 \hline
-\normal\ {\ce Ns} & Axis about which the light is being queried (i.e., the
-axis passed to \illuminance), or the surface's \N if no axis was passed
-to \illuminance). \\
+\normal\ {\ce Ns} & Axis about which the light is being queried
+% (i.e., the axis passed to \illuminance), or the surface's \N if no
+% axis was passed to \illuminance). 
+\\
 \hline
 \point\ {\ce Pl} & Position of the light source. \\
 \hline
@@ -3685,12 +3707,14 @@ being shaded.
 \apiend
 \vspace{-20pt}
 
+\begin{comment}
 \apiitem{"light"}
 \vspace{10pt}
 Valid only if {\cf getmessage()} is called from within an \illuminance
 loop, retrieves the message from current light source being examined.
 \apiend
 \vspace{-20pt}
+\end{comment}
 
 \apiitem{"parent"}
 \vspace{10pt}
@@ -3820,10 +3844,11 @@ nothing (empty, no token).
 \section*{Overall structure}
 
 \begin{grammar}
-<shader-file> ::= \{ <global-declaration> \} <shader-declaration>
+<shader-file> ::= \{ <global-declaration> \}
 
 <global-declaration> ::= <function-declaration> 
 \alt <struct-declaration>
+\alt <shader-declaration>
 
 <shader-declaration> ::= \spc \\ 
     <shadertype> <identifier> <metadata-block-opt> 
@@ -3834,14 +3859,14 @@ nothing (empty, no token).
 
 <shader-formal-params> ::= <shader-formal-param> \{ "," <shader-formal-param> \}
 
-<shader-formal-param> ::= <outputspec> <typename> <identifier>
+<shader-formal-param> ::= <outputspec> <typespec> <identifier>
                                <initializer> <metadata-block-opt>
-\alt <outputspec> <typename> <identifier> <arrayspec>
+\alt <outputspec> <typespec> <identifier> <arrayspec>
           <array-initializer> <metadata-block-opt>
 
 <metadata-block> ::= "[[" <metadata> \{ "," <metadata> \} "]]"
 
-<metadata> ::= <simple-typename> <identifier> <initializer>
+<metadata> ::= <simple-typespec> <identifier> <initializer>
 
 \end{grammar}
 
@@ -3849,28 +3874,28 @@ nothing (empty, no token).
 \section*{Declarations}
 \begin{grammar}
 
-<function-declaration> ::= \spc \\ <typename> <identifier> 
+<function-declaration> ::= \spc \\ <typespec> <identifier> 
       "(" <function-formal-params-opt> ")" "{" <statement-list> "}"
 
 <function-formal-params> ::= <function-formal-param> \{ "," <function-formal-param> \}
 
-<function-formal-param> ::= <outputspec> <typename> <identifier> <arrayspec-opt>
+<function-formal-param> ::= <outputspec> <typespec> <identifier> <arrayspec-opt>
 
 <outputspec> ::= "output" | $\epsilon$
 
 <struct-declaration> ::= "struct" <identifier> "{" <field-declarations> "}"
 
-<field-declarations> ::= <field-declaration> \{ "," <field-declaration> \}
+<field-declarations> ::= <field-declaration> \{ <field-declaration> \}
 
-<field-declaration> ::= <typename> <identifier> ";"
-\alt <typename> <identifier> <arrayspec> ";"
+<field-declaration> ::= <typespec> <identifier> ";"
+\alt <typespec> <identifier> <arrayspec> ";"
 
 <local-declaration> ::= <function-declaration>
 \alt <variable-declaration>
 
 <arrayspec> ::= "[" <integer> "]"
 
-<variable-declaration> ::= <typename> <def-expressions> ";"
+<variable-declaration> ::= <typespec> <def-expressions> ";"
 
 <def-expressions> ::= <def-expression> \{ "," <def-expression> \}
 
@@ -3881,7 +3906,7 @@ nothing (empty, no token).
 
 <array-initializer> ::= "=" "{" <expression-list> "}"
 
-<typename> ::= <simple-typename> 
+<typespec> ::= <simple-typename> 
 \alt <simple-typename> "closure"
 \alt <identifier-structname>
 
@@ -3901,7 +3926,7 @@ nothing (empty, no token).
 \section*{Statements}
 \begin{grammar}
 
-<statement-list> ::= <statement-list> <statement>
+<statement-list> ::= <statement> \{ <statement> \}
 
 <statement> ::= 
 <expression-opt> ";"
@@ -3979,7 +4004,7 @@ nothing (empty, no token).
 
 <incdec-op> ::= "++" | "--"
 
-<type-constructor> ::= <typename> "(" <expression-list> ")"
+<type-constructor> ::= <typespec> "(" <expression-list> ")"
 
 <function-call> ::= <identifier> "(" <function-args-opt> ")"
 

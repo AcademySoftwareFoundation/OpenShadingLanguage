@@ -18,6 +18,7 @@
 
 #include "oslcomp.h"
 #include "ast.h"
+#include "symtab.h"
 
 
 class oslFlexLexer;
@@ -94,6 +95,7 @@ private:
     int m_lineno;             ///< Current line we're parsing
     ASTNode::ref m_shader;    ///< The shader's syntax tree
     bool m_err;               ///< Has an error occurred?
+    SymbolTable m_symtab;     ///< Symbol table
 };
 
 

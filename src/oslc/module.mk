@@ -22,7 +22,7 @@ local_libs :=
 local_shlibs := liboslcomp
 
 # ld flags needed for this module
-local_ldflags := ${OPENIMAGEIO_LINK}
+local_ldflags := ${OPENIMAGEIO_LINK} ${LINK_BOOST}
 
 
 

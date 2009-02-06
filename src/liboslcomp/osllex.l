@@ -179,6 +179,8 @@ void preprocess (const char *yytext);
 ">="			{  return (yylval.i=GE_OP); }
 "=="			{  return (yylval.i=EQ_OP); }
 "!="			{  return (yylval.i=NE_OP); }
+"++"                    {  return (yylval.i=INCREMENT); }
+"--"                    {  return (yylval.i=DECREMENT); }
 
  /* Beginning of metadata */
 "[["                    {  return (yylval.i=METADATA_BEGIN); }

@@ -33,7 +33,7 @@ local_extra_objs := ${GRAMO} ${LEXO}
 local_shlibs := 
 
 # ld flags needed for this library
-local_ldflags := ${OPENIMAGEIO_LINK}
+local_ldflags := ${OPENIMAGEIO_LINK} ${LINK_BOOST}
 
 
 # 

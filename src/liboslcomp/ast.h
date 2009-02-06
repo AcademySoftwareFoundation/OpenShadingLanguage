@@ -41,14 +41,19 @@ public:
     /// List of all the types of AST nodes.
     ///
     enum NodeType {
-        UnknownNode, ShaderDeclarationNode
+        unknown_node, shader_declaration_node,
+        conditional_statement_node, loop_statement_node,
+        binary_expression_node, unary_expression_node,
+        assign_expression_node, ternary_expression_node, 
+        typecast_expression_node,
+        _last_node
     };
 
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler);
 
     virtual ~ASTNode () { }
 
-    virtual void print (int indent = 0) const = 0;
+    virtual void print (int indentlevel = 0) const = 0;
 
     /// What type of node is this?
     ///
@@ -117,24 +122,12 @@ class ASTshader_declaration : public ASTNode
 public:
     ASTshader_declaration (OSLCompilerImpl *comp, int stype, ustring name,
                            ASTNode *form, ASTNode *stmts, ASTNode *meta) 
-        : ASTNode (ShaderDeclarationNode, comp),
+        : ASTNode (shader_declaration_node, comp),
           m_shadertype(stype), m_shadername(name),
           m_formals(form), m_statements(stmts), m_metadata(meta)
     { }
-    virtual void print (int indentlevel=0) const {
-        indent (indentlevel);
-        std::cout << "Shader declaration:\n";
-        indent (indentlevel);
-        std::cout << "  Type: " << m_shadertype << "\n";
-        indent (indentlevel);
-        std::cout << "  Name: " << m_shadername << "\n";
-        indent (indentlevel);
-        std::cout << "  Formals:\n";
-        printlist (m_formals, indentlevel+1);
-        indent (indentlevel);
-        std::cout << "  Statements:\n";
-        printlist (m_statements, indentlevel+1);
-    }
+    void print (int indentlevel=0) const;
+
 private:
     int m_shadertype;
     ustring m_shadername;
@@ -144,14 +137,107 @@ private:
 };
 
 
+
+class ASTconditional_statement : public ASTNode
+{
+public:
+    ASTconditional_statement (OSLCompilerImpl *comp, ASTNode *cond,
+                              ASTNode *truestmt, ASTNode *falsestmt=NULL)
+        : ASTNode (conditional_statement_node, comp), 
+          m_cond(cond), m_truestmt(truestmt), m_falsestmt(falsestmt)
+    { }
+
+    void print (int indentlevel = 0) const;
+
+private:
+    ref m_cond, m_truestmt, m_falsestmt;
+};
+
+
+
+class ASTloop_statement : public ASTNode
+{
+public:
+    enum LoopType {
+        LoopWhile, LoopDo, LoopFor
+    };
+
+    ASTloop_statement (OSLCompilerImpl *comp, LoopType looptype, ASTNode *init,
+                       ASTNode *cond, ASTNode *iter, ASTNode *stmt)
+        : ASTNode (loop_statement_node, comp), m_looptype(looptype),
+          m_init(init), m_cond(cond), m_iter(iter), m_stmt(stmt)
+    { }
+
+    void print (int indentlevel = 0) const;
+
+    LoopType looptype () const { return m_looptype; }
+
+private:
+    LoopType m_looptype;
+    ref m_init, m_cond, m_iter, m_stmt;
+};
+
+
+
+class ASTassign_expression : public ASTNode
+{
+public:
+    enum Assignment { Assign, MulAssign, DivAssign, AddAssign, SubAssign,
+                      BitwiseAndAssign, BitwiseOrAssign, BitwiseXorAssign,
+                      ShiftLeftAssign, ShiftRightAssign };
+
+    ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var, Assignment op,
+                          ASTNode *expr)
+        : ASTNode (assign_expression_node, comp), 
+              m_var(var), m_op(op), m_expr(expr)
+    { }
+
+    void print (int indentlevel = 0) const;
+
+    const char *opsymbol () const;
+
+private:
+    Assignment m_op;
+    ref m_var, m_expr;
+};
+
+
+
+class ASTbinary_expression : public ASTNode
+{
+public:
+    enum Binop { Mul, Div, Add, Sub, Mod, 
+                 Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual, 
+                 BitwiseAnd, BitwiseOr, BitwiseXor, LogicalAnd, LogicalOr,
+                 ShiftLeft, ShiftRight };
+
+    ASTbinary_expression (OSLCompilerImpl *comp, Binop op,
+                          ASTNode *left, ASTNode *right)
+        : ASTNode (binary_expression_node, comp), 
+          m_left(left), m_right(right), m_op(op)
+    { }
+
+    void print (int indentlevel = 0) const;
+
+    const char *opsymbol () const;
+
+private:
+    ref m_left, m_right;
+    Binop m_op;
+};
+
+
+
+#if 0
 class ASTsubclass : public ASTNode
 {
 public:
-    ASTsubclass (OSLCompilerImpl *comp) : ASTNode (UnknownNode, comp) { }
-    virtual ~ASTsubclass () { }
-    virtual void print (int indent = 0) const { }
+    ASTsubclass (OSLCompilerImpl *comp) : ASTNode (unknown_node, comp) { }
+    ~ASTsubclass () { }
+    void print (int indentlevel = 0) const { }
 private:
 };
+#endif
 
 
 

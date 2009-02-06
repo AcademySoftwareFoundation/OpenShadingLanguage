@@ -82,7 +82,7 @@ using namespace OSL::pvt;
 %type <n> for_init_statement
 %type <n> expression_list expression_opt expression
 %type <n> variable_lvalue variable_ref array_deref_opt component_deref_opt
-%type <i> unary_op incdec_op 
+%type <i> unary_op incdec_op incdec_op_opt
 %type <n> type_constructor function_call function_args_opt function_args
 %type <n> assign_expression ternary_expression typecast_expression
 %type <n> binary_expression
@@ -128,8 +128,8 @@ global_declarations
         ;
 
 global_declaration
-        : function_declaration
-        | struct_declaration
+        : function_declaration          { $$ = 0;  /* FIXME */ }
+        | struct_declaration            { $$ = 0;  /* FIXME */ }
         | shader_declaration
         ;
 
@@ -164,12 +164,12 @@ shader_formal_params
         ;
 
 shader_formal_param
-        : outputspec typespec IDENTIFIER initializer metadata_block_opt { $$ = 0; }
-        | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt { $$ = 0; }
+        : outputspec typespec IDENTIFIER initializer metadata_block_opt { $$ = 0; /*FIXME*/ }
+        | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt { $$ = 0; /*FIXME*/ }
         ;
 
 metadata_block_opt
-        : METADATA_BEGIN metadata ']' ']' { $$ = 0; }
+        : METADATA_BEGIN metadata ']' ']' { $$ = 0;  /*FIXME*/ }
         | /* empty */                   { $$ = 0; }
         ;
 
@@ -179,12 +179,15 @@ metadata
         ;
 
 metadatum
-        : simple_typename IDENTIFIER initializer { $$ = 0; }
-        | simple_typename IDENTIFIER arrayspec array_initializer { $$ = 0; }
+        : simple_typename IDENTIFIER initializer { $$ = 0;  /*FIXME*/ }
+        | simple_typename IDENTIFIER arrayspec array_initializer { $$ = 0;  /*FIXME*/ }
         ;
 
 function_declaration
         : typespec IDENTIFIER '(' function_formal_params_opt ')' '{' statement_list '}'
+                {
+                    $$ = 0; /*FIXME*/
+                }
         ;
 
 function_formal_params_opt
@@ -201,12 +204,12 @@ function_formal_params
         ;
 
 function_formal_param
-        : outputspec typespec IDENTIFIER           { $$ = 0; }
-        | outputspec typespec IDENTIFIER arrayspec { $$ = 0; }
+        : outputspec typespec IDENTIFIER           { $$ = 0;  /*FIXME*/ }
+        | outputspec typespec IDENTIFIER arrayspec { $$ = 0;  /*FIXME*/ }
         ;
 
 struct_declaration
-        : STRUCT IDENTIFIER '{' field_declarations '}' { $$ = 0; }
+        : STRUCT IDENTIFIER '{' field_declarations '}' { $$ = 0;  /*FIXME*/ }
         ;
 
 field_declarations
@@ -215,8 +218,8 @@ field_declarations
         ;
 
 field_declaration
-        : typespec IDENTIFIER ';'
-        | typespec IDENTIFIER arrayspec ';'
+        : typespec IDENTIFIER ';'               { $$ = 0; /*FIXME*/ }
+        | typespec IDENTIFIER arrayspec ';'     { $$ = 0; /*FIXME*/ }
         ;
 
 local_declaration
@@ -225,7 +228,7 @@ local_declaration
         ;
 
 variable_declaration
-        : typespec def_expressions ';'
+        : typespec def_expressions ';'          { $$ = 0;  /*FIXME*/ }
         ;
 
 def_expressions
@@ -234,8 +237,8 @@ def_expressions
         ;
 
 def_expression
-        : IDENTIFIER initializer_opt { $$ = 0; }
-        | IDENTIFIER arrayspec array_initializer_opt { $$ = 0; }
+        : IDENTIFIER initializer_opt { $$ = 0;  /*FIXME*/}
+        | IDENTIFIER arrayspec array_initializer_opt { $$ = 0;  /*FIXME*/ }
         ;
 
 initializer_opt
@@ -244,7 +247,7 @@ initializer_opt
         ;
 
 initializer
-        : '=' expression { $$ = 0; }
+        : '=' expression                { $$ = $2; }
         ;
 
 array_initializer_opt
@@ -253,7 +256,7 @@ array_initializer_opt
         ;
 
 array_initializer
-        : '=' '{' expression_list '}' { $$ = 0; }
+        : '=' '{' expression_list '}'   { $$ = $3; }
         ;
 
 shadertype
@@ -296,17 +299,17 @@ simple_typename
         ;
 
 arrayspec
-        : '[' INT_LITERAL ']'
+        : '[' INT_LITERAL ']'           { $$ = $2; }
         ;
 
 typespec
-        : simple_typename { $$ = 0; }
-        | simple_typename CLOSURE { $$ = 0; }
-        | IDENTIFIER /* struct name */ { $$ = 0; }
+        : simple_typename               { $$ = 0; /*FIXME*/ }
+        | simple_typename CLOSURE       { $$ = 0; /*FIXME*/ }
+        | IDENTIFIER /* struct name */  { $$ = 0; /*FIXME*/ }
         ;
 
 statement_list
-        : statement statement_list
+        : statement statement_list      { $$ = concat ($1, $2); }
         | /* empty */                   { $$ = 0; }
         ;
 
@@ -326,23 +329,44 @@ scoped_statements
         ;
 
 conditional_statement
-        : IF '(' expression ')' statement { $$ = 0; }
-        | IF '(' expression ')' statement ELSE statement { $$ = 0; }
+        : IF '(' expression ')' statement
+                {
+                    $$ = new ASTconditional_statement (oslcompiler, $3, $5);
+                }
+        | IF '(' expression ')' statement ELSE statement
+                {
+                    $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
+                }
         ;
 
 loop_statement
-        : WHILE '(' expression ')' statement { $$ = 0; }
-        | DO statement WHILE '(' expression ')' ';' { $$ = 0; }
-        | FOR '(' for_init_statement expression_opt ';' expression_opt ')' statement { $$ = 0; }
+        : WHILE '(' expression ')' statement
+                {
+                    $$ = new ASTloop_statement (oslcompiler,
+                                                ASTloop_statement::LoopWhile,
+                                                NULL, $3, NULL, $5);
+                }
+        | DO statement WHILE '(' expression ')' ';'
+               {
+                   $$ = new ASTloop_statement (oslcompiler,
+                                               ASTloop_statement::LoopDo,
+                                               NULL, $5, NULL, $2);
+               }
+        | FOR '(' for_init_statement expression_opt ';' expression_opt ')' statement
+               {
+                   $$ = new ASTloop_statement (oslcompiler,
+                                               ASTloop_statement::LoopFor,
+                                               $3, $4, $6, $8);
+               }
         ;
 
 loopmod_statement
-        : BREAK ';' { $$ = 0; }
-        | CONTINUE ';' { $$ = 0; }
+        : BREAK ';'                     { $$ = 0; /*FIXME*/ }
+        | CONTINUE ';'                  { $$ = 0; /*FIXME*/ }
         ;
 
 return_statement
-        : RETURN expression_opt ';' { $$ = 0; }
+        : RETURN expression_opt ';'     { $$ = 0;  /*FIXME*/ }
         ;
 
 for_init_statement
@@ -361,27 +385,30 @@ expression_opt
         ;
 
 expression
-        : INT_LITERAL { $$ = 0; }
-        | FLOAT_LITERAL { $$ = 0; }
-        | STRING_LITERAL { $$ = 0; }
-        | incdec_op variable_ref { $$ = 0; }
+        : INT_LITERAL { $$ = 0; /*FIXME*/ }
+        | FLOAT_LITERAL { $$ = 0; /*FIXME*/ }
+        | STRING_LITERAL { $$ = 0; /*FIXME*/ }
+        | variable_ref
+        | incdec_op variable_ref { $$ = 0; /*FIXME*/ }
         | binary_expression
-        | unary_op expression %prec UMINUS_PREC { $$ = 0; }
+        | unary_op expression %prec UMINUS_PREC { $$ = 0; /*FIXME*/ }
         | '(' expression ')'                    { $$ = $2; }
         | function_call
         | assign_expression
         | ternary_expression
         | typecast_expression
         | type_constructor
-        | variable_ref
         ;
 
 variable_lvalue
-        : IDENTIFIER array_deref_opt component_deref_opt component_deref_opt { $$ = 0; }
+        : IDENTIFIER array_deref_opt component_deref_opt component_deref_opt 
+                {
+                    $$ = 0; /*FIXME*/
+                }
         ;
 
 variable_ref
-        : variable_lvalue incdec_op     { $$ = 0; }
+        : variable_lvalue incdec_op_opt { $$ = 0; /*FIXME*/ }
         ;
 
 array_deref_opt
@@ -396,39 +423,117 @@ component_deref_opt
 
 binary_expression
         : expression LOGIC_OR_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::LogicalOr, $1, $3);
+                }
         | expression LOGIC_AND_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::LogicalAnd, $1, $3);
+                }
         | expression '|' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::BitwiseOr, $1, $3);
+                }
         | expression '^' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::BitwiseXor, $1, $3);
+                }
         | expression '&' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::BitwiseAnd, $1, $3);
+                }
         | expression EQ_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Equal, $1, $3);
+                }
         | expression NE_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::NotEqual, $1, $3);
+                }
         | expression '>' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Greater, $1, $3);
+                }
         | expression GE_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::GreaterEqual, $1, $3);
+                }
         | expression '<' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Less, $1, $3);
+                }
         | expression LE_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::LessEqual, $1, $3);
+                }
         | expression SHL_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::ShiftLeft, $1, $3);
+                }
         | expression SHR_OP expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::ShiftRight, $1, $3);
+                }
         | expression '+' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Add, $1, $3);
+                }
         | expression '-' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Sub, $1, $3);
+                }
         | expression '*' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Mul, $1, $3);
+                }
         | expression '/' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Div, $1, $3);
+                }
         | expression '%' expression
+                {
+                    $$ = new ASTbinary_expression (oslcompiler, 
+                                    ASTbinary_expression::Mod, $1, $3);
+                }
         ;
 
 unary_op
         : '-' | '+' | '!' | '~'
         ;
 
+incdec_op_opt
+        : incdec_op
+        | /* empty */                   { $$ = NULL; }
+        ;
+
 incdec_op
-        : INCREMENT | DECREMENT
+        : INCREMENT
+        | DECREMENT
         ;
 
 type_constructor
-        : typespec '(' expression_list ')' { $$ = 0; }
+        : typespec '(' expression_list ')' { $$ = 0; /*FIXME*/ }
         ;
 
 function_call
-        : IDENTIFIER '(' function_args_opt ')' { $$ = 0; }
+        : IDENTIFIER '(' function_args_opt ')' { $$ = 0; /*FIXME*/ }
         ;
 
 function_args_opt
@@ -443,23 +548,43 @@ function_args
 
 assign_expression
         : variable_lvalue '=' expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+                                ASTassign_expression::Assign, $3); }
         | variable_lvalue MUL_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+                	        ASTassign_expression::MulAssign, $3); }
         | variable_lvalue DIV_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::DivAssign, $3); }
         | variable_lvalue ADD_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::AddAssign, $3); }
         | variable_lvalue SUB_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::SubAssign, $3); }
         | variable_lvalue BIT_AND_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::BitwiseAndAssign, $3); }
         | variable_lvalue BIT_OR_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::BitwiseOrAssign, $3); }
         | variable_lvalue BIT_XOR_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::BitwiseXorAssign, $3); }
         | variable_lvalue SHL_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::ShiftLeftAssign, $3); }
         | variable_lvalue SHR_ASSIGN expression
+                { $$ = new ASTassign_expression (oslcompiler, $1,
+				ASTassign_expression::ShiftRightAssign, $3); }
         ;
 
 ternary_expression
-        : expression '?' expression ':' expression
+        : expression '?' expression ':' expression { $$ = 0; /*FIXME*/ }
         ;
 
 typecast_expression
-        : '(' simple_typename ')' expression { $$ = 0; }
+        : '(' simple_typename ')' expression { $$ = 0; /*FIXME*/ }
         ;
 
 %%

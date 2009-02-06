@@ -24,7 +24,8 @@ help:
 	@echo "  make clean      Remove the temporary files in ${build_dir}"
 	@echo "  make realclean  Remove both ${build_dir} AND ${dist_dir}"
 	@echo "  make nuke       Remove ALL of build and dist (not just ${platform})"
-#	@echo "Helpful modifiers:"
+	@echo "Helpful modifiers:"
+	@echo "  make SHOWCOMMANDS=1 ...     Show all compilation commands"
 	@echo ""
 
 
@@ -86,9 +87,9 @@ LINK_BOOST ?= ${LD_LIBPATH}${BOOST_LIB_AREA} \
 
 # Here we put instructions to copy libraries from these external tools into
 # this project's lib directory.
-#dist_extra_libs += $(wildcard ${BOOST_LIB_AREA}/libboost_filesystem${BOOST_SUFFIX}${SHLIBEXT}*) \
-#		   $(wildcard ${BOOST_LIB_AREA}/libboost_system${BOOST_SUFFIX}${SHLIBEXT}*) \
-#		   $(wildcard ${BOOST_LIB_AREA}/libboost_thread${BOOST_SUFFIX}${SHLIBEXT}*)
+dist_extra_libs += $(wildcard ${BOOST_LIB_AREA}/libboost_filesystem${BOOST_SUFFIX}${SHLIBEXT}*) \
+		   $(wildcard ${BOOST_LIB_AREA}/libboost_system${BOOST_SUFFIX}${SHLIBEXT}*) \
+		   $(wildcard ${BOOST_LIB_AREA}/libboost_thread${BOOST_SUFFIX}${SHLIBEXT}*)
 
 OPENIMAGEIO_HOME ?= ${IMAGEIOHOME}
 OPENIMAGEIO_INCLUDE ?= -I${OPENIMAGEIO_HOME}/include -I${OPENIMAGEIO_HOME}/include/OpenImageIO

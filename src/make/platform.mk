@@ -48,9 +48,9 @@ ifeq (${platform},unknown)
 
   # Windows
   ifeq (${uname},cygwin)
-    platform := win
+    platform := windows
     ifeq (${hw},x86_64)
-      platform := win64
+      platform := windows64
     endif
   endif
 
@@ -117,7 +117,7 @@ LINKWITH := -l
 SHLIBEXT := .so
 LDSHLIB := ${CXX}
 SHLIB_DASHO := -o #
-SHLIB_LDFLAGS := -Bdynamic -rdynamic -shared ${PIC} 
+SHLIB_LDFLAGS += -Bdynamic -rdynamic -shared ${PIC} 
 
 # Making dependency make files (.d)
 MAKEDEPEND := makedepend
@@ -137,6 +137,7 @@ CPR := cp -vpfr
 SED := sed
 # ld?
 
+QT_MOC ?= moc
 FLEX := flex
 BISON := bison
 

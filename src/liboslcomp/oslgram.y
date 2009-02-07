@@ -228,7 +228,7 @@ local_declaration
         ;
 
 variable_declaration
-        : typespec def_expressions ';'          { $$ = 0;  /*FIXME*/ }
+        : typespec def_expressions ';'          { $$ = $2;  /*FIXME*/ }
         ;
 
 def_expressions
@@ -237,7 +237,11 @@ def_expressions
         ;
 
 def_expression
-        : IDENTIFIER initializer_opt { $$ = 0;  /*FIXME*/}
+        : IDENTIFIER initializer_opt
+                {
+                    $$ = new ASTvariable_declaration (oslcompiler,
+                                                      ustring($1), $2);
+                }
         | IDENTIFIER arrayspec array_initializer_opt { $$ = 0;  /*FIXME*/ }
         ;
 

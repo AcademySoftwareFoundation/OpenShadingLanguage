@@ -28,8 +28,86 @@ namespace pvt {   // OSL::pvt
 ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler) 
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno())
+      m_sourceline(compiler->lineno()), m_op(0)
 {
+}
+
+
+
+ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
+                  ASTNode *a)
+    : m_nodetype(nodetype), m_compiler(compiler),
+      m_sourcefile(compiler->filename()),
+      m_sourceline(compiler->lineno()), m_op(op)
+{
+    addchild (a);
+}
+
+
+
+ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
+                  ASTNode *a, ASTNode *b)
+    : m_nodetype(nodetype), m_compiler(compiler),
+      m_sourcefile(compiler->filename()),
+      m_sourceline(compiler->lineno()), m_op(op)
+{
+    addchild (a);
+    addchild (b);
+}
+
+
+
+ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
+                  ASTNode *a, ASTNode *b, ASTNode *c)
+    : m_nodetype(nodetype), m_compiler(compiler),
+      m_sourcefile(compiler->filename()),
+      m_sourceline(compiler->lineno()), m_op(op)
+{
+    addchild (a);
+    addchild (b);
+    addchild (c);
+}
+
+
+
+ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
+                  ASTNode *a, ASTNode *b, ASTNode *c, ASTNode *d)
+    : m_nodetype(nodetype), m_compiler(compiler),
+      m_sourcefile(compiler->filename()),
+      m_sourceline(compiler->lineno()), m_op(op)
+{
+    addchild (a);
+    addchild (b);
+    addchild (c);
+    addchild (d);
+}
+
+
+
+void
+ASTNode::print (int indentlevel) const 
+{
+    indent (indentlevel);
+    std::cout << nodetypename() << " : " << (opname() ? opname() : "") << "\n";
+    for (size_t i = 0;  i < m_children.size();  ++i) {
+        if (! child(i))
+            continue;
+        indent (indentlevel);
+        if (childname(i))
+            std::cout << "  " << childname(i) << " :\n";
+        else
+            std::cout << "  child " << i << " :\n";
+        printlist (child(i), indentlevel+1);
+    }
+}
+
+
+
+const char *
+ASTshader_declaration::childname (size_t i) const
+{
+    static const char *name[] = { "metadata", "formals", "statements" };
+    return name[i];
 }
 
 
@@ -38,84 +116,75 @@ void
 ASTshader_declaration::print (int indentlevel) const
 {
     indent (indentlevel);
-    std::cout << "Shader declaration:\n";
-    indent (indentlevel);
-    std::cout << "  Type: " << m_shadertype << "\n";
-    indent (indentlevel);
-    std::cout << "  Name: " << m_shadername << "\n";
-    indent (indentlevel);
-    std::cout << "  Formals:\n";
-    printlist (m_formals, indentlevel+1);
-    indent (indentlevel);
-    std::cout << "  Statements:\n";
-    printlist (m_statements, indentlevel+1);
-}
-
-
-
-void
-ASTconditional_statement::print (int indentlevel) const 
-{
-    indent (indentlevel);
-    std::cout << "Conditional\n";
-    indent (indentlevel);
-    std::cout << "  Condition:\n";
-    printlist (m_cond, indentlevel+1);
-    indent (indentlevel);
-    std::cout << "  True statements:\n";
-    printlist (m_truestmt, indentlevel+1);
-    if (m_falsestmt) {
-        indent (indentlevel);
-        std::cout << "  False statements:\n";
-        printlist (m_falsestmt, indentlevel+1);
-    }
-}
-
-
-
-void
-ASTloop_statement::print (int indentlevel) const 
-{
-    indent (indentlevel);
-    std::cout << "Loop: " << (looptype() == LoopWhile ? "while" 
-                             : looptype() == LoopDo ? "do" : "for") << "\n";
-    if (m_init) {
-        indent (indentlevel);
-        std::cout << "  Initialization:\n";
-        printlist (m_init, indentlevel+1);
-    }
-    indent (indentlevel);
-    std::cout << "  Condition:\n";
-    printlist (m_cond, indentlevel+1);
-    if (m_iter) {
-        indent (indentlevel);
-        std::cout << "  Iteration:\n";
-        printlist (m_iter, indentlevel+1);
-    }
-    indent (indentlevel);
-    std::cout << "  Statements:\n";
-    printlist (m_stmt, indentlevel+1);
-}
-
-
-
-void
-ASTassign_expression::print (int indentlevel) const 
-{
-    indent (indentlevel);
-    std::cout << "Assignment: operator " << opsymbol() << "\n";
-    indent (indentlevel);
-    std::cout << "  Variable:\n";
-    printlist (m_var, indentlevel+1);
-    indent (indentlevel);
-    std::cout << "  Expression:\n";
-    printlist (m_expr, indentlevel+1);
+    std::cout << "Name: " << m_shadername << "\n";
+    ASTNode::print (indentlevel);
 }
 
 
 
 const char *
-ASTassign_expression::opsymbol () const
+ASTvariable_declaration::childname (size_t i) const
+{
+    static const char *name[] = { "initializer" };
+    return name[i];
+}
+
+
+
+void
+ASTvariable_declaration::print (int indentlevel) const
+{
+    indent (indentlevel);
+    std::cout << "Name: " << m_name << "\n";
+    ASTNode::print (indentlevel);
+}
+
+
+
+const char *
+ASTconditional_statement::childname (size_t i) const
+{
+    static const char *name[] = { "condition",
+                                  "truestatement", "falsestatement" };
+    return name[i];
+}
+
+
+
+const char *
+ASTloop_statement::childname (size_t i) const
+{
+    static const char *name[] = { "initializer", "condition",
+                                  "bodystatement", "iteration" };
+    return name[i];
+}
+
+
+
+const char *
+ASTloop_statement::opname () const
+{
+    switch (m_op) {
+    case LoopWhile : return "while";
+    case LoopDo    : return "do";
+    case LoopFor   : return "for";
+    default: ASSERT(0);
+    }
+}
+
+
+
+const char *
+ASTassign_expression::childname (size_t i) const
+{
+    static const char *name[] = { "variable", "expression" };
+    return name[i];
+}
+
+
+
+const char *
+ASTassign_expression::opname () const
 {
     switch (m_op) {
     case Assign           : return "=";
@@ -134,23 +203,17 @@ ASTassign_expression::opsymbol () const
 
 
 
-void
-ASTbinary_expression::print (int indentlevel) const 
+const char *
+ASTbinary_expression::childname (size_t i) const
 {
-    indent (indentlevel);
-    std::cout << "Binary expresion: operator " << opsymbol() << "\n";
-    indent (indentlevel);
-    std::cout << "  Left:\n";
-    printlist (m_left, indentlevel+1);
-    indent (indentlevel);
-    std::cout << "  Right:\n";
-    printlist (m_right, indentlevel+1);
+    static const char *name[] = { "left", "right" };
+    return name[i];
 }
 
 
 
 const char *
-ASTbinary_expression::opsymbol () const
+ASTbinary_expression::opname () const
 {
     switch (m_op) {
     case Mul          : return "*";

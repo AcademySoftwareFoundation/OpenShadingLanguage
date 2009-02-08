@@ -34,7 +34,7 @@ class ASTNode;
 
 class OSLCompilerImpl : public OSL::OSLCompiler {
 public:
-    OSLCompilerImpl (void) : m_lexer(NULL), m_err(false) { }
+    OSLCompilerImpl (void);
     virtual ~OSLCompilerImpl (void) { }
 
     /// Fully compile a shader located in 'filename', with the command-line
@@ -89,6 +89,15 @@ public:
     ///
     ASTNode::ref shader () const { return m_shader; }
 
+    /// Return a reference to the symbol table.
+    ///
+    SymbolTable &symtab () { return m_symtab; }
+
+    TypeSpec current_typespec () const { return m_current_typespec; }
+    void current_typespec (TypeSpec t) { m_current_typespec = t; }
+    bool current_output () const { return m_current_output; }
+    void current_output (bool b) { m_current_output = b; }
+
 private:
     oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
@@ -96,6 +105,8 @@ private:
     ASTNode::ref m_shader;    ///< The shader's syntax tree
     bool m_err;               ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table
+    TypeSpec m_current_typespec;  ///< Currently-declared type
+    bool m_current_output;        ///< Currently-declared output status
 };
 
 

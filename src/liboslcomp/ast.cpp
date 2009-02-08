@@ -89,6 +89,14 @@ ASTNode::print (int indentlevel) const
 {
     indent (indentlevel);
     std::cout << nodetypename() << " : " << (opname() ? opname() : "") << "\n";
+    printchildren (indentlevel);
+}
+
+
+
+void
+ASTNode::printchildren (int indentlevel) const 
+{
     for (size_t i = 0;  i < m_children.size();  ++i) {
         if (! child(i))
             continue;
@@ -116,8 +124,27 @@ void
 ASTshader_declaration::print (int indentlevel) const
 {
     indent (indentlevel);
-    std::cout << "Name: " << m_shadername << "\n";
-    ASTNode::print (indentlevel);
+    std::cout << nodetypename() << " \"" << m_shadername << "\"\n";
+    printchildren (indentlevel);
+}
+
+
+
+ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
+                                                  const TypeSpec &type,
+                                                  ustring name, ASTNode *init)
+    : ASTNode (variable_declaration_node, comp, 0, init),
+      m_name(name), m_sym(NULL)
+{
+    Symbol *f = comp->symtab().find (name);
+    if (f && f->scope() == comp->symtab().scopeid()) {
+        comp->error (sourcefile(), sourceline(), 
+                     "\"%s\" already declared in this scope",
+                     name.c_str());
+        // FIXME -- print the file and line of the other definition
+    }
+    m_sym = new Symbol (name, oslcompiler->current_typespec());
+    oslcompiler->symtab().insert (m_sym);
 }
 
 
@@ -135,8 +162,45 @@ void
 ASTvariable_declaration::print (int indentlevel) const
 {
     indent (indentlevel);
-    std::cout << "Name: " << m_name << "\n";
-    ASTNode::print (indentlevel);
+    std::cout << nodetypename() << " " 
+              << m_sym->type().type().c_str() << " " 
+              << m_name << "\n";
+    printchildren (indentlevel);
+}
+
+
+
+ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
+    : ASTNode (variable_ref_node, comp), m_name(name), m_sym(NULL)
+{
+    m_sym = comp->symtab().find (name);
+    if (! m_sym) {
+        comp->error (sourcefile(), sourceline(), 
+                     "\"%s\" not found", name.c_str());
+        // FIXME -- would be fun to troll through the symtab and try to
+        // find the things that almost matched and offer suggestions.
+    }
+}
+
+
+
+const char *
+ASTvariable_ref::childname (size_t i) const
+{
+    static const char *name[] = { "initializer" };
+    return name[i];
+}
+
+
+
+void
+ASTvariable_ref::print (int indentlevel) const
+{
+    indent (indentlevel);
+    std::cout << nodetypename() << " " 
+              << m_sym->type().type().c_str() << " " 
+              << m_name << "\n";
+    printchildren (indentlevel);
 }
 
 

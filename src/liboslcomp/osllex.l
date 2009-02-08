@@ -98,26 +98,26 @@ void preprocess (const char *yytext);
  /* keywords */
 "break"			{  return (yylval.i=BREAK); }
 "closure"		{  return (yylval.i=CLOSURE); }
-"color"			{  return (yylval.i=COLOR); }
+"color"			{  return (yylval.i=COLORTYPE); }
 "continue"		{  return (yylval.i=CONTINUE); }
 "do"		        {  return (yylval.i=DO); }
 "else"			{  return (yylval.i=ELSE); }
-"float"			{  return (yylval.i=FLOAT); }
+"float"			{  return (yylval.i=FLOATTYPE); }
 "for"			{  return (yylval.i=FOR); }
 "if"			{  return (yylval.i=IF); }
 "illuminance"	        {  return (yylval.i=ILLUMINANCE); }
 "illuminate"	        {  return (yylval.i=ILLUMINATE); }
-"int"		        {  return (yylval.i=INT); }
-"matrix"		{  return (yylval.i=MATRIX); }
-"normal"		{  return (yylval.i=NORMAL); }
+"int"		        {  return (yylval.i=INTTYPE); }
+"matrix"		{  return (yylval.i=MATRIXTYPE); }
+"normal"		{  return (yylval.i=NORMALTYPE); }
 "output"                {  return (yylval.i=OUTPUT); }
-"point"			{  return (yylval.i=POINT); }
+"point"			{  return (yylval.i=POINTTYPE); }
 "public"		{  return (yylval.i=PUBLIC); }
 "return"		{  return (yylval.i=RETURN); }
-"string"		{  return (yylval.i=STRING); }
+"string"		{  return (yylval.i=STRINGTYPE); }
 "struct"		{  return (yylval.i=STRUCT); }
-"vector"		{  return (yylval.i=VECTOR); }
-"void"			{  return (yylval.i=VOID); }
+"vector"		{  return (yylval.i=VECTORTYPE); }
+"void"			{  return (yylval.i=VOIDTYPE); }
 "while"			{  return (yylval.i=WHILE); }
 
  /* reserved words */

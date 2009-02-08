@@ -31,6 +31,7 @@ namespace pvt {
 // Forward declarations
 class OSLCompilerImpl;
 class Symbol;
+class TypeSpec;
 
 
 
@@ -45,6 +46,7 @@ public:
     enum NodeType {
         unknown_node, shader_declaration_node,
         variable_declaration_node,
+        variable_ref_node,
         conditional_statement_node, 
         loop_statement_node, loopmod_statement_node,
         binary_expression_node, unary_expression_node,
@@ -110,6 +112,14 @@ public:
             return B;
     }
 
+    /// What source file was this parse node created from?
+    ///
+    ustring sourcefile () const { return m_sourcefile; }
+
+    /// What line of the source file was this parse node created from?
+    ///
+    int sourceline () const { return m_sourceline; }
+
 protected:
     /// Return a reference-counted pointer to the next node in the sequence.
     ///
@@ -135,6 +145,13 @@ protected:
         return (i < m_children.size()) ? m_children[i].get() : NULL;
     }
 
+    /// Add a new node to the list of children.
+    ///
+    void addchild (ASTNode *n) { m_children.push_back (n); }
+
+    virtual void printchildren (int indentlevel = 0) const;
+
+
 protected:
     NodeType m_nodetype;    ///< Type of node this is
     ref m_next;             ///< Next node in the list
@@ -143,10 +160,6 @@ protected:
     int m_sourceline;       ///< Line number in source where the node came from
     std::vector<ref> m_children;  ///< Child nodes
     int m_op;                     ///< Operator selection
-
-    /// Add a new node to the list of children.
-    ///
-    void addchild (ASTNode *n) { m_children.push_back (n); }
 
 private:
 };
@@ -177,16 +190,27 @@ private:
 class ASTvariable_declaration : public ASTNode
 {
 public:
-    ASTvariable_declaration (OSLCompilerImpl *comp, /* type */ ustring name,
-                             ASTNode *init)
-        : ASTNode (variable_declaration_node, comp, 0, init),
-          m_name(name), m_sym(NULL)
-    { }
+    ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
+                             ustring name, ASTNode *init);
     const char *nodetypename () const { return "variable_declaration"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
 
     ref init () const { return child (0); }
+private:
+    ustring m_name;
+    Symbol *m_sym;
+};
+
+
+
+class ASTvariable_ref : public ASTNode
+{
+public:
+    ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
+    const char *nodetypename () const { return "variable_ref"; }
+    const char *childname (size_t i) const;
+    void print (int indentlevel=0) const;
 private:
     ustring m_name;
     Symbol *m_sym;

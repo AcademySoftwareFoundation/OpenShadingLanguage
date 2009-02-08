@@ -31,6 +31,7 @@ using std::hash_set;
 
 #include <boost/intrusive/list.hpp>
 
+#include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/dassert.h"
 
@@ -39,17 +40,44 @@ namespace OSL {
 namespace pvt {
 
 
+
+/// Light-weight way to describe types for the compiler -- simple types,
+/// closures, or the ID of a structure.
+class TypeSpec {
+public:
+    TypeSpec (TypeDesc simple, bool closure=false)
+        : m_structure(0), m_closure(closure), m_simple(simple)
+    { }
+
+    bool is_closure () const { return m_closure; }
+    bool is_structure () const { return m_structure > 0; }
+    TypeDesc type () const { return m_simple; }
+
+private:
+    short m_structure;     ///< 0 is not a structure, >=1 for structure id
+    bool  m_closure;       ///< Is it a closure? (m_simple also used)
+    TypeDesc m_simple;     ///< Data if it's a simple type
+};
+
+
+
 /// The compiler record of a single symbol (identifier) and all relevant
 /// information about it.
 class Symbol {
 public:
-    Symbol (ustring n) : m_name(n) { }
+    Symbol (ustring n, const TypeSpec &t) : m_name(n), m_typespec(t) { }
     ~Symbol () { }
 
     ustring name () const { return m_name; }
 
+    const TypeSpec &type () const { return m_typespec; }
+
+    int scope () const { return m_scope; }
+
 private:
     ustring m_name;
+    TypeSpec m_typespec;
+    int m_scope;
 };
 
 
@@ -129,7 +157,7 @@ public:
 
     /// Return the current scope ID
     ///
-    int scopeid () const { 
+    int scopeid () const {
         recursive_lock_guard guard (m_mutex);  // thread safety
         return m_scopeid;
     }

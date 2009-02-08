@@ -47,6 +47,14 @@ namespace pvt {   // OSL::pvt
 OSLCompilerImpl *oslcompiler = NULL;
 
 
+OSLCompilerImpl::OSLCompilerImpl (void)
+    : m_lexer(NULL), m_err(false), 
+      m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false)
+{
+}
+
+
+
 bool
 OSLCompilerImpl::compile (const std::string &filename,
                           const std::vector<std::string> &options)

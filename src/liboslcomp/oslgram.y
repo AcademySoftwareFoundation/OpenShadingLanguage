@@ -26,6 +26,7 @@
 
 #include "oslcomp_pvt.h"
 #include "ast.h"
+#include "symtab.h"
 
 #undef yylex
 #define yyFlexLexer oslFlexLexer
@@ -35,6 +36,27 @@ void yyerror (const char *err);
 #define yylex oslcompiler->lexer()->yylex
 
 using namespace OSL::pvt;
+
+
+
+// Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
+inline TypeDesc
+lextype (int lex)
+{
+    switch (lex) {
+    case COLORTYPE  : return TypeDesc::TypeColor;
+    case FLOATTYPE  : return TypeDesc::TypeFloat;
+    case INTTYPE    : return TypeDesc::TypeInt;
+    case MATRIXTYPE : return TypeDesc::TypeMatrix;
+    case NORMALTYPE : return TypeDesc::TypeNormal;
+    case POINTTYPE  : return TypeDesc::TypePoint;
+    case STRINGTYPE : return TypeDesc::TypeString;
+    case VECTORTYPE : return TypeDesc::TypeVector;
+    case VOIDTYPE   : return TypeDesc::VOID;
+    default: return PT_UNKNOWN;
+    }
+}
+
 
 %}
 
@@ -57,7 +79,8 @@ using namespace OSL::pvt;
 %token <s> IDENTIFIER STRING_LITERAL
 %token <i> INT_LITERAL
 %token <f> FLOAT_LITERAL
-%token <i> COLOR FLOAT INT MATRIX NORMAL POINT STRING VECTOR VOID
+%token <i> COLORTYPE FLOATTYPE INTTYPE MATRIXTYPE 
+%token <i> NORMALTYPE POINTTYPE STRINGTYPE VECTORTYPE VOIDTYPE
 %token <i> CLOSURE OUTPUT PUBLIC STRUCT
 %token <i> BREAK CONTINUE DO ELSE FOR IF ILLUMINATE ILLUMINANCE RETURN WHILE
 %token <i> RESERVED
@@ -240,7 +263,8 @@ def_expression
         : IDENTIFIER initializer_opt
                 {
                     $$ = new ASTvariable_declaration (oslcompiler,
-                                                      ustring($1), $2);
+                                              oslcompiler->current_typespec(),
+                                              ustring($1), $2);
                 }
         | IDENTIFIER arrayspec array_initializer_opt { $$ = 0;  /*FIXME*/ }
         ;
@@ -285,30 +309,42 @@ shadertype
                 }
         ;
 
+/* outputspec operates by merely setting the current_output to whether
+ * or not we're declaring an output parameter.
+ */
 outputspec
-        : OUTPUT
-        | /* empty */                   { $$ = 0; }
+        : OUTPUT                { oslcompiler->current_output (true); $$ = 0; }
+        | /* empty */           { oslcompiler->current_output (false); $$ = 0; }
         ;
 
 simple_typename
-        : COLOR
-        | FLOAT
-        | INT
-        | MATRIX
-        | NORMAL
-        | POINT
-        | STRING
-        | VECTOR
-        | VOID
+        : COLORTYPE
+        | FLOATTYPE
+        | INTTYPE
+        | MATRIXTYPE
+        | NORMALTYPE
+        | POINTTYPE
+        | STRINGTYPE
+        | VECTORTYPE
+        | VOIDTYPE
         ;
 
 arrayspec
         : '[' INT_LITERAL ']'           { $$ = $2; }
         ;
 
+/* typespec operates by merely setting the current_typespec */
 typespec
-        : simple_typename               { $$ = 0; /*FIXME*/ }
-        | simple_typename CLOSURE       { $$ = 0; /*FIXME*/ }
+        : simple_typename
+                {
+                    oslcompiler->current_typespec (TypeSpec (lextype ($1)));
+                    $$ = 0;
+                }
+        | simple_typename CLOSURE
+                {
+                    oslcompiler->current_typespec (TypeSpec (lextype ($1), true));
+                    $$ = 0;
+                }
         | IDENTIFIER /* struct name */  { $$ = 0; /*FIXME*/ }
         ;
 
@@ -407,12 +443,18 @@ expression
 variable_lvalue
         : IDENTIFIER array_deref_opt component_deref_opt component_deref_opt 
                 {
-                    $$ = 0; /*FIXME*/
+                    $$ = new ASTvariable_ref (oslcompiler, ustring($1));
+                    // FIXME -- not considering the array or component
+                    // deref!!!
                 }
         ;
 
 variable_ref
-        : variable_lvalue incdec_op_opt { $$ = 0; /*FIXME*/ }
+        : variable_lvalue incdec_op_opt
+                {
+                     $$ = $1;
+                     // FIXME -- not considering the incdec!
+                }
         ;
 
 array_deref_opt

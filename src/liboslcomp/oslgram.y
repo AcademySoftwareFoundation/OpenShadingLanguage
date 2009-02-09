@@ -227,8 +227,29 @@ function_formal_params
         ;
 
 function_formal_param
-        : outputspec typespec IDENTIFIER           { $$ = 0;  /*FIXME*/ }
-        | outputspec typespec IDENTIFIER arrayspec { $$ = 0;  /*FIXME*/ }
+        : outputspec typespec IDENTIFIER
+                {
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler,
+                                              oslcompiler->current_typespec(),
+                                              ustring ($3), NULL, true);
+                    var->make_output ($1);
+                    $$ = var;
+                }
+        | outputspec typespec IDENTIFIER arrayspec
+                {
+                    // Grab the current declaration type, modify it to be array
+                    TypeSpec t = oslcompiler->current_typespec();
+                    TypeDesc simple = t.type();
+                    simple.arraylen = $4;
+                    t = TypeSpec (simple, t.is_closure());
+                    // FIXME -- won't work for a struct
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler, t, 
+                                                       ustring($3), NULL, true);
+                    var->make_output ($1);
+                    $$ = var;
+                }
         ;
 
 struct_declaration
@@ -251,7 +272,7 @@ local_declaration
         ;
 
 variable_declaration
-        : typespec def_expressions ';'          { $$ = $2;  /*FIXME*/ }
+        : typespec def_expressions ';'          { $$ = $2; }
         ;
 
 def_expressions
@@ -266,7 +287,17 @@ def_expression
                                               oslcompiler->current_typespec(),
                                               ustring($1), $2);
                 }
-        | IDENTIFIER arrayspec array_initializer_opt { $$ = 0;  /*FIXME*/ }
+        | IDENTIFIER arrayspec array_initializer_opt
+                {
+                    // Grab the current declaration type, modify it to be array
+                    TypeSpec t = oslcompiler->current_typespec();
+                    TypeDesc simple = t.type();
+                    simple.arraylen = $2;
+                    t = TypeSpec (simple, t.is_closure());
+                    // FIXME -- won't work for a struct
+                    $$ = new ASTvariable_declaration (oslcompiler, t, 
+                                                      ustring($1), $3);
+                }
         ;
 
 initializer_opt
@@ -313,7 +344,7 @@ shadertype
  * or not we're declaring an output parameter.
  */
 outputspec
-        : OUTPUT                { oslcompiler->current_output (true); $$ = 0; }
+        : OUTPUT                { oslcompiler->current_output (true); $$ = 1; }
         | /* empty */           { oslcompiler->current_output (false); $$ = 0; }
         ;
 
@@ -387,26 +418,35 @@ loop_statement
                                                 NULL, $3, NULL, $5);
                 }
         | DO statement WHILE '(' expression ')' ';'
-               {
-                   $$ = new ASTloop_statement (oslcompiler,
-                                               ASTloop_statement::LoopDo,
-                                               NULL, $5, NULL, $2);
-               }
+                {
+                    $$ = new ASTloop_statement (oslcompiler,
+                                                ASTloop_statement::LoopDo,
+                                                NULL, $5, NULL, $2);
+                }
         | FOR '(' for_init_statement expression_opt ';' expression_opt ')' statement
-               {
-                   $$ = new ASTloop_statement (oslcompiler,
-                                               ASTloop_statement::LoopFor,
-                                               $3, $4, $6, $8);
-               }
+                {
+                    $$ = new ASTloop_statement (oslcompiler,
+                                                ASTloop_statement::LoopFor,
+                                                $3, $4, $6, $8);
+                }
         ;
 
 loopmod_statement
-        : BREAK ';'                     { $$ = 0; /*FIXME*/ }
-        | CONTINUE ';'                  { $$ = 0; /*FIXME*/ }
+        : BREAK ';'
+                {
+                    $$ = new ASTloopmod_statement (oslcompiler, ASTloopmod_statement::LoopModBreak);
+                }
+        | CONTINUE ';'
+                {
+                    $$ = new ASTloopmod_statement (oslcompiler, ASTloopmod_statement::LoopModContinue);
+                }
         ;
 
 return_statement
-        : RETURN expression_opt ';'     { $$ = 0;  /*FIXME*/ }
+        : RETURN expression_opt ';'
+                {
+                    $$ = new ASTreturn_statement (oslcompiler, $2);
+                }
         ;
 
 for_init_statement
@@ -425,13 +465,21 @@ expression_opt
         ;
 
 expression
-        : INT_LITERAL { $$ = 0; /*FIXME*/ }
-        | FLOAT_LITERAL { $$ = 0; /*FIXME*/ }
-        | STRING_LITERAL { $$ = 0; /*FIXME*/ }
+        : INT_LITERAL           { $$ = new ASTliteral (oslcompiler, $1); }
+        | FLOAT_LITERAL         { $$ = new ASTliteral (oslcompiler, $1); }
+        | STRING_LITERAL        { $$ = new ASTliteral (oslcompiler, ustring($1)); }
         | variable_ref
-        | incdec_op variable_ref { $$ = 0; /*FIXME*/ }
+        | incdec_op variable_lvalue 
+                {
+                    DASSERT ($2->nodetype() == ASTNode::variable_ref_node);
+                    ((ASTvariable_ref *)$2)->add_preop ($1);
+                    $$ = $2;
+                }
         | binary_expression
-        | unary_op expression %prec UMINUS_PREC { $$ = 0; /*FIXME*/ }
+        | unary_op expression %prec UMINUS_PREC
+                {
+                    $$ = new ASTunary_expression (oslcompiler, $1, $2);
+                }
         | '(' expression ')'                    { $$ = $2; }
         | function_call
         | assign_expression
@@ -443,17 +491,17 @@ expression
 variable_lvalue
         : IDENTIFIER array_deref_opt component_deref_opt component_deref_opt 
                 {
-                    $$ = new ASTvariable_ref (oslcompiler, ustring($1));
-                    // FIXME -- not considering the array or component
-                    // deref!!!
+                    $$ = new ASTvariable_ref (oslcompiler, ustring($1),
+                                              $2, $3, $4);
                 }
         ;
 
 variable_ref
         : variable_lvalue incdec_op_opt
                 {
-                     $$ = $1;
-                     // FIXME -- not considering the incdec!
+                    DASSERT ($1->nodetype() == ASTNode::variable_ref_node);
+                    ((ASTvariable_ref *)$1)->add_postop ($2);
+                    $$ = $1;
                 }
         ;
 
@@ -566,20 +614,28 @@ unary_op
 
 incdec_op_opt
         : incdec_op
-        | /* empty */                   { $$ = NULL; }
+        | /* empty */                   { $$ = 0; }
         ;
 
 incdec_op
-        : INCREMENT
-        | DECREMENT
+        : INCREMENT                     { $$ = +1; }
+        | DECREMENT                     { $$ = -1; }
         ;
 
 type_constructor
-        : typespec '(' expression_list ')' { $$ = 0; /*FIXME*/ }
+        : typespec '(' expression_list ')'
+                {
+                    $$ = new ASTtypecast_expression (oslcompiler, 
+                                                     oslcompiler->current_typespec(),
+                                                     $3);
+                }
         ;
 
 function_call
-        : IDENTIFIER '(' function_args_opt ')' { $$ = 0; /*FIXME*/ }
+        : IDENTIFIER '(' function_args_opt ')'
+                {
+                    $$ = new ASTfunction_call (oslcompiler, $1, $3);
+                }
         ;
 
 function_args_opt
@@ -626,11 +682,19 @@ assign_expression
         ;
 
 ternary_expression
-        : expression '?' expression ':' expression { $$ = 0; /*FIXME*/ }
+        : expression '?' expression ':' expression
+                {
+                    $$ = new ASTternary_expression (oslcompiler, $1, $3, $5);
+                }
         ;
 
 typecast_expression
-        : '(' simple_typename ')' expression { $$ = 0; /*FIXME*/ }
+        : '(' simple_typename ')' expression
+                {
+                    $$ = new ASTtypecast_expression (oslcompiler, 
+                                                     TypeSpec (lextype ($2)),
+                                                     $4);
+                }
         ;
 
 %%

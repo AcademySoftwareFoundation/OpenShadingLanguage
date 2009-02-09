@@ -45,6 +45,15 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 
 
 
+ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op)
+    : m_nodetype(nodetype), m_compiler(compiler),
+      m_sourcefile(compiler->filename()),
+      m_sourceline(compiler->lineno()), m_op(op)
+{
+}
+
+
+
 ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
                   ASTNode *a, ASTNode *b)
     : m_nodetype(nodetype), m_compiler(compiler),
@@ -132,9 +141,10 @@ ASTshader_declaration::print (int indentlevel) const
 
 ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
-                                                  ustring name, ASTNode *init)
+                                                  ustring name, ASTNode *init,
+                                                  bool isparam)
     : ASTNode (variable_declaration_node, comp, 0, init),
-      m_name(name), m_sym(NULL)
+      m_name(name), m_sym(NULL), m_isparam(isparam)
 {
     Symbol *f = comp->symtab().find (name);
     if (f && f->scope() == comp->symtab().scopeid()) {
@@ -143,8 +153,16 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                      name.c_str());
         // FIXME -- print the file and line of the other definition
     }
-    m_sym = new Symbol (name, oslcompiler->current_typespec());
+    m_sym = new Symbol (name, type);
     oslcompiler->symtab().insert (m_sym);
+}
+
+
+
+const char *
+ASTvariable_declaration::nodetypename () const
+{
+    return m_isparam ? "parameter" : "variable_declaration";
 }
 
 
@@ -170,8 +188,11 @@ ASTvariable_declaration::print (int indentlevel) const
 
 
 
-ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
-    : ASTNode (variable_ref_node, comp), m_name(name), m_sym(NULL)
+ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
+                                  ASTNode *array_index, ASTNode *comp1_index,
+                                  ASTNode *comp2_index)
+    : ASTNode (variable_ref_node, comp, 0, array_index, comp1_index, comp2_index),
+      m_name(name), m_sym(NULL), m_preop(0), m_postop(0)
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {
@@ -187,7 +208,7 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
 const char *
 ASTvariable_ref::childname (size_t i) const
 {
-    static const char *name[] = { "initializer" };
+    static const char *name[] = { "arrayindex", "componentindex1", "componentindex2" };
     return name[i];
 }
 
@@ -199,7 +220,16 @@ ASTvariable_ref::print (int indentlevel) const
     indent (indentlevel);
     std::cout << nodetypename() << " " 
               << m_sym->type().type().c_str() << " " 
-              << m_name << "\n";
+              << m_name;
+    if (m_preop == 1)
+        std::cout << " PRE-INCREMENT";
+    else if (m_preop == -1)
+        std::cout << " PRE-DECREMENT";
+    if (m_postop == 1)
+        std::cout << " POST-INCREMENT";
+    else if (m_postop == -1)
+        std::cout << " POST-DECREMENT";
+    std::cout << "\n";
     printchildren (indentlevel);
 }
 
@@ -239,6 +269,34 @@ ASTloop_statement::opname () const
 
 
 const char *
+ASTloopmod_statement::childname (size_t i) const
+{
+    return NULL;  // no children
+}
+
+
+
+const char *
+ASTloopmod_statement::opname () const
+{
+    switch (m_op) {
+    case LoopModBreak    : return "break";
+    case LoopModContinue : return "continue";
+    default: ASSERT(0);
+    }
+}
+
+
+
+const char *
+ASTreturn_statement::childname (size_t i) const
+{
+    return "expression";  // only child
+}
+
+
+
+const char *
 ASTassign_expression::childname (size_t i) const
 {
     static const char *name[] = { "variable", "expression" };
@@ -261,6 +319,29 @@ ASTassign_expression::opname () const
     case BitwiseXorAssign : return "^=";
     case ShiftLeftAssign  : return "<<=";
     case ShiftRightAssign : return ">>=";
+    default: ASSERT(0);
+    }
+}
+
+
+
+const char *
+ASTunary_expression::childname (size_t i) const
+{
+    static const char *name[] = { "expression" };
+    return name[i];
+}
+
+
+
+const char *
+ASTunary_expression::opname () const
+{
+    switch (m_op) {
+    case Pos        : return "+";
+    case Neg        : return "-";
+    case LogicalNot : return "!";
+    case BitwiseNot : return "~";
     default: ASSERT(0);
     }
 }
@@ -302,6 +383,73 @@ ASTbinary_expression::opname () const
     }
 }
 
+
+
+const char *
+ASTternary_expression::childname (size_t i) const
+{
+    static const char *name[] = { "condition",
+                                  "trueexpression", "falseexpression" };
+    return name[i];
+}
+
+
+
+const char *
+ASTtypecast_expression::childname (size_t i) const
+{
+    static const char *name[] = { "expr" };
+    return name[i];
+}
+
+
+
+ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
+                                    ASTNode *args)
+    : ASTNode (function_call_node, comp, 0, args)
+{
+    m_sym = comp->symtab().find (name);
+    if (! m_sym) {
+        comp->error (sourcefile(), sourceline(), 
+                     "function \"%s\" not found", name.c_str());
+        // FIXME -- would be fun to troll through the symtab and try to
+        // find the things that almost matched and offer suggestions.
+    }
+}
+
+
+
+const char *
+ASTfunction_call::childname (size_t i) const
+{
+    static const char *name[] = { "parameters" };
+    return name[i];
+}
+
+
+
+const char *
+ASTliteral::childname (size_t i) const
+{
+    return NULL;
+}
+
+
+
+void
+ASTliteral::print (int indentlevel) const
+{
+    indent (indentlevel);
+    std::cout << nodetypename() << " " 
+              << m_typespec.type().c_str() << " ";
+    if (m_typespec.type() == TypeDesc::TypeInt)
+        std::cout << m_i;
+    else if (m_typespec.type() == TypeDesc::TypeFloat)
+        std::cout << m_f;
+    if (m_typespec.type() == TypeDesc::TypeString)
+        std::cout << "\"" << m_s << "\"";
+    std::cout << "\n";
+}
 
 
 }; // namespace pvt

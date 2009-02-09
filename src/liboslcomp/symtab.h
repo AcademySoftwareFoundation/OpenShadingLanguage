@@ -45,7 +45,7 @@ namespace pvt {
 /// closures, or the ID of a structure.
 class TypeSpec {
 public:
-    TypeSpec (TypeDesc simple, bool closure=false)
+    TypeSpec (TypeDesc simple=TypeDesc::UNKNOWN, bool closure=false)
         : m_structure(0), m_closure(closure), m_simple(simple)
     { }
 

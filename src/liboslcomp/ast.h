@@ -18,6 +18,7 @@
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/refcnt.h"
 #include "oslcomp.h"
+#include "symtab.h"
 
 
 class oslFlexLexer;
@@ -46,17 +47,20 @@ public:
     enum NodeType {
         unknown_node, shader_declaration_node,
         variable_declaration_node,
-        variable_ref_node,
-        conditional_statement_node, 
-        loop_statement_node, loopmod_statement_node,
+        variable_ref_node, preincdec_node,
+        conditional_statement_node,
+        loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
         assign_expression_node, ternary_expression_node, 
         typecast_expression_node,
+        function_call_node,
+        literal_node,
         _last_node
     };
 
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler);
 
+    ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op);
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
              ASTNode *a);
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
@@ -85,6 +89,10 @@ public:
     /// Name of the child node
     ///
     virtual const char *childname (size_t i) const = 0;
+
+    /// What data type is this node?
+    ///
+    const TypeSpec &typespec () const { return m_typespec; }
 
     /// Append a new node (specified by raw pointer) onto the end of the
     /// sequence that *this belongs to.  Return *this.
@@ -160,6 +168,7 @@ protected:
     int m_sourceline;       ///< Line number in source where the node came from
     std::vector<ref> m_children;  ///< Child nodes
     int m_op;                     ///< Operator selection
+    TypeSpec m_typespec;          ///< Data type of this node
 
 private:
 };
@@ -191,15 +200,20 @@ class ASTvariable_declaration : public ASTNode
 {
 public:
     ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
-                             ustring name, ASTNode *init);
-    const char *nodetypename () const { return "variable_declaration"; }
+                             ustring name, ASTNode *init, bool isparam=false);
+    const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
 
     ref init () const { return child (0); }
+
+    void make_output (bool out=true) { m_isoutput = out; }
+
 private:
     ustring m_name;
     Symbol *m_sym;
+    bool m_isparam;
+    bool m_isoutput;
 };
 
 
@@ -207,13 +221,22 @@ private:
 class ASTvariable_ref : public ASTNode
 {
 public:
-    ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
+    ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
+                     ASTNode *array_index=NULL, ASTNode *comp1_index=NULL,
+                     ASTNode *comp2_index=NULL);
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
+    void add_preop (int op) { m_preop = op; }
+    void add_postop (int op) { m_postop = op; }
 private:
     ustring m_name;
     Symbol *m_sym;
+    int m_postop;
+    int m_preop;
+    ref m_array_index;
+    ref m_comp1_index;
+    ref m_comp2_index;
 };
 
 
@@ -261,6 +284,39 @@ public:
 
 
 
+class ASTloopmod_statement : public ASTNode
+{
+public:
+    enum LoopModType {
+        LoopModBreak, LoopModContinue
+    };
+
+    ASTloopmod_statement (OSLCompilerImpl *comp, LoopModType loopmodtype)
+        : ASTNode (loopmod_statement_node, comp, loopmodtype)
+    { }
+
+    const char *nodetypename () const { return "loopmod_statement"; }
+    const char *childname (size_t i) const;
+    const char *opname () const;
+};
+
+
+
+class ASTreturn_statement : public ASTNode
+{
+public:
+    ASTreturn_statement (OSLCompilerImpl *comp, ASTNode *expr)
+        : ASTNode (return_statement_node, comp, 0, expr)
+    { }
+
+    const char *nodetypename () const { return "return_statement"; }
+    const char *childname (size_t i) const;
+
+    ref expr () const { return child (0); }
+};
+
+
+
 class ASTassign_expression : public ASTNode
 {
 public:
@@ -279,6 +335,24 @@ public:
 
     ref var () const { return child (0); }
     ref expr () const { return child (1); }
+};
+
+
+
+class ASTunary_expression : public ASTNode
+{
+public:
+    enum Unop { Pos='+', Neg='-', LogicalNot='!', BitwiseNot='~' };
+
+    ASTunary_expression (OSLCompilerImpl *comp, int op, ASTNode *expr)
+        : ASTNode (unary_expression_node, comp, op, expr)
+    { }
+
+    const char *nodetypename () const { return "unary_expression"; }
+    const char *childname (size_t i) const;
+    const char *opname () const;
+
+    ref expr () const { return child (0); }
 };
 
 
@@ -302,6 +376,83 @@ public:
 
     ref left () const { return child (0); }
     ref right () const { return child (1); }
+};
+
+
+
+class ASTternary_expression : public ASTNode
+{
+public:
+    ASTternary_expression (OSLCompilerImpl *comp, ASTNode *cond,
+                           ASTNode *trueexpr, ASTNode *falseexpr)
+        : ASTNode (ternary_expression_node, comp, 0, 
+                   cond, trueexpr, falseexpr)
+    { }
+
+    const char *nodetypename () const { return "ternary_expression"; }
+    const char *childname (size_t i) const;
+
+    ref cond () const { return child (0); }
+    ref trueexpr () const { return child (1); }
+    ref falseexpr () const { return child (2); }
+};
+
+
+
+class ASTtypecast_expression : public ASTNode
+{
+public:
+    ASTtypecast_expression (OSLCompilerImpl *comp, TypeSpec typespec,
+                            ASTNode *expr)
+        : ASTNode (typecast_expression_node, comp, 0, expr)
+    {
+        m_typespec = typespec;
+    }
+
+    const char *nodetypename () const { return "typecast_expression"; }
+    const char *childname (size_t i) const;
+
+    ref expr () const { return child (0); }
+};
+
+
+
+class ASTfunction_call : public ASTNode
+{
+public:
+    ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args);
+    const char *nodetypename () const { return "function_call"; }
+    const char *childname (size_t i) const;
+private:
+    ustring m_name;
+    Symbol *m_sym;
+};
+
+
+
+class ASTliteral : public ASTNode
+{
+public:
+    ASTliteral (OSLCompilerImpl *comp, int i)
+        : ASTNode (literal_node, comp), m_i(i)
+    { m_typespec = TypeDesc::TypeInt; }
+
+    ASTliteral (OSLCompilerImpl *comp, float f)
+        : ASTNode (literal_node, comp), m_f(f)
+    { m_typespec = TypeDesc::TypeFloat; }
+
+    ASTliteral (OSLCompilerImpl *comp, ustring s)
+        : ASTNode (literal_node, comp), m_s(s)
+    { m_typespec = TypeDesc::TypeString; }
+
+    const char *nodetypename () const { return "literal"; }
+    const char *childname (size_t i) const;
+    void print (int indentlevel) const;
+
+private:
+    ustring m_s;
+    int m_i;
+    float m_f;
 };
 
 

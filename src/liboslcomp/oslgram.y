@@ -152,7 +152,7 @@ global_declarations
 
 global_declaration
         : function_declaration          { $$ = 0;  /* FIXME */ }
-        | struct_declaration            { $$ = 0;  /* FIXME */ }
+        | struct_declaration            { $$ = 0; }
         | shader_declaration
         ;
 
@@ -162,9 +162,7 @@ shader_declaration
                     $$ = new ASTshader_declaration (oslcompiler, $1,
                                                     ustring($2), $5, $8, $3);
                     if (oslcompiler->shader_is_defined()) {
-                        oslcompiler->error (oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Only one shader is allowed per file.");
+                        yyerror ("Only one shader is allowed per file.");
                         delete $$;
                         $$ = NULL;
                     } else {
@@ -190,9 +188,9 @@ shader_formal_param
         : outputspec typespec IDENTIFIER initializer metadata_block_opt
                 {
                     ASTvariable_declaration *var;
+                    TypeSpec t = oslcompiler->current_typespec();
                     var = new ASTvariable_declaration (oslcompiler,
-                                              oslcompiler->current_typespec(),
-                                              ustring ($3), $4, true);
+                                                  t, ustring ($3), $4, true);
                     var->make_output ($1);
                     var->add_meta ($5);
                     $$ = var;
@@ -201,10 +199,7 @@ shader_formal_param
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    TypeDesc simple = t.type();
-                    simple.arraylen = $4;
-                    t = TypeSpec (simple, t.is_closure());
-                    // FIXME -- won't work for a struct
+                    t.make_array ($4);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
                                                        ustring($3), $5, true);
@@ -249,7 +244,10 @@ metadatum
 function_declaration
         : typespec IDENTIFIER '(' function_formal_params_opt ')' '{' statement_list '}'
                 {
-                    $$ = 0; /*FIXME*/
+                    $$ = new ASTfunction_declaration (oslcompiler,
+                                                      oslcompiler->current_typespec(),
+                                                      ustring($2), $4, $7, NULL);
+                    // FIXME -- funcs don't have metadata. Should they?
                 }
         ;
 
@@ -280,10 +278,7 @@ function_formal_param
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    TypeDesc simple = t.type();
-                    simple.arraylen = $4;
-                    t = TypeSpec (simple, t.is_closure());
-                    // FIXME -- won't work for a struct
+                    t.make_array ($4);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
                                                        ustring($3), NULL, true);
@@ -293,7 +288,24 @@ function_formal_param
         ;
 
 struct_declaration
-        : STRUCT IDENTIFIER '{' field_declarations '}' { $$ = 0;  /*FIXME*/ }
+        : STRUCT IDENTIFIER '{' 
+                {
+                    ustring name ($2);
+                    Symbol *s = oslcompiler->symtab().clash (name);
+                    if (s) {
+                        oslcompiler->error (oslcompiler->filename(), 
+                                            oslcompiler->lineno(), 
+                                            "\"%s\" already declared in this scope",
+                                            name.c_str());
+                        // FIXME -- print the file and line of the other definition
+                    } else {
+                        oslcompiler->symtab().new_struct (name);
+                    }
+                }
+          field_declarations '}'
+                {
+                    $$ = 0;
+                }
         ;
 
 field_declarations
@@ -302,8 +314,22 @@ field_declarations
         ;
 
 field_declaration
-        : typespec IDENTIFIER ';'               { $$ = 0; /*FIXME*/ }
-        | typespec IDENTIFIER arrayspec ';'     { $$ = 0; /*FIXME*/ }
+        : typespec IDENTIFIER ';'
+                {
+                    TypeSpec t = oslcompiler->current_typespec();
+                    oslcompiler->symtab().add_struct_field (t, ustring($2));
+                    $$ = 0;
+                }
+        | typespec IDENTIFIER arrayspec ';'
+                {
+                    // Grab the current declaration type, modify it to be array
+                    TypeSpec t = oslcompiler->current_typespec();
+                    TypeDesc simple = t.type();
+                    simple.arraylen = $3;
+                    t = TypeSpec (simple, t.is_closure());
+                    oslcompiler->symtab().add_struct_field (t, ustring($2));
+                    $$ = 0;
+                }
         ;
 
 local_declaration
@@ -323,18 +349,15 @@ def_expressions
 def_expression
         : IDENTIFIER initializer_opt
                 {
+                    TypeSpec t = oslcompiler->current_typespec();
                     $$ = new ASTvariable_declaration (oslcompiler,
-                                              oslcompiler->current_typespec(),
-                                              ustring($1), $2);
+                                                      t, ustring($1), $2);
                 }
         | IDENTIFIER arrayspec array_initializer_opt
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    TypeDesc simple = t.type();
-                    simple.arraylen = $2;
-                    t = TypeSpec (simple, t.is_closure());
-                    // FIXME -- won't work for a struct
+                    t.make_array ($3);
                     $$ = new ASTvariable_declaration (oslcompiler, t, 
                                                       ustring($1), $3);
                 }
@@ -416,7 +439,20 @@ typespec
                     oslcompiler->current_typespec (TypeSpec (lextype ($1), true));
                     $$ = 0;
                 }
-        | IDENTIFIER /* struct name */  { $$ = 0; /*FIXME*/ }
+        | IDENTIFIER /* struct name */
+                {
+                    ustring name ($1);
+                    Symbol *s = oslcompiler->symtab().find (name);
+                    if (s && s->type().is_structure())
+                        oslcompiler->current_typespec (TypeSpec (s->type().structure()));
+                    else {
+                        oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Unknown struct name: %s", $1);
+                    }
+                    $$ = 0;
+                }
         ;
 
 statement_list

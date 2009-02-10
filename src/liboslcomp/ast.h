@@ -45,7 +45,7 @@ public:
     /// List of all the types of AST nodes.
     ///
     enum NodeType {
-        unknown_node, shader_declaration_node,
+        unknown_node, shader_declaration_node, function_declaration_node,
         variable_declaration_node,
         variable_ref_node, preincdec_node,
         conditional_statement_node,
@@ -192,6 +192,25 @@ public:
     ref statements () const { return child (2); }
 private:
     ustring m_shadername;
+};
+
+
+
+class ASTfunction_declaration : public ASTNode
+{
+public:
+    ASTfunction_declaration (OSLCompilerImpl *comp, TypeSpec type, ustring name,
+                             ASTNode *form, ASTNode *stmts, ASTNode *meta=NULL);
+    const char *nodetypename () const { return "function_declaration"; }
+    const char *childname (size_t i) const;
+    void print (int indentlevel=0) const;
+
+    ref metadata () const { return child (0); }
+    ref formals () const { return child (1); }
+    ref statements () const { return child (2); }
+private:
+    ustring m_name;
+    Symbol *m_sym;
 };
 
 

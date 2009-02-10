@@ -40,6 +40,9 @@ namespace OSL {
 namespace pvt {
 
 
+class ASTNode;  // forward declaration
+
+
 
 /// Light-weight way to describe types for the compiler -- simple types,
 /// closures, or the ID of a structure.
@@ -49,9 +52,18 @@ public:
         : m_structure(0), m_closure(closure), m_simple(simple)
     { }
 
+    TypeSpec (int structid)
+        : m_structure((short)structid), m_closure(false), m_simple(TypeDesc::UNKNOWN)
+    {
+        std::cerr << "Typespec of struct " << structid << "\n";
+    }
+
     bool is_closure () const { return m_closure; }
     bool is_structure () const { return m_structure > 0; }
     TypeDesc type () const { return m_simple; }
+    int structure () const { return m_structure; }
+
+    void make_array (int len) { m_simple.arraylen = len; }
 
 private:
     short m_structure;     ///< 0 is not a structure, >=1 for structure id
@@ -61,11 +73,37 @@ private:
 
 
 
+class StructSpec {
+public:
+    StructSpec () { }
+
+    struct FieldSpec {
+        FieldSpec (const TypeSpec &t, ustring n) : type(t), name(n) { }
+        TypeSpec type;
+        ustring name;
+    };
+
+    void add_field (const TypeSpec &t, ustring n) {
+        m_fields.push_back (FieldSpec (t, n));
+    }
+
+private:
+    std::vector<FieldSpec> m_fields;
+};
+
+
+typedef std::vector<StructSpec *> StructList;
+
+
+
 /// The compiler record of a single symbol (identifier) and all relevant
 /// information about it.
 class Symbol {
 public:
-    Symbol (ustring n, const TypeSpec &t) : m_name(n), m_typespec(t) { }
+    Symbol (ustring n, const TypeSpec &t) 
+        : m_name(n), m_typespec(t), m_scope(0), m_isfunction(false), 
+          m_node(NULL)
+    { }
     ~Symbol () { }
 
     ustring name () const { return m_name; }
@@ -74,10 +112,19 @@ public:
 
     int scope () const { return m_scope; }
 
+    bool is_function () const { return m_isfunction; }
+
+    void is_function (ASTNode *def) {
+        m_node = def;
+        m_isfunction = true;
+    }
+
 private:
     ustring m_name;
     TypeSpec m_typespec;
     int m_scope;
+    bool m_isfunction;
+    ASTNode *m_node;
 };
 
 
@@ -112,7 +159,9 @@ public:
         m_scopetables.reserve (20);  // So unlikely to ever copy tables
         push ();                     // Create scope 0 -- global scope
     }
-    ~SymbolTable () { }
+    ~SymbolTable () {
+        delete_syms ();
+    }
 
     void lock () { m_mutex.lock (); }
     void unlock () { m_mutex.unlock (); }
@@ -146,6 +195,14 @@ public:
         return NULL;  // not found
     }
 
+    /// If there is already a symbol with that name in the current scope,
+    /// return it, otherwise return NULL.
+    Symbol * clash (ustring name) const {
+        recursive_lock_guard guard (m_mutex);  // thread safety
+        Symbol *s = find (name);
+        return (s && s->scope() == scopeid()) ? s : NULL;
+    }
+
     /// Insert the symbol into the current inner scope.  
     ///
     void insert (Symbol *sym) {
@@ -153,6 +210,19 @@ public:
         DASSERT (sym != NULL);
         DASSERT (! find (sym->name()));
         m_scopetables.back()[sym->name()] = sym;
+    }
+
+    /// Make a new structure type and name it.  Return the index of the
+    /// new structure.
+    int new_struct (ustring name) {
+        recursive_lock_guard guard (m_mutex);  // thread safety
+        m_structs.push_back (new StructSpec);
+        return (int) m_structs.size();
+    }
+
+    void add_struct_field (const TypeSpec &type, ustring name) {
+        recursive_lock_guard guard (m_mutex);  // thread safety
+        m_structs.back()->add_field (type, name);
     }
 
     /// Return the current scope ID
@@ -184,18 +254,23 @@ public:
     /// delete all symbols that have ever been entered into the table.
     /// After doing this, beware following any Symbol pointers left over!
     void delete_syms () {
+        recursive_lock_guard guard (m_mutex);  // thread safety
         for (SymbolList::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
             delete (*i);
         m_allsyms.clear ();
+        for (StructList::iterator i = m_structs.begin(); i != m_structs.end(); ++i)
+            delete (*i);
+        m_structs.clear ();
     }
 
 private:
-    SymbolList m_allsyms;          ///< Master list of all symbols
-    ScopeTableStack m_scopetables; ///< Stack of symbol scopes
-    std::stack<int> m_scopestack;  ///< Stack of current scope IDs
-    int m_scopeid;                 ///< Current scope ID
-    int m_nextscopeid;             ///< Next unique scope ID
-    mutable recursive_mutex m_mutex;  ///< Mutex to make the table thread-safe
+    SymbolList m_allsyms;            ///< Master list of all symbols
+    StructList m_structs;            ///< All the structures we use
+    ScopeTableStack m_scopetables;   ///< Stack of symbol scopes
+    std::stack<int> m_scopestack;    ///< Stack of current scope IDs
+    int m_scopeid;                   ///< Current scope ID
+    int m_nextscopeid;               ///< Next unique scope ID
+    mutable recursive_mutex m_mutex; ///< Mutex for thread-safety
 };
 
 

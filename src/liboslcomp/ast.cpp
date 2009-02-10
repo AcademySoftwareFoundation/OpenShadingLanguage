@@ -139,6 +139,46 @@ ASTshader_declaration::print (int indentlevel) const
 
 
 
+ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
+                             TypeSpec type, ustring name,
+                             ASTNode *form, ASTNode *stmts, ASTNode *meta)
+    : ASTNode (function_declaration_node, comp, 0, meta, form, stmts),
+      m_name(name), m_sym(NULL)
+{
+    m_typespec = type;
+    Symbol *f = comp->symtab().clash (name);
+    if (f) {
+        comp->error (sourcefile(), sourceline(), 
+                     "\"%s\" already declared in this scope",
+                     name.c_str());
+        // FIXME -- print the file and line of the other definition
+    }
+    m_sym = new Symbol (name, type);
+    m_sym->is_function (this);
+    oslcompiler->symtab().insert (m_sym);
+}
+
+
+
+const char *
+ASTfunction_declaration::childname (size_t i) const
+{
+    static const char *name[] = { "metadata", "formals", "statements" };
+    return name[i];
+}
+
+
+
+void
+ASTfunction_declaration::print (int indentlevel) const
+{
+    indent (indentlevel);
+    std::cout << nodetypename() << " \"" << m_name << "\"\n";
+    printchildren (indentlevel);
+}
+
+
+
 ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
                                                   ustring name, ASTNode *init,
@@ -147,8 +187,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
       m_name(name), m_sym(NULL), 
       m_isparam(isparam), m_isoutput(false), m_ismetadata(false)
 {
-    Symbol *f = comp->symtab().find (name);
-    if (f && f->scope() == comp->symtab().scopeid()) {
+    m_typespec = type;
+    Symbol *f = comp->symtab().clash (name);
+    if (f) {
         comp->error (sourcefile(), sourceline(), 
                      "\"%s\" already declared in this scope",
                      name.c_str());

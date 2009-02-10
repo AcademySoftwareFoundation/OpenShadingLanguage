@@ -207,13 +207,19 @@ public:
 
     ref init () const { return child (0); }
 
+    void make_param (bool param=true) { m_isparam = param; }
     void make_output (bool out=true) { m_isoutput = out; }
+    void make_meta (bool meta=true) { m_ismetadata = meta; }
+
+    void add_meta (ASTNode *meta) { m_meta = meta; }
 
 private:
     ustring m_name;
     Symbol *m_sym;
     bool m_isparam;
     bool m_isoutput;
+    bool m_ismetadata;
+    ref m_meta;
 };
 
 

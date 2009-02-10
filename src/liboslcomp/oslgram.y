@@ -187,13 +187,36 @@ shader_formal_params
         ;
 
 shader_formal_param
-        : outputspec typespec IDENTIFIER initializer metadata_block_opt { $$ = 0; /*FIXME*/ }
-        | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt { $$ = 0; /*FIXME*/ }
+        : outputspec typespec IDENTIFIER initializer metadata_block_opt
+                {
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler,
+                                              oslcompiler->current_typespec(),
+                                              ustring ($3), $4, true);
+                    var->make_output ($1);
+                    var->add_meta ($5);
+                    $$ = var;
+                }
+        | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt
+                {
+                    // Grab the current declaration type, modify it to be array
+                    TypeSpec t = oslcompiler->current_typespec();
+                    TypeDesc simple = t.type();
+                    simple.arraylen = $4;
+                    t = TypeSpec (simple, t.is_closure());
+                    // FIXME -- won't work for a struct
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler, t, 
+                                                       ustring($3), $5, true);
+                    var->make_output ($1);
+                    var->add_meta ($6);
+                    $$ = var;
+                }
         ;
 
 metadata_block_opt
-        : METADATA_BEGIN metadata ']' ']' { $$ = 0;  /*FIXME*/ }
-        | /* empty */                   { $$ = 0; }
+        : METADATA_BEGIN metadata ']' ']'       { $$ = $2; }
+        | /* empty */                           { $$ = 0; }
         ;
 
 metadata
@@ -202,8 +225,25 @@ metadata
         ;
 
 metadatum
-        : simple_typename IDENTIFIER initializer { $$ = 0;  /*FIXME*/ }
-        | simple_typename IDENTIFIER arrayspec array_initializer { $$ = 0;  /*FIXME*/ }
+        : simple_typename IDENTIFIER initializer
+                {
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler, lextype($1),
+                                                       ustring ($2), $3);
+                    var->make_meta (true);
+                    $$ = var;
+                }
+        | simple_typename IDENTIFIER arrayspec array_initializer
+                {
+                    TypeDesc simple = lextype ($1);
+                    simple.arraylen = $3;
+                    TypeSpec t (simple, t.is_closure());
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler, t, 
+                                                       ustring ($2), $4);
+                    var->make_meta (true);
+                    $$ = var;
+                }
         ;
 
 function_declaration

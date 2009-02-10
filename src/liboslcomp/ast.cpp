@@ -144,7 +144,8 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   ustring name, ASTNode *init,
                                                   bool isparam)
     : ASTNode (variable_declaration_node, comp, 0, init),
-      m_name(name), m_sym(NULL), m_isparam(isparam)
+      m_name(name), m_sym(NULL), 
+      m_isparam(isparam), m_isoutput(false), m_ismetadata(false)
 {
     Symbol *f = comp->symtab().find (name);
     if (f && f->scope() == comp->symtab().scopeid()) {

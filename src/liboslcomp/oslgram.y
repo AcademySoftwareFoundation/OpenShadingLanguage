@@ -634,7 +634,7 @@ type_constructor
 function_call
         : IDENTIFIER '(' function_args_opt ')'
                 {
-                    $$ = new ASTfunction_call (oslcompiler, $1, $3);
+                    $$ = new ASTfunction_call (oslcompiler, ustring($1), $3);
                 }
         ;
 

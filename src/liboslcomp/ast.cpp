@@ -249,7 +249,7 @@ const char *
 ASTloop_statement::childname (size_t i) const
 {
     static const char *name[] = { "initializer", "condition",
-                                  "bodystatement", "iteration" };
+                                  "iteration", "bodystatement" };
     return name[i];
 }
 

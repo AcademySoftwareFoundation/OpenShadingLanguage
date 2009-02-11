@@ -153,6 +153,11 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
                      name.c_str());
         // FIXME -- print the file and line of the other definition
     }
+    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
+        comp->error (sourcefile(), sourceline(),
+                     "\"%s\" : sorry, can't start with three underscores",
+                     name.c_str());
+    }
     m_sym = new Symbol (name, type);
     m_sym->is_function (this);
     oslcompiler->symtab().insert (m_sym);
@@ -173,7 +178,11 @@ void
 ASTfunction_declaration::print (int indentlevel) const
 {
     indent (indentlevel);
-    std::cout << nodetypename() << " \"" << m_name << "\"\n";
+    std::cout << nodetypename() << " " << m_sym->mangled();
+    if (m_sym->scope())
+        std::cout << " (" << m_sym->name() 
+                  << " in scope " << m_sym->scope() << ")";
+    std::cout << "\n";
     printchildren (indentlevel);
 }
 
@@ -194,6 +203,11 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                      "\"%s\" already declared in this scope",
                      name.c_str());
         // FIXME -- print the file and line of the other definition
+    }
+    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
+        comp->error (sourcefile(), sourceline(),
+                     "\"%s\" : sorry, can't start with three underscores",
+                     name.c_str());
     }
     m_sym = new Symbol (name, type);
     oslcompiler->symtab().insert (m_sym);
@@ -224,7 +238,11 @@ ASTvariable_declaration::print (int indentlevel) const
     indent (indentlevel);
     std::cout << nodetypename() << " " 
               << m_sym->type().type().c_str() << " " 
-              << m_name << "\n";
+              << m_sym->mangled();
+    if (m_sym->scope())
+        std::cout << " (" << m_sym->name() 
+                  << " in scope " << m_sym->scope() << ")";
+    std::cout << "\n";
     printchildren (indentlevel);
 }
 
@@ -239,7 +257,7 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
     m_sym = comp->symtab().find (name);
     if (! m_sym) {
         comp->error (sourcefile(), sourceline(), 
-                     "\"%s\" not found", name.c_str());
+                     "'%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
     }
@@ -262,7 +280,7 @@ ASTvariable_ref::print (int indentlevel) const
     indent (indentlevel);
     std::cout << nodetypename() << " " 
               << m_sym->type().type().c_str() << " " 
-              << m_name;
+              << m_sym->mangled();
     if (m_preop == 1)
         std::cout << " PRE-INCREMENT";
     else if (m_preop == -1)
@@ -453,7 +471,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
     m_sym = comp->symtab().find (name);
     if (! m_sym) {
         comp->error (sourcefile(), sourceline(), 
-                     "function \"%s\" not found", name.c_str());
+                     "function '%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
     }

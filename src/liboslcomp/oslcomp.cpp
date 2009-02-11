@@ -90,8 +90,10 @@ OSLCompilerImpl::compile (const std::string &filename,
         delete m_lexer;
 
         // Print the parse tree if there were no errors
-        if (! error_encountered())
+        if (! error_encountered()) {
+            oslcompiler->symtab().print ();
             oslcompiler->shader()->print ();
+        }
 
         // All done, close the files
         oslcompiler = NULL;
@@ -110,7 +112,7 @@ OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
     va_list ap;
     va_start (ap, format);
     std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
-    fprintf (stderr, "Error: \"%s\", line %d: %s\n", 
+    fprintf (stderr, "%s:%d: error: %s\n", 
              filename.c_str(), line, errmsg.c_str());
     va_end (ap);
     m_err = true;
@@ -124,7 +126,7 @@ OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
     va_list ap;
     va_start (ap, format);
     std::string errmsg = format ? Strutil::vformat (format, ap) : "";
-    fprintf (stderr, "Warning: \"%s\", line %d: %s\n", 
+    fprintf (stderr, "%s:%d: warning: %s\n", 
              filename.c_str(), line, errmsg.c_str());
     va_end (ap);
 }

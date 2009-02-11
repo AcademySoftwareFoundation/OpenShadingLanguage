@@ -298,11 +298,16 @@ struct_declaration
                                             "\"%s\" already declared in this scope",
                                             name.c_str());
                         // FIXME -- print the file and line of the other definition
-                    } else {
-                        oslcompiler->symtab().new_struct (name);
                     }
+                    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
+                        oslcompiler->error (oslcompiler->filename(), 
+                            oslcompiler->lineno(),
+                            "\"%s\" : sorry, can't start with three underscores",
+                            name.c_str());
+                    }
+                    oslcompiler->symtab().new_struct (name);
                 }
-          field_declarations '}'
+          field_declarations '}' ';'
                 {
                     $$ = 0;
                 }
@@ -357,7 +362,7 @@ def_expression
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    t.make_array ($3);
+                    t.make_array ($2);
                     $$ = new ASTvariable_declaration (oslcompiler, t, 
                                                       ustring($1), $3);
                 }
@@ -472,7 +477,15 @@ statement
         ;
 
 scoped_statements
-        : '{' statement_list '}'        { $$ = $2; }
+        : '{' 
+                {
+                    oslcompiler->symtab().push ();  // new scope
+                }
+          statement_list '}'
+                {
+                    oslcompiler->symtab().pop ();  // restore scope
+                    $$ = $3;
+                }
         ;
 
 conditional_statement

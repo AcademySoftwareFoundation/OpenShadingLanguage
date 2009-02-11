@@ -29,11 +29,12 @@ using std::hash_map;
 using std::hash_set;
 #endif
 
-#include <boost/intrusive/list.hpp>
+#include <boost/foreach.hpp>
 
 #include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/dassert.h"
+#include "OpenImageIO/strutil.h"
 
 
 namespace OSL {
@@ -75,7 +76,7 @@ private:
 
 class StructSpec {
 public:
-    StructSpec () { }
+    StructSpec (ustring name, int scope) : m_name(name), m_scope(scope) { }
 
     struct FieldSpec {
         FieldSpec (const TypeSpec &t, ustring n) : type(t), name(n) { }
@@ -87,7 +88,22 @@ public:
         m_fields.push_back (FieldSpec (t, n));
     }
 
+    ustring name () const { return m_name; }
+
+    std::string mangled () const {
+        return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
+                       : m_name.string();
+    }
+
+    size_t numfields () const { return m_fields.size(); }
+
+    const FieldSpec & field (size_t i) const { return m_fields[i]; }
+
+    int scope () const { return m_scope; }
+
 private:
+    ustring m_name;
+    int m_scope;
     std::vector<FieldSpec> m_fields;
 };
 
@@ -108,9 +124,17 @@ public:
 
     ustring name () const { return m_name; }
 
+    std::string mangled () const {
+        // FIXME: De-alias
+        return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
+                       : m_name.string();
+    }
+
     const TypeSpec &type () const { return m_typespec; }
 
     int scope () const { return m_scope; }
+
+    void scope (int s) { m_scope = s; }
 
     bool is_function () const { return m_isfunction; }
 
@@ -209,14 +233,16 @@ public:
         recursive_lock_guard guard (m_mutex);  // thread safety
         DASSERT (sym != NULL);
         DASSERT (! find (sym->name()));
+        sym->scope (scopeid ());
         m_scopetables.back()[sym->name()] = sym;
+        m_allsyms.push_back (sym);
     }
 
     /// Make a new structure type and name it.  Return the index of the
     /// new structure.
     int new_struct (ustring name) {
         recursive_lock_guard guard (m_mutex);  // thread safety
-        m_structs.push_back (new StructSpec);
+        m_structs.push_back (new StructSpec (name, scopeid()));
         return (int) m_structs.size();
     }
 
@@ -261,6 +287,36 @@ public:
         for (StructList::iterator i = m_structs.begin(); i != m_structs.end(); ++i)
             delete (*i);
         m_structs.clear ();
+    }
+
+    void print () {
+        recursive_lock_guard guard (m_mutex);  // thread safety
+        if (m_structs.size()) {
+            std::cout << "Structure table:\n";
+            BOOST_FOREACH (const StructSpec * s, m_structs) {
+                std::cout << "    struct " << s->mangled();
+                if (s->scope())
+                    std::cout << " (" << s->name() 
+                              << " in scope " << s->scope() << ")";
+                std::cout << " :\n";
+                for (size_t i = 0;  i < s->numfields();  ++i) {
+                    const StructSpec::FieldSpec & f (s->field(i));
+                    std::cout << "\t" << f.name << " : " 
+                              << f.type.type().c_str() << "\n";
+                }
+            }
+            std::cout << "\n";
+        }
+        std::cout << "Symbol table:\n";
+        BOOST_FOREACH (const Symbol *s, m_allsyms) {
+            std::cout << "\t" << s->mangled() << " : " 
+                      << s->type().type().c_str();
+            if (s->scope())
+                std::cout << " (" << s->name() << " in scope " 
+                          << s->scope() << ")";
+            std::cout << "\n";
+        }
+        std::cout << "\n";
     }
 
 private:

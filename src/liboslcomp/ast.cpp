@@ -97,7 +97,8 @@ void
 ASTNode::print (int indentlevel) const 
 {
     indent (indentlevel);
-    std::cout << nodetypename() << " : " << (opname() ? opname() : "") << "\n";
+    std::cout << nodetypename() << " : " << (opname() ? opname() : "") 
+              << "    type: " << typespec().string() << "\n";
     printchildren (indentlevel);
 }
 
@@ -110,8 +111,12 @@ ASTNode::printchildren (int indentlevel) const
         if (! child(i))
             continue;
         indent (indentlevel);
-        if (childname(i))
-            std::cout << "  " << childname(i) << " :\n";
+        if (childname(i)) {
+            std::cout << "  " << childname(i);
+            if (typespec() != TypeSpec())
+                std::cout << "    (type: " << typespec().string() << ")";
+            std::cout << " :\n";
+        }
         else
             std::cout << "  child " << i << " :\n";
         printlist (child(i), indentlevel+1);
@@ -161,6 +166,7 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
     m_sym = new Symbol (name, type);
     m_sym->is_function (this);
     oslcompiler->symtab().insert (m_sym);
+    oslcompiler->add_function (m_sym);
 }
 
 
@@ -249,9 +255,9 @@ ASTvariable_declaration::print (int indentlevel) const
 
 
 ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
-                                  ASTNode *array_index, ASTNode *comp1_index,
-                                  ASTNode *comp2_index)
-    : ASTNode (variable_ref_node, comp, 0, array_index, comp1_index, comp2_index),
+                                  ASTNode *index1, ASTNode *index2,
+                                  ASTNode *index3)
+    : ASTNode (variable_ref_node, comp),
       m_name(name), m_sym(NULL), m_preop(0), m_postop(0)
 {
     m_sym = comp->symtab().find (name);
@@ -260,7 +266,16 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
                      "'%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
+        return;
     }
+    if (m_sym->type().is_array()) {
+        addchild (index1);
+        index1 = index2;
+        index2 = index3;
+        index3 = NULL;
+    }
+    // FIXME -- I'm here
+
 }
 
 

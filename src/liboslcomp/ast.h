@@ -90,6 +90,20 @@ public:
     ///
     virtual const char *childname (size_t i) const = 0;
 
+    /// Type check the node, return its type.  Optionally an "expected type"
+    /// may be passed down, conveying any requirements or coercion.
+    /// The default (base class) implementation just type checks all the
+    /// child nodes but makes this node's type be the expected.
+    virtual TypeSpec typecheck (TypeSpec expected = TypeSpec());
+
+    /// Type check all the children of this node, return the type of the
+    /// first child.
+    TypeSpec typecheck_children (TypeSpec expected = TypeSpec());
+
+    /// Follow a list of nodes, type checking each in turn, and return
+    /// the type of the last one.
+    static TypeSpec typecheck_list (ref node, TypeSpec expected = TypeSpec());
+
     /// What data type is this node?
     ///
     const TypeSpec &typespec () const { return m_typespec; }
@@ -204,6 +218,10 @@ public:
     const char *nodetypename () const { return "function_declaration"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
+    TypeSpec typecheck (TypeSpec expected = TypeSpec()) {
+        typecheck_children (expected);
+        return m_typespec = m_sym->type();
+    }
 
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
@@ -223,6 +241,11 @@ public:
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
+    TypeSpec typecheck (TypeSpec expected = TypeSpec()) {
+        typecheck_children (m_sym->type());
+        return m_typespec = m_sym->type();
+        // FIXME -- make sure initializer is the right type
+    }
 
     ref init () const { return child (0); }
 
@@ -252,6 +275,7 @@ public:
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
+    TypeSpec typecheck (TypeSpec expected = TypeSpec());
     void add_preop (int op) { m_preop = op; }
     void add_postop (int op) { m_postop = op; }
 private:

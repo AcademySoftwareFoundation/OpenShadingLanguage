@@ -93,6 +93,10 @@ public:
     ///
     SymbolTable &symtab () { return m_symtab; }
 
+    /// Register a symbol
+    ///
+    void add_function (Symbol *sym) { m_allfuncs.push_back (sym); }
+
     TypeSpec current_typespec () const { return m_current_typespec; }
     void current_typespec (TypeSpec t) { m_current_typespec = t; }
     bool current_output () const { return m_current_output; }
@@ -107,6 +111,7 @@ private:
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
+    SymbolList m_allfuncs;    ///< All function symbols, in decl order
 };
 
 

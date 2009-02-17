@@ -91,6 +91,11 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         // Print the parse tree if there were no errors
         if (! error_encountered()) {
+            oslcompiler->shader()->typecheck ();
+        }
+
+        // Print the parse tree if there were no errors
+        if (! error_encountered()) {
             oslcompiler->symtab().print ();
             oslcompiler->shader()->print ();
         }
@@ -130,6 +135,7 @@ OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
              filename.c_str(), line, errmsg.c_str());
     va_end (ap);
 }
+
 
 
 }; // namespace pvt

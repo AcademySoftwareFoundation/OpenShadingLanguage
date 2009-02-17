@@ -151,7 +151,7 @@ global_declarations
         ;
 
 global_declaration
-        : function_declaration          { $$ = 0;  /* FIXME */ }
+        : function_declaration          { $$ = 0; }
         | struct_declaration            { $$ = 0; }
         | shader_declaration
         ;

@@ -50,14 +50,13 @@ class ASTNode;  // forward declaration
 class TypeSpec {
 public:
     TypeSpec (TypeDesc simple=TypeDesc::UNKNOWN, bool closure=false)
-        : m_structure(0), m_closure(closure), m_simple(simple)
+        : m_simple(simple), m_structure(0), m_closure(closure)
     { }
 
     TypeSpec (int structid)
-        : m_structure((short)structid), m_closure(false), m_simple(TypeDesc::UNKNOWN)
-    {
-        std::cerr << "Typespec of struct " << structid << "\n";
-    }
+        : m_simple(TypeDesc::UNKNOWN), m_structure((short)structid),
+          m_closure(false)
+    { }
 
     bool is_closure () const { return m_closure; }
     bool is_structure () const { return m_structure > 0; }
@@ -66,10 +65,34 @@ public:
 
     void make_array (int len) { m_simple.arraylen = len; }
 
+    /// Express the type as a string
+    ///
+    std::string string () const {
+        std::string s;
+        if (is_structure())
+            s = Strutil::format ("struct %d", structure());
+        else s = type().c_str();
+        if (is_closure())
+            s += " closure";
+        return s;
+    }
+
+    bool operator== (const TypeSpec &x) const {
+        return (m_simple == x.m_simple && m_structure == x.m_structure &&
+                m_closure == x.m_closure);
+    }
+    bool operator!= (const TypeSpec &x) const { return ! (*this == x); }
+
+    bool is_array () const { return m_simple.arraylen != 0; }
+
+    bool is_int () const {
+        return m_simple == TypeDesc::INT && !is_structure() && !is_closure();
+    }
+
 private:
+    TypeDesc m_simple;     ///< Data if it's a simple type
     short m_structure;     ///< 0 is not a structure, >=1 for structure id
     bool  m_closure;       ///< Is it a closure? (m_simple also used)
-    TypeDesc m_simple;     ///< Data if it's a simple type
 };
 
 

@@ -94,6 +94,18 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 
 
 void
+ASTNode::error (const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
+    va_end (ap);
+    m_compiler->error (sourcefile(), sourceline(), "%s", errmsg.c_str());
+}
+
+
+
+void
 ASTNode::print (int indentlevel) const 
 {
     indent (indentlevel);
@@ -153,18 +165,14 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
     if (f) {
-        comp->error (sourcefile(), sourceline(), 
-                     "\"%s\" already declared in this scope",
-                     name.c_str());
+        error ("\"%s\" already declared in this scope", name.c_str());
         // FIXME -- print the file and line of the other definition
     }
     if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-        comp->error (sourcefile(), sourceline(),
-                     "\"%s\" : sorry, can't start with three underscores",
-                     name.c_str());
+        error ("\"%s\" : sorry, can't start with three underscores",
+               name.c_str());
     }
-    m_sym = new Symbol (name, type);
-    m_sym->is_function (this);
+    m_sym = new Symbol (name, type, Symbol::SymTypeFunction, this);
     oslcompiler->symtab().insert (m_sym);
     oslcompiler->add_function (m_sym);
 }
@@ -205,17 +213,14 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
     if (f) {
-        comp->error (sourcefile(), sourceline(), 
-                     "\"%s\" already declared in this scope",
-                     name.c_str());
+        error ("\"%s\" already declared in this scope", name.c_str());
         // FIXME -- print the file and line of the other definition
     }
     if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-        comp->error (sourcefile(), sourceline(),
-                     "\"%s\" : sorry, can't start with three underscores",
-                     name.c_str());
+        error ("\"%s\" : sorry, can't start with three underscores",
+               name.c_str());
     }
-    m_sym = new Symbol (name, type);
+    m_sym = new Symbol (name, type, Symbol::SymTypeLocal);
     oslcompiler->symtab().insert (m_sym);
 }
 
@@ -254,37 +259,17 @@ ASTvariable_declaration::print (int indentlevel) const
 
 
 
-ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
-                                  ASTNode *index1, ASTNode *index2,
-                                  ASTNode *index3)
-    : ASTNode (variable_ref_node, comp),
-      m_name(name), m_sym(NULL), m_preop(0), m_postop(0)
+ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
+    : ASTNode (variable_ref_node, comp), m_name(name), m_sym(NULL)
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {
-        comp->error (sourcefile(), sourceline(), 
-                     "'%s' was not declared in this scope", name.c_str());
+        error ("'%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;
     }
-    if (m_sym->type().is_array()) {
-        addchild (index1);
-        index1 = index2;
-        index2 = index3;
-        index3 = NULL;
-    }
-    // FIXME -- I'm here
-
-}
-
-
-
-const char *
-ASTvariable_ref::childname (size_t i) const
-{
-    static const char *name[] = { "arrayindex", "componentindex1", "componentindex2" };
-    return name[i];
+    m_typespec = m_sym->type();
 }
 
 
@@ -295,17 +280,54 @@ ASTvariable_ref::print (int indentlevel) const
     indent (indentlevel);
     std::cout << nodetypename() << " " 
               << m_sym->type().type().c_str() << " " 
-              << m_sym->mangled();
-    if (m_preop == 1)
-        std::cout << " PRE-INCREMENT";
-    else if (m_preop == -1)
-        std::cout << " PRE-DECREMENT";
-    if (m_postop == 1)
-        std::cout << " POST-INCREMENT";
-    else if (m_postop == -1)
-        std::cout << " POST-DECREMENT";
-    std::cout << "\n";
+              << m_sym->mangled() << "\n";
     printchildren (indentlevel);
+}
+
+
+
+const char *
+ASTpreincdec::childname (size_t i) const
+{
+    static const char *name[] = { "expression" };
+    return name[i];
+}
+
+
+
+const char *
+ASTpostincdec::childname (size_t i) const
+{
+    static const char *name[] = { "expression" };
+    return name[i];
+}
+
+
+
+const char *
+ASTindex::childname (size_t i) const
+{
+    static const char *name[] = { "expression", "index" };
+    return name[i];
+}
+
+
+
+const char *
+ASTstructselect::childname (size_t i) const
+{
+    static const char *name[] = { "expression" };
+    return name[i];
+}
+
+
+
+void
+ASTstructselect::print (int indentlevel) const
+{
+    ASTNode::print (indentlevel);
+    indent (indentlevel+1);
+    std::cout << "select " << field() << "\n";
 }
 
 
@@ -413,6 +435,8 @@ const char *
 ASTunary_expression::opname () const
 {
     switch (m_op) {
+    case Decr       : return "--";
+    case Incr       : return "++";
     case Pos        : return "+";
     case Neg        : return "-";
     case LogicalNot : return "!";
@@ -485,8 +509,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {
-        comp->error (sourcefile(), sourceline(), 
-                     "function '%s' was not declared in this scope", name.c_str());
+        error ("function '%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
     }
@@ -516,12 +539,12 @@ ASTliteral::print (int indentlevel) const
 {
     indent (indentlevel);
     std::cout << nodetypename() << " " 
-              << m_typespec.type().c_str() << " ";
+              << m_typespec.string() << " ";
     if (m_typespec.type() == TypeDesc::TypeInt)
         std::cout << m_i;
     else if (m_typespec.type() == TypeDesc::TypeFloat)
         std::cout << m_f;
-    if (m_typespec.type() == TypeDesc::TypeString)
+    else if (m_typespec.type() == TypeDesc::TypeString)
         std::cout << "\"" << m_s << "\"";
     std::cout << "\n";
 }

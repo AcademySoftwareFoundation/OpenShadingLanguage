@@ -104,7 +104,7 @@ lextype (int lex)
 %type <n> return_statement
 %type <n> for_init_statement
 %type <n> expression_list expression_opt expression
-%type <n> variable_lvalue variable_ref array_deref_opt component_deref_opt
+%type <n> variable_lvalue variable_ref 
 %type <i> unary_op incdec_op incdec_op_opt
 %type <n> type_constructor function_call function_args_opt function_args
 %type <n> assign_expression ternary_expression typecast_expression
@@ -448,8 +448,8 @@ typespec
                 {
                     ustring name ($1);
                     Symbol *s = oslcompiler->symtab().find (name);
-                    if (s && s->type().is_structure())
-                        oslcompiler->current_typespec (TypeSpec (s->type().structure()));
+                    if (s && s->is_structure())
+                        oslcompiler->current_typespec (TypeSpec (s->type().structure(), ""));
                     else {
                         oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
                         oslcompiler->error (oslcompiler->filename(),
@@ -560,9 +560,7 @@ expression
         | variable_ref
         | incdec_op variable_lvalue 
                 {
-                    DASSERT ($2->nodetype() == ASTNode::variable_ref_node);
-                    ((ASTvariable_ref *)$2)->add_preop ($1);
-                    $$ = $2;
+                    $$ = new ASTpreincdec (oslcompiler, $1, $2);
                 }
         | binary_expression
         | unary_op expression %prec UMINUS_PREC
@@ -578,30 +576,28 @@ expression
         ;
 
 variable_lvalue
-        : IDENTIFIER array_deref_opt component_deref_opt component_deref_opt 
+        : IDENTIFIER 
                 {
-                    $$ = new ASTvariable_ref (oslcompiler, ustring($1),
-                                              $2, $3, $4);
+                    $$ = new ASTvariable_ref (oslcompiler, ustring($1));
+                }
+        | variable_lvalue '[' expression ']'
+                {
+                    $$ = new ASTindex (oslcompiler, $1, $3);
+                }
+        | variable_lvalue '.' IDENTIFIER
+                {
+                    $$ = new ASTstructselect (oslcompiler, $1, ustring($3));
                 }
         ;
 
 variable_ref
         : variable_lvalue incdec_op_opt
                 {
-                    DASSERT ($1->nodetype() == ASTNode::variable_ref_node);
-                    ((ASTvariable_ref *)$1)->add_postop ($2);
-                    $$ = $1;
+                    if ($2)
+                        $$ = new ASTpostincdec (oslcompiler, $2, $1);
+                    else
+                        $$ = $1;
                 }
-        ;
-
-array_deref_opt
-        : '[' expression ']'            { $$ = $2; }
-        | /* empty */                   { $$ = 0; }
-        ;
-
-component_deref_opt
-        : '[' expression ']'            { $$ = $2; }
-        | /* empty */                   { $$ = 0; }
         ;
 
 binary_expression

@@ -43,17 +43,19 @@ ALPHA           [A-Za-z]
 DIGIT           [0-9]
  /* Integer literal */
 INTEGER         {DIGIT}+
- /* floating point literal (FLT1 and FLT2 are just helpers) */
-FLT1            X[-+]?{DIGIT}+\.?([eE][-+]?{DIGIT}+)?
-FLT2            X[-+]?{DIGIT}*\.{DIGIT}+([eE][-+]?{DIGIT}+)?
-FLT             {FLT1}|{FLT2}
+ /* floating point literal (E, FLT1, FLT2, FLT3 are just helpers) */
+E               [eE][-+]?{DIGIT}+
+FLT1            [-+]?{DIGIT}+\.{DIGIT}*{E}?
+FLT2            [-+]?{DIGIT}*\.{DIGIT}+{E}?
+FLT3            [-+]?{DIGIT}+{E}
+FLT             {FLT1}|{FLT2}|{FLT3}
  /* string literal */
 STR     \"(\\.|[^\\"])*\"
 STRDUMMY \"(\\.|[^\\"])*\"
  /* Dumb note: STRDUMMY is just to fix my syntax highlighting in emacs,
   * which is thrown off by the odd number of quotes!
   */
- /* Identifier: alphanumeric, may contain '_' after the first character */
+ /* Identifier: alphanumeric, may contain digits after the first character */
 IDENT           ({ALPHA}|[_])({ALPHA}|{DIGIT}|[_])*
  /* C preprocessor (cpp) directives */
 CPP             ^[ \t]*#.*\n

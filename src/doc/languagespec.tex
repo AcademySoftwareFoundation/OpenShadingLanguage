@@ -3981,13 +3981,10 @@ nothing (empty, no token).
 \alt <variable-ref>
 
 <variable-lvalue> ::= <identifier> <array-deref-opt> <component-deref-opt>
+\alt <variable_lvalue> "[" <expression> "]"
+\alt <variable_lvalue> "." <identifier>
 
-<variable-ref> ::= <identifier> <array-deref-opt> <component-deref-opt> <incdec-op-opt>
-
-<array-deref> ::= "[" <expression> "]"
-
-<component-deref> ::= "[" <expression> "]"
-\alt "[" <expression> "]" "[" <expression> "]"
+<variable-ref> ::= <identifier> <array-deref-opt> 
 
 <binary-op> ::= "*" | "/" | "\%"
 \alt "+" | "-" 
@@ -4048,6 +4045,42 @@ This specification is a living document.  Nothing is permanently set in
 stone.  There will someday be a 2.0 spec.  It's easier to add things we
 left out than to take out things that turned out to be unnecessary
 things or a bad idea.
+
+\section{Variables, Functions, and Scoping}
+
+\subsection{Separate namespace for functions?}
+
+\NEW
+RSL and GSL had separate symbol tables for functions and for all other
+variables, for example allowing a variable or parameter "foo" and also a
+function called "foo". This is not for any principled reason, but just a
+historical accident or arbitrary choice. Once you do something like
+that, you can never change it, because then you'll break old shaders.
+
+One of the nice things that came from having separate function and
+variable namespaces is that it's perfectly ok to have a shader parameter
+that happens to have the same name as a built-in function (for example,
+surprisingly many RenderMan shaders have a parameter named
+"diffuse"!). If you've ever tried to duplicate a set of shaders from a
+3rd party package (such as making a set of shaders that duplicate all
+the Maya built-in nodes) you're very happy for separate symbol tables,
+so that you can pick param names that are the same as the Maya parameter
+names, without regard to whether their names happen to conflict with
+your built-in functions, otherwise you need to mangle the symbols
+somehow.
+
+C, C++, and related languages tend to have a single symbol table for
+functions and variables. In other words, if you have a function named
+"foo", you can't have a variable named "foo" in the same scope, and vice
+versa. Part of the reason for this is that these languages can pass
+functions as parameters, take their address, etc., so they use a single
+namespace (though I think they could have separate namespace and still
+disambiguate based on the use).
+
+So should we have separate function and variable namespaces (similar
+to RMan, possibly handy to avoid name clashes, but arbitrarily different
+than C's scoping rules), or single namespace (more "standard" in modern
+programming language design)?
 
 \section{Data types}
 

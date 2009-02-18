@@ -53,7 +53,7 @@ public:
         : m_simple(simple), m_structure(0), m_closure(closure)
     { }
 
-    TypeSpec (int structid)
+    TypeSpec (int structid, const char *dummy)
         : m_simple(TypeDesc::UNKNOWN), m_structure((short)structid),
           m_closure(false)
     { }
@@ -85,6 +85,10 @@ public:
 
     bool is_array () const { return m_simple.arraylen != 0; }
 
+    bool is_aggregate () const {
+        return !is_structure() && !is_closure() && type().aggregate != TypeDesc::SCALAR;
+    }
+            
     bool is_int () const {
         return m_simple == TypeDesc::INT && !is_structure() && !is_closure();
     }
@@ -139,9 +143,13 @@ typedef std::vector<StructSpec *> StructList;
 /// information about it.
 class Symbol {
 public:
-    Symbol (ustring n, const TypeSpec &t) 
-        : m_name(n), m_typespec(t), m_scope(0), m_isfunction(false), 
-          m_node(NULL)
+    enum SymType {
+        SymTypeParam, SymTypeLocal, SymTypeTemp, SymTypeFunction, 
+        SymTypeType
+    };
+
+    Symbol (ustring n, const TypeSpec &t, SymType s, ASTNode *node=NULL) 
+        : m_name(n), m_typespec(t), m_symtype(s), m_scope(0), m_node(node)
     { }
     ~Symbol () { }
 
@@ -155,22 +163,21 @@ public:
 
     const TypeSpec &type () const { return m_typespec; }
 
+    SymType symtype () const { return m_symtype; }
+
     int scope () const { return m_scope; }
 
     void scope (int s) { m_scope = s; }
 
-    bool is_function () const { return m_isfunction; }
+    bool is_function () const { return m_symtype == Symbol::SymTypeFunction; }
 
-    void is_function (ASTNode *def) {
-        m_node = def;
-        m_isfunction = true;
-    }
+    bool is_structure () const { return m_symtype == Symbol::SymTypeType; }
 
 private:
     ustring m_name;
     TypeSpec m_typespec;
+    SymType m_symtype;
     int m_scope;
-    bool m_isfunction;
     ASTNode *m_node;
 };
 
@@ -205,6 +212,7 @@ public:
     {
         m_scopetables.reserve (20);  // So unlikely to ever copy tables
         push ();                     // Create scope 0 -- global scope
+        m_structs.push_back (NULL);  // Create dummy struct
     }
     ~SymbolTable () {
         delete_syms ();
@@ -255,7 +263,6 @@ public:
     void insert (Symbol *sym) {
         recursive_lock_guard guard (m_mutex);  // thread safety
         DASSERT (sym != NULL);
-        DASSERT (! find (sym->name()));
         sym->scope (scopeid ());
         m_scopetables.back()[sym->name()] = sym;
         m_allsyms.push_back (sym);
@@ -266,7 +273,9 @@ public:
     int new_struct (ustring name) {
         recursive_lock_guard guard (m_mutex);  // thread safety
         m_structs.push_back (new StructSpec (name, scopeid()));
-        return (int) m_structs.size();
+        int structid = (int) m_structs.size() - 1;
+        insert (new Symbol (name, TypeSpec (structid,""), Symbol::SymTypeType));
+        return structid;
     }
 
     void add_struct_field (const TypeSpec &type, ustring name) {
@@ -316,8 +325,11 @@ public:
         recursive_lock_guard guard (m_mutex);  // thread safety
         if (m_structs.size()) {
             std::cout << "Structure table:\n";
+            int structid = 0;
             BOOST_FOREACH (const StructSpec * s, m_structs) {
-                std::cout << "    struct " << s->mangled();
+                if (! s)
+                    continue;
+                std::cout << "    " << structid << ": struct " << s->mangled();
                 if (s->scope())
                     std::cout << " (" << s->name() 
                               << " in scope " << s->scope() << ")";
@@ -327,13 +339,21 @@ public:
                     std::cout << "\t" << f.name << " : " 
                               << f.type.type().c_str() << "\n";
                 }
+                ++structid;
             }
             std::cout << "\n";
         }
         std::cout << "Symbol table:\n";
         BOOST_FOREACH (const Symbol *s, m_allsyms) {
-            std::cout << "\t" << s->mangled() << " : " 
-                      << s->type().type().c_str();
+            if (s->is_structure())
+                continue;
+            std::cout << "\t" << s->mangled() << " : ";
+            if (s->type().is_structure()) {
+                std::cout << "struct " << s->type().structure() << " "
+                          << m_structs[s->type().structure()]->name();
+            } else {
+                std::cout << s->type().type().c_str();
+            }
             if (s->scope())
                 std::cout << " (" << s->name() << " in scope " 
                           << s->scope() << ")";

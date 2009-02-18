@@ -27,13 +27,13 @@ namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
-/// Base class default implementation of typecheck() -- just check each 
-/// child node, and set this node's type to 
 TypeSpec
 ASTNode::typecheck (TypeSpec expected)
 {
     typecheck_children (expected);
-    return m_typespec = expected;
+    if (m_typespec == TypeSpec())
+        m_typespec = expected;
+    return m_typespec;
 }
 
 
@@ -69,15 +69,27 @@ ASTNode::typecheck_list (ref node, TypeSpec expected)
 
 
 TypeSpec
-ASTvariable_ref::typecheck (TypeSpec expected)
+ASTindex::typecheck (TypeSpec expected)
 {
-    typecheck_children (TypeSpec(TypeDesc::INT));  // All indices are integers
-#if 0
-    if (m_array_index) {
-        if (! m_array_index->typespec().is_int())
-            error ();
+    typecheck_list (lvalue());
+    typecheck_list (index(), TypeSpec(TypeDesc::INT));
+    const char *indextype = "";
+    if (lvalue()->typespec().is_array()) {
+        indextype = "array ";
+        if (! index()->typespec().is_int())
+            error ("array index must be an integer");
+        m_typespec = lvalue()->typespec();
+        m_typespec.make_array (0);  // make it not be an array
+    } else if (lvalue()->typespec().is_aggregate()) {
+        indextype = "component ";
+//        if (lvalue()->typespec().
+    } else {
+        error ("can only use [] indexing for arrays or multi-component types");
+        return TypeSpec();
     }
-#endif
+    if (! index()->typespec().is_int())
+        error ("%s index must be an integer, not a %s", 
+               indextype, index()->typespec().string().c_str());
 }
 
 

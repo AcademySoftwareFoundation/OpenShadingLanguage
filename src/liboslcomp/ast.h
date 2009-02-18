@@ -47,7 +47,8 @@ public:
     enum NodeType {
         unknown_node, shader_declaration_node, function_declaration_node,
         variable_declaration_node,
-        variable_ref_node, preincdec_node,
+        variable_ref_node, preincdec_node, postincdec_node,
+        index_node, structselect_node,
         conditional_statement_node,
         loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
@@ -93,7 +94,8 @@ public:
     /// Type check the node, return its type.  Optionally an "expected type"
     /// may be passed down, conveying any requirements or coercion.
     /// The default (base class) implementation just type checks all the
-    /// child nodes but makes this node's type be the expected.
+    /// child nodes and makes this node's type be the expected if it
+    /// is unknown, but doens't change it if it's not unknown.
     virtual TypeSpec typecheck (TypeSpec expected = TypeSpec());
 
     /// Type check all the children of this node, return the type of the
@@ -141,6 +143,8 @@ public:
     /// What line of the source file was this parse node created from?
     ///
     int sourceline () const { return m_sourceline; }
+
+    void error (const char *format, ...);
 
 protected:
     /// Return a reference-counted pointer to the next node in the sequence.
@@ -269,23 +273,75 @@ private:
 class ASTvariable_ref : public ASTNode
 {
 public:
-    ASTvariable_ref (OSLCompilerImpl *comp, ustring name,
-                     ASTNode *array_index=NULL, ASTNode *comp1_index=NULL,
-                     ASTNode *comp2_index=NULL);
+    ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
     const char *nodetypename () const { return "variable_ref"; }
-    const char *childname (size_t i) const;
+    const char *childname (size_t i) const { return ""; } // no children
     void print (int indentlevel=0) const;
-    TypeSpec typecheck (TypeSpec expected = TypeSpec());
-    void add_preop (int op) { m_preop = op; }
-    void add_postop (int op) { m_postop = op; }
 private:
     ustring m_name;
     Symbol *m_sym;
-    int m_postop;
-    int m_preop;
-    ref m_array_index;
-    ref m_comp1_index;
-    ref m_comp2_index;
+};
+
+
+
+class ASTpreincdec : public ASTNode
+{
+public:
+    ASTpreincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
+        : ASTNode (preincdec_node, comp, op, expr)
+    { }
+    const char *nodetypename () const { return m_op > 0 ? "preincrement" : "predecrement"; }
+    const char *childname (size_t i) const;
+
+    ref lvalue () const { return child (0); }
+};
+
+
+
+class ASTpostincdec : public ASTNode
+{
+public:
+    ASTpostincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
+        : ASTNode (postincdec_node, comp, op, expr)
+    { }
+    const char *nodetypename () const { return m_op > 0 ? "postincrement" : "postdecrement"; }
+    const char *childname (size_t i) const;
+
+    ref lvalue () const { return child (0); }
+};
+
+
+
+class ASTindex : public ASTNode
+{
+public:
+    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
+        : ASTNode (index_node, comp, 0, expr, index)
+    { }
+    const char *nodetypename () const { return "index"; }
+    const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected = TypeSpec());
+
+    ref lvalue () const { return child (0); }
+    ref index () const { return child (1); }
+};
+
+
+
+class ASTstructselect : public ASTNode
+{
+public:
+    ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr, ustring field)
+        : ASTNode (structselect_node, comp, 0, expr), m_field(field)
+    { }
+    const char *nodetypename () const { return "structselect"; }
+    const char *childname (size_t i) const;
+    void print (int indentlevel=0) const;
+
+    ref lvalue () const { return child (0); }
+    ustring field () const { return m_field; }
+private:
+    ustring m_field;
 };
 
 
@@ -391,7 +447,7 @@ public:
 class ASTunary_expression : public ASTNode
 {
 public:
-    enum Unop { Pos='+', Neg='-', LogicalNot='!', BitwiseNot='~' };
+    enum Unop { Incr=1, Decr=-1, Pos='+', Neg='-', LogicalNot='!', BitwiseNot='~' };
 
     ASTunary_expression (OSLCompilerImpl *comp, int op, ASTNode *expr)
         : ASTNode (unary_expression_node, comp, op, expr)

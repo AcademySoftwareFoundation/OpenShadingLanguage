@@ -36,6 +36,7 @@ usage ()
         "\t-Ipath         Add path to the #include search path\n"
         "\t-Dsym[=val]    Define preprocessor symbol\n"
         "\t-Usym          Undefine preprocessor symbol\n"
+        "\t-d             Debug mode\n"
         ;
 }
 
@@ -47,13 +48,14 @@ main (int argc, const char *argv[])
     std::vector <std::string> args;
 
     for (int a = 1;  a < argc;  ++a) {
-        if (! strcmp (argv[a], "-v")) {
-            // Valid command-line argument
-            args.push_back (argv[a]);
-        }
-        else if (! strcmp (argv[a], "--help") | ! strcmp (argv[a], "-a")) {
+        if (! strcmp (argv[a], "--help") | ! strcmp (argv[a], "-h")) {
             usage ();
             return EXIT_SUCCESS;
+        }
+        else if (! strcmp (argv[a], "-v") ||
+            ! strcmp (argv[a], "-d")) {
+            // Valid command-line argument
+            args.push_back (argv[a]);
         }
         else {
             boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());

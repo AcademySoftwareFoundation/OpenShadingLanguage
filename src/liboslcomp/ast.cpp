@@ -248,7 +248,7 @@ ASTvariable_declaration::print (int indentlevel) const
 {
     indent (indentlevel);
     std::cout << nodetypename() << " " 
-              << m_sym->type().type().c_str() << " " 
+              << m_sym->typespec().string() << " " 
               << m_sym->mangled();
     if (m_sym->scope())
         std::cout << " (" << m_sym->name() 
@@ -269,7 +269,7 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
         // find the things that almost matched and offer suggestions.
         return;
     }
-    m_typespec = m_sym->type();
+    m_typespec = m_sym->typespec();
 }
 
 
@@ -279,7 +279,7 @@ ASTvariable_ref::print (int indentlevel) const
 {
     indent (indentlevel);
     std::cout << nodetypename() << " " 
-              << m_sym->type().type().c_str() << " " 
+              << m_sym->typespec().string() << " " 
               << m_sym->mangled() << "\n";
     printchildren (indentlevel);
 }
@@ -307,7 +307,7 @@ ASTpostincdec::childname (size_t i) const
 const char *
 ASTindex::childname (size_t i) const
 {
-    static const char *name[] = { "expression", "index" };
+    static const char *name[] = { "expression", "index", "index" };
     return name[i];
 }
 
@@ -540,11 +540,11 @@ ASTliteral::print (int indentlevel) const
     indent (indentlevel);
     std::cout << nodetypename() << " " 
               << m_typespec.string() << " ";
-    if (m_typespec.type() == TypeDesc::TypeInt)
+    if (m_typespec.is_int())
         std::cout << m_i;
-    else if (m_typespec.type() == TypeDesc::TypeFloat)
+    else if (m_typespec.is_float())
         std::cout << m_f;
-    else if (m_typespec.type() == TypeDesc::TypeString)
+    else if (m_typespec.is_string())
         std::cout << "\"" << m_s << "\"";
     std::cout << "\n";
 }

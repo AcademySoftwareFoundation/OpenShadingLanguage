@@ -160,10 +160,16 @@ protected:
             std::cout << "    ";
     }
 
+    /// A is the head of a list of nodes, traverse the list and call
+    /// the print() method for each node in the list.
     static void printlist (const ref &A, int indentlevel) {
         for (const ASTNode *n = A.get();  n;  n = n->nextptr())
             n->print (indentlevel);
     }
+
+    /// Return the number of child nodes.
+    ///
+    size_t nchildren () const { return m_children.size(); }
 
     /// Return the i-th child node, or NULL if there is no such node
     ///
@@ -175,12 +181,14 @@ protected:
     ///
     void addchild (ASTNode *n) { m_children.push_back (n); }
 
+    /// Call the print() method of all the children of this node.
+    ///
     virtual void printchildren (int indentlevel = 0) const;
 
 
 protected:
-    NodeType m_nodetype;    ///< Type of node this is
-    ref m_next;             ///< Next node in the list
+    NodeType m_nodetype;          ///< Type of node this is
+    ref m_next;                   ///< Next node in the list
     OSLCompilerImpl *m_compiler;  ///< Back-pointer to the compiler
     ustring m_sourcefile;   ///< Filename of source where the node came from
     int m_sourceline;       ///< Line number in source where the node came from
@@ -204,6 +212,7 @@ public:
     const char *nodetypename () const { return "shader_declaration"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
+    // TypeSpec typecheck (TypeSpec expected); // Use the default
 
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
@@ -222,10 +231,7 @@ public:
     const char *nodetypename () const { return "function_declaration"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
-    TypeSpec typecheck (TypeSpec expected = TypeSpec()) {
-        typecheck_children (expected);
-        return m_typespec = m_sym->type();
-    }
+    // TypeSpec typecheck (TypeSpec expected); // Use the default
 
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
@@ -245,11 +251,7 @@ public:
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
-    TypeSpec typecheck (TypeSpec expected = TypeSpec()) {
-        typecheck_children (m_sym->type());
-        return m_typespec = m_sym->type();
-        // FIXME -- make sure initializer is the right type
-    }
+    // TypeSpec typecheck (TypeSpec expected); // Use the default
 
     ref init () const { return child (0); }
 
@@ -277,6 +279,7 @@ public:
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const { return ""; } // no children
     void print (int indentlevel=0) const;
+    // TypeSpec typecheck (TypeSpec expected); // Use the default
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -292,6 +295,7 @@ public:
     { }
     const char *nodetypename () const { return m_op > 0 ? "preincrement" : "predecrement"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref lvalue () const { return child (0); }
 };
@@ -306,6 +310,7 @@ public:
     { }
     const char *nodetypename () const { return m_op > 0 ? "postincrement" : "postdecrement"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref lvalue () const { return child (0); }
 };
@@ -318,12 +323,16 @@ public:
     ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
         : ASTNode (index_node, comp, 0, expr, index)
     { }
+    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2)
+        : ASTNode (index_node, comp, 0, expr, index, index2)
+    { }
     const char *nodetypename () const { return "index"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
 
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }
+    ref index2 () const { return child (2); }
 };
 
 
@@ -337,6 +346,7 @@ public:
     const char *nodetypename () const { return "structselect"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref lvalue () const { return child (0); }
     ustring field () const { return m_field; }
@@ -357,6 +367,7 @@ public:
 
     const char *nodetypename () const { return "conditional_statement"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref cond () const { return child (0); }
     ref truestmt () const { return child (1); }
@@ -380,6 +391,7 @@ public:
     const char *nodetypename () const { return "loop_statement"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref cond () const { return child (0); }
     ref init () const { return child (1); }
@@ -403,6 +415,7 @@ public:
     const char *nodetypename () const { return "loopmod_statement"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 };
 
 
@@ -416,6 +429,7 @@ public:
 
     const char *nodetypename () const { return "return_statement"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref expr () const { return child (0); }
 };
@@ -437,6 +451,7 @@ public:
     const char *nodetypename () const { return "assign_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    TypeSpec typecheck (TypeSpec expected);
 
     ref var () const { return child (0); }
     ref expr () const { return child (1); }
@@ -456,6 +471,7 @@ public:
     const char *nodetypename () const { return "unary_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref expr () const { return child (0); }
 };
@@ -478,6 +494,7 @@ public:
     const char *nodetypename () const { return "binary_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref left () const { return child (0); }
     ref right () const { return child (1); }
@@ -496,6 +513,7 @@ public:
 
     const char *nodetypename () const { return "ternary_expression"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref cond () const { return child (0); }
     ref trueexpr () const { return child (1); }
@@ -516,6 +534,7 @@ public:
 
     const char *nodetypename () const { return "typecast_expression"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
     ref expr () const { return child (0); }
 };
@@ -528,6 +547,7 @@ public:
     ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args);
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -553,6 +573,7 @@ public:
     const char *nodetypename () const { return "literal"; }
     const char *childname (size_t i) const;
     void print (int indentlevel) const;
+    // TypeSpec typecheck (TypeSpec expected); // Use the default
 
 private:
     ustring m_s;
@@ -570,6 +591,7 @@ public:
     ~ASTsubclass () { }
     const char *nodetypename () const { return "<FIXME>"; }
     const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 private:
 };
 #endif

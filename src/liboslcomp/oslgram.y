@@ -104,7 +104,7 @@ lextype (int lex)
 %type <n> return_statement
 %type <n> for_init_statement
 %type <n> expression_list expression_opt expression
-%type <n> variable_lvalue variable_ref 
+%type <n> id_or_field variable_lvalue variable_ref 
 %type <i> unary_op incdec_op incdec_op_opt
 %type <n> type_constructor function_call function_args_opt function_args
 %type <n> assign_expression ternary_expression typecast_expression
@@ -329,9 +329,7 @@ field_declaration
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    TypeDesc simple = t.type();
-                    simple.arraylen = $3;
-                    t = TypeSpec (simple, t.is_closure());
+                    t.make_array ($3);
                     oslcompiler->symtab().add_struct_field (t, ustring($2));
                     $$ = 0;
                 }
@@ -449,7 +447,7 @@ typespec
                     ustring name ($1);
                     Symbol *s = oslcompiler->symtab().find (name);
                     if (s && s->is_structure())
-                        oslcompiler->current_typespec (TypeSpec (s->type().structure(), ""));
+                        oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
                     else {
                         oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
                         oslcompiler->error (oslcompiler->filename(),
@@ -576,13 +574,21 @@ expression
         ;
 
 variable_lvalue
+        : id_or_field
+        | id_or_field '[' expression ']'
+                {
+                    $$ = new ASTindex (oslcompiler, $1, $3);
+                }
+        | id_or_field '[' expression ']' '[' expression ']'
+                {
+                    $$ = new ASTindex (oslcompiler, $1, $3, $6);
+                }
+        ;
+
+id_or_field
         : IDENTIFIER 
                 {
                     $$ = new ASTvariable_ref (oslcompiler, ustring($1));
-                }
-        | variable_lvalue '[' expression ']'
-                {
-                    $$ = new ASTindex (oslcompiler, $1, $3);
                 }
         | variable_lvalue '.' IDENTIFIER
                 {

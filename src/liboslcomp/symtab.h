@@ -49,21 +49,22 @@ class ASTNode;  // forward declaration
 /// closures, or the ID of a structure.
 class TypeSpec {
 public:
-    TypeSpec (TypeDesc simple=TypeDesc::UNKNOWN, bool closure=false)
+    TypeSpec ()
+        : m_simple(TypeDesc::UNKNOWN), m_structure(0), m_closure(false)
+    { }
+
+    TypeSpec (TypeDesc simple)
+        : m_simple(simple), m_structure(0), m_closure(false)
+    { }
+
+    TypeSpec (TypeDesc simple, bool closure)
         : m_simple(simple), m_structure(0), m_closure(closure)
     { }
 
-    TypeSpec (int structid, const char *dummy)
-        : m_simple(TypeDesc::UNKNOWN), m_structure((short)structid),
+    TypeSpec (const char *name, int structid, int arraylen=0)
+        : m_simple(TypeDesc::UNKNOWN, arraylen), m_structure((short)structid),
           m_closure(false)
     { }
-
-    bool is_closure () const { return m_closure; }
-    bool is_structure () const { return m_structure > 0; }
-    TypeDesc type () const { return m_simple; }
-    int structure () const { return m_structure; }
-
-    void make_array (int len) { m_simple.arraylen = len; }
 
     /// Express the type as a string
     ///
@@ -71,10 +72,16 @@ public:
         std::string s;
         if (is_structure())
             s = Strutil::format ("struct %d", structure());
-        else s = type().c_str();
+        else s = simpletype().c_str();
         if (is_closure())
             s += " closure";
         return s;
+    }
+
+    TypeSpec & operator= (const TypeDesc simple) {
+        m_simple = simple;
+        m_structure = 0;
+        m_closure = false;
     }
 
     bool operator== (const TypeSpec &x) const {
@@ -83,18 +90,33 @@ public:
     }
     bool operator!= (const TypeSpec &x) const { return ! (*this == x); }
 
-    bool is_array () const { return m_simple.arraylen != 0; }
+    TypeDesc simpletype () const { return m_simple; }
 
+    bool is_closure () const { return m_closure; }
+    bool is_structure () const { return m_structure > 0 && !is_array(); }
+    int structure () const { return m_structure; }
+    bool is_array () const { return m_simple.arraylen != 0; }
+    void make_array (int len) { m_simple.arraylen = len; }
+    TypeSpec elementtype () const { TypeSpec t; t.make_array (0); return t; }
     bool is_aggregate () const {
-        return !is_structure() && !is_closure() && type().aggregate != TypeDesc::SCALAR;
+        return !is_structure() && !is_closure() && 
+               !is_array() && m_simple.aggregate != TypeDesc::SCALAR;
     }
-            
+    TypeDesc::AGGREGATE aggregate () const { return (TypeDesc::AGGREGATE)m_simple.aggregate; }
+
     bool is_int () const {
         return m_simple == TypeDesc::INT && !is_structure() && !is_closure();
+    }
+    bool is_float () const {
+        return m_simple == TypeDesc::FLOAT && !is_structure() && !is_closure();
+    }
+    bool is_string () const {
+        return m_simple == TypeDesc::STRING && !is_structure() && !is_closure();
     }
 
 private:
     TypeDesc m_simple;     ///< Data if it's a simple type
+    int m_arraylen;        ///< 0 if not array, nonzero for array length
     short m_structure;     ///< 0 is not a structure, >=1 for structure id
     bool  m_closure;       ///< Is it a closure? (m_simple also used)
 };
@@ -161,7 +183,7 @@ public:
                        : m_name.string();
     }
 
-    const TypeSpec &type () const { return m_typespec; }
+    const TypeSpec &typespec () const { return m_typespec; }
 
     SymType symtype () const { return m_symtype; }
 
@@ -274,7 +296,7 @@ public:
         recursive_lock_guard guard (m_mutex);  // thread safety
         m_structs.push_back (new StructSpec (name, scopeid()));
         int structid = (int) m_structs.size() - 1;
-        insert (new Symbol (name, TypeSpec (structid,""), Symbol::SymTypeType));
+        insert (new Symbol (name, TypeSpec ("",structid), Symbol::SymTypeType));
         return structid;
     }
 
@@ -337,7 +359,7 @@ public:
                 for (size_t i = 0;  i < s->numfields();  ++i) {
                     const StructSpec::FieldSpec & f (s->field(i));
                     std::cout << "\t" << f.name << " : " 
-                              << f.type.type().c_str() << "\n";
+                              << f.type.simpletype().c_str() << "\n";
                 }
                 ++structid;
             }
@@ -348,11 +370,11 @@ public:
             if (s->is_structure())
                 continue;
             std::cout << "\t" << s->mangled() << " : ";
-            if (s->type().is_structure()) {
-                std::cout << "struct " << s->type().structure() << " "
-                          << m_structs[s->type().structure()]->name();
+            if (s->typespec().is_structure()) {
+                std::cout << "struct " << s->typespec().structure() << " "
+                          << m_structs[s->typespec().structure()]->name();
             } else {
-                std::cout << s->type().type().c_str();
+                std::cout << s->typespec().simpletype().c_str();
             }
             if (s->scope())
                 std::cout << " (" << s->name() << " in scope " 

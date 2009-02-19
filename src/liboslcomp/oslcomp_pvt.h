@@ -112,6 +112,8 @@ private:
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
     SymbolList m_allfuncs;    ///< All function symbols, in decl order
+    bool m_verbose;           /// Verbose mode
+    bool m_debug;             /// Debug mode
 };
 
 

@@ -49,7 +49,8 @@ OSLCompilerImpl *oslcompiler = NULL;
 
 OSLCompilerImpl::OSLCompilerImpl (void)
     : m_lexer(NULL), m_err(false), 
-      m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false)
+      m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
+      m_verbose(false), m_debug(false)
 {
 }
 
@@ -62,9 +63,18 @@ OSLCompilerImpl::compile (const std::string &filename,
     std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
 
     for (size_t i = 0;  i < options.size();  ++i) {
-        cppcommand += "\"";
-        cppcommand += options[i];
-        cppcommand += "\" ";
+        if (options[i] == "-v") {
+            // verbose mode
+            m_verbose = true;
+        } else if (options[i] == "-d") {
+            // debug mode
+            m_debug = true;
+        } else {
+            // something meant for the cpp command
+            cppcommand += "\"";
+            cppcommand += options[i];
+            cppcommand += "\" ";
+        }
     }
     cppcommand += "\"";
     cppcommand += filename;
@@ -94,10 +104,12 @@ OSLCompilerImpl::compile (const std::string &filename,
             oslcompiler->shader()->typecheck ();
 
         // Print the parse tree if there were no errors
-//        if (! error_encountered()) {
-            oslcompiler->symtab().print ();
-            oslcompiler->shader()->print ();
-//        }
+            if (m_debug) {
+//              if (! error_encountered()) {
+                oslcompiler->symtab().print ();
+                oslcompiler->shader()->print ();
+//              }
+            }
         }
 
 

@@ -610,97 +610,100 @@ binary_expression
         : expression LOGIC_OR_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::LogicalOr, $1, $3);
+                                    ASTNode::LogicalOr, $1, $3);
                 }
         | expression LOGIC_AND_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::LogicalAnd, $1, $3);
+                                    ASTNode::LogicalAnd, $1, $3);
                 }
         | expression '|' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::BitwiseOr, $1, $3);
+                                    ASTNode::BitwiseOr, $1, $3);
                 }
         | expression '^' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::BitwiseXor, $1, $3);
+                                    ASTNode::BitwiseXor, $1, $3);
                 }
         | expression '&' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::BitwiseAnd, $1, $3);
+                                    ASTNode::BitwiseAnd, $1, $3);
                 }
         | expression EQ_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Equal, $1, $3);
+                                    ASTNode::Equal, $1, $3);
                 }
         | expression NE_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::NotEqual, $1, $3);
+                                    ASTNode::NotEqual, $1, $3);
                 }
         | expression '>' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Greater, $1, $3);
+                                    ASTNode::Greater, $1, $3);
                 }
         | expression GE_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::GreaterEqual, $1, $3);
+                                    ASTNode::GreaterEqual, $1, $3);
                 }
         | expression '<' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Less, $1, $3);
+                                    ASTNode::Less, $1, $3);
                 }
         | expression LE_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::LessEqual, $1, $3);
+                                    ASTNode::LessEqual, $1, $3);
                 }
         | expression SHL_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::ShiftLeft, $1, $3);
+                                    ASTNode::ShiftLeft, $1, $3);
                 }
         | expression SHR_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::ShiftRight, $1, $3);
+                                    ASTNode::ShiftRight, $1, $3);
                 }
         | expression '+' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Add, $1, $3);
+                                    ASTNode::Add, $1, $3);
                 }
         | expression '-' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Sub, $1, $3);
+                                    ASTNode::Sub, $1, $3);
                 }
         | expression '*' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Mul, $1, $3);
+                                    ASTNode::Mul, $1, $3);
                 }
         | expression '/' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Div, $1, $3);
+                                    ASTNode::Div, $1, $3);
                 }
         | expression '%' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTbinary_expression::Mod, $1, $3);
+                                    ASTNode::Mod, $1, $3);
                 }
         ;
 
 unary_op
-        : '-' | '+' | '!' | '~'
+        : '-'                           { $$ = ASTNode::Sub; }
+        | '+'                           { $$ = ASTNode::Add; }
+        | '!'                           { $$ = ASTNode::LogicalNot; }
+        | '~'                           { $$ = ASTNode::BitwiseNot; }
         ;
 
 incdec_op_opt
@@ -709,8 +712,8 @@ incdec_op_opt
         ;
 
 incdec_op
-        : INCREMENT                     { $$ = +1; }
-        | DECREMENT                     { $$ = -1; }
+        : INCREMENT                     { $$ = ASTNode::Incr; }
+        | DECREMENT                     { $$ = ASTNode::Decr; }
         ;
 
 type_constructor
@@ -742,34 +745,34 @@ function_args
 assign_expression
         : variable_lvalue '=' expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-                                ASTassign_expression::Assign, $3); }
+                                ASTNode::Assign, $3); }
         | variable_lvalue MUL_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-                	        ASTassign_expression::MulAssign, $3); }
+                	        ASTNode::Mul, $3); }
         | variable_lvalue DIV_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::DivAssign, $3); }
+				ASTNode::Div, $3); }
         | variable_lvalue ADD_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::AddAssign, $3); }
+				ASTNode::Add, $3); }
         | variable_lvalue SUB_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::SubAssign, $3); }
+				ASTNode::Sub, $3); }
         | variable_lvalue BIT_AND_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::BitwiseAndAssign, $3); }
+				ASTNode::BitwiseAnd, $3); }
         | variable_lvalue BIT_OR_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::BitwiseOrAssign, $3); }
+				ASTNode::BitwiseOr, $3); }
         | variable_lvalue BIT_XOR_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::BitwiseXorAssign, $3); }
+				ASTNode::BitwiseXor, $3); }
         | variable_lvalue SHL_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::ShiftLeftAssign, $3); }
+				ASTNode::ShiftLeft, $3); }
         | variable_lvalue SHR_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTassign_expression::ShiftRightAssign, $3); }
+				ASTNode::ShiftRight, $3); }
         ;
 
 ternary_expression

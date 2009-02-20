@@ -59,6 +59,12 @@ public:
         _last_node
     };
 
+    enum Operator { Nothing=0, Decr, Incr, 
+                    Assign, Mul, Div, Add, Sub, Mod,
+                    Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual, 
+                    BitwiseAnd, BitwiseOr, BitwiseXor, BitwiseNot,
+                    LogicalAnd, LogicalOr, LogicalNot, ShiftLeft, ShiftRight };
+
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler);
 
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op);
@@ -146,6 +152,8 @@ public:
 
     void error (const char *format, ...);
 
+    bool is_lvalue () const { return m_is_lvalue; }
+
 protected:
     /// Return a reference-counted pointer to the next node in the sequence.
     ///
@@ -185,7 +193,6 @@ protected:
     ///
     virtual void printchildren (int indentlevel = 0) const;
 
-
 protected:
     NodeType m_nodetype;          ///< Type of node this is
     ref m_next;                   ///< Next node in the list
@@ -195,6 +202,7 @@ protected:
     std::vector<ref> m_children;  ///< Child nodes
     int m_op;                     ///< Operator selection
     TypeSpec m_typespec;          ///< Data type of this node
+    bool m_is_lvalue;             ///< Is it an lvalue (assignable?)
 
 private:
 };
@@ -279,7 +287,7 @@ public:
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const { return ""; } // no children
     void print (int indentlevel=0) const;
-    // TypeSpec typecheck (TypeSpec expected); // Use the default
+    TypeSpec typecheck (TypeSpec expected);
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -293,7 +301,7 @@ public:
     ASTpreincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
         : ASTNode (preincdec_node, comp, op, expr)
     { }
-    const char *nodetypename () const { return m_op > 0 ? "preincrement" : "predecrement"; }
+    const char *nodetypename () const { return m_op==Incr ? "preincrement" : "predecrement"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
@@ -308,7 +316,7 @@ public:
     ASTpostincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
         : ASTNode (postincdec_node, comp, op, expr)
     { }
-    const char *nodetypename () const { return m_op > 0 ? "postincrement" : "postdecrement"; }
+    const char *nodetypename () const { return m_op==Incr ? "postincrement" : "postdecrement"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
 
@@ -346,7 +354,7 @@ public:
     const char *nodetypename () const { return "structselect"; }
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
     ref lvalue () const { return child (0); }
     ustring field () const { return m_field; }
@@ -439,11 +447,7 @@ public:
 class ASTassign_expression : public ASTNode
 {
 public:
-    enum Assignment { Assign, MulAssign, DivAssign, AddAssign, SubAssign,
-                      BitwiseAndAssign, BitwiseOrAssign, BitwiseXorAssign,
-                      ShiftLeftAssign, ShiftRightAssign };
-
-    ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var, Assignment op,
+    ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var, Operator op,
                           ASTNode *expr)
         : ASTNode (assign_expression_node, comp, op, var, expr)
     { }
@@ -462,8 +466,6 @@ public:
 class ASTunary_expression : public ASTNode
 {
 public:
-    enum Unop { Incr=1, Decr=-1, Pos='+', Neg='-', LogicalNot='!', BitwiseNot='~' };
-
     ASTunary_expression (OSLCompilerImpl *comp, int op, ASTNode *expr)
         : ASTNode (unary_expression_node, comp, op, expr)
     { }
@@ -481,12 +483,7 @@ public:
 class ASTbinary_expression : public ASTNode
 {
 public:
-    enum Binop { Mul, Div, Add, Sub, Mod, 
-                 Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual, 
-                 BitwiseAnd, BitwiseOr, BitwiseXor, LogicalAnd, LogicalOr,
-                 ShiftLeft, ShiftRight };
-
-    ASTbinary_expression (OSLCompilerImpl *comp, Binop op,
+    ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
                           ASTNode *left, ASTNode *right)
         : ASTNode (binary_expression_node, comp, op, left, right)
     { }

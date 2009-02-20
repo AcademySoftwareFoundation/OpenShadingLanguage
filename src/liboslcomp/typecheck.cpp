@@ -69,9 +69,18 @@ ASTNode::typecheck_list (ref node, TypeSpec expected)
 
 
 TypeSpec
+ASTvariable_ref::typecheck (TypeSpec expected)
+{
+    m_is_lvalue = true;             // A var ref is an lvalue
+    return m_typespec;
+}
+
+
+ 
+TypeSpec
 ASTindex::typecheck (TypeSpec expected)
 {
-    typecheck_children ();
+   typecheck_children ();
     const char *indextype = "";
     TypeSpec t = lvalue()->typespec();
     if (t.is_structure()) {
@@ -112,7 +121,20 @@ ASTindex::typecheck (TypeSpec expected)
             error ("%s index must be an integer, not a %s", 
                    indextype, index()->typespec().string().c_str());
 
+    // If the thing we're indexing is an lvalue, so is the indexed element
+    m_is_lvalue = lvalue()->is_lvalue();
+
     return m_typespec;
+}
+
+
+
+TypeSpec
+ASTstructselect::typecheck (TypeSpec expected)
+{
+    m_is_lvalue = lvalue()->is_lvalue();
+    return ASTNode::typecheck (expected);
+    // FIXME -- this is totally wrong
 }
 
 
@@ -120,7 +142,40 @@ ASTindex::typecheck (TypeSpec expected)
 TypeSpec
 ASTassign_expression::typecheck (TypeSpec expected)
 {
-    return ASTNode::typecheck(expected); /* FIXME */
+    typecheck_children (expected);
+    TypeSpec vt = var()->typespec();
+    TypeSpec et = expr()->typespec();
+
+    if (! var()->is_lvalue()) {
+        error ("Can't assign via %s to something that isn't an lvalue", opname());
+        return TypeSpec();
+    }
+    
+    // We don't currently support assignment of whole arrays
+    if (vt.is_array() || et.is_array()) {
+        error ("Can't assign entire arrays");
+        return TypeSpec();
+    }
+
+    // Bitwise and shift can only apply to int
+    if (m_op == BitwiseAnd || m_op == BitwiseOr || m_op == BitwiseXor ||
+        m_op == ShiftLeft || m_op == ShiftRight) {
+        if (! vt.is_int()) {
+            error ("Operator %s can only be used on int, not %s",
+                   opname(), vt.string().c_str());
+            return TypeSpec();
+        }
+    }
+
+    // Expression must be of a type assignable to the lvalue
+    if (! assignable (vt, et)) {
+        error ("Cannot assign '%s' to '%s'",
+               et.string().c_str(), vt.string().c_str());
+        // FIXME - can we print the variable in question?
+        return TypeSpec();
+    }
+
+    return m_typespec = vt;
 }
 
 

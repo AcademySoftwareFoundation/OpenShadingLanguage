@@ -104,14 +104,60 @@ public:
     }
     TypeDesc::AGGREGATE aggregate () const { return (TypeDesc::AGGREGATE)m_simple.aggregate; }
 
+    /// Is it an int?
+    ///
     bool is_int () const {
         return m_simple == TypeDesc::INT && !is_structure() && !is_closure();
     }
+
+    /// Is it a float?
+    ///
     bool is_float () const {
-        return m_simple == TypeDesc::FLOAT && !is_structure() && !is_closure();
+        return m_simple == TypeDesc::TypeFloat && !is_structure() && !is_closure();
     }
+
+    /// Is it a string?
+    ///
     bool is_string () const {
-        return m_simple == TypeDesc::STRING && !is_structure() && !is_closure();
+        return m_simple == TypeDesc::TypeString && !is_structure() && !is_closure();
+    }
+
+    /// Is it a triple (color, point, vector, or normal)?
+    ///
+    bool is_triple () const {
+        return ! is_structure() && ! is_closure() && 
+            (m_simple == TypeDesc::TypeColor ||
+             m_simple == TypeDesc::TypePoint ||
+             m_simple == TypeDesc::TypeVector ||
+             m_simple == TypeDesc::TypeNormal);
+    }
+
+    /// Is it based on floats (even if an aggregate?)
+    bool is_floatbased () const {
+        return ! is_structure() && ! is_closure() && ! is_array() &&
+            m_simple.basetype == TypeDesc::FLOAT;
+    }
+
+    /// Is it a vector-like triple (point, vector, or normal)?
+    ///
+    bool is_vectriple () const {
+        return ! is_structure() && ! is_closure() && 
+            (m_simple == TypeDesc::TypePoint ||
+             m_simple == TypeDesc::TypeVector ||
+             m_simple == TypeDesc::TypeNormal);
+    }
+
+    /// Types are equivalent if they are identical, or if both are
+    /// vector-like.
+    friend bool equivalent (const TypeSpec &a, const TypeSpec &b) {
+        return (a == b) || (a.is_vectriple() && b.is_vectriple());
+    }
+
+    /// Is type b is assignable to a?  It is if they are the equivalent(),
+    /// or if a is a float or float-aggregate and b is a float or int.
+    friend bool assignable (const TypeSpec &a, const TypeSpec &b) {
+        return equivalent (a, b) || 
+            (a.is_floatbased() && (b.is_float() || b.is_int()));
     }
 
 private:

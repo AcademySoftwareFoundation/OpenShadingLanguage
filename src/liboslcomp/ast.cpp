@@ -28,7 +28,7 @@ namespace pvt {   // OSL::pvt
 ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler) 
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno()), m_op(0)
+      m_sourceline(compiler->lineno()), m_op(0), m_is_lvalue(false)
 {
 }
 
@@ -38,7 +38,7 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
                   ASTNode *a)
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno()), m_op(op)
+      m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
     addchild (a);
 }
@@ -48,7 +48,7 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op)
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno()), m_op(op)
+      m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
 }
 
@@ -58,7 +58,7 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
                   ASTNode *a, ASTNode *b)
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno()), m_op(op)
+      m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
     addchild (a);
     addchild (b);
@@ -70,7 +70,7 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
                   ASTNode *a, ASTNode *b, ASTNode *c)
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno()), m_op(op)
+      m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
     addchild (a);
     addchild (b);
@@ -83,7 +83,7 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
                   ASTNode *a, ASTNode *b, ASTNode *c, ASTNode *d)
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
-      m_sourceline(compiler->lineno()), m_op(op)
+      m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
     addchild (a);
     addchild (b);
@@ -406,16 +406,16 @@ const char *
 ASTassign_expression::opname () const
 {
     switch (m_op) {
-    case Assign           : return "=";
-    case MulAssign        : return "*=";
-    case DivAssign        : return "/=";
-    case AddAssign        : return "+=";
-    case SubAssign        : return "-=";
-    case BitwiseAndAssign : return "&=";
-    case BitwiseOrAssign  : return "|=";
-    case BitwiseXorAssign : return "^=";
-    case ShiftLeftAssign  : return "<<=";
-    case ShiftRightAssign : return ">>=";
+    case Assign     : return "=";
+    case Mul        : return "*=";
+    case Div        : return "/=";
+    case Add        : return "+=";
+    case Sub        : return "-=";
+    case BitwiseAnd : return "&=";
+    case BitwiseOr  : return "|=";
+    case BitwiseXor : return "^=";
+    case ShiftLeft  : return "<<=";
+    case ShiftRight : return ">>=";
     default: ASSERT(0);
     }
 }
@@ -437,8 +437,8 @@ ASTunary_expression::opname () const
     switch (m_op) {
     case Decr       : return "--";
     case Incr       : return "++";
-    case Pos        : return "+";
-    case Neg        : return "-";
+    case Add        : return "+";
+    case Sub        : return "-";
     case LogicalNot : return "!";
     case BitwiseNot : return "~";
     default: ASSERT(0);

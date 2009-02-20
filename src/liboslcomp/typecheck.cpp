@@ -78,6 +78,30 @@ ASTvariable_ref::typecheck (TypeSpec expected)
 
  
 TypeSpec
+ASTpreincdec::typecheck (TypeSpec expected)
+{
+    typecheck_children ();
+    m_is_lvalue = var()->is_lvalue();
+    m_typespec = var()->typespec();
+    return m_typespec;
+}
+
+
+ 
+TypeSpec
+ASTpostincdec::typecheck (TypeSpec expected)
+{
+    typecheck_children ();
+    if (! var()->is_lvalue())
+        error ("%s can only be applied to an lvalue", nodetypename());
+    m_is_lvalue = false;
+    m_typespec = var()->typespec();
+    return m_typespec;
+}
+
+
+ 
+TypeSpec
 ASTindex::typecheck (TypeSpec expected)
 {
    typecheck_children ();
@@ -160,9 +184,9 @@ ASTassign_expression::typecheck (TypeSpec expected)
     // Bitwise and shift can only apply to int
     if (m_op == BitwiseAnd || m_op == BitwiseOr || m_op == BitwiseXor ||
         m_op == ShiftLeft || m_op == ShiftRight) {
-        if (! vt.is_int()) {
-            error ("Operator %s can only be used on int, not %s",
-                   opname(), vt.string().c_str());
+        if (! vt.is_int() || ! et.is_int()) {
+            error ("Operator %s can only be used on int, not %s %s %s",
+                   opname(), vt.string().c_str(), opname(), et.string().c_str());
             return TypeSpec();
         }
     }
@@ -179,5 +203,156 @@ ASTassign_expression::typecheck (TypeSpec expected)
 }
 
 
+
+TypeSpec
+ASTunary_expression::typecheck (TypeSpec expected)
+{
+    // FIXME - closures
+    typecheck_children ();
+    TypeSpec t = expr()->typespec();
+    if (t.is_structure()) {
+        error ("Can't do '%s' to a %s.", opname(), t.string().c_str());
+        return TypeSpec ();
+    }
+    switch (m_op) {
+    case Sub :
+    case Add :
+        if (t.is_string()) {
+            error ("Can't do '%s' to a %s.", opname(), t.string().c_str());
+            return TypeSpec ();
+        }
+        m_typespec = t;
+        break;
+    case LogicalNot :
+        m_typespec = TypeDesc::TypeInt;  // ! is always an int
+        break;
+    case BitwiseNot :
+        if (! t.is_int()) {
+            error ("Operator '~' can only be done to an int");
+            return TypeSpec ();
+        }
+        m_typespec = t;
+        break;
+    default:
+        error ("unknown unary operator");
+    }
+    return m_typespec;
+}
+
+
+
+/// Given two types (which are already compatible for numeric ops),
+/// return which one has "more precision".  Let's say the op is '+'.  So
+/// hp(int,float) == float, hp(vector,float) == vector, etc.
+inline TypeDesc
+higherprecision (const TypeDesc &a, const TypeDesc &b)
+{
+    // Aggregate always beats non-aggregate
+    if (a.aggregate > b.aggregate)
+        return a;
+    else if (b.aggregate > a.aggregate)
+        return b;
+    // Float beats int
+    if (b.basetype == TypeDesc::FLOAT)
+        return b;
+    else return a;
+}
+
+
+
+TypeSpec
+ASTbinary_expression::typecheck (TypeSpec expected)
+{
+    // FIXME - closures
+    typecheck_children ();
+    TypeSpec l = left()->typespec();
+    TypeSpec r = right()->typespec();
+
+    // No binary ops work on structs or arrays
+    if (l.is_structure() || r.is_structure() ||
+        l.is_array() || r.is_array()) {
+        error ("Not allowed: '%s %s %s'",
+               l.string().c_str(), opname(), r.string().c_str());
+        return TypeSpec ();
+    }
+
+    switch (m_op) {
+    case Sub :
+    case Add :
+    case Mul :
+    case Div :
+        // Add/Sub/Mul/Div work for any equivalent types, and
+        // combination of int/float and other numeric types, but do not
+        // work with strings.  Add/Sub don't work with matrices, but
+        // Mul/Div do.
+        // FIXME -- currently, equivalent types combine to make the
+        // left type.  But maybe we should be more careful, for example
+        // point-point -> vector, etc.
+        if (l.is_string() || r.is_string())
+            break;   // Dispense with strings trivially
+        if ((m_op == Sub || m_op == Add) && (l.is_matrix() || r.is_matrix()))
+            break;   // Matrices don't combine for + and -
+        if (equivalent (l, r) ||
+                (l.is_numeric() && r.is_int_or_float()) ||
+                (l.is_int_or_float() && r.is_numeric()))
+            return m_typespec = higherprecision (l.simpletype(), r.simpletype());
+        break;
+
+    case Mod :
+        // Mod only works with ints, and return ints.
+        if (l.is_int() && r.is_int())
+            return m_typespec = TypeDesc::TypeInt;
+        break;
+
+    case Equal :
+    case NotEqual :
+        // Any equivalent types can be compared with == and !=, also a 
+        // float or int can be compared to any other numeric type.
+        // Result is always an int.
+        if (equivalent (l, r) || 
+              (l.is_numeric() && r.is_int_or_float()) ||
+              (l.is_int_or_float() && r.is_numeric()))
+            return m_typespec = TypeDesc::TypeInt;
+        break;
+
+    case Greater :
+    case Less :
+    case GreaterEqual :
+    case LessEqual :
+        // G/L comparisons only work with floats or ints, and always
+        // return int.
+        if (l.is_int_or_float() && r.is_int_or_float())
+            return m_typespec = TypeDesc::TypeInt;
+        break;
+
+    case BitwiseAnd :
+    case BitwiseOr :
+    case BitwiseXor :
+    case ShiftLeft :
+    case ShiftRight :
+        // Bitwise ops only work with ints, and return ints.
+        if (l.is_int() && r.is_int())
+            return m_typespec = TypeDesc::TypeInt;
+        break;
+
+    case LogicalAnd :
+    case LogicalOr :
+        // Logical ops work on any simple type (since they test for
+        // nonzeroness), but always return int.
+        m_typespec = TypeDesc::TypeInt;
+        break;
+
+    default:
+        error ("unknown binary operator");
+    }
+
+    // If we got this far, it's an op that's not allowed
+    error ("Not allowed: '%s %s %s'",
+           l.string().c_str(), opname(), r.string().c_str());
+    return TypeSpec ();
+}
+
+
+ 
 }; // namespace pvt
 }; // namespace OSL

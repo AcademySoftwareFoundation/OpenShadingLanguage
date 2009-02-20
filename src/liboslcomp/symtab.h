@@ -138,6 +138,21 @@ public:
             m_simple.basetype == TypeDesc::FLOAT;
     }
 
+    /// Is it a numeric (based on float or int, even if an aggregate)?
+    ///
+    bool is_numeric () const {
+        return ! is_structure() && ! is_closure() && ! is_array() &&
+            (m_simple.basetype == TypeDesc::FLOAT || m_simple.basetype == TypeDesc::INT);
+    }
+
+    /// Is it a scalar numeric (int or float)?
+    ///
+    bool is_scalarnum () const {
+        return is_numeric() && m_simple.aggregate == TypeDesc::SCALAR;
+    }
+
+    bool is_int_or_float () const { return is_scalarnum(); }
+
     /// Is it a vector-like triple (point, vector, or normal)?
     ///
     bool is_vectriple () const {
@@ -145,6 +160,13 @@ public:
             (m_simple == TypeDesc::TypePoint ||
              m_simple == TypeDesc::TypeVector ||
              m_simple == TypeDesc::TypeNormal);
+    }
+
+    /// Is it a matrix?
+    ///
+    bool is_matrix () const {
+        return ! is_structure() && ! is_closure() && 
+            m_simple == TypeDesc::TypeMatrix;
     }
 
     /// Types are equivalent if they are identical, or if both are

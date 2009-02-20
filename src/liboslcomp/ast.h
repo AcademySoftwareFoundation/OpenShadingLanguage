@@ -303,9 +303,9 @@ public:
     { }
     const char *nodetypename () const { return m_op==Incr ? "preincrement" : "predecrement"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
-    ref lvalue () const { return child (0); }
+    ref var () const { return child (0); }
 };
 
 
@@ -318,9 +318,9 @@ public:
     { }
     const char *nodetypename () const { return m_op==Incr ? "postincrement" : "postdecrement"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
-    ref lvalue () const { return child (0); }
+    ref var () const { return child (0); }
 };
 
 
@@ -473,7 +473,7 @@ public:
     const char *nodetypename () const { return "unary_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
     ref expr () const { return child (0); }
 };
@@ -491,7 +491,7 @@ public:
     const char *nodetypename () const { return "binary_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
     ref left () const { return child (0); }
     ref right () const { return child (1); }

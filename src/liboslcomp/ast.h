@@ -104,9 +104,9 @@ public:
     /// is unknown, but doens't change it if it's not unknown.
     virtual TypeSpec typecheck (TypeSpec expected = TypeSpec());
 
-    /// Type check all the children of this node, return the type of the
-    /// first child.
-    TypeSpec typecheck_children (TypeSpec expected = TypeSpec());
+    /// Type check all the children of this node.
+    ///
+    void typecheck_children (TypeSpec expected = TypeSpec());
 
     /// Follow a list of nodes, type checking each in turn, and return
     /// the type of the last one.
@@ -375,7 +375,7 @@ public:
 
     const char *nodetypename () const { return "conditional_statement"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
     ref cond () const { return child (0); }
     ref truestmt () const { return child (1); }
@@ -399,10 +399,10 @@ public:
     const char *nodetypename () const { return "loop_statement"; }
     const char *childname (size_t i) const;
     const char *opname () const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
-    ref cond () const { return child (0); }
-    ref init () const { return child (1); }
+    ref init () const { return child (0); }
+    ref cond () const { return child (1); }
     ref iter () const { return child (2); }
     ref stmt () const { return child (3); }
 };
@@ -510,7 +510,7 @@ public:
 
     const char *nodetypename () const { return "ternary_expression"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
     ref cond () const { return child (0); }
     ref trueexpr () const { return child (1); }
@@ -531,7 +531,7 @@ public:
 
     const char *nodetypename () const { return "typecast_expression"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
 
     ref expr () const { return child (0); }
 };
@@ -577,21 +577,6 @@ private:
     int m_i;
     float m_f;
 };
-
-
-
-#if 0
-class ASTsubclass : public ASTNode
-{
-public:
-    ASTsubclass (OSLCompilerImpl *comp) : ASTNode (unknown_node, comp) { }
-    ~ASTsubclass () { }
-    const char *nodetypename () const { return "<FIXME>"; }
-    const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
-private:
-};
-#endif
 
 
 

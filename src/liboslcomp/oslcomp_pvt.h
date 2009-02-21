@@ -60,7 +60,7 @@ public:
 
     /// Increment the line count
     ///
-    int incr_lineno () { ++m_lineno; }
+    int incr_lineno () { return ++m_lineno; }
 
     /// Return a pointer to the current lexer.
     ///

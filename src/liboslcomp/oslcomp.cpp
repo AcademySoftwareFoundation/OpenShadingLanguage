@@ -151,5 +151,32 @@ OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
 
 
 
+std::string
+TypeSpec::string () const
+{
+    std::string str;
+    if (is_structure())
+        str = Strutil::format ("struct %d", structure());
+    else {
+        // Substitute some special names
+        if (m_simple == TypeDesc::TypeColor)
+            str = "color";
+        else if (m_simple == TypeDesc::TypePoint)
+            str = "point";
+        else if (m_simple == TypeDesc::TypeVector)
+            str = "vector";
+        else if (m_simple == TypeDesc::TypeNormal)
+            str = "normal";
+        else if (m_simple == TypeDesc::TypeMatrix)
+            str = "matrix";
+        else
+            str = simpletype().c_str();
+    }
+    if (is_closure())
+        str += " closure";
+    return str;
+}
+
+
 }; // namespace pvt
 }; // namespace OSL

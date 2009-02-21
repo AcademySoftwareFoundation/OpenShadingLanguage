@@ -68,20 +68,13 @@ public:
 
     /// Express the type as a string
     ///
-    std::string string () const {
-        std::string s;
-        if (is_structure())
-            s = Strutil::format ("struct %d", structure());
-        else s = simpletype().c_str();
-        if (is_closure())
-            s += " closure";
-        return s;
-    }
+    std::string string () const;
 
-    TypeSpec & operator= (const TypeDesc simple) {
+    const TypeSpec & operator= (const TypeDesc simple) {
         m_simple = simple;
         m_structure = 0;
         m_closure = false;
+        return *this;
     }
 
     bool operator== (const TypeSpec &x) const {
@@ -184,7 +177,6 @@ public:
 
 private:
     TypeDesc m_simple;     ///< Data if it's a simple type
-    int m_arraylen;        ///< 0 if not array, nonzero for array length
     short m_structure;     ///< 0 is not a structure, >=1 for structure id
     bool  m_closure;       ///< Is it a closure? (m_simple also used)
 };

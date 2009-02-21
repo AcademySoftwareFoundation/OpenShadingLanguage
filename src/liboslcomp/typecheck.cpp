@@ -38,19 +38,12 @@ ASTNode::typecheck (TypeSpec expected)
 
 
 
-TypeSpec
+void
 ASTNode::typecheck_children (TypeSpec expected)
 {
-    bool first = true;
-    TypeSpec firsttype;
     BOOST_FOREACH (ref &c, m_children) {
-        TypeSpec t = typecheck_list (c, expected);
-        if (first) {
-            firsttype = t;
-            first = false;
-        }
+        typecheck_list (c, expected);
     }
-    return firsttype;
 }
 
 
@@ -164,6 +157,38 @@ ASTstructselect::typecheck (TypeSpec expected)
 
 
 TypeSpec
+ASTconditional_statement::typecheck (TypeSpec expected)
+{
+    typecheck_children ();
+    TypeSpec c = cond()->typespec();
+    if (c.is_closure())
+        error ("Cannot use a closure as an 'if' condition");
+    if (c.is_structure())
+        error ("Cannot use a struct as an 'if' condition");
+    if (c.is_array())
+        error ("Cannot use an array as an 'if' condition");
+    return m_typespec = TypeDesc (TypeDesc::VOID);
+}
+
+
+
+TypeSpec
+ASTloop_statement::typecheck (TypeSpec expected)
+{
+    typecheck_children ();
+    TypeSpec c = cond()->typespec();
+    if (c.is_closure())
+        error ("Cannot use a closure as an '%s' condition", opname());
+    if (c.is_structure())
+        error ("Cannot use a struct as an '%s' condition", opname());
+    if (c.is_array())
+        error ("Cannot use an array as an '%s' condition", opname());
+    return m_typespec = TypeDesc (TypeDesc::VOID);
+}
+
+
+
+TypeSpec
 ASTassign_expression::typecheck (TypeSpec expected)
 {
     typecheck_children (expected);
@@ -208,7 +233,7 @@ TypeSpec
 ASTunary_expression::typecheck (TypeSpec expected)
 {
     // FIXME - closures
-    typecheck_children ();
+    typecheck_children (expected);
     TypeSpec t = expr()->typespec();
     if (t.is_structure()) {
         error ("Can't do '%s' to a %s.", opname(), t.string().c_str());
@@ -264,7 +289,7 @@ TypeSpec
 ASTbinary_expression::typecheck (TypeSpec expected)
 {
     // FIXME - closures
-    typecheck_children ();
+    typecheck_children (expected);
     TypeSpec l = left()->typespec();
     TypeSpec r = right()->typespec();
 
@@ -353,6 +378,54 @@ ASTbinary_expression::typecheck (TypeSpec expected)
 }
 
 
- 
+
+TypeSpec
+ASTternary_expression::typecheck (TypeSpec expected)
+{
+    // FIXME - closures
+    TypeSpec c = typecheck_list (cond(), TypeDesc::TypeInt);
+    TypeSpec t = typecheck_list (trueexpr(), expected);
+    TypeSpec f = typecheck_list (falseexpr(), expected);
+
+    if (c.is_closure())
+        error ("Cannot use a closure as a condition");
+    if (c.is_structure())
+        error ("Cannot use a struct as a condition");
+    if (c.is_array())
+        error ("Cannot use a struct as a condition");
+
+    // No arrays
+    if (t.is_array() || t.is_array()) {
+        error ("Not allowed: '%s ? %s : %s'",
+               c.string().c_str(), t.string().c_str(), f.string().c_str());
+        return TypeSpec ();
+    }
+
+    // The true and false clauses need to be equivalent types, or one
+    // needs to be assignable to the other (so one can be upcast).
+    if (assignable (t, f) || assignable (f, t))
+        m_typespec = higherprecision (t.simpletype(), f.simpletype());
+    else
+        error ("Not allowed: '%s ? %s : %s'",
+               c.string().c_str(), t.string().c_str(), f.string().c_str());
+
+    return m_typespec;
+}
+
+
+
+TypeSpec
+ASTtypecast_expression::typecheck (TypeSpec expected)
+{
+    // FIXME - closures
+    typecheck_children (expected);
+    TypeSpec t = expr()->typespec();
+    if (! assignable (m_typespec, t))
+        error ("Cannot cast '%s' to '%s'", t.string().c_str(),
+               m_typespec.string().c_str());
+    return m_typespec;
+}
+
+
 }; // namespace pvt
 }; // namespace OSL

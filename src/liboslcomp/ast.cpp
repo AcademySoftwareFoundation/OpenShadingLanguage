@@ -17,6 +17,9 @@
 #include <cstdio>
 #include <streambuf>
 
+#include "OpenImageIO/strutil.h"
+#include "OpenImageIO/dassert.h"
+
 #include "oslcomp_pvt.h"
 #include "ast.h"
 

@@ -29,12 +29,8 @@ using std::hash_map;
 using std::hash_set;
 #endif
 
-#include <boost/foreach.hpp>
-
 #include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/ustring.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/strutil.h"
 
 
 namespace OSL {
@@ -183,40 +179,58 @@ private:
 
 
 
+/// Describe the layout of an OSL 'struct'.
+/// Basically it's just a list of all the individual fields' names and
+/// types.
 class StructSpec {
 public:
+    /// Construct a new struct with the given name, in the given scope.
+    ///
     StructSpec (ustring name, int scope) : m_name(name), m_scope(scope) { }
 
+    /// Description of a single structure field -- just a type and name.
+    ///
     struct FieldSpec {
         FieldSpec (const TypeSpec &t, ustring n) : type(t), name(n) { }
         TypeSpec type;
         ustring name;
     };
 
-    void add_field (const TypeSpec &t, ustring n) {
-        m_fields.push_back (FieldSpec (t, n));
+    /// Append a new field (with type and name) to this struct.
+    ///
+    void add_field (const TypeSpec &type, ustring name) {
+        m_fields.push_back (FieldSpec (type, name));
     }
 
+    /// The name of this struct (may not be unique across all scopes).
+    ///
     ustring name () const { return m_name; }
 
-    std::string mangled () const {
-        return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
-                       : m_name.string();
-    }
+    /// The unique mangled name (with scope embedded) of this struct.
+    ///
+    std::string mangled () const;
 
-    size_t numfields () const { return m_fields.size(); }
-
-    const FieldSpec & field (size_t i) const { return m_fields[i]; }
-
+    /// The scope number where this struct was defined.
+    ///
     int scope () const { return m_scope; }
 
+    /// Number of fields in the struct.
+    ///
+    size_t numfields () const { return m_fields.size(); }
+
+    /// Return a reference to an individual FieldSpec for one field
+    /// of the struct, indexed numerically (starting with 0).
+    const FieldSpec & field (size_t i) const { return m_fields[i]; }
+
 private:
-    ustring m_name;
-    int m_scope;
-    std::vector<FieldSpec> m_fields;
+    ustring m_name;                    ///< Structure name (unmangled)
+    int m_scope;                       ///< Structure's scope id
+    std::vector<FieldSpec> m_fields;   ///< List of fields of the struct
 };
 
 
+/// Handy typedef for a vector of pointers to StructSpec's.
+///
 typedef std::vector<StructSpec *> StructList;
 
 
@@ -226,8 +240,8 @@ typedef std::vector<StructSpec *> StructList;
 class Symbol {
 public:
     enum SymType {
-        SymTypeParam, SymTypeLocal, SymTypeTemp, SymTypeFunction, 
-        SymTypeType
+        SymTypeParam, SymTypeLocal, SymTypeTemp, SymTypeGlobal, 
+        SymTypeFunction, SymTypeType
     };
 
     Symbol (ustring n, const TypeSpec &t, SymType s, ASTNode *node=NULL) 
@@ -237,11 +251,7 @@ public:
 
     ustring name () const { return m_name; }
 
-    std::string mangled () const {
-        // FIXME: De-alias
-        return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
-                       : m_name.string();
-    }
+    std::string mangled () const;
 
     const TypeSpec &typespec () const { return m_typespec; }
 
@@ -281,11 +291,9 @@ typedef std::vector<Symbol *> SymbolList;
 /// of such maps representing the current scope hierarchy, so a symbol
 /// search proceeds from innermost scope (top of stack) to outermost
 /// (bottom of stack).  
-
-//template <class S>
+///
 class SymbolTable {
 public:
-//    typedef S Symbol;
     typedef hash_map<ustring, Symbol *,ustringHash> ScopeTable;
     typedef std::vector<ScopeTable> ScopeTableStack;
 
@@ -309,61 +317,21 @@ public:
     /// scopes.  If 'last' is non-NULL, we're already found that one and
     /// are looking for another symbol of the same name in a farther-out
     /// scope.
-    Symbol * find (ustring name, Symbol *last=NULL) const {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        ScopeTableStack::const_reverse_iterator scopelevel;
-        scopelevel = m_scopetables.rbegin();
-        if (last) {
-            // We only want to match OUTSIDE the scope of 'last'.  So first
-            // search for last.  Then advance to the next outer scope.
-            for ( ;  scopelevel != m_scopetables.rend();  ++scopelevel) {
-                ScopeTable::const_iterator s = scopelevel->find (name);
-                if (s != scopelevel->end() && s->second == last) {
-                    ++scopelevel;
-                    break;
-                }
-            }
-        }
-        for ( ;  scopelevel != m_scopetables.rend();  ++scopelevel) {
-            ScopeTable::const_iterator s = scopelevel->find (name);
-            if (s != scopelevel->end())
-                return s->second;
-        }
-        return NULL;  // not found
-    }
+    Symbol * find (ustring name, Symbol *last=NULL) const;
 
     /// If there is already a symbol with that name in the current scope,
     /// return it, otherwise return NULL.
-    Symbol * clash (ustring name) const {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        Symbol *s = find (name);
-        return (s && s->scope() == scopeid()) ? s : NULL;
-    }
+    Symbol * clash (ustring name) const;
 
     /// Insert the symbol into the current inner scope.  
     ///
-    void insert (Symbol *sym) {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        DASSERT (sym != NULL);
-        sym->scope (scopeid ());
-        m_scopetables.back()[sym->name()] = sym;
-        m_allsyms.push_back (sym);
-    }
+    void insert (Symbol *sym);
 
     /// Make a new structure type and name it.  Return the index of the
     /// new structure.
-    int new_struct (ustring name) {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        m_structs.push_back (new StructSpec (name, scopeid()));
-        int structid = (int) m_structs.size() - 1;
-        insert (new Symbol (name, TypeSpec ("",structid), Symbol::SymTypeType));
-        return structid;
-    }
+    int new_struct (ustring name);
 
-    void add_struct_field (const TypeSpec &type, ustring name) {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        m_structs.back()->add_field (type, name);
-    }
+    void add_struct_field (const TypeSpec &type, ustring name);
 
     /// Return the current scope ID
     ///
@@ -374,75 +342,19 @@ public:
 
     /// Create a new unique scope, inner to the previous current scope.
     ///
-    void push () {
-        recursive_lock_guard guard (m_mutex);     // thread safety
-        m_scopestack.push (m_scopeid);  // push old scope id on the scope stack
-        m_scopeid = m_nextscopeid++;    // set to new scope id
-        m_scopetables.resize (m_scopetables.size()+1); // push scope table
-    }
+    void push ();
 
     /// Restore to the next outermost scope.
     ///
-    void pop () {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        m_scopetables.resize (m_scopetables.size()-1);
-        ASSERT (! m_scopestack.empty());
-        m_scopeid = m_scopestack.top ();
-        m_scopestack.pop ();
-    }
+    void pop ();
 
     /// delete all symbols that have ever been entered into the table.
     /// After doing this, beware following any Symbol pointers left over!
-    void delete_syms () {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        for (SymbolList::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
-            delete (*i);
-        m_allsyms.clear ();
-        for (StructList::iterator i = m_structs.begin(); i != m_structs.end(); ++i)
-            delete (*i);
-        m_structs.clear ();
-    }
+    void delete_syms ();
 
-    void print () {
-        recursive_lock_guard guard (m_mutex);  // thread safety
-        if (m_structs.size()) {
-            std::cout << "Structure table:\n";
-            int structid = 0;
-            BOOST_FOREACH (const StructSpec * s, m_structs) {
-                if (! s)
-                    continue;
-                std::cout << "    " << structid << ": struct " << s->mangled();
-                if (s->scope())
-                    std::cout << " (" << s->name() 
-                              << " in scope " << s->scope() << ")";
-                std::cout << " :\n";
-                for (size_t i = 0;  i < s->numfields();  ++i) {
-                    const StructSpec::FieldSpec & f (s->field(i));
-                    std::cout << "\t" << f.name << " : " 
-                              << f.type.simpletype().c_str() << "\n";
-                }
-                ++structid;
-            }
-            std::cout << "\n";
-        }
-        std::cout << "Symbol table:\n";
-        BOOST_FOREACH (const Symbol *s, m_allsyms) {
-            if (s->is_structure())
-                continue;
-            std::cout << "\t" << s->mangled() << " : ";
-            if (s->typespec().is_structure()) {
-                std::cout << "struct " << s->typespec().structure() << " "
-                          << m_structs[s->typespec().structure()]->name();
-            } else {
-                std::cout << s->typespec().simpletype().c_str();
-            }
-            if (s->scope())
-                std::cout << " (" << s->name() << " in scope " 
-                          << s->scope() << ")";
-            std::cout << "\n";
-        }
-        std::cout << "\n";
-    }
+    /// Dump the whole symbol table to stdout for debugging purposes.
+    ///
+    void print ();
 
 private:
     SymbolList m_allsyms;            ///< Master list of all symbols

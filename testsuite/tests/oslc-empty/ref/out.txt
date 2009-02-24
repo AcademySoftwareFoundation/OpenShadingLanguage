@@ -1,6 +1,25 @@
 Structure table:
 
 Symbol table:
+	P : color
+	I : color
+	N : color
+	Ng : color
+	u : float
+	v : float
+	dPdu : color
+	dPdv : color
+	L : color
+	Cl : color
+	Ps : color
+	Ns : color
+	Pl : color
+	Nl : color
+	Ci : color closure
+	Oi : color
+	time : float
+	dtime : float
+	dPdtime : color
 
 shader_declaration "test"
 Compiled test.osl ->  FIXME

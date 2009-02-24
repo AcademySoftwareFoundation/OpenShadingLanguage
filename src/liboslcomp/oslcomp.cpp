@@ -52,6 +52,34 @@ OSLCompilerImpl::OSLCompilerImpl (void)
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_debug(false)
 {
+    initialize_globals ();
+}
+
+
+
+void
+OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
+    fprintf (stderr, "%s:%d: error: %s\n", 
+             filename.c_str(), line, errmsg.c_str());
+    va_end (ap);
+    m_err = true;
+}
+
+
+
+void
+OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string errmsg = format ? Strutil::vformat (format, ap) : "";
+    fprintf (stderr, "%s:%d: warning: %s\n", 
+             filename.c_str(), line, errmsg.c_str());
+    va_end (ap);
 }
 
 
@@ -97,21 +125,19 @@ OSLCompilerImpl::compile (const std::string &filename,
         // Create a lexer, parse the file, delete the lexer
         m_lexer = new oslFlexLexer (&in);
         oslparse ();
+        bool parseerr = error_encountered();
         delete m_lexer;
 
-        // Print the parse tree if there were no errors
         if (! error_encountered()) {
             oslcompiler->shader()->typecheck ();
-
-        // Print the parse tree if there were no errors
-            if (m_debug) {
-//              if (! error_encountered()) {
-                oslcompiler->symtab().print ();
-                oslcompiler->shader()->print ();
-//              }
-            }
         }
 
+        // Print the parse tree if there were no errors
+        if (m_debug) {
+            oslcompiler->symtab().print ();
+//            if (! parseerr)
+                oslcompiler->shader()->print ();
+        }
 
         // All done, close the files
         oslcompiler = NULL;
@@ -124,29 +150,43 @@ OSLCompilerImpl::compile (const std::string &filename,
 
 
 
+struct GlobalTable {
+    const char *name;
+    TypeSpec type;
+};
+
+static GlobalTable globals[] = {
+    { "P", TypeDesc::TypePoint },
+    { "I", TypeDesc::TypeVector },
+    { "N", TypeDesc::TypeNormal },
+    { "Ng", TypeDesc::TypeNormal },
+    { "u", TypeDesc::TypeFloat },
+    { "v", TypeDesc::TypeFloat },
+    { "dPdu", TypeDesc::TypeVector },
+    { "dPdv", TypeDesc::TypeVector },
+    { "L", TypeDesc::TypeVector },
+    { "Cl", TypeDesc::TypeColor },
+    { "Ps", TypeDesc::TypePoint },
+    { "Ns", TypeDesc::TypeNormal },
+    { "Pl", TypeDesc::TypePoint },
+    { "Nl", TypeDesc::TypeNormal },
+    { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
+    { "Oi", TypeDesc::TypeColor },
+    { "time", TypeDesc::TypeFloat },
+    { "dtime", TypeDesc::TypeFloat },
+    { "dPdtime", TypeDesc::TypeVector },
+    { NULL }
+};
+
+
 void
-OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
+OSLCompilerImpl::initialize_globals ()
 {
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
-    fprintf (stderr, "%s:%d: error: %s\n", 
-             filename.c_str(), line, errmsg.c_str());
-    va_end (ap);
-    m_err = true;
-}
-
-
-
-void
-OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "";
-    fprintf (stderr, "%s:%d: warning: %s\n", 
-             filename.c_str(), line, errmsg.c_str());
-    va_end (ap);
+    for (int i = 0;  globals[i].name;  ++i) {
+        Symbol *s = new Symbol (ustring(globals[i].name), globals[i].type,
+                                Symbol::SymTypeGlobal);
+        symtab().insert (s);
+    }
 }
 
 

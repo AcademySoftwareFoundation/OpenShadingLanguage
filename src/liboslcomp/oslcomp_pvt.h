@@ -103,6 +103,8 @@ public:
     void current_output (bool b) { m_current_output = b; }
 
 private:
+    void initialize_globals ();
+
     oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing

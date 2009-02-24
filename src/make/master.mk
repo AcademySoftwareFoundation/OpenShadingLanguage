@@ -154,7 +154,7 @@ nuke:
 doxygen:
 	doxygen src/doc/Doxyfile
 
-test : ${all_tests}
+test : build ${all_tests}
 	@ echo "Running test suite..."
 	@ for f in ${all_tests} ; do \
 	    ( cd $$f ; \

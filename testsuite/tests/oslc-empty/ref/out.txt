@@ -1,0 +1,6 @@
+Structure table:
+
+Symbol table:
+
+shader_declaration "test"
+Compiled test.osl ->  FIXME

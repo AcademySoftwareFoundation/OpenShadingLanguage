@@ -24,6 +24,7 @@ help:
 	@echo "  make clean      Remove the temporary files in ${build_dir}"
 	@echo "  make realclean  Remove both ${build_dir} AND ${dist_dir}"
 	@echo "  make nuke       Remove ALL of build and dist (not just ${platform})"
+	@echo "  make test       Run test suite"
 	@echo "Helpful modifiers:"
 	@echo "  make SHOWCOMMANDS=1 ...     Show all compilation commands"
 	@echo ""
@@ -34,14 +35,14 @@ help:
 # dist_files lists (relative to build) all files that end up in an
 # external distribution
 dist_bins    	:= oslc
-dist_libs     	:= 
+dist_libs     	:= liboslcomp${SHLIBEXT}
 
 # include files that get included in the compiled distribution
-dist_includes	:= 
+dist_includes	:= oslcomp.h
 
 # make the public distro have a subdirectory in include,
 # to avoid name clashes
-# dist_include_dir := include/ProjectName
+dist_include_dir := include/OSL
 
 # docs files that get copied to dist
 dist_docs	:= 

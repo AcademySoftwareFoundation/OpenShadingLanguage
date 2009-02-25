@@ -19,6 +19,8 @@
 
 #include <boost/foreach.hpp>
 
+#include "OpenImageIO/dassert.h"
+
 #include "oslcomp_pvt.h"
 #include "ast.h"
 
@@ -424,6 +426,183 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
         error ("Cannot cast '%s' to '%s'", t.string().c_str(),
                m_typespec.string().c_str());
     return m_typespec;
+}
+
+
+
+TypeSpec
+ASTfunction_call::typecheck (TypeSpec expected)
+{
+    typecheck_children ();
+    return TypeSpec();
+}
+
+
+
+// FIXME -- should the type constructors be here?
+// FIXME -- spline, inversespline -- hard case!
+// FIXME -- regex, substr
+// FIXME -- light and shadow
+
+#define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
+#define NOISE_ARGS "ff", "fff", "fp", "fpf", "cf", "cff", "cp", "cpf", \
+                   "vf", "vff", "vp", "vpf"
+#define PNOISE_ARGS "fff", "fffff", "fpp", "fpfpf", \
+                    "cff", "cffff", "cpp", "cpfpf", \
+                    "vff", "vffff", "vpp", "vpfpf"
+#define DERIV_ARGS "ff", "vp", "vv", "vn", "cc"
+
+static const char * builtin_func_args [] = {
+
+    "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", NULL,
+    "abs", ANY_ONE_FLOAT_BASED, NULL,
+    "acos", ANY_ONE_FLOAT_BASED, NULL,
+    "area", "fp", NULL,
+    "arraylength", "i*[", NULL,
+    "asin", ANY_ONE_FLOAT_BASED, NULL,
+    "atan", ANY_ONE_FLOAT_BASED, NULL,
+    "atan2", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
+    "bump", "xf", "xsf", "xv", NULL,
+    "calculatenormal", "vp", NULL,
+    "ceil", ANY_ONE_FLOAT_BASED, NULL,
+    "cellnoise", NOISE_ARGS, NULL,
+    "clamp", "ffff", "cccc", "pppp", "vvvv", "nnnn", NULL,
+    "concat", "ss.", NULL,   // FIXME -- further checking
+    "cos", ANY_ONE_FLOAT_BASED, NULL,
+    "cosh", ANY_ONE_FLOAT_BASED, NULL,
+    "cross", "vvv", NULL,
+    "Du", DERIV_ARGS, NULL,
+    "Dv", DERIV_ARGS, NULL,
+    "degrees", "ff", NULL,
+    "deltau", DERIV_ARGS, NULL,
+    "deltav", DERIV_ARGS, NULL,
+    "determinant", "fm", NULL,
+    "displace", "xf", "xsf", "xv", NULL,
+    "distance", "fpp", "fppp", NULL,
+    "dot", "fvv", NULL,
+    "erf", "ff", NULL,
+    "erfc", "ff", NULL,
+    "error", "xs.", NULL,   // FIXME -- further checking
+    "exit", "x", NULL,
+    "exp", ANY_ONE_FLOAT_BASED, NULL,
+    "exp2", ANY_ONE_FLOAT_BASED, NULL,
+    "expm1", ANY_ONE_FLOAT_BASED, NULL,
+    "fabs", ANY_ONE_FLOAT_BASED, NULL,
+    "faceforward", "vvvv", "vvv", NULL,
+    "filterwidth", DERIV_ARGS, NULL,
+    "floor", ANY_ONE_FLOAT_BASED, NULL,
+    "fmod", ANY_ONE_FLOAT_BASED, NULL,
+    "format", "ss.", NULL,
+    "fprintf", "xs.", NULL,   // FIXME -- further checking
+    "fresnel", "xvvf", "xvvffvv", NULL,
+    "getattribute", "is?", NULL,  // FIXME -- further checking?
+    "getmessage", "iss?", NULL,  // FIXME -- further checking?
+    "gettextureinfo", "iss?", NULL,  // FIXME -- further checking?
+    "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,
+    "isfinite", "if", NULL,
+    "isindirectray", "i", NULL,
+    "isinf", "if", NULL,
+    "isnan", "if", NULL,
+    "isshadowray", "i", NULL,
+    "hash", NOISE_ARGS, NULL,
+    "hypot", "fff", "ffff", NULL,
+    "length", "fv", NULL,
+    "log", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
+    "log2", ANY_ONE_FLOAT_BASED, NULL,
+    "log10", ANY_ONE_FLOAT_BASED, NULL,
+    "luminance", "fc", NULL,
+    "max", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
+    "min", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
+    "mix", "ffff", "cccc", "pppp", "vvvv", "nnnn", 
+                   "cccf", "pppf", "vvvf", "nnnf", NULL,
+    "mod", ANY_ONE_FLOAT_BASED, NULL,
+    "noise", NOISE_ARGS, NULL,
+    "normalize", "vv", NULL,
+    "pnoise", NOISE_ARGS, NULL,
+    "pow", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
+    "printf", "xs.", NULL,   // FIXME -- further checking
+    "psnoise", NOISE_ARGS, NULL,
+    "radians", "ff", NULL,
+    "random", "f", "c", "p", "v", "n", NULL,
+    "raylevel", "i", NULL,
+    "reflect", "vvv", NULL,
+    "refract", "vvvf", NULL,
+    "rotate", "ppfpp", NULL,
+    "round", ANY_ONE_FLOAT_BASED, NULL,
+    "setmessage", "vs?", NULL,
+    "sign", ANY_ONE_FLOAT_BASED, NULL,
+    "sin", ANY_ONE_FLOAT_BASED, NULL,
+    "sinh", ANY_ONE_FLOAT_BASED, NULL,
+    "smoothstep", "ffff", NULL,
+    "snoise", NOISE_ARGS, NULL,
+    "sqrt", ANY_ONE_FLOAT_BASED, NULL,
+    "step", "fff", NULL,
+    "tan", ANY_ONE_FLOAT_BASED, NULL,
+    "tanh", ANY_ONE_FLOAT_BASED, NULL,
+    "texture", "fsffT", "fsffffffT","csffT", "csffffffT", 
+               "vsffT", "vsffffffT", NULL,
+    "transform", "psp", "vsv", "nsn", "pssp", "vssv", "nssn",
+                 "pmp", "vmv", "nmn", NULL,
+    "transformc", "csc", "cssc", NULL,
+    "transformu", "fsf", "fssf", NULL,
+    "transpose", "mm", NULL,
+    "trunc", ANY_ONE_FLOAT_BASED, NULL,
+    NULL
+#undef ANY_ONE_FLOAT_BASED
+#undef NOISE_ARGS
+#undef PNOISE_ARGS
+#undef DERIV_ARGS
+};
+
+
+void
+OSLCompilerImpl::initialize_builtin_funcs ()
+{
+    for (int i = 0;  builtin_func_args[i];  ++i) {
+        ustring funcname (builtin_func_args[i++]);
+        for ( ; builtin_func_args[i]; ++i) {
+            ustring poly (builtin_func_args[i]);
+            Symbol *last = symtab().clash (funcname);
+            ASSERT (last == NULL || last->symtype() == Symbol::SymTypeFunction);
+            TypeSpec rettype = type_from_code (poly.c_str());
+            FunctionSymbol *f = new FunctionSymbol (funcname, rettype);
+            f->nextpoly ((FunctionSymbol *)last);
+            f->argcodes (poly);
+            symtab().insert (f);
+        }
+    }
+}
+
+
+
+TypeSpec
+OSLCompilerImpl::type_from_code (const char *code, int *advance)
+{
+    TypeSpec t;
+    int i = 0;
+    switch (code[i]) {
+    case 'i' : t = TypeDesc::TypeInt;          break;
+    case 'f' : t = TypeDesc::TypeFloat;        break;
+    case 'c' : t = TypeDesc::TypeColor;        break;
+    case 'p' : t = TypeDesc::TypePoint;        break;
+    case 'v' : t = TypeDesc::TypeVector;       break;
+    case 'n' : t = TypeDesc::TypeNormal;       break;
+    case 'm' : t = TypeDesc::TypeMatrix;       break;
+    case 's' : t = TypeDesc::TypeString;       break;
+    case 'x' : t = TypeDesc (TypeDesc::VOID);  break;
+    default:
+        ASSERT (0);   // FIXME
+        if (advance)
+            *advance = 0;
+        return TypeSpec();
+    }
+    ++i;
+
+    // FIXME -- arrays, closures, structs
+
+    if (advance)
+        *advance = i;
+    return t;
 }
 
 

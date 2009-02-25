@@ -181,12 +181,17 @@ SymbolTable::print ()
         }
         std::cout << "\n";
     }
+
     std::cout << "Symbol table:\n";
     BOOST_FOREACH (const Symbol *s, m_allsyms) {
         if (s->is_structure())
             continue;
         std::cout << "\t" << s->mangled() << " : ";
-        if (s->typespec().is_structure()) {
+        if (s->is_function()) {
+            const FunctionSymbol *f = (const FunctionSymbol *) s;
+            std::cout << "function " << s->name() 
+                      << " (" << f->argcodes() << ") ";
+        } if (s->is_structure()) {
             std::cout << "struct " << s->typespec().structure() << " "
                       << m_structs[s->typespec().structure()]->name();
         } else {

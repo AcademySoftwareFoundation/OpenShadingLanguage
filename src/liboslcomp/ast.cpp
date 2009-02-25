@@ -167,17 +167,26 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
-    if (f) {
-        error ("\"%s\" already declared in this scope", name.c_str());
+    if (f && f->symtype() != Symbol::SymTypeFunction) {
+        error ("\"%s\" already declared in this scope as a ", name.c_str(),
+               f->typespec().string().c_str());
         // FIXME -- print the file and line of the other definition
+        f = NULL;
     }
+
+    // FIXME -- allow multiple function declarations, but only if they
+    // aren't the same polymorphic type.
+
     if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
         error ("\"%s\" : sorry, can't start with three underscores",
                name.c_str());
     }
-    m_sym = new Symbol (name, type, Symbol::SymTypeFunction, this);
+
+    m_sym = new FunctionSymbol (name, type, this);
+    func()->nextpoly ((FunctionSymbol *)f);
+
     oslcompiler->symtab().insert (m_sym);
-    oslcompiler->add_function (m_sym);
+//    oslcompiler->add_function (m_sym);
 }
 
 

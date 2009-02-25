@@ -244,6 +244,7 @@ public:
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
     ref statements () const { return child (2); }
+    FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -544,7 +545,9 @@ public:
     ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args);
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
+    FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
+
 private:
     ustring m_name;
     Symbol *m_sym;

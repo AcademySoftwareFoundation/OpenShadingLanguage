@@ -95,15 +95,24 @@ public:
 
     /// Register a symbol
     ///
-    void add_function (Symbol *sym) { m_allfuncs.push_back (sym); }
+//    void add_function (Symbol *sym) { m_allfuncs.push_back (sym); }
 
     TypeSpec current_typespec () const { return m_current_typespec; }
     void current_typespec (TypeSpec t) { m_current_typespec = t; }
     bool current_output () const { return m_current_output; }
     void current_output (bool b) { m_current_output = b; }
 
+    /// Given a pointer to a type code string that we use for argument
+    /// checking ("p", "v", etc.) return the TypeSpec of the first type
+    /// described by the string (UNKNOWN if it couldn't be recognized).
+    /// If 'advance' is non-NULL, set *advance to the number of
+    /// characters taken by the first code so the caller can advance
+    /// their pointer to the next code in the string.
+    TypeSpec type_from_code (const char *code, int *advance=NULL);
+
 private:
     void initialize_globals ();
+    void initialize_builtin_funcs ();
 
     oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
@@ -113,7 +122,7 @@ private:
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
-    SymbolList m_allfuncs;    ///< All function symbols, in decl order
+//    SymbolList m_allfuncs;    ///< All function symbols, in decl order
     bool m_verbose;           /// Verbose mode
     bool m_debug;             /// Debug mode
 };

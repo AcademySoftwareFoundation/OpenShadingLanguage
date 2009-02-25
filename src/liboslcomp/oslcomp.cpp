@@ -53,6 +53,7 @@ OSLCompilerImpl::OSLCompilerImpl (void)
       m_verbose(false), m_debug(false)
 {
     initialize_globals ();
+    initialize_builtin_funcs ();
 }
 
 

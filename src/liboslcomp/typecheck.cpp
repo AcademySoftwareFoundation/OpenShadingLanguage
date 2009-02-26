@@ -20,6 +20,7 @@
 #include <boost/foreach.hpp>
 
 #include "OpenImageIO/dassert.h"
+#include "OpenImageIO/strutil.h"
 
 #include "oslcomp_pvt.h"
 #include "ast.h"
@@ -63,6 +64,15 @@ ASTNode::typecheck_list (ref node, TypeSpec expected)
 
 
 
+TypeSpec
+ASTvariable_declaration::typecheck (TypeSpec expected)
+{
+    typecheck_children (m_typespec);
+    return m_typespec;
+}
+
+
+ 
 TypeSpec
 ASTvariable_ref::typecheck (TypeSpec expected)
 {
@@ -447,14 +457,12 @@ ASTNode::check_arglist (ASTNode::ref arg, const char *formals, bool coerce)
             // FIXME!
         }
 
-        // FIXME -- we aren't considering return type as a matching criteria!
-
         TypeSpec argtype = arg->typespec();
         int advance;
         TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
         formals += advance;
-        std::cerr << "\targ is " << argtype.string() 
-                  << ", formal is " << formaltype.string() << "\n";
+        // std::cerr << "\targ is " << argtype.string() 
+        //           << ", formal is " << formaltype.string() << "\n";
         if (argtype == formaltype)
             continue;   // ok, move on to next arg
         if (coerce && assignable (formaltype, argtype))
@@ -465,7 +473,27 @@ ASTNode::check_arglist (ASTNode::ref arg, const char *formals, bool coerce)
     }
     if (*formals && *formals != '*') // Non-* formals expected, no more actuals
         return false;
+
     return true;  // Is this safe?
+}
+
+
+
+TypeSpec
+ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
+{
+    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
+        const char *code = poly->argcodes().c_str();
+        int advance;
+        TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+        code += advance;
+        if (check_arglist (args(), code, coerce)) {
+            // Return types also must match if not coercible
+            if (coerce || expected == TypeSpec() || expected == returntype)
+                return returntype;
+        }
+    }
+    return TypeSpec();
 }
 
 
@@ -475,44 +503,55 @@ ASTfunction_call::typecheck (TypeSpec expected)
 {
     typecheck_children ();
 
-    std::cerr << "Matching " << m_name << ":\n";
-    // Loop over the polymorphic versions of the function, first looking
-    // for an exact match.
+    // Look for an exact match, including expected return type
+    m_typespec = typecheck_all_poly (expected, false);
+    if (m_typespec != TypeSpec())
+        return m_typespec;
+
+    // Now look for an exact match on args, but any assignable return type
+    if (expected != TypeSpec()) {
+        m_typespec = typecheck_all_poly (TypeSpec(), false);
+        if (m_typespec != TypeSpec())
+            return m_typespec;
+    }
+
+    // Now look for a coercible match of args, exact march on return type
+    m_typespec = typecheck_all_poly (expected, true);
+    if (m_typespec != TypeSpec())
+        return m_typespec;
+
+    // All that failed, try for a coercible match on everything
+    if (expected != TypeSpec()) {
+        m_typespec = typecheck_all_poly (TypeSpec(), true);
+        if (m_typespec != TypeSpec())
+            return m_typespec;
+    }
+
+    // Couldn't find any way to match any polymorphic version of the
+    // function that we know about.  OK, at least try for helpful error
+    // message.
+    std::string choices ("");
     for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
-        std::cerr << "  match versus " << poly->argcodes() << "\n";
-        
         const char *code = poly->argcodes().c_str();
         int advance;
         TypeSpec returntype = m_compiler->type_from_code (code, &advance);
         code += advance;
-
-        if (check_arglist (args(), code)) {
-            // A match!
-            std::cerr << "Exact match against " << poly->argcodes() << "\n";
-            return m_typespec = returntype;
-        }
+        if (choices.length())
+            choices += "\n";
+        choices += Strutil::format ("\t%s %s (%s)",
+                              returntype.string().c_str(), m_name.c_str(),
+                              m_compiler->typelist_from_code(code).c_str());
     }
 
-    // Now look for a coercable match.
-    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
-        std::cerr << "  match versus " << poly->argcodes() << "\n";
-        
-        const char *code = poly->argcodes().c_str();
-        int advance;
-        TypeSpec returntype = m_compiler->type_from_code (code, &advance);
-        code += advance;
-
-        if (check_arglist (args(), code, true)) {
-            // A match!
-            std::cerr << "Coerced match against " << poly->argcodes() << "\n";
-            return m_typespec = returntype;
-        }
+    std::string actualargs;
+    for (ASTNode::ref arg = args();  arg;  arg = arg->next()) {
+        if (actualargs.length())
+            actualargs += ", ";
+        actualargs += arg->typespec().string();
     }
 
-    // First, look for an exact match
-
-    // Now look for a coercable match
-
+    error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s", 
+           m_name.c_str(), actualargs.c_str(), choices.c_str());
     return TypeSpec();
 }
 

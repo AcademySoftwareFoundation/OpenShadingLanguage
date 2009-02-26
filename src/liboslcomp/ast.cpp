@@ -126,14 +126,13 @@ ASTNode::printchildren (int indentlevel) const
         if (! child(i))
             continue;
         indent (indentlevel);
-        if (childname(i)) {
+        if (childname(i))
             std::cout << "  " << childname(i);
-            if (typespec() != TypeSpec())
-                std::cout << "    (type: " << typespec().string() << ")";
-            std::cout << " :\n";
-        }
         else
-            std::cout << "  child " << i << " :\n";
+            std::cout << "  child " << i;
+        if (typespec() != TypeSpec() && ! child(i)->next())
+            std::cout << "    (type: " << typespec().string() << ")";
+        std::cout << " :\n";
         printlist (child(i), indentlevel+1);
     }
 }
@@ -517,7 +516,7 @@ ASTtypecast_expression::childname (size_t i) const
 
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
                                     ASTNode *args)
-    : ASTNode (function_call_node, comp, 0, args)
+    : ASTNode (function_call_node, comp, 0, args), m_name(name)
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {

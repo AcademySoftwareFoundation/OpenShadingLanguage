@@ -264,7 +264,7 @@ public:
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
-    // TypeSpec typecheck (TypeSpec expected); // Use the default
+    TypeSpec typecheck (TypeSpec expected);
 
     ref init () const { return child (0); }
 
@@ -555,6 +555,10 @@ public:
     ref args () const { return child (0); }
 
 private:
+    /// Typecheck all polymorphic versions, return UNKNOWN if no match was
+    /// found, or a real type if there was a match.
+    TypeSpec typecheck_all_poly (TypeSpec expected, bool coerce);
+
     ustring m_name;
     Symbol *m_sym;
 };
@@ -579,7 +583,7 @@ public:
     const char *nodetypename () const { return "literal"; }
     const char *childname (size_t i) const;
     void print (int indentlevel) const;
-    // TypeSpec typecheck (TypeSpec expected); // Use the default
+    TypeSpec typecheck (TypeSpec expected) { return m_typespec; }
 
 private:
     ustring m_s;

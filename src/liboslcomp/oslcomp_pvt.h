@@ -110,6 +110,10 @@ public:
     /// their pointer to the next code in the string.
     TypeSpec type_from_code (const char *code, int *advance=NULL);
 
+    /// Take a type code string (possibly containing many types)
+    /// and turn it into a human-readable string.
+    std::string typelist_from_code (const char *code);
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();

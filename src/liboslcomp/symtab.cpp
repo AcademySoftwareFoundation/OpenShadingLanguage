@@ -31,6 +31,34 @@ namespace pvt {   // OSL::pvt
 
 
 std::string
+TypeSpec::string () const
+{
+    std::string str;
+    if (is_structure())
+        str = Strutil::format ("struct %d", structure());
+    else {
+        // Substitute some special names
+        if (m_simple == TypeDesc::TypeColor)
+            str = "color";
+        else if (m_simple == TypeDesc::TypePoint)
+            str = "point";
+        else if (m_simple == TypeDesc::TypeVector)
+            str = "vector";
+        else if (m_simple == TypeDesc::TypeNormal)
+            str = "normal";
+        else if (m_simple == TypeDesc::TypeMatrix)
+            str = "matrix";
+        else
+            str = simpletype().c_str();
+    }
+    if (is_closure())
+        str += " closure";
+    return str;
+}
+
+
+
+std::string
 Symbol::mangled () const
 {
     // FIXME: De-alias
@@ -187,11 +215,7 @@ SymbolTable::print ()
         if (s->is_structure())
             continue;
         std::cout << "\t" << s->mangled() << " : ";
-        if (s->is_function()) {
-            const FunctionSymbol *f = (const FunctionSymbol *) s;
-            std::cout << "function " << s->name() 
-                      << " (" << f->argcodes() << ") ";
-        } if (s->is_structure()) {
+        if (s->is_structure()) {
             std::cout << "struct " << s->typespec().structure() << " "
                       << m_structs[s->typespec().structure()]->name();
         } else {
@@ -200,6 +224,14 @@ SymbolTable::print ()
         if (s->scope())
             std::cout << " (" << s->name() << " in scope " 
                       << s->scope() << ")";
+        if (s->is_function()) {
+            const FunctionSymbol *f = (const FunctionSymbol *) s;
+            const char *args = f->argcodes().c_str();
+            int advance = 0;
+            TypeSpec rettype = m_comp.type_from_code (args, &advance);
+            args += advance;
+            std::cout << " function (" << m_comp.typelist_from_code(args) << ") ";
+        }
         std::cout << "\n";
     }
     std::cout << "\n";

@@ -154,11 +154,11 @@ public:
 
     bool is_lvalue () const { return m_is_lvalue; }
 
-protected:
     /// Return a reference-counted pointer to the next node in the sequence.
     ///
     ref next () const { return m_next; }
 
+protected:
     /// Return the raw pointer to the next node in the sequence.  Use
     /// with caution!
     ASTNode *nextptr () const { return m_next.get(); }
@@ -192,6 +192,10 @@ protected:
     /// Call the print() method of all the children of this node.
     ///
     virtual void printchildren (int indentlevel = 0) const;
+
+    /// Type check a list (whose head is given by 'arg' against the list
+    /// of expected types given in encoded form by 'formals'.
+    bool check_arglist (ref arg, const char *formals, bool coerce=false);
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is
@@ -546,7 +550,9 @@ public:
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected);
+
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
+    ref args () const { return child (0); }
 
 private:
     ustring m_name;

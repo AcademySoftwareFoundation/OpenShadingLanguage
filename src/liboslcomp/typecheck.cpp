@@ -430,10 +430,89 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
 
 
 
+bool
+ASTNode::check_arglist (ASTNode::ref arg, const char *formals, bool coerce)
+{
+    for ( ;  arg;  arg = arg->next()) {
+        if (! *formals)   // More formal args, but no more actual args
+            return false;
+        if (*formals == '*')  // Will match anything left
+            return true;
+        if (*formals == '.') {  // Special case for token/value pairs
+            return false;
+            // FIXME!
+        }
+        if (*formals == '?') {
+            return false;
+            // FIXME!
+        }
+
+        // FIXME -- we aren't considering return type as a matching criteria!
+
+        TypeSpec argtype = arg->typespec();
+        int advance;
+        TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
+        formals += advance;
+        std::cerr << "\targ is " << argtype.string() 
+                  << ", formal is " << formaltype.string() << "\n";
+        if (argtype == formaltype)
+            continue;   // ok, move on to next arg
+        if (coerce && assignable (formaltype, argtype))
+            continue;
+
+        // anything that gets this far we don't consider a match
+        return false;
+    }
+    if (*formals && *formals != '*') // Non-* formals expected, no more actuals
+        return false;
+    return true;  // Is this safe?
+}
+
+
+
 TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
 {
     typecheck_children ();
+
+    std::cerr << "Matching " << m_name << ":\n";
+    // Loop over the polymorphic versions of the function, first looking
+    // for an exact match.
+    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
+        std::cerr << "  match versus " << poly->argcodes() << "\n";
+        
+        const char *code = poly->argcodes().c_str();
+        int advance;
+        TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+        code += advance;
+
+        if (check_arglist (args(), code)) {
+            // A match!
+            std::cerr << "Exact match against " << poly->argcodes() << "\n";
+            return m_typespec = returntype;
+        }
+    }
+
+    // Now look for a coercable match.
+    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
+        std::cerr << "  match versus " << poly->argcodes() << "\n";
+        
+        const char *code = poly->argcodes().c_str();
+        int advance;
+        TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+        code += advance;
+
+        if (check_arglist (args(), code, true)) {
+            // A match!
+            std::cerr << "Coerced match against " << poly->argcodes() << "\n";
+            return m_typespec = returntype;
+        }
+    }
+
+    // First, look for an exact match
+
+    // Now look for a coercable match
+
     return TypeSpec();
 }
 
@@ -458,7 +537,7 @@ static const char * builtin_func_args [] = {
     "abs", ANY_ONE_FLOAT_BASED, NULL,
     "acos", ANY_ONE_FLOAT_BASED, NULL,
     "area", "fp", NULL,
-    "arraylength", "i*[", NULL,
+    "arraylength", "i?[", NULL,
     "asin", ANY_ONE_FLOAT_BASED, NULL,
     "atan", ANY_ONE_FLOAT_BASED, NULL,
     "atan2", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
@@ -560,8 +639,13 @@ OSLCompilerImpl::initialize_builtin_funcs ()
 {
     for (int i = 0;  builtin_func_args[i];  ++i) {
         ustring funcname (builtin_func_args[i++]);
-        for ( ; builtin_func_args[i]; ++i) {
-            ustring poly (builtin_func_args[i]);
+        // Count the number of polymorphic versions
+        int npoly = 0;
+        for (npoly = 0;  builtin_func_args[i+npoly];  ++npoly) ;
+        // Now add them in reverse order, so the order in the table is
+        // the priority order for approximate matches.
+        for (int j = npoly-1;  j >= 0;  --j) {
+            ustring poly (builtin_func_args[i+j]);
             Symbol *last = symtab().clash (funcname);
             ASSERT (last == NULL || last->symtype() == Symbol::SymTypeFunction);
             TypeSpec rettype = type_from_code (poly.c_str());
@@ -570,6 +654,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
             f->argcodes (poly);
             symtab().insert (f);
         }
+        i += npoly;
     }
 }
 
@@ -590,19 +675,72 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     case 'm' : t = TypeDesc::TypeMatrix;       break;
     case 's' : t = TypeDesc::TypeString;       break;
     case 'x' : t = TypeDesc (TypeDesc::VOID);  break;
+    case 'C' : // color closure
+        t = TypeSpec (TypeDesc::TypeColor, true);
+        break;
+    case '?' : break; // anything will match, so keep 'UNKNOWN'
     default:
+        std::cerr << "Don't know how to decode type code '" 
+                  << code << "' " << (int)code[0] << "\n";
         ASSERT (0);   // FIXME
         if (advance)
-            *advance = 0;
+            *advance = 1;
         return TypeSpec();
     }
     ++i;
 
-    // FIXME -- arrays, closures, structs
+    if (code[i] == '[') {
+        ++i;
+        t.make_array (-1);   // signal arrayness, unknown length
+        if (isdigit(code[i])) {
+            t.make_array (atoi (code));
+            while (isdigit(code[i]))
+                ++i;
+            if (code[i] == ']')
+                ++i;
+        }
+    }
+
+    // FIXME -- closures, structs
 
     if (advance)
         *advance = i;
     return t;
+}
+
+
+
+std::string
+OSLCompilerImpl::typelist_from_code (const char *code)
+{
+    std::string ret;
+    while (*code) {
+        // Handle some special cases
+        int advance = 1;
+        if (ret.length())
+            ret += ", ";
+        if (*code == '.') {
+            ret += "...";
+        } else if (*code == 'T') {
+            ret += "...";
+        } else if (*code == '?') {
+            ret += "any";
+        } else {            
+            TypeSpec t = type_from_code (code, &advance);
+            ret += t.string();
+        }
+        code += advance;
+        if (*code == '[') {
+            ret += "[]";
+            ++code;
+            while (isdigit(*code))
+                ++code;
+            if (*code == ']')
+                ++code;
+        }
+    }
+
+    return ret;
 }
 
 

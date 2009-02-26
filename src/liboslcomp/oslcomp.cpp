@@ -48,7 +48,7 @@ OSLCompilerImpl *oslcompiler = NULL;
 
 
 OSLCompilerImpl::OSLCompilerImpl (void)
-    : m_lexer(NULL), m_err(false), 
+    : m_lexer(NULL), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_debug(false)
 {
@@ -190,33 +190,6 @@ OSLCompilerImpl::initialize_globals ()
     }
 }
 
-
-
-std::string
-TypeSpec::string () const
-{
-    std::string str;
-    if (is_structure())
-        str = Strutil::format ("struct %d", structure());
-    else {
-        // Substitute some special names
-        if (m_simple == TypeDesc::TypeColor)
-            str = "color";
-        else if (m_simple == TypeDesc::TypePoint)
-            str = "point";
-        else if (m_simple == TypeDesc::TypeVector)
-            str = "vector";
-        else if (m_simple == TypeDesc::TypeNormal)
-            str = "normal";
-        else if (m_simple == TypeDesc::TypeMatrix)
-            str = "matrix";
-        else
-            str = simpletype().c_str();
-    }
-    if (is_closure())
-        str += " closure";
-    return str;
-}
 
 
 }; // namespace pvt

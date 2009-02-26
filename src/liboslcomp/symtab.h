@@ -37,6 +37,7 @@ namespace OSL {
 namespace pvt {
 
 
+class OSLCompilerImpl;
 class ASTNode;  // forward declaration
 class ASTfunction_definition;
 
@@ -382,8 +383,8 @@ public:
     typedef hash_map<ustring, Symbol *,ustringHash> ScopeTable;
     typedef std::vector<ScopeTable> ScopeTableStack;
 
-    SymbolTable ()
-        : m_scopeid(-1), m_nextscopeid(0)
+    SymbolTable (OSLCompilerImpl &comp)
+        : m_comp(comp), m_scopeid(-1), m_nextscopeid(0)
     {
         m_scopetables.reserve (20);  // So unlikely to ever copy tables
         push ();                     // Create scope 0 -- global scope
@@ -442,6 +443,7 @@ public:
     void print ();
 
 private:
+    OSLCompilerImpl &m_comp;         ///< Back-reference to compiler
     SymbolList m_allsyms;            ///< Master list of all symbols
     StructList m_structs;            ///< All the structures we use
     ScopeTableStack m_scopetables;   ///< Stack of symbol scopes

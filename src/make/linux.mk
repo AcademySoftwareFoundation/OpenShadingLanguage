@@ -7,7 +7,7 @@
 
 
 
-CFLAGS += -DLINUX
+CFLAGS += -DLINUX -Wall
 
 ifdef DEBUG
 CFLAGS += -g

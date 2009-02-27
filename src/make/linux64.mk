@@ -7,7 +7,7 @@
 
 
 
-CFLAGS += -DLINUX -DLINUX64 
+CFLAGS += -DLINUX -DLINUX64 -Wall
 # 64-bit Linux should compile using PIC code
 CFLAGS += -fPIC
 

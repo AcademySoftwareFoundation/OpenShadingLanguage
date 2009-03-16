@@ -80,7 +80,6 @@ StructSpec::mangled () const
 Symbol *
 SymbolTable::find (ustring name, Symbol *last) const
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     ScopeTableStack::const_reverse_iterator scopelevel;
     scopelevel = m_scopetables.rbegin();
     if (last) {
@@ -107,7 +106,6 @@ SymbolTable::find (ustring name, Symbol *last) const
 Symbol * 
 SymbolTable::clash (ustring name) const
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     Symbol *s = find (name);
     return (s && s->scope() == scopeid()) ? s : NULL;
 }
@@ -117,7 +115,6 @@ SymbolTable::clash (ustring name) const
 void
 SymbolTable::insert (Symbol *sym)
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     DASSERT (sym != NULL);
     sym->scope (scopeid ());
     m_scopetables.back()[sym->name()] = sym;
@@ -129,7 +126,6 @@ SymbolTable::insert (Symbol *sym)
 int
 SymbolTable::new_struct (ustring name)
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     m_structs.push_back (new StructSpec (name, scopeid()));
     int structid = (int) m_structs.size() - 1;
     insert (new Symbol (name, TypeSpec ("",structid), Symbol::SymTypeType));
@@ -141,7 +137,6 @@ SymbolTable::new_struct (ustring name)
 void
 SymbolTable::add_struct_field (const TypeSpec &type, ustring name)
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     m_structs.back()->add_field (type, name);
 }
 
@@ -150,7 +145,6 @@ SymbolTable::add_struct_field (const TypeSpec &type, ustring name)
 void
 SymbolTable::push ()
 {
-    recursive_lock_guard guard (m_mutex);     // thread safety
     m_scopestack.push (m_scopeid);  // push old scope id on the scope stack
     m_scopeid = m_nextscopeid++;    // set to new scope id
     m_scopetables.resize (m_scopetables.size()+1); // push scope table
@@ -161,7 +155,6 @@ SymbolTable::push ()
 void
 SymbolTable::pop ()
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     m_scopetables.resize (m_scopetables.size()-1);
     ASSERT (! m_scopestack.empty());
     m_scopeid = m_scopestack.top ();
@@ -173,7 +166,6 @@ SymbolTable::pop ()
 void
 SymbolTable::delete_syms ()
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     for (SymbolList::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
         delete (*i);
     m_allsyms.clear ();
@@ -188,7 +180,6 @@ SymbolTable::delete_syms ()
 void
 SymbolTable::print ()
 {
-    recursive_lock_guard guard (m_mutex);  // thread safety
     if (m_structs.size()) {
         std::cout << "Structure table:\n";
         int structid = 0;

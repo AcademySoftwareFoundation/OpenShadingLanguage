@@ -394,9 +394,6 @@ public:
         delete_syms ();
     }
 
-    void lock () { m_mutex.lock (); }
-    void unlock () { m_mutex.unlock (); }
-
     /// Look up the symbol, starting with the innermost active scope and
     /// proceeding to successively outer scopes.  Return a pointer to
     /// the symbol record if found, NULL if not found in any active
@@ -422,7 +419,6 @@ public:
     /// Return the current scope ID
     ///
     int scopeid () const {
-        recursive_lock_guard guard (m_mutex);  // thread safety
         return m_scopeid;
     }
 
@@ -450,7 +446,6 @@ private:
     std::stack<int> m_scopestack;    ///< Stack of current scope IDs
     int m_scopeid;                   ///< Current scope ID
     int m_nextscopeid;               ///< Next unique scope ID
-    mutable recursive_mutex m_mutex; ///< Mutex for thread-safety
 };
 
 

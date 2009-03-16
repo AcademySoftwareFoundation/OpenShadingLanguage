@@ -39,7 +39,7 @@ local_ldflags := ${OPENIMAGEIO_LINK} ${LINK_BOOST}
 # 
 ${LEXC}: ${LEXL} ${GRAMH} ${COMPILER_HEADERS}
 	@ echo "  Compiling $@ ..."
-	${FLEX} --c++ -o $@ ${LEXL}
+	${FLEX} -+ -t ${LEXL} > $@
 
 ${LEXO}: ${LEXC} ${GRAMH}
 	@ ${CXX} ${CFLAGS} ${CINCL}${src_dir}/liboslcomp ${PROJECT_EXTRA_CXX} ${DASHC} ${LEXC} ${DASHO}$@

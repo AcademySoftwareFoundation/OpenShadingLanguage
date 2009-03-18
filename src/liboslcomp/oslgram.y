@@ -224,7 +224,8 @@ metadatum
                 {
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, lextype($1),
-                                                       ustring ($2), $3);
+                                                       ustring ($2), $3, false,
+                                                       true /* ismeta */);
                     var->make_meta (true);
                     $$ = var;
                 }
@@ -235,7 +236,8 @@ metadatum
                     TypeSpec t (simple, t.is_closure());
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
-                                                       ustring ($2), $4);
+                                                       ustring ($2), $4, false,
+                                                       true /* ismeata */);
                     var->make_meta (true);
                     $$ = var;
                 }

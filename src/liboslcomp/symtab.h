@@ -153,6 +153,12 @@ public:
         return m_simple == TypeDesc::TypeFloat && !is_structure() && !is_closure();
     }
 
+    /// Is it a simple scalar float?
+    ///
+    bool is_color () const {
+        return m_simple == TypeDesc::TypeColor && !is_structure() && !is_closure();
+    }
+
     /// Is it a simple string?
     ///
     bool is_string () const {
@@ -216,6 +222,12 @@ public:
     bool is_matrix () const {
         return ! is_structure() && ! is_closure() && 
             m_simple == TypeDesc::TypeMatrix;
+    }
+
+    /// Is it a color closure?
+    ///
+    bool is_color_closure () const {
+        return is_closure() && (m_simple == TypeDesc::TypeColor);
     }
 
     /// Types are equivalent if they are identical, or if both are

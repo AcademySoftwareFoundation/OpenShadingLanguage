@@ -89,6 +89,10 @@ public:
     ///
     virtual const char *nodetypename () const = 0;
 
+    /// What data type is this node?
+    ///
+    const TypeSpec &typespec () const { return m_typespec; }
+
     /// Name of the op, if any, or NULL.
     ///
     virtual const char *opname () const { return NULL; }
@@ -97,24 +101,20 @@ public:
     ///
     virtual const char *childname (size_t i) const = 0;
 
-    /// Type check the node, return its type.  Optionally an "expected type"
-    /// may be passed down, conveying any requirements or coercion.
-    /// The default (base class) implementation just type checks all the
-    /// child nodes and makes this node's type be the expected if it
-    /// is unknown, but doens't change it if it's not unknown.
+    /// Type check the node, return its type.  Optionally an "expected
+    /// type" may be passed down, conveying any requirements or
+    /// coercion.  The default (base class) implementation just type
+    /// checks all the child nodes and makes this node's type be the
+    /// expected if it is unknown, but doens't change it if it's not
+    /// unknown.
     virtual TypeSpec typecheck (TypeSpec expected = TypeSpec());
 
-    /// Type check all the children of this node.
-    ///
-    void typecheck_children (TypeSpec expected = TypeSpec());
-
-    /// Follow a list of nodes, type checking each in turn, and return
-    /// the type of the last one.
-    static TypeSpec typecheck_list (ref node, TypeSpec expected = TypeSpec());
-
-    /// What data type is this node?
-    ///
-    const TypeSpec &typespec () const { return m_typespec; }
+    /// Generate IR code for this node and its children, return the
+    /// symbol where the result is stored (if applicable, otherwise
+    /// NULL).  The optional 'dest' is a request for the caller to store
+    /// the results in a particular place (which it can't always do, of
+    /// course).
+    virtual Symbol *codegen (Symbol *dest = NULL) { }
 
     /// Append a new node (specified by raw pointer) onto the end of the
     /// sequence that *this belongs to.  Return *this.
@@ -193,6 +193,14 @@ protected:
     ///
     virtual void printchildren (int indentlevel = 0) const;
 
+    /// Follow a list of nodes, type checking each in turn, and return
+    /// the type of the last one.
+    static TypeSpec typecheck_list (ref node, TypeSpec expected = TypeSpec());
+
+    /// Type check all the children of this node.
+    ///
+    void typecheck_children (TypeSpec expected = TypeSpec());
+
     /// Type check a list (whose head is given by 'arg' against the list
     /// of expected types given in encoded form by 'formals'.
     bool check_arglist (ref arg, const char *formals, bool coerce=false);
@@ -260,19 +268,25 @@ class ASTvariable_declaration : public ASTNode
 {
 public:
     ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
-                             ustring name, ASTNode *init, bool isparam=false);
+                             ustring name, ASTNode *init, bool isparam=false,
+                             bool ismeta=false);
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
 
     ref init () const { return child (0); }
+    ref meta () const { return child (1); }
 
     void make_param (bool param=true) { m_isparam = param; }
     void make_output (bool out=true) { m_isoutput = out; }
     void make_meta (bool meta=true) { m_ismetadata = meta; }
 
-    void add_meta (ASTNode *meta) { m_meta = meta; }
+    void add_meta (ASTNode *meta) {
+        while (nchildren() < 2)
+            addchild (NULL);
+        m_children[1] = meta;  // beware changing the order!
+    }
 
 private:
     ustring m_name;
@@ -280,7 +294,6 @@ private:
     bool m_isparam;
     bool m_isoutput;
     bool m_ismetadata;
-    ref m_meta;
 };
 
 
@@ -549,6 +562,7 @@ public:
     ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args);
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
+    const char *opname () const;
     TypeSpec typecheck (TypeSpec expected);
 
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }

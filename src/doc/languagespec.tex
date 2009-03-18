@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 % email should go here
  \bigskip \\
 }
-\date{{\large Date: 16 January, 2009}}
+\date{{\large Date: 10 March, 2009}}
 
 
 \include{macros}
@@ -1782,7 +1782,7 @@ operation & result & ~ \\
 \colorclosure\ {\ce *} \float & \colorclosure & scaling \\[0.5ex]
 \hline
 \colorclosure\ {\ce +} \colorclosure & \colorclosure & component-wise addition \\[0.5ex]
-\colorclosure\ {\ce -} \colorclosure & \colorclosure & component-wise subtraction \\[0.5ex]
+% \colorclosure\ {\ce -} \colorclosure & \colorclosure & component-wise subtraction \\[0.5ex]
 \hline
 \end{tabular}
 
@@ -1950,7 +1950,7 @@ Examples of declaration and use of structures:
     };
 
     ray r;   // Declare a structure
-    ray s = { point(0,0,0), vector(0,0,1), 1e6 };  // declare and initialize
+    ray s = { point(0,0,0), vector(0,0,1) };  // declare and initialize
     r.pos = point (1, 0, 0);  // Assign to one field
 \end{code}
 
@@ -3522,6 +3522,7 @@ implemented as follows:
 \apiend
 
 \apiitem{\colorclosure\ {\ce reflection} () \\
+\colorclosure\ {\ce reflection} (float angle) \\
 \colorclosure\ {\ce reflection} (string source) \\
 \colorclosure\ {\ce reflection} (string source, float angle)}
 \indexapi{reflection()}
@@ -3545,6 +3546,7 @@ reflection direction, from which reflection information will be sampled
 \apiend
 
 \apiitem{\colorclosure\ {\ce reflection} (vector R) \\
+\colorclosure\ {\ce reflection} (vector R, float angle) \\
 \colorclosure\ {\ce reflection} (string source, vector R) \\
 \colorclosure\ {\ce reflection} (string source, vector R, float angle)}
 \indexapi{reflection()}
@@ -3562,6 +3564,7 @@ strategies.  Use with caution!
 
 
 \apiitem{\colorclosure\ {\ce refraction} (float eta) \\
+\colorclosure\ {\ce refraction} (float eta, float angle) \\
 \colorclosure\ {\ce refraction} (string source, float eta) \\
 \colorclosure\ {\ce refraction} (string source, float eta, float angle)}
 \indexapi{refraction()}
@@ -3591,9 +3594,10 @@ refraction direction, from which refraction information will be sampled
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce refraction} (vector R) \\
-\colorclosure\ {\ce refraction} (string source, vector R) \\
-\colorclosure\ {\ce refraction} (string source, vector R, float angle)}
+\apiitem{\colorclosure\ {\ce refraction} (vector R, float eta) \\
+\colorclosure\ {\ce refraction} (vector R, float eta, float angle) \\
+\colorclosure\ {\ce refraction} (string source, vector R, float eta) \\
+\colorclosure\ {\ce refraction} (string source, vector R, float eta, float angle)}
 \indexapi{refraction()}
 
 These alternative versions of {\cf refraction()} explicitly specify a

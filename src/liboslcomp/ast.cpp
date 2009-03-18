@@ -216,10 +216,10 @@ ASTfunction_declaration::print (int indentlevel) const
 ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
                                                   ustring name, ASTNode *init,
-                                                  bool isparam)
-    : ASTNode (variable_declaration_node, comp, 0, init),
+                                                  bool isparam, bool ismeta)
+    : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
       m_name(name), m_sym(NULL), 
-      m_isparam(isparam), m_isoutput(false), m_ismetadata(false)
+      m_isparam(isparam), m_isoutput(false), m_ismetadata(ismeta)
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
@@ -232,7 +232,8 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                name.c_str());
     }
     m_sym = new Symbol (name, type, Symbol::SymTypeLocal);
-    oslcompiler->symtab().insert (m_sym);
+    if (! m_ismetadata)
+        oslcompiler->symtab().insert (m_sym);
 }
 
 
@@ -248,7 +249,7 @@ ASTvariable_declaration::nodetypename () const
 const char *
 ASTvariable_declaration::childname (size_t i) const
 {
-    static const char *name[] = { "initializer" };
+    static const char *name[] = { "initializer", "metadata" };
     return name[i];
 }
 
@@ -533,6 +534,14 @@ ASTfunction_call::childname (size_t i) const
 {
     static const char *name[] = { "parameters" };
     return name[i];
+}
+
+
+
+const char *
+ASTfunction_call::opname () const
+{
+    return m_name.c_str ();
 }
 
 

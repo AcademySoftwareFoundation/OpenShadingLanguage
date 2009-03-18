@@ -313,6 +313,24 @@ ASTbinary_expression::typecheck (TypeSpec expected)
         return TypeSpec ();
     }
 
+    // Special for closures -- just a few cases to worry about
+    if (l.is_color_closure() || r.is_color_closure()) {
+        if (m_op == Add) {
+            if (l.is_color_closure() && r.is_color_closure())
+                return m_typespec = l;
+        }
+        if (m_op == Mul) {
+            if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
+                return m_typespec = l;
+            if (r.is_color_closure() && (l.is_color() || l.is_int_or_float()))
+                return m_typespec = r;
+        }
+        // If we got this far, it's an op that's not allowed
+        error ("Not allowed: '%s %s %s'",
+               l.string().c_str(), opname(), r.string().c_str());
+        return TypeSpec ();
+    }
+
     switch (m_op) {
     case Sub :
     case Add :
@@ -562,6 +580,23 @@ ASTfunction_call::typecheck (TypeSpec expected)
 // FIXME -- regex, substr
 // FIXME -- light and shadow
 
+// Key:
+//    x - void (only used for first char to indicate void return type)
+//    i - int
+//    f - float
+//    c - color
+//    p - point
+//    v - vector
+//    n - normal
+//    m - matrix
+//    s - string
+//    ? - one arg of any type
+//    X[] - an array of X's of any size
+//    X[int] - an array of X's of definite length
+//    * - 0 or more args of any type
+//    . - 2*n args of alternating string/value
+//    C - color closure
+
 #define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
 #define NOISE_ARGS "ff", "fff", "fp", "fpf", "cf", "cff", "cp", "cpf", \
                    "vf", "vff", "vp", "vpf"
@@ -576,7 +611,7 @@ static const char * builtin_func_args [] = {
     "abs", ANY_ONE_FLOAT_BASED, NULL,
     "acos", ANY_ONE_FLOAT_BASED, NULL,
     "area", "fp", NULL,
-    "arraylength", "i?[", NULL,
+    "arraylength", "i?[]", NULL,
     "asin", ANY_ONE_FLOAT_BASED, NULL,
     "atan", ANY_ONE_FLOAT_BASED, NULL,
     "atan2", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
@@ -635,7 +670,7 @@ static const char * builtin_func_args [] = {
                    "cccf", "pppf", "vvvf", "nnnf", NULL,
     "mod", ANY_ONE_FLOAT_BASED, NULL,
     "noise", NOISE_ARGS, NULL,
-    "normalize", "vv", NULL,
+    "normalize", "vv", "nn", NULL,
     "pnoise", NOISE_ARGS, NULL,
     "pow", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
     "printf", "xs.", NULL,   // FIXME -- further checking
@@ -665,6 +700,18 @@ static const char * builtin_func_args [] = {
     "transformu", "fsf", "fssf", NULL,
     "transpose", "mm", NULL,
     "trunc", ANY_ONE_FLOAT_BASED, NULL,
+
+    "ambient", "C", "Cn", NULL,
+    "cooktorrance", "Cf", NULL,
+    "diffuse", "C", NULL,
+    "orennayar", "Cf", NULL,
+    "reflection", "C", "Cf", "Cs", "Csf", "Cv", "Cvf", "Csv", "Csvf", NULL,
+    "refraction", "Cf", "Cff", "Csf", "Csff", 
+                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
+    "specular", "Cf", NULL,
+    "subsurface", "C.", NULL,
+    "translucence", "C", NULL,
+    "ward", "Cvvff", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

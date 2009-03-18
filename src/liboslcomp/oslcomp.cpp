@@ -129,6 +129,12 @@ OSLCompilerImpl::compile (const std::string &filename,
         bool parseerr = error_encountered();
         delete m_lexer;
 
+        // All done with the input, close the files
+        oslcompiler = NULL;
+        fb.close ();
+        pclose (cpppipe);
+        cpppipe = NULL;
+
         if (! error_encountered()) {
             oslcompiler->shader()->typecheck ();
         }
@@ -140,10 +146,10 @@ OSLCompilerImpl::compile (const std::string &filename,
                 oslcompiler->shader()->print ();
         }
 
-        // All done, close the files
-        oslcompiler = NULL;
-        fb.close ();
-        pclose (cpppipe);
+        if (! error_encountered()) {
+            oslcompiler->shader()->codegen ();
+        }
+ 
     }
 
     return ! error_encountered();

@@ -218,6 +218,10 @@ protected:
     void emitcode (const char *opname, Symbol *arg0=NULL, 
                    Symbol *arg1=NULL, Symbol *arg2=NULL);
 
+    /// Emit a single IR opcode.
+    ///
+    void emitcode (const char *opname, size_t nargs, Symbol **args);
+
 protected:
     NodeType m_nodetype;          ///< Type of node this is
     ref m_next;                   ///< Next node in the list
@@ -246,6 +250,7 @@ public:
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
     // TypeSpec typecheck (TypeSpec expected); // Use the default
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
@@ -319,6 +324,7 @@ public:
     const char *childname (size_t i) const { return ""; } // no children
     void print (int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -486,7 +492,9 @@ public:
     const char *nodetypename () const { return "assign_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    const char *opword () const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref var () const { return child (0); }
     ref expr () const { return child (1); }
@@ -504,6 +512,7 @@ public:
     const char *nodetypename () const { return "unary_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    const char *opword () const;
     TypeSpec typecheck (TypeSpec expected);
 
     ref expr () const { return child (0); }
@@ -522,7 +531,9 @@ public:
     const char *nodetypename () const { return "binary_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    const char *opword () const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref left () const { return child (0); }
     ref right () const { return child (1); }
@@ -577,6 +588,7 @@ public:
     const char *childname (size_t i) const;
     const char *opname () const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
     ref args () const { return child (0); }

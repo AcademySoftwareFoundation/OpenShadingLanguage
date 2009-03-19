@@ -432,6 +432,26 @@ ASTassign_expression::opname () const
 
 
 const char *
+ASTassign_expression::opword () const
+{
+    switch (m_op) {
+    case Assign     : return "assign";
+    case Mul        : return "mul";
+    case Div        : return "div";
+    case Add        : return "add";
+    case Sub        : return "sub";
+    case BitwiseAnd : return "band";
+    case BitwiseOr  : return "bor";
+    case BitwiseXor : return "bxor";
+    case ShiftLeft  : return "shl";
+    case ShiftRight : return "shr";
+    default: ASSERT(0);
+    }
+}
+
+
+
+const char *
 ASTunary_expression::childname (size_t i) const
 {
     static const char *name[] = { "expression" };
@@ -450,6 +470,22 @@ ASTunary_expression::opname () const
     case Sub        : return "-";
     case LogicalNot : return "!";
     case BitwiseNot : return "~";
+    default: ASSERT(0);
+    }
+}
+
+
+
+const char *
+ASTunary_expression::opword () const
+{
+    switch (m_op) {
+    case Decr       : return "dec";
+    case Incr       : return "inc";
+    case Add        : return "add";
+    case Sub        : return "neg";
+    case LogicalNot : return "not";
+    case BitwiseNot : return "bnot";
     default: ASSERT(0);
     }
 }
@@ -487,6 +523,34 @@ ASTbinary_expression::opname () const
     case LogicalOr    : return "||";
     case ShiftLeft    : return "<<";
     case ShiftRight   : return ">>";
+    default: ASSERT(0);
+    }
+}
+
+
+
+const char *
+ASTbinary_expression::opword () const
+{
+    switch (m_op) {
+    case Mul          : return "mul";
+    case Div          : return "div";
+    case Add          : return "add";
+    case Sub          : return "sub";
+    case Mod          : return "mod";
+    case Equal        : return "eq";
+    case NotEqual     : return "neq";
+    case Greater      : return "gt";
+    case GreaterEqual : return "ge";
+    case Less         : return "lt";
+    case LessEqual    : return "le";
+    case BitwiseAnd   : return "band";
+    case BitwiseOr    : return "bor";
+    case BitwiseXor   : return "bxor";
+    case LogicalAnd   : return "and";
+    case LogicalOr    : return "or";
+    case ShiftLeft    : return "shl";
+    case ShiftRight   : return "shr";
     default: ASSERT(0);
     }
 }

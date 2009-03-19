@@ -50,7 +50,7 @@ OSLCompilerImpl *oslcompiler = NULL;
 OSLCompilerImpl::OSLCompilerImpl (void)
     : m_lexer(NULL), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
-      m_verbose(false), m_debug(false)
+      m_verbose(false), m_debug(false), m_next_temp(0)
 {
     initialize_globals ();
     initialize_builtin_funcs ();

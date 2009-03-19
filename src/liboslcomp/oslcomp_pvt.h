@@ -36,7 +36,7 @@ class ASTNode;
 ///
 class IROpcode {
 public:
-    IROpcode (ustring op);
+    IROpcode (ustring op, ASTNode *node) : m_op(op), m_astnode(node) { }
     void add_arg (Symbol *arg) { m_args.push_back (arg->dealias()); }
     size_t nargs () const { return m_args.size(); }
 
@@ -131,6 +131,13 @@ public:
     /// and turn it into a human-readable string.
     std::string typelist_from_code (const char *code);
 
+    /// Emit a single IR opcode.
+    ///
+    void emitcode (const char *opname, size_t nargs, Symbol **args,
+                   ASTNode *node);
+
+    Symbol *make_temporary (const TypeSpec &type);
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -147,6 +154,7 @@ private:
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
     std::vector<IROpcode> m_ircode;  ///< Generated IR code
+    int m_next_temp;          ///< Next temporary symbol index
 };
 
 

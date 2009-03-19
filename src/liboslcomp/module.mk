@@ -8,7 +8,7 @@
 local_name := liboslcomp
 
 # Name of all source files in this directory
-local_src := ast.cpp oslcomp.cpp symtab.cpp typecheck.cpp
+local_src := ast.cpp codegen.cpp oslcomp.cpp symtab.cpp typecheck.cpp
 #sllex.l slgram.y
 
 # Extra static libs needed to compile this binary (leave blank if this

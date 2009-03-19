@@ -114,7 +114,7 @@ public:
     /// NULL).  The optional 'dest' is a request for the caller to store
     /// the results in a particular place (which it can't always do, of
     /// course).
-    virtual Symbol *codegen (Symbol *dest = NULL) { }
+    virtual Symbol *codegen (Symbol *dest = NULL);
 
     /// Append a new node (specified by raw pointer) onto the end of the
     /// sequence that *this belongs to.  Return *this.
@@ -204,6 +204,19 @@ protected:
     /// Type check a list (whose head is given by 'arg' against the list
     /// of expected types given in encoded form by 'formals'.
     bool check_arglist (ref arg, const char *formals, bool coerce=false);
+
+    /// Follow a list of nodes, generating code for each in turn.
+    ///
+    static void codegen_list (ref node);
+
+    /// Generate code for all the children of this node.
+    ///
+    void codegen_children ();
+
+    /// Emit a single IR opcode.
+    ///
+    void emitcode (const char *opname, Symbol *arg0=NULL, 
+                   Symbol *arg1=NULL, Symbol *arg2=NULL);
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is

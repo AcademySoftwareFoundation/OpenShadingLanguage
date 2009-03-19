@@ -130,7 +130,6 @@ OSLCompilerImpl::compile (const std::string &filename,
         delete m_lexer;
 
         // All done with the input, close the files
-        oslcompiler = NULL;
         fb.close ();
         pclose (cpppipe);
         cpppipe = NULL;
@@ -150,6 +149,7 @@ OSLCompilerImpl::compile (const std::string &filename,
             oslcompiler->shader()->codegen ();
         }
  
+        oslcompiler = NULL;
     }
 
     return ! error_encountered();

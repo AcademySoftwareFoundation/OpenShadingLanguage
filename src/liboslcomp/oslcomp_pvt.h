@@ -32,6 +32,23 @@ namespace pvt {
 class ASTNode;
 
 
+/// Intermediate Represenatation opcode
+///
+class IROpcode {
+public:
+    IROpcode (ustring op);
+    void add_arg (Symbol *arg) { m_args.push_back (arg->dealias()); }
+    size_t nargs () const { return m_args.size(); }
+
+private:
+    ustring m_op;                   ///< Name of opcode
+    std::vector<Symbol *> m_args;   ///< Arguments
+    ASTNode *m_astnode;             ///< AST node that generated this op
+};
+
+
+
+
 class OSLCompilerImpl : public OSL::OSLCompiler {
 public:
     OSLCompilerImpl (void);
@@ -126,9 +143,10 @@ private:
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
-//    SymbolList m_allfuncs;    ///< All function symbols, in decl order
-    bool m_verbose;           /// Verbose mode
-    bool m_debug;             /// Debug mode
+//    SymbolList m_allfuncs;      ///< All function symbols, in decl order
+    bool m_verbose;           ///< Verbose mode
+    bool m_debug;             ///< Debug mode
+    std::vector<IROpcode> m_ircode;  ///< Generated IR code
 };
 
 

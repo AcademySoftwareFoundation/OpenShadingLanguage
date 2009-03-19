@@ -320,7 +320,8 @@ public:
     };
 
     Symbol (ustring n, const TypeSpec &t, SymType s, ASTNode *node=NULL) 
-        : m_name(n), m_typespec(t), m_symtype(s), m_scope(0), m_node(node)
+        : m_name(n), m_typespec(t), m_symtype(s), m_scope(0), m_node(node),
+          m_alias(NULL)
     { }
     ~Symbol () { }
 
@@ -340,12 +341,20 @@ public:
 
     bool is_structure () const { return m_symtype == Symbol::SymTypeType; }
 
+    Symbol *dealias () const {
+        Symbol *s = const_cast<Symbol *>(this);
+        while (s->m_alias)
+            s = s->m_alias;
+        return s;
+    }
+
 protected:
     ustring m_name;
     TypeSpec m_typespec;
     SymType m_symtype;
     int m_scope;
     ASTNode *m_node;
+    Symbol *m_alias;
 };
 
 

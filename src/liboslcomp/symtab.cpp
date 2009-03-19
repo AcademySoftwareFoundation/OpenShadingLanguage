@@ -13,9 +13,6 @@
 
 #include <vector>
 #include <string>
-#include <fstream>
-#include <cstdio>
-#include <streambuf>
 
 #include <boost/foreach.hpp>
 

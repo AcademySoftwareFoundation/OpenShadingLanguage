@@ -149,8 +149,25 @@ void
 ASTshader_declaration::print (int indentlevel) const
 {
     indent (indentlevel);
-    std::cout << nodetypename() << " \"" << m_shadername << "\"\n";
+    std::cout << nodetypename() << " " << shadertypename() 
+              << " \"" << m_shadername << "\"\n";
     printchildren (indentlevel);
+}
+
+
+
+const char *
+ASTshader_declaration::shadertypename () const
+{
+    switch (m_op) {
+    case ShadTypeGeneric:      return ("shader");
+    case ShadTypeSurface:      return ("surface");
+    case ShadTypeDisplacement: return ("displacement");
+    case ShadTypeVolume:       return ("volume");
+    case ShadTypeLight:        return ("light");
+    default:
+        ASSERT(0);
+    }
 }
 
 

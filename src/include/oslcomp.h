@@ -37,6 +37,10 @@ public:
     /// Return true if ok, false if the compile failed.
     virtual bool compile (const std::string &filename,
                           const std::vector<std::string> &options) = 0;
+
+    /// Generate the name of our compiled output based on the name of
+    /// the input file.
+    virtual std::string output_filename (const std::string &inputfilename) = 0;
 };
 
 

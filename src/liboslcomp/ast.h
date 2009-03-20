@@ -255,6 +255,9 @@ public:
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
     ref statements () const { return child (2); }
+    ustring shadername () const { return m_shadername; }
+    const char *shadertypename () const;
+
 private:
     ustring m_shadername;
 };
@@ -292,6 +295,7 @@ public:
     const char *childname (size_t i) const;
     void print (int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref init () const { return child (0); }
     ref meta () const { return child (1); }

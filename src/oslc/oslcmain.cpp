@@ -60,16 +60,15 @@ main (int argc, const char *argv[])
         else {
             boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());
             bool ok = compiler->compile (argv[a], args);
-            if (ok)
+            if (ok) {
                 std::cout << "Compiled " << argv[a] << " -> " 
-                          << " FIXME\n";
-            else {
+                          << compiler->output_filename(argv[a]) << "\n";
+            } else {
                 std::cout << "FAILED " << argv[a] << "\n";
                 return EXIT_FAILURE;
             }
         }
     }
-
 
     return EXIT_SUCCESS;
 }

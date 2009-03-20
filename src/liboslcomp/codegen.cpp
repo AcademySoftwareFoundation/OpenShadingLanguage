@@ -49,7 +49,7 @@ OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
 Symbol *
 OSLCompilerImpl::make_temporary (const TypeSpec &type)
 {
-    ustring name = ustring::format ("___temp_%d", ++m_next_temp);
+    ustring name = ustring::format ("$tmp%d", ++m_next_temp);
     Symbol *s = new Symbol (name, type, Symbol::SymTypeTemp);
     symtab().insert (s);
     return s;
@@ -136,6 +136,19 @@ ASTassign_expression::codegen (Symbol *dest)
     }
 
     return dest;
+}
+
+
+
+Symbol *
+ASTvariable_declaration::codegen (Symbol *)
+{
+    if (init()) {
+        Symbol *dest = init()->codegen (m_sym);
+        if (dest != m_sym)
+            emitcode ("assign", m_sym, dest);
+    }        
+    return m_sym;
 }
 
 

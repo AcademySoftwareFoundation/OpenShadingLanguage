@@ -39,6 +39,9 @@ public:
     IROpcode (ustring op, ASTNode *node) : m_op(op), m_astnode(node) { }
     void add_arg (Symbol *arg) { m_args.push_back (arg->dealias()); }
     size_t nargs () const { return m_args.size(); }
+    Symbol *arg (int i) const { return m_args[i]; }
+    ASTNode *node () const { return m_astnode; }
+    const char *opname () const { return m_op.c_str(); }
 
 private:
     ustring m_op;                   ///< Name of opcode
@@ -47,12 +50,14 @@ private:
 };
 
 
+typedef std::vector<IROpcode> IROpcodeVec;
+
 
 
 class OSLCompilerImpl : public OSL::OSLCompiler {
 public:
-    OSLCompilerImpl (void);
-    virtual ~OSLCompilerImpl (void) { }
+    OSLCompilerImpl ();
+    virtual ~OSLCompilerImpl ();
 
     /// Fully compile a shader located in 'filename', with the command-line
     /// options ("-I" and the like) in the options vector.
@@ -138,9 +143,17 @@ public:
 
     Symbol *make_temporary (const TypeSpec &type);
 
+    std::string output_filename (const std::string &inputfilename);
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
+    void write_oso_file (const std::string &outfilename);
+    void oso (const char *fmt, ...);
+    ASTshader_declaration *shader_decl () const {
+        return dynamic_cast<ASTshader_declaration *>(m_shader.get());
+    }
+    std::string retrieve_source (ustring filename, int line);
 
     oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
@@ -153,8 +166,12 @@ private:
 //    SymbolList m_allfuncs;      ///< All function symbols, in decl order
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
-    std::vector<IROpcode> m_ircode;  ///< Generated IR code
+    IROpcodeVec m_ircode;     ///< Generated IR code
     int m_next_temp;          ///< Next temporary symbol index
+    FILE *m_osofile;          ///< Open .oso file for output
+    FILE *m_sourcefile;       ///< Open file handle for retrieve_source
+    ustring m_last_sourcefile;///< Last filename for retrieve_source
+    int m_last_sourceline;    ///< Last line read for retrieve_source
 };
 
 

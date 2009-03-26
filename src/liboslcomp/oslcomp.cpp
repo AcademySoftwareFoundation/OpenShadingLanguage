@@ -232,6 +232,57 @@ OSLCompilerImpl::output_filename (const std::string &inputfilename)
 
 
 void
+OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
+{
+    const ASTvariable_declaration *metavar = dynamic_cast<const ASTvariable_declaration *>(metanode);
+    ASSERT (metavar);
+    Symbol *metasym = metavar->sym();
+    ASSERT (metasym);
+    TypeSpec ts = metasym->typespec();
+    oso ("%%meta{%s,%s,", ts.string().c_str(), metasym->name().c_str());
+    const ASTNode *init = metavar->init().get();
+    ASSERT (init);
+    if (ts.is_string() && init->nodetype() == ASTNode::literal_node)
+        oso ("\"%s\"", ((const ASTliteral *)init)->strval());
+    else if (ts.is_int() && init->nodetype() == ASTNode::literal_node)
+        oso ("%d", ((const ASTliteral *)init)->intval());
+    else if (ts.is_float() && init->nodetype() == ASTNode::literal_node)
+        oso ("%g", ((const ASTliteral *)init)->floatval());
+    else {
+        std::cout << "Error, don't know how to print metadata " << ts.string() << "\n";
+        ASSERT (0);  // FIXME
+    }
+    oso ("} ");
+}
+
+
+
+void
+OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
+{
+    oso ("%s\t%s\t%s", sym->symtype_shortname(),
+         sym->typespec().string().c_str(), sym->mangled().c_str());
+
+    int hints = 0;
+    if (sym->node() &&
+          sym->node()->nodetype() == ASTNode::variable_declaration_node) {
+        ASTvariable_declaration *v = dynamic_cast<ASTvariable_declaration *>(sym->node());
+        ASSERT (v);
+        for (ASTNode::ref m = v->meta();  m;  m = m->next()) {
+            if (hints++ == 0)
+                oso ("\t");
+            write_oso_metadata (m.get());
+        }
+    }
+
+    // FIXME -- print default values, if constant
+
+    oso ("\n");
+}
+
+
+
+void
 OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 {
     ASSERT (m_osofile == NULL);
@@ -253,9 +304,24 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 
     oso ("\n");
 
-    // FIXME -- Output params
-
-    // FIXME -- output all non-param symbols
+    // Output params, so they are first
+    for (SymbolList::const_iterator s = symtab().symbegin();
+             s != symtab().symend();  ++s) {
+        if ((*s)->symtype() == Symbol::SymTypeParam ||
+                (*s)->symtype() == Symbol::SymTypeOutputParam) {
+            write_oso_symbol (*s);
+        }
+    }
+    // Output globals, locals, temps, const
+    for (SymbolList::const_iterator s = symtab().symbegin();
+             s != symtab().symend();  ++s) {
+        if ((*s)->symtype() == Symbol::SymTypeLocal ||
+                (*s)->symtype() == Symbol::SymTypeTemp ||
+                (*s)->symtype() == Symbol::SymTypeGlobal ||
+                (*s)->symtype() == Symbol::SymTypeConst) {
+            write_oso_symbol (*s);
+        }
+    }
 
     // FIXME -- output all opcodes
     int lastline = -1;
@@ -271,15 +337,16 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         }
 
         oso ("\t%s", op->opname());
+        if (op->nargs())
+            oso (strlen(op->opname()) < 8 ? "\t\t" : "\t");
         for (size_t i = 0;  i < op->nargs();  ++i) {
-            oso ("%c%s", (i ? ' ' : '\t'),
-                 op->arg(i)->dealias()->mangled().c_str());
+            oso ("%s ", op->arg(i)->dealias()->mangled().c_str());
         }
         bool firsthint = true;
         if (op->node()) {
             if (op->node()->sourcefile() != lastfile) {
                 lastfile = op->node()->sourcefile();
-                oso ("%c%%filename{%s}", firsthint ? '\t' : ' ', lastfile.c_str());
+                oso ("%c%%filename{\"%s\"}", firsthint ? '\t' : ' ', lastfile.c_str());
                 firsthint = false;
             }
             if (op->node()->sourceline() != lastline) {
@@ -299,7 +366,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 
 
 void
-OSLCompilerImpl::oso (const char *fmt, ...)
+OSLCompilerImpl::oso (const char *fmt, ...) const
 {
     // FIXME -- might be nice to let this save to a memory buffer, not
     // just a file.

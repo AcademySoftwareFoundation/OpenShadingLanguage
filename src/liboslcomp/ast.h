@@ -310,6 +310,8 @@ public:
         m_children[1] = meta;  // beware changing the order!
     }
 
+    Symbol *sym () const { return m_sym; }
+
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -627,6 +629,10 @@ public:
     const char *childname (size_t i) const;
     void print (int indentlevel) const;
     TypeSpec typecheck (TypeSpec expected) { return m_typespec; }
+
+    const char *strval () const { return m_s.c_str(); }
+    int intval () const { return m_i; }
+    float floatval () const { return m_typespec.is_int() ? (float)m_i : m_f; }
 
 private:
     ustring m_s;

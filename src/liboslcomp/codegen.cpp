@@ -34,14 +34,14 @@ void
 OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
                            ASTNode *node)
 {
-    std::cout << "\temit " << opname;
+//    std::cout << "\temit " << opname;
     m_ircode.push_back (IROpcode (ustring (opname), node));
     for (size_t i = 0;  i < nargs;  ++i) {
         if (args[i])
             m_ircode.back().add_arg (args[i]);
-        std::cout << " " << (args[i] ? args[i]->name() : ustring("<null>"));
+//        std::cout << " " << (args[i] ? args[i]->name() : ustring("<null>"));
     }
-    std::cout << "\n";
+//    std::cout << "\n";
 }
 
 

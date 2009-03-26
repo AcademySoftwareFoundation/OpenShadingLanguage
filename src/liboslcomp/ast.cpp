@@ -245,7 +245,8 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         error ("\"%s\" : sorry, can't start with three underscores",
                name.c_str());
     }
-    m_sym = new Symbol (name, type, Symbol::SymTypeLocal);
+    Symbol::SymType symtype = isparam ? Symbol::SymTypeParam : Symbol::SymTypeLocal;
+    m_sym = new Symbol (name, type, symtype, this);
     if (! m_ismetadata)
         oslcompiler->symtab().insert (m_sym);
 }

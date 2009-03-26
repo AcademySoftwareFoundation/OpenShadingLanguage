@@ -144,7 +144,7 @@ public:
     /// Is it a simple scalar int?
     ///
     bool is_int () const {
-        return m_simple == TypeDesc::INT && !is_structure() && !is_closure();
+        return m_simple == TypeDesc::TypeInt && !is_structure() && !is_closure();
     }
 
     /// Is it a simple scalar float?
@@ -315,7 +315,8 @@ typedef std::vector<StructSpec *> StructList;
 class Symbol {
 public:
     enum SymType {
-        SymTypeParam, SymTypeLocal, SymTypeTemp, SymTypeGlobal, 
+        SymTypeParam, SymTypeOutputParam,
+        SymTypeLocal, SymTypeTemp, SymTypeGlobal, SymTypeConst,
         SymTypeFunction, SymTypeType
     };
 
@@ -337,6 +338,8 @@ public:
 
     void scope (int s) { m_scope = s; }
 
+    ASTNode *node () const { return m_node; }
+
     bool is_function () const { return m_symtype == Symbol::SymTypeFunction; }
 
     bool is_structure () const { return m_symtype == Symbol::SymTypeType; }
@@ -346,6 +349,12 @@ public:
         while (s->m_alias)
             s = s->m_alias;
         return s;
+    }
+
+    static const char *symtype_shortname (SymType s);
+
+    const char *symtype_shortname () const {
+        return symtype_shortname(m_symtype);
     }
 
 protected:
@@ -458,6 +467,11 @@ public:
     /// Dump the whole symbol table to stdout for debugging purposes.
     ///
     void print ();
+
+    SymbolList::iterator symbegin () { return m_allsyms.begin(); }
+    const SymbolList::const_iterator symbegin () const { return m_allsyms.begin(); }
+    SymbolList::iterator symend () { return m_allsyms.end(); }
+    const SymbolList::const_iterator symend () const { return m_allsyms.end(); }
 
 private:
     OSLCompilerImpl &m_comp;         ///< Back-reference to compiler

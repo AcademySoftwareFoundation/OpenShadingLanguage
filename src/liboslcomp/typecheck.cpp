@@ -65,6 +65,10 @@ TypeSpec
 ASTvariable_declaration::typecheck (TypeSpec expected)
 {
     typecheck_children (m_typespec);
+    if (init() && ! assignable(m_typespec, init()->typespec()))
+        error ("can't assign '%s' to %s %s",
+               init()->typespec().string().c_str(),
+               m_typespec.string().c_str(), m_name.c_str());
     return m_typespec;
 }
 

@@ -148,8 +148,12 @@ public:
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
+
     void write_oso_file (const std::string &outfilename);
-    void oso (const char *fmt, ...);
+    void write_oso_symbol (const Symbol *sym) const;
+    void write_oso_metadata (const ASTNode *metanode) const;
+    void oso (const char *fmt, ...) const;
+
     ASTshader_declaration *shader_decl () const {
         return dynamic_cast<ASTshader_declaration *>(m_shader.get());
     }

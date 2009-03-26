@@ -31,25 +31,25 @@ std::string
 TypeSpec::string () const
 {
     std::string str;
+    if (is_closure())
+        str += "closure ";
     if (is_structure())
-        str = Strutil::format ("struct %d", structure());
+        str += Strutil::format ("struct %d", structure());
     else {
         // Substitute some special names
         if (m_simple == TypeDesc::TypeColor)
-            str = "color";
+            str += "color";
         else if (m_simple == TypeDesc::TypePoint)
-            str = "point";
+            str += "point";
         else if (m_simple == TypeDesc::TypeVector)
-            str = "vector";
+            str += "vector";
         else if (m_simple == TypeDesc::TypeNormal)
-            str = "normal";
+            str += "normal";
         else if (m_simple == TypeDesc::TypeMatrix)
-            str = "matrix";
+            str += "matrix";
         else
             str = simpletype().c_str();
     }
-    if (is_closure())
-        str += " closure";
     return str;
 }
 
@@ -61,6 +61,17 @@ Symbol::mangled () const
     // FIXME: De-alias
     return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
         : m_name.string();
+}
+
+
+
+const char *
+Symbol::symtype_shortname (SymType s)
+{
+    ASSERT ((int)s >= 0 && (int)s < (int)SymTypeType);
+    static const char *names[] = { "param", "oparam", "local", "local",
+                                   "global", "const", "func" };
+    return names[(int)s];
 }
 
 

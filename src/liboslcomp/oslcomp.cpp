@@ -53,8 +53,8 @@ OSLCompilerImpl *oslcompiler = NULL;
 OSLCompilerImpl::OSLCompilerImpl ()
     : m_lexer(NULL), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
-      m_verbose(false), m_debug(false), m_next_temp(0), m_osofile(NULL),
-      m_sourcefile(NULL), m_last_sourceline(0)
+      m_verbose(false), m_debug(false), m_next_temp(0), m_next_const(0),
+      m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0)
 {
     initialize_globals ();
     initialize_builtin_funcs ();
@@ -248,8 +248,11 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
         oso ("%d", ((const ASTliteral *)init)->intval());
     else if (ts.is_float() && init->nodetype() == ASTNode::literal_node)
         oso ("%g", ((const ASTliteral *)init)->floatval());
+    // FIXME -- what about type constructors?
     else {
-        std::cout << "Error, don't know how to print metadata " << ts.string() << "\n";
+        std::cout << "Error, don't know how to print metadata " 
+                  << ts.string() << " with node type " 
+                  << init->nodetypename() << "\n";
         ASSERT (0);  // FIXME
     }
     oso ("} ");
@@ -326,8 +329,15 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     // FIXME -- output all opcodes
     int lastline = -1;
     ustring lastfile;
-    oso ("code main\n");
+    ustring lastmethod ("___uninitialized___");
     for (IROpcodeVec::iterator op = m_ircode.begin(); op != m_ircode.end();  ++op) {
+        if (lastmethod != op->method()) {
+            oso ("code %s\n", op->method().c_str());
+            lastmethod = op->method();
+            lastfile = ustring();
+            lastline = -1;
+        }
+
         if (m_debug && op->node()) {
             ustring file = op->node()->sourcefile();
             int line = op->node()->sourceline();

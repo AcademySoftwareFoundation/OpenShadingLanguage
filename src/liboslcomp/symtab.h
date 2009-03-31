@@ -368,6 +368,10 @@ protected:
 
 
 
+typedef std::vector<Symbol *> SymbolList;
+
+
+
 /// Subclass of Symbol used just for functions, which are different
 /// because they can be polymorphic, and also need to carry around more
 /// information than other symbols.
@@ -385,13 +389,33 @@ public:
     void argcodes (ustring args) { m_argcodes = args; }
     ustring argcodes () const { return m_argcodes; }
 
-protected:
+private:
     ustring m_argcodes;              ///< Encoded arg types
     FunctionSymbol *m_nextpoly;      ///< Next polymorphic version
 };
 
 
-typedef std::vector<Symbol *> SymbolList;
+
+/// Subclass of Symbol used just for constants, which are different
+/// because they need to carry around their value.
+class ConstantSymbol : public Symbol {
+public:
+    ConstantSymbol (ustring n, ustring val)
+        : Symbol(n, TypeDesc::TypeString, Symbol::SymTypeConst), m_s(val) { }
+    ConstantSymbol (ustring n, int val)
+        : Symbol(n, TypeDesc::TypeInt, Symbol::SymTypeConst), m_i(val) { }
+    ConstantSymbol (ustring n, float val)
+        : Symbol(n, TypeDesc::TypeFloat, Symbol::SymTypeConst), m_f(val) { }
+
+    ustring strval () const { return m_s; }
+    int intval () const { return m_i; }
+    float floatval () const { return m_typespec.is_int() ? (float)m_i : m_f; }
+
+private:
+    ustring m_s;
+    int m_i;
+    float m_f;
+};
 
 
 

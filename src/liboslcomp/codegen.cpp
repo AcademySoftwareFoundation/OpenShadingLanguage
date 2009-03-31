@@ -35,7 +35,7 @@ OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
                            ASTNode *node)
 {
 //    std::cout << "\temit " << opname;
-    m_ircode.push_back (IROpcode (ustring (opname), node));
+    m_ircode.push_back (IROpcode (ustring (opname), node, m_codegenmethod));
     for (size_t i = 0;  i < nargs;  ++i) {
         if (args[i])
             m_ircode.back().add_arg (args[i]);
@@ -52,6 +52,57 @@ OSLCompilerImpl::make_temporary (const TypeSpec &type)
     ustring name = ustring::format ("$tmp%d", ++m_next_temp);
     Symbol *s = new Symbol (name, type, Symbol::SymTypeTemp);
     symtab().insert (s);
+    return s;
+}
+
+
+
+Symbol *
+OSLCompilerImpl::make_constant (ustring val)
+{
+    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+        if (sym->typespec().is_string() && sym->strval() == val)
+            return sym;
+    }
+    // It's not a constant we've added before
+    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ConstantSymbol *s = new ConstantSymbol (name, val);
+    symtab().insert (s);
+    m_const_syms.push_back (s);
+    return s;
+}
+
+
+
+Symbol *
+OSLCompilerImpl::make_constant (int val)
+{
+    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+        if (sym->typespec().is_int() && sym->intval() == val)
+            return sym;
+    }
+    // It's not a constant we've added before
+    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ConstantSymbol *s = new ConstantSymbol (name, val);
+    symtab().insert (s);
+    m_const_syms.push_back (s);
+    return s;
+}
+
+
+
+Symbol *
+OSLCompilerImpl::make_constant (float val)
+{
+    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+        if (sym->typespec().is_float() && sym->floatval() == val)
+            return sym;
+    }
+    // It's not a constant we've added before
+    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ConstantSymbol *s = new ConstantSymbol (name, val);
+    symtab().insert (s);
+    m_const_syms.push_back (s);
     return s;
 }
 
@@ -112,8 +163,17 @@ ASTNode::codegen_list (ref node)
 Symbol *
 ASTshader_declaration::codegen (Symbol *dest)
 {
-    // FIXME -- formals
+    for (ref f = formals();  f;  f = f->next()) {
+        ASSERT (f->nodetype() == ASTNode::variable_declaration_node);
+        ASTvariable_declaration *v = (ASTvariable_declaration *) f.get();
+        if (v->init()) {
+            m_compiler->codegen_method (v->name());
+            v->codegen ();
+        }
+        // FIXME -- we don't need code for simple constants
+    }
 
+    m_compiler->codegen_method (ustring ("main"));
     codegen_list (statements());
     return NULL;
 }
@@ -191,6 +251,22 @@ ASTfunction_call::codegen (Symbol *dest)
     }
     emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
     return dest;
+}
+
+
+
+Symbol *
+ASTliteral::codegen (Symbol *dest)
+{
+    TypeSpec t = typespec();
+    if (t.is_string())
+        return m_compiler->make_constant (ustring(strval()));
+    if (t.is_int())
+        return m_compiler->make_constant (intval());
+    if (t.is_float())
+        return m_compiler->make_constant (floatval());
+    ASSERT (0 && "Don't know how to generate code for this literal");
+    return NULL;
 }
 
 

@@ -36,17 +36,20 @@ class ASTNode;
 ///
 class IROpcode {
 public:
-    IROpcode (ustring op, ASTNode *node) : m_op(op), m_astnode(node) { }
+    IROpcode (ustring op, ASTNode *node, ustring method)
+        : m_op(op), m_astnode(node), m_method(method) { }
     void add_arg (Symbol *arg) { m_args.push_back (arg->dealias()); }
     size_t nargs () const { return m_args.size(); }
     Symbol *arg (int i) const { return m_args[i]; }
     ASTNode *node () const { return m_astnode; }
     const char *opname () const { return m_op.c_str(); }
+    ustring method () const { return m_method; }
 
 private:
     ustring m_op;                   ///< Name of opcode
     std::vector<Symbol *> m_args;   ///< Arguments
     ASTNode *m_astnode;             ///< AST node that generated this op
+    ustring m_method;               ///< Which param or method this code is for
 };
 
 
@@ -141,7 +144,25 @@ public:
     void emitcode (const char *opname, size_t nargs, Symbol **args,
                    ASTNode *node);
 
+    /// Specify that subsequent opcodes are for a particular method
+    ///
+    void codegen_method (ustring method) { m_codegenmethod = method; }
+
+    /// Make a temporary symbol of the given type.
+    ///
     Symbol *make_temporary (const TypeSpec &type);
+
+    /// Make a constant string symbol
+    ///
+    Symbol *make_constant (ustring s);
+
+    /// Make a constant int symbol
+    ///
+    Symbol *make_constant (int i);
+
+    /// Make a constant float symbol
+    ///
+    Symbol *make_constant (float f);
 
     std::string output_filename (const std::string &inputfilename);
 
@@ -172,10 +193,13 @@ private:
     bool m_debug;             ///< Debug mode
     IROpcodeVec m_ircode;     ///< Generated IR code
     int m_next_temp;          ///< Next temporary symbol index
+    int m_next_const;         ///< Next const symbol index
+    std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
     FILE *m_osofile;          ///< Open .oso file for output
     FILE *m_sourcefile;       ///< Open file handle for retrieve_source
     ustring m_last_sourcefile;///< Last filename for retrieve_source
     int m_last_sourceline;    ///< Last line read for retrieve_source
+    ustring m_codegenmethod;  ///< Current method we're generating code for
 };
 
 

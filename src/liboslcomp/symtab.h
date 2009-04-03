@@ -314,36 +314,60 @@ typedef std::vector<StructSpec *> StructList;
 /// information about it.
 class Symbol {
 public:
+    /// Kinds of symbols
+    ///
     enum SymType {
         SymTypeParam, SymTypeOutputParam,
         SymTypeLocal, SymTypeTemp, SymTypeGlobal, SymTypeConst,
         SymTypeFunction, SymTypeType
     };
 
-    Symbol (ustring n, const TypeSpec &t, SymType s, ASTNode *node=NULL) 
-        : m_name(n), m_typespec(t), m_symtype(s), m_scope(0), m_node(node),
-          m_alias(NULL)
+    Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
+            ASTNode *declaration_node=NULL) 
+        : m_name(name), m_typespec(datatype), m_symtype(symtype),
+          m_scope(0), m_node(declaration_node), m_alias(NULL)
     { }
-    ~Symbol () { }
+    virtual ~Symbol () { }
 
+    /// The symbol's (unmangled) name, guaranteed unique only within the
+    /// symbol's declaration scope.
     ustring name () const { return m_name; }
 
+    /// The symbol's name, mangled to incorporate the scope so it will be
+    /// a globally unique name.
     std::string mangled () const;
 
+    /// Data type of this symbol.
+    ///
     const TypeSpec &typespec () const { return m_typespec; }
 
+    /// Kind of symbol this is (param, local, etc.)
+    ///
     SymType symtype () const { return m_symtype; }
 
+    /// Numerical ID of the scope in which this symbol was declared.
+    ///
     int scope () const { return m_scope; }
 
+    /// Set the scope of this symbol to s.
+    ///
     void scope (int s) { m_scope = s; }
 
+    /// Return teh AST node containing the declaration of this symbol.
+    /// Use with care!
     ASTNode *node () const { return m_node; }
 
+    /// Is this symbol a function?
+    ///
     bool is_function () const { return m_symtype == Symbol::SymTypeFunction; }
 
+    /// Is this symbol a structure?
+    ///
     bool is_structure () const { return m_symtype == Symbol::SymTypeType; }
 
+    /// Return a ptr to the symbol that this really refers to, tracing
+    /// aliases back all the way until it finds a symbol that isn't an
+    /// alias for anything else.
     Symbol *dealias () const {
         Symbol *s = const_cast<Symbol *>(this);
         while (s->m_alias)
@@ -351,19 +375,24 @@ public:
         return s;
     }
 
+    /// Return a string representation ("param", "global", etc.) of the
+    /// SymType s.
     static const char *symtype_shortname (SymType s);
 
+    /// Return a string representation ("param", "global", etc.) of this
+    /// symbol.
     const char *symtype_shortname () const {
         return symtype_shortname(m_symtype);
     }
 
 protected:
-    ustring m_name;
-    TypeSpec m_typespec;
-    SymType m_symtype;
-    int m_scope;
-    ASTNode *m_node;
-    Symbol *m_alias;
+    ustring m_name;             ///< Symbol name (unmangled)
+    TypeSpec m_typespec;        ///< Data type of the symbol
+    SymType m_symtype;          ///< Kind of symbol (param, local, etc.)
+    int m_scope;                ///< Scope where this symbol was declared
+    ASTNode *m_node;            ///< Ptr to the declaration of this symbol
+    Symbol *m_alias;            ///< Another symbol that this is an alias for
+    bool m_const_initializer;   ///< initializer is a constant expression
 };
 
 

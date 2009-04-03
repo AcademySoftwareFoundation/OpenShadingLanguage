@@ -261,15 +261,102 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
 
 
 void
+OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
+{
+    ASSERT (sym);
+    if (sym->typespec().is_string())
+        oso ("\"%s\"", sym->strval().c_str());
+    else if (sym->typespec().is_int())
+        oso ("%d", sym->intval());
+    else if (sym->typespec().is_float())
+        oso ("%g", sym->floatval());
+    else {
+        ASSERT (0 && "Only know how to output const vals that are single int, float, string");
+    }
+}
+
+
+
+void
+OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) const
+{
+    Symbol *sym = node->sym();
+    TypeSpec type = sym->typespec();
+
+    // FIXME -- this only works for single values or arrays made of
+    // literals.  Needs to be seriously beefed up.
+
+    for (ASTNode::ref init = node->init();  init;  init = init->next()) {
+        ASTliteral *lit = dynamic_cast<ASTliteral *>(init.get());
+        if (type.is_int()) {
+            if (lit && lit->typespec().is_int())
+                oso ("%d ", lit->intval());
+            else
+                oso ("0 ");  // FIXME?
+        } else if (type.is_float()) {
+            if (lit && lit->typespec().is_int())
+                oso ("%d ", lit->intval());
+            else if (lit && lit->typespec().is_float())
+                oso ("%g ", lit->floatval());
+            else
+                oso ("0 ");  // FIXME?
+        } else if (type.is_triple()) {
+            float f = 0;
+            if (lit && lit->typespec().is_int())
+                f = lit->intval();
+            else if (lit && lit->typespec().is_float())
+                f = lit->floatval();
+            else
+                f = 0;  // FIXME?
+            oso ("%g %g %g ", f, f, f);
+        } else if (type.is_matrix()) {
+            float f = 0;
+            if (lit && lit->typespec().is_int())
+                f = lit->intval();
+            else if (lit && lit->typespec().is_float())
+                f = lit->floatval();
+            else
+                f = 0;  // FIXME?
+            oso ("%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g ",
+                 f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
+        } else if (type.is_string()) {
+            if (lit && lit->typespec().is_string())
+                oso ("\"%s\" ", lit->strval());
+            else
+                oso ("\"\" ");  // FIXME?
+        }
+        else {
+            ASSERT (0 && "help with initializer");
+        }
+    }
+}
+
+
+
+void
 OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
 {
     oso ("%s\t%s\t%s", sym->symtype_shortname(),
          sym->typespec().string().c_str(), sym->mangled().c_str());
 
+    ASTvariable_declaration *v = NULL;
+    if (sym->node())
+        v = dynamic_cast<ASTvariable_declaration *>(sym->node());
+
+    // Print default values
+    if (sym->symtype() == Symbol::SymTypeConst) {
+        oso ("\t");
+        write_oso_const_value (dynamic_cast<const ConstantSymbol *>(sym));
+        oso ("\t");
+    } else if (v && (sym->symtype() == Symbol::SymTypeParam ||
+                    sym->symtype() == Symbol::SymTypeOutputParam)) {
+        oso ("\t");
+        write_oso_formal_default (v);
+        oso ("\t");
+    }
+
     int hints = 0;
-    if (sym->node() &&
-          sym->node()->nodetype() == ASTNode::variable_declaration_node) {
-        ASTvariable_declaration *v = dynamic_cast<ASTvariable_declaration *>(sym->node());
+    if (v) {
         ASSERT (v);
         for (ASTNode::ref m = v->meta();  m;  m = m->next()) {
             if (hints++ == 0)
@@ -277,8 +364,6 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
             write_oso_metadata (m.get());
         }
     }
-
-    // FIXME -- print default values, if constant
 
     oso ("\n");
 }

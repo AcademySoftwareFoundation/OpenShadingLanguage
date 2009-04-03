@@ -171,6 +171,8 @@ private:
     void initialize_builtin_funcs ();
 
     void write_oso_file (const std::string &outfilename);
+    void write_oso_const_value (const ConstantSymbol *sym) const;
+    void write_oso_formal_default (const ASTvariable_declaration *node) const;
     void write_oso_symbol (const Symbol *sym) const;
     void write_oso_metadata (const ASTNode *metanode) const;
     void oso (const char *fmt, ...) const;

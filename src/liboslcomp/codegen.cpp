@@ -167,10 +167,14 @@ ASTshader_declaration::codegen (Symbol *dest)
         ASSERT (f->nodetype() == ASTNode::variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *) f.get();
         if (v->init()) {
+            // If the initializer is a single literal, we will output
+            // it as a constant in the symbol definition, no need for ops.
+            if (v->init()->nodetype() == literal_node && ! v->init()->next())
+                continue;
+
             m_compiler->codegen_method (v->name());
             v->codegen ();
         }
-        // FIXME -- we don't need code for simple constants
     }
 
     m_compiler->codegen_method (ustring ("main"));

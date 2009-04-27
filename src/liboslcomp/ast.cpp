@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
@@ -106,31 +107,35 @@ ASTNode::error (const char *format, ...)
 
 
 void
-ASTNode::print (int indentlevel) const 
+ASTNode::print (std::ostream &out, int indentlevel) const 
 {
-    indent (indentlevel);
-    std::cout << nodetypename() << " : " << (opname() ? opname() : "") 
-              << "    type: " << typespec().string() << "\n";
-    printchildren (indentlevel);
+    indent (out, indentlevel);
+    out << "(" << nodetypename() << " : " 
+        << "    (type: " << typespec().string() << ") "
+        << (opname() ? opname() : "") << "\n";
+    printchildren (out, indentlevel);
+    indent (out, indentlevel);
+    out << ")\n";
 }
 
 
 
 void
-ASTNode::printchildren (int indentlevel) const 
+ASTNode::printchildren (std::ostream &out, int indentlevel) const 
 {
     for (size_t i = 0;  i < m_children.size();  ++i) {
         if (! child(i))
             continue;
-        indent (indentlevel);
+        indent (out, indentlevel);
         if (childname(i))
-            std::cout << "  " << childname(i);
+            out << "  " << childname(i);
         else
-            std::cout << "  child " << i;
+            out << "  child" << i;
+        out << ": ";
         if (typespec() != TypeSpec() && ! child(i)->next())
-            std::cout << "    (type: " << typespec().string() << ")";
-        std::cout << " :\n";
-        printlist (child(i), indentlevel+1);
+            out << " (type: " << typespec().string() << ")";
+        out << "\n";
+        printlist (out, child(i), indentlevel+1);
     }
 }
 
@@ -146,12 +151,14 @@ ASTshader_declaration::childname (size_t i) const
 
 
 void
-ASTshader_declaration::print (int indentlevel) const
+ASTshader_declaration::print (std::ostream &out, int indentlevel) const
 {
-    indent (indentlevel);
-    std::cout << nodetypename() << " " << shadertypename() 
+    indent (out, indentlevel);
+    out << "(" << nodetypename() << " " << shadertypename() 
               << " \"" << m_shadername << "\"\n";
-    printchildren (indentlevel);
+    printchildren (out, indentlevel);
+    indent (out, indentlevel);
+    out << ")\n";
 }
 
 
@@ -214,15 +221,15 @@ ASTfunction_declaration::childname (size_t i) const
 
 
 void
-ASTfunction_declaration::print (int indentlevel) const
+ASTfunction_declaration::print (std::ostream &out, int indentlevel) const
 {
-    indent (indentlevel);
-    std::cout << nodetypename() << " " << m_sym->mangled();
+    indent (out, indentlevel);
+    out << nodetypename() << " " << m_sym->mangled();
     if (m_sym->scope())
-        std::cout << " (" << m_sym->name() 
+        out << " (" << m_sym->name() 
                   << " in scope " << m_sym->scope() << ")";
-    std::cout << "\n";
-    printchildren (indentlevel);
+    out << "\n";
+    printchildren (out, indentlevel);
 }
 
 
@@ -271,17 +278,21 @@ ASTvariable_declaration::childname (size_t i) const
 
 
 void
-ASTvariable_declaration::print (int indentlevel) const
+ASTvariable_declaration::print (std::ostream &out, int indentlevel) const
 {
-    indent (indentlevel);
-    std::cout << nodetypename() << " " 
+    indent (out, indentlevel);
+    out << "(" << nodetypename() << " " 
               << m_sym->typespec().string() << " " 
               << m_sym->mangled();
+#if 0
     if (m_sym->scope())
-        std::cout << " (" << m_sym->name() 
+        out << " (" << m_sym->name() 
                   << " in scope " << m_sym->scope() << ")";
-    std::cout << "\n";
-    printchildren (indentlevel);
+#endif
+    out << "\n";
+    printchildren (out, indentlevel);
+    indent (out, indentlevel);
+    out << ")\n";
 }
 
 
@@ -302,13 +313,13 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
 
 
 void
-ASTvariable_ref::print (int indentlevel) const
+ASTvariable_ref::print (std::ostream &out, int indentlevel) const
 {
-    indent (indentlevel);
-    std::cout << nodetypename() << " " 
-              << m_sym->typespec().string() << " " 
-              << m_sym->mangled() << "\n";
-    printchildren (indentlevel);
+    indent (out, indentlevel);
+    out << "(" << nodetypename() 
+        << " (type: " << m_sym->typespec().string() << ") " 
+        << m_sym->mangled() << ")\n";
+    DASSERT (nchildren() == 0);
 }
 
 
@@ -350,11 +361,11 @@ ASTstructselect::childname (size_t i) const
 
 
 void
-ASTstructselect::print (int indentlevel) const
+ASTstructselect::print (std::ostream &out, int indentlevel) const
 {
-    ASTNode::print (indentlevel);
-    indent (indentlevel+1);
-    std::cout << "select " << field() << "\n";
+    ASTNode::print (out, indentlevel);
+    indent (out, indentlevel+1);
+    out << "select " << field() << "\n";
 }
 
 
@@ -634,18 +645,17 @@ ASTliteral::childname (size_t i) const
 
 
 void
-ASTliteral::print (int indentlevel) const
+ASTliteral::print (std::ostream &out, int indentlevel) const
 {
-    indent (indentlevel);
-    std::cout << nodetypename() << " " 
-              << m_typespec.string() << " ";
+    indent (out, indentlevel);
+    out << "(" << nodetypename() << " (type: " << m_typespec.string() << ") ";
     if (m_typespec.is_int())
-        std::cout << m_i;
+        out << m_i;
     else if (m_typespec.is_float())
-        std::cout << m_f;
+        out << m_f;
     else if (m_typespec.is_string())
-        std::cout << "\"" << m_s << "\"";
-    std::cout << "\n";
+        out << "\"" << m_s << "\"";
+    out << ")\n";
 }
 
 

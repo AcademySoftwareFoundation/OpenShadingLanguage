@@ -79,7 +79,9 @@ public:
 
     virtual ~ASTNode () { }
 
-    virtual void print (int indentlevel = 0) const;
+    /// Print a text description of this node (and its children) to the
+    /// console, for debugging.
+    virtual void print (std::ostream &out, int indentlevel = 0) const;
 
     /// What type of node is this?
     ///
@@ -163,16 +165,16 @@ protected:
     /// with caution!
     ASTNode *nextptr () const { return m_next.get(); }
 
-    void indent (int indentlevel=0) const {
+    void indent (std::ostream &out, int indentlevel=0) const {
         while (indentlevel--)
-            std::cout << "    ";
+            out << "    ";
     }
 
     /// A is the head of a list of nodes, traverse the list and call
     /// the print() method for each node in the list.
-    static void printlist (const ref &A, int indentlevel) {
+    static void printlist (std::ostream &out, const ref &A, int indentlevel) {
         for (const ASTNode *n = A.get();  n;  n = n->nextptr())
-            n->print (indentlevel);
+            n->print (out, indentlevel);
     }
 
     /// Return the number of child nodes.
@@ -191,7 +193,7 @@ protected:
 
     /// Call the print() method of all the children of this node.
     ///
-    virtual void printchildren (int indentlevel = 0) const;
+    void printchildren (std::ostream &out, int indentlevel = 0) const;
 
     /// Follow a list of nodes, type checking each in turn, and return
     /// the type of the last one.
@@ -248,7 +250,7 @@ public:
     { }
     const char *nodetypename () const { return "shader_declaration"; }
     const char *childname (size_t i) const;
-    void print (int indentlevel=0) const;
+    void print (std::ostream &out, int indentlevel=0) const;
     // TypeSpec typecheck (TypeSpec expected); // Use the default
     Symbol *codegen (Symbol *dest = NULL);
 
@@ -271,7 +273,7 @@ public:
                              ASTNode *form, ASTNode *stmts, ASTNode *meta=NULL);
     const char *nodetypename () const { return "function_declaration"; }
     const char *childname (size_t i) const;
-    void print (int indentlevel=0) const;
+    void print (std::ostream &out, int indentlevel=0) const;
     // TypeSpec typecheck (TypeSpec expected); // Use the default
 
     ref metadata () const { return child (0); }
@@ -293,7 +295,7 @@ public:
                              bool ismeta=false);
     const char *nodetypename () const;
     const char *childname (size_t i) const;
-    void print (int indentlevel=0) const;
+    void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
 
@@ -329,7 +331,7 @@ public:
     ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const { return ""; } // no children
-    void print (int indentlevel=0) const;
+    void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
 private:
@@ -397,7 +399,7 @@ public:
     { }
     const char *nodetypename () const { return "structselect"; }
     const char *childname (size_t i) const;
-    void print (int indentlevel=0) const;
+    void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
 
     ref lvalue () const { return child (0); }
@@ -628,7 +630,7 @@ public:
 
     const char *nodetypename () const { return "literal"; }
     const char *childname (size_t i) const;
-    void print (int indentlevel) const;
+    void print (std::ostream &out, int indentlevel) const;
     TypeSpec typecheck (TypeSpec expected) { return m_typespec; }
     Symbol *codegen (Symbol *dest = NULL);
 

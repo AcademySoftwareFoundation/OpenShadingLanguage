@@ -160,7 +160,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         if (m_debug) {
             oslcompiler->symtab().print ();
 //            if (! parseerr)
-                oslcompiler->shader()->print ();
+            oslcompiler->shader()->print (std::cout);
         }
 
         if (! error_encountered()) {

@@ -439,7 +439,7 @@ typespec
                     oslcompiler->current_typespec (TypeSpec (lextype ($1)));
                     $$ = 0;
                 }
-        | simple_typename CLOSURE
+        | CLOSURE simple_typename
                 {
                     oslcompiler->current_typespec (TypeSpec (lextype ($1), true));
                     $$ = 0;

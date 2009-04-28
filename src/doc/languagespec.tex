@@ -102,7 +102,8 @@ Editor: Larry Gritz \\
 \def\illuminate{{\cf illuminate}\xspace}
 
 \def\closure{{\cf closure}\xspace}
-\def\colorclosure{{\cf color closure}\xspace}
+\def\colorclosure{{\cf closure color}\xspace}
+\def\closurecolor{{\cf closure color}\xspace}
 
 
 \makeindex
@@ -1755,7 +1756,7 @@ It certainly makes the implementation of the language easier.
 A \closure is an expression or function call that will be stored, along
 with necessary contextual information, to be evaluated at a later time.
 
-In general, the type ``\emph{gentype} \closure'' behaves exactly like a
+In general, the type ``\closure \emph{gentype}'' behaves exactly like a
 \emph{gentype}, except that its numeric values may not be examined or
 used for the duration of the shader's execution.  For example, a
 \colorclosure behaves mostly like a color --- you can multiply it by a
@@ -3916,7 +3917,7 @@ nothing (empty, no token).
 <array-initializer> ::= "=" "{" <expression-list> "}"
 
 <typespec> ::= <simple-typename> 
-\alt <simple-typename> "closure"
+\alt "closure" <simple-typename>
 \alt <identifier-structname>
 
 <simple-typename> ::= 

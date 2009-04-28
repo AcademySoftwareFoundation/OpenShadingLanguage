@@ -719,11 +719,10 @@ incdec_op
         ;
 
 type_constructor
-        : typespec '(' expression_list ')'
+        : simple_typename '(' expression_list ')'
                 {
-                    $$ = new ASTtypecast_expression (oslcompiler, 
-                                                     oslcompiler->current_typespec(),
-                                                     $3);
+                    $$ = new ASTtype_constructor (oslcompiler,
+                                                  TypeSpec (lextype ($1)), $3);
                 }
         ;
 

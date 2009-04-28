@@ -53,7 +53,7 @@ public:
         loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
         assign_expression_node, ternary_expression_node, 
-        typecast_expression_node,
+        typecast_expression_node, type_constructor_node,
         function_call_node,
         literal_node,
         _last_node
@@ -205,7 +205,8 @@ protected:
 
     /// Type check a list (whose head is given by 'arg' against the list
     /// of expected types given in encoded form by 'formals'.
-    bool check_arglist (ref arg, const char *formals, bool coerce=false);
+    bool check_arglist (const char *funcname, ref arg,
+                        const char *formals, bool coerce=false);
 
     /// Follow a list of nodes, generating code for each in turn.
     ///
@@ -494,10 +495,7 @@ class ASTassign_expression : public ASTNode
 {
 public:
     ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var, Operator op,
-                          ASTNode *expr)
-        : ASTNode (assign_expression_node, comp, op, var, expr)
-    { }
-
+                          ASTNode *expr);
     const char *nodetypename () const { return "assign_expression"; }
     const char *childname (size_t i) const;
     const char *opname () const;
@@ -585,6 +583,26 @@ public:
     TypeSpec typecheck (TypeSpec expected);
 
     ref expr () const { return child (0); }
+};
+
+
+
+class ASTtype_constructor : public ASTNode
+{
+public:
+    ASTtype_constructor (OSLCompilerImpl *comp, TypeSpec typespec,
+                         ASTNode *args)
+        : ASTNode (type_constructor_node, comp, 0, args)
+    {
+        m_typespec = typespec;
+    }
+
+    const char *nodetypename () const { return "type_constructor"; }
+    const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
+
+    ref args () const { return child (0); }
 };
 
 

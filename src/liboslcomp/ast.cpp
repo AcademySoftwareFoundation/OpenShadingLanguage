@@ -316,9 +316,9 @@ void
 ASTvariable_ref::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() 
-        << " (type: " << m_sym->typespec().string() << ") " 
-        << m_sym->mangled() << ")\n";
+    out << "(" << nodetypename() << " (type: "
+        << (m_sym ? m_sym->typespec().string() : "unknown") << ") " 
+        << (m_sym ? m_sym->mangled() : m_name.string()) << ")\n";
     DASSERT (nchildren() == 0);
 }
 
@@ -427,6 +427,19 @@ const char *
 ASTreturn_statement::childname (size_t i) const
 {
     return "expression";  // only child
+}
+
+
+
+ASTassign_expression::ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var,
+                                            Operator op, ASTNode *expr)
+    : ASTNode (assign_expression_node, comp, op, var, expr)
+{
+    if (op != Assign) {
+        // Rejigger to straight assignment and binary op
+        m_op = Assign;
+        m_children[1] = new ASTbinary_expression (comp, op, var, expr);
+    }
 }
 
 
@@ -600,6 +613,15 @@ const char *
 ASTtypecast_expression::childname (size_t i) const
 {
     static const char *name[] = { "expr" };
+    return name[i];
+}
+
+
+
+const char *
+ASTtype_constructor::childname (size_t i) const
+{
+    static const char *name[] = { "args" };
     return name[i];
 }
 

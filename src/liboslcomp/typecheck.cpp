@@ -395,8 +395,7 @@ ASTbinary_expression::typecheck (TypeSpec expected)
     case LogicalOr :
         // Logical ops work on any simple type (since they test for
         // nonzeroness), but always return int.
-        m_typespec = TypeDesc::TypeInt;
-        break;
+        return m_typespec = TypeDesc::TypeInt;
 
     default:
         error ("unknown binary operator");
@@ -459,8 +458,63 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
 
 
 
+TypeSpec
+ASTtype_constructor::typecheck (TypeSpec expected)
+{
+    // FIXME - closures
+    typecheck_children ();
+
+    // Hijack the usual function arg-checking routines.
+    // So we have a set of valid patterns for each type constructor:
+    static const char *float_patterns[] = { "ff", NULL };
+    static const char *triple_patterns[] = { "cf", "cfff", "csf", "csfff",
+                                             "cc", "cp", "cv", "cn", NULL };
+    static const char *matrix_patterns[] = { "mffffffffffffffff",
+                                             "msffffffffffffffff", NULL };
+    // Select the pattern for the type of constructor we are...
+    const char **patterns = NULL;
+    if (typespec().is_float())
+        patterns = float_patterns;
+    else if (typespec().is_triple())
+        patterns = triple_patterns;
+    else if (typespec().is_matrix())
+        patterns = matrix_patterns;
+    if (! patterns) {
+        error ("Cannot construct type '%s'", typespec().string().c_str());
+        return m_typespec;
+    }
+
+    // Try to get a match, first without type coercion of the arguments,
+    // then with coercion.
+    for (int co = 0;  co < 2;  ++co) {
+        bool coerce = co;
+        for (const char **pat = patterns;  *pat;  ++pat) {
+            const char *code = *pat;
+            if (check_arglist (typespec().string().c_str(), args(), code + 1, coerce))
+                return m_typespec;
+        }
+    }
+
+    // If we made it this far, no match could be found.
+    std::string err = Strutil::format ("Cannot construct %s (", 
+                                       typespec().string().c_str());
+    for (ref a = args();  a;  a = a->next()) {
+        err += a->typespec().string();
+        if (a->next())
+            err += ", ";
+    }
+    err += ")";
+    error ("%s", err.c_str());
+    // FIXME -- it might be nice here to enumerate for the user all the
+    // valid combinations.
+    return m_typespec;
+}
+
+
+
 bool
-ASTNode::check_arglist (ASTNode::ref arg, const char *formals, bool coerce)
+ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
+                        const char *formals, bool coerce)
 {
     for ( ;  arg;  arg = arg->next()) {
         if (! *formals)   // More formal args, but no more actual args
@@ -468,8 +522,11 @@ ASTNode::check_arglist (ASTNode::ref arg, const char *formals, bool coerce)
         if (*formals == '*')  // Will match anything left
             return true;
         if (*formals == '.') {  // Special case for token/value pairs
+            if (arg->typespec().is_string() && arg->next() != NULL) {
+                arg = arg->next();
+                continue;
+            }
             return false;
-            // FIXME!
         }
         if (*formals == '?') {
             return false;
@@ -490,8 +547,8 @@ ASTNode::check_arglist (ASTNode::ref arg, const char *formals, bool coerce)
         // anything that gets this far we don't consider a match
         return false;
     }
-    if (*formals && *formals != '*') // Non-* formals expected, no more actuals
-        return false;
+    if (*formals && *formals != '*' && *formals != '.') 
+        return false;  // Non-*, non-... formals expected, no more actuals
 
     return true;  // Is this safe?
 }
@@ -506,7 +563,7 @@ ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
         int advance;
         TypeSpec returntype = m_compiler->type_from_code (code, &advance);
         code += advance;
-        if (check_arglist (args(), code, coerce)) {
+        if (check_arglist (m_name.c_str(), args(), code, coerce)) {
             // Return types also must match if not coercible
             if (coerce || expected == TypeSpec() || expected == returntype)
                 return returntype;
@@ -705,8 +762,9 @@ static const char * builtin_func_args [] = {
     "ambient", "C", "Cn", NULL,
     "cooktorrance", "Cf", NULL,
     "diffuse", "C", NULL,
+    "emission", "C", NULL,
     "orennayar", "Cf", NULL,
-    "reflection", "C", "Cf", "Cs", "Csf", "Cv", "Cvf", "Csv", "Csvf", NULL,
+    "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,
     "refraction", "Cf", "Cff", "Csf", "Csff", 
                   "Cvf", "Cvff", "Csvf", "Csvff", NULL,
     "specular", "Cf", NULL,

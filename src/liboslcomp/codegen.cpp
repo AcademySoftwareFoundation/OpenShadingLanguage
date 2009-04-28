@@ -242,6 +242,22 @@ ASTbinary_expression::codegen (Symbol *dest)
 
 
 Symbol *
+ASTtype_constructor::codegen (Symbol *dest)
+{
+    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
+        dest = m_compiler->make_temporary (typespec());
+    std::vector<Symbol *> argdest;
+    argdest.push_back (dest);
+    for (ref a = args();  a;  a = a->next()) {
+        argdest.push_back (a->codegen());
+    }
+    emitcode (typespec().string().c_str(), argdest.size(), &argdest[0]);
+    return dest;
+}
+
+
+
+Symbol *
 ASTfunction_call::codegen (Symbol *dest)
 {
     // FIXME -- this is very wrong, just a placeholder

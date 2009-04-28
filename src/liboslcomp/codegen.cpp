@@ -30,11 +30,22 @@ namespace pvt {   // OSL::pvt
 
 
 
-void
+IROpcode::IROpcode (ustring op, ASTNode *node, ustring method)
+    : m_op(op), m_astnode(node), m_method(method)
+{
+    m_jump[0] = -1;
+    m_jump[1] = -1;
+    m_jump[2] = -1;
+}
+
+
+
+int
 OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
                            ASTNode *node)
 {
 //    std::cout << "\temit " << opname;
+    int opnum = (int) m_ircode.size();
     m_ircode.push_back (IROpcode (ustring (opname), node, m_codegenmethod));
     for (size_t i = 0;  i < nargs;  ++i) {
         if (args[i])
@@ -42,6 +53,7 @@ OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
 //        std::cout << " " << (args[i] ? args[i]->name() : ustring("<null>"));
     }
 //    std::cout << "\n";
+    return opnum;
 }
 
 
@@ -108,21 +120,21 @@ OSLCompilerImpl::make_constant (float val)
 
 
 
-void
+int
 ASTNode::emitcode (const char *opname, Symbol *arg0, 
                    Symbol *arg1, Symbol *arg2)
 {
     Symbol *args[3] = { arg0, arg1, arg2 };
     size_t nargs = (arg0 != NULL) + (arg1 != NULL) + (arg2 != NULL);
-    m_compiler->emitcode (opname, nargs, args, this);
+    return m_compiler->emitcode (opname, nargs, args, this);
 }
 
 
 
-void
+int
 ASTNode::emitcode (const char *opname, size_t nargs, Symbol **args)
 {
-    m_compiler->emitcode (opname, nargs, args, this);
+    return m_compiler->emitcode (opname, nargs, args, this);
 }
 
 
@@ -226,6 +238,44 @@ ASTvariable_ref::codegen (Symbol *)
 
 
 Symbol *
+ASTconditional_statement::codegen (Symbol *)
+{
+    Symbol *condvar = cond()->codegen ();
+    TypeSpec condtype = condvar->typespec();
+    if (! condtype.is_int()) {
+        // If they're not using an int as the condition, then it's an
+        // implied comparison to zero.
+        Symbol *tempvar = m_compiler->make_temporary (TypeDesc::TypeInt);
+        Symbol *zerovar = condtype.is_string() ? 
+                            m_compiler->make_constant (ustring("")) : 
+                            m_compiler->make_constant (0.0f);
+        emitcode ("ne", tempvar, condvar, zerovar);
+        condvar = tempvar;
+    }
+
+    // Generate the op for the 'if' itself.  Record its label, so that we
+    // can go back and patch it with the jump destinations.
+    int ifop = emitcode ("if", condvar);
+
+    // Generate the code for the 'true' and 'false' code blocks, recording
+    // the jump destinations for 'else' and the next op after the if.
+    m_compiler->next_op_label ();
+    codegen_list (truestmt());
+    int falselabel = m_compiler->next_op_label ();
+    codegen_list (falsestmt());
+    int donelabel = m_compiler->next_op_label ();
+
+    // Fix up the 'if' to have the jump destinations.
+    m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
+
+    // FIXME -- account for the fact that the first argument, unlike
+    // almost all other ops, is read, not written
+    return NULL;
+}
+
+
+
+Symbol *
 ASTbinary_expression::codegen (Symbol *dest)
 {
     Symbol *lsym = left()->codegen ();
@@ -234,6 +284,8 @@ ASTbinary_expression::codegen (Symbol *dest)
         dest = m_compiler->make_temporary (typespec());
 
     // FIXME -- what about coerced types, do we need a temp and copy here?
+
+    // FIXME -- we want && and || to properly short-circuit
 
     emitcode (opword(), dest, lsym, rsym);
     return dest;

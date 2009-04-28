@@ -216,14 +216,14 @@ protected:
     ///
     void codegen_children ();
 
-    /// Emit a single IR opcode.
-    ///
-    void emitcode (const char *opname, Symbol *arg0=NULL, 
-                   Symbol *arg1=NULL, Symbol *arg2=NULL);
+    /// Emit a single IR opcode -- append one op to the list of
+    /// intermediate code, returning the label (address) of the new op.
+    int emitcode (const char *opname, Symbol *arg0=NULL, 
+                  Symbol *arg1=NULL, Symbol *arg2=NULL);
 
-    /// Emit a single IR opcode.
-    ///
-    void emitcode (const char *opname, size_t nargs, Symbol **args);
+    /// Emit a single IR opcode -- append one op to the list of
+    /// intermediate code, returning the label (address) of the new op.
+    int emitcode (const char *opname, size_t nargs, Symbol **args);
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is
@@ -423,6 +423,7 @@ public:
     const char *nodetypename () const { return "conditional_statement"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref cond () const { return child (0); }
     ref truestmt () const { return child (1); }

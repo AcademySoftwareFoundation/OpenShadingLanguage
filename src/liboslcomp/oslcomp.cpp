@@ -431,12 +431,22 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
                      retrieve_source (file, line).c_str());
         }
 
+        // Op name
         oso ("\t%s", op->opname());
+
+        // Register arguments
         if (op->nargs())
             oso (strlen(op->opname()) < 8 ? "\t\t" : "\t");
         for (size_t i = 0;  i < op->nargs();  ++i) {
             oso ("%s ", op->arg(i)->dealias()->mangled().c_str());
         }
+
+        // Jump targets
+        for (int i = 0;  i < IROpcode::max_jumps;  ++i)
+            if (op->jump(i) >= 0)
+                oso ("%d ", op->jump(i));
+
+        // Hints
         bool firsthint = true;
         if (op->node()) {
             if (op->node()->sourcefile() != lastfile) {

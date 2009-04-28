@@ -212,21 +212,13 @@ ASTassign_expression::typecheck (TypeSpec expected)
         error ("Can't assign via %s to something that isn't an lvalue", opname());
         return TypeSpec();
     }
-    
+
+    ASSERT (m_op == Assign);  // all else handled by binary_op
+
     // We don't currently support assignment of whole arrays
     if (vt.is_array() || et.is_array()) {
         error ("Can't assign entire arrays");
         return TypeSpec();
-    }
-
-    // Bitwise and shift can only apply to int
-    if (m_op == BitwiseAnd || m_op == BitwiseOr || m_op == BitwiseXor ||
-        m_op == ShiftLeft || m_op == ShiftRight) {
-        if (! vt.is_int() || ! et.is_int()) {
-            error ("Operator %s can only be used on int, not %s %s %s",
-                   opname(), vt.string().c_str(), opname(), et.string().c_str());
-            return TypeSpec();
-        }
     }
 
     // Expression must be of a type assignable to the lvalue

@@ -36,8 +36,7 @@ class ASTNode;
 ///
 class IROpcode {
 public:
-    IROpcode (ustring op, ASTNode *node, ustring method)
-        : m_op(op), m_astnode(node), m_method(method) { }
+    IROpcode (ustring op, ASTNode *node, ustring method);
     void add_arg (Symbol *arg) { m_args.push_back (arg->dealias()); }
     size_t nargs () const { return m_args.size(); }
     Symbol *arg (int i) const { return m_args[i]; }
@@ -45,11 +44,26 @@ public:
     const char *opname () const { return m_op.c_str(); }
     ustring method () const { return m_method; }
 
+    /// Set the jump addresses (-1 means no jump)
+    ///
+    void set_jump (int jump0=-1, int jump1=-1, int jump2=-1) {
+        m_jump[0] = jump0;
+        m_jump[1] = jump1;
+        m_jump[2] = jump2;
+    }
+
+    /// Return the i'th jump target address (-1 for none).
+    ///
+    int jump (int i) const { return m_jump[i]; }
+
+    static const int max_jumps = 3; ///< Maximum jump targets an op can have
+
 private:
     ustring m_op;                   ///< Name of opcode
     std::vector<Symbol *> m_args;   ///< Arguments
     ASTNode *m_astnode;             ///< AST node that generated this op
     ustring m_method;               ///< Which param or method this code is for
+    int m_jump[max_jumps];          ///< Jump addresses (-1 means none)
 };
 
 
@@ -139,10 +153,18 @@ public:
     /// and turn it into a human-readable string.
     std::string typelist_from_code (const char *code);
 
-    /// Emit a single IR opcode.
+    /// Emit a single IR opcode -- append one op to the list of
+    /// intermediate code, returning the label (address) of the new op.
+    int emitcode (const char *opname, size_t nargs, Symbol **args,
+                  ASTNode *node);
+
+    /// Return the label (opcode address) for the next opcode that will
+    /// be emitted.
+    int next_op_label () { return (int)m_ircode.size(); }
+
+    /// Return a reference to a given IR opcode.
     ///
-    void emitcode (const char *opname, size_t nargs, Symbol **args,
-                   ASTNode *node);
+    IROpcode & ircode (int index) { return m_ircode[index]; }
 
     /// Specify that subsequent opcodes are for a particular method
     ///

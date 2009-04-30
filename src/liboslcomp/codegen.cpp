@@ -62,7 +62,7 @@ Symbol *
 OSLCompilerImpl::make_temporary (const TypeSpec &type)
 {
     ustring name = ustring::format ("$tmp%d", ++m_next_temp);
-    Symbol *s = new Symbol (name, type, Symbol::SymTypeTemp);
+    Symbol *s = new Symbol (name, type, SymTypeTemp);
     symtab().insert (s);
     return s;
 }

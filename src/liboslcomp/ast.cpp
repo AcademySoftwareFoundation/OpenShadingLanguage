@@ -187,7 +187,7 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
-    if (f && f->symtype() != Symbol::SymTypeFunction) {
+    if (f && f->symtype() != SymTypeFunction) {
         error ("\"%s\" already declared in this scope as a ", name.c_str(),
                f->typespec().string().c_str());
         // FIXME -- print the file and line of the other definition
@@ -252,7 +252,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         error ("\"%s\" : sorry, can't start with three underscores",
                name.c_str());
     }
-    Symbol::SymType symtype = isparam ? Symbol::SymTypeParam : Symbol::SymTypeLocal;
+    SymType symtype = isparam ? SymTypeParam : SymTypeLocal;
     m_sym = new Symbol (name, type, symtype, this);
     if (! m_ismetadata)
         oslcompiler->symtab().insert (m_sym);

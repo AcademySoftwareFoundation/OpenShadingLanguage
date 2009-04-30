@@ -784,7 +784,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
         for (int j = npoly-1;  j >= 0;  --j) {
             ustring poly (builtin_func_args[i+j]);
             Symbol *last = symtab().clash (funcname);
-            ASSERT (last == NULL || last->symtype() == Symbol::SymTypeFunction);
+            ASSERT (last == NULL || last->symtype() == SymTypeFunction);
             TypeSpec rettype = type_from_code (poly.c_str());
             FunctionSymbol *f = new FunctionSymbol (funcname, rettype);
             f->nextpoly ((FunctionSymbol *)last);

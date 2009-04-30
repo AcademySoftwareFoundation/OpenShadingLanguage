@@ -35,10 +35,10 @@ help:
 # dist_files lists (relative to build) all files that end up in an
 # external distribution
 dist_bins    	:= oslc
-dist_libs     	:= liboslcomp${SHLIBEXT}
+dist_libs     	:= liboslcomp${SHLIBEXT} liboslexec${SHLIBEXT}
 
 # include files that get included in the compiled distribution
-dist_includes	:= oslcomp.h
+dist_includes	:= oslcomp.h oslexec.h
 
 # make the public distro have a subdirectory in include,
 # to avoid name clashes
@@ -84,6 +84,7 @@ endif
 
 LINK_BOOST ?= ${LD_LIBPATH}${BOOST_LIB_AREA} \
               ${BOOST_LIB_AREA}/${LIBPREFIX}boost_filesystem${BOOST_SUFFIX}${LIBEXT} \
+              ${BOOST_LIB_AREA}/${LIBPREFIX}boost_program_options${BOOST_SUFFIX}${LIBEXT} \
               ${BOOST_LIB_AREA}/${LIBPREFIX}boost_regex${BOOST_SUFFIX}${LIBEXT} \
               ${BOOST_LIB_AREA}/${LIBPREFIX}boost_system${BOOST_SUFFIX}${LIBEXT} \
               ${BOOST_LIB_AREA}/${LIBPREFIX}boost_thread${BOOST_SUFFIX}${LIBEXT}

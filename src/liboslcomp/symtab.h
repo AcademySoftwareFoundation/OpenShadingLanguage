@@ -32,6 +32,8 @@ using std::hash_set;
 #include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/ustring.h"
 
+#include "osl_pvt.h"
+
 
 namespace OSL {
 namespace pvt {
@@ -314,14 +316,6 @@ typedef std::vector<StructSpec *> StructList;
 /// information about it.
 class Symbol {
 public:
-    /// Kinds of symbols
-    ///
-    enum SymType {
-        SymTypeParam, SymTypeOutputParam,
-        SymTypeLocal, SymTypeTemp, SymTypeGlobal, SymTypeConst,
-        SymTypeFunction, SymTypeType
-    };
-
     Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
             ASTNode *declaration_node=NULL) 
         : m_name(name), m_typespec(datatype), m_symtype(symtype),
@@ -359,11 +353,11 @@ public:
 
     /// Is this symbol a function?
     ///
-    bool is_function () const { return m_symtype == Symbol::SymTypeFunction; }
+    bool is_function () const { return m_symtype == SymTypeFunction; }
 
     /// Is this symbol a structure?
     ///
-    bool is_structure () const { return m_symtype == Symbol::SymTypeType; }
+    bool is_structure () const { return m_symtype == SymTypeType; }
 
     /// Return a ptr to the symbol that this really refers to, tracing
     /// aliases back all the way until it finds a symbol that isn't an
@@ -407,7 +401,7 @@ typedef std::vector<Symbol *> SymbolList;
 class FunctionSymbol : public Symbol {
 public:
     FunctionSymbol (ustring n, TypeSpec type, ASTNode *node=NULL)
-        : Symbol(n, type, Symbol::SymTypeFunction, node), m_nextpoly(NULL)
+        : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL)
     { }
 
     void nextpoly (FunctionSymbol *nextpoly) { m_nextpoly = nextpoly; }
@@ -430,11 +424,11 @@ private:
 class ConstantSymbol : public Symbol {
 public:
     ConstantSymbol (ustring n, ustring val)
-        : Symbol(n, TypeDesc::TypeString, Symbol::SymTypeConst), m_s(val) { }
+        : Symbol(n, TypeDesc::TypeString, SymTypeConst), m_s(val) { }
     ConstantSymbol (ustring n, int val)
-        : Symbol(n, TypeDesc::TypeInt, Symbol::SymTypeConst), m_i(val) { }
+        : Symbol(n, TypeDesc::TypeInt, SymTypeConst), m_i(val) { }
     ConstantSymbol (ustring n, float val)
-        : Symbol(n, TypeDesc::TypeFloat, Symbol::SymTypeConst), m_f(val) { }
+        : Symbol(n, TypeDesc::TypeFloat, SymTypeConst), m_f(val) { }
 
     ustring strval () const { return m_s; }
     int intval () const { return m_i; }

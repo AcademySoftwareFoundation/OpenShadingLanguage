@@ -136,7 +136,7 @@ SymbolTable::new_struct (ustring name)
 {
     m_structs.push_back (new StructSpec (name, scopeid()));
     int structid = (int) m_structs.size() - 1;
-    insert (new Symbol (name, TypeSpec ("",structid), Symbol::SymTypeType));
+    insert (new Symbol (name, TypeSpec ("",structid), SymTypeType));
     return structid;
 }
 

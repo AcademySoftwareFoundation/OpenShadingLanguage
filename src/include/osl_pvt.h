@@ -11,13 +11,16 @@
  *
  *****************************************************************************/
 
-#ifndef OSLCOMP_H
-#define OSLCOMP_H
+#ifndef OSL_PVT_H
+#define OSL_PVT_H
 
 
 namespace OSL {
+namespace pvt {
 
 
+/// Kinds of shaders
+///
 enum ShaderType {
     ShadTypeUnknown, ShadTypeGeneric, ShadTypeSurface, 
     ShadTypeDisplacement, ShadTypeVolume, ShadTypeLight,
@@ -26,26 +29,19 @@ enum ShaderType {
 
 
 
-class OSLCompiler {
-public:
-    static OSLCompiler *create ();
-
-    OSLCompiler (void) { }
-    virtual ~OSLCompiler (void) { }
-
-    /// Compile the given file, using the list of command-line options.
-    /// Return true if ok, false if the compile failed.
-    virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options) = 0;
-
-    /// Generate the name of our compiled output based on the name of
-    /// the input file.
-    virtual std::string output_filename (const std::string &inputfilename) = 0;
+/// Kinds of symbols
+///
+enum SymType {
+    SymTypeParam, SymTypeOutputParam,
+    SymTypeLocal, SymTypeTemp, SymTypeGlobal, SymTypeConst,
+    SymTypeFunction, SymTypeType
 };
 
 
 
+
+}; // namespace OSL::pvt
 }; // namespace OSL
 
 
-#endif /* OSLCOMP_H */
+#endif /* OSL_PVT_H */

@@ -214,7 +214,7 @@ OSLCompilerImpl::initialize_globals ()
 {
     for (int i = 0;  globals[i].name;  ++i) {
         Symbol *s = new Symbol (ustring(globals[i].name), globals[i].type,
-                                Symbol::SymTypeGlobal);
+                                SymTypeGlobal);
         symtab().insert (s);
     }
 }
@@ -344,12 +344,12 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
         v = dynamic_cast<ASTvariable_declaration *>(sym->node());
 
     // Print default values
-    if (sym->symtype() == Symbol::SymTypeConst) {
+    if (sym->symtype() == SymTypeConst) {
         oso ("\t");
         write_oso_const_value (dynamic_cast<const ConstantSymbol *>(sym));
         oso ("\t");
-    } else if (v && (sym->symtype() == Symbol::SymTypeParam ||
-                    sym->symtype() == Symbol::SymTypeOutputParam)) {
+    } else if (v && (sym->symtype() == SymTypeParam ||
+                    sym->symtype() == SymTypeOutputParam)) {
         oso ("\t");
         write_oso_formal_default (v);
         oso ("\t");
@@ -395,18 +395,18 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     // Output params, so they are first
     for (SymbolList::const_iterator s = symtab().symbegin();
              s != symtab().symend();  ++s) {
-        if ((*s)->symtype() == Symbol::SymTypeParam ||
-                (*s)->symtype() == Symbol::SymTypeOutputParam) {
+        if ((*s)->symtype() == SymTypeParam ||
+                (*s)->symtype() == SymTypeOutputParam) {
             write_oso_symbol (*s);
         }
     }
     // Output globals, locals, temps, const
     for (SymbolList::const_iterator s = symtab().symbegin();
              s != symtab().symend();  ++s) {
-        if ((*s)->symtype() == Symbol::SymTypeLocal ||
-                (*s)->symtype() == Symbol::SymTypeTemp ||
-                (*s)->symtype() == Symbol::SymTypeGlobal ||
-                (*s)->symtype() == Symbol::SymTypeConst) {
+        if ((*s)->symtype() == SymTypeLocal ||
+                (*s)->symtype() == SymTypeTemp ||
+                (*s)->symtype() == SymTypeGlobal ||
+                (*s)->symtype() == SymTypeConst) {
             write_oso_symbol (*s);
         }
     }

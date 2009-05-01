@@ -24,21 +24,21 @@
 #include <vector>
 #include <string>
 
-#include "oslexec.h"
-#include "oslexec_pvt.h"
+#include "osoreader.h"
 
 #undef yylex
 #define yyFlexLexer osoFlexLexer
 #include "FlexLexer.h"
 
-void yyerror (const char *err);
-#define yylex OSL::ShadingSystem::osolexer->yylex
-
 using namespace OSL;
 using namespace OSL::pvt;
 
+void yyerror (const char *err);
 
-osoFlexLexer *ShadingSystem::osolexer = NULL;
+#define yylex OSOReader::osolexer->yylex
+#define reader OSOReader::reader
+
+static TypeSpec current_typespec;
 
 
 
@@ -86,7 +86,8 @@ lextype (int lex)
 %token <i> CODE SYMTYPE ENDOFLINE
 
 // Define the nonterminals 
-%type <i> oso_file version shader_declaration shader_type
+%type <i> oso_file version shader_declaration
+%type <s> shader_type
 %type <i> symbols_opt symbols symbol typespec simple_typename arraylen_opt
 %type <i> initial_val_opt initial_val
 %type <i> initial_floats initial_float initial_strings initial_string
@@ -113,15 +114,19 @@ oso_file
 version
         : IDENTIFIER FLOAT_LITERAL ENDOFLINE
                 {
-                    std::cerr << "Recognized version " << $2 << "\n";
+                    OSOReader::osoreader->version ($1, $2);
                     $$ = 0;
                 }
         ;
 
 shader_declaration
-        : shader_type IDENTIFIER hints_opt ENDOFLINE
+        : shader_type IDENTIFIER 
                 {
-                    std::cerr << "Recognized shader_declaration\n";
+                    OSOReader::osoreader->shader ($1, $2);
+                }
+            hints_opt ENDOFLINE
+                {
+                    $$ = 0;
                 }
         ;
 
@@ -133,7 +138,7 @@ symbols_opt
 codemarker
         : CODE IDENTIFIER ENDOFLINE
                 {
-                    std::cerr << "Recognized code marker  " << $2 << "\n";
+                    OSOReader::osoreader->codemarker ($2);
                 }
         ;
 
@@ -143,16 +148,17 @@ instructions
         ;
 
 instruction
-        : label opcode arguments_opt jumptargets_opt hints_opt ENDOFLINE
+        : label opcode 
                 {
-                    std::cerr << "Recognized instruction " << $2 << "\n";
+                    OSOReader::osoreader->instruction ($1, $2);
                 }
+            arguments_opt jumptargets_opt hints_opt ENDOFLINE
         | codemarker
         | ENDOFLINE
         ;
 
 shader_type
-        : IDENTIFIER                    { $$ = 0; }
+        : IDENTIFIER
         ;
 
 symbols
@@ -161,10 +167,14 @@ symbols
         ;
 
 symbol
-        : SYMTYPE typespec IDENTIFIER arraylen_opt initial_val_opt hints_opt ENDOFLINE
+        : SYMTYPE typespec IDENTIFIER arraylen_opt
                 {
-                    std::cerr << "Recognized symbol " << $3 << "\n";
+                    TypeSpec typespec = current_typespec;
+                    if ($4)
+                        typespec.make_array ($4);
+                    OSOReader::osoreader->symbol ((SymType)$1, typespec, $3);
                 }
+            initial_val_opt hints_opt ENDOFLINE
         | ENDOFLINE
         ;
 
@@ -172,14 +182,17 @@ symbol
 typespec
         : simple_typename
                 {
+                    current_typespec = lextype ($1);
                     $$ = 0;
                 }
         | CLOSURE simple_typename
                 {
+                    current_typespec = TypeSpec (lextype ($2), true);
                     $$ = 0;
                 }
         | STRUCT IDENTIFIER /* struct name */
                 {
+                    // FIXME
                     $$ = 0;
                 }
         ;
@@ -232,7 +245,7 @@ initial_string
 
 label
         : INT_LITERAL ':'
-        | /* empty */                   { $$ = 0; }
+        | /* empty */                   { $$ = -1; }
         ;
 
 opcode
@@ -250,7 +263,10 @@ arguments
         ;
 
 argument
-        : IDENTIFIER                    { $$ = 0; }
+        : IDENTIFIER
+                {
+                    OSOReader::osoreader->instruction_arg ($1);
+                }
         ;
 
 jumptargets_opt
@@ -265,6 +281,9 @@ jumptargets
 
 jumptarget
         : INT_LITERAL
+                {
+                    OSOReader::osoreader->instruction_jump ($1);
+                }
         ;
 
 hints_opt
@@ -278,7 +297,10 @@ hints
         ;
 
 hint
-        : HINT                          { $$ = 0; }
+        : HINT
+                {
+                    OSOReader::osoreader->hint ($1);
+                }
         ;
 
 %%
@@ -291,7 +313,7 @@ yyerror (const char *err)
 //    oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
 //                        "Syntax error: %s", err);
     fprintf (stderr, "Error, line %d: %s", 
-             OSL::ShadingSystem::osolexer->lineno(), err);
+             OSOReader::osolexer->lineno(), err);
 }
 
 

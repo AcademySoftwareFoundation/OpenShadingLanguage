@@ -76,9 +76,9 @@ HINTPATTERN     \%{IDENT}(\{[^\}]*\})?
 #include <vector>
 #include <string>
 
-#include <OpenImageIO/ustring.h>
+#include "OpenImageIO/ustring.h"
 
-#include "osl_pvt.h"
+#include "osoreader.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -190,7 +190,6 @@ using namespace OSL::pvt;
 
  /* End of line */
 [\n]			{
-                            std::cerr << "lex end of line\n";
                             return ENDOFLINE;
                         }
 

@@ -23,10 +23,7 @@ namespace po = boost::program_options;
 #include "oslexec.h"
 using namespace OSL;
 
-#include "../liboslexec/oslexec_pvt.h"
-
-#define yyFlexLexer osoFlexLexer
-#include <FlexLexer.h>
+#include "../liboslexec/osoreader.h"
 
 
 
@@ -99,24 +96,13 @@ getargs (int argc, char *argv[])
 static void
 test_shader (const std::string &filename)
 {
-    std::fstream input (filename.c_str(), std::ios::in);
-    if (! input.is_open()) {
-        std::cout << "File " << filename << " not found.\n";
-        return;
-    }
-
-    ShadingSystem::osolexer = new osoFlexLexer (&input);
-    assert (ShadingSystem::osolexer);
-    bool ok = ! osoparse ();   // osoparse returns nonzero if error
+    OSL::pvt::OSOReader oso;
+    bool ok = oso.parse (filename);
     if (ok) {
-        std::cout << "Correctly parse " << filename << "\n";
+        std::cout << "Correctly parsed " << filename << "\n";
     } else {
         std::cout << "Failed parse of " << filename << "\n";
     }
-    delete ShadingSystem::osolexer;
-    ShadingSystem::osolexer = NULL;
-
-    input.close ();
 }
 
 

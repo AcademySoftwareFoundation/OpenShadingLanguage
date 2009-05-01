@@ -8,7 +8,7 @@
 local_name := liboslexec
 
 # Name of all source files in this directory
-local_src := 
+local_src := oslexec.cpp osoreader.cpp
 #sllex.l slgram.y
 
 # Extra static libs needed to compile this binary (leave blank if this
@@ -30,7 +30,7 @@ local_extra_objs := ${OSOGRAMO} ${OSOLEXO}
 
 # Extra shared libs needed to compile this binary (leave blank if this
 # module is not for a binary executable)
-local_shlibs := 
+local_shlibs := liboslcomp
 
 # ld flags needed for this library
 local_ldflags := ${OPENIMAGEIO_LINK} ${LINK_BOOST}

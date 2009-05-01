@@ -19,7 +19,7 @@ local_libs :=
 
 # Extra shared libs needed to compile this module (leave blank if this
 # module is not for a binary executable)
-local_shlibs := liboslexec
+local_shlibs := liboslexec liboslcomp
 
 # ld flags needed for this module
 local_ldflags := ${OPENIMAGEIO_LINK} ${LINK_BOOST}

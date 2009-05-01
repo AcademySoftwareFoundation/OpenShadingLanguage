@@ -53,7 +53,17 @@ public:
     ///
     virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
 
-    // FIXME - initial values
+    /// Add a default integer value to the last declared symbol.
+    ///
+    virtual void symdefault (int def) { }
+
+    /// Add a default float value to the last declared symbol.
+    ///
+    virtual void symdefault (float def) { }
+
+    /// Add a default string value to the last declared symbol.
+    ///
+    virtual void symdefault (const char *def) { }
 
     /// Add a hint.
     ///

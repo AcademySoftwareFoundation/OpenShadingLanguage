@@ -89,8 +89,7 @@ lextype (int lex)
 %type <i> oso_file version shader_declaration
 %type <s> shader_type
 %type <i> symbols_opt symbols symbol typespec simple_typename arraylen_opt
-%type <i> initial_val_opt initial_val
-%type <i> initial_floats initial_float initial_strings initial_string
+%type <i> initial_values_opt initial_values initial_value
 %type <i> codemarker label
 %type <i> instructions instruction
 %type <s> opcode
@@ -174,7 +173,7 @@ symbol
                         typespec.make_array ($4);
                     OSOReader::osoreader->symbol ((SymType)$1, typespec, $3);
                 }
-            initial_val_opt hints_opt ENDOFLINE
+            initial_values_opt hints_opt ENDOFLINE
         | ENDOFLINE
         ;
 
@@ -214,33 +213,32 @@ arraylen_opt
         | /* empty */                   { $$ = 0; }
         ;
 
-initial_val_opt
-        : initial_val
+initial_values_opt
+        : initial_values
         | /* empty */                   { $$ = 0; }
         ;
 
-initial_val
-        : initial_floats
-        | initial_strings
+initial_values
+        : initial_value
+        | initial_values initial_value
         ;
 
-initial_floats
-        : initial_float
-        | initial_floats initial_float
-        ;
-
-initial_strings
-        : initial_string
-        | initial_strings initial_string
-        ;
-
-initial_float
-        : FLOAT_LITERAL                 { $$ = 0; }
-        | INT_LITERAL                   { $$ = 0; }
-        ;
-
-initial_string
-        : STRING_LITERAL                { $$ = 0; }
+initial_value
+        : FLOAT_LITERAL
+                {
+                    OSOReader::osoreader->symdefault ($1);
+                    $$ = 0;
+                }
+        | INT_LITERAL
+                {
+                    OSOReader::osoreader->symdefault ($1);
+                    $$ = 0;
+                }
+        | STRING_LITERAL
+                {
+                    OSOReader::osoreader->symdefault ($1);
+                    $$ = 0;
+                }
         ;
 
 label

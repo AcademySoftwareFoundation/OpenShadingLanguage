@@ -34,11 +34,13 @@ help:
 #########################################################################
 # dist_files lists (relative to build) all files that end up in an
 # external distribution
-dist_bins    	:= oslc
-dist_libs     	:= liboslcomp${SHLIBEXT} liboslexec${SHLIBEXT}
+dist_bins    	:= oslc oslinfo
+dist_libs     	:= liboslcomp${SHLIBEXT} \
+		   liboslexec${SHLIBEXT} \
+		   liboslquery${SHLIBEXT}
 
 # include files that get included in the compiled distribution
-dist_includes	:= oslcomp.h oslexec.h
+dist_includes	:= oslcomp.h oslexec.h oslquery.h
 
 # make the public distro have a subdirectory in include,
 # to avoid name clashes

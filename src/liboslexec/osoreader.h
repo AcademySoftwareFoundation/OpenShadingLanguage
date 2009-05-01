@@ -67,7 +67,7 @@ public:
 
     /// Add a hint.
     ///
-    virtual void hint (const char *string) { }
+    virtual void hint (const char *hintstring) { }
 
     /// New code section marker designating subsequent instructions.
     ///

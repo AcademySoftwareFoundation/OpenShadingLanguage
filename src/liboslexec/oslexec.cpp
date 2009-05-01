@@ -59,6 +59,7 @@ read_shader (const char *name)
     OSOReader oso;
     std::string filename = name;   // FIXME -- do search, etc.
     bool ok = oso.parse (name);
+    return ok ? NULL /* FIXME */ : NULL;
 }
 
 

@@ -30,6 +30,62 @@ namespace OSL {
 namespace pvt {
 
 
+// ptr is a pointer to a char pointer.  Read chars from *ptr until you
+// hit the end of the string, or the next char is one of stop1 or stop2.
+// At that point, return what we hit, and also update *ptr to then point
+// to the next character following the stop character.
+static std::string
+readuntil (const char **ptr, char stop1, char stop2=-1)
+{
+    std::string s;
+    while (**ptr == ' ')
+        ++(*ptr);
+    while (**ptr && **ptr != stop1 && **ptr != stop2) {
+        s += (**ptr);
+        ++(*ptr);
+    }
+    if (**ptr == stop1 || **ptr == stop2)
+        ++(*ptr);
+    while (**ptr == ' ')
+        ++(*ptr);
+    return s;
+}
+
+
+
+static TypeDesc
+string_to_type (const char *s)
+{
+    TypeDesc t;
+    std::string tname = readuntil (&s, ' ');
+    if (tname == "int")
+        t = TypeDesc::TypeInt;
+    if (tname == "float")
+        t = TypeDesc::TypeFloat;
+    if (tname == "color")
+        t = TypeDesc::TypeColor;
+    if (tname == "point")
+        t = TypeDesc::TypePoint;
+    if (tname == "vector")
+        t = TypeDesc::TypeVector;
+    if (tname == "normal")
+        t = TypeDesc::TypeNormal;
+    if (tname == "matrix")
+        t = TypeDesc::TypeMatrix;
+    if (tname == "string")
+        t = TypeDesc::TypeString;
+    if (*s == '[') {
+        ++s;
+        if (*s == ']')
+            t.arraylen = -1;
+        else
+            t.arraylen = atoi (s);
+    }
+    return t;
+}
+
+
+
 // Custom subclass of OSOReader that just reads the .oso file and fills
 // out the right fields in the OSLQuery.
 class OSOReaderQuery : public OSOReader
@@ -83,10 +139,45 @@ public:
             p.validdefault = true;
         }
     }
-    virtual void hint (const char *string) {
-        // FIXME
+    virtual void hint (const char *hintstring) {
+        if (m_reading_param && ! strncmp (hintstring, "%meta{", 6)) {
+            hintstring += 6;
+            // std::cerr << "  Metadata '" << hintstring << "'\n";
+            std::string type = readuntil (&hintstring, ',', '}');
+            std::string name = readuntil (&hintstring, ',', '}');
+            // std::cerr << "    " << name << " : " << type << "\n";
+            OSLQuery::Parameter p;
+            p.name = name;
+            p.type = string_to_type (type.c_str());
+            if (p.type.basetype == TypeDesc::STRING) {
+                while (*hintstring == ' ')
+                    ++hintstring;
+                while (hintstring[0] == '\"') {
+                    ++hintstring;
+                    p.sdefault.push_back (readuntil (&hintstring, '\"'));
+                }
+            } else if (p.type.basetype == TypeDesc::INT) {
+                while (*hintstring == ' ')
+                    ++hintstring;
+                while (*hintstring && *hintstring != '}') {
+                    p.idefault.push_back (atoi (hintstring));
+                    readuntil (&hintstring, ',', '}');
+                }
+            } else if (p.type.basetype == TypeDesc::FLOAT) {
+                while (*hintstring == ' ')
+                    ++hintstring;
+                while (*hintstring && *hintstring != '}') {
+                    p.fdefault.push_back (atof (hintstring));
+                    readuntil (&hintstring, ',', '}');
+                }
+            }
+            m_query.m_params[m_query.nparams()-1].metadata.push_back (p);
+        }
+        // std::cerr << "Hint '" << hintstring << "'\n";
     }
-    virtual void codemarker (const char *name) { }
+    virtual void codemarker (const char *name) {
+        m_reading_param = false;
+    }
     virtual void instruction (int label, const char *opcode) { }
     virtual void instruction_arg (const char *name) { }
     virtual void instruction_jump (int target) { }

@@ -70,13 +70,5 @@ OSOReader::parse (const std::string &filename)
 
 
 
-void
-OSOReader::symbol (SymType symtype, TypeSpec typespec, const char *name)
-{
-    std::cout << "Recognized symbol " << name << " is " << typespec.string() << "\n";
-}
-
-
-
 }; // namespace pvt
 }; // namespace OSL

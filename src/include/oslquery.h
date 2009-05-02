@@ -99,7 +99,7 @@ public:
                const std::string &searchpath=std::string());
 
     /// Return the shader type: "surface", "displacement", "volume",
-    /// "light", or "generic."
+    /// "light", or "shader" (for generic shaders).
     const std::string &shadertype (void) const { return m_shadertype; }
 
     /// Get the name of the shader.

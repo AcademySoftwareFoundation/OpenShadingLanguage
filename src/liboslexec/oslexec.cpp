@@ -31,35 +31,36 @@ namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
-/// Custom subclass of OSOReader that provide callbacks that set all the
-/// right fields in the ShaderMaster.
-class OSOReaderToMaster : public OSOReader
+const char *
+shadertypename (ShaderType s)
 {
-public:
-    OSOReaderToMaster (ShaderMaster &master) : m_master(master) { }
-    virtual ~OSOReaderToMaster () { }
-    virtual void version (const char *specid, float version) { }
-    virtual void shader (const char *shadertype, const char *name) { }
-    virtual void symbol (SymType symtype, TypeSpec typespec, const char *name) { }
-    virtual void hint (const char *string) { }
-    virtual void codemarker (const char *name) { }
-    virtual void instruction (int label, const char *opcode) { }
-    virtual void instruction_arg (const char *name) { }
-    virtual void instruction_jump (int target) { }
-
-private:
-    ShaderMaster &m_master;
-};
+    switch (s) {
+    case ShadTypeGeneric:      return ("shader");
+    case ShadTypeSurface:      return ("surface");
+    case ShadTypeDisplacement: return ("displacement");
+    case ShadTypeVolume:       return ("volume");
+    case ShadTypeLight:        return ("light");
+    default:
+        ASSERT (0 && "Invalid shader type");
+    }
+}
 
 
 
-ShaderMaster::Ref
-read_shader (const char *name)
+ShaderType
+shadertype_from_name (const char *name)
 {
-    OSOReader oso;
-    std::string filename = name;   // FIXME -- do search, etc.
-    bool ok = oso.parse (name);
-    return ok ? NULL /* FIXME */ : NULL;
+    if (! strcmp (name, "shader") || ! strcmp (name, "generic"))
+        return ShadTypeGeneric;
+    if (! strcmp (name, "surface"))
+        return ShadTypeSurface;
+    if (! strcmp (name, "displacement"))
+        return ShadTypeDisplacement;
+    if (! strcmp (name, "volume"))
+        return ShadTypeVolume;
+    if (! strcmp (name, "light"))
+        return ShadTypeLight;
+    return ShadTypeUnknown;
 }
 
 

@@ -18,6 +18,7 @@
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 
+#include "osl_pvt.h"
 #include "oslcomp_pvt.h"
 #include "ast.h"
 
@@ -166,15 +167,7 @@ ASTshader_declaration::print (std::ostream &out, int indentlevel) const
 const char *
 ASTshader_declaration::shadertypename () const
 {
-    switch (m_op) {
-    case ShadTypeGeneric:      return ("shader");
-    case ShadTypeSurface:      return ("surface");
-    case ShadTypeDisplacement: return ("displacement");
-    case ShadTypeVolume:       return ("volume");
-    case ShadTypeLight:        return ("light");
-    default:
-        ASSERT(0);
-    }
+    return OSL::pvt::shadertypename ((ShaderType)m_op);
 }
 
 

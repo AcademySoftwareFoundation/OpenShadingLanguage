@@ -393,7 +393,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     oso ("\n");
 
     // Output params, so they are first
-    for (SymbolList::const_iterator s = symtab().symbegin();
+    for (SymbolPtrVec::const_iterator s = symtab().symbegin();
              s != symtab().symend();  ++s) {
         if ((*s)->symtype() == SymTypeParam ||
                 (*s)->symtype() == SymTypeOutputParam) {
@@ -401,7 +401,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         }
     }
     // Output globals, locals, temps, const
-    for (SymbolList::const_iterator s = symtab().symbegin();
+    for (SymbolPtrVec::const_iterator s = symtab().symbegin();
              s != symtab().symend();  ++s) {
         if ((*s)->symtype() == SymTypeLocal ||
                 (*s)->symtype() == SymTypeTemp ||

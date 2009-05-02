@@ -23,7 +23,7 @@ namespace po = boost::program_options;
 #include "oslexec.h"
 using namespace OSL;
 
-#include "../liboslexec/osoreader.h"
+#include "../liboslexec/oslexec_pvt.h"
 
 
 
@@ -63,23 +63,19 @@ getargs (int argc, char *argv[])
             exit (EXIT_SUCCESS);
         }
 
+#if 0
         std::cout << "Verbose: " << vm.count("verbose") << "\n";
         std::cout << "filenameprefix: " << vm.count("filename-prefix") << "\n";
         std::cout << "Sum: " << vm.count("sum") << "\n";
+#endif
 
         if (vm.count("compression")) {
             std::cout << "Compression level was set to " 
                       << vm["compression"].as<int>() << ".\n";
-        } else {
-            std::cout << "Compression level was not set.\n";
         }
 
-        if (vm.count("input-file")) {
+        if (vm.count("input-file"))
             inputfiles = vm["input-file"].as<std::vector<std::string> >();
-            std::cout << "Input files are: " ;
-            for (size_t i = 0;  i < inputfiles.size();  ++i) 
-                std::cout << "\t" << inputfiles[i] << "\n";
-        }
     }
     catch (std::exception& e) {
         std::cout <<
@@ -96,13 +92,10 @@ getargs (int argc, char *argv[])
 static void
 test_shader (const std::string &filename)
 {
-    OSL::pvt::OSOReader oso;
-    bool ok = oso.parse (filename);
-    if (ok) {
-        std::cout << "Correctly parsed " << filename << "\n";
-    } else {
-        std::cout << "Failed parse of " << filename << "\n";
-    }
+    OSL::pvt::ShadingSystemImpl shadingsys;
+    OSL::pvt::ShaderMaster::ref m = shadingsys.loadshader (filename.c_str());
+    if (m)
+        m->print ();
 }
 
 

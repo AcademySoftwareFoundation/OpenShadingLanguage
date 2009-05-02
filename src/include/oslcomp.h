@@ -18,14 +18,6 @@
 namespace OSL {
 
 
-enum ShaderType {
-    ShadTypeUnknown, ShadTypeGeneric, ShadTypeSurface, 
-    ShadTypeDisplacement, ShadTypeVolume, ShadTypeLight,
-    ShadTypeLast
-};
-
-
-
 class OSLCompiler {
 public:
     static OSLCompiler *create ();

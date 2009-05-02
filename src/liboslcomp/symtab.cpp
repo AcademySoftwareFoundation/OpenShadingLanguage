@@ -174,7 +174,7 @@ SymbolTable::pop ()
 void
 SymbolTable::delete_syms ()
 {
-    for (SymbolList::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
+    for (SymbolPtrVec::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
         delete (*i);
     m_allsyms.clear ();
     for (StructList::iterator i = m_structs.begin(); i != m_structs.end(); ++i)

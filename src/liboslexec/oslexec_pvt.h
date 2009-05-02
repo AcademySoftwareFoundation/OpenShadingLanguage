@@ -32,9 +32,11 @@ namespace pvt {
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
-    typedef intrusive_ptr<ShaderMaster> Ref;
+    typedef intrusive_ptr<ShaderMaster> ref;
     ShaderMaster () { }
     ~ShaderMaster () { }
+
+    void print ();  // Debugging
 
 private:
     ShaderType m_shadertype;            ///< Type of shader
@@ -42,10 +44,13 @@ private:
     // Need the code
     // Need the code offsets for each code block
     // Need the argument list (ints)
-    // Need the symbols
-    // Need constant values (int, float, string)
-    // Need default values for each parameter (int, float, string)
+    SymbolVec m_symbols;                ///< Symbols used by the shader
+    std::vector<int> m_idefaults;       ///< int default values
+    std::vector<float> m_fdefaults;     ///< float default values
+    std::vector<ustring> m_sdefaults;   ///< string default values
+    friend class OSOReaderToMaster;
 };
+
 
 
 /// ShaderInstance is a particular instance of a shader, with its own
@@ -56,7 +61,7 @@ public:
     ShaderInstance () { }
     ~ShaderInstance () { }
 private:
-    ShaderMaster::Ref m_master;         ///< Reference to the master
+    ShaderMaster::ref m_master;         ///< Reference to the master
     ustring m_layername;                ///< Name of this layer
     // Need instance values for each parameter (int, float, string)
 
@@ -70,7 +75,7 @@ public:
     ShadingSystemImpl () { }
     ~ShadingSystemImpl () { }
 
-    ShaderMaster::Ref read_shader (const char *name);
+    ShaderMaster::ref loadshader (const char *name);
 
 private:
     friend class OSOReaderToMaster;

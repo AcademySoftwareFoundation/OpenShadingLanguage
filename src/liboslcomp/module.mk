@@ -26,7 +26,8 @@ GRAMC := ${build_obj_dir}/${local_name}/oslgram.cpp
 GRAMH := ${build_obj_dir}/${local_name}/oslgram.hpp
 
 # Extra objects from other libs we need to compile this library 
-local_extra_objs := ${GRAMO} ${LEXO}
+local_extra_objs := ${GRAMO} ${LEXO} \
+		    ${build_obj_dir}/liboslexec/oslexec${OEXT}
 
 # Extra shared libs needed to compile this binary (leave blank if this
 # module is not for a binary executable)

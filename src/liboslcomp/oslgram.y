@@ -390,20 +390,20 @@ shadertype
         : IDENTIFIER
                 {
                     if (! strcmp ($1, "shader"))
-                        $$ = OSL::ShadTypeGeneric;
+                        $$ = ShadTypeGeneric;
                     else if (! strcmp ($1, "surface"))
-                        $$ = OSL::ShadTypeSurface;
+                        $$ = ShadTypeSurface;
                     else if (! strcmp ($1, "displacement"))
-                        $$ = OSL::ShadTypeDisplacement;
+                        $$ = ShadTypeDisplacement;
                     else if (! strcmp ($1, "volume"))
-                        $$ = OSL::ShadTypeVolume;
+                        $$ = ShadTypeVolume;
                     else if (! strcmp ($1, "light"))
-                        $$ = OSL::ShadTypeLight;
+                        $$ = ShadTypeLight;
                     else {
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
                                             "Unknown shader type: %s", $1);
-                        $$ = OSL::ShadTypeUnknown;
+                        $$ = ShadTypeUnknown;
                     }
                 }
         ;

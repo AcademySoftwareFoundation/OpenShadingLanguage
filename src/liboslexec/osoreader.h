@@ -51,7 +51,8 @@ public:
 
     /// Register a new symbol.
     ///
-    virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
+    virtual void symbol (SymType symtype, TypeSpec typespec, const char *name)
+    { }
 
     /// Add a default integer value to the last declared symbol.
     ///

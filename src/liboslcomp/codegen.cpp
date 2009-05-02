@@ -30,8 +30,9 @@ namespace pvt {   // OSL::pvt
 
 
 
-IROpcode::IROpcode (ustring op, ASTNode *node, ustring method)
-    : m_op(op), m_astnode(node), m_method(method)
+IROpcode::IROpcode (ustring op, ustring method, size_t firstarg, size_t nargs)
+    : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
+      m_method(method)
 {
     m_jump[0] = -1;
     m_jump[1] = -1;
@@ -46,10 +47,11 @@ OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
 {
 //    std::cout << "\temit " << opname;
     int opnum = (int) m_ircode.size();
-    m_ircode.push_back (IROpcode (ustring (opname), node, m_codegenmethod));
+    m_ircode.push_back (IROpcode (ustring (opname), m_codegenmethod,
+                                  m_opargs.size(), nargs));
     for (size_t i = 0;  i < nargs;  ++i) {
-        if (args[i])
-            m_ircode.back().add_arg (args[i]);
+        ASSERT (args[i]);
+        m_opargs.push_back (args[i]);
 //        std::cout << " " << (args[i] ? args[i]->name() : ustring("<null>"));
     }
 //    std::cout << "\n";

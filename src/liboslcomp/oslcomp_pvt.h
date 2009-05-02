@@ -36,13 +36,17 @@ class ASTNode;
 ///
 class IROpcode {
 public:
-    IROpcode (ustring op, ASTNode *node, ustring method);
-    void add_arg (Symbol *arg) { m_args.push_back (arg->dealias()); }
-    size_t nargs () const { return m_args.size(); }
-    Symbol *arg (int i) const { return m_args[i]; }
-    ASTNode *node () const { return m_astnode; }
+    IROpcode (ustring op, ustring method, size_t firstarg, size_t nargs);
     const char *opname () const { return m_op.c_str(); }
+    size_t firstarg () const { return (size_t)m_firstarg; }
+    size_t nargs () const { return (size_t) m_nargs; }
     ustring method () const { return m_method; }
+    void source (ustring sourcefile, int sourceline) {
+        m_sourcefile = sourcefile;
+        m_sourceline = sourceline;
+    }
+    ustring sourcefile () const { return m_sourcefile; }
+    int sourceline () const { return m_sourceline; }
 
     /// Set the jump addresses (-1 means no jump)
     ///
@@ -60,10 +64,12 @@ public:
 
 private:
     ustring m_op;                   ///< Name of opcode
-    std::vector<Symbol *> m_args;   ///< Arguments
-    ASTNode *m_astnode;             ///< AST node that generated this op
+    int m_firstarg;                 ///< Index of first argument
+    int m_nargs;                    ///< Total number of arguments
     ustring m_method;               ///< Which param or method this code is for
     int m_jump[max_jumps];          ///< Jump addresses (-1 means none)
+    ustring m_sourcefile;           ///< Source filename for this op
+    int m_sourceline;               ///< Line of source code for this op
 };
 
 
@@ -216,6 +222,7 @@ private:
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
     IROpcodeVec m_ircode;     ///< Generated IR code
+    std::vector<Symbol *> m_opargs;  ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made

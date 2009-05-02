@@ -423,9 +423,9 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
             lastline = -1;
         }
 
-        if (m_debug && op->node()) {
-            ustring file = op->node()->sourcefile();
-            int line = op->node()->sourceline();
+        if (m_debug && op->sourcefile()) {
+            ustring file = op->sourcefile();
+            int line = op->sourceline();
             if (file != lastfile || line != lastline)
                 oso ("# %s:%d\n# %s\n", file.c_str(), line,
                      retrieve_source (file, line).c_str());
@@ -438,7 +438,8 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         if (op->nargs())
             oso (strlen(op->opname()) < 8 ? "\t\t" : "\t");
         for (size_t i = 0;  i < op->nargs();  ++i) {
-            oso ("%s ", op->arg(i)->dealias()->mangled().c_str());
+            int arg = op->firstarg() + i;
+            oso ("%s ", m_opargs[arg]->dealias()->mangled().c_str());
         }
 
         // Jump targets
@@ -448,14 +449,14 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 
         // Hints
         bool firsthint = true;
-        if (op->node()) {
-            if (op->node()->sourcefile() != lastfile) {
-                lastfile = op->node()->sourcefile();
+        if (op->sourcefile()) {
+            if (op->sourcefile() != lastfile) {
+                lastfile = op->sourcefile();
                 oso ("%c%%filename{\"%s\"}", firsthint ? '\t' : ' ', lastfile.c_str());
                 firsthint = false;
             }
-            if (op->node()->sourceline() != lastline) {
-                lastline = op->node()->sourceline();
+            if (op->sourceline() != lastline) {
+                lastline = op->sourceline();
                 oso ("%c%%line{%d}", firsthint ? '\t' : ' ', lastline);
                 firsthint = false;
             }

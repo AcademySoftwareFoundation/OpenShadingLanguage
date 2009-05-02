@@ -29,53 +29,6 @@ namespace OSL {
 namespace pvt {
 
 
-class ASTNode;
-
-
-/// Intermediate Represenatation opcode
-///
-class IROpcode {
-public:
-    IROpcode (ustring op, ustring method, size_t firstarg, size_t nargs);
-    const char *opname () const { return m_op.c_str(); }
-    size_t firstarg () const { return (size_t)m_firstarg; }
-    size_t nargs () const { return (size_t) m_nargs; }
-    ustring method () const { return m_method; }
-    void source (ustring sourcefile, int sourceline) {
-        m_sourcefile = sourcefile;
-        m_sourceline = sourceline;
-    }
-    ustring sourcefile () const { return m_sourcefile; }
-    int sourceline () const { return m_sourceline; }
-
-    /// Set the jump addresses (-1 means no jump)
-    ///
-    void set_jump (int jump0=-1, int jump1=-1, int jump2=-1) {
-        m_jump[0] = jump0;
-        m_jump[1] = jump1;
-        m_jump[2] = jump2;
-    }
-
-    /// Return the i'th jump target address (-1 for none).
-    ///
-    int jump (int i) const { return m_jump[i]; }
-
-    static const int max_jumps = 3; ///< Maximum jump targets an op can have
-
-private:
-    ustring m_op;                   ///< Name of opcode
-    int m_firstarg;                 ///< Index of first argument
-    int m_nargs;                    ///< Total number of arguments
-    ustring m_method;               ///< Which param or method this code is for
-    int m_jump[max_jumps];          ///< Jump addresses (-1 means none)
-    ustring m_sourcefile;           ///< Source filename for this op
-    int m_sourceline;               ///< Line of source code for this op
-};
-
-
-typedef std::vector<IROpcode> IROpcodeVec;
-
-
 
 class OSLCompilerImpl : public OSL::OSLCompiler {
 public:
@@ -170,7 +123,7 @@ public:
 
     /// Return a reference to a given IR opcode.
     ///
-    IROpcode & ircode (int index) { return m_ircode[index]; }
+    Opcode & ircode (int index) { return m_ircode[index]; }
 
     /// Specify that subsequent opcodes are for a particular method
     ///
@@ -221,7 +174,7 @@ private:
 //    SymbolList m_allfuncs;      ///< All function symbols, in decl order
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
-    IROpcodeVec m_ircode;     ///< Generated IR code
+    OpcodeVec m_ircode;       ///< Generated IR code
     std::vector<Symbol *> m_opargs;  ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index
     int m_next_const;         ///< Next const symbol index

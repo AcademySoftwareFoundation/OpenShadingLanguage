@@ -415,7 +415,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     int lastline = -1;
     ustring lastfile;
     ustring lastmethod ("___uninitialized___");
-    for (IROpcodeVec::iterator op = m_ircode.begin(); op != m_ircode.end();  ++op) {
+    for (OpcodeVec::iterator op = m_ircode.begin(); op != m_ircode.end();  ++op) {
         if (lastmethod != op->method()) {
             oso ("code %s\n", op->method().c_str());
             lastmethod = op->method();
@@ -443,7 +443,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         }
 
         // Jump targets
-        for (int i = 0;  i < IROpcode::max_jumps;  ++i)
+        for (int i = 0;  i < Opcode::max_jumps;  ++i)
             if (op->jump(i) >= 0)
                 oso ("%d ", op->jump(i));
 

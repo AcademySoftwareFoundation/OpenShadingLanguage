@@ -102,9 +102,6 @@ public:
     virtual void symdefault (const char *def);
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
-    virtual void instruction (int label, const char *opcode) { }
-    virtual void instruction_arg (const char *name) { }
-    virtual void instruction_jump (int target) { }
 
 private:
     OSLQuery &m_query;

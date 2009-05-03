@@ -41,9 +41,9 @@ public:
 private:
     ShaderType m_shadertype;            ///< Type of shader
     ustring m_shadername;               ///< Shader name
-    // Need the code
+    OpcodeVec m_ops;                    ///< Actual code instructions
+    std::vector<int> m_args;            ///< Arguments for all the ops
     // Need the code offsets for each code block
-    // Need the argument list (ints)
     SymbolVec m_symbols;                ///< Symbols used by the shader
     std::vector<int> m_idefaults;       ///< int default values
     std::vector<float> m_fdefaults;     ///< float default values
@@ -78,7 +78,7 @@ public:
     ShaderMaster::ref loadshader (const char *name);
 
 private:
-    friend class OSOReaderToMaster;
+
 };
 
 

@@ -443,7 +443,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         }
 
         // Jump targets
-        for (int i = 0;  i < Opcode::max_jumps;  ++i)
+        for (size_t i = 0;  i < Opcode::max_jumps;  ++i)
             if (op->jump(i) >= 0)
                 oso ("%d ", op->jump(i));
 

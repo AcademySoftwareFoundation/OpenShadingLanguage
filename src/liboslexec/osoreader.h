@@ -86,6 +86,10 @@ public:
     ///
     virtual void instruction_jump (int target) { }
 
+    /// Called after an instruction (after args and hints)
+    ///
+    virtual void instruction_end () { }
+
     /// Pointer to the one and only lexer in effect.  This is 'public',
     /// but NOBODY should modify this except for this class and the
     /// lexer internals.

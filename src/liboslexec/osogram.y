@@ -152,6 +152,9 @@ instruction
                     OSOReader::osoreader->instruction ($1, $2);
                 }
             arguments_opt jumptargets_opt hints_opt ENDOFLINE
+                {
+                    OSOReader::osoreader->instruction_end ();
+                }
         | codemarker
         | ENDOFLINE
         ;

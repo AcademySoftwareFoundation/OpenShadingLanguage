@@ -360,7 +360,7 @@ typedef std::vector<Symbol *> SymbolPtrVec;
 ///
 class Opcode {
 public:
-    Opcode (ustring op, ustring method, size_t firstarg, size_t nargs)
+    Opcode (ustring op, ustring method, size_t firstarg=0, size_t nargs=0)
         : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
           m_method(method)
     {
@@ -379,6 +379,11 @@ public:
     ustring sourcefile () const { return m_sourcefile; }
     int sourceline () const { return m_sourceline; }
 
+    void set_args (size_t firstarg, size_t nargs) {
+        m_firstarg = (int) firstarg;
+        m_nargs = (int) nargs;
+    }
+
     /// Set the jump addresses (-1 means no jump)
     ///
     void set_jump (int jump0=-1, int jump1=-1, int jump2=-1) {
@@ -387,11 +392,21 @@ public:
         m_jump[2] = jump2;
     }
 
+    void add_jump (int target) {
+        for (unsigned int i = 0;  i < max_jumps;  ++i)
+            if (m_jump[i] < 0) {
+                m_jump[i] = target;
+                return;
+            }
+    }
+
     /// Return the i'th jump target address (-1 for none).
     ///
     int jump (int i) const { return m_jump[i]; }
 
-    static const int max_jumps = 3; ///< Maximum jump targets an op can have
+    /// Maximum jump targets an op can have.
+    ///
+    static const unsigned int max_jumps = 3;
 
 private:
     ustring m_op;                   ///< Name of opcode

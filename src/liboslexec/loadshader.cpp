@@ -16,6 +16,8 @@
 #include <string>
 #include <cstdio>
 
+#include <boost/algorithm/string.hpp>
+
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
@@ -36,7 +38,9 @@ namespace pvt {   // OSL::pvt
 class OSOReaderToMaster : public OSOReader
 {
 public:
-    OSOReaderToMaster () : m_master (new ShaderMaster) { }
+    OSOReaderToMaster ()
+        : m_master (new ShaderMaster), m_reading_instruction(false)
+      { }
     virtual ~OSOReaderToMaster () { }
     virtual void version (const char *specid, float version) { }
     virtual void shader (const char *shadertype, const char *name);
@@ -46,14 +50,20 @@ public:
     virtual void symdefault (const char *def);
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
-    virtual void instruction (int label, const char *opcode) { }
-    virtual void instruction_arg (const char *name) { }
-    virtual void instruction_jump (int target) { }
+    virtual void instruction (int label, const char *opcode);
+    virtual void instruction_arg (const char *name);
+    virtual void instruction_jump (int target);
+    virtual void instruction_end ();
 
     ShaderMaster::ref master () const { return m_master; }
 
 private:
     ShaderMaster::ref m_master;
+    size_t m_firstarg;
+    size_t m_nargs;
+    bool m_reading_instruction;
+    ustring m_sourcefile;
+    int m_sourceline;
 };
 
 
@@ -129,45 +139,50 @@ OSOReaderToMaster::symdefault (const char *def)
 
 
 
+// If the string 'source' begins with 'pattern', erase the pattern from
+// the start of source and return true.  Otherwise, do not alter source
+// and return false.
+inline bool
+extract_prefix (std::string &source, const std::string &pattern)
+{
+    if (boost::starts_with (source, pattern)) {
+        source.erase (0, pattern.length());
+        return true;
+    }
+    return false;
+}
+
+
+
+// Return the prefix of source that doesn't contain any characters in
+// 'stop', erase that prefix from source (up to and including the stop
+// character.  Also, the returned string is trimmed of leading and trailing
+// spaces if 'do_trim' is true.
+static std::string
+readuntil (std::string &source, const std::string &stop, bool do_trim=false)
+{
+    size_t e = source.find_first_of (stop);
+    std::string r (source, 0, e);
+    source.erase (0, e == source.npos ? e : e+1);
+    if (do_trim)
+        boost::trim (r);
+    return r;
+}
+
+
+
 void
 OSOReaderToMaster::hint (const char *hintstring)
 {
-#if 0
-    if (m_reading_param && ! strncmp (hintstring, "%meta{", 6)) {
-        hintstring += 6;
-        // std::cerr << "  Metadata '" << hintstring << "'\n";
-        std::string type = readuntil (&hintstring, ',', '}');
-        std::string name = readuntil (&hintstring, ',', '}');
-        // std::cerr << "    " << name << " : " << type << "\n";
-        OSLToMaster::Parameter p;
-        p.name = name;
-        p.type = string_to_type (type.c_str());
-        if (p.type.basetype == TypeDesc::STRING) {
-            while (*hintstring == ' ')
-                ++hintstring;
-            while (hintstring[0] == '\"') {
-                ++hintstring;
-                p.sdefault.push_back (readuntil (&hintstring, '\"'));
-            }
-        } else if (p.type.basetype == TypeDesc::INT) {
-            while (*hintstring == ' ')
-                ++hintstring;
-            while (*hintstring && *hintstring != '}') {
-                p.idefault.push_back (atoi (hintstring));
-                readuntil (&hintstring, ',', '}');
-            }
-        } else if (p.type.basetype == TypeDesc::FLOAT) {
-            while (*hintstring == ' ')
-                ++hintstring;
-            while (*hintstring && *hintstring != '}') {
-                p.fdefault.push_back (atof (hintstring));
-                readuntil (&hintstring, ',', '}');
-            }
-        }
-        m_query.m_params[m_query.nparams()-1].metadata.push_back (p);
+    std::string h (hintstring);
+    if (extract_prefix (h, "%filename{\"")) {
+        m_sourcefile = readuntil (h, "\"");
+        return;
     }
-    // std::cerr << "Hint '" << hintstring << "'\n";
-#endif
+    if (extract_prefix (h, "%line{")) {
+        m_sourceline = atoi (h.c_str());
+        return;
+    }
 }
 
 
@@ -178,6 +193,55 @@ OSOReaderToMaster::codemarker (const char *name)
 #if 0
     m_reading_param = false;
 #endif
+    m_sourcefile.clear();
+}
+
+
+
+void
+OSOReaderToMaster::instruction (int label, const char *opcode)
+{
+    Opcode op (ustring(opcode), ustring(""));
+    m_master->m_ops.push_back (op);
+    m_firstarg = m_master->m_args.size();
+    m_nargs = 0;
+    m_reading_instruction = true;
+}
+
+
+
+void
+OSOReaderToMaster::instruction_arg (const char *name)
+{
+    ustring argname (name);
+    for (size_t i = 0;  i < m_master->m_symbols.size();  ++i) {
+        if (m_master->m_symbols[i].name() == argname) {
+            m_master->m_args.push_back (i);
+            ++m_nargs;
+            return;
+        }
+    }
+    // ERROR! -- FIXME
+//    m_master->m_args.push_back (0);  // FIXME
+    std::cerr << "(unknown arg " << name << ") ";
+}
+
+
+
+void
+OSOReaderToMaster::instruction_jump (int target)
+{
+    m_master->m_ops.back().add_jump (target);
+}
+
+
+
+void
+OSOReaderToMaster::instruction_end ()
+{
+    m_master->m_ops.back().set_args (m_firstarg, m_nargs);
+    m_master->m_ops.back().source (m_sourcefile, m_sourceline);
+    m_reading_instruction = false;
 }
 
 
@@ -216,6 +280,19 @@ ShaderMaster::print ()
     for (size_t i = 0;  i < m_sdefaults.size();  ++i)
         std::cout << "\"" << m_sdefaults[i] << "\" ";
     std::cout << "\n";
+    std::cout << "  code:\n";
+    for (size_t i = 0;  i < m_ops.size();  ++i) {
+        std::cout << "    " << i << ": " << m_ops[i].opname();
+        for (size_t a = 0;  a < m_ops[i].nargs();  ++a)
+            std::cout << " " << m_symbols[m_args[m_ops[i].firstarg()+a]].name();
+        for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
+            if (m_ops[i].jump(j) >= 0)
+                std::cout << " " << m_ops[i].jump(j);
+        if (m_ops[i].sourcefile())
+            std::cout << "\t(" << m_ops[i].sourcefile() << ":" 
+                      << m_ops[i].sourceline() << ")";
+        std::cout << "\n";
+    }
 }
 
 

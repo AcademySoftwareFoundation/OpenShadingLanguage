@@ -16,18 +16,25 @@
 
 
 #include "OpenImageIO/typedesc.h"
+#include "OpenImageIO/refcnt.h"
 
 
 
 namespace OSL {
+
+namespace pvt {
+class ShaderInstance;
+typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
+};
+using pvt::ShaderInstanceRef;
 
 
 
 class ShadingSystem
 {
 public:
-    ShadingSystem () { }
-    virtual ~ShadingSystem () { }
+    ShadingSystem ();
+    virtual ~ShadingSystem ();
 
     static ShadingSystem *create ();
     static void destroy (ShadingSystem *x);
@@ -86,7 +93,47 @@ public:
         return ok;
     }
 
+    /// Set a parameter of the next shader.
+    ///
+    virtual void Parameter (const char *name, TypeDesc t, const void *val) {}
+#if 0
+    virtual void Parameter (const char *name, int val) {
+        Parameter (name, TypeDesc::IntType, &val);
+    }
+    virtual void Parameter (const char *name, float val) {
+        Parameter (name, TypeDesc::FloatType, &val);
+    }
+    virtual void Parameter (const char *name, double val) {}
+    virtual void Parameter (const char *name, const char *val) {}
+    virtual void Parameter (const char *name, const std::string &val) {}
+    virtual void Parameter (const char *name, TypeDesc t, const int *val) {}
+    virtual void Parameter (const char *name, TypeDesc t, const float *val) {}
+    virtual void Parameter (const char *name, TypeDesc t, const char **val) {}
+#endif
+
+    /// 
+    virtual ShaderInstanceRef Shader (const char *shaderusage,
+                                      const char *shadername=NULL,
+                                      const char *layername=NULL) = 0;
+    virtual void ShaderGroupBegin (void) = 0;
+    virtual ShaderInstanceRef ShaderGroupEnd (void) = 0;
+    virtual void ConnectShaders (const char *srclayer, const char *srcparam,
+                                 const char *dstlayer, const char *dstparam)=0;
+
+    /// If any of the API routines returned false indicating an error,
+    /// this routine will return the error string (and clear any error
+    /// flags).  If no error has occurred since the last time geterror()
+    /// was called, it will return an empty string.
+    virtual std::string geterror () const = 0;
+
+    /// Return the statistics output as a huge string.
+    ///
+    virtual std::string getstats (int level=1) const = 0;
+
 private:
+    // Make delete private and unimplemented in order to prevent apps
+    // from calling it.  Instead, they should call ShadingSystem::destroy().
+    void operator delete (void *todel) { }
 };
 
 

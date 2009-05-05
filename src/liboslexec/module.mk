@@ -8,7 +8,9 @@
 local_name := liboslexec
 
 # Name of all source files in this directory
-local_src := oslexec.cpp osoreader.cpp loadshader.cpp shadingsys.cpp
+local_src := instance.cpp loadshader.cpp master.cpp \
+	     oslexec.cpp osoreader.cpp \
+	     shadingsys.cpp
 #sllex.l slgram.y
 
 # Extra static libs needed to compile this binary (leave blank if this

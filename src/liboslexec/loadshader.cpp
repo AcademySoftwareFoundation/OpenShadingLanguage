@@ -39,8 +39,8 @@ namespace pvt {   // OSL::pvt
 class OSOReaderToMaster : public OSOReader
 {
 public:
-    OSOReaderToMaster ()
-        : m_master (new ShaderMaster), m_reading_instruction(false)
+    OSOReaderToMaster (ShadingSystemImpl &shadingsys)
+        : m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
       { }
     virtual ~OSOReaderToMaster () { }
     virtual bool parse (const std::string &filename);
@@ -260,6 +260,11 @@ OSOReaderToMaster::instruction_end ()
 ShaderMaster::ref
 ShadingSystemImpl::loadshader (const char *cname)
 {
+    if (! cname || ! cname[0]) {
+        error ("Attempt to load shader with empty name \"\".");
+        return NULL;
+    }
+    ++m_stat_shaders_requested;
     ustring name (cname);
     lock_guard guard (m_mutex);  // Thread safety
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
@@ -270,61 +275,27 @@ ShadingSystemImpl::loadshader (const char *cname)
     }
 
     // Not found in the map
-    OSOReaderToMaster oso;
+    OSOReaderToMaster oso (*this);
     std::string filename = Filesystem::searchpath_find (name.string() + ".oso",
                                                         m_searchpath_dirs);
     if (filename.empty ()) {
         // FIXME -- error
+        error ("No .oso file could be found for shader \"%s\"", name.c_str());
         return NULL;
     }
     bool ok = oso.parse (filename);
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
-    std::cerr << "Added " << filename << " to shader_masters\n";
+    if (ok) {
+        ++m_stat_shaders_loaded;
+        std::cerr << "Added " << filename << " to shader_masters\n";
+    } else {
+        error ("Unable to read \"%s\"", filename.c_str());
+    }
     // FIXME -- catch errors
     return r;
 }
 
-
-
-void
-ShaderMaster::print ()
-{
-    std::cout << "Shader " << m_shadername << " type=" 
-              << shadertypename(m_shadertype) << "\n";
-    std::cout << "  path = " << m_osofilename << "\n";
-    std::cout << "  symbols:\n";
-    for (size_t i = 0;  i < m_symbols.size();  ++i) {
-        const Symbol &s (m_symbols[i]);
-        std::cout << "    " << s.typespec().string() << " " << s.name()
-                  << "\n";
-    }
-    std::cout << "  int defaults:\n    ";
-    for (size_t i = 0;  i < m_idefaults.size();  ++i)
-        std::cout << m_idefaults[i] << ' ';
-    std::cout << "\n";
-    std::cout << "  float defaults:\n    ";
-    for (size_t i = 0;  i < m_fdefaults.size();  ++i)
-        std::cout << m_fdefaults[i] << ' ';
-    std::cout << "\n";
-    std::cout << "  string defaults:\n    ";
-    for (size_t i = 0;  i < m_sdefaults.size();  ++i)
-        std::cout << "\"" << m_sdefaults[i] << "\" ";
-    std::cout << "\n";
-    std::cout << "  code:\n";
-    for (size_t i = 0;  i < m_ops.size();  ++i) {
-        std::cout << "    " << i << ": " << m_ops[i].opname();
-        for (size_t a = 0;  a < m_ops[i].nargs();  ++a)
-            std::cout << " " << m_symbols[m_args[m_ops[i].firstarg()+a]].name();
-        for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
-            if (m_ops[i].jump(j) >= 0)
-                std::cout << " " << m_ops[i].jump(j);
-        if (m_ops[i].sourcefile())
-            std::cout << "\t(" << m_ops[i].sourcefile() << ":" 
-                      << m_ops[i].sourceline() << ")";
-        std::cout << "\n";
-    }
-}
 
 
 }; // namespace pvt

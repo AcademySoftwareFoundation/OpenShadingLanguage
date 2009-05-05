@@ -98,6 +98,9 @@ test_shader (const std::string &filename)
         ((ShadingSystemImpl *)shadingsys)->loadshader (filename.c_str());
     if (m)
         m->print ();
+    else
+        std::cerr << "ERR: " << shadingsys->geterror() << "\n";
+    std::cout << "\n";
 }
 
 
@@ -108,6 +111,7 @@ main (int argc, char *argv[])
     getargs (argc, argv);
 
     shadingsys = ShadingSystem::create ();
+    shadingsys->attribute ("statistics:level", 5);
 
     for (size_t i = 0;  i < inputfiles.size();  ++i) {
         test_shader (inputfiles[i]);

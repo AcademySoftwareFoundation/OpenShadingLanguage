@@ -21,12 +21,14 @@
 namespace po = boost::program_options;
 
 #include "oslexec.h"
-using namespace OSL;
-
 #include "../liboslexec/oslexec_pvt.h"
+using namespace OSL;
+using namespace OSL::pvt;
 
 
 
+
+static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> inputfiles;
 
 
@@ -92,8 +94,8 @@ getargs (int argc, char *argv[])
 static void
 test_shader (const std::string &filename)
 {
-    OSL::pvt::ShadingSystemImpl shadingsys;
-    OSL::pvt::ShaderMaster::ref m = shadingsys.loadshader (filename.c_str());
+    ShaderMaster::ref m = 
+        ((ShadingSystemImpl *)shadingsys)->loadshader (filename.c_str());
     if (m)
         m->print ();
 }
@@ -105,9 +107,13 @@ main (int argc, char *argv[])
 {
     getargs (argc, argv);
 
+    shadingsys = ShadingSystem::create ();
+
     for (size_t i = 0;  i < inputfiles.size();  ++i) {
         test_shader (inputfiles[i]);
     }
+
+    ShadingSystem::destroy (shadingsys);
 
     return EXIT_SUCCESS;
 }

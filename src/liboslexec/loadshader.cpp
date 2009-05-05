@@ -21,6 +21,7 @@
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
+#include "OpenImageIO/filesystem.h"
 
 #include "oslexec_pvt.h"
 #include "osoreader.h"
@@ -42,6 +43,7 @@ public:
         : m_master (new ShaderMaster), m_reading_instruction(false)
       { }
     virtual ~OSOReaderToMaster () { }
+    virtual bool parse (const std::string &filename);
     virtual void version (const char *specid, float version) { }
     virtual void shader (const char *shadertype, const char *name);
     virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
@@ -68,10 +70,19 @@ private:
 
 
 
+bool
+OSOReaderToMaster::parse (const std::string &filename)
+{
+    m_master->m_osofilename = filename;
+    return OSOReader::parse (filename);
+}
+
+
+
 void
 OSOReaderToMaster::shader (const char *shadertype, const char *name)
 {
-    m_master->m_shadername = ustring(name);
+    m_master->m_shadername = name; //ustring(name);
     m_master->m_shadertype = shadertype_from_name (shadertype);
 }
 
@@ -247,12 +258,31 @@ OSOReaderToMaster::instruction_end ()
 
 
 ShaderMaster::ref
-ShadingSystemImpl::loadshader (const char *name)
+ShadingSystemImpl::loadshader (const char *cname)
 {
+    ustring name (cname);
+    lock_guard guard (m_mutex);  // Thread safety
+    ShaderNameMap::const_iterator found = m_shader_masters.find (name);
+    if (found != m_shader_masters.end()) {
+        std::cerr << "Found " << name << " in shader_masters\n";
+        // Already loaded this shader, return its reference
+        return (*found).second;
+    }
+
+    // Not found in the map
     OSOReaderToMaster oso;
-    std::string filename = name;   // FIXME -- do search, etc.
+    std::string filename = Filesystem::searchpath_find (name.string() + ".oso",
+                                                        m_searchpath_dirs);
+    if (filename.empty ()) {
+        // FIXME -- error
+        return NULL;
+    }
     bool ok = oso.parse (filename);
-    return ok ? oso.master() : NULL;
+    ShaderMaster::ref r = ok ? oso.master() : NULL;
+    m_shader_masters[name] = r;
+    std::cerr << "Added " << filename << " to shader_masters\n";
+    // FIXME -- catch errors
+    return r;
 }
 
 
@@ -262,6 +292,7 @@ ShaderMaster::print ()
 {
     std::cout << "Shader " << m_shadername << " type=" 
               << shadertypename(m_shadertype) << "\n";
+    std::cout << "  path = " << m_osofilename << "\n";
     std::cout << "  symbols:\n";
     for (size_t i = 0;  i < m_symbols.size();  ++i) {
         const Symbol &s (m_symbols[i]);

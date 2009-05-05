@@ -39,7 +39,7 @@ public:
     /// Read in the oso file, parse it, call the various callbacks.
     /// Return true if the file was correctly parsed, false if there was
     /// an unrecoverable error reading the file.
-    bool parse (const std::string &filename);
+    virtual bool parse (const std::string &filename);
 
     /// Declare the shader version.
     ///

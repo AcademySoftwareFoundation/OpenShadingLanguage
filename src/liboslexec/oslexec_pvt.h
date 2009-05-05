@@ -19,6 +19,7 @@
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/refcnt.h"
 
+#include "oslexec.h"
 #include "osl_pvt.h"
 
 
@@ -40,7 +41,8 @@ public:
 
 private:
     ShaderType m_shadertype;            ///< Type of shader
-    ustring m_shadername;               ///< Shader name
+    std::string m_shadername;           ///< Shader name
+    std::string m_osofilename;          ///< Full path of oso file
     OpcodeVec m_ops;                    ///< Actual code instructions
     std::vector<int> m_args;            ///< Arguments for all the ops
     // Need the code offsets for each code block
@@ -48,6 +50,7 @@ private:
     std::vector<int> m_idefaults;       ///< int default values
     std::vector<float> m_fdefaults;     ///< float default values
     std::vector<ustring> m_sdefaults;   ///< string default values
+
     friend class OSOReaderToMaster;
 };
 
@@ -58,27 +61,42 @@ private:
 /// other instances within the same shader group.
 class ShaderInstance : public RefCnt {
 public:
+    typedef intrusive_ptr<ShaderInstance> ref;
     ShaderInstance () { }
     ~ShaderInstance () { }
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
     ustring m_layername;                ///< Name of this layer
+    ref m_nextlayer;                    ///< Next layer in the group
+    bool m_firstlayer;                  ///< Is this the 1st layer of group?
     // Need instance values for each parameter (int, float, string)
+    std::vector<int> m_iparams;         ///< int param values
+    std::vector<float> m_fparams;       ///< float param values
+    std::vector<ustring> m_sparams;     ///< string param values
 
 };
 
 
 
-class ShadingSystemImpl
+class ShadingSystemImpl : public ShadingSystem
 {
 public:
     ShadingSystemImpl () { }
-    ~ShadingSystemImpl () { }
+    virtual ~ShadingSystemImpl () { }
+
+    virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
+    virtual bool getattribute (const std::string &name, TypeDesc type, void *val);
+
 
     ShaderMaster::ref loadshader (const char *name);
 
 private:
-
+    typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
+    ShaderNameMap m_shader_masters;   ///< name -> shader masters map
+    std::string m_searchpath;         ///< Shader search path
+    std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
+    mutex m_mutex;                    ///< Thread safety for attribs & map
+    
 };
 
 

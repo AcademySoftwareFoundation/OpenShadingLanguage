@@ -15,20 +15,78 @@
 #define OSLEXEC_H
 
 
-class osoFlexLexer;
+#include "OpenImageIO/typedesc.h"
+
 
 
 namespace OSL {
 
 
-class ShadingSystem {
+
+class ShadingSystem
+{
 public:
-    static ShadingSystem *create () { return NULL; }
+    ShadingSystem () { }
+    virtual ~ShadingSystem () { }
 
-    ShadingSystem (void) { }
-    virtual ~ShadingSystem (void) { }
+    static ShadingSystem *create ();
+    static void destroy (ShadingSystem *x);
 
-    static osoFlexLexer *osolexer;
+    /// Set an attribute controlling the texture system.  Return true
+    /// if the name and type were recognized and the attrib was set.
+    /// Documented attributes:
+    ///
+    virtual bool attribute (const std::string &name, TypeDesc type,
+                            const void *val) = 0;
+    // Shortcuts for common types
+    bool attribute (const std::string &name, int val) {
+        return attribute (name, TypeDesc::INT, &val);
+    }
+    bool attribute (const std::string &name, float val) {
+        return attribute (name, TypeDesc::FLOAT, &val);
+    }
+    bool attribute (const std::string &name, double val) {
+        float f = (float) val;
+        return attribute (name, TypeDesc::FLOAT, &f);
+    }
+    bool attribute (const std::string &name, const char *val) {
+        return attribute (name, TypeDesc::STRING, &val);
+    }
+    bool attribute (const std::string &name, const std::string &val) {
+        const char *s = val.c_str();
+        return attribute (name, TypeDesc::STRING, &s);
+    }
+
+    /// Get the named attribute, store it in value.
+    ///
+    virtual bool getattribute (const std::string &name, TypeDesc type,
+                               void *val) = 0;
+    // Shortcuts for common types
+    bool getattribute (const std::string &name, int &val) {
+        return getattribute (name, TypeDesc::INT, &val);
+    }
+    bool getattribute (const std::string &name, float &val) {
+        return getattribute (name, TypeDesc::FLOAT, &val);
+    }
+    bool getattribute (const std::string &name, double &val) {
+        float f;
+        bool ok = getattribute (name, TypeDesc::FLOAT, &f);
+        if (ok)
+            val = f;
+        return ok;
+    }
+    bool getattribute (const std::string &name, char **val) {
+        return getattribute (name, TypeDesc::STRING, val);
+    }
+    bool getattribute (const std::string &name, std::string &val) {
+        const char *s = NULL;
+        bool ok = getattribute (name, TypeDesc::STRING, &s);
+        if (ok)
+            val = s;
+        return ok;
+    }
+
+private:
 };
 
 

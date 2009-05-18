@@ -52,7 +52,7 @@ lextype (int lex)
     case POINTTYPE  : return TypeDesc::TypePoint;
     case STRINGTYPE : return TypeDesc::TypeString;
     case VECTORTYPE : return TypeDesc::TypeVector;
-    case VOIDTYPE   : return TypeDesc::VOID;
+    case VOIDTYPE   : return TypeDesc::NONE;
     default: return PT_UNKNOWN;
     }
 }

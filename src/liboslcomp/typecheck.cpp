@@ -180,7 +180,7 @@ ASTconditional_statement::typecheck (TypeSpec expected)
         error ("Cannot use a struct as an 'if' condition");
     if (c.is_array())
         error ("Cannot use an array as an 'if' condition");
-    return m_typespec = TypeDesc (TypeDesc::VOID);
+    return m_typespec = TypeDesc (TypeDesc::NONE);
 }
 
 
@@ -196,7 +196,7 @@ ASTloop_statement::typecheck (TypeSpec expected)
         error ("Cannot use a struct as an '%s' condition", opname());
     if (c.is_array())
         error ("Cannot use an array as an '%s' condition", opname());
-    return m_typespec = TypeDesc (TypeDesc::VOID);
+    return m_typespec = TypeDesc (TypeDesc::NONE);
 }
 
 
@@ -811,7 +811,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     case 'n' : t = TypeDesc::TypeNormal;       break;
     case 'm' : t = TypeDesc::TypeMatrix;       break;
     case 's' : t = TypeDesc::TypeString;       break;
-    case 'x' : t = TypeDesc (TypeDesc::VOID);  break;
+    case 'x' : t = TypeDesc (TypeDesc::NONE);  break;
     case 'C' : // color closure
         t = TypeSpec (TypeDesc::TypeColor, true);
         break;

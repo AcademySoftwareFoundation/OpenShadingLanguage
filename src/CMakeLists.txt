@@ -60,13 +60,14 @@ ADD_SUBDIRECTORY ( doc )
 
 
 
+#########################################################################
 # Testing
-#INCLUDE ( CTest )
-#ADD_SUBDIRECTORY ( testshade )
+INCLUDE ( CTest )
+ADD_SUBDIRECTORY ( testshade )
 # Ugh, I can't seem to ADD_SUBDIRECTORY the testsuite dir if it's not a true
 # subdirectory of source, so we fake it by creating a link.  FIXME!
-#EXECUTE_PROCESS ( COMMAND cmake -E create_symlink ${PROJECT_SOURCE_DIR}/../testsuite ${PROJECT_SOURCE_DIR}/testsuite )
-#ADD_SUBDIRECTORY ( testsuite )
+EXECUTE_PROCESS ( COMMAND cmake -E create_symlink ${PROJECT_SOURCE_DIR}/../testsuite ${PROJECT_SOURCE_DIR}/testsuite )
+ADD_SUBDIRECTORY ( testsuite )
 
 
 #########################################################################

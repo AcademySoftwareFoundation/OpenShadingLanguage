@@ -1,0 +1,5 @@
+SET ( testshade_srcs testshade.cpp )
+ADD_EXECUTABLE ( testshade ${testshade_srcs} )
+LINK_ILMBASE ( testshade )
+TARGET_LINK_LIBRARIES ( testshade oslexec oslcomp ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} )
+INSTALL ( TARGETS testshade RUNTIME DESTINATION bin )

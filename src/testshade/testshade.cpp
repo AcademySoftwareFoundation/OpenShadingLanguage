@@ -101,6 +101,10 @@ test_shader (const std::string &filename)
     else
         std::cerr << "ERR: " << shadingsys->geterror() << "\n";
     std::cout << "\n";
+
+    float Kd = 0.75;
+    shadingsys->Parameter ("Kd", TypeDesc::TypeFloat, &Kd);
+    shadingsys->Shader ("surface", filename.c_str());
 }
 
 

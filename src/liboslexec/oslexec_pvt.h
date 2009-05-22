@@ -60,11 +60,12 @@ public:
     /// Reassign the current value, adjust peak and requested as necessary.
     ///
     const value_t operator= (value_t newval) {
-        if (newval > m_current)
-            m_requested += (m_current-newval);
+        value_t cur = m_current;
+        if (newval > cur)
+            m_requested += (cur-newval);
         m_current = newval;
-        if (m_current > m_peak)
-            m_peak = m_current;
+        if (newval > m_peak)
+            m_peak = newval;
         return m_current;
     }
     /// Add to current value, adjust peak and requested as necessary.
@@ -93,6 +94,45 @@ private:
 
 
 
+/// Reference to a shader Parameter from the user/app.  Use local
+/// storage for simple scalar types (a single int, float, or string).
+class ParamRef {
+public:
+    ParamRef (ustring name, TypeDesc type, const void *data)
+        : m_name(name), m_type(type), m_data(data), m_is_local(false)
+    {
+        if (type == TypeDesc::TypeInt) {
+            m_data = &m_local_data.i;
+            m_local_data.i = *(const int *)data;
+            m_is_local = true;
+        } else if (type == TypeDesc::TypeFloat) {
+            m_data = &m_local_data.f;
+            m_local_data.f = *(const float *)data;
+            m_is_local = true;
+        } else if (type == TypeDesc::TypeString) {
+            m_data = &m_local_data.s;
+            m_local_data.s = ustring(*(const char **)data).c_str();
+            m_is_local = true;
+        }
+    }
+    ~ParamRef () { }
+    ustring name () const { return m_name; }
+    TypeDesc type () const { return m_type; }
+    const void *data () const { return m_data; }
+private:
+    ustring m_name;         ///< Parameter name
+    TypeDesc m_type;        ///< Parameter type
+    const void *m_data;     ///< Pointer to data -- we are not the owner!
+    bool m_is_local;        ///< Do we use local storage?
+    union {
+        int i;
+        float f;
+        const char *s;
+    } m_local_data;         ///< Local storage for small simple types
+};
+
+
+
 /// ShaderMaster is the full internal representation of a complete
 /// shader that would be a .oso file on disk: symbols, instructions,
 /// arguments, you name it.  A master copy is shared by all the 
@@ -109,6 +149,23 @@ public:
     ///
     ShadingSystemImpl & shadingsys () const { return m_shadingsys; }
 
+    /// Run through the symbols and set their data pointers if they are
+    /// constants or params (to the defaults).  As a side effect, also
+    /// set m_firstparam/m_lastparam.
+    void resolve_defaults ();
+
+    /// Find the named symbol, return its index in the symbol array, or
+    /// -1 if not found.
+    int findsymbol (ustring name) const;
+
+    /// Find the named parameter, return its index in the symbol array, or
+    /// -1 if not found.
+    int findparam (ustring name) const;
+
+    /// Return a pointer to the symbol (specified by integer index),
+    /// or NULL (if index was -1, as returned by 'findsymbol').
+    Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Back-ptr to the shading system
     ShaderType m_shadertype;            ///< Type of shader
@@ -118,11 +175,16 @@ private:
     std::vector<int> m_args;            ///< Arguments for all the ops
     // Need the code offsets for each code block
     SymbolVec m_symbols;                ///< Symbols used by the shader
-    std::vector<int> m_idefaults;       ///< int default values
-    std::vector<float> m_fdefaults;     ///< float default values
-    std::vector<ustring> m_sdefaults;   ///< string default values
+    std::vector<int> m_idefaults;       ///< int default param values
+    std::vector<float> m_fdefaults;     ///< float default param values
+    std::vector<ustring> m_sdefaults;   ///< string default param values
+    std::vector<int> m_iconsts;         ///< int constant values
+    std::vector<float> m_fconsts;       ///< float constant values
+    std::vector<ustring> m_sconsts;     ///< string constant values
+    int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
 
     friend class OSOReaderToMaster;
+    friend class ShaderInstance;
 };
 
 
@@ -134,9 +196,7 @@ class ShaderInstance /*: public RefCnt*/ {
 public:
 //    typedef intrusive_ptr<ShaderInstance> ref;
     typedef ShaderInstanceRef ref;
-    ShaderInstance (ShaderMaster::ref master, const char *layername="") 
-        : m_master(master), m_layername(layername),
-          m_firstlayer(true) { }
+    ShaderInstance (ShaderMaster::ref master, const char *layername="");
     ~ShaderInstance () { }
 
     /// Return a pointer to the master for this instance.
@@ -157,8 +217,13 @@ public:
     ///
     ShaderInstance *next_layer () const { return m_nextlayer.get(); }
 
+    /// Apply pending parameters
+    /// 
+    void parameters (const std::vector<ParamRef> &params);
+
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
+    SymbolVec m_symbols;                ///< Symbols used by the instance
     ustring m_layername;                ///< Name of this layer
     ref m_nextlayer;                    ///< Next layer in the group
     bool m_firstlayer;                  ///< Is this the 1st layer of group?
@@ -178,16 +243,14 @@ public:
     virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
     virtual bool getattribute (const std::string &name, TypeDesc type, void *val);
 
-    virtual void Parameter (const char *name, TypeDesc t, const void *val) { }
+    virtual void Parameter (const char *name, TypeDesc t, const void *val);
     virtual ShaderInstanceRef Shader (const char *shaderusage,
                                       const char *shadername=NULL,
-                                      const char *layername=NULL) {
-        return ShaderInstanceRef();
-    }
-    virtual void ShaderGroupBegin (void) { }
-    virtual ShaderInstanceRef ShaderGroupEnd (void) { return ShaderInstanceRef(); }
+                                      const char *layername=NULL);
+    virtual void ShaderGroupBegin (void);
+    virtual ShaderInstanceRef ShaderGroupEnd (void);
     virtual void ConnectShaders (const char *srclayer, const char *srcparam,
-                                 const char *dstlayer, const char *dstparam) {}
+                                 const char *dstlayer, const char *dstparam);
 
 
     /// Internal error reporting routine, with printf-like arguments.
@@ -209,6 +272,9 @@ private:
     int m_statslevel;                     ///< Statistics level
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
+    bool m_in_group;                      ///< Are we specifying a group?
+    ShaderInstanceRef m_group_head;       ///< Head of our group
+    std::vector<ParamRef> m_pending_params; ///< Pending Parameter() values
     mutable mutex m_mutex;                ///< Thread safety
     mutable mutex m_errmutex;             ///< Safety for error messages
     mutable fast_mutex m_stats_mutex;     ///< Spin lock for non-atomic stats

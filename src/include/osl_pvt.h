@@ -335,6 +335,16 @@ public:
         return symtype_shortname(m_symtype);
     }
 
+    /// Return a pointer to the symbol's data.
+    ///
+    void *data () const { return m_data; }
+
+    /// Specify the location of the symbol's data.
+    ///
+    void data (void *d) { m_data = d; }
+
+    int dataoffset () const { return m_dataoffset; }
+
 protected:
     void *m_data;               ///< Pointer to the data
     ustring m_name;             ///< Symbol name (unmangled)

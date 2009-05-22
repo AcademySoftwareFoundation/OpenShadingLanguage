@@ -15,16 +15,15 @@
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <limits>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
 
 #include "oslexec_pvt.h"
-#include "osoreader.h"
 
 
 
@@ -32,6 +31,64 @@
 namespace OSL {
 
 namespace pvt {   // OSL::pvt
+
+
+int
+ShaderMaster::findsymbol (ustring name) const
+{
+    for (size_t i = 0;  i < m_symbols.size();  ++i)
+        if (m_symbols[i].name() == name)
+            return (int)i;
+    return -1;
+}
+
+
+
+int
+ShaderMaster::findparam (ustring name) const
+{
+    for (int i = m_firstparam;  i <= m_lastparam;  ++i)
+        if (m_symbols[i].name() == name)
+            return i;
+    return -1;
+}
+
+
+
+void
+ShaderMaster::resolve_defaults ()
+{
+    m_firstparam = std::numeric_limits<int>::max();
+    m_lastparam = -1;
+    int i = 0;
+    BOOST_FOREACH (Symbol &s, m_symbols) {
+        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
+            if (m_firstparam > i)
+                m_firstparam = i;
+            m_lastparam = i;
+            if (s.dataoffset() >= 0) {
+                if (s.typespec().simpletype().basetype == TypeDesc::INT)
+                    s.data (&(m_idefaults[s.dataoffset()]));
+                else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
+                    s.data (&(m_fdefaults[s.dataoffset()]));
+                else if (s.typespec().simpletype().basetype == TypeDesc::STRING)
+                    s.data (&(m_sdefaults[s.dataoffset()]));
+            }
+        }
+        if (s.symtype() == SymTypeConst) {
+            if (s.dataoffset() >= 0) {
+                if (s.typespec().simpletype().basetype == TypeDesc::INT)
+                    s.data (&(m_iconsts[s.dataoffset()]));
+                else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
+                    s.data (&(m_fconsts[s.dataoffset()]));
+                else if (s.typespec().simpletype().basetype == TypeDesc::STRING)
+                    s.data (&(m_sconsts[s.dataoffset()]));
+            }
+        }
+        ++i;
+    }
+}
+
 
 
 void
@@ -46,6 +103,18 @@ ShaderMaster::print ()
         std::cout << "    " << s.typespec().string() << " " << s.name()
                   << "\n";
     }
+    std::cout << "  int consts:\n    ";
+    for (size_t i = 0;  i < m_iconsts.size();  ++i)
+        std::cout << m_iconsts[i] << ' ';
+    std::cout << "\n";
+    std::cout << "  float consts:\n    ";
+    for (size_t i = 0;  i < m_fconsts.size();  ++i)
+        std::cout << m_fconsts[i] << ' ';
+    std::cout << "\n";
+    std::cout << "  string consts:\n    ";
+    for (size_t i = 0;  i < m_sconsts.size();  ++i)
+        std::cout << "\"" << m_sconsts[i] << "\" ";
+    std::cout << "\n";
     std::cout << "  int defaults:\n    ";
     for (size_t i = 0;  i < m_idefaults.size();  ++i)
         std::cout << m_idefaults[i] << ' ';

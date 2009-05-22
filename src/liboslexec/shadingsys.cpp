@@ -71,7 +71,7 @@ namespace pvt {   // OSL::pvt
 
 
 ShadingSystemImpl::ShadingSystemImpl ()
-    : m_statslevel(0)
+    : m_in_group (false), m_statslevel (0)
 {
 }
 
@@ -173,6 +173,79 @@ ShadingSystemImpl::printstats () const
     if (m_statslevel == 0)
         return;
     std::cout << getstats (m_statslevel) << "\n\n";
+}
+
+
+
+void
+ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
+{
+    m_pending_params.push_back (ParamRef (ustring(name), t, val));
+}
+
+
+
+void
+ShadingSystemImpl::ShaderGroupBegin (void)
+{
+    if (m_in_group) {
+        error ("Nested ShaderGroupBegin() calls");
+        return;
+    }
+    m_in_group = true;
+    m_group_head.reset ();
+}
+
+
+
+ShaderInstanceRef
+ShadingSystemImpl::ShaderGroupEnd (void)
+{
+    ShaderInstanceRef head;
+    std::swap (m_group_head, head);
+    // gets head into group_head, AND clears group_head!
+    return head;
+}
+
+
+
+ShaderInstanceRef
+ShadingSystemImpl::Shader (const char *shaderusage,
+                           const char *shadername,
+                           const char *layername)
+{
+    ShaderMaster::ref master = loadshader (shadername);
+    if (! master)
+        return ShaderInstanceRef();
+
+    ShaderInstanceRef instance (new ShaderInstance (master, layername));
+    if (m_in_group) {
+        if (! m_group_head) {
+            // First shader in group -- it's the head
+            m_group_head = instance;
+        } else {
+            // Not first shader in group -- append to the end
+            m_group_head->append (instance);
+            // FIXME -- check that it's the same shaderusage as the rest
+            // of the group!
+            // FIXME -- check for duplicate layer name within the group!
+        }
+    }
+
+    // FIXME -- resolve parameters!
+    instance->parameters (m_pending_params);
+    m_pending_params.clear ();
+
+    return instance;
+}
+
+
+
+void
+ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
+                                   const char *dstlayer, const char *dstparam)
+{
+    // FIXME
 }
 
 

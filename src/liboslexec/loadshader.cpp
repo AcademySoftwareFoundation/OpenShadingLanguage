@@ -92,14 +92,27 @@ void
 OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 {
     Symbol sym (ustring(name), typespec, symtype);
-    if (typespec.simpletype().basetype == TypeDesc::FLOAT)
-        sym.m_dataoffset = (int) m_master->m_fdefaults.size();
-    else if (typespec.simpletype().basetype == TypeDesc::INT)
-        sym.m_dataoffset = (int) m_master->m_idefaults.size();
-    else if (typespec.simpletype().basetype == TypeDesc::STRING)
-        sym.m_dataoffset = (int) m_master->m_sdefaults.size();
-    else {
-        ASSERT (0 && "unexpected type");
+    if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
+        if (typespec.simpletype().basetype == TypeDesc::FLOAT)
+            sym.m_dataoffset = (int) m_master->m_fdefaults.size();
+        else if (typespec.simpletype().basetype == TypeDesc::INT)
+            sym.m_dataoffset = (int) m_master->m_idefaults.size();
+        else if (typespec.simpletype().basetype == TypeDesc::STRING)
+            sym.m_dataoffset = (int) m_master->m_sdefaults.size();
+        else {
+            ASSERT (0 && "unexpected type");
+        }
+    }
+    if (sym.symtype() == SymTypeConst) {
+        if (typespec.simpletype().basetype == TypeDesc::FLOAT)
+            sym.m_dataoffset = (int) m_master->m_fconsts.size();
+        else if (typespec.simpletype().basetype == TypeDesc::INT)
+            sym.m_dataoffset = (int) m_master->m_iconsts.size();
+        else if (typespec.simpletype().basetype == TypeDesc::STRING)
+            sym.m_dataoffset = (int) m_master->m_sconsts.size();
+        else {
+            ASSERT (0 && "unexpected type");
+        }
     }
     m_master->m_symbols.push_back (sym);
 }
@@ -111,12 +124,22 @@ OSOReaderToMaster::symdefault (int def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
-    if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-        m_master->m_fdefaults.push_back ((float)def);
-    else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-        m_master->m_idefaults.push_back (def);
-    else {
-        ASSERT (0 && "unexpected type");
+    if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
+        if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+            m_master->m_fdefaults.push_back ((float)def);
+        else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
+            m_master->m_idefaults.push_back (def);
+        else {
+            ASSERT (0 && "unexpected type");
+        }
+    } else if (sym.symtype() == SymTypeConst) {
+        if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+            m_master->m_fconsts.push_back ((float)def);
+        else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
+            m_master->m_iconsts.push_back (def);
+        else {
+            ASSERT (0 && "unexpected type");
+        }
     }
 }
 
@@ -127,10 +150,18 @@ OSOReaderToMaster::symdefault (float def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
-    if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-        m_master->m_fdefaults.push_back (def);
-    else {
-        ASSERT (0 && "unexpected type");
+    if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
+        if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+            m_master->m_fdefaults.push_back (def);
+        else {
+            ASSERT (0 && "unexpected type");
+        }
+    } else if (sym.symtype() == SymTypeConst) {
+        if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+            m_master->m_fconsts.push_back (def);
+        else {
+            ASSERT (0 && "unexpected type");
+        }
     }
 }
 
@@ -141,10 +172,18 @@ OSOReaderToMaster::symdefault (const char *def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
-    if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-        m_master->m_sdefaults.push_back (ustring(def));
-    else {
-        ASSERT (0 && "unexpected type");
+    if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
+        if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
+            m_master->m_sdefaults.push_back (ustring(def));
+        else {
+            ASSERT (0 && "unexpected type");
+        }
+    } else if (sym.symtype() == SymTypeConst) {
+        if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
+            m_master->m_sconsts.push_back (ustring(def));
+        else {
+            ASSERT (0 && "unexpected type");
+        }
     }
 }
 
@@ -293,6 +332,11 @@ ShadingSystemImpl::loadshader (const char *cname)
         error ("Unable to read \"%s\"", filename.c_str());
     }
     // FIXME -- catch errors
+
+    if (r) {
+        r->resolve_defaults ();
+    }
+
     return r;
 }
 

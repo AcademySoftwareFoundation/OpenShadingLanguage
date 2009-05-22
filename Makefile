@@ -95,6 +95,10 @@ cmakeinstall: cmake
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
 
+# 'make fast' builds assuming cmake has already run.  Use with caution!
+fast: 
+	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} install )
+
 # 'make test' does a full build and then runs all tests
 test: cmake
 	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} test )

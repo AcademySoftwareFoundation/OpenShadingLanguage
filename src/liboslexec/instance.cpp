@@ -16,22 +16,26 @@
 #include <string>
 #include <cstdio>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 
-#include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
 
 #include "oslexec_pvt.h"
-#include "osoreader.h"
-
 
 
 
 namespace OSL {
 
 namespace pvt {   // OSL::pvt
+
+
+ShaderInstance::ShaderInstance (ShaderMaster::ref master,
+                                const char *layername) 
+    : m_master(master), m_symbols(m_master->m_symbols),
+      m_layername(layername), m_firstlayer(true)
+{
+}
+
 
 
 void
@@ -44,6 +48,32 @@ ShaderInstance::append (ShaderInstance::ref anotherlayer)
              "we should be pointing to the last layer of the group");
     inst->m_nextlayer = anotherlayer;
     anotherlayer->m_firstlayer = false;
+}
+
+
+
+void
+ShaderInstance::parameters (const std::vector<ParamRef> &params)
+{
+    m_symbols = m_master->m_symbols;
+    BOOST_FOREACH (const ParamRef &p, params) {
+        std::cout << " PARAMETER " << p.name() << ' ' << p.type().c_str() << "\n";
+        int i = m_master->findparam (p.name());
+        if (i >= 0) {
+            std::cerr << "    found " << i << "\n";
+#if 0
+            if (s.typespec().simpletype().basetype == TypeDesc::INT) {
+                s.data (&(m_iparams[s.dataoffset()]));
+            } else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT) {
+                s.data (&(m_fparams[s.dataoffset()]));
+            } else if (s.typespec().simpletype().basetype == TypeDesc::STRING) {
+                s.data (&(m_sparams [s.dataoffset()]));
+            }
+//          std::cerr << "    sym " << s.name() << " offset " << s.dataoffset()
+//                    << " address " << (void *)s.data() << "\n";
+#endif
+        }
+    }
 }
 
 

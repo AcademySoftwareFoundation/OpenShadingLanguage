@@ -73,6 +73,8 @@ namespace pvt {   // OSL::pvt
 ShadingSystemImpl::ShadingSystemImpl ()
     : m_in_group (false), m_statslevel (0)
 {
+    m_stat_shaders_loaded = 0;
+    m_stat_shaders_requested = 0;
 }
 
 
@@ -151,7 +153,6 @@ ShadingSystemImpl::getstats (int level) const
 {
     if (level <= 0)
         return "";
-    fast_mutex::lock_guard statguard (m_stats_mutex);
     std::ostringstream out;
     out << "OSL ShadingSystem statistics (" << (void*)this << ")\n";
     out << "  Shaders:\n";
@@ -198,45 +199,60 @@ ShadingSystemImpl::ShaderGroupBegin (void)
 
 
 
-ShaderInstanceRef
+void
 ShadingSystemImpl::ShaderGroupEnd (void)
 {
-    ShaderInstanceRef head;
-    std::swap (m_group_head, head);
-    // gets head into group_head, AND clears group_head!
-    return head;
+    m_group_head.reset ();
+    m_in_group = false;
+    m_group_use = ShadUseUnknown;
 }
 
 
 
-ShaderInstanceRef
+void
 ShadingSystemImpl::Shader (const char *shaderusage,
                            const char *shadername,
                            const char *layername)
 {
     ShaderMaster::ref master = loadshader (shadername);
-    if (! master)
-        return ShaderInstanceRef();
+    if (! master) {
+        // FIXME -- some kind of error return?
+        return;
+    }
+
+    ShaderUse use = shaderuse_from_name (shaderusage);
+    if (use == ShadUseUnknown) {
+        error ("Unknown shader usage '%s'", shaderusage);
+        return;
+    }
+
+    // Make sure we have a current attrib state
+    if (! m_curattrib)
+        m_curattrib.reset (new ShadingAttribState);
 
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
     if (m_in_group) {
         if (! m_group_head) {
             // First shader in group -- it's the head
             m_group_head = instance;
+            m_group_use = use;
+            m_curattrib->m_shaders[(int)use] = instance;
         } else {
             // Not first shader in group -- append to the end
+            if (use != m_group_use) {
+                error ("Shader usage '%s' does not match current group (%s)",
+                       shaderusage, shaderusename (m_group_use));
+                return;
+            }
             m_group_head->append (instance);
-            // FIXME -- check that it's the same shaderusage as the rest
-            // of the group!
-            // FIXME -- check for duplicate layer name within the group!
+            // FIXME -- check for duplicate layer name within the group?
         }
+    } else {
+        m_curattrib->m_shaders[(int)use] = instance;
     }
 
-    // FIXME -- resolve parameters!
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
-
-    return instance;
 }
 
 
@@ -245,9 +261,28 @@ void
 ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
                                    const char *dstlayer, const char *dstparam)
 {
+    if (! m_in_group) {
+        error ("ConectShaders can only be called within ShaderGroupBegin/End");
+        return;
+    }
     // FIXME
 }
 
+
+
+ShadingAttribStateRef
+ShadingSystemImpl::state () const
+{
+    return m_curattrib;
+}
+
+
+
+void
+ShadingSystemImpl::clear_state ()
+{
+    m_curattrib.reset (new ShadingAttribState);
+}
 
 
 }; // namespace pvt

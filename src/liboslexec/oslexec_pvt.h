@@ -244,14 +244,15 @@ public:
     virtual bool getattribute (const std::string &name, TypeDesc type, void *val);
 
     virtual void Parameter (const char *name, TypeDesc t, const void *val);
-    virtual ShaderInstanceRef Shader (const char *shaderusage,
-                                      const char *shadername=NULL,
-                                      const char *layername=NULL);
+    virtual void Shader (const char *shaderusage,
+                         const char *shadername=NULL,
+                         const char *layername=NULL);
     virtual void ShaderGroupBegin (void);
-    virtual ShaderInstanceRef ShaderGroupEnd (void);
+    virtual void ShaderGroupEnd (void);
     virtual void ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
-
+    virtual ShadingAttribStateRef state () const;
+    virtual void clear_state ();
 
     /// Internal error reporting routine, with printf-like arguments.
     ///
@@ -274,10 +275,11 @@ private:
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderInstanceRef m_group_head;       ///< Head of our group
+    ShaderUse m_group_use;                ///< Use of group
     std::vector<ParamRef> m_pending_params; ///< Pending Parameter() values
+    ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
     mutable mutex m_mutex;                ///< Thread safety
     mutable mutex m_errmutex;             ///< Safety for error messages
-    mutable fast_mutex m_stats_mutex;     ///< Spin lock for non-atomic stats
     mutable std::string m_errormessage;   ///< Saved error string.
     atomic_int m_stat_shaders_loaded;     ///< Stat: shaders loaded
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
@@ -286,6 +288,24 @@ private:
 
 
 }; // namespace pvt
+
+
+
+
+
+class ShadingAttribState
+{
+public:
+    ShadingAttribState () { }
+    ~ShadingAttribState () { }
+
+private:
+    ShaderInstanceRef m_shaders[OSL::pvt::ShadUseLast];
+    friend class OSL::pvt::ShadingSystemImpl;
+};
+
+
+
 }; // namespace OSL
 
 

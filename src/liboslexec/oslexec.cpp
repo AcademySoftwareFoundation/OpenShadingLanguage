@@ -64,5 +64,35 @@ shadertype_from_name (const char *name)
 }
 
 
+const char *
+shaderusename (ShaderUse s)
+{
+    switch (s) {
+    case ShadUseSurface:      return ("surface");
+    case ShadUseDisplacement: return ("displacement");
+    case ShadUseVolume:       return ("volume");
+    case ShadUseLight:        return ("light");
+    default:
+        ASSERT (0 && "Invalid shader use");
+    }
+}
+
+
+
+ShaderUse
+shaderuse_from_name (const char *name)
+{
+    if (! strcmp (name, "surface"))
+        return ShadUseSurface;
+    if (! strcmp (name, "displacement"))
+        return ShadUseDisplacement;
+    if (! strcmp (name, "volume"))
+        return ShadUseVolume;
+    if (! strcmp (name, "light"))
+        return ShadUseLight;
+    return ShadUseLast;
+}
+
+
 }; // namespace pvt
 }; // namespace OSL

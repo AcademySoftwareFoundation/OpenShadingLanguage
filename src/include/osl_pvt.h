@@ -44,6 +44,24 @@ ShaderType shadertype_from_name (const char *name);
 
 
 
+/// Uses of shaders
+///
+enum ShaderUse {
+    ShadUseSurface, ShadUseDisplacement, ShadUseVolume, ShadUseLight,
+    ShadUseLast, ShadUseUnknown = ShadUseLast
+};
+
+
+/// Convert a ShaderUse to a human-readable name ("surface", etc.)
+///
+const char *shaderusename (ShaderUse s);
+
+/// Convert a ShaderUse to a human-readable name ("surface", etc.)
+///
+ShaderUse shaderuse_from_name (const char *name);
+
+
+
 
 
 /// Kinds of symbols

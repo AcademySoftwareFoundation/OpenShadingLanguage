@@ -105,6 +105,9 @@ test_shader (const std::string &filename)
     float Kd = 0.75;
     shadingsys->Parameter ("Kd", TypeDesc::TypeFloat, &Kd);
     shadingsys->Shader ("surface", filename.c_str());
+
+    ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
+    shared_ptr<ShadingContext> ctx = ssi->get_context ();
 }
 
 

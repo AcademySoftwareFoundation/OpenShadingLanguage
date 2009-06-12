@@ -27,7 +27,11 @@ namespace OSL {
 namespace pvt {
 
 
+// forward definitions
 class ShadingSystemImpl;
+class ShadingContext;
+class ShadingExecution;
+
 
 
 /// Like an int (of type T), but also internally keeps track of the 
@@ -88,6 +92,12 @@ public:
     const value_t operator-- ()    { *this -= 1;  return m_current; }
     const value_t operator-- (int) { *this -= 1;  return m_current+1; }
 
+    friend std::ostream & operator<< (std::ostream &out, const PeakCounter &p)
+    {
+        out << p.requested() << " requested, " << p.peak() << " peak, "
+            << p.current() << " current";
+        return out;
+    }
 private:
     value_t m_current, m_requested, m_peak;
 };
@@ -192,9 +202,8 @@ private:
 /// ShaderInstance is a particular instance of a shader, with its own
 /// set of parameter values, coordinate transform, and connections to
 /// other instances within the same shader group.
-class ShaderInstance /*: public RefCnt*/ {
+class ShaderInstance {
 public:
-//    typedef intrusive_ptr<ShaderInstance> ref;
     typedef ShaderInstanceRef ref;
     ShaderInstance (ShaderMaster::ref master, const char *layername="");
     ~ShaderInstance () { }
@@ -254,6 +263,9 @@ public:
     virtual ShadingAttribStateRef state () const;
     virtual void clear_state ();
 
+//    virtual void RunShaders (ShadingAttribStateRef &attribstate,
+//                             ShaderUse use);
+
     /// Internal error reporting routine, with printf-like arguments.
     ///
     void error (const char *message, ...);
@@ -262,6 +274,8 @@ public:
     virtual std::string getstats (int level=1) const;
 
     ShaderMaster::ref loadshader (const char *name);
+
+    shared_ptr<ShadingContext> get_context ();
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 
@@ -284,7 +298,64 @@ private:
     atomic_int m_stat_shaders_loaded;     ///< Stat: shaders loaded
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
     PeakCounter<int> m_stat_instances;    ///< Stat: instances
+    PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
+
+    friend class ShadingContext;
 };
+
+
+
+class ShadingExecution;
+typedef std::vector<ShadingExecution> ExecutionLayers;
+
+
+
+/// The full context for executing a network of shaders.  This contains
+/// ShadingExecution states for each shader
+///
+class ShadingContext {
+public:
+    ShadingContext (ShadingSystemImpl &shadingsys);
+    ~ShadingContext ();
+
+    /// Return a reference to the shading system for this context.
+    ///
+    ShadingSystemImpl & shadingsys () const { return m_shadingsys; }
+
+    /// Set up this context for shading n points with the given shader
+    /// attribute state and shader globals.  Resolve all the memory
+    /// layout issues so that we're ready to execute().
+    void bind (int n, ShadingAttribState &sas, ShaderGlobals &sg);
+
+    /// Execute the shaders for the given use (for example,
+    /// ShadUseSurface).  The context must already be bound.  If
+    /// runflags are not supplied, they will be auto-generated with all
+    /// points turned on.
+    void execute (ShaderUse use, RunFlags *rf=NULL);
+
+private:
+    ShadingSystemImpl &m_shadingsys;
+    std::vector<float> *m_heap;                   ///< Heap memory
+    ExecutionLayers m_surf, m_disp, m_volume;
+};
+
+
+
+/// The state and machinery necessary to execute a single shader (node).
+///
+class ShadingExecution {
+public:
+    ShadingExecution (ShadingContext *context=NULL) 
+        : m_context(context), m_ourlayers(NULL)
+    { }
+    ~ShadingExecution () { }
+private:
+    ShadingContext *m_context;
+    ShaderInstance::ref m_instance;
+    ShaderMaster::ref m_master;
+    ExecutionLayers *m_ourlayers;
+};
+
 
 
 }; // namespace pvt

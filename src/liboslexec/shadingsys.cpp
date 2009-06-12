@@ -159,9 +159,8 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Requested: " << m_stat_shaders_requested << "\n";
     out << "    Loaded:    " << m_stat_shaders_loaded << "\n";
     out << "    Masters:   " << m_stat_shaders_loaded << "\n";
-    out << "    Instances: " << m_stat_instances.requested() << " requested, "
-        << m_stat_instances.peak() << " peak, "
-        << m_stat_instances.current() << " current\n";
+    out << "    Instances: " << m_stat_instances << "\n";
+    out << "  Shading contexts: " << m_stat_contexts << "\n";
     // FIXME
     return out.str();
 }
@@ -282,6 +281,14 @@ void
 ShadingSystemImpl::clear_state ()
 {
     m_curattrib.reset (new ShadingAttribState);
+}
+
+
+
+shared_ptr<ShadingContext>
+ShadingSystemImpl::get_context ()
+{
+    return shared_ptr<ShadingContext> (new ShadingContext (*this));
 }
 
 

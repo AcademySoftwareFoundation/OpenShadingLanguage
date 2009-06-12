@@ -17,6 +17,11 @@
 
 #include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/refcnt.h"
+#include "OpenImageIO/varyingref.h"
+
+#include <ImathVec.h>
+#include <ImathColor.h>
+
 
 
 
@@ -24,6 +29,7 @@ namespace OSL {
 
 class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
+class ShaderGlobals;
 
 namespace pvt {
 class ShaderInstance;
@@ -156,6 +162,28 @@ private:
     // Make delete private and unimplemented in order to prevent apps
     // from calling it.  Instead, they should call ShadingSystem::destroy().
     void operator delete (void *todel) { }
+};
+
+
+
+class ShaderGlobals
+{
+public:
+    ShaderGlobals () { }
+    ~ShaderGlobals () { }
+
+    VaryingRef<Imath::V3f> P;          ///< Position
+    VaryingRef<Imath::V3f> I;          ///< Incident ray
+    VaryingRef<Imath::V3f> N;          ///< Shading normal
+    VaryingRef<Imath::V3f> Ng;         ///< True geometric normal
+    VaryingRef<float> u, v;            ///< Surface parameters
+    VaryingRef<Imath::V3f> dPdu, dPdv; ///< Partial derivatives
+    VaryingRef<float> time;            ///< Time for each sample
+    VaryingRef<float> dtime;           ///< Time interval for each sample
+    VaryingRef<Imath::V3f> dPdtime;    ///< Velocity
+
+    VaryingRef<Imath::Color3f> Ci;     ///< Output colors
+    VaryingRef<Imath::Color3f> Oi;     ///< Output opacities
 };
 
 

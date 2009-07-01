@@ -53,6 +53,13 @@ ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
 
+ifneq (${MYCC},)
+MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER:STRING=${MYCC}
+endif
+ifneq (${MYCXX},)
+MY_CMAKE_FLAGS += -DCMAKE_CXX_COMPILER:STRING=${MYCXX}
+endif
+
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
 
@@ -145,8 +152,7 @@ doxygen:
 # 'make help' prints important make targets
 help:
 	@echo "Targets:"
-	@echo "  make              (default target is 'all')"
-	@echo "  make all          Build optimized binaries and libraries in ${dist_dir},"
+	@echo "  make              Build optimized binaries and libraries in ${dist_dir},"
 	@echo "                        temporary build files in ${build_dir}"
 	@echo "  make debug        Build unoptimized with symbols in ${dist_dir}.debug,"
 	@echo "                        temporary build files in ${build_dir}.debug"
@@ -160,6 +166,7 @@ help:
 	@echo ""
 	@echo "Helpful modifiers:"
 	@echo "  make VERBOSE=1 ...          Show all compilation commands"
+	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
 	@echo ""
 
 

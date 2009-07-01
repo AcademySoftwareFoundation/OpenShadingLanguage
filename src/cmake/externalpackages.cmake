@@ -2,24 +2,34 @@
 # Find libraries
 
 setup_path (THIRD_PARTY_TOOLS_HOME 
-            "${PROJECT_SOURCE_DIR}/../../external/dist/${platform}"
-            "Location of third party libraries in the external project" )
+#            "${PROJECT_SOURCE_DIR}/../../external/dist/${platform}"
+            "unknown"
+            "Location of third party libraries in the external project")
 
 # Add all third party tool directories to the include and library paths so
 # that they'll be correctly found by the various FIND_PACKAGE() invocations.
-IF ( EXISTS ${THIRD_PARTY_TOOLS_HOME} )
+if (THIRD_PARTY_TOOLS_HOME AND EXISTS ${THIRD_PARTY_TOOLS_HOME})
+    set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include" ${CMAKE_INCLUDE_PATH})
     # Detect third party tools which have been successfully built using the
     # lock files which are placed there by the external project Makefile.
-    FILE ( GLOB _external_dir_lockfiles "${THIRD_PARTY_TOOLS_HOME}/*.d" )
-    FOREACH ( _dir_lockfile ${_external_dir_lockfiles} )
+    file (GLOB _external_dir_lockfiles "${THIRD_PARTY_TOOLS_HOME}/*.d")
+    foreach (_dir_lockfile ${_external_dir_lockfiles})
         # Grab the tool directory_name.d
-        GET_FILENAME_COMPONENT ( _ext_dirname ${_dir_lockfile} NAME )
+        get_filename_component (_ext_dirname ${_dir_lockfile} NAME)
         # Strip off the .d extension
-        STRING ( REGEX REPLACE "\\.d$" "" _ext_dirname ${_ext_dirname} )
-        SET ( CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include/${_ext_dirname}" ${CMAKE_INCLUDE_PATH} )
-        SET ( CMAKE_LIBRARY_PATH "${THIRD_PARTY_TOOLS_HOME}/lib/${_ext_dirname}" ${CMAKE_LIBRARY_PATH} )
-    ENDFOREACH ()
-ENDIF ()
+        string (REGEX REPLACE "\\.d$" "" _ext_dirname ${_ext_dirname})
+        set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include/${_ext_dirname}" ${CMAKE_INCLUDE_PATH})
+        set (CMAKE_LIBRARY_PATH "${THIRD_PARTY_TOOLS_HOME}/lib/${_ext_dirname}" ${CMAKE_LIBRARY_PATH})
+    endforeach ()
+endif ()
+
+
+setup_string (SPECIAL_COMPILE_FLAGS "" 
+               "Custom compilation flags")
+if (SPECIAL_COMPILE_FLAGS)
+    add_definitions (${SPECIAL_COMPILE_FLAGS})
+endif ()
+
 
 
 ###########################################################################
@@ -28,56 +38,78 @@ ENDIF ()
 # TODO: Place the OpenEXR stuff into a separate FindOpenEXR.cmake module.
 
 # example of using setup_var instead:
-#setup_var (ILMBASE_VERSION 1.0.1 "Version of the ILMBase library" )
-setup_string ( ILMBASE_VERSION 1.0.1
-               "Version of the ILMBase library")
-setup_path ( ILMBASE_HOME "${THIRD_PARTY_TOOLS_HOME}"
-             "Location of the ILMBase library install")
-setup_path ( ILMBASE_INCLUDE_AREA 
-             "${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}/OpenEXR" 
-             "Directory containing IlmBase include files" )
-setup_path ( ILMBASE_LIB_AREA "${ILMBASE_HOME}/lib/ilmbase-${ILMBASE_VERSION}"
-             "Directory containing IlmBase libraries")
-MARK_AS_ADVANCED (ILMBASE_VERSION)
-MARK_AS_ADVANCED (ILMBASE_HOME)
-MARK_AS_ADVANCED (ILMBASE_INCLUDE_AREA)
-MARK_AS_ADVANCED (ILMBASE_LIB_AREA)
-INCLUDE_DIRECTORIES ( "${ILMBASE_INCLUDE_AREA}" )
-LINK_DIRECTORIES ( "${ILMBASE_LIB_AREA}" )
-setup_string ( SPECIAL_COMPILE_FLAGS "" 
-               "Custom compilation flags" )
-IF ( SPECIAL_COMPILE_FLAGS )
-    ADD_DEFINITIONS ( ${SPECIAL_COMPILE_FLAGS} )
-ENDIF ()
+#setup_var (ILMBASE_VERSION 1.0.1 "Version of the ILMBase library")
+setup_string (ILMBASE_VERSION 1.0.1
+              "Version of the ILMBase library")
+mark_as_advanced (ILMBASE_VERSION)
+setup_path (ILMBASE_HOME "${THIRD_PARTY_TOOLS_HOME}"
+            "Location of the ILMBase library install")
+mark_as_advanced (ILMBASE_HOME)
+find_path (ILMBASE_INCLUDE_AREA half.h
+           ${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}
+           ${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}/OpenEXR
+           ${ILMBASE_HOME}/include/OpenEXR
+           /usr/include/OpenEXR
+           /usr/local/include/OpenEXR
+           /opt/local/include/OpenEXR
+          )
+foreach (_lib Imath Half IlmThread Iex)
+    find_library (ILMBASE_LIBS_${_lib} ${_lib}
+                  PATHS ${ILMBASE_HOME}/lib ${ILMBASE_HOME}/lib64
+                        ${ILMBASE_LIB_AREA}
+                  )
+endforeach ()
+set (ILMBASE_LIBRARIES ${ILMBASE_LIBS_Imath} ${ILMBASE_LIBS_Half}
+                       ${ILMBASE_LIBS_IlmThread} ${ILMBASE_LIBS_Iex})
+message (STATUS "ILMBASE_INCLUDE_AREA = ${ILMBASE_INCLUDE_AREA}")
+message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
+if (ILMBASE_INCLUDE_AREA AND ILMBASE_LIBRARIES)
+    set (ILMBASE_FOUND true)
+    include_directories ("${ILMBASE_INCLUDE_AREA}")
+else ()
+    message (FATAL_ERROR "ILMBASE not found!")
+endif ()
 
-MACRO ( LINK_ILMBASE_HALF target )
-    TARGET_LINK_LIBRARIES ( ${target} Half )
-ENDMACRO ()
-
-MACRO ( LINK_ILMBASE target )
-    TARGET_LINK_LIBRARIES ( ${target} Imath Half IlmThread Iex )
-ENDMACRO ()
+macro (LINK_ILMBASE target)
+    target_link_libraries (${target} ${ILMBASE_LIBRARIES})
+endmacro ()
 
 setup_string (OPENEXR_VERSION 1.6.1 "OpenEXR version number")
 setup_string (OPENEXR_VERSION_DIGITS 010601 "OpenEXR version preprocessor number")
-MARK_AS_ADVANCED (OPENEXR_VERSION)
-MARK_AS_ADVANCED (OPENEXR_VERSION_DIGITS)
+mark_as_advanced (OPENEXR_VERSION)
+mark_as_advanced (OPENEXR_VERSION_DIGITS)
 # FIXME -- should instead do the search & replace automatically, like this
 # way it was done in the old makefiles:
 #     OPENEXR_VERSION_DIGITS ?= 0$(subst .,0,${OPENEXR_VERSION})
 setup_path (OPENEXR_HOME "${THIRD_PARTY_TOOLS_HOME}"
             "Location of the OpenEXR library install")
-setup_path (OPENEXR_LIB_AREA "${OPENEXR_HOME}/lib/openexr-${OPENEXR_VERSION}"
-            "Directory containing the OpenEXR libraries")
-MARK_AS_ADVANCED (OPENEXR_HOME)
-MARK_AS_ADVANCED (OPENEXR_LIB_AREA)
-INCLUDE_DIRECTORIES ( "${OPENEXR_HOME}/include/openexr-${OPENEXR_VERSION}/OpenEXR" )
-LINK_DIRECTORIES ( "${OPENEXR_LIB_AREA}" )
-ADD_DEFINITIONS ("-DOPENEXR_VERSION=${OPENEXR_VERSION_DIGITS}")
-SET ( OPENEXR_LIBRARIES "IlmImf" )
-MACRO ( LINK_OPENEXR target )
-    TARGET_LINK_LIBRARIES ( ${target} IlmImf )
-ENDMACRO ()
+mark_as_advanced (OPENEXR_HOME)
+find_path (OPENEXR_INCLUDE_AREA OpenEXRConfig.h
+           ${OPENEXR_HOME}/include
+           ${OPENEXR_HOME}/include/OpenEXR
+           ${ILMBASE_HOME}/include/openexr-${OPENEXR_VERSION}
+           ${ILMBASE_HOME}/include/openexr-${OPENEXR_VERSION}/OpenEXR
+           /usr/include/OpenEXR
+           /usr/local/include/OpenEXR
+           /opt/local/include/OpenEXR )
+find_library (OPENEXR_LIBRARY IlmImf
+              PATHS ${OPENEXR_HOME}/lib
+                    ${OPENEXR_HOME}/lib64
+                    ${OPENEXR_LIB_AREA}
+             )
+message (STATUS "OPENEXR_INCLUDE_AREA = ${OPENEXR_INCLUDE_AREA}")
+message (STATUS "OPENEXR_LIBRARY = ${OPENEXR_LIBRARY}")
+if (OPENEXR_INCLUDE_AREA AND OPENEXR_LIBRARY)
+    set (OPENEXR_FOUND true)
+    include_directories (${OPENEXR_INCLUDE_AREA})
+else ()
+    message (STATUS "OPENEXR not found!")
+endif ()
+add_definitions ("-DOPENEXR_VERSION=${OPENEXR_VERSION_DIGITS}")
+find_package (ZLIB)
+macro (LINK_OPENEXR target)
+    target_link_libraries (${target} ${OPENEXR_LIBRARY} ${ZLIB_LIBRARIES})
+endmacro ()
 
 
 # end IlmBase and OpenEXR setup
@@ -86,33 +118,26 @@ ENDMACRO ()
 ###########################################################################
 # Boost setup
 
-MESSAGE ( STATUS "BOOST_ROOT ${BOOST_ROOT}" )
+message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 
 set(Boost_ADDITIONAL_VERSIONS "1.38" "1.38.0" "1.37" "1.37.0" "1.34.1" "1_34_1")
 #set (Boost_USE_STATIC_LIBS   ON)
 set (Boost_USE_MULTITHREADED ON)
-#if (APPLE)
-#    set (Boost_COMPILER xgcc42-mt)
-#    set (BOOST_SUFFIX xgcc42-mt-1_38)
-#else ()
-#    set (Boost_COMPILER gcc42-mt)
-#    set (BOOST_SUFFIX gcc42-mt-1_38)
-#endif ()
-IF ( BOOST_CUSTOM )
-    SET (BOOST_FOUND true)
-ELSE ()
-    find_package ( Boost 1.34 REQUIRED 
-                   COMPONENTS filesystem program_options regex system thread
+if (BOOST_CUSTOM)
+    set (Boost_FOUND true)
+else ()
+    find_package (Boost 1.34 REQUIRED 
+                  COMPONENTS filesystem program_options regex system thread
                  )
-ENDIF ()
+endif ()
 
-MESSAGE (STATUS "Boost found ${Boost_FOUND} ")
-MESSAGE (STATUS "Boost include dirs ${Boost_INCLUDE_DIRS}")
-MESSAGE (STATUS "Boost library dirs ${Boost_LIBRARY_DIRS}" )
-MESSAGE (STATUS "Boost libraries    ${Boost_LIBRARIES}")
+message (STATUS "Boost found ${Boost_FOUND} ")
+message (STATUS "Boost include dirs ${Boost_INCLUDE_DIRS}")
+message (STATUS "Boost library dirs ${Boost_LIBRARY_DIRS}")
+message (STATUS "Boost libraries    ${Boost_LIBRARIES}")
 
-INCLUDE_DIRECTORIES ( "${Boost_INCLUDE_DIRS}")
-LINK_DIRECTORIES ( "${Boost_LIBRARY_DIRS}" )
+include_directories ("${Boost_INCLUDE_DIRS}")
+link_directories ("${Boost_LIBRARY_DIRS}")
 
 # end Boost setup
 ###########################################################################
@@ -120,10 +145,10 @@ LINK_DIRECTORIES ( "${Boost_LIBRARY_DIRS}" )
 ###########################################################################
 # OpenGL setup
 
-IF ( USE_OPENGL )
-    find_package ( OpenGL )
-ENDIF ()
-MESSAGE (STATUS "OPENGL_FOUND=${OPENGL_FOUND} USE_OPENGL=${USE_OPENGL}")
+if (USE_OPENGL)
+    find_package (OpenGL)
+endif ()
+message (STATUS "OPENGL_FOUND=${OPENGL_FOUND} USE_OPENGL=${USE_OPENGL}")
 
 # end OpenGL setup
 ###########################################################################
@@ -131,13 +156,13 @@ MESSAGE (STATUS "OPENGL_FOUND=${OPENGL_FOUND} USE_OPENGL=${USE_OPENGL}")
 ###########################################################################
 # Qt setup
 
-IF ( USE_QT )
-    IF ( USE_OPENGL )
-        SET ( QT_USE_QTOPENGL true )
-    ENDIF ()
-    find_package ( Qt4 )
-ENDIF ()
-MESSAGE (STATUS "QT4_FOUND=${QT4_FOUND}")
+if (USE_QT)
+    if (USE_OPENGL)
+        set (QT_USE_QTOPENGL true)
+    endif ()
+    find_package (Qt4)
+endif ()
+message (STATUS "QT4_FOUND=${QT4_FOUND}")
 
 # end Qt setup
 ###########################################################################
@@ -145,20 +170,75 @@ MESSAGE (STATUS "QT4_FOUND=${QT4_FOUND}")
 ###########################################################################
 # Gtest (Google Test) setup
 
-SET ( GTEST_VERSION 1.3.0 )
-find_library ( GTEST_LIBRARY
-               NAMES gtest
-               PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/ )
-find_path ( GTEST_INCLUDES gtest/gtest.h
-            ${THIRD_PARTY_TOOLS}/include/gtest-${GTEST_VERSION} )
-IF (GTEST_INCLUDES AND GTEST_LIBRARY )
-    SET ( GTEST_FOUND TRUE )
-    MESSAGE ( STATUS "Gtest includes = ${GTEST_INCLUDES}" )
-    MESSAGE ( STATUS "Gtest library = ${GTEST_LIBRARY}" )
-ELSE ()
-    MESSAGE ( STATUS "Gtest not found" )
-ENDIF ()
+set (GTEST_VERSION 1.3.0)
+find_library (GTEST_LIBRARY
+              NAMES gtest
+              PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/)
+find_path (GTEST_INCLUDES gtest/gtest.h
+           ${THIRD_PARTY_TOOLS}/include/gtest-${GTEST_VERSION})
+if (GTEST_INCLUDES AND GTEST_LIBRARY)
+    set (GTEST_FOUND TRUE)
+    message (STATUS "Gtest includes = ${GTEST_INCLUDES}")
+    message (STATUS "Gtest library = ${GTEST_LIBRARY}")
+else ()
+    message (STATUS "Gtest not found")
+endif ()
 
 # end Gtest setup
 ###########################################################################
 
+###########################################################################
+# TBB (Intel Thread Building Blocks) setup
+
+setup_path (TBB_HOME "${THIRD_PARTY_TOOLS_HOME}"
+            "Location of the TBB library install")
+mark_as_advanced (TBB_HOME)
+if (USE_TBB)
+    set (TBB_VERSION 21_20080605oss)
+    find_library (TBB_LIBRARY
+                  NAMES tbb
+                  PATHS ${TBB_HOME}/lib
+                  PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/
+                 )
+    find_path (TBB_INCLUDES tbb/tbb_stddef.h
+               ${TBB_HOME}/include/tbb${TBB_VERSION}
+               ${THIRD_PARTY_TOOLS}/include/tbb${TBB_VERSION}
+               ${PROJECT_SOURCE_DIR}/include
+              )
+    if (TBB_INCLUDES OR TBB_LIBRARY)
+        set (TBB_FOUND TRUE)
+        message (STATUS "TBB includes = ${TBB_INCLUDES}")
+        message (STATUS "TBB library = ${TBB_LIBRARY}")
+        add_definitions ("-DUSE_TBB=1")
+    else ()
+        message (STATUS "TBB not found")
+    endif ()
+else ()
+    add_definitions ("-DUSE_TBB=0")
+    message (STATUS "TBB will not be used")
+endif ()
+
+# end TBB setup
+###########################################################################
+
+###########################################################################
+# GL Extension Wrangler library setup
+
+if (USE_OPENGL)
+    set (GLEW_VERSION 1.5.1)
+    find_library (GLEW_LIBRARIES
+                  NAMES GLEW)
+    find_path (GLEW_INCLUDES
+               NAMES glew.h
+               PATH_SUFFIXES GL)
+    if (GLEW_INCLUDES AND GLEW_LIBRARIES)
+        set (GLEW_FOUND TRUE)
+        message (STATUS "GLEW includes = ${GLEW_INCLUDES}")
+        message (STATUS "GLEW library = ${GLEW_LIBRARIES}")
+    else ()
+        message (STATUS "GLEW not found")
+    endif ()
+endif (USE_OPENGL)
+
+# end GL Extension Wrangler library setup
+###########################################################################

@@ -170,13 +170,13 @@ void preprocess (const char *yytext);
 "/="			{  return (yylval.i=DIV_ASSIGN); }
 "&="			{  return (yylval.i=BIT_AND_ASSIGN); }
 "|="			{  return (yylval.i=BIT_OR_ASSIGN); }
-"^="			{  return (yylval.i=BIT_XOR_ASSIGN); }
+"^="			{  return (yylval.i=XOR_ASSIGN); }
 "<<="			{  return (yylval.i=SHL_ASSIGN); }
 ">>="			{  return (yylval.i=SHR_ASSIGN); }
 "<<"			{  return (yylval.i=SHL_OP); }
 ">>"			{  return (yylval.i=SHR_OP); }
-"&&"			{  return (yylval.i=LOGIC_AND_OP); }
-"||"			{  return (yylval.i=LOGIC_OR_OP); }
+"&&"			{  return (yylval.i=AND_OP); }
+"||"			{  return (yylval.i=OR_OP); }
 "<="			{  return (yylval.i=LE_OP); }
 ">="			{  return (yylval.i=GE_OP); }
 "=="			{  return (yylval.i=EQ_OP); }

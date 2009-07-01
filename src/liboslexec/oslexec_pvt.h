@@ -32,6 +32,15 @@ class ShadingSystemImpl;
 class ShadingContext;
 class ShadingExecution;
 
+/// Data type for flags that indicate on a point-by-point basis whether
+/// we want computations to be performed.
+typedef unsigned char Runflag;
+
+/// Pre-defined values for Runflag's.
+///
+enum RunFlagVal { RunFlagOff = 0, RunFlagOn = 255 };
+
+
 
 
 /// Like an int (of type T), but also internally keeps track of the 
@@ -331,7 +340,7 @@ public:
     /// ShadUseSurface).  The context must already be bound.  If
     /// runflags are not supplied, they will be auto-generated with all
     /// points turned on.
-    void execute (ShaderUse use, RunFlags *rf=NULL);
+    void execute (ShaderUse use, Runflag *rf=NULL);
 
 private:
     ShadingSystemImpl &m_shadingsys;

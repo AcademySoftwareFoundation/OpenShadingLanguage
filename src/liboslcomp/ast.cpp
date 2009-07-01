@@ -455,9 +455,9 @@ ASTassign_expression::opname () const
     case Div        : return "/=";
     case Add        : return "+=";
     case Sub        : return "-=";
-    case BitwiseAnd : return "&=";
-    case BitwiseOr  : return "|=";
-    case BitwiseXor : return "^=";
+    case BitAnd     : return "&=";
+    case BitOr      : return "|=";
+    case Xor        : return "^=";
     case ShiftLeft  : return "<<=";
     case ShiftRight : return ">>=";
     default: ASSERT(0);
@@ -475,9 +475,9 @@ ASTassign_expression::opword () const
     case Div        : return "div";
     case Add        : return "add";
     case Sub        : return "sub";
-    case BitwiseAnd : return "band";
-    case BitwiseOr  : return "bor";
-    case BitwiseXor : return "bxor";
+    case BitAnd     : return "bitand";
+    case BitOr      : return "bitor";
+    case Xor        : return "xor";
     case ShiftLeft  : return "shl";
     case ShiftRight : return "shr";
     default: ASSERT(0);
@@ -499,12 +499,12 @@ const char *
 ASTunary_expression::opname () const
 {
     switch (m_op) {
-    case Decr       : return "--";
-    case Incr       : return "++";
-    case Add        : return "+";
-    case Sub        : return "-";
-    case LogicalNot : return "!";
-    case BitwiseNot : return "~";
+    case Decr  : return "--";
+    case Incr  : return "++";
+    case Add   : return "+";
+    case Sub   : return "-";
+    case Not   : return "!";
+    case Compl : return "~";
     default: ASSERT(0);
     }
 }
@@ -515,12 +515,12 @@ const char *
 ASTunary_expression::opword () const
 {
     switch (m_op) {
-    case Decr       : return "dec";
-    case Incr       : return "inc";
-    case Add        : return "add";
-    case Sub        : return "neg";
-    case LogicalNot : return "not";
-    case BitwiseNot : return "bnot";
+    case Decr  : return "dec";
+    case Incr  : return "inc";
+    case Add   : return "add";
+    case Sub   : return "neg";
+    case Not   : return "not";
+    case Compl : return "compl";
     default: ASSERT(0);
     }
 }
@@ -551,11 +551,11 @@ ASTbinary_expression::opname () const
     case GreaterEqual : return ">=";
     case Less         : return "<";
     case LessEqual    : return "<=";
-    case BitwiseAnd   : return "&";
-    case BitwiseOr    : return "|";
-    case BitwiseXor   : return "^";
-    case LogicalAnd   : return "&&";
-    case LogicalOr    : return "||";
+    case BitAnd       : return "&";
+    case BitOr        : return "|";
+    case Xor          : return "^";
+    case And          : return "&&";
+    case Or           : return "||";
     case ShiftLeft    : return "<<";
     case ShiftRight   : return ">>";
     default: ASSERT(0);
@@ -579,11 +579,11 @@ ASTbinary_expression::opword () const
     case GreaterEqual : return "ge";
     case Less         : return "lt";
     case LessEqual    : return "le";
-    case BitwiseAnd   : return "band";
-    case BitwiseOr    : return "bor";
-    case BitwiseXor   : return "bxor";
-    case LogicalAnd   : return "and";
-    case LogicalOr    : return "or";
+    case BitAnd       : return "bitand";
+    case BitOr        : return "bitor";
+    case Xor          : return "xor";
+    case And          : return "and";
+    case Or           : return "or";
     case ShiftLeft    : return "shl";
     case ShiftRight   : return "shr";
     default: ASSERT(0);

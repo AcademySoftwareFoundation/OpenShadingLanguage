@@ -112,10 +112,10 @@ lextype (int lex)
 
 // Define operator precedence, lowest-to-highest
 %left <i> ','
-%right <i> '=' ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN BIT_AND_ASSIGN BIT_OR_ASSIGN BIT_XOR_ASSIGN SHL_ASSIGN SHR_ASSIGN
+%right <i> '=' ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN BIT_AND_ASSIGN BIT_OR_ASSIGN XOR_ASSIGN SHL_ASSIGN SHR_ASSIGN
 %right <i> '?' ':'
-%left <i> LOGIC_OR_OP
-%left <i> LOGIC_AND_OP
+%left <i> OR_OP
+%left <i> AND_OP
 %left <i> '|'
 %left <i> '^'
 %left <i> '&'
@@ -609,30 +609,30 @@ variable_ref
         ;
 
 binary_expression
-        : expression LOGIC_OR_OP expression
+        : expression OR_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTNode::LogicalOr, $1, $3);
+                                    ASTNode::Or, $1, $3);
                 }
-        | expression LOGIC_AND_OP expression
+        | expression AND_OP expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTNode::LogicalAnd, $1, $3);
+                                    ASTNode::And, $1, $3);
                 }
         | expression '|' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTNode::BitwiseOr, $1, $3);
+                                    ASTNode::BitOr, $1, $3);
                 }
         | expression '^' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTNode::BitwiseXor, $1, $3);
+                                    ASTNode::Xor, $1, $3);
                 }
         | expression '&' expression
                 {
                     $$ = new ASTbinary_expression (oslcompiler, 
-                                    ASTNode::BitwiseAnd, $1, $3);
+                                    ASTNode::BitAnd, $1, $3);
                 }
         | expression EQ_OP expression
                 {
@@ -704,8 +704,8 @@ binary_expression
 unary_op
         : '-'                           { $$ = ASTNode::Sub; }
         | '+'                           { $$ = ASTNode::Add; }
-        | '!'                           { $$ = ASTNode::LogicalNot; }
-        | '~'                           { $$ = ASTNode::BitwiseNot; }
+        | '!'                           { $$ = ASTNode::Not; }
+        | '~'                           { $$ = ASTNode::Compl; }
         ;
 
 incdec_op_opt
@@ -761,13 +761,13 @@ assign_expression
 				ASTNode::Sub, $3); }
         | variable_lvalue BIT_AND_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTNode::BitwiseAnd, $3); }
+				ASTNode::BitAnd, $3); }
         | variable_lvalue BIT_OR_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTNode::BitwiseOr, $3); }
-        | variable_lvalue BIT_XOR_ASSIGN expression
+				ASTNode::BitOr, $3); }
+        | variable_lvalue XOR_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
-				ASTNode::BitwiseXor, $3); }
+				ASTNode::Xor, $3); }
         | variable_lvalue SHL_ASSIGN expression
                 { $$ = new ASTassign_expression (oslcompiler, $1,
 				ASTNode::ShiftLeft, $3); }

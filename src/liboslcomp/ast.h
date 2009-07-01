@@ -62,8 +62,8 @@ public:
     enum Operator { Nothing=0, Decr, Incr, 
                     Assign, Mul, Div, Add, Sub, Mod,
                     Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual, 
-                    BitwiseAnd, BitwiseOr, BitwiseXor, BitwiseNot,
-                    LogicalAnd, LogicalOr, LogicalNot, ShiftLeft, ShiftRight };
+                    BitAnd, BitOr, Xor, Compl,
+                    And, Or, Not, ShiftLeft, ShiftRight };
 
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler);
 

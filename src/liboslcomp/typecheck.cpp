@@ -253,10 +253,10 @@ ASTunary_expression::typecheck (TypeSpec expected)
         }
         m_typespec = t;
         break;
-    case LogicalNot :
+    case Not :
         m_typespec = TypeDesc::TypeInt;  // ! is always an int
         break;
-    case BitwiseNot :
+    case Compl :
         if (! t.is_int()) {
             error ("Operator '~' can only be done to an int");
             return TypeSpec ();
@@ -373,9 +373,9 @@ ASTbinary_expression::typecheck (TypeSpec expected)
             return m_typespec = TypeDesc::TypeInt;
         break;
 
-    case BitwiseAnd :
-    case BitwiseOr :
-    case BitwiseXor :
+    case BitAnd :
+    case BitOr :
+    case Xor :
     case ShiftLeft :
     case ShiftRight :
         // Bitwise ops only work with ints, and return ints.
@@ -383,8 +383,8 @@ ASTbinary_expression::typecheck (TypeSpec expected)
             return m_typespec = TypeDesc::TypeInt;
         break;
 
-    case LogicalAnd :
-    case LogicalOr :
+    case And :
+    case Or :
         // Logical ops work on any simple type (since they test for
         // nonzeroness), but always return int.
         return m_typespec = TypeDesc::TypeInt;

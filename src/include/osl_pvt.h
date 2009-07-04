@@ -23,6 +23,7 @@ namespace OSL {
 namespace pvt {
 
 class ASTNode;
+class ShadingExecution;
 
 
 /// Kinds of shaders
@@ -59,6 +60,16 @@ const char *shaderusename (ShaderUse s);
 /// Convert a ShaderUse to a human-readable name ("surface", etc.)
 ///
 ShaderUse shaderuse_from_name (const char *name);
+
+
+
+/// Data type for flags that indicate on a point-by-point basis whether
+/// we want computations to be performed.
+typedef unsigned char Runflag;
+
+/// Pre-defined values for Runflag's.
+///
+enum RunFlagVal { RunFlagOff = 0, RunFlagOn = 255 };
 
 
 
@@ -383,6 +394,12 @@ typedef std::vector<Symbol> SymbolVec;
 typedef std::vector<Symbol *> SymbolPtrVec;
 
 
+/// Function pointer to a shadeop implementation
+///
+typedef void (*OpImpl) (ShadingExecution *exec, int nargs, const int *args,
+                        Runflag *runflags, int beginpoint, int endpoint);
+
+
 
 /// Intermediate Represenatation opcode
 ///
@@ -390,15 +407,15 @@ class Opcode {
 public:
     Opcode (ustring op, ustring method, size_t firstarg=0, size_t nargs=0)
         : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
-          m_method(method)
+          m_method(method), m_impl(NULL)
     {
         m_jump[0] = -1;
         m_jump[1] = -1;
         m_jump[2] = -1;
     }
     const char *opname () const { return m_op.c_str(); }
-    size_t firstarg () const { return (size_t)m_firstarg; }
-    size_t nargs () const { return (size_t) m_nargs; }
+    int firstarg () const { return m_firstarg; }
+    int nargs () const { return m_nargs; }
     ustring method () const { return m_method; }
     void source (ustring sourcefile, int sourceline) {
         m_sourcefile = sourcefile;
@@ -436,6 +453,16 @@ public:
     ///
     static const unsigned int max_jumps = 3;
 
+    void implementation (OpImpl impl) { m_impl = impl; }
+    OpImpl implementation () const { return m_impl; }
+
+    /// Execute the op!
+    ///
+    void operator() (ShadingExecution *exec, int nargs, int *args,
+                     Runflag *runflags, int beginpoint, int endpoint) {
+        m_impl (exec, m_nargs, args, runflags, beginpoint, endpoint);
+    }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument
@@ -444,6 +471,7 @@ private:
     int m_jump[max_jumps];          ///< Jump addresses (-1 means none)
     ustring m_sourcefile;           ///< Source filename for this op
     int m_sourceline;               ///< Line of source code for this op
+    OpImpl m_impl;                  ///< Implementation of this op
 };
 
 

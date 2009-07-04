@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+#include <OpenImageIO/argparse.h>
+
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
@@ -30,12 +32,49 @@ using namespace OSL::pvt;
 
 static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> inputfiles;
+static std::string outputfile ("out.exr");
 
 
 
-static void
-getargs (int argc, char *argv[])
+
+static int
+parse_files (int argc, const char *argv[])
 {
+    for (int i = 0;  i < argc;  i++)
+        inputfiles.push_back (argv[i]);
+    return 0;
+}
+
+
+
+static int
+getargs (int argc, const char *argv[])
+{
+#if 1
+    static bool help = false;
+    ArgParse ap;
+    ap.options ("Usage:  testshade [options] shader...",
+                "%*", parse_files, "",
+                "--help", &help, "Print help message",
+                "-o %s", &outputfile, "Output filename",
+//                "-v", &verbose, "Verbose output",
+//                "-m %s", &metamatch, "Metadata names to print (default: all)",
+//                "-f", &filenameprefix, "Prefix each line with the filename",
+//                "-s", &sum, "Sum the image sizes",
+                NULL);
+    if (ap.parse(argc, argv) < 0 || inputfiles.empty()) {
+        std::cerr << ap.error_message() << std::endl;
+        ap.usage ();
+        exit (EXIT_FAILURE);
+    }
+    if (help) {
+        std::cout <<
+            "testshade -- Test Open Shading Language\n"
+            "(c) Copyright 2009 Sony Pictures Imageworks. All Rights Reserved.\n";
+        ap.usage ();
+        exit (EXIT_SUCCESS);
+    }
+#else
 // Declare the supported options.
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -43,8 +82,9 @@ getargs (int argc, char *argv[])
         ("verbose,v", "Verbose output")
         ("sum,s", "Sum the image sizes")
         ("filename-prefix,f", "Prefix each line with the filename")
+        ("output-file,o", po::value<std::string>(), "Output file")
 //        ("compression", po::value<int>(), "set compression level")
-        ("input-file", po::value< std::vector<std::string> >(), "input file")
+        ("input-file", po::value< std::vector<std::string> >(), "Input file")
 
         ;
     
@@ -71,6 +111,11 @@ getargs (int argc, char *argv[])
         std::cout << "Sum: " << vm.count("sum") << "\n";
 #endif
 
+        if (vm.count("output-file")) {
+            outputfile = vm["output-file"].as<std::string>();
+            std::cout << "output file " << outputfile << "\n";
+        }
+
         if (vm.count("compression")) {
             std::cout << "Compression level was set to " 
                       << vm["compression"].as<int>() << ".\n";
@@ -87,6 +132,7 @@ getargs (int argc, char *argv[])
         std::cout << desc << "\n";
         exit (EXIT_FAILURE);
     }
+#endif
 }
 
 
@@ -122,7 +168,7 @@ test_shader (const std::string &filename)
 
 
 int
-main (int argc, char *argv[])
+main (int argc, const char *argv[])
 {
     getargs (argc, argv);
 

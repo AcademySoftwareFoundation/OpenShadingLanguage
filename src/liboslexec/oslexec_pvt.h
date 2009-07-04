@@ -21,6 +21,8 @@
 
 #include "oslexec.h"
 #include "osl_pvt.h"
+using namespace OSL;
+using namespace OSL::pvt;
 
 
 namespace OSL {
@@ -31,15 +33,6 @@ namespace pvt {
 class ShadingSystemImpl;
 class ShadingContext;
 class ShadingExecution;
-
-/// Data type for flags that indicate on a point-by-point basis whether
-/// we want computations to be performed.
-typedef unsigned char Runflag;
-
-/// Pre-defined values for Runflag's.
-///
-enum RunFlagVal { RunFlagOff = 0, RunFlagOn = 255 };
-
 
 
 
@@ -185,6 +178,10 @@ public:
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
 
+    /// Return the name of the shader.
+    ///
+    const std::string &shadername () const { return m_shadername; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Back-ptr to the shading system
     ShaderType m_shadertype;            ///< Type of shader
@@ -204,6 +201,7 @@ private:
 
     friend class OSOReaderToMaster;
     friend class ShaderInstance;
+    friend class ShadingExecution;
 };
 
 
@@ -258,6 +256,10 @@ public:
     /// How many layers are in this network?
     ///
     int nlayers () const { return (int) m_layers.size(); }
+
+    /// Array indexing returns the i-th layer of the network.
+    ///
+    ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
 
 private:
     std::vector<ShaderInstanceRef> m_layers;
@@ -365,14 +367,14 @@ private:
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<float> m_heap;          ///< Heap memory
-    ExecutionLayers m_surf;             ///< Surface shading network
-    ExecutionLayers m_disp;             ///< Displacement shading network
+    ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the networks
     ExecutionLayers m_volume;           ///< Volume shading network
     int m_npoints;                      ///< Number of points being shaded
     int m_nlights;                      ///< Number of lights
     int m_curlight;                     ///< Current light index
     int m_curuse;                       ///< Current use that we're running
     int m_nlayers[ShadUseLast];         ///< Number of layers for each use
+    friend class ShadingExecution;
 };
 
 
@@ -381,15 +383,37 @@ private:
 ///
 class ShadingExecution {
 public:
-    ShadingExecution (ShadingContext *context=NULL) 
-        : m_context(context), m_ourlayers(NULL)
-    { }
-    ~ShadingExecution () { }
+    ShadingExecution ();
+    ~ShadingExecution ();
+
+    /// Bind an arena to prepare to run the shader.
+    ///
+    void bind (ShadingContext *context, ShaderUse use, int layerindex,
+               ShaderInstance *instance);
+
+    /// Execute the shader with the supplied runflags.
+    ///
+    void run (Runflag *rf=NULL);
+
+    /// Execute the shader with the current runflags, over the range of
+    /// ops denoted by [beginop, endop).
+    void run (int beginop, int endop);
+
 private:
-    ShadingContext *m_context;
-    ShaderInstance::ref m_instance;
-    ShaderMaster::ref m_master;
-    ExecutionLayers *m_ourlayers;
+    ShaderUse m_use;              ///< Our shader use
+    ShaderUse m_layerindex;       ///< Which layer are we?
+    ShadingContext *m_context;    ///< Ptr to our shading context
+    ShaderInstance *m_instance;   ///< Ptr to the shader instance
+    ShaderMaster *m_master;       ///< Ptr to the instance's master
+    int m_npoints;                ///< How many points are we running?
+    bool m_bound;                 ///< Have we been bound?
+    bool m_executed;              ///< Have we been executed?
+    Runflag *m_runflags;          ///< Current runflags
+    bool m_beginpoint;            ///< First point to shade
+    bool m_endpoint;              ///< One past last point to shade
+    bool m_allpointson;           ///< Are all points on [begin,end) on?
+    std::vector<Runflag *> m_runfag_stack;  ///< Stack of runflags
+    int m_ip;                     ///< Instruction pointer
 };
 
 
@@ -410,6 +434,7 @@ private:
     OSL::pvt::ShaderNetwork m_shaders[OSL::pvt::ShadUseLast];
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::ShadingContext;
+    friend class OSL::pvt::ShadingExecution;
 };
 
 

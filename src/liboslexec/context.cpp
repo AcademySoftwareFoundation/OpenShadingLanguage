@@ -70,9 +70,32 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
 void
 ShadingContext::execute (ShaderUse use, Runflag *rf)
 {
+    // FIXME -- timers/stats
+
     std::cerr << "execute " << (void *)this 
               << " as " << shaderusename(use) << "\n";
     m_curuse = use;
+    ASSERT (use == ShadUseSurface);  // FIXME
+
+    // Get a handy ref to the network for this shader use
+    ShaderNetwork &network (m_attribs->m_shaders[use]);
+    int nlayers = network.nlayers ();
+
+    // Get a handy ref to the array of ShadeExec layer for this shade use,
+    // and make sure it's big enough for the number of layers we have.
+    ExecutionLayers &execlayers (m_exec[use]);
+    if (nlayers > execlayers.size())
+        execlayers.resize (nlayers);
+
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        execlayers[layer].bind (this, use, layer, network[layer]);
+        // FIXME -- for now, we're executing layers unconditionally.
+        // Eventually, we only want to execut them here if they have
+        // side effects (including generating final renderer outputs).
+        // Layers without side effects should be executed lazily, only
+        // as their outputs are needed by other layers.
+        execlayers[layer].run (rf);
+    }
 }
 
 

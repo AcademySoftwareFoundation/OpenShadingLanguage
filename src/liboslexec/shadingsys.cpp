@@ -193,7 +193,7 @@ ShadingSystemImpl::ShaderGroupBegin (void)
         return;
     }
     m_in_group = true;
-    m_group_head.reset ();
+    m_group_use = ShadUseUnknown;
 }
 
 
@@ -201,7 +201,6 @@ ShadingSystemImpl::ShaderGroupBegin (void)
 void
 ShadingSystemImpl::ShaderGroupEnd (void)
 {
-    m_group_head.reset ();
     m_in_group = false;
     m_group_use = ShadUseUnknown;
 }
@@ -230,28 +229,25 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         m_curattrib.reset (new ShadingAttribState);
 
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
-    if (m_in_group) {
-        if (! m_group_head) {
-            // First shader in group -- it's the head
-            m_group_head = instance;
-            m_group_use = use;
-            m_curattrib->m_shaders[(int)use] = instance;
-        } else {
-            // Not first shader in group -- append to the end
-            if (use != m_group_use) {
-                error ("Shader usage '%s' does not match current group (%s)",
-                       shaderusage, shaderusename (m_group_use));
-                return;
-            }
-            m_group_head->append (instance);
-            // FIXME -- check for duplicate layer name within the group?
-        }
-    } else {
-        m_curattrib->m_shaders[(int)use] = instance;
-    }
-
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
+
+    if (! m_in_group || m_group_use == ShadUseUnknown) {
+        // A singleton, or the first in a group
+        m_curattrib->m_shaders[(int)use].clear ();
+    }
+    if (m_in_group) {
+        if (m_group_use == ShadUseUnknown) {  // First shader in group
+            m_group_use = use;
+        } else if (use != m_group_use) {
+            error ("Shader usage '%s' does not match current group (%s)",
+                   shaderusage, shaderusename (m_group_use));
+            return;
+        }
+    }
+
+    m_curattrib->m_shaders[(int)use].append (instance);
+    // FIXME -- check for duplicate layer name within the group?
 }
 
 

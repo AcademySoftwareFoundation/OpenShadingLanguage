@@ -32,22 +32,8 @@ namespace pvt {   // OSL::pvt
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_symbols(m_master->m_symbols),
-      m_layername(layername), m_firstlayer(true)
+      m_layername(layername)
 {
-}
-
-
-
-void
-ShaderInstance::append (ShaderInstance::ref anotherlayer)
-{
-    ShaderInstance *inst = this;
-    while (inst->next_layer ())
-        inst = inst->next_layer ();
-    DASSERT (inst != NULL && inst->next_layer() == NULL &&
-             "we should be pointing to the last layer of the group");
-    inst->m_nextlayer = anotherlayer;
-    anotherlayer->m_firstlayer = false;
 }
 
 

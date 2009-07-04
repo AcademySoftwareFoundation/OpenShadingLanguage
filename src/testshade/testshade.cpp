@@ -105,9 +105,18 @@ test_shader (const std::string &filename)
     float Kd = 0.75;
     shadingsys->Parameter ("Kd", TypeDesc::TypeFloat, &Kd);
     shadingsys->Shader ("surface", filename.c_str());
+    ShadingAttribStateRef shaderstate = shadingsys->state ();
+
+    ShaderGlobals shaderglobals;
+    const int npoints = 1;
+    Imath::V3f gP[npoints];
+    shaderglobals.P.init (gP);
 
     ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
     shared_ptr<ShadingContext> ctx = ssi->get_context ();
+    ctx->bind (npoints, *shaderstate, shaderglobals);
+    ctx->execute (ShadUseSurface);
+    std::cerr << "\n";
 }
 
 

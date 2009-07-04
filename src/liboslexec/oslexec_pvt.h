@@ -225,16 +225,6 @@ public:
     ///
     ShadingSystemImpl & shadingsys () const { return m_master->shadingsys(); }
 
-    /// Is this instance the first (head) of its group?
-    ///
-    bool is_first_in_group () const { return m_firstlayer; }
-
-    void append (ShaderInstance::ref anotherlayer);
-
-    /// Return a pointer to the next layer in the group.
-    ///
-    ShaderInstance *next_layer () const { return m_nextlayer.get(); }
-
     /// Apply pending parameters
     /// 
     void parameters (const std::vector<ParamRef> &params);
@@ -243,11 +233,34 @@ private:
     ShaderMaster::ref m_master;         ///< Reference to the master
     SymbolVec m_symbols;                ///< Symbols used by the instance
     ustring m_layername;                ///< Name of this layer
-    ref m_nextlayer;                    ///< Next layer in the group
-    bool m_firstlayer;                  ///< Is this the 1st layer of group?
     std::vector<int> m_iparams;         ///< int param values
     std::vector<float> m_fparams;       ///< float param values
     std::vector<ustring> m_sparams;     ///< string param values
+};
+
+
+
+/// A ShaderNetwork consists of one or more layers (each of which is a
+/// ShaderInstance), and the connections among them.
+class ShaderNetwork {
+public:
+    ShaderNetwork () { }
+    ~ShaderNetwork () { }
+
+    /// Clear the network
+    ///
+    void clear () { m_layers.clear (); }
+
+    /// Append a new shader instance on to the end of this network
+    ///
+    void append (ShaderInstanceRef newlayer) { m_layers.push_back (newlayer); }
+
+    /// How many layers are in this network?
+    ///
+    int nlayers () const { return (int) m_layers.size(); }
+
+private:
+    std::vector<ShaderInstanceRef> m_layers;
 };
 
 
@@ -284,6 +297,8 @@ public:
 
     ShaderMaster::ref loadshader (const char *name);
 
+    /// Return a "blank" ShadingContext that we can use.
+    ///
     shared_ptr<ShadingContext> get_context ();
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
@@ -297,7 +312,6 @@ private:
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     bool m_in_group;                      ///< Are we specifying a group?
-    ShaderInstanceRef m_group_head;       ///< Head of our group
     ShaderUse m_group_use;                ///< Use of group
     std::vector<ParamRef> m_pending_params; ///< Pending Parameter() values
     ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
@@ -342,10 +356,23 @@ public:
     /// points turned on.
     void execute (ShaderUse use, Runflag *rf=NULL);
 
+    /// Return the number of points being shaded.
+    ///
+    int npoints () const { return m_npoints; }
+
 private:
-    ShadingSystemImpl &m_shadingsys;
-    std::vector<float> *m_heap;                   ///< Heap memory
-    ExecutionLayers m_surf, m_disp, m_volume;
+    ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
+    ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
+    ShaderGlobals *m_globals;           ///< Ptr to shader globals
+    std::vector<float> m_heap;          ///< Heap memory
+    ExecutionLayers m_surf;             ///< Surface shading network
+    ExecutionLayers m_disp;             ///< Displacement shading network
+    ExecutionLayers m_volume;           ///< Volume shading network
+    int m_npoints;                      ///< Number of points being shaded
+    int m_nlights;                      ///< Number of lights
+    int m_curlight;                     ///< Current light index
+    int m_curuse;                       ///< Current use that we're running
+    int m_nlayers[ShadUseLast];         ///< Number of layers for each use
 };
 
 
@@ -380,8 +407,9 @@ public:
     ~ShadingAttribState () { }
 
 private:
-    ShaderInstanceRef m_shaders[OSL::pvt::ShadUseLast];
+    OSL::pvt::ShaderNetwork m_shaders[OSL::pvt::ShadUseLast];
     friend class OSL::pvt::ShadingSystemImpl;
+    friend class OSL::pvt::ShadingContext;
 };
 
 

@@ -335,6 +335,7 @@ ShadingSystemImpl::loadshader (const char *cname)
 
     if (r) {
         r->resolve_defaults ();
+        r->resolve_ops ();
     }
 
     return r;

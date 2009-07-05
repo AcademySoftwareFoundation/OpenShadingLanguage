@@ -11,32 +11,27 @@
  *
  *****************************************************************************/
 
-#ifndef OSLOPS_H
-#define OSLOPS_H
-
-#include "OpenImageIO/typedesc.h"
-
-#include "oslexec.h"
-#include "osl_pvt.h"
+#include "oslops.h"
 
 
 namespace OSL {
 namespace pvt {
 
 
-#define DECLOP(name) \
-    void name (ShadingExecution *exec, int nargs, const int *args, \
-               Runflag *runflags, int beginpoint, int endpoint)
+
+DECLOP (OP_missing)
+{
+    std::cerr << "Missing op!\n";
+}
 
 
-DECLOP (OP_assign);
-DECLOP (OP_end);
 
-DECLOP (OP_missing);
+DECLOP (OP_end)
+{
+    std::cerr << "Executing end!\n";
+}
+
 
 
 }; // namespace pvt
 }; // namespace OSL
-
-
-#endif /* OSLOPS_H */

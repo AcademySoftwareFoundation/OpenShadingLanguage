@@ -140,7 +140,7 @@ public:
 
     /// Return just the simple type underlying this TypeSpec -- only works
     /// reliable if it's not a struct, a struct will return an UNKNOWN type.
-    TypeDesc simpletype () const { return m_simple; }
+    const TypeDesc &simpletype () const { return m_simple; }
 
     /// Is this typespec a closure?  (N.B. if so, you can find out what
     /// kind of closure it is with simpletype()).
@@ -413,7 +413,7 @@ public:
         m_jump[1] = -1;
         m_jump[2] = -1;
     }
-    const char *opname () const { return m_op.c_str(); }
+    ustring opname () const { return m_op; }
     int firstarg () const { return m_firstarg; }
     int nargs () const { return m_nargs; }
     ustring method () const { return m_method; }

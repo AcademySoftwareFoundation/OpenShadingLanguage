@@ -166,6 +166,10 @@ public:
     /// set m_firstparam/m_lastparam.
     void resolve_defaults ();
 
+    /// Run through the code, find an implementation for each op, do
+    /// other housekeeping related to the code.
+    void resolve_ops ();
+
     /// Find the named symbol, return its index in the symbol array, or
     /// -1 if not found.
     int findsymbol (ustring name) const;
@@ -227,6 +231,18 @@ public:
     /// 
     void parameters (const std::vector<ParamRef> &params);
 
+    /// How much heap space this instance needs per point being shaded.
+    ///
+    size_t heapsize () const { return m_heapsize; }
+
+    /// Recalculate the amount of heap space needed, store in m_heapsize
+    /// and also return it.
+    size_t calc_heapsize ();
+
+    /// Return a pointer to the symbol (specified by integer index),
+    /// or NULL (if index was -1, as returned by 'findsymbol').
+    Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
+
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
     SymbolVec m_symbols;                ///< Symbols used by the instance
@@ -234,35 +250,44 @@ private:
     std::vector<int> m_iparams;         ///< int param values
     std::vector<float> m_fparams;       ///< float param values
     std::vector<ustring> m_sparams;     ///< string param values
+    size_t m_heapsize;                  ///< Heap space needed per point
 };
 
 
 
-/// A ShaderNetwork consists of one or more layers (each of which is a
+/// A ShaderGroup consists of one or more layers (each of which is a
 /// ShaderInstance), and the connections among them.
-class ShaderNetwork {
+class ShaderGroup {
 public:
-    ShaderNetwork () { }
-    ~ShaderNetwork () { }
+    ShaderGroup () : m_heapsize(0) { }
+    ~ShaderGroup () { }
 
-    /// Clear the network
+    /// Clear the layers
     ///
-    void clear () { m_layers.clear (); }
+    void clear () { m_layers.clear ();  m_heapsize = 0; }
 
-    /// Append a new shader instance on to the end of this network
+    /// Append a new shader instance on to the end of this group
     ///
-    void append (ShaderInstanceRef newlayer) { m_layers.push_back (newlayer); }
+    void append (ShaderInstanceRef newlayer) {
+        m_layers.push_back (newlayer);
+        m_heapsize += newlayer->heapsize();
+    }
 
-    /// How many layers are in this network?
+    /// How many layers are in this group?
     ///
     int nlayers () const { return (int) m_layers.size(); }
 
-    /// Array indexing returns the i-th layer of the network.
+    /// Array indexing returns the i-th layer of the group
     ///
     ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
 
+    /// How much heap space this instance needs per point being shaded.
+    ///
+    size_t heapsize () const { return m_heapsize; }
+
 private:
     std::vector<ShaderInstanceRef> m_layers;
+    size_t m_heapsize;                 ///< Heap space needed per point
 };
 
 
@@ -335,7 +360,7 @@ typedef std::vector<ShadingExecution> ExecutionLayers;
 
 
 
-/// The full context for executing a network of shaders.  This contains
+/// The full context for executing a shader group.  This contains
 /// ShadingExecution states for each shader
 ///
 class ShadingContext {
@@ -366,9 +391,8 @@ private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
-    std::vector<float> m_heap;          ///< Heap memory
-    ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the networks
-    ExecutionLayers m_volume;           ///< Volume shading network
+    std::vector<char> m_heap;           ///< Heap memory
+    ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
     int m_nlights;                      ///< Number of lights
     int m_curlight;                     ///< Current light index
@@ -427,14 +451,31 @@ private:
 class ShadingAttribState
 {
 public:
-    ShadingAttribState () { }
+    ShadingAttribState () : m_heapsize(0) { }
     ~ShadingAttribState () { }
 
+    /// Return a reference to the shader group for a particular use
+    ///
+    ShaderGroup & shadergroup (ShaderUse use) {
+        return m_shaders[(int)use];
+    }
+
+    /// How much heap space this instance needs per point being shaded.
+    ///
+    size_t heapsize () const { return m_heapsize; }
+
+    /// Recalculate the amount of heap space needed, store in m_heapsize
+    /// and also return it.
+    size_t calc_heapsize () {
+        m_heapsize = 0;
+        for (int i = 0;  i < (int)OSL::pvt::ShadUseLast;  ++i)
+            m_heapsize += m_shaders[i].heapsize ();
+        return m_heapsize;
+    }
+
 private:
-    OSL::pvt::ShaderNetwork m_shaders[OSL::pvt::ShadUseLast];
-    friend class OSL::pvt::ShadingSystemImpl;
-    friend class OSL::pvt::ShadingContext;
-    friend class OSL::pvt::ShadingExecution;
+    OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
+    size_t m_heapsize;                 ///< Heap space needed per point
 };
 
 

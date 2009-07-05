@@ -56,11 +56,19 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     m_curlight = -1;
     m_curuse = ShadUseUnknown;
 
-    // FIXME -- allocate enough space on the heap
+    // Allocate enough space on the heap
+    size_t heap_size_needed = m_npoints * sas.heapsize ();
+    std::cerr << "  need heap " << heap_size_needed << " vs " << m_heap.size() << "\n";
+    // FIXME -- what about globals?
+    if (heap_size_needed > m_heap.size()) {
+        std::cerr << "  ShadingContext " << (void *)this 
+                  << " growing heap to " << heap_size_needed << "\n";
+        m_heap.resize (heap_size_needed);
+    }
 
     // Calculate number of layers we need for each use
     for (int i = 0;  i < ShadUseLast;  ++i) {
-        m_nlayers[i] = m_attribs->m_shaders[i].nlayers ();
+        m_nlayers[i] = m_attribs->shadergroup ((ShaderUse)i).nlayers ();
         std::cerr << "  " << m_nlayers[i] << " layers of " << shaderusename((ShaderUse)i) << "\n";
     }
 }
@@ -77,9 +85,9 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     m_curuse = use;
     ASSERT (use == ShadUseSurface);  // FIXME
 
-    // Get a handy ref to the network for this shader use
-    ShaderNetwork &network (m_attribs->m_shaders[use]);
-    int nlayers = network.nlayers ();
+    // Get a handy ref to the shader group for this shader use
+    ShaderGroup &sgroup (m_attribs->shadergroup (use));
+    int nlayers = sgroup.nlayers ();
 
     // Get a handy ref to the array of ShadeExec layer for this shade use,
     // and make sure it's big enough for the number of layers we have.
@@ -88,7 +96,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
         execlayers.resize (nlayers);
 
     for (int layer = 0;  layer < nlayers;  ++layer) {
-        execlayers[layer].bind (this, use, layer, network[layer]);
+        execlayers[layer].bind (this, use, layer, sgroup[layer]);
         // FIXME -- for now, we're executing layers unconditionally.
         // Eventually, we only want to execut them here if they have
         // side effects (including generating final renderer outputs).

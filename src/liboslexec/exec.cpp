@@ -124,10 +124,14 @@ ShadingExecution::run (int beginop, int endop)
               << " ops [" << beginop << "," << endop << ")\n";
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         Opcode &op = m_master->m_ops[m_ip];
-        std::cerr << "  instruction " << m_ip << ": " 
-                  << op.opname() << "\n";
+        std::cerr << "  instruction " << m_ip << ": " << op.opname() << " ";
+        for (int i = 0;  i < op.nargs();  ++i) {
+            int arg = m_master->m_args[op.firstarg()+i];
+            std::cerr << m_instance->symbol(arg)->mangled() << " ";
+        }
+        std::cerr << "\n";
         ASSERT (op.implementation() && "Unimplemented op!");
-        op (this, op.nargs(), &m_master->m_args[0],
+        op (this, op.nargs(), &m_master->m_args[op.firstarg()],
             m_runflags, m_beginpoint, m_endpoint);
     }
     // FIXME -- this is a good place to do all sorts of other sanity checks,

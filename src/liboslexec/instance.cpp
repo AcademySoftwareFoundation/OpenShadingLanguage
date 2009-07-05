@@ -32,8 +32,9 @@ namespace pvt {   // OSL::pvt
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_symbols(m_master->m_symbols),
-      m_layername(layername)
+      m_layername(layername), m_heapsize(0)
 {
+    calc_heapsize ();
 }
 
 
@@ -61,6 +62,40 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
         }
     }
 }
+
+
+
+size_t
+ShaderInstance::calc_heapsize ()
+{
+    std::cerr << "calc_heapsize on " << m_master->shadername() << "\n";
+    m_heapsize = 0;
+    BOOST_FOREACH (const Symbol &s, m_symbols) {
+        // std::cerr << "  sym " << s.mangled() << "\n";
+
+        // Skip if the symbol is a type that doesn't need heap space
+        if (s.symtype() == SymTypeConst || s.symtype() == SymTypeGlobal)
+            continue;
+
+        const TypeSpec &t (s.typespec());
+        size_t size = 0;
+        if (t.is_closure()) {
+            // FIXME
+        } else if (t.is_structure()) {
+            // FIXME
+        } else {
+            size = t.simpletype().size();
+        }
+        // Round up to multipe of 4 bytes
+        size = (size+3) & (~3);
+        m_heapsize += size;
+        // FIXME -- have a ShadingSystem method in a central place that
+        // computes heap size for all types
+    }
+    std::cerr << " Heap needed " << m_heapsize << "\n";
+    return m_heapsize;
+}
+
 
 
 }; // namespace pvt

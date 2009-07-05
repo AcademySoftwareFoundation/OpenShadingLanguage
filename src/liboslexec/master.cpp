@@ -24,7 +24,7 @@
 #include "OpenImageIO/thread.h"
 
 #include "oslexec_pvt.h"
-
+#include "oslops.h"
 
 
 
@@ -100,8 +100,8 @@ ShaderMaster::print ()
     std::cout << "  symbols:\n";
     for (size_t i = 0;  i < m_symbols.size();  ++i) {
         const Symbol &s (m_symbols[i]);
-        std::cout << "    " << s.typespec().string() << " " << s.name()
-                  << "\n";
+        std::cout << "    " << i << ": " << s.typespec().string() 
+                  << " " << s.name() << "\n";
     }
     std::cout << "  int consts:\n    ";
     for (size_t i = 0;  i < m_iconsts.size();  ++i)
@@ -139,6 +139,22 @@ ShaderMaster::print ()
             std::cout << "\t(" << m_ops[i].sourcefile() << ":" 
                       << m_ops[i].sourceline() << ")";
         std::cout << "\n";
+    }
+}
+
+
+
+void
+ShaderMaster::resolve_ops ()
+{
+    BOOST_FOREACH (Opcode &op, m_ops) {
+        // FIXME -- replace this hard-coded crap with a hash table or
+        // something.
+        std::cerr << "resolving " << op.opname() << "\n";
+        if (op.opname() == "assign")
+            op.implementation (OP_assign);
+        else if (op.opname() == "end")
+            op.implementation (OP_end);
     }
 }
 

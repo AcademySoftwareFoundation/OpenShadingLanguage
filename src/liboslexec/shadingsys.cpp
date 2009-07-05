@@ -232,9 +232,10 @@ ShadingSystemImpl::Shader (const char *shaderusage,
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
 
+    ShaderGroup &shadergroup (m_curattrib->shadergroup (use));
     if (! m_in_group || m_group_use == ShadUseUnknown) {
         // A singleton, or the first in a group
-        m_curattrib->m_shaders[(int)use].clear ();
+        shadergroup.clear ();
     }
     if (m_in_group) {
         if (m_group_use == ShadUseUnknown) {  // First shader in group
@@ -246,7 +247,8 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         }
     }
 
-    m_curattrib->m_shaders[(int)use].append (instance);
+    shadergroup.append (instance);
+    m_curattrib->calc_heapsize ();
     // FIXME -- check for duplicate layer name within the group?
 }
 

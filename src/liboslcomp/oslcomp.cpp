@@ -432,11 +432,11 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         }
 
         // Op name
-        oso ("\t%s", op->opname());
+        oso ("\t%s", op->opname().c_str());
 
         // Register arguments
         if (op->nargs())
-            oso (strlen(op->opname()) < 8 ? "\t\t" : "\t");
+            oso (op->opname().length() < 8 ? "\t\t" : "\t");
         for (size_t i = 0;  i < op->nargs();  ++i) {
             int arg = op->firstarg() + i;
             oso ("%s ", m_opargs[arg]->dealias()->mangled().c_str());

@@ -55,11 +55,12 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     m_nlights = 0;
     m_curlight = -1;
     m_curuse = ShadUseUnknown;
+    m_heap_allotted = 0;
 
     // Allocate enough space on the heap
     size_t heap_size_needed = m_npoints * sas.heapsize ();
+    heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
     std::cerr << "  need heap " << heap_size_needed << " vs " << m_heap.size() << "\n";
-    // FIXME -- what about globals?
     if (heap_size_needed > m_heap.size()) {
         std::cerr << "  ShadingContext " << (void *)this 
                   << " growing heap to " << heap_size_needed << "\n";

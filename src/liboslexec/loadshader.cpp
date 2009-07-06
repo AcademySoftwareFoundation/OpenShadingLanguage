@@ -40,7 +40,8 @@ class OSOReaderToMaster : public OSOReader
 {
 public:
     OSOReaderToMaster (ShadingSystemImpl &shadingsys)
-        : m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
+        : m_shadingsys (shadingsys),
+          m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
       { }
     virtual ~OSOReaderToMaster () { }
     virtual bool parse (const std::string &filename);
@@ -60,6 +61,7 @@ public:
     ShaderMaster::ref master () const { return m_master; }
 
 private:
+    ShadingSystemImpl &m_shadingsys;
     ShaderMaster::ref m_master;
     size_t m_firstarg;
     size_t m_nargs;
@@ -94,25 +96,28 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
     Symbol sym (ustring(name), typespec, symtype);
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (typespec.simpletype().basetype == TypeDesc::FLOAT)
-            sym.m_dataoffset = (int) m_master->m_fdefaults.size();
+            sym.dataoffset ((int) m_master->m_fdefaults.size());
         else if (typespec.simpletype().basetype == TypeDesc::INT)
-            sym.m_dataoffset = (int) m_master->m_idefaults.size();
+            sym.dataoffset ((int) m_master->m_idefaults.size());
         else if (typespec.simpletype().basetype == TypeDesc::STRING)
-            sym.m_dataoffset = (int) m_master->m_sdefaults.size();
+            sym.dataoffset ((int) m_master->m_sdefaults.size());
         else {
             ASSERT (0 && "unexpected type");
         }
     }
     if (sym.symtype() == SymTypeConst) {
         if (typespec.simpletype().basetype == TypeDesc::FLOAT)
-            sym.m_dataoffset = (int) m_master->m_fconsts.size();
+            sym.dataoffset ((int) m_master->m_fconsts.size());
         else if (typespec.simpletype().basetype == TypeDesc::INT)
-            sym.m_dataoffset = (int) m_master->m_iconsts.size();
+            sym.dataoffset ((int) m_master->m_iconsts.size());
         else if (typespec.simpletype().basetype == TypeDesc::STRING)
-            sym.m_dataoffset = (int) m_master->m_sconsts.size();
+            sym.dataoffset ((int) m_master->m_sconsts.size());
         else {
             ASSERT (0 && "unexpected type");
         }
+    }
+    if (sym.symtype() == SymTypeGlobal) {
+        sym.dataoffset (m_shadingsys.global_heap_offset (sym.name()));
     }
     m_master->m_symbols.push_back (sym);
 }

@@ -71,10 +71,11 @@ namespace pvt {   // OSL::pvt
 
 
 ShadingSystemImpl::ShadingSystemImpl ()
-    : m_in_group (false), m_statslevel (0)
+    : m_in_group (false), m_statslevel (0), m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
+    init_global_heap_offsets ();
 }
 
 
@@ -289,6 +290,48 @@ ShadingSystemImpl::get_context ()
     return shared_ptr<ShadingContext> (new ShadingContext (*this));
 }
 
+
+
+
+void
+ShadingSystemImpl::init_global_heap_offsets ()
+{
+    lock_guard lock (m_mutex);
+    if (m_global_heap_total > 0)
+        return;   // Already initialized
+
+    const int triple_size = sizeof (Imath::V3f);
+    m_global_heap_offsets[ustring("P")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("I")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("N")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("Ng")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("dPdu")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("dPdv")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+
+    m_global_heap_offsets[ustring("u")] = m_global_heap_total;
+    m_global_heap_total += sizeof (float);
+    m_global_heap_offsets[ustring("v")] = m_global_heap_total;
+    m_global_heap_total += sizeof (float);
+    m_global_heap_offsets[ustring("time")] = m_global_heap_total;
+    m_global_heap_total += sizeof (float);
+    m_global_heap_offsets[ustring("dtime")] = m_global_heap_total;
+    m_global_heap_total += sizeof (float);
+}
+
+
+
+int
+ShadingSystemImpl::global_heap_offset (ustring name)
+{
+    std::map<ustring,int>::const_iterator f = m_global_heap_offsets.find (name);
+    return f != m_global_heap_offsets.end() ? f->second : -1;
+}
 
 }; // namespace pvt
 }; // namespace OSL

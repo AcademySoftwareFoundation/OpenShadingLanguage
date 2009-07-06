@@ -183,34 +183,43 @@ public:
     /// VEC3, or MATRIX44).
     TypeDesc::AGGREGATE aggregate () const { return (TypeDesc::AGGREGATE)m_simple.aggregate; }
 
+    // Note on the is_<simple_type> routines:
+    // We don't need to explicitly check for !is_struct(), since the
+    // m_simple is always UNKNOWN for structures.
+
     /// Is it a simple scalar int?
     ///
     bool is_int () const {
-        return m_simple == TypeDesc::TypeInt && !is_structure() && !is_closure();
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return m_simple == TypeDesc::TypeInt && !is_closure();
     }
 
     /// Is it a simple scalar float?
     ///
     bool is_float () const {
-        return m_simple == TypeDesc::TypeFloat && !is_structure() && !is_closure();
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return m_simple == TypeDesc::TypeFloat && !is_closure();
     }
 
     /// Is it a simple scalar float?
     ///
     bool is_color () const {
-        return m_simple == TypeDesc::TypeColor && !is_structure() && !is_closure();
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return m_simple == TypeDesc::TypeColor && !is_closure();
     }
 
     /// Is it a simple string?
     ///
     bool is_string () const {
-        return m_simple == TypeDesc::TypeString && !is_structure() && !is_closure();
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return m_simple == TypeDesc::TypeString && !is_closure();
     }
 
     /// Is it a simple triple (color, point, vector, or normal)?
     ///
     bool is_triple () const {
-        return ! is_structure() && ! is_closure() && 
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return ! is_closure() && 
             (m_simple == TypeDesc::TypeColor ||
              m_simple == TypeDesc::TypePoint ||
              m_simple == TypeDesc::TypeVector ||
@@ -221,7 +230,8 @@ public:
     /// This will return false for a closure or array (even if of floats)
     /// or struct.
     bool is_floatbased () const {
-        return ! is_structure() && ! is_closure() && ! is_array() &&
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return ! is_closure() && ! is_array() &&
             m_simple.basetype == TypeDesc::FLOAT;
     }
 
@@ -229,11 +239,13 @@ public:
     /// aggregate)?  This is false for a closure or array (even if of
     /// an underlying numeric type) or struct.
     bool is_numeric () const {
-        return ! is_structure() && ! is_closure() && ! is_array() &&
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return ! is_closure() && ! is_array() &&
             (m_simple.basetype == TypeDesc::FLOAT || m_simple.basetype == TypeDesc::INT);
     }
 
     bool is_scalarnum () const {
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
         return is_numeric() && m_simple.aggregate == TypeDesc::SCALAR;
     }
 
@@ -244,7 +256,8 @@ public:
     /// Is it a simple vector-like triple (point, vector, or normal, but
     /// not an array or closure)?
     bool is_vectriple () const {
-        return ! is_structure() && ! is_closure() && 
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return ! is_closure() && 
             (m_simple == TypeDesc::TypePoint ||
              m_simple == TypeDesc::TypeVector ||
              m_simple == TypeDesc::TypeNormal);
@@ -253,16 +266,16 @@ public:
     /// Is it based on a vector-like triple (point, vector, or normal)?
     /// (It's ok for it to be an array or closure.)
     bool is_vectriple_based () const {
-        return ! is_structure() && 
-            (m_simple.elementtype() == TypeDesc::TypePoint ||
-             m_simple.elementtype() == TypeDesc::TypeVector ||
-             m_simple.elementtype() == TypeDesc::TypeNormal);
+        return (m_simple.elementtype() == TypeDesc::TypePoint ||
+                m_simple.elementtype() == TypeDesc::TypeVector ||
+                m_simple.elementtype() == TypeDesc::TypeNormal);
     }
 
     /// Is it a simple matrix (but not an array or closure)?
     ///
     bool is_matrix () const {
-        return ! is_structure() && ! is_closure() && 
+        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+        return ! is_closure() && 
             m_simple == TypeDesc::TypeMatrix;
     }
 
@@ -302,7 +315,8 @@ class Symbol {
 public:
     Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
             ASTNode *declaration_node=NULL) 
-        : m_data(NULL), m_name(name), m_typespec(datatype), m_symtype(symtype),
+        : m_data(NULL), m_step(0), 
+          m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_scope(0), m_node(declaration_node), m_alias(NULL),
           m_const_initializer(false), m_dataoffset(-1)
     { }
@@ -372,10 +386,15 @@ public:
     ///
     void data (void *d) { m_data = d; }
 
+    void dataoffset (int d) { m_dataoffset = d; }
     int dataoffset () const { return m_dataoffset; }
+
+    int step () const { return m_step; }
+    void step (int newstep) { m_step = newstep; }
 
 protected:
     void *m_data;               ///< Pointer to the data
+    int m_step;                 ///< Step (in bytes) from point to point
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
     SymType m_symtype;          ///< Kind of symbol (param, local, etc.)
@@ -384,8 +403,6 @@ protected:
     Symbol *m_alias;            ///< Another symbol that this is an alias for
     bool m_const_initializer;   ///< initializer is a constant expression
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
-
-    friend class OSOReaderToMaster;
 };
 
 

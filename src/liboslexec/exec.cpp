@@ -16,6 +16,8 @@
 #include <string>
 #include <cstdio>
 
+#include "boost/foreach.hpp"
+
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
 
@@ -64,10 +66,46 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     }
 
     m_npoints = m_context->npoints ();
+    m_symbols = m_instance->m_symbols;
 
     // FIXME: bind the symbols -- get the syms ready and pointing to the
     // right place in the heap,, interpolate primitive variables, handle
     // connections, initialize all parameters
+    BOOST_FOREACH (Symbol &sym, m_symbols) {
+        std::cerr << "  bind " << sym.mangled() 
+                  << ", offset " << sym.dataoffset() << "\n";
+        if (sym.symtype() == SymTypeGlobal) {
+            if (sym.dataoffset() >= 0) {
+                sym.data (m_context->heapaddr (sym.dataoffset()));
+            } else {
+                // ASSERT (sym.dataoffset() >= 0 &&
+                //         "Global ought to already have a dataoffset");
+                // Skip this for now -- it includes L, Cl, etc.
+            }
+            sym.step (0);  // FIXME
+        } else if (sym.symtype() == SymTypeParam ||
+                   sym.symtype() == SymTypeOutputParam) {
+//            ASSERT (sym.dataoffset() < 0 &&
+//                    "Param should not yet have a data offset");
+//            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()));
+            size_t addr = context->heap_allot (sym.typespec().simpletype().size());
+            sym.data (m_context->heapaddr (sym.dataoffset()));
+            sym.step (0);  // FIXME
+        } else if (sym.symtype() == SymTypeLocal ||
+                   sym.symtype() == SymTypeTemp) {
+            ASSERT (sym.dataoffset() < 0);
+            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()));
+            sym.data (m_context->heapaddr (sym.dataoffset()));
+            sym.step (0);  // FIXME
+        } else if (sym.symtype() == SymTypeConst) {
+            ASSERT (sym.data() != NULL &&
+                    "Const symbol should have valid data address");
+        } else {
+            ASSERT (0 && "Should never get here");
+        }
+        std::cerr << "  bound " << sym.mangled() << " to address " 
+                  << (void *)sym.data() << ", step " << sym.step() << "\n";
+    }
 
     m_bound = true;
     m_executed = false;

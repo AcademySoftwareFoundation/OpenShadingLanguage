@@ -251,6 +251,8 @@ private:
     std::vector<float> m_fparams;       ///< float param values
     std::vector<ustring> m_sparams;     ///< string param values
     size_t m_heapsize;                  ///< Heap space needed per point
+
+    friend class ShadingExecution;
 };
 
 
@@ -330,8 +332,13 @@ public:
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 
+    /// Return the precomputed heap offset of the named global, or -1 if
+    /// it's not precomputed.
+    int global_heap_offset (ustring name);
+
 private:
     void printstats () const;
+    void init_global_heap_offsets ();
 
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
@@ -342,6 +349,8 @@ private:
     ShaderUse m_group_use;                ///< Use of group
     std::vector<ParamRef> m_pending_params; ///< Pending Parameter() values
     ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
+    std::map<ustring,int> m_global_heap_offsets; ///< Heap offsets of globals
+    size_t m_global_heap_total;           ///< Heap size for globals
     mutable mutex m_mutex;                ///< Thread safety
     mutable mutex m_errmutex;             ///< Safety for error messages
     mutable std::string m_errormessage;   ///< Saved error string.
@@ -387,11 +396,24 @@ public:
     ///
     int npoints () const { return m_npoints; }
 
+    /// Return the address of a particular offset into the heap.
+    ///
+    void *heapaddr (size_t offset) { return &m_heap[offset]; }
+
+    /// Allot 'size' bytes in the heap for this context, return its starting
+    /// offset into the heap.
+    size_t heap_allot (size_t size) {
+        size_t cur = m_heap_allotted;
+        m_heap_allotted += size;
+        return cur;
+    }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<char> m_heap;           ///< Heap memory
+    size_t m_heap_allotted;             ///< Heap memory allotted
     ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
     int m_nlights;                      ///< Number of lights
@@ -423,6 +445,10 @@ public:
     /// ops denoted by [beginop, endop).
     void run (int beginop, int endop);
 
+    /// Get a reference to the symbol with the given index.
+    ///
+    Symbol &sym (int index) { return m_symbols[index]; }
+
 private:
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?
@@ -438,6 +464,7 @@ private:
     bool m_allpointson;           ///< Are all points on [begin,end) on?
     std::vector<Runflag *> m_runfag_stack;  ///< Stack of runflags
     int m_ip;                     ///< Instruction pointer
+    SymbolVec m_symbols;          ///< Our own copy of the syms
 };
 
 

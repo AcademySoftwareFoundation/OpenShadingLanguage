@@ -315,7 +315,7 @@ class Symbol {
 public:
     Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
             ASTNode *declaration_node=NULL) 
-        : m_data(NULL), m_step(0), 
+        : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_scope(0), m_node(declaration_node), m_alias(NULL),
           m_const_initializer(false), m_dataoffset(-1)
@@ -392,9 +392,15 @@ public:
     int step () const { return m_step; }
     void step (int newstep) { m_step = newstep; }
 
+    bool is_uniform () const { return m_step == 0; }
+    bool is_varying () const { return m_step != 0; }
+
+    int size () const { return m_size; }
+
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point
+    int m_size;                 ///< Size of data (in bytes)
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
     SymType m_symtype;          ///< Kind of symbol (param, local, etc.)

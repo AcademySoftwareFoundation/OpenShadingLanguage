@@ -453,6 +453,28 @@ public:
     /// pointer).
     Opcode & op () const { return m_master->m_ops[m_ip]; }
 
+    /// Adjust whether sym is uniform or varying, depending on what is
+    /// about to be assigned to it.  In cases when sym is promoted from
+    /// uniform to varying, 'preserve_value' determines if the old value
+    /// should be preserved (and replicated to fill the new varying
+    /// space); it defaults to true (safe) but some shadeops may know
+    /// that this isn't necessary and safe the work.
+    void adjust_varying (Symbol &sym, bool varying_assignment,
+                         bool preserve_value = true);
+
+    /// Are all shading points currently turned on for execution?
+    ///
+    bool all_points_on () const { return m_all_points_on; }
+
+    // Set the runflags to rf[0..
+    void new_runflags (Runflag *rf);
+
+    /// Adjust the valid point range [m_beginpoint,m_endpoint) to
+    /// newly-set runflags, but extending no farther than the begin/end
+    /// range given, and set m_all_points_on to true iff all points are
+    /// turned on.
+    void new_runflag_range (int begin, int end);
+
 private:
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?
@@ -463,9 +485,9 @@ private:
     bool m_bound;                 ///< Have we been bound?
     bool m_executed;              ///< Have we been executed?
     Runflag *m_runflags;          ///< Current runflags
-    bool m_beginpoint;            ///< First point to shade
-    bool m_endpoint;              ///< One past last point to shade
-    bool m_allpointson;           ///< Are all points on [begin,end) on?
+    int m_beginpoint;             ///< First point to shade
+    int m_endpoint;               ///< One past last point to shade
+    bool m_all_points_on;         ///< Are all points turned on?
     std::vector<Runflag *> m_runfag_stack;  ///< Stack of runflags
     int m_ip;                     ///< Instruction pointer
     SymbolVec m_symbols;          ///< Our own copy of the syms

@@ -142,17 +142,14 @@ ShadingExecution::run (Runflag *rf)
     if (rf) {
         // Passed runflags -- copy those
         memcpy (m_runflags, rf, m_npoints*sizeof(Runflag));
-        // FIXME -- restrict begin/end
-        m_beginpoint = 0;
-        m_endpoint = m_npoints;
-        m_allpointson = true;
+        new_runflag_range (0, m_npoints);
     } else {
         // If not passed runflags, make new ones
         for (int i = 0;  i < m_npoints;  ++i)
             m_runflags[i] = 1;
         m_beginpoint = 0;
         m_endpoint = m_npoints;
-        m_allpointson = true;
+        m_all_points_on = true;
     }
 
     // FIXME -- push the runflags, begin, end
@@ -189,6 +186,79 @@ ShadingExecution::run (int beginop, int endop)
     // like seeing if any nans have crept in from each op.
 }
 
+
+
+void
+ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
+                                  bool preserve_value)
+{
+    // This is tricky.  To make sure we're catching all the cases, let's
+    // enumerate them by the current symbol varyingness, the assignent
+    // varyingness, and whether all points in the grid are active:
+    //   case   sym    assignment   all_pts_on     action
+    //    0      v         v            n           v (leave alone)
+    //    1      v         v            y           v (leave alone)
+    //    2      v         u            n           v (leave alone)
+    //    3      v         u            y           u (demote)
+    //    4      u         v            n           v (promote)
+    //    5      u         v            y           v (promote)
+    //    6      u         u            n           v (promote)
+    //    7      u         u            y           u (leave alone)
+
+    // If we're inside a conditional of any kind, even a uniform assignment
+    // makes the result varying.  
+    varying_assignment |= ! all_points_on();
+
+    // This reduces us to just four cases:
+    //   case   sym    assignment   action
+    //    0/1/2  v         v          v (leave alone)
+    //    3      v         u          u (demote)
+    //    4/5/6  u         v          v (promote)
+    //    7      u         u          u (leave alone)
+
+    // Trivial case: we need it varying and it already is, or we need it
+    // uniform and it already is.
+    if (sym.is_varying() == varying_assignment)
+        return;
+
+    if (varying_assignment) {
+        // sym is uniform, but we're either assigning a new varying
+        // value or we're inside a conditional.  Promote sym to varying.
+        sym.step (sym.size());
+        if (preserve_value || ! all_points_on()) {
+            // Propagate the value from slot 0 to other slots
+            size_t size = sym.size();
+            char *data = (char *) sym.data();
+            for (int i = 1;  i < m_npoints;  ++i)
+                memcpy (data + i*size, data, size);
+        }
+    } else {
+        // sym is varying, but we're assigning a new uniform value AND
+        // we're not inside a conditional.  Safe to demote sym to uniform.
+        if (sym.symtype() != SymTypeGlobal) // DO NOT demote a global
+            sym.step (0);
+    }
+}
+
+
+
+void
+ShadingExecution::new_runflag_range (int begin, int end)
+{
+    m_beginpoint = INT_MAX;
+    m_endpoint = -1;
+    m_all_points_on = (begin == 0 && end == m_npoints);
+    for (int i = begin;  i < end;  ++i) {
+        if (m_runflags[i]) {
+            if (i < m_beginpoint)
+                m_beginpoint = i;
+            if (i >= m_endpoint)
+                m_endpoint = i+1;
+        } else {
+            m_all_points_on = false;
+        }
+    }
+}
 
 
 }; // namespace pvt

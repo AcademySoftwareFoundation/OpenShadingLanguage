@@ -30,15 +30,22 @@ template <class RET, class SRC>
 static DECLOP (specialized_assign)
 {
     std::cerr << "Executing specialized_assign!\n";
+    // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
-    // FIXME -- handle uniform vs varying of result here
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, Src.is_varying(),
+                          Result.data() == Src.data());
+
+    // Loop over points, do the assignment.
     VaryingRef<RET> result ((RET *)Result.data(), Result.step());
     VaryingRef<SRC> src ((SRC *)Src.data(), Src.step());
     if (result.is_uniform()) {
         // Result (and src) are uniform
         *result = RET (*src);
     } else {
+        // Potentially varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = RET (src[i]);
@@ -59,9 +66,15 @@ static DECLOP (specialized_assign_matrix_scalar)
 {
     std::cerr << "Executing specialized_assign for matrix!\n";
     typedef Imath::M44f RET;
+    // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
-    // FIXME -- handle uniform vs varying of result here
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, Src.is_varying(),
+                          Result.data() == Src.data());
+
+    // Loop over points, do the assignment.
     VaryingRef<RET> result ((RET *)Result.data(), Result.step());
     VaryingRef<SRC> src ((SRC *)Src.data(), Src.step());
     if (result.is_uniform()) {
@@ -69,6 +82,7 @@ static DECLOP (specialized_assign_matrix_scalar)
         *result = 1.0f;
         *result *= *src;
     } else {
+        // Potentially varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i]) {
                 result[i] = 1.0f;

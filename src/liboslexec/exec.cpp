@@ -89,8 +89,21 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 //                    "Param should not yet have a data offset");
 //            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()));
             size_t addr = context->heap_allot (sym.typespec().simpletype().size());
-            sym.data (m_context->heapaddr (sym.dataoffset()));
+            sym.data (m_context->heapaddr (addr));
             sym.step (0);  // FIXME
+            // Copy the parameter value
+            // FIXME -- if the parameter is not being overridden and is
+            // not writeable, I think we should just point to the parameter
+            // data, not copy it?  Or does it matter?
+            if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+                memcpy (sym.data(), &instance->m_fparams[sym.dataoffset()],
+                        sym.typespec().simpletype().size());
+            else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
+                memcpy (sym.data(), &instance->m_iparams[sym.dataoffset()],
+                        sym.typespec().simpletype().size());
+            else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
+                memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
+                        sym.typespec().simpletype().size());
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);
@@ -99,7 +112,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             sym.step (0);  // FIXME
         } else if (sym.symtype() == SymTypeConst) {
             ASSERT (sym.data() != NULL &&
-                    "Const symbol should have valid data address");
+                    "Const symbol should already have valid data address");
         } else {
             ASSERT (0 && "Should never get here");
         }

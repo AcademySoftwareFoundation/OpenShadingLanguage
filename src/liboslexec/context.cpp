@@ -66,6 +66,8 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
                   << " growing heap to " << heap_size_needed << "\n";
         m_heap.resize (heap_size_needed);
     }
+    // Zero out everything in the heap
+    memset (&m_heap[0], 0, m_heap.size());
 
     // Calculate number of layers we need for each use
     for (int i = 0;  i < ShadUseLast;  ++i) {

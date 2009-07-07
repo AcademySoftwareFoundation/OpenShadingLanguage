@@ -42,6 +42,9 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
 void
 ShaderInstance::parameters (const std::vector<ParamRef> &params)
 {
+    m_iparams = m_master->m_idefaults;
+    m_fparams = m_master->m_fdefaults;
+    m_sparams = m_master->m_sdefaults;
     m_symbols = m_master->m_symbols;
     BOOST_FOREACH (const ParamRef &p, params) {
         std::cout << " PARAMETER " << p.name() << ' ' << p.type().c_str() << "\n";

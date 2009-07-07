@@ -24,10 +24,17 @@ namespace OSL {
 namespace pvt {
 
 
-#define DECLOP(name) \
-    void name (ShadingExecution *exec, int nargs, const int *args, \
-               Runflag *runflags, int beginpoint, int endpoint)
+/// Macro that defines the arguments to shading opcode implementations
+///
+#define OPARGSDECL     ShadingExecution *exec, int nargs, const int *args, \
+                       Runflag *runflags, int beginpoint, int endpoint
 
+/// Macro that defines the full declaration of a shading opcode
+/// implementation
+#define DECLOP(name)   void name (OPARGSDECL)
+
+
+// Declarations of all our shader opcodes follow:
 
 DECLOP (OP_assign);
 DECLOP (OP_end);

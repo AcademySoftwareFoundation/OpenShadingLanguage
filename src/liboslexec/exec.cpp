@@ -161,7 +161,7 @@ ShadingExecution::run (int beginop, int endop)
               << ", shader " << m_master->shadername() 
               << " ops [" << beginop << "," << endop << ")\n";
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
-        Opcode &op = m_master->m_ops[m_ip];
+        Opcode &op (this->op ());
         std::cerr << "  instruction " << m_ip << ": " << op.opname() << " ";
         for (int i = 0;  i < op.nargs();  ++i) {
             int arg = m_master->m_args[op.firstarg()+i];

@@ -449,6 +449,10 @@ public:
     ///
     Symbol &sym (int index) { return m_symbols[index]; }
 
+    /// Return a reference to the current op (pointed to by the instruction
+    /// pointer).
+    Opcode & op () const { return m_master->m_ops[m_ip]; }
+
 private:
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?

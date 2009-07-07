@@ -21,6 +21,7 @@
 
 #include <ImathVec.h>
 #include <ImathColor.h>
+#include <ImathMatrix.h>
 
 
 

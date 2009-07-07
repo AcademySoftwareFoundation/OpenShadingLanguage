@@ -32,7 +32,7 @@ namespace pvt {   // OSL::pvt
 
 ShadingExecution::ShadingExecution ()
     : m_context(NULL), m_instance(NULL), m_master(NULL),
-      m_bound(false)
+      m_bound(false), m_debug(false)
 {
 }
 
@@ -51,8 +51,10 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     ASSERT (! m_bound);  // avoid double-binding
     ASSERT (context != NULL && instance != NULL);
 
-    std::cerr << "bind ctx " << (void *)context << " use " 
-              << shaderusename(use) << " layer " << layerindex << "\n";
+    m_debug = context->shadingsys().debug();
+    if (m_debug)
+        std::cout << "bind ctx " << (void *)context << " use " 
+                  << shaderusename(use) << " layer " << layerindex << "\n";
     m_use = use;
 
     // Take various shortcuts if we are re-binding the same instance as
@@ -72,8 +74,9 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     // right place in the heap,, interpolate primitive variables, handle
     // connections, initialize all parameters
     BOOST_FOREACH (Symbol &sym, m_symbols) {
-        std::cerr << "  bind " << sym.mangled() 
-                  << ", offset " << sym.dataoffset() << "\n";
+        if (m_debug)
+            std::cout << "  bind " << sym.mangled() 
+                      << ", offset " << sym.dataoffset() << "\n";
         if (sym.symtype() == SymTypeGlobal) {
             if (sym.dataoffset() >= 0) {
                 sym.data (m_context->heapaddr (sym.dataoffset()));
@@ -116,8 +119,10 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
         } else {
             ASSERT (0 && "Should never get here");
         }
-        std::cerr << "  bound " << sym.mangled() << " to address " 
-                  << (void *)sym.data() << ", step " << sym.step() << "\n";
+        if (m_debug)
+            std::cout << "  bound " << sym.mangled() << " to address " 
+                      << (void *)sym.data() << ", step " << sym.step() 
+                      << ", size " << sym.size() << "\n";
     }
 
     m_bound = true;
@@ -132,8 +137,9 @@ ShadingExecution::run (Runflag *rf)
     if (m_executed)
         return;       // Already executed
 
-    std::cerr << "Running ShadeExec " << (void *)this << ", shader " 
-              << m_master->shadername() << "\n";
+    if (m_debug)
+        std::cout << "Running ShadeExec " << (void *)this << ", shader " 
+                  << m_master->shadername() << "\n";
 
     ASSERT (m_bound);  // We'd better be bound at this point
 
@@ -167,17 +173,21 @@ ShadingExecution::run (Runflag *rf)
 void
 ShadingExecution::run (int beginop, int endop)
 {
-    std::cerr << "Running ShadeExec " << (void *)this 
-              << ", shader " << m_master->shadername() 
-              << " ops [" << beginop << "," << endop << ")\n";
+    if (m_debug)
+        std::cout << "Running ShadeExec " << (void *)this 
+                  << ", shader " << m_master->shadername() 
+                  << " ops [" << beginop << "," << endop << ")\n";
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         Opcode &op (this->op ());
-        std::cerr << "  instruction " << m_ip << ": " << op.opname() << " ";
+        if (m_debug)
+            std::cout << "  instruction " << m_ip << ": " << op.opname() << " ";
         for (int i = 0;  i < op.nargs();  ++i) {
             int arg = m_master->m_args[op.firstarg()+i];
-            std::cerr << m_instance->symbol(arg)->mangled() << " ";
+            if (m_debug)
+                std::cout << m_instance->symbol(arg)->mangled() << " ";
         }
-        std::cerr << "\n";
+        if (m_debug)
+            std::cout << "\n";
         ASSERT (op.implementation() && "Unimplemented op!");
         op (this, op.nargs(), &m_master->m_args[op.firstarg()],
             m_runflags, m_beginpoint, m_endpoint);

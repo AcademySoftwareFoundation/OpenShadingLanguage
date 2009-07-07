@@ -313,7 +313,8 @@ ShadingSystemImpl::loadshader (const char *cname)
     lock_guard guard (m_mutex);  // Thread safety
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
     if (found != m_shader_masters.end()) {
-        std::cerr << "Found " << name << " in shader_masters\n";
+        if (debug())
+            std::cout << "Found " << name << " in shader_masters\n";
         // Already loaded this shader, return its reference
         return (*found).second;
     }
@@ -332,7 +333,8 @@ ShadingSystemImpl::loadshader (const char *cname)
     m_shader_masters[name] = r;
     if (ok) {
         ++m_stat_shaders_loaded;
-        std::cerr << "Added " << filename << " to shader_masters\n";
+        if (debug())
+            std::cout << "Added " << filename << " to shader_masters\n";
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }
@@ -342,6 +344,9 @@ ShadingSystemImpl::loadshader (const char *cname)
         r->resolve_defaults ();
         r->resolve_ops ();
     }
+
+    if (r && m_debug)
+        r->print ();
 
     return r;
 }

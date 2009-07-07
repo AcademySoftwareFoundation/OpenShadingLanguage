@@ -47,10 +47,12 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
     m_sparams = m_master->m_sdefaults;
     m_symbols = m_master->m_symbols;
     BOOST_FOREACH (const ParamRef &p, params) {
-        std::cout << " PARAMETER " << p.name() << ' ' << p.type().c_str() << "\n";
+        if (shadingsys().debug())
+            std::cout << " PARAMETER " << p.name() << ' ' << p.type().c_str() << "\n";
         int i = m_master->findparam (p.name());
         if (i >= 0) {
-            std::cerr << "    found " << i << "\n";
+            if (shadingsys().debug())
+                std::cout << "    found " << i << "\n";
 #if 0
             if (s.typespec().simpletype().basetype == TypeDesc::INT) {
                 s.data (&(m_iparams[s.dataoffset()]));
@@ -71,10 +73,11 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
 size_t
 ShaderInstance::calc_heapsize ()
 {
-    std::cerr << "calc_heapsize on " << m_master->shadername() << "\n";
+    if (shadingsys().debug())
+        std::cout << "calc_heapsize on " << m_master->shadername() << "\n";
     m_heapsize = 0;
     BOOST_FOREACH (const Symbol &s, m_symbols) {
-        // std::cerr << "  sym " << s.mangled() << "\n";
+        // std::cout << "  sym " << s.mangled() << "\n";
 
         // Skip if the symbol is a type that doesn't need heap space
         if (s.symtype() == SymTypeConst || s.symtype() == SymTypeGlobal)
@@ -95,7 +98,8 @@ ShaderInstance::calc_heapsize ()
         // FIXME -- have a ShadingSystem method in a central place that
         // computes heap size for all types
     }
-    std::cerr << " Heap needed " << m_heapsize << "\n";
+    if (shadingsys().debug())
+        std::cout << " Heap needed " << m_heapsize << "\n";
     return m_heapsize;
 }
 

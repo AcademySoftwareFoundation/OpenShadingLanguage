@@ -48,7 +48,8 @@ ShadingContext::~ShadingContext ()
 void
 ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
 {
-    std::cerr << "bind " << (void *)this << " with " << n << " points\n";
+    if (shadingsys().debug())
+        std::cout << "bind " << (void *)this << " with " << n << " points\n";
     m_attribs = &sas;
     m_globals = &sg;
     m_npoints = n;
@@ -60,10 +61,12 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // Allocate enough space on the heap
     size_t heap_size_needed = m_npoints * sas.heapsize ();
     heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
-    std::cerr << "  need heap " << heap_size_needed << " vs " << m_heap.size() << "\n";
+    if (shadingsys().debug())
+        std::cout << "  need heap " << heap_size_needed << " vs " << m_heap.size() << "\n";
     if (heap_size_needed > m_heap.size()) {
-        std::cerr << "  ShadingContext " << (void *)this 
-                  << " growing heap to " << heap_size_needed << "\n";
+        if (shadingsys().debug())
+            std::cout << "  ShadingContext " << (void *)this 
+                      << " growing heap to " << heap_size_needed << "\n";
         m_heap.resize (heap_size_needed);
     }
     // Zero out everything in the heap
@@ -72,7 +75,8 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // Calculate number of layers we need for each use
     for (int i = 0;  i < ShadUseLast;  ++i) {
         m_nlayers[i] = m_attribs->shadergroup ((ShaderUse)i).nlayers ();
-        std::cerr << "  " << m_nlayers[i] << " layers of " << shaderusename((ShaderUse)i) << "\n";
+        if (shadingsys().debug())
+            std::cout << "  " << m_nlayers[i] << " layers of " << shaderusename((ShaderUse)i) << "\n";
     }
 }
 
@@ -83,8 +87,9 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
 {
     // FIXME -- timers/stats
 
-    std::cerr << "execute " << (void *)this 
-              << " as " << shaderusename(use) << "\n";
+    if (shadingsys().debug())
+        std::cout << "execute " << (void *)this 
+                  << " as " << shaderusename(use) << "\n";
     m_curuse = use;
     ASSERT (use == ShadUseSurface);  // FIXME
 

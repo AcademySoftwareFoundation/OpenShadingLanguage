@@ -29,7 +29,8 @@ namespace pvt {
 template <class RET, class SRC>
 static DECLOP (specialized_assign)
 {
-    std::cerr << "Executing specialized_assign!\n";
+    if (exec->debug())
+        std::cout << "Executing specialized_assign!\n";
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
@@ -50,9 +51,11 @@ static DECLOP (specialized_assign)
             if (runflags[i])
                 result[i] = RET (src[i]);
     }
-    std::cerr << "After assignment, new values are:\n";
-    for (int i = beginpoint;  i < endpoint;  ++i)
-        std::cerr << "\t" << i << ": " << (result[i]) << "\n";
+    if (exec->debug()) {
+        std::cout << "After assignment, new values are:\n";
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            std::cout << "\t" << i << ": " << (result[i]) << "\n";
+    }
 }
 
 
@@ -64,7 +67,8 @@ static DECLOP (specialized_assign)
 template <class SRC>
 static DECLOP (specialized_assign_matrix_scalar)
 {
-    std::cerr << "Executing specialized_assign for matrix!\n";
+    if (exec->debug())
+        std::cout << "Executing specialized_assign for matrix!\n";
     typedef Imath::M44f RET;
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
@@ -89,23 +93,28 @@ static DECLOP (specialized_assign_matrix_scalar)
                 result[i] *= (src[i]);
             }
     }
-    std::cerr << "After assignment, new values are:\n";
-    for (int i = beginpoint;  i < endpoint;  ++i)
-        std::cerr << "\t" << i << ": " << (result[i]) << "\n";
+    if (exec->debug()) {
+        std::cout << "After assignment, new values are:\n";
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            std::cout << "\t" << i << ": " << (result[i]) << "\n";
+    }
 }
 
 
 
 DECLOP (OP_assign)
 {
-    std::cerr << "Executing assign!\n";
+    if (exec->debug())
+        std::cout << "Executing assign!\n";
     ASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
-    std::cerr << "  Result is " << Result.typespec().string() 
-              << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-    std::cerr << "  Src is " << Src.typespec().string() 
-              << " " << Src.mangled() << " @ " << (void*)Src.data() << "\n";
+    if (exec->debug()) {
+        std::cout << "  Result is " << Result.typespec().string() 
+                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
+        std::cout << "  Src is " << Src.typespec().string() 
+                  << " " << Src.mangled() << " @ " << (void*)Src.data() << "\n";
+    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet

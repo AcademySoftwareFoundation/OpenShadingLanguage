@@ -12,6 +12,7 @@
  *****************************************************************************/
 
 #include "oslops.h"
+#include "oslexec_pvt.h"
 
 
 namespace OSL {
@@ -21,14 +22,16 @@ namespace pvt {
 
 DECLOP (OP_missing)
 {
-    std::cerr << "Missing op!\n";
+    if (exec->debug())
+        std::cout << "Missing op!\n";
 }
 
 
 
 DECLOP (OP_end)
 {
-    std::cerr << "Executing end!\n";
+    if (exec->debug())
+        std::cout << "Executing end!\n";
 }
 
 

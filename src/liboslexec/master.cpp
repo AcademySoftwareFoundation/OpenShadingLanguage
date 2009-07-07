@@ -150,7 +150,8 @@ ShaderMaster::resolve_ops ()
     BOOST_FOREACH (Opcode &op, m_ops) {
         // FIXME -- replace this hard-coded crap with a hash table or
         // something.
-        std::cerr << "resolving " << op.opname() << "\n";
+        if (shadingsys().debug())
+            std::cout << "resolving " << op.opname() << "\n";
         if (op.opname() == "assign")
             op.implementation (OP_assign);
         else if (op.opname() == "end")

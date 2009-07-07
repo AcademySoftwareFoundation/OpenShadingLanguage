@@ -38,7 +38,7 @@ ShadingSystem::create ()
     // Doesn't need a shared cache
     ShadingSystemImpl *ts = new ShadingSystemImpl;
 #ifdef DEBUG
-    std::cerr << "creating new ShadingSystem " << (void *)ts << "\n";
+    std::cout << "creating new ShadingSystem " << (void *)ts << "\n";
 #endif
     return ts;
 }
@@ -71,7 +71,8 @@ namespace pvt {   // OSL::pvt
 
 
 ShadingSystemImpl::ShadingSystemImpl ()
-    : m_in_group (false), m_statslevel (0), m_global_heap_total (0)
+    : m_in_group (false), m_statslevel (0), m_debug (false),
+      m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
@@ -101,6 +102,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_statslevel = *(const int *)val;
         return true;
     }
+    if (name == "debug" && type == TypeDesc::INT) {
+        m_debug = *(const int *)val;
+        return true;
+    }
     return false;
 }
 
@@ -117,6 +122,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "statistics:level" && type == TypeDesc::INT) {
         *(int *)val = m_statslevel;
+        return true;
+    }
+    if (name == "debug" && type == TypeDesc::INT) {
+        *(int *)val = m_debug;
         return true;
     }
     return false;

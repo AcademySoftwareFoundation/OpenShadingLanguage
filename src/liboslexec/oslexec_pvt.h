@@ -336,6 +336,10 @@ public:
     /// it's not precomputed.
     int global_heap_offset (ustring name);
 
+    /// Is the shading system in debug mode?
+    ///
+    bool debug () const { return m_debug; }
+
 private:
     void printstats () const;
     void init_global_heap_offsets ();
@@ -343,6 +347,7 @@ private:
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
     int m_statslevel;                     ///< Statistics level
+    bool m_debug;                         ///< Debugging output
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     bool m_in_group;                      ///< Are we specifying a group?
@@ -475,6 +480,8 @@ public:
     /// turned on.
     void new_runflag_range (int begin, int end);
 
+    bool debug () const { return m_debug; }
+
 private:
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?
@@ -484,6 +491,7 @@ private:
     int m_npoints;                ///< How many points are we running?
     bool m_bound;                 ///< Have we been bound?
     bool m_executed;              ///< Have we been executed?
+    bool m_debug;                 ///< Debug mode
     Runflag *m_runflags;          ///< Current runflags
     int m_beginpoint;             ///< First point to shade
     int m_endpoint;               ///< One past last point to shade

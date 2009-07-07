@@ -28,6 +28,9 @@ include (oiio)
 include_directories (${OPENIMAGEIO_INCLUDES})
 
 
+# We want CTest for testing
+include (CTest)
+
 include_directories ("include")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -54,6 +57,7 @@ add_subdirectory (liboslexec)
 
 add_subdirectory (oslc)
 add_subdirectory (oslinfo)
+add_subdirectory (testshade)
 
 add_subdirectory (include)
 add_subdirectory (doc)
@@ -62,8 +66,6 @@ add_subdirectory (doc)
 
 #########################################################################
 # Testing
-include (CTest)
-add_subdirectory (testshade)
 # Ugh, I can't seem to ADD_SUBDIRECTORY the testsuite dir if it's not a true
 # subdirectory of source, so we fake it by creating a link.  FIXME!
 exec_program ("cmake -E create_symlink ${PROJECT_SOURCE_DIR}/../testsuite ${PROJECT_SOURCE_DIR}/testsuite")

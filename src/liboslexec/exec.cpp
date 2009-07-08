@@ -23,6 +23,12 @@
 
 #include "oslexec_pvt.h"
 
+namespace {
+// Define static ustring symbols for very fast comparison
+static ustring P_("P"), I_("I"), N_("N"), Ng_("Ng");
+static ustring dPdu_("dPdu"), dPdv_("dPdv"), u_("u"), v_("v");
+static ustring time_("time"), dtime_("dtime"), dPdtime_("dPdtime");
+};
 
 
 namespace OSL {
@@ -68,7 +74,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     }
 
     m_npoints = m_context->npoints ();
-    m_symbols = m_instance->m_symbols;
+    m_symbols = m_instance->m_symbols;  // fresh copy of symbols from instance
+    ShaderGlobals *globals (m_context->m_globals);
 
     // FIXME: bind the symbols -- get the syms ready and pointing to the
     // right place in the heap,, interpolate primitive variables, handle
@@ -78,14 +85,43 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             std::cout << "  bind " << sym.mangled() 
                       << ", offset " << sym.dataoffset() << "\n";
         if (sym.symtype() == SymTypeGlobal) {
-            if (sym.dataoffset() >= 0) {
-                sym.data (m_context->heapaddr (sym.dataoffset()));
-            } else {
-                // ASSERT (sym.dataoffset() >= 0 &&
-                //         "Global ought to already have a dataoffset");
-                // Skip this for now -- it includes L, Cl, etc.
+            // FIXME -- is this too wasteful here?
+            if (sym.name() == P_) {
+                sym.data (globals->P.ptr());  sym.step (globals->P.step());
+            } else if (sym.name() == I_) {
+                sym.data (globals->I.ptr());  sym.step (globals->I.step());
+            } else if (sym.name() == N_) {
+                sym.data (globals->N.ptr());  sym.step (globals->N.step());
+            } else if (sym.name() == Ng_) {
+                sym.data (globals->Ng.ptr());  sym.step (globals->Ng.step());
+            } else if (sym.name() == u_) {
+                sym.data (globals->u.ptr());  sym.step (globals->u.step());
+            } else if (sym.name() == v_) {
+                sym.data (globals->v.ptr());  sym.step (globals->v.step());
+            } else if (sym.name() == dPdu_) {
+                sym.data (globals->dPdu.ptr());  sym.step (globals->dPdu.step());
+            } else if (sym.name() == dPdv_) {
+                sym.data (globals->dPdv.ptr());  sym.step (globals->dPdv.step());
+            } else if (sym.name() == time_) {
+                sym.data (globals->time.ptr());  sym.step (globals->time.step());
+            } else if (sym.name() == dtime_) {
+                sym.data (globals->dtime.ptr());  sym.step (globals->dtime.step());
+            } else if (sym.name() == dPdtime_) {
+                sym.data (globals->dPdtime.ptr());  sym.step (globals->dPdtime.step());
             }
-            sym.step (0);  // FIXME
+            if (sym.data() == NULL) {
+                if (sym.dataoffset() >= 0) {
+                    // Not specified where it lives, put it in the heap
+                    sym.data (m_context->heapaddr (sym.dataoffset()));
+                    sym.step (0);
+                    std::cout << "Global " << sym.name() << " at address " << sym.dataoffset() << "\n";
+                } else {
+                    // ASSERT (sym.dataoffset() >= 0 &&
+                    //         "Global ought to already have a dataoffset");
+                    // Skip this for now -- it includes L, Cl, etc.
+                    sym.step (0);   // FIXME
+                }
+            }
         } else if (sym.symtype() == SymTypeParam ||
                    sym.symtype() == SymTypeOutputParam) {
 //            ASSERT (sym.dataoffset() < 0 &&

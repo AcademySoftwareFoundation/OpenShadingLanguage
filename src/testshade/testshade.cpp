@@ -60,7 +60,7 @@ getargs (int argc, const char *argv[])
     static bool help = false;
     ArgParse ap;
     ap.options ("Usage:  testshade [options] shader...",
-                "%!", add_shader, "",
+                "%*", add_shader, "",
                 "--help", &help, "Print help message",
                 "--debug", &debug, "Lots of debugging info",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
@@ -109,8 +109,8 @@ main (int argc, const char *argv[])
     for (int j = 0;  j < yres;  ++j) {
         for (int i = 0;  i < xres;  ++i) {
             int n = j*yres + i;
-            gu[n] = (float)(i+0.5)/xres;
-            gv[n] = (float)(j+0.5)/yres;
+            gu[n] = (xres == 1) ? 0.5 : (float)i/(xres-1);
+            gv[n] = (yres == 1) ? 0.5 : (float)j/(yres-1);
             gP[n] = Imath::V3f (gu[n], gv[n], 1.0f);
         }
     }
@@ -131,6 +131,7 @@ main (int argc, const char *argv[])
     bool runtime = timer ();
     std::cout << "\n";
 
+    std::vector<float> pixel;
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         Symbol *sym = ctx->symbol (ShadUseSurface, ustring(outputvars[i]));
         if (! sym) {
@@ -140,11 +141,20 @@ main (int argc, const char *argv[])
         std::cout << "Output " << outputvars[i] << " to " 
                   << outputfiles[i]<< "\n";
         TypeDesc t = sym->typespec().simpletype();
-        OpenImageIO::ImageSpec spec (xres, yres, 
-                                     t.numelements()*t.aggregate /* nchans */,
-                                     (TypeDesc::BASETYPE)t.basetype);
+        TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
+        int nchans = t.numelements() * t.aggregate;
+        pixel.resize (nchans);
+        OpenImageIO::ImageSpec spec (xres, yres, nchans, tbase);
         OpenImageIO::ImageBuf img (outputfiles[i], spec);
         img.zero ();
+        for (int y = 0, n = 0;  y < yres;  ++y) {
+            for (int x = 0;  x < xres;  ++x, ++n) {
+                OpenImageIO::convert_types (tbase,
+                                            (char *)sym->data() + n*sym->step(),
+                                            TypeDesc::FLOAT, &pixel[0], nchans);
+                img.setpixel (x, y, &pixel[0]);
+            }
+        }
         img.save ();
     }
 

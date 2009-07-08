@@ -53,8 +53,18 @@ static DECLOP (specialized_assign)
     }
     if (exec->debug()) {
         std::cout << "After assignment, new values are:\n";
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            std::cout << "\t" << i << ": " << (result[i]) << "\n";
+        if (result.is_uniform())
+            std::cout << "\tuniform " << result[0] << "\n";
+        else {
+            for (int i = beginpoint;  i < endpoint;  ++i) {
+                std::cout << "\t" << i << ": " << (result[i]) << "\n";
+                if (i == beginpoint || (i%16 == 0))
+                    std::cout << "\t" << i << ": ";
+                std::cout << result[i] << ' ';
+                if (i == endpoint-1 || (i%16 == 15))
+                    std::cout << "\n";
+            }
+        }
     }
 }
 

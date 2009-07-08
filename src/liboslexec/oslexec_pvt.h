@@ -413,6 +413,12 @@ public:
         return cur;
     }
 
+    /// Find the named symbol in the (already-executed!) stack of
+    /// ShadingExecution's of the given use, with priority given to
+    /// later laters over earlier layers (if they name the same symbol).
+    /// Return NULL if no such symbol is found.
+    Symbol * symbol (ShaderUse use, ustring name);
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -481,6 +487,13 @@ public:
     void new_runflag_range (int begin, int end);
 
     bool debug () const { return m_debug; }
+
+    /// Find the named symbol.  Return NULL if no such symbol is found.
+    ///
+    Symbol * symbol (ustring name) {
+        int s = m_master->findsymbol (name);
+        return s >= 0 ? &m_symbols[s] : NULL;
+    }
 
 private:
     ShaderUse m_use;              ///< Our shader use

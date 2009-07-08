@@ -16,11 +16,13 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cmath>
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/argparse.h>
-
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/timer.h>
 
 #include "oslexec.h"
 #include "../liboslexec/oslexec_pvt.h"
@@ -31,18 +33,22 @@ using namespace OSL::pvt;
 
 
 static ShadingSystem *shadingsys = NULL;
-static std::vector<std::string> inputfiles;
+static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static bool debug = false;
+static int xres = 1, yres = 1;
 
 
 
 static int
-parse_files (int argc, const char *argv[])
+add_shader (int argc, const char *argv[])
 {
-    for (int i = 0;  i < argc;  i++)
-        inputfiles.push_back (argv[i]);
+    shadingsys->attribute ("debug", (int)debug);
+    for (int i = 0;  i < argc;  i++) {
+        shadernames.push_back (argv[i]);
+        shadingsys->Shader ("surface", argv[i]);
+    }
     return 0;
 }
 
@@ -54,14 +60,15 @@ getargs (int argc, const char *argv[])
     static bool help = false;
     ArgParse ap;
     ap.options ("Usage:  testshade [options] shader...",
-                "%*", parse_files, "",
+                "%!", add_shader, "",
                 "--help", &help, "Print help message",
                 "--debug", &debug, "Lots of debugging info",
-                "-o %L %L", &outputfiles, &outputvars, 
-                        "Output (filename, variable)",
+                "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
+                "-o %L %L", &outputvars, &outputfiles,
+                        "Output (variable, filename)",
 //                "-v", &verbose, "Verbose output",
                 NULL);
-    if (ap.parse(argc, argv) < 0 || inputfiles.empty()) {
+    if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
         std::cerr << ap.error_message() << std::endl;
         ap.usage ();
         exit (EXIT_FAILURE);
@@ -80,40 +87,73 @@ getargs (int argc, const char *argv[])
 int
 main (int argc, const char *argv[])
 {
-    getargs (argc, argv);
-
+    // Create a new shading system.
+    Timer timer;
     shadingsys = ShadingSystem::create ();
     shadingsys->attribute ("statistics:level", 5);
-    shadingsys->attribute ("debug", (int)debug);
 
-    for (size_t i = 0;  i < inputfiles.size();  ++i) {
-        ShaderMaster::ref m = 
-            ((ShadingSystemImpl *)shadingsys)->loadshader (inputfiles[i].c_str());
-        if (! m)
-            std::cerr << "ERR: " << shadingsys->geterror() << "\n";
-        std::cout << "\n";
-
-        float Kd = 0.75;
-        shadingsys->Parameter ("Kd", TypeDesc::TypeFloat, &Kd);
-        shadingsys->Shader ("surface", inputfiles[i].c_str());
-    }
-
+    getargs (argc, argv);
+    // getargs called 'add_shader' for each shader mentioned on the command
+    // line.  So now we should have a valid shading state.
     ShadingAttribStateRef shaderstate = shadingsys->state ();
 
-    // Set up shader globals
+    // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
-    const int npoints = 1;
-    Imath::V3f gP[npoints];
-    shaderglobals.P.init (gP);
+    const int npoints = xres*yres;
+    std::vector<Imath::V3f> gP (npoints);
+    std::vector<float> gu (npoints);
+    std::vector<float> gv (npoints);
+    shaderglobals.P.init (&gP[0], sizeof(gP[0]));
+    shaderglobals.u.init (&gu[0], sizeof(gu[0]));
+    shaderglobals.v.init (&gv[0], sizeof(gv[0]));
+    for (int j = 0;  j < yres;  ++j) {
+        for (int i = 0;  i < xres;  ++i) {
+            int n = j*yres + i;
+            gu[n] = (float)(i+0.5)/xres;
+            gv[n] = (float)(j+0.5)/yres;
+            gP[n] = Imath::V3f (gu[n], gv[n], 1.0f);
+        }
+    }
+    double setuptime = timer ();
+    timer.reset ();
+    timer.start ();
 
+    // Request a shading context, bind it, execute the shaders.
+    // FIXME -- this will eventually be replaced with a public
+    // ShadingSystem call that encapsulates it.
     ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
     shared_ptr<ShadingContext> ctx = ssi->get_context ();
     ctx->bind (npoints, *shaderstate, shaderglobals);
+    double bindtime = timer ();
+    timer.reset ();
+    timer.start ();
     ctx->execute (ShadUseSurface);
-    std::cerr << "\n";
+    bool runtime = timer ();
+    std::cout << "\n";
 
+    for (size_t i = 0;  i < outputfiles.size();  ++i) {
+        Symbol *sym = ctx->symbol (ShadUseSurface, ustring(outputvars[i]));
+        if (! sym) {
+            std::cerr << "Output " << outputvars[i] << " not found, skipping.\n";
+            continue;
+        }
+        std::cout << "Output " << outputvars[i] << " to " 
+                  << outputfiles[i]<< "\n";
+        TypeDesc t = sym->typespec().simpletype();
+        OpenImageIO::ImageSpec spec (xres, yres, 
+                                     t.numelements()*t.aggregate /* nchans */,
+                                     (TypeDesc::BASETYPE)t.basetype);
+        OpenImageIO::ImageBuf img (outputfiles[i], spec);
+        img.zero ();
+        img.save ();
+    }
+
+    std::cout << "\n";
+    std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";
+    std::cout << "Bind : " << Strutil::timeintervalformat (bindtime,2) << "\n";
+    std::cout << "Run  : " << Strutil::timeintervalformat (runtime,2) << "\n";
+    std::cout << "\n";
 
     ShadingSystem::destroy (shadingsys);
-
     return EXIT_SUCCESS;
 }

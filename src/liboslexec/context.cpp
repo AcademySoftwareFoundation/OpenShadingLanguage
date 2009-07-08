@@ -18,7 +18,7 @@
 
 #include <boost/foreach.hpp>
 
-#include "OpenImageIO/dassert.h"
+#include <OpenImageIO/dassert.h>
 
 #include "oslexec_pvt.h"
 
@@ -112,6 +112,19 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
         // as their outputs are needed by other layers.
         execlayers[layer].run (rf);
     }
+}
+
+
+
+Symbol *
+ShadingContext::symbol (ShaderUse use, ustring name)
+{
+    for (int layer = (int)m_exec[use].size()-1;  layer >= 0;  --layer) {
+        Symbol *sym = m_exec[use][layer].symbol (name);
+        if (sym)
+            return sym;
+    }
+    return NULL;
 }
 
 

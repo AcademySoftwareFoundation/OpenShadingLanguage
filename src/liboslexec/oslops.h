@@ -36,6 +36,7 @@ namespace pvt {
 
 // Declarations of all our shader opcodes follow:
 
+DECLOP (OP_add);
 DECLOP (OP_assign);
 DECLOP (OP_end);
 

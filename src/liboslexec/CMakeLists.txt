@@ -1,6 +1,6 @@
 SET ( liboslexec_srcs context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          opassign.cpp opmisc.cpp
+          opassign.cpp opmath.cpp opmisc.cpp
           oslexec.cpp osoreader.cpp shadingsys.cpp 
     )
 FILE ( GLOB compiler_headers "*.h" )

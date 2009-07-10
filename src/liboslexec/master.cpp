@@ -152,7 +152,9 @@ ShaderMaster::resolve_ops ()
         // something.
         if (shadingsys().debug())
             std::cout << "resolving " << op.opname() << "\n";
-        if (op.opname() == "assign")
+        if (op.opname() == "add")
+            op.implementation (OP_add);
+        else if (op.opname() == "assign")
             op.implementation (OP_assign);
         else if (op.opname() == "end")
             op.implementation (OP_end);

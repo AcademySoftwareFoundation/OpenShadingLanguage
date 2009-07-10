@@ -39,6 +39,14 @@ typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 using pvt::ShaderInstanceRef;
 
 
+// Define vector types and precision we like to use as OSL::Float,
+// OSL::Vec3, etc.
+typedef float Float;
+typedef Imath::Vec3<Float> Vec3;
+typedef Imath::Matrix44<Float> Matrix44;
+typedef Imath::Color3<Float> Color3;
+
+
 
 class ShadingSystem
 {
@@ -173,18 +181,18 @@ public:
     ShaderGlobals () { }
     ~ShaderGlobals () { }
 
-    VaryingRef<Imath::V3f> P;          ///< Position
-    VaryingRef<Imath::V3f> I;          ///< Incident ray
-    VaryingRef<Imath::V3f> N;          ///< Shading normal
-    VaryingRef<Imath::V3f> Ng;         ///< True geometric normal
+    VaryingRef<Vec3> P;                ///< Position
+    VaryingRef<Vec3> I;                ///< Incident ray
+    VaryingRef<Vec3> N;                ///< Shading normal
+    VaryingRef<Vec3> Ng;               ///< True geometric normal
     VaryingRef<float> u, v;            ///< Surface parameters
-    VaryingRef<Imath::V3f> dPdu, dPdv; ///< Partial derivatives
+    VaryingRef<Vec3> dPdu, dPdv;       ///< Partial derivatives
     VaryingRef<float> time;            ///< Time for each sample
     VaryingRef<float> dtime;           ///< Time interval for each sample
-    VaryingRef<Imath::V3f> dPdtime;    ///< Velocity
+    VaryingRef<Vec3> dPdtime;          ///< Velocity
 
-    VaryingRef<Imath::Color3f> Ci;     ///< Output colors
-    VaryingRef<Imath::Color3f> Oi;     ///< Output opacities
+    VaryingRef<Color3> Ci;             ///< Output colors
+    VaryingRef<Color3> Oi;             ///< Output opacities
 };
 
 

@@ -309,7 +309,7 @@ ShadingSystemImpl::init_global_heap_offsets ()
     if (m_global_heap_total > 0)
         return;   // Already initialized
 
-    const int triple_size = sizeof (Imath::V3f);
+    const int triple_size = sizeof (Vec3);
     m_global_heap_offsets[ustring("P")] = m_global_heap_total;
     m_global_heap_total += triple_size;
     m_global_heap_offsets[ustring("I")] = m_global_heap_total;

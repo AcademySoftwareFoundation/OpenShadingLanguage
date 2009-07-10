@@ -100,7 +100,7 @@ main (int argc, const char *argv[])
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
     const int npoints = xres*yres;
-    std::vector<Imath::V3f> gP (npoints);
+    std::vector<Vec3> gP (npoints);
     std::vector<float> gu (npoints);
     std::vector<float> gv (npoints);
     shaderglobals.P.init (&gP[0], sizeof(gP[0]));
@@ -111,7 +111,7 @@ main (int argc, const char *argv[])
             int n = j*yres + i;
             gu[n] = (xres == 1) ? 0.5 : (float)i/(xres-1);
             gv[n] = (yres == 1) ? 0.5 : (float)j/(yres-1);
-            gP[n] = Imath::V3f (gu[n], gv[n], 1.0f);
+            gP[n] = Vec3 (gu[n], gv[n], 1.0f);
         }
     }
     double setuptime = timer ();

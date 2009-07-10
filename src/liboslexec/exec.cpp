@@ -126,8 +126,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                    sym.symtype() == SymTypeOutputParam) {
 //            ASSERT (sym.dataoffset() < 0 &&
 //                    "Param should not yet have a data offset");
-//            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()));
-            size_t addr = context->heap_allot (sym.typespec().simpletype().size());
+//            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()) * m_npoints);
+            size_t addr = context->heap_allot (sym.typespec().simpletype().size() * m_npoints);
             sym.data (m_context->heapaddr (addr));
             sym.step (0);  // FIXME
             // Copy the parameter value
@@ -146,7 +146,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);
-            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()));
+            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()) * m_npoints);
             sym.data (m_context->heapaddr (sym.dataoffset()));
             sym.step (0);  // FIXME
         } else if (sym.symtype() == SymTypeConst) {
@@ -217,7 +217,16 @@ ShadingExecution::run (int beginop, int endop)
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         Opcode &op (this->op ());
         if (m_debug) {
-            std::cout << "  instruction " << m_ip << ": " << op.opname() << " ";
+            std::cout << "instruction " << m_ip << ": " << op.opname() << " ";
+        }
+        if (m_debug) {
+            std::cout << "Before running '" << op.opname() 
+                      << "', values are:\n";
+            for (int i = 0;  i < op.nargs();  ++i) {
+                Symbol &s (sym (args[op.firstarg()+i]));
+                std::cout << "    " << s.mangled() << "\n";
+                printsymbol (s);
+            }
         }
         for (int i = 0;  i < op.nargs();  ++i) {
             int arg = args[op.firstarg()+i];

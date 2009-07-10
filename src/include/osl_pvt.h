@@ -481,7 +481,7 @@ public:
 
     /// Execute the op!
     ///
-    void operator() (ShadingExecution *exec, int nargs, int *args,
+    void operator() (ShadingExecution *exec, int nargs, const int *args,
                      Runflag *runflags, int beginpoint, int endpoint) {
         m_impl (exec, m_nargs, args, runflags, beginpoint, endpoint);
     }

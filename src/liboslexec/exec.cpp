@@ -213,23 +213,36 @@ ShadingExecution::run (int beginop, int endop)
         std::cout << "Running ShadeExec " << (void *)this 
                   << ", shader " << m_master->shadername() 
                   << " ops [" << beginop << "," << endop << ")\n";
+    const int *args = &m_master->m_args[0];
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         Opcode &op (this->op ());
-        if (m_debug)
+        if (m_debug) {
             std::cout << "  instruction " << m_ip << ": " << op.opname() << " ";
+        }
         for (int i = 0;  i < op.nargs();  ++i) {
-            int arg = m_master->m_args[op.firstarg()+i];
+            int arg = args[op.firstarg()+i];
             if (m_debug)
-                std::cout << m_instance->symbol(arg)->mangled() << " ";
+                std::cout << sym(arg).mangled() << " ";
         }
         if (m_debug)
             std::cout << "\n";
         ASSERT (op.implementation() && "Unimplemented op!");
-        op (this, op.nargs(), &m_master->m_args[op.firstarg()],
+        op (this, op.nargs(), args+op.firstarg(),
             m_runflags, m_beginpoint, m_endpoint);
+
+        // FIXME -- this is a good place to do all sorts of other sanity
+        // checks, like seeing if any nans have crept in from each op.
+
+        if (m_debug) {
+            std::cout << "After running '" << op.opname() 
+                      << "', new values are:\n";
+            for (int i = 0;  i < op.nargs();  ++i) {
+                Symbol &s (sym (args[op.firstarg()+i]));
+                std::cout << "    " << s.mangled() << "\n";
+                printsymbol (s);
+            }
+        }
     }
-    // FIXME -- this is a good place to do all sorts of other sanity checks,
-    // like seeing if any nans have crept in from each op.
 }
 
 
@@ -303,6 +316,36 @@ ShadingExecution::new_runflag_range (int begin, int end)
         } else {
             m_all_points_on = false;
         }
+    }
+}
+
+
+
+void
+ShadingExecution::printsymbol (Symbol &sym)
+{
+    const char *data = (const char *) sym.data ();
+    TypeDesc type = sym.typespec().simpletype();
+    data += m_beginpoint * sym.step();
+    for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step()) {
+        if (sym.is_uniform())
+            std::cout << "\tuniform";
+        else if (i == m_beginpoint || (i%8) == 0)
+            std::cout << "\t" << i << ":";
+        int n = type.numelements() * type.aggregate;
+        for (int j = 0;  j < n;  ++j) {
+            std::cout << ' ';
+            if (type.basetype == TypeDesc::FLOAT)
+                std::cout << ((float *)data)[j];
+            else if (type.basetype == TypeDesc::INT)
+                std::cout << ((int *)data)[j];
+            else if (type.basetype == TypeDesc::STRING)
+                std::cout << ((ustring *)data)[j];
+        }
+        if (i == m_endpoint-1 || (i%8) == 7 || sym.is_uniform())
+            std::cout << "\n";
+        if (sym.is_uniform())
+            break;
     }
 }
 

@@ -51,20 +51,6 @@ static DECLOP (specialized_assign)
             if (runflags[i])
                 result[i] = RET (src[i]);
     }
-    if (exec->debug()) {
-        std::cout << "After assignment, new values are:\n";
-        if (result.is_uniform())
-            std::cout << "\tuniform " << result[0] << "\n";
-        else {
-            for (int i = beginpoint;  i < endpoint;  ++i) {
-                if (i == beginpoint || (i%8) == 0)
-                    std::cout << "\t" << i << ": ";
-                std::cout << result[i] << ' ';
-                if (i == endpoint-1 || (i%8) == 7)
-                    std::cout << "\n";
-            }
-        }
-    }
 }
 
 
@@ -101,11 +87,6 @@ static DECLOP (specialized_assign_matrix_scalar)
                 result[i] = 1.0f;
                 result[i] *= (src[i]);
             }
-    }
-    if (exec->debug()) {
-        std::cout << "After assignment, new values are:\n";
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            std::cout << "\t" << i << ": " << (result[i]) << "\n";
     }
 }
 

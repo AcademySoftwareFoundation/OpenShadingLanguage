@@ -495,6 +495,10 @@ public:
         return s >= 0 ? &m_symbols[s] : NULL;
     }
 
+    /// Print the symbol (for debugging)
+    ///
+    void printsymbol (Symbol &sym);
+
 private:
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?

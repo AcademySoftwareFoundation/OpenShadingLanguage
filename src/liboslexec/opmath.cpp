@@ -29,6 +29,7 @@ namespace {
 // not normally supported by Imath::Vec3.
 class VecProxy : public Vec3 {
 public:
+    VecProxy (float a) : Vec3(a,a,a) { }
     VecProxy (float a, float b, float c) : Vec3(a,b,c) { }
     VecProxy (const Vec3& v) : Vec3(v) { }
 
@@ -99,6 +100,13 @@ public:
         float f = a * b;
         return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
     }
+};
+
+// Make a templated functor that encapsulates negation.
+template<class R, class A>
+class Neg {
+public:
+    inline R operator() (const A &a) { return R (-a); }
 };
 
 };  // End anonymous namespace
@@ -369,6 +377,70 @@ DECLOP (OP_mul)
                   << " = " << A.typespec().string() 
                   << " + " << B.typespec().string() << "\n";
         ASSERT (0 && "Multiplication types can't be handled");
+    }
+}
+
+
+
+DECLOP (OP_neg)
+{
+    ASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    if (exec->debug()) {
+        std::cout << "Executing neg!\n";
+        std::cout << "  Result is " << Result.typespec().string() 
+                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
+        std::cout << "  A is " << A.typespec().string() 
+                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
+    }
+    ASSERT (! Result.typespec().is_closure() &&
+            ! Result.typespec().is_structure() &&
+            ! Result.typespec().is_array());   // Not yet
+    ASSERT (! A.typespec().is_closure() &&
+            ! A.typespec().is_structure() &&
+            ! A.typespec().is_array());   // Not yet
+    OpImpl impl = NULL;
+
+    if (Result.typespec().is_closure()) {
+        // FIXME -- not handled yet
+    }
+
+    else if (Result.typespec().is_triple()) {
+        if (A.typespec().is_triple())
+            impl = unary_op<Vec3,Vec3, Neg<Vec3,Vec3> >;
+        else if (A.typespec().is_float())
+            impl = unary_op<VecProxy,float, Neg<VecProxy,float> >;
+        else if (A.typespec().is_int())
+            impl = unary_op<VecProxy,int, Neg<VecProxy,int> >;
+    } 
+
+    else if (Result.typespec().is_float()) {
+        if (A.typespec().is_float())
+            impl = unary_op<float,float, Neg<float,float> >;
+        else if (A.typespec().is_int())
+            impl = unary_op<float,int, Neg<float,int> >;
+    }
+
+    else if (Result.typespec().is_int() && A.typespec().is_int()) {
+        impl = unary_op<int,int, Neg<int,int> >;
+    }
+
+    else if (Result.typespec().is_matrix()) {
+        if (A.typespec().is_matrix())
+            impl = unary_op<Matrix44,Matrix44, Neg<Matrix44,Matrix44> >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how to neg " << Result.typespec().string()
+                  << " = -" << A.typespec().string() << "\n";
+        ASSERT (0 && "Negation types can't be handled");
     }
 }
 

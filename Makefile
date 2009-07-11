@@ -9,15 +9,6 @@
 #########################################################################
 
 
-ifdef NOCMAKE
-#########################################################################
-# When not using CMake, the top-level Makefile is just a stub that
-# merely includes src/make/master.mk
-#########################################################################
-include src/make/master.mk
-
-else
-
 .PHONY: all debug profile clean realclean nuke doxygen
 
 working_dir	:= ${shell pwd}
@@ -168,7 +159,3 @@ help:
 	@echo "  make VERBOSE=1 ...          Show all compilation commands"
 	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
 	@echo ""
-
-
-
-endif

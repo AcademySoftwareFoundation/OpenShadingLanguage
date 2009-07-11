@@ -3,8 +3,8 @@ set (OSL_VERSION_MAJOR 0)
 set (OSL_VERSION_MINOR 1)
 set (OSL_VERSION_PATCH 0)
 
-CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
-SET (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
+cmake_minimum_required (VERSION 2.6)
+set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
 message (STATUS "Project build dir = ${CMAKE_BINARY_DIR}")
 
@@ -14,12 +14,15 @@ endif ()
 
 
 if (NOT CMAKE_BUILD_TYPE)
-    SET (CMAKE_BUILD_TYPE "Release")
+    set (CMAKE_BUILD_TYPE "Release")
 endif ()
 
-set(CMAKE_MODULE_PATH
-    "${PROJECT_SOURCE_DIR}/cmake/modules"
-    "${PROJECT_SOURCE_DIR}/cmake")
+set (USE_TBB ON CACHE BOOL "Use TBB if needed")
+
+set (CMAKE_MODULE_PATH
+     "${PROJECT_SOURCE_DIR}/cmake/modules"
+     "${PROJECT_SOURCE_DIR}/cmake")
+
 include (util_macros)
 include (platform)
 include (externalpackages)
@@ -50,6 +53,16 @@ set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 message (STATUS "CMAKE_INSTALL_RPATH = ${CMAKE_INSTALL_RPATH}")
 
+
+###########################################################################
+if (MSVC)
+    add_definitions (-D_CRT_SECURE_NO_DEPRECATE)
+    add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions (-D_CRT_NONSTDC_NO_WARNINGS)
+    add_definitions (-D_SCL_SECURE_NO_WARNINGS)
+endif (MSVC)
+
+
 # Tell CMake to process the sub-directories
 add_subdirectory (liboslcomp)
 add_subdirectory (liboslquery)
@@ -66,10 +79,17 @@ add_subdirectory (doc)
 
 #########################################################################
 # Testing
-# Ugh, I can't seem to ADD_SUBDIRECTORY the testsuite dir if it's not a true
-# subdirectory of source, so we fake it by creating a link.  FIXME!
-exec_program ("cmake -E create_symlink ${PROJECT_SOURCE_DIR}/../testsuite ${PROJECT_SOURCE_DIR}/testsuite")
-add_subdirectory (testsuite)
+
+macro ( TESTSUITE )
+    foreach (_testname ${ARGN})
+        add_test ( ${_testname} python ${PROJECT_SOURCE_DIR}/../testsuite/tests/${_testname}/run.py ${PROJECT_SOURCE_DIR}/../testsuite/tests/${_testname} ${CMAKE_BINARY_DIR} )
+    endforeach ()
+endmacro ()
+
+# List all the individual testsuite tests here, except those that need
+# special installed tests.
+TESTSUITE ( oslc-empty )
+
 
 
 #########################################################################

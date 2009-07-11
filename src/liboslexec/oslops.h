@@ -39,7 +39,9 @@ namespace pvt {
 
 DECLOP (OP_add);
 DECLOP (OP_assign);
+DECLOP (OP_div);
 DECLOP (OP_end);
+DECLOP (OP_mul);
 DECLOP (OP_sub);
 
 DECLOP (OP_missing);

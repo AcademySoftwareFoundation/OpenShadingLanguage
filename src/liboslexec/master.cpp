@@ -158,6 +158,8 @@ ShaderMaster::resolve_ops ()
             op.implementation (OP_assign);
         else if (op.opname() == "end")
             op.implementation (OP_end);
+        else if (op.opname() == "mul")
+            op.implementation (OP_mul);
         else if (op.opname() == "sub")
             op.implementation (OP_sub);
         else

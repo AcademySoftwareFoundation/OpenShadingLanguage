@@ -267,6 +267,34 @@ ASTconditional_statement::codegen (Symbol *)
 
 
 Symbol *
+ASTunary_expression::codegen (Symbol *dest)
+{
+    // Code generation for unary expressions (-x, !x, etc.)
+
+    // Generate the code for our expression
+    Symbol *esym = expr()->codegen ();
+
+    if (m_op == Add) {
+        // Special case: +x just returns x.
+        return esym;
+    }
+
+    // If we were not given a requested destination, or if it is not of
+    // the right type, make a temporary.
+    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
+        dest = m_compiler->make_temporary (typespec());
+
+    // FIXME -- what about coerced types, do we need a temp and copy here?
+
+    // Generate the opcode
+    emitcode (opword(), dest, esym);
+
+    return dest;
+}
+
+
+
+Symbol *
 ASTbinary_expression::codegen (Symbol *dest)
 {
     Symbol *lsym = left()->codegen ();

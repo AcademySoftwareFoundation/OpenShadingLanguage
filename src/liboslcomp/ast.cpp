@@ -460,7 +460,7 @@ ASTassign_expression::opname () const
     case Xor        : return "^=";
     case ShiftLeft  : return "<<=";
     case ShiftRight : return ">>=";
-    default: ASSERT(0);
+    default: ASSERT (0 && "unknown assignment expression");
     }
 }
 
@@ -480,7 +480,7 @@ ASTassign_expression::opword () const
     case Xor        : return "xor";
     case ShiftLeft  : return "shl";
     case ShiftRight : return "shr";
-    default: ASSERT(0);
+    default: ASSERT (0 && "unknown assignment expression");
     }
 }
 
@@ -499,13 +499,11 @@ const char *
 ASTunary_expression::opname () const
 {
     switch (m_op) {
-    case Decr  : return "--";
-    case Incr  : return "++";
     case Add   : return "+";
     case Sub   : return "-";
     case Not   : return "!";
     case Compl : return "~";
-    default: ASSERT(0);
+    default: ASSERT (0 && "unknown unary expression");
     }
 }
 
@@ -515,13 +513,11 @@ const char *
 ASTunary_expression::opword () const
 {
     switch (m_op) {
-    case Decr  : return "dec";
-    case Incr  : return "inc";
     case Add   : return "add";
     case Sub   : return "neg";
     case Not   : return "not";
     case Compl : return "compl";
-    default: ASSERT(0);
+    default: ASSERT (0 && "unknown unary expression");
     }
 }
 
@@ -558,7 +554,7 @@ ASTbinary_expression::opname () const
     case Or           : return "||";
     case ShiftLeft    : return "<<";
     case ShiftRight   : return ">>";
-    default: ASSERT(0);
+    default: ASSERT (0 && "unknown binary expression");
     }
 }
 
@@ -586,7 +582,7 @@ ASTbinary_expression::opword () const
     case Or           : return "or";
     case ShiftLeft    : return "shl";
     case ShiftRight   : return "shr";
-    default: ASSERT(0);
+    default: ASSERT (0 && "unknown binary expression");
     }
 }
 

@@ -522,6 +522,7 @@ public:
     const char *opname () const;
     const char *opword () const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
 };

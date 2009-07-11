@@ -18,6 +18,7 @@
 
 #include "oslexec.h"
 #include "osl_pvt.h"
+#include "oslexec_pvt.h"
 
 
 namespace OSL {
@@ -39,8 +40,53 @@ namespace pvt {
 DECLOP (OP_add);
 DECLOP (OP_assign);
 DECLOP (OP_end);
+DECLOP (OP_sub);
 
 DECLOP (OP_missing);
+
+
+
+// Heavy lifting of the math and other binary ops, this is a templated
+// version that knows the types of the arguments and the operation to
+// perform (given by a functor).
+template <class RET, class ATYPE, class BTYPE, class FUNCTION>
+DECLOP (binary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, A.is_varying() | B.is_varying(),
+                          A.data() == Result.data() || B.data() == Result.data());
+
+    // Loop over points, do the operation
+    VaryingRef<RET> result ((RET *)Result.data(), Result.step());
+    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
+    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
+    FUNCTION function;
+    if (result.is_uniform()) {
+        // Uniform case
+        *result = function (*a, *b);
+    } else if (A.is_uniform() && B.is_uniform()) {
+        // Operands are uniform but we're assigning to a varying (it can
+        // happen if we're in a conditional).  Take a shortcut by doing
+        // the operation only once.
+        RET r = function (*a, *b);
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = r;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = function (a[i], b[i]);
+    }
+}
+
+
+
 
 
 }; // namespace pvt

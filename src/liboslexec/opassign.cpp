@@ -116,6 +116,9 @@ DECLOP (OP_assign)
         } else {
             // Nothing else can be assigned to a triple
         }
+    } else if (Result.typespec().is_int()) {
+        if (Src.typespec().is_int())
+            impl = specialized_assign<int,int>;
     } else if (Result.typespec().is_matrix()) {
         if (Src.typespec().is_matrix()) {
             impl = specialized_assign<Matrix44,Matrix44>;
@@ -137,8 +140,11 @@ DECLOP (OP_assign)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
         return;
+    } else {
+        std::cerr << "Don't know how to assign " << Result.typespec().string()
+                  << " = " << Src.typespec().string() << "\n";
+        ASSERT (0 && "Assignment types can't be handled");
     }
-    ASSERT (0 && "Assignment types can't be handled");
 }
 
 

@@ -190,6 +190,7 @@ using namespace OSL::pvt;
 
  /* End of line */
 [\n]			{
+                            OSOReader::osoreader->incr_lineno ();
                             return ENDOFLINE;
                         }
 

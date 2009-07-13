@@ -314,7 +314,7 @@ yyerror (const char *err)
 //    oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
 //                        "Syntax error: %s", err);
     fprintf (stderr, "Error, line %d: %s", 
-             OSOReader::osolexer->lineno(), err);
+             OSOReader::osoreader->lineno(), err);
 }
 
 

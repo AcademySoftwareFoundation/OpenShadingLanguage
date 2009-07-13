@@ -33,7 +33,7 @@ namespace pvt {
 ///
 class OSOReader {
 public:
-    OSOReader () { }
+    OSOReader () : m_lineno(1) { }
     virtual ~OSOReader () { }
 
     /// Read in the oso file, parse it, call the various callbacks.
@@ -90,6 +90,14 @@ public:
     ///
     virtual void instruction_end () { }
 
+    /// Increment the line number (for error reporting).  Should only
+    /// be called by the lexer.
+    void incr_lineno () { ++m_lineno; }
+
+    /// Return the line number (for error reporting).  Should only
+    /// be called by the lexer.
+    int lineno () const { return m_lineno; }
+
     /// Pointer to the one and only lexer in effect.  This is 'public',
     /// but NOBODY should modify this except for this class and the
     /// lexer internals.
@@ -98,6 +106,7 @@ public:
     static OSOReader *osoreader;
 
 private:
+    int m_lineno;
     static mutex m_osoread_mutex;
 };
 

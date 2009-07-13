@@ -685,7 +685,7 @@ static const char * builtin_func_args [] = {
     "dot", "fvv", NULL,
     "erf", "ff", NULL,
     "erfc", "ff", NULL,
-    "error", "xs.", NULL,   // FIXME -- further checking
+    "error", "xs*", NULL,   // FIXME -- further checking
     "exit", "x", NULL,
     "exp", ANY_ONE_FLOAT_BASED, NULL,
     "exp2", ANY_ONE_FLOAT_BASED, NULL,
@@ -695,8 +695,8 @@ static const char * builtin_func_args [] = {
     "filterwidth", DERIV_ARGS, NULL,
     "floor", ANY_ONE_FLOAT_BASED, NULL,
     "fmod", ANY_ONE_FLOAT_BASED, NULL,
-    "format", "ss.", NULL,
-    "fprintf", "xs.", NULL,   // FIXME -- further checking
+    "format", "ss*", NULL,
+    "fprintf", "xs*", NULL,   // FIXME -- further checking
     "fresnel", "xvvf", "xvvffvv", NULL,
     "getattribute", "is?", NULL,  // FIXME -- further checking?
     "getmessage", "iss?", NULL,  // FIXME -- further checking?
@@ -723,7 +723,7 @@ static const char * builtin_func_args [] = {
     "normalize", "vv", "nn", NULL,
     "pnoise", NOISE_ARGS, NULL,
     "pow", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
-    "printf", "xs.", NULL,   // FIXME -- further checking
+    "printf", "xs*", NULL,   // FIXME -- further checking
     "psnoise", NOISE_ARGS, NULL,
     "radians", "ff", NULL,
     "random", "f", "c", "p", "v", "n", NULL,

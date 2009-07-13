@@ -162,6 +162,8 @@ ShaderMaster::resolve_ops ()
             op.implementation (OP_mul);
         else if (op.opname() == "neg")
             op.implementation (OP_neg);
+        else if (op.opname() == "printf")
+            op.implementation (OP_printf);
         else if (op.opname() == "sub")
             op.implementation (OP_sub);
         else

@@ -20,6 +20,7 @@
 
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
+#include "OpenImageIO/strutil.h"
 
 #include "oslexec_pvt.h"
 
@@ -330,11 +331,36 @@ ShadingExecution::new_runflag_range (int begin, int end)
 
 
 
+std::string
+ShadingExecution::format_symbol (const std::string &format,
+                                 Symbol &sym, int whichpoint)
+{
+    TypeDesc type = sym.typespec().simpletype();
+    const char *data = (const char *)sym.data() + whichpoint * sym.step();
+    char kind = format[format.length()-1];
+    std::string s;
+    int n = type.numelements() * type.aggregate;
+    for (int i = 0;  i < n;  ++i) {
+        // FIXME -- type checking here!!!!
+        if (type.basetype == TypeDesc::FLOAT)
+            s += Strutil::format (format.c_str(), ((const float *)data)[i]);
+        else if (type.basetype == TypeDesc::INT)
+            s += Strutil::format (format.c_str(), ((const int *)data)[i]);
+        else if (type.basetype == TypeDesc::STRING)
+            s += Strutil::format (format.c_str(), ((const ustring *)data)[i].c_str());
+        if (n > 1 && i < n-1)
+            s += ' ';
+    }
+    return s;
+}
+
+
+
 void
 ShadingExecution::printsymbol (Symbol &sym)
 {
-    const char *data = (const char *) sym.data ();
     TypeDesc type = sym.typespec().simpletype();
+    const char *data = (const char *) sym.data ();
     data += m_beginpoint * sym.step();
     for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step()) {
         if (sym.is_uniform())

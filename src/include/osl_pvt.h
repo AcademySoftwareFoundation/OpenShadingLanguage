@@ -215,6 +215,12 @@ public:
         return m_simple == TypeDesc::TypeString && !is_closure();
     }
 
+    /// Is it a void?
+    ///
+    bool is_void () const {
+        return m_simple == TypeDesc::NONE;
+    }
+
     /// Is it a simple triple (color, point, vector, or normal)?
     ///
     bool is_triple () const {

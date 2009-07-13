@@ -495,6 +495,12 @@ public:
         return s >= 0 ? &m_symbols[s] : NULL;
     }
 
+    /// Format the value of sym using the printf-like format (taking a
+    /// SINGLE value specifier), where 'whichpoint' gives the position
+    /// in the set of shading points that we're concerned about.
+    std::string format_symbol (const std::string &format, Symbol &sym,
+                               int whichpoint);
+
     /// Print the symbol (for debugging)
     ///
     void printsymbol (Symbol &sym);

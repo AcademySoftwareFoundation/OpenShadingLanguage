@@ -140,7 +140,7 @@ DECLOP (OP_neg);
 //DECLOP (OP_or);
 //DECLOP (OP_orennayar);
 //DECLOP (OP_point);
-//DECLOP (OP_printf);
+DECLOP (OP_printf);
 //DECLOP (OP_pow);
 //DECLOP (OP_psnoise);
 //DECLOP (OP_radians);

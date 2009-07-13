@@ -333,10 +333,12 @@ ASTfunction_call::codegen (Symbol *dest)
 {
     // FIXME -- this is very wrong, just a placeholder
 
-    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
-        dest = m_compiler->make_temporary (typespec());
     std::vector<Symbol *> argdest;
-    argdest.push_back (dest);
+    if (! typespec().is_void()) {
+        if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
+            dest = m_compiler->make_temporary (typespec());
+        argdest.push_back (dest);
+    }
     for (ref a = args();  a;  a = a->next()) {
         argdest.push_back (a->codegen());
     }

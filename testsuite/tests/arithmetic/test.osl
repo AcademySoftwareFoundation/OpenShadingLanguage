@@ -1,0 +1,73 @@
+shader
+test ()
+{
+    // float
+    {
+        printf ("float:\n");
+        float a = 0.7;
+        float b = 0.2;
+        printf ("  %g + %g = %g\n", a, b, a+b);
+        printf ("  %g - %g = %g\n", a, b, a-b);
+        printf ("  %g * %g = %g\n", a, b, a*b);
+//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  - %g = %g\n", a, -a);
+
+        printf (" varying: u=%g, v=%g\n", u, v);
+        a += u;
+        printf ("  %g + %g = %g\n", a, b, a+b);
+        printf ("  %g - %g = %g\n", a, b, a-b);
+        printf ("  %g * %g = %g\n", a, b, a*b);
+//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  - %g = %g\n", a, -a);
+        printf ("\n");
+    }
+
+    // triple
+    {
+        printf ("triple:\n");
+        color a = 0.7;
+        color b = 0.2;
+        printf ("  %g + %g = %g\n", a, b, a+b);
+        printf ("  %g - %g = %g\n", a, b, a-b);
+        printf ("  %g * %g = %g\n", a, b, a*b);
+//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  - %g = %g\n", a, -a);
+
+        printf (" varying: u=%g, v=%g\n", u, v);
+        a += u;
+        printf ("  %g + %g = %g\n", a, b, a+b);
+        printf ("  %g - %g = %g\n", a, b, a-b);
+        printf ("  %g * %g = %g\n", a, b, a*b);
+//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  - %g = %g\n", a, -a);
+        printf ("\n");
+    }
+
+    // int
+    {
+        printf ("int:\n");
+        int a = 7;
+        int b = 2;
+        printf ("  %d + %d = %d\n", a, b, a+b);
+        printf ("  %d - %d = %d\n", a, b, a-b);
+        printf ("  %d * %d = %d\n", a, b, a*b);
+//        printf ("  %d / %d = %d\n", a, b, a/b);
+        printf ("  - %d = %d\n", a, -a);
+
+        printf (" varying: u=%g, v=%g\n", u, v);
+#if 0
+        // FIXME -- restore this after we have integer casts
+        a += u;
+        printf ("  %d + %d = %d\n", a, b, a+b);
+        printf ("  %d - %d = %d\n", a, b, a-b);
+        printf ("  %d * %d = %d\n", a, b, a*b);
+//FIXME        printf ("  %d / %d = %d\n", a, b, a/b);
+//FIXME        printf ("  %d %% %d = %d\n", a, b, a%b);
+        printf ("  - %d = %d\n", a, -a);
+#endif
+        printf ("\n");
+    }
+
+    // FIXME -- matrix
+
+}

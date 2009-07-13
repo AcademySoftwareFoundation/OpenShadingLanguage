@@ -90,7 +90,6 @@ main (int argc, const char *argv[])
     // Create a new shading system.
     Timer timer;
     shadingsys = ShadingSystem::create ();
-    shadingsys->attribute ("statistics:level", 5);
 
     getargs (argc, argv);
     // getargs called 'add_shader' for each shader mentioned on the command
@@ -158,11 +157,14 @@ main (int argc, const char *argv[])
         img.save ();
     }
 
-    std::cout << "\n";
-    std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";
-    std::cout << "Bind : " << Strutil::timeintervalformat (bindtime,2) << "\n";
-    std::cout << "Run  : " << Strutil::timeintervalformat (runtime,2) << "\n";
-    std::cout << "\n";
+    if (debug) {
+        std::cout << "\n";
+        std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";
+        std::cout << "Bind : " << Strutil::timeintervalformat (bindtime,2) << "\n";
+        std::cout << "Run  : " << Strutil::timeintervalformat (runtime,2) << "\n";
+        std::cout << "\n";
+        std::cout << shadingsys->getstats (5) << "\n";
+    }
 
     ShadingSystem::destroy (shadingsys);
     return EXIT_SUCCESS;

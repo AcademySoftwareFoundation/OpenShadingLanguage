@@ -115,7 +115,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     // Not specified where it lives, put it in the heap
                     sym.data (m_context->heapaddr (sym.dataoffset()));
                     sym.step (0);
-                    std::cout << "Global " << sym.name() << " at address " << sym.dataoffset() << "\n";
+                    // std::cout << "Global " << sym.name() << " at address " << sym.dataoffset() << "\n";
                 } else {
                     // ASSERT (sym.dataoffset() >= 0 &&
                     //         "Global ought to already have a dataoffset");

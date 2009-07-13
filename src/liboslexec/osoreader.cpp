@@ -57,7 +57,7 @@ OSOReader::parse (const std::string &filename)
     assert (osolexer);
     bool ok = ! osoparse ();   // osoparse returns nonzero if error
     if (ok) {
-        std::cout << "Correctly parsed " << filename << "\n";
+//        std::cout << "Correctly parsed " << filename << "\n";
     } else {
         std::cout << "Failed parse of " << filename << "\n";
     }

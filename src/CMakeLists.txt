@@ -90,6 +90,7 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic )
+TESTSUITE ( comparison )
 
 
 

@@ -174,6 +174,14 @@ ShaderMaster::resolve_ops ()
             op.implementation (OP_div);
         else if (op.opname() == "end")
             op.implementation (OP_end);
+        else if (op.opname() == "ge")
+            op.implementation (OP_ge);
+        else if (op.opname() == "gt")
+            op.implementation (OP_gt);
+        else if (op.opname() == "le")
+            op.implementation (OP_le);
+        else if (op.opname() == "lt")
+            op.implementation (OP_lt);
         else if (op.opname() == "mod")
             op.implementation (OP_mod);
         else if (op.opname() == "mul")

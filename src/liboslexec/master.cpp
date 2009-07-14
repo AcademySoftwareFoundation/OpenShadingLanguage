@@ -156,6 +156,8 @@ ShaderMaster::resolve_ops ()
             op.implementation (OP_add);
         else if (op.opname() == "assign")
             op.implementation (OP_assign);
+        else if (op.opname() == "div")
+            op.implementation (OP_div);
         else if (op.opname() == "end")
             op.implementation (OP_end);
         else if (op.opname() == "mul")

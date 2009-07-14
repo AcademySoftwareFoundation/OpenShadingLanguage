@@ -43,13 +43,34 @@ public:
         return VecProxy (v.x-f, v.y-f, v.z-f);
     }
     friend VecProxy operator- (float f, const Vec3 &v) {
-        return VecProxy (v.x-f, v.y-f, v.z-f);
+        return VecProxy (f-v.x, f-v.y, f-v.z);
     }
     friend VecProxy operator* (const Vec3 &v, int f) {
         return VecProxy (v.x*f, v.y*f, v.z*f);
     }
     friend VecProxy operator* (int f, const Vec3 &v) {
         return VecProxy (v.x*f, v.y*f, v.z*f);
+    }
+    friend VecProxy operator/ (const Vec3 &v, int f) {
+        if (f == 0)
+            return VecProxy(0.0);
+        return VecProxy (v.x/f, v.y/f, v.z/f);
+    }
+    friend VecProxy operator/ (float f, const Vec3 &v) {
+        return VecProxy (v.x == 0.0 ? 0.0 : f/v.x, 
+                         v.y == 0.0 ? 0.0 : f/v.y,
+                         v.z == 0.0 ? 0.0 : f/v.z);
+    }
+    friend VecProxy operator/ (int f, const Vec3 &v) {
+        return VecProxy (v.x == 0.0 ? 0.0 : f/v.x, 
+                         v.y == 0.0 ? 0.0 : f/v.y,
+                         v.z == 0.0 ? 0.0 : f/v.z);
+    }
+    friend bool operator== (const Vec3 &v, float f) {
+        return v.x == f && v.y == f && v.z == f;
+    }
+    friend bool operator== (const Vec3 &v, int f) {
+        return v.x == f && v.y == f && v.z == f;
     }
 };
 
@@ -98,6 +119,64 @@ class ScalarMatrixMul {
 public:
     inline Matrix44 operator() (float a, float b) {
         float f = a * b;
+        return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
+    }
+};
+
+// Make a templated functor that encapsulates division.
+template<class R, class A, class B>
+class Div {
+public:
+    inline R operator() (const A &a, const B &b) {
+        return (b == 0) ? R (0.0) : R (a / b);
+    }
+};
+
+// Specialized version for matrix = matrix / matrix
+template<>
+class Div<Matrix44,Matrix44,Matrix44>
+{
+public:
+    inline Matrix44 operator() (const Matrix44 &a, const Matrix44 &b) {
+        return a * b.inverse();
+    }
+};
+
+// Specialized version for matrix = float / matrix
+template<>
+class Div<Matrix44,float,Matrix44>
+{
+public:
+    inline Matrix44 operator() (float a, const Matrix44 &b) {
+        return a * b.inverse();
+    }
+};
+
+// Specialized version for matrix = int / matrix
+template<>
+class Div<Matrix44,int,Matrix44>
+{
+public:
+    inline Matrix44 operator() (int a, const Matrix44 &b) {
+        return (float)a * b.inverse();
+    }
+};
+
+// Specialized version for matrix = matrix / int
+template<>
+class Div<Matrix44,Matrix44,int>
+{
+public:
+    inline Matrix44 operator() (const Matrix44 &a, int b) {
+        return a / (float)b;
+    }
+};
+
+// Specialized version for matrix = scalar / scalar
+class ScalarMatrixDiv {
+public:
+    inline Matrix44 operator() (float a, float b) {
+        float f = (b == 0) ? 0.0 : (a / b);
         return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
     }
 };
@@ -377,6 +456,115 @@ DECLOP (OP_mul)
                   << " = " << A.typespec().string() 
                   << " + " << B.typespec().string() << "\n";
         ASSERT (0 && "Multiplication types can't be handled");
+    }
+}
+
+
+
+DECLOP (OP_div)
+{
+    // FIXME -- maybe we can speed up div for the case where A is varying
+    // and B is uniform, by taking 1/b and mutiplying.
+
+    ASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    if (exec->debug()) {
+        std::cout << "Executing div!\n";
+        std::cout << "  Result is " << Result.typespec().string() 
+                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
+        std::cout << "  A is " << A.typespec().string() 
+                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
+        std::cout << "  B is " << B.typespec().string() 
+                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
+    }
+    ASSERT (! Result.typespec().is_closure() &&
+            ! Result.typespec().is_structure() &&
+            ! Result.typespec().is_array());   // Not yet
+    ASSERT (! A.typespec().is_closure() &&
+            ! A.typespec().is_structure() &&
+            ! A.typespec().is_array());   // Not yet
+    ASSERT (! B.typespec().is_closure() &&
+            ! B.typespec().is_structure() &&
+            ! B.typespec().is_array());   // Not yet
+    OpImpl impl = NULL;
+
+    if (Result.typespec().is_closure()) {
+        // FIXME -- not handled yet
+    }
+
+    else if (Result.typespec().is_triple()) {
+        if (A.typespec().is_triple()) {
+            if (B.typespec().is_triple())
+                impl = binary_op<Vec3,Vec3,Vec3, Div<Vec3,Vec3,Vec3> >;
+            else if (B.typespec().is_float())
+                impl = binary_op<VecProxy,VecProxy,float,
+                                 Div<VecProxy,VecProxy,float> >;
+            else if (B.typespec().is_int())
+                impl = binary_op<VecProxy,VecProxy,int,
+                                 Div<VecProxy,VecProxy,int> >;
+        } else if (A.typespec().is_float()) {
+            if (B.typespec().is_triple())
+                impl = binary_op<VecProxy,float,VecProxy,
+                                 Div<VecProxy,float,VecProxy> >;
+        } if (A.typespec().is_int()) {
+            if (B.typespec().is_triple())
+                impl = binary_op<VecProxy,int,VecProxy,
+                                 Div<VecProxy,int,VecProxy> >;
+        }
+    } 
+
+    else if (Result.typespec().is_float()) {
+        if (A.typespec().is_float() && B.typespec().is_float())
+            impl = binary_op<float,float,float, Div<float,float,float> >;
+        else if (A.typespec().is_float() && B.typespec().is_int())
+            impl = binary_op<float,float,int, Div<float,float,int> >;
+        else if (A.typespec().is_int() && B.typespec().is_float())
+            impl = binary_op<float,int,float, Div<float,int,float> >;
+    }
+
+    else if (Result.typespec().is_int()) {
+        if (A.typespec().is_int() && B.typespec().is_int())
+            impl = binary_op<int,int,int, Div<int,int,int> >;
+    }
+
+    else if (Result.typespec().is_matrix()) {
+        if (A.typespec().is_float()) {
+            if (B.typespec().is_float())
+                impl = binary_op<Matrix44,float,float, ScalarMatrixDiv>;
+            else if (B.typespec().is_int())
+                impl = binary_op<Matrix44,float,int, ScalarMatrixDiv>;
+            else if (B.typespec().is_matrix())
+                impl = binary_op<Matrix44,float,Matrix44, Div<Matrix44,float,Matrix44> >;
+        } if (A.typespec().is_int()) {
+            if (B.typespec().is_float())
+                impl = binary_op<Matrix44,int,float, ScalarMatrixDiv>;
+            else if (B.typespec().is_int())
+                impl = binary_op<Matrix44,int,int, ScalarMatrixDiv>;
+            else if (B.typespec().is_matrix())
+                impl = binary_op<Matrix44,int,Matrix44, Div<Matrix44,int,Matrix44> >;
+        } if (A.typespec().is_matrix()) {
+            if (B.typespec().is_float())
+                impl = binary_op<Matrix44,Matrix44,float, Div<Matrix44,Matrix44,float> >;
+            else if (B.typespec().is_int())
+                impl = binary_op<Matrix44,Matrix44,int, Div<Matrix44,Matrix44,int> >;
+            else if (B.typespec().is_matrix())
+                impl = binary_op<Matrix44,Matrix44,Matrix44, Div<Matrix44,Matrix44,Matrix44> >;
+        }
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how to div " << Result.typespec().string()
+                  << " = " << A.typespec().string() 
+                  << " + " << B.typespec().string() << "\n";
+        ASSERT (0 && "Division types can't be handled");
     }
 }
 

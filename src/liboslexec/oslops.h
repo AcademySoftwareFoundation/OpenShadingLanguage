@@ -74,7 +74,7 @@ DECLOP (OP_assign);
 //DECLOP (OP_diffuse);
 //DECLOP (OP_displace);
 //DECLOP (OP_distance);
-//DECLOP (OP_div);
+DECLOP (OP_div);
 //DECLOP (OP_do);
 //DECLOP (OP_dot);
 //DECLOP (OP_Du);

@@ -6,10 +6,12 @@ test ()
         printf ("float:\n");
         float a = 0.7;
         float b = 0.2;
+        float z = 0;
         printf ("  %g + %g = %g\n", a, b, a+b);
         printf ("  %g - %g = %g\n", a, b, a-b);
         printf ("  %g * %g = %g\n", a, b, a*b);
-//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, z, a/z);
         printf ("  - %g = %g\n", a, -a);
 
         printf (" varying: u=%g, v=%g\n", u, v);
@@ -17,7 +19,8 @@ test ()
         printf ("  %g + %g = %g\n", a, b, a+b);
         printf ("  %g - %g = %g\n", a, b, a-b);
         printf ("  %g * %g = %g\n", a, b, a*b);
-//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, z, a/z);
         printf ("  - %g = %g\n", a, -a);
         printf ("\n");
     }
@@ -27,18 +30,32 @@ test ()
         printf ("triple:\n");
         color a = 0.7;
         color b = 0.2;
+        float f = 0.5;
+        color z = 0;
+        float zf = 0;
         printf ("  %g + %g = %g\n", a, b, a+b);
         printf ("  %g - %g = %g\n", a, b, a-b);
         printf ("  %g * %g = %g\n", a, b, a*b);
-//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, z, a/z);
+        printf ("  %g / %g = %g\n", a, zf, a/zf);
         printf ("  - %g = %g\n", a, -a);
+
+        printf ("  %g + %g = %g\n", a, f, a+f);
+        printf ("  %g - %g = %g\n", a, f, a-f);
+        printf ("  %g * %g = %g\n", a, f, a*f);
+        printf ("  %g / %g = %g\n", a, f, a/f);
+        printf ("  %g + %g = %g\n", f, a, f+a);
+        printf ("  %g - %g = %g\n", f, a, f-a);
+        printf ("  %g * %g = %g\n", f, a, f*a);
+        printf ("  %g / %g = %g\n", f, a, f/a);
 
         printf (" varying: u=%g, v=%g\n", u, v);
         a += u;
         printf ("  %g + %g = %g\n", a, b, a+b);
         printf ("  %g - %g = %g\n", a, b, a-b);
         printf ("  %g * %g = %g\n", a, b, a*b);
-//FIXME        printf ("  %g / %g = %g\n", a, b, a/b);
+        printf ("  %g / %g = %g\n", a, b, a/b);
         printf ("  - %g = %g\n", a, -a);
         printf ("\n");
     }
@@ -51,7 +68,7 @@ test ()
         printf ("  %d + %d = %d\n", a, b, a+b);
         printf ("  %d - %d = %d\n", a, b, a-b);
         printf ("  %d * %d = %d\n", a, b, a*b);
-//        printf ("  %d / %d = %d\n", a, b, a/b);
+        printf ("  %d / %d = %d\n", a, b, a/b);
         printf ("  - %d = %d\n", a, -a);
 
         printf (" varying: u=%g, v=%g\n", u, v);
@@ -61,7 +78,7 @@ test ()
         printf ("  %d + %d = %d\n", a, b, a+b);
         printf ("  %d - %d = %d\n", a, b, a-b);
         printf ("  %d * %d = %d\n", a, b, a*b);
-//FIXME        printf ("  %d / %d = %d\n", a, b, a/b);
+        printf ("  %d / %d = %d\n", a, b, a/b);
 //FIXME        printf ("  %d %% %d = %d\n", a, b, a%b);
         printf ("  - %d = %d\n", a, -a);
 #endif

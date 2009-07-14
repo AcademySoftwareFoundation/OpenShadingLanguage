@@ -158,40 +158,56 @@ ShaderMaster::print ()
 
 
 
+// Define a name/impl pair
+struct OpNameEntry {
+    const char *name;
+    OpImpl impl;
+};
+
+// Static table of opcode names and implementations
+static OpNameEntry op_name_entries[] = {
+    { "add", OP_add },
+    { "assign", OP_assign },
+    { "div", OP_div },
+    { "end", OP_end },
+    { "ge", OP_ge },
+    { "gt", OP_gt },
+    { "le", OP_le },
+    { "lt", OP_lt },
+    { "mod", OP_mod },
+    { "mul", OP_mul },
+    { "neg", OP_neg },
+    { "printf", OP_printf },
+    { "sub", OP_sub },
+    { NULL, NULL}
+};
+
+// Map for fast opname->implementation lookup
+static std::map<ustring,OpImpl> ops_table;
+// Mutex to guard the table
+static mutex ops_table_mutex;
+
+
 void
 ShaderMaster::resolve_ops ()
 {
+    {
+        // Make sure ops_table has been initialized
+        lock_guard lock (ops_table_mutex);
+        if (ops_table.empty()) {
+            for (int i = 0;  op_name_entries[i].name;  ++i)
+                ops_table[ustring(op_name_entries[i].name)] = 
+                    op_name_entries[i].impl;
+        }
+    }
+
     BOOST_FOREACH (Opcode &op, m_ops) {
-        // FIXME -- replace this hard-coded crap with a hash table or
-        // something.
         if (shadingsys().debug())
             std::cout << "resolving " << op.opname() << "\n";
-        if (op.opname() == "add")
-            op.implementation (OP_add);
-        else if (op.opname() == "assign")
-            op.implementation (OP_assign);
-        else if (op.opname() == "div")
-            op.implementation (OP_div);
-        else if (op.opname() == "end")
-            op.implementation (OP_end);
-        else if (op.opname() == "ge")
-            op.implementation (OP_ge);
-        else if (op.opname() == "gt")
-            op.implementation (OP_gt);
-        else if (op.opname() == "le")
-            op.implementation (OP_le);
-        else if (op.opname() == "lt")
-            op.implementation (OP_lt);
-        else if (op.opname() == "mod")
-            op.implementation (OP_mod);
-        else if (op.opname() == "mul")
-            op.implementation (OP_mul);
-        else if (op.opname() == "neg")
-            op.implementation (OP_neg);
-        else if (op.opname() == "printf")
-            op.implementation (OP_printf);
-        else if (op.opname() == "sub")
-            op.implementation (OP_sub);
+        std::map<ustring,OpImpl>::const_iterator found;
+        found = ops_table.find (op.opname());
+        if (found != ops_table.end())
+            op.implementation (found->second);
         else
             op.implementation (OP_missing);
     }

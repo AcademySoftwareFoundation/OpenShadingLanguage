@@ -63,8 +63,6 @@ public:
 template <class RET, class SRC>
 static DECLOP (specialized_assign)
 {
-    if (exec->debug())
-        std::cout << "Executing specialized_assign!\n";
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
@@ -89,19 +87,43 @@ static DECLOP (specialized_assign)
 
 
 
+// Special version of assign for when the source and result are the same
+// exact type, so we can just memcpy.
+static DECLOP (assign_copy)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Src (exec->sym (args[1]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, Src.is_varying(),
+                          Result.data() == Src.data());
+
+    // Loop over points, do the assignment.
+    size_t size = Result.size ();
+    if (Result.is_uniform()) {
+        // Uniform case
+        memcpy (Result.data(), Src.data(), size);
+    } else if (exec->all_points_on() && Src.is_varying()) {
+        // Simple case where a single memcpy will do
+        memcpy (Result.data(), Src.data(), size * exec->npoints());
+    } else {
+        // Potentially varying case
+        VaryingRef<char> result ((char *)Result.data(), Result.step());
+        VaryingRef<char> src ((char *)Src.data(), Src.step());
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                memcpy (&result[i], &src[i], size);
+    }
+}
+
+
+
 DECLOP (OP_assign)
 {
-    if (exec->debug())
-        std::cout << "Executing assign!\n";
     ASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
-    if (exec->debug()) {
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  Src is " << Src.typespec().string() 
-                  << " " << Src.mangled() << " @ " << (void*)Src.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -113,40 +135,26 @@ DECLOP (OP_assign)
         // FIXME -- not handled yet
     } else if (Result.typespec().is_structure()) {
         // FIXME -- not handled yet
+    } else if (Result.typespec().simpletype() == Src.typespec().simpletype()) {
+        // Easy case -- the two types are exactly the same.  That's
+        // always legal and has a very specialized implementation.  This
+        // case handles f=f, p=p, v=v, n=n, c=c, s=s, m=m.
+        impl = assign_copy;
     } else if (Result.typespec().is_float()) {
-        if (Src.typespec().is_float()) {
-            impl = specialized_assign<float,float>;
-        } if (Src.typespec().is_int()) {
-            impl = specialized_assign<float,int>;
-        } else {
-            // Nothing else can be assigned to a float
-        }
-    } else if (Result.typespec().is_triple()) {
-        if (Src.typespec().is_triple()) {
-            impl = specialized_assign<Vec3,Vec3>;
-        } else if (Src.typespec().is_float()) {
-            impl = specialized_assign<Vec3,float>;
-        } if (Src.typespec().is_int()) {
-            impl = specialized_assign<Vec3,int>;
-        } else {
-            // Nothing else can be assigned to a triple
-        }
-    } else if (Result.typespec().is_int()) {
         if (Src.typespec().is_int())
-            impl = specialized_assign<int,int>;
+            impl = specialized_assign<float,int>;
+    } else if (Result.typespec().is_triple()) {
+        if (Src.typespec().is_triple())
+            impl = assign_copy;  // p=n, v=p, etc.
+        else if (Src.typespec().is_float())
+            impl = specialized_assign<Vec3,float>;
+        else if (Src.typespec().is_int())
+            impl = specialized_assign<Vec3,int>;
     } else if (Result.typespec().is_matrix()) {
-        if (Src.typespec().is_matrix()) {
-            impl = specialized_assign<Matrix44,Matrix44>;
-        } else if (Src.typespec().is_float()) {
+        if (Src.typespec().is_float())
             impl = specialized_assign<MatrixProxy,float>;
-        } if (Src.typespec().is_int()) {
+        else if (Src.typespec().is_int())
             impl = specialized_assign<MatrixProxy,int>;
-        } else {
-            // Nothing else can be assigned to a matrix
-        }
-    } else if (Result.typespec().is_string()) {
-        if (Src.typespec().is_string())
-            impl = specialized_assign<ustring,ustring>;
     }
     if (impl) {
         impl (exec, nargs, args, runflags, beginpoint, endpoint);

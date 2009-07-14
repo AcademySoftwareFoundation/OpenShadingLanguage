@@ -220,15 +220,6 @@ DECLOP (OP_add)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    if (exec->debug()) {
-        std::cout << "Executing add!\n";
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  A is " << A.typespec().string() 
-                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
-        std::cout << "  B is " << B.typespec().string() 
-                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -301,15 +292,6 @@ DECLOP (OP_sub)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    if (exec->debug()) {
-        std::cout << "Executing sub!\n";
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  A is " << A.typespec().string() 
-                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
-        std::cout << "  B is " << B.typespec().string() 
-                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -382,15 +364,6 @@ DECLOP (OP_mul)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    if (exec->debug()) {
-        std::cout << "Executing mul!\n";
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  A is " << A.typespec().string() 
-                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
-        std::cout << "  B is " << B.typespec().string() 
-                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -491,15 +464,6 @@ DECLOP (OP_div)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    if (exec->debug()) {
-        std::cout << "Executing div!\n";
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  A is " << A.typespec().string() 
-                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
-        std::cout << "  B is " << B.typespec().string() 
-                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -597,15 +561,6 @@ DECLOP (OP_mod)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    if (exec->debug()) {
-        std::cout << "Executing mod!\n";
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  A is " << A.typespec().string() 
-                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
-        std::cout << "  B is " << B.typespec().string() 
-                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -643,13 +598,6 @@ DECLOP (OP_neg)
     ASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
-    if (exec->debug()) {
-        std::cout << "Executing neg!\n";
-        std::cout << "  Result is " << Result.typespec().string() 
-                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
-        std::cout << "  A is " << A.typespec().string() 
-                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
-    }
     ASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
@@ -699,55 +647,6 @@ DECLOP (OP_neg)
         ASSERT (0 && "Negation types can't be handled");
     }
 }
-
-
-
-#if 0
-    // Canonical:
-    if (Result.typespec().is_XXX()) { // triple, float, int, matrix, string
-        if (A.typespec().is_triple()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<XXX,Vec3,Vec3, FUNC<XXX,Vec3,Vec3> >;
-            else if (B.typespec().is_float())
-                impl = binary_op<XXX,Vec3,float, FUNC<XXX,Vec3,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<XXX,Vec3,int, FUNC<XXX,Vec3,int> >;
-            else if (B.typespec().is_matrix())
-                impl = binary_op<XXX,Vec3,Matrix44, FUNC<XXX,Vec3,Matrix44> >;
-        } else if (A.typespec().is_float()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<XXX,float,Vec3, FUNC<XXX,float,Vec3> >;
-            else if (B.typespec().is_float())
-                impl = binary_op<XXX,float,float, FUNC<XXX,float,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<XXX,float,int, FUNC<XXX,float,int> >;
-            else if (B.typespec().is_matrix())
-                impl = binary_op<XXX,float,Matrix44, FUNC<XXX,float,Matrix44> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<XXX,int,Vec3, FUNC<XXX,int,Vec3> >;
-            else if (B.typespec().is_float())
-                impl = binary_op<XXX,int,float, FUNC<XXX,int,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<XXX,int,int, FUNC<XXX,int,int> >;
-            else if (B.typespec().is_matrix())
-                impl = binary_op<XXX,int,Matrix44, FUNC<XXX,int,Matrix44> >;
-        } if (A.typespec().is_matrix()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<XXX,Matrix44,Vec3, FUNC<XXX,Matrix44,Vec3> >;
-            else if (B.typespec().is_float())
-                impl = binary_op<XXX,Matrix44,float, FUNC<XXX,Matrix44,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<XXX,Matrix44,int, FUNC<XXX,Matrix44,int> >;
-            else if (B.typespec().is_matrix())
-                impl = binary_op<XXX,Matrix44,Matrix44, FUNC<XXX,Matrix44,Matrix44> >;
-        } if (A.typespec().is_string()) {
-            if (B.typespec().is_string())
-                impl = binary_op<XXX,ustring,ustring, FUNC<XXX,ustring,ustring> >;
-        }
-#endif
-
-
 
 
 }; // namespace pvt

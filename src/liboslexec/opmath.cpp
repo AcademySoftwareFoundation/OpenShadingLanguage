@@ -181,6 +181,12 @@ public:
     }
 };
 
+// Make a functor that encapsulates modulus
+class Mod {
+public:
+    inline int operator() (int a, int b) { return (b == 0) ? 0 : (a % b); }
+};
+
 // Make a templated functor that encapsulates negation.
 template<class R, class A>
 class Neg {
@@ -562,6 +568,53 @@ DECLOP (OP_div)
         exec->op().implementation (impl);
     } else {
         std::cerr << "Don't know how to div " << Result.typespec().string()
+                  << " = " << A.typespec().string() 
+                  << " + " << B.typespec().string() << "\n";
+        ASSERT (0 && "Division types can't be handled");
+    }
+}
+
+
+
+DECLOP (OP_mod)
+{
+    ASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    if (exec->debug()) {
+        std::cout << "Executing mod!\n";
+        std::cout << "  Result is " << Result.typespec().string() 
+                  << " " << Result.mangled() << " @ " << (void *)Result.data() << "\n";
+        std::cout << "  A is " << A.typespec().string() 
+                  << " " << A.mangled() << " @ " << (void*)A.data() << "\n";
+        std::cout << "  B is " << B.typespec().string() 
+                  << " " << B.mangled() << " @ " << (void*)B.data() << "\n";
+    }
+    ASSERT (! Result.typespec().is_closure() &&
+            ! Result.typespec().is_structure() &&
+            ! Result.typespec().is_array());   // Not yet
+    ASSERT (! A.typespec().is_closure() &&
+            ! A.typespec().is_structure() &&
+            ! A.typespec().is_array());   // Not yet
+    ASSERT (! B.typespec().is_closure() &&
+            ! B.typespec().is_structure() &&
+            ! B.typespec().is_array());   // Not yet
+    OpImpl impl = NULL;
+
+    if (Result.typespec().is_int() && A.typespec().is_int() &&
+            B.typespec().is_int()) {
+        impl = binary_op<int,int,int, Mod >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how to mod " << Result.typespec().string()
                   << " = " << A.typespec().string() 
                   << " + " << B.typespec().string() << "\n";
         ASSERT (0 && "Division types can't be handled");

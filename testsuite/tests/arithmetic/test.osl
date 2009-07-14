@@ -69,6 +69,7 @@ test ()
         printf ("  %d - %d = %d\n", a, b, a-b);
         printf ("  %d * %d = %d\n", a, b, a*b);
         printf ("  %d / %d = %d\n", a, b, a/b);
+        printf ("  %d %% %d = %d\n", a, b, a%b);
         printf ("  - %d = %d\n", a, -a);
 
         printf (" varying: u=%g, v=%g\n", u, v);

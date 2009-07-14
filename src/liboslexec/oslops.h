@@ -129,7 +129,7 @@ DECLOP (OP_end);
 //DECLOP (OP_mix);
 //DECLOP (OP_mxcompassign);
 //DECLOP (OP_mxcompref);
-//DECLOP (OP_mod);
+DECLOP (OP_mod);
 DECLOP (OP_mul);
 //DECLOP (OP_neq);
 DECLOP (OP_neg);

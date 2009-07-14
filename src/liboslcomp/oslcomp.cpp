@@ -174,8 +174,8 @@ OSLCompilerImpl::compile (const std::string &filename,
         // Print the parse tree if there were no errors
         if (m_debug) {
             oslcompiler->symtab().print ();
-//            if (! parseerr)
-            oslcompiler->shader()->print (std::cout);
+            if (oslcompiler->shader())
+                oslcompiler->shader()->print (std::cout);
         }
 
         if (! error_encountered()) {

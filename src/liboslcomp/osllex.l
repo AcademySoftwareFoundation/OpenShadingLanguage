@@ -58,11 +58,15 @@ ALPHA           [A-Za-z]
 DIGIT           [0-9]
  /* Integer literal */
 INTEGER         {DIGIT}+
- /* floating point literal (E, FLT1, FLT2, FLT3 are just helpers) */
+ /* floating point literal (E, FLT1, FLT2, FLT3 are just helpers)
+  * NB: we don't allow leading +/- due to ambiguity between 
+  * whether "a-0.5" is really "a -0.5" or "a - 0.5".  Resolve this
+  * in the grammar.
+  */
 E               [eE][-+]?{DIGIT}+
-FLT1            [-+]?{DIGIT}+\.{DIGIT}*{E}?
-FLT2            [-+]?{DIGIT}*\.{DIGIT}+{E}?
-FLT3            [-+]?{DIGIT}+{E}
+FLT1            {DIGIT}+\.{DIGIT}*{E}?
+FLT2            {DIGIT}*\.{DIGIT}+{E}?
+FLT3            {DIGIT}+{E}
 FLT             {FLT1}|{FLT2}|{FLT3}
  /* string literal */
 STR     \"(\\.|[^\\"])*\"

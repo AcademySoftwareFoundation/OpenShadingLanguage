@@ -581,7 +581,17 @@ expression
         | binary_expression
         | unary_op expression %prec UMINUS_PREC
                 {
-                    $$ = new ASTunary_expression (oslcompiler, $1, $2);
+                    // Correct for literal +float -float
+                    if ($1 == ASTNode::Add) {
+                        $$ = $2;
+                    } else if ($1 == ASTNode::Sub &&
+                               $2->nodetype() == ASTNode::literal_node &&
+                               $2->typespec().is_numeric()) {
+                         ((ASTliteral *)$2)->negate ();
+                         $$ = $2;
+                    } else {
+                        $$ = new ASTunary_expression (oslcompiler, $1, $2);
+                    }
                 }
         | '(' expression ')'                    { $$ = $2; }
         | function_call

@@ -673,6 +673,8 @@ public:
     int intval () const { return m_i; }
     float floatval () const { return m_typespec.is_int() ? (float)m_i : m_f; }
 
+    void negate () { m_i = -m_i;  m_f = -m_f; }
+
 private:
     ustring m_s;
     int m_i;

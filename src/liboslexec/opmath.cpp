@@ -40,56 +40,6 @@ namespace pvt {
 
 namespace {
 
-// Proxy type that derives from Vec3 but allows some additional operations
-// not normally supported by Imath::Vec3.
-class VecProxy : public Vec3 {
-public:
-    VecProxy (float a) : Vec3(a,a,a) { }
-    VecProxy (float a, float b, float c) : Vec3(a,b,c) { }
-    VecProxy (const Vec3& v) : Vec3(v) { }
-
-    friend VecProxy operator+ (const Vec3 &v, float f) {
-        return VecProxy (v.x+f, v.y+f, v.z+f);
-    }
-    friend VecProxy operator+ (float f, const Vec3 &v) {
-        return VecProxy (v.x+f, v.y+f, v.z+f);
-    }
-    friend VecProxy operator- (const Vec3 &v, float f) {
-        return VecProxy (v.x-f, v.y-f, v.z-f);
-    }
-    friend VecProxy operator- (float f, const Vec3 &v) {
-        return VecProxy (f-v.x, f-v.y, f-v.z);
-    }
-    friend VecProxy operator* (const Vec3 &v, int f) {
-        return VecProxy (v.x*f, v.y*f, v.z*f);
-    }
-    friend VecProxy operator* (int f, const Vec3 &v) {
-        return VecProxy (v.x*f, v.y*f, v.z*f);
-    }
-    friend VecProxy operator/ (const Vec3 &v, int f) {
-        if (f == 0)
-            return VecProxy(0.0);
-        return VecProxy (v.x/f, v.y/f, v.z/f);
-    }
-    friend VecProxy operator/ (float f, const Vec3 &v) {
-        return VecProxy (v.x == 0.0 ? 0.0 : f/v.x, 
-                         v.y == 0.0 ? 0.0 : f/v.y,
-                         v.z == 0.0 ? 0.0 : f/v.z);
-    }
-    friend VecProxy operator/ (int f, const Vec3 &v) {
-        return VecProxy (v.x == 0.0 ? 0.0 : f/v.x, 
-                         v.y == 0.0 ? 0.0 : f/v.y,
-                         v.z == 0.0 ? 0.0 : f/v.z);
-    }
-    friend bool operator== (const Vec3 &v, float f) {
-        return v.x == f && v.y == f && v.z == f;
-    }
-    friend bool operator== (const Vec3 &v, int f) {
-        return v.x == f && v.y == f && v.z == f;
-    }
-};
-
-
 // Make a templated functor that encapsulates addition.
 template<class R, class A, class B>
 class Add {

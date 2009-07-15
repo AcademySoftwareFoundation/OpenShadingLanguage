@@ -38,26 +38,6 @@ namespace OSL {
 namespace pvt {
 
 
-// Proxy type that derives from Matrix44 but allows assignment of a float
-// to mean f*Identity.
-class MatrixProxy : public Matrix44 {
-public:
-    MatrixProxy (float a, float b, float c, float d,
-                 float e, float f, float g, float h,
-                 float i, float j, float k, float l,
-                 float m, float n, float o, float p)
-        : Matrix44 (a,b,c,d, e,f,g,h, i,j,k,l, m,n,o,p) { }
-
-    MatrixProxy (float f) : Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f) { }
-
-    const MatrixProxy& operator= (float f) {
-        *this = MatrixProxy (f);
-        return *this;
-    }
-};
-
-
-
 // Heavy lifting of 'assign', this is a specialized version that knows
 // the types of the arguments.
 template <class RET, class SRC>

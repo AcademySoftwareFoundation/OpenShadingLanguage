@@ -6,6 +6,8 @@ test ()
         printf ("float:\n");
         float a = 0.7;
         float b = 0.2;
+        printf ("  %g == %g = %d\n", a, b, a==b);
+        printf ("  %g != %g = %d\n", a, b, a!=b);
         printf ("  %g < %g = %d\n", a, b, a<b);
         printf ("  %g <= %g = %d\n", a, b, a<=b);
         printf ("  %g > %g = %d\n", a, b, a>b);
@@ -14,6 +16,8 @@ test ()
         printf (" varying:\n");
         a = u+0.5;
         b = v+0.5;
+        printf ("  %g == %g = %d\n", a, b, a==b);
+        printf ("  %g != %g = %d\n", a, b, a!=b);
         printf ("  %g < %g = %d\n", a, b, a<b);
         printf ("  %g <= %g = %d\n", a, b, a<=b);
         printf ("  %g > %g = %d\n", a, b, a>b);
@@ -23,9 +27,11 @@ test ()
 
     // int
     {
-        printf ("xint:\n");
+        printf ("int:\n");
         int a = 7;
         int b = 2;
+        printf ("  %d == %d = %d\n", a, b, a==b);
+        printf ("  %d != %d = %d\n", a, b, a!=b);
         printf ("  %d < %d = %d\n", a, b, a<b);
         printf ("  %d <= %d = %d\n", a, b, a<=b);
         printf ("  %d > %d = %d\n", a, b, a>b);
@@ -36,6 +42,8 @@ test ()
         printf (" varying:\n");
         a = u+0.5;
         b = v+0.5;
+        printf ("  %d == %d = %d\n", a, b, a==b);
+        printf ("  %d != %d = %d\n", a, b, a!=b);
         printf ("  %d < %d = %d\n", a, b, a<b);
         printf ("  %d <= %d = %d\n", a, b, a<=b);
         printf ("  %d > %d = %d\n", a, b, a>b);
@@ -44,4 +52,77 @@ test ()
 #endif
     }
 
+    // triple
+    {
+        printf ("triple:\n");
+        color a = 0.7;
+        color b = 0.2;
+        color c = 0.7;
+        float f = 0.2;
+        printf ("  %g == %g = %d\n", a, b, a==b);
+        printf ("  %g == %g = %d\n", a, c, a==c);
+        printf ("  %g == %g = %d\n", a, f, a==f);
+        printf ("  %g == %g = %d\n", b, f, b==f);
+        printf ("  %g != %g = %d\n", a, b, a!=b);
+        printf ("  %g != %g = %d\n", a, c, a!=c);
+        printf ("  %g != %g = %d\n", a, f, a!=f);
+        printf ("  %g != %g = %d\n", b, f, b!=f);
+
+        printf (" varying:\n");
+        a = u+0.5;
+        b = v+0.5;
+        f = 0.5;
+        printf ("  %g == %g = %d\n", a, b, a==b);
+        printf ("  %g == %g = %d\n", a, c, a==c);
+        printf ("  %g == %g = %d\n", a, f, a==f);
+        printf ("  %g == %g = %d\n", b, f, b==f);
+        printf ("  %g != %g = %d\n", a, b, a!=b);
+        printf ("  %g != %g = %d\n", a, c, a!=c);
+        printf ("  %g != %g = %d\n", a, f, a!=f);
+        printf ("  %g != %g = %d\n", b, f, b!=f);
+        printf ("\n");
+    }
+
+    // matrix
+    {
+        printf ("matrix:\n");
+        matrix a = 1;
+        matrix b = 0.2;
+        float f = 1;
+        printf ("  %g == %g = %d\n", a, b, a==b);
+        printf ("  %g == %g = %d\n", a, f, a==f);
+        printf ("  %g == %g = %d\n", b, f, b==f);
+        printf ("  %g != %g = %d\n", a, b, a!=b);
+        printf ("  %g != %g = %d\n", a, f, a!=f);
+        printf ("  %g != %g = %d\n", b, f, b!=f);
+#if 0
+        printf (" varying:\n");
+        a = a * u;
+        printf ("  %g == %g = %d\n", a, b, a==b);
+        printf ("  %g == %g = %d\n", a, f, a==f);
+        printf ("  %g == %g = %d\n", b, f, b==f);
+        printf ("  %g != %g = %d\n", a, b, a!=b);
+        printf ("  %g != %g = %d\n", a, f, a!=f);
+        printf ("  %g != %g = %d\n", b, f, b!=f);
+        printf ("\n");
+#endif
+    }
+
+    // string
+    {
+        printf ("string:\n");
+        string a = "hi";
+        string b = "there";
+        string c = "hi";
+        printf ("  \"%s\" == \"%s\" = %d\n", a, b, a==b);
+        printf ("  \"%s\" != \"%s\" = %d\n", a, b, a!=b);
+        printf ("  \"%s\" == \"%s\" = %d\n", a, c, a==c);
+        printf ("  \"%s\" != \"%s\" = %d\n", a, c, a!=c);
+
+#if 0
+        // FIXME - test varying strings
+        printf (" varying:\n");
+        printf ("\n");
+#endif
+    }
 }

@@ -170,6 +170,7 @@ static OpNameEntry op_name_entries[] = {
     { "assign", OP_assign },
     { "div", OP_div },
     { "end", OP_end },
+    { "eq", OP_eq },
     { "ge", OP_ge },
     { "gt", OP_gt },
     { "le", OP_le },
@@ -177,6 +178,7 @@ static OpNameEntry op_name_entries[] = {
     { "mod", OP_mod },
     { "mul", OP_mul },
     { "neg", OP_neg },
+    { "neq", OP_neq },
     { "printf", OP_printf },
     { "sub", OP_sub },
     { NULL, NULL}

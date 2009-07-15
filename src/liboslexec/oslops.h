@@ -104,7 +104,7 @@ DECLOP (OP_end);
 //DECLOP (OP_exp);
 //DECLOP (OP_exp2);
 //DECLOP (OP_expm1);
-//DECLOP (OP_eq);
+DECLOP (OP_eq);
 //DECLOP (OP_fabs);
 //DECLOP (OP_faceforward);
 //DECLOP (OP_filterwidth);
@@ -146,7 +146,7 @@ DECLOP (OP_lt);
 //DECLOP (OP_mxcompref);
 DECLOP (OP_mod);
 DECLOP (OP_mul);
-//DECLOP (OP_neq);
+DECLOP (OP_neq);
 DECLOP (OP_neg);
 //DECLOP (OP_noise);
 //DECLOP (OP_normal);
@@ -280,6 +280,116 @@ DECLOP (unary_op)
 }
 
 
+
+// Proxy type that derives from Vec3 but allows some additional operations
+// not normally supported by Imath::Vec3.  This is purely for convenience.
+class VecProxy : public Vec3 {
+public:
+    VecProxy (float a) : Vec3(a,a,a) { }
+    VecProxy (float a, float b, float c) : Vec3(a,b,c) { }
+    VecProxy (const Vec3& v) : Vec3(v) { }
+
+    friend VecProxy operator+ (const Vec3 &v, float f) {
+        return VecProxy (v.x+f, v.y+f, v.z+f);
+    }
+    friend VecProxy operator+ (float f, const Vec3 &v) {
+        return VecProxy (v.x+f, v.y+f, v.z+f);
+    }
+    friend VecProxy operator- (const Vec3 &v, float f) {
+        return VecProxy (v.x-f, v.y-f, v.z-f);
+    }
+    friend VecProxy operator- (float f, const Vec3 &v) {
+        return VecProxy (f-v.x, f-v.y, f-v.z);
+    }
+    friend VecProxy operator* (const Vec3 &v, int f) {
+        return VecProxy (v.x*f, v.y*f, v.z*f);
+    }
+    friend VecProxy operator* (int f, const Vec3 &v) {
+        return VecProxy (v.x*f, v.y*f, v.z*f);
+    }
+    friend VecProxy operator/ (const Vec3 &v, int f) {
+        if (f == 0)
+            return VecProxy(0.0);
+        return VecProxy (v.x/f, v.y/f, v.z/f);
+    }
+    friend VecProxy operator/ (float f, const Vec3 &v) {
+        return VecProxy (v.x == 0.0 ? 0.0 : f/v.x, 
+                         v.y == 0.0 ? 0.0 : f/v.y,
+                         v.z == 0.0 ? 0.0 : f/v.z);
+    }
+    friend VecProxy operator/ (int f, const Vec3 &v) {
+        return VecProxy (v.x == 0.0 ? 0.0 : f/v.x, 
+                         v.y == 0.0 ? 0.0 : f/v.y,
+                         v.z == 0.0 ? 0.0 : f/v.z);
+    }
+    friend bool operator== (const Vec3 &v, float f) {
+        return v.x == f && v.y == f && v.z == f;
+    }
+    friend bool operator== (const Vec3 &v, int f) {
+        return v.x == f && v.y == f && v.z == f;
+    }
+    friend bool operator== (float f, const Vec3 &v) {
+        return v.x == f && v.y == f && v.z == f;
+    }
+    friend bool operator== (int f, const Vec3 &v) {
+        return v.x == f && v.y == f && v.z == f;
+    }
+
+    friend bool operator!= (const Vec3 &v, float f) {
+        return v.x != f || v.y != f || v.z != f;
+    }
+    friend bool operator!= (const Vec3 &v, int f) {
+        return v.x != f || v.y != f || v.z != f;
+    }
+    friend bool operator!= (float f, const Vec3 &v) {
+        return v.x != f || v.y != f || v.z != f;
+    }
+    friend bool operator!= (int f, const Vec3 &v) {
+        return v.x != f || v.y != f || v.z != f;
+    }
+};
+
+
+
+// Proxy type that derives from Matrix44 but allows assignment of a float
+// to mean f*Identity.
+class MatrixProxy : public Matrix44 {
+public:
+    MatrixProxy (float a, float b, float c, float d,
+                 float e, float f, float g, float h,
+                 float i, float j, float k, float l,
+                 float m, float n, float o, float p)
+        : Matrix44 (a,b,c,d, e,f,g,h, i,j,k,l, m,n,o,p) { }
+
+    MatrixProxy (float f) : Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f) { }
+
+    const MatrixProxy& operator= (float f) {
+        *this = MatrixProxy (f);
+        return *this;
+    }
+
+    friend bool operator== (const MatrixProxy &m, float f) {
+        MatrixProxy comp (f);
+        return m == comp;
+    }
+    friend bool operator== (const MatrixProxy &m, int f) {
+        MatrixProxy comp (f);
+        return m == comp;
+    }
+    friend bool operator== (float f, const MatrixProxy &m) { return m == f; }
+    friend bool operator== (int f, const MatrixProxy &m) { return m == f; }
+
+    friend bool operator!= (const MatrixProxy &m, float f) {
+        MatrixProxy comp (f);
+        return m != comp;
+    }
+    friend bool operator!= (const MatrixProxy &m, int f) {
+        MatrixProxy comp (f);
+        return m != comp;
+    }
+    friend bool operator!= (float f, const MatrixProxy &m) { return m != f; }
+    friend bool operator!= (int f, const MatrixProxy &m) { return m != f; }
+};
 
 
 

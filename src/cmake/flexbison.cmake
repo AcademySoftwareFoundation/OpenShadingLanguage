@@ -48,6 +48,15 @@ IF ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
         SET ( ${srclist} ${${srclist}} ${bisonoutputcxx} ${flexoutputcxx} )
         # MESSAGE (STATUS "  src list now ${${srclist}}")
         # MESSAGE (STATUS "  compiler headers = ${${compiler_headers}}")
+
+        # Be really sure that we prefer the FlexLexer.h that comes with
+        # the flex binary we're using, not some other one in the system.
+        GET_FILENAME_COMPONENT ( FLEX_UP ${FLEX_EXECUTABLE} PATH )
+        GET_FILENAME_COMPONENT ( FLEX_UP_UP ${FLEX_UP} PATH )
+        SET ( FLEX_INCLUDE_DIR "${FLEX_UP_UP}/include" )
+        MESSAGE (STATUS "Flex include dir = ${FLEX_INCLUDE_DIR}")
+        INCLUDE_DIRECTORIES ( ${FLEX_INCLUDE_DIR} )
+
         INCLUDE_DIRECTORIES ( ${CMAKE_CURRENT_BINARY_DIR} )
         INCLUDE_DIRECTORIES ( ${CMAKE_CURRENT_SOURCE_DIR} )
         ADD_CUSTOM_COMMAND ( OUTPUT ${bisonoutputcxx} 

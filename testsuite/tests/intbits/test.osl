@@ -1,0 +1,23 @@
+shader
+test ()
+{
+    int a = 7;
+    int b = 2;
+    int c = 8;
+    printf ("  %d & %d = %d\n", a, b, a & b);
+    printf ("  %d & %d = %d\n", a, c, a & c);
+    printf ("  %d | %d = %d\n", a, b, a | b);
+    printf ("  %d | %d = %d\n", a, c, a | c);
+    printf ("  %d ^ %d = %d\n", a, b, a ^ b);
+    printf ("  %d ^ %d = %d\n", a, c, a ^ c);
+    printf ("  %d << %d = %d\n", a, b, a << b);
+    printf ("  %d >> %d = %d\n", a, b, a >> b);
+
+#if 0
+    // FIXME - restore this once we get float-to-int casts
+    printf (" varying:\n");
+    a = u+0.5;
+    b = v+0.5;
+    printf ("\n");
+#endif
+}

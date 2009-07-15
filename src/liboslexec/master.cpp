@@ -168,6 +168,8 @@ struct OpNameEntry {
 static OpNameEntry op_name_entries[] = {
     { "add", OP_add },
     { "assign", OP_assign },
+    { "bitand", OP_bitand },
+    { "bitor", OP_bitor },
     { "div", OP_div },
     { "end", OP_end },
     { "eq", OP_eq },
@@ -180,7 +182,10 @@ static OpNameEntry op_name_entries[] = {
     { "neg", OP_neg },
     { "neq", OP_neq },
     { "printf", OP_printf },
+    { "shl", OP_shl },
+    { "shr", OP_shr },
     { "sub", OP_sub },
+    { "xor", OP_xor },
     { NULL, NULL}
 };
 

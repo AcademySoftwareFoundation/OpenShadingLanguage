@@ -65,8 +65,8 @@ DECLOP (OP_add);
 //DECLOP (OP_atan);
 //DECLOP (OP_atan2);
 DECLOP (OP_assign);
-//DECLOP (OP_bitand);
-//DECLOP (OP_bitor);
+DECLOP (OP_bitand);
+DECLOP (OP_bitor);
 //DECLOP (OP_bump);
 //DECLOP (OP_calculatenormal);
 //DECLOP (OP_ceil);
@@ -172,8 +172,8 @@ DECLOP (OP_printf);
 //DECLOP (OP_setattribute);
 //DECLOP (OP_setmessage);
 //DECLOP (OP_shadow);
-//DECLOP (OP_shl);
-//DECLOP (OP_shr);
+DECLOP (OP_shl);
+DECLOP (OP_shr);
 //DECLOP (OP_sign);
 //DECLOP (OP_sin);
 //DECLOP (OP_sinh);
@@ -196,7 +196,7 @@ DECLOP (OP_sub);
 //DECLOP (OP_trunc);
 //DECLOP (OP_vector);
 //DECLOP (OP_ward);
-//DECLOP (OP_xor);
+DECLOP (OP_xor);
 
 DECLOP (OP_missing);
 
@@ -206,13 +206,11 @@ DECLOP (OP_missing);
 // version that knows the types of the arguments and the operation to
 // perform (given by a functor).
 template <class RET, class ATYPE, class BTYPE, class FUNCTION>
-DECLOP (binary_op)
+inline void
+binary_op_guts (Symbol &Result, Symbol &A, Symbol &B,
+                ShadingExecution *exec, 
+                Runflag *runflags, int beginpoint, int endpoint)
 {
-    // Get references to the symbols this op accesses
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-    Symbol &B (exec->sym (args[2]));
-
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying() | B.is_varying(),
                           A.data() == Result.data() || B.data() == Result.data());
@@ -239,6 +237,22 @@ DECLOP (binary_op)
             if (runflags[i])
                 result[i] = function (a[i], b[i]);
     }
+}
+
+
+
+// Wrapper around binary_op_guts that does has he call signature of an
+// ordinary shadeop.
+template <class RET, class ATYPE, class BTYPE, class FUNCTION>
+DECLOP (binary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+                                              runflags, beginpoint, endpoint);
 }
 
 

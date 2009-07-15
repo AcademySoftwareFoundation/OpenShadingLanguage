@@ -55,25 +55,12 @@ void yyerror (const char *err);
 
 static TypeSpec current_typespec;
 
-
-
-// Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
-inline TypeDesc
-lextype (int lex)
-{
-    switch (lex) {
-    case COLORTYPE  : return TypeDesc::TypeColor;
-    case FLOATTYPE  : return TypeDesc::TypeFloat;
-    case INTTYPE    : return TypeDesc::TypeInt;
-    case MATRIXTYPE : return TypeDesc::TypeMatrix;
-    case NORMALTYPE : return TypeDesc::TypeNormal;
-    case POINTTYPE  : return TypeDesc::TypePoint;
-    case STRINGTYPE : return TypeDesc::TypeString;
-    case VECTORTYPE : return TypeDesc::TypeVector;
-    case VOIDTYPE   : return TypeDesc::NONE;
-    default: return PT_UNKNOWN;
-    }
-}
+// Forward declaration
+namespace OSL {
+namespace pvt {
+TypeDesc lextype (int lex);
+};
+};
 
 
 %}
@@ -333,3 +320,24 @@ yyerror (const char *err)
 }
 
 
+
+
+
+
+// Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
+TypeDesc
+OSL::pvt::lextype (int lex)
+{
+    switch (lex) {
+    case COLORTYPE  : return TypeDesc::TypeColor;
+    case FLOATTYPE  : return TypeDesc::TypeFloat;
+    case INTTYPE    : return TypeDesc::TypeInt;
+    case MATRIXTYPE : return TypeDesc::TypeMatrix;
+    case NORMALTYPE : return TypeDesc::TypeNormal;
+    case POINTTYPE  : return TypeDesc::TypePoint;
+    case STRINGTYPE : return TypeDesc::TypeString;
+    case VECTORTYPE : return TypeDesc::TypeVector;
+    case VOIDTYPE   : return TypeDesc::NONE;
+    default: return PT_UNKNOWN;
+    }
+}

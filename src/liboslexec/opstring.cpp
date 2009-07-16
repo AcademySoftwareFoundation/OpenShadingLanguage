@@ -26,6 +26,14 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/////////////////////////////////////////////////////////////////////////
+/// \file
+///
+/// Shader interpreter implementation of string functions
+/// such as format, concat, printf, etc.
+///
+/////////////////////////////////////////////////////////////////////////
+
 #include "oslops.h"
 #include "oslexec_pvt.h"
 

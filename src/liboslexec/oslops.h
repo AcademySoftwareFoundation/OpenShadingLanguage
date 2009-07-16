@@ -78,7 +78,7 @@ DECLOP (OP_bitor);
 //DECLOP (OP_compref);
 //DECLOP (OP_concat);
 //DECLOP (OP_cooktorrance);
-//DECLOP (OP_cos);
+DECLOP (OP_cos);
 //DECLOP (OP_cosh);
 //DECLOP (OP_cross);
 //DECLOP (OP_decr);

@@ -1,0 +1,40 @@
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
+
+shader
+test ()
+{
+    {
+        float a = 0;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+        a = M_PI/4;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+        a = M_PI/2;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+        a = M_PI;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+    }
+
+    { 
+        vector a = 0;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+        a = M_PI/4;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+        a = M_PI/2;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+        a = M_PI;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+    }
+
+    printf (" varying:\n");
+    {
+        float a = u;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+    }
+    {
+        color a = u;
+        printf ("  cos (%g) = %g\n", a, cos(a));
+    }
+}

@@ -89,7 +89,7 @@ endmacro ()
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
 #TESTSUITE ( oslc-empty )
-TESTSUITE ( arithmetic comparison if intbits )
+TESTSUITE ( arithmetic comparison if intbits trig )
 
 
 

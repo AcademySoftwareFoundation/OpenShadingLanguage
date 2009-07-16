@@ -187,13 +187,6 @@ public:
     /// array.  For a non-array, just return the type.
     TypeSpec elementtype () const { TypeSpec t; t.make_array (0); return t; }
 
-    /// Is it an "aggregate" type, meaning a structure, closure, array,
-    /// or a simple type that isn't a scalar (such as a vector/point)?
-    bool is_aggregate () const {
-        return !is_structure() && !is_closure() && 
-               !is_array() && m_simple.aggregate != TypeDesc::SCALAR;
-    }
-
     /// Return the aggregateness of the underlying simple type (SCALAR,
     /// VEC3, or MATRIX44).
     TypeDesc::AGGREGATE aggregate () const { return (TypeDesc::AGGREGATE)m_simple.aggregate; }

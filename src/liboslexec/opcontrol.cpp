@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 
 #include "OpenImageIO/varyingref.h"
+#include "OpenImageIO/sysutil.h"
 
 
 namespace OSL {
@@ -85,8 +86,40 @@ DECLOP (OP_if)
         return;
     }
 
-    // Varying condition or potential break/continue at play
-    ASSERT (0);
+    // From here on, varying condition or potential break/continue at play
+
+    // Generate new true and false runflags based on the condition
+    Runflag *true_runflags = ALLOCA (Runflag, exec->npoints());
+    memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
+    Runflag *false_runflags = ALLOCA (Runflag, exec->npoints());
+    memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            if (condition[i])
+                false_runflags[i] = RunflagOff;
+            else
+                true_runflags[i] = RunflagOff;
+        }
+    }
+
+    // True clause
+    exec->push_runflags (true_runflags, beginpoint, endpoint);
+    exec->run (exec->ip() + 1, op.jump(0));
+    exec->pop_runflags ();
+
+    // False clause
+    if (op.jump(0) < op.jump(1)) {
+        exec->push_runflags (false_runflags, beginpoint, endpoint);
+        exec->run (op.jump(0), op.jump(1));
+        exec->pop_runflags ();
+    }
+
+    // Jump to after the if (remember that the interpreter loop will
+    // increment the ip one more time, so back up one.
+    exec->ip (op.jump(1) - 1);
+
+    // FIXME -- we may need to call new_runflag_range here if, during
+    // execution, we may have hit a 'break' or 'continue'.
 }
 
 

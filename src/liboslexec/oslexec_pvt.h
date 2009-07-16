@@ -513,6 +513,14 @@ public:
     /// turned on.
     void new_runflag_range (int begin, int end);
 
+    /// Set up a new run state, with the old one safely stored on the
+    /// stack.
+    void push_runflags (Runflag *runflags, int beginpoint, int endpoint);
+
+    /// Restore the runflags to the state it was in before push_runflags().
+    ///
+    void pop_runflags ();
+
     bool debug () const { return m_debug; }
 
     /// Find the named symbol.  Return NULL if no such symbol is found.
@@ -542,13 +550,29 @@ private:
     bool m_bound;                 ///< Have we been bound?
     bool m_executed;              ///< Have we been executed?
     bool m_debug;                 ///< Debug mode
+    SymbolVec m_symbols;          ///< Our own copy of the syms
+
+    // A word about runflags and the runflag stack: the head of the
+    // stack contains a copy of the CURRENT run state.  This is so that
+    // certain operations can affect the whole set of runstates by
+    // simply iterating over the stack entries, without treating the
+    // current run state as a special case.
+    struct Runstate {
+        Runflag *runflags;
+        int beginpoint, endpoint;
+        bool allpointson;
+        Runstate (Runflag *rf, int bp, int ep, bool all) 
+            : runflags(rf), beginpoint(bp), endpoint(ep), allpointson(all) {}
+    };
+    typedef std::vector<Runstate> RunflagStack;
+
     Runflag *m_runflags;          ///< Current runflags
     int m_beginpoint;             ///< First point to shade
     int m_endpoint;               ///< One past last point to shade
     bool m_all_points_on;         ///< Are all points turned on?
-    std::vector<Runflag *> m_runfag_stack;  ///< Stack of runflags
+    RunflagStack m_runflag_stack; ///< Stack of runflags
     int m_ip;                     ///< Instruction pointer
-    SymbolVec m_symbols;          ///< Our own copy of the syms
+
 };
 
 

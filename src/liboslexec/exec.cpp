@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/strutil.h"
+#include "OpenImageIO/sysutil.h"
 
 #include "oslexec_pvt.h"
 
@@ -195,26 +196,22 @@ ShadingExecution::run (Runflag *rf)
     ASSERT (m_bound);  // We'd better be bound at this point
 
     // Make space for new runflags
-    m_runflags = (Runflag *) alloca (m_npoints * sizeof(Runflag));
+    Runflag *runflags = ALLOCA (Runflag, m_npoints);
     if (rf) {
         // Passed runflags -- copy those
-        memcpy (m_runflags, rf, m_npoints*sizeof(Runflag));
-        new_runflag_range (0, m_npoints);
+        memcpy (runflags, rf, m_npoints*sizeof(Runflag));
     } else {
         // If not passed runflags, make new ones
         for (int i = 0;  i < m_npoints;  ++i)
-            m_runflags[i] = 1;
-        m_beginpoint = 0;
-        m_endpoint = m_npoints;
-        m_all_points_on = true;
+            runflags[i] = RunflagOn;
     }
 
-    // FIXME -- push the runflags, begin, end
+    push_runflags (runflags, 0, m_npoints);
 
     // FIXME -- this runs every op.  Really, we just want the main code body.
     run (0, (int)m_master->m_ops.size());
 
-    // FIXME -- pop the runflags, begin, end
+    pop_runflags ();
 
     m_executed = true;
 }
@@ -320,6 +317,36 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
         // we're not inside a conditional.  Safe to demote sym to uniform.
         if (sym.symtype() != SymTypeGlobal) // DO NOT demote a global
             sym.step (0);
+    }
+}
+
+
+
+void
+ShadingExecution::push_runflags (Runflag *runflags,
+                                 int beginpoint, int endpoint)
+{
+    ASSERT (runflags != NULL);
+    m_runflags = runflags;
+    new_runflag_range (beginpoint, endpoint);
+    m_runflag_stack.push_back (Runstate (m_runflags, m_beginpoint,
+                                         m_endpoint, m_all_points_on));
+}
+
+
+
+void
+ShadingExecution::pop_runflags ()
+{
+    m_runflag_stack.pop_back ();
+    if (m_runflag_stack.size()) {
+        const Runstate &r (m_runflag_stack.back());
+        m_runflags = r.runflags;
+        m_beginpoint = r.beginpoint;
+        m_endpoint = r.endpoint;
+        m_all_points_on = r.allpointson;
+    } else {
+        m_runflags = NULL;
     }
 }
 

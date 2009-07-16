@@ -18,4 +18,11 @@ test ()
         printf ("2-clause uniform if %d:  true - Should NOT NOT NOT print this!\n", zero);
     else
         printf ("2-clause uniform if %d:  false - Should print this\n", zero);
+
+    printf ("Test varying if:\n");
+    if (u < v) {
+        printf ("u less than v: %g < %g\n", u, v);
+    } else {
+        printf ("u greater or equal than v: %g >= %g\n", u, v);
+    }
 }

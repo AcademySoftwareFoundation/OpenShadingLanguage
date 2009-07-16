@@ -84,7 +84,7 @@ typedef unsigned char Runflag;
 
 /// Pre-defined values for Runflag's.
 ///
-enum RunFlagVal { RunFlagOff = 0, RunFlagOn = 255 };
+enum RunflagVal { RunflagOff = 0, RunflagOn = 255 };
 
 
 

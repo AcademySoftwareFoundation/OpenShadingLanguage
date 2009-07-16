@@ -1,6 +1,6 @@
 SET ( liboslexec_srcs context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          opassign.cpp opcompare.cpp opinteger.cpp 
+          opassign.cpp opcompare.cpp opcontrol.cpp opinteger.cpp 
           opmath.cpp opmisc.cpp opstring.cpp
           oslexec.cpp osoreader.cpp shadingsys.cpp 
     )

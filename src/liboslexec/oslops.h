@@ -121,7 +121,7 @@ DECLOP (OP_ge);
 DECLOP (OP_gt);
 //DECLOP (OP_hash);
 //DECLOP (OP_hypot);
-//DECLOP (OP_if);
+DECLOP (OP_if);
 //DECLOP (OP_incr);
 //DECLOP (OP_inversespline);
 //DECLOP (OP_inversesqrt);

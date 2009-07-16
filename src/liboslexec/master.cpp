@@ -175,6 +175,7 @@ static OpNameEntry op_name_entries[] = {
     { "eq", OP_eq },
     { "ge", OP_ge },
     { "gt", OP_gt },
+    { "if", OP_if },
     { "le", OP_le },
     { "lt", OP_lt },
     { "mod", OP_mod },

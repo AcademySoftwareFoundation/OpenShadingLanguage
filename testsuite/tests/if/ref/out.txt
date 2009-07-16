@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+1-clause uniform if 7:  Should print this
+2-clause uniform if 7:  true - Should print this
+2-clause uniform if 0:  false - Should print this
+

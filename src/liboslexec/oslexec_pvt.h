@@ -475,6 +475,14 @@ public:
     ///
     Symbol &sym (int index) { return m_symbols[index]; }
 
+    /// Return the current instruction pointer index.
+    ///
+    int ip () const { return m_ip; }
+
+    /// Set the instruction pointer index -- JUMP!
+    ///
+    void ip (int target) { m_ip = target; }
+
     /// Return a reference to the current op (pointed to by the instruction
     /// pointer).
     Opcode & op () const { return m_master->m_ops[m_ip]; }

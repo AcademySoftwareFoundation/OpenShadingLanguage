@@ -86,7 +86,10 @@ public:
 
 
 // Generic template for implementing "T func(T)" where T can be either
-// float or triple.
+// float or triple.  This expands to a function that checks the arguments
+// for valid type combinations, then dispatches to a further specialized
+// one for the individual types (but that doesn't do any more polymorphic
+// resolution or sanity checks).
 template<class FUNCTION>
 DECLOP (generic_unary_function_shadeop)
 {

@@ -73,7 +73,8 @@ namespace pvt {
 
 namespace {
 
-// Functors
+// Functors for the math functions
+
 class Cos {
 public:
     inline float operator() (float x) { return cosf (x); }
@@ -82,12 +83,12 @@ public:
     }
 };
 
-};  // End anonymous namespace
 
 
-
-
-DECLOP (OP_cos)
+// Generic template for implementing "T func(T)" where T can be either
+// float or triple.
+template<class FUNCTION>
+DECLOP (generic_unary_function_shadeop)
 {
     // 2 args, result and input.
     ASSERT (nargs == 2);
@@ -98,10 +99,10 @@ DECLOP (OP_cos)
 
     // We allow two flavors: float = func (float), and triple = func (triple)
     if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-        impl = unary_op<Vec3,Vec3, Cos >;
+        impl = unary_op<Vec3,Vec3, FUNCTION >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float()) {
-        impl = unary_op<float,float, Cos >;
+        impl = unary_op<float,float, FUNCTION >;
     }
 
     if (impl) {
@@ -118,6 +119,16 @@ DECLOP (OP_cos)
     }
 }
 
+};  // End anonymous namespace
+
+
+
+
+DECLOP (OP_cos)
+{
+    generic_unary_function_shadeop<Cos> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
 
 
 

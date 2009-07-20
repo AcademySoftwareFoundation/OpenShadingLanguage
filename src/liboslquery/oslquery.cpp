@@ -40,6 +40,10 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 
 namespace pvt {
@@ -271,3 +275,6 @@ OSLQuery::open (const std::string &shadername,
 
 };   // end namespace OSL
 
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

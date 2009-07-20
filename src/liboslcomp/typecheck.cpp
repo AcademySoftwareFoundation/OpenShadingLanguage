@@ -38,6 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ast.h"
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 namespace pvt {   // OSL::pvt
 
@@ -899,3 +903,7 @@ OSLCompilerImpl::typelist_from_code (const char *code)
 
 }; // namespace pvt
 }; // namespace OSL
+
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

@@ -67,6 +67,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/varyingref.h"
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 namespace OSL {
 namespace pvt {
 
@@ -137,3 +140,6 @@ DECLOP (OP_cos)
 
 }; // namespace pvt
 }; // namespace OSL
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

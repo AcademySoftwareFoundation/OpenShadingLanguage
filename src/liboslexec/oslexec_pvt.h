@@ -40,6 +40,10 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 namespace pvt {
 
@@ -619,5 +623,9 @@ private:
 
 }; // namespace OSL
 
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+using namespace OSL_NAMESPACE;
+#endif
 
 #endif /* OSLEXEC_PVT_H */

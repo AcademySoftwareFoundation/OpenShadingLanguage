@@ -47,6 +47,10 @@ Sony Pictures Imageworks terms, above.
 #include "OpenImageIO/typedesc.h"
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 
 namespace pvt {
@@ -137,6 +141,11 @@ private:
 
 
 }; /* end namespace OSL */
+
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+using namespace OSL_NAMESPACE;
+#endif
 
 
 #endif /* OSLQUERY_H */

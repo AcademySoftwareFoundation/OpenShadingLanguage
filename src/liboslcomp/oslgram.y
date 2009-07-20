@@ -55,11 +55,17 @@ using namespace OSL::pvt;
 
 
 // Forward declaration
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 namespace OSL {
 namespace pvt {
 TypeDesc lextype (int lex);
 };
 };
+#ifdef OSL_NAMESPACE {
+};
+#endif
 
 %}
 

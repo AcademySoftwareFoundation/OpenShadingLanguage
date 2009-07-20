@@ -34,6 +34,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/ustring.h"
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 namespace pvt {
 
@@ -519,5 +523,9 @@ typedef std::vector<Opcode> OpcodeVec;
 }; // namespace OSL::pvt
 }; // namespace OSL
 
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+using namespace OSL_NAMESPACE;
+#endif
 
 #endif /* OSL_PVT_H */

@@ -40,6 +40,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions ("-DDEBUG=1")
 endif ()
 
+if (OSL_NAMESPACE)
+    add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
+endif ()
+
 # use, i.e. don't skip the full RPATH for the build tree
 set (CMAKE_SKIP_BUILD_RPATH  FALSE)
 # when building, don't use the install RPATH already

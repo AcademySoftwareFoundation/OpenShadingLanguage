@@ -40,6 +40,14 @@ ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
 endif
 
+ifneq (${USE_TBB},)
+MY_CMAKE_FLAGS += -DUSE_TBB:BOOL=${USE_TBB}
+endif
+
+ifneq (${NAMESPACE},)
+MY_CMAKE_FLAGS += -DOSL_NAMESPACE:STRING=${NAMESPACE}
+endif
+
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -158,4 +166,6 @@ help:
 	@echo "Helpful modifiers:"
 	@echo "  make VERBOSE=1 ...          Show all compilation commands"
 	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
+	@echo "  make USE_TBB=0 ...          Don't use TBB"
+	@echo "  make NAMESPACE=name         Wrap everything in another namespace"
 	@echo ""

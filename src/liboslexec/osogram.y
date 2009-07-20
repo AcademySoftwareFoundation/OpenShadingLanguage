@@ -56,12 +56,17 @@ void yyerror (const char *err);
 static TypeSpec current_typespec;
 
 // Forward declaration
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 namespace OSL {
 namespace pvt {
 TypeDesc lextype (int lex);
 };
 };
-
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif
 
 %}
 

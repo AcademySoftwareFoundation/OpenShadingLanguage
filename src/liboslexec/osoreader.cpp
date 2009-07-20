@@ -42,8 +42,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FlexLexer.h"
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 namespace OSL {
-
 namespace pvt {   // OSL::pvt
 
 
@@ -86,3 +88,7 @@ OSOReader::parse (const std::string &filename)
 
 }; // namespace pvt
 }; // namespace OSL
+
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

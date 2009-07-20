@@ -30,6 +30,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSLCOMP_H
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 
 
@@ -53,6 +57,11 @@ public:
 
 
 }; // namespace OSL
+
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+using namespace OSL_NAMESPACE;
+#endif
 
 
 #endif /* OSLCOMP_H */

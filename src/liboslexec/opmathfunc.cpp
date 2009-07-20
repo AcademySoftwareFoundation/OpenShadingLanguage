@@ -86,6 +86,14 @@ public:
     }
 };
 
+class Sin {
+public:
+    inline float operator() (float x) { return sinf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (sinf (x[0]), sinf (x[1]), sinf (x[2]));
+    }
+};
+
 
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -133,6 +141,12 @@ DECLOP (generic_unary_function_shadeop)
 DECLOP (OP_cos)
 {
     generic_unary_function_shadeop<Cos> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_sin)
+{
+    generic_unary_function_shadeop<Sin> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

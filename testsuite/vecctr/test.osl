@@ -1,0 +1,21 @@
+shader
+test ()
+{
+    float a = 0.1, b = 0.2, c = 0.5;
+
+    point p;
+    printf ("  point (%g, %g, %g) = %g\n", a, b, c, point(a,b,c));
+    printf ("  vector (%g, %g, %g) = %g\n", a, b, c, vector(a,b,c));
+    printf ("  normal (%g, %g, %g) = %g\n", a, b, c, normal(a,b,c));
+
+    {
+        printf (" varying:\n");
+        float a = u;
+        float b = 1.0 + v;
+        float c = 0.5;
+
+        printf ("  point (%g, %g, %g) = %g\n", a, b, c, point(a,b,c));
+        printf ("  vector (%g, %g, %g) = %g\n", a, b, c, vector(a,b,c));
+        printf ("  normal (%g, %g, %g) = %g\n", a, b, c, normal(a,b,c));
+    }
+}

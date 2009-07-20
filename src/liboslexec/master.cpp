@@ -183,10 +183,13 @@ static OpNameEntry op_name_entries[] = {
     { "mul", OP_mul },
     { "neg", OP_neg },
     { "neq", OP_neq },
+    { "normal", OP_normal },
+    { "point", OP_point },
     { "printf", OP_printf },
     { "shl", OP_shl },
     { "shr", OP_shr },
     { "sub", OP_sub },
+    { "vector", OP_vector },
     { "xor", OP_xor },
     { NULL, NULL}
 };

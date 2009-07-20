@@ -492,7 +492,9 @@ public:
     /// uniform to varying, 'preserve_value' determines if the old value
     /// should be preserved (and replicated to fill the new varying
     /// space); it defaults to true (safe) but some shadeops may know
-    /// that this isn't necessary and safe the work.
+    /// that this isn't necessary and safe the work.  The value must
+    /// be preserved if there's a chance that any symbols being written
+    /// to are also symbols being read from in the same op.
     void adjust_varying (Symbol &sym, bool varying_assignment,
                          bool preserve_value = true);
 

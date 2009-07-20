@@ -26,8 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSOREADER_H
-#define OSOREADER_H
+#ifndef OSL_OSOREADER_H
+#define OSL_OSOREADER_H
 
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/typedesc.h"
@@ -131,4 +131,4 @@ private:
 }; // namespace OSL
 
 
-#endif /* OSOREADER_H */
+#endif /* OSL_OSOREADER_H */

@@ -26,8 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SYMTAB_H
-#define SYMTAB_H
+#ifndef OSL_SYMTAB_H
+#define OSL_SYMTAB_H
 
 #include <vector>
 #include <stack>
@@ -257,4 +257,4 @@ private:
 }; // namespace OSL
 
 
-#endif /* SYMTAB_H */
+#endif /* OSL_SYMTAB_H */

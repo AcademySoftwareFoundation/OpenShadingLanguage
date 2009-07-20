@@ -26,8 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef AST_H
-#define AST_H
+#ifndef OSL_AST_H
+#define OSL_AST_H
 
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/thread.h"
@@ -687,4 +687,4 @@ private:
 }; // namespace OSL
 
 
-#endif /* AST_H */
+#endif /* OSL_AST_H */

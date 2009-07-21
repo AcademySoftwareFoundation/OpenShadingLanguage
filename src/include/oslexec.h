@@ -40,6 +40,7 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
+class RendererServices;
 class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 class ShaderGlobals;
@@ -55,11 +56,16 @@ using pvt::ShaderInstanceRef;
 
 class ShadingSystem
 {
-public:
+protected:
+    /// ShadingSystem is an abstract class, its constructor is protected
+    /// so that ordinary users can't make an instance, but instead are
+    /// forced to request one via ShadingSystem::create().
     ShadingSystem ();
     virtual ~ShadingSystem ();
 
-    static ShadingSystem *create ();
+public:
+    static ShadingSystem *create (RendererServices *renderer=NULL,
+                                  TextureSystem *texturesystem=NULL);
     static void destroy (ShadingSystem *x);
 
     /// Set an attribute controlling the texture system.  Return true
@@ -180,6 +186,9 @@ private:
 
 
 
+/// ShaderGlobals holds references to data to be used for the "global"
+/// data for each point being shaded -- position, normal, uv
+/// coordinates, etc.
 class ShaderGlobals
 {
 public:
@@ -200,6 +209,17 @@ public:
     VaryingRef<Color3> Oi;             ///< Output opacities
 };
 
+
+
+/// RendererServices defines an abstract interface through which a 
+/// renderer may provide callback to the ShadingSystem.
+class RendererServices {
+public:
+    RendererServices () { }
+    virtual ~RendererServices () { }
+
+    
+};
 
 
 }; // namespace OSL

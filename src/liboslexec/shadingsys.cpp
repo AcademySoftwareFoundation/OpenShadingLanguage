@@ -43,14 +43,19 @@ using namespace OSL::pvt;
 
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
 namespace OSL {
 
 
 ShadingSystem *
-ShadingSystem::create ()
+ShadingSystem::create (RendererServices *renderer,
+                       TextureSystem *texturesystem)
 {
     // Doesn't need a shared cache
-    ShadingSystemImpl *ts = new ShadingSystemImpl;
+    ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem);
 #ifdef DEBUG
     std::cout << "creating new ShadingSystem " << (void *)ts << "\n";
 #endif
@@ -84,13 +89,24 @@ namespace pvt {   // OSL::pvt
 
 
 
-ShadingSystemImpl::ShadingSystemImpl ()
-    : m_in_group (false), m_statslevel (0), m_debug (false),
+ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
+                                      TextureSystem *texturesystem)
+    : m_texturesys(texturesystem),
+      m_in_group (false), m_statslevel (0), m_debug (false),
       m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
     init_global_heap_offsets ();
+
+    // If client didn't supply a texture system, create a new one
+    if (! m_texturesys) {
+        m_texturesys = TextureSystem::create (true /* shared */);
+        ASSERT (m_texturesys);
+        // Make some good guesses about default options
+        m_texturesys->attribute ("automip",  1);
+        m_texturesys->attribute ("autotile", 1);
+    }
 }
 
 
@@ -98,6 +114,8 @@ ShadingSystemImpl::ShadingSystemImpl ()
 ShadingSystemImpl::~ShadingSystemImpl ()
 {
     printstats ();
+    // N.B. just let m_texsys go -- if we asked for one to be created,
+    // we asked for a shared one.
 }
 
 
@@ -150,9 +168,12 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
 std::string
 ShadingSystemImpl::geterror () const
 {
-    lock_guard lock (m_errmutex);
-    std::string e = m_errormessage;
-    m_errormessage.clear();
+    std::string e;
+    std::string *errptr = m_errormessage.get ();
+    if (errptr) {
+        e = *errptr;
+        errptr->clear ();
+    }
     return e;
 }
 
@@ -161,12 +182,17 @@ ShadingSystemImpl::geterror () const
 void
 ShadingSystemImpl::error (const char *message, ...)
 {
-    lock_guard lock (m_errmutex);
+    std::string *errptr = m_errormessage.get ();
+    if (! errptr) {
+        errptr = new std::string;
+        m_errormessage.reset (errptr);
+    }
+    ASSERT (errptr != NULL);
+    if (errptr->size())
+        *errptr += '\n';
     va_list ap;
     va_start (ap, message);
-    if (m_errormessage.size())
-        m_errormessage += '\n';
-    m_errormessage += Strutil::vformat (message, ap);
+    *errptr += Strutil::vformat (message, ap);
     va_end (ap);
 }
 
@@ -356,5 +382,10 @@ ShadingSystemImpl::global_heap_offset (ustring name)
     return f != m_global_heap_offsets.end() ? f->second : -1;
 }
 
+
 }; // namespace pvt
 }; // namespace OSL
+
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

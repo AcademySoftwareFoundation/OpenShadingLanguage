@@ -29,9 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_PVT_H
 #define OSL_PVT_H
 
-#include "OpenImageIO/typedesc.h"
+#include "oslconfig.h"
+
 #include "OpenImageIO/dassert.h"
-#include "OpenImageIO/ustring.h"
 
 
 #ifdef OSL_NAMESPACE

@@ -29,10 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSLEXEC_PVT_H
 #define OSLEXEC_PVT_H
 
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/thread.h"
-#include "OpenImageIO/refcnt.h"
 
 #include "oslexec.h"
 #include "osl_pvt.h"
@@ -316,7 +313,8 @@ private:
 class ShadingSystemImpl : public ShadingSystem
 {
 public:
-    ShadingSystemImpl ();
+    ShadingSystemImpl (RendererServices *renderer=NULL,
+                       TextureSystem *texturesystem=NULL);
     virtual ~ShadingSystemImpl ();
 
     virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
@@ -359,10 +357,20 @@ public:
     ///
     bool debug () const { return m_debug; }
 
+    /// Return a reference to the renderer services object.
+    ///
+    RendererServices &renderer () const { return *m_renderer; }
+
+    /// Return a reference to the texture system.
+    ///
+    TextureSystem &texturesys () const { return *m_texturesys; }
+
 private:
     void printstats () const;
     void init_global_heap_offsets ();
 
+    RendererServices *m_renderer;         ///< Renderer services
+    TextureSystem *m_texturesys;          ///< Texture system
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
     int m_statslevel;                     ///< Statistics level
@@ -376,8 +384,10 @@ private:
     std::map<ustring,int> m_global_heap_offsets; ///< Heap offsets of globals
     size_t m_global_heap_total;           ///< Heap size for globals
     mutable mutex m_mutex;                ///< Thread safety
-    mutable mutex m_errmutex;             ///< Safety for error messages
-    mutable std::string m_errormessage;   ///< Saved error string.
+    /// Saved error string, per-thread
+    ///
+    mutable boost::thread_specific_ptr<std::string> m_errormessage;
+
     atomic_int m_stat_shaders_loaded;     ///< Stat: shaders loaded
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
     PeakCounter<int> m_stat_instances;    ///< Stat: instances

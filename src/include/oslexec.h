@@ -30,14 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSLEXEC_H
 
 
-#include "OpenImageIO/typedesc.h"
-#include "OpenImageIO/refcnt.h"
-#include "OpenImageIO/varyingref.h"
-
-#include <ImathVec.h>
-#include <ImathColor.h>
-#include <ImathMatrix.h>
-
+#include "oslconfig.h"
 
 
 
@@ -57,13 +50,6 @@ typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 };
 using pvt::ShaderInstanceRef;
 
-
-// Define vector types and precision we like to use as OSL::Float,
-// OSL::Vec3, etc.
-typedef float Float;
-typedef Imath::Vec3<Float> Vec3;
-typedef Imath::Matrix44<Float> Matrix44;
-typedef Imath::Color3<Float> Color3;
 
 
 

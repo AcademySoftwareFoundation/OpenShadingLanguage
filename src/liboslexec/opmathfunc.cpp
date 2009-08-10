@@ -166,6 +166,17 @@ public:
     }
 };
 
+// logarithmic/exponential functions
+
+class Log {
+public:
+    inline float operator() (float x) { return logf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (logf (x[0]), logf (x[1]), logf (x[2]));
+    }
+};
+
+// logarithmic/exponential functions
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -260,6 +271,12 @@ DECLOP (OP_sinh)
 DECLOP (OP_tanh)
 {
     generic_unary_function_shadeop<Tanh> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_log)
+{
+    generic_unary_function_shadeop<Log> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

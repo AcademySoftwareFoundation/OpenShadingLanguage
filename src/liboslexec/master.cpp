@@ -184,6 +184,7 @@ static OpNameEntry op_name_entries[] = {
     { "gt", OP_gt },
     { "if", OP_if },
     { "le", OP_le },
+    { "log", OP_log },
     { "lt", OP_lt },
     { "mod", OP_mod },
     { "mul", OP_mul },

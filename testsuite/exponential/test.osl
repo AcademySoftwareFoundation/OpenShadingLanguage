@@ -1,0 +1,32 @@
+#ifndef M_E
+#define M_E 2.718281828459
+#endif
+
+
+shader
+test ()
+{
+    {
+        float a = M_E;
+        printf ("  log (%g) = %g\n", a, log(a));
+        a = 10.0*M_E;
+        printf ("  log (%g) = %g\n", a, log(a));
+    }
+
+    { 
+        vector a = M_E;
+        printf ("  log (%g) = %g\n", a, log(a));
+        a = 10.0*M_E;
+        printf ("  log (%g) = %g\n", a, log(a));
+    }
+
+    printf (" varying:\n");
+    {
+        float a = u;
+        printf ("  log (%g) = %g\n", a, log(a));
+    }
+    {
+        color a = u;
+        printf ("  log (%g) = %g\n", a, log(a));
+    }
+}

@@ -78,6 +78,8 @@ namespace {
 
 // Functors for the math functions
 
+// regular trigonometric functions
+
 class Cos {
 public:
     inline float operator() (float x) { return cosf (x); }
@@ -93,6 +95,16 @@ public:
         return Vec3 (sinf (x[0]), sinf (x[1]), sinf (x[2]));
     }
 };
+
+class Tan {
+public:
+    inline float operator() (float x) { return tanf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (tanf (x[0]), tanf (x[1]), tanf (x[2]));
+    }
+};
+
+// inverse trigonometric functions
 
 class ACos {
     static inline float safe_acosf(float x) {
@@ -160,6 +172,12 @@ DECLOP (OP_cos)
 DECLOP (OP_sin)
 {
     generic_unary_function_shadeop<Sin> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_tan)
+{
+    generic_unary_function_shadeop<Tan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

@@ -189,7 +189,7 @@ DECLOP (OP_sin);
 DECLOP (OP_sub);
 //DECLOP (OP_substr);
 //DECLOP (OP_subsurface);
-//DECLOP (OP_tan);
+DECLOP (OP_tan);
 //DECLOP (OP_tanh);
 //DECLOP (OP_texture);
 //DECLOP (OP_transform);

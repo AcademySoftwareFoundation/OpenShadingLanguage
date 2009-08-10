@@ -732,6 +732,7 @@ static const char * builtin_func_args [] = {
     "log", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
     "log2", ANY_ONE_FLOAT_BASED, NULL,
     "log10", ANY_ONE_FLOAT_BASED, NULL,
+    "logb", ANY_ONE_FLOAT_BASED, NULL,
     "luminance", "fc", NULL,
     "max", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
     "min", "fff", "ccc", "ppp", "vvv", "nnn", NULL,

@@ -208,7 +208,13 @@ public:
     }
 };
 
-// logarithmic/exponential functions
+class Expm1 {
+public:
+    inline float operator() (float x) { return expm1f (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (expm1f (x[0]), expm1f (x[1]), expm1f (x[2]));
+    }
+};
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -333,6 +339,12 @@ DECLOP (OP_exp)
 DECLOP (OP_exp2)
 {
     generic_unary_function_shadeop<Exp2> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_expm1)
+{
+    generic_unary_function_shadeop<Expm1> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

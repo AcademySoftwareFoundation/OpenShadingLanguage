@@ -11,6 +11,7 @@ test ()
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
@@ -18,6 +19,7 @@ test ()
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
@@ -28,6 +30,7 @@ test ()
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
@@ -35,6 +38,7 @@ test ()
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
@@ -46,6 +50,7 @@ test ()
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log2 (%g) = %g\n", a, log2 (a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
@@ -55,6 +60,7 @@ test ()
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));

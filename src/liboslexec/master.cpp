@@ -190,6 +190,7 @@ static OpNameEntry op_name_entries[] = {
     { "log", OP_log },
     { "log10", OP_log10 },
     { "log2", OP_log2 },
+    { "logb", OP_logb },
     { "lt", OP_lt },
     { "mod", OP_mod },
     { "mul", OP_mul },

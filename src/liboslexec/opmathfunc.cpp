@@ -192,6 +192,14 @@ public:
     }
 };
 
+class Logb {
+public:
+    inline float operator() (float x) { return logbf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (logbf (x[0]), logbf (x[1]), logbf (x[2]));
+    }
+};
+
 class Exp {
 public:
     inline float operator() (float x) { return expf (x); }
@@ -327,6 +335,12 @@ DECLOP (OP_log2)
 DECLOP (OP_log10)
 {
     generic_unary_function_shadeop<Log10> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_logb)
+{
+    generic_unary_function_shadeop<Logb> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

@@ -107,10 +107,10 @@ public:
 // inverse trigonometric functions
 
 class ACos {
-    static inline float safe_acosf(float x) {
+    static inline float safe_acosf (float x) {
         if (x >=  1.0f) return 0.0f;
         if (x <= -1.0f) return M_PI;
-        return acosf(x);
+        return acosf (x);
     }
 public:
     inline float operator() (float x) { return safe_acosf (x); }

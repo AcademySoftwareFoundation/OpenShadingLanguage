@@ -119,6 +119,19 @@ public:
     }
 };
 
+class ASin {
+    static inline float safe_asinf (float x) {
+        if (x >=  1.0f) return  M_PI/2;
+        if (x <= -1.0f) return -M_PI/2;
+        return asinf (x);
+    }
+public:
+    inline float operator() (float x) { return safe_asinf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (safe_asinf (x[0]), safe_asinf (x[1]), safe_asinf (x[2]));
+    }
+};
+
 
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -184,6 +197,12 @@ DECLOP (OP_tan)
 DECLOP (OP_acos)
 {
     generic_unary_function_shadeop<ACos> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_asin)
+{
+    generic_unary_function_shadeop<ASin> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

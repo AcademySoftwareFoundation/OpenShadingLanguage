@@ -65,7 +65,7 @@ DECLOP (OP_add);
 //DECLOP (OP_area);
 //DECLOP (OP_aref);
 //DECLOP (OP_arraylength);
-//DECLOP (OP_asin);
+DECLOP (OP_asin);
 //DECLOP (OP_atan);
 //DECLOP (OP_atan2);
 DECLOP (OP_assign);

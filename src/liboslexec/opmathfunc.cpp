@@ -140,6 +140,16 @@ public:
     }
 };
 
+// hyperbolic functions
+
+class Cosh {
+public:
+    inline float operator() (float x) { return coshf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (coshf (x[0]), coshf (x[1]), coshf (x[2]));
+    }
+};
+
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -218,6 +228,13 @@ DECLOP (OP_atan)
     generic_unary_function_shadeop<ATan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
+
+DECLOP (OP_cosh)
+{
+    generic_unary_function_shadeop<Cosh> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
 
 
 }; // namespace pvt

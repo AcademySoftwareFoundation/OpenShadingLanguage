@@ -94,6 +94,19 @@ public:
     }
 };
 
+class ACos {
+    static inline float safe_acosf(float x) {
+        if (x >=  1.0f) return 0.0f;
+        if (x <= -1.0f) return M_PI;
+        return acosf(x);
+    }
+public:
+    inline float operator() (float x) { return safe_acosf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (safe_acosf (x[0]), safe_acosf (x[1]), safe_acosf (x[2]));
+    }
+};
+
 
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -147,6 +160,12 @@ DECLOP (OP_cos)
 DECLOP (OP_sin)
 {
     generic_unary_function_shadeop<Sin> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_acos)
+{
+    generic_unary_function_shadeop<ACos> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

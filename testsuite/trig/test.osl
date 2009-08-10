@@ -10,30 +10,38 @@ test ()
         float a = 0;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
         a = M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
         a = M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
         a = M_PI;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
     }
 
     { 
         vector a = 0;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
         a = M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
         a = M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
         a = M_PI;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
     }
 
     printf (" varying:\n");
@@ -41,10 +49,12 @@ test ()
         float a = u;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
     }
     {
         color a = u;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
+        printf ("  acos (%g) = %g\n", a, acos(a));
     }
 }

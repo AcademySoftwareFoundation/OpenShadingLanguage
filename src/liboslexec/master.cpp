@@ -168,6 +168,7 @@ struct OpNameEntry {
 
 // Static table of opcode names and implementations
 static OpNameEntry op_name_entries[] = {
+    { "acos", OP_acos },
     { "add", OP_add },
     { "assign", OP_assign },
     { "bitand", OP_bitand },

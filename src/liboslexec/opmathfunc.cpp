@@ -192,6 +192,14 @@ public:
     }
 };
 
+class Exp {
+public:
+    inline float operator() (float x) { return expf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (expf (x[0]), expf (x[1]), expf (x[2]));
+    }
+};
+
 // logarithmic/exponential functions
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -308,6 +316,11 @@ DECLOP (OP_log10)
                                          runflags, beginpoint, endpoint);
 }
 
+DECLOP (OP_exp)
+{
+    generic_unary_function_shadeop<Exp> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
 
 
 }; // namespace pvt

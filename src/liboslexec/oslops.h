@@ -105,7 +105,7 @@ DECLOP (OP_end);
 //DECLOP (OP_erfc);
 //DECLOP (OP_error);
 //DECLOP (OP_exit);
-//DECLOP (OP_exp);
+DECLOP (OP_exp);
 //DECLOP (OP_exp2);
 //DECLOP (OP_expm1);
 DECLOP (OP_eq);

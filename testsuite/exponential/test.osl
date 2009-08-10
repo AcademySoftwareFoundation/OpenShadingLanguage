@@ -9,24 +9,30 @@ test ()
     {
         float a = M_E;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
         a = 10.0*M_E;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
     }
 
     { 
         vector a = M_E;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
         a = 10.0*M_E;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
     }
 
     printf (" varying:\n");
     {
         float a = u;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log2 (%g) = %g\n", a, log2 (a));
     }
     {
         color a = u;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
     }
 }

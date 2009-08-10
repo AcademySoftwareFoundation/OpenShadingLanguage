@@ -176,6 +176,14 @@ public:
     }
 };
 
+class Log2 {
+public:
+    inline float operator() (float x) { return log2f (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (log2f (x[0]), log2f (x[1]), log2f (x[2]));
+    }
+};
+
 // logarithmic/exponential functions
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -277,6 +285,12 @@ DECLOP (OP_tanh)
 DECLOP (OP_log)
 {
     generic_unary_function_shadeop<Log> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_log2)
+{
+    generic_unary_function_shadeop<Log2> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

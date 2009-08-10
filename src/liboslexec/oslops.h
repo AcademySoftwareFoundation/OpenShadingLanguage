@@ -137,7 +137,7 @@ DECLOP (OP_if);
 DECLOP (OP_le);
 //DECLOP (OP_length);
 DECLOP (OP_log);
-//DECLOP (OP_log2);
+DECLOP (OP_log2);
 //DECLOP (OP_log10);
 //DECLOP (OP_logb);
 DECLOP (OP_lt);

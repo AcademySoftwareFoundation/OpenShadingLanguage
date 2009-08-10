@@ -184,6 +184,14 @@ public:
     }
 };
 
+class Log10 {
+public:
+    inline float operator() (float x) { return log10f (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
+    }
+};
+
 // logarithmic/exponential functions
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -291,6 +299,12 @@ DECLOP (OP_log)
 DECLOP (OP_log2)
 {
     generic_unary_function_shadeop<Log2> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_log10)
+{
+    generic_unary_function_shadeop<Log10> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

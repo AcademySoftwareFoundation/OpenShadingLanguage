@@ -195,6 +195,7 @@ static OpNameEntry op_name_entries[] = {
     { "shl", OP_shl },
     { "shr", OP_shr },
     { "sin", OP_sin },
+    { "sinh", OP_sinh },
     { "sub", OP_sub },
     { "tan", OP_tan },
     { "vector", OP_vector },

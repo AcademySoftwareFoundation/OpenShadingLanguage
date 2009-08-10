@@ -150,6 +150,13 @@ public:
     }
 };
 
+class Sinh {
+public:
+    inline float operator() (float x) { return sinhf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (sinhf (x[0]), sinhf (x[1]), sinhf (x[2]));
+    }
+};
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -232,6 +239,12 @@ DECLOP (OP_atan)
 DECLOP (OP_cosh)
 {
     generic_unary_function_shadeop<Cosh> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_sinh)
+{
+    generic_unary_function_shadeop<Sinh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

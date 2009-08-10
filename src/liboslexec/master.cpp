@@ -198,6 +198,7 @@ static OpNameEntry op_name_entries[] = {
     { "sinh", OP_sinh },
     { "sub", OP_sub },
     { "tan", OP_tan },
+    { "tanh", OP_tanh },
     { "vector", OP_vector },
     { "xor", OP_xor },
     { NULL, NULL}

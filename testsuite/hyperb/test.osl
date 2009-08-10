@@ -10,24 +10,30 @@ test ()
         float a = -M_E;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
         a = 0;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
         a = M_E;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
     }
 
     { 
         vector a = -M_E;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
         a = 0;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
         a = M_E;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
     }
 
     printf (" varying:\n");
@@ -35,10 +41,12 @@ test ()
         float a = u;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
     }
     {
         color a = u;
         printf ("  cosh (%g) = %g\n", a, cosh(a));
         printf ("  sinh (%g) = %g\n", a, sinh(a));
+        printf ("  tanh (%g) = %g\n", a, tanh(a));
     }
 }

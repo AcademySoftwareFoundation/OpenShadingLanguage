@@ -158,6 +158,15 @@ public:
     }
 };
 
+class Tanh {
+public:
+    inline float operator() (float x) { return tanhf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (tanhf (x[0]), tanhf (x[1]), tanhf (x[2]));
+    }
+};
+
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -245,6 +254,12 @@ DECLOP (OP_cosh)
 DECLOP (OP_sinh)
 {
     generic_unary_function_shadeop<Sinh> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_tanh)
+{
+    generic_unary_function_shadeop<Tanh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

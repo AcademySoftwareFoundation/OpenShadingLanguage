@@ -132,6 +132,13 @@ public:
     }
 };
 
+class ATan {
+public:
+    inline float operator() (float x) { return atanf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (atanf (x[0]), atanf (x[1]), atanf (x[2]));
+    }
+};
 
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -206,6 +213,11 @@ DECLOP (OP_asin)
                                          runflags, beginpoint, endpoint);
 }
 
+DECLOP (OP_atan)
+{
+    generic_unary_function_shadeop<ATan> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
 
 
 }; // namespace pvt

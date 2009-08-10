@@ -13,42 +13,49 @@ test ()
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = -M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = -M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = 0;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = M_PI;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
     }
 
     { 
@@ -58,42 +65,49 @@ test ()
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = -M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = -M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = 0;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
         a = M_PI;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
     }
 
     printf (" varying:\n");
@@ -104,6 +118,7 @@ test ()
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
     }
     {
         color a = u;
@@ -112,5 +127,6 @@ test ()
         printf ("  tan (%g) = %g\n", a, tan(a));
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
+        printf ("  atan (%g) = %g\n", a, atan(a));
     }
 }

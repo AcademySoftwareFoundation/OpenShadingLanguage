@@ -103,9 +103,12 @@ DECLOP (triple_ctr_transform)
     Symbol &Z (exec->sym (args[4]));
 
     // Adjust the result's uniform/varying status
+    ShaderGlobals *globals = exec->context()->globals();
     bool vary = (Space.is_varying() |
-                 X.is_varying() | Y.is_varying() | Z.is_varying());
+                 X.is_varying() | Y.is_varying() | Z.is_varying() |
+                 globals->time.is_varying());
     exec->adjust_varying (Result, vary, false /* can't alias */);
+    // FIXME -- must consider varying ray times!
 
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
     VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
@@ -113,22 +116,47 @@ DECLOP (triple_ctr_transform)
     VaryingRef<float> y ((float *)Y.data(), Y.step());
     VaryingRef<float> z ((float *)Z.data(), Z.step());
 
+    Matrix44 M;
     if (result.is_uniform()) {
         // Everything is uniform
+        exec->get_matrix (M, *space);
+        if (xformtype == (int)TypeDesc::NORMAL)
+            M = M.inverse().transpose();
         *result = Vec3 (*x, *y, *z);
+        if (xformtype == (int)TypeDesc::POINT)
+            M.multVecMatrix (*result, *result);
+        else
+            M.multDirMatrix (*result, *result);
     } else if (! vary) {
         // Result is varying, but everything else is uniform
+        exec->get_matrix (M, *space);
+        if (xformtype == (int)TypeDesc::NORMAL)
+            M = M.inverse().transpose();
         Vec3 r (*x, *y, *z);
+        if (xformtype == (int)TypeDesc::POINT)
+            M.multVecMatrix (r, r);
+        else
+            M.multDirMatrix (r, r);
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = r;
     } else {
         // Fully varying case
+        ustring last_space;
         for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
+            if (runflags[i]) {
+                if (space[i] != last_space || globals->time.is_varying()) {
+                    exec->get_matrix (M, space[i], i);
+                    if (xformtype == (int)TypeDesc::NORMAL)
+                        M = M.inverse().transpose();
+                }
                 result[i] = Vec3 (x[i], y[i], z[i]);
+                if (xformtype == (int)TypeDesc::POINT)
+                    M.multVecMatrix (result[i], result[i]);
+                else
+                    M.multDirMatrix (result[i], result[i]);
+            }
     }
-    ASSERT (0);  // FIXME -- not yet considering the space name!
 }
 
 

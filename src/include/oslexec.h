@@ -53,6 +53,12 @@ using pvt::ShaderInstanceRef;
 
 
 
+/// Opaque pointer to whatever the renderer uses to represent a
+/// (potentially motion-blurred) coordinate transformation.
+typedef const void * TransformationPtr;
+
+
+
 
 class ShadingSystem
 {
@@ -205,6 +211,9 @@ public:
     VaryingRef<float> dtime;           ///< Time interval for each sample
     VaryingRef<Vec3> dPdtime;          ///< Velocity
 
+    VaryingRef<TransformationPtr> object2common; /// Object->common xform
+    VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
+
     VaryingRef<Color3> Ci;             ///< Output colors
     VaryingRef<Color3> Oi;             ///< Output opacities
 };
@@ -218,7 +227,14 @@ public:
     RendererServices () { }
     virtual ~RendererServices () { }
 
-    
+    /// Get the 4x4 matrix that transforms by the specified
+    /// transformation at the given time.
+    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
+                             float time) = 0;
+
+    /// Get the 4x4 matrix that transforms points from the named
+    /// 'from' coordinate system to "common" space at the given time.
+    virtual bool get_matrix (Matrix44 &result, ustring from, float time) = 0;
 };
 
 

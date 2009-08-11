@@ -357,13 +357,13 @@ public:
     ///
     bool debug () const { return m_debug; }
 
-    /// Return a reference to the renderer services object.
+    /// Return a pointer to the renderer services object.
     ///
-    RendererServices &renderer () const { return *m_renderer; }
+    RendererServices *renderer () const { return m_renderer; }
 
-    /// Return a reference to the texture system.
+    /// Return a pointer to the texture system.
     ///
-    TextureSystem &texturesys () const { return *m_texturesys; }
+    TextureSystem *texturesys () const { return m_texturesys; }
 
 private:
     void printstats () const;
@@ -414,6 +414,10 @@ public:
     /// Return a reference to the shading system for this context.
     ///
     ShadingSystemImpl & shadingsys () const { return m_shadingsys; }
+
+    /// Return a pointer to our shader globals structure.
+    ///
+    ShaderGlobals *globals () const { return m_globals; }
 
     /// Set up this context for shading n points with the given shader
     /// attribute state and shader globals.  Resolve all the memory
@@ -556,12 +560,30 @@ public:
     ///
     void printsymbol (Symbol &sym);
 
+    /// Get a pointer to the ShadingContext for this execution.
+    ///
+    ShadingContext *context () const { return m_context; }
+
+    /// Get a pointer to the RendererServices for this execution.
+    ///
+    RendererServices *renderer () const { return m_renderer; }
+
+    /// Get the 4x4 matrix that transforms points from the named 'from'
+    /// coordinate system to "common" space for the given shading point.
+    void get_matrix (Matrix44 &result, ustring from, int whichpoint=0);
+
+    /// Pass an error along to the ShadingSystem.
+    ///
+    void error (const char *message, ...);
+
 private:
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?
     ShadingContext *m_context;    ///< Ptr to our shading context
     ShaderInstance *m_instance;   ///< Ptr to the shader instance
     ShaderMaster *m_master;       ///< Ptr to the instance's master
+    ShadingSystemImpl *m_shadingsys; ///< Ptr to shading system
+    RendererServices *m_renderer; ///< Ptr to renderer services
     int m_npoints;                ///< How many points are we running?
     bool m_bound;                 ///< Have we been bound?
     bool m_executed;              ///< Have we been executed?
@@ -629,6 +651,11 @@ private:
     size_t m_heapsize;                 ///< Heap space needed per point
 };
 
+
+
+namespace Strings {
+    extern ustring camera, common, object, shader;
+}; // namespace Strings
 
 
 }; // namespace OSL

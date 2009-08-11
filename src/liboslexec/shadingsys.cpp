@@ -84,6 +84,14 @@ ShadingSystem::~ShadingSystem ()
 
 
 
+namespace Strings {
+
+ustring camera ("camera"), common ("common");
+ustring object ("object"), shader ("shader");
+
+};
+
+
 
 namespace pvt {   // OSL::pvt
 
@@ -91,13 +99,21 @@ namespace pvt {   // OSL::pvt
 
 ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       TextureSystem *texturesystem)
-    : m_texturesys(texturesystem),
+    : m_renderer(renderer), m_texturesys(texturesystem),
       m_in_group (false), m_statslevel (0), m_debug (false),
       m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
     init_global_heap_offsets ();
+
+#if 0
+    // If client didn't supply renderer services, create a default one
+    if (! m_renderer) {
+        m_renderer = NULL;
+        ASSERT (m_renderer);
+    }
+#endif
 
     // If client didn't supply a texture system, create a new one
     if (! m_texturesys) {

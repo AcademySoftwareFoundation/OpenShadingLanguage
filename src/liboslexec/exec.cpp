@@ -67,6 +67,18 @@ ShadingExecution::~ShadingExecution ()
 
 
 void
+ShadingExecution::error (const char *message, ...)
+{
+    va_list ap;
+    va_start (ap, message);
+    std::string e = Strutil::vformat (message, ap);
+    m_shadingsys->error ("%s", e.c_str());
+    va_end (ap);
+}
+
+
+
+void
 ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                         int layerindex, ShaderInstance *instance)
 {
@@ -86,7 +98,9 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
         m_context = context;
         m_instance = instance;
         m_master = instance->master ();
-        ASSERT (m_master);
+        m_shadingsys = &context->shadingsys ();
+        m_renderer = m_shadingsys->renderer ();
+        ASSERT (m_master && m_context && m_shadingsys && m_renderer);
     }
 
     m_npoints = m_context->npoints ();
@@ -422,6 +436,33 @@ ShadingExecution::printsymbol (Symbol &sym)
             std::cout << "\n";
         if (sym.is_uniform())
             break;
+    }
+}
+
+
+
+void
+ShadingExecution::get_matrix (Matrix44 &result, ustring from, int whichpoint)
+{
+    if (from == Strings::common) {
+        result.makeIdentity ();
+        return;
+    }
+    ShaderGlobals *globals = m_context->m_globals;
+    if (from == Strings::shader) {
+        m_renderer->get_matrix (result, globals->shader2common[whichpoint],
+                                globals->time[whichpoint]);
+        return;
+    }
+    if (from == Strings::object) {
+        m_renderer->get_matrix (result, globals->object2common[whichpoint],
+                                globals->time[whichpoint]);
+        return;
+    }
+    bool ok = m_renderer->get_matrix (result, from, globals->time[whichpoint]);
+    if (! ok) {
+        result.makeIdentity ();
+        error ("Could not get matrix '%s'", from.c_str());
     }
 }
 

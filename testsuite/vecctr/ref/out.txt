@@ -16,3 +16,8 @@ Compiled test.osl -> test.oso
   normal (0, 2, 0.5) = 0 2 0.5
   normal (1, 2, 0.5) = 1 2 0.5
 
+testing with spaces:
+  point ("shader", 0, 1, 0) = 0.292893 0.707107 0
+  vector ("shader", 0, 1, 0) = -0.707107 0.707107 0
+  normal ("shader", 0, 1, 0) = -0.707107 0.707107 0
+

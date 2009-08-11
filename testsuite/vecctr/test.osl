@@ -18,4 +18,15 @@ test ()
         printf ("  vector (%g, %g, %g) = %g\n", a, b, c, vector(a,b,c));
         printf ("  normal (%g, %g, %g) = %g\n", a, b, c, normal(a,b,c));
     }
+
+    { 
+        float a = 0, b = 1, c = 0;
+        printf ("\ntesting with spaces:\n");
+        printf ("  point (\"shader\", %g, %g, %g) = %g\n",
+                a, b, c, point("shader",a,b,c));
+        printf ("  vector (\"shader\", %g, %g, %g) = %g\n",
+                a, b, c, vector("shader",a,b,c));
+        printf ("  normal (\"shader\", %g, %g, %g) = %g\n",
+                a, b, c, normal("shader",a,b,c));
+    }
 }

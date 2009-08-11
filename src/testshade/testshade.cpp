@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec.h"
 #include "../liboslexec/oslexec_pvt.h"
+#include "simplerend.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -104,7 +105,8 @@ main (int argc, const char *argv[])
 {
     // Create a new shading system.
     Timer timer;
-    shadingsys = ShadingSystem::create ();
+    SimpleRenderer rend;
+    shadingsys = ShadingSystem::create (&rend);
 
     getargs (argc, argv);
     // getargs called 'add_shader' for each shader mentioned on the command
@@ -120,6 +122,27 @@ main (int argc, const char *argv[])
     shaderglobals.P.init (&gP[0], sizeof(gP[0]));
     shaderglobals.u.init (&gu[0], sizeof(gu[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
+    float time = 0.0f;
+    shaderglobals.time.init (&time, 0);
+    
+    // Make a shader space that is translated one unit in x and rotated
+    // 45deg about the z axis.
+    OSL::Matrix44 Mshad;
+    Mshad.translate (OSL::Vec3 (1.0, 0.0, 0.0));
+    Mshad.rotate (OSL::Vec3 (0.0, 0.0, M_PI_4));
+    // std::cout << "shader-to-common matrix: " << Mshad << "\n";
+    OSL::TransformationPtr Mshadptr (&Mshad);
+    shaderglobals.shader2common.init ((OSL::TransformationPtr *)&Mshadptr, 0);
+
+    // Make an object space that is translated one unit in y and rotated
+    // 90deg about the z axis.
+    OSL::Matrix44 Mobj;
+    Mobj.translate (OSL::Vec3 (0.0, 1.0, 0.0));
+    Mobj.rotate (OSL::Vec3 (0.0, 0.0, M_PI_2));
+    // std::cout << "object-to-common matrix: " << Mobj << "\n";
+    OSL::TransformationPtr Mobjptr (&Mobj);
+    shaderglobals.object2common.init ((OSL::TransformationPtr *)&Mobjptr, 0);
+
     for (int j = 0;  j < yres;  ++j) {
         for (int i = 0;  i < xres;  ++i) {
             int n = j*yres + i;

@@ -277,7 +277,7 @@ DECLOP (unary_op)
     // Loop over points, do the operation
     VaryingRef<RET> result ((RET *)Result.data(), Result.step());
     VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-    FUNCTION function;
+    FUNCTION function (exec);
     if (result.is_uniform()) {
         // Uniform case
         *result = function (*a);

@@ -28,9 +28,9 @@ Compiled test.osl -> test.oso
   exp2 (27.1828 27.1828 27.1828) = 1.52349e+08 1.52349e+08 1.52349e+08
   expm1 (27.1828 27.1828 27.1828) = 6.38764e+11 6.38764e+11 6.38764e+11
  varying:
-  log (0) = -inf
+  log (0) = -3.40282e+38
   log (1) = 0
-  log (0) = -inf
+  log (0) = -3.40282e+38
   log (1) = 0
   log2 (0) = -inf
   log2 (1) = 0
@@ -56,9 +56,9 @@ Compiled test.osl -> test.oso
   expm1 (1) = 1.71828
   expm1 (0) = 0
   expm1 (1) = 1.71828
-  log (0 0 0) = -inf -inf -inf
+  log (0 0 0) = -3.40282e+38 -3.40282e+38 -3.40282e+38
   log (1 1 1) = 0 0 0
-  log (0 0 0) = -inf -inf -inf
+  log (0 0 0) = -3.40282e+38 -3.40282e+38 -3.40282e+38
   log (1 1 1) = 0 0 0
   log2 (0 0 0) = -inf -inf -inf
   log2 (1 1 1) = 0 0 0

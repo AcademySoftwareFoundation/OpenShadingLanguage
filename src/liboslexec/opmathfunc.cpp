@@ -82,6 +82,7 @@ namespace {
 
 class Cos {
 public:
+    Cos (ShadingExecution *) { }
     inline float operator() (float x) { return cosf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (cosf (x[0]), cosf (x[1]), cosf (x[2]));
@@ -90,6 +91,7 @@ public:
 
 class Sin {
 public:
+    Sin (ShadingExecution *) { }
     inline float operator() (float x) { return sinf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (sinf (x[0]), sinf (x[1]), sinf (x[2]));
@@ -98,6 +100,7 @@ public:
 
 class Tan {
 public:
+    Tan (ShadingExecution *) { }
     inline float operator() (float x) { return tanf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (tanf (x[0]), tanf (x[1]), tanf (x[2]));
@@ -113,6 +116,7 @@ class ACos {
         return acosf (x);
     }
 public:
+    ACos (ShadingExecution *) { }
     inline float operator() (float x) { return safe_acosf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (safe_acosf (x[0]), safe_acosf (x[1]), safe_acosf (x[2]));
@@ -126,6 +130,7 @@ class ASin {
         return asinf (x);
     }
 public:
+    ASin (ShadingExecution *) { }
     inline float operator() (float x) { return safe_asinf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (safe_asinf (x[0]), safe_asinf (x[1]), safe_asinf (x[2]));
@@ -134,6 +139,7 @@ public:
 
 class ATan {
 public:
+    ATan (ShadingExecution *) { }
     inline float operator() (float x) { return atanf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (atanf (x[0]), atanf (x[1]), atanf (x[2]));
@@ -144,6 +150,7 @@ public:
 
 class Cosh {
 public:
+    Cosh (ShadingExecution *) { }
     inline float operator() (float x) { return coshf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (coshf (x[0]), coshf (x[1]), coshf (x[2]));
@@ -152,6 +159,7 @@ public:
 
 class Sinh {
 public:
+    Sinh (ShadingExecution *) { }
     inline float operator() (float x) { return sinhf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (sinhf (x[0]), sinhf (x[1]), sinhf (x[2]));
@@ -160,6 +168,7 @@ public:
 
 class Tanh {
 public:
+    Tanh (ShadingExecution *) { }
     inline float operator() (float x) { return tanhf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (tanhf (x[0]), tanhf (x[1]), tanhf (x[2]));
@@ -170,14 +179,26 @@ public:
 
 class Log {
 public:
-    inline float operator() (float x) { return logf (x); }
+    Log (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x) { return safe_log (x); }
     inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (logf (x[0]), logf (x[1]), logf (x[2]));
+        return Vec3 (safe_log (x[0]), safe_log (x[1]), safe_log (x[2]));
     }
+private:
+    inline float safe_log (float f) {
+        if (f <= 0.0f) {
+            m_exec->error ("attempted to compute log(%g)", f);
+            return -std::numeric_limits<float>::max();
+        } else {
+            return logf (f);
+        }
+    }
+    ShadingExecution *m_exec;
 };
 
 class Log2 {
 public:
+    Log2 (ShadingExecution *) { }
     inline float operator() (float x) { return log2f (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (log2f (x[0]), log2f (x[1]), log2f (x[2]));
@@ -186,6 +207,7 @@ public:
 
 class Log10 {
 public:
+    Log10 (ShadingExecution *) { }
     inline float operator() (float x) { return log10f (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
@@ -194,6 +216,7 @@ public:
 
 class Logb {
 public:
+    Logb (ShadingExecution *) { }
     inline float operator() (float x) { return logbf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (logbf (x[0]), logbf (x[1]), logbf (x[2]));
@@ -202,6 +225,7 @@ public:
 
 class Exp {
 public:
+    Exp (ShadingExecution *) { }
     inline float operator() (float x) { return expf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (expf (x[0]), expf (x[1]), expf (x[2]));
@@ -210,6 +234,7 @@ public:
 
 class Exp2 {
 public:
+    Exp2 (ShadingExecution *) { }
     inline float operator() (float x) { return exp2f (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (exp2f (x[0]), exp2f (x[1]), exp2f (x[2]));
@@ -218,6 +243,7 @@ public:
 
 class Expm1 {
 public:
+    Expm1 (ShadingExecution *) { }
     inline float operator() (float x) { return expm1f (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (expm1f (x[0]), expm1f (x[1]), expm1f (x[2]));

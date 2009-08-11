@@ -168,6 +168,7 @@ public:
 template<class R, class A>
 class Neg {
 public:
+    Neg (ShadingExecution *) { }
     inline R operator() (const A &a) { return R (-a); }
 };
 

@@ -248,6 +248,33 @@ ASTvariable_ref::codegen (Symbol *)
 
 
 Symbol *
+ASTpreincdec::codegen (Symbol *)
+{
+    Symbol *sym = var()->codegen ();
+    Symbol *one = sym->typespec().is_int() ? m_compiler->make_constant(1)
+                                           : m_compiler->make_constant(1.0f);
+    emitcode (m_op == Incr ? "add" : "sub", sym, sym, one);
+    return sym;
+}
+
+
+
+Symbol *
+ASTpostincdec::codegen (Symbol *dest)
+{
+    Symbol *sym = var()->codegen ();
+    Symbol *one = sym->typespec().is_int() ? m_compiler->make_constant(1)
+                                           : m_compiler->make_constant(1.0f);
+    if (! dest)
+        dest = m_compiler->make_temporary (sym->typespec());
+    emitcode ("assign", dest, sym);
+    emitcode (m_op == Incr ? "add" : "sub", sym, sym, one);
+    return dest;
+}
+
+
+
+Symbol *
 ASTconditional_statement::codegen (Symbol *)
 {
     Symbol *condvar = cond()->codegen ();

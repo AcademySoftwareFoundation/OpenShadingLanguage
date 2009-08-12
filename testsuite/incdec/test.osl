@@ -1,0 +1,49 @@
+shader
+test ()
+{
+    // int
+    {
+        printf ("int:\n");
+        int a = 0;
+        int b;
+        printf ("  a = %d\n", a);
+        b = ++a;
+        printf ("  after b = ++a, a = %d, b = %d\n", a, b);
+        b = --a;
+        printf ("  after b = --a, a = %d, b = %d\n", a, b);
+        b = a++;
+        printf ("  after b = a++, a = %d, b = %d\n", a, b);
+        b = a--;
+        printf ("  after b = a--, a = %d, b = %d\n", a, b);
+    }
+
+
+    // float
+    {
+        printf ("float:\n");
+        float a = 0;
+        float b;
+        printf ("  a = %g\n", a);
+        b = ++a;
+        printf ("  after b = ++a, a = %g, b = %g\n", a, b);
+        b = --a;
+        printf ("  after b = --a, a = %g, b = %g\n", a, b);
+        b = a++;
+        printf ("  after b = a++, a = %g, b = %g\n", a, b);
+        b = a--;
+        printf ("  after b = a--, a = %g, b = %g\n", a, b);
+
+        printf (" varying: u=%g, v=%g\n", u, v);
+        a = u;
+        printf ("  a = %g\n", a);
+        b = ++a;
+        printf ("  after b = ++a, a = %g, b = %g\n", a, b);
+        b = --a;
+        printf ("  after b = --a, a = %g, b = %g\n", a, b);
+        b = a++;
+        printf ("  after b = a++, a = %g, b = %g\n", a, b);
+        b = a--;
+        printf ("  after b = a--, a = %g, b = %g\n", a, b);
+    }
+
+}

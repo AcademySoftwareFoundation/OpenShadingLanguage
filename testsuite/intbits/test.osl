@@ -12,7 +12,7 @@ test ()
     printf ("  %d ^ %d = %d\n", a, c, a ^ c);
     printf ("  %d << %d = %d\n", a, b, a << b);
     printf ("  %d >> %d = %d\n", a, b, a >> b);
-
+    printf ("  ~ %d = %d\n", a, ~a);
 #if 0
     // FIXME - restore this once we get float-to-int casts
     printf (" varying:\n");

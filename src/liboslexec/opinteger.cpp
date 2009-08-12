@@ -78,6 +78,12 @@ public:
     inline int operator() (int a, int b) { return a >> b; }
 };
 
+class Compl {
+public:
+    Compl (ShadingExecution *) { }
+    inline int operator() (int a) { return ~a; }
+};
+
 
 };  // End anonymous namespace
 
@@ -200,6 +206,24 @@ DECLOP (OP_shr)
 
     binary_op_guts<int,int,int,Shr> (Result, A, B, exec,
                                      runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_compl)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    DASSERT (! Result.typespec().is_closure() &&
+            ! Result.typespec().is_structure() &&
+            ! Result.typespec().is_array());
+    DASSERT (! A.typespec().is_closure() &&
+            ! A.typespec().is_structure() &&
+            ! A.typespec().is_array());
+    DASSERT (Result.typespec().is_int() && A.typespec().is_int());
+
+    unary_op<int,int,Compl> (exec, nargs, args, runflags, beginpoint, endpoint);
 }
 
 

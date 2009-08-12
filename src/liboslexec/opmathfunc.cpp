@@ -110,30 +110,32 @@ public:
 // inverse trigonometric functions
 
 class ACos {
-    static inline float safe_acosf (float x) {
-        if (x >=  1.0f) return 0.0f;
-        if (x <= -1.0f) return M_PI;
-        return acosf (x);
-    }
 public:
     ACos (ShadingExecution *) { }
     inline float operator() (float x) { return safe_acosf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (safe_acosf (x[0]), safe_acosf (x[1]), safe_acosf (x[2]));
     }
+private:
+    inline float safe_acosf (float x) {
+        if (x >=  1.0f) return 0.0f;
+        if (x <= -1.0f) return M_PI;
+        return acosf (x);
+    }
 };
 
 class ASin {
-    static inline float safe_asinf (float x) {
-        if (x >=  1.0f) return  M_PI/2;
-        if (x <= -1.0f) return -M_PI/2;
-        return asinf (x);
-    }
 public:
     ASin (ShadingExecution *) { }
     inline float operator() (float x) { return safe_asinf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (safe_asinf (x[0]), safe_asinf (x[1]), safe_asinf (x[2]));
+    }
+private:
+    static inline float safe_asinf (float x) {
+        if (x >=  1.0f) return  M_PI/2;
+        if (x <= -1.0f) return -M_PI/2;
+        return asinf (x);
     }
 };
 
@@ -198,29 +200,59 @@ private:
 
 class Log2 {
 public:
-    Log2 (ShadingExecution *) { }
-    inline float operator() (float x) { return log2f (x); }
+    Log2 (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x) { return safe_log2f (x); }
     inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (log2f (x[0]), log2f (x[1]), log2f (x[2]));
+        return Vec3 (safe_log2f (x[0]), safe_log2f (x[1]), safe_log2f (x[2]));
     }
+private:
+    inline float safe_log2f (float f) {
+        if (f <= 0.0f) {
+            m_exec->error ("attempted to compute log2(%g)", f);
+            return -std::numeric_limits<float>::max();
+        } else {
+            return log2f (f);
+        }
+    }
+    ShadingExecution *m_exec;
 };
 
 class Log10 {
 public:
-    Log10 (ShadingExecution *) { }
-    inline float operator() (float x) { return log10f (x); }
+    Log10 (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x) { return safe_log10f (x); }
     inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
+        return Vec3 (safe_log10f (x[0]), safe_log10f (x[1]), safe_log10f (x[2]));
     }
+private:
+    inline float safe_log10f (float f) {
+        if (f <= 0.0f) {
+            m_exec->error ("attempted to compute log10(%g)", f);
+            return -std::numeric_limits<float>::max();
+        } else {
+            return log10f (f);
+        }
+    }
+    ShadingExecution *m_exec;
 };
 
 class Logb {
 public:
-    Logb (ShadingExecution *) { }
-    inline float operator() (float x) { return logbf (x); }
+    Logb (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x) { return safe_logbf (x); }
     inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (logbf (x[0]), logbf (x[1]), logbf (x[2]));
+        return Vec3 (safe_logbf (x[0]), safe_logbf (x[1]), safe_logbf (x[2]));
     }
+private:
+    inline float safe_logbf (float f) {
+        if (f == 0.0f) {
+            m_exec->error ("attempted to compute logb(%g)", f);
+            return -std::numeric_limits<float>::max();
+        } else {
+            return logbf (f);
+        }
+    }
+    ShadingExecution *m_exec;
 };
 
 class Exp {

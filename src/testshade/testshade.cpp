@@ -143,6 +143,12 @@ main (int argc, const char *argv[])
     OSL::TransformationPtr Mobjptr (&Mobj);
     shaderglobals.object2common.init ((OSL::TransformationPtr *)&Mobjptr, 0);
 
+    // Make a 'myspace that is non-uniformly scaled
+    OSL::Matrix44 Mmyspace;
+    Mmyspace.scale (OSL::Vec3 (1.0, 2.0, 1.0));
+    // std::cout << "myspace-to-common matrix: " << Mmyspace << "\n";
+    rend.name_transform ("myspace", Mmyspace);
+
     for (int j = 0;  j < yres;  ++j) {
         for (int i = 0;  i < xres;  ++i) {
             int n = j*yres + i;

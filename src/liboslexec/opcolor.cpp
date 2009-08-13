@@ -239,8 +239,8 @@ DECLOP (OP_luminance)
     DASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
     Symbol &C (exec->sym (args[1]));
-    DASSERT (! Result.typespec().is_closure() && ! X.typespec().is_closure());
-    DASSERT (Result.typespec().is_float() && X.typespec().is_triple());
+    DASSERT (! Result.typespec().is_closure() && ! C.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
     unary_op_guts<Float, Color3, Luminance> (Result, C, exec, runflags,
                                              beginpoint, endpoint);

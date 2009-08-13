@@ -153,17 +153,15 @@ public:
 class Degrees {
 public:
     Degrees (ShadingExecution *) { }
-    inline float operator() (float x) { return degrees (x); }
-private:
-    float degrees (float x) { return x*180/M_PI; }
+    inline float operator() (float x) { return x*180.0/M_PI; }
+    inline Vec3 operator() (const Vec3 &x) { return x*Float(180.0/M_PI); }
 };
 
 class Radians {
 public:
     Radians (ShadingExecution *) { }
-    inline float operator() (float x) { return radians (x); }
-private:
-    float radians (float x) { return x*M_PI/180.0; }
+    inline float operator() (float x) { return x*M_PI/180.0; }
+    inline Vec3 operator() (Vec3 &x) { return x*Float(M_PI/180.0); }
 };
 
 
@@ -340,39 +338,6 @@ DECLOP (generic_unary_function_shadeop)
     }
 }
 
-// Generic template for implementing "float func(float).  This expands to a
-// function that checks the arguments for valid type, then dispatches to a
-// further specialized one for the individual type (but that doesn't do any
-// more polymorphic resolution or sanity checks).
-template<class FUNCTION>
-DECLOP (scalar_unary_function_shadeop)
-{
-    // 2 args, result and input.
-    ASSERT (nargs == 2);
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
-    OpImpl impl = NULL;
-
-    // We allow one flavor: float = func (float)
-    if (Result.typespec().is_float() && A.typespec().is_float()) {
-        impl = unary_op<float,float, FUNCTION >;
-    }
-
-    if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
-        // Use the specialized one for next time!  Never have to check the
-        // types or do the other sanity checks again.
-        // FIXME -- is this thread-safe?
-        exec->op().implementation (impl);
-    } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ")\n";
-        ASSERT (0 && "Function arg type can't be handled");
-    }
-}
-
 };  // End anonymous namespace
 
 
@@ -416,14 +381,14 @@ DECLOP (OP_atan)
 
 DECLOP (OP_degrees)
 {
-    scalar_unary_function_shadeop<Degrees> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Degrees> (exec, nargs, args, 
+                                             runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_radians)
 {
-    scalar_unary_function_shadeop<Radians> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Radians> (exec, nargs, args, 
+                                             runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_cosh)

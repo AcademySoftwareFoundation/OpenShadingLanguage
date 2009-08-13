@@ -366,7 +366,16 @@ ASTtype_constructor::codegen (Symbol *dest)
     std::vector<Symbol *> argdest;
     argdest.push_back (dest);
     for (ref a = args();  a;  a = a->next()) {
-        argdest.push_back (a->codegen());
+        Symbol *argval = a->codegen();
+        // Coerce to floats if it's an int
+        if (argval->typespec().is_int()) {
+            Symbol *tmp = argval;
+            argval = m_compiler->make_temporary (TypeSpec(TypeDesc::FLOAT));
+            emitcode ("assign", argval, tmp);
+            // FIXME -- take a shortcut if it's a constant, just make a new
+            // constant of the right type, don't convert at runtime
+        }
+        argdest.push_back (argval);
     }
     emitcode (typespec().string().c_str(), argdest.size(), &argdest[0]);
     return dest;

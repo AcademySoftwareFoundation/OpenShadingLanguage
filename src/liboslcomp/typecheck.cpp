@@ -695,7 +695,7 @@ static const char * builtin_func_args [] = {
     "cross", "vvv", NULL,
     "Du", DERIV_ARGS, NULL,
     "Dv", DERIV_ARGS, NULL,
-    "degrees", "ff", NULL,
+    "degrees", ANY_ONE_FLOAT_BASED, NULL,
     "deltau", DERIV_ARGS, NULL,
     "deltav", DERIV_ARGS, NULL,
     "determinant", "fm", NULL,
@@ -745,7 +745,7 @@ static const char * builtin_func_args [] = {
     "pow", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
     "printf", "xs*", NULL,   // FIXME -- further checking
     "psnoise", NOISE_ARGS, NULL,
-    "radians", "ff", NULL,
+    "radians", ANY_ONE_FLOAT_BASED, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
     "raylevel", "i", NULL,
     "reflect", "vvv", NULL,

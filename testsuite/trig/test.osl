@@ -14,6 +14,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
         a = -M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
@@ -21,6 +23,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
         a = -M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
@@ -28,6 +32,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
         a = 0;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
@@ -35,6 +41,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
         a = M_PI/4;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
@@ -42,6 +50,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
         a = M_PI/2;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
@@ -49,6 +59,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
         a = M_PI;
         printf ("  cos (%g) = %g\n", a, cos(a));
         printf ("  sin (%g) = %g\n", a, sin(a));
@@ -56,6 +68,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
     }
 
     { 
@@ -119,6 +133,8 @@ test ()
         printf ("  acos (%g) = %g\n", a, acos(a));
         printf ("  asin (%g) = %g\n", a, asin(a));
         printf ("  atan (%g) = %g\n", a, atan(a));
+        printf ("  degrees (%g) = %g\n", a, degrees(a));
+        printf ("  radians (%g) = %g\n", a, radians(a));
     }
     {
         color a = u;

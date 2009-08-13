@@ -478,9 +478,10 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     // Hijack the usual function arg-checking routines.
     // So we have a set of valid patterns for each type constructor:
     static const char *float_patterns[] = { "ff", NULL };
-    static const char *triple_patterns[] = { "cf", "cfff", "csf", "csfff",
+    static const char *triple_patterns[] = { "cf", "cfff", "csfff",
                                              "cc", "cp", "cv", "cn", NULL };
-    static const char *matrix_patterns[] = { "mffffffffffffffff",
+    static const char *matrix_patterns[] = { "mf", "msf",
+                                             "mffffffffffffffff",
                                              "msffffffffffffffff", NULL };
     // Select the pattern for the type of constructor we are...
     const char **patterns = NULL;

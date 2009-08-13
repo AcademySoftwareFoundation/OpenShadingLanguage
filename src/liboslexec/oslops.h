@@ -142,7 +142,7 @@ DECLOP (OP_log10);
 DECLOP (OP_logb);
 DECLOP (OP_lt);
 DECLOP (OP_luminance);
-//DECLOP (OP_matrix);
+DECLOP (OP_matrix);
 //DECLOP (OP_max);
 //DECLOP (OP_min);
 //DECLOP (OP_mix);

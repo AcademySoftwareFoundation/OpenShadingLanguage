@@ -108,7 +108,6 @@ DECLOP (triple_ctr_transform)
                  X.is_varying() | Y.is_varying() | Z.is_varying() |
                  globals->time.is_varying());
     exec->adjust_varying (Result, vary, false /* can't alias */);
-    // FIXME -- must consider varying ray times!
 
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
     VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
@@ -149,6 +148,7 @@ DECLOP (triple_ctr_transform)
                     exec->get_matrix (M, space[i], i);
                     if (xformtype == (int)TypeDesc::NORMAL)
                         M = M.inverse().transpose();
+                    last_space = space[i];
                 }
                 result[i] = Vec3 (x[i], y[i], z[i]);
                 if (xformtype == (int)TypeDesc::POINT)

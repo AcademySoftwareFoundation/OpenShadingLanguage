@@ -36,5 +36,18 @@ test ()
         h = 0.5; s = 1; l = 0.1;
         printf ("  color (\"hsl\", %g, %g, %g) = %g\n",
                 h, s, l, color("hsl",h,s,l));
+
+        float Y = 0.5, I = 0.25, Q = 0.25;
+        printf ("  color (\"YIQ\", %g, %g, %g) = %g\n",
+                Y, I, Q, color("YIQ", Y,I,Q));
+        float x = 0.25, y = 0.5, z = 0.25;
+        printf ("  color (\"xyz\", %g, %g, %g) = %g\n",
+                x, y, z, color("xyz",x,y,z));
     }
+
+    printf ("\n");
+    color c = color (0.5, 0.75, 0.75);
+    printf ("  luminance(%g) = %g\n", c, luminance(c));
+    c = 0.5;
+    printf ("  luminance(%g) = %g\n", c, luminance(c));
 }

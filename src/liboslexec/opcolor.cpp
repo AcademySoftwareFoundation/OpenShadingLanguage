@@ -50,7 +50,7 @@ namespace OSL {
 namespace pvt {
 
 
-extern DECLOP (triple_ctr);
+extern DECLOP (triple_ctr);   // definition is elsewhere
 
 
 namespace {
@@ -138,6 +138,16 @@ to_rgb (ustring fromspace, float a, float b, float c, ShadingExecution *exec)
 
 
 
+class Luminance {
+public:
+    Luminance (ShadingExecution *) { }
+    inline float operator() (const Color3 &c) {
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    }
+};
+
+
+
 /// Implementation of the constructor "color (string, float, float, float)".
 ///
 DECLOP (color_ctr_transform)
@@ -220,6 +230,20 @@ DECLOP (OP_color)
                   << Z.typespec().string() << ")\n";
         ASSERT (0 && "Function arg type can't be handled");
     }
+}
+
+
+
+DECLOP (OP_luminance)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &C (exec->sym (args[1]));
+    DASSERT (! Result.typespec().is_closure() && ! X.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && X.typespec().is_triple());
+
+    unary_op_guts<Float, Color3, Luminance> (Result, C, exec, runflags,
+                                             beginpoint, endpoint);
 }
 
 

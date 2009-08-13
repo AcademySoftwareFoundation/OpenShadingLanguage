@@ -141,7 +141,7 @@ DECLOP (OP_log2);
 DECLOP (OP_log10);
 DECLOP (OP_logb);
 DECLOP (OP_lt);
-//DECLOP (OP_luminance);
+DECLOP (OP_luminance);
 //DECLOP (OP_matrix);
 //DECLOP (OP_max);
 //DECLOP (OP_min);
@@ -265,12 +265,11 @@ DECLOP (binary_op)
 // version that knows the types of the arguments and the operation to
 // perform (given by a functor).
 template <class RET, class ATYPE, class FUNCTION>
-DECLOP (unary_op)
+inline void
+unary_op_guts (Symbol &Result, Symbol &A,
+               ShadingExecution *exec, 
+               Runflag *runflags, int beginpoint, int endpoint)
 {
-    // Get references to the symbols this op accesses
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying(), A.data() == Result.data());
 
@@ -295,6 +294,22 @@ DECLOP (unary_op)
             if (runflags[i])
                 result[i] = function (a[i]);
     }
+}
+
+
+
+// Heavy lifting of the math and other unary ops, this is a templated
+// version that knows the types of the arguments and the operation to
+// perform (given by a functor).
+template <class RET, class ATYPE, class FUNCTION>
+DECLOP (unary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+
+    unary_op_guts<RET,ATYPE,FUNCTION> (Result, A, exec,
+                                       runflags, beginpoint, endpoint);
 }
 
 

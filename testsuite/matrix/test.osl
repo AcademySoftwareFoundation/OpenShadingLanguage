@@ -1,6 +1,7 @@
 shader
 test ()
 {
+    // Test matrix constructors
     {
         float a = 0.1, b = 0.2, c = 0.3, d = 0.4,
             e = 0.5, f = 0.6, g = 0.7, h = 0.8,
@@ -20,6 +21,7 @@ test ()
                 matrix (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p));
     }
 
+    // Varying versions of constructors
     { 
         float a = 1, b = 1, c = 0;
         printf ("\ntesting with spaces:\n");
@@ -34,4 +36,25 @@ test ()
         printf ("  matrix (\"shader\", %g, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) \n\t= %g\n",
                 a, matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
     }
+
+    // Matrix arithmetic
+    matrix Ident = 1;
+    matrix M = matrix ("shader", 1);
+    printf ("\n\nTesting matrix math:\n");
+    printf ("  M = [%g]\n", M);
+    printf ("  -M = [%g]\n", -M);
+    printf ("  2*M = [%g]\n", 2*M);
+    printf ("  M*2 = [%g]\n", M*2);
+    printf ("  M/2 = [%g]\n", M/2);
+    printf ("  M*Ident = [%g]\n", M*Ident);
+    printf ("  Ident*M = [%g]\n", Ident*M);
+    printf ("  M*M = [%g]\n", M*M);
+    printf ("  M/M = [%g]\n", M/M);
+    printf ("  M/Ident = [%g]\n", M/Ident);
+    printf ("  Ident/M = [%g]\n", Ident/M);
+    printf ("  1/M = [%g]\n", 1/M);
+    printf ("  (M==M) ? %d\n", M == M);
+    printf ("  (M!=M) ? %d\n", M != M);
+    printf ("  (M==Ident) ? %d\n", M == Ident);
+    printf ("  (M!=Ident) ? %d\n", M != Ident);
 }

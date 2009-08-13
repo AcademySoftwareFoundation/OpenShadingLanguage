@@ -655,6 +655,7 @@ private:
 
 namespace Strings {
     extern ustring camera, common, object, shader;
+    extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
 }; // namespace Strings
 
 

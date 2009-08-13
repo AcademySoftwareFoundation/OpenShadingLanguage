@@ -88,6 +88,8 @@ namespace Strings {
 
 ustring camera ("camera"), common ("common");
 ustring object ("object"), shader ("shader");
+ustring rgb ("rgb"), RGB ("RGB");
+ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
 
 };
 

@@ -1,0 +1,40 @@
+shader
+test ()
+{
+    {
+        float a = 0.1, b = 0.2, c = 0.5;
+        printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
+    }
+
+    {
+        printf (" varying:\n");
+        float a = u;
+        float b = v;
+        float c = 0.5;
+
+        printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
+    }
+
+    { 
+        float a = 0.1, b = 0.2, c = 0.5;
+        printf ("\ntesting with spaces:\n");
+        printf ("  color (\"rgb\", %g, %g, %g) = %g\n",
+                a, b, c, color("rgb",a,b,c));
+        printf ("  color (\"hsv\", %g, %g, %g) = %g\n",
+                a, b, c, color("hsv",a,b,c));
+        float h, s, v, l;
+        h = 0; s = 0; v = 0.5;
+        printf ("  color (\"hsv\", %g, %g, %g) = %g\n",
+                h, s, v, color("hsv",h,s,v));
+        h = 0.5; s = 1; v = 0.5;
+        printf ("  color (\"hsv\", %g, %g, %g) = %g\n",
+                h, s, v, color("hsv",h,s,v));
+
+        h = 0; s = 0; l = 0.5;
+        printf ("  color (\"hsl\", %g, %g, %g) = %g\n",
+                h, s, l, color("hsl",h,s,l));
+        h = 0.5; s = 1; l = 0.1;
+        printf ("  color (\"hsl\", %g, %g, %g) = %g\n",
+                h, s, l, color("hsl",h,s,l));
+    }
+}

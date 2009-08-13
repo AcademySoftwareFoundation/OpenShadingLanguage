@@ -93,7 +93,7 @@ endmacro ()
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
 #TESTSUITE ( oslc-empty )
-TESTSUITE ( arithmetic comparison exponential 
+TESTSUITE ( arithmetic color comparison exponential 
             hyperb if incdec intbits trig vecctr )
 
 

@@ -76,7 +76,7 @@ DECLOP (OP_bitor);
 //DECLOP (OP_ceil);
 //DECLOP (OP_cellnoise);
 //DECLOP (OP_clamp);
-//DECLOP (OP_color);
+DECLOP (OP_color);
 //DECLOP (OP_compassign);
 DECLOP (OP_compl);
 //DECLOP (OP_compref);

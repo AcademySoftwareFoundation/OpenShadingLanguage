@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 % email should go here
  \bigskip \\
 }
-\date{{\large Date: 10 March, 2009}}
+\date{{\large Date: 12 August, 2009}}
 
 
 \include{macros}
@@ -2074,6 +2074,13 @@ are implemented as \inttype values, 0 if false and 1 if true.
 \hspace{0.5in}  \emph{expr1} {\cf \&\&} \emph{expr2}
 
 \hspace{0.5in}    \emph{expr1} {\cf ||} \emph{expr2}
+
+For the logical operators, numeric expressions (\inttype or \float) are
+considered \emph{true} if nonzero, \emph{false} if zero.
+Multi-component types (such as \color) are considered \emph{true} any
+component is nonzero, \emph{false} all components are zero.  Strings are
+considered \emph{true} if they are nonempty, \emph{false} if they are
+the empty string (\qkw{}).
 
 \item another expression enclosed in parenthesis: {\cf ( )}.
   Parenthesis may be used to guarantee associativity of operations.

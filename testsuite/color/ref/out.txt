@@ -1,0 +1,16 @@
+Compiled test.osl -> test.oso
+  color (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  color (0, 0, 0.5) = 0 0 0.5
+  color (1, 0, 0.5) = 1 0 0.5
+  color (0, 1, 0.5) = 0 1 0.5
+  color (1, 1, 0.5) = 1 1 0.5
+
+testing with spaces:
+  color ("rgb", 0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  color ("hsv", 0.1, 0.2, 0.5) = 0.5 0.46 0.4
+  color ("hsv", 0, 0, 0.5) = 0.5 0.5 0.5
+  color ("hsv", 0.5, 1, 0.5) = 0 0.5 0.5
+  color ("hsl", 0, 0, 0.5) = 0.5 0.5 0.5
+  color ("hsl", 0.5, 1, 0.1) = 0 0.2 0.2
+

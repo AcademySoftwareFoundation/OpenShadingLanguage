@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////
 /// \file
 ///
-/// Shader interpreter implementation of vector operations.
+/// Shader interpreter implementation of color operations.
 ///
 /////////////////////////////////////////////////////////////////////////
 
@@ -50,50 +50,97 @@ namespace OSL {
 namespace pvt {
 
 
-/// Implementation of the constructor "triple (float, float, float)".
-/// Since no coordinate system name is supplied, this will work with any
-/// of the triple types.
-DECLOP (triple_ctr)
+extern DECLOP (triple_ctr);
+
+
+namespace {
+
+
+static Color3
+hsv_to_rgb (float h, float s, float v)
 {
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &X (exec->sym (args[1]));
-    Symbol &Y (exec->sym (args[2]));
-    Symbol &Z (exec->sym (args[3]));
-
-    // Adjust the result's uniform/varying status
-    bool vary = (X.is_varying() | Y.is_varying() | Z.is_varying());
-    exec->adjust_varying (Result, vary, false /* can't alias */);
-
-    VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
-    VaryingRef<float> x ((float *)X.data(), X.step());
-    VaryingRef<float> y ((float *)Y.data(), Y.step());
-    VaryingRef<float> z ((float *)Z.data(), Z.step());
-
-    if (result.is_uniform()) {
-        // Everything is uniform
-        *result = Vec3 (*x, *y, *z);
-    } else if (! vary) {
-        // Result is varying, but everything else is uniform
-        Vec3 r (*x, *y, *z);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+    // Reference for this technique: Foley & van Dam
+    if (s < 0.0001f) {
+      return Color3 (v, v, v);
     } else {
-        // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = Vec3 (x[i], y[i], z[i]);
+        h = 6.0f * (h - floorf(h));  // expand to [0..6)
+        int hi = (int) h;
+        float f = h - hi;
+        float p = v * (1.0f-s);
+        float q = v * (1.0f-s*f);
+        float t = v * (1.0f-s*(1.0f-f));
+        switch (hi) {
+        case 0 : return Color3 (v, t, p);
+        case 1 : return Color3 (q, v, p);
+        case 2 : return Color3 (p, v, t);
+        case 3 : return Color3 (p, q, v);
+        case 4 : return Color3 (t, p, v);
+        default: return Color3 (v, p, q);
+	}
     }
 }
 
 
 
-namespace {
+static Color3
+hsl_to_rgb (float h, float s, float l)
+{
+    // Easiest to convert hsl -> hsv, then hsv -> RGB (per Foley & van Dam)
+    float v = (l <= 0.5) ? (l * (1.0f + s)) : (l * (1.0f - s) + s);
+    if (v <= 0.0f) {
+        return Color3 (0.0f, 0.0f, 0.0f);
+    } else {
+	float min = 2.0f * l - v;
+	s = (v - min) / v;
+	return hsv_to_rgb (h, s, v);
+    }
+}
 
-/// Implementation of the constructor "triple (string, float, float, float)".
-/// Templated on the type of transformation needed (point, vector, normal).
-template<int xformtype>
-DECLOP (triple_ctr_transform)
+
+
+static Color3
+YIQ_to_rgb (float Y, float I, float Q)
+{
+    return Color3 (Y + 0.9557f * I + 0.6199f * Q,
+                   Y - 0.2716f * I - 0.6469f * Q,
+                   Y - 1.1082f * I + 1.7051f * Q);
+}
+
+
+
+static Color3
+xyz_to_rgb (float x, float y, float z)
+{
+    return Color3 ( 3.240479f * x + -1.537150f * y + -0.498535f * z,
+                   -0.969256f * x +  1.875991f * y +  0.041556f * z,
+                    0.055648f * x + -0.204043f * y +  1.057311f * z);
+}
+
+
+
+static Color3
+to_rgb (ustring fromspace, float a, float b, float c, ShadingExecution *exec)
+{
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb)
+        return Color3 (a, b, c);
+    if (fromspace == Strings::hsv)
+        return hsv_to_rgb (a, b, c);
+    if (fromspace == Strings::hsl)
+        return hsl_to_rgb (a, b, c);
+    if (fromspace == Strings::YIQ)
+        return YIQ_to_rgb (a, b, c);
+    if (fromspace == Strings::xyz)
+        return xyz_to_rgb (a, b, c);
+
+    exec->error ("Unknown color space \"%s\"", fromspace.c_str());
+    return Color3 (a, b, c);
+}
+
+
+
+/// Implementation of the constructor "color (string, float, float, float)".
+///
+DECLOP (color_ctr_transform)
 {
     bool using_space = (nargs == 5);
     Symbol &Result (exec->sym (args[0]));
@@ -103,14 +150,11 @@ DECLOP (triple_ctr_transform)
     Symbol &Z (exec->sym (args[4]));
 
     // Adjust the result's uniform/varying status
-    ShaderGlobals *globals = exec->context()->globals();
     bool vary = (Space.is_varying() |
-                 X.is_varying() | Y.is_varying() | Z.is_varying() |
-                 globals->time.is_varying());
+                 X.is_varying() | Y.is_varying() | Z.is_varying() );
     exec->adjust_varying (Result, vary, false /* can't alias */);
-    // FIXME -- must consider varying ray times!
 
-    VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
+    VaryingRef<Color3> result ((Color3 *)Result.data(), Result.step());
     VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
     VaryingRef<float> x ((float *)X.data(), X.step());
     VaryingRef<float> y ((float *)Y.data(), Y.step());
@@ -119,55 +163,26 @@ DECLOP (triple_ctr_transform)
     Matrix44 M;
     if (result.is_uniform()) {
         // Everything is uniform
-        exec->get_matrix (M, *space);
-        if (xformtype == (int)TypeDesc::NORMAL)
-            M = M.inverse().transpose();
-        *result = Vec3 (*x, *y, *z);
-        if (xformtype == (int)TypeDesc::POINT)
-            M.multVecMatrix (*result, *result);
-        else
-            M.multDirMatrix (*result, *result);
+        *result = to_rgb (*space, *x, *y, *z, exec);
     } else if (! vary) {
         // Result is varying, but everything else is uniform
-        exec->get_matrix (M, *space);
-        if (xformtype == (int)TypeDesc::NORMAL)
-            M = M.inverse().transpose();
-        Vec3 r (*x, *y, *z);
-        if (xformtype == (int)TypeDesc::POINT)
-            M.multVecMatrix (r, r);
-        else
-            M.multDirMatrix (r, r);
+        Color3 r = to_rgb (*space, *x, *y, *z, exec);
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = r;
     } else {
         // Fully varying case
-        ustring last_space;
         for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i]) {
-                if (space[i] != last_space || globals->time.is_varying()) {
-                    exec->get_matrix (M, space[i], i);
-                    if (xformtype == (int)TypeDesc::NORMAL)
-                        M = M.inverse().transpose();
-                }
-                result[i] = Vec3 (x[i], y[i], z[i]);
-                if (xformtype == (int)TypeDesc::POINT)
-                    M.multVecMatrix (result[i], result[i]);
-                else
-                    M.multDirMatrix (result[i], result[i]);
-            }
+            if (runflags[i])
+                result[i] = to_rgb (space[i], x[i], y[i], z[i], exec);
     }
 }
 
 
+};  // End anonymous namespace
 
-/// Templated constructor for triples (point, vector, normal) with full
-/// error checking and polymorphism resolution (based on the type of
-/// transformation and whether a coordinate system name was supplied).
-/// After doing the sanity checks, a specific implementation is chosen
-/// and will be used directly for all subsequent calls to this op.
-template<int xformtype>
-DECLOP (triple_ctr_shadeop)
+
+DECLOP (OP_color)
 {
     ASSERT (nargs == 4 || nargs == 5);
     Symbol &Result (exec->sym (args[0]));
@@ -187,7 +202,7 @@ DECLOP (triple_ctr_shadeop)
           (using_space == false || Space.typespec().is_string())) {
         OpImpl impl = NULL;
         if (using_space)
-            impl = triple_ctr_transform<xformtype>;
+            impl = color_ctr_transform;  // special case: colors different
         else
             impl = triple_ctr;
         impl (exec, nargs, args, runflags, beginpoint, endpoint);
@@ -207,32 +222,6 @@ DECLOP (triple_ctr_shadeop)
     }
 }
 
-};  // End anonymous namespace
-
-
-
-
-DECLOP (OP_point)
-{
-    triple_ctr_shadeop<TypeDesc::POINT> (exec, nargs, args,
-                                         runflags, beginpoint, endpoint);
-}
-
-
-
-DECLOP (OP_vector)
-{
-    triple_ctr_shadeop<TypeDesc::VECTOR> (exec, nargs, args,
-                                          runflags, beginpoint, endpoint);
-}
-
-
-
-DECLOP (OP_normal)
-{
-    triple_ctr_shadeop<TypeDesc::NORMAL> (exec, nargs, args,
-                                          runflags, beginpoint, endpoint);
-}
 
 
 

@@ -194,14 +194,14 @@ DECLOP (color_ctr_transform)
 
 DECLOP (OP_color)
 {
-    ASSERT (nargs == 4 || nargs == 5);
+    DASSERT (nargs == 4 || nargs == 5);
     Symbol &Result (exec->sym (args[0]));
     bool using_space = (nargs == 5);
     Symbol &Space (exec->sym (args[1]));
     Symbol &X (exec->sym (args[1+using_space]));
     Symbol &Y (exec->sym (args[2+using_space]));
     Symbol &Z (exec->sym (args[3+using_space]));
-    ASSERT (! Result.typespec().is_closure() && 
+    DASSERT (! Result.typespec().is_closure() && 
             ! X.typespec().is_closure() && ! Y.typespec().is_closure() &&
             ! Z.typespec().is_closure() && ! Space.typespec().is_closure());
     

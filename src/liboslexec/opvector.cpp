@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 
 #include "OpenImageIO/varyingref.h"
+#include "OpenImageIO/fmath.h"
 
 
 #ifdef OSL_NAMESPACE
@@ -88,7 +89,7 @@ DECLOP (triple_ctr)
 
 
 
-namespace {
+namespace {  // anonymous
 
 /// Implementation of the constructor "triple (string, float, float, float)".
 /// Templated on the type of transformation needed (point, vector, normal).
@@ -207,6 +208,26 @@ DECLOP (triple_ctr_shadeop)
     }
 }
 
+
+
+// Functor for component reference
+class Compref {
+public:
+    Compref (ShadingExecution *exec) : m_exec (exec) { }
+    float operator() (const Vec3 &v, int i) {
+        if (i < 0 || i > 2) {
+            const Symbol &V (m_exec->sym (m_exec->op().firstarg()+1));
+            m_exec->error ("Index out of range: accessed %s %s[%d]\n",
+                           V.typespec().string().c_str(),
+                           V.name().c_str(), i);
+            i = clamp (i, 0, 2);
+        }
+        return v[i];
+    }
+private:
+    ShadingExecution *m_exec;
+};
+
 };  // End anonymous namespace
 
 
@@ -232,6 +253,24 @@ DECLOP (OP_normal)
 {
     triple_ctr_shadeop<TypeDesc::NORMAL> (exec, nargs, args,
                                           runflags, beginpoint, endpoint);
+}
+
+
+
+// vec[index]
+DECLOP (OP_compref)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &V (exec->sym (args[1]));
+    Symbol &I (exec->sym (args[2]));
+    DASSERT (! Result.typespec().is_closure() && 
+             ! V.typespec().is_closure() && ! I.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && V.typespec().is_triple() &&
+             I.typespec().is_int());
+
+    binary_op_guts<Float,Vec3,int,Compref> (Result, V, I, exec,
+                                            runflags, beginpoint, endpoint);
 }
 
 

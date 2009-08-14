@@ -1,0 +1,10 @@
+Compiled test.osl -> test.oso
+Test vector functions
+
+  V = vector (0 1 2) has components 0, 1, 2
+ varying:
+  V = vector (0 0 2) has components 0, 0, 2
+  V = vector (1 0 2) has components 1, 0, 2
+  V = vector (0 1 2) has components 0, 1, 2
+  V = vector (1 1 2) has components 1, 1, 2
+

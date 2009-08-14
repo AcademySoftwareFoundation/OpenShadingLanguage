@@ -220,6 +220,7 @@ ASTassign_expression::codegen (Symbol *dest)
         // FIXME -- what about coerced types, do we need a temp and copy here?
         emitcode (opword(), dest, dest, operand);
     }
+    // FIXME -- what about component or array indices?
 
     return dest;
 }
@@ -254,6 +255,7 @@ ASTpreincdec::codegen (Symbol *)
     Symbol *one = sym->typespec().is_int() ? m_compiler->make_constant(1)
                                            : m_compiler->make_constant(1.0f);
     emitcode (m_op == Incr ? "add" : "sub", sym, sym, one);
+    // FIXME -- what if it's an indexed lvalue, like v[i]?
     return sym;
 }
 
@@ -269,6 +271,29 @@ ASTpostincdec::codegen (Symbol *dest)
         dest = m_compiler->make_temporary (sym->typespec());
     emitcode ("assign", dest, sym);
     emitcode (m_op == Incr ? "add" : "sub", sym, sym, one);
+    // FIXME -- what if it's an indexed lvalue, like v[i]?
+    return dest;
+}
+
+
+
+Symbol *
+ASTindex::codegen (Symbol *dest)
+{
+    Symbol *lv = lvalue()->codegen ();
+    Symbol *ind = index()->codegen ();
+    if (! dest)
+        dest = m_compiler->make_temporary (typespec());
+    if (lv->typespec().is_array()) {
+        emitcode ("arrayref", dest, lv, ind);
+    } else if (lv->typespec().is_triple()) {
+        emitcode ("compref", dest, lv, ind);
+    } else if (lv->typespec().is_matrix()) {
+        Symbol *ind2 = index2()->codegen ();
+        emitcode ("mxcompref", dest, lv, ind);
+    } else {
+        ASSERT (0);
+    }
     return dest;
 }
 

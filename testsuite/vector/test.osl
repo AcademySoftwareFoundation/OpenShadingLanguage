@@ -1,0 +1,19 @@
+shader
+test ()
+{
+    printf ("Test vector functions\n\n");
+    {
+        vector V = vector (0, 1, 2);
+        printf ("  V = vector (%g) has components %g, %g, %g\n",
+                V, V[0], V[1], V[2]);
+        // FIXME -- test V[i] for varying i
+    }
+
+    {
+        printf (" varying:\n");
+        vector V = vector (u, v, 2);
+        printf ("  V = vector (%g) has components %g, %g, %g\n",
+                V, V[0], V[1], V[2]);
+        // FIXME -- test V[i] for varying i
+    }
+}

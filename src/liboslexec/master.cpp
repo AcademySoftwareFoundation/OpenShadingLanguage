@@ -177,6 +177,7 @@ static OpNameEntry op_name_entries[] = {
     { "bitor", OP_bitor },
     { "color", OP_color },
     { "compl", OP_compl },
+    { "compref", OP_compref },
     { "cos", OP_cos },
     { "cosh", OP_cosh },
     { "degrees", OP_degrees },

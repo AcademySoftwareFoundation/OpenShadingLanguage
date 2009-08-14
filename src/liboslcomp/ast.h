@@ -405,6 +405,7 @@ public:
     const char *nodetypename () const { return "index"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }

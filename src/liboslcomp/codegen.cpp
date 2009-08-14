@@ -392,13 +392,18 @@ ASTtype_constructor::codegen (Symbol *dest)
     argdest.push_back (dest);
     for (ref a = args();  a;  a = a->next()) {
         Symbol *argval = a->codegen();
-        // Coerce to floats if it's an int
         if (argval->typespec().is_int()) {
-            Symbol *tmp = argval;
-            argval = m_compiler->make_temporary (TypeSpec(TypeDesc::FLOAT));
-            emitcode ("assign", argval, tmp);
-            // FIXME -- take a shortcut if it's a constant, just make a new
-            // constant of the right type, don't convert at runtime
+            // Coerce to float if it's an int
+            if (a->nodetype() == literal_node) {
+                // It's a literal int, so let's make a literal float
+                int i = ((ASTliteral *)a.get())->intval ();
+                argval = m_compiler->make_constant ((float)i);
+            } else {
+                // General case
+                Symbol *tmp = argval;
+                argval = m_compiler->make_temporary (TypeSpec(TypeDesc::FLOAT));
+                emitcode ("assign", argval, tmp);
+            }
         }
         argdest.push_back (argval);
     }

@@ -53,6 +53,8 @@ test ()
     printf ("  M/Ident = [%g]\n", M/Ident);
     printf ("  Ident/M = [%g]\n", Ident/M);
     printf ("  1/M = [%g]\n", 1/M);
+    printf ("  transpose(M) = %g\n", transpose(M));
+    printf ("  determinant(M) = %g\n", determinant(M));
     printf ("  (M==M) ? %d\n", M == M);
     printf ("  (M!=M) ? %d\n", M != M);
     printf ("  (M==Ident) ? %d\n", M == Ident);

@@ -180,6 +180,7 @@ static OpNameEntry op_name_entries[] = {
     { "cos", OP_cos },
     { "cosh", OP_cosh },
     { "degrees", OP_degrees },
+    { "determinant", OP_determinant },
     { "div", OP_div },
     { "end", OP_end },
     { "eq", OP_eq },
@@ -212,6 +213,7 @@ static OpNameEntry op_name_entries[] = {
     { "sub", OP_sub },
     { "tan", OP_tan },
     { "tanh", OP_tanh },
+    { "transpose", OP_transpose },
     { "vector", OP_vector },
     { "xor", OP_xor },
     { NULL, NULL}

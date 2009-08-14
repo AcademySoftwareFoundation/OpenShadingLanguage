@@ -6,7 +6,12 @@ test ()
         vector V = vector (0, 1, 2);
         printf ("  V = vector (%g) has components %g, %g, %g\n",
                 V, V[0], V[1], V[2]);
-        // FIXME -- test V[i] for varying i
+        V[1] = 8;
+        printf ("  After V[1] = 8, V = (%g)\n", V);
+        V[2] = 0.5;
+        printf ("  After V[2] = 0.5, V = (%g)\n", V);
+        // FIXME -- test V[i] for varying i (need int cast first)
+
     }
 
     {
@@ -14,6 +19,10 @@ test ()
         vector V = vector (u, v, 2);
         printf ("  V = vector (%g) has components %g, %g, %g\n",
                 V, V[0], V[1], V[2]);
-        // FIXME -- test V[i] for varying i
+        V[1] = 8;
+        printf ("  After V[1] = 8, V = (%g)\n", V);
+        V[2] = 10+u;
+        printf ("  After V[2] = %g, V = (%g)\n", 10+u, V);
+        // FIXME -- test V[i] for varying i (need int cast first)
     }
 }

@@ -2,9 +2,19 @@ Compiled test.osl -> test.oso
 Test vector functions
 
   V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 0.5, V = (0 8 0.5)
  varying:
   V = vector (0 0 2) has components 0, 0, 2
   V = vector (1 0 2) has components 1, 0, 2
   V = vector (0 1 2) has components 0, 1, 2
   V = vector (1 1 2) has components 1, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[1] = 8, V = (1 8 2)
+  After V[1] = 8, V = (0 8 2)
+  After V[1] = 8, V = (1 8 2)
+  After V[2] = 10, V = (0 8 10)
+  After V[2] = 11, V = (1 8 11)
+  After V[2] = 10, V = (0 8 10)
+  After V[2] = 11, V = (1 8 11)
 

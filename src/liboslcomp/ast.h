@@ -238,7 +238,7 @@ protected:
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
     int emitcode (const char *opname, Symbol *arg0=NULL, 
-                  Symbol *arg1=NULL, Symbol *arg2=NULL);
+                  Symbol *arg1=NULL, Symbol *arg2=NULL, Symbol *arg3=NULL);
 
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
@@ -406,6 +406,10 @@ public:
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
     Symbol *codegen (Symbol *dest = NULL);
+
+    /// Special code generation of assignment of src to this indexed location
+    ///
+    void codegen_assign (Symbol *src);
 
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }

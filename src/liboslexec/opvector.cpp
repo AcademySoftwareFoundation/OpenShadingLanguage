@@ -217,7 +217,7 @@ public:
     float operator() (const Vec3 &v, int i) {
         if (i < 0 || i > 2) {
             const Symbol &V (m_exec->sym (m_exec->op().firstarg()+1));
-            m_exec->error ("Index out of range: accessed %s %s[%d]\n",
+            m_exec->error ("Index out of range: %s %s[%d]\n",
                            V.typespec().string().c_str(),
                            V.name().c_str(), i);
             i = clamp (i, 0, 2);
@@ -257,7 +257,7 @@ DECLOP (OP_normal)
 
 
 
-// vec[index]
+// result = vec[index]
 DECLOP (OP_compref)
 {
     DASSERT (nargs == 3);
@@ -271,6 +271,66 @@ DECLOP (OP_compref)
 
     binary_op_guts<Float,Vec3,int,Compref> (Result, V, I, exec,
                                             runflags, beginpoint, endpoint);
+}
+
+
+
+// result[index] = val
+template<class SRC>
+static DECLOP (specialized_compassign)
+{
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Index (exec->sym (args[1]));
+    Symbol &Val (exec->sym (args[2]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, Result.is_varying() | Index.is_varying() | Val.is_varying(), false /* can't alias */);
+
+    // Loop over points, do the operation
+    VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
+    VaryingRef<int> index ((int *)Index.data(), Index.step());
+    VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
+    if (result.is_uniform()) {
+        // Uniform case
+        (*result)[*index] = (Float) *val;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i]) {
+                result[i][index[i]] = (Float) val[i];
+            }
+    }
+}
+
+
+
+// result[index] = val
+DECLOP (OP_compassign)
+{
+    ASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Index (exec->sym (args[1]));
+    Symbol &Val (exec->sym (args[2]));
+    ASSERT (! Result.typespec().is_closure() && 
+            ! Index.typespec().is_closure() && ! Val.typespec().is_closure());
+    ASSERT (Result.typespec().is_triple() && Index.typespec().is_int());
+
+    OpImpl impl = NULL;
+    if (Val.typespec().is_float())
+        impl = specialized_compassign<Float>;
+    else if (Val.typespec().is_int())
+        impl = specialized_compassign<int>;
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+        return;
+    } else {
+        ASSERT (0 && "Component assignment types can't be handled");
+    }
 }
 
 

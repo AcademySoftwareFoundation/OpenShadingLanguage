@@ -55,8 +55,9 @@ OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
 {
 //    std::cout << "\temit " << opname;
     int opnum = (int) m_ircode.size();
-    m_ircode.push_back (Opcode (ustring (opname), m_codegenmethod,
-                                m_opargs.size(), nargs));
+    Opcode op (ustring (opname), m_codegenmethod, m_opargs.size(), nargs);
+    op.source (node->sourcefile(), node->sourceline());
+    m_ircode.push_back (op);
     for (size_t i = 0;  i < nargs;  ++i) {
         ASSERT (args[i]);
         m_opargs.push_back (args[i]);
@@ -132,10 +133,11 @@ OSLCompilerImpl::make_constant (float val)
 
 int
 ASTNode::emitcode (const char *opname, Symbol *arg0, 
-                   Symbol *arg1, Symbol *arg2)
+                   Symbol *arg1, Symbol *arg2, Symbol *arg3)
 {
-    Symbol *args[3] = { arg0, arg1, arg2 };
-    size_t nargs = (arg0 != NULL) + (arg1 != NULL) + (arg2 != NULL);
+    Symbol *args[4] = { arg0, arg1, arg2, arg3 };
+    size_t nargs = (arg0 != NULL) + (arg1 != NULL) + 
+                   (arg2 != NULL) + (arg3 != NULL);
     return m_compiler->emitcode (opname, nargs, args, this);
 }
 
@@ -209,18 +211,29 @@ ASTshader_declaration::codegen (Symbol *dest)
 Symbol *
 ASTassign_expression::codegen (Symbol *dest)
 {
-    dest = var()->codegen();
+    ASTindex *index = NULL;
+    if (var()->nodetype() == index_node) {
+        // Assigning to an individual component or array element
+        index = (ASTindex *) var().get();
+    }
+    dest = index ? NULL : var()->codegen();
     if (m_op == Assign) {
         Symbol *operand = expr()->codegen (dest);
         // FIXME -- what about coerced types, do we need a temp and copy here?
-        if (operand != dest)
+        if (index)
+            index->codegen_assign (operand);
+        else if (operand != dest)
             emitcode ("assign", dest, operand);
     } else {
         Symbol *operand = expr()->codegen ();
         // FIXME -- what about coerced types, do we need a temp and copy here?
-        emitcode (opword(), dest, dest, operand);
+        if (index) {
+            index->codegen_assign (operand);
+            // FIXME -- wrong
+        }
+        else
+            emitcode (opword(), dest, dest, operand);
     }
-    // FIXME -- what about component or array indices?
 
     return dest;
 }
@@ -285,16 +298,35 @@ ASTindex::codegen (Symbol *dest)
     if (! dest)
         dest = m_compiler->make_temporary (typespec());
     if (lv->typespec().is_array()) {
-        emitcode ("arrayref", dest, lv, ind);
+        emitcode ("aref", dest, lv, ind);
     } else if (lv->typespec().is_triple()) {
         emitcode ("compref", dest, lv, ind);
     } else if (lv->typespec().is_matrix()) {
         Symbol *ind2 = index2()->codegen ();
-        emitcode ("mxcompref", dest, lv, ind);
+        emitcode ("mxcompref", dest, lv, ind, ind2);
     } else {
         ASSERT (0);
     }
     return dest;
+}
+
+
+
+void
+ASTindex::codegen_assign (Symbol *src)
+{
+    Symbol *lv = lvalue()->codegen ();
+    Symbol *ind = index()->codegen ();
+    if (lv->typespec().is_array()) {
+        emitcode ("aassign", lv, ind, src);
+    } else if (lv->typespec().is_triple()) {
+        emitcode ("compassign", lv, ind, src);
+    } else if (lv->typespec().is_matrix()) {
+        Symbol *ind2 = index2()->codegen ();
+        emitcode ("mxcompassign", lv, ind, ind2, src);
+    } else {
+        ASSERT (0);
+    }
 }
 
 

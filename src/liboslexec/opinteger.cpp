@@ -55,26 +55,31 @@ namespace {
 // Functors
 class BitAnd {
 public:
+    BitAnd (ShadingExecution *) { }
     inline int operator() (int a, int b) { return a & b; }
 };
 
 class BitOr {
 public:
+    BitOr (ShadingExecution *) { }
     inline int operator() (int a, int b) { return a | b; }
 };
 
 class Xor {
 public:
+    Xor (ShadingExecution *) { }
     inline int operator() (int a, int b) { return a ^ b; }
 };
 
 class Shl {
 public:
+    Shl (ShadingExecution *) { }
     inline int operator() (int a, int b) { return a << b; }
 };
 
 class Shr {
 public:
+    Shr (ShadingExecution *) { }
     inline int operator() (int a, int b) { return a >> b; }
 };
 

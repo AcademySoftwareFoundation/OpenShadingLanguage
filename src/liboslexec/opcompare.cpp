@@ -55,36 +55,42 @@ namespace {
 template<class A, class B>
 class Equal {
 public:
+    Equal (ShadingExecution *) { }
     inline int operator() (const A &a, const B &b) { return (a == b); }
 };
 
 template<class A, class B>
 class NotEqual {
 public:
+    NotEqual (ShadingExecution *) { }
     inline int operator() (const A &a, const B &b) { return (a != b); }
 };
 
 template<class A, class B>
 class Less {
 public:
+    Less (ShadingExecution *) { }
     inline int operator() (const A &a, const B &b) { return (a < b); }
 };
 
 template<class A, class B>
 class LessEqual {
 public:
+    LessEqual (ShadingExecution *) { }
     inline int operator() (const A &a, const B &b) { return (a <= b); }
 };
 
 template<class A, class B>
 class Greater {
 public:
+    Greater (ShadingExecution *) { }
     inline int operator() (const A &a, const B &b) { return (a > b); }
 };
 
 template<class A, class B>
 class GreaterEqual {
 public:
+    GreaterEqual (ShadingExecution *) { }
     inline int operator() (const A &a, const B &b) { return (a >= b); }
 };
 

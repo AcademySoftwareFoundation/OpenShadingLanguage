@@ -56,6 +56,7 @@ namespace {
 template<class R, class A, class B>
 class Add {
 public:
+    Add (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) { return R (a + b); }
 };
 
@@ -64,6 +65,7 @@ public:
 template<class R, class A, class B>
 class Sub {
 public:
+    Sub (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) { return R (a - b); }
 };
 
@@ -72,12 +74,14 @@ public:
 template<class R, class A, class B>
 class Mul {
 public:
+    Mul (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) { return R (a * b); }
 };
 
 template<>
 class Mul<Matrix44,Matrix44,int> {
 public:
+    Mul (ShadingExecution *) { }
     inline Matrix44 operator() (const Matrix44 &a, int b) {
         return Matrix44 (a * (float)b);
     }
@@ -86,6 +90,7 @@ public:
 template<>
 class Mul<Matrix44,int,Matrix44> {
 public:
+    Mul (ShadingExecution *) { }
     inline Matrix44 operator() (int a, const Matrix44 &b) {
         return Matrix44 ((float)a * b);
     }
@@ -94,6 +99,7 @@ public:
 // Specialized version for matrix = scalar * scalar
 class ScalarMatrixMul {
 public:
+    ScalarMatrixMul (ShadingExecution *) { }
     inline Matrix44 operator() (float a, float b) {
         float f = a * b;
         return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
@@ -104,6 +110,7 @@ public:
 template<class R, class A, class B>
 class Div {
 public:
+    Div (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) {
         return (b == 0) ? R (0.0) : R (a / b);
     }
@@ -114,6 +121,7 @@ template<>
 class Div<Matrix44,Matrix44,Matrix44>
 {
 public:
+    Div (ShadingExecution *) { }
     inline Matrix44 operator() (const Matrix44 &a, const Matrix44 &b) {
         return a * b.inverse();
     }
@@ -124,6 +132,7 @@ template<>
 class Div<Matrix44,float,Matrix44>
 {
 public:
+    Div (ShadingExecution *) { }
     inline Matrix44 operator() (float a, const Matrix44 &b) {
         return a * b.inverse();
     }
@@ -134,6 +143,7 @@ template<>
 class Div<Matrix44,int,Matrix44>
 {
 public:
+    Div (ShadingExecution *) { }
     inline Matrix44 operator() (int a, const Matrix44 &b) {
         return (float)a * b.inverse();
     }
@@ -144,6 +154,7 @@ template<>
 class Div<Matrix44,Matrix44,int>
 {
 public:
+    Div (ShadingExecution *) { }
     inline Matrix44 operator() (const Matrix44 &a, int b) {
         return a / (float)b;
     }
@@ -152,6 +163,7 @@ public:
 // Specialized version for matrix = scalar / scalar
 class ScalarMatrixDiv {
 public:
+    ScalarMatrixDiv (ShadingExecution *) { }
     inline Matrix44 operator() (float a, float b) {
         float f = (b == 0) ? 0.0 : (a / b);
         return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
@@ -161,6 +173,7 @@ public:
 // Make a functor that encapsulates modulus
 class Mod {
 public:
+    Mod (ShadingExecution *) { }
     inline int operator() (int a, int b) { return (b == 0) ? 0 : (a % b); }
 };
 

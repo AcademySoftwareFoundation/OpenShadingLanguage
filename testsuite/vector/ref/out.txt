@@ -44,4 +44,5 @@ Test vector functions
   normalize (1 8 11) = 0.0733236 0.586588 0.806559
   normalize (0 8 10) = 0 0.624695 0.780869
   normalize (1 8 11) = 0.0733236 0.586588 0.806559
+  normalize (0 0 0) = 0 0 0
 

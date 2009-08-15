@@ -2,6 +2,10 @@ shader
 test ()
 {
     printf ("Test vector functions\n\n");
+    vector X = vector (1, 0, 0);
+    vector Y = vector (0, 1, 0);
+    vector XY = X + Y;
+    vector Zero = 0;
     {
         vector V = vector (0, 1, 2);
         printf ("  V = vector (%g) has components %g, %g, %g\n",
@@ -11,7 +15,16 @@ test ()
         V[2] = 0.5;
         printf ("  After V[2] = 0.5, V = (%g)\n", V);
         // FIXME -- test V[i] for varying i (need int cast first)
-
+        printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
+        printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
+        printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
+        printf ("  length (%g) = %g\n", Y, length(Y));
+        printf ("  length (%g) = %g\n", XY, length(XY));
+        printf ("  distance ((%g), (%g)) = %g\n", X, Y, distance(X,Y));
+        printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
+        printf ("  normalize (%g) = %g\n", XY, normalize(XY));
+        printf ("  normalize (%g) = %g\n", V, normalize(V));
+        printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));
     }
 
     {
@@ -24,5 +37,14 @@ test ()
         V[2] = 10+u;
         printf ("  After V[2] = %g, V = (%g)\n", 10+u, V);
         // FIXME -- test V[i] for varying i (need int cast first)
+        printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
+        printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
+        printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
+        printf ("  length (%g) = %g\n", Y, length(Y));
+        printf ("  length (%g) = %g\n", XY, length(XY));
+        printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
+        printf ("  normalize (%g) = %g\n", XY, normalize(XY));
+        printf ("  normalize (%g) = %g\n", V, normalize(V));
+        printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));
     }
 }

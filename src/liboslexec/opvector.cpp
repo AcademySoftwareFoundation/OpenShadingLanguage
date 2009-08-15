@@ -228,6 +228,47 @@ private:
     ShadingExecution *m_exec;
 };
 
+
+class Dot {
+public:
+    Dot (ShadingExecution *) { }
+    float operator() (const Vec3 &a, const Vec3 &b) { return a.dot (b); }
+};
+
+
+class Cross {
+public:
+    Cross (ShadingExecution *) { }
+    Vec3 operator() (const Vec3 &a, const Vec3 &b) { return a.cross (b); }
+};
+
+
+class Length {
+public:
+    Length (ShadingExecution *) { }
+    float operator() (const Vec3 &a) { return a.length(); }
+};
+
+
+class Normalize {
+public:
+    Normalize (ShadingExecution *) { }
+    Vec3 operator() (const Vec3 &a) { return a.normalized(); }
+};
+
+
+class Distance {
+public:
+    Distance (ShadingExecution *) { }
+    float operator() (const Vec3 &a, const Vec3 &b) {
+        float x = a[0] - b[0];
+        float y = a[1] - b[1];
+        float z = a[2] - b[2];
+        return sqrtf (x*x + y*y + z*z);
+    }
+};
+
+
 };  // End anonymous namespace
 
 
@@ -331,6 +372,87 @@ DECLOP (OP_compassign)
     } else {
         ASSERT (0 && "Component assignment types can't be handled");
     }
+}
+
+
+
+DECLOP (OP_dot)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    DASSERT (! Result.typespec().is_closure() && 
+             ! A.typespec().is_closure() && ! B.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && A.typespec().is_triple() &&
+             B.typespec().is_triple());
+
+    binary_op_guts<Float,Vec3,Vec3,Dot> (Result, A, B, exec,
+                                         runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_cross)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    DASSERT (! Result.typespec().is_closure() && 
+             ! A.typespec().is_closure() && ! B.typespec().is_closure());
+    DASSERT (Result.typespec().is_triple() && A.typespec().is_triple() &&
+             B.typespec().is_triple());
+
+    binary_op_guts<Vec3,Vec3,Vec3,Cross> (Result, A, B, exec,
+                                          runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_length)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    DASSERT (! Result.typespec().is_closure() && 
+             ! A.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && A.typespec().is_triple());
+
+    unary_op_guts<Float,Vec3,Length> (Result, A, exec,
+                                      runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_normalize)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    DASSERT (! Result.typespec().is_closure() && 
+             ! A.typespec().is_closure());
+    DASSERT (Result.typespec().is_triple() && A.typespec().is_triple());
+
+    unary_op_guts<Vec3,Vec3,Normalize> (Result, A, exec,
+                                        runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_distance)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    DASSERT (! Result.typespec().is_closure() && 
+             ! A.typespec().is_closure() && ! B.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && A.typespec().is_triple() &&
+             B.typespec().is_triple());
+
+    binary_op_guts<Float,Vec3,Vec3,Distance> (Result, A, B, exec,
+                                              runflags, beginpoint, endpoint);
 }
 
 

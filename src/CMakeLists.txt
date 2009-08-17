@@ -94,7 +94,7 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic color comparison exponential 
-            hyperb if incdec intbits matrix trig vecctr vector )
+            hyperb if incdec intbits matrix trig typecast vecctr vector )
 
 
 

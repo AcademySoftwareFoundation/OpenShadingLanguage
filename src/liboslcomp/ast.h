@@ -609,6 +609,7 @@ public:
     const char *nodetypename () const { return "typecast_expression"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
 };

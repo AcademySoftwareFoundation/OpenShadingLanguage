@@ -86,6 +86,4 @@ test ()
         printf ("\n");
     }
 
-    // FIXME -- matrix
-
 }

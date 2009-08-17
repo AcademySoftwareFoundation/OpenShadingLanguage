@@ -134,6 +134,9 @@ DECLOP (OP_assign)
     } else if (Result.typespec().is_float()) {
         if (Src.typespec().is_int())
             impl = specialized_assign<float,int>;
+    } else if (Result.typespec().is_int()) {
+        if (Src.typespec().is_float())
+            impl = specialized_assign<int,float>;
     } else if (Result.typespec().is_triple()) {
         if (Src.typespec().is_triple())
             impl = assign_copy;  // p=n, v=p, etc.

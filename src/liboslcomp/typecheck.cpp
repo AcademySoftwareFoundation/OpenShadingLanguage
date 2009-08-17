@@ -461,7 +461,9 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
     // FIXME - closures
     typecheck_children (expected);
     TypeSpec t = expr()->typespec();
-    if (! assignable (m_typespec, t))
+    if (! assignable (m_typespec, t) &&
+        ! (m_typespec.is_int() && t.is_float()) && // (int)float is ok
+        ! (m_typespec.is_triple() && t.is_triple()))
         error ("Cannot cast '%s' to '%s'", t.string().c_str(),
                m_typespec.string().c_str());
     return m_typespec;

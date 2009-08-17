@@ -416,6 +416,26 @@ ASTbinary_expression::codegen (Symbol *dest)
 
 
 Symbol *
+ASTtypecast_expression::codegen (Symbol *dest)
+{
+    Symbol *e = expr()->codegen ();
+
+    // If the cast is a null operation -- they are already the same types,
+    // or we're converting one triple to another -- just pass the expression.
+    if (equivalent (typespec(), e->typespec()))
+        return e;
+
+    // Some actual conversion is necessary.  Generally, our "assign"
+    // op can handle it all easily.
+    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
+        dest = m_compiler->make_temporary (typespec());
+    emitcode ("assign", dest, e);
+    return dest;
+}
+
+
+
+Symbol *
 ASTtype_constructor::codegen (Symbol *dest)
 {
     if (dest == NULL || ! equivalent (dest->typespec(), typespec()))

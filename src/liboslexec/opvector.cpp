@@ -325,7 +325,7 @@ static DECLOP (specialized_compassign)
     Symbol &Val (exec->sym (args[2]));
 
     // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, Result.is_varying() | Index.is_varying() | Val.is_varying(), false /* can't alias */);
+    exec->adjust_varying (Result, Result.is_varying() | Index.is_varying() | Val.is_varying());
 
     // Loop over points, do the operation
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
@@ -333,13 +333,28 @@ static DECLOP (specialized_compassign)
     VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
     if (result.is_uniform()) {
         // Uniform case
-        (*result)[*index] = (Float) *val;
+        int c = *index;
+        if (c < 0 || c > 2) {
+            exec->error ("Index out of range: %s %s[%d]\n",
+                         Result.typespec().string().c_str(),
+                         Result.name().c_str(), c);
+            c = clamp (c, 0, 2);
+        }
+        (*result)[c] = (Float) *val;
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
+        for (int i = beginpoint;  i < endpoint;  ++i) {
             if (runflags[i]) {
-                result[i][index[i]] = (Float) val[i];
+                int c = index[i];
+                if (c < 0 || c > 2) {
+                    exec->error ("Index out of range: %s %s[%d]\n",
+                                 Result.typespec().string().c_str(),
+                                 Result.name().c_str(), c);
+                    c = clamp (c, 0, 2);
+                }
+                result[i][c] = (Float) val[i];
             }
+        }
     }
 }
 

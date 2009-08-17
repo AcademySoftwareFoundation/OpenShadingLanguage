@@ -8,7 +8,9 @@ test ()
 {
     {
         float a = M_E;
+        float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));
@@ -17,6 +19,7 @@ test ()
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
         a = 10.0*M_E;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));
@@ -27,7 +30,9 @@ test ()
 
     { 
         vector a = M_E;
+        float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));
@@ -36,6 +41,7 @@ test ()
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
         a = 10.0*M_E;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));
@@ -47,7 +53,9 @@ test ()
     printf (" varying:\n");
     {
         float a = u;
+        float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         printf ("  log2 (%g) = %g\n", a, log2 (a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));
@@ -57,7 +65,9 @@ test ()
     }
     {
         color a = u;
+        float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));

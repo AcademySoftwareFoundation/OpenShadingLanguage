@@ -199,17 +199,42 @@ public:
 class Log {
 public:
     Log (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x) { return safe_log (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (safe_log (x[0]), safe_log (x[1]), safe_log (x[2]));
-    }
+    inline float operator() (float x)          { return safe_log (x, M_E);}
+    inline float operator() (float x, float b) { return safe_log (x, b);  }
+    inline Vec3  operator() (const Vec3 &x)    { return safe_log (x, M_E);} 
+    inline Vec3  operator() (const Vec3 &x, float b) { return safe_log (x, b);}
 private:
-    inline float safe_log (float f) {
-        if (f <= 0.0f) {
-            m_exec->error ("attempted to compute log(%g)", f);
-            return -std::numeric_limits<float>::max();
+    inline float safe_log (float f, float b) {
+        if (f <= 0.0f || b <= 0.0f || b == 1.0f) {
+            m_exec->error ("attempted to compute log(%g, %g)", f, b);
+            if (b == 1.0) 
+                return std::numeric_limits<float>::max();
+            else
+                return -std::numeric_limits<float>::max();
         } else {
-            return logf (f);
+            if (b == (float)M_E)
+                return logf (f);
+            else
+                return logf (f)/ logf (b);
+        }
+    }
+    inline Vec3 safe_log (const Vec3 &x, float b) {
+        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f || b <= 0.0f || b == 1.0f) {
+            m_exec->error ("attempted to compute log(<%g,%g,%g>, %g)", x[0], x[1], x[2], b);
+            if (b == 1.0) {
+                const float flt_max = std::numeric_limits<float>::max();
+                return Vec3 (flt_max, flt_max, flt_max);
+            } else {
+                const float neg_flt_max = -std::numeric_limits<float>::max();
+                return Vec3 (neg_flt_max, neg_flt_max, neg_flt_max);
+            }
+        } else {
+            if (b == (float)M_E) {
+                return Vec3 (logf (x[0]), logf (x[1]), logf (x[2]));
+            } else {
+                float inv_log_b = 1.0/logf (b);
+                return Vec3 (logf (x[0])*inv_log_b, logf (x[1])*inv_log_b, logf (x[2])*inv_log_b);
+            }
         }
     }
     ShadingExecution *m_exec;
@@ -338,10 +363,8 @@ DECLOP (generic_unary_function_shadeop)
     }
 }
 
+
 };  // End anonymous namespace
-
-
-
 
 DECLOP (OP_cos)
 {
@@ -409,10 +432,60 @@ DECLOP (OP_tanh)
                                          runflags, beginpoint, endpoint);
 }
 
+// log() function can two forms:
+//   T = log(T)
+//   T = log(T, float)
+//  where T is float or 3-tuple (color/vector...)
 DECLOP (OP_log)
 {
-    generic_unary_function_shadeop<Log> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    ASSERT (nargs == 2 || nargs == 3);
+    OpImpl impl = NULL;
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+
+    // T = log(T) case
+    if (nargs == 2) {
+        ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
+        if (Result.typespec().is_triple() && A.typespec().is_triple()) {
+            impl = unary_op<Vec3,Vec3, Log>;
+        }
+        else if (Result.typespec().is_float() && A.typespec().is_float()){
+            impl = unary_op<float,float, Log>;
+        }
+        else {
+            std::cerr << "Don't know how compute " << Result.typespec().string()
+                      << " = " << exec->op().opname() << "(" 
+                      << A.typespec().string() << ")\n";
+            ASSERT (0 && "Function arg type can't be handled");
+        }
+    }
+
+    // T = log(T, float) case
+    else if (nargs == 3) {
+        Symbol &B (exec->sym (args[2]));
+        ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
+        if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_float()) {
+            impl = binary_op<Vec3,Vec3,float, Log>;
+        }
+        else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()){
+            impl = binary_op<float,float,float, Log>;
+        }
+        else {
+            std::cerr << "Don't know how compute " << Result.typespec().string()
+                      << " = " << exec->op().opname() << "(" 
+                      << A.typespec().string() << ", "
+                      << B.typespec().string() << ")\n";
+            ASSERT (0 && "Function arg type can't be handled");
+        }
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } 
 }
 
 DECLOP (OP_log2)

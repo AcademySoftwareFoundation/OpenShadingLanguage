@@ -732,7 +732,7 @@ static const char * builtin_func_args [] = {
     "hash", NOISE_ARGS, NULL,
     "hypot", "fff", "ffff", NULL,
     "length", "fv", NULL,
-    "log", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
+    "log", ANY_ONE_FLOAT_BASED, "fff", "ccf", "ppf", "vvf", "nnf", NULL,
     "log2", ANY_ONE_FLOAT_BASED, NULL,
     "log10", ANY_ONE_FLOAT_BASED, NULL,
     "logb", ANY_ONE_FLOAT_BASED, NULL,

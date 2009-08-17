@@ -204,6 +204,8 @@ static OpNameEntry op_name_entries[] = {
     { "lt", OP_lt },
     { "luminance", OP_luminance },
     { "matrix", OP_matrix },
+    { "mxcompassign", OP_mxcompassign },
+    { "mxcompref", OP_mxcompref },
     { "mod", OP_mod },
     { "mul", OP_mul },
     { "neg", OP_neg },

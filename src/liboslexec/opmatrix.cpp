@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 
 #include "OpenImageIO/varyingref.h"
+#include "OpenImageIO/fmath.h"
 
 
 #ifdef OSL_NAMESPACE
@@ -133,6 +134,143 @@ DECLOP (OP_matrix)
                 }
                 result[i] = R;
             }
+    }
+}
+
+
+
+// matrix[row][col] = val
+template<class SRC>
+static DECLOP (specialized_mxcompassign)
+{
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Row (exec->sym (args[1]));
+    Symbol &Col (exec->sym (args[2]));
+    Symbol &Val (exec->sym (args[3]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, Result.is_varying() | Row.is_varying() |
+                          Col.is_varying() | Val.is_varying());
+
+    // Loop over points, do the operation
+    VaryingRef<Matrix44> result ((Matrix44 *)Result.data(), Result.step());
+    VaryingRef<int> row ((int *)Row.data(), Row.step());
+    VaryingRef<int> col ((int *)Col.data(), Col.step());
+    VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
+    if (result.is_uniform()) {
+        // Uniform case
+        int r = *row, c = *col;
+        if (r < 0 || r > 3 || c < 0 || c > 3) {
+            exec->error ("Index out of range: %s %s[%d][%d]\n",
+                         Result.typespec().string().c_str(),
+                         Result.name().c_str(), r, c);
+            r = clamp (r, 0, 3);
+            c = clamp (c, 0, 3);
+        }
+        (*result)[r][c] = (Float) *val;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i) {
+            if (runflags[i]) {
+                int r = row[i];
+                int c = col[i];
+                if (r < 0 || r > 3 || c < 0 || c > 3) {
+                    exec->error ("Index out of range: %s %s[%d][%d]\n",
+                                 Result.typespec().string().c_str(),
+                                 Result.name().c_str(), r, c);
+                    r = clamp (r, 0, 3);
+                    c = clamp (c, 0, 3);
+                }
+                result[i][r][c] = (Float) val[i];
+            }
+        }
+    }
+}
+
+
+
+// matrix[row][col] = val
+DECLOP (OP_mxcompassign)
+{
+    ASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Row (exec->sym (args[1]));
+    Symbol &Col (exec->sym (args[2]));
+    Symbol &Val (exec->sym (args[3]));
+    ASSERT (! Result.typespec().is_closure() && ! Row.typespec().is_closure() &&
+            ! Col.typespec().is_closure() && ! Val.typespec().is_closure());
+    ASSERT (Result.typespec().is_matrix() && Row.typespec().is_int() &&
+            Col.typespec().is_int());
+
+    OpImpl impl = NULL;
+    if (Val.typespec().is_float())
+        impl = specialized_mxcompassign<Float>;
+    else if (Val.typespec().is_int())
+        impl = specialized_mxcompassign<int>;
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+        return;
+    } else {
+        ASSERT (0 && "Component assignment types can't be handled");
+    }
+}
+
+
+
+// result = matrix[row][col]
+DECLOP (OP_mxcompref)
+{
+    DASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &M (exec->sym (args[1]));
+    Symbol &Row (exec->sym (args[2]));
+    Symbol &Col (exec->sym (args[3]));
+    DASSERT (! Result.typespec().is_closure() && ! Row.typespec().is_closure() &&
+            ! Col.typespec().is_closure() && ! Val.typespec().is_closure());
+    DASSERT (Result.typespec().is_float() && M.typespec().is_matrix() &&
+             Row.typespec().is_int() && Col.typespec().is_int());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, M.is_varying() | Row.is_varying() |
+                          Col.is_varying(), false /* can't alias */);
+
+    // Loop over points, do the operation
+    VaryingRef<Float> result ((Float *)Result.data(), Result.step());
+    VaryingRef<Matrix44> m ((Matrix44 *)M.data(), M.step());
+    VaryingRef<int> row ((int *)Row.data(), Row.step());
+    VaryingRef<int> col ((int *)Col.data(), Col.step());
+    if (result.is_uniform()) {
+        // Uniform case
+        int r = *row, c = *col;
+        if (r < 0 || r > 3 || c < 0 || c > 3) {
+            exec->error ("Index out of range: %s %s[%d][%d]\n",
+                         Result.typespec().string().c_str(),
+                         Result.name().c_str(), r, c);
+            r = clamp (r, 0, 3);
+            c = clamp (c, 0, 3);
+        }
+        (*result) = (*m)[r][c];
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i) {
+            if (runflags[i]) {
+                int r = row[i];
+                int c = col[i];
+                if (r < 0 || r > 3 || c < 0 || c > 3) {
+                    exec->error ("Index out of range: %s %s[%d][%d]\n",
+                                 Result.typespec().string().c_str(),
+                                 Result.name().c_str(), r, c);
+                    r = clamp (r, 0, 3);
+                    c = clamp (c, 0, 3);
+                }
+                result[i] = (m[i])[r][c];
+            }
+        }
     }
 }
 

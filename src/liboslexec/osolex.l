@@ -58,7 +58,7 @@ ALPHA           [A-Za-z]
  /* numerals */
 DIGIT           [0-9]
  /* Integer literal */
-INTEGER         {DIGIT}+
+INTEGER         [-+]?{DIGIT}+
  /* floating point literal (E, FLT1, FLT2, FLT3 are just helpers) */
 E               [eE][-+]?{DIGIT}+
 FLT1            [-+]?{DIGIT}+\.{DIGIT}*{E}?

@@ -372,6 +372,14 @@ public:
     }
 };
 
+class Ceil {
+public:
+    Ceil (ShadingExecution *) { }
+    inline float operator() (float x) { return ceilf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (ceilf (x[0]), ceilf (x[1]), ceilf (x[2]));
+    }
+};
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -615,6 +623,11 @@ DECLOP (OP_floor)
                                          runflags, beginpoint, endpoint);
 }
 
+DECLOP (OP_ceil)
+{
+    generic_unary_function_shadeop<Ceil> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
 
 }; // namespace pvt
 }; // namespace OSL

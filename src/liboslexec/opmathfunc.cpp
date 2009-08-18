@@ -362,6 +362,14 @@ public:
     }
 };
 
+class Floor {
+public:
+    Floor (ShadingExecution *) { }
+    inline float operator() (float x) { return floorf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (floorf (x[0]), floorf (x[1]), floorf (x[2]));
+    }
+};
 
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -568,6 +576,11 @@ DECLOP (OP_fabs)
                                          runflags, beginpoint, endpoint);
 }
 
+DECLOP (OP_floor)
+{
+    generic_unary_function_shadeop<Floor> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
 
 
 }; // namespace pvt

@@ -113,7 +113,7 @@ DECLOP (OP_fabs);
 //DECLOP (OP_faceforward);
 //DECLOP (OP_filterwidth);
 //DECLOP (OP_fmod);
-//DECLOP (OP_floor);
+DECLOP (OP_floor);
 //DECLOP (OP_for);
 //DECLOP (OP_format);
 //DECLOP (OP_fprintf);

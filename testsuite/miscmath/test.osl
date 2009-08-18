@@ -7,27 +7,33 @@ shader
 test ()
 {
     {
-        float a = 101;
+        float a = 101.29;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
-        a = -137;
+        printf ("  floor (%g) = %g\n", a, floor(a));
+        a = -137.29;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
+        printf ("  floor (%g) = %g\n", a, floor(a));
     }
 
     { 
-        vector a = 101;
+        vector a = 101.29;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
-        a = -137;
+        printf ("  floor (%g) = %g\n", a, floor(a));
+        a = -137.29;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
+        printf ("  floor (%g) = %g\n", a, floor(a));
     }
 
     printf (" varying:\n");
     {
         float a = u;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
+        printf ("  floor (%g) = %g\n", a, floor(a));
     }
 
     {
         color a = u;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
+        printf ("  floor (%g) = %g\n", a, floor(a));
     }
 }

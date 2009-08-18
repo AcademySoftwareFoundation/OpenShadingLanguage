@@ -351,6 +351,17 @@ public:
     }
 };
 
+// miscellaneous math ops
+
+class FAbs {
+public:
+    FAbs (ShadingExecution *) { }
+    inline float operator() (float x) { return fabsf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (fabsf (x[0]), fabsf (x[1]), fabsf (x[2]));
+    }
+};
+
 
 
 // Generic template for implementing "T func(T)" where T can be either
@@ -550,6 +561,13 @@ DECLOP (OP_expm1)
     generic_unary_function_shadeop<Expm1> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
+
+DECLOP (OP_fabs)
+{
+    generic_unary_function_shadeop<FAbs> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
 
 
 }; // namespace pvt

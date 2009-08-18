@@ -1,0 +1,15 @@
+Compiled test.osl -> test.oso
+  fabs (101) = 101
+  fabs (-137) = 137
+  fabs (101 101 101) = 101 101 101
+  fabs (-137 -137 -137) = 137 137 137
+ varying:
+  fabs (0) = 0
+  fabs (1) = 1
+  fabs (0) = 0
+  fabs (1) = 1
+  fabs (0 0 0) = 0 0 0
+  fabs (1 1 1) = 1 1 1
+  fabs (0 0 0) = 0 0 0
+  fabs (1 1 1) = 1 1 1
+

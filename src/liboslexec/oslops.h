@@ -109,7 +109,7 @@ DECLOP (OP_exp);
 DECLOP (OP_exp2);
 DECLOP (OP_expm1);
 DECLOP (OP_eq);
-//DECLOP (OP_fabs);
+DECLOP (OP_fabs);
 //DECLOP (OP_faceforward);
 //DECLOP (OP_filterwidth);
 //DECLOP (OP_fmod);

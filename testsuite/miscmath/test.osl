@@ -13,6 +13,12 @@ test ()
         a = -137.29;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
+        int i = 137;
+        printf ("  abs (%d) = %d\n", i, abs(i));
+        printf ("  fabs (%d) = %d\n", i, fabs(i));
+        i = -137;
+        printf ("  abs (%d) = %d\n", i, abs(i));
+        printf ("  fabs (%d) = %d\n", i, fabs(i));
     }
 
     { 

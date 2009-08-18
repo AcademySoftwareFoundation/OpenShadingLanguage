@@ -680,7 +680,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
 static const char * builtin_func_args [] = {
 
     "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", NULL,
-    "abs", ANY_ONE_FLOAT_BASED, NULL,
+    "abs", ANY_ONE_FLOAT_BASED,  "ii", NULL,  // alias for fabs()
     "acos", ANY_ONE_FLOAT_BASED, NULL,
     "area", "fp", NULL,
     "arraylength", "i?[]", NULL,
@@ -712,7 +712,7 @@ static const char * builtin_func_args [] = {
     "exp", ANY_ONE_FLOAT_BASED, NULL,
     "exp2", ANY_ONE_FLOAT_BASED, NULL,
     "expm1", ANY_ONE_FLOAT_BASED, NULL,
-    "fabs", ANY_ONE_FLOAT_BASED, NULL,
+    "fabs", ANY_ONE_FLOAT_BASED, "ii",  NULL,
     "faceforward", "vvvv", "vvv", NULL,
     "filterwidth", DERIV_ARGS, NULL,
     "floor", ANY_ONE_FLOAT_BASED, NULL,

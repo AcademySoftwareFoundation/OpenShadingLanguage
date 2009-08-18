@@ -168,6 +168,7 @@ struct OpNameEntry {
 
 // Static table of opcode names and implementations
 static OpNameEntry op_name_entries[] = {
+    { "abs", OP_fabs },  // alias for fabs()
     { "acos", OP_acos },
     { "add", OP_add },
     { "asin", OP_asin },

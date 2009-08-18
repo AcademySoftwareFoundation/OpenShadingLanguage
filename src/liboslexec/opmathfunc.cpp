@@ -356,6 +356,7 @@ public:
 class FAbs {
 public:
     FAbs (ShadingExecution *) { }
+    inline int   operator() (int   x) { return abs (x);   }
     inline float operator() (float x) { return fabsf (x); }
     inline Vec3 operator() (const Vec3 &x) {
         return Vec3 (fabsf (x[0]), fabsf (x[1]), fabsf (x[2]));
@@ -570,11 +571,43 @@ DECLOP (OP_expm1)
                                          runflags, beginpoint, endpoint);
 }
 
+// The fabs() function can be of the form:
+//    T = fabs(T) where T is a Vec, Flt, or int
+// NOTE: abs() is an alias for fabs()
 DECLOP (OP_fabs)
 {
-    generic_unary_function_shadeop<FAbs> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    // 2 args, result and input.
+    ASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float), and triple = func (triple)
+    if (Result.typespec().is_triple() && A.typespec().is_triple()) {
+        impl = unary_op<Vec3,Vec3, FAbs >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float()) {
+        impl = unary_op<float,float, FAbs >;
+    }
+    else if (Result.typespec().is_int() && A.typespec().is_int()) {
+        impl = unary_op<int,int, FAbs >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how compute " << Result.typespec().string()
+                  << " = " << exec->op().opname() << "(" 
+                  << A.typespec().string() << ")\n";
+        ASSERT (0 && "Function arg type can't be handled");
+    }
 }
+
 
 DECLOP (OP_floor)
 {

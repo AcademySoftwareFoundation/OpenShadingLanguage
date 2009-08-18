@@ -212,10 +212,8 @@ private:
             else
                 return -std::numeric_limits<float>::max();
         } else {
-            if (b == (float)M_E) return logf (f);
-            else if (b == 2.0f)  return log2f (f);
-            else if (b == 10.0f) return log10f (f);
-            else return logf (f)/ logf (b);
+            // OPT: faster to check if (b==M_E)?
+            return logf (f)/ logf (b);
         }
     }
     inline Vec3 safe_log (const Vec3 &x, float b) {
@@ -235,16 +233,8 @@ private:
                 return Vec3 (x0, x1, x2);
             }
         } else {
-            if (b == (float)M_E) {
-                return Vec3 (logf (x[0]), logf (x[1]), logf (x[2]));
-            } else if (b == 2.0f) {
-                return Vec3 (log2f (x[0]), log2f (x[1]), log2f (x[2]));
-            } else if (b == 10.0f) {
-                return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
-            } else {
-                float inv_log_b = 1.0/logf (b);
-                return Vec3 (logf (x[0])*inv_log_b, logf (x[1])*inv_log_b, logf (x[2])*inv_log_b);
-            }
+            float inv_log_b = 1.0/logf (b);
+            return Vec3 (logf (x[0])*inv_log_b, logf (x[1])*inv_log_b, logf (x[2])*inv_log_b);
         }
     }
     ShadingExecution *m_exec;

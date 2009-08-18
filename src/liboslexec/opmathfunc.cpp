@@ -212,25 +212,35 @@ private:
             else
                 return -std::numeric_limits<float>::max();
         } else {
-            if (b == (float)M_E)
-                return logf (f);
-            else
-                return logf (f)/ logf (b);
+            if (b == (float)M_E) return logf (f);
+            else if (b == 2.0f)  return log2f (f);
+            else if (b == 10.0f) return log10f (f);
+            else return logf (f)/ logf (b);
         }
     }
     inline Vec3 safe_log (const Vec3 &x, float b) {
         if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f || b <= 0.0f || b == 1.0f) {
-            m_exec->error ("attempted to compute log(<%g,%g,%g>, %g)", x[0], x[1], x[2], b);
-            if (b == 1.0) {
+            m_exec->error ("attempted to compute log(%g %g %g, %g)", x[0], x[1], x[2], b);
+            if (b == 0.0) {
+                const float neg_flt_max = -std::numeric_limits<float>::max();
+                return Vec3 (neg_flt_max, neg_flt_max, neg_flt_max);
+            } else if (b == 1.0) {
                 const float flt_max = std::numeric_limits<float>::max();
                 return Vec3 (flt_max, flt_max, flt_max);
             } else {
-                const float neg_flt_max = -std::numeric_limits<float>::max();
-                return Vec3 (neg_flt_max, neg_flt_max, neg_flt_max);
+                float inv_log_b = 1.0/logf (b);
+                float x0 = (x[0] <= 0) ? -std::numeric_limits<float>::max() : logf (x[0])*inv_log_b;
+                float x1 = (x[1] <= 0) ? -std::numeric_limits<float>::max() : logf (x[1])*inv_log_b;
+                float x2 = (x[2] <= 0) ? -std::numeric_limits<float>::max() : logf (x[2])*inv_log_b;
+                return Vec3 (x0, x1, x2);
             }
         } else {
             if (b == (float)M_E) {
                 return Vec3 (logf (x[0]), logf (x[1]), logf (x[2]));
+            } else if (b == 2.0f) {
+                return Vec3 (log2f (x[0]), log2f (x[1]), log2f (x[2]));
+            } else if (b == 10.0f) {
+                return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
             } else {
                 float inv_log_b = 1.0/logf (b);
                 return Vec3 (logf (x[0])*inv_log_b, logf (x[1])*inv_log_b, logf (x[2])*inv_log_b);
@@ -244,9 +254,7 @@ class Log2 {
 public:
     Log2 (ShadingExecution *exec) : m_exec(exec) { }
     inline float operator() (float x) { return safe_log2f (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (safe_log2f (x[0]), safe_log2f (x[1]), safe_log2f (x[2]));
-    }
+    inline Vec3  operator() (const Vec3 &x) { return safe_log2f (x); }
 private:
     inline float safe_log2f (float f) {
         if (f <= 0.0f) {
@@ -256,6 +264,17 @@ private:
             return log2f (f);
         }
     }
+    inline Vec3 safe_log2f (const Vec3 &x) {
+        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) {
+            m_exec->error ("attempted to compute log2(%g %g %g)", x[0], x[1], x[2]);
+            float x0 = (x[0] <= 0) ? -std::numeric_limits<float>::max() : log2f (x[0]);
+            float x1 = (x[1] <= 0) ? -std::numeric_limits<float>::max() : log2f (x[1]);
+            float x2 = (x[2] <= 0) ? -std::numeric_limits<float>::max() : log2f (x[2]);
+            return Vec3 (x0, x1, x2);
+        } else {
+            return Vec3( log2f (x[0]), log2f (x[1]), log2f (x[2]));
+        }
+    }
     ShadingExecution *m_exec;
 };
 
@@ -263,9 +282,7 @@ class Log10 {
 public:
     Log10 (ShadingExecution *exec) : m_exec(exec) { }
     inline float operator() (float x) { return safe_log10f (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (safe_log10f (x[0]), safe_log10f (x[1]), safe_log10f (x[2]));
-    }
+    inline Vec3  operator() (const Vec3 &x) { return safe_log10f (x); }
 private:
     inline float safe_log10f (float f) {
         if (f <= 0.0f) {
@@ -275,6 +292,17 @@ private:
             return log10f (f);
         }
     }
+    inline Vec3 safe_log10f (const Vec3 &x) {
+        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) {
+            m_exec->error ("attempted to compute log10(%g %g %g)", x[0], x[1], x[2]);
+            float x0 = (x[0] <= 0) ? -std::numeric_limits<float>::max() : log10f (x[0]);
+            float x1 = (x[1] <= 0) ? -std::numeric_limits<float>::max() : log10f (x[1]);
+            float x2 = (x[2] <= 0) ? -std::numeric_limits<float>::max() : log10f (x[2]);
+            return Vec3 (x0, x1, x2);
+        } else {
+            return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
+        }
+    }
     ShadingExecution *m_exec;
 };
 
@@ -282,9 +310,7 @@ class Logb {
 public:
     Logb (ShadingExecution *exec) : m_exec(exec) { }
     inline float operator() (float x) { return safe_logbf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (safe_logbf (x[0]), safe_logbf (x[1]), safe_logbf (x[2]));
-    }
+    inline Vec3 operator() (const Vec3 &x) { return safe_logbf (x); }
 private:
     inline float safe_logbf (float f) {
         if (f == 0.0f) {
@@ -292,6 +318,17 @@ private:
             return -std::numeric_limits<float>::max();
         } else {
             return logbf (f);
+        }
+    }
+    inline Vec3 safe_logbf (const Vec3 &x) {
+        if (x[0] == 0.0f || x[1] == 0.0f || x[2] == 0.0f) {
+            m_exec->error ("attempted to compute logb(%g %g %g)", x[0], x[1], x[2]);
+            float x0 = (x[0] == 0) ? -std::numeric_limits<float>::max() : logbf (x[0]);
+            float x1 = (x[1] == 0) ? -std::numeric_limits<float>::max() : logbf (x[1]);
+            float x2 = (x[2] == 0) ? -std::numeric_limits<float>::max() : logbf (x[2]);
+            return Vec3 (x0, x1, x2);
+        } else {
+            return Vec3 (logbf (x[0]), logbf (x[1]), logbf (x[2]));
         }
     }
     ShadingExecution *m_exec;

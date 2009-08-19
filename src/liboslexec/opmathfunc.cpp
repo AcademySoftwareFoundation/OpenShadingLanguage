@@ -148,6 +148,15 @@ public:
     }
 };
 
+class ATan2 {
+public:
+    ATan2 (ShadingExecution *) { }
+    inline float operator() (float y, float x) { return atan2f (y, x); }
+    inline Vec3 operator() (const Vec3 &y, const Vec3 &x) {
+        return Vec3 (atan2f (y[0], x[0]), atan2f (y[1], x[1]), atan2f (y[2], x[2]));
+    }
+};
+
 // Degrees/Radians
 
 class Degrees {
@@ -492,6 +501,45 @@ DECLOP (generic_unary_function_shadeop)
     }
 }
 
+// Generic template for implementing "T func(T, T)" where T can be either
+// float or triple.  This expands to a function that checks the arguments
+// for valid type combinations, then dispatches to a further specialized
+// one for the individual types (but that doesn't do any more polymorphic
+// resolution or sanity checks).
+template<class FUNCTION>
+DECLOP (generic_binary_function_shadeop)
+{
+    // 3 args, result and two inputs.
+    ASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && !B.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float, float), and triple = func (triple, triple)
+    if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple()) {
+        impl = binary_op<Vec3,Vec3,Vec3, FUNCTION >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
+        impl = binary_op<float,float,float, FUNCTION >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how compute " << Result.typespec().string()
+                  << " = " << exec->op().opname() << "(" 
+                  << A.typespec().string() << ", "
+                  << A.typespec().string() << ")\n";
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+}
+
 
 };  // End anonymous namespace
 
@@ -528,6 +576,12 @@ DECLOP (OP_asin)
 DECLOP (OP_atan)
 {
     generic_unary_function_shadeop<ATan> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_atan2)
+{
+    generic_binary_function_shadeop<ATan2> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

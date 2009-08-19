@@ -390,6 +390,15 @@ public:
     }
 };
 
+class Trunc {
+public:
+    Trunc (ShadingExecution *) { }
+    inline float operator() (float x) { return truncf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (truncf (x[0]), truncf (x[1]), truncf (x[2]));
+    }
+};
+
 class Sqrt {
 public:
     Sqrt (ShadingExecution *exec) : m_exec(exec) { }
@@ -697,6 +706,12 @@ DECLOP (OP_ceil)
 DECLOP (OP_round)
 {
     generic_unary_function_shadeop<Round> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_trunc)
+{
+    generic_unary_function_shadeop<Trunc> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

@@ -17,6 +17,7 @@ test ()
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
+        printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
@@ -24,6 +25,7 @@ test ()
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
+        printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
@@ -34,6 +36,7 @@ test ()
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
+        printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
@@ -41,6 +44,7 @@ test ()
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
+        printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
@@ -52,6 +56,7 @@ test ()
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
+        printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
@@ -62,6 +67,7 @@ test ()
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
+        printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));

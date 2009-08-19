@@ -1,0 +1,19 @@
+
+shader
+test ()
+{
+    {
+        float a = 10;
+        printf ("  isnan (%g) = %d\n", a, isnan(a));
+        printf ("  isinf (%g) = %d\n", a, isinf(a));
+        printf ("  isfinite (%g) = %d\n", a, isfinite(a));
+    }
+
+    printf (" varying:\n");
+    {
+        float a = u;
+        printf ("  isnan (%g) = %d\n", a, isnan(a));
+        printf ("  isinf (%g) = %d\n", a, isinf(a));
+        printf ("  isfinite (%g) = %d\n", a, isfinite(a));
+    }
+}

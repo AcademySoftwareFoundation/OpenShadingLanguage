@@ -535,7 +535,7 @@ DECLOP (generic_binary_function_shadeop)
         std::cerr << "Don't know how compute " << Result.typespec().string()
                   << " = " << exec->op().opname() << "(" 
                   << A.typespec().string() << ", "
-                  << A.typespec().string() << ")\n";
+                  << B.typespec().string() << ")\n";
         ASSERT (0 && "Function arg type can't be handled");
     }
 }

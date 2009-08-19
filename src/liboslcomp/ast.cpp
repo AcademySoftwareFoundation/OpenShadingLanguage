@@ -407,7 +407,7 @@ ASTloop_statement::opname () const
 {
     switch (m_op) {
     case LoopWhile : return "while";
-    case LoopDo    : return "do";
+    case LoopDo    : return "dowhile";
     case LoopFor   : return "for";
     default: ASSERT(0);
     }

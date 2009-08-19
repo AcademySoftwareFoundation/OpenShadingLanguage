@@ -190,6 +190,7 @@ static OpNameEntry op_name_entries[] = {
     { "distance", OP_distance },
     { "div", OP_div },
     { "dot", OP_dot },
+    { "dowhile", OP_dowhile },
     { "end", OP_end },
     { "eq", OP_eq },
     { "exp", OP_exp },

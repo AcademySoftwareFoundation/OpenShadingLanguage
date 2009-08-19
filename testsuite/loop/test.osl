@@ -8,6 +8,7 @@ test ()
             printf ("  i = %d\n", i);
             ++i;
         }
+        printf ("After loop, i = %d\n", i);
     }
 
     {
@@ -19,6 +20,7 @@ test ()
             printf ("  i = %g\n", i);
             ++i;
         }
+        printf ("After loop, i = %g\n", i);
     }
 
     {
@@ -38,6 +40,29 @@ test ()
         }
         printf (" outer scope i = %g\n", i);
     }
+
+    {
+        printf ("\nCount using 'do...while(i<5)':\n");
+        int i = 0;
+        do {
+            printf ("  i = %d\n", i);
+            ++i;
+        } while (i < 5);
+        printf ("After loop, i = %d\n", i);
+    }
+
+    {
+        printf ("\nVarying do...while(i<5):\n");
+        float i = 0.5 + u + v;
+        printf (" Start with i = %g\n", i);
+        do {
+            printf (" iteration:\n");
+            printf ("  i = %g\n", i);
+            ++i;
+        } while (i < 5);
+        printf ("After loop, i = %g\n", i);
+    }
+
 
     // FIXME -- try break/continue
 }

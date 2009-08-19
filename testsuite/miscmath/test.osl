@@ -19,6 +19,7 @@ test ()
         printf ("  ceil (%g) = %g\n", a, ceil(a));
         printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
+        printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
         a = -137.59;
@@ -27,6 +28,7 @@ test ()
         printf ("  ceil (%g) = %g\n", a, ceil(a));
         printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
+        printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
     }
@@ -38,6 +40,7 @@ test ()
         printf ("  ceil (%g) = %g\n", a, ceil(a));
         printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
+        printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
         a = -137.59;
@@ -46,6 +49,7 @@ test ()
         printf ("  ceil (%g) = %g\n", a, ceil(a));
         printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
+        printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
     }
@@ -58,6 +62,7 @@ test ()
         printf ("  ceil (%g) = %g\n", a, ceil(a));
         printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
+        printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
     }
@@ -69,6 +74,7 @@ test ()
         printf ("  ceil (%g) = %g\n", a, ceil(a));
         printf ("  trunc (%g) = %g\n", a, trunc(a));
         printf ("  round (%g) = %g\n", a, round(a));
+        printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
     }

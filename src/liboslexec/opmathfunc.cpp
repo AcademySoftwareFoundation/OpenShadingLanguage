@@ -408,6 +408,19 @@ public:
     }
 };
 
+class Sign {
+public:
+    Sign (ShadingExecution *) { }
+    inline float operator() (float x) { return sign(x); }
+    inline Vec3 operator() (const Vec3 &x) { return Vec3(sign(x[0]), sign(x[1]), sign(x[2])); }
+private:
+    inline float sign (float x) { 
+        if (x > 0) return 1.0f; 
+        else if (x < 0) return -1.0f; 
+        else return 0.0; 
+    }
+};
+
 class Sqrt {
 public:
     Sqrt (ShadingExecution *exec) : m_exec(exec) { }
@@ -481,6 +494,7 @@ public:
     IsFinite (ShadingExecution *) { }
     inline int operator() (float x) { return std::isfinite (x); }
 };
+
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -814,6 +828,12 @@ DECLOP (OP_round)
 DECLOP (OP_trunc)
 {
     generic_unary_function_shadeop<Trunc> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_sign)
+{
+    generic_unary_function_shadeop<Sign> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

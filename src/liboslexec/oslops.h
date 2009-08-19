@@ -178,7 +178,7 @@ DECLOP (OP_round);
 //DECLOP (OP_shadow);
 DECLOP (OP_shl);
 DECLOP (OP_shr);
-//DECLOP (OP_sign);
+DECLOP (OP_sign);
 DECLOP (OP_sin);
 DECLOP (OP_sinh);
 //DECLOP (OP_smoothstep);

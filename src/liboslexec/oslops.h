@@ -172,7 +172,7 @@ DECLOP (OP_radians);
 //DECLOP (OP_regex_match);
 //DECLOP (OP_regex_search);
 //DECLOP (OP_rotate);
-//DECLOP (OP_round);
+DECLOP (OP_round);
 //DECLOP (OP_setattribute);
 //DECLOP (OP_setmessage);
 //DECLOP (OP_shadow);

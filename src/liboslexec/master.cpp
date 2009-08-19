@@ -220,6 +220,7 @@ static OpNameEntry op_name_entries[] = {
     { "point", OP_point },
     { "printf", OP_printf },
     { "radians", OP_radians },
+    { "round", OP_round },
     { "shl", OP_shl },
     { "shr", OP_shr },
     { "sin", OP_sin },

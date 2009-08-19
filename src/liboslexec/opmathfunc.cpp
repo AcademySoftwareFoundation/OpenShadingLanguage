@@ -381,6 +381,15 @@ public:
     }
 };
 
+class Round {
+public:
+    Round (ShadingExecution *) { }
+    inline float operator() (float x) { return roundf (x); }
+    inline Vec3 operator() (const Vec3 &x) {
+        return Vec3 (roundf (x[0]), roundf (x[1]), roundf (x[2]));
+    }
+};
+
 class Sqrt {
 public:
     Sqrt (ShadingExecution *exec) : m_exec(exec) { }
@@ -682,6 +691,12 @@ DECLOP (OP_floor)
 DECLOP (OP_ceil)
 {
     generic_unary_function_shadeop<Ceil> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_round)
+{
+    generic_unary_function_shadeop<Round> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

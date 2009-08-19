@@ -128,7 +128,7 @@ DECLOP (OP_gt);
 DECLOP (OP_if);
 //DECLOP (OP_incr);
 //DECLOP (OP_inversespline);
-//DECLOP (OP_inversesqrt);
+DECLOP (OP_inversesqrt);
 //DECLOP (OP_isnan);
 //DECLOP (OP_isinf);
 //DECLOP (OP_isindirectray);

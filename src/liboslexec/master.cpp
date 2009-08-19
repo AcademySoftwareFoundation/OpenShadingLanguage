@@ -199,6 +199,7 @@ static OpNameEntry op_name_entries[] = {
     { "ge", OP_ge },
     { "gt", OP_gt },
     { "if", OP_if },
+    { "inversesqrt", OP_inversesqrt },
     { "le", OP_le },
     { "length", OP_length },
     { "log", OP_log },

@@ -7,18 +7,22 @@ Compiled test.osl -> test.oso
   floor (101.29) = 101
   ceil (101.29) = 102
   sqrt (101.29) = 10.0643
+  inversesqrt (101.29) = 0.0993612
   fabs (-137.29) = 137.29
   floor (-137.29) = -138
   ceil (-137.29) = -137
   sqrt (-137.29) = 0
+  inversesqrt (-137.29) = 0
   fabs (101.29 101.29 101.29) = 101.29 101.29 101.29
   floor (101.29 101.29 101.29) = 101 101 101
   ceil (101.29 101.29 101.29) = 102 102 102
   sqrt (101.29 101.29 101.29) = 10.0643 10.0643 10.0643
+  inversesqrt (101.29 101.29 101.29) = 0.0993612 0.0993612 0.0993612
   fabs (-137.29 -137.29 -137.29) = 137.29 137.29 137.29
   floor (-137.29 -137.29 -137.29) = -138 -138 -138
   ceil (-137.29 -137.29 -137.29) = -137 -137 -137
   sqrt (-137.29 -137.29 -137.29) = 0 0 0
+  inversesqrt (-137.29 -137.29 -137.29) = 0 0 0
  varying:
   fabs (0) = 0
   fabs (1) = 1
@@ -36,6 +40,10 @@ Compiled test.osl -> test.oso
   sqrt (1) = 1
   sqrt (0) = 0
   sqrt (1) = 1
+  inversesqrt (0) = 0
+  inversesqrt (1) = 1
+  inversesqrt (0) = 0
+  inversesqrt (1) = 1
   fabs (0 0 0) = 0 0 0
   fabs (1 1 1) = 1 1 1
   fabs (0 0 0) = 0 0 0
@@ -52,4 +60,8 @@ Compiled test.osl -> test.oso
   sqrt (1 1 1) = 1 1 1
   sqrt (0 0 0) = 0 0 0
   sqrt (1 1 1) = 1 1 1
+  inversesqrt (0 0 0) = 0 0 0
+  inversesqrt (1 1 1) = 1 1 1
+  inversesqrt (0 0 0) = 0 0 0
+  inversesqrt (1 1 1) = 1 1 1
 

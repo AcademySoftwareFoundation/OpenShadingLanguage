@@ -409,6 +409,34 @@ private:
     ShadingExecution *m_exec;
 };
 
+class InverseSqrt {
+public:
+    InverseSqrt (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x) { return safe_invsqrt (x); }
+    inline Vec3  operator() (const Vec3 &x) { return safe_invsqrt(x); }
+private:
+    inline float safe_invsqrt (float f) {
+        if (f <= 0.0f) {
+            m_exec->error ("attempted to compute inversesqrt(%g)", f);
+            return 0.0f;
+        } else {
+            return 1.0f/sqrtf (f);
+        }
+    }
+    inline Vec3 safe_invsqrt (const Vec3 &x) {
+        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) {
+            m_exec->error ("attempted to compute inversesqrt(%g %g %g)", x[0], x[1], x[2]);
+            float x0 = (x[0] <= 0) ? 0.0f : 1.0f/sqrtf (x[0]);
+            float x1 = (x[1] <= 0) ? 0.0f : 1.0f/sqrtf (x[1]);
+            float x2 = (x[2] <= 0) ? 0.0f : 1.0f/sqrtf (x[2]);
+            return Vec3 (x0, x1, x2);
+        } else {
+            return Vec3( 1.0f/sqrtf (x[0]), 1.0f/sqrtf (x[1]), 1.0f/sqrtf (x[2]));
+        }
+    }
+    ShadingExecution *m_exec;
+};
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -662,6 +690,13 @@ DECLOP (OP_sqrt)
     generic_unary_function_shadeop<Sqrt> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
+
+DECLOP (OP_inversesqrt)
+{
+    generic_unary_function_shadeop<InverseSqrt> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

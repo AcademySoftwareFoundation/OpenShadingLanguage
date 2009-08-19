@@ -170,6 +170,7 @@ shader_declaration
                 {
                     $$ = new ASTshader_declaration (oslcompiler, $1,
                                                     ustring($2), $5, $8, $3);
+                    $$->sourceline (@2.first_line);
                     if (oslcompiler->shader_is_defined()) {
                         yyerror ("Only one shader is allowed per file.");
                         delete $$;
@@ -501,10 +502,12 @@ conditional_statement
         : IF '(' expression ')' statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5);
+                    $$->sourceline (@1.first_line);
                 }
         | IF '(' expression ')' statement ELSE statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
+                    $$->sourceline (@1.first_line);
                 }
         ;
 
@@ -514,18 +517,26 @@ loop_statement
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopWhile,
                                                 NULL, $3, NULL, $5);
+                    $$->sourceline (@1.first_line);
                 }
         | DO statement WHILE '(' expression ')' ';'
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopDo,
                                                 NULL, $5, NULL, $2);
+                    $$->sourceline (@1.first_line);
                 }
-        | FOR '(' for_init_statement expression_opt ';' expression_opt ')' statement
+        | FOR '(' 
+                {
+                    oslcompiler->symtab().push (); // new declaration scope
+                }
+          for_init_statement expression_opt ';' expression_opt ')' statement
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopFor,
-                                                $3, $4, $6, $8);
+                                                $4, $5, $7, $9);
+                    $$->sourceline (@1.first_line);
+                    oslcompiler->symtab().pop ();
                 }
         ;
 

@@ -49,21 +49,28 @@ namespace pvt {   // OSL::pvt
 
 
 
+size_t
+OSLCompilerImpl::add_op_args (size_t nargs, Symbol **args)
+{
+    size_t n = m_opargs.size ();
+    for (size_t i = 0;  i < nargs;  ++i) {
+        ASSERT (args[i]);
+        m_opargs.push_back (args[i]);
+    }
+    return n;
+}
+
+
+
 int
 OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
                            ASTNode *node)
 {
-//    std::cout << "\temit " << opname;
     int opnum = (int) m_ircode.size();
     Opcode op (ustring (opname), m_codegenmethod, m_opargs.size(), nargs);
     op.source (node->sourcefile(), node->sourceline());
     m_ircode.push_back (op);
-    for (size_t i = 0;  i < nargs;  ++i) {
-        ASSERT (args[i]);
-        m_opargs.push_back (args[i]);
-//        std::cout << " " << (args[i] ? args[i]->name() : ustring("<null>"));
-    }
-//    std::cout << "\n";
+    add_op_args (nargs, args);
     return opnum;
 }
 
@@ -353,7 +360,6 @@ ASTconditional_statement::codegen (Symbol *)
 
     // Generate the code for the 'true' and 'false' code blocks, recording
     // the jump destinations for 'else' and the next op after the if.
-    m_compiler->next_op_label ();
     codegen_list (truestmt());
     int falselabel = m_compiler->next_op_label ();
     codegen_list (falsestmt());
@@ -361,6 +367,53 @@ ASTconditional_statement::codegen (Symbol *)
 
     // Fix up the 'if' to have the jump destinations.
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
+
+    // FIXME -- account for the fact that the first argument, unlike
+    // almost all other ops, is read, not written
+    return NULL;
+}
+
+
+
+// while (cond) statement
+// do statement while (cond);
+// for (init; cond; iter);
+Symbol *
+ASTloop_statement::codegen (Symbol *)
+{
+    // Generate the op for the loop itself.  Record its label, so that we
+    // can go back and patch it with the jump destinations.
+    int loop_op = emitcode (opname());
+        
+    codegen_list (init());
+
+    int condlabel = m_compiler->next_op_label ();
+    Symbol *condvar = cond()->codegen ();
+    TypeSpec condtype = condvar->typespec();
+    if (! condtype.is_int()) {
+        // If they're not using an int as the condition, then it's an
+        // implied comparison to zero.
+        Symbol *tempvar = m_compiler->make_temporary (TypeDesc::TypeInt);
+        Symbol *zerovar = condtype.is_string() ? 
+            m_compiler->make_constant (ustring("")) : 
+            m_compiler->make_constant (0.0f);
+        emitcode ("ne", tempvar, condvar, zerovar);
+        condvar = tempvar;
+    }
+
+    // Retroactively add the argument
+    size_t argstart = m_compiler->add_op_args (1, &condvar);
+    m_compiler->ircode(loop_op).set_args (argstart, 1);
+
+    int bodylabel = m_compiler->next_op_label ();
+    codegen_list (stmt());
+    int iterlabel = m_compiler->next_op_label ();
+    codegen_list (iter());
+    int donelabel = m_compiler->next_op_label ();
+
+    // Fix up the loop op to have the jump destinations.
+    m_compiler->ircode(loop_op).set_jump (condlabel, bodylabel,
+                                          iterlabel, donelabel);
 
     // FIXME -- account for the fact that the first argument, unlike
     // almost all other ops, is read, not written

@@ -194,6 +194,7 @@ static OpNameEntry op_name_entries[] = {
     { "exp", OP_exp },
     { "exp2", OP_exp2 },
     { "expm1", OP_expm1 },
+    { "for", OP_for },
     { "fabs", OP_fabs },
     { "floor", OP_floor },
     { "ge", OP_ge },
@@ -232,6 +233,7 @@ static OpNameEntry op_name_entries[] = {
     { "transpose", OP_transpose },
     { "trunc", OP_trunc },
     { "vector", OP_vector },
+    { "while", OP_for },
     { "xor", OP_xor },
     { NULL, NULL}
 };

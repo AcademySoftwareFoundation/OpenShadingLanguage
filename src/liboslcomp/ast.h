@@ -171,6 +171,8 @@ public:
     ///
     int sourceline () const { return m_sourceline; }
 
+    void sourceline (int line) { m_sourceline = line; }
+
     void error (const char *format, ...);
 
     bool is_lvalue () const { return m_is_lvalue; }
@@ -474,6 +476,7 @@ public:
     const char *childname (size_t i) const;
     const char *opname () const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref init () const { return child (0); }
     ref cond () const { return child (1); }

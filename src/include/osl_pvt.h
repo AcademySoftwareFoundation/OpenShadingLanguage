@@ -453,6 +453,7 @@ public:
         m_jump[0] = -1;
         m_jump[1] = -1;
         m_jump[2] = -1;
+        m_jump[3] = -1;
     }
     ustring opname () const { return m_op; }
     int firstarg () const { return m_firstarg; }
@@ -472,10 +473,11 @@ public:
 
     /// Set the jump addresses (-1 means no jump)
     ///
-    void set_jump (int jump0=-1, int jump1=-1, int jump2=-1) {
+    void set_jump (int jump0=-1, int jump1=-1, int jump2=-1, int jump3=-1) {
         m_jump[0] = jump0;
         m_jump[1] = jump1;
         m_jump[2] = jump2;
+        m_jump[3] = jump3;
     }
 
     void add_jump (int target) {
@@ -492,7 +494,7 @@ public:
 
     /// Maximum jump targets an op can have.
     ///
-    static const unsigned int max_jumps = 3;
+    static const unsigned int max_jumps = 4;
 
     void implementation (OpImpl impl) { m_impl = impl; }
     OpImpl implementation () const { return m_impl; }

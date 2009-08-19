@@ -56,17 +56,20 @@ DECLOP (OP_if)
     Symbol &Condition (exec->sym (args[0]));
     ASSERT (Condition.typespec().is_int());
     VaryingRef<int> condition ((int *)Condition.data(), Condition.step());
-
     Opcode &op (exec->op());
-    std::cerr << "if!  " << Condition.mangled() << ' ' << op.jump(0) << ' ' << op.jump(1) << "\n";
 
     // Determine if it's a "uniform if"
     bool uniform = Condition.is_uniform ();
-    for (int i = beginpoint+1;  uniform && i < endpoint;  ++i)
-        if (runflags[i] && condition[i] != condition[beginpoint]) {
-            uniform = false;
-            break;
-        }
+    if (! uniform) {
+        // Second chance -- what if the condition is varying, but the
+        // results are the same at all points?
+        uniform = true;
+        for (int i = beginpoint+1;  i < endpoint;  ++i)
+            if (runflags[i] && condition[i] != condition[beginpoint]) {
+                uniform = false;
+                break;
+            }
+    }
 
     // FIXME -- if there's potentially a 'break' or 'continue' inside
     // this conditional, we need to treat it as varying.
@@ -123,6 +126,98 @@ DECLOP (OP_if)
     // FIXME -- we may need to call new_runflag_range here if, during
     // execution, we may have hit a 'break' or 'continue'.
 }
+
+
+
+
+DECLOP (OP_for)
+{
+    ASSERT (nargs == 1);
+    Symbol &Condition (exec->sym (args[0]));
+    ASSERT (Condition.typespec().is_int());
+    Opcode &op (exec->op());
+
+    // Jump addresses
+    int startinit = exec->ip() + 1;
+    int startcondition = op.jump (0);
+    int startbody = op.jump (1);
+    int startiterate = op.jump (2);
+    int done = op.jump (3);
+
+    // Execute the initialization
+    if (startinit < startcondition)
+        exec->run (startinit, startcondition);
+
+    Runflag *true_runflags = NULL;  // Allocate as needed
+    while (1) {
+        // Execute the condition
+        exec->run (startcondition, startbody);
+        // Determine if it's a "uniform if"
+        bool uniform = Condition.is_uniform ();
+        VaryingRef<int> condition ((int *)Condition.data(), Condition.step());
+
+        // FIXME -- if there's potentially a 'break' or 'continue' inside
+        // this loop, we need to treat it as varying.
+
+        if (uniform) {
+            // Uniform condition -- don't need new runflags
+            if (condition[beginpoint])
+                exec->run (startbody, startiterate);  // Run the body
+            else
+                break;   // break out of the loop
+        } else {
+            // From here on, varying condition or potential
+            // break/continue at play
+
+            // Generate new runflags based on the condition
+            if (! true_runflags) {
+                true_runflags = ALLOCA (Runflag, exec->npoints());
+                memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
+                exec->push_runflags (true_runflags, beginpoint, endpoint);
+            }
+            int turnedoff = 0;  // Number of points that turned off
+            bool all_off = true;  // Are all points turned off?
+            for (int i = beginpoint;  i < endpoint;  ++i) {
+                if (true_runflags[i]) {
+                    if (condition[i])
+                        all_off = false;  // this point is still on
+                    else {
+                        // this point has turned off on this iteration
+                        true_runflags[i] = RunflagOff;
+                        ++turnedoff;
+                    }
+                }
+            }
+            if (all_off)
+                break;     // No points left on
+
+            // At least one point is still on
+            if (turnedoff) {
+                // If we turned off any "new" points on this iteration,
+                // reset the runflags
+                exec->pop_runflags ();
+                exec->push_runflags (true_runflags, beginpoint, endpoint);
+            }
+            // Execute the body
+            exec->run (startbody, startiterate);
+            
+            // FIXME -- we may need to call new_runflag_range here if, during
+            // execution, we may have hit a 'break' or 'continue'.
+        }
+
+        if (startiterate < done)
+            exec->run (startiterate, done);
+    }
+
+    if (true_runflags) {
+        // Restore old runflags if we ever made new ones
+        exec->pop_runflags ();
+    }
+
+    // Skip to after the loop
+    exec->ip (done-1);
+}
+
 
 
 }; // namespace pvt

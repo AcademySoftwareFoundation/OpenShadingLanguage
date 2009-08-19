@@ -140,6 +140,11 @@ public:
     /// be emitted.
     int next_op_label () { return (int)m_ircode.size(); }
 
+    /// Add op arguments, return the index of the first one added.
+    /// Use with extreme caution!  If you're not the guts of 'emitcode',
+    /// think twice about how you use this so you don't "leak" arguments.
+    size_t add_op_args (size_t nargs, Symbol **args);
+
     /// Return a reference to a given IR opcode.
     ///
     Opcode & ircode (int index) { return m_ircode[index]; }

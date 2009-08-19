@@ -1,0 +1,43 @@
+shader
+test ()
+{
+    {
+        printf ("\nCount 0 to 4 using 'while':\n");
+        int i = 0;
+        while (i < 5) {
+            printf ("  i = %d\n", i);
+            ++i;
+        }
+    }
+
+    {
+        printf ("\nVarying 'while', count up until < 5:\n");
+        float i = 0.5 + u + v;
+        printf (" Start with i = %g\n", i);
+        while (i < 5) {
+            printf (" iteration:\n");
+            printf ("  i = %g\n", i);
+            ++i;
+        }
+    }
+
+    {
+        printf ("\nCount 0 to 4 using 'for':\n");
+        for (int i = 0; i < 5; ++i) {
+            printf ("  i = %d\n", i);
+        }
+    }
+
+    {
+        printf ("\nVarying 'for', count up until < 5:\n");
+        float i = 15;
+        printf (" outer scope i = %g\n", i);  // test scoping rules
+        for (float i = 0.5+u+v;  i < 5;  ++i) {
+            printf (" iteration:\n");
+            printf ("  i = %g\n", i);
+        }
+        printf (" outer scope i = %g\n", i);
+    }
+
+    // FIXME -- try break/continue
+}

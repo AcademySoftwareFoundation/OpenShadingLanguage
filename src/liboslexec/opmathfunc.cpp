@@ -524,6 +524,48 @@ public:
     inline int operator() (float x) { return std::isfinite (x); }
 };
 
+class Clamp {
+public:
+    Clamp (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x, float minv, float maxv) { return clamp(x, minv, maxv); }
+    inline Vec3 operator() (const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) { return clamp(x, minv, maxv); }
+private:
+    inline float quiet_clamp(float x, float minv, float maxv) {
+        if (x < minv) return minv;
+        else if (x > maxv) return maxv;
+        else return x;
+    }
+    inline float clamp(float x, float minv, float maxv) {
+        if (minv > maxv) {
+            m_exec->error ("attempted to compute clamp(%g,%g,%g)", x, minv, maxv);
+            // clamp(x, minv, maxv) == min(max(x, minv), maxv)
+            // when minv and maxv are swapped, this means we return maxv
+            return maxv;
+        } else {
+            return quiet_clamp(x, minv, maxv);
+        }
+    }
+    inline Vec3 clamp(const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) {
+        if (minv[0] > maxv[0] || minv[1] > maxv[1] || minv[2] > maxv[2]) {
+            m_exec->error ("attempted to compute clamp(%g %g %g, %g %g %g, %g, %g %g)", 
+                  x[0], x[1], x[2],
+                  minv[0], minv[1], minv[2],
+                  maxv[0], maxv[1], maxv[2]);
+            // clamp(x, minv, maxv) is defined as min( max( x, minv), maxv)
+            // when minv and maxv are swapped, this means we return maxv
+            float x0 = (minv[0] > maxv[0]) ? maxv[0] : quiet_clamp(x[0], minv[0], maxv[0]);
+            float x1 = (minv[1] > maxv[1]) ? maxv[1] : quiet_clamp(x[1], minv[1], maxv[1]);
+            float x2 = (minv[2] > maxv[2]) ? maxv[2] : quiet_clamp(x[2], minv[2], maxv[2]);
+            return Vec3 (x0, x1, x2);
+        } else {  
+            float x0 = quiet_clamp(x[0], minv[0], maxv[0]);
+            float x1 = quiet_clamp(x[1], minv[1], maxv[1]);
+            float x2 = quiet_clamp(x[2], minv[2], maxv[2]);
+            return Vec3 (x0, x1, x2);
+        }
+    }
+    ShadingExecution *m_exec;
+};
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -597,6 +639,47 @@ DECLOP (generic_binary_function_shadeop)
                   << " = " << exec->op().opname() << "(" 
                   << A.typespec().string() << ", "
                   << B.typespec().string() << ")\n";
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+}
+
+// Generic template for implementing "T func(T, T, T)" where T can be either
+// float or triple.  This expands to a function that checks the arguments
+// for valid type combinations, then dispatches to a further specialized
+// one for the individual types (but that doesn't do any more polymorphic
+// resolution or sanity checks).
+template<class FUNCTION>
+DECLOP (generic_ternary_function_shadeop)
+{
+    // 3 args, result and two inputs.
+    ASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && !B.typespec().is_closure() && ! C.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float, float, float), and triple = func (triple, triple, triple)
+    if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_triple()) {
+        impl = ternary_op<Vec3,Vec3,Vec3,Vec3, FUNCTION >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float() && C.typespec().is_float()) {
+        impl = ternary_op<float,float,float,float, FUNCTION >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how compute " << Result.typespec().string()
+                  << " = " << exec->op().opname() << "(" 
+                  << A.typespec().string() << ", "
+                  << B.typespec().string() << ". "
+                  << C.typespec().string() << ")\n";
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
@@ -898,6 +981,12 @@ DECLOP (OP_isinf)
 DECLOP (OP_isfinite)
 {
     unary_op<int,float,IsFinite> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_clamp)
+{
+    generic_ternary_function_shadeop<Clamp> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

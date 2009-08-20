@@ -75,7 +75,7 @@ DECLOP (OP_bitor);
 //DECLOP (OP_calculatenormal);
 DECLOP (OP_ceil);
 //DECLOP (OP_cellnoise);
-//DECLOP (OP_clamp);
+DECLOP (OP_clamp);
 DECLOP (OP_color);
 DECLOP (OP_compassign);
 DECLOP (OP_compl);
@@ -203,6 +203,59 @@ DECLOP (OP_vector);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);
+
+// Heavy lifting of the math and other ternary ops, this is a templated
+// version that knows the types of the arguments and the operation to
+// perform (given by a functor).
+template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
+inline void
+ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
+                ShadingExecution *exec, 
+                Runflag *runflags, int beginpoint, int endpoint)
+{
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, A.is_varying() | B.is_varying() | C.is_varying(),
+                          A.data() == Result.data() || B.data() == Result.data() || C.data() == Result.data());
+
+    // Loop over points, do the operation
+    VaryingRef<RET> result ((RET *)Result.data(), Result.step());
+    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
+    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
+    VaryingRef<CTYPE> c ((BTYPE *)C.data(), C.step());
+    FUNCTION function (exec);
+    if (result.is_uniform()) {
+        // Uniform case
+        *result = function (*a, *b, *c);
+    } else if (A.is_uniform() && B.is_uniform() && C.is_uniform()) {
+        // Operands are uniform but we're assigning to a varying (it can
+        // happen if we're in a conditional).  Take a shortcut by doing
+        // the operation only once.
+        RET r = function (*a, *b, *c);
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = r;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = function (a[i], b[i], c[i]);
+    }
+}
+
+// Wrapper around binary_op_guts that does has he call signature of an
+// ordinary shadeop.
+template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
+DECLOP (ternary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+
+    ternary_op_guts<RET,ATYPE,BTYPE,CTYPE,FUNCTION> (Result, A, B, C, exec,
+                                              runflags, beginpoint, endpoint);
+}
 
 
 

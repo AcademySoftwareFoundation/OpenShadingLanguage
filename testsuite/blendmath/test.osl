@@ -9,6 +9,12 @@ test ()
         printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
         printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
         printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
+        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
+        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
+        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
+        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
+        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
+        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
     }
 
     { 
@@ -19,6 +25,12 @@ test ()
         printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
         printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
         printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
+        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
+        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
+        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
+        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
+        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
+        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
     }
 
     printf (" varying:\n");
@@ -30,6 +42,12 @@ test ()
         printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
         printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
         printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
+        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
+        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
+        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
+        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
+        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
+        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
     }
 
     {
@@ -40,5 +58,11 @@ test ()
         printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
         printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
         printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
+        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
+        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
+        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
+        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
+        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
+        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
     }
 }

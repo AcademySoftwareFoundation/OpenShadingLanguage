@@ -567,6 +567,34 @@ private:
     ShadingExecution *m_exec;
 };
 
+class Max {
+public:
+    Max (ShadingExecution *) { }
+    inline float operator() (float x, float y) { return max(x,y); }
+    inline Vec3 operator() (const Vec3 &x, const Vec3 &y) { 
+       return Vec3 (max (x[0], y[0]), max (x[1], y[1]), max (x[2], y[2]));
+    }
+private:
+    inline float max (float x, float y) { 
+        if (x > y) return x;
+        else return y;
+    }
+};
+
+class Min {
+public:
+    Min (ShadingExecution *) { }
+    inline float operator() (float x, float y) { return min(x,y); }
+    inline Vec3 operator() (const Vec3 &x, const Vec3 &y) { 
+       return Vec3 (min (x[0], y[0]), min (x[1], y[1]), min (x[2], y[2]));
+    }
+private:
+    inline float min (float x, float y) { 
+        if (x > y) return y;
+        else return x;
+    }
+};
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -987,6 +1015,18 @@ DECLOP (OP_isfinite)
 DECLOP (OP_clamp)
 {
     generic_ternary_function_shadeop<Clamp> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_max)
+{
+    generic_binary_function_shadeop<Max> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_min)
+{
+    generic_binary_function_shadeop<Min> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

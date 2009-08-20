@@ -533,36 +533,6 @@ DECLOP (generic_unary_function_shadeop)
     }
 }
 
-// Generic template for implementing "int func(float)"
-template<class FUNCTION>
-DECLOP (bool_float_unary_function_shadeop)
-{
-    // 2 args, result and input.
-    ASSERT (nargs == 2);
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
-    OpImpl impl = NULL;
-
-    // We allow one flavor: int = func (float)
-    if (Result.typespec().is_int() && A.typespec().is_float()) {
-        impl = unary_op<int,float, FUNCTION >;
-    }
-
-    if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
-        // Use the specialized one for next time!  Never have to check the
-        // types or do the other sanity checks again.
-        // FIXME -- is this thread-safe?
-        exec->op().implementation (impl);
-    } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ")\n";
-        ASSERT (0 && "Function arg type can't be handled");
-    }
-}
-
 // Generic template for implementing "T func(T, T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -851,19 +821,19 @@ DECLOP (OP_inversesqrt)
 
 DECLOP (OP_isnan)
 {
-    bool_float_unary_function_shadeop<IsNan> (exec, nargs, args, 
+    unary_op<int,float,IsNan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_isinf)
 {
-    bool_float_unary_function_shadeop<IsInf> (exec, nargs, args, 
+    unary_op<int,float,IsInf> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_isfinite)
 {
-    bool_float_unary_function_shadeop<IsFinite> (exec, nargs, args, 
+    unary_op<int,float,IsFinite> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

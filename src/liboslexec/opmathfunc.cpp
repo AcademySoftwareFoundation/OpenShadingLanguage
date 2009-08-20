@@ -526,7 +526,7 @@ public:
 
 class Clamp {
 public:
-    Clamp (ShadingExecution *exec) : m_exec(exec) { }
+    Clamp (ShadingExecution *) { }
     inline float operator() (float x, float minv, float maxv) { return clamp(x, minv, maxv); }
     inline Vec3 operator() (const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) { return clamp(x, minv, maxv); }
 private:
@@ -541,7 +541,6 @@ private:
         float x2 = clamp(x[2], minv[2], maxv[2]);
         return Vec3 (x0, x1, x2);
     }
-    ShadingExecution *m_exec;
 };
 
 class Max {

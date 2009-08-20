@@ -530,39 +530,16 @@ public:
     inline float operator() (float x, float minv, float maxv) { return clamp(x, minv, maxv); }
     inline Vec3 operator() (const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) { return clamp(x, minv, maxv); }
 private:
-    inline float quiet_clamp(float x, float minv, float maxv) {
+    inline float clamp(float x, float minv, float maxv) {
         if (x < minv) return minv;
         else if (x > maxv) return maxv;
         else return x;
     }
-    inline float clamp(float x, float minv, float maxv) {
-        if (minv > maxv) {
-            m_exec->error ("attempted to compute clamp(%g,%g,%g)", x, minv, maxv);
-            // clamp(x, minv, maxv) == min(max(x, minv), maxv)
-            // when minv and maxv are swapped, this means we return maxv
-            return maxv;
-        } else {
-            return quiet_clamp(x, minv, maxv);
-        }
-    }
     inline Vec3 clamp(const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) {
-        if (minv[0] > maxv[0] || minv[1] > maxv[1] || minv[2] > maxv[2]) {
-            m_exec->error ("attempted to compute clamp(%g %g %g, %g %g %g, %g, %g %g)", 
-                  x[0], x[1], x[2],
-                  minv[0], minv[1], minv[2],
-                  maxv[0], maxv[1], maxv[2]);
-            // clamp(x, minv, maxv) is defined as min( max( x, minv), maxv)
-            // when minv and maxv are swapped, this means we return maxv
-            float x0 = (minv[0] > maxv[0]) ? maxv[0] : quiet_clamp(x[0], minv[0], maxv[0]);
-            float x1 = (minv[1] > maxv[1]) ? maxv[1] : quiet_clamp(x[1], minv[1], maxv[1]);
-            float x2 = (minv[2] > maxv[2]) ? maxv[2] : quiet_clamp(x[2], minv[2], maxv[2]);
-            return Vec3 (x0, x1, x2);
-        } else {  
-            float x0 = quiet_clamp(x[0], minv[0], maxv[0]);
-            float x1 = quiet_clamp(x[1], minv[1], maxv[1]);
-            float x2 = quiet_clamp(x[2], minv[2], maxv[2]);
-            return Vec3 (x0, x1, x2);
-        }
+        float x0 = clamp(x[0], minv[0], maxv[0]);
+        float x1 = clamp(x[1], minv[1], maxv[1]);
+        float x2 = clamp(x[2], minv[2], maxv[2]);
+        return Vec3 (x0, x1, x2);
     }
     ShadingExecution *m_exec;
 };

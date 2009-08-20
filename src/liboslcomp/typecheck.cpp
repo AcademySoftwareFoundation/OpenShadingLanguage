@@ -745,7 +745,7 @@ static const char * builtin_func_args [] = {
     "noise", NOISE_ARGS, NULL,
     "normalize", "vv", "nn", NULL,
     "pnoise", NOISE_ARGS, NULL,
-    "pow", ANY_ONE_FLOAT_BASED, "ccf", "ppf", "vvf", "nnf", NULL,
+    "pow", "fff", "ccf", "ppf", "vvf", "nnf", NULL,
     "printf", "xs*", NULL,   // FIXME -- further checking
     "psnoise", NOISE_ARGS, NULL,
     "radians", ANY_ONE_FLOAT_BASED, NULL,

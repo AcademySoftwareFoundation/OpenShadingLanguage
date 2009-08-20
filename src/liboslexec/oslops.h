@@ -160,7 +160,7 @@ DECLOP (OP_normalize);
 //DECLOP (OP_orennayar);
 DECLOP (OP_point);
 DECLOP (OP_printf);
-//DECLOP (OP_pow);
+DECLOP (OP_pow);
 //DECLOP (OP_psnoise);
 DECLOP (OP_radians);
 //DECLOP (OP_random);

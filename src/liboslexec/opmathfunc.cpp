@@ -360,6 +360,35 @@ public:
     }
 };
 
+class Pow {
+public:
+    Pow (ShadingExecution *exec) : m_exec(exec) { }
+    inline float operator() (float x, float y) { return safe_pow (x, y); }
+    inline Vec3  operator() (const Vec3 &x, float y) { return safe_pow (x, y); }
+private:
+    inline float safe_pow (float x, float y) {
+        if (x <= 0.0f &&  (y < 0.0f  || truncf(y) != y) ) {
+            m_exec->error ("attempted to compute pow(%g, %g)", x, y);
+           return  0.0f;
+        } else {
+            return powf (x, y);
+        }
+    }
+    inline Vec3 safe_pow (const Vec3 &x, float y) {
+        if ( (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) && 
+              (y < 0.0f || truncf(y) != y) ) {
+            m_exec->error ("attempted to compute log(%g %g %g, %g)", x[0], x[1], x[2], y);
+            float x0 = (x[0] <= 0) ? 0.0f : powf (x[0], y);
+            float x1 = (x[1] <= 0) ? 0.0f : powf (x[1], y);
+            float x2 = (x[2] <= 0) ? 0.0f : powf (x[2], y);
+            return Vec3 (x0, x1, x2);
+        } else {
+            return Vec3 (powf (x[0], y), powf (x[1], y), powf (x[2], y));
+        }
+    }
+    ShadingExecution *m_exec;
+};
+
 // miscellaneous math ops
 
 class FAbs {
@@ -737,6 +766,41 @@ DECLOP (OP_expm1)
 {
     generic_unary_function_shadeop<Expm1> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
+}
+
+// pow() function can two forms:
+//   T = pow(T, float)
+//  where T is float or 3-tuple (color/vector...)
+DECLOP (OP_pow)
+{
+    ASSERT (nargs == 3);
+    OpImpl impl = NULL;
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
+    if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_float()) {
+        impl = binary_op<Vec3,Vec3,float, Pow>;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()){
+        impl = binary_op<float,float,float, Pow>;
+    }
+    else {
+        std::cerr << "Don't know how compute " << Result.typespec().string()
+                  << " = " << exec->op().opname() << "(" 
+                  << A.typespec().string() << ", "
+                  << B.typespec().string() << ")\n";
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } 
 }
 
 // The fabs() function can be of the form:

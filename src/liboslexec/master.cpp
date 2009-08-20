@@ -224,6 +224,7 @@ static OpNameEntry op_name_entries[] = {
     { "normal", OP_normal },
     { "normalize", OP_normalize },
     { "point", OP_point },
+    { "pow", OP_pow },
     { "printf", OP_printf },
     { "radians", OP_radians },
     { "round", OP_round },

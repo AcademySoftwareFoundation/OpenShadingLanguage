@@ -32,6 +32,23 @@ test ()
         b = 10.0;
         a = 10.0;
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        a = 2.0;
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = -2.0;
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        // catch some weird corner cases
+        a = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = -3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
 
     { 
@@ -60,6 +77,23 @@ test ()
         a = 10.0;
         b = 10.0;
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        a = 2.0;
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = -2.0;
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        // catch some weird corner cases
+        a = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = -3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
 
     printf (" varying:\n");
@@ -74,6 +108,8 @@ test ()
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
     {
         color a = u;
@@ -86,5 +122,7 @@ test ()
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
 }

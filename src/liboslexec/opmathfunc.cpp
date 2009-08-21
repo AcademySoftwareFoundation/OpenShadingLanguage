@@ -592,6 +592,14 @@ private:
     }
 };
 
+class Step {
+public:
+    Step (ShadingExecution *) { }
+    inline float operator() (float edge, float x) { 
+        if (x < edge) return 0.0f;
+        else return 1.0f;
+    }
+};
 
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
@@ -1067,6 +1075,12 @@ DECLOP (OP_mix)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } 
+}
+
+DECLOP (OP_step)
+{
+    binary_op<float,float,float,Step> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
 }
 
 

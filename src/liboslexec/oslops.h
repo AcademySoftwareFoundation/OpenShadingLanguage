@@ -185,7 +185,7 @@ DECLOP (OP_sinh);
 //DECLOP (OP_snoise);
 //DECLOP (OP_spline);
 DECLOP (OP_sqrt);
-//DECLOP (OP_step);
+DECLOP (OP_step);
 DECLOP (OP_sub);
 //DECLOP (OP_substr);
 //DECLOP (OP_subsurface);

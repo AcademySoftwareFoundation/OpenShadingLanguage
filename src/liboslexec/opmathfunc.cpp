@@ -614,6 +614,13 @@ public:
     }
 };
 
+class Hypot {
+public:
+    Hypot (ShadingExecution *) { }
+    inline float operator() (float x, float y) { return sqrtf (x*x + y*y); }
+    inline float operator() (float x, float y, float z) { return sqrtf (x*x + y*y + z*z); }
+};
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -1108,6 +1115,57 @@ DECLOP (OP_step)
                                          runflags, beginpoint, endpoint);
 }
 
+// hypot() function can two forms:
+//   float = hypot(float, float)
+//   float = hypot(float, float, float)
+DECLOP (OP_hypot)
+{
+    ASSERT (nargs == 3 || nargs == 4);
+    OpImpl impl = NULL;
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    // float = hypot(float, float) case
+    if (nargs == 3) {
+        ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
+        if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
+            impl = binary_op<float,float,float, Hypot>;
+        }
+        else {
+            std::cerr << "Don't know how compute " << Result.typespec().string()
+                      << " = " << exec->op().opname() << "(" 
+                      << A.typespec().string() << ", "
+                      << B.typespec().string() << ")\n";
+            ASSERT (0 && "Function arg type can't be handled");
+        }
+    }
+
+    // float = hypot(float, float, float) case
+    else if (nargs == 4) {
+        Symbol &C (exec->sym (args[3]));
+        ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure() && ! C.typespec().is_closure());
+        if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float() && C.typespec().is_float()) {
+            impl = ternary_op<float,float,float,float, Hypot>;
+        }
+        else {
+            std::cerr << "Don't know how compute " << Result.typespec().string()
+                      << " = " << exec->op().opname() << "(" 
+                      << A.typespec().string() << ", "
+                      << B.typespec().string() << ", "
+                      << C.typespec().string() << ")\n";
+            ASSERT (0 && "Function arg type can't be handled");
+        }
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } 
+}
 
 }; // namespace pvt
 }; // namespace OSL

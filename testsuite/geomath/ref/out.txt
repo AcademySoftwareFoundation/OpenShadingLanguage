@@ -1,0 +1,13 @@
+Compiled test.osl -> test.oso
+  hypot (3, 4) = 5
+  hypot (3, 4, 5) = 7.07107
+ varying:
+  hypot (0, 0) = 0
+  hypot (1, 0) = 1
+  hypot (0, 1) = 1
+  hypot (1, 1) = 1.41421
+  hypot (0, 0, 0) = 0
+  hypot (1, 0, 1) = 1.41421
+  hypot (0, 1, 1) = 1.41421
+  hypot (1, 1, 2) = 2.44949
+

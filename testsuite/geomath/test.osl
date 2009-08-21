@@ -1,0 +1,26 @@
+
+shader
+test ()
+{
+    {
+        float x = 3;
+        float y = 4;
+        float z = 5;
+        printf ("  hypot (%g, %g) = %g\n", x, y, hypot(x,y));
+        printf ("  hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+    }
+
+    { 
+    }
+
+    printf (" varying:\n");
+    {
+        float x = u;
+        float y = v;
+        float z = u+v;
+        printf ("  hypot (%g, %g) = %g\n", x, y, hypot(x,y));
+        printf ("  hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+    }
+    {
+    }
+}

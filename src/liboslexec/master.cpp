@@ -204,6 +204,7 @@ static OpNameEntry op_name_entries[] = {
     { "floor", OP_floor },
     { "ge", OP_ge },
     { "gt", OP_gt },
+    { "hypot", OP_hypot },
     { "if", OP_if },
     { "inversesqrt", OP_inversesqrt },
     { "isfinite", OP_isfinite },

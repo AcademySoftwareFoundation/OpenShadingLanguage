@@ -124,7 +124,7 @@ DECLOP (OP_ge);
 //DECLOP (OP_gettextureinfo);
 DECLOP (OP_gt);
 //DECLOP (OP_hash);
-//DECLOP (OP_hypot);
+DECLOP (OP_hypot);
 DECLOP (OP_if);
 //DECLOP (OP_incr);
 //DECLOP (OP_inversespline);

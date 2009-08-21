@@ -94,7 +94,7 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic blendmath color comparison exponential 
-            hyperb ieee_fp if incdec intbits loop matrix
+            geomath hyperb ieee_fp if incdec intbits loop matrix
             miscmath trig typecast vecctr vector )
 
 

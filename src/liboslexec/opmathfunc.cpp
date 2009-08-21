@@ -621,6 +621,19 @@ public:
     inline float operator() (float x, float y, float z) { return sqrtf (x*x + y*y + z*z); }
 };
 
+class Smoothstep {
+public:
+    Smoothstep (ShadingExecution *) { }
+    inline float operator() (float edge0, float edge1, float x) { 
+       if (x < edge0) return 0.0f;
+       else if (x >= edge1) return 1.0f;
+       else {
+         float t = (x - edge0)/(edge1 - edge0);
+         return (3.0f-2.0f*t)*(t*t);
+       }
+    }
+};
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -1166,6 +1179,13 @@ DECLOP (OP_hypot)
         exec->op().implementation (impl);
     } 
 }
+
+DECLOP (OP_smoothstep)
+{
+    ternary_op<float,float,float,float, Smoothstep> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
 
 }; // namespace pvt
 }; // namespace OSL

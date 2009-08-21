@@ -240,6 +240,7 @@ static OpNameEntry op_name_entries[] = {
     { "sign", OP_sign },
     { "sin", OP_sin },
     { "sinh", OP_sinh },
+    { "smoothstep", OP_smoothstep },
     { "sqrt", OP_sqrt },
     { "step", OP_step },
     { "sub", OP_sub },

@@ -23,6 +23,7 @@ test ()
         printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
         t = 1.0;
         printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
     }
 
     { 
@@ -70,6 +71,7 @@ test ()
         printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
         t = 1.0;
         printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        printf ("  smoothstep (%g, %g, %g) = %g\n", b, c, a, smoothstep (b,c,a));
     }
 
     {

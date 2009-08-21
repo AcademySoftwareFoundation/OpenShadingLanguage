@@ -181,7 +181,7 @@ DECLOP (OP_shr);
 DECLOP (OP_sign);
 DECLOP (OP_sin);
 DECLOP (OP_sinh);
-//DECLOP (OP_smoothstep);
+DECLOP (OP_smoothstep);
 //DECLOP (OP_snoise);
 //DECLOP (OP_spline);
 DECLOP (OP_sqrt);

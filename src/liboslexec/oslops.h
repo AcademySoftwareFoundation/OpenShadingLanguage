@@ -221,7 +221,7 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
     VaryingRef<RET> result ((RET *)Result.data(), Result.step());
     VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
     VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-    VaryingRef<CTYPE> c ((BTYPE *)C.data(), C.step());
+    VaryingRef<CTYPE> c ((CTYPE *)C.data(), C.step());
     FUNCTION function (exec);
     if (result.is_uniform()) {
         // Uniform case

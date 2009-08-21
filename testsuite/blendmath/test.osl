@@ -15,6 +15,12 @@ test ()
         printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        float t = 0.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 0.25;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 1.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
     }
 
     { 
@@ -31,6 +37,12 @@ test ()
         printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        vector t = 0.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 0.25;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 1.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
     }
 
     printf (" varying:\n");
@@ -48,6 +60,12 @@ test ()
         printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        float t = 0.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 0.25;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 1.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
     }
 
     {
@@ -64,5 +82,11 @@ test ()
         printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        float t = 0.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 0.25;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        t = 1.0;
+        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
     }
 }

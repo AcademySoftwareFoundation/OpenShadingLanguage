@@ -220,6 +220,7 @@ static OpNameEntry op_name_entries[] = {
     { "mxcompref", OP_mxcompref },
     { "max", OP_max },
     { "min", OP_min },
+    { "mix", OP_mix },
     { "mod", OP_mod },
     { "mul", OP_mul },
     { "neg", OP_neg },

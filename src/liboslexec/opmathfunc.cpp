@@ -571,6 +571,28 @@ private:
     }
 };
 
+class Mix {
+public:
+    Mix (ShadingExecution *) { }
+    inline float operator() (float x, float y, float a) { return mix(x,y,a); }
+    inline Vec3 operator() (const Vec3 &x, const Vec3 &y, float a) { return mix(x,y,a); }
+    inline Vec3 operator() (const Vec3 &x, const Vec3 &y, const Vec3 &a) { 
+       return mix (x,y,a);
+    }
+private:
+    inline float mix (float x, float y, float a) { 
+        return x*(1.0f-a) + y*a;
+    }
+    inline Vec3 mix (const Vec3 &x, const Vec3 &y, float a) { 
+       return x*(1.0f-a) + y*a;
+    }
+    inline Vec3 mix (const Vec3 &x, const Vec3 &y, const Vec3 &a) { 
+       Vec3 one(1.0f, 1.0f, 1.0f);
+       return x*(one-a) + y*a;
+    }
+};
+
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -1005,6 +1027,48 @@ DECLOP (OP_min)
     generic_binary_function_shadeop<Min> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
+
+// mix() function can two forms:
+//   T = log(T, T, T)
+//   T = log(T, T, float)
+//  where T is float or 3-tuple (color/vector...)
+DECLOP (OP_mix)
+{
+    ASSERT (nargs == 4);
+    OpImpl impl = NULL;
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure() && ! C.typespec().is_closure());
+    if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_triple()) {
+        impl = ternary_op<Vec3,Vec3,Vec3,float, Mix>;
+    }
+    else if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_float()) {
+        impl = ternary_op<Vec3,Vec3,Vec3,float, Mix>;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float() && C.typespec().is_float()){
+        impl = ternary_op<float,float,float,float, Mix>;
+    }
+    else {
+        std::cerr << "Don't know how compute " << Result.typespec().string()
+                  << " = " << exec->op().opname() << "(" 
+                  << A.typespec().string() << ", "
+                  << B.typespec().string() << ", "
+                  << C.typespec().string() << ")\n";
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } 
+}
+
 
 }; // namespace pvt
 }; // namespace OSL

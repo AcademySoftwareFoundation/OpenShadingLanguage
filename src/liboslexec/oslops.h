@@ -145,7 +145,7 @@ DECLOP (OP_luminance);
 DECLOP (OP_matrix);
 DECLOP (OP_max);
 DECLOP (OP_min);
-//DECLOP (OP_mix);
+DECLOP (OP_mix);
 DECLOP (OP_mxcompassign);
 DECLOP (OP_mxcompref);
 DECLOP (OP_mod);

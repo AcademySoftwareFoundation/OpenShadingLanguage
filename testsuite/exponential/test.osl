@@ -17,6 +17,8 @@ test ()
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        printf ("  erf (%g) = %g\n", a, erf(a));
+        printf ("  erfc (%g) = %g\n", a, erfc(a));
         a = 10.0*M_E;
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
@@ -26,6 +28,8 @@ test ()
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        printf ("  erf (%g) = %g\n", a, erf(a));
+        printf ("  erfc (%g) = %g\n", a, erfc(a));
         b = 2.0;
         a = 2.0;
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
@@ -108,6 +112,8 @@ test ()
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        printf ("  erf (%g) = %g\n", a, erf(a));
+        printf ("  erfc (%g) = %g\n", a, erfc(a));
         b = 1.5;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }

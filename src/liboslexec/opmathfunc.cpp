@@ -389,6 +389,19 @@ private:
     ShadingExecution *m_exec;
 };
 
+class Erf {
+public:
+    Erf (ShadingExecution *) { }
+    inline float operator() (float x) { return erff(x); }
+};
+
+class Erfc {
+public:
+    Erfc (ShadingExecution *) { }
+    inline float operator() (float x) { return erfcf(x); }
+};
+
+
 // miscellaneous math ops
 
 class FAbs {
@@ -918,6 +931,18 @@ DECLOP (OP_pow)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } 
+}
+
+DECLOP (OP_erf)
+{
+    unary_op<float,float,Erf> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_erfc)
+{
+    unary_op<float,float,Erfc> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
 }
 
 // The fabs() function can be of the form:

@@ -194,6 +194,8 @@ static OpNameEntry op_name_entries[] = {
     { "dowhile", OP_dowhile },
     { "end", OP_end },
     { "eq", OP_eq },
+    { "erf", OP_erf },
+    { "erfc", OP_erfc },
     { "exp", OP_exp },
     { "exp2", OP_exp2 },
     { "expm1", OP_expm1 },

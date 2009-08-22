@@ -173,8 +173,54 @@ public:
 // Make a functor that encapsulates modulus
 class Mod {
 public:
-    Mod (ShadingExecution *) { }
-    inline int operator() (int a, int b) { return (b == 0) ? 0 : (a % b); }
+    Mod (ShadingExecution *exec) : m_exec(exec) { }
+    inline int operator() (int a, int b) { return safe_mod(a, b); }
+    inline float operator() (float x, float y) { return safe_fmod(x, y); }
+    inline Vec3 operator() (const Vec3 &x, float y) { return safe_fmod(x, y); }
+    inline Vec3 operator() (const Vec3 &x, const Vec3 &y) { return safe_fmod(x, y); }
+private:
+    inline int safe_mod(int a, int b) {
+        if (b == 0) {
+             m_exec->error ("attempted to compute mod(%d, %d)", a, b);
+            return 0;
+        }
+        else {
+            return (a % b);
+        }
+    }
+    inline float safe_fmod (float x, float y) { 
+        if (y == 0.0f) {
+             m_exec->error ("attempted to compute mod(%g, %g)", x, y);
+            return 0.0f;
+        }
+        else {
+            return fmodf (x,y); 
+        }
+    }
+    inline Vec3 safe_fmod (const Vec3 &x, float y) { 
+        if (y == 0.0f) {
+             m_exec->error ("attempted to compute mod(%g %g %g, %g)",
+                            x[0], x[1], x[2], y);
+            return Vec3 (0.0f, 0.0f, 0.0f);
+        }
+        else {
+            return Vec3 (fmodf( x[0],y), fmodf(x[1],y), fmodf (x[2],y));
+        }
+    }
+    inline Vec3 safe_fmod (const Vec3 &x, const Vec3 &y) { 
+        if (y[0] == 0.0f || y[1] == 0.0f || y[2] == 0.0f) {
+             m_exec->error ("attempted to compute mod(%g %g %g, %g %g %g)",
+                            x[0], x[1], x[2], y[0], y[1], y[2]);
+            float x0 = (y[0] == 0.0f) ? 0.0f : fmodf (x[0], y[0]);
+            float x1 = (y[1] == 0.0f) ? 0.0f : fmodf (x[1], y[1]);
+            float x2 = (y[2] == 0.0f) ? 0.0f : fmodf (x[2], y[2]);
+            return Vec3 (x0, x1, x2);
+        }
+        else {
+            return Vec3 (fmodf( x[0],y[0]), fmodf(x[1],y[1]), fmodf (x[2],y[2]));
+        }
+    }
+    ShadingExecution *m_exec;
 };
 
 // Make a templated functor that encapsulates negation.
@@ -551,6 +597,18 @@ DECLOP (OP_mod)
     if (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int()) {
         impl = binary_op<int,int,int, Mod >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() &&
+            B.typespec().is_float()) {
+        impl = binary_op<float,float,float, Mod >;
+    }
+    else if (Result.typespec().is_triple() && A.typespec().is_triple() &&
+            B.typespec().is_float()) {
+        impl = binary_op<Vec3,Vec3,float, Mod >;
+    }
+    else if (Result.typespec().is_triple() && A.typespec().is_triple() &&
+            B.typespec().is_triple()) {
+        impl = binary_op<Vec3,Vec3,Vec3, Mod >;
     }
 
     if (impl) {

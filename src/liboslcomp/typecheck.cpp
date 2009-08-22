@@ -716,7 +716,7 @@ static const char * builtin_func_args [] = {
     "faceforward", "vvvv", "vvv", NULL,
     "filterwidth", DERIV_ARGS, NULL,
     "floor", ANY_ONE_FLOAT_BASED, NULL,
-    "fmod", ANY_ONE_FLOAT_BASED, NULL,
+    "fmod", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL, // alias for mod()
     "format", "ss*", NULL,
     "fprintf", "xs*", NULL,   // FIXME -- further checking
     "fresnel", "xvvf", "xvvffvv", NULL,
@@ -741,7 +741,7 @@ static const char * builtin_func_args [] = {
     "min", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
     "mix", "ffff", "cccc", "pppp", "vvvv", "nnnn", 
                    "cccf", "pppf", "vvvf", "nnnf", NULL,
-    "mod", ANY_ONE_FLOAT_BASED, NULL,
+    "mod", "iii", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL,  
     "noise", NOISE_ARGS, NULL,
     "normalize", "vv", "nn", NULL,
     "pnoise", NOISE_ARGS, NULL,

@@ -14,6 +14,7 @@ test ()
         printf ("  abs (%d) = %d\n", i, abs(i));
         printf ("  fabs (%d) = %d\n", i, fabs(i));
         float a = 101.29;
+        float b = 1.5*a;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
@@ -22,7 +23,9 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         a = -137.59;
+        b = 1.5*a;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
@@ -31,10 +34,18 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+
+        i = 16;
+        int j = 7;
+        printf ("  mod (%d, %d) = %d\n", i, j, mod(i, j));
+        float fi = 16.0;
+        float fj = 7.0;
+        printf ("  fmod (%g, %g) = %g\n", fi, fj, fmod(fi, fj));
     }
 
     { 
         vector a = 101.29;
+        vector b = 1.5*a;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
@@ -43,7 +54,9 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         a = -137.59;
+        b = 1.5*a;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
@@ -52,11 +65,13 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
     }
 
     printf (" varying:\n");
     {
         float a = u;
+        float b = 1.5*u;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
@@ -65,10 +80,12 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
     }
 
     {
         color a = u;
+        color b = 1.5*u;
         printf ("  fabs (%g) = %g\n", a, fabs(a));
         printf ("  floor (%g) = %g\n", a, floor(a));
         printf ("  ceil (%g) = %g\n", a, ceil(a));
@@ -77,5 +94,6 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
     }
 }

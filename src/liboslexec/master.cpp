@@ -199,6 +199,7 @@ static OpNameEntry op_name_entries[] = {
     { "exp", OP_exp },
     { "exp2", OP_exp2 },
     { "expm1", OP_expm1 },
+    { "fmod", OP_mod },  // alias for mod()
     { "for", OP_for },
     { "fabs", OP_fabs },
     { "floor", OP_floor },

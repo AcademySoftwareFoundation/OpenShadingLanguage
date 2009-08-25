@@ -189,7 +189,7 @@ public:
 
     /// For an array, return the TypeSpec of an individual element of the
     /// array.  For a non-array, just return the type.
-    TypeSpec elementtype () const { TypeSpec t; t.make_array (0); return t; }
+    TypeSpec elementtype () const { TypeSpec t = *this; t.make_array (0); return t; }
 
     /// Return the aggregateness of the underlying simple type (SCALAR,
     /// VEC3, or MATRIX44).

@@ -1,5 +1,5 @@
 shader
-test ()
+test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
 {
     int iarray[3] = { 10, 11, 12 };
     // Initialization of farray includes one initializer that looks like
@@ -18,6 +18,8 @@ test ()
     printf ("marray = [(%g) (%g) (%g)]\n", marray[0], marray[1], marray[2]);
     printf ("sarray = [\"%s\" \"%s\" \"%s\"]\n", sarray[0], sarray[1], sarray[2]);
     printf ("arraylength(carray) = %d\n", arraylength(carray));
+    printf ("parameter cparamarray = [(%g) (%g)]\n",
+            cparamarray[0], cparamarray[1]);
 
     printf ("\nTest array element assignment:\n");
     printf ("After 'farray[1] = 14; farray[2] = 15.5;'...\n");
@@ -38,6 +40,4 @@ test ()
     printf ("After carray[2] = color(u,v,4)...\n");
     carray[2] = color (u, v, 4);
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
-
-    // FIXME: need to test params
 }

@@ -300,7 +300,7 @@ void
 OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) const
 {
     Symbol *sym = node->sym();
-    TypeSpec type = sym->typespec();
+    TypeSpec type = sym->typespec().elementtype();
 
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.

@@ -509,10 +509,13 @@ public:
     /// about to be assigned to it.  In cases when sym is promoted from
     /// uniform to varying, 'preserve_value' determines if the old value
     /// should be preserved (and replicated to fill the new varying
-    /// space); it defaults to true (safe) but some shadeops may know
-    /// that this isn't necessary and safe the work.  The value must
-    /// be preserved if there's a chance that any symbols being written
-    /// to are also symbols being read from in the same op.
+    /// space) even if all shading points are turned on; it defaults to
+    /// true (safe) but some shadeops may know that this isn't necessary
+    /// and save the work. (If only a subset of points are enabled,
+    /// e.g., in a conditional, the values will be preserved for 'off'
+    /// points even if preserve_value is false.)  The value must be
+    /// preserved if there's a chance that any symbols being written to
+    /// are also symbols being read from in the same op.
     void adjust_varying (Symbol &sym, bool varying_assignment,
                          bool preserve_value = true);
 

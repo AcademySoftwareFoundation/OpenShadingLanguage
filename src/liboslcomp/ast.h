@@ -404,6 +404,10 @@ public:
     ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2)
         : ASTNode (index_node, comp, 0, expr, index, index2)
     { }
+    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
+              ASTNode *index2, ASTNode *index3)
+        : ASTNode (index_node, comp, 0, expr, index, index2, index3)
+    { }
     const char *nodetypename () const { return "index"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
@@ -416,6 +420,7 @@ public:
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }
     ref index2 () const { return child (2); }
+    ref index3 () const { return child (3); }
 };
 
 

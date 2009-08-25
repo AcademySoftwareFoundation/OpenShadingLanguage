@@ -321,12 +321,18 @@ ASTindex::codegen (Symbol *dest)
 {
     Symbol *lv = lvalue()->codegen ();
     Symbol *ind = index()->codegen ();
+    Symbol *ind2 = index2() ? index2()->codegen () : NULL;
+    Symbol *ind3 = index3() ? index3()->codegen () : NULL;
     if (! dest)
         dest = m_compiler->make_temporary (typespec());
     if (lv->typespec().is_array()) {
-        if (index2()) {
+        if (index3()) {
+            // matrixarray[a][c][r]
+            Symbol *tmp = m_compiler->make_temporary (lv->typespec().elementtype());
+            emitcode ("aref", tmp, lv, ind);
+            emitcode ("mxcompref", dest, tmp, ind2, ind3);
+        } else if (index2()) {
             // colorarray[a][c]
-            Symbol *ind2 = index2()->codegen ();
             Symbol *tmp = m_compiler->make_temporary (lv->typespec().elementtype());
             emitcode ("aref", tmp, lv, ind);
             emitcode ("compref", dest, tmp, ind2);
@@ -337,7 +343,6 @@ ASTindex::codegen (Symbol *dest)
     } else if (lv->typespec().is_triple()) {
         emitcode ("compref", dest, lv, ind);
     } else if (lv->typespec().is_matrix()) {
-        Symbol *ind2 = index2()->codegen ();
         emitcode ("mxcompref", dest, lv, ind, ind2);
     } else {
         ASSERT (0);
@@ -352,15 +357,22 @@ ASTindex::codegen_assign (Symbol *src)
 {
     Symbol *lv = lvalue()->codegen ();
     Symbol *ind = index()->codegen ();
+    Symbol *ind2 = index2() ? index2()->codegen () : NULL;
+    Symbol *ind3 = index3() ? index3()->codegen () : NULL;
     if (lv->typespec().is_array()) {
         TypeSpec elemtype = lv->typespec().elementtype();
-        if (index2() && elemtype.is_triple()) {
-            // Component of array, e.g., colorarray[i][c] = float
-            Symbol *ind2 = index2()->codegen ();
-            Symbol *tripletemp = m_compiler->make_temporary (elemtype);
-            emitcode ("aref", tripletemp, lv, ind);
-            emitcode ("compassign", tripletemp, ind2, src);
-            emitcode ("aassign", lv, ind, tripletemp);
+        if (ind3 && elemtype.is_matrix()) {
+            // Component of matrix array, e.g., matrixarray[i][c][r] = float
+            Symbol *temp = m_compiler->make_temporary (elemtype);
+            emitcode ("aref", temp, lv, ind);
+            emitcode ("mxcompassign", temp, ind2, ind3, src);
+            emitcode ("aassign", lv, ind, temp);
+        } else if (ind2 && elemtype.is_triple()) {
+            // Component of triple array, e.g., colorarray[i][c] = float
+            Symbol *temp = m_compiler->make_temporary (elemtype);
+            emitcode ("aref", temp, lv, ind);
+            emitcode ("compassign", temp, ind2, src);
+            emitcode ("aassign", lv, ind, temp);
         }
         else if (! equivalent (elemtype, src->typespec())) {
             // Type conversion, e.g., colorarray[i] = float or 
@@ -379,7 +391,6 @@ ASTindex::codegen_assign (Symbol *src)
     } else if (lv->typespec().is_triple()) {
         emitcode ("compassign", lv, ind, src);
     } else if (lv->typespec().is_matrix()) {
-        Symbol *ind2 = index2()->codegen ();
         emitcode ("mxcompassign", lv, ind, ind2, src);
     } else {
         ASSERT (0);

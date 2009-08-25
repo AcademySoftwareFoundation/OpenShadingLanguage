@@ -136,7 +136,7 @@ ASTpostincdec::typecheck (TypeSpec expected)
 TypeSpec
 ASTindex::typecheck (TypeSpec expected)
 {
-   typecheck_children ();
+    typecheck_children ();
     const char *indextype = "";
     TypeSpec t = lvalue()->typespec();
     if (t.is_structure()) {
@@ -147,7 +147,11 @@ ASTindex::typecheck (TypeSpec expected)
         error ("Cannot use [] indexing on a closure");
         return TypeSpec();
     }
-    if (t.is_array()) {
+    if (index3()) {
+        if (! t.is_array() && ! t.elementtype().is_matrix())
+            error ("[][][] only valid for a matrix array");
+        m_typespec = TypeDesc::FLOAT;
+    } else if (t.is_array()) {
         indextype = "array";
         m_typespec = t.elementtype();
         if (index2()) {

@@ -28,11 +28,16 @@ test ()
     carray[1][2] = 3.1;
     printf ("after 'carray[1][2] = 3.1', carray[1][2] = %g\n", carray[1][2]);
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
+    printf ("marray[2][1][1] = %g, marray[2][1][2] = %g\n",
+            marray[2][1][1], marray[2][1][2]);
+    printf ("after 'marray[2][1][3] = 100',\n");
+    marray[2][1][3] = 100;
+    printf ("marray[2] = (%g)\n", marray[2]);
 
     printf ("\nTest varying array assignment and reference:\n");
     printf ("After carray[2] = color(u,v,4)...\n");
     carray[2] = color (u, v, 4);
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
 
-    // FIXME: need to test arraylength(), marray[i][r][c], test params
+    // FIXME: need to test params
 }

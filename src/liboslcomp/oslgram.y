@@ -615,6 +615,10 @@ variable_lvalue
                 {
                     $$ = new ASTindex (oslcompiler, $1, $3, $6);
                 }
+        | id_or_field '[' expression ']' '[' expression ']' '[' expression ']'
+                {
+                    $$ = new ASTindex (oslcompiler, $1, $3, $6, $9);
+                }
         ;
 
 id_or_field

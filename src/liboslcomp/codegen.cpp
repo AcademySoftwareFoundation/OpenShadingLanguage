@@ -250,10 +250,29 @@ ASTassign_expression::codegen (Symbol *dest)
 Symbol *
 ASTvariable_declaration::codegen (Symbol *)
 {
-    if (init()) {
-        Symbol *dest = init()->codegen (m_sym);
-        if (dest != m_sym)
-            emitcode ("assign", m_sym, dest);
+    // Loop over a list of initializers (it's just 1 if not an array)...
+    int i = 0;
+    for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
+        Symbol *dest = in->codegen (m_sym);
+        if (dest != m_sym) {
+            if (m_sym->typespec().is_array()) {
+                // Array variable -- assign to the i-th element
+                TypeSpec elemtype = m_sym->typespec().elementtype();
+                if (! equivalent (elemtype, dest->typespec())) {
+                    // We only allow A[ind] = x if the type of x is
+                    // equivalent to that of A's elements.  You can't,
+                    // for example, do floatarray[ind] = int.  So we 
+                    // convert through a temp.
+                    Symbol *tmp = dest;
+                    dest = m_compiler->make_temporary (elemtype);
+                    emitcode ("assign", dest, tmp);
+                }
+                emitcode ("aassign", m_sym, m_compiler->make_constant(i), dest);
+            } else {
+                // Non-array variable, just a simple assignment
+                emitcode ("assign", m_sym, dest);
+            }
+        }
     }        
     return m_sym;
 }
@@ -305,7 +324,16 @@ ASTindex::codegen (Symbol *dest)
     if (! dest)
         dest = m_compiler->make_temporary (typespec());
     if (lv->typespec().is_array()) {
-        emitcode ("aref", dest, lv, ind);
+        if (index2()) {
+            // colorarray[a][c]
+            Symbol *ind2 = index2()->codegen ();
+            Symbol *tmp = m_compiler->make_temporary (lv->typespec().elementtype());
+            emitcode ("aref", tmp, lv, ind);
+            emitcode ("compref", dest, tmp, ind2);
+        } else {
+            // regulararray[a]
+            emitcode ("aref", dest, lv, ind);
+        }
     } else if (lv->typespec().is_triple()) {
         emitcode ("compref", dest, lv, ind);
     } else if (lv->typespec().is_matrix()) {
@@ -325,7 +353,29 @@ ASTindex::codegen_assign (Symbol *src)
     Symbol *lv = lvalue()->codegen ();
     Symbol *ind = index()->codegen ();
     if (lv->typespec().is_array()) {
-        emitcode ("aassign", lv, ind, src);
+        TypeSpec elemtype = lv->typespec().elementtype();
+        if (index2() && elemtype.is_triple()) {
+            // Component of array, e.g., colorarray[i][c] = float
+            Symbol *ind2 = index2()->codegen ();
+            Symbol *tripletemp = m_compiler->make_temporary (elemtype);
+            emitcode ("aref", tripletemp, lv, ind);
+            emitcode ("compassign", tripletemp, ind2, src);
+            emitcode ("aassign", lv, ind, tripletemp);
+        }
+        else if (! equivalent (elemtype, src->typespec())) {
+            // Type conversion, e.g., colorarray[i] = float or 
+            //    floatarray[i] = int
+            // We only allow A[ind] = x if the type of x is equivalent
+            // to that of A's elements.  You can't, for example, do
+            // floatarray[ind] = int.  So we convert through a temp.
+            Symbol *tmp = src;
+            src = m_compiler->make_temporary (elemtype);
+            emitcode ("assign", src, tmp);
+            emitcode ("aassign", lv, ind, src);
+        } else {
+            // Simple Xarray[i] = X
+            emitcode ("aassign", lv, ind, src);
+        }
     } else if (lv->typespec().is_triple()) {
         emitcode ("compassign", lv, ind, src);
     } else if (lv->typespec().is_matrix()) {

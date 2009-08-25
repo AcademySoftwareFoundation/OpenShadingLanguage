@@ -1,0 +1,22 @@
+Compiled test.osl -> test.oso
+Test basic array initialization and referencing:
+iarray = [10 11 12]
+farray = [10.5 11.5 12]
+carray = [(0.1 0.2 0.3) (0.2 0.2 0.2) (0.3 0.3 0.3)]
+marray = [(1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1) (2 0 0 0 0 2 0 0 0 0 2 0 0 0 0 2) (3 0 0 0 0 3 0 0 0 0 3 0 0 0 0 3)]
+sarray = ["Able" "Baker" "Charlie"]
+
+Test array element assignment:
+After 'farray[1] = 14; farray[2] = 15.5;'...
+  farray = [10.5 14 15.5]
+carray[1][2] = 0.2
+after 'carray[1][2] = 3.1', carray[1][2] = 3.1
+carray = [(0.1 0.2 0.3) (0.2 0.2 3.1) (0.3 0.3 0.3)]
+
+Test varying array assignment and reference:
+After carray[2] = color(u,v,4)...
+carray = [(0.1 0.2 0.3) (0.2 0.2 3.1) (0 0 4)]
+carray = [(0.1 0.2 0.3) (0.2 0.2 3.1) (1 0 4)]
+carray = [(0.1 0.2 0.3) (0.2 0.2 3.1) (0 1 4)]
+carray = [(0.1 0.2 0.3) (0.2 0.2 3.1) (1 1 4)]
+

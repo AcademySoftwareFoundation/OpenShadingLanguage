@@ -176,12 +176,12 @@ symbols
         ;
 
 symbol
-        : SYMTYPE typespec IDENTIFIER arraylen_opt
+        : SYMTYPE typespec arraylen_opt IDENTIFIER 
                 {
                     TypeSpec typespec = current_typespec;
-                    if ($4)
-                        typespec.make_array ($4);
-                    OSOReader::osoreader->symbol ((SymType)$1, typespec, $3);
+                    if ($3)
+                        typespec.make_array ($3);
+                    OSOReader::osoreader->symbol ((SymType)$1, typespec, $4);
                 }
             initial_values_opt hints_opt ENDOFLINE
         | ENDOFLINE

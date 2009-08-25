@@ -1,0 +1,37 @@
+shader
+test ()
+{
+    int iarray[3] = { 10, 11, 12 };
+    // Initialization of farray includes one initializer that looks like
+    // an int rather than a float
+    float farray[3] = { 10.5, 11.5, 12 };
+    // Initialization of carray includes one element that looks like a
+    // float rather than a color
+    color carray[3] = { color(.1,.2,.3), 0.2, color(.3,.3,.3) };
+    matrix marray[3] = { matrix(1), matrix(2), matrix(3) };
+    string sarray[3] = { "Able", "Baker", "Charlie" };
+
+    printf ("Test basic array initialization and referencing:\n");
+    printf ("iarray = [%d %d %d]\n", iarray[0], iarray[1], iarray[2]);
+    printf ("farray = [%g %g %g]\n", farray[0], farray[1], farray[2]);
+    printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
+    printf ("marray = [(%g) (%g) (%g)]\n", marray[0], marray[1], marray[2]);
+    printf ("sarray = [\"%s\" \"%s\" \"%s\"]\n", sarray[0], sarray[1], sarray[2]);
+
+    printf ("\nTest array element assignment:\n");
+    printf ("After 'farray[1] = 14; farray[2] = 15.5;'...\n");
+    farray[1] = 14;
+    farray[2] = 15.5;
+    printf ("  farray = [%g %g %g]\n", farray[0], farray[1], farray[2]);
+    printf ("carray[1][2] = %g\n", carray[1][2]);
+    carray[1][2] = 3.1;
+    printf ("after 'carray[1][2] = 3.1', carray[1][2] = %g\n", carray[1][2]);
+    printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
+
+    printf ("\nTest varying array assignment and reference:\n");
+    printf ("After carray[2] = color(u,v,4)...\n");
+    carray[2] = color (u, v, 4);
+    printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
+
+    // FIXME: need to test arraylength(), marray[i][r][c], test params
+}

@@ -57,13 +57,13 @@ namespace pvt {
 // Declarations of all our shader opcodes follow:
 
 //DECLOP (OP_aastep);
-//DECLOP (OP_aassign);
+DECLOP (OP_aassign);
 DECLOP (OP_acos);
 DECLOP (OP_add);
 //DECLOP (OP_ambient);
 //DECLOP (OP_and);
 //DECLOP (OP_area);
-//DECLOP (OP_aref);
+DECLOP (OP_aref);
 //DECLOP (OP_arraylength);
 DECLOP (OP_asin);
 DECLOP (OP_atan);

@@ -84,10 +84,17 @@ TypeSpec
 ASTvariable_declaration::typecheck (TypeSpec expected)
 {
     typecheck_children (m_typespec);
-    if (init() && ! assignable(m_typespec, init()->typespec()))
-        error ("can't assign '%s' to %s %s",
-               init()->typespec().string().c_str(),
-               m_typespec.string().c_str(), m_name.c_str());
+    int i = 0;
+    for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
+        if (! m_sym->typespec().is_array() && i > 0)
+            error ("Can't assign array initializers to non-array %s %s",
+                   m_typespec.string().c_str(), m_name.c_str());
+        if (! assignable(m_sym->typespec().elementtype(), in->typespec()))
+            error ("can't assign '%s' to %s %s (%s)",
+                   in->typespec().string().c_str(),
+                   m_sym->typespec().string().c_str(), m_name.c_str(),
+                   m_sym->typespec().elementtype().string().c_str());
+    }
     return m_typespec;
 }
 
@@ -143,8 +150,11 @@ ASTindex::typecheck (TypeSpec expected)
     if (t.is_array()) {
         indextype = "array";
         m_typespec = t.elementtype();
-        if (index2())
-            error ("can't use [][] on a simple array");
+        if (index2()) {
+            if (t.aggregate() == TypeDesc::SCALAR)
+                error ("can't use [][] on a simple array");
+            m_typespec = TypeDesc::FLOAT;
+        }
     } else if (t.aggregate() == TypeDesc::VEC3) {
         indextype = "component";
         TypeDesc tnew = t.simpletype();

@@ -17,6 +17,7 @@ test ()
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
     printf ("marray = [(%g) (%g) (%g)]\n", marray[0], marray[1], marray[2]);
     printf ("sarray = [\"%s\" \"%s\" \"%s\"]\n", sarray[0], sarray[1], sarray[2]);
+    printf ("arraylength(carray) = %d\n", arraylength(carray));
 
     printf ("\nTest array element assignment:\n");
     printf ("After 'farray[1] = 14; farray[2] = 15.5;'...\n");

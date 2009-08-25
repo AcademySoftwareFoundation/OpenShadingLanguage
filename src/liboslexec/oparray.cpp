@@ -201,6 +201,30 @@ DECLOP (OP_aassign)
 
 
 
+DECLOP (OP_arraylength)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    DASSERT (Result.typespec().is_int() && A.typespec().is_array());
+    
+    // Result is always uniform!  (Though note that adjust_varying will
+    // still make it varying if inside a conditional.)
+    exec->adjust_varying (Result, false);
+
+    VaryingRef<int> result ((int *)Result.data(), Result.step());
+    int len = A.typespec().arraylength ();
+    if (result.is_uniform()) {
+        *result = len;
+    } else {
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = len;
+    }
+}
+
+
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

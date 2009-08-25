@@ -172,6 +172,7 @@ static OpNameEntry op_name_entries[] = {
     { "abs", OP_fabs },  // alias for fabs()
     { "acos", OP_acos },
     { "add", OP_add },
+    { "arraylength", OP_arraylength },
     { "aref", OP_aref },
     { "asin", OP_asin },
     { "assign", OP_assign },

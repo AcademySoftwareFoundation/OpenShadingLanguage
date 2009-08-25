@@ -553,8 +553,16 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             return false;
         }
         if (*formals == '?') {
-            return false;
-            // FIXME!
+            if (formals[1] == '[' && formals[2] == ']') {
+                // Any array
+                formals += 3;
+                if (arg->typespec().is_array())
+                    continue;  // match
+                else return false;  // wanted an array, didn't get one
+            }
+            if (arg->typespec().is_array())
+                return false;   // wanted any scalar, got an array
+            continue;  // match anything
         }
 
         TypeSpec argtype = arg->typespec();

@@ -8,6 +8,56 @@ test ()
         float z = 5;
         printf ("  hypot (%g, %g) = %g\n", x, y, hypot(x,y));
         printf ("  hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+        vector va = vector(1,-2,0);
+        va = normalize(va);
+        vector myN = vector(0, 1, 0);
+        printf (" reflect (%g, %g) =  %g\n", va, myN, reflect (va, myN));
+        myN = vector(-1, 0, 0);
+        printf (" reflect (%g, %g) =  %g\n", va, myN, reflect (va, myN));
+
+        // test total internal reflection (going from greater to lesser IOR)
+        float n1 = 1.42;
+        float n2 = 1.0;
+        float eta = n1/n2; // critical angle < 45 degrees
+        vector vb = vector(1,-1,0);
+        vb = normalize(vb);
+        myN = vector(0,1,0);
+        printf (" refract (%g, %g, %g) =  %g\n", vb, myN, eta, refract (vb, myN, eta));
+       
+        // regular refraction
+        n1 = 1.0;
+        n2 = 1.33;
+        eta = n1/n2;
+        vector refr = refract(vb, myN, eta);
+        printf (" refract (%g, %g, %g) =  %g\n", vb, myN, eta, refr);
+        // verify answer
+        float cos_incid_angle = dot(vb,myN);
+        float cos_refr_angle  = dot(refr, -myN);
+        float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("    verify refraction:  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
+
+        // one more refraction off-axis
+        n1 = 1.0;
+        n2 = 1.16;
+        eta = n1/n2;
+        myN = vector(1,2,3);
+        myN = normalize(myN);
+        vb = vector(-2,-1,-4);
+        vb = normalize(vb);
+        refr = refract(vb, myN, eta);
+        printf (" refract (%g, %g, %g) =  %g\n", vb, myN, eta, refr);
+        cos_incid_angle = dot(vb,myN);
+        cos_refr_angle  = dot(refr, -myN);
+        sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("    verify refraction:  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
     }
 
     { 
@@ -18,8 +68,14 @@ test ()
         float x = u;
         float y = v;
         float z = u+v;
+
         printf ("  hypot (%g, %g) = %g\n", x, y, hypot(x,y));
         printf ("  hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+        vector va = vector(u,-2,0);
+        va = normalize(va);
+        vector myN = vector(v, 1, 0);
+        myN = normalize(myN);
+        printf (" reflect (%g, %g) =  %g\n", va, myN, reflect (va, myN));
     }
     {
     }

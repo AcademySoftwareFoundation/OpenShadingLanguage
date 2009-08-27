@@ -238,6 +238,8 @@ static OpNameEntry op_name_entries[] = {
     { "pow", OP_pow },
     { "printf", OP_printf },
     { "radians", OP_radians },
+    { "reflect", OP_reflect },
+    { "refract", OP_refract },
     { "round", OP_round },
     { "shl", OP_shl },
     { "shr", OP_shr },

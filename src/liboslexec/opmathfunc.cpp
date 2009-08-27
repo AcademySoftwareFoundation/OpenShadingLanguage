@@ -634,6 +634,47 @@ public:
     }
 };
 
+//  vector operations
+
+static inline Vec3 reflect(const Vec3 &I, const Vec3 &N) {
+   Vec3 R = I - 2.0f*(N.dot(I))*N;
+   return R;
+}
+
+class Reflect {
+public:
+    Reflect (ShadingExecution *) { }
+    inline Vec3 operator() (const Vec3 &I, const Vec3 &N) {
+        return reflect(I, N);
+    }
+};
+
+class Refract {
+public:
+    Refract (ShadingExecution *) { }
+    inline Vec3 operator() (const Vec3 &I, const Vec3 &N, float eta) {
+        Vec3 T;
+
+        if (eta == 1.0f)
+           return I;
+
+        float n = 1.0*eta;
+        float c1 = -I.dot(N);
+        float c2_sqr = 1.0 - n*n*(1.0 - c1*c1);
+
+        if (c2_sqr < 0.0f) {
+            // total-internal reflection
+            T = reflect (I, N);
+        }
+        else {
+            // refraction
+            float c2 = sqrtf(c2_sqr);
+            T = n*I + (n*c1 - c2)*N;
+        }
+        return T.normalize();
+    }
+};
+
 // Generic template for implementing "T func(T)" where T can be either
 // float or triple.  This expands to a function that checks the arguments
 // for valid type combinations, then dispatches to a further specialized
@@ -1183,6 +1224,18 @@ DECLOP (OP_hypot)
 DECLOP (OP_smoothstep)
 {
     ternary_op<float,float,float,float, Smoothstep> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_reflect)
+{
+    binary_op<Vec3,Vec3,Vec3, Reflect> (exec, nargs, args, 
+                                         runflags, beginpoint, endpoint);
+}
+
+DECLOP (OP_refract)
+{
+    ternary_op<Vec3,Vec3,Vec3,float, Refract> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

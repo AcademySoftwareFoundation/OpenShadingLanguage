@@ -664,14 +664,14 @@ public:
 
         if (c2_sqr < 0.0f) {
             // total-internal reflection
-            T = reflect (I, N);
+            T = Vec3(0,0,0);
         }
         else {
             // refraction
             float c2 = sqrtf(c2_sqr);
             T = n*I + (n*c1 - c2)*N;
         }
-        return T.normalize();
+        return T;
     }
 };
 

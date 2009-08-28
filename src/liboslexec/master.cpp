@@ -206,6 +206,7 @@ static OpNameEntry op_name_entries[] = {
     { "for", OP_for },
     { "fabs", OP_fabs },
     { "floor", OP_floor },
+    { "fresnel", OP_fresnel },
     { "ge", OP_ge },
     { "gt", OP_gt },
     { "hypot", OP_hypot },

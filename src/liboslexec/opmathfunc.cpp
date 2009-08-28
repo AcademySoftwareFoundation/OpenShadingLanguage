@@ -641,6 +641,27 @@ static inline Vec3 reflect(const Vec3 &I, const Vec3 &N) {
    return R;
 }
 
+static inline Vec3 refract(const Vec3 &I, const Vec3 &N, float eta) {
+    if (eta == 1.0f)
+       return I;
+
+    Vec3  T;
+    float n = 1.0*eta;
+    float c1 = -I.dot(N);
+    float c2_sqr = 1.0 - n*n*(1.0 - c1*c1);
+
+    if (c2_sqr < 0.0f) {
+        // total-internal reflection
+        T = Vec3(0,0,0);
+    }
+    else {
+        // refraction
+        float c2 = sqrtf(c2_sqr);
+        T = n*I + (n*c1 - c2)*N;
+    }
+    return T;
+}
+
 class Reflect {
 public:
     Reflect (ShadingExecution *) { }
@@ -653,25 +674,54 @@ class Refract {
 public:
     Refract (ShadingExecution *) { }
     inline Vec3 operator() (const Vec3 &I, const Vec3 &N, float eta) {
-        Vec3 T;
+        return refract(I, N, eta);
+    }
+};
 
-        if (eta == 1.0f)
-           return I;
-
-        float n = 1.0*eta;
-        float c1 = -I.dot(N);
-        float c2_sqr = 1.0 - n*n*(1.0 - c1*c1);
-
-        if (c2_sqr < 0.0f) {
-            // total-internal reflection
-            T = Vec3(0,0,0);
+class Fresnel {
+public:
+    Fresnel (ShadingExecution *) { }
+    inline void operator() (const Vec3 &I, const Vec3 &N, float eta,
+                            float &Kr) {
+        float Kt;
+        Vec3 R, T;
+        fresnel (I, N, eta, Kr, Kt, R, T, false);
+    }
+    inline void operator() (const Vec3 &I, const Vec3 &N, float eta,
+                            float &Kr, float &Kt, Vec3 &R, Vec3 &T) {
+        fresnel (I, N, eta, Kr, Kt, R, T, true);
+    }
+private:
+    inline float sqr(float x) { return x*x; }
+    // Implementation of Fresnel.  See, e.g., Roy Hall, "Illumination and Color
+    // in Computer Generated Imagery."
+    inline void fresnel (const Vec3 &I, const Vec3 &N, float eta,
+                            float &Kr, float &Kt, Vec3 &R, Vec3 &T, bool compute_all) {
+        float c = I.dot(N);
+        if (c < 0)
+            c = -c;
+        if (compute_all)
+           R = reflect(I, N);
+        float g = 1.0f / sqr(eta) - 1.0f + c * c;
+        if (g >= 0.0f) {
+            g = sqrtf (g);
+            float beta = g - c;
+            float F = (c * (g+c) - 1.0f) / (c * beta + 1.0f);
+            F = 0.5f * (1.0f + sqr(F));
+            F *= sqr (beta / (g+c));
+            Kr = F;
+            if (compute_all) {
+                Kt = (1.0f - Kr) * eta*eta;
+                // OPT: the following recomputes some of the above values, but it 
+                // gives us the same result as if the shader-writer called refract()
+                T = refract(I, N, eta);
+            }
+        } else {
+            // total internal reflection
+            Kr = 1.0f;
+            Kt = 0.0f;
+            T = Vec3 (0,0,0);
         }
-        else {
-            // refraction
-            float c2 = sqrtf(c2_sqr);
-            T = n*I + (n*c1 - c2)*N;
-        }
-        return T;
     }
 };
 
@@ -1239,6 +1289,189 @@ DECLOP (OP_refract)
                                          runflags, beginpoint, endpoint);
 }
 
+inline void
+fresnel4_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr,
+                ShadingExecution *exec, 
+                Runflag *runflags, int beginpoint, int endpoint)
+{
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Kr, I.is_varying() | N.is_varying() | eta.is_varying(),
+                          I.data() == Kr.data() || N.data() == Kr.data() || eta.data() == Kr.data());
+
+    // Loop over points, do the operation
+    VaryingRef<Vec3> inI ((Vec3 *)I.data(), I.step());
+    VaryingRef<Vec3> inN ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> inEta ((float *)eta.data(), eta.step());
+    VaryingRef<float> outKr ((float *)Kr.data(), Kr.step());
+    Fresnel fresnel (exec);
+    if (outKr.is_uniform()) {
+        // Uniform case
+        fresnel (*inI, *inN, *inEta, *outKr);
+    } else if (inI.is_uniform() && inN.is_uniform() && inEta.is_uniform()) {
+        // Operands are uniform but we're assigning to a varying (it can
+        // happen if we're in a conditional).  Take a shortcut by doing
+        // the operation only once.
+        float tKr;
+        fresnel (*inI, *inN, *inEta, tKr);
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                outKr[i] = tKr;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                fresnel (inI[i], inN[i], inEta[i], outKr[i]);
+    }
+}
+
+DECLOP (fresnel4_op)
+{
+    Symbol &I   (exec->sym (args[0]));
+    Symbol &N   (exec->sym (args[1]));
+    Symbol &eta (exec->sym (args[2]));
+    Symbol &Kr  (exec->sym (args[3]));
+    fresnel4_op_guts(I, N, eta, Kr, exec, runflags, beginpoint, endpoint);
+}
+
+inline void
+fresnel7_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr, Symbol &Kt, Symbol &R, Symbol &T,
+                ShadingExecution *exec, 
+                Runflag *runflags, int beginpoint, int endpoint)
+{
+    // Adjust the results' uniform/varying status
+    bool varying_assig = I.is_varying() | N.is_varying() | eta.is_varying();
+
+    exec->adjust_varying (Kr, varying_assig, I.data()   == Kr.data() || 
+                                             N.data()   == Kr.data() || 
+                                             eta.data() == Kr.data());
+    exec->adjust_varying (Kt, varying_assig, I.data()   == Kt.data() || 
+                                             N.data()   == Kt.data() || 
+                                             eta.data() == Kt.data());
+    exec->adjust_varying (R,  varying_assig, I.data()   == R.data() || 
+                                             N.data()   == R.data() || 
+                                             eta.data() == R.data());
+    exec->adjust_varying (T,  varying_assig, I.data()   == T.data() || 
+                                             N.data()   == T.data() || 
+                                             eta.data() == T.data());
+
+    // Loop over points, do the operation
+    VaryingRef<Vec3>  inI ((Vec3 *)I.data(), I.step());
+    VaryingRef<Vec3>  inN ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> inEta ((float *)eta.data(), eta.step());
+    VaryingRef<float> outKr ((float *)Kr.data(),  Kr.step());
+    VaryingRef<float> outKt ((float *)Kt.data(),  Kt.step());
+    VaryingRef<Vec3>  outR  ((Vec3 *)R.data(),   R.step());
+    VaryingRef<Vec3>  outT  ((Vec3 *)T.data(),   T.step());
+    Fresnel fresnel (exec);
+    if (outKr.is_uniform() && outKt.is_uniform() && outR.is_uniform() && outT.is_uniform()) {
+        // Uniform case
+        fresnel (*inI, *inN, *inEta, *outKr, *outKt, *outR, *outT);
+    } else if (inI.is_uniform() && inN.is_uniform() && inEta.is_uniform()) {
+        // Operands are uniform but we're assigning to a varying (it can
+        // happen if we're in a conditional).  Take a shortcut by doing
+        // the operation only once.
+        float tKr, tKt;
+        Vec3  tR, tT;
+        fresnel (*inI, *inN, *inEta, tKr, tKt, tR, tT);
+        for (int i = beginpoint;  i < endpoint;  ++i) {
+            if (runflags[i]) {
+                outKr[i] = tKr;
+                outKt[i] = tKt;
+                outR[i]  = tR;
+                outT[i]  = tT;
+            }
+        }
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                fresnel (inI[i], inN[i], inEta[i], outKr[i], outKt[i], outR[i], outT[i]);
+    }
+}
+
+DECLOP (fresnel7_op)
+{
+    Symbol &I   (exec->sym (args[0]));
+    Symbol &N   (exec->sym (args[1]));
+    Symbol &eta (exec->sym (args[2]));
+    Symbol &Kr  (exec->sym (args[3]));
+    Symbol &Kt  (exec->sym (args[4]));
+    Symbol &R   (exec->sym (args[5]));
+    Symbol &T   (exec->sym (args[6]));
+    fresnel7_op_guts(I, N, eta, Kr, Kt, R, T, exec, runflags, beginpoint, endpoint);
+}
+
+
+DECLOP (OP_fresnel)
+{
+    ASSERT (nargs == 4 || nargs == 7);
+    OpImpl impl = NULL;
+    Symbol &I   (exec->sym (args[0]));
+    Symbol &N   (exec->sym (args[1]));
+    Symbol &eta (exec->sym (args[2]));
+    Symbol &Kr  (exec->sym (args[3]));
+
+    ASSERT (! I.typespec().is_closure()   &&
+            ! N.typespec().is_closure()   &&
+            ! eta.typespec().is_closure() &&
+            ! Kr.typespec().is_closure());
+
+    if (nargs == 4) {
+        if (I.typespec().is_triple()  &&
+            N.typespec().is_triple()  &&
+            eta.typespec().is_float() &&
+            Kr.typespec().is_float() ) 
+        {
+            impl = fresnel4_op;
+        } else {
+            std::cerr << "Don't know how compute "
+                      << "void " << exec->op().opname() << "(" 
+                      << I.typespec().string()   << ", "
+                      << N.typespec().string()   << ", "
+                      << eta.typespec().string() << ", "
+                      << Kr.typespec().string()  << ")\n";
+            ASSERT (0 && "Function arg type can't be handled");
+        }
+
+    } else if (nargs == 7) {
+        Symbol &Kt (exec->sym (args[4]));
+        Symbol &R  (exec->sym (args[5]));
+        Symbol &T  (exec->sym (args[6]));
+
+        ASSERT (! Kt.typespec().is_closure() &&
+                ! R.typespec().is_closure()  &&
+                ! T.typespec().is_closure());
+
+        if (I.typespec().is_triple()  &&
+            N.typespec().is_triple()  &&
+            eta.typespec().is_float() &&
+            Kr.typespec().is_float()  &&
+            Kt.typespec().is_float()  &&
+            R.typespec().is_triple()  &&
+            T.typespec().is_triple())
+        {
+            impl = fresnel7_op;
+        } else {
+            std::cerr << "Don't know how compute "
+                      << "void " << exec->op().opname() << "(" 
+                      << I.typespec().string()   << ", "
+                      << N.typespec().string()   << ", "
+                      << eta.typespec().string() << ", "
+                      << Kr.typespec().string()  << ", "
+                      << Kt.typespec().string()  << ", "
+                      << R.typespec().string()   << ", "
+                      << T.typespec().string()   << ")\n";
+            ASSERT (0 && "Function arg type can't be handled");
+        }
+    }
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } 
+}
 
 }; // namespace pvt
 }; // namespace OSL

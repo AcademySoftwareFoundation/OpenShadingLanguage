@@ -1,4 +1,3 @@
-
 shader
 test ()
 {
@@ -6,76 +5,105 @@ test ()
         float x = 3;
         float y = 4;
         float z = 5;
-        printf ("  hypot (%g, %g) = %g\n", x, y, hypot(x,y));
-        printf ("  hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
-        vector va = vector(1,-2,0);
-        va = normalize(va);
-        vector myN = vector(0, 1, 0);
-        printf (" reflect (%g, %g) =  %g\n", va, myN, reflect (va, myN));
-        myN = vector(-1, 0, 0);
-        printf (" reflect (%g, %g) =  %g\n", va, myN, reflect (va, myN));
+        printf ("   hypot (%g, %g) = %g\n", x, y, hypot(x,y));
+        printf ("   hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+        vector vI = vector(1,-2,0);
+        vI = normalize(vI);
+        vector vN = vector(0, 1, 0);
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, reflect (vI, vN));
+        vN = vector(-1, 0, 0);
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, reflect (vI, vN));
 
         // test total internal reflection (going from greater to lesser IOR)
+        printf (" testing total-internal reflection:\n");
         float n1 = 1.42;
         float n2 = 1.0;
         float eta = n1/n2; // critical angle < 45 degrees
-        vector vb = vector(1,-1,0);
-        vb = normalize(vb);
-        myN = vector(0,1,0);
-        printf (" refract (%g, %g, %g) =  %g\n", vb, myN, eta, refract (vb, myN, eta));
+        vI = vector(1,-1,0);
+        vI = normalize(vI);
+        vN = vector(0,1,0);
+        printf ("   refract (%g, %g, %g) =  %g\n", vI, vN, eta, refract (vI, vN, eta));
+        float Kr, Kt;
+        vector fR, fT;
+        fresnel(vI, vN, eta, Kr, Kt, fR, fT);
+        printf ("   frensel:  Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt, fR, fT); 
        
-        // regular refraction
-        n1 = 1.0;
-        n2 = 1.33;
-        eta = n1/n2;
-        vector refr = refract(vb, myN, eta);
-        printf (" refract (%g, %g, %g) =  %g\n", vb, myN, eta, refr);
-        // verify answer
-        float cos_incid_angle = dot(vb,myN);
-        float cos_refr_angle  = dot(refr, -myN);
-        float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
-        float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
-        //  n1/n2 = sin(theta2)/sin(theta1);
-        printf("    verify refraction:  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
-              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
-              n1/n2, sin2/sin1);
-
-        // one more refraction off-axis
+        // test regular refraction
+        printf (" testing regular refraction:\n");
         n1 = 1.0;
         n2 = 1.16;
         eta = n1/n2;
-        myN = vector(1,2,3);
-        myN = normalize(myN);
-        vb = vector(-2,-1,-4);
-        vb = normalize(vb);
-        refr = refract(vb, myN, eta);
-        printf (" refract (%g, %g, %g) =  %g\n", vb, myN, eta, refr);
-        cos_incid_angle = dot(vb,myN);
-        cos_refr_angle  = dot(refr, -myN);
+        vN = vector(1,2,3);
+        vN = normalize(vN);
+        vI = vector(-2,-1,-4);
+        vI = normalize(vI);
+        vector rR = refract(vI, vN, eta);
+        printf ("   refract (%g, %g, %g) =  %g\n", vI, vN, eta, rR);
+        float cos_incid_angle = dot(vI,vN);
+        float cos_refr_angle  = dot(rR, -vN);
+        float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("   --> verify refract():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
+        fresnel(vI, vN, eta, Kr, Kt, fR, fT);
+        printf ("   fresnel:  Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt, fR, fT); 
+        cos_incid_angle = dot(vI,vN);
+        cos_refr_angle  = dot(fT, -vN);
         sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
         sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
         //  n1/n2 = sin(theta2)/sin(theta1);
-        printf("    verify refraction:  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
-              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
-              n1/n2, sin2/sin1);
+        printf("   --> verify fresnel():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1, n2, degrees(asin(sin2)), degrees(asin(sin1)), n1/n2, sin2/sin1);
     }
 
     { 
     }
 
-    printf (" varying:\n");
+    printf (" Varying:\n");
     {
         float x = u;
         float y = v;
         float z = u+v;
 
-        printf ("  hypot (%g, %g) = %g\n", x, y, hypot(x,y));
-        printf ("  hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
-        vector va = vector(u,-2,0);
-        va = normalize(va);
-        vector myN = vector(v, 1, 0);
-        myN = normalize(myN);
-        printf (" reflect (%g, %g) =  %g\n", va, myN, reflect (va, myN));
+        printf ("   hypot (%g, %g) = %g\n", x, y, hypot(x,y));
+        printf ("   hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+        vector vI = vector(u,-2,0);
+        vI = normalize(vI);
+        vector vN = vector(v, 1, 0);
+        vN = normalize(vN);
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, reflect (vI, vN));
+
+        float n1 = 1.0;
+        float n2 = 1.33;
+        float eta = n1/n2;
+        vI = vector(u+0.5, v-0.5, -1.0);
+        vN = vector(0,0,1);
+        vI = normalize(vI);
+        vector rR = refract(vI, vN, eta);
+        printf ("   refract (%g, %g, %g) =  %g\n", vI, vN, eta, rR);
+        float cos_incid_angle = dot(vI,vN);
+        float cos_refr_angle  = dot(rR, -vN);
+        float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("   --> verify refract():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
+        float Kr, Kt;
+        vector fR, fT;
+        fresnel(vI, vN, eta, Kr, Kt, fT, fT);
+        printf ("   fresnel() -> Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt, fR, fT); 
+        cos_incid_angle = dot(vI,vN);
+        cos_refr_angle  = dot(fT, -vN);
+        sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("   --> verify fresnel():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
+
     }
     {
     }

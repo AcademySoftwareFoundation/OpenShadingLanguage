@@ -117,7 +117,7 @@ DECLOP (OP_floor);
 DECLOP (OP_for);
 //DECLOP (OP_format);
 //DECLOP (OP_fprintf);
-//DECLOP (OP_fresnel);
+DECLOP (OP_fresnel);
 DECLOP (OP_ge);
 //DECLOP (OP_getattribute);
 //DECLOP (OP_getmessage);

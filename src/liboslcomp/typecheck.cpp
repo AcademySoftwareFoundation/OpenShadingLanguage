@@ -741,7 +741,7 @@ static const char * builtin_func_args [] = {
     "fmod", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL, // alias for mod()
     "format", "ss*", NULL,
     "fprintf", "xs*", NULL,   // FIXME -- further checking
-    "fresnel", "xvvf", "xvvffvv", NULL,
+    "fresnel", "xvvff", "xvvfffvv", NULL,
     "getattribute", "is?", NULL,  // FIXME -- further checking?
     "getmessage", "iss?", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", NULL,  // FIXME -- further checking?

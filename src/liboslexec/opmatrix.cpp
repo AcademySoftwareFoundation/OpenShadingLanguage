@@ -231,7 +231,7 @@ DECLOP (OP_mxcompref)
     Symbol &Row (exec->sym (args[2]));
     Symbol &Col (exec->sym (args[3]));
     DASSERT (! Result.typespec().is_closure() && ! Row.typespec().is_closure() &&
-            ! Col.typespec().is_closure() && ! Val.typespec().is_closure());
+            ! Col.typespec().is_closure() && ! M.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && M.typespec().is_matrix() &&
              Row.typespec().is_int() && Col.typespec().is_int());
 

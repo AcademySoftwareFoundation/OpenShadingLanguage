@@ -61,11 +61,27 @@ static NullClosure nullclosure;
 
 
 
-void
-ClosureColor::register_primitive (const ClosurePrimitive &prim)
+ClosurePrimitive::ClosurePrimitive (ustring name, int nargs, ustring argtypes)
+    : m_name(name), m_nargs(nargs), m_argtypes(argtypes)
 {
+    // Base class ctr of a closure primitive registers it
     lock_guard guard (closure_mutex);
-    prim_map[prim.name()] = &prim;
+    ClosurePrimMap::const_iterator found = prim_map.find (m_name);
+    ASSERT (found == prim_map.end());
+    prim_map[m_name] = this;
+    std::cerr << "Registered closure primitive '" << m_name << "'\n";
+}
+
+
+
+ClosurePrimitive::~ClosurePrimitive ()
+{
+    // Base class of a closure primitive registers it
+    lock_guard guard (closure_mutex);
+    ClosurePrimMap::iterator todelete = prim_map.find (m_name);
+    ASSERT (todelete != prim_map.end() && todelete->second == this);
+    prim_map.erase (todelete);
+    std::cerr << "De-registered closure primitive '" << m_name << "'\n";
 }
 
 

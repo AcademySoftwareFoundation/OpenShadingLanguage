@@ -47,13 +47,13 @@ struct ClosureColorComponent;  // forward declaration
 
 /// Representation of a radiance color closure.
 /// For each BSDF or emission profile, the renderer should create a
-/// subclass of ClosurePrimitive, create an object, and register it.
+/// subclass of ClosurePrimitive and create a single object (which
+/// automatically "registers" it with the system).
 /// Each subclass (BSDF) needs to overload eval() and sample().
 class ClosurePrimitive {
 public:
-    ClosurePrimitive (ustring name, int nargs, ustring argtypes)
-        : m_name(name), m_nargs(nargs), m_argtypes(argtypes) { }
-    virtual ~ClosurePrimitive () { }
+    ClosurePrimitive (ustring name, int nargs, ustring argtypes);
+    virtual ~ClosurePrimitive ();
 
     /// Return the name of the primitive
     ///
@@ -195,10 +195,6 @@ public:
     /// Assemble a primitive by name
     ///
     static compref_t primitive (ustring name);
-
-    /// Tell the system about your primitive.
-    ///
-    static void register_primitive (const ClosurePrimitive &prim);
 
     /// Stream output (for debugging)
     ///

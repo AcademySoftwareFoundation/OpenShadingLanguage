@@ -52,8 +52,6 @@ MyClosure myclosure;
 
 BOOST_AUTO_TEST_CASE (closure_test_add)
 {
-    ClosureColor::register_primitive (myclosure);
-    
     // Create a closure with one component
     ClosureColor c;
     ClosureColor::compref_t comp = ClosureColor::primitive (ustring("my"));

@@ -120,14 +120,14 @@ endmacro ()
 
 message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 
-set(Boost_ADDITIONAL_VERSIONS "1.38" "1.38.0" "1.37" "1.37.0" "1.34.1" "1_34_1")
+set (Boost_ADDITIONAL_VERSIONS "1.40" "1.39" "1.38" "1.38.0" "1.37" "1.37.0" "1.34.1" "1_34_1")
 #set (Boost_USE_STATIC_LIBS   ON)
 set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
     set (Boost_FOUND true)
 else ()
     find_package (Boost 1.34 REQUIRED 
-                  COMPONENTS filesystem program_options regex system thread
+                  COMPONENTS filesystem regex system thread
                  )
 endif ()
 

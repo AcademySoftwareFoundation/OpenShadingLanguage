@@ -2708,6 +2708,18 @@ For incident vector {\cf I} and surface orientation {\cf N},
 returns the refraction direction using Snell's law. The {\cf eta} 
 parameter is the ratio of the index of refraction of the volume containing
 {\cf I} divided by the index of refraction of the volume being entered.
+The result is not necessarily normalized and a zero-length vector is 
+returned in the case of total internal reflection.  
+For reference, here is the equivalent \langname of the implementation:
+
+\begin{code}
+vector refract (vector I, vector N, float eta)
+{
+    float IdotN = dot (I, N);
+    float k = 1 - eta*eta * (1 - IdotN*IdotN);
+    return (k < 0) ? point(0,0,0) : (eta*I - N * (eta*IdotN + sqrt(k)));
+}
+\end{code}
 \apiend
 
 \apiitem {void {\ce fresnel} (vector I, normal N, float eta, \\

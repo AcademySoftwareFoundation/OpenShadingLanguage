@@ -112,7 +112,7 @@ class Div {
 public:
     Div (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) {
-        return (b == 0) ? R (0.0) : R (a / b);
+        return (b == (Float)0.0) ? R (0.0) : R (a / b);
     }
 };
 
@@ -504,7 +504,8 @@ DECLOP (OP_div)
     else if (Result.typespec().is_triple()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op<Vec3,Vec3,Vec3, Div<Vec3,Vec3,Vec3> >;
+                impl = binary_op<VecProxy,VecProxy,VecProxy,
+                                 Div<VecProxy,VecProxy,VecProxy> >;
             else if (B.typespec().is_float())
                 impl = binary_op<VecProxy,VecProxy,float,
                                  Div<VecProxy,VecProxy,float> >;

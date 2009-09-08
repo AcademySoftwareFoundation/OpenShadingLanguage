@@ -1,10 +1,11 @@
-SET ( liboslexec_srcs closure.cpp context.cpp exec.cpp instance.cpp 
+SET ( liboslexec_srcs shadingsys.cpp 
+          closure.cpp bsdf.cpp context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          oparray.cpp opassign.cpp 
+          oparray.cpp opassign.cpp opbsdf.cpp
           opcolor.cpp opcompare.cpp opcontrol.cpp opinteger.cpp 
           opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp 
           opstring.cpp opvector.cpp
-          oslexec.cpp osoreader.cpp shadingsys.cpp 
+          oslexec.cpp osoreader.cpp
     )
 FILE ( GLOB compiler_headers "*.h" )
 

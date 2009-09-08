@@ -191,6 +191,7 @@ static OpNameEntry op_name_entries[] = {
     { "cross", OP_cross },
     { "degrees", OP_degrees },
     { "determinant", OP_determinant },
+    { "diffuse", OP_diffuse },
     { "distance", OP_distance },
     { "div", OP_div },
     { "dot", OP_dot },

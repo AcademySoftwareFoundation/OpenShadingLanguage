@@ -90,6 +90,8 @@ ustring camera ("camera"), common ("common");
 ustring object ("object"), shader ("shader");
 ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
+ustring null ("null");
+ustring diffuse ("diffuse");
 
 };
 

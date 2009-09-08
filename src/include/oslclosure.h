@@ -68,16 +68,18 @@ public:
     ustring argtypes () const { return m_argtypes; }
 
     /// Evaluate the BSDF -- Given instance parameters found in comp,
-    /// incoming radiance El in the direction L, and reflection
-    /// direction R, compute the outgoing radiance Er in the direction
-    /// of R.  Return true if there is any (non-zero) outgoing radiance,
-    /// false if there is no outgoing radiance (this allows the caller
-    /// to take various shortcuts without needing to check the value of
-    /// Er.  It is assumed that L and R are already normalized and point
-    /// away from the surface.  It's up to the implementor of a
-    /// ClosurePrimitive subclass to ensure that it conserves energy
-    /// (unless it's intended to be emissive) and observes reciprocity.
+    /// position P, surface normal N, incoming radiance El in the
+    /// direction L, and reflection direction R, compute the outgoing
+    /// radiance Er in the direction of R.  Return true if there is any
+    /// (non-zero) outgoing radiance, false if there is no outgoing
+    /// radiance (this allows the caller to take various shortcuts
+    /// without needing to check the value of Er.  It is assumed that L
+    /// and R are already normalized and point away from the surface.
+    /// It's up to the implementor of a ClosurePrimitive subclass to
+    /// ensure that it conserves energy (unless it's intended to be
+    /// emissive) and observes reciprocity.
     virtual bool eval (const ClosureColorComponent &comp,
+                       const Vec3 &P, const Vec3 &N,
                        const Vec3 &L, const Color3 &El,
                        const Vec3 &R, Color3 &Er) const {
         Er.setValue (0.0f, 0.0f, 0.0f);
@@ -85,11 +87,12 @@ public:
     }
 
     /// Sample the BSDF -- Given instance parameters found in comp,
-    /// incident direction I (pointing toward the surface), and random
-    /// deviates randu and randv on [0,1), return an importance-sampled
-    /// direction R and the PDF.
+    /// position P, surface normal N, incident direction I (pointing
+    /// toward the surface), and random deviates randu and randv on
+    /// [0,1), return an importance-sampled direction R and the PDF.
     virtual void sample (const ClosureColorComponent &comp,
-                         const Vec3 &I, float randu, float randv,
+                         const Vec3 &P, const Vec3 &N, const Vec3 &I,
+                         float randu, float randv,
                          Vec3 &R, float &pdf) const {
         R = -I;
         pdf = 1;
@@ -187,10 +190,33 @@ public:
     /// *this += A
     ///
     void add (const ClosureColor &A);
+    const ClosureColor & operator+= (const ClosureColor &A) {
+        add (A);
+        return *this;
+    }
 
     /// *this = a+b
     ///
     void add (const ClosureColor &a, const ClosureColor &b);
+
+    /// *this -= A
+    ///
+    void sub (const ClosureColor &A);
+    const ClosureColor & operator-= (const ClosureColor &A) {
+        sub (A);
+        return *this;
+    }
+
+    /// *this = a-b
+    ///
+    void sub (const ClosureColor &a, const ClosureColor &b);
+
+    /// *this *= f
+    ///
+    void mul (float f);
+    void mul (const Color3 &w);
+    const ClosureColor & operator*= (float w) { mul(w); return *this; }
+    const ClosureColor & operator*= (const Color3 &w) { mul(w); return *this; }
 
     /// Assemble a primitive by name
     ///

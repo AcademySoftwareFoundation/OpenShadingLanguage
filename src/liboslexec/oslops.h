@@ -90,7 +90,7 @@ DECLOP (OP_degrees);
 //DECLOP (OP_deltau);
 //DECLOP (OP_deltav);
 DECLOP (OP_determinant);
-//DECLOP (OP_diffuse);
+DECLOP (OP_diffuse);
 //DECLOP (OP_displace);
 DECLOP (OP_distance);
 DECLOP (OP_div);

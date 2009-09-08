@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
+#include "oslclosure.h"
 
 #include "OpenImageIO/varyingref.h"
 
@@ -231,6 +232,134 @@ public:
     inline R operator() (const A &a) { return R (-a); }
 };
 
+
+
+// Specialized binary operation driver for closures.  We actually store
+// the pointers to the closures, so r = op(a,b) won't work properly.
+// What we really want is *r = op(*a,*b), but we don't want the copy
+// either.  So we use a functor that takes arguments (result, a, b) and
+// do not return a value.
+template <class ATYPE, class BTYPE, class FUNCTION>
+DECLOP (closure_binary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+
+    // Loop over points, do the operation
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
+    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
+    FUNCTION function (exec);
+    for (int i = beginpoint;  i < endpoint;  ++i)
+        if (runflags[i])
+            function (result[i], a[i], b[i]);
+}
+
+
+
+// Specialized unary operation driver for closures.  We actually store
+// the pointers to the closures, so r = op(a) won't work properly.
+// What we really want is *r = op(*a), but we don't want the copy
+// either.  So we use a functor that takes arguments (result, a) and
+// do not return a value.
+template <class ATYPE, class FUNCTION>
+DECLOP (closure_unary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+
+    // Loop over points, do the operation
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
+    FUNCTION function (exec);
+    for (int i = beginpoint;  i < endpoint;  ++i)
+        if (runflags[i])
+            function (result[i], a[i]);
+}
+
+
+
+class AddClosure {
+public:
+    AddClosure (ShadingExecution *) { }
+    inline void operator() (ClosureColor *result, 
+                            const ClosureColor *A, const ClosureColor *B) {
+        result->add (*A, *B);
+    }
+};
+
+
+class SubClosure {
+public:
+    SubClosure (ShadingExecution *) { }
+    inline void operator() (ClosureColor *result, 
+                            const ClosureColor *A, const ClosureColor *B) {
+        result->sub (*A, *B);
+    }
+};
+
+
+class MulClosure {
+public:
+    MulClosure (ShadingExecution *) { }
+    inline void operator() (ClosureColor *result, 
+                            const ClosureColor *A, const Color3 &B) {
+        *result = *A;
+        *result *= B;
+    }
+    inline void operator() (ClosureColor *result, 
+                            const Color3 &A, const ClosureColor *B) {
+        *result = *B;
+        *result *= A;
+    }
+    inline void operator() (ClosureColor *result, 
+                            const ClosureColor *A, float B) {
+        *result = *A;
+        *result *= B;
+    }
+    inline void operator() (ClosureColor *result, 
+                            float A, const ClosureColor *B) {
+        *result = *B;
+        *result *= A;
+    }
+};
+
+
+class DivClosure {
+public:
+    DivClosure (ShadingExecution *) { }
+    inline void operator() (ClosureColor *result, 
+                            const ClosureColor *A, const Color3 &B) {
+        *result = *A;
+        *result *= Color3 (1.0/B[0], 1.0/B[1], 1.0/B[2]);
+    }
+    inline void operator() (ClosureColor *result, 
+                            const ClosureColor *A, float B) {
+        *result = *A;
+        *result *= ((Float)1.0) / B;
+    }
+};
+
+
+class NegClosure {
+public:
+    NegClosure (ShadingExecution *) { }
+    inline void operator() (ClosureColor *result, const ClosureColor *A) {
+        *result = *A;
+        *result *= -1.0;
+    }
+};
+
+
 };  // End anonymous namespace
 
 
@@ -242,19 +371,17 @@ DECLOP (OP_add)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    ASSERT (! Result.typespec().is_closure() &&
-            ! Result.typespec().is_structure() &&
+    ASSERT (! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
-    ASSERT (! A.typespec().is_closure() &&
-            ! A.typespec().is_structure() &&
+    ASSERT (! A.typespec().is_structure() &&
             ! A.typespec().is_array());   // Not yet
-    ASSERT (! B.typespec().is_closure() &&
-            ! B.typespec().is_structure() &&
+    ASSERT (! B.typespec().is_structure() &&
             ! B.typespec().is_array());   // Not yet
     OpImpl impl = NULL;
 
     if (Result.typespec().is_closure()) {
-        // FIXME -- not handled yet
+        if (A.typespec().is_closure() && B.typespec().is_closure())
+            impl = closure_binary_op<ClosureColor *, ClosureColor *, AddClosure>;
     }
 
     else if (Result.typespec().is_triple()) {
@@ -314,19 +441,17 @@ DECLOP (OP_sub)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    ASSERT (! Result.typespec().is_closure() &&
-            ! Result.typespec().is_structure() &&
+    ASSERT (! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
-    ASSERT (! A.typespec().is_closure() &&
-            ! A.typespec().is_structure() &&
+    ASSERT (! A.typespec().is_structure() &&
             ! A.typespec().is_array());   // Not yet
-    ASSERT (! B.typespec().is_closure() &&
-            ! B.typespec().is_structure() &&
+    ASSERT (! B.typespec().is_structure() &&
             ! B.typespec().is_array());   // Not yet
     OpImpl impl = NULL;
 
     if (Result.typespec().is_closure()) {
-        // FIXME -- not handled yet
+        if (A.typespec().is_closure() && B.typespec().is_closure())
+            impl = closure_binary_op<ClosureColor *, ClosureColor *, SubClosure>;
     }
 
     else if (Result.typespec().is_triple()) {
@@ -386,19 +511,24 @@ DECLOP (OP_mul)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
-    ASSERT (! Result.typespec().is_closure() &&
-            ! Result.typespec().is_structure() &&
+    ASSERT (! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
-    ASSERT (! A.typespec().is_closure() &&
-            ! A.typespec().is_structure() &&
+    ASSERT (! A.typespec().is_structure() &&
             ! A.typespec().is_array());   // Not yet
-    ASSERT (! B.typespec().is_closure() &&
-            ! B.typespec().is_structure() &&
+    ASSERT (! B.typespec().is_structure() &&
             ! B.typespec().is_array());   // Not yet
     OpImpl impl = NULL;
 
     if (Result.typespec().is_closure()) {
-        // FIXME -- not handled yet
+        ASSERT (A.typespec().is_closure() || B.typespec().is_closure());
+        if (A.typespec().is_closure() && B.typespec().is_triple())
+            impl = closure_binary_op<ClosureColor *, Color3, MulClosure>;
+        else if (A.typespec().is_closure() && B.typespec().is_float())
+            impl = closure_binary_op<ClosureColor *, float, MulClosure>;
+        else if (A.typespec().is_triple() && B.typespec().is_closure())
+            impl = closure_binary_op<Color3, ClosureColor *, MulClosure>;
+        else if (A.typespec().is_float() && B.typespec().is_closure())
+            impl = closure_binary_op<float, ClosureColor *, MulClosure>;
     }
 
     else if (Result.typespec().is_triple()) {
@@ -633,16 +763,15 @@ DECLOP (OP_neg)
     ASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
-    ASSERT (! Result.typespec().is_closure() &&
-            ! Result.typespec().is_structure() &&
+    ASSERT (! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
-    ASSERT (! A.typespec().is_closure() &&
-            ! A.typespec().is_structure() &&
+    ASSERT (! A.typespec().is_structure() &&
             ! A.typespec().is_array());   // Not yet
     OpImpl impl = NULL;
 
     if (Result.typespec().is_closure()) {
-        // FIXME -- not handled yet
+        if (A.typespec().is_closure())
+            impl = closure_unary_op<ClosureColor *, NegClosure>;
     }
 
     else if (Result.typespec().is_triple()) {

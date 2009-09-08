@@ -38,12 +38,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslconfig.h"
 #include "oslclosure.h"
+#include "oslexec_pvt.h"
 
 
+
+namespace {
 
 typedef hash_map<ustring, const OSL::ClosurePrimitive *, ustringHash> ClosurePrimMap;
-static ClosurePrimMap prim_map;
-static mutex closure_mutex;
+ClosurePrimMap prim_map;
+mutex closure_mutex;
+
+};
 
 
 namespace OSL {
@@ -54,7 +59,7 @@ namespace OSL {
 // Define a null primitive used for error conditions
 class NullClosure : public ClosurePrimitive {
 public:
-    NullClosure () : ClosurePrimitive (ustring("null"), 0, ustring("")) { }
+    NullClosure () : ClosurePrimitive (Strings::null, 0, ustring()) { }
 };
 
 static NullClosure nullclosure;
@@ -64,6 +69,7 @@ static NullClosure nullclosure;
 ClosurePrimitive::ClosurePrimitive (ustring name, int nargs, ustring argtypes)
     : m_name(name), m_nargs(nargs), m_argtypes(argtypes)
 {
+    ASSERT (name.length());
     // Base class ctr of a closure primitive registers it
     lock_guard guard (closure_mutex);
     ClosurePrimMap::const_iterator found = prim_map.find (m_name);
@@ -165,10 +171,8 @@ ClosureColor::add (const compref_t &comp, const Color3 &weight)
 void
 ClosureColor::add (const ClosureColor &A)
 {
-    // For every component of A, add that component to us
-    for (int a = 0;  a < A.m_ncomps;  ++a) {
+    for (int a = 0;  a < A.m_ncomps;  ++a)
         add (A.m_components[a], A.m_weight[a]);
-    }
 }
 
 
@@ -176,9 +180,48 @@ ClosureColor::add (const ClosureColor &A)
 void
 ClosureColor::add (const ClosureColor &A, const ClosureColor &B)
 {
-    // Start with the contents of A
-    *this = A;
-    add (B);    
+    if (this != &A)
+        *this = A;
+    add (B);
+}
+
+
+
+void
+ClosureColor::sub (const ClosureColor &A)
+{
+    for (int a = 0;  a < A.m_ncomps;  ++a)
+        add (A.m_components[a], -A.m_weight[a]);
+}
+
+
+
+void
+ClosureColor::sub (const ClosureColor &A, const ClosureColor &B)
+{
+    if (this != &A)
+        *this = A;
+    sub (B);
+}
+
+
+
+void
+ClosureColor::mul (const Color3 &w)
+{
+    // For every component, scale it
+    for (int a = 0;  a < m_ncomps;  ++a)
+        m_weight[a] *= w;
+}
+
+
+
+void
+ClosureColor::mul (float w)
+{
+    // For every component, scale it
+    for (int a = 0;  a < m_ncomps;  ++a)
+        m_weight[a] *= w;
 }
 
 

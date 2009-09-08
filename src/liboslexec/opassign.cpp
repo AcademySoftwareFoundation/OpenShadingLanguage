@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
+#include "oslclosure.h"
 
 #include "OpenImageIO/varyingref.h"
 
@@ -110,20 +111,47 @@ static DECLOP (assign_copy)
 
 
 
+static void
+assign_closure (ShadingExecution *exec, int nargs, const int *args,
+                Runflag *runflags, int beginpoint, int endpoint)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Src (exec->sym (args[1]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closure always vary */);
+
+    // Loop over points, do the assignment.
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<ClosureColor *> src ((ClosureColor **)Src.data(), Src.step());
+    if (result.is_uniform()) {
+        // Uniform case
+        *(*result) = *(*src);
+    } else {
+        // Potentially varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                *(result[i]) = *(src[i]);
+    }
+}
+
+
+
 DECLOP (OP_assign)
 {
     ASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
-    ASSERT (! Result.typespec().is_closure() &&
-            ! Result.typespec().is_structure() &&
+    ASSERT (! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());   // Not yet
-    ASSERT (! Src.typespec().is_closure() &&
-            ! Src.typespec().is_structure() &&
+    ASSERT (! Src.typespec().is_structure() &&
             ! Src.typespec().is_array());   // Not yet
     OpImpl impl = NULL;
-    if (Result.typespec().is_closure()) {
-        // FIXME -- not handled yet
+    if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
+        if (Result.typespec().is_closure() && Src.typespec().is_closure())
+            impl = assign_closure;
+        // otherwise, it's an error
     } else if (Result.typespec().is_structure()) {
         // FIXME -- not handled yet
     } else if (Result.typespec().simpletype() == Src.typespec().simpletype()) {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,50 +30,45 @@
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#include <windows.h>
-
 #if defined(__INTEL_COMPILER)
-#define __TBB_fence_for_acquire() __asm { __asm nop }
-#define __TBB_fence_for_release() __asm { __asm nop }
+#define __TBB_release_consistency_helper() __asm { __asm nop }
 #elif _MSC_VER >= 1300
 extern "C" void _ReadWriteBarrier();
 #pragma intrinsic(_ReadWriteBarrier)
-#define __TBB_fence_for_acquire() _ReadWriteBarrier()
-#define __TBB_fence_for_release() _ReadWriteBarrier()
+#define __TBB_release_consistency_helper() _ReadWriteBarrier()
+#else
+#error Unsupported compiler - need to define __TBB_release_consistency_helper to support it
 #endif
+
+inline void __TBB_rel_acq_fence() { __asm { __asm mfence } }
 
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0
 
-#if defined(_MSC_VER) && defined(_Wp64)
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (push)
     #pragma warning (disable: 4244 4267)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 extern "C" {
-    __int64 __TBB_machine_cmpswp8 (volatile void *ptr, __int64 value, __int64 comparand );
-    __int64 __TBB_machine_fetchadd8 (volatile void *ptr, __int64 addend );
-    __int64 __TBB_machine_fetchstore8 (volatile void *ptr, __int64 value );
-    void __TBB_machine_store8 (volatile void *ptr, __int64 value );
-    __int64 __TBB_machine_load8 (const volatile void *ptr);
-    bool __TBB_machine_trylockbyte ( volatile unsigned char& flag );
+    __int64 __TBB_EXPORTED_FUNC __TBB_machine_cmpswp8 (volatile void *ptr, __int64 value, __int64 comparand );
+    __int64 __TBB_EXPORTED_FUNC __TBB_machine_fetchadd8 (volatile void *ptr, __int64 addend );
+    __int64 __TBB_EXPORTED_FUNC __TBB_machine_fetchstore8 (volatile void *ptr, __int64 value );
+    void __TBB_EXPORTED_FUNC __TBB_machine_store8 (volatile void *ptr, __int64 value );
+    __int64 __TBB_EXPORTED_FUNC __TBB_machine_load8 (const volatile void *ptr);
 }
 
 template <typename T, size_t S>
 struct __TBB_machine_load_store {
     static inline T load_with_acquire(const volatile T& location) {
         T to_return = location;
-#ifdef __TBB_fence_for_acquire 
-        __TBB_fence_for_acquire();
-#endif /* __TBB_fence_for_acquire */
+        __TBB_release_consistency_helper();
         return to_return;
     }
 
     static inline void store_with_release(volatile T &location, T value) {
-#ifdef __TBB_fence_for_release
-        __TBB_fence_for_release();
-#endif /* __TBB_fence_for_release */
+        __TBB_release_consistency_helper();
         location = value;
     }
 };
@@ -99,14 +94,19 @@ inline void __TBB_machine_store_with_release(T& location, V value) {
     __TBB_machine_load_store<T,sizeof(T)>::store_with_release(location,value);
 }
 
+//! Overload that exists solely to avoid /Wp64 warnings.
+inline void __TBB_machine_store_with_release(size_t& location, size_t value) {
+    __TBB_machine_load_store<size_t,sizeof(size_t)>::store_with_release(location,value);
+} 
+
 #define __TBB_load_with_acquire(L) __TBB_machine_load_with_acquire((L))
 #define __TBB_store_with_release(L,V) __TBB_machine_store_with_release((L),(V))
 
-
-#define DEFINE_ATOMICS(S,T,A,C) \
-static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, T value, T comparand ) { \
+#define __TBB_DEFINE_ATOMICS(S,T,U,A,C) \
+static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, U value, U comparand ) { \
     T result; \
     volatile T *p = (T *)ptr; \
+    __TBB_release_consistency_helper(); \
     __asm \
     { \
        __asm mov edx, p \
@@ -115,13 +115,14 @@ static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, T value, T compar
        __asm lock cmpxchg [edx], C \
        __asm mov result, A \
     } \
-   __TBB_load_with_acquire(*(T *)ptr); \
+    __TBB_release_consistency_helper(); \
     return result; \
 } \
 \
-static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, T addend ) { \
+static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, U addend ) { \
     T result; \
     volatile T *p = (T *)ptr; \
+    __TBB_release_consistency_helper(); \
     __asm \
     { \
         __asm mov edx, p \
@@ -129,13 +130,14 @@ static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, T addend ) { \
         __asm lock xadd [edx], A \
         __asm mov result, A \
     } \
-   __TBB_load_with_acquire(*(T *)ptr); \
+    __TBB_release_consistency_helper(); \
     return result; \
 }\
 \
-static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, T value ) { \
+static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, U value ) { \
     T result; \
     volatile T *p = (T *)ptr; \
+    __TBB_release_consistency_helper(); \
     __asm \
     { \
         __asm mov edx, p \
@@ -143,13 +145,13 @@ static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, T value ) { \
         __asm lock xchg [edx], A \
         __asm mov result, A \
     } \
-   __TBB_load_with_acquire(*(T *)ptr); \
+    __TBB_release_consistency_helper(); \
     return result; \
 }
 
-DEFINE_ATOMICS(1, __int8, al, cl)
-DEFINE_ATOMICS(2, __int16, ax, cx)
-DEFINE_ATOMICS(4, __int32, eax, ecx)
+__TBB_DEFINE_ATOMICS(1, __int8, __int8, al, cl)
+__TBB_DEFINE_ATOMICS(2, __int16, __int16, ax, cx)
+__TBB_DEFINE_ATOMICS(4, __int32, ptrdiff_t, eax, ecx)
 
 static inline __int32 __TBB_machine_lg( unsigned __int64 i ) {
     unsigned __int32 j;
@@ -161,7 +163,7 @@ static inline __int32 __TBB_machine_lg( unsigned __int64 i ) {
     return j;
 }
 
-static inline void __TBB_machine_OR( volatile void *operand, unsigned __int32 addend ) {
+static inline void __TBB_machine_OR( volatile void *operand, __int32 addend ) {
    __asm 
    {
        mov eax, addend
@@ -170,7 +172,7 @@ static inline void __TBB_machine_OR( volatile void *operand, unsigned __int32 ad
    }
 }
 
-static inline void __TBB_machine_AND( volatile void *operand, unsigned __int32 addend ) {
+static inline void __TBB_machine_AND( volatile void *operand, __int32 addend ) {
    __asm 
    {
        mov eax, addend
@@ -216,30 +218,25 @@ static inline void __TBB_machine_pause (__int32 delay ) {
 #define __TBB_AtomicAND(P,V) __TBB_machine_AND(P,V)
 
 // Definition of other functions
-#if !defined(_WIN32_WINNT)
-extern "C" BOOL WINAPI SwitchToThread(void);
-#endif
+extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #define __TBB_Yield()  SwitchToThread()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
 #define __TBB_Log2(V)    __TBB_machine_lg(V)
 
-#define __TBB_TryLockByte(F) __TBB_machine_trylockbyte(F)
+// Use generic definitions from tbb_machine.h
+#undef __TBB_TryLockByte
+#undef __TBB_LockByte
 
-#define __TBB_cpuid
-static inline void __TBB_x86_cpuid( __int32 buffer[4], __int32 mode ) {
-    __asm
-    {
-        mov eax,mode
-        cpuid
-        mov edi,buffer
-        mov [edi+0],eax
-        mov [edi+4],ebx
-        mov [edi+8],ecx
-        mov [edi+12],edx
+#if defined(_MSC_VER)&&_MSC_VER<1400
+    static inline void* __TBB_machine_get_current_teb () {
+        void* pteb;
+        __asm mov eax, fs:[0x18]
+        __asm mov pteb, eax
+        return pteb;
     }
-}
+#endif
 
-#if defined(_MSC_VER) && defined(_Wp64)
-    // Workaround for overzealous compiler warnings in /Wp64 mode
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     #pragma warning (pop)
-#endif /* _MSC_VER && _Wp64 */
+#endif // warnings 4244, 4267 are back
+

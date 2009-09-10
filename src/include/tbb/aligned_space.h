@@ -26,27 +26,30 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_machine_H
-#error Do not include this file directly; include tbb_machine.h instead
-#endif
+#ifndef __TBB_aligned_space_H
+#define __TBB_aligned_space_H
 
-#define __TBB_WORDSIZE 8
-#define __TBB_BIG_ENDIAN 1
+#include "tbb_stddef.h"
+#include "tbb_machine.h"
 
-#include <stdint.h>
-#include <unistd.h>
-#include <sched.h>
+namespace tbb {
 
-extern "C" {
+//! Block of space aligned sufficiently to construct an array T with N elements.
+/** The elements are not constructed or destroyed by this class.
+    @ingroup memory_allocation */
+template<typename T,size_t N>
+class aligned_space {
+private:
+    typedef __TBB_TypeWithAlignmentAtLeastAsStrict(T) element_type;
+    element_type array[(sizeof(T)*N+sizeof(element_type)-1)/sizeof(element_type)];
+public:
+    //! Pointer to beginning of array
+    T* begin() {return reinterpret_cast<T*>(this);}
 
-int32_t __TBB_machine_cas_32 (volatile void* ptr, int32_t value, int32_t comparand);
-int64_t __TBB_machine_cas_64 (volatile void* ptr, int64_t value, int64_t comparand);
-#define __TBB_fence_for_acquire() __TBB_machine_flush ()
-#define __TBB_fence_for_release() __TBB_machine_flush ()
+    //! Pointer to one past last element in array.
+    T* end() {return begin()+N;}
+};
 
-}
+} // namespace tbb 
 
-#define __TBB_CompareAndSwap4(P,V,C) __TBB_machine_cas_32(P,V,C)
-#define __TBB_CompareAndSwap8(P,V,C) __TBB_machine_cas_64(P,V,C)
-#define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cas_64(P,V,C)
-#define __TBB_Yield() sched_yield()
+#endif /* __TBB_aligned_space_H */

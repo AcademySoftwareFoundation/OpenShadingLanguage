@@ -68,18 +68,22 @@ public:
     ustring argtypes () const { return m_argtypes; }
 
     /// Evaluate the BSDF -- Given instance parameters found in comp,
-    /// position P, surface normal N, incoming radiance El in the
-    /// direction L, and reflection direction R, compute the outgoing
-    /// radiance Er in the direction of R.  Return true if there is any
-    /// (non-zero) outgoing radiance, false if there is no outgoing
-    /// radiance (this allows the caller to take various shortcuts
-    /// without needing to check the value of Er.  It is assumed that L
-    /// and R are already normalized and point away from the surface.
-    /// It's up to the implementor of a ClosurePrimitive subclass to
-    /// ensure that it conserves energy (unless it's intended to be
-    /// emissive) and observes reciprocity.
-    virtual bool eval (const ClosureColorComponent &comp,
-                       const Vec3 &P, const Vec3 &N,
+    /// position P, surface normal N, tangent T, binormal B, incoming
+    /// radiance El in the direction L, and reflection direction R,
+    /// compute the outgoing radiance Er in the direction of R.  Return
+    /// true if there is any (non-zero) outgoing radiance, false if
+    /// there is no outgoing radiance (this allows the caller to take
+    /// various shortcuts without needing to check the value of Er.  It
+    /// is assumed that N, T, B, L, and R are already normalized and
+    /// point away from the surface position.  It's up to the
+    /// implementor of a ClosurePrimitive subclass to ensure that it
+    /// conserves energy (unless it's intended to be emissive) and
+    /// observes reciprocity.
+    ///
+    /// The default implementation is bogus, subclasses MUST replace it!
+    ///
+    virtual bool eval (const ClosureColorComponent &comp, const Vec3 &P,
+                       const Vec3 &N, const Vec3 &T, const Vec3 &B,
                        const Vec3 &L, const Color3 &El,
                        const Vec3 &R, Color3 &Er) const {
         Er.setValue (0.0f, 0.0f, 0.0f);
@@ -87,16 +91,19 @@ public:
     }
 
     /// Sample the BSDF -- Given instance parameters found in comp,
-    /// position P, surface normal N, incident direction I (pointing
-    /// toward the surface), and random deviates randu and randv on
-    /// [0,1), return an importance-sampled direction R and the PDF.
-    virtual void sample (const ClosureColorComponent &comp,
-                         const Vec3 &P, const Vec3 &N, const Vec3 &I,
-                         float randu, float randv,
-                         Vec3 &R, float &pdf) const {
-        R = -I;
-        pdf = 1;
-    }
+    /// position P, surface normal N, tangent T, binormal B, incident
+    /// direction I (pointing toward the surface), and random deviates
+    /// randu and randv on [0,1), return a sampled direction R and the
+    /// PDF value in that direction.
+    ///
+    /// The default implementation samples uniformly about the
+    /// hemisphere in the direction of N, with cosine weighting.  That's
+    /// correct for Lambert, and adequate (though not optimal) for other
+    /// BSDFs that don't wish to figure out the right solution.
+    virtual void sample (const ClosureColorComponent &comp, const Vec3 &P,
+                         const Vec3 &N, const Vec3 &T, const Vec3 &B,
+                         const Vec3 &I, float randu, float randv,
+                         Vec3 &R, float &pdf) const;
     
 private:
     ustring m_name;

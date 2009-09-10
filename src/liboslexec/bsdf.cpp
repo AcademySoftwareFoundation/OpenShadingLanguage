@@ -26,6 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cmath>
+
 #include "oslops.h"
 #include "oslclosure.h"
 #include "oslexec_pvt.h"
@@ -35,6 +37,59 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace OSL_NAMESPACE {
 #endif
 namespace OSL {
+
+
+
+/// Given values x and y on [0,1], convert them in place to values on
+/// [-1,1] uniformly distributed over a unit sphere.  This code is
+/// derived from Peter Shirley, "Realistic Ray Tracing", p. 103.
+static void
+to_unit_disk (float &x, float &y)
+{
+    float r, phi;
+    float a = 2.0f * x - 1.0f;
+    float b = 2.0f * y - 1.0f;
+    if (a > -b) {
+        if (a > b) {
+	    r = a;
+	    phi = M_PI_4 * (b/a);
+	} else {
+	    r = b;
+	    phi = M_PI_4 * (2.0f - a/b);
+	}
+    } else {
+	if (a < b) {
+	    r = -a;
+	    phi = M_PI_4 * (4.0f + b/a);
+	} else {
+	    r = -b;
+	    if (b != 0.0f)
+		phi = M_PI_4 * (6.0f - a/b);
+	    else phi = 0.0f;
+	}
+    }
+    x = r * cosf (phi);
+    y = r * sinf (phi);
+}
+
+
+
+void
+ClosurePrimitive::sample (const ClosureColorComponent &comp, const Vec3 &P,
+                          const Vec3 &N, const Vec3 &T, const Vec3 &B,
+                          const Vec3 &I, float randu, float randv,
+                          Vec3 &R, float &pdf) const
+{
+    // Default closure BSDF implementation: uniformly sample
+    // cosine-weighted hemisphere above the point.
+    to_unit_disk (randu, randv);
+    float costheta = sqrtf (1.0f - randu*randu - randv*randv);
+    R = randu * T + randv * B + costheta * N;
+    pdf = costheta / M_PI;
+}
+
+
+
 namespace pvt {
 
 
@@ -42,8 +97,8 @@ class DiffuseClosure : public ClosurePrimitive {
 public:
     DiffuseClosure () : ClosurePrimitive (Strings::diffuse, 0, ustring()) { }
 
-    bool eval (const ClosureColorComponent &comp,
-               const Vec3 &P, const Vec3 &N,
+    bool eval (const ClosureColorComponent &comp, const Vec3 &P,
+               const Vec3 &N, const Vec3 &T, const Vec3 &B,
                const Vec3 &L, const Color3 &El,
                const Vec3 &R, Color3 &Er) const
     {
@@ -54,17 +109,6 @@ public:
             Er.setValue (0.0f, 0.0f, 0.0f);
             return false;
         }
-    }
-
-    void sample (const ClosureColorComponent &comp,
-                 const Vec3 &P, const Vec3 &N, const Vec3 &I,
-                 float randu, float randv,
-                 Vec3 &R, float &pdf) const
-    {
-        // FIXME -- pick a direction uniformly with cosine falloff
-        // This is WRONG!!!
-        R = N;
-        pdf = 1.0f;
     }
 
 };

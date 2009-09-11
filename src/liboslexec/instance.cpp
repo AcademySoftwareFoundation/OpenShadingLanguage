@@ -90,6 +90,7 @@ ShaderInstance::calc_heapsize ()
     if (shadingsys().debug())
         std::cout << "calc_heapsize on " << m_master->shadername() << "\n";
     m_heapsize = 0;
+    m_numclosures = 0;
     BOOST_FOREACH (const Symbol &s, m_symbols) {
         // std::cout << "  sym " << s.mangled() << "\n";
 
@@ -100,7 +101,8 @@ ShaderInstance::calc_heapsize ()
         const TypeSpec &t (s.typespec());
         size_t size = 0;
         if (t.is_closure()) {
-            // FIXME
+            ++m_numclosures;
+            size = sizeof (ClosureColor *);  // we store ptrs in the heap
         } else if (t.is_structure()) {
             // FIXME
         } else {
@@ -113,7 +115,8 @@ ShaderInstance::calc_heapsize ()
         // computes heap size for all types
     }
     if (shadingsys().debug())
-        std::cout << " Heap needed " << m_heapsize << "\n";
+        std::cout << " Heap needed " << m_heapsize << ", " 
+                  << m_numclosures << " closures on the heap.\n";
     return m_heapsize;
 }
 

@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <sstream>
 
 #include "boost/foreach.hpp"
 
@@ -38,13 +39,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/sysutil.h"
 
 #include "oslexec_pvt.h"
-
-namespace {
-// Define static ustring symbols for very fast comparison
-static ustring P_("P"), I_("I"), N_("N"), Ng_("Ng");
-static ustring dPdu_("dPdu"), dPdv_("dPdv"), u_("u"), v_("v");
-static ustring time_("time"), dtime_("dtime"), dPdtime_("dPdtime");
-};
 
 
 namespace OSL {
@@ -116,28 +110,32 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                       << ", offset " << sym.dataoffset() << "\n";
         if (sym.symtype() == SymTypeGlobal) {
             // FIXME -- is this too wasteful here?
-            if (sym.name() == P_) {
+            if (sym.name() == Strings::P) {
                 sym.data (globals->P.ptr());  sym.step (globals->P.step());
-            } else if (sym.name() == I_) {
+            } else if (sym.name() == Strings::I) {
                 sym.data (globals->I.ptr());  sym.step (globals->I.step());
-            } else if (sym.name() == N_) {
+            } else if (sym.name() == Strings::N) {
                 sym.data (globals->N.ptr());  sym.step (globals->N.step());
-            } else if (sym.name() == Ng_) {
+            } else if (sym.name() == Strings::Ng) {
                 sym.data (globals->Ng.ptr());  sym.step (globals->Ng.step());
-            } else if (sym.name() == u_) {
+            } else if (sym.name() == Strings::u) {
                 sym.data (globals->u.ptr());  sym.step (globals->u.step());
-            } else if (sym.name() == v_) {
+            } else if (sym.name() == Strings::v) {
                 sym.data (globals->v.ptr());  sym.step (globals->v.step());
-            } else if (sym.name() == dPdu_) {
+            } else if (sym.name() == Strings::dPdu) {
                 sym.data (globals->dPdu.ptr());  sym.step (globals->dPdu.step());
-            } else if (sym.name() == dPdv_) {
+            } else if (sym.name() == Strings::dPdv) {
                 sym.data (globals->dPdv.ptr());  sym.step (globals->dPdv.step());
-            } else if (sym.name() == time_) {
+            } else if (sym.name() == Strings::time) {
                 sym.data (globals->time.ptr());  sym.step (globals->time.step());
-            } else if (sym.name() == dtime_) {
+            } else if (sym.name() == Strings::dtime) {
                 sym.data (globals->dtime.ptr());  sym.step (globals->dtime.step());
-            } else if (sym.name() == dPdtime_) {
+            } else if (sym.name() == Strings::dPdtime) {
                 sym.data (globals->dPdtime.ptr());  sym.step (globals->dPdtime.step());
+            } else if (sym.name() == Strings::Ci) {
+                sym.data (globals->Ci.ptr());  sym.step (globals->Ci.step());
+            } else if (sym.name() == Strings::Oi) {
+                sym.data (globals->Oi.ptr());  sym.step (globals->Oi.step());
             }
             if (sym.data() == NULL) {
                 if (sym.dataoffset() >= 0) {
@@ -176,9 +174,16 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);
-            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()) * m_npoints);
-            sym.data (m_context->heapaddr (sym.dataoffset()));
-            sym.step (0);  // FIXME
+            if (sym.typespec().is_closure()) {
+                // Special case -- closures store pointers in the heap
+                sym.dataoffset (m_context->closure_allot (m_npoints));
+                sym.data (m_context->heapaddr (sym.dataoffset()));
+                sym.step (sizeof (ClosureColor *));
+            } else {
+                sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()) * m_npoints);
+                sym.data (m_context->heapaddr (sym.dataoffset()));
+                sym.step (0);  // FIXME
+            }
         } else if (sym.symtype() == SymTypeConst) {
             ASSERT (sym.data() != NULL &&
                     "Const symbol should already have valid data address");
@@ -390,6 +395,12 @@ std::string
 ShadingExecution::format_symbol (const std::string &format,
                                  Symbol &sym, int whichpoint)
 {
+    if (sym.typespec().is_closure()) {
+        // Special case for printing closures
+        std::stringstream stream;
+        stream << *(((const ClosureColor **)sym.data())[whichpoint]);
+        return stream.str ();
+    }
     TypeDesc type = sym.typespec().simpletype();
     const char *data = (const char *)sym.data() + whichpoint * sym.step();
     char kind = format[format.length()-1];
@@ -421,18 +432,17 @@ ShadingExecution::printsymbol (Symbol &sym)
         if (sym.is_uniform())
             std::cout << "\tuniform";
         else if (i == m_beginpoint || (i%8) == 0)
-            std::cout << "\t" << i << ":";
-        int n = type.numelements() * type.aggregate;
-        for (int j = 0;  j < n;  ++j) {
-            std::cout << ' ';
-            if (type.basetype == TypeDesc::FLOAT)
-                std::cout << ((float *)data)[j];
-            else if (type.basetype == TypeDesc::INT)
-                std::cout << ((int *)data)[j];
-            else if (type.basetype == TypeDesc::STRING)
-                std::cout << ((ustring *)data)[j];
-        }
-        if (i == m_endpoint-1 || (i%8) == 7 || sym.is_uniform())
+            std::cout << "\t" << i << ": ";
+        if (sym.typespec().is_closure())
+            std::cout << format_symbol (" %s", sym, i);
+        else if (type.basetype == TypeDesc::FLOAT)
+            std::cout << format_symbol (" %g", sym, i);
+        else if (type.basetype == TypeDesc::INT)
+            std::cout << format_symbol (" %d", sym, i);
+        else if (type.basetype == TypeDesc::STRING)
+            std::cout << format_symbol (" \"%s\"", sym, i);
+        if (i == m_endpoint-1 || (i%8) == 7 ||
+                sym.is_uniform() || sym.typespec().is_closure())
             std::cout << "\n";
         if (sym.is_uniform())
             break;

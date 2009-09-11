@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec.h"
 #include "../liboslexec/oslexec_pvt.h"
+#include "oslclosure.h"
 #include "simplerend.h"
 using namespace OSL;
 using namespace OSL::pvt;
@@ -124,7 +125,13 @@ main (int argc, const char *argv[])
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
     float time = 0.0f;
     shaderglobals.time.init (&time, 0);
-    
+
+    std::vector<ClosureColor> Ci (npoints);
+    std::vector<ClosureColor *> Ci_ptr (npoints);
+    for (int i = 0;  i < npoints;  ++i)
+        Ci_ptr[i] = &Ci[i];
+    shaderglobals.Ci.init (&Ci_ptr[0], sizeof(Ci_ptr[0]));
+
     // Make a shader space that is translated one unit in x and rotated
     // 45deg about the z axis.
     OSL::Matrix44 Mshad;

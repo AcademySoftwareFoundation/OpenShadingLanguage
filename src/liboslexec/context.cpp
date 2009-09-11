@@ -71,6 +71,7 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     m_curlight = -1;
     m_curuse = ShadUseUnknown;
     m_heap_allotted = 0;
+    m_closures_allotted = 0;
 
     // Allocate enough space on the heap
     size_t heap_size_needed = m_npoints * sas.heapsize ();
@@ -85,6 +86,20 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     }
     // Zero out everything in the heap
     memset (&m_heap[0], 0, m_heap.size());
+
+    // Set up closure storage
+    size_t closures_needed = m_npoints * sas.numclosures ();
+    if (shadingsys().debug())
+        std::cout << "  need closures " << closures_needed << " vs " << m_closures.size() << "\n";
+    if (closures_needed > m_closures.size()) {
+        if (shadingsys().debug())
+            std::cout << "  ShadingContext " << (void *)this 
+                      << " growing closures to " << closures_needed << "\n";
+        m_closures.resize (closures_needed);
+    }
+    // Zero out the closures
+    for (size_t i = 0;  i < m_closures.size();  ++i)
+        m_closures[i].clear ();
 
     // Calculate number of layers we need for each use
     for (int i = 0;  i < ShadUseLast;  ++i) {

@@ -44,6 +44,7 @@ class RendererServices;
 class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 class ShaderGlobals;
+class ClosureColor;
 
 namespace pvt {
 class ShaderInstance;
@@ -214,7 +215,7 @@ public:
     VaryingRef<TransformationPtr> object2common; /// Object->common xform
     VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
 
-    VaryingRef<Color3> Ci;             ///< Output colors
+    VaryingRef<ClosureColor *> Ci;     ///< Output colors
     VaryingRef<Color3> Oi;             ///< Output opacities
 };
 

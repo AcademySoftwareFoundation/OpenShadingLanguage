@@ -75,7 +75,22 @@ format_args (ShadingExecution *exec, const char *format,
                 std::cerr << "Mismatch between format string and arguments";
                 continue;
             }
-            s += exec->format_symbol (ourformat, exec->sym(args[arg++]), whichpoint);
+            // Doctor it to fix mismatches between format and data
+            Symbol &sym (exec->sym(args[arg]));
+            TypeDesc simpletype (sym.typespec().simpletype());
+            char code = ourformat[ourformat.length()-1];
+            if (sym.typespec().is_closure() && code != 's') {
+                ourformat[ourformat.length()-1] = 's';
+            } else if (simpletype.basetype == TypeDesc::FLOAT &&
+                    code != 'f' && code != 'g') {
+                ourformat[ourformat.length()-1] = 'g';
+            } else if (simpletype.basetype == TypeDesc::INT && code != 'd') {
+                ourformat[ourformat.length()-1] = 'd';
+            } else if (simpletype.basetype == TypeDesc::STRING && code != 's') {
+                ourformat[ourformat.length()-1] = 's';
+            }
+            s += exec->format_symbol (ourformat, sym, whichpoint);
+            ++arg;
         } else if (*format == '\\') {
             // Escape sequence
             ++format;  // skip the backslash

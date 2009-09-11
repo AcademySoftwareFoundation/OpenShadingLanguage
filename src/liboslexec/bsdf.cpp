@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslops.h"
-#include "oslclosure.h"
 #include "oslexec_pvt.h"
 
 

@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/thread.h"
 
 #include "oslexec.h"
+#include "oslclosure.h"
 #include "osl_pvt.h"
 using namespace OSL;
 using namespace OSL::pvt;
@@ -218,7 +219,6 @@ private:
     std::vector<float> m_fconsts;       ///< float constant values
     std::vector<ustring> m_sconsts;     ///< string constant values
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
-
     friend class OSOReaderToMaster;
     friend class ShaderInstance;
     friend class ShadingExecution;
@@ -252,12 +252,16 @@ public:
     size_t heapsize () const { return m_heapsize; }
 
     /// Recalculate the amount of heap space needed, store in m_heapsize
-    /// and also return it.
+    /// and also return it.  Also recalculated: m_numclosures.
     size_t calc_heapsize ();
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
+
+    /// How many closures does this group use, not counting globals.
+    ///
+    size_t numclosures () const { return m_numclosures; }
 
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
@@ -267,6 +271,7 @@ private:
     std::vector<float> m_fparams;       ///< float param values
     std::vector<ustring> m_sparams;     ///< string param values
     size_t m_heapsize;                  ///< Heap space needed per point
+    size_t m_numclosures;               ///< Number of non-global closures
 
     friend class ShadingExecution;
 };
@@ -289,6 +294,7 @@ public:
     void append (ShaderInstanceRef newlayer) {
         m_layers.push_back (newlayer);
         m_heapsize += newlayer->heapsize();
+        m_numclosures += newlayer->numclosures ();
     }
 
     /// How many layers are in this group?
@@ -303,9 +309,14 @@ public:
     ///
     size_t heapsize () const { return m_heapsize; }
 
+    /// How many closures does this group use, not counting globals.
+    ///
+    size_t numclosures () const { return m_numclosures; }
+
 private:
     std::vector<ShaderInstanceRef> m_layers;
     size_t m_heapsize;                 ///< Heap space needed per point
+    size_t m_numclosures;              ///< Number of non-global closures
 };
 
 
@@ -446,6 +457,17 @@ public:
         return cur;
     }
 
+    /// Allot 'n' closures in the closure area, and allot 'n' closure
+    /// pointers in the heap (pointed to the allotted closures).  Return
+    /// the starting offset into the heap of the pointers.
+    size_t closure_allot (size_t n) {
+        size_t curheap = heap_allot (n * sizeof (ClosureColor *));
+        ClosureColor **ptrs = (ClosureColor **) heapaddr (curheap);
+        for (int i = 0;  i < n;  ++i)
+            ptrs[i] = &m_closures[m_closures_allotted++];
+        return curheap;
+    }
+
     /// Find the named symbol in the (already-executed!) stack of
     /// ShadingExecution's of the given use, with priority given to
     /// later laters over earlier layers (if they name the same symbol).
@@ -458,6 +480,8 @@ private:
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_heap_allotted;             ///< Heap memory allotted
+    std::vector<ClosureColor> m_closures; ///< Closure memory
+    size_t m_closures_allotted;         ///< Closure memory allotted
     ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
     int m_nlights;                      ///< Number of lights
@@ -636,22 +660,30 @@ public:
         return m_shaders[(int)use];
     }
 
-    /// How much heap space this instance needs per point being shaded.
+    /// How much heap space does this group use per point being shaded.
     ///
     size_t heapsize () const { return m_heapsize; }
 
+    /// How many closures does this group use, not counting globals.
+    ///
+    size_t numclosures () const { return m_numclosures; }
+
     /// Recalculate the amount of heap space needed, store in m_heapsize
-    /// and also return it.
+    /// and also return it.  Also 
     size_t calc_heapsize () {
         m_heapsize = 0;
-        for (int i = 0;  i < (int)OSL::pvt::ShadUseLast;  ++i)
+        m_numclosures = 0;
+        for (int i = 0;  i < (int)OSL::pvt::ShadUseLast;  ++i) {
             m_heapsize += m_shaders[i].heapsize ();
+            m_numclosures += m_shaders[i].numclosures ();
+        }
         return m_heapsize;
     }
 
 private:
     OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
     size_t m_heapsize;                 ///< Heap space needed per point
+    size_t m_numclosures;               ///< Number of non-global closures
 };
 
 
@@ -661,6 +693,8 @@ namespace Strings {
     extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
     extern ustring null;
     extern ustring diffuse;
+    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime;
+    extern ustring Ci, Oi;
 }; // namespace Strings
 
 

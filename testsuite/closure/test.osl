@@ -1,0 +1,6 @@
+shader
+test (float Kd = 0.5)
+{
+    Ci = Kd * diffuse ();
+    printf ("  Ci = %s\n", Ci);
+}

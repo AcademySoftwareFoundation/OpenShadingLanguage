@@ -86,12 +86,17 @@ ShadingSystem::~ShadingSystem ()
 
 namespace Strings {
 
+// Define static ustring symbols for very fast comparison
 ustring camera ("camera"), common ("common");
 ustring object ("object"), shader ("shader");
 ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
 ustring null ("null");
 ustring diffuse ("diffuse");
+ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
+ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v");
+ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");
+ustring Ci ("Ci"), Oi ("Oi");
 
 };
 

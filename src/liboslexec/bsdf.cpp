@@ -73,18 +73,50 @@ to_unit_disk (float &x, float &y)
 
 
 
+/// Make two unit vectors that are orthogonal to N and each other.  This
+/// assumes that N is already normalized.  We get the first orthonormal
+/// by taking the cross product of N and (1,1,1), unless N is 1,1,1, in
+/// which case we cross with (-1,1,1).  Either way, we get something
+/// orthogonal.  Then N x a is mutually orthogonal to the other two.
+template <class T>
+static void
+make_orthonormals (const Imath::Vec3<T> &N,
+                   Imath::Vec3<T> &a, Imath::Vec3<T> &b)
+{
+    if (N[0] != N[1] || N[0] != N[2])
+        a = Imath::Vec3<T> (N[2]-N[1], N[0]-N[2], N[1]-N[0]);  // (1,1,1) x N
+    else
+        a = Imath::Vec3<T> (N[2]-N[1], N[0]+N[2], -N[1]-N[0]);  // (-1,1,1) x N
+    a.normalize ();
+    b = N.cross (a);
+}
+
+
+
 void
-ClosurePrimitive::sample (const ClosureColorComponent &comp, const Vec3 &P,
-                          const Vec3 &N, const Vec3 &T, const Vec3 &B,
-                          const Vec3 &I, float randu, float randv,
-                          Vec3 &R, float &pdf) const
+ClosurePrimitive::sample_cos_hemisphere (const Vec3 &N, const Vec3 &I,
+                                         float randu, float randv,
+                                         Vec3 &R, float &pdf)
 {
     // Default closure BSDF implementation: uniformly sample
     // cosine-weighted hemisphere above the point.
     to_unit_disk (randu, randv);
     float costheta = sqrtf (1.0f - randu*randu - randv*randv);
+    Vec3 T, B;
+    make_orthonormals (N, T, B);
     R = randu * T + randv * B + costheta * N;
     pdf = costheta / M_PI;
+}
+
+
+
+float
+ClosurePrimitive::pdf_cos_hemisphere (const Vec3 &N, const Vec3 &R)
+{
+    // Default closure BSDF implementation: cosine-weighted hemisphere
+    // above the point.
+    float costheta = N.dot (R);
+    return costheta <= 0.0f ? 0.0f : (costheta / M_PI);
 }
 
 
@@ -94,20 +126,37 @@ namespace pvt {
 
 class DiffuseClosure : public ClosurePrimitive {
 public:
-    DiffuseClosure () : ClosurePrimitive (Strings::diffuse, 0, ustring()) { }
+    DiffuseClosure () : ClosurePrimitive ("diffuse", "n") { }
 
-    bool eval (const ClosureColorComponent &comp, const Vec3 &P,
-               const Vec3 &N, const Vec3 &T, const Vec3 &B,
-               const Vec3 &L, const Color3 &El,
+    struct params_t {
+        Vec3 N;
+    };
+
+    bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
                const Vec3 &R, Color3 &Er) const
     {
-        if (N.dot(L) > 0.0f) {
+        const params_t *params = (const params_t *) paramsptr;
+        if (params->N.dot(L) > 0.0f) {
             Er.setValue (1.0f, 1.0f, 1.0f);
             return true;
         } else {
             Er.setValue (0.0f, 0.0f, 0.0f);
             return false;
         }
+    }
+
+    void sample (const void *paramsptr,
+                 const Vec3 &I, float randu, float randv,
+                 Vec3 &R, float &pdf) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        sample_cos_hemisphere (params->N, I, randu, randv, R, pdf);
+    }
+
+    float pdf (const void *paramsptr, const Vec3 &R) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        return pdf_cos_hemisphere (params->N, R);
     }
 
 };

@@ -3409,7 +3409,7 @@ type in the metadata or other header information of the texture file.
 \index{light and shadow functions}
 \index{functions!light and shadows}
 
-\apiitem{\colorclosure\ {\ce diffuse} ()}
+\apiitem{\colorclosure\ {\ce diffuse} (normal N)}
 \indexapi{diffuse()}
 
 Returns a \colorclosure that represents the Lambertian diffuse
@@ -3438,7 +3438,7 @@ implemented as follows:
 \end{code}
 \apiend
 
-\apiitem{\colorclosure\ {\ce orennayar} (float roughness)}
+\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness)}
 \indexapi{orennayar()}
 
 Returns a \colorclosure that represents the diffuse reflectance of a
@@ -3479,7 +3479,7 @@ implemented as follows:
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce cooktorrance} (float roughness)}
+\apiitem{\colorclosure\ {\ce cooktorrance} (normal N, float roughness)}
 \indexapi{cooktorrance()}
 
 Returns a \colorclosure that represents specular reflectance of the
@@ -3499,7 +3499,7 @@ implemented as follows:
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce ward} (vector xdir, vector ydir, float xrough, float yrough)}
+\apiitem{\colorclosure\ {\ce ward} (normal N, vector xdir, vector ydir, float xrough, float yrough)}
 \indexapi{ward()}
 
 Returns a \colorclosure that represents the anisotropic specular

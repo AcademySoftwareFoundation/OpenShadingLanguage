@@ -798,13 +798,13 @@ static const char * builtin_func_args [] = {
 
     "ambient", "C", "Cn", NULL,
     "cooktorrance", "Cf", NULL,
-    "diffuse", "C", NULL,
+    "diffuse", "Cn", NULL,
     "emission", "C", NULL,
-    "orennayar", "Cf", NULL,
+    "orennayar", "Cnf", NULL,
     "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,
     "refraction", "Cf", "Cff", "Csf", "Csff", 
                   "Cvf", "Cvff", "Csvf", "Csvff", NULL,
-    "specular", "Cf", NULL,
+    "specular", "Cnf", NULL,
     "subsurface", "C.", NULL,
     "translucence", "C", NULL,
     "ward", "Cvvff", NULL,
@@ -876,7 +876,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
         ++i;
         t.make_array (-1);   // signal arrayness, unknown length
         if (isdigit(code[i])) {
-            t.make_array (atoi (code));
+            t.make_array (atoi (code+i));
             while (isdigit(code[i]))
                 ++i;
             if (code[i] == ']')

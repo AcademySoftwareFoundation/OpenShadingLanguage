@@ -56,26 +56,91 @@ namespace OSL {
 //namespace pvt {   // OSL::pvt
 
 
-// Define a null primitive used for error conditions
-class NullClosure : public ClosurePrimitive {
-public:
-    NullClosure () : ClosurePrimitive (Strings::null, 0, ustring()) { }
-};
 
-static NullClosure nullclosure;
-
-
-
-ClosurePrimitive::ClosurePrimitive (ustring name, int nargs, ustring argtypes)
-    : m_name(name), m_nargs(nargs), m_argtypes(argtypes)
+/// Grab the first type from 'code' (an encoded arg type string), return
+/// the TypeDesc corresponding to it, and if advance the code pointer to
+/// the next type.
+static TypeDesc
+typedesc_from_code (const char * &codestart)
 {
-    ASSERT (name.length());
+    const char *code = codestart;
+    TypeDesc t;
+    switch (*code) {
+    case 'i' : t = TypeDesc::TypeInt;          break;
+    case 'f' : t = TypeDesc::TypeFloat;        break;
+    case 'c' : t = TypeDesc::TypeColor;        break;
+    case 'p' : t = TypeDesc::TypePoint;        break;
+    case 'v' : t = TypeDesc::TypeVector;       break;
+    case 'n' : t = TypeDesc::TypeNormal;       break;
+    case 'm' : t = TypeDesc::TypeMatrix;       break;
+    case 's' : t = TypeDesc::TypeString;       break;
+    case 'x' : t = TypeDesc (TypeDesc::NONE);  break;
+    default:
+        std::cerr << "Don't know how to decode type code '" 
+                  << code << "' " << (int)(*code) << "\n";
+        ASSERT (0);   // FIXME
+        ++codestart;
+        return TypeDesc();
+    }
+    ++code;
+
+    if (*code == '[') {
+        ++code;
+        t.arraylen = -1;   // signal arrayness, unknown length
+        if (isdigit (*code)) {
+            t.arraylen = atoi (code);
+            while (isdigit (*code))
+                ++code;
+            if (*code == ']')
+                ++code;
+        }
+    }
+
+    codestart = code;
+    return t;
+}
+
+
+
+
+ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes)
+    : m_name(name), m_nargs(0), m_argcodes(argtypes)
+{
+    ASSERT (m_name.length());
     // Base class ctr of a closure primitive registers it
     lock_guard guard (closure_mutex);
     ClosurePrimMap::const_iterator found = prim_map.find (m_name);
     ASSERT (found == prim_map.end());
     prim_map[m_name] = this;
+
+
+    const int alignment = sizeof (char *);
+    m_argmem = 0;
+    for (const char *code = m_argcodes.c_str();  code && *code; ) {
+        // Grab the next type code.  This automatically advances code!
+        TypeDesc t = typedesc_from_code (code);
+
+        // Add that type to our type list
+        m_argtypes.push_back (t);
+
+        // Round up the mem used if this type needs particular alignment
+        if (t.basetype == TypeDesc::STRING) {
+            // strings are really pointers that need to be aligned
+            m_argmem = (m_argmem + sizeof(char *) - 1) & (~ sizeof(char *));
+        }
+
+        // Add the offset for this argument = mem used so far
+        m_argoffsets.push_back (m_argmem);
+
+        // Account for mem used for this argument
+        m_argmem += t.size ();
+
+        ++m_nargs;
+    }
+
     std::cerr << "Registered closure primitive '" << m_name << "'\n";
+    std::cerr << "   " << m_nargs << " arguments : " << m_argcodes << "\n";
+    std::cerr << "   needs " << m_argmem << " bytes for arguments\n";
 }
 
 
@@ -92,8 +157,8 @@ ClosurePrimitive::~ClosurePrimitive ()
 
 
 
-ClosureColor::compref_t
-ClosureColor::primitive (ustring name)
+const ClosurePrimitive *
+ClosurePrimitive::primitive (ustring name)
 {
     ClosurePrimMap::const_iterator found;
     {
@@ -101,69 +166,29 @@ ClosureColor::primitive (ustring name)
         found = prim_map.find (name);
     }
     if (found != prim_map.end())
-        return new ClosureColorComponent (*found->second);
-    // Oh no, not found!  Return a null primitive.
-    return new ClosureColorComponent (nullclosure);
-}
-
-
-
-std::ostream &
-operator<< (std::ostream &out, const ClosureColorComponent &comp)
-{
-    out << comp.m_cprim->name() << " (";
-    ustring argtypes = comp.argtypes();
-    int nextf = 0, nexts = 0;
-    for (int i = 0;  i < comp.m_nargs;  ++i) {
-        if (i)
-            out << ", ";
-        switch (argtypes[i]) {
-        case 'f' :
-            out << comp.m_fparams[nextf++];
-            break;
-        case 'p' :
-        case 'v' :
-        case 'n' :
-        case 'c' :
-            out << "(";
-            out << comp.m_fparams[nextf++] << ", ";
-            out << comp.m_fparams[nextf++] << ", ";
-            out << comp.m_fparams[nextf++] << ")";
-            break;
-        case 'm' :
-            out << "(";
-            for (int m = 0;  m < 16;  ++m) {
-                if (m)
-                    out << ", ";
-                out << comp.m_fparams[nextf++];
-            }
-            out << ")";
-        case 's' :
-            out << '\"' << comp.m_sparams[nexts++] << '\"';
-            break;
-        }
-    }
-    out << ")";
-    return out;
+        return found->second;
+    // Oh no, not found!  Return NULL;
+    return NULL;
 }
 
 
 
 void
-ClosureColor::add (const compref_t &comp, const Color3 &weight)
+ClosureColor::add_component (const ClosurePrimitive *cprim,
+                             const Color3 &weight, const void *params)
 {
-    // See if this component is already present in us
-    for (int m = 0;  m < m_ncomps;  ++m) {
-        if (m_components[m] == comp || *m_components[m] == *comp) {
-            // same primitive closure and same args
-            m_weight[m] += weight;
-            return;
-        }
-    }
-    // But if we aren't adding to an existing component, add it now
-    m_components.push_back (comp);
-    m_weight.push_back (weight);
-    ++m_ncomps;
+    // Make a new component
+    m_components.push_back (Component (cprim, weight));
+    Component &newcomp (m_components.back ());
+
+    // Grow our memory
+    size_t oldmemsize = m_mem.size ();
+    newcomp.memoffset = oldmemsize;
+    m_mem.resize (oldmemsize + cprim->argmem ());
+
+    // Copy the params, if supplied
+    if (params)
+        memcpy (&m_mem[oldmemsize], params, cprim->argmem ());
 }
 
 
@@ -171,8 +196,8 @@ ClosureColor::add (const compref_t &comp, const Color3 &weight)
 void
 ClosureColor::add (const ClosureColor &A)
 {
-    for (int a = 0;  a < A.m_ncomps;  ++a)
-        add (A.m_components[a], A.m_weight[a]);
+    BOOST_FOREACH (const Component &Acomp, A.m_components)
+        add_component (Acomp.cprim, Acomp.weight, &A.m_mem[Acomp.memoffset]);
 }
 
 
@@ -187,6 +212,7 @@ ClosureColor::add (const ClosureColor &A, const ClosureColor &B)
 
 
 
+#if 0
 void
 ClosureColor::sub (const ClosureColor &A)
 {
@@ -203,6 +229,7 @@ ClosureColor::sub (const ClosureColor &A, const ClosureColor &B)
         *this = A;
     sub (B);
 }
+#endif
 
 
 
@@ -210,8 +237,8 @@ void
 ClosureColor::mul (const Color3 &w)
 {
     // For every component, scale it
-    for (int a = 0;  a < m_ncomps;  ++a)
-        m_weight[a] *= w;
+    BOOST_FOREACH (Component &c, m_components)
+        c.weight *= w;
 }
 
 
@@ -220,21 +247,48 @@ void
 ClosureColor::mul (float w)
 {
     // For every component, scale it
-    for (int a = 0;  a < m_ncomps;  ++a)
-        m_weight[a] *= w;
+    BOOST_FOREACH (Component &c, m_components)
+        c.weight *= w;
 }
 
 
 
 std::ostream &
-operator<< (std::ostream &out, const ClosureColor &c)
+operator<< (std::ostream &out, const ClosureColor &closure)
 {
-    for (int i = 0;  i < c.m_ncomps;  ++i) {
-        if (i)
+    for (size_t c = 0;  c < closure.m_components.size();  ++c) {
+        const ClosureColor::Component &comp (closure.m_components[c]);
+        const ClosurePrimitive *cprim = comp.cprim;
+        if (c)
             out << "\n\t+ ";
-        out << "(" << c.m_weight[i][0] << ", "
-            << c.m_weight[i][1] << ", " << c.m_weight[i][2] << ") * " 
-            << *c.m_components[i];
+        out << "(" << comp.weight[0] << ", "
+            << comp.weight[1] << ", " << comp.weight[2] << ") * ";
+        out << cprim->name() << " (";
+
+        for (int a = 0;  a < comp.nargs;  ++a) {
+            const char *data = &closure.m_mem[comp.memoffset] + cprim->argoffset(a);
+            TypeDesc t = cprim->argtype (a);
+            if (a)
+                out << ", ";
+            if (t.aggregate != TypeDesc::SCALAR || t.arraylen)
+                out << "(";
+            int n = t.numelements() * (int)t.aggregate;
+            for (int i = 0;  i < n;  ++i) {
+                if (i)
+                    out << ", ";
+                if (t.basetype == TypeDesc::FLOAT) {
+                    out << ((const float *)data)[i];
+                } else if (t.basetype == TypeDesc::INT) {
+                    out << ((const int *)data)[i];
+                } else if (t.basetype == TypeDesc::STRING) {
+                    out << '\"' << ((const char **)data)[i] << '\"';
+                }
+            }
+            if (t.aggregate != TypeDesc::SCALAR || t.arraylen)
+                out << ")";
+        }
+
+        out << ")";
     }
     return out;
 }

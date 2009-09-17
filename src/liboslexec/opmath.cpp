@@ -302,7 +302,8 @@ public:
     SubClosure (ShadingExecution *) { }
     inline void operator() (ClosureColor *result, 
                             const ClosureColor *A, const ClosureColor *B) {
-        result->sub (*A, *B);
+        ASSERT (0 && "sub unimplemented for closures");
+//        result->sub (*A, *B);
     }
 };
 

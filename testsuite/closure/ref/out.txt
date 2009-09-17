@@ -1,6 +1,6 @@
 Compiled test.osl -> test.oso
-  Ci = (0.5, 0.5, 0.5) * diffuse ()
-  Ci = (0.5, 0.5, 0.5) * diffuse ()
-  Ci = (0.5, 0.5, 0.5) * diffuse ()
-  Ci = (0.5, 0.5, 0.5) * diffuse ()
+  Ci = (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+  Ci = (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+  Ci = (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+  Ci = (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 

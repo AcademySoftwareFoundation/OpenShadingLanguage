@@ -43,7 +43,19 @@ using namespace OSL;
 
 class MyClosure : public ClosurePrimitive {
 public:
-    MyClosure () : ClosurePrimitive (ustring("my"), 0, ustring("f")) { }
+    MyClosure () : ClosurePrimitive ("my", "f") { }
+    bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
+               const Vec3 &R, Color3 &Er) const
+    {
+        return false;
+    }
+    void sample (const void *paramsptr, const Vec3 &I, float randu, float randv,
+                 Vec3 &R, float &pdf) const
+    { }
+    float pdf (const void *paramsptr, const Vec3 &R) const
+    {
+        return 0;
+    }
 };
 
 MyClosure myclosure;
@@ -54,23 +66,16 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
 {
     // Create a closure with one component
     ClosureColor c;
-    ClosureColor::compref_t comp = ClosureColor::primitive (ustring("my"));
-    comp->addarg (0.33f);
-    c.add (comp, Color3(.1,.1,.1));
+    c.add_component (ClosurePrimitive::primitive (ustring("my")), Color3(.1, .1, .1));
+    float f = 0.33;
+    c.set_parameter (0, 0, &f);
     BOOST_CHECK_EQUAL (c.ncomponents(), 1);
-
-    // Add another component same params as the first, should still have
-    // one component, just higher weight.
-    c.add (comp, Color3(.1,.1,.1));
-    BOOST_CHECK_EQUAL (c.ncomponents(), 1);
-    BOOST_CHECK_EQUAL (c.weight(0), Color3 (0.2, 0.2, 0.2));
-    std::cout << "c = " << c << "\n";
 
     // Add another component with different params.  It should now look
     // like two components, not combine with the others.
-    comp = ClosureColor::primitive (ustring("my"));
-    comp->addarg (0.5);
-    c.add (comp, Color3(0.4, 0.4, 0.4));
+    c.add_component (ClosurePrimitive::primitive (ustring("my")), Color3(.4, .4, .4));
+    f = 0.5;
+    c.set_parameter (1, 0, &f);
     BOOST_CHECK_EQUAL (c.ncomponents(), 2);
     BOOST_CHECK_EQUAL (c.weight(1), Color3 (0.4, 0.4, 0.4));
     std::cout << "c = " << c << "\n";

@@ -118,9 +118,11 @@ main (int argc, const char *argv[])
     ShaderGlobals shaderglobals;
     const int npoints = xres*yres;
     std::vector<Vec3> gP (npoints);
+    std::vector<Vec3> gN (npoints);
     std::vector<float> gu (npoints);
     std::vector<float> gv (npoints);
     shaderglobals.P.init (&gP[0], sizeof(gP[0]));
+    shaderglobals.N.init (&gN[0], sizeof(gN[0]));
     shaderglobals.u.init (&gu[0], sizeof(gu[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
     float time = 0.0f;
@@ -162,6 +164,7 @@ main (int argc, const char *argv[])
             gu[n] = (xres == 1) ? 0.5 : (float)i/(xres-1);
             gv[n] = (yres == 1) ? 0.5 : (float)j/(yres-1);
             gP[n] = Vec3 (gu[n], gv[n], 1.0f);
+            gN[n] = Vec3 (0, 0, 1);
         }
     }
     double setuptime = timer ();

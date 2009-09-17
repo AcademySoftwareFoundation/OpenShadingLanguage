@@ -43,20 +43,24 @@ static Color3 one (1.0f, 1.0f, 1.0f);
 
 DECLOP (OP_diffuse)
 {
-    DASSERT (nargs == 1);
+    DASSERT (nargs == 2);
     Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
     DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* closures always vary */);
 
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+
     // Since diffuse takes no args, we can construct it just once.
-    ClosureColor::compref_t comp = ClosureColor::primitive (Strings::diffuse);
+    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::diffuse);
     for (int i = beginpoint;  i < endpoint;  ++i) {
         if (runflags[i]) {
-            result[i]->clear ();
-            result[i]->add (comp, one);
+            result[i]->set (prim);
+            result[i]->set_parameter (0, 0, &(n[i]));
         }
     }
 }

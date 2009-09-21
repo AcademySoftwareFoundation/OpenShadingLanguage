@@ -401,18 +401,6 @@ public:
     ///
     void *data () const { return m_data; }
 
-    /// Return a pointer to the partial derivatives with respect to x
-    //
-    void *dx_data (int npoints) const {
-        return (void *) ((char *)m_data + npoints * m_step);
-    }
-
-    /// Return a pointer to the partial derivatives with respect to x
-    //
-    void *dy_data (int npoints) const {
-        return (void *) ((char *)m_data + 2 * npoints * m_step);
-    }
-
     /// Specify the location of the symbol's data.
     ///
     void data (void *d) { m_data = d; }

@@ -1296,7 +1296,7 @@ fresnel4_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr,
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Kr, I.is_varying() | N.is_varying() | eta.is_varying(),
-                          I.data() == Kr.data() || N.data() == Kr.data() || eta.data() == Kr.data());
+                          eta.data() == Kr.data());
 
     // FIXME -- clear derivs for now, make it right later.
     if (Kr.has_derivs ())
@@ -1345,18 +1345,12 @@ fresnel7_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr, Symbol &Kt, Sym
     // Adjust the results' uniform/varying status
     bool varying_assig = I.is_varying() | N.is_varying() | eta.is_varying();
 
-    exec->adjust_varying (Kr, varying_assig, I.data()   == Kr.data() || 
-                                             N.data()   == Kr.data() || 
-                                             eta.data() == Kr.data());
-    exec->adjust_varying (Kt, varying_assig, I.data()   == Kt.data() || 
-                                             N.data()   == Kt.data() || 
-                                             eta.data() == Kt.data());
+    exec->adjust_varying (Kr, varying_assig, eta.data() == Kr.data());
+    exec->adjust_varying (Kt, varying_assig, eta.data() == Kt.data());
     exec->adjust_varying (R,  varying_assig, I.data()   == R.data() || 
-                                             N.data()   == R.data() || 
-                                             eta.data() == R.data());
+                                             N.data()   == R.data());
     exec->adjust_varying (T,  varying_assig, I.data()   == T.data() || 
-                                             N.data()   == T.data() || 
-                                             eta.data() == T.data());
+                                             N.data()   == T.data());
 
     // FIXME -- clear derivs for now, make it right later.
     if (Kr.has_derivs ())

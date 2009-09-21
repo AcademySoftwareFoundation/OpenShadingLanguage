@@ -335,8 +335,9 @@ public:
             ASTNode *declaration_node=NULL) 
         : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
-          m_scope(0), m_node(declaration_node), m_alias(NULL),
-          m_const_initializer(false), m_dataoffset(-1)
+          m_scope(0), m_dataoffset(-1), m_deriv_step(0),
+          m_node(declaration_node), m_alias(NULL),
+          m_const_initializer(false)
     { }
     virtual ~Symbol () { }
 
@@ -400,6 +401,18 @@ public:
     ///
     void *data () const { return m_data; }
 
+    /// Return a pointer to the partial derivatives with respect to x
+    //
+    void *dx_data (int npoints) const {
+        return (void *) ((char *)m_data + npoints * m_step);
+    }
+
+    /// Return a pointer to the partial derivatives with respect to x
+    //
+    void *dy_data (int npoints) const {
+        return (void *) ((char *)m_data + 2 * npoints * m_step);
+    }
+
     /// Specify the location of the symbol's data.
     ///
     void data (void *d) { m_data = d; }
@@ -413,6 +426,10 @@ public:
     bool is_uniform () const { return m_step == 0; }
     bool is_varying () const { return m_step != 0; }
 
+    bool has_derivs () const { return m_deriv_step != 0; }
+    int deriv_step () const { return m_deriv_step; }
+//    bool deriv_step (int new_deriv_step) { m_deriv_step = new_deriv_step; }
+
     int size () const { return m_size; }
 
 protected:
@@ -423,10 +440,11 @@ protected:
     TypeSpec m_typespec;        ///< Data type of the symbol
     SymType m_symtype;          ///< Kind of symbol (param, local, etc.)
     int m_scope;                ///< Scope where this symbol was declared
+    int m_dataoffset;           ///< Offset of the data (-1 for unknown)
+    int m_deriv_step;           ///< Step to derivs (0 == has no derivs)
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol
     Symbol *m_alias;            ///< Another symbol that this is an alias for
     bool m_const_initializer;   ///< initializer is a constant expression
-    int m_dataoffset;           ///< Offset of the data (-1 for unknown)
 };
 
 

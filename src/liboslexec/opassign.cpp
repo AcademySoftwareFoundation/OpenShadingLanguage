@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
+#include "dual.h"
 
 #include "OpenImageIO/varyingref.h"
 
@@ -68,11 +69,25 @@ static DECLOP (specialized_assign)
     if (result.is_uniform()) {
         // Uniform case
         *result = RET (*src);
+        if (Result.has_derivs())
+            exec->zero_derivs (Result);
     } else {
         // Potentially varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = RET (src[i]);
+        if (!std::numeric_limits<RET>::is_integer &&
+            !std::numeric_limits<SRC>::is_integer &&
+                 Result.has_derivs() && Src.has_derivs()) {
+            VaryingRef<Dual2<RET> > result ((Dual2<RET> *)Result.data(), Result.step());
+            VaryingRef<Dual2<SRC> > src ((Dual2<SRC> *)Src.data(), Src.step());
+            for (int i = beginpoint;  i < endpoint;  ++i)
+                if (runflags[i])
+                    result[i] = Dual2<RET> (src[i]);
+        } else {
+            for (int i = beginpoint;  i < endpoint;  ++i)
+                if (runflags[i])
+                    result[i] = RET (src[i]);
+            if (Result.has_derivs())
+                exec->zero_derivs (Result);
+        }
     }
 }
 
@@ -90,12 +105,21 @@ static DECLOP (assign_copy)
     exec->adjust_varying (Result, Src.is_varying(),
                           Result.data() == Src.data());
 
-    // Loop over points, do the assignment.
     size_t size = Result.size ();
+
+    if (Result.has_derivs()) {
+        if (Src.has_derivs())            // Both have derivs...
+            size = Result.step ();       //    memcpy the derivs too
+        else                             // Result needs derivs but
+            exec->zero_derivs (Result);  //   src doesn't have -> zero
+    }
+
+    // Loop over points, do the assignment.
     if (Result.is_uniform()) {
         // Uniform case
         memcpy (Result.data(), Src.data(), size);
-    } else if (exec->all_points_on() && Src.is_varying()) {
+    } else if (exec->all_points_on() && Src.is_varying() &&
+               Result.has_derivs() == Src.has_derivs()) {
         // Simple case where a single memcpy will do
         memcpy (Result.data(), Src.data(), size * exec->npoints());
     } else {
@@ -133,6 +157,7 @@ assign_closure (ShadingExecution *exec, int nargs, const int *args,
             if (runflags[i])
                 *(result[i]) = *(src[i]);
     }
+    // N.B. You can't take a derivative of a closure
 }
 
 

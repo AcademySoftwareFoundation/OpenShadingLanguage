@@ -323,10 +323,10 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
     if (varying_assignment) {
         // sym is uniform, but we're either assigning a new varying
         // value or we're inside a conditional.  Promote sym to varying.
-        sym.step (sym.size());
+        size_t size = sym.has_derivs() ? 3*sym.deriv_step() : sym.size();
+        sym.step (size);
         if (preserve_value || ! all_points_on()) {
             // Propagate the value from slot 0 to other slots
-            size_t size = sym.size();
             char *data = (char *) sym.data();
             for (int i = 1;  i < m_npoints;  ++i)
                 memcpy (data + i*size, data, size);
@@ -334,8 +334,29 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
     } else {
         // sym is varying, but we're assigning a new uniform value AND
         // we're not inside a conditional.  Safe to demote sym to uniform.
-        if (sym.symtype() != SymTypeGlobal) // DO NOT demote a global
+        if (sym.symtype() != SymTypeGlobal) { // DO NOT demote a global
             sym.step (0);
+            if (sym.has_derivs())
+                zero_derivs (sym);
+        }
+    }
+}
+
+
+
+void
+ShadingExecution::zero_derivs (Symbol &sym)
+{
+    size_t deriv_step = sym.deriv_step ();
+    size_t deriv_size = 2 * deriv_step;
+    char *data = (char *)sym.data() + deriv_step;
+    if (sym.is_uniform ())
+        memset (data, deriv_size, 0);
+    else {
+        data += m_beginpoint * sym.step();
+        for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step())
+            if (m_runflags[i])
+                memset (data, deriv_size, 0);
     }
 }
 

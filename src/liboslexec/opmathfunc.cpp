@@ -1298,6 +1298,10 @@ fresnel4_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr,
     exec->adjust_varying (Kr, I.is_varying() | N.is_varying() | eta.is_varying(),
                           I.data() == Kr.data() || N.data() == Kr.data() || eta.data() == Kr.data());
 
+    // FIXME -- clear derivs for now, make it right later.
+    if (Kr.has_derivs ())
+        exec->zero_derivs (Kr);
+
     // Loop over points, do the operation
     VaryingRef<Vec3> inI ((Vec3 *)I.data(), I.step());
     VaryingRef<Vec3> inN ((Vec3 *)N.data(), N.step());
@@ -1353,6 +1357,16 @@ fresnel7_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr, Symbol &Kt, Sym
     exec->adjust_varying (T,  varying_assig, I.data()   == T.data() || 
                                              N.data()   == T.data() || 
                                              eta.data() == T.data());
+
+    // FIXME -- clear derivs for now, make it right later.
+    if (Kr.has_derivs ())
+        exec->zero_derivs (Kr);
+    if (Kt.has_derivs ())
+        exec->zero_derivs (Kt);
+    if (R.has_derivs ())
+        exec->zero_derivs (R);
+    if (T.has_derivs ())
+        exec->zero_derivs (T);
 
     // Loop over points, do the operation
     VaryingRef<Vec3>  inI ((Vec3 *)I.data(), I.step());

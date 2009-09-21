@@ -65,6 +65,10 @@ DECLOP (triple_ctr)
     bool vary = (X.is_varying() | Y.is_varying() | Z.is_varying());
     exec->adjust_varying (Result, vary, false /* can't alias */);
 
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
+
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
     VaryingRef<float> x ((float *)X.data(), X.step());
     VaryingRef<float> y ((float *)Y.data(), Y.step());
@@ -109,6 +113,10 @@ DECLOP (triple_ctr_transform)
                  X.is_varying() | Y.is_varying() | Z.is_varying() |
                  globals->time.is_varying());
     exec->adjust_varying (Result, vary, false /* can't alias */);
+
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
 
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
     VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
@@ -326,6 +334,10 @@ static DECLOP (specialized_compassign)
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Result.is_varying() | Index.is_varying() | Val.is_varying());
+
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
 
     // Loop over points, do the operation
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());

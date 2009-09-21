@@ -164,6 +164,10 @@ DECLOP (color_ctr_transform)
                  X.is_varying() | Y.is_varying() | Z.is_varying() );
     exec->adjust_varying (Result, vary, false /* can't alias */);
 
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
+
     VaryingRef<Color3> result ((Color3 *)Result.data(), Result.step());
     VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
     VaryingRef<float> x ((float *)X.data(), X.step());

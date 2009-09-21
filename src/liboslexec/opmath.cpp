@@ -248,6 +248,7 @@ DECLOP (closure_binary_op)
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs.
 
     // Loop over points, do the operation
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
@@ -275,6 +276,7 @@ DECLOP (closure_unary_op)
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
 
     // Loop over points, do the operation
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());

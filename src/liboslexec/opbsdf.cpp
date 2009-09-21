@@ -51,6 +51,7 @@ DECLOP (OP_diffuse)
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
 
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());

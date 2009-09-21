@@ -543,8 +543,6 @@ public:
     void adjust_varying (Symbol &sym, bool varying_assignment,
                          bool preserve_value = true);
 
-    void adjust_derivs (Symbol &sym, bool derivs) { }
-
     /// Zero out the derivatives of sym for all shading points that are
     /// turned on.
     void zero_derivs (Symbol &sym);

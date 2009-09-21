@@ -347,6 +347,7 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
 void
 ShadingExecution::zero_derivs (Symbol &sym)
 {
+    DASSERT (sym.has_derivs ());
     size_t deriv_step = sym.deriv_step ();
     size_t deriv_size = 2 * deriv_step;
     char *data = (char *)sym.data() + deriv_step;

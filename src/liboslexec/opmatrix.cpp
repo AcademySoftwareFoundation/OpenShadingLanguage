@@ -82,6 +82,10 @@ DECLOP (OP_matrix)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, varying_args, false /* can't alias */);
 
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
+
     VaryingRef<Matrix44> result ((Matrix44 *)Result.data(), Result.step());
     VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
     if (! varying_args) {
@@ -151,6 +155,10 @@ static DECLOP (specialized_mxcompassign)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Result.is_varying() | Row.is_varying() |
                           Col.is_varying() | Val.is_varying());
+
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
 
     // Loop over points, do the operation
     VaryingRef<Matrix44> result ((Matrix44 *)Result.data(), Result.step());
@@ -238,6 +246,10 @@ DECLOP (OP_mxcompref)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, M.is_varying() | Row.is_varying() |
                           Col.is_varying(), false /* can't alias */);
+
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
 
     // Loop over points, do the operation
     VaryingRef<Float> result ((Float *)Result.data(), Result.step());

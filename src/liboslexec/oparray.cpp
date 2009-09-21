@@ -62,6 +62,10 @@ static DECLOP (specialized_aref)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Src.is_varying() || Index.is_varying());
 
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
+
     // Loop over points, do the assignment.
     VaryingRef<T> result ((T *)Result.data(), Result.step());
     VaryingRef<T> src ((T *)Src.data(), Src.step());
@@ -137,6 +141,10 @@ static DECLOP (specialized_aassign)
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Src.is_varying() || Index.is_varying());
+
+    // FIXME -- clear derivs for now, make it right later.
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
 
     // Loop over points, do the assignment.
     VaryingRef<T> result ((T *)Result.data(), Result.step());
@@ -221,6 +229,8 @@ DECLOP (OP_arraylength)
             if (runflags[i])
                 result[i] = len;
     }
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);   // arraylength not varying
 }
 
 

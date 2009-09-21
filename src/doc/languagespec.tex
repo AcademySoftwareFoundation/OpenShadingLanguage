@@ -3074,17 +3074,16 @@ on the surface, or something else.  Do not confuse the ``u'' and ``v''
 in the name with a guarantee that it is tied to the surface parameters.
 \apiend
 
-\apiitem{float {\ce Du} (float x), {\ce Dv} (float x) \\
-vector {\ce Du} (point x), {\ce Dv} (point x) \\
-vector {\ce Du} (vector x), {\ce Dv} (vector x)\\
-color {\ce Du} (color x), {\ce Dv} (color x)}
-\indexapi{Du()} \indexapi{Dv()}
-Compute an approximation to the derivatives of $x$ with respect to
-each of two principal directions.  Depending on the renderer
-implementation, those directions may be $x$ and $y$ on the imaging
-plane, may be parametric $u$ and $v$ on the surface, or something else.
-Do not confuse the ``u'' and ``v'' in the name with a guarantee that it
-is tied to the surface parameters.
+\apiitem{float {\ce Dx} (float a), {\ce Dy} (float a) \\
+vector {\ce Dx} (point a), {\ce Dy} (point a) \\
+vector {\ce Dx} (vector a), {\ce Dy} (vector a)\\
+color {\ce Dx} (color a), {\ce Dy} (color a)}
+\indexapi{Dx()} \indexapi{Dy()}
+Compute an approximation to the partial derivatives of $a$ with respect to
+each of two principal directions, $\partial a / \partial x$ and
+$\partial a / \partial y$.  Depending on the renderer
+implementation, those directions may be aligned to the imagine plane,
+on the surface of the object, or something else.
 \apiend
 
 \begin{annotate}

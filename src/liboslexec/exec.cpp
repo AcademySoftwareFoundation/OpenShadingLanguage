@@ -345,6 +345,26 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
 
 
 void
+ShadingExecution::zero (Symbol &sym)
+{
+    size_t size = sym.has_derivs() ? sym.deriv_step()*3 : sym.size();
+    if (sym.is_uniform ())
+        memset (sym.data(), size, 0);
+    else if (sym.is_varying() && all_points_on()) {
+        // Varying, but we can do one big memset
+        memset (sym.data(), size * m_npoints, 0);
+    } else {
+        // Varying, with some points on and some off
+        char *data = (char *)sym.data() + m_beginpoint * sym.step();
+        for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step())
+            if (m_runflags[i])
+                memset (data, size, 0);
+    }
+}
+
+
+
+void
 ShadingExecution::zero_derivs (Symbol &sym)
 {
     DASSERT (sym.has_derivs ());
@@ -438,6 +458,17 @@ ShadingExecution::format_symbol (const std::string &format,
             s += Strutil::format (format.c_str(), ((const ustring *)data)[i].c_str());
         if (n > 1 && i < n-1)
             s += ' ';
+    }
+    if (m_debug && sym.has_derivs() && type.basetype == TypeDesc::FLOAT) {
+        s += " {dx=";
+        data += sym.deriv_step ();
+        for (int i = 0;  i < n;  ++i)
+            s += Strutil::format ("%g ", ((const float *)data)[i]);
+        s += ", dy=";
+        data += sym.deriv_step ();
+        for (int i = 0;  i < n;  ++i)
+            s += Strutil::format ("%g ", ((const float *)data)[i]);
+        s += "}";
     }
     return s;
 }

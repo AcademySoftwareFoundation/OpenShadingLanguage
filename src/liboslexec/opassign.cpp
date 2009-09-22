@@ -106,10 +106,9 @@ static DECLOP (assign_copy)
                           Result.data() == Src.data());
 
     size_t size = Result.size ();
-
     if (Result.has_derivs()) {
         if (Src.has_derivs())            // Both have derivs...
-            size = Result.step ();       //    memcpy the derivs too
+            size *= 3;                   //    memcpy the derivs too
         else                             // Result needs derivs but
             exec->zero_derivs (Result);  //   src doesn't have -> zero
     }
@@ -121,7 +120,7 @@ static DECLOP (assign_copy)
     } else if (exec->all_points_on() && Src.is_varying() &&
                Result.has_derivs() == Src.has_derivs()) {
         // Simple case where a single memcpy will do
-        memcpy (Result.data(), Src.data(), size * exec->npoints());
+        memcpy (Result.data(), Src.data(), Src.step() * exec->npoints());
     } else {
         // Potentially varying case
         VaryingRef<char> result ((char *)Result.data(), Result.step());

@@ -1,0 +1,10 @@
+shader
+test ()
+{
+    printf ("Test derivatives\n\n");
+
+    printf ("u = %g, Dx(u) = %g, Dy(u) = %g\n", u, Dx(u), Dy(u));
+    printf ("v = %g, Dx(v) = %g, Dy(v) = %g\n", v, Dx(v), Dy(v));
+    printf ("P = %g, Dx(P) = %g, Dy(P) = %g\n", v, Dx(P), Dy(P));
+    
+}

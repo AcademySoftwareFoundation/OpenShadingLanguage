@@ -1,0 +1,16 @@
+Compiled test.osl -> test.oso
+Test derivatives
+
+u = 0, Dx(u) = 0.5, Dy(u) = 0
+u = 1, Dx(u) = 0.5, Dy(u) = 0
+u = 0, Dx(u) = 0.5, Dy(u) = 0
+u = 1, Dx(u) = 0.5, Dy(u) = 0
+v = 0, Dx(v) = 0, Dy(v) = 0.5
+v = 0, Dx(v) = 0, Dy(v) = 0.5
+v = 1, Dx(v) = 0, Dy(v) = 0.5
+v = 1, Dx(v) = 0, Dy(v) = 0.5
+P = 0, Dx(P) = 0 0 0, Dy(P) = 0 0 0
+P = 0, Dx(P) = 0 0 0, Dy(P) = 0 0 0
+P = 1, Dx(P) = 0 0 0, Dy(P) = 0 0 0
+P = 1, Dx(P) = 0 0 0, Dy(P) = 0 0 0
+

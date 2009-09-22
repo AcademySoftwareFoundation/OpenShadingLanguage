@@ -46,9 +46,9 @@ namespace pvt {   // OSL::pvt
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_symbols(m_master->m_symbols),
-      m_layername(layername), m_heapsize(0)
+      m_layername(layername), m_heapsize(-1 /*uninitialized*/),
+      m_heapround(0), m_numclosures(-1)
 {
-    calc_heapsize ();
 }
 
 
@@ -84,43 +84,125 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
 
 
 
-size_t
-ShaderInstance::calc_heapsize ()
+void
+ShaderInstance::calc_heap_size ()
 {
     if (shadingsys().debug())
         std::cout << "calc_heapsize on " << m_master->shadername() << "\n";
     m_heapsize = 0;
     m_numclosures = 0;
-    BOOST_FOREACH (const Symbol &s, m_symbols) {
-        // std::cout << "  sym " << s.mangled() << "\n";
-
+    m_heapround = 0;
+    BOOST_FOREACH (/*const*/ Symbol &s, m_symbols) {
         // Skip if the symbol is a type that doesn't need heap space
         if (s.symtype() == SymTypeConst || s.symtype() == SymTypeGlobal)
             continue;
 
+#if 1
+        // FIXME -- test code
+        if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
+            s.has_derivs (true);
+#endif
+
         const TypeSpec &t (s.typespec());
-        size_t size = 0;
-        if (t.is_closure()) {
+        size_t size = s.size ();
+        if (t.is_closure())
             ++m_numclosures;
-            size = sizeof (ClosureColor *);  // we store ptrs in the heap
-        } else if (t.is_structure()) {
-            // FIXME
-        } else {
-            size = t.simpletype().size();
-        }
-        // Round up to multipe of 4 bytes
-        size = (size+3) & (~3);
-        m_heapsize += size;
-        // FIXME -- have a ShadingSystem method in a central place that
-        // computes heap size for all types
+        if (s.has_derivs())
+            size *= 3;
+
+        int pad = (int) shadingsys().align_padding (size);
+        if (pad)
+            m_heapround += pad;
+        m_heapsize += size + pad;
+
+        if (shadingsys().debug())
+            std::cout << " sym " << s.mangled() << " given " << size 
+                      << " bytes on heap (including " << pad << " padding)\n";
     }
-    if (shadingsys().debug())
+    if (shadingsys().debug()) {
         std::cout << " Heap needed " << m_heapsize << ", " 
                   << m_numclosures << " closures on the heap.\n";
-    return m_heapsize;
+        std::cout << " Padding for alignment = " << m_heapround << "\n";
+    }
 }
 
 
 
+size_t
+ShaderInstance::heapsize ()
+{
+    if (! heap_size_calculated ())
+        calc_heap_size ();
+    return (size_t) m_heapsize;
+}
+
+
+
+size_t
+ShaderInstance::heapround ()
+{
+    if (! heap_size_calculated ())
+        calc_heap_size ();
+    return (size_t) m_heapround;
+}
+
+
+
+size_t
+ShaderInstance::numclosures ()
+{
+    if (! heap_size_calculated ())
+        calc_heap_size ();
+    return (size_t) m_numclosures;
+}
+
+
 }; // namespace pvt
+
+
+void
+ShadingAttribState::calc_heap_size ()
+{
+    m_heapsize = 0;
+    m_heapround = 0;
+    m_numclosures = 0;
+    for (int i = 0;  i < (int)OSL::pvt::ShadUseLast;  ++i) {
+        for (int lay = 0;  lay < m_shaders[i].nlayers();  ++lay) {
+            m_heapsize += m_shaders[i][lay]->heapsize ();
+            m_heapround += m_shaders[i][lay]->heapround ();
+            m_numclosures += m_shaders[i][lay]->numclosures ();
+        }
+    }
+}
+
+
+
+size_t
+ShadingAttribState::heapsize ()
+{
+    if (! heap_size_calculated ())
+        calc_heap_size ();
+    return (size_t) m_heapsize;
+}
+
+
+size_t
+ShadingAttribState::heapround ()
+{
+    if (! heap_size_calculated ())
+        calc_heap_size ();
+    return (size_t) m_heapround;
+}
+
+
+size_t
+ShadingAttribState::numclosures ()
+{
+    if (! heap_size_calculated ())
+        calc_heap_size ();
+    return (size_t) m_numclosures;
+}
+
+
+
 }; // namespace OSL

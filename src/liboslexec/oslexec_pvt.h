@@ -178,10 +178,11 @@ public:
     ///
     ShadingSystemImpl & shadingsys () const { return m_shadingsys; }
 
-    /// Run through the symbols and set their data pointers if they are
-    /// constants or params (to the defaults).  As a side effect, also
-    /// set m_firstparam/m_lastparam.
-    void resolve_defaults ();
+    /// Run through the symbols and set up various things we can know
+    /// with just the master: the size (including padding), and their
+    /// data pointers if they are constants or params (to the defaults).
+    /// As a side effect, also set this->m_firstparam/m_lastparam.
+    void resolve_syms ();
 
     /// Run through the code, find an implementation for each op, do
     /// other housekeeping related to the code.
@@ -247,13 +248,10 @@ public:
     /// 
     void parameters (const std::vector<ParamRef> &params);
 
-    /// How much heap space this instance needs per point being shaded.
-    ///
-    size_t heapsize () const { return m_heapsize; }
-
-    /// Recalculate the amount of heap space needed, store in m_heapsize
-    /// and also return it.  Also recalculated: m_numclosures.
-    size_t calc_heapsize ();
+    /// How much heap space this instance needs per point being shaded?
+    /// As a side effect, set the dataoffset for each symbol (as if there
+    /// was just one point being shaded).
+    size_t heapsize ();
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
@@ -261,17 +259,26 @@ public:
 
     /// How many closures does this group use, not counting globals.
     ///
-    size_t numclosures () const { return m_numclosures; }
+    size_t numclosures ();
+
+    /// Estimate how much to round the required heap size up if npoints
+    /// is odd, to account for getting the desired alignment for each
+    /// symbol.
+    size_t heapround ();
 
 private:
+    bool heap_size_calculated () const { return m_heapsize >= 0; }
+    void calc_heap_size ();
+
     ShaderMaster::ref m_master;         ///< Reference to the master
     SymbolVec m_symbols;                ///< Symbols used by the instance
     ustring m_layername;                ///< Name of this layer
     std::vector<int> m_iparams;         ///< int param values
     std::vector<float> m_fparams;       ///< float param values
     std::vector<ustring> m_sparams;     ///< string param values
-    size_t m_heapsize;                  ///< Heap space needed per point
-    size_t m_numclosures;               ///< Number of non-global closures
+    int m_heapsize;                     ///< Heap space needed per point
+    int m_heapround;                    ///< Heap padding for odd npoints
+    int m_numclosures;                  ///< Number of non-global closures
 
     friend class ShadingExecution;
 };
@@ -282,19 +289,17 @@ private:
 /// ShaderInstance), and the connections among them.
 class ShaderGroup {
 public:
-    ShaderGroup () : m_heapsize(0) { }
+    ShaderGroup () { }
     ~ShaderGroup () { }
 
     /// Clear the layers
     ///
-    void clear () { m_layers.clear ();  m_heapsize = 0; }
+    void clear () { m_layers.clear (); }
 
     /// Append a new shader instance on to the end of this group
     ///
     void append (ShaderInstanceRef newlayer) {
         m_layers.push_back (newlayer);
-        m_heapsize += newlayer->heapsize();
-        m_numclosures += newlayer->numclosures ();
     }
 
     /// How many layers are in this group?
@@ -305,18 +310,8 @@ public:
     ///
     ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
 
-    /// How much heap space this instance needs per point being shaded.
-    ///
-    size_t heapsize () const { return m_heapsize; }
-
-    /// How many closures does this group use, not counting globals.
-    ///
-    size_t numclosures () const { return m_numclosures; }
-
 private:
     std::vector<ShaderInstanceRef> m_layers;
-    size_t m_heapsize;                 ///< Heap space needed per point
-    size_t m_numclosures;              ///< Number of non-global closures
 };
 
 
@@ -375,6 +370,21 @@ public:
     /// Return a pointer to the texture system.
     ///
     TextureSystem *texturesys () const { return m_texturesys; }
+
+    /// Round up to an 8-byte boundary. 
+    /// FIXME -- do we want to round up to 16-byte boundaries for 
+    /// hardware SIMD reasons?
+    size_t align_padding (size_t x, size_t alignment = 8) {
+        size_t excess = (x & (alignment-1));
+        return excess ? (alignment - excess) : 0;
+    }
+
+    /// Round up to an 8-byte boundary. 
+    /// FIXME -- do we want to round up to 16-byte boundaries for 
+    /// hardware SIMD reasons?
+    size_t align (size_t x, size_t alignment = 8) {
+        return x + align_padding (x, alignment);
+    }
 
 private:
     void printstats () const;
@@ -453,7 +463,8 @@ public:
     /// offset into the heap.
     size_t heap_allot (size_t size) {
         size_t cur = m_heap_allotted;
-        m_heap_allotted += size;
+        m_heap_allotted += shadingsys().align (size);
+        DASSERT (m_heap_allotted <= m_heap.size());
         return cur;
     }
 
@@ -659,7 +670,8 @@ private:
 class ShadingAttribState
 {
 public:
-    ShadingAttribState () : m_heapsize(0) { }
+    ShadingAttribState () : m_heapsize (-1 /*uninitialized*/),
+                            m_heapround (-1), m_numclosures (-1) { }
     ~ShadingAttribState () { }
 
     /// Return a reference to the shader group for a particular use
@@ -668,30 +680,26 @@ public:
         return m_shaders[(int)use];
     }
 
-    /// How much heap space does this group use per point being shaded.
+    /// How much heap space does this group use per point being shaded?
     ///
-    size_t heapsize () const { return m_heapsize; }
+    size_t heapsize ();
 
-    /// How many closures does this group use, not counting globals.
+    /// How much heap space rounding might this group use?
     ///
-    size_t numclosures () const { return m_numclosures; }
+    size_t heapround ();
 
-    /// Recalculate the amount of heap space needed, store in m_heapsize
-    /// and also return it.  Also 
-    size_t calc_heapsize () {
-        m_heapsize = 0;
-        m_numclosures = 0;
-        for (int i = 0;  i < (int)OSL::pvt::ShadUseLast;  ++i) {
-            m_heapsize += m_shaders[i].heapsize ();
-            m_numclosures += m_shaders[i].numclosures ();
-        }
-        return m_heapsize;
-    }
+    /// How many closures does this group use, not counting globals?
+    ///
+    size_t numclosures ();
 
 private:
+    bool heap_size_calculated () const { return m_heapsize >= 0; }
+    void calc_heap_size ();
+
     OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
-    size_t m_heapsize;                 ///< Heap space needed per point
-    size_t m_numclosures;               ///< Number of non-global closures
+    int m_heapsize;                  ///< Heap space needed per point
+    int m_heapround;                 ///< Heap padding for odd npoints
+    int m_numclosures;               ///< Number of non-global closures
 };
 
 

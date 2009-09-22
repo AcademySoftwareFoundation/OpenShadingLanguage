@@ -112,6 +112,20 @@ Dual2<T> operator+ (const Dual2<T> &a, const Dual2<T> &b)
 }
 
 
+template<class T>
+Dual2<T> operator+ (const Dual2<T> &a, const T &b)
+{
+    return Dual2<T> (a.val()+b, a.dx(), a.dy());
+}
+
+
+template<class T>
+Dual2<T> operator+ (const T &a, const Dual2<T> &b)
+{
+    return Dual2<T> (a+b.val(), b.dx(), b.dy());
+}
+
+
 /// Subtraction of duals.
 ///
 template<class T>
@@ -119,6 +133,21 @@ Dual2<T> operator- (const Dual2<T> &a, const Dual2<T> &b)
 {
     return Dual2<T> (a.val()-b.val(), a.dx()-b.dx(), a.dy()-b.dy());
 }
+
+
+template<class T>
+Dual2<T> operator- (const Dual2<T> &a, const T &b)
+{
+    return Dual2<T> (a.val()-b, a.dx(), a.dy());
+}
+
+
+template<class T>
+Dual2<T> operator- (const T &a, const Dual2<T> &b)
+{
+    return Dual2<T> (a+b.val(), -b.dx(), -b.dy());
+}
+
 
 
 /// Negation of duals.

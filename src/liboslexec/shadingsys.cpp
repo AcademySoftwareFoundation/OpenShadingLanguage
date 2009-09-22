@@ -323,7 +323,6 @@ ShadingSystemImpl::Shader (const char *shaderusage,
     }
 
     shadergroup.append (instance);
-    m_curattrib->calc_heapsize ();
     // FIXME -- check for duplicate layer name within the group?
 }
 
@@ -374,6 +373,9 @@ ShadingSystemImpl::init_global_heap_offsets ()
     if (m_global_heap_total > 0)
         return;   // Already initialized
 
+    // FIXME -- these are all wrong (but luckily unused).  They don't 
+    // properly consider npoints, let alone derivs or alignment.  Ugh.
+    // Leave here for right now, anticipate future deletion or fixing.
     const int triple_size = sizeof (Vec3);
     m_global_heap_offsets[ustring("P")] = m_global_heap_total;
     m_global_heap_total += triple_size;
@@ -403,6 +405,10 @@ ShadingSystemImpl::init_global_heap_offsets ()
 int
 ShadingSystemImpl::global_heap_offset (ustring name)
 {
+    // FIXME -- these are all wrong.  I don't know what I was thinking
+    // when I wrote this.  But luckily, it also doesn't seem to be used
+    // now.
+    ASSERT (0);
     std::map<ustring,int>::const_iterator f = m_global_heap_offsets.find (name);
     return f != m_global_heap_offsets.end() ? f->second : -1;
 }

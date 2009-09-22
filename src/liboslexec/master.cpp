@@ -72,12 +72,25 @@ ShaderMaster::findparam (ustring name) const
 
 
 void
-ShaderMaster::resolve_defaults ()
+ShaderMaster::resolve_syms ()
 {
     m_firstparam = std::numeric_limits<int>::max();
     m_lastparam = -1;
     int i = 0;
     BOOST_FOREACH (Symbol &s, m_symbols) {
+        // Fix up the size of the symbol's data (for one point, not 
+        // counting derivatives).
+        if (s.typespec().is_closure()) {
+            s.size (sizeof (ClosureColor *)); // heap stores ptrs to closures
+        } else if (s.typespec().is_structure()) {
+            ASSERT (0 && "Struct sizing not yet implemented"); // FIXME
+        } else {
+            s.size (s.typespec().simpletype().size());
+            // FIXME -- some day we may want special padding here, like
+            // if we REALLY want 3-vectors to take 16 bytes for HW SIMD
+            // reasons.
+        }
+
         if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
             if (m_firstparam > i)
                 m_firstparam = i;

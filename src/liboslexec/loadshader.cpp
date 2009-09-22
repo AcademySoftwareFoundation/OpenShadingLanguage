@@ -132,9 +132,13 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
             ASSERT (0 && "unexpected type");
         }
     }
+#if 0
+    // FIXME -- global_heap_offset is quite broken.  But also not necessary.
+    // We made need to fix this later.
     if (sym.symtype() == SymTypeGlobal) {
         sym.dataoffset (m_shadingsys.global_heap_offset (sym.name()));
     }
+#endif
     m_master->m_symbols.push_back (sym);
 }
 
@@ -357,7 +361,7 @@ ShadingSystemImpl::loadshader (const char *cname)
     // FIXME -- catch errors
 
     if (r) {
-        r->resolve_defaults ();
+        r->resolve_syms ();
         r->resolve_ops ();
     }
 

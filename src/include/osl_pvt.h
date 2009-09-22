@@ -335,9 +335,10 @@ public:
             ASTNode *declaration_node=NULL) 
         : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
-          m_scope(0), m_dataoffset(-1), m_deriv_step(0),
-          m_node(declaration_node), m_alias(NULL),
-          m_const_initializer(false)
+          m_has_derivs(false), m_const_initializer(false),
+          m_scope(0), m_dataoffset(-1), 
+          m_node(declaration_node), m_alias(NULL)
+          
     { }
     virtual ~Symbol () { }
 
@@ -414,11 +415,13 @@ public:
     bool is_uniform () const { return m_step == 0; }
     bool is_varying () const { return m_step != 0; }
 
-    bool has_derivs () const { return m_deriv_step != 0; }
-    int deriv_step () const { return m_deriv_step; }
-//    bool deriv_step (int new_deriv_step) { m_deriv_step = new_deriv_step; }
-
+    bool has_derivs () const { return m_has_derivs; }
+    int deriv_step () const { return m_size; /*m_deriv_step;*/ }
+    bool has_derivs (bool new_derivs) {
+        m_has_derivs = new_derivs;
+    }
     int size () const { return m_size; }
+    void size (size_t newsize) { m_size = (int)newsize; }
 
 protected:
     void *m_data;               ///< Pointer to the data
@@ -427,12 +430,12 @@ protected:
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
     SymType m_symtype;          ///< Kind of symbol (param, local, etc.)
+    bool m_has_derivs;          ///< Step to derivs (0 == has no derivs)
+    bool m_const_initializer;   ///< initializer is a constant expression
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
-    int m_deriv_step;           ///< Step to derivs (0 == has no derivs)
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol
     Symbol *m_alias;            ///< Another symbol that this is an alias for
-    bool m_const_initializer;   ///< initializer is a constant expression
 };
 
 

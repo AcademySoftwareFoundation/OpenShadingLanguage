@@ -95,6 +95,10 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
         m_shadingsys = &context->shadingsys ();
         m_renderer = m_shadingsys->renderer ();
         ASSERT (m_master && m_context && m_shadingsys && m_renderer);
+        // FIXME -- if the number of points we need now is <= last time
+        // we bound to this context, we can even skip much of the work
+        // below, and reuse all the heap offsets and pointers.  We can
+        // do that optimization later.
     }
 
     m_npoints = m_context->npoints ();
@@ -147,6 +151,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     // ASSERT (sym.dataoffset() >= 0 &&
                     //         "Global ought to already have a dataoffset");
                     // Skip this for now -- it includes L, Cl, etc.
+                    // FIXME
                     sym.step (0);   // FIXME
                 }
             }
@@ -180,7 +185,10 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                 sym.data (m_context->heapaddr (sym.dataoffset()));
                 sym.step (sizeof (ClosureColor *));
             } else {
-                sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()) * m_npoints);
+                size_t size = sym.size ();
+                if (sym.has_derivs ())
+                    size *= 3;
+                sym.dataoffset (m_context->heap_allot (size * m_npoints));
                 sym.data (m_context->heapaddr (sym.dataoffset()));
                 sym.step (0);  // FIXME
             }
@@ -459,16 +467,18 @@ ShadingExecution::format_symbol (const std::string &format,
         if (n > 1 && i < n-1)
             s += ' ';
     }
-    if (m_debug && sym.has_derivs() && type.basetype == TypeDesc::FLOAT) {
+    if (m_debug && sym.has_derivs() && sym.is_varying() &&
+            type.basetype == TypeDesc::FLOAT) {
         s += " {dx=";
         data += sym.deriv_step ();
         for (int i = 0;  i < n;  ++i)
-            s += Strutil::format ("%g ", ((const float *)data)[i]);
-        s += ", dy=";
+            s += Strutil::format ("%g%c", ((const float *)data)[i],
+                                  i < n-1 ? ' ' : ',');
+        s += " dy=";
         data += sym.deriv_step ();
         for (int i = 0;  i < n;  ++i)
-            s += Strutil::format ("%g ", ((const float *)data)[i]);
-        s += "}";
+            s += Strutil::format ("%g%c", ((const float *)data)[i],
+                                  i < n-1 ? ' ' : '}');
     }
     return s;
 }

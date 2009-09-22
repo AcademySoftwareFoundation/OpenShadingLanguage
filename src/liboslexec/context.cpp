@@ -74,7 +74,8 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     m_closures_allotted = 0;
 
     // Allocate enough space on the heap
-    size_t heap_size_needed = m_npoints * sas.heapsize ();
+    size_t heap_size_needed = m_npoints * sas.heapsize () + sas.heapround ();
+    // FIXME: the next statement is totally bogus, yet harmless.
     heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
     if (shadingsys().debug())
         std::cout << "  need heap " << heap_size_needed << " vs " << m_heap.size() << "\n";

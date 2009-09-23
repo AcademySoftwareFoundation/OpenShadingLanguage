@@ -202,7 +202,7 @@ public:
     /// Is it a simple scalar int?
     ///
     bool is_int () const {
-        ASSERT (! is_closure() && "Don't call this if it could be a closure");
+//        ASSERT (! is_closure() && "Don't call this if it could be a closure");
         return m_simple == TypeDesc::TypeInt && !is_closure();
     }
 

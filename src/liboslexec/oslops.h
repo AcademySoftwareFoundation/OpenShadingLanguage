@@ -247,7 +247,7 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
     }
 }
 
-// Wrapper around binary_op_guts that does has he call signature of an
+// Wrapper around ternary_op_guts that does has he call signature of an
 // ordinary shadeop.
 template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
 DECLOP (ternary_op)
@@ -271,14 +271,15 @@ template <class RET, class ATYPE, class BTYPE, class FUNCTION>
 inline void
 binary_op_guts (Symbol &Result, Symbol &A, Symbol &B,
                 ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint)
+                Runflag *runflags, int beginpoint, int endpoint,
+                bool zero_derivs=true)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying() | B.is_varying(),
                           A.data() == Result.data() || B.data() == Result.data());
 
     // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
+    if (zero_derivs && Result.has_derivs ())
         exec->zero_derivs (Result);
 
     // Loop over points, do the operation
@@ -337,21 +338,21 @@ DECLOP (binary_op_derivs)
         if (A.has_derivs()) {
             if (B.has_derivs())
                 binary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint);
+                                           runflags, beginpoint, endpoint, false);
             else
                 binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint);
+                                           runflags, beginpoint, endpoint, false);
         } else if (B.has_derivs()) {
             binary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint);
+                                           runflags, beginpoint, endpoint, false);
         } else {
             binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                                              runflags, beginpoint, endpoint);
+                                           runflags, beginpoint, endpoint,false);
             exec->zero_derivs (Result);
         }
     } else {
         binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                                                  runflags, beginpoint, endpoint);
+                                                  runflags, beginpoint, endpoint, false);
     }
 }
 

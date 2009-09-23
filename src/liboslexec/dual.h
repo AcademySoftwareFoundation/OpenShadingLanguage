@@ -154,7 +154,7 @@ Dual2<T> operator- (const Dual2<T> &a, const T &b)
 template<class T>
 Dual2<T> operator- (const T &a, const Dual2<T> &b)
 {
-    return Dual2<T> (a+b.val(), -b.dx(), -b.dy());
+    return Dual2<T> (a-b.val(), -b.dx(), -b.dy());
 }
 
 

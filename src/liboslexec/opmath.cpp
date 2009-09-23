@@ -70,6 +70,9 @@ class Sub {
 public:
     Sub (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) { return R (a - b); }
+    inline Dual2<R> operator() (const Dual2<A> &a, const Dual2<B> &b) { return (a - b); }
+    inline Dual2<R> operator() (const Dual2<A> &a, const B &b) { return (a - b); }
+    inline Dual2<R> operator() (const A &a, const Dual2<B> &b) { return (a - b); }
 };
 
 
@@ -79,6 +82,9 @@ class Mul {
 public:
     Mul (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) { return R (a * b); }
+    inline Dual2<R> operator() (const Dual2<A> &a, const Dual2<B> &b) { return (a * b); }
+    inline Dual2<R> operator() (const Dual2<A> &a, const B &b) { return (a * b); }
+    inline Dual2<R> operator() (const A &a, const Dual2<B> &b) { return (a * b); }
 };
 
 template<>
@@ -378,6 +384,32 @@ Dual2<VecProxy> operator+ (const Dual2<Float> &a, const Dual2<VecProxy> &b)
 }
 
 
+Dual2<VecProxy> operator- (const Dual2<VecProxy> &a, const Dual2<Float> &b)
+{
+    return Dual2<VecProxy> (a.val()-b.val(), a.dx()-b.dx(), a.dy()-b.dy());
+}
+
+
+Dual2<VecProxy> operator- (const Dual2<Float> &a, const Dual2<VecProxy> &b)
+{
+    return Dual2<VecProxy> (a.val()-b.val(), a.dx()-b.dx(), a.dy()-b.dy());
+}
+
+
+Dual2<VecProxy> operator* (const Dual2<VecProxy> &a, const Dual2<Float> &b)
+{
+    return Dual2<VecProxy> (a.val()*b.val(), a.val()*b.dx() + a.dx()*b.val(),
+                            a.val()*b.dy() + a.dy()*b.val());
+}
+
+
+Dual2<VecProxy> operator* (const Dual2<Float> &a, const Dual2<VecProxy> &b)
+{
+    return Dual2<VecProxy> (a.val()*b.val(), a.val()*b.dx() + a.dx()*b.val(),
+                            a.val()*b.dy() + a.dy()*b.val());
+}
+
+
 
 };  // End anonymous namespace
 
@@ -468,33 +500,21 @@ DECLOP (OP_sub)
                 impl = binary_op<Vec3,Vec3,Vec3, Sub<Vec3,Vec3,Vec3> >;
             else if (B.typespec().is_float())
                 impl = binary_op<VecProxy,VecProxy,float,
-                                 Sub<VecProxy,VecProxy,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<VecProxy,VecProxy,int,
-                                 Sub<VecProxy,VecProxy,int> >;
-        } else if (A.typespec().is_float()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,float,VecProxy,
-                                 Sub<VecProxy,float,VecProxy> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,int,VecProxy,
-                                 Sub<VecProxy,int,VecProxy> >;
+                                        Sub<VecProxy,VecProxy,float> >;
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            impl = binary_op<VecProxy,float,VecProxy,
+                             Sub<VecProxy,float,VecProxy> >;
         }
-    } 
-
-    else if (Result.typespec().is_float()) {
-        if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<float,float,float, Sub<float,float,float> >;
-        else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<float,float,int, Sub<float,float,int> >;
-        else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<float,int,float, Sub<float,int,float> >;
     }
 
-    else if (Result.typespec().is_int()) {
-        if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, Sub<int,int,int> >;
+    else if (Result.typespec().is_float() && 
+             A.typespec().is_float() && B.typespec().is_float()) {
+        impl = binary_op_derivs<float,float,float, Sub<float,float,float> >;
+    }
+
+    else if (Result.typespec().is_int() &&
+             A.typespec().is_int() && B.typespec().is_int()) {
+        impl = binary_op<int,int,int, Sub<int,int,int> >;
     }
 
     if (impl) {
@@ -542,58 +562,36 @@ DECLOP (OP_mul)
     else if (Result.typespec().is_triple()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op<Vec3,Vec3,Vec3, Mul<Vec3,Vec3,Vec3> >;
+                impl = binary_op_derivs<Vec3,Vec3,Vec3, Mul<Vec3,Vec3,Vec3> >;
             else if (B.typespec().is_float())
-                impl = binary_op<VecProxy,VecProxy,float,
+                impl = binary_op_derivs<VecProxy,VecProxy,float,
                                  Mul<VecProxy,VecProxy,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<VecProxy,VecProxy,int,
-                                 Mul<VecProxy,VecProxy,int> >;
-        } else if (A.typespec().is_float()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,float,VecProxy,
-                                 Mul<VecProxy,float,VecProxy> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,int,VecProxy,
-                                 Mul<VecProxy,int,VecProxy> >;
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            impl = binary_op_derivs<VecProxy,float,VecProxy,
+                             Mul<VecProxy,float,VecProxy> >;
         }
     } 
 
-    else if (Result.typespec().is_float()) {
-        if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<float,float,float, Mul<float,float,float> >;
-        else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<float,float,int, Mul<float,float,int> >;
-        else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<float,int,float, Mul<float,int,float> >;
+    else if (Result.typespec().is_float() &&
+             A.typespec().is_float() && B.typespec().is_float()) {
+        impl = binary_op_derivs<float,float,float, Mul<float,float,float> >;
     }
 
-    else if (Result.typespec().is_int()) {
-        if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, Mul<int,int,int> >;
+    else if (Result.typespec().is_int() &&
+             A.typespec().is_int() && B.typespec().is_int()) {
+        impl = binary_op<int,int,int, Mul<int,int,int> >;
     }
 
     else if (Result.typespec().is_matrix()) {
+        // FIXME? Is it meaningful to compute derivs of matrices?
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
                 impl = binary_op<Matrix44,float,float, ScalarMatrixMul>;
-            else if (B.typespec().is_int())
-                impl = binary_op<Matrix44,float,int, ScalarMatrixMul>;
             else if (B.typespec().is_matrix())
                 impl = binary_op<Matrix44,float,Matrix44, Mul<Matrix44,float,Matrix44> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_float())
-                impl = binary_op<Matrix44,int,float, ScalarMatrixMul>;
-            else if (B.typespec().is_int())
-                impl = binary_op<Matrix44,int,int, ScalarMatrixMul>;
-            else if (B.typespec().is_matrix())
-                impl = binary_op<Matrix44,int,Matrix44, Mul<Matrix44,int,Matrix44> >;
         } if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
                 impl = binary_op<Matrix44,Matrix44,float, Mul<Matrix44,Matrix44,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<Matrix44,Matrix44,int, Mul<Matrix44,Matrix44,int> >;
             else if (B.typespec().is_matrix())
                 impl = binary_op<Matrix44,Matrix44,Matrix44, Mul<Matrix44,Matrix44,Matrix44> >;
         }
@@ -647,54 +645,31 @@ DECLOP (OP_div)
             else if (B.typespec().is_float())
                 impl = binary_op<VecProxy,VecProxy,float,
                                  Div<VecProxy,VecProxy,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<VecProxy,VecProxy,int,
-                                 Div<VecProxy,VecProxy,int> >;
-        } else if (A.typespec().is_float()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,float,VecProxy,
-                                 Div<VecProxy,float,VecProxy> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,int,VecProxy,
-                                 Div<VecProxy,int,VecProxy> >;
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            impl = binary_op<VecProxy,float,VecProxy,
+                             Div<VecProxy,float,VecProxy> >;
         }
     } 
 
-    else if (Result.typespec().is_float()) {
-        if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<float,float,float, Div<float,float,float> >;
-        else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<float,float,int, Div<float,float,int> >;
-        else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<float,int,float, Div<float,int,float> >;
+    else if (Result.typespec().is_float() &&
+             A.typespec().is_float() && B.typespec().is_float()) {
+        impl = binary_op<float,float,float, Div<float,float,float> >;
     }
 
-    else if (Result.typespec().is_int()) {
-        if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, Div<int,int,int> >;
+    else if (Result.typespec().is_int() &&
+             A.typespec().is_int() && B.typespec().is_int()) {
+        impl = binary_op<int,int,int, Div<int,int,int> >;
     }
 
     else if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
                 impl = binary_op<Matrix44,float,float, ScalarMatrixDiv>;
-            else if (B.typespec().is_int())
-                impl = binary_op<Matrix44,float,int, ScalarMatrixDiv>;
             else if (B.typespec().is_matrix())
                 impl = binary_op<Matrix44,float,Matrix44, Div<Matrix44,float,Matrix44> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_float())
-                impl = binary_op<Matrix44,int,float, ScalarMatrixDiv>;
-            else if (B.typespec().is_int())
-                impl = binary_op<Matrix44,int,int, ScalarMatrixDiv>;
-            else if (B.typespec().is_matrix())
-                impl = binary_op<Matrix44,int,Matrix44, Div<Matrix44,int,Matrix44> >;
         } if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
                 impl = binary_op<Matrix44,Matrix44,float, Div<Matrix44,Matrix44,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<Matrix44,Matrix44,int, Div<Matrix44,Matrix44,int> >;
             else if (B.typespec().is_matrix())
                 impl = binary_op<Matrix44,Matrix44,Matrix44, Div<Matrix44,Matrix44,Matrix44> >;
         }

@@ -24,3 +24,13 @@ Add: a = u+v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
 Add: a = u+v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
 Add: a = u+v; a = 2, Dy(a) = 0.5, Dy(a) = 0.5
 
+Sub: a = u-v; a = 0, Dy(a) = 0.5, Dy(a) = -0.5
+Sub: a = u-v; a = 1, Dy(a) = 0.5, Dy(a) = -0.5
+Sub: a = u-v; a = -1, Dy(a) = 0.5, Dy(a) = -0.5
+Sub: a = u-v; a = 0, Dy(a) = 0.5, Dy(a) = -0.5
+
+Mul: a = u*v; a = 0, Dy(a) = 0, Dy(a) = 0
+Mul: a = u*v; a = 0, Dy(a) = 0, Dy(a) = 0.5
+Mul: a = u*v; a = 0, Dy(a) = 0.5, Dy(a) = 0
+Mul: a = u*v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
+

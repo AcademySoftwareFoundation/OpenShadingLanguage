@@ -318,7 +318,7 @@ DECLOP (OP_compref)
     DASSERT (Result.typespec().is_float() && V.typespec().is_triple() &&
              I.typespec().is_int());
 
-    binary_op_guts<Float,Vec3,int,Compref> (Result, V, I, exec,
+    binary_op_guts_noderivs<Float,Vec3,int,Compref> (Result, V, I, exec,
                                             runflags, beginpoint, endpoint);
 }
 
@@ -414,7 +414,7 @@ DECLOP (OP_dot)
     DASSERT (Result.typespec().is_float() && A.typespec().is_triple() &&
              B.typespec().is_triple());
 
-    binary_op_guts<Float,Vec3,Vec3,Dot> (Result, A, B, exec,
+    binary_op_guts_noderivs<Float,Vec3,Vec3,Dot> (Result, A, B, exec,
                                          runflags, beginpoint, endpoint);
 }
 
@@ -431,7 +431,7 @@ DECLOP (OP_cross)
     DASSERT (Result.typespec().is_triple() && A.typespec().is_triple() &&
              B.typespec().is_triple());
 
-    binary_op_guts<Vec3,Vec3,Vec3,Cross> (Result, A, B, exec,
+    binary_op_guts_noderivs<Vec3,Vec3,Vec3,Cross> (Result, A, B, exec,
                                           runflags, beginpoint, endpoint);
 }
 
@@ -446,8 +446,8 @@ DECLOP (OP_length)
              ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && A.typespec().is_triple());
 
-    unary_op_guts<Float,Vec3,Length> (Result, A, exec,
-                                      runflags, beginpoint, endpoint);
+    unary_op_guts_noderivs<Float,Vec3,Length> (Result, A, exec,
+                                               runflags, beginpoint, endpoint);
 }
 
 
@@ -461,8 +461,8 @@ DECLOP (OP_normalize)
              ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_triple() && A.typespec().is_triple());
 
-    unary_op_guts<Vec3,Vec3,Normalize> (Result, A, exec,
-                                        runflags, beginpoint, endpoint);
+    unary_op_guts_noderivs<Vec3,Vec3,Normalize> (Result, A, exec,
+                                                 runflags, beginpoint, endpoint);
 }
 
 
@@ -478,7 +478,7 @@ DECLOP (OP_distance)
     DASSERT (Result.typespec().is_float() && A.typespec().is_triple() &&
              B.typespec().is_triple());
 
-    binary_op_guts<Float,Vec3,Vec3,Distance> (Result, A, B, exec,
+    binary_op_guts_noderivs<Float,Vec3,Vec3,Distance> (Result, A, B, exec,
                                               runflags, beginpoint, endpoint);
 }
 

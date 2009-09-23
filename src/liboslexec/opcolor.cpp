@@ -246,8 +246,8 @@ DECLOP (OP_luminance)
     DASSERT (! Result.typespec().is_closure() && ! C.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
-    unary_op_guts<Float, Color3, Luminance> (Result, C, exec, runflags,
-                                             beginpoint, endpoint);
+    unary_op_guts_noderivs<Float, Color3, Luminance> (Result, C, exec, runflags,
+                                                      beginpoint, endpoint);
 }
 
 

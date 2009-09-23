@@ -357,7 +357,7 @@ DECLOP (OP_determinant)
     DASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && A.typespec().is_matrix());
 
-    unary_op_guts<Float, Matrix44, Determinant> (Result, A, exec, runflags,
+    unary_op_guts_noderivs<Float, Matrix44, Determinant> (Result, A, exec, runflags,
                                                  beginpoint, endpoint);
 }
 
@@ -371,7 +371,7 @@ DECLOP (OP_transpose)
     DASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_matrix() && A.typespec().is_matrix());
 
-    unary_op_guts<Matrix44, Matrix44, Transpose> (Result, A, exec, runflags,
+    unary_op_guts_noderivs<Matrix44, Matrix44, Transpose> (Result, A, exec, runflags,
                                                   beginpoint, endpoint);
 }
 

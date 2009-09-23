@@ -120,39 +120,39 @@ DECLOP (OP_eq)
     if (Result.typespec().is_int()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op<int,Vec3,Vec3, Equal<Vec3,Vec3> >;
+                impl = binary_op_noderivs<int,Vec3,Vec3, Equal<Vec3,Vec3> >;
             else if (B.typespec().is_float())
-                impl = binary_op<int,VecProxy,float, Equal<VecProxy,float> >;
+                impl = binary_op_noderivs<int,VecProxy,float, Equal<VecProxy,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,VecProxy,int, Equal<VecProxy,int> >;
+                impl = binary_op_noderivs<int,VecProxy,int, Equal<VecProxy,int> >;
         } else if (A.typespec().is_float()) {
             if (B.typespec().is_triple())
-                impl = binary_op<int,float,VecProxy, Equal<float,VecProxy> >;
+                impl = binary_op_noderivs<int,float,VecProxy, Equal<float,VecProxy> >;
             else if (B.typespec().is_float())
-                impl = binary_op<int,float,float, Equal<float,float> >;
+                impl = binary_op_noderivs<int,float,float, Equal<float,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,float,int, Equal<float,int> >;
+                impl = binary_op_noderivs<int,float,int, Equal<float,int> >;
             else if (B.typespec().is_matrix())
-                impl = binary_op<int,float,MatrixProxy, Equal<float,MatrixProxy> >;
+                impl = binary_op_noderivs<int,float,MatrixProxy, Equal<float,MatrixProxy> >;
         } if (A.typespec().is_int()) {
             if (B.typespec().is_triple())
-                impl = binary_op<int,int,VecProxy, Equal<int,VecProxy> >;
+                impl = binary_op_noderivs<int,int,VecProxy, Equal<int,VecProxy> >;
             else if (B.typespec().is_float())
-                impl = binary_op<int,int,float, Equal<int,float> >;
+                impl = binary_op_noderivs<int,int,float, Equal<int,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,int,int, Equal<int,int> >;
+                impl = binary_op_noderivs<int,int,int, Equal<int,int> >;
             else if (B.typespec().is_matrix())
-                impl = binary_op<int,int,MatrixProxy, Equal<int,MatrixProxy> >;
+                impl = binary_op_noderivs<int,int,MatrixProxy, Equal<int,MatrixProxy> >;
         } if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                impl = binary_op<int,MatrixProxy,float, Equal<MatrixProxy,float> >;
+                impl = binary_op_noderivs<int,MatrixProxy,float, Equal<MatrixProxy,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,MatrixProxy,int, Equal<MatrixProxy,int> >;
+                impl = binary_op_noderivs<int,MatrixProxy,int, Equal<MatrixProxy,int> >;
             else if (B.typespec().is_matrix())
-                impl = binary_op<int,Matrix44,Matrix44, Equal<Matrix44,Matrix44> >;
+                impl = binary_op_noderivs<int,Matrix44,Matrix44, Equal<Matrix44,Matrix44> >;
         } if (A.typespec().is_string()) {
             if (B.typespec().is_string())
-                impl = binary_op<int,ustring,ustring, Equal<ustring,ustring> >;
+                impl = binary_op_noderivs<int,ustring,ustring, Equal<ustring,ustring> >;
         }
     }
 
@@ -193,39 +193,39 @@ DECLOP (OP_neq)
     if (Result.typespec().is_int()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op<int,Vec3,Vec3, NotEqual<Vec3,Vec3> >;
+                impl = binary_op_noderivs<int,Vec3,Vec3, NotEqual<Vec3,Vec3> >;
             else if (B.typespec().is_float())
-                impl = binary_op<int,VecProxy,float, NotEqual<VecProxy,float> >;
+                impl = binary_op_noderivs<int,VecProxy,float, NotEqual<VecProxy,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,VecProxy,int, NotEqual<VecProxy,int> >;
+                impl = binary_op_noderivs<int,VecProxy,int, NotEqual<VecProxy,int> >;
         } else if (A.typespec().is_float()) {
             if (B.typespec().is_triple())
-                impl = binary_op<int,float,VecProxy, NotEqual<float,VecProxy> >;
+                impl = binary_op_noderivs<int,float,VecProxy, NotEqual<float,VecProxy> >;
             else if (B.typespec().is_float())
-                impl = binary_op<int,float,float, NotEqual<float,float> >;
+                impl = binary_op_noderivs<int,float,float, NotEqual<float,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,float,int, NotEqual<float,int> >;
+                impl = binary_op_noderivs<int,float,int, NotEqual<float,int> >;
             else if (B.typespec().is_matrix())
-                impl = binary_op<int,float,MatrixProxy, NotEqual<float,MatrixProxy> >;
+                impl = binary_op_noderivs<int,float,MatrixProxy, NotEqual<float,MatrixProxy> >;
         } if (A.typespec().is_int()) {
             if (B.typespec().is_triple())
-                impl = binary_op<int,int,VecProxy, NotEqual<int,VecProxy> >;
+                impl = binary_op_noderivs<int,int,VecProxy, NotEqual<int,VecProxy> >;
             else if (B.typespec().is_float())
-                impl = binary_op<int,int,float, NotEqual<int,float> >;
+                impl = binary_op_noderivs<int,int,float, NotEqual<int,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,int,int, NotEqual<int,int> >;
+                impl = binary_op_noderivs<int,int,int, NotEqual<int,int> >;
             else if (B.typespec().is_matrix())
-                impl = binary_op<int,int,MatrixProxy, NotEqual<int,MatrixProxy> >;
+                impl = binary_op_noderivs<int,int,MatrixProxy, NotEqual<int,MatrixProxy> >;
         } if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                impl = binary_op<int,MatrixProxy,float, NotEqual<MatrixProxy,float> >;
+                impl = binary_op_noderivs<int,MatrixProxy,float, NotEqual<MatrixProxy,float> >;
             else if (B.typespec().is_int())
-                impl = binary_op<int,MatrixProxy,int, NotEqual<MatrixProxy,int> >;
+                impl = binary_op_noderivs<int,MatrixProxy,int, NotEqual<MatrixProxy,int> >;
             else if (B.typespec().is_matrix())
-                impl = binary_op<int,Matrix44,Matrix44, NotEqual<Matrix44,Matrix44> >;
+                impl = binary_op_noderivs<int,Matrix44,Matrix44, NotEqual<Matrix44,Matrix44> >;
         } if (A.typespec().is_string()) {
             if (B.typespec().is_string())
-                impl = binary_op<int,ustring,ustring, NotEqual<ustring,ustring> >;
+                impl = binary_op_noderivs<int,ustring,ustring, NotEqual<ustring,ustring> >;
         }
     }
 
@@ -265,13 +265,13 @@ DECLOP (OP_lt)
 
     if (Result.typespec().is_int()) {
         if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<int,float,float, Less<float,float> >;
+            impl = binary_op_noderivs<int,float,float, Less<float,float> >;
         else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<int,float,int, Less<float,int> >;
+            impl = binary_op_noderivs<int,float,int, Less<float,int> >;
         else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<int,int,float, Less<int,float> >;
+            impl = binary_op_noderivs<int,int,float, Less<int,float> >;
         else if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, Less<int,int> >;
+            impl = binary_op_noderivs<int,int,int, Less<int,int> >;
     }
 
     if (impl) {
@@ -310,13 +310,13 @@ DECLOP (OP_le)
 
     if (Result.typespec().is_int()) {
         if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<int,float,float, LessEqual<float,float> >;
+            impl = binary_op_noderivs<int,float,float, LessEqual<float,float> >;
         else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<int,float,int, LessEqual<float,int> >;
+            impl = binary_op_noderivs<int,float,int, LessEqual<float,int> >;
         else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<int,int,float, LessEqual<int,float> >;
+            impl = binary_op_noderivs<int,int,float, LessEqual<int,float> >;
         else if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, LessEqual<int,int> >;
+            impl = binary_op_noderivs<int,int,int, LessEqual<int,int> >;
     }
 
     if (impl) {
@@ -355,13 +355,13 @@ DECLOP (OP_gt)
 
     if (Result.typespec().is_int()) {
         if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<int,float,float, Greater<float,float> >;
+            impl = binary_op_noderivs<int,float,float, Greater<float,float> >;
         else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<int,float,int, Greater<float,int> >;
+            impl = binary_op_noderivs<int,float,int, Greater<float,int> >;
         else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<int,int,float, Greater<int,float> >;
+            impl = binary_op_noderivs<int,int,float, Greater<int,float> >;
         else if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, Greater<int,int> >;
+            impl = binary_op_noderivs<int,int,int, Greater<int,int> >;
     }
 
     if (impl) {
@@ -400,13 +400,13 @@ DECLOP (OP_ge)
 
     if (Result.typespec().is_int()) {
         if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<int,float,float, GreaterEqual<float,float> >;
+            impl = binary_op_noderivs<int,float,float, GreaterEqual<float,float> >;
         else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<int,float,int, GreaterEqual<float,int> >;
+            impl = binary_op_noderivs<int,float,int, GreaterEqual<float,int> >;
         else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<int,int,float, GreaterEqual<int,float> >;
+            impl = binary_op_noderivs<int,int,float, GreaterEqual<int,float> >;
         else if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, GreaterEqual<int,int> >;
+            impl = binary_op_noderivs<int,int,int, GreaterEqual<int,int> >;
     }
 
     if (impl) {

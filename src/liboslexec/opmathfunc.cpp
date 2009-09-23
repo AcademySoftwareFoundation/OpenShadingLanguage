@@ -742,10 +742,10 @@ DECLOP (generic_unary_function_shadeop)
 
     // We allow two flavors: float = func (float), and triple = func (triple)
     if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-        impl = unary_op<Vec3,Vec3, FUNCTION >;
+        impl = unary_op_noderivs<Vec3,Vec3, FUNCTION >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float()) {
-        impl = unary_op<float,float, FUNCTION >;
+        impl = unary_op_noderivs<float,float, FUNCTION >;
     }
 
     if (impl) {
@@ -780,10 +780,10 @@ DECLOP (generic_binary_function_shadeop)
 
     // We allow two flavors: float = func (float, float), and triple = func (triple, triple)
     if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple()) {
-        impl = binary_op<Vec3,Vec3,Vec3, FUNCTION >;
+        impl = binary_op_noderivs<Vec3,Vec3,Vec3, FUNCTION >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
-        impl = binary_op<float,float,float, FUNCTION >;
+        impl = binary_op_noderivs<float,float,float, FUNCTION >;
     }
 
     if (impl) {
@@ -932,10 +932,10 @@ DECLOP (OP_log)
     if (nargs == 2) {
         ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
         if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-            impl = unary_op<Vec3,Vec3, Log>;
+            impl = unary_op_noderivs<Vec3,Vec3, Log>;
         }
         else if (Result.typespec().is_float() && A.typespec().is_float()){
-            impl = unary_op<float,float, Log>;
+            impl = unary_op_noderivs<float,float, Log>;
         }
         else {
             std::cerr << "Don't know how compute " << Result.typespec().string()
@@ -950,10 +950,10 @@ DECLOP (OP_log)
         Symbol &B (exec->sym (args[2]));
         ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
         if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_float()) {
-            impl = binary_op<Vec3,Vec3,float, Log>;
+            impl = binary_op_noderivs<Vec3,Vec3,float, Log>;
         }
         else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()){
-            impl = binary_op<float,float,float, Log>;
+            impl = binary_op_noderivs<float,float,float, Log>;
         }
         else {
             std::cerr << "Don't know how compute " << Result.typespec().string()
@@ -1022,10 +1022,10 @@ DECLOP (OP_pow)
 
     ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
     if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_float()) {
-        impl = binary_op<Vec3,Vec3,float, Pow>;
+        impl = binary_op_noderivs<Vec3,Vec3,float, Pow>;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()){
-        impl = binary_op<float,float,float, Pow>;
+        impl = binary_op_noderivs<float,float,float, Pow>;
     }
     else {
         std::cerr << "Don't know how compute " << Result.typespec().string()
@@ -1046,13 +1046,13 @@ DECLOP (OP_pow)
 
 DECLOP (OP_erf)
 {
-    unary_op<float,float,Erf> (exec, nargs, args, 
+    unary_op_noderivs<float,float,Erf> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_erfc)
 {
-    unary_op<float,float,Erfc> (exec, nargs, args, 
+    unary_op_noderivs<float,float,Erfc> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1070,13 +1070,13 @@ DECLOP (OP_fabs)
 
     // We allow two flavors: float = func (float), and triple = func (triple)
     if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-        impl = unary_op<Vec3,Vec3, FAbs >;
+        impl = unary_op_noderivs<Vec3,Vec3, FAbs >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float()) {
-        impl = unary_op<float,float, FAbs >;
+        impl = unary_op_noderivs<float,float, FAbs >;
     }
     else if (Result.typespec().is_int() && A.typespec().is_int()) {
-        impl = unary_op<int,int, FAbs >;
+        impl = unary_op_noderivs<int,int, FAbs >;
     }
 
     if (impl) {
@@ -1138,19 +1138,19 @@ DECLOP (OP_inversesqrt)
 
 DECLOP (OP_isnan)
 {
-    unary_op<int,float,IsNan> (exec, nargs, args, 
+    unary_op_noderivs<int,float,IsNan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_isinf)
 {
-    unary_op<int,float,IsInf> (exec, nargs, args, 
+    unary_op_noderivs<int,float,IsInf> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_isfinite)
 {
-    unary_op<int,float,IsFinite> (exec, nargs, args, 
+    unary_op_noderivs<int,float,IsFinite> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1215,7 +1215,7 @@ DECLOP (OP_mix)
 
 DECLOP (OP_step)
 {
-    binary_op<float,float,float,Step> (exec, nargs, args, 
+    binary_op_noderivs<float,float,float,Step> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1234,7 +1234,7 @@ DECLOP (OP_hypot)
     if (nargs == 3) {
         ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
         if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
-            impl = binary_op<float,float,float, Hypot>;
+            impl = binary_op_noderivs<float,float,float, Hypot>;
         }
         else {
             std::cerr << "Don't know how compute " << Result.typespec().string()
@@ -1279,7 +1279,7 @@ DECLOP (OP_smoothstep)
 
 DECLOP (OP_reflect)
 {
-    binary_op<Vec3,Vec3,Vec3, Reflect> (exec, nargs, args, 
+    binary_op_noderivs<Vec3,Vec3,Vec3, Reflect> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

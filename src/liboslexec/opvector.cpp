@@ -222,7 +222,7 @@ DECLOP (triple_ctr_shadeop)
 class Compref {
 public:
     Compref (ShadingExecution *exec) : m_exec (exec) { }
-    float operator() (const Vec3 &v, int i) {
+    void operator() (float &result, const Vec3 &v, int i) {
         if (i < 0 || i > 2) {
             const Symbol &V (m_exec->sym (m_exec->op().firstarg()+1));
             m_exec->error ("Index out of range: %s %s[%d]\n",
@@ -230,7 +230,7 @@ public:
                            V.name().c_str(), i);
             i = clamp (i, 0, 2);
         }
-        return v[i];
+        result = v[i];
     }
 private:
     ShadingExecution *m_exec;
@@ -240,39 +240,39 @@ private:
 class Dot {
 public:
     Dot (ShadingExecution *) { }
-    float operator() (const Vec3 &a, const Vec3 &b) { return a.dot (b); }
+    void operator() (float &result, const Vec3 &a, const Vec3 &b) { result = a.dot (b); }
 };
 
 
 class Cross {
 public:
     Cross (ShadingExecution *) { }
-    Vec3 operator() (const Vec3 &a, const Vec3 &b) { return a.cross (b); }
+    void operator() (Vec3 &result, const Vec3 &a, const Vec3 &b) { result = a.cross (b); }
 };
 
 
 class Length {
 public:
     Length (ShadingExecution *) { }
-    float operator() (const Vec3 &a) { return a.length(); }
+    void operator() (float &result, const Vec3 &a) { result = a.length(); }
 };
 
 
 class Normalize {
 public:
     Normalize (ShadingExecution *) { }
-    Vec3 operator() (const Vec3 &a) { return a.normalized(); }
+    void operator() (Vec3 &result, const Vec3 &a) { result = a.normalized(); }
 };
 
 
 class Distance {
 public:
     Distance (ShadingExecution *) { }
-    float operator() (const Vec3 &a, const Vec3 &b) {
+    void operator() (float &result, const Vec3 &a, const Vec3 &b) {
         float x = a[0] - b[0];
         float y = a[1] - b[1];
         float z = a[2] - b[2];
-        return sqrtf (x*x + y*y + z*z);
+        result = sqrtf (x*x + y*y + z*z);
     }
 };
 

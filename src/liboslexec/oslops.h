@@ -230,12 +230,13 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
     FUNCTION function (exec);
     if (result.is_uniform()) {
         // Uniform case
-        *result = function (*a, *b, *c);
+        function (*result, *a, *b, *c);
     } else if (A.is_uniform() && B.is_uniform() && C.is_uniform()) {
         // Operands are uniform but we're assigning to a varying (it can
         // happen if we're in a conditional).  Take a shortcut by doing
         // the operation only once.
-        RET r = function (*a, *b, *c);
+        RET r;
+        function (r, *a, *b, *c);
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = r;
@@ -243,7 +244,7 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
         // Fully varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
-                result[i] = function (a[i], b[i], c[i]);
+                function (result[i], a[i], b[i], c[i]);
     }
 }
 
@@ -290,12 +291,13 @@ binary_op_guts_noderivs (Symbol &Result, Symbol &A, Symbol &B,
     FUNCTION function (exec);
     if (result.is_uniform()) {
         // Uniform case
-        *result = function (*a, *b);
+        function (*result, *a, *b);
     } else if (A.is_uniform() && B.is_uniform()) {
         // Operands are uniform but we're assigning to a varying (it can
         // happen if we're in a conditional).  Take a shortcut by doing
         // the operation only once.
-        RET r = function (*a, *b);
+        RET r;
+        function (r, *a, *b);
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = r;
@@ -303,7 +305,7 @@ binary_op_guts_noderivs (Symbol &Result, Symbol &A, Symbol &B,
         // Fully varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
-                result[i] = function (a[i], b[i]);
+                function (result[i], a[i], b[i]);
     }
 }
 
@@ -338,7 +340,7 @@ binary_op_guts_derivs (Symbol &Result, Symbol &A, Symbol &B,
         VaryingRef<RET> result ((RET *)Result.data(), Result.step());
         VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
         VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-        *result = function (*a, *b);
+        function (*result, *a, *b);
         if (Result.has_derivs ())
             exec->zero_derivs (Result);
     } else if (A.is_uniform() && B.is_uniform()) {
@@ -348,7 +350,8 @@ binary_op_guts_derivs (Symbol &Result, Symbol &A, Symbol &B,
         VaryingRef<RET> result ((RET *)Result.data(), Result.step());
         VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
         VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-        RET r = function (*a, *b);
+        RET r;
+        function (r, *a, *b);
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = r;
@@ -361,7 +364,7 @@ binary_op_guts_derivs (Symbol &Result, Symbol &A, Symbol &B,
         VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
-                result[i] = function (a[i], b[i]);
+                function (result[i], a[i], b[i]);
         if (Result.has_derivs ())
             exec->zero_derivs (Result);
     }
@@ -442,12 +445,13 @@ unary_op_guts_noderivs (Symbol &Result, Symbol &A,
     FUNCTION function (exec);
     if (result.is_uniform()) {
         // Uniform case
-        *result = function (*a);
+        function (*result, *a);
     } else if (A.is_uniform()) {
         // Operands are uniform but we're assigning to a varying (it can
         // happen if we're in a conditional).  Take a shortcut by doing
         // the operation only once.
-        RET r = function (*a);
+        RET r;
+        function (r, *a);
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = r;
@@ -455,7 +459,7 @@ unary_op_guts_noderivs (Symbol &Result, Symbol &A,
         // Fully varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
-                result[i] = function (a[i]);
+                function (result[i], a[i]);
     }
 }
 
@@ -484,7 +488,8 @@ unary_op_guts_derivs (Symbol &Result, Symbol &A,
         // Operands are uniform but we're assigning to a varying (it can
         // happen if we're in a conditional).  Take a shortcut by doing
         // the operation only once.
-        RET r = function (*(ATYPE *)A.data());
+        RET r;
+        function (r, *(ATYPE *)A.data());
         VaryingRef<RET> result ((RET *)Result.data(), Result.step());
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
@@ -498,13 +503,13 @@ unary_op_guts_derivs (Symbol &Result, Symbol &A,
             VaryingRef<Dual2<ATYPE> > a ((Dual2<ATYPE> *)A.data(), A.step());
             for (int i = beginpoint;  i < endpoint;  ++i)
                 if (runflags[i])
-                    result[i] = function (a[i]);
+                    function (result[i], a[i]);
         } else {
             VaryingRef<RET> result ((RET *)Result.data(), Result.step());
             VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
             for (int i = beginpoint;  i < endpoint;  ++i)
                 if (runflags[i])
-                    result[i] = function (a[i]);
+                    function (result[i], a[i]);
             if (Result.has_derivs())
                 exec->zero_derivs (Result);
         }
@@ -545,6 +550,7 @@ DECLOP (unary_op_derivs)
 // not normally supported by Imath::Vec3.  This is purely for convenience.
 class VecProxy : public Vec3 {
 public:
+    VecProxy () { }
     VecProxy (float a) : Vec3(a,a,a) { }
     VecProxy (float a, float b, float c) : Vec3(a,b,c) { }
     VecProxy (const Vec3& v) : Vec3(v) { }
@@ -615,6 +621,7 @@ public:
 // to mean f*Identity.
 class MatrixProxy : public Matrix44 {
 public:
+    MatrixProxy () { }
     MatrixProxy (float a, float b, float c, float d,
                  float e, float f, float g, float h,
                  float i, float j, float k, float l,

@@ -57,10 +57,10 @@ template<class R, class A, class B>
 class Add {
 public:
     Add (ShadingExecution *) { }
-    inline R operator() (const A &a, const B &b) { return R (a + b); }
-    inline Dual2<R> operator() (const Dual2<A> &a, const Dual2<B> &b) { return (a + b); }
-    inline Dual2<R> operator() (const Dual2<A> &a, const B &b) { return (a + b); }
-    inline Dual2<R> operator() (const A &a, const Dual2<B> &b) { return (a + b); }
+    inline void operator() (R &result, const A &a, const B &b) { result = R (a + b); }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const Dual2<B> &b) { result = (a + b); }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const B &b) { result = (a + b); }
+    inline void operator() (Dual2<R> &result, const A &a, const Dual2<B> &b) { result = (a + b); }
 };
 
 
@@ -69,10 +69,10 @@ template<class R, class A, class B>
 class Sub {
 public:
     Sub (ShadingExecution *) { }
-    inline R operator() (const A &a, const B &b) { return R (a - b); }
-    inline Dual2<R> operator() (const Dual2<A> &a, const Dual2<B> &b) { return (a - b); }
-    inline Dual2<R> operator() (const Dual2<A> &a, const B &b) { return (a - b); }
-    inline Dual2<R> operator() (const A &a, const Dual2<B> &b) { return (a - b); }
+    inline void operator() (R &result, const A &a, const B &b) { result = R (a - b); }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const Dual2<B> &b) { result = (a - b); }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const B &b) { result = (a - b); }
+    inline void operator() (Dual2<R> &result, const A &a, const Dual2<B> &b) { result = (a - b); }
 };
 
 
@@ -81,37 +81,19 @@ template<class R, class A, class B>
 class Mul {
 public:
     Mul (ShadingExecution *) { }
-    inline R operator() (const A &a, const B &b) { return R (a * b); }
-    inline Dual2<R> operator() (const Dual2<A> &a, const Dual2<B> &b) { return (a * b); }
-    inline Dual2<R> operator() (const Dual2<A> &a, const B &b) { return (a * b); }
-    inline Dual2<R> operator() (const A &a, const Dual2<B> &b) { return (a * b); }
-};
-
-template<>
-class Mul<Matrix44,Matrix44,int> {
-public:
-    Mul (ShadingExecution *) { }
-    inline Matrix44 operator() (const Matrix44 &a, int b) {
-        return Matrix44 (a * (float)b);
-    }
-};
-
-template<>
-class Mul<Matrix44,int,Matrix44> {
-public:
-    Mul (ShadingExecution *) { }
-    inline Matrix44 operator() (int a, const Matrix44 &b) {
-        return Matrix44 ((float)a * b);
-    }
+    inline void operator() (R &result, const A &a, const B &b) { result = R (a * b); }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const Dual2<B> &b) { result = (a * b); }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const B &b) { result = (a * b); }
+    inline void operator() (Dual2<R> &result, const A &a, const Dual2<B> &b) { result = (a * b); }
 };
 
 // Specialized version for matrix = scalar * scalar
 class ScalarMatrixMul {
 public:
     ScalarMatrixMul (ShadingExecution *) { }
-    inline Matrix44 operator() (float a, float b) {
+    inline void operator() (Matrix44 &result, float a, float b) {
         float f = a * b;
-        return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
+        result = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
     }
 };
 
@@ -120,8 +102,8 @@ template<class R, class A, class B>
 class Div {
 public:
     Div (ShadingExecution *) { }
-    inline R operator() (const A &a, const B &b) {
-        return (b == (Float)0.0) ? R (0.0) : R (a / b);
+    inline void operator() (R &result, const A &a, const B &b) {
+        result = (b == (Float)0.0) ? R (0.0) : R (a / b);
     }
 };
 
@@ -131,8 +113,8 @@ class Div<Matrix44,Matrix44,Matrix44>
 {
 public:
     Div (ShadingExecution *) { }
-    inline Matrix44 operator() (const Matrix44 &a, const Matrix44 &b) {
-        return a * b.inverse();
+    inline void operator() (Matrix44 &result, const Matrix44 &a, const Matrix44 &b) {
+        result = a * b.inverse();
     }
 };
 
@@ -142,30 +124,8 @@ class Div<Matrix44,float,Matrix44>
 {
 public:
     Div (ShadingExecution *) { }
-    inline Matrix44 operator() (float a, const Matrix44 &b) {
-        return a * b.inverse();
-    }
-};
-
-// Specialized version for matrix = int / matrix
-template<>
-class Div<Matrix44,int,Matrix44>
-{
-public:
-    Div (ShadingExecution *) { }
-    inline Matrix44 operator() (int a, const Matrix44 &b) {
-        return (float)a * b.inverse();
-    }
-};
-
-// Specialized version for matrix = matrix / int
-template<>
-class Div<Matrix44,Matrix44,int>
-{
-public:
-    Div (ShadingExecution *) { }
-    inline Matrix44 operator() (const Matrix44 &a, int b) {
-        return a / (float)b;
+    inline void operator() (Matrix44 &result, float a, const Matrix44 &b) {
+        result = a * b.inverse();
     }
 };
 
@@ -173,9 +133,9 @@ public:
 class ScalarMatrixDiv {
 public:
     ScalarMatrixDiv (ShadingExecution *) { }
-    inline Matrix44 operator() (float a, float b) {
+    inline void operator() (Matrix44 &result, float a, float b) {
         float f = (b == 0) ? 0.0 : (a / b);
-        return Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
+        result = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
     }
 };
 
@@ -183,10 +143,10 @@ public:
 class Mod {
 public:
     Mod (ShadingExecution *exec) : m_exec(exec) { }
-    inline int operator() (int a, int b) { return safe_mod(a, b); }
-    inline float operator() (float x, float y) { return safe_fmod(x, y); }
-    inline Vec3 operator() (const Vec3 &x, float y) { return safe_fmod(x, y); }
-    inline Vec3 operator() (const Vec3 &x, const Vec3 &y) { return safe_fmod(x, y); }
+    inline void operator() (int &result, int a, int b) { result = safe_mod(a, b); }
+    inline void operator() (float &result, float x, float y) { result = safe_fmod(x, y); }
+    inline void operator() (Vec3 &result, const Vec3 &x, float y) { result = safe_fmod(x, y); }
+    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y) { result = safe_fmod(x, y); }
 private:
     inline int safe_mod(int a, int b) {
         if (b == 0) {
@@ -237,16 +197,12 @@ template<class R, class A>
 class Neg {
 public:
     Neg (ShadingExecution *) { }
-    inline R operator() (const A &a) { return R (-a); }
+    inline void operator() (R &result, const A &a) { result = -a; }
 };
 
 
 
-// Specialized binary operation driver for closures.  We actually store
-// the pointers to the closures, so r = op(a,b) won't work properly.
-// What we really want is *r = op(*a,*b), but we don't want the copy
-// either.  So we use a functor that takes arguments (result, a, b) and
-// do not return a value.
+// Specialized binary operation driver for closures.  
 template <class ATYPE, class BTYPE, class FUNCTION>
 DECLOP (closure_binary_op)
 {
@@ -271,11 +227,7 @@ DECLOP (closure_binary_op)
 
 
 
-// Specialized unary operation driver for closures.  We actually store
-// the pointers to the closures, so r = op(a) won't work properly.
-// What we really want is *r = op(*a), but we don't want the copy
-// either.  So we use a functor that takes arguments (result, a) and
-// do not return a value.
+// Specialized unary operation driver for closures.  
 template <class ATYPE, class FUNCTION>
 DECLOP (closure_unary_op)
 {

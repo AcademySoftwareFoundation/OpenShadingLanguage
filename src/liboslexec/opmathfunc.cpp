@@ -83,27 +83,27 @@ namespace {
 class Cos {
 public:
     Cos (ShadingExecution *) { }
-    inline float operator() (float x) { return cosf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (cosf (x[0]), cosf (x[1]), cosf (x[2]));
+    inline void operator() (float &result, float x) { result = cosf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (cosf (x[0]), cosf (x[1]), cosf (x[2]));
     }
 };
 
 class Sin {
 public:
     Sin (ShadingExecution *) { }
-    inline float operator() (float x) { return sinf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (sinf (x[0]), sinf (x[1]), sinf (x[2]));
+    inline void operator() (float &result, float x) { result = sinf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (sinf (x[0]), sinf (x[1]), sinf (x[2]));
     }
 };
 
 class Tan {
 public:
     Tan (ShadingExecution *) { }
-    inline float operator() (float x) { return tanf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (tanf (x[0]), tanf (x[1]), tanf (x[2]));
+    inline void operator() (float &result, float x) { result = tanf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (tanf (x[0]), tanf (x[1]), tanf (x[2]));
     }
 };
 
@@ -112,9 +112,9 @@ public:
 class ACos {
 public:
     ACos (ShadingExecution *) { }
-    inline float operator() (float x) { return safe_acosf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (safe_acosf (x[0]), safe_acosf (x[1]), safe_acosf (x[2]));
+    inline void operator() (float &result, float x) { result = safe_acosf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (safe_acosf (x[0]), safe_acosf (x[1]), safe_acosf (x[2]));
     }
 private:
     inline float safe_acosf (float x) {
@@ -127,9 +127,9 @@ private:
 class ASin {
 public:
     ASin (ShadingExecution *) { }
-    inline float operator() (float x) { return safe_asinf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (safe_asinf (x[0]), safe_asinf (x[1]), safe_asinf (x[2]));
+    inline void operator() (float &result, float x) { result = safe_asinf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (safe_asinf (x[0]), safe_asinf (x[1]), safe_asinf (x[2]));
     }
 private:
     static inline float safe_asinf (float x) {
@@ -142,18 +142,18 @@ private:
 class ATan {
 public:
     ATan (ShadingExecution *) { }
-    inline float operator() (float x) { return atanf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (atanf (x[0]), atanf (x[1]), atanf (x[2]));
+    inline void operator() (float &result, float x) { result = atanf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (atanf (x[0]), atanf (x[1]), atanf (x[2]));
     }
 };
 
 class ATan2 {
 public:
     ATan2 (ShadingExecution *) { }
-    inline float operator() (float y, float x) { return atan2f (y, x); }
-    inline Vec3 operator() (const Vec3 &y, const Vec3 &x) {
-        return Vec3 (atan2f (y[0], x[0]), atan2f (y[1], x[1]), atan2f (y[2], x[2]));
+    inline void operator() (float &result, float y, float x) { result = atan2f (y, x); }
+    inline void operator() (Vec3 &result, const Vec3 &y, const Vec3 &x) {
+        result = Vec3 (atan2f (y[0], x[0]), atan2f (y[1], x[1]), atan2f (y[2], x[2]));
     }
 };
 
@@ -162,15 +162,15 @@ public:
 class Degrees {
 public:
     Degrees (ShadingExecution *) { }
-    inline float operator() (float x) { return x*180.0/M_PI; }
-    inline Vec3 operator() (const Vec3 &x) { return x*Float(180.0/M_PI); }
+    inline void operator() (float &result, float x) { result = x*180.0/M_PI; }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = x*Float(180.0/M_PI); }
 };
 
 class Radians {
 public:
     Radians (ShadingExecution *) { }
-    inline float operator() (float x) { return x*M_PI/180.0; }
-    inline Vec3 operator() (Vec3 &x) { return x*Float(M_PI/180.0); }
+    inline void operator() (float &result, float x) { result = x*M_PI/180.0; }
+    inline void operator() (Vec3 &result, Vec3 &x) { result = x*Float(M_PI/180.0); }
 };
 
 
@@ -179,27 +179,27 @@ public:
 class Cosh {
 public:
     Cosh (ShadingExecution *) { }
-    inline float operator() (float x) { return coshf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (coshf (x[0]), coshf (x[1]), coshf (x[2]));
+    inline void operator() (float &result, float x) { result = coshf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (coshf (x[0]), coshf (x[1]), coshf (x[2]));
     }
 };
 
 class Sinh {
 public:
     Sinh (ShadingExecution *) { }
-    inline float operator() (float x) { return sinhf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (sinhf (x[0]), sinhf (x[1]), sinhf (x[2]));
+    inline void operator() (float &result, float x) { result = sinhf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (sinhf (x[0]), sinhf (x[1]), sinhf (x[2]));
     }
 };
 
 class Tanh {
 public:
     Tanh (ShadingExecution *) { }
-    inline float operator() (float x) { return tanhf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (tanhf (x[0]), tanhf (x[1]), tanhf (x[2]));
+    inline void operator() (float &result, float x) { result = tanhf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (tanhf (x[0]), tanhf (x[1]), tanhf (x[2]));
     }
 };
 
@@ -208,10 +208,10 @@ public:
 class Log {
 public:
     Log (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x)          { return safe_log (x, M_E);}
-    inline float operator() (float x, float b) { return safe_log (x, b);  }
-    inline Vec3  operator() (const Vec3 &x)    { return safe_log (x, M_E);} 
-    inline Vec3  operator() (const Vec3 &x, float b) { return safe_log (x, b);}
+    inline void operator() (float &result, float x) { result = safe_log (x, M_E);}
+    inline void operator() (float &result, float x, float b) { result = safe_log (x, b);  }
+    inline void operator() (Vec3 &result, const Vec3 &x)    { result = safe_log (x, M_E);} 
+    inline void operator() (Vec3 &result, const Vec3 &x, float b) { result = safe_log (x, b);}
 private:
     inline float safe_log (float f, float b) {
         if (f <= 0.0f || b <= 0.0f || b == 1.0f) {
@@ -252,8 +252,8 @@ private:
 class Log2 {
 public:
     Log2 (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x) { return safe_log2f (x); }
-    inline Vec3  operator() (const Vec3 &x) { return safe_log2f (x); }
+    inline void operator() (float &result, float x) { result = safe_log2f (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_log2f (x); }
 private:
     inline float safe_log2f (float f) {
         if (f <= 0.0f) {
@@ -280,8 +280,8 @@ private:
 class Log10 {
 public:
     Log10 (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x) { return safe_log10f (x); }
-    inline Vec3  operator() (const Vec3 &x) { return safe_log10f (x); }
+    inline void operator() (float &result, float x) { result = safe_log10f (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_log10f (x); }
 private:
     inline float safe_log10f (float f) {
         if (f <= 0.0f) {
@@ -308,8 +308,8 @@ private:
 class Logb {
 public:
     Logb (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x) { return safe_logbf (x); }
-    inline Vec3 operator() (const Vec3 &x) { return safe_logbf (x); }
+    inline void operator() (float &result, float x) { result = safe_logbf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_logbf (x); }
 private:
     inline float safe_logbf (float f) {
         if (f == 0.0f) {
@@ -336,35 +336,35 @@ private:
 class Exp {
 public:
     Exp (ShadingExecution *) { }
-    inline float operator() (float x) { return expf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (expf (x[0]), expf (x[1]), expf (x[2]));
+    inline void operator() (float &result, float x) { result = expf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (expf (x[0]), expf (x[1]), expf (x[2]));
     }
 };
 
 class Exp2 {
 public:
     Exp2 (ShadingExecution *) { }
-    inline float operator() (float x) { return exp2f (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (exp2f (x[0]), exp2f (x[1]), exp2f (x[2]));
+    inline void operator() (float &result, float x) { result = exp2f (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (exp2f (x[0]), exp2f (x[1]), exp2f (x[2]));
     }
 };
 
 class Expm1 {
 public:
     Expm1 (ShadingExecution *) { }
-    inline float operator() (float x) { return expm1f (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (expm1f (x[0]), expm1f (x[1]), expm1f (x[2]));
+    inline void operator() (float &result, float x) { result = expm1f (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (expm1f (x[0]), expm1f (x[1]), expm1f (x[2]));
     }
 };
 
 class Pow {
 public:
     Pow (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x, float y) { return safe_pow (x, y); }
-    inline Vec3  operator() (const Vec3 &x, float y) { return safe_pow (x, y); }
+    inline void operator() (float &result, float x, float y) { result = safe_pow (x, y); }
+    inline void operator() (Vec3 &result, const Vec3 &x, float y) { result = safe_pow (x, y); }
 private:
     inline float safe_pow (float x, float y) {
         if (x <= 0.0f &&  (y < 0.0f  || truncf(y) != y) ) {
@@ -392,13 +392,13 @@ private:
 class Erf {
 public:
     Erf (ShadingExecution *) { }
-    inline float operator() (float x) { return erff(x); }
+    inline void operator() (float &result, float x) { result = erff(x); }
 };
 
 class Erfc {
 public:
     Erfc (ShadingExecution *) { }
-    inline float operator() (float x) { return erfcf(x); }
+    inline void operator() (float &result, float x) { result = erfcf(x); }
 };
 
 
@@ -407,54 +407,54 @@ public:
 class FAbs {
 public:
     FAbs (ShadingExecution *) { }
-    inline int   operator() (int   x) { return abs (x);   }
-    inline float operator() (float x) { return fabsf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (fabsf (x[0]), fabsf (x[1]), fabsf (x[2]));
+    inline void operator() (int &result, int x) { result = abs (x); }
+    inline void operator() (float &result, float x) { result = fabsf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (fabsf (x[0]), fabsf (x[1]), fabsf (x[2]));
     }
 };
 
 class Floor {
 public:
     Floor (ShadingExecution *) { }
-    inline float operator() (float x) { return floorf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (floorf (x[0]), floorf (x[1]), floorf (x[2]));
+    inline void operator() (float &result, float x) { result = floorf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (floorf (x[0]), floorf (x[1]), floorf (x[2]));
     }
 };
 
 class Ceil {
 public:
     Ceil (ShadingExecution *) { }
-    inline float operator() (float x) { return ceilf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (ceilf (x[0]), ceilf (x[1]), ceilf (x[2]));
+    inline void operator() (float &result, float x) { result = ceilf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (ceilf (x[0]), ceilf (x[1]), ceilf (x[2]));
     }
 };
 
 class Round {
 public:
     Round (ShadingExecution *) { }
-    inline float operator() (float x) { return roundf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (roundf (x[0]), roundf (x[1]), roundf (x[2]));
+    inline void operator() (float &result, float x) { result = roundf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (roundf (x[0]), roundf (x[1]), roundf (x[2]));
     }
 };
 
 class Trunc {
 public:
     Trunc (ShadingExecution *) { }
-    inline float operator() (float x) { return truncf (x); }
-    inline Vec3 operator() (const Vec3 &x) {
-        return Vec3 (truncf (x[0]), truncf (x[1]), truncf (x[2]));
+    inline void operator() (float &result, float x) { result = truncf (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) {
+        result = Vec3 (truncf (x[0]), truncf (x[1]), truncf (x[2]));
     }
 };
 
 class Sign {
 public:
     Sign (ShadingExecution *) { }
-    inline float operator() (float x) { return sign(x); }
-    inline Vec3 operator() (const Vec3 &x) { return Vec3(sign(x[0]), sign(x[1]), sign(x[2])); }
+    inline void operator() (float &result, float x) { result = sign(x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = Vec3(sign(x[0]), sign(x[1]), sign(x[2])); }
 private:
     inline float sign (float x) { 
         if (x > 0) return 1.0f; 
@@ -466,8 +466,8 @@ private:
 class Sqrt {
 public:
     Sqrt (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x) { return safe_sqrt (x); }
-    inline Vec3  operator() (const Vec3 &x) { return safe_sqrt(x); }
+    inline void operator() (float &result, float x) { result = safe_sqrt (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_sqrt(x); }
 private:
     inline float safe_sqrt (float f) {
         if (f < 0.0f) {
@@ -494,8 +494,8 @@ private:
 class InverseSqrt {
 public:
     InverseSqrt (ShadingExecution *exec) : m_exec(exec) { }
-    inline float operator() (float x) { return safe_invsqrt (x); }
-    inline Vec3  operator() (const Vec3 &x) { return safe_invsqrt(x); }
+    inline void operator() (float &result, float x) { result = safe_invsqrt (x); }
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_invsqrt(x); }
 private:
     inline float safe_invsqrt (float f) {
         if (f <= 0.0f) {
@@ -522,26 +522,30 @@ private:
 class IsNan {
 public:
     IsNan (ShadingExecution *) { }
-    inline int operator() (float x) { return std::isnan (x); }
+    inline void operator() (int &result, float x) { result = std::isnan (x); }
 };
 
 class IsInf {
 public:
     IsInf (ShadingExecution *) { }
-    inline int operator() (float x) { return std::isinf (x); }
+    inline void operator() (int &result, float x) { result = std::isinf (x); }
 };
 
 class IsFinite {
 public:
     IsFinite (ShadingExecution *) { }
-    inline int operator() (float x) { return std::isfinite (x); }
+    inline void operator() (int &result, float x) { result = std::isfinite (x); }
 };
 
 class Clamp {
 public:
     Clamp (ShadingExecution *) { }
-    inline float operator() (float x, float minv, float maxv) { return clamp(x, minv, maxv); }
-    inline Vec3 operator() (const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) { return clamp(x, minv, maxv); }
+    inline void operator() (float &result, float x, float minv, float maxv) {
+        result = clamp(x, minv, maxv);
+    }
+    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) {
+        result = clamp(x, minv, maxv);
+    }
 private:
     inline float clamp(float x, float minv, float maxv) {
         if (x < minv) return minv;
@@ -559,9 +563,9 @@ private:
 class Max {
 public:
     Max (ShadingExecution *) { }
-    inline float operator() (float x, float y) { return max(x,y); }
-    inline Vec3 operator() (const Vec3 &x, const Vec3 &y) { 
-       return Vec3 (max (x[0], y[0]), max (x[1], y[1]), max (x[2], y[2]));
+    inline void operator() (float &result, float x, float y) { result = max(x,y); }
+    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y) { 
+        result = Vec3 (max (x[0], y[0]), max (x[1], y[1]), max (x[2], y[2]));
     }
 private:
     inline float max (float x, float y) { 
@@ -573,9 +577,9 @@ private:
 class Min {
 public:
     Min (ShadingExecution *) { }
-    inline float operator() (float x, float y) { return min(x,y); }
-    inline Vec3 operator() (const Vec3 &x, const Vec3 &y) { 
-       return Vec3 (min (x[0], y[0]), min (x[1], y[1]), min (x[2], y[2]));
+    inline void operator() (float &result, float x, float y) { result = min(x,y); }
+    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y) { 
+        result = Vec3 (min (x[0], y[0]), min (x[1], y[1]), min (x[2], y[2]));
     }
 private:
     inline float min (float x, float y) { 
@@ -587,50 +591,47 @@ private:
 class Mix {
 public:
     Mix (ShadingExecution *) { }
-    inline float operator() (float x, float y, float a) { return mix(x,y,a); }
-    inline Vec3 operator() (const Vec3 &x, const Vec3 &y, float a) { return mix(x,y,a); }
-    inline Vec3 operator() (const Vec3 &x, const Vec3 &y, const Vec3 &a) { 
-       return mix (x,y,a);
+    inline void operator() (float &result, float x, float y, float a) {
+        result = x*(1.0f-a) + y*a;
     }
-private:
-    inline float mix (float x, float y, float a) { 
-        return x*(1.0f-a) + y*a;
+    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y, float a) {
+        result = x*(1.0f-a) + y*a;
     }
-    inline Vec3 mix (const Vec3 &x, const Vec3 &y, float a) { 
-       return x*(1.0f-a) + y*a;
-    }
-    inline Vec3 mix (const Vec3 &x, const Vec3 &y, const Vec3 &a) { 
-       Vec3 one(1.0f, 1.0f, 1.0f);
-       return x*(one-a) + y*a;
+    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y, const Vec3 &a) { 
+        Vec3 one(1.0f, 1.0f, 1.0f);
+        result = x*(one-a) + y*a;
     }
 };
 
 class Step {
 public:
     Step (ShadingExecution *) { }
-    inline float operator() (float edge, float x) { 
-        if (x < edge) return 0.0f;
-        else return 1.0f;
+    inline void operator() (float &result, float edge, float x) { 
+        result = (x < edge) ? 0.0f : 1.0f;
     }
 };
 
 class Hypot {
 public:
     Hypot (ShadingExecution *) { }
-    inline float operator() (float x, float y) { return sqrtf (x*x + y*y); }
-    inline float operator() (float x, float y, float z) { return sqrtf (x*x + y*y + z*z); }
+    inline void operator() (float &result, float x, float y) {
+        result = sqrtf (x*x + y*y);
+    }
+    inline void operator() (float &result, float x, float y, float z) {
+        result = sqrtf (x*x + y*y + z*z);
+    }
 };
 
 class Smoothstep {
 public:
     Smoothstep (ShadingExecution *) { }
-    inline float operator() (float edge0, float edge1, float x) { 
-       if (x < edge0) return 0.0f;
-       else if (x >= edge1) return 1.0f;
-       else {
-         float t = (x - edge0)/(edge1 - edge0);
-         return (3.0f-2.0f*t)*(t*t);
-       }
+    inline void operator() (float &result, float edge0, float edge1, float x) { 
+        if (x < edge0) result = 0.0f;
+        else if (x >= edge1) result = 1.0f;
+        else {
+            float t = (x - edge0)/(edge1 - edge0);
+            result = (3.0f-2.0f*t)*(t*t);
+        }
     }
 };
 
@@ -665,16 +666,16 @@ static inline Vec3 refract(const Vec3 &I, const Vec3 &N, float eta) {
 class Reflect {
 public:
     Reflect (ShadingExecution *) { }
-    inline Vec3 operator() (const Vec3 &I, const Vec3 &N) {
-        return reflect(I, N);
+    inline void operator() (Vec3 &result, const Vec3 &I, const Vec3 &N) {
+        result = reflect(I, N);
     }
 };
 
 class Refract {
 public:
     Refract (ShadingExecution *) { }
-    inline Vec3 operator() (const Vec3 &I, const Vec3 &N, float eta) {
-        return refract(I, N, eta);
+    inline void operator() (Vec3 &result, const Vec3 &I, const Vec3 &N, float eta) {
+        result = refract(I, N, eta);
     }
 };
 

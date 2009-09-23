@@ -141,8 +141,8 @@ to_rgb (ustring fromspace, float a, float b, float c, ShadingExecution *exec)
 class Luminance {
 public:
     Luminance (ShadingExecution *) { }
-    inline float operator() (const Color3 &c) {
-        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    float operator() (float &result, const Color3 &c) {
+        result = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     }
 };
 

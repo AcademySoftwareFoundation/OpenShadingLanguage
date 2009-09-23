@@ -330,8 +330,8 @@ inline F det4x4(const Imath::Matrix44<F> &m)
 class Determinant {
 public:
     Determinant (ShadingExecution *) { }
-    inline float operator() (const Matrix44 &m) {
-        return det4x4 (m);
+    inline void operator() (float &result, const Matrix44 &m) {
+        result = det4x4 (m);
     }
 };
 
@@ -340,8 +340,8 @@ public:
 class Transpose {
 public:
     Transpose (ShadingExecution *) { }
-    inline Matrix44 operator() (const Matrix44 &m) {
-        return m.transposed();
+    inline void operator() (Matrix44 &result, const Matrix44 &m) {
+        result = m.transposed();
     }
 };
 

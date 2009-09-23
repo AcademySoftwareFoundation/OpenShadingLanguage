@@ -29,7 +29,7 @@ test ()
     {
         printf ("float/int:\n");
         float a = 0.7;
-        float b = 2;
+        int b = 2;
         float z = 0;
         printf ("  %g + %d = %g\n", a, b, a+b);
         printf ("  %d + %g = %g\n", b, a, b+a);

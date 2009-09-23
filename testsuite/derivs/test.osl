@@ -7,4 +7,18 @@ test ()
     printf ("v = %g, Dx(v) = %g, Dy(v) = %g\n", v, Dx(v), Dy(v));
     printf ("P = %g, Dx(P) = %g, Dy(P) = %g\n", P, Dx(P), Dy(P));
     
+    {
+        float a = u;
+        printf ("\n");
+        printf ("Assign: a = u; a = %d, Dy(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = u+v;
+        printf ("\n");
+        printf ("Add: a = u+v; a = %d, Dy(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
 }

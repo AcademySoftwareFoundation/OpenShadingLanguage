@@ -60,7 +60,7 @@ public:
 
     /// Construct a Dual from just a real value (derivs set to 0)
     ///
-    explicit Dual2 (const T &x) : m_val(x), m_dx(T(0)), m_dy(T(0)) { }
+    Dual2 (const T &x) : m_val(x), m_dx(T(0)), m_dy(T(0)) { }
 
     template <class F>
     explicit Dual2 (const Dual2<F> &x) : m_val(T(x.val())), m_dx(T(x.dx())), m_dy(T(x.dy())) { }

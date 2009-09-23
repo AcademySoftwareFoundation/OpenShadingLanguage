@@ -14,3 +14,13 @@ P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 
+Assign: a = u; a = 0, Dy(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 1, Dy(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 0, Dy(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 1, Dy(a) = 0.5, Dy(a) = 0
+
+Add: a = u+v; a = 0, Dy(a) = 0.5, Dy(a) = 0.5
+Add: a = u+v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
+Add: a = u+v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
+Add: a = u+v; a = 2, Dy(a) = 0.5, Dy(a) = 0.5
+

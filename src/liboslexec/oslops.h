@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec.h"
 #include "osl_pvt.h"
 #include "oslexec_pvt.h"
+#include "dual.h"
 
 
 #ifdef OSL_NAMESPACE
@@ -318,6 +319,40 @@ DECLOP (binary_op)
 
     binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
                                               runflags, beginpoint, endpoint);
+}
+
+
+
+// Wrapper around binary_op_guts that does has he call signature of an
+// ordinary shadeop, with support for derivatives.
+template <class RET, class ATYPE, class BTYPE, class FUNCTION>
+DECLOP (binary_op_derivs)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    if (Result.has_derivs()) {
+        if (A.has_derivs()) {
+            if (B.has_derivs())
+                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
+                                           runflags, beginpoint, endpoint);
+            else
+                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
+                                           runflags, beginpoint, endpoint);
+        } else if (B.has_derivs()) {
+            binary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
+                                           runflags, beginpoint, endpoint);
+        } else {
+            binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+                                              runflags, beginpoint, endpoint);
+            exec->zero_derivs (Result);
+        }
+    } else {
+        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+                                                  runflags, beginpoint, endpoint);
+    }
 }
 
 

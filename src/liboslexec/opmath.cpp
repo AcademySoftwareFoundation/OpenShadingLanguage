@@ -58,6 +58,9 @@ class Add {
 public:
     Add (ShadingExecution *) { }
     inline R operator() (const A &a, const B &b) { return R (a + b); }
+    inline Dual2<R> operator() (const Dual2<A> &a, const Dual2<B> &b) { return (a + b); }
+    inline Dual2<R> operator() (const Dual2<A> &a, const B &b) { return (a + b); }
+    inline Dual2<R> operator() (const A &a, const Dual2<B> &b) { return (a + b); }
 };
 
 
@@ -362,6 +365,20 @@ public:
 };
 
 
+
+Dual2<VecProxy> operator+ (const Dual2<VecProxy> &a, const Dual2<Float> &b)
+{
+    return Dual2<VecProxy> (a.val()+b.val(), a.dx()+b.dx(), a.dy()+b.dy());
+}
+
+
+Dual2<VecProxy> operator+ (const Dual2<Float> &a, const Dual2<VecProxy> &b)
+{
+    return Dual2<VecProxy> (a.val()+b.val(), a.dx()+b.dx(), a.dy()+b.dy());
+}
+
+
+
 };  // End anonymous namespace
 
 
@@ -389,36 +406,25 @@ DECLOP (OP_add)
     else if (Result.typespec().is_triple()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op<Vec3,Vec3,Vec3, Add<Vec3,Vec3,Vec3> >;
+                impl = binary_op_derivs<Vec3,Vec3,Vec3, Add<Vec3,Vec3,Vec3> >;
             else if (B.typespec().is_float())
-                impl = binary_op<VecProxy,VecProxy,float,
-                                 Add<VecProxy,VecProxy,float> >;
-            else if (B.typespec().is_int())
-                impl = binary_op<VecProxy,VecProxy,int,
-                                 Add<VecProxy,VecProxy,int> >;
+                impl = binary_op_derivs<VecProxy,VecProxy,float,
+                                        Add<VecProxy,VecProxy,float> >;
         } else if (A.typespec().is_float()) {
             if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,float,VecProxy,
-                                 Add<VecProxy,float,VecProxy> >;
-        } if (A.typespec().is_int()) {
-            if (B.typespec().is_triple())
-                impl = binary_op<VecProxy,int,VecProxy,
-                                 Add<VecProxy,int,VecProxy> >;
+                impl = binary_op_derivs<VecProxy,float,VecProxy,
+                                        Add<VecProxy,float,VecProxy> >;
         }
     } 
 
-    else if (Result.typespec().is_float()) {
-        if (A.typespec().is_float() && B.typespec().is_float())
-            impl = binary_op<float,float,float, Add<float,float,float> >;
-        else if (A.typespec().is_float() && B.typespec().is_int())
-            impl = binary_op<float,float,int, Add<float,float,int> >;
-        else if (A.typespec().is_int() && B.typespec().is_float())
-            impl = binary_op<float,int,float, Add<float,int,float> >;
+    else if (Result.typespec().is_float() &&
+             A.typespec().is_float() && B.typespec().is_float()) {
+        impl = binary_op_derivs<float,float,float, Add<float,float,float> >;
     }
 
-    else if (Result.typespec().is_int()) {
-        if (A.typespec().is_int() && B.typespec().is_int())
-            impl = binary_op<int,int,int, Add<int,int,int> >;
+    else if (Result.typespec().is_int() && 
+             A.typespec().is_int() && B.typespec().is_int()) {
+        impl = binary_op<int,int,int, Add<int,int,int> >;
     }
 
     if (impl) {

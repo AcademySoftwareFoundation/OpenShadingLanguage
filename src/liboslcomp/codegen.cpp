@@ -521,6 +521,32 @@ ASTbinary_expression::codegen (Symbol *dest)
 
     // FIXME -- what about coerced types, do we need a temp and copy here?
 
+    // Promote ints to float-like types, for mixed arithmetic
+    if ((m_op == Mul || m_op == Div || m_op == Add || m_op == Sub) &&
+        ! lsym->typespec().is_closure() && ! rsym->typespec().is_closure()) {
+        if ((lsym->typespec().is_float() || lsym->typespec().is_triple()) &&
+               rsym->typespec().is_int()) {
+            if (rsym->symtype() == SymTypeConst) {
+                float val = ((ConstantSymbol *)rsym)->floatval();
+                rsym = m_compiler->make_constant (val);
+            } else {
+                Symbol *tmp = rsym;
+                rsym = m_compiler->make_temporary (lsym->typespec());
+                emitcode ("assign", rsym, tmp);  // type coercion
+            }
+        } else if (lsym->typespec().is_int() &&
+                   (rsym->typespec().is_float() || rsym->typespec().is_triple())) {
+            if (lsym->symtype() == SymTypeConst) {
+                float val = ((ConstantSymbol *)lsym)->floatval();
+                lsym = m_compiler->make_constant (val);
+            } else {
+                Symbol *tmp = lsym;
+                lsym = m_compiler->make_temporary (rsym->typespec());
+                emitcode ("assign", lsym, tmp);  // type coercion
+            }
+        }
+    }
+
     // FIXME -- we want && and || to properly short-circuit
 
     emitcode (opword(), dest, lsym, rsym);

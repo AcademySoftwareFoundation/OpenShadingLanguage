@@ -120,7 +120,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     // Derivs supplied
                     sym.has_derivs (true);
                     void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Vec3> > P ((Vec3 *)addr, sym.step());
+                    VaryingRef<Dual2<Vec3> > P ((Dual2<Vec3> *)addr, sym.step());
                     for (int i = 0;  i < npoints();  ++i)
                         P[i].init (globals->P[i], globals->dPdx[i], globals->dPdy[i]);
                 } else {

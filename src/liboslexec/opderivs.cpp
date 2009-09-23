@@ -62,7 +62,7 @@ static DECLOP (specialized_Dxy)
         exec->adjust_varying (Result, true, Result.data() != Src.data());
         DASSERT (Result.is_varying());
         VaryingRef<T> result ((T *)Result.data(), Result.step());
-        VaryingRef<Dual2<T> > src ((T *)Src.data(), Src.step());
+        VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
         if (whichd == 0) {
             for (int i = beginpoint;  i < endpoint;  ++i)
                 if (runflags[i])
@@ -93,7 +93,7 @@ DECLOP (OP_Dx)
     if (Result.typespec().is_float() && Src.typespec().is_float())
         impl = specialized_Dxy<float, 0>;
     else if (Result.typespec().is_triple() && Src.typespec().is_triple())
-        impl = specialized_Dxy<float, 0>;
+        impl = specialized_Dxy<Vec3, 0>;
 
     if (impl) {
         impl (exec, nargs, args, runflags, beginpoint, endpoint);
@@ -121,7 +121,7 @@ DECLOP (OP_Dy)
     if (Result.typespec().is_float() && Src.typespec().is_float())
         impl = specialized_Dxy<float, 1>;
     else if (Result.typespec().is_triple() && Src.typespec().is_triple())
-        impl = specialized_Dxy<float, 1>;
+        impl = specialized_Dxy<Vec3, 1>;
 
     if (impl) {
         impl (exec, nargs, args, runflags, beginpoint, endpoint);

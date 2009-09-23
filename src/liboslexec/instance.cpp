@@ -94,11 +94,15 @@ ShaderInstance::calc_heap_size ()
     m_heapround = 0;
     BOOST_FOREACH (/*const*/ Symbol &s, m_symbols) {
         // Skip if the symbol is a type that doesn't need heap space
-        if (s.symtype() == SymTypeConst || s.symtype() == SymTypeGlobal)
+        if (s.symtype() == SymTypeConst /* || s.symtype() == SymTypeGlobal */)
             continue;
 
+        // assume globals have derivs
+        if (s.symtype() == SymTypeGlobal)
+            s.has_derivs (true);
+
 #if 1
-        // FIXME -- test code
+        // FIXME -- test code by assuming all locals and temps carry derivs
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
             s.has_derivs (true);
 #endif

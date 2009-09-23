@@ -468,6 +468,19 @@ public:
         return cur;
     }
 
+    /// Allot whatever 'sym' needs on the heap and set up its offsets
+    /// and adresses.  If 'varying' is true, set the symbol up to be
+    /// initially varying.  Return the address in the heap where the
+    /// memory for this symbol starts.
+    void * heap_allot (Symbol &sym, bool varying = false) {
+        size_t cur = heap_allot (sym.derivsize() * m_npoints);
+        sym.dataoffset (cur);
+        void *addr = heapaddr (cur);
+        sym.data (addr);
+        sym.step (varying ? sym.derivsize() : 0);
+        return addr;
+    }
+
     /// Allot 'n' closures in the closure area, and allot 'n' closure
     /// pointers in the heap (pointed to the allotted closures).  Return
     /// the starting offset into the heap of the pointers.

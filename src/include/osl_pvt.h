@@ -423,6 +423,10 @@ public:
     int size () const { return m_size; }
     void size (size_t newsize) { m_size = (int)newsize; }
 
+    /// Return the size for each point, including derivs.
+    ///
+    int derivsize () const { return m_has_derivs ? 3*m_size : m_size; }
+
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point

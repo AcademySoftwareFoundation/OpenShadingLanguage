@@ -118,12 +118,18 @@ main (int argc, const char *argv[])
     ShaderGlobals shaderglobals;
     const int npoints = xres*yres;
     std::vector<Vec3> gP (npoints);
+    std::vector<Vec3> gP_dx (npoints);
+    std::vector<Vec3> gP_dy (npoints);
     std::vector<Vec3> gN (npoints);
     std::vector<float> gu (npoints);
     std::vector<float> gv (npoints);
     shaderglobals.P.init (&gP[0], sizeof(gP[0]));
+    shaderglobals.dPdx.init (&gP_dx[0], sizeof(gP_dx[0]));
+    shaderglobals.dPdy.init (&gP_dy[0], sizeof(gP_dy[0]));
     shaderglobals.N.init (&gN[0], sizeof(gN[0]));
+    shaderglobals.Ng.init (&gN[0], sizeof(gN[0]));  // Ng = N for now
     shaderglobals.u.init (&gu[0], sizeof(gu[0]));
+    shaderglobals.v.init (&gv[0], sizeof(gv[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
     float time = 0.0f;
     shaderglobals.time.init (&time, 0);
@@ -158,15 +164,25 @@ main (int argc, const char *argv[])
     // std::cout << "myspace-to-common matrix: " << Mmyspace << "\n";
     rend.name_transform ("myspace", Mmyspace);
 
+    float dudx = 1.0f / xres, dudy = 0;
+    float dvdx = 0, dvdy = 1.0f / yres;
+    shaderglobals.dudx.init (&dudx, 0);
+    shaderglobals.dudy.init (&dudy, 0);
+    shaderglobals.dvdx.init (&dvdx, 0);
+    shaderglobals.dvdy.init (&dvdy, 0);
+
     for (int j = 0;  j < yres;  ++j) {
         for (int i = 0;  i < xres;  ++i) {
             int n = j*yres + i;
             gu[n] = (xres == 1) ? 0.5 : (float)i/(xres-1);
             gv[n] = (yres == 1) ? 0.5 : (float)j/(yres-1);
             gP[n] = Vec3 (gu[n], gv[n], 1.0f);
+            gP_dx[n] = Vec3 (dudx, dudy, 0.0f);
+            gP_dy[n] = Vec3 (dvdx, dvdy, 0.0f);
             gN[n] = Vec3 (0, 0, 1);
         }
     }
+
     double setuptime = timer ();
     timer.reset ();
     timer.start ();

@@ -70,6 +70,10 @@ public:
     Dual2 (const T &x, const T &dx, const T &dy) 
         : m_val(x), m_dx(dx), m_dy(dy) { }
 
+    void init (const T &x, const T &dx, const T &dy) {
+        m_val = x;  m_dx = dx;  m_dy = dy;
+    }
+
     /// Return the real value of *this.
     ///
     const T& val () const { return m_val; }
@@ -86,6 +90,11 @@ public:
     /// number, i == 1 is the dy imaginary number).
     static Dual2<T> d (int i) {
         return i==0 ? Dual2<T> (T(0),T(1),T(0)) : Dual2<T> (T(0),T(0),T(1));
+    }
+
+    const Dual2<T> & operator= (const T &x) {
+        init (x, T(0), T(0));
+        return *this;
     }
 
     /// Stream output.  Format as: "val[dx,dy]"

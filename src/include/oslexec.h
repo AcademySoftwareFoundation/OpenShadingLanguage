@@ -203,10 +203,13 @@ public:
     ~ShaderGlobals () { }
 
     VaryingRef<Vec3> P;                ///< Position
+    VaryingRef<Vec3> dPdx, dPdy;       ///< Partials
     VaryingRef<Vec3> I;                ///< Incident ray
     VaryingRef<Vec3> N;                ///< Shading normal
     VaryingRef<Vec3> Ng;               ///< True geometric normal
     VaryingRef<float> u, v;            ///< Surface parameters
+    VaryingRef<float> dudx, dudy;      ///< u differentials
+    VaryingRef<float> dvdx, dvdy;      ///< v differentials
     VaryingRef<Vec3> dPdu, dPdv;       ///< Partial derivatives
     VaryingRef<float> time;            ///< Time for each sample
     VaryingRef<float> dtime;           ///< Time interval for each sample

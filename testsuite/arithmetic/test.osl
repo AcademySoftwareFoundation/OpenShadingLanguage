@@ -25,6 +25,23 @@ test ()
         printf ("\n");
     }
 
+    // mixed float and int
+    {
+        printf ("float/int:\n");
+        float a = 0.7;
+        float b = 2;
+        float z = 0;
+        printf ("  %g + %d = %g\n", a, b, a+b);
+        printf ("  %d + %g = %g\n", b, a, b+a);
+        printf ("  %g - %d = %g\n", a, b, a-b);
+        printf ("  %d - %g = %g\n", b, a, b-a);
+        printf ("  %g * %d = %g\n", a, b, a*b);
+        printf ("  %d * %g = %g\n", b, a, b*a);
+        printf ("  %g / %d = %g\n", a, b, a/b);
+        printf ("  %d / %g = %g\n", b, a, b/a);
+        printf ("\n");
+    }
+
     // triple
     {
         printf ("triple:\n");

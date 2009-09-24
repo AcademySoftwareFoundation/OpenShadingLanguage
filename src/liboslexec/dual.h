@@ -63,7 +63,7 @@ public:
     Dual2 (const T &x) : m_val(x), m_dx(T(0)), m_dy(T(0)) { }
 
     template <class F>
-    explicit Dual2 (const Dual2<F> &x) : m_val(T(x.val())), m_dx(T(x.dx())), m_dy(T(x.dy())) { }
+    Dual2 (const Dual2<F> &x) : m_val(T(x.val())), m_dx(T(x.dx())), m_dy(T(x.dy())) { }
 
     /// Construct a Dual from a real and both infinitesimal.
     ///
@@ -183,7 +183,7 @@ Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
 /// Multiplication of dual by scalar.
 ///
 template<class T>
-Dual2<T> operator* (const Dual2<T> &a, T b)
+Dual2<T> operator* (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dx()*b);
 }
@@ -192,7 +192,7 @@ Dual2<T> operator* (const Dual2<T> &a, T b)
 /// Multiplication of dual by scalar.
 ///
 template<class T>
-Dual2<T> operator* (T b, const Dual2<T> &a)
+Dual2<T> operator* (const T &b, const Dual2<T> &a)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dx()*b);
 }
@@ -215,7 +215,7 @@ Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
 /// Division of dual by scalar.
 ///
 template<class T>
-Dual2<T> operator/ (const Dual2<T> &a, T b)
+Dual2<T> operator/ (const Dual2<T> &a, const T &b)
 {
     T binv = 1.0f / b;
     return a * binv;
@@ -225,7 +225,7 @@ Dual2<T> operator/ (const Dual2<T> &a, T b)
 /// Division of scalar by dual.
 ///
 template<class T>
-Dual2<T> operator/ (T aval, const Dual2<T> &b)
+Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
 {
     T bvalinv = 1.0f / b.val();
     T aval_bval = aval * bvalinv;

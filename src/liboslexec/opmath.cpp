@@ -137,6 +137,33 @@ public:
     }
 };
 
+template<>
+class Div<VecProxy,float,VecProxy> {
+public:
+    Div (ShadingExecution *x=NULL) { }
+    inline void operator() (VecProxy &result, const Float &a, const VecProxy &b) {
+        result = a/b;
+    }
+    inline void operator() (Dual2<VecProxy> &result, const Dual2<Float> &a, const Dual2<VecProxy> &b) {
+        VecProxy bvalinv = Float(1) / b.val();
+        VecProxy aval_bval = a.val() * bvalinv;
+        result.set (aval_bval,
+                    bvalinv * (VecProxy(a.dx()) - aval_bval * b.dx()),
+                    bvalinv * (VecProxy(a.dy()) - aval_bval * b.dy()));
+    }
+    inline void operator() (Dual2<VecProxy> &result, const Dual2<Float> &a, const VecProxy &b) {
+        VecProxy binv = Float(1) / b;
+        result.set (a.val() * binv, a.dx() * binv, a.dy() * binv);
+    }
+    inline void operator() (Dual2<VecProxy> &result, const Float &a, const Dual2<VecProxy> &b) {
+        VecProxy bvalinv = Float(1) / b.val();
+        VecProxy aval_bval = a * bvalinv;
+        result.set (aval_bval,
+                    bvalinv * ( - aval_bval * b.dx()),
+                    bvalinv * ( - aval_bval * b.dy()));
+    }
+};
+
 // Specialized version for matrix = matrix / matrix
 template<>
 class Div<Matrix44,Matrix44,Matrix44>
@@ -480,12 +507,12 @@ DECLOP (OP_sub)
     else if (Result.typespec().is_triple()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op_noderivs<Vec3,Vec3,Vec3, Sub<Vec3,Vec3,Vec3> >;
+                impl = binary_op<Vec3,Vec3,Vec3, Sub<Vec3,Vec3,Vec3> >;
             else if (B.typespec().is_float())
-                impl = binary_op_noderivs<VecProxy,VecProxy,float,
-                                        Sub<VecProxy,VecProxy,float> >;
+                impl = binary_op<VecProxy,VecProxy,float,
+                                 Sub<VecProxy,VecProxy,float> >;
         } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            impl = binary_op_noderivs<VecProxy,float,VecProxy,
+            impl = binary_op<VecProxy,float,VecProxy,
                              Sub<VecProxy,float,VecProxy> >;
         }
     }
@@ -626,10 +653,10 @@ DECLOP (OP_div)
                 impl = binary_op<VecProxy,VecProxy,VecProxy,
                                  Div<VecProxy,VecProxy,VecProxy> >;
             else if (B.typespec().is_float())
-                impl = binary_op_noderivs<VecProxy,VecProxy,float,
+                impl = binary_op<VecProxy,VecProxy,float,
                                  Div<VecProxy,VecProxy,float> >;
         } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            impl = binary_op_noderivs<VecProxy,float,VecProxy,
+            impl = binary_op<VecProxy,float,VecProxy,
                              Div<VecProxy,float,VecProxy> >;
         }
     } 

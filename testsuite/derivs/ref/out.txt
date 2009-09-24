@@ -14,41 +14,51 @@ P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 
-Assign: a = u; a = 0, Dy(a) = 0.5, Dy(a) = 0
-Assign: a = u; a = 1, Dy(a) = 0.5, Dy(a) = 0
-Assign: a = u; a = 0, Dy(a) = 0.5, Dy(a) = 0
-Assign: a = u; a = 1, Dy(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 0, Dx(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 1, Dx(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 0, Dx(a) = 0.5, Dy(a) = 0
+Assign: a = u; a = 1, Dx(a) = 0.5, Dy(a) = 0
 
-Add: a = u+v; a = 0, Dy(a) = 0.5, Dy(a) = 0.5
-Add: a = u+v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
-Add: a = u+v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
-Add: a = u+v; a = 2, Dy(a) = 0.5, Dy(a) = 0.5
-Add constant: a = u+0.5; a = 0.5, Dy(a) = 0.5, Dy(a) = 0
-Add constant: a = u+0.5; a = 1.5, Dy(a) = 0.5, Dy(a) = 0
-Add constant: a = u+0.5; a = 0.5, Dy(a) = 0.5, Dy(a) = 0
-Add constant: a = u+0.5; a = 1.5, Dy(a) = 0.5, Dy(a) = 0
+Add: a = u+v; a = 0, Dx(a) = 0.5, Dy(a) = 0.5
+Add: a = u+v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
+Add: a = u+v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
+Add: a = u+v; a = 2, Dx(a) = 0.5, Dy(a) = 0.5
+Add constant: a = u+0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
+Add constant: a = u+0.5; a = 1.5, Dx(a) = 0.5, Dy(a) = 0
+Add constant: a = u+0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
+Add constant: a = u+0.5; a = 1.5, Dx(a) = 0.5, Dy(a) = 0
 
-Sub: a = u-v; a = 0, Dy(a) = 0.5, Dy(a) = -0.5
-Sub: a = u-v; a = 1, Dy(a) = 0.5, Dy(a) = -0.5
-Sub: a = u-v; a = -1, Dy(a) = 0.5, Dy(a) = -0.5
-Sub: a = u-v; a = 0, Dy(a) = 0.5, Dy(a) = -0.5
-Sub constant: a = u-0.5; a = -0.5, Dy(a) = 0.5, Dy(a) = 0
-Sub constant: a = u-0.5; a = 0.5, Dy(a) = 0.5, Dy(a) = 0
-Sub constant: a = u-0.5; a = -0.5, Dy(a) = 0.5, Dy(a) = 0
-Sub constant: a = u-0.5; a = 0.5, Dy(a) = 0.5, Dy(a) = 0
+Sub: a = u-v; a = 0, Dx(a) = 0.5, Dy(a) = -0.5
+Sub: a = u-v; a = 1, Dx(a) = 0.5, Dy(a) = -0.5
+Sub: a = u-v; a = -1, Dx(a) = 0.5, Dy(a) = -0.5
+Sub: a = u-v; a = 0, Dx(a) = 0.5, Dy(a) = -0.5
+Sub constant: a = u-0.5; a = -0.5, Dx(a) = 0.5, Dy(a) = 0
+Sub constant: a = u-0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
+Sub constant: a = u-0.5; a = -0.5, Dx(a) = 0.5, Dy(a) = 0
+Sub constant: a = u-0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
 
-Negate: a = -u; a = -0, Dy(a) = -0.5, Dy(a) = -0
-Negate: a = -u; a = -1, Dy(a) = -0.5, Dy(a) = -0
-Negate: a = -u; a = -0, Dy(a) = -0.5, Dy(a) = -0
-Negate: a = -u; a = -1, Dy(a) = -0.5, Dy(a) = -0
+Negate: a = -u; a = -0, Dx(a) = -0.5, Dy(a) = -0
+Negate: a = -u; a = -1, Dx(a) = -0.5, Dy(a) = -0
+Negate: a = -u; a = -0, Dx(a) = -0.5, Dy(a) = -0
+Negate: a = -u; a = -1, Dx(a) = -0.5, Dy(a) = -0
 
-Mul: a = u*v; a = 0, Dy(a) = 0, Dy(a) = 0
-Mul: a = u*v; a = 0, Dy(a) = 0, Dy(a) = 0.5
-Mul: a = u*v; a = 0, Dy(a) = 0.5, Dy(a) = 0
-Mul: a = u*v; a = 1, Dy(a) = 0.5, Dy(a) = 0.5
+Mul: a = u*v; a = 0, Dx(a) = 0, Dy(a) = 0
+Mul: a = u*v; a = 0, Dx(a) = 0, Dy(a) = 0.5
+Mul: a = u*v; a = 0, Dx(a) = 0.5, Dy(a) = 0
+Mul: a = u*v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
 
-Div: a = u/(v+1); a = 0, Dy(a) = 0.5, Dy(a) = 0
-Div: a = u/(v+1); a = 1, Dy(a) = 0.5, Dy(a) = -0.5
-Div: a = u/(v+1); a = 0, Dy(a) = 0.25, Dy(a) = 0
-Div: a = u/(v+1); a = 0.5, Dy(a) = 0.25, Dy(a) = -0.125
+Div: a = u/(v+1); a = 0, Dx(a) = 0.5, Dy(a) = 0
+Div: a = u/(v+1); a = 1, Dx(a) = 0.5, Dy(a) = -0.5
+Div: a = u/(v+1); a = 0, Dx(a) = 0.25, Dy(a) = 0
+Div: a = u/(v+1); a = 0.5, Dx(a) = 0.25, Dy(a) = -0.125
+
+cos: a = cos(u); a = 1, Dx(a) = -0, Dy(a) = -0
+cos: a = cos(u); a = 0.540302, Dx(a) = -0.420735, Dy(a) = -0
+cos: a = cos(u); a = 1, Dx(a) = -0, Dy(a) = -0
+cos: a = cos(u); a = 0.540302, Dx(a) = -0.420735, Dy(a) = -0
+
+sin: a = sin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
+sin: a = sin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
 

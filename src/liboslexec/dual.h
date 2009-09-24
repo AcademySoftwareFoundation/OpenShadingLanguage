@@ -235,6 +235,25 @@ Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
 }
 
 
+template<class T>
+Dual2<T> cos (const Dual2<T> &a)
+{
+    float sina, cosa;
+    sina = std::sin (a.val());
+    cosa = std::cos (a.val());
+    return Dual2<T> (cosa, -sina * a.dx(), -sina * a.dy());
+}
+
+
+template<class T>
+Dual2<T> sin (const Dual2<T> &a)
+{
+    float sina, cosa;
+    sina = std::sin (a.val());
+    cosa = std::cos (a.val());
+    return Dual2<T> (sina, cosa * a.dx(), cosa * a.dy());
+}
+
 
 }; // namespace OSL
 

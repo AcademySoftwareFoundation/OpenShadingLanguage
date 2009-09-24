@@ -80,12 +80,27 @@ namespace {
 
 // regular trigonometric functions
 
+inline Vec3 cos (const Vec3 &x) {
+    return Vec3 (cosf(x[0]), cosf(x[1]), cosf(x[2]));
+}
+
+inline Vec3 sin (const Vec3 &x) {
+    return Vec3 (sinf(x[0]), sinf(x[1]), sinf(x[2]));
+}
+
 class Cos {
 public:
     Cos (ShadingExecution *) { }
     inline void operator() (float &result, float x) { result = cosf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (cosf (x[0]), cosf (x[1]), cosf (x[2]));
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = cos (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) {
+        result = cos (x);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a) {
+        Vec3 sina, cosa;
+        sina = sin (a.val());
+        cosa = cos (a.val());
+        result.set (cosa, -sina * a.dx(), -sina * a.dy());
     }
 };
 
@@ -93,8 +108,15 @@ class Sin {
 public:
     Sin (ShadingExecution *) { }
     inline void operator() (float &result, float x) { result = sinf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (sinf (x[0]), sinf (x[1]), sinf (x[2]));
+    inline void operator() (Vec3 &result, const Vec3 &x) { result = sin (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) {
+        result = sin (x);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a) {
+        Vec3 sina, cosa;
+        sina = sin (a.val());
+        cosa = cos (a.val());
+        result.set (sina, cosa * a.dx(), cosa * a.dy());
     }
 };
 
@@ -732,6 +754,38 @@ private:
 // one for the individual types (but that doesn't do any more polymorphic
 // resolution or sanity checks).
 template<class FUNCTION>
+DECLOP (generic_unary_function_shadeop_noderivs)
+{
+    // 2 args, result and input.
+    ASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float), and triple = func (triple).
+    if (Result.typespec().is_triple() && A.typespec().is_triple()) {
+        impl = unary_op_noderivs<Vec3,Vec3, FUNCTION >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float()) {
+        impl = unary_op_noderivs<float,float, FUNCTION >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        std::cerr << "Don't know how compute " << Result.typespec().string()
+                  << " = " << exec->op().opname() << "(" 
+                  << A.typespec().string() << ")\n";
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+}
+
+template<class FUNCTION>
 DECLOP (generic_unary_function_shadeop)
 {
     // 2 args, result and input.
@@ -741,12 +795,12 @@ DECLOP (generic_unary_function_shadeop)
     ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
     OpImpl impl = NULL;
 
-    // We allow two flavors: float = func (float), and triple = func (triple)
+    // We allow two flavors: float = func (float), and triple = func (triple).
     if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-        impl = unary_op_noderivs<Vec3,Vec3, FUNCTION >;
+        impl = unary_op<Vec3,Vec3, FUNCTION >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float()) {
-        impl = unary_op_noderivs<float,float, FUNCTION >;
+        impl = unary_op<float,float, FUNCTION >;
     }
 
     if (impl) {
@@ -860,25 +914,25 @@ DECLOP (OP_sin)
 
 DECLOP (OP_tan)
 {
-    generic_unary_function_shadeop<Tan> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Tan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_acos)
 {
-    generic_unary_function_shadeop<ACos> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<ACos> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_asin)
 {
-    generic_unary_function_shadeop<ASin> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<ASin> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_atan)
 {
-    generic_unary_function_shadeop<ATan> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<ATan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -890,31 +944,31 @@ DECLOP (OP_atan2)
 
 DECLOP (OP_degrees)
 {
-    generic_unary_function_shadeop<Degrees> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Degrees> (exec, nargs, args, 
                                              runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_radians)
 {
-    generic_unary_function_shadeop<Radians> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Radians> (exec, nargs, args, 
                                              runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_cosh)
 {
-    generic_unary_function_shadeop<Cosh> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Cosh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_sinh)
 {
-    generic_unary_function_shadeop<Sinh> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Sinh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_tanh)
 {
-    generic_unary_function_shadeop<Tanh> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Tanh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -976,37 +1030,37 @@ DECLOP (OP_log)
 
 DECLOP (OP_log2)
 {
-    generic_unary_function_shadeop<Log2> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Log2> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_log10)
 {
-    generic_unary_function_shadeop<Log10> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Log10> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_logb)
 {
-    generic_unary_function_shadeop<Logb> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Logb> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_exp)
 {
-    generic_unary_function_shadeop<Exp> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Exp> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_exp2)
 {
-    generic_unary_function_shadeop<Exp2> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Exp2> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_expm1)
 {
-    generic_unary_function_shadeop<Expm1> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Expm1> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1097,43 +1151,43 @@ DECLOP (OP_fabs)
 
 DECLOP (OP_floor)
 {
-    generic_unary_function_shadeop<Floor> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Floor> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_ceil)
 {
-    generic_unary_function_shadeop<Ceil> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Ceil> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_round)
 {
-    generic_unary_function_shadeop<Round> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Round> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_trunc)
 {
-    generic_unary_function_shadeop<Trunc> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Trunc> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_sign)
 {
-    generic_unary_function_shadeop<Sign> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Sign> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_sqrt)
 {
-    generic_unary_function_shadeop<Sqrt> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<Sqrt> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_inversesqrt)
 {
-    generic_unary_function_shadeop<InverseSqrt> (exec, nargs, args, 
+    generic_unary_function_shadeop_noderivs<InverseSqrt> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

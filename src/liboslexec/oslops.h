@@ -470,7 +470,7 @@ unary_op_guts_noderivs (Symbol &Result, Symbol &A,
 // perform (given by a functor).  This version computes derivatives.
 template <class RET, class ATYPE, class FUNCTION>
 inline void
-unary_op_guts_derivs (Symbol &Result, Symbol &A,
+unary_op_guts (Symbol &Result, Symbol &A,
                ShadingExecution *exec, 
                Runflag *runflags, int beginpoint, int endpoint)
 {
@@ -481,7 +481,7 @@ unary_op_guts_derivs (Symbol &Result, Symbol &A,
     FUNCTION function (exec);
     if (Result.is_uniform()) {
         // Uniform case
-        *((RET *)Result.data()) = function (*(ATYPE *)A.data());
+        function (*((RET *)Result.data()), *(ATYPE *)A.data());
         if (Result.has_derivs())
             exec->zero_derivs (Result);
     } else if (A.is_uniform()) {
@@ -534,14 +534,14 @@ DECLOP (unary_op_noderivs)
 
 
 template <class RET, class ATYPE, class FUNCTION>
-DECLOP (unary_op_derivs)
+DECLOP (unary_op)
 {
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
 
-    unary_op_guts_derivs<RET,ATYPE,FUNCTION> (Result, A, exec,
-                                              runflags, beginpoint, endpoint);
+    unary_op_guts<RET,ATYPE,FUNCTION> (Result, A, exec,
+                                       runflags, beginpoint, endpoint);
 }
 
 

@@ -10,28 +10,48 @@ test ()
     {
         float a = u;
         printf ("\n");
-        printf ("Assign: a = u; a = %d, Dy(a) = %g, Dy(a) = %g\n",
+        printf ("Assign: a = u; a = %g, Dy(a) = %g, Dy(a) = %g\n",
                 a, Dx(a), Dy(a));
     }
 
     {
         float a = u+v;
         printf ("\n");
-        printf ("Add: a = u+v; a = %d, Dy(a) = %g, Dy(a) = %g\n",
+        printf ("Add: a = u+v; a = %g, Dy(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+        a = u+0.5;
+        printf ("Add constant: a = u+0.5; a = %g, Dy(a) = %g, Dy(a) = %g\n",
                 a, Dx(a), Dy(a));
     }
 
     {
         float a = u-v;
         printf ("\n");
-        printf ("Sub: a = u-v; a = %d, Dy(a) = %g, Dy(a) = %g\n",
+        printf ("Sub: a = u-v; a = %g, Dy(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+        a = u-0.5;
+        printf ("Sub constant: a = u-0.5; a = %g, Dy(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = -u;
+        printf ("\n");
+        printf ("Negate: a = -u; a = %g, Dy(a) = %g, Dy(a) = %g\n",
                 a, Dx(a), Dy(a));
     }
 
     {
         float a = u*v;
         printf ("\n");
-        printf ("Mul: a = u*v; a = %d, Dy(a) = %g, Dy(a) = %g\n",
+        printf ("Mul: a = u*v; a = %g, Dy(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = u/(v+1);
+        printf ("\n");
+        printf ("Div: a = u/(v+1); a = %g, Dy(a) = %g, Dy(a) = %g\n",
                 a, Dx(a), Dy(a));
     }
 

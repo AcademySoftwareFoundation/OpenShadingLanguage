@@ -70,7 +70,7 @@ public:
     Dual2 (const T &x, const T &dx, const T &dy) 
         : m_val(x), m_dx(dx), m_dy(dy) { }
 
-    void init (const T &x, const T &dx, const T &dy) {
+    void set (const T &x, const T &dx, const T &dy) {
         m_val = x;  m_dx = dx;  m_dy = dy;
     }
 
@@ -195,6 +195,43 @@ template<class T>
 Dual2<T> operator* (T b, const Dual2<T> &a)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dx()*b);
+}
+
+
+
+/// Division of duals.
+///
+template<class T>
+Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
+{
+    T bvalinv = 1.0f / b.val();
+    T aval_bval = a.val() * bvalinv;
+    return Dual2<T> (aval_bval,
+                     bvalinv * (a.dx() - aval_bval * b.dx()),
+                     bvalinv * (a.dy() - aval_bval * b.dy()));
+}
+
+
+/// Division of dual by scalar.
+///
+template<class T>
+Dual2<T> operator/ (const Dual2<T> &a, T b)
+{
+    T binv = 1.0f / b;
+    return a * binv;
+}
+
+
+/// Division of scalar by dual.
+///
+template<class T>
+Dual2<T> operator/ (T aval, const Dual2<T> &b)
+{
+    T bvalinv = 1.0f / b.val();
+    T aval_bval = aval * bvalinv;
+    return Dual2<T> (aval_bval,
+                     bvalinv * ( - aval_bval * b.dx()),
+                     bvalinv * ( - aval_bval * b.dy()));
 }
 
 

@@ -122,7 +122,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     void *addr = m_context->heap_allot (sym, true);
                     VaryingRef<Dual2<Vec3> > P ((Dual2<Vec3> *)addr, sym.step());
                     for (int i = 0;  i < npoints();  ++i)
-                        P[i].init (globals->P[i], globals->dPdx[i], globals->dPdy[i]);
+                        P[i].set (globals->P[i], globals->dPdx[i], globals->dPdy[i]);
                 } else {
                     // No derivs anyway -- don't copy the user's data
                     sym.has_derivs (false);
@@ -144,7 +144,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     void *addr = m_context->heap_allot (sym, true);
                     VaryingRef<Dual2<Float> > u ((Float *)addr, sym.step());
                     for (int i = 0;  i < npoints();  ++i)
-                        u[i].init (globals->u[i], globals->dudx[i], globals->dudy[i]);
+                        u[i].set (globals->u[i], globals->dudx[i], globals->dudy[i]);
                 } else {
                     // No derivs anyway -- don't copy the user's data
                     sym.has_derivs (false);
@@ -157,7 +157,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     void *addr = m_context->heap_allot (sym, true);
                     VaryingRef<Dual2<Float> > v ((Float *)addr, sym.step());
                     for (int i = 0;  i < npoints();  ++i)
-                        v[i].init (globals->v[i], globals->dvdx[i], globals->dvdy[i]);
+                        v[i].set (globals->v[i], globals->dvdx[i], globals->dvdy[i]);
                 } else {
                     // No derivs anyway -- don't copy the user's data
                     sym.has_derivs (false);

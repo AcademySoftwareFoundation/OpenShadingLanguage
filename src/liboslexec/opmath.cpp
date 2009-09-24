@@ -101,9 +101,39 @@ public:
 template<class R, class A, class B>
 class Div {
 public:
-    Div (ShadingExecution *) { }
+    Div (ShadingExecution *x=NULL) { }
     inline void operator() (R &result, const A &a, const B &b) {
         result = (b == (Float)0.0) ? R (0.0) : R (a / b);
+    }
+    inline void operator() (Vec3 &result, const A &a, const Vec3 &b) {
+        Vec3 binv (b[0] == 0.0f ? 0.0f : (1.0f / b[0]),
+                   b[1] == 0.0f ? 0.0f : (1.0f / b[1]),
+                   b[2] == 0.0f ? 0.0f : (1.0f / b[2]));
+        return a * binv;
+    }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const Dual2<B> &b) {
+        Div<R,A,B> div;
+        R bvalinv;
+        div (bvalinv, A(1.0f), b.val());
+        R aval_bval = a.val() * bvalinv;
+        result.set (aval_bval,
+                    bvalinv * (a.dx() - aval_bval * b.dx()),
+                    bvalinv * (a.dy() - aval_bval * b.dy()));
+    }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a, const B &b) {
+        Div<R,A,B> div;
+        R binv;
+        div (binv, A(1.0f), b);
+        result.set (a.val() * binv, a.dx() * binv, a.dy() * binv);
+    }
+    inline void operator() (Dual2<R> &result, const A &a, const Dual2<B> &b) {
+        Div<R,A,B> div;
+        R bvalinv;
+        div (bvalinv, A(1.0f), b.val());
+        R aval_bval = a * bvalinv;
+        result.set (aval_bval,
+                    bvalinv * ( - aval_bval * b.dx()),
+                    bvalinv * ( - aval_bval * b.dy()));
     }
 };
 
@@ -198,6 +228,7 @@ class Neg {
 public:
     Neg (ShadingExecution *) { }
     inline void operator() (R &result, const A &a) { result = -a; }
+    inline void operator() (Dual2<R> &result, const Dual2<A> &a) { result.set (-a.val(), -a.dx(), -a.dy()); }
 };
 
 
@@ -478,7 +509,7 @@ DECLOP (OP_sub)
     } else {
         std::cerr << "Don't know how to sub " << Result.typespec().string()
                   << " = " << A.typespec().string() 
-                  << " + " << B.typespec().string() << "\n";
+                  << " - " << B.typespec().string() << "\n";
         ASSERT (0 && "Subtraction types can't be handled");
     }
 }
@@ -558,7 +589,7 @@ DECLOP (OP_mul)
     } else {
         std::cerr << "Don't know how to mul " << Result.typespec().string()
                   << " = " << A.typespec().string() 
-                  << " + " << B.typespec().string() << "\n";
+                  << " * " << B.typespec().string() << "\n";
         ASSERT (0 && "Multiplication types can't be handled");
     }
 }
@@ -592,7 +623,7 @@ DECLOP (OP_div)
     else if (Result.typespec().is_triple()) {
         if (A.typespec().is_triple()) {
             if (B.typespec().is_triple())
-                impl = binary_op_noderivs<VecProxy,VecProxy,VecProxy,
+                impl = binary_op<VecProxy,VecProxy,VecProxy,
                                  Div<VecProxy,VecProxy,VecProxy> >;
             else if (B.typespec().is_float())
                 impl = binary_op_noderivs<VecProxy,VecProxy,float,
@@ -605,7 +636,7 @@ DECLOP (OP_div)
 
     else if (Result.typespec().is_float() &&
              A.typespec().is_float() && B.typespec().is_float()) {
-        impl = binary_op_noderivs<float,float,float, Div<float,float,float> >;
+        impl = binary_op<float,float,float, Div<float,float,float> >;
     }
 
     else if (Result.typespec().is_int() &&
@@ -636,7 +667,7 @@ DECLOP (OP_div)
     } else {
         std::cerr << "Don't know how to div " << Result.typespec().string()
                   << " = " << A.typespec().string() 
-                  << " + " << B.typespec().string() << "\n";
+                  << " / " << B.typespec().string() << "\n";
         ASSERT (0 && "Division types can't be handled");
     }
 }
@@ -686,8 +717,8 @@ DECLOP (OP_mod)
     } else {
         std::cerr << "Don't know how to mod " << Result.typespec().string()
                   << " = " << A.typespec().string() 
-                  << " + " << B.typespec().string() << "\n";
-        ASSERT (0 && "Division types can't be handled");
+                  << " % " << B.typespec().string() << "\n";
+        ASSERT (0 && "Mod types can't be handled");
     }
 }
 
@@ -711,16 +742,16 @@ DECLOP (OP_neg)
 
     else if (Result.typespec().is_triple()) {
         if (A.typespec().is_triple())
-            impl = unary_op_noderivs<Vec3,Vec3, Neg<Vec3,Vec3> >;
+            impl = unary_op<Vec3,Vec3, Neg<Vec3,Vec3> >;
         else if (A.typespec().is_float())
-            impl = unary_op_noderivs<VecProxy,float, Neg<VecProxy,float> >;
+            impl = unary_op<VecProxy,float, Neg<VecProxy,float> >;
         else if (A.typespec().is_int())
             impl = unary_op_noderivs<VecProxy,int, Neg<VecProxy,int> >;
     } 
 
     else if (Result.typespec().is_float()) {
         if (A.typespec().is_float())
-            impl = unary_op_noderivs<float,float, Neg<float,float> >;
+            impl = unary_op<float,float, Neg<float,float> >;
         else if (A.typespec().is_int())
             impl = unary_op_noderivs<float,int, Neg<float,int> >;
     }

@@ -198,6 +198,15 @@ protected:
             n->print (out, indentlevel);
     }
 
+    /// A is the head of a list of nodes, traverse the list and call
+    /// the print() method for each node in the list.
+    static size_t listlength (const ref &A) {
+        size_t len = 0;
+        for (const ASTNode *n = A.get();  n;  n = n->nextptr())
+            ++len;
+        return len;
+    }
+
     /// Return the number of child nodes.
     ///
     size_t nchildren () const { return m_children.size(); }
@@ -338,6 +347,8 @@ public:
     Symbol *sym () const { return m_sym; }
     ustring name () const { return m_name; }
 
+    bool is_output () const { return m_isoutput; }
+
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -414,9 +425,15 @@ public:
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
     Symbol *codegen (Symbol *dest = NULL);
 
+    /// Special code generation that, when it generates the code for the
+    /// indices, stores those in the extra variables.
+    Symbol *codegen (Symbol *dest, Symbol * &ind,
+                     Symbol * &ind2, Symbol *&ind3);
+
     /// Special code generation of assignment of src to this indexed location
     ///
-    void codegen_assign (Symbol *src);
+    void codegen_assign (Symbol *src, Symbol *ind = NULL,
+                         Symbol *ind2 = NULL, Symbol *ind3 = NULL);
 
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }

@@ -348,10 +348,21 @@ ASTpostincdec::codegen (Symbol *dest)
 Symbol *
 ASTindex::codegen (Symbol *dest)
 {
+    // All heavy lifting is done by the version that stores index symbols.
+    Symbol *ind = NULL, *ind2 = NULL, *ind3 = NULL;
+    return codegen (dest, ind, ind2, ind3);
+}
+
+
+
+Symbol *
+ASTindex::codegen (Symbol *dest, Symbol * &ind,
+                   Symbol * &ind2, Symbol *&ind3)
+{
     Symbol *lv = lvalue()->codegen ();
-    Symbol *ind = index()->codegen ();
-    Symbol *ind2 = index2() ? index2()->codegen () : NULL;
-    Symbol *ind3 = index3() ? index3()->codegen () : NULL;
+    ind = index()->codegen ();
+    ind2 = index2() ? index2()->codegen () : NULL;
+    ind3 = index3() ? index3()->codegen () : NULL;
     if (! dest)
         dest = m_compiler->make_temporary (typespec());
     if (lv->typespec().is_array()) {
@@ -382,12 +393,16 @@ ASTindex::codegen (Symbol *dest)
 
 
 void
-ASTindex::codegen_assign (Symbol *src)
+ASTindex::codegen_assign (Symbol *src, Symbol *ind,
+                          Symbol *ind2, Symbol *ind3)
 {
     Symbol *lv = lvalue()->codegen ();
-    Symbol *ind = index()->codegen ();
-    Symbol *ind2 = index2() ? index2()->codegen () : NULL;
-    Symbol *ind3 = index3() ? index3()->codegen () : NULL;
+    if (! ind)
+        ind = index()->codegen ();
+    if (! ind2)
+        ind2 = index2() ? index2()->codegen () : NULL;
+    if (! ind3)
+        ind3 = index3() ? index3()->codegen () : NULL;
     if (lv->typespec().is_array()) {
         TypeSpec elemtype = lv->typespec().elementtype();
         if (ind3 && elemtype.is_matrix()) {
@@ -638,16 +653,33 @@ ASTtype_constructor::codegen (Symbol *dest)
 Symbol *
 ASTfunction_call::codegen (Symbol *dest)
 {
-    // FIXME -- this is very wrong, just a placeholder
-
-    std::vector<Symbol *> argdest;
+    // Set up a return destination if not passed one (or not the right type)
     if (! typespec().is_void()) {
         if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
             dest = m_compiler->make_temporary (typespec());
-        argdest.push_back (dest);
     }
-    for (ref a = args();  a;  a = a->next()) {
-        argdest.push_back (a->codegen());
+
+    // Generate code for all the individual arguments.  Remember the
+    // individual indices for arguments that are array elements or
+    // vector/color/matrix components.
+    size_t nargs = listlength (args());
+    std::vector<Symbol *> argdest;
+    std::vector<Symbol *> index (nargs, 0), index2(nargs, 0), index3(nargs, 0);
+    bool indexed_output_params = false;
+    int argdest_return_offset = 0;
+    ASTNode *a = args().get();
+    for (int i = 0;  a;  a = a->nextptr(), ++i) {
+        if (a->nodetype() == index_node /* FIXME && arg is written to */) {
+            // Special case for individual array elements or vec/col/matrix
+            // components being passed as output params of the function --
+            // these aren't really lvalues, so we need to restore their
+            // values.  We save the indices we genearate code for here...
+            ASTindex *indexnode = dynamic_cast<ASTindex *> (a);
+            argdest.push_back (indexnode->codegen (NULL, index[i], index2[i], index3[i]));
+            indexed_output_params = true;
+        } else {
+            argdest.push_back (a->codegen ());
+        }
     }
 
     if (is_user_function ()) {
@@ -658,8 +690,7 @@ ASTfunction_call::codegen (Symbol *dest)
         // the corresponding actual parameter.
         ASTNode *form = user_function()->formals().get();
         ASTNode *a = args().get();
-        for (int i = typespec().is_void() ? 0 : 1;
-               a;  a = a->nextptr(), form = form->nextptr(), ++i) {
+        for (int i = 0;  a;  a = a->nextptr(), form = form->nextptr(), ++i) {
             ASTvariable_declaration *f = dynamic_cast<ASTvariable_declaration *>(form);
             f->sym()->alias (argdest[i]);
         }
@@ -697,7 +728,25 @@ ASTfunction_call::codegen (Symbol *dest)
 
     } else {
         // Built-in function
+        if (! typespec().is_void()) {    // Insert the resturn dest if non-void
+            argdest.insert (argdest.begin(), dest);
+            argdest_return_offset = 1;
+        }
         emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
+    }
+
+    if (indexed_output_params) {
+        // Second half of the element/component-passed-as-output-param
+        // issue -- restore the written values to the right spots.
+        a = args().get();
+        for (int i = 0;  a;  a = a->nextptr(), ++i) {
+            if (index[i]) {
+                ASTindex *indexnode = dynamic_cast<ASTindex *> (a);
+                ASSERT (indexnode);
+                indexnode->codegen_assign (argdest[i+argdest_return_offset],
+                                           index[i], index2[i], index3[i]);
+            }
+        }
     }
 
     return dest;

@@ -1,0 +1,18 @@
+void func (output float x)
+{
+    x = 42;
+}
+
+
+shader test ()
+{
+    float a[3] = { 0, 1, 2 };
+    printf ("array a = { %g %g %g }\n", a[0], a[1], a[2]);
+    func (a[1]);
+    printf ("after func(a[1]), a = { %g %g %g }\n", a[0], a[1], a[2]);
+
+    color c = 0;
+    printf ("\n color c = %g\n", c);
+    func (c[1]);
+    printf ("after func(c[1]), c = %g\n", c);
+}

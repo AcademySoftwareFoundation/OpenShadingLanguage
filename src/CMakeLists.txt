@@ -94,7 +94,7 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic array blendmath closure color comparison 
-            derivs exponential function-simple
+            derivs exponential function-simple function-outputelem
             geomath hyperb ieee_fp if incdec intbits loop matrix
             miscmath trig typecast vecctr vector )
 

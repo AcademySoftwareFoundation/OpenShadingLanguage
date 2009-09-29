@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include <stack>
 #include <string>
 
 #include "oslcomp_pvt.h"
@@ -66,6 +67,8 @@ TypeDesc lextype (int lex);
 #ifdef OSL_NAMESPACE {
 };
 #endif
+
+static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 
 %}
 
@@ -257,13 +260,15 @@ function_declaration
         : typespec IDENTIFIER 
                 {
                     oslcompiler->symtab().push ();  // new scope
+                    typespec_stack.push (oslcompiler->current_typespec());
                 }
           '(' function_formal_params_opt ')' '{' statement_list '}'
                 {
                     oslcompiler->symtab().pop ();  // restore scope
                     $$ = new ASTfunction_declaration (oslcompiler,
-                                                      oslcompiler->current_typespec(),
+                                                      typespec_stack.top(),
                                                       ustring($2), $5, $8, NULL);
+                    typespec_stack.pop ();
                     // FIXME -- funcs don't have metadata. Should they?
                 }
         ;

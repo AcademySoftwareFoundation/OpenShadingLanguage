@@ -179,6 +179,7 @@ ASTindex::typecheck (TypeSpec expected)
         indextype = "component";
         TypeDesc tnew = t.simpletype();
         tnew.aggregate = TypeDesc::SCALAR;
+        tnew.vecsemantics = TypeDesc::NOXFORM;
         m_typespec = tnew;
         if (index2())
             error ("can't use [][] on a %s", t.string().c_str());
@@ -186,6 +187,7 @@ ASTindex::typecheck (TypeSpec expected)
         indextype = "component";
         TypeDesc tnew = t.simpletype();
         tnew.aggregate = TypeDesc::SCALAR;
+        tnew.vecsemantics = TypeDesc::NOXFORM;
         m_typespec = tnew;
         if (! index2())
             error ("must use [][] on a matrix, not just []");

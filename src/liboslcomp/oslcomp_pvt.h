@@ -29,6 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSLCOMP_PVT_H
 #define OSLCOMP_PVT_H
 
+#include <vector>
+#include <stack>
+
 #include "OpenImageIO/ustring.h"
 
 #include "oslcomp.h"
@@ -110,10 +113,6 @@ public:
     ///
     SymbolTable &symtab () { return m_symtab; }
 
-    /// Register a symbol
-    ///
-//    void add_function (Symbol *sym) { m_allfuncs.push_back (sym); }
-
     TypeSpec current_typespec () const { return m_current_typespec; }
     void current_typespec (TypeSpec t) { m_current_typespec = t; }
     bool current_output () const { return m_current_output; }
@@ -126,6 +125,10 @@ public:
     /// characters taken by the first code so the caller can advance
     /// their pointer to the next code in the string.
     TypeSpec type_from_code (const char *code, int *advance=NULL);
+
+    /// Return the argument checking code ("p", "v", etc.) corresponding
+    /// to the type.
+    std::string code_from_type (TypeSpec type);
 
     /// Take a type code string (possibly containing many types)
     /// and turn it into a human-readable string.
@@ -171,6 +174,35 @@ public:
 
     std::string output_filename (const std::string &inputfilename);
 
+    /// Push the designated function on the stack, to keep track of
+    /// nesting and so recursed methods can query which is the current
+    /// function in play.
+    void push_function (FunctionSymbol *func) {
+        m_function_stack.push (func);
+        func->init_nesting ();
+    }
+
+    /// Restore the function stack to its state before the last
+    /// push_function().
+    void pop_function () { m_function_stack.pop (); }
+
+    /// Return the symbol of the current user function we're descending
+    /// into, or NULL if we are not inside a user function.
+    FunctionSymbol *current_function () const {
+        return m_function_stack.empty () ? NULL : m_function_stack.top ();
+    }
+
+    /// Push the conditional nesting level, called any time the compiler
+    /// is about to recursively descend into processing (type checking,
+    /// code generation, whatever) for something that may affect which
+    /// points are run.  Pass true for 'isloop' if it's a loop.
+    void push_nesting (bool isloop=false);
+
+    /// Restore the previous conditional nesting level, called any time
+    /// the compiler is done recursively descending.  Pass true for
+    /// 'isloop' if it's a loop.
+    void pop_nesting (bool isloop=false);
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -195,7 +227,6 @@ private:
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
-//    SymbolList m_allfuncs;      ///< All function symbols, in decl order
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
     OpcodeVec m_ircode;       ///< Generated IR code
@@ -208,6 +239,9 @@ private:
     ustring m_last_sourcefile;///< Last filename for retrieve_source
     int m_last_sourceline;    ///< Last line read for retrieve_source
     ustring m_codegenmethod;  ///< Current method we're generating code for
+    std::stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
+    int m_total_nesting;      ///< total conditional nesting level (0 == none)
+    int m_loop_nesting;       ///< just loop nesting level (0 == none)
 };
 
 

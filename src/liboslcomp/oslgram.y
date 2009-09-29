@@ -254,11 +254,16 @@ metadatum
         ;
 
 function_declaration
-        : typespec IDENTIFIER '(' function_formal_params_opt ')' '{' statement_list '}'
+        : typespec IDENTIFIER 
                 {
+                    oslcompiler->symtab().push ();  // new scope
+                }
+          '(' function_formal_params_opt ')' '{' statement_list '}'
+                {
+                    oslcompiler->symtab().pop ();  // restore scope
                     $$ = new ASTfunction_declaration (oslcompiler,
                                                       oslcompiler->current_typespec(),
-                                                      ustring($2), $4, $7, NULL);
+                                                      ustring($2), $5, $8, NULL);
                     // FIXME -- funcs don't have metadata. Should they?
                 }
         ;
@@ -282,7 +287,7 @@ function_formal_param
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler,
                                               oslcompiler->current_typespec(),
-                                              ustring ($3), NULL, true);
+                                              ustring ($3), NULL);
                     var->make_output ($1);
                     $$ = var;
                 }
@@ -293,7 +298,7 @@ function_formal_param
                     t.make_array ($4);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
-                                                       ustring($3), NULL, true);
+                                                       ustring($3), NULL);
                     var->make_output ($1);
                     $$ = var;
                 }

@@ -216,6 +216,35 @@ ASTshader_declaration::codegen (Symbol *dest)
 
 
 Symbol *
+ASTreturn_statement::codegen (Symbol *dest)
+{
+    FunctionSymbol *myfunc = oslcompiler->current_function ();
+    if (myfunc) {
+        // If it's a user function (as opposed to a main shader body)...
+        if (expr()) {
+            // If we are returning a value, generate code for the value,
+            // try to put it in the designated function return location,
+            // but if that's not possible, let it go wherever and then
+            // copy it.
+            ASSERT (myfunc->return_location() != NULL);
+            dest = expr()->codegen (myfunc->return_location ());
+            if (dest != myfunc->return_location ())
+                emitcode ("assign", myfunc->return_location(), dest);
+        }
+        // Functions that return from their middles are special -- to make
+        // them work, we actually wrap them in "dowhile" loops so that we
+        // can "break" to exit them early.
+        if (myfunc->complex_return ())
+            emitcode ("break");
+    } else {
+        // Must be return from the main shader body -- exit from the shader
+        emitcode ("exit");
+    }
+}
+
+
+
+Symbol *
 ASTassign_expression::codegen (Symbol *dest)
 {
     ASTindex *index = NULL;
@@ -421,10 +450,12 @@ ASTconditional_statement::codegen (Symbol *)
 
     // Generate the code for the 'true' and 'false' code blocks, recording
     // the jump destinations for 'else' and the next op after the if.
+    oslcompiler->push_nesting (false);
     codegen_list (truestmt());
     int falselabel = m_compiler->next_op_label ();
     codegen_list (falsestmt());
     int donelabel = m_compiler->next_op_label ();
+    oslcompiler->pop_nesting (false);
 
     // Fix up the 'if' to have the jump destinations.
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
@@ -446,6 +477,7 @@ ASTloop_statement::codegen (Symbol *)
     // can go back and patch it with the jump destinations.
     int loop_op = emitcode (opname());
         
+    oslcompiler->push_nesting (true);
     codegen_list (init());
 
     int condlabel = m_compiler->next_op_label ();
@@ -471,6 +503,7 @@ ASTloop_statement::codegen (Symbol *)
     int iterlabel = m_compiler->next_op_label ();
     codegen_list (iter());
     int donelabel = m_compiler->next_op_label ();
+    oslcompiler->pop_nesting (true);
 
     // Fix up the loop op to have the jump destinations.
     m_compiler->ircode(loop_op).set_jump (condlabel, bodylabel,
@@ -616,7 +649,57 @@ ASTfunction_call::codegen (Symbol *dest)
     for (ref a = args();  a;  a = a->next()) {
         argdest.push_back (a->codegen());
     }
-    emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
+
+    if (is_user_function ()) {
+        // Record the return location
+        func()->return_location (typespec().is_void() ? NULL : dest);
+
+        // Alias each function formal parameter to the symbol holding
+        // the corresponding actual parameter.
+        ASTNode *form = user_function()->formals().get();
+        ASTNode *a = args().get();
+        for (int i = typespec().is_void() ? 0 : 1;
+               a;  a = a->nextptr(), form = form->nextptr(), ++i) {
+            ASTvariable_declaration *f = dynamic_cast<ASTvariable_declaration *>(form);
+            f->sym()->alias (argdest[i]);
+        }
+
+        // Typecheck the function
+        user_function()->typecheck (typespec ());
+
+        // Return statements inside the middle of a function (not the
+        // last statement in the function, or inside a conditional)
+        // require special care, since we don't have a general "jump"
+        // instruction.  Instead, we wrap the function call inside a
+        // do-while loop and "break".
+        int loop_op = -1;
+        int startlabel = m_compiler->next_op_label ();
+        if (func()->complex_return ())
+            loop_op = emitcode ("dowhile");
+
+        // Generate the code for the function body
+        oslcompiler->push_function (func ());
+        codegen_list (user_function()->statements());
+        oslcompiler->pop_function ();
+
+        if (func()->complex_return ()) {
+            // Second half of the "do-while-break" technique for functions
+            // that do not have simple return patterns.  Now we need to
+            // retroactively add the loop arguments and jump targets to
+            // the loop instruction.
+            Symbol *condvar = m_compiler->make_constant (0);
+            size_t argstart = m_compiler->add_op_args (1, &condvar);
+            m_compiler->ircode(loop_op).set_args (argstart, 1);
+            int endlabel = m_compiler->next_op_label ();
+            m_compiler->ircode(loop_op).set_jump (startlabel, startlabel,
+                                                  endlabel, endlabel);
+        }
+
+    } else {
+        // Built-in function
+        emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
+    }
+
     return dest;
 }
 

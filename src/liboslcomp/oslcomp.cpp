@@ -73,7 +73,8 @@ OSLCompilerImpl::OSLCompilerImpl ()
     : m_lexer(NULL), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_debug(false), m_next_temp(0), m_next_const(0),
-      m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0)
+      m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
+      m_total_nesting(0), m_loop_nesting(0)
 {
     initialize_globals ();
     initialize_builtin_funcs ();
@@ -539,6 +540,31 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
 
     return std::string (buf);
 }
+
+
+
+void
+OSLCompilerImpl::push_nesting (bool isloop)
+{
+    ++m_total_nesting;
+    if (isloop)
+        ++m_loop_nesting;
+    if (current_function())
+        current_function()->push_nesting (isloop);
+}
+
+
+
+void
+OSLCompilerImpl::pop_nesting (bool isloop)
+{
+    --m_total_nesting;
+    if (isloop)
+        --m_loop_nesting;
+    if (current_function())
+        current_function()->pop_nesting (isloop);
+}
+
 
 
 }; // namespace pvt

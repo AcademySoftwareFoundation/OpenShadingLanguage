@@ -181,11 +181,11 @@ public:
     ///
     ref next () const { return m_next; }
 
-protected:
     /// Return the raw pointer to the next node in the sequence.  Use
     /// with caution!
     ASTNode *nextptr () const { return m_next.get(); }
 
+protected:
     void indent (std::ostream &out, int indentlevel=0) const {
         while (indentlevel--)
             out << "    ";
@@ -296,12 +296,13 @@ public:
     const char *nodetypename () const { return "function_declaration"; }
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
-    // TypeSpec typecheck (TypeSpec expected); // Use the default
+    TypeSpec typecheck (TypeSpec expected);
 
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }
     ref statements () const { return child (2); }
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
+
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -519,7 +520,8 @@ public:
 
     const char *nodetypename () const { return "return_statement"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
 };
@@ -656,6 +658,12 @@ public:
 
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
     ref args () const { return child (0); }
+    bool is_user_function () const {
+        return func()->node() != NULL;
+    }
+    ASTfunction_declaration * user_function () const {
+        return (ASTfunction_declaration *) func()->node();
+    }
 
 private:
     /// Typecheck all polymorphic versions, return UNKNOWN if no match was

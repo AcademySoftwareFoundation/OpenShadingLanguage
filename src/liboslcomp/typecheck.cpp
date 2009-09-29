@@ -81,6 +81,22 @@ ASTNode::typecheck_list (ref node, TypeSpec expected)
 
 
 TypeSpec
+ASTfunction_declaration::typecheck (TypeSpec expected)
+{
+    // Typecheck the args, remember to push/pop the function so that the
+    // typechecking for 'return' will know which function it belongs to.
+    oslcompiler->push_function (func ());
+    typecheck_children (expected);
+    oslcompiler->pop_function ();
+
+    if (m_typespec == TypeSpec())
+        m_typespec = expected;
+    return m_typespec;
+}
+
+
+
+TypeSpec
 ASTvariable_declaration::typecheck (TypeSpec expected)
 {
     typecheck_children (m_typespec);
@@ -205,7 +221,12 @@ ASTstructselect::typecheck (TypeSpec expected)
 TypeSpec
 ASTconditional_statement::typecheck (TypeSpec expected)
 {
-    typecheck_children ();
+    typecheck_list (cond ());
+    oslcompiler->push_nesting (false);
+    typecheck_list (truestmt ());
+    typecheck_list (falsestmt ());
+    oslcompiler->pop_nesting (false);
+
     TypeSpec c = cond()->typespec();
     if (c.is_closure())
         error ("Cannot use a closure as an 'if' condition");
@@ -221,7 +242,13 @@ ASTconditional_statement::typecheck (TypeSpec expected)
 TypeSpec
 ASTloop_statement::typecheck (TypeSpec expected)
 {
-    typecheck_children ();
+    typecheck_list (init ());
+    oslcompiler->push_nesting (true);
+    typecheck_list (cond ());
+    typecheck_list (iter ());
+    typecheck_list (stmt ());
+    oslcompiler->pop_nesting (true);
+
     TypeSpec c = cond()->typespec();
     if (c.is_closure())
         error ("Cannot use a closure as an '%s' condition", opname());
@@ -263,6 +290,45 @@ ASTassign_expression::typecheck (TypeSpec expected)
     }
 
     return m_typespec = vt;
+}
+
+
+
+TypeSpec
+ASTreturn_statement::typecheck (TypeSpec expected)
+{
+    FunctionSymbol *myfunc = oslcompiler->current_function ();
+    if (myfunc) {
+        // If it's a user function (as opposed to a main shader body)...
+        if (expr()) {
+            // If we are returning a value, it must be assignable to the
+            // kind of type the function actually returns.  This check
+            // will also catch returning a value from a void function.
+            TypeSpec et = expr()->typespec ();
+            if (! assignable (myfunc->typespec(), et)) {
+                error ("Cannot return a '%s' from '%s %s()'",
+                       et.string().c_str(), myfunc->typespec().string().c_str(),
+                       myfunc->name().c_str());
+            }
+        } else {
+            // If we are not returning a value, it must be a void function.
+            if (! myfunc->typespec().is_void ())
+                error ("You must return a '%s' from function '%s'",
+                       myfunc->typespec().string().c_str(),
+                       myfunc->name().c_str());
+        }
+        // If the function has other statements AFTER 'return', or if
+        // the return statement is in a conditional, we'll need to
+        // handle it specially when generating code.
+        myfunc->complex_return (this->nextptr() != NULL ||
+                                myfunc->nesting_level() > 0);
+    } else {
+        // We're not part of any user function, so this 'return' must 
+        // be from the main shader body.  That's fine (it's equivalent
+        // to calling exit()), but it can't return a value.
+        if (expr())
+            error ("Cannot return a value from a shader body");
+    }
 }
 
 
@@ -925,6 +991,52 @@ OSLCompilerImpl::typelist_from_code (const char *code)
 
     return ret;
 }
+
+
+
+std::string
+OSLCompilerImpl::code_from_type (TypeSpec type)
+{
+    std::string out;
+    TypeDesc elem = type.elementtype().simpletype();
+    if (type.is_structure()) {
+        ASSERT (0 && "code_from_type doesn't handle struct yet");
+    } else if (type.is_closure()) {
+        out = 'C';
+    } else {
+        if (elem == TypeDesc::TypeInt)
+            out = 'i';
+        else if (elem == TypeDesc::TypeFloat)
+            out = 'f';
+        else if (elem == TypeDesc::TypeColor)
+            out = 'c';
+        else if (elem == TypeDesc::TypePoint)
+            out = 'p';
+        else if (elem == TypeDesc::TypeVector)
+            out = 'v';
+        else if (elem == TypeDesc::TypeNormal)
+            out = 'n';
+        else if (elem == TypeDesc::TypeMatrix)
+            out = 'm';
+        else if (elem == TypeDesc::TypeString)
+            out = 's';
+        else if (elem == TypeDesc::NONE)
+            out = 'x';
+        else
+            ASSERT (0);
+    }
+
+    if (type.is_array()) {
+        int len = type.arraylength ();
+        if (len > 0)
+            out += Strutil::format ("[%d]", len);
+        else
+            out += "[]";
+    }
+
+    return out;
+}
+
 
 
 }; // namespace pvt

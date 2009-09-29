@@ -137,9 +137,36 @@ public:
     void argcodes (ustring args) { m_argcodes = args; }
     ustring argcodes () const { return m_argcodes; }
 
+    Symbol *return_location () const { return m_return_location; }
+    void return_location (Symbol *r) { m_return_location = r; }
+
+    bool complex_return () const { return m_complex_return; }
+    void complex_return (bool complex) { m_complex_return = complex; }
+
+    void push_nesting (bool isloop) {
+        ++m_function_total_nesting;
+        if (isloop)
+            ++m_function_loop_nesting;
+    }
+    void pop_nesting (bool isloop) {
+        --m_function_total_nesting;
+        if (isloop)
+            --m_function_loop_nesting;
+    }
+    int nesting_level () const { return m_function_total_nesting; }
+    void init_nesting () {
+        m_function_total_nesting = 0;
+        m_function_loop_nesting = 0;
+    }
+
 private:
     ustring m_argcodes;              ///< Encoded arg types
     FunctionSymbol *m_nextpoly;      ///< Next polymorphic version
+    // Below, temporary storage used during code generation
+    Symbol *m_return_location;       ///< Store return value location
+    bool m_complex_return;           ///< Return is not last statement unconditionally executed
+    int m_function_loop_nesting;     ///< Loop nesting level within the func
+    int m_function_total_nesting;    ///< Total nesting level within the func
 };
 
 

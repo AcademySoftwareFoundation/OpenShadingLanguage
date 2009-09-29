@@ -216,9 +216,11 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 
     m_sym = new FunctionSymbol (name, type, this);
     func()->nextpoly ((FunctionSymbol *)f);
-
+    std::string argcodes = oslcompiler->code_from_type (m_typespec);
+    for (ref arg = formals();  arg;  arg = arg->next())
+        argcodes += oslcompiler->code_from_type (arg->typespec ());
+    func()->argcodes (ustring (argcodes));
     oslcompiler->symtab().insert (m_sym);
-//    oslcompiler->add_function (m_sym);
 }
 
 
@@ -652,8 +654,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
 const char *
 ASTfunction_call::childname (size_t i) const
 {
-    static const char *name[] = { "parameters" };
-    return name[i];
+    return ustring::format ("param%d", (int)i).c_str();
 }
 
 

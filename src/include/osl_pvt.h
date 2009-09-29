@@ -388,6 +388,13 @@ public:
         return s;
     }
 
+    /// Establish that this symbol is really an alias for another symbol.
+    ///
+    void alias (Symbol *other) {
+        DASSERT (other != this);  // circular alias would be bad
+        m_alias = other;
+    }
+
     /// Return a string representation ("param", "global", etc.) of the
     /// SymType s.
     static const char *symtype_shortname (SymType s);

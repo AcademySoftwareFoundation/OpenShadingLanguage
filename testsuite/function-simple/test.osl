@@ -1,0 +1,14 @@
+float sqr (float a)
+{
+    float z = a * a;
+    printf ("%g*%g = %g\n", a, a, z);
+    return z;
+}
+
+
+shader test ()
+{
+    float x = 2;
+    float y = sqr (x);
+    printf ("x = %g, y = %g\n", x, y);
+}

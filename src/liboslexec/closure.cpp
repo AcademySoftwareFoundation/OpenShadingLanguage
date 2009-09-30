@@ -103,8 +103,10 @@ typedesc_from_code (const char * &codestart)
 
 
 
-ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes)
-    : m_name(name), m_nargs(0), m_argcodes(argtypes)
+ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes,
+                                    int category)
+    : m_name(name), m_category((Category)category),
+      m_nargs(0), m_argcodes(argtypes)
 {
     ASSERT (m_name.length());
     // Base class ctr of a closure primitive registers it

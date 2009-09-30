@@ -124,9 +124,9 @@ ClosurePrimitive::pdf_cos_hemisphere (const Vec3 &N, const Vec3 &R)
 namespace pvt {
 
 
-class DiffuseClosure : public ClosurePrimitive {
+class DiffuseClosure : public BSDFClosure {
 public:
-    DiffuseClosure () : ClosurePrimitive ("diffuse", "n") { }
+    DiffuseClosure () : BSDFClosure ("diffuse", "n") { }
 
     struct params_t {
         Vec3 N;
@@ -153,7 +153,7 @@ public:
         sample_cos_hemisphere (params->N, I, randu, randv, R, pdf);
     }
 
-    float pdf (const void *paramsptr, const Vec3 &R) const
+    float pdf (const void *paramsptr, const Vec3 &I, const Vec3 &R) const
     {
         const params_t *params = (const params_t *) paramsptr;
         return pdf_cos_hemisphere (params->N, R);

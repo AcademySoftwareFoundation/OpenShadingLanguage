@@ -41,9 +41,9 @@ using namespace OSL;
 #include <boost/test/included/unit_test.hpp>
 
 
-class MyClosure : public ClosurePrimitive {
+class MyClosure : public BSDFClosure {
 public:
-    MyClosure () : ClosurePrimitive ("my", "f") { }
+    MyClosure () : BSDFClosure ("my", "f") { }
     bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
                const Vec3 &R, Color3 &Er) const
     {
@@ -52,7 +52,7 @@ public:
     void sample (const void *paramsptr, const Vec3 &I, float randu, float randv,
                  Vec3 &R, float &pdf) const
     { }
-    float pdf (const void *paramsptr, const Vec3 &R) const
+    float pdf (const void *paramsptr, const Vec3 &I, const Vec3 &R) const
     {
         return 0;
     }

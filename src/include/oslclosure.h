@@ -41,14 +41,22 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 
 
-/// Representation of a radiance color closure.
+/// Base class representation of a radiance color closure.
 /// For each BSDF or emission profile, the renderer should create a
 /// subclass of ClosurePrimitive and create a single object (which
 /// automatically "registers" it with the system).
-/// Each subclass (BSDF) needs to overload eval(), sample(), pdf().
+/// Each subclass needs to overload eval(), sample(), pdf().
 class ClosurePrimitive {
 public:
-    ClosurePrimitive (const char *name, const char *argtypes);
+    /// The categories of closure primitives we can have.  It's possible
+    /// to customize/extend this list as long as there is coordination
+    /// between the closure primitives and the integrators.
+    enum Category {
+        BSDF,           ///< It's reflective and/or transmissive
+        Emissive        ///< It's emissive (like a light)
+    };
+
+    ClosurePrimitive (const char *name, const char *argtypes, int category);
     virtual ~ClosurePrimitive ();
 
     /// Return the name of the primitive
@@ -76,39 +84,10 @@ public:
     ///
     int argmem () const { return m_argmem; }
 
-    /// Evaluate the BSDF -- Given instance parameters, incoming
-    /// radiance El in the direction L, and reflection direction R,
-    /// compute the outgoing radiance Er in the direction of R.  Return
-    /// true if there is any (non-zero) outgoing radiance, false if
-    /// there is no outgoing radiance (this allows the caller to take
-    /// various shortcuts without needing to check the value of Er.  It
-    /// is assumed that L and R are already normalized and point away
-    /// from the surface position.  It's up to the implementor of a
-    /// ClosurePrimitive subclass to ensure that it conserves energy
-    /// (unless it's intended to be emissive) and observes reciprocity.
-    virtual bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
-                       const Vec3 &R, Color3 &Er) const = 0;
-
-    /// Sample the BSDF -- Given instance parameters, incident direction
-    /// I (pointing toward the surface), and random deviates randu and
-    /// randv on [0,1), return a sampled direction R and the PDF value
-    /// in that direction.
+    /// Return the category of material this primitive represents.
     ///
-    /// The default implementation samples uniformly about the
-    /// hemisphere in the direction of N, with cosine weighting.  That's
-    /// correct for Lambert, and adequate (though not optimal) for other
-    /// BSDFs that don't wish to figure out the right solution.
-    virtual void sample (const void *paramsptr,
-                         const Vec3 &I, float randu, float randv,
-                         Vec3 &R, float &pdf) const = 0;
+    int category () const { return m_category; }
 
-    /// Return the probability distribution function in the direction R,
-    /// given the parameters.  This MUST match the PDF computed by
-    /// sample().
-    ///
-    /// The default implementation assumes cosine-weighted sampling of
-    /// the hemisphere centered upon N.
-    virtual float pdf (const void *paramsptr, const Vec3 &R) const = 0;
 
     /// Assemble a primitive by name
     ///
@@ -125,11 +104,82 @@ public:
 
 private:
     ustring m_name;
+    Category m_category;
     int m_nargs;
-    ustring m_argcodes;
     int m_argmem;
     std::vector<TypeDesc> m_argtypes;
     std::vector<int> m_argoffsets;
+    ustring m_argcodes;
+};
+
+
+
+/// Subclass of ClosurePrimitive that contains the methods needed
+/// for a BSDF-like material: eval(), sample(), pdf().
+class BSDFClosure : public ClosurePrimitive {
+public:
+    BSDFClosure (const char *name, const char *argtypes)
+        : ClosurePrimitive (name, argtypes, BSDF) { }
+    ~BSDFClosure () { }
+
+    /// Evaluate the BSDF -- Given instance parameters, incoming
+    /// radiance El in the direction L, and reflection direction R,
+    /// compute the outgoing radiance Er in the direction of R.  Return
+    /// true if there is any (non-zero) outgoing radiance, false if
+    /// there is no outgoing radiance (this allows the caller to take
+    /// various shortcuts without needing to check the value of Er.  It
+    /// is assumed that L and R are already normalized and point away
+    /// from the surface position.  It's up to the implementor of a
+    /// BSDFClosure subclass to ensure that it conserves energy and
+    /// observes reciprocity.
+    virtual bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
+                       const Vec3 &R, Color3 &Er) const = 0;
+
+    /// Sample the BSDF -- Given instance parameters, incident direction
+    /// I (pointing toward the surface), and random deviates randu and
+    /// randv on [0,1), return a sampled direction R and the PDF value
+    /// in that direction.
+    virtual void sample (const void *paramsptr,
+                         const Vec3 &I, float randu, float randv,
+                         Vec3 &R, float &pdf) const = 0;
+
+    /// Return the probability distribution function in the direction R,
+    /// given the parameters and incident direction I.  This MUST match
+    /// the PDF computed by sample().
+    virtual float pdf (const void *paramsptr, const Vec3 &I,
+                       const Vec3 &R) const = 0;
+};
+
+
+
+/// Subclass of ClosurePrimitive that contains the methods needed
+/// for an emissive material.
+class EmissiveClosure : public ClosurePrimitive {
+public:
+    EmissiveClosure (const char *name, const char *argtypes)
+        : ClosurePrimitive (name, argtypes, Emissive) { }
+    ~EmissiveClosure () { }
+
+    /// Evaluate the emission -- Given instance parameters, compute the
+    /// outgoing radiance Er in the direction of R.  Return true if
+    /// there is any (non-zero) outgoing radiance, false if there is no
+    /// outgoing radiance (this allows the caller to take various
+    /// shortcuts without needing to check the value of Er.  It is
+    /// assumed that R is already normalized and points away from the
+    /// surface position.
+    virtual bool eval (const void *paramsptr, 
+                       const Vec3 &R, Color3 &Er) const = 0;
+
+    /// Sample the emission direction -- Given instance parameters and
+    /// random deviates randu and randv on [0,1), return a sampled
+    /// direction R and the PDF value in that direction.
+    virtual void sample (const void *paramsptr, float randu, float randv,
+                         Vec3 &R, float &pdf) const = 0;
+
+    /// Return the probability distribution function in the direction R,
+    /// given the parameters.  This MUST match the PDF computed by
+    /// sample().
+    virtual float pdf (const void *paramsptr, const Vec3 &R) const = 0;
 };
 
 

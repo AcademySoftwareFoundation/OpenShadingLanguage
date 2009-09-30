@@ -491,7 +491,7 @@ public:
     size_t closure_allot (size_t n) {
         size_t curheap = heap_allot (n * sizeof (ClosureColor *));
         ClosureColor **ptrs = (ClosureColor **) heapaddr (curheap);
-        for (int i = 0;  i < n;  ++i)
+        for (size_t i = 0;  i < n;  ++i)
             ptrs[i] = &m_closures[m_closures_allotted++];
         return curheap;
     }

@@ -100,7 +100,6 @@ namespace {  // anonymous
 template<int xformtype>
 DECLOP (triple_ctr_transform)
 {
-    bool using_space = (nargs == 5);
     Symbol &Result (exec->sym (args[0]));
     Symbol &Space (exec->sym (args[1]));
     Symbol &X (exec->sym (args[2]));

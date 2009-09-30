@@ -125,7 +125,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
 
     // Get a handy ref to the shader group for this shader use
     ShaderGroup &sgroup (m_attribs->shadergroup (use));
-    int nlayers = sgroup.nlayers ();
+    size_t nlayers = sgroup.nlayers ();
 
     // Get a handy ref to the array of ShadeExec layer for this shade use,
     // and make sure it's big enough for the number of layers we have.
@@ -133,7 +133,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     if (nlayers > execlayers.size())
         execlayers.resize (nlayers);
 
-    for (int layer = 0;  layer < nlayers;  ++layer) {
+    for (size_t layer = 0;  layer < nlayers;  ++layer) {
         execlayers[layer].bind (this, use, layer, sgroup[layer]);
         // FIXME -- for now, we're executing layers unconditionally.
         // Eventually, we only want to execut them here if they have

@@ -64,10 +64,14 @@ MyClosure myclosure;
 
 BOOST_AUTO_TEST_CASE (closure_test_add)
 {
-    // Create a closure with one component
+   // avoid warnings from boost headers
+    BOOST_CHECK_CLOSE(0.0f, 0.0f, 0.001f);
+    BOOST_CHECK_SMALL(0.0f, 0.001f);
+
+   // Create a closure with one component
     ClosureColor c;
     c.add_component (ClosurePrimitive::primitive (ustring("my")), Color3(.1, .1, .1));
-    float f = 0.33;
+    float f = 0.33f;
     c.set_parameter (0, 0, &f);
     BOOST_CHECK_EQUAL (c.ncomponents(), 1);
 

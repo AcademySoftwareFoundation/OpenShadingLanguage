@@ -141,8 +141,8 @@ to_rgb (ustring fromspace, float a, float b, float c, ShadingExecution *exec)
 class Luminance {
 public:
     Luminance (ShadingExecution *) { }
-    float operator() (float &result, const Color3 &c) {
-        result = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    void operator() (float &result, const Color3 &c) {
+       result = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     }
 };
 
@@ -152,7 +152,6 @@ public:
 ///
 DECLOP (color_ctr_transform)
 {
-    bool using_space = (nargs == 5);
     Symbol &Result (exec->sym (args[0]));
     Symbol &Space (exec->sym (args[1]));
     Symbol &X (exec->sym (args[2]));

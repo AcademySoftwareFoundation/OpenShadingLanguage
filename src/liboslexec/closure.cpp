@@ -114,7 +114,6 @@ ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes)
     prim_map[m_name] = this;
 
 
-    const int alignment = sizeof (char *);
     m_argmem = 0;
     for (const char *code = m_argcodes.c_str();  code && *code; ) {
         // Grab the next type code.  This automatically advances code!

@@ -172,7 +172,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         pclose (cpppipe);
         cpppipe = NULL;
 
-        if (! error_encountered()) {
+        if (! parseerr) {
             oslcompiler->shader()->typecheck ();
         }
 
@@ -457,7 +457,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         // Register arguments
         if (op->nargs())
             oso (op->opname().length() < 8 ? "\t\t" : "\t");
-        for (size_t i = 0;  i < op->nargs();  ++i) {
+        for (int i = 0;  i < op->nargs();  ++i) {
             int arg = op->firstarg() + i;
             oso ("%s ", m_opargs[arg]->dealias()->mangled().c_str());
         }

@@ -159,7 +159,7 @@ ShaderMaster::print ()
     std::cout << "  code:\n";
     for (size_t i = 0;  i < m_ops.size();  ++i) {
         std::cout << "    " << i << ": " << m_ops[i].opname();
-        for (size_t a = 0;  a < m_ops[i].nargs();  ++a)
+        for (int a = 0;  a < m_ops[i].nargs();  ++a)
             std::cout << " " << m_symbols[m_args[m_ops[i].firstarg()+a]].name();
         for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
             if (m_ops[i].jump(j) >= 0)

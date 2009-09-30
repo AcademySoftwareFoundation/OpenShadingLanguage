@@ -493,7 +493,6 @@ ShadingExecution::format_symbol (const std::string &format,
     }
     TypeDesc type = sym.typespec().simpletype();
     const char *data = (const char *)sym.data() + whichpoint * sym.step();
-    char kind = format[format.length()-1];
     std::string s;
     int n = type.numelements() * type.aggregate;
     for (int i = 0;  i < n;  ++i) {

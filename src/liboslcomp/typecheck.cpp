@@ -331,6 +331,7 @@ ASTreturn_statement::typecheck (TypeSpec expected)
         if (expr())
             error ("Cannot return a value from a shader body");
     }
+    return TypeSpec(); // TODO: what should be returned here?
 }
 
 

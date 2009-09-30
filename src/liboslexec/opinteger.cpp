@@ -218,8 +218,10 @@ DECLOP (OP_shr)
 DECLOP (OP_compl)
 {
     DASSERT (nargs == 2);
+#ifdef DEBUG
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
+#endif
     DASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());

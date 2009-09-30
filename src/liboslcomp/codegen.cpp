@@ -240,6 +240,7 @@ ASTreturn_statement::codegen (Symbol *dest)
         // Must be return from the main shader body -- exit from the shader
         emitcode ("exit");
     }
+    return NULL;
 }
 
 

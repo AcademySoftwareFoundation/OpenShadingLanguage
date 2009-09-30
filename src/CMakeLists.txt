@@ -17,6 +17,10 @@ if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
 
+## turn on more detailed warnings
+set ( CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
+set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
+
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 
 set (CMAKE_MODULE_PATH

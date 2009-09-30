@@ -71,7 +71,7 @@ add_shader (int argc, const char *argv[])
 
 
 
-static int
+static void
 getargs (int argc, const char *argv[])
 {
     static bool help = false;

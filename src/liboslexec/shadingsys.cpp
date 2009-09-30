@@ -57,7 +57,7 @@ ShadingSystem::create (RendererServices *renderer,
     // Doesn't need a shared cache
     ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem);
 #ifdef DEBUG
-    std::cout << "creating new ShadingSystem " << (void *)ts << "\n";
+    //std::cout << "creating new ShadingSystem " << (void *)ts << "\n";
 #endif
     return ts;
 }
@@ -109,7 +109,7 @@ namespace pvt {   // OSL::pvt
 ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       TextureSystem *texturesystem)
     : m_renderer(renderer), m_texturesys(texturesystem),
-      m_in_group (false), m_statslevel (0), m_debug (false),
+      m_statslevel (0), m_debug (false), m_in_group (false),
       m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;

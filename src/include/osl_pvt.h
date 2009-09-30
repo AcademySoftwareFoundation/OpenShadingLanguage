@@ -424,7 +424,7 @@ public:
 
     bool has_derivs () const { return m_has_derivs; }
     int deriv_step () const { return m_size; /*m_deriv_step;*/ }
-    bool has_derivs (bool new_derivs) {
+    void has_derivs (bool new_derivs) {
         m_has_derivs = new_derivs;
     }
     int size () const { return m_size; }

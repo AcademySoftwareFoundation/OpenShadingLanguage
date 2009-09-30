@@ -100,7 +100,7 @@ public:
     /// Stream output.  Format as: "val[dx,dy]"
     ///
     friend std::ostream& operator<< (std::ostream &out, const Dual2<T> &x) {
-        out << x.val() << "[" << x.dx() << "," << x.dy() << "]";
+        return out << x.val() << "[" << x.dx() << "," << x.dy() << "]";
     }
 
 private:

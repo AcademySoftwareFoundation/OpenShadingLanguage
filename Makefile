@@ -62,6 +62,13 @@ endif
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
 
+
+# Site-specific build instructions
+ifneq (${shell uname -n | grep imageworks},)
+include ${working_dir}/site/spi/Makefile-bits
+endif
+
+
 #########################################################################
 
 

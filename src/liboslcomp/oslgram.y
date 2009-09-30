@@ -64,7 +64,7 @@ namespace pvt {
 TypeDesc lextype (int lex);
 };
 };
-#ifdef OSL_NAMESPACE {
+#ifdef OSL_NAMESPACE
 };
 #endif
 

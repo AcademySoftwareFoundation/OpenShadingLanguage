@@ -142,7 +142,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     // Derivs supplied
                     sym.has_derivs (true);
                     void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Float> > u ((Float *)addr, sym.step());
+                    VaryingRef<Dual2<Float> > u ((Dual2<Float> *)addr, sym.step());
                     for (int i = 0;  i < npoints();  ++i)
                         u[i].set (globals->u[i], globals->dudx[i], globals->dudy[i]);
                 } else {
@@ -155,7 +155,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     // Derivs supplied
                     sym.has_derivs (true);
                     void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Float> > v ((Float *)addr, sym.step());
+                    VaryingRef<Dual2<Float> > v ((Dual2<Float> *)addr, sym.step());
                     for (int i = 0;  i < npoints();  ++i)
                         v[i].set (globals->v[i], globals->dvdx[i], globals->dvdy[i]);
                 } else {

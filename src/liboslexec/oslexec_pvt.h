@@ -29,6 +29,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSLEXEC_PVT_H
 #define OSLEXEC_PVT_H
 
+#include <string>
+#include <vector>
+#include <map>
+
 #include "OpenImageIO/thread.h"
 
 #include "oslexec.h"

@@ -64,10 +64,11 @@ MyClosure myclosure;
 
 BOOST_AUTO_TEST_CASE (closure_test_add)
 {
+#if BOOST_VERSION >= 103900
    // avoid warnings from boost headers
     BOOST_CHECK_CLOSE(0.0f, 0.0f, 0.001f);
     BOOST_CHECK_SMALL(0.0f, 0.001f);
-
+#endif
    // Create a closure with one component
     ClosureColor c;
     c.add_component (ClosurePrimitive::primitive (ustring("my")), Color3(.1, .1, .1));

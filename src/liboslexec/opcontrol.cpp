@@ -97,7 +97,7 @@ DECLOP (OP_if)
     Runflag *true_runflags = ALLOCA (Runflag, exec->npoints());
     memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
     Runflag *false_runflags = ALLOCA (Runflag, exec->npoints());
-    memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
+    memcpy (false_runflags, runflags, exec->npoints() * sizeof(Runflag));
     for (int i = beginpoint;  i < endpoint;  ++i) {
         if (runflags[i]) {
             if (condition[i])

@@ -45,8 +45,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace {
 
 typedef hash_map<ustring, const OSL::ClosurePrimitive *, ustringHash> ClosurePrimMap;
-ClosurePrimMap prim_map;
-mutex closure_mutex;
+static ClosurePrimMap *prim_map = NULL;
+// N.B. The reason we have a pointer here is to avoid linkage problems 
+// where some orders of static constructions would lead to errors.
+// Case in point: if the hash table has not been constructed in time
+// for a ClosurePrimitive subclass ctr that needs it.
+static mutex closure_mutex;
 
 };
 
@@ -111,9 +115,11 @@ ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes,
     ASSERT (m_name.length());
     // Base class ctr of a closure primitive registers it
     lock_guard guard (closure_mutex);
-    ClosurePrimMap::const_iterator found = prim_map.find (m_name);
-    ASSERT (found == prim_map.end());
-    prim_map[m_name] = this;
+    if (! prim_map)
+        prim_map = new ClosurePrimMap;
+    ClosurePrimMap::const_iterator found = prim_map->find (m_name);
+    ASSERT (found == prim_map->end());
+    (*prim_map)[m_name] = this;
 
 
     m_argmem = 0;
@@ -150,9 +156,9 @@ ClosurePrimitive::~ClosurePrimitive ()
 {
     // Base class of a closure primitive registers it
     lock_guard guard (closure_mutex);
-    ClosurePrimMap::iterator todelete = prim_map.find (m_name);
-    ASSERT (todelete != prim_map.end() && todelete->second == this);
-    prim_map.erase (todelete);
+    ClosurePrimMap::iterator todelete = prim_map->find (m_name);
+    ASSERT (todelete != prim_map->end() && todelete->second == this);
+    prim_map->erase (todelete);
     std::cerr << "De-registered closure primitive '" << m_name << "'\n";
 }
 
@@ -164,9 +170,11 @@ ClosurePrimitive::primitive (ustring name)
     ClosurePrimMap::const_iterator found;
     {
         lock_guard guard (closure_mutex);
-        found = prim_map.find (name);
+        if (! prim_map)
+            return NULL;
+        found = prim_map->find (name);
     }
-    if (found != prim_map.end())
+    if (found != prim_map->end())
         return found->second;
     // Oh no, not found!  Return NULL;
     return NULL;

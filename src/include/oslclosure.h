@@ -256,8 +256,21 @@ public:
     ///
     friend std::ostream & operator<< (std::ostream &out, const ClosureColor &c);
 
+    /// Return the number of primitive components of this closure.
+    ///
     int ncomponents () const { return (int) m_components.size(); }
-    const Color3 & weight (int i) const { return m_components[i].weight; }
+
+    /// Return the weight of the i-th primitive component of this closure.
+    ///
+    const Color3 & weight (int i) const { return component(i).weight; }
+
+    /// Return a pointer to the ClosurePrimitive of the i-th primitive
+    /// component of this closure.
+    const ClosurePrimitive * prim (int i) const { return component(i).cprim; }
+
+    /// Return a pointer to the raw primitive data for the i-th primitive
+    /// component of this closure.
+    const void *compdata (int i) const { return &m_mem[component(i).memoffset]; }
 
     /// Add a parameter value
     ///

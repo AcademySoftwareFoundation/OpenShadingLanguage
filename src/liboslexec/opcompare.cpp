@@ -163,9 +163,7 @@ DECLOP (OP_eq)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to compare " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " == " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "comparison types can't be handled");
     }
 }
@@ -236,9 +234,7 @@ DECLOP (OP_neq)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to compare " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " != " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "comparison types can't be handled");
     }
 }
@@ -281,9 +277,7 @@ DECLOP (OP_lt)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to compare " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " < " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "comparison types can't be handled");
     }
 }
@@ -326,9 +320,7 @@ DECLOP (OP_le)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to compare " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " <= " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "comparison types can't be handled");
     }
 }
@@ -371,9 +363,7 @@ DECLOP (OP_gt)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to compare " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " > " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "comparison types can't be handled");
     }
 }
@@ -416,9 +406,7 @@ DECLOP (OP_ge)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to compare " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " >= " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "comparison types can't be handled");
     }
 }

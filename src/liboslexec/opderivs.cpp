@@ -103,8 +103,7 @@ DECLOP (OP_Dx)
         exec->op().implementation (impl);
         return;
     } else {
-        std::cerr << "Don't know how to '" << Result.typespec().string()
-                  << " = Dx (" << Src.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Derivative type can't be handled");
     }
 }
@@ -131,8 +130,7 @@ DECLOP (OP_Dy)
         exec->op().implementation (impl);
         return;
     } else {
-        std::cerr << "Don't know how to '" << Result.typespec().string()
-                  << " = Dy (" << Src.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Derivative type can't be handled");
     }
 }

@@ -74,6 +74,15 @@ TypeSpec::string () const
 
 
 
+const char *
+TypeSpec::c_str () const
+{
+    ustring s (this->string());
+    return s.c_str ();
+}
+
+
+
 std::string
 Symbol::mangled () const
 {

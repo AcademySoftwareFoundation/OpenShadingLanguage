@@ -52,7 +52,10 @@ namespace pvt {
 ///
 class OSOReader {
 public:
-    OSOReader () : m_lineno(1) { }
+    OSOReader (ErrorHandler *errhandler = NULL) 
+        : m_err (errhandler ? *errhandler : ErrorHandler::default_handler()),
+          m_lineno(1)
+    { }
     virtual ~OSOReader () { }
 
     /// Read in the oso file, parse it, call the various callbacks.
@@ -125,6 +128,7 @@ public:
     static OSOReader *osoreader;
 
 private:
+    ErrorHandler &m_err;
     int m_lineno;
     static mutex m_osoread_mutex;
 };

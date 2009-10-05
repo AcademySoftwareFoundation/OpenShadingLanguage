@@ -476,9 +476,7 @@ DECLOP (OP_add)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to add " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " + " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Addition types can't be handled");
     }
 }
@@ -534,9 +532,7 @@ DECLOP (OP_sub)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to sub " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " - " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Subtraction types can't be handled");
     }
 }
@@ -614,9 +610,7 @@ DECLOP (OP_mul)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to mul " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " * " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Multiplication types can't be handled");
     }
 }
@@ -692,9 +686,7 @@ DECLOP (OP_div)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to div " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " / " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Division types can't be handled");
     }
 }
@@ -742,9 +734,7 @@ DECLOP (OP_mod)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to mod " << Result.typespec().string()
-                  << " = " << A.typespec().string() 
-                  << " % " << B.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Mod types can't be handled");
     }
 }
@@ -799,8 +789,7 @@ DECLOP (OP_neg)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how to neg " << Result.typespec().string()
-                  << " = -" << A.typespec().string() << "\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Negation types can't be handled");
     }
 }

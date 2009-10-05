@@ -176,7 +176,7 @@ public:
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
     ~ShaderMaster () { }
 
-    void print ();  // Debugging
+    std::string print ();  // Debugging
 
     /// Return a pointer to the shading system for this master.
     ///
@@ -324,7 +324,8 @@ class ShadingSystemImpl : public ShadingSystem
 {
 public:
     ShadingSystemImpl (RendererServices *renderer=NULL,
-                       TextureSystem *texturesystem=NULL);
+                       TextureSystem *texturesystem=NULL,
+                       ErrorHandler *err=NULL);
     virtual ~ShadingSystemImpl ();
 
     virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
@@ -348,8 +349,14 @@ public:
     ///
     void error (const char *message, ...);
 
+    /// Internal info printing routine, with printf-like arguments.
+    ///
+    void info (const char *message, ...);
+
     virtual std::string geterror () const;
     virtual std::string getstats (int level=1) const;
+
+    ErrorHandler &errhandler () const { return *m_err; }
 
     ShaderMaster::ref loadshader (const char *name);
 
@@ -396,6 +403,7 @@ private:
 
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system
+    ErrorHandler *m_err;                  ///< Error handler
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
     int m_statslevel;                     ///< Statistics level
@@ -619,9 +627,9 @@ public:
     std::string format_symbol (const std::string &format, Symbol &sym,
                                int whichpoint);
 
-    /// Print the symbol (for debugging)
+    /// Turn the symbol into a string (for debugging).
     ///
-    void printsymbol (Symbol &sym);
+    std::string printsymbolval (Symbol &sym);
 
     /// Get a pointer to the ShadingContext for this execution.
     ///
@@ -638,6 +646,13 @@ public:
     /// Pass an error along to the ShadingSystem.
     ///
     void error (const char *message, ...);
+    void warning (const char *message, ...);
+    void info (const char *message, ...);
+    void message (const char *message, ...);
+
+    /// Generic type mismatch error
+    ///
+    void error_arg_types ();
 
 private:
     ShaderUse m_use;              ///< Our shader use

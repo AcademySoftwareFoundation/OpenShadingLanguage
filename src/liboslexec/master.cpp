@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 #include <limits>
+#include <sstream>
 
 #include <boost/foreach.hpp>
 
@@ -120,55 +121,57 @@ ShaderMaster::resolve_syms ()
 
 
 
-void
+std::string
 ShaderMaster::print ()
 {
-    std::cout << "Shader " << m_shadername << " type=" 
+    std::stringstream out;
+    out << "Shader " << m_shadername << " type=" 
               << shadertypename(m_shadertype) << "\n";
-    std::cout << "  path = " << m_osofilename << "\n";
-    std::cout << "  symbols:\n";
+    out << "  path = " << m_osofilename << "\n";
+    out << "  symbols:\n";
     for (size_t i = 0;  i < m_symbols.size();  ++i) {
         const Symbol &s (m_symbols[i]);
-        std::cout << "    " << i << ": " << s.typespec().string() 
+        out << "    " << i << ": " << s.typespec().string() 
                   << " " << s.name() << "\n";
     }
-    std::cout << "  int consts:\n    ";
+    out << "  int consts:\n    ";
     for (size_t i = 0;  i < m_iconsts.size();  ++i)
-        std::cout << m_iconsts[i] << ' ';
-    std::cout << "\n";
-    std::cout << "  float consts:\n    ";
+        out << m_iconsts[i] << ' ';
+    out << "\n";
+    out << "  float consts:\n    ";
     for (size_t i = 0;  i < m_fconsts.size();  ++i)
-        std::cout << m_fconsts[i] << ' ';
-    std::cout << "\n";
-    std::cout << "  string consts:\n    ";
+        out << m_fconsts[i] << ' ';
+    out << "\n";
+    out << "  string consts:\n    ";
     for (size_t i = 0;  i < m_sconsts.size();  ++i)
-        std::cout << "\"" << m_sconsts[i] << "\" ";
-    std::cout << "\n";
-    std::cout << "  int defaults:\n    ";
+        out << "\"" << m_sconsts[i] << "\" ";
+    out << "\n";
+    out << "  int defaults:\n    ";
     for (size_t i = 0;  i < m_idefaults.size();  ++i)
-        std::cout << m_idefaults[i] << ' ';
-    std::cout << "\n";
-    std::cout << "  float defaults:\n    ";
+        out << m_idefaults[i] << ' ';
+    out << "\n";
+    out << "  float defaults:\n    ";
     for (size_t i = 0;  i < m_fdefaults.size();  ++i)
-        std::cout << m_fdefaults[i] << ' ';
-    std::cout << "\n";
-    std::cout << "  string defaults:\n    ";
+        out << m_fdefaults[i] << ' ';
+    out << "\n";
+    out << "  string defaults:\n    ";
     for (size_t i = 0;  i < m_sdefaults.size();  ++i)
-        std::cout << "\"" << m_sdefaults[i] << "\" ";
-    std::cout << "\n";
-    std::cout << "  code:\n";
+        out << "\"" << m_sdefaults[i] << "\" ";
+    out << "\n";
+    out << "  code:\n";
     for (size_t i = 0;  i < m_ops.size();  ++i) {
-        std::cout << "    " << i << ": " << m_ops[i].opname();
+        out << "    " << i << ": " << m_ops[i].opname();
         for (int a = 0;  a < m_ops[i].nargs();  ++a)
-            std::cout << " " << m_symbols[m_args[m_ops[i].firstarg()+a]].name();
+            out << " " << m_symbols[m_args[m_ops[i].firstarg()+a]].name();
         for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
             if (m_ops[i].jump(j) >= 0)
-                std::cout << " " << m_ops[i].jump(j);
+                out << " " << m_ops[i].jump(j);
         if (m_ops[i].sourcefile())
-            std::cout << "\t(" << m_ops[i].sourcefile() << ":" 
+            out << "\t(" << m_ops[i].sourcefile() << ":" 
                       << m_ops[i].sourceline() << ")";
-        std::cout << "\n";
+        out << "\n";
     }
+    return out.str ();
 }
 
 
@@ -300,7 +303,7 @@ ShaderMaster::resolve_ops ()
 
     BOOST_FOREACH (Opcode &op, m_ops) {
         if (shadingsys().debug())
-            std::cout << "resolving " << op.opname() << "\n";
+            shadingsys().info ("resolving %s", op.opname().c_str());
         std::map<ustring,OpImpl>::const_iterator found;
         found = ops_table.find (op.opname());
         if (found != ops_table.end())

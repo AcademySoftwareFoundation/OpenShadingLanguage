@@ -62,11 +62,12 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
     m_symbols = m_master->m_symbols;
     BOOST_FOREACH (const ParamRef &p, params) {
         if (shadingsys().debug())
-            std::cout << " PARAMETER " << p.name() << ' ' << p.type().c_str() << "\n";
+            shadingsys().info (" PARAMETER %s %s",
+                               p.name().c_str(), p.type().c_str());
         int i = m_master->findparam (p.name());
         if (i >= 0) {
             if (shadingsys().debug())
-                std::cout << "    found " << i << "\n";
+                shadingsys().info ("    found %d", i);
 #if 0
             if (s.typespec().simpletype().basetype == TypeDesc::INT) {
                 s.data (&(m_iparams[s.dataoffset()]));
@@ -75,8 +76,9 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
             } else if (s.typespec().simpletype().basetype == TypeDesc::STRING) {
                 s.data (&(m_sparams [s.dataoffset()]));
             }
-//          std::cerr << "    sym " << s.name() << " offset " << s.dataoffset()
-//                    << " address " << (void *)s.data() << "\n";
+//          shadingsys().info ("    sym %s offset %ull address %p",
+//                             s.name().c_str(),
+//                             (unsigned long long)s.dataoffset(), s.data());
 #endif
         }
     }
@@ -88,7 +90,7 @@ void
 ShaderInstance::calc_heap_size ()
 {
     if (shadingsys().debug())
-        std::cout << "calc_heapsize on " << m_master->shadername() << "\n";
+        shadingsys().info ("calc_heapsize on %s", m_master->shadername().c_str());
     m_heapsize = 0;
     m_numclosures = 0;
     m_heapround = 0;
@@ -120,13 +122,15 @@ ShaderInstance::calc_heap_size ()
         m_heapsize += size + pad;
 
         if (shadingsys().debug())
-            std::cout << " sym " << s.mangled() << " given " << size 
-                      << " bytes on heap (including " << pad << " padding)\n";
+            shadingsys().info (" sym %s given %ull bytes on heap (including %ull padding)",
+                               s.mangled().c_str(),
+                               (unsigned long long)size,
+                               (unsigned long long)pad);
     }
     if (shadingsys().debug()) {
-        std::cout << " Heap needed " << m_heapsize << ", " 
-                  << m_numclosures << " closures on the heap.\n";
-        std::cout << " Padding for alignment = " << m_heapround << "\n";
+        shadingsys().info (" Heap needed %ull, %d closures on the heap",
+                           (unsigned long long)m_heapsize, m_numclosures);
+        shadingsys().info (" Padding for alignment = %d", m_heapround);
     }
 }
 

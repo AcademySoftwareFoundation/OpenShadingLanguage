@@ -64,7 +64,7 @@ OSOReader::parse (const std::string &filename)
 
     std::fstream input (filename.c_str(), std::ios::in);
     if (! input.is_open()) {
-        std::cerr << "File " << filename << " not found.\n";
+        m_err.error ("File %s not found", filename.c_str());
         return false;
     }
 
@@ -73,9 +73,9 @@ OSOReader::parse (const std::string &filename)
     assert (osolexer);
     bool ok = ! osoparse ();   // osoparse returns nonzero if error
     if (ok) {
-//        std::cout << "Correctly parsed " << filename << "\n";
+//        m_err.info ("Correctly parsed %s", filename.c_str());
     } else {
-        std::cout << "Failed parse of " << filename << "\n";
+        m_err.error ("Failed parse of %s", filename.c_str());
     }
     delete osolexer;
     osolexer = NULL;

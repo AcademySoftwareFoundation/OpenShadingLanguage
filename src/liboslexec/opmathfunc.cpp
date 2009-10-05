@@ -778,9 +778,7 @@ DECLOP (generic_unary_function_shadeop_noderivs)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
@@ -810,9 +808,7 @@ DECLOP (generic_unary_function_shadeop)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
@@ -848,10 +844,7 @@ DECLOP (generic_binary_function_shadeop)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ", "
-                  << B.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
@@ -888,11 +881,7 @@ DECLOP (generic_ternary_function_shadeop)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ", "
-                  << B.typespec().string() << ". "
-                  << C.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
@@ -993,9 +982,7 @@ DECLOP (OP_log)
             impl = unary_op_noderivs<float,float, Log>;
         }
         else {
-            std::cerr << "Don't know how compute " << Result.typespec().string()
-                      << " = " << exec->op().opname() << "(" 
-                      << A.typespec().string() << ")\n";
+            exec->error_arg_types ();
             ASSERT (0 && "Function arg type can't be handled");
         }
     }
@@ -1011,10 +998,7 @@ DECLOP (OP_log)
             impl = binary_op_noderivs<float,float,float, Log>;
         }
         else {
-            std::cerr << "Don't know how compute " << Result.typespec().string()
-                      << " = " << exec->op().opname() << "(" 
-                      << A.typespec().string() << ", "
-                      << B.typespec().string() << ")\n";
+            exec->error_arg_types ();
             ASSERT (0 && "Function arg type can't be handled");
         }
     }
@@ -1083,10 +1067,7 @@ DECLOP (OP_pow)
         impl = binary_op_noderivs<float,float,float, Pow>;
     }
     else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ", "
-                  << B.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 
@@ -1141,9 +1122,7 @@ DECLOP (OP_fabs)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
@@ -1251,11 +1230,7 @@ DECLOP (OP_mix)
         impl = ternary_op<float,float,float,float, Mix>;
     }
     else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "(" 
-                  << A.typespec().string() << ", "
-                  << B.typespec().string() << ", "
-                  << C.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 
@@ -1292,10 +1267,7 @@ DECLOP (OP_hypot)
             impl = binary_op_noderivs<float,float,float, Hypot>;
         }
         else {
-            std::cerr << "Don't know how compute " << Result.typespec().string()
-                      << " = " << exec->op().opname() << "(" 
-                      << A.typespec().string() << ", "
-                      << B.typespec().string() << ")\n";
+            exec->error_arg_types ();
             ASSERT (0 && "Function arg type can't be handled");
         }
     }
@@ -1308,11 +1280,7 @@ DECLOP (OP_hypot)
             impl = ternary_op<float,float,float,float, Hypot>;
         }
         else {
-            std::cerr << "Don't know how compute " << Result.typespec().string()
-                      << " = " << exec->op().opname() << "(" 
-                      << A.typespec().string() << ", "
-                      << B.typespec().string() << ", "
-                      << C.typespec().string() << ")\n";
+            exec->error_arg_types ();
             ASSERT (0 && "Function arg type can't be handled");
         }
     }
@@ -1487,12 +1455,7 @@ DECLOP (OP_fresnel)
         {
             impl = fresnel4_op;
         } else {
-            std::cerr << "Don't know how compute "
-                      << "void " << exec->op().opname() << "(" 
-                      << I.typespec().string()   << ", "
-                      << N.typespec().string()   << ", "
-                      << eta.typespec().string() << ", "
-                      << Kr.typespec().string()  << ")\n";
+            exec->error_arg_types ();
             ASSERT (0 && "Function arg type can't be handled");
         }
 
@@ -1515,15 +1478,7 @@ DECLOP (OP_fresnel)
         {
             impl = fresnel7_op;
         } else {
-            std::cerr << "Don't know how compute "
-                      << "void " << exec->op().opname() << "(" 
-                      << I.typespec().string()   << ", "
-                      << N.typespec().string()   << ", "
-                      << eta.typespec().string() << ", "
-                      << Kr.typespec().string()  << ", "
-                      << Kt.typespec().string()  << ", "
-                      << R.typespec().string()   << ", "
-                      << T.typespec().string()   << ")\n";
+            exec->error_arg_types ();
             ASSERT (0 && "Function arg type can't be handled");
         }
     }

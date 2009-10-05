@@ -56,7 +56,7 @@ class OSOReaderToMaster : public OSOReader
 {
 public:
     OSOReaderToMaster (ShadingSystemImpl &shadingsys)
-        : m_shadingsys (shadingsys),
+        : OSOReader (&shadingsys.errhandler()), m_shadingsys (shadingsys),
           m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
       { }
     virtual ~OSOReaderToMaster () { }
@@ -298,7 +298,7 @@ OSOReaderToMaster::instruction_arg (const char *name)
     }
     // ERROR! -- FIXME
 //    m_master->m_args.push_back (0);  // FIXME
-    std::cerr << "(unknown arg " << name << ") ";
+    m_shadingsys.error ("Parsing shader: unknown arg %s", name);
 }
 
 
@@ -334,7 +334,7 @@ ShadingSystemImpl::loadshader (const char *cname)
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
     if (found != m_shader_masters.end()) {
         if (debug())
-            std::cout << "Found " << name << " in shader_masters\n";
+            info ("Found %s in shader_masters", name.c_str());
         // Already loaded this shader, return its reference
         return (*found).second;
     }
@@ -354,7 +354,7 @@ ShadingSystemImpl::loadshader (const char *cname)
     if (ok) {
         ++m_stat_shaders_loaded;
         if (debug())
-            std::cout << "Added " << filename << " to shader_masters\n";
+            info ("Added %s to shader_masters", filename.c_str());
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }
@@ -366,7 +366,7 @@ ShadingSystemImpl::loadshader (const char *cname)
     }
 
     if (r && m_debug)
-        r->print ();
+        info ("%s", r->print ().c_str());
 
     return r;
 }

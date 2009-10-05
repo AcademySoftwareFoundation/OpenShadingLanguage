@@ -138,6 +138,10 @@ public:
     ///
     std::string string () const;
 
+    /// Express the type as a string (char *).  This is safe, the caller
+    /// is not responsible for freeing the characters.
+    const char *c_str () const;
+
     /// Assignment of a simple TypeDesc to a full TypeSpec.
     ///
     const TypeSpec & operator= (const TypeDesc simple) {

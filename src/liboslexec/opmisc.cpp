@@ -40,7 +40,7 @@ namespace pvt {
 
 DECLOP (OP_missing)
 {
-    std::cout << "Missing op '" << exec->op().opname() << "'!\n";
+    exec->error ("Missing op '%s'!", exec->op().opname().c_str());
 }
 
 
@@ -48,7 +48,7 @@ DECLOP (OP_missing)
 DECLOP (OP_end)
 {
     if (exec->debug())
-        std::cout << "Executing end!\n";
+        exec->info ("Executing end!");
 }
 
 

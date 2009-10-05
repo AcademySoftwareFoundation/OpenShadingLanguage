@@ -120,9 +120,9 @@ DECLOP (OP_aref)
         exec->op().implementation (impl);
         return;
     } else {
-        std::cerr << "Don't know how to assign " << Result.typespec().string()
-                  << " = " << Src.typespec().string() << "["
-                  << Index.typespec().string() << "]\n";
+        exec->error ("Don't know how to assign %s = %s [%s]",
+                     Result.typespec().c_str(), Src.typespec().c_str(),
+                     Index.typespec().c_str());
         ASSERT (0 && "Array reference types can't be handled");
     }
 }
@@ -200,9 +200,9 @@ DECLOP (OP_aassign)
         exec->op().implementation (impl);
         return;
     } else {
-        std::cerr << "Don't know how to assign " << Relement.string()
-                  << "[" <<  Index.typespec().string() << "] = " 
-                  << Src.typespec().string() << "\n";
+        exec->error ("Don't know how to assign %s [%s] = %s",
+                     Relement.c_str(), Index.typespec().c_str(),
+                     Src.typespec().c_str());
         ASSERT (0 && "Array assignment types can't be handled");
     }
 }

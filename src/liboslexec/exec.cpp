@@ -67,8 +67,62 @@ ShadingExecution::error (const char *message, ...)
     va_list ap;
     va_start (ap, message);
     std::string e = Strutil::vformat (message, ap);
-    m_shadingsys->error ("%s", e.c_str());
+    m_shadingsys->errhandler().error (e);
     va_end (ap);
+}
+
+
+
+void
+ShadingExecution::warning (const char *message, ...)
+{
+    va_list ap;
+    va_start (ap, message);
+    std::string e = Strutil::vformat (message, ap);
+    m_shadingsys->errhandler().warning (e);
+    va_end (ap);
+}
+
+
+
+void
+ShadingExecution::info (const char *message, ...)
+{
+    va_list ap;
+    va_start (ap, message);
+    std::string e = Strutil::vformat (message, ap);
+    m_shadingsys->errhandler().info (e);
+    va_end (ap);
+}
+
+
+
+void
+ShadingExecution::message (const char *message, ...)
+{
+    va_list ap;
+    va_start (ap, message);
+    std::string e = Strutil::vformat (message, ap);
+    m_shadingsys->errhandler().message (e);
+    va_end (ap);
+}
+
+
+
+void
+ShadingExecution::error_arg_types ()
+{
+    std::stringstream out;
+    const Opcode &op (this->op());
+    out << "Don't know how to compute " 
+        << sym(op.firstarg()).typespec().string() << " (";
+    for (int i = 1;  i < op.nargs();  ++i) {
+        if (i > 1)
+            out << ", ";
+        out << sym(op.firstarg()+i).typespec().string();
+    }
+    out << ")";
+    error ("%s", out.str().c_str());
 }
 
 
@@ -82,8 +136,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 
     m_debug = context->shadingsys().debug();
     if (m_debug)
-        std::cout << "bind ctx " << (void *)context << " use " 
-                  << shaderusename(use) << " layer " << layerindex << "\n";
+        context->shadingsys().info ("bind ctx %p use %s layer %d", context,
+                                    shaderusename(use), layerindex);
     m_use = use;
 
     // Take various shortcuts if we are re-binding the same instance as
@@ -111,8 +165,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     // connections, initialize all parameters
     BOOST_FOREACH (Symbol &sym, m_symbols) {
         if (m_debug)
-            std::cout << "  bind " << sym.mangled() 
-                      << ", offset " << sym.dataoffset() << "\n";
+            m_shadingsys->info ("  bind %s, offset %d",
+                                sym.mangled().c_str(), sym.dataoffset());
         if (sym.symtype() == SymTypeGlobal) {
             // FIXME -- is this too wasteful here?
             if (sym.name() == Strings::P) {
@@ -191,7 +245,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     // Not specified where it lives, put it in the heap
                     sym.data (m_context->heapaddr (sym.dataoffset()));
                     sym.step (0);
-                    // std::cout << "Global " << sym.name() << " at address " << sym.dataoffset() << "\n";
+                    // m_shadingsys->info ("Global %s at address %d",
+                    //                     sym.name().c_str(), sym.dataoffset());
                 } else {
                     // ASSERT (sym.dataoffset() >= 0 &&
                     //         "Global ought to already have a dataoffset");
@@ -239,9 +294,9 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             ASSERT (0 && "Should never get here");
         }
         if (m_debug)
-            std::cout << "  bound " << sym.mangled() << " to address " 
-                      << (void *)sym.data() << ", step " << sym.step() 
-                      << ", size " << sym.size() << "\n";
+            m_shadingsys->info ("  bound %s to address %p, step %d, size %d",
+                                sym.mangled().c_str(), sym.data(),
+                                sym.step(), sym.size());
     }
 
     m_bound = true;
@@ -257,8 +312,8 @@ ShadingExecution::run (Runflag *rf)
         return;       // Already executed
 
     if (m_debug)
-        std::cout << "Running ShadeExec " << (void *)this << ", shader " 
-                  << m_master->shadername() << "\n";
+        m_shadingsys->info ("Running ShadeExec %p, shader %s",
+                            this, m_master->shadername().c_str());
 
     ASSERT (m_bound);  // We'd better be bound at this point
 
@@ -289,31 +344,22 @@ void
 ShadingExecution::run (int beginop, int endop)
 {
     if (m_debug)
-        std::cout << "Running ShadeExec " << (void *)this 
-                  << ", shader " << m_master->shadername() 
-                  << " ops [" << beginop << "," << endop << ")\n";
+        m_shadingsys->info ("Running ShadeExec %p, shader %s ops [%d,%d)",
+                            this, m_master->shadername().c_str(),
+                            beginop, endop);
     const int *args = &m_master->m_args[0];
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         Opcode &op (this->op ());
         if (m_debug) {
-            std::cout << "instruction " << m_ip << ": " << op.opname() << " ";
-        }
-        if (m_debug) {
-            std::cout << "Before running '" << op.opname() 
-                      << "', values are:\n";
+            m_shadingsys->info ("instruction %d: %s", m_ip, op.opname().c_str());
+            m_shadingsys->info ("Before running %s, values are:",
+                                op.opname().c_str());
             for (int i = 0;  i < op.nargs();  ++i) {
                 Symbol &s (sym (args[op.firstarg()+i]));
-                std::cout << "    " << s.mangled() << "\n";
-                printsymbol (s);
+                m_shadingsys->info ("    %s\n%s", s.mangled().c_str(),
+                                    printsymbolval(s).c_str());
             }
         }
-        for (int i = 0;  i < op.nargs();  ++i) {
-            int arg = args[op.firstarg()+i];
-            if (m_debug)
-                std::cout << sym(arg).mangled() << " ";
-        }
-        if (m_debug)
-            std::cout << "\n";
         ASSERT (op.implementation() && "Unimplemented op!");
         op (this, op.nargs(), args+op.firstarg(),
             m_runflags, m_beginpoint, m_endpoint);
@@ -322,12 +368,12 @@ ShadingExecution::run (int beginop, int endop)
         // checks, like seeing if any nans have crept in from each op.
 
         if (m_debug) {
-            std::cout << "After running '" << op.opname() 
-                      << "', new values are:\n";
+            m_shadingsys->info ("After running %s, new values are:",
+                                op.opname().c_str());
             for (int i = 0;  i < op.nargs();  ++i) {
                 Symbol &s (sym (args[op.firstarg()+i]));
-                std::cout << "    " << s.mangled() << "\n";
-                printsymbol (s);
+                m_shadingsys->info ("    %s\n%s", s.mangled().c_str(),
+                                    printsymbolval(s).c_str());
             }
         }
     }
@@ -524,31 +570,33 @@ ShadingExecution::format_symbol (const std::string &format,
 
 
 
-void
-ShadingExecution::printsymbol (Symbol &sym)
+std::string
+ShadingExecution::printsymbolval (Symbol &sym)
 {
+    std::stringstream out;
     TypeDesc type = sym.typespec().simpletype();
     const char *data = (const char *) sym.data ();
     data += m_beginpoint * sym.step();
     for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step()) {
         if (sym.is_uniform())
-            std::cout << "\tuniform";
+            out << "\tuniform";
         else if (i == m_beginpoint || (i%8) == 0)
-            std::cout << "\t" << i << ": ";
+            out << "\t" << i << ": ";
         if (sym.typespec().is_closure())
-            std::cout << format_symbol (" %s", sym, i);
+            out << format_symbol (" %s", sym, i);
         else if (type.basetype == TypeDesc::FLOAT)
-            std::cout << format_symbol (" %g", sym, i);
+            out << format_symbol (" %g", sym, i);
         else if (type.basetype == TypeDesc::INT)
-            std::cout << format_symbol (" %d", sym, i);
+            out << format_symbol (" %d", sym, i);
         else if (type.basetype == TypeDesc::STRING)
-            std::cout << format_symbol (" \"%s\"", sym, i);
+            out << format_symbol (" \"%s\"", sym, i);
         if (i == m_endpoint-1 || (i%8) == 7 ||
                 sym.is_uniform() || sym.typespec().is_closure())
-            std::cout << "\n";
+            out << "\n";
         if (sym.is_uniform())
             break;
     }
+    return out.str ();
 }
 
 

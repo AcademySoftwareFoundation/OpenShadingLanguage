@@ -224,13 +224,7 @@ DECLOP (OP_color)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } else {
-        std::cerr << "Don't know how compute " << Result.typespec().string()
-                  << " = " << exec->op().opname() << "("
-                  << (using_space ? Space.typespec().string() : std::string())
-                  << (using_space ? ", " : "")
-                  << X.typespec().string() << ", "
-                  << Y.typespec().string() << ", "
-                  << Z.typespec().string() << ")\n";
+        exec->error_arg_types ();
         ASSERT (0 && "Function arg type can't be handled");
     }
 }

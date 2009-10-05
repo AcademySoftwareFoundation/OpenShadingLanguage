@@ -63,7 +63,7 @@ void
 ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
 {
     if (shadingsys().debug())
-        std::cout << "bind " << (void *)this << " with " << n << " points\n";
+        shadingsys().info ("bind %p with %d points", (void *)this, n);
     m_attribs = &sas;
     m_globals = &sg;
     m_npoints = n;
@@ -78,11 +78,13 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // FIXME: the next statement is totally bogus, yet harmless.
     heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
     if (shadingsys().debug())
-        std::cout << "  need heap " << heap_size_needed << " vs " << m_heap.size() << "\n";
+        shadingsys().info ("  need heap %ull vs %ull",
+                           (unsigned long long)heap_size_needed,
+                           (unsigned long long)m_heap.size());
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
-            std::cout << "  ShadingContext " << (void *)this 
-                      << " growing heap to " << heap_size_needed << "\n";
+            shadingsys().info ("  ShadingContext %p growing heap to %ull",
+                               this, (unsigned long long) heap_size_needed);
         m_heap.resize (heap_size_needed);
     }
     // Zero out everything in the heap
@@ -91,11 +93,12 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // Set up closure storage
     size_t closures_needed = m_npoints * sas.numclosures ();
     if (shadingsys().debug())
-        std::cout << "  need closures " << closures_needed << " vs " << m_closures.size() << "\n";
+        shadingsys().info ("  need closures %d vs %ull", closures_needed,
+                           (unsigned long long) m_closures.size());
     if (closures_needed > m_closures.size()) {
         if (shadingsys().debug())
-            std::cout << "  ShadingContext " << (void *)this 
-                      << " growing closures to " << closures_needed << "\n";
+            shadingsys().info ("  ShadingContext %p growing closures to %ull",
+                               this, (unsigned long long)closures_needed);
         m_closures.resize (closures_needed);
     }
     // Zero out the closures
@@ -106,7 +109,8 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     for (int i = 0;  i < ShadUseLast;  ++i) {
         m_nlayers[i] = m_attribs->shadergroup ((ShaderUse)i).nlayers ();
         if (shadingsys().debug())
-            std::cout << "  " << m_nlayers[i] << " layers of " << shaderusename((ShaderUse)i) << "\n";
+            shadingsys().info ("  %d layers of %s", m_nlayers[i],
+                               shaderusename((ShaderUse)i));
     }
 }
 
@@ -118,8 +122,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     // FIXME -- timers/stats
 
     if (shadingsys().debug())
-        std::cout << "execute " << (void *)this 
-                  << " as " << shaderusename(use) << "\n";
+        shadingsys().info ("execute %p as %s", this, shaderusename(use));
     m_curuse = use;
     ASSERT (use == ShadUseSurface);  // FIXME
 

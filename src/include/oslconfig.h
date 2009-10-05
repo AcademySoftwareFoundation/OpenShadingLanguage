@@ -43,9 +43,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ImathMatrix.h>
 
 // All the things we need from OpenImageIO
-#include "OpenImageIO/typedesc.h"
+#include "OpenImageIO/errorhandler.h"
 #include "OpenImageIO/refcnt.h"
 #include "OpenImageIO/texture.h"
+#include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/varyingref.h"
 
@@ -86,6 +87,7 @@ typedef Imath::Color3<Float>   Color3;
 typedef OpenImageIO::TextureSystem TextureSystem;
 
 
+typedef OpenImageIO::ErrorHandler ErrorHandler;
 
 
 }; // namespace OSL

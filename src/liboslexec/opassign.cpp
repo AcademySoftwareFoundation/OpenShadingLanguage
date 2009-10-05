@@ -209,8 +209,8 @@ DECLOP (OP_assign)
         exec->op().implementation (impl);
         return;
     } else {
-        std::cerr << "Don't know how to assign " << Result.typespec().string()
-                  << " = " << Src.typespec().string() << "\n";
+        exec->error ("Don't know how to assign %s = %s",
+                     Result.typespec().c_str(), Src.typespec().c_str());
         ASSERT (0 && "Assignment types can't be handled");
     }
 }

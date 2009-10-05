@@ -52,12 +52,20 @@ namespace OSL {
 
 ShadingSystem *
 ShadingSystem::create (RendererServices *renderer,
-                       TextureSystem *texturesystem)
+                       TextureSystem *texturesystem,
+                       ErrorHandler *err)
 {
+    // If client didn't supply an error handler, just use the default
+    // one that echoes to the terminal.
+    if (! err) {
+        err = & ErrorHandler::default_handler ();
+        ASSERT (err != NULL && "Can't create default ErrorHandler");
+    }
+
     // Doesn't need a shared cache
-    ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem);
+    ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem, err);
 #ifdef DEBUG
-    //std::cout << "creating new ShadingSystem " << (void *)ts << "\n";
+    err->info ("creating new ShadingSystem %p", (void *)ts);
 #endif
     return ts;
 }
@@ -107,14 +115,21 @@ namespace pvt {   // OSL::pvt
 
 
 ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
-                                      TextureSystem *texturesystem)
-    : m_renderer(renderer), m_texturesys(texturesystem),
+                                      TextureSystem *texturesystem,
+                                      ErrorHandler *err)
+    : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_debug (false), m_in_group (false),
       m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
     init_global_heap_offsets ();
+
+    // If client didn't supply an error handler, just use the default
+    // one that echoes to the terminal.
+    if (! m_err) {
+        m_err = & ErrorHandler::default_handler ();
+    }
 
 #if 0
     // If client didn't supply renderer services, create a default one
@@ -217,7 +232,21 @@ ShadingSystemImpl::error (const char *message, ...)
         *errptr += '\n';
     va_list ap;
     va_start (ap, message);
-    *errptr += Strutil::vformat (message, ap);
+    std::string msg = Strutil::vformat (message, ap);
+    *errptr += msg;
+    m_err->error (msg);
+    va_end (ap);
+}
+
+
+
+void
+ShadingSystemImpl::info (const char *message, ...)
+{
+    va_list ap;
+    va_start (ap, message);
+    std::string msg = Strutil::vformat (message, ap);
+    m_err->info (msg);
     va_end (ap);
 }
 
@@ -247,7 +276,7 @@ ShadingSystemImpl::printstats () const
 {
     if (m_statslevel == 0)
         return;
-    std::cout << getstats (m_statslevel) << "\n\n";
+    m_err->message (getstats (m_statslevel));
 }
 
 

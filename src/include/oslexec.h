@@ -72,7 +72,8 @@ protected:
 
 public:
     static ShadingSystem *create (RendererServices *renderer=NULL,
-                                  TextureSystem *texturesystem=NULL);
+                                  TextureSystem *texturesystem=NULL,
+                                  ErrorHandler *err=NULL);
     static void destroy (ShadingSystem *x);
 
     /// Set an attribute controlling the texture system.  Return true

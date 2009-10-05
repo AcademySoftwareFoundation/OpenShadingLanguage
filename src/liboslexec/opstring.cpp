@@ -72,7 +72,7 @@ format_args (ShadingExecution *exec, const char *format,
             std::string ourformat (oldfmt, format);  // straddle the format
             if (arg >= nargs) {
                 // FIXME -- send this error through the exec
-                std::cerr << "Mismatch between format string and arguments";
+                exec->error ("Mismatch between format string and arguments");
                 continue;
             }
             // Doctor it to fix mismatches between format and data
@@ -113,8 +113,6 @@ format_args (ShadingExecution *exec, const char *format,
 
 DECLOP (OP_printf)
 {
-    if (exec->debug())
-        std::cout << "printf!\n";
     ASSERT (nargs >= 1);
     Symbol &Format (exec->sym (args[0]));
     ASSERT (Format.typespec().is_string ());
@@ -127,15 +125,13 @@ DECLOP (OP_printf)
             if (runflags[i]) {
                 std::string s = format_args (exec, format[i].c_str(),
                                              nargs-1, args+1, i);
-                std::cout << s;
-                // FIXME -- go through the exec's error mechanism
+                exec->message ("%s", s.c_str());
             }
     } else {
         // Uniform case
         std::string s = format_args (exec, (*format).c_str(),
                                      nargs-1, args+1, 0);
-        std::cout << s;
-        // FIXME -- go through the exec's error mechanism
+        exec->message ("%s", s.c_str());
     }
 }
 

@@ -95,12 +95,12 @@ public:
 
     /// Helper function: sample cosine-weighted hemisphere.
     ///
-    static void sample_cos_hemisphere (const Vec3 &N, const Vec3 &I,
-                        float randu, float randv, Vec3 &R, float &pdf);
+    static void sample_cos_hemisphere (const Vec3 &N, const Vec3 &omega_out,
+                        float randu, float randv, Vec3 &omega_in, float &pdf);
 
     /// Helper function: return the PDF for cosine-weighted hemisphere.
     ///
-    static float pdf_cos_hemisphere (const Vec3 &N, const Vec3 &R);
+    static float pdf_cos_hemisphere (const Vec3 &N, const Vec3 &omega_in);
 
 private:
     ustring m_name;
@@ -122,32 +122,47 @@ public:
         : ClosurePrimitive (name, argtypes, BSDF) { }
     ~BSDFClosure () { }
 
-    /// Evaluate the BSDF -- Given instance parameters, incoming
-    /// radiance El in the direction L, and reflection direction R,
-    /// compute the outgoing radiance Er in the direction of R.  Return
-    /// true if there is any (non-zero) outgoing radiance, false if
-    /// there is no outgoing radiance (this allows the caller to take
-    /// various shortcuts without needing to check the value of Er.  It
-    /// is assumed that L and R are already normalized and point away
-    /// from the surface position.  It's up to the implementor of a
-    /// BSDFClosure subclass to ensure that it conserves energy and
-    /// observes reciprocity.
-    virtual bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
-                       const Vec3 &R, Color3 &Er) const = 0;
+    /// Return the evaluation cone -- Given instance parameters, and viewing
+    /// direction omega_out (pointing away from the surface), returns the cone of
+    /// directions this BSDF is sensitive to light from. If the incoming
+    /// direction is in the wrong hemisphere, or if this BSDF is singular, this
+    /// method should return false rather than return a degenerate cone. If this
+    /// method returns true, axis must be normalized and angle must be in the
+    /// range (0, 2*pi]. Note that the cone can have an angle greater than pi,
+    /// this allows a surface to potentially gather light from the entire sphere
+    /// of directions.
+    virtual bool get_cone(const void *paramsptr,
+                          const Vec3 &omega_out, Vec3 &axis, float &angle) const = 0;
 
-    /// Sample the BSDF -- Given instance parameters, incident direction
-    /// I (pointing toward the surface), and random deviates randu and
-    /// randv on [0,1), return a sampled direction R and the PDF value
+    /// Evaluate the BSDF -- Given instance parameters, viewing direction omega_out
+    /// and lighting direction omega_in (both pointing away from the surface),
+    /// compute the amount of radiance to be transfered between these two
+    /// directions.
+    /// It is safe to assume that the omega_in vector is inside the cone returned
+    /// above. If the get_cone method returned false, this function will never be
+    /// called.
+    virtual Color3 eval (const void *paramsptr,
+                         const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
+
+    /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
+    /// (pointing away from the surface), and random deviates randu and
+    /// randv on [0,1), return a sampled direction omega_in and the PDF value
     /// in that direction.
+    /// Unlike the other methods, this routine can be called even if the
+    /// get_cone routine returned false. This is to allow singular BRDFs to pick
+    /// directions from infinitely small cones.
     virtual void sample (const void *paramsptr,
-                         const Vec3 &I, float randu, float randv,
-                         Vec3 &R, float &pdf) const = 0;
+                         const Vec3 &omega_out, float randu, float randv,
+                         Vec3 &omega_in, float &pdf) const = 0;
 
     /// Return the probability distribution function in the direction R,
     /// given the parameters and incident direction I.  This MUST match
     /// the PDF computed by sample().
-    virtual float pdf (const void *paramsptr, const Vec3 &I,
-                       const Vec3 &R) const = 0;
+    /// It is safe to assume that the omega_in vector is inside the cone returned
+    /// above. If the get_cone method returned false, this function will never be
+    /// called. This means that singular BSDFs should not return 1 here.
+    virtual float pdf (const void *paramsptr,
+                       const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
 };
 
 

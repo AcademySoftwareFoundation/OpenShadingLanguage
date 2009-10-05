@@ -33,26 +33,41 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslconfig.h"
 #include "oslclosure.h"
+
 using namespace OSL;
-//using namespace pvt;
 
 
 #define BOOST_TEST_MAIN
 #include <boost/test/included/unit_test.hpp>
+#include <boost/random.hpp>
 
+namespace {
 
 class MyClosure : public BSDFClosure {
 public:
     MyClosure () : BSDFClosure ("my", "f") { }
-    bool eval (const void *paramsptr, const Vec3 &L, const Color3 &El,
-               const Vec3 &R, Color3 &Er) const
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
         return false;
     }
-    void sample (const void *paramsptr, const Vec3 &I, float randu, float randv,
-                 Vec3 &R, float &pdf) const
-    { }
-    float pdf (const void *paramsptr, const Vec3 &I, const Vec3 &R) const
+
+    Color3 eval (const void *paramsptr,
+                 const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        return Color3 (0, 0, 0);
+    }
+
+    void sample (const void *paramsptr,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf) const
+    {
+        pdf = 0, omega_in.setValue(0, 0, 0);
+    }
+
+    float pdf (const void *paramsptr,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         return 0;
     }
@@ -60,7 +75,7 @@ public:
 
 MyClosure myclosure;
 
-
+} // anonymous namespace
 
 BOOST_AUTO_TEST_CASE (closure_test_add)
 {
@@ -85,5 +100,3 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
     BOOST_CHECK_EQUAL (c.weight(1), Color3 (0.4, 0.4, 0.4));
     std::cout << "c = " << c << "\n";
 }
-
-

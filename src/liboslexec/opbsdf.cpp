@@ -68,6 +68,58 @@ DECLOP (OP_diffuse)
 
 
 
+DECLOP (OP_transparent)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_closure());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+
+    // Since transparent takes no args, we can construct it just once.
+    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::transparent);
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i]->set (prim);
+        }
+    }
+}
+
+
+
+DECLOP (OP_phong)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &exponent (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (exponent.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> exp ((float *)exponent.data(), exponent.step());
+
+    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::phong);
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i]->set (prim);
+            result[i]->set_parameter (0, 0, &(n[i]));
+            result[i]->set_parameter (0, 1, &(exp[i]));
+        }
+    }
+}
+
+
 
 }; // namespace pvt
 }; // namespace OSL

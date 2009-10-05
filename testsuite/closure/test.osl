@@ -1,6 +1,15 @@
 shader
-test (float Kd = 0.5)
+test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5)
 {
     Ci = Kd * diffuse (N);
+    printf ("  Ci = %s\n", Ci);
+
+    printf ("adding specular term:");
+    Ci += Ks * phong(N, exponent);
+    printf ("  Ci = %s\n", Ci);
+
+    // mix in transparency
+    printf ("adding transparency:");
+    Ci = opacity * Ci + (1 - opacity) * transparent();
     printf ("  Ci = %s\n", Ci);
 }

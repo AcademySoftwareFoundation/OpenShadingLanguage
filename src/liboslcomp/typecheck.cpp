@@ -868,6 +868,8 @@ static const char * builtin_func_args [] = {
     "ambient", "C", "Cn", NULL,
     "cooktorrance", "Cf", NULL,
     "diffuse", "Cn", NULL,
+    "phong", "Cnf", NULL,
+    "transparent", "C", NULL,
     "emission", "C", NULL,
     "orennayar", "Cnf", NULL,
     "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,

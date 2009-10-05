@@ -92,7 +92,7 @@ ustring object ("object"), shader ("shader");
 ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
 ustring null ("null");
-ustring diffuse ("diffuse");
+ustring diffuse ("diffuse"), phong ("phong"), transparent ("transparent");
 ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
 ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v");
 ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");

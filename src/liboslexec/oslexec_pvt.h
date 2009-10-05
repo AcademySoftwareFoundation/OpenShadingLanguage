@@ -725,7 +725,7 @@ namespace Strings {
     extern ustring camera, common, object, shader;
     extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
     extern ustring null;
-    extern ustring diffuse;
+    extern ustring diffuse, phong, transparent;
     extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime;
     extern ustring Ci, Oi;
 }; // namespace Strings

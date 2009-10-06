@@ -99,7 +99,7 @@ DECLOP (OP_dot);
 DECLOP (OP_dowhile);
 DECLOP (OP_Dx);
 DECLOP (OP_Dy);
-//DECLOP (OP_emission);
+DECLOP (OP_emission);
 //DECLOP (OP_environment);
 DECLOP (OP_end);
 DECLOP (OP_erf);

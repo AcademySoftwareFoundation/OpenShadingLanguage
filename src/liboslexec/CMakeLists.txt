@@ -1,7 +1,8 @@
 SET ( liboslexec_srcs shadingsys.cpp 
-          closure.cpp bsdf.cpp context.cpp exec.cpp instance.cpp 
+          closure.cpp bsdf.cpp emissive.cpp
+          context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          oparray.cpp opassign.cpp opbsdf.cpp
+          oparray.cpp opassign.cpp opbsdf.cpp opemissive.cpp
           opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp 
           opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp 
           opstring.cpp opvector.cpp

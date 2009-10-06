@@ -12,4 +12,9 @@ test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5)
     printf ("adding transparency:");
     Ci = opacity * Ci + (1 - opacity) * transparent();
     printf ("  Ci = %s\n", Ci);
+
+    // add emission term
+    printf ("adding emission:");
+    Ci += emission();
+    printf ("  Ci = %s\n", Ci);
 }

@@ -29,10 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSLCLOSURE_H
 #define OSLCLOSURE_H
 
-
-#include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
 
+#include "oslconfig.h"
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -102,6 +101,13 @@ public:
     ///
     static float pdf_cos_hemisphere (const Vec3 &N, const Vec3 &omega_in);
 
+    /// Helper function: make two unit vectors that are orthogonal to N and
+    /// each other.  This assumes that N is already normalized.  We get the
+    /// first orthonormal by taking the cross product of N and (1,1,1), unless N
+    /// is 1,1,1, in which case we cross with (-1,1,1).  Either way, we get
+    /// something orthogonal.  Then N x a is mutually orthogonal to the other two.
+    static void make_orthonormals (const Vec3 &N, Vec3 &a, Vec3 &b);
+
 private:
     ustring m_name;
     Category m_category;
@@ -155,8 +161,8 @@ public:
                          const Vec3 &omega_out, float randu, float randv,
                          Vec3 &omega_in, float &pdf) const = 0;
 
-    /// Return the probability distribution function in the direction R,
-    /// given the parameters and incident direction I.  This MUST match
+    /// Return the probability distribution function in the direction omega_in,
+    /// given the parameters and incident direction omega_out.  This MUST match
     /// the PDF computed by sample().
     /// It is safe to assume that the omega_in vector is inside the cone returned
     /// above. If the get_cone method returned false, this function will never be
@@ -175,26 +181,26 @@ public:
         : ClosurePrimitive (name, argtypes, Emissive) { }
     ~EmissiveClosure () { }
 
-    /// Evaluate the emission -- Given instance parameters, compute the
-    /// outgoing radiance Er in the direction of R.  Return true if
-    /// there is any (non-zero) outgoing radiance, false if there is no
-    /// outgoing radiance (this allows the caller to take various
-    /// shortcuts without needing to check the value of Er.  It is
-    /// assumed that R is already normalized and points away from the
-    /// surface position.
-    virtual bool eval (const void *paramsptr, 
-                       const Vec3 &R, Color3 &Er) const = 0;
+    /// Evaluate the emission -- Given instance parameters, the light's surface
+    /// normal N and the viewing direction omega_out, compute the outgoing
+    /// radiance along omega_out (which points away from the light's
+    /// surface).
+    virtual Color3 eval (const void *paramsptr, const Vec3 &N, 
+                         const Vec3 &omega_out) const = 0;
 
-    /// Sample the emission direction -- Given instance parameters and
-    /// random deviates randu and randv on [0,1), return a sampled
-    /// direction R and the PDF value in that direction.
-    virtual void sample (const void *paramsptr, float randu, float randv,
-                         Vec3 &R, float &pdf) const = 0;
+    /// Sample the emission direction -- Given instance parameters, the light's
+    /// surface normal and random deviates randu and randv on [0,1), return a
+    /// sampled direction omega_out (pointing away from the light's surface) and
+    /// the PDF value in that direction.
+    virtual void sample (const void *paramsptr, const Vec3 &N,
+                         float randu, float randv,
+                         Vec3 &omega_out, float &pdf) const = 0;
 
-    /// Return the probability distribution function in the direction R,
-    /// given the parameters.  This MUST match the PDF computed by
-    /// sample().
-    virtual float pdf (const void *paramsptr, const Vec3 &R) const = 0;
+    /// Return the probability distribution function in the direction omega_out,
+    /// given the parameters and the light's surface normal.  This MUST match
+    /// the PDF computed by sample().
+    virtual float pdf (const void *paramsptr, const Vec3 &N,
+                       const Vec3 &omega_out) const = 0;
 };
 
 

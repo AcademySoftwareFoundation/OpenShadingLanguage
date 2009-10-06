@@ -214,6 +214,7 @@ static OpNameEntry op_name_entries[] = {
     { "Dx", OP_Dx },
     { "Dy", OP_Dy },
     { "dowhile", OP_dowhile },
+    { "emission", OP_emission },
     { "end", OP_end },
     { "eq", OP_eq },
     { "erf", OP_erf },

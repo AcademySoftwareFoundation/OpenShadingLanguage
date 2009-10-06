@@ -79,8 +79,8 @@ to_unit_disk (float &x, float &y)
 /// by taking the cross product of N and (1,1,1), unless N is 1,1,1, in
 /// which case we cross with (-1,1,1).  Either way, we get something
 /// orthogonal.  Then N x a is mutually orthogonal to the other two.
-static void
-make_orthonormals (const Vec3 &N, Vec3 &a, Vec3 &b)
+void
+ClosurePrimitive::make_orthonormals (const Vec3 &N, Vec3 &a, Vec3 &b)
 {
     if (N[0] != N[1] || N[0] != N[2])
         a = Vec3 (N[2]-N[1], N[0]-N[2], N[1]-N[0]);  // (1,1,1) x N
@@ -271,8 +271,8 @@ public:
            float cosTheta = powf(randv, 1 / (params->exponent + 1));
            float sinTheta = sqrtf(1 - cosTheta * cosTheta);
            omega_in = (cosf(phi) * sinTheta) * T +
-                  (sinf(phi) * sinTheta) * B +
-                  (            cosTheta) * R;
+                      (sinf(phi) * sinTheta) * B +
+                      (            cosTheta) * R;
            // make sure the direction we chose is still in the right hemisphere
            if (params->N.dot(omega_in) > 0) {
               pdf = (params->exponent + 1) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);

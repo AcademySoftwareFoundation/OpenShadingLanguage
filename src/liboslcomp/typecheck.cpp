@@ -266,9 +266,8 @@ ASTloop_statement::typecheck (TypeSpec expected)
 TypeSpec
 ASTassign_expression::typecheck (TypeSpec expected)
 {
-    typecheck_children (expected);
-    TypeSpec vt = var()->typespec();
-    TypeSpec et = expr()->typespec();
+    TypeSpec vt = var()->typecheck ();
+    TypeSpec et = expr()->typecheck (vt);
 
     if (! var()->is_lvalue()) {
         error ("Can't assign via %s to something that isn't an lvalue", opname());
@@ -542,7 +541,7 @@ TypeSpec
 ASTtypecast_expression::typecheck (TypeSpec expected)
 {
     // FIXME - closures
-    typecheck_children (expected);
+    typecheck_children (m_typespec);
     TypeSpec t = expr()->typespec();
     if (! assignable (m_typespec, t) &&
         ! (m_typespec.is_int() && t.is_float()) && // (int)float is ok
@@ -856,8 +855,8 @@ static const char * builtin_func_args [] = {
     "step", "fff", NULL,
     "tan", ANY_ONE_FLOAT_BASED, NULL,
     "tanh", ANY_ONE_FLOAT_BASED, NULL,
-    "texture", "fsffT", "fsffffffT","csffT", "csffffffT", 
-               "vsffT", "vsffffffT", NULL,
+    "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
+               "vsff.", "vsffffff.", NULL,
     "transform", "psp", "vsv", "nsn", "pssp", "vssv", "nssn",
                  "pmp", "vmv", "nmn", NULL,
     "transformc", "csc", "cssc", NULL,

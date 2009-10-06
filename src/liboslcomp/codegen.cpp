@@ -604,7 +604,7 @@ ASTbinary_expression::codegen (Symbol *dest)
 Symbol *
 ASTtypecast_expression::codegen (Symbol *dest)
 {
-    Symbol *e = expr()->codegen ();
+    Symbol *e = expr()->codegen (dest);
 
     // If the cast is a null operation -- they are already the same types,
     // or we're converting one triple to another -- just pass the expression.

@@ -55,6 +55,9 @@ static mutex closure_mutex;
 };
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 namespace OSL {
 
 //namespace pvt {   // OSL::pvt
@@ -306,3 +309,6 @@ operator<< (std::ostream &out, const ClosureColor &closure)
 
 //}; // namespace pvt
 }; // namespace OSL
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

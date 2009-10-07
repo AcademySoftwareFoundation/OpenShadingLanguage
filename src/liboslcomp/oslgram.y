@@ -198,7 +198,7 @@ shader_formal_params
         ;
 
 shader_formal_param
-        : outputspec typespec IDENTIFIER initializer metadata_block_opt
+        : outputspec typespec IDENTIFIER initializer_opt metadata_block_opt
                 {
                     ASTvariable_declaration *var;
                     TypeSpec t = oslcompiler->current_typespec();
@@ -207,6 +207,13 @@ shader_formal_param
                     var->make_output ($1);
                     var->add_meta ($5);
                     $$ = var;
+                    // Initializer is not really optional on a shader param,
+                    // but try to give helpful error message
+                    if ($4 == NULL) {
+                        oslcompiler->error (oslcompiler->filename(),
+                                            @3.first_line,
+                                            "shader parameter '%s' MUST have a default initializer", $3);
+                    }
                 }
         | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt
                 {

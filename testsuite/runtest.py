@@ -4,7 +4,7 @@ import os
 import sys
 from optparse import OptionParser
 
-def runtest (command, outputs, cleanfiles="") :
+def runtest (command, outputs, cleanfiles="", failureok=0) :
     parser = OptionParser()
     parser.add_option("-p", "--path", help="add to executable path",
                       action="store", type="string", dest="path", default="")
@@ -28,7 +28,7 @@ def runtest (command, outputs, cleanfiles="") :
     cmdret = os.system (command)
     # print "cmdret = " + str(cmdret)
 
-    if cmdret != 0 :
+    if cmdret != 0 and failureok == 0 :
         print "FAIL"
         return (1)
 
@@ -37,7 +37,8 @@ def runtest (command, outputs, cleanfiles="") :
         extension = os.path.splitext(out)[1]
         if extension == ".tif" or extension == ".exr" :
             # images -- use idiff
-            cmpcommand = os.environ['IMAGEIOHOME'] + "/bin/idiff " + out + " ref/" + out
+            cmpcommand = (os.path.join (os.environ['IMAGEIOHOME'], "bin", "idiff")
+                          + " " + out + " ref/" + out)
         else :
             # anything else, mainly text files
             cmpcommand = "diff " + out + " ref/" + out

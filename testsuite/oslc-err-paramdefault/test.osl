@@ -1,0 +1,4 @@
+shader
+test (color a)
+{
+}

@@ -1,0 +1,32 @@
+shader
+test (float angle = 10, float scale = 20,
+      output color Cout_f1 = 0,
+      output color Cout_f2 = 0,
+      output color Cout_f3 = 0,
+      output color Cout_f4 = 0,
+      output color Cout_c1 = 0,
+      output color Cout_c2 = 0,
+      output color Cout_c3 = 0,
+      output color Cout_c4 = 0)
+{
+   // setup some coordinates
+   float theta = angle / 180 * 3.1415; // deg2rad
+   float ru = cos(theta) * u + sin(theta) * v;
+   float rv = sin(theta) * u - cos(theta) * v;
+   ru *= scale;
+   rv *= scale;
+   float rz = cos(scale * (u + v));
+   float t = sin(scale * u);
+
+   // float cellnoise in 1,2,3,4 dimensions
+   Cout_f1 = (float) cellnoise(ru);
+   Cout_f2 = (float) cellnoise(ru, rv);
+   Cout_f3 = (float) cellnoise(point(ru, rv, rz));
+   Cout_f4 = (float) cellnoise(point(ru, rv, rz), t);
+
+   // color cellnoise in 1,2,3,4 dimensions
+   Cout_c1 = cellnoise(ru);
+   Cout_c2 = cellnoise(ru, rv);
+   Cout_c3 = cellnoise(point(ru, rv, rz));
+   Cout_c4 = cellnoise(point(ru, rv, rz), t);
+}

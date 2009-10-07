@@ -97,7 +97,7 @@ endmacro ()
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
 #TESTSUITE ( oslc-empty )
-TESTSUITE ( arithmetic array blendmath closure color comparison 
+TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison 
             derivs exponential function-simple function-outputelem
             geomath hyperb ieee_fp if incdec intbits loop matrix
             miscmath trig typecast vecctr vector )

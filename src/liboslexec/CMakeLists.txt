@@ -3,8 +3,8 @@ SET ( liboslexec_srcs shadingsys.cpp
           context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
           oparray.cpp opassign.cpp opbsdf.cpp opemissive.cpp
-          opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp 
-          opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp 
+          opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp
+          opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp opnoise.cpp 
           opstring.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
     )

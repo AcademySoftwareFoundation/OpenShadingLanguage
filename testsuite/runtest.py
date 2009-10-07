@@ -37,7 +37,7 @@ def runtest (command, outputs, cleanfiles="") :
         extension = os.path.splitext(out)[1]
         if extension == ".tif" or extension == ".exr" :
             # images -- use idiff
-            cmpcommand = os.environ['IMAGEIOHOME'] + "bin/idiff " + out + " ref/" + out
+            cmpcommand = os.environ['IMAGEIOHOME'] + "/bin/idiff " + out + " ref/" + out
         else :
             # anything else, mainly text files
             cmpcommand = "diff " + out + " ref/" + out

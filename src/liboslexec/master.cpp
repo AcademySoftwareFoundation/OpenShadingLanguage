@@ -275,6 +275,7 @@ static OpNameEntry op_name_entries[] = {
     { "sub", OP_sub },
     { "tan", OP_tan },
     { "tanh", OP_tanh },
+    { "texture", OP_texture },
     { "transparent", OP_transparent },
     { "transpose", OP_transpose },
     { "trunc", OP_trunc },

@@ -85,6 +85,7 @@ typedef Imath::Color3<Float>   Color3;
 /// same API as OIIO's TextureSystem class, it's a purely abstract class
 /// anyway.
 typedef OpenImageIO::TextureSystem TextureSystem;
+typedef OpenImageIO::TextureOptions TextureOptions;
 
 
 typedef OpenImageIO::ErrorHandler ErrorHandler;

@@ -106,7 +106,8 @@ ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
 ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v");
 ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");
 ustring Ci ("Ci"), Oi ("Oi");
-
+ustring width ("width"), swidth ("swidth"), twidth ("twidth");
+ustring blur ("blur"), sblur ("sblur"), tblur ("tblur");
 };
 
 

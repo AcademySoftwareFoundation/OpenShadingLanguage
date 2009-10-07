@@ -639,6 +639,10 @@ public:
     ///
     RendererServices *renderer () const { return m_renderer; }
 
+    /// Get a pointer to the TextureSystem for this execution.
+    ///
+    TextureSystem *texturesys () const { return m_shadingsys->texturesys(); }
+
     /// Get the 4x4 matrix that transforms points from the named 'from'
     /// coordinate system to "common" space for the given shading point.
     void get_matrix (Matrix44 &result, ustring from, int whichpoint=0);
@@ -744,6 +748,7 @@ namespace Strings {
     extern ustring emission;
     extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime;
     extern ustring Ci, Oi;
+    extern ustring width, swidth, twidth, blur, sblur, tblur;
 }; // namespace Strings
 
 

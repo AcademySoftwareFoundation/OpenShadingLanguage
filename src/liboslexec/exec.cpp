@@ -114,12 +114,13 @@ ShadingExecution::error_arg_types ()
 {
     std::stringstream out;
     const Opcode &op (this->op());
-    out << "Don't know how to compute " 
-        << sym(op.firstarg()).typespec().string() << " (";
+    const int *args = &m_master->m_args[0];
+    out << "Don't know how to compute "
+        << sym(args[op.firstarg()]).typespec().string() << " " << op.opname() << " (";
     for (int i = 1;  i < op.nargs();  ++i) {
         if (i > 1)
             out << ", ";
-        out << sym(op.firstarg()+i).typespec().string();
+        out << sym(args[op.firstarg()+i]).typespec().string();
     }
     out << ")";
     error ("%s", out.str().c_str());

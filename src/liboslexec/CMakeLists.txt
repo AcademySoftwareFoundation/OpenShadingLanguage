@@ -5,7 +5,7 @@ SET ( liboslexec_srcs shadingsys.cpp
           oparray.cpp opassign.cpp opbsdf.cpp opemissive.cpp
           opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp
           opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp opnoise.cpp 
-          opstring.cpp opvector.cpp
+          opstring.cpp optexture.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
     )
 FILE ( GLOB compiler_headers "*.h" )

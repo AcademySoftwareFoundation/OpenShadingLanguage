@@ -743,12 +743,14 @@ private:
 namespace Strings {
     extern ustring camera, common, object, shader;
     extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
-    extern ustring null;
+    extern ustring null, default_;
     extern ustring diffuse, phong, transparent;
     extern ustring emission;
     extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime;
     extern ustring Ci, Oi;
     extern ustring width, swidth, twidth, blur, sblur, tblur;
+    extern ustring wrap, swrap, twrap, black, clamp, periodic, mirror;
+    extern ustring firstchannel, fill, alpha;
 }; // namespace Strings
 
 

@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+
+Output Cblack to black.tif
+Output Cclamp to clamp.tif
+Output Cperiodic to periodic.tif
+Output Cmirror to mirror.tif

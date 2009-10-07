@@ -102,7 +102,8 @@ TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison
             geomath hyperb ieee_fp if incdec intbits loop matrix
             miscmath noise
             oslc-err-paramdefault
-            texture-blur texture-simple texture-width
+            texture-blur texture-firstchannel texture-simple 
+            texture-width texture-wrap
             trig typecast vecctr vector )
 
 

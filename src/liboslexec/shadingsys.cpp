@@ -99,7 +99,7 @@ ustring camera ("camera"), common ("common");
 ustring object ("object"), shader ("shader");
 ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
-ustring null ("null");
+ustring null ("null"), default_("default");
 ustring diffuse ("diffuse"), phong ("phong"), transparent ("transparent");
 ustring emission ("emission");
 ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
@@ -108,6 +108,10 @@ ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");
 ustring Ci ("Ci"), Oi ("Oi");
 ustring width ("width"), swidth ("swidth"), twidth ("twidth");
 ustring blur ("blur"), sblur ("sblur"), tblur ("tblur");
+ustring wrap ("wrap"), swrap ("swrap"), twrap ("twrap");
+ustring black ("black"), clamp ("clamp");
+ustring periodic ("periodic"), mirror ("mirror");
+ustring firstchannel ("firstchannel"), fill ("fill"), alpha ("alpha");
 };
 
 
@@ -147,7 +151,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         ASSERT (m_texturesys);
         // Make some good guesses about default options
         m_texturesys->attribute ("automip",  1);
-        m_texturesys->attribute ("autotile", 1);
+        m_texturesys->attribute ("autotile", 64);
     }
 }
 

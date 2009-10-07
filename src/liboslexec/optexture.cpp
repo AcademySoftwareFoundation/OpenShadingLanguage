@@ -39,6 +39,25 @@ namespace OSL {
 namespace pvt {
 
 
+namespace {  // anonymous
+
+inline TextureOptions::Wrap
+decode_wrap (ustring w)
+{
+    if (w == Strings::black)
+        return TextureOptions::WrapBlack;
+    if (w == Strings::clamp)
+        return TextureOptions::WrapClamp;
+    if (w == Strings::periodic)
+        return TextureOptions::WrapPeriodic;
+    if (w == Strings::mirror)
+        return TextureOptions::WrapMirror;
+    return TextureOptions::WrapDefault;
+}
+
+};  // end anonymous namespace
+
+
 
 DECLOP (OP_texture)
 {
@@ -58,16 +77,21 @@ DECLOP (OP_texture)
     if (Result.has_derivs ())
         exec->zero_derivs (Result);
 
+    float zero = 0.0f;
     VaryingRef<float> result ((float *)Result.data(), Result.step());
     VaryingRef<float> s ((float *)S.data(), S.step());
     VaryingRef<float> t ((float *)T.data(), T.step());
     VaryingRef<ustring> filename ((ustring *)Filename.data(), Filename.step());
+    VaryingRef<ustring> swrap (NULL), twrap (NULL);
+    VaryingRef<int> firstchannel (NULL);
 
     TextureSystem *texturesys = exec->texturesys ();
     TextureOptions options;
+    options.firstchannel = 0;
+    options.nchannels = (Result.typespec().is_triple() ? 3 : 1);
+    options.fill.init (&zero);
 
     // Set up derivs
-    float zero = 0.0f;
     VaryingRef<float> dsdx, dsdy, dtdx, dtdy;
     if (S.has_derivs()) {
         dsdx.init ((float *)S.data() + 1, S.step());
@@ -95,25 +119,43 @@ DECLOP (OP_texture)
         }
         ++a;  // advance to next argument
         Symbol &Val (exec->sym (args[a]));
+        TypeDesc valtype = Val.typespec().simpletype ();
         ustring name = * (ustring *) Name.data();
-        if (name == Strings::width) {
+        if (name == Strings::width && valtype == TypeDesc::FLOAT) {
             options.swidth.init ((float *)Val.data(), Val.step());
             options.twidth.init ((float *)Val.data(), Val.step());
-        } else if (name == Strings::swidth) {
+        } else if (name == Strings::swidth && valtype == TypeDesc::FLOAT) {
             options.swidth.init ((float *)Val.data(), Val.step());
-        } else if (name == Strings::twidth) {
+        } else if (name == Strings::twidth && valtype == TypeDesc::FLOAT) {
             options.twidth.init ((float *)Val.data(), Val.step());
-        } else if (name == Strings::blur) {
+
+        } else if (name == Strings::blur && valtype == TypeDesc::FLOAT) {
             options.sblur.init ((float *)Val.data(), Val.step());
             options.tblur.init ((float *)Val.data(), Val.step());
-        } else if (name == Strings::sblur) {
+        } else if (name == Strings::sblur && valtype == TypeDesc::FLOAT) {
             options.sblur.init ((float *)Val.data(), Val.step());
-        } else if (name == Strings::tblur) {
+        } else if (name == Strings::tblur && valtype == TypeDesc::FLOAT) {
             options.tblur.init ((float *)Val.data(), Val.step());
+
+        } else if (name == Strings::wrap && valtype == TypeDesc::STRING) {
+            swrap.init ((ustring *)Val.data(), Val.step());
+            twrap.init ((ustring *)Val.data(), Val.step());
+        } else if (name == Strings::swrap && valtype == TypeDesc::STRING) {
+            swrap.init ((ustring *)Val.data(), Val.step());
+        } else if (name == Strings::twrap && valtype == TypeDesc::STRING) {
+            twrap.init ((ustring *)Val.data(), Val.step());
+
+        } else if (name == Strings::firstchannel && valtype == TypeDesc::INT) {
+            firstchannel.init ((int *)Val.data(), Val.step());
+        } else if (name == Strings::fill && valtype == TypeDesc::FLOAT) {
+            options.fill.init ((float *)Val.data(), Val.step());
+
+        } else {
+            exec->error ("Unknown texture optional argument: \"%s\", <%s>",
+                         name.c_str(), valtype.c_str());
         }
     }
 
-    options.nchannels = (Result.typespec().is_triple() ? 3 : 1);
     float *r = &result[0];
     bool tempresult = false;
     if (Result.has_derivs()) {
@@ -125,17 +167,17 @@ DECLOP (OP_texture)
         // We really want to batch it into groups that share the same texture
         // filename.
         if (runflags[i]) {
-#if 0
-            // For comparison: one-point texture call
-            bool ok = texturesys->texture (filename[i], options, 
-                                           s[i], t[i], dsdx[i], dtdx[i], dsdy[i], dtdy[i],
-                                           &r[i*options.nchannels]);
-#else
-            bool ok = texturesys->texture (filename[i], options, 
+            if (swrap)
+                options.swrap = decode_wrap (swrap[i]);
+            if (twrap)
+                options.twrap = decode_wrap (twrap[i]);
+            if (firstchannel)
+                options.firstchannel = firstchannel[i];
+
+            bool ok = texturesys->texture (filename[i], options,
                                            runflags, i /*beginpoint*/, i+1 /*endpoint*/,
                                            s, t, dsdx, dtdx, dsdy, dtdy,
                                            r);
-#endif
             if (! ok) {
                 std::string err = texturesys->geterror ();
                 exec->error ("%s", err.c_str());

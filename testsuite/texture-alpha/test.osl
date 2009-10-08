@@ -1,0 +1,11 @@
+shader
+test (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    // This tests single-channel reads as well as "alpha" (one past the
+    // last channel directly read, stored in another variable)
+    float r, g, b;
+    r = (float) texture (filename, u, v);
+    g = (float) texture (filename, u, v, "firstchannel", 1, "alpha", b);
+    Cout = color (r, g, b);
+}

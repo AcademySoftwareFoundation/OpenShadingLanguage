@@ -84,11 +84,12 @@ DECLOP (OP_texture)
     VaryingRef<ustring> filename ((ustring *)Filename.data(), Filename.step());
     VaryingRef<ustring> swrap (NULL), twrap (NULL);
     VaryingRef<int> firstchannel (NULL);
+    VaryingRef<float> alpha (NULL);
 
     TextureSystem *texturesys = exec->texturesys ();
     TextureOptions options;
     options.firstchannel = 0;
-    options.nchannels = (Result.typespec().is_triple() ? 3 : 1);
+    options.nchannels = Result.typespec().simpletype().aggregate;
     options.fill.init (&zero);
 
     // Set up derivs
@@ -150,15 +151,22 @@ DECLOP (OP_texture)
         } else if (name == Strings::fill && valtype == TypeDesc::FLOAT) {
             options.fill.init ((float *)Val.data(), Val.step());
 
+        } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
+            exec->adjust_varying (Val, true);
+            alpha.init ((float *)Val.data(), Val.step());
+
         } else {
             exec->error ("Unknown texture optional argument: \"%s\", <%s>",
                          name.c_str(), valtype.c_str());
         }
     }
 
+    if (alpha)
+        options.nchannels += 1;
+
     float *r = &result[0];
     bool tempresult = false;
-    if (Result.has_derivs()) {
+    if (Result.has_derivs() || alpha) {
         tempresult = true;
         r = ALLOCA (float, endpoint*options.nchannels);
     }
@@ -185,11 +193,18 @@ DECLOP (OP_texture)
          }
     }
 
-    if (Result.has_derivs()) {
+    if (tempresult) {
+        // We need to re-copy results back to the right destinations.
+        int resultchans = Result.typespec().simpletype().aggregate;
         for (int i = beginpoint;  i < endpoint;  ++i) {
             if (runflags[i])
-                for (int c = 0;  c < options.nchannels;  ++c)
+                for (int c = 0;  c < resultchans;  ++c)
                     (&result[i])[c] = r[i*options.nchannels+c];
+        }
+        if (alpha) {
+            for (int i = beginpoint;  i < endpoint;  ++i)
+                if (runflags[i])
+                    alpha[i] = r[i*options.nchannels+resultchans];
         }
     }
 }

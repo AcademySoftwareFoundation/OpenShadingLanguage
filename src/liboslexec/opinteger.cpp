@@ -113,7 +113,7 @@ DECLOP (OP_bitand)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts_noderivs<int,int,int,BitAnd> (Result, A, B, exec,
+    binary_op_guts<int,int,int,BitAnd> (Result, A, B, exec,
                                         runflags, beginpoint, endpoint);
 }
 
@@ -137,7 +137,7 @@ DECLOP (OP_bitor)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts_noderivs<int,int,int,BitOr> (Result, A, B, exec,
+    binary_op_guts<int,int,int,BitOr> (Result, A, B, exec,
                                        runflags, beginpoint, endpoint);
 }
 
@@ -161,7 +161,7 @@ DECLOP (OP_xor)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts_noderivs<int,int,int,Xor> (Result, A, B, exec,
+    binary_op_guts<int,int,int,Xor> (Result, A, B, exec,
                                      runflags, beginpoint, endpoint);
 }
 
@@ -185,7 +185,7 @@ DECLOP (OP_shl)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts_noderivs<int,int,int,Shl> (Result, A, B, exec,
+    binary_op_guts<int,int,int,Shl> (Result, A, B, exec,
                                      runflags, beginpoint, endpoint);
 }
 
@@ -209,7 +209,7 @@ DECLOP (OP_shr)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts_noderivs<int,int,int,Shr> (Result, A, B, exec,
+    binary_op_guts<int,int,int,Shr> (Result, A, B, exec,
                                      runflags, beginpoint, endpoint);
 }
 

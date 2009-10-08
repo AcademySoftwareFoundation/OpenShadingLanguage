@@ -269,11 +269,11 @@ DECLOP (ternary_op)
 
 // Heavy lifting of the math and other binary ops, this is a templated
 // version that knows the types of the arguments and the operation to
-// perform (given by a functor).  This version is unaware of how to
-// compute derivatives, so just clears them.
+// perform (given by a functor).  This version can compute derivatives as long
+// as FUNCTION has the required Dual2 operator implementations.
 template <class RET, class ATYPE, class BTYPE, class FUNCTION>
 inline void
-binary_op_guts_noderivs (Symbol &Result, Symbol &A, Symbol &B,
+binary_op_guts (Symbol &Result, Symbol &A, Symbol &B,
                 ShadingExecution *exec, 
                 Runflag *runflags, int beginpoint, int endpoint,
                 bool zero_derivs=true)
@@ -282,100 +282,35 @@ binary_op_guts_noderivs (Symbol &Result, Symbol &A, Symbol &B,
     exec->adjust_varying (Result, A.is_varying() | B.is_varying(),
                           A.data() == Result.data() || B.data() == Result.data());
 
-    // FIXME -- clear derivs for now, make it right later.
+    // Loop over points, do the operation
+    VaryingRef<RET> result ((RET *)Result.data(), Result.step());
+    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
+    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
+    FUNCTION function (exec);
+    if (result.is_uniform()) {
+        // Uniform case
+        function (*result, *a, *b);
+    } else if (A.is_uniform() && B.is_uniform()) {
+        // Operands are uniform but we're assigning to a varying (it can
+        // happen if we're in a conditional).  Take a shortcut by doing
+        // the operation only once.
+        RET r;
+        function (r, *a, *b);
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = r;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                function (result[i], a[i], b[i]);
+    }
     if (zero_derivs && Result.has_derivs ())
         exec->zero_derivs (Result);
-
-    // Loop over points, do the operation
-    VaryingRef<RET> result ((RET *)Result.data(), Result.step());
-    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-    FUNCTION function (exec);
-    if (result.is_uniform()) {
-        // Uniform case
-        function (*result, *a, *b);
-    } else if (A.is_uniform() && B.is_uniform()) {
-        // Operands are uniform but we're assigning to a varying (it can
-        // happen if we're in a conditional).  Take a shortcut by doing
-        // the operation only once.
-        RET r;
-        function (r, *a, *b);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
-    } else {
-        // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                function (result[i], a[i], b[i]);
-    }
 }
 
-
-
-// Heavy lifting of the math and other binary ops, this is a templated
-// version that knows the types of the arguments and the operation to
-// perform (given by a functor).  This version is unaware of how to
-// compute derivatives, so just clears them.
-template <class RET, class ATYPE, class BTYPE, class FUNCTION>
-inline void
-binary_op_guts_derivs (Symbol &Result, Symbol &A, Symbol &B,
-                ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint,
-                bool zero_derivs=true)
-{
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, A.is_varying() | B.is_varying(),
-                          A.data() == Result.data() || B.data() == Result.data());
-
-    // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
-    // Loop over points, do the operation
-    VaryingRef<RET> result ((RET *)Result.data(), Result.step());
-    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-    FUNCTION function (exec);
-    if (result.is_uniform()) {
-        // Uniform case
-        VaryingRef<RET> result ((RET *)Result.data(), Result.step());
-        VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-        VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-        function (*result, *a, *b);
-        if (Result.has_derivs ())
-            exec->zero_derivs (Result);
-    } else if (A.is_uniform() && B.is_uniform()) {
-        // Operands are uniform but we're assigning to a varying (it can
-        // happen if we're in a conditional).  Take a shortcut by doing
-        // the operation only once.
-        VaryingRef<RET> result ((RET *)Result.data(), Result.step());
-        VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-        VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-        RET r;
-        function (r, *a, *b);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
-        if (Result.has_derivs ())
-            exec->zero_derivs (Result);
-    } else {
-        // Fully varying case
-        VaryingRef<RET> result ((RET *)Result.data(), Result.step());
-        VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-        VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                function (result[i], a[i], b[i]);
-        if (Result.has_derivs ())
-            exec->zero_derivs (Result);
-    }
-}
-
-
-
-// Wrapper around binary_op_guts that does has he call signature of an
-// ordinary shadeop.
+// Wrapper around binary_op_guts that has the call signature of an ordinary
+// shadeop.
 template <class RET, class ATYPE, class BTYPE, class FUNCTION>
 DECLOP (binary_op_noderivs)
 {
@@ -384,7 +319,7 @@ DECLOP (binary_op_noderivs)
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
 
-    binary_op_guts_noderivs<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+    binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
                                               runflags, beginpoint, endpoint);
 }
 
@@ -392,6 +327,8 @@ DECLOP (binary_op_noderivs)
 
 // Wrapper around binary_op_guts that does has he call signature of an
 // ordinary shadeop, with support for derivatives.
+// TODO: the presence of derivatives is static, but this shadeop checks
+//       Symbol::has_derivs() everytime
 template <class RET, class ATYPE, class BTYPE, class FUNCTION>
 DECLOP (binary_op)
 {
@@ -403,21 +340,20 @@ DECLOP (binary_op)
     if (Result.has_derivs()) {
         if (A.has_derivs()) {
             if (B.has_derivs())
-                binary_op_guts_noderivs<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
+                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
                                            runflags, beginpoint, endpoint, false);
             else
-                binary_op_guts_noderivs<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
+                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
                                            runflags, beginpoint, endpoint, false);
         } else if (B.has_derivs()) {
-            binary_op_guts_noderivs<Dual2<RET>,ATYPE,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
+            binary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
                                            runflags, beginpoint, endpoint, false);
         } else {
-            binary_op_guts_noderivs<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint,false);
-            exec->zero_derivs (Result);
+            binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+                                           runflags, beginpoint, endpoint,true);
         }
     } else {
-        binary_op_guts_noderivs<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
                                                   runflags, beginpoint, endpoint, false);
     }
 }

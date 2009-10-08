@@ -188,7 +188,8 @@ DECLOP (OP_texture)
                                            r);
             if (! ok) {
                 std::string err = texturesys->geterror ();
-                exec->error ("%s", err.c_str());
+                if (err.length())
+                    exec->error ("%s", err.c_str());
             }
          }
     }

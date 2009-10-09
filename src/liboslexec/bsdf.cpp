@@ -251,7 +251,7 @@ public:
         float cosNO = params->N.dot(omega_out);
         float cosNI = params->N.dot(omega_in);
         // reflect the view vector
-        Vec3 R = (2 * cosNO) * params->N + omega_out;
+        Vec3 R = (2 * cosNO) * params->N - omega_out;
         float out = cosNI * ((params->exponent + 2) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent));
         return Color3 (out, out, out);
     }
@@ -264,7 +264,7 @@ public:
         float cosNO = params->N.dot(omega_out);
         if (cosNO > 0) {
            // reflect the view vector
-           Vec3 R = (2 * cosNO) * params->N + omega_out;
+           Vec3 R = (2 * cosNO) * params->N - omega_out;
            Vec3 T, B;
            make_orthonormals (R, T, B);
            float phi = 2 * (float) M_PI * randu;
@@ -287,7 +287,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
-        Vec3 R = (2 * cosNO) * params->N + omega_out;
+        Vec3 R = (2 * cosNO) * params->N - omega_out;
         return (params->exponent + 1) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
     }
 

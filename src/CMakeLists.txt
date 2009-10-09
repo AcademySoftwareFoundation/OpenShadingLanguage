@@ -100,7 +100,7 @@ endmacro ()
 TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison 
             derivs exponential function-simple function-outputelem
             geomath hyperb ieee_fp if incdec intbits loop matrix
-            miscmath noise
+            miscmath noise pnoise
             oslc-err-paramdefault
             texture-alpha texture-blur texture-firstchannel texture-simple 
             texture-width texture-wrap

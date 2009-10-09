@@ -1,0 +1,32 @@
+shader
+test (float angle = 10, float scale = 20,
+      output color Cout_f1 = 0,
+      output color Cout_f2 = 0,
+      output color Cout_f3 = 0,
+      output color Cout_f4 = 0,
+      output color Cout_c1 = 0,
+      output color Cout_c2 = 0,
+      output color Cout_c3 = 0,
+      output color Cout_c4 = 0)
+{
+   // setup some coordinates
+   float theta = radians(angle);
+   float ru = cos(theta) * u + sin(theta) * v;
+   float rv = sin(theta) * u - cos(theta) * v;
+   ru *= scale;
+   rv *= scale;
+   float rz = cos(scale * (u + v));
+   float t = sin(scale * u);
+
+   // float periodic noise in 1,2,3,4 dimensions
+   Cout_f1 = (float) pnoise(ru, 6.0);
+   Cout_f2 = (float) pnoise(ru, rv, 3.0, 6.0);
+   Cout_f3 = (float) pnoise(point(ru, rv, rz), point(6, 6, 6));
+   Cout_f4 = (float) pnoise(point(ru, rv, rz), t, point(6, 6, 6), 3.0);
+
+   // color periodic noise in 1,2,3,4 dimensions
+   Cout_c1 = pnoise(ru, 6.0);
+   Cout_c2 = pnoise(ru, rv, 3.0, 6.0);
+   Cout_c3 = pnoise(point(ru, rv, rz), point(6, 6, 6));
+   Cout_c4 = pnoise(point(ru, rv, rz), t, point(6, 6, 6), 3.0);
+}

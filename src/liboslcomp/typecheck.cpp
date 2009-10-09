@@ -761,7 +761,8 @@ ASTfunction_call::typecheck (TypeSpec expected)
 //    C - color closure
 
 #define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
-#define NOISE_ARGS "ff", "fff", "fp", "fpf", "cf", "cff", "cp", "cpf", \
+#define NOISE_ARGS "ff", "fff", "fp", "fpf", \
+                   "cf", "cff", "cp", "cpf", \
                    "vf", "vff", "vp", "vpf"
 #define PNOISE_ARGS "fff", "fffff", "fpp", "fpfpf", \
                     "cff", "cffff", "cpp", "cpfpf", \
@@ -835,10 +836,10 @@ static const char * builtin_func_args [] = {
     "mod", "iii", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL,  
     "noise", NOISE_ARGS, NULL,
     "normalize", "vv", "nn", NULL,
-    "pnoise", NOISE_ARGS, NULL,
+    "pnoise", PNOISE_ARGS, NULL,
     "pow", "fff", "ccf", "ppf", "vvf", "nnf", NULL,
     "printf", "xs*", NULL,   // FIXME -- further checking
-    "psnoise", NOISE_ARGS, NULL,
+    "psnoise", PNOISE_ARGS, NULL,
     "radians", ANY_ONE_FLOAT_BASED, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
     "raylevel", "i", NULL,

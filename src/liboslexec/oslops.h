@@ -160,10 +160,11 @@ DECLOP (OP_normalize);
 //DECLOP (OP_or);
 //DECLOP (OP_orennayar);
 DECLOP (OP_phong);
+DECLOP (OP_pnoise);
 DECLOP (OP_point);
-DECLOP (OP_printf);
 DECLOP (OP_pow);
-//DECLOP (OP_psnoise);
+DECLOP (OP_printf);
+DECLOP (OP_psnoise);
 DECLOP (OP_radians);
 //DECLOP (OP_random);
 DECLOP (OP_reflect);
@@ -206,6 +207,53 @@ DECLOP (OP_vector);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);
+
+
+// Heavy lifting of the math and other ternary ops, this is a templated
+// version that knows the types of the arguments and the operation to
+// perform (given by a functor).
+template <class RET, class ATYPE, class BTYPE, class CTYPE, class DTYPE, class FUNCTION>
+inline void
+quaternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C, Symbol &D,
+                    ShadingExecution *exec, 
+                    Runflag *runflags, int beginpoint, int endpoint,
+                    bool zero_derivs=true)
+{
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, A.is_varying() | B.is_varying() | C.is_varying() | D.is_varying(),
+                          A.data() == Result.data() || B.data() == Result.data() ||
+                          C.data() == Result.data() || D.data() == Result.data());
+
+    // Loop over points, do the operation
+    VaryingRef<RET> result ((RET *)Result.data(), Result.step());
+    VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
+    VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
+    VaryingRef<CTYPE> c ((CTYPE *)C.data(), C.step());
+    VaryingRef<DTYPE> d ((DTYPE *)D.data(), D.step());
+    FUNCTION function (exec);
+    if (result.is_uniform()) {
+        // Uniform case
+        function (*result, *a, *b, *c, *d);
+    } else if (A.is_uniform() && B.is_uniform() && C.is_uniform()) {
+        // Operands are uniform but we're assigning to a varying (it can
+        // happen if we're in a conditional).  Take a shortcut by doing
+        // the operation only once.
+        RET r;
+        function (r, *a, *b, *c, *d);
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = r;
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                function (result[i], a[i], b[i], c[i], d[i]);
+    }
+
+    if (zero_derivs && Result.has_derivs ())
+        exec->zero_derivs (Result);
+}
+
 
 // Heavy lifting of the math and other ternary ops, this is a templated
 // version that knows the types of the arguments and the operation to

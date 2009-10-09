@@ -519,80 +519,108 @@ struct HashVector {
 };
 
 struct HashScalarPeriodic {
-    HashScalarPeriodic (int px) : px(px < 1 ? 1: px) {}
-    HashScalarPeriodic (int px, int py) : px(px < 1 ? 1: px), py(py < 1 ? 1: py) {}
-    HashScalarPeriodic (int px, int py, int pz) : px(px < 1 ? 1: px), py(py < 1 ? 1: py), pz(pz < 1 ? 1: pz) {}
-    HashScalarPeriodic (int px, int py, int pz, int pw) : px(px < 1 ? 1: px), py(py < 1 ? 1: py), pz(pz < 1 ? 1: pz), pw(pw < 1 ? 1: pw) {}
+    HashScalarPeriodic (float px) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+    }
+    HashScalarPeriodic (float px, float py) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+    }
+    HashScalarPeriodic (float px, float py, float pz) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
+    }
+    HashScalarPeriodic (float px, float py, float pz, float pw) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
+        m_pw = quick_floor(pw); if (m_pw < 1) m_pw = 1;
+    }
 
-    int px, py, pz, pw;
+    int m_px, m_py, m_pz, m_pw;
 
     int operator() (int x) const {
         unsigned int iv[1];
-        iv[0] = imod (x, px);
+        iv[0] = imod (x, m_px);
         return inthash<1> (iv);
     }
 
     int operator() (int x, int y) const {
         unsigned int iv[2];
-        iv[0] = imod (x, px);
-        iv[1] = imod (y, py);
+        iv[0] = imod (x, m_px);
+        iv[1] = imod (y, m_py);
         return inthash<2> (iv);
     }
 
     int operator() (int x, int y, int z) const {
         unsigned int iv[3];
-        iv[0] = imod (x, px);
-        iv[1] = imod (y, py);
-        iv[2] = imod (z, pz);
+        iv[0] = imod (x, m_px);
+        iv[1] = imod (y, m_py);
+        iv[2] = imod (z, m_pz);
         return inthash<3> (iv);
     }
 
     int operator() (int x, int y, int z, int w) const {
         unsigned int iv[4];
-        iv[0] = imod (x, px);
-        iv[1] = imod (y, py);
-        iv[2] = imod (z, pz);
-        iv[3] = imod (w, pz);
+        iv[0] = imod (x, m_px);
+        iv[1] = imod (y, m_py);
+        iv[2] = imod (z, m_pz);
+        iv[3] = imod (w, m_pw);
         return inthash<4> (iv);
     }
 };
 
 struct HashVectorPeriodic {
-    HashVectorPeriodic (int px) : px(px < 1 ? 1: px) {}
-    HashVectorPeriodic (int px, int py) : px(px < 1 ? 1: px), py(py < 1 ? 1: py) {}
-    HashVectorPeriodic (int px, int py, int pz) : px(px < 1 ? 1: px), py(py < 1 ? 1: py), pz(pz < 1 ? 1: pz) {}
-    HashVectorPeriodic (int px, int py, int pz, int pw) : px(px < 1 ? 1: px), py(py < 1 ? 1: py), pz(pz < 1 ? 1: pz), pw(pw < 1 ? 1: pw) {}
+    HashVectorPeriodic (float px) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+    }
+    HashVectorPeriodic (float px, float py) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+    }
+    HashVectorPeriodic (float px, float py, float pz) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
+    }
+    HashVectorPeriodic (float px, float py, float pz, float pw) {
+        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
+        m_pw = quick_floor(pw); if (m_pw < 1) m_pw = 1;
+    }
 
-    int px, py, pz, pw;
+    int m_px, m_py, m_pz, m_pw;
 
     Vec3i operator() (int x) const {
         unsigned int iv[1];
-        iv[0] = imod (x, px);
+        iv[0] = imod (x, m_px);
         return hash3<1> (iv);
     }
 
     Vec3i operator() (int x, int y) const {
         unsigned int iv[2];
-        iv[0] = imod (x, px);
-        iv[1] = imod (y, py);
+        iv[0] = imod (x, m_px);
+        iv[1] = imod (y, m_py);
         return hash3<2> (iv);
     }
 
     Vec3i operator() (int x, int y, int z) const {
         unsigned int iv[3];
-        iv[0] = imod (x, px);
-        iv[1] = imod (y, py);
-        iv[2] = imod (z, pz);
+        iv[0] = imod (x, m_px);
+        iv[1] = imod (y, m_py);
+        iv[2] = imod (z, m_pz);
         return hash3<3> (iv);
 
     }
 
     Vec3i operator() (int x, int y, int z, int w) const {
         unsigned int iv[4];
-        iv[0] = imod (x, px);
-        iv[1] = imod (y, py);
-        iv[2] = imod (z, pz);
-        iv[3] = imod (w, pw);
+        iv[0] = imod (x, m_px);
+        iv[1] = imod (y, m_py);
+        iv[2] = imod (z, m_pz);
+        iv[3] = imod (w, m_pw);
         return hash3<4> (iv);
     }
 
@@ -822,7 +850,227 @@ struct SNoise {
     }
 };
 
-// TODO: periodic noise functor
+
+
+struct PeriodicNoise {
+    PeriodicNoise (ShadingExecution *) { }
+
+    inline void operator() (float &result, float x, float px) const {
+        HashScalarPeriodic h(px);
+        perlin(result, h, x);
+        result = 0.5f * (result + 1);
+    }
+
+    inline void operator() (float &result, float x, float y, float px, float py) const {
+        HashScalarPeriodic h(px, py);
+        perlin(result, h, x, y);
+        result = 0.5f * (result + 1);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z);
+        perlin(result, h, p.x, p.y, p.z);
+        result = 0.5f * (result + 1);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin(result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (result + 1);
+    }
+
+    inline void operator() (Vec3 &result, float x, float px) const {
+        HashVectorPeriodic h(px);
+        perlin(result, h, x);
+        result = 0.5f * (result + Vec3(1, 1, 1));
+    }
+
+    inline void operator() (Vec3 &result, float x, float y, float px, float py) const {
+        HashVectorPeriodic h(px, py);
+        perlin(result, h, x, y);
+        result = 0.5f * (result + Vec3(1, 1, 1));
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z);
+        perlin(result, h, p.x, p.y, p.z);
+        result = 0.5f * (result + Vec3(1, 1, 1));
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin(result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (result + Vec3(1, 1, 1));
+    }
+
+    // dual versions
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
+        HashScalarPeriodic h(px);
+        perlin(result, h, x);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
+        HashScalarPeriodic h(px, py);
+        perlin(result, h, x, y);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);        
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz, t);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
+        HashVectorPeriodic h(px);
+        perlin(result, h, x);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
+        HashVectorPeriodic h(px, py);
+        perlin(result, h, x, y);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz, t);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+    }
+};
+
+struct PeriodicSNoise {
+    PeriodicSNoise (ShadingExecution *) { }
+
+    inline void operator() (float &result, float x, float px) const {
+        HashScalarPeriodic h(px);
+        perlin(result, h, x);
+    }
+
+    inline void operator() (float &result, float x, float y, float px, float py) const {
+        HashScalarPeriodic h(px, py);
+        perlin(result, h, x, y);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z);
+        perlin(result, h, p.x, p.y, p.z);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin(result, h, p.x, p.y, p.z, t);
+    }
+
+    inline void operator() (Vec3 &result, float x, float px) const {
+        HashVectorPeriodic h(px);
+        perlin(result, h, x);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y, float px, float py) const {
+        HashVectorPeriodic h(px, py);
+        perlin(result, h, x, y);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z);
+        perlin(result, h, p.x, p.y, p.z);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin(result, h, p.x, p.y, p.z, t);
+    }
+
+    // dual versions
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
+        HashScalarPeriodic h(px);
+        perlin(result, h, x);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
+        HashScalarPeriodic h(px, py);
+        perlin(result, h, x, y);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);        
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz, t);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
+        HashVectorPeriodic h(px);
+        perlin(result, h, x);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
+        HashVectorPeriodic h(px, py);
+        perlin(result, h, x, y);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin(result, h, px, py, pz, t);
+    }
+};
 
 } // anonymous namespace
 
@@ -924,6 +1172,123 @@ DECLOP (generic_noise_function)
     }
 }
 
+// this is a binary function where only the "A" argument contributes to the
+// result's derivatives
+template <typename RET, typename ATYPE, typename BTYPE, typename FUNCTION>
+DECLOP (binary_op_unary_derivs)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    if (Result.has_derivs() && A.has_derivs()) {
+        binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
+                runflags, beginpoint, endpoint, false);
+    } else {
+        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+                runflags, beginpoint, endpoint, true);
+    }
+}
+
+// this is a quaternary function where only the "A" and "B" arguments contribute
+// to the result's derivatives
+template <typename RET, typename ATYPE, typename BTYPE, typename CTYPE, typename DTYPE, typename FUNCTION>
+DECLOP (quaternary_op_binary_derivs)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+    Symbol &D (exec->sym (args[4]));
+
+    if (Result.has_derivs()) {
+        if (A.has_derivs()) {
+            if (B.has_derivs())
+                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                        runflags, beginpoint, endpoint, false);
+            else
+                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                        runflags, beginpoint, endpoint, false);
+        } else if (B.has_derivs()) {
+            quaternary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                    runflags, beginpoint, endpoint, false);
+        } else {
+            quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                    runflags, beginpoint, endpoint,true);
+        }
+    } else {
+        quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                runflags, beginpoint, endpoint, false);
+    }
+}
+
+template <typename FUNCTION>
+DECLOP (generic_pnoise_function)
+{
+    ASSERT (nargs == 3 || nargs == 5);
+    OpImpl impl = NULL;
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    // type check first args
+    ASSERT (Result.typespec().is_float() || Result.typespec().is_triple());
+    ASSERT (A.typespec().is_float() || A.typespec().is_triple());
+
+    if (nargs == 3) {
+        // either fff or fpp
+        ASSERT (B.typespec().is_float() || B.typespec().is_triple());
+        ASSERT (A.typespec().is_float() == B.typespec().is_float());
+        ASSERT (A.typespec().is_triple() == B.typespec().is_triple());
+
+        // this isn't a regular binary op because we don't care about the
+        // derivatives of the period (since that value gets floored)
+        // so we manually instantiate binary_op_guts only considering the first
+        // arguments need for derivatives
+        if (Result.typespec().is_float() && A.typespec().is_float())
+            impl = binary_op_unary_derivs<float, float, float, FUNCTION>;
+        else if (Result.typespec().is_float() && A.typespec().is_triple())
+            impl = binary_op_unary_derivs<float, Vec3, Vec3, FUNCTION>;
+        else if (Result.typespec().is_triple() && A.typespec().is_float())
+            impl = binary_op_unary_derivs<Vec3, float, float, FUNCTION>;
+        else if (Result.typespec().is_triple() && A.typespec().is_triple())
+            impl = binary_op_unary_derivs<Vec3, Vec3, Vec3, FUNCTION>;
+    } else if (nargs == 5) {
+        // either fffff or fpfpf
+        Symbol &C (exec->sym (args[3]));
+        Symbol &D (exec->sym (args[4]));
+
+        ASSERT (B.typespec().is_float());
+        ASSERT (C.typespec().is_float() || C.typespec().is_triple());
+        ASSERT (D.typespec().is_float());
+        ASSERT (C.typespec() == A.typespec());
+
+        if (Result.typespec().is_float() && A.typespec().is_float())
+            impl = quaternary_op_binary_derivs<float, float, float, float, float, FUNCTION>;
+        else if (Result.typespec().is_float() && A.typespec().is_triple())
+            impl = quaternary_op_binary_derivs<float, Vec3, float, Vec3, float, FUNCTION>;
+        else if (Result.typespec().is_triple() && A.typespec().is_float())
+            impl = quaternary_op_binary_derivs<Vec3, float, float, float, float, FUNCTION>;
+        else if (Result.typespec().is_triple() && A.typespec().is_triple())
+            impl = quaternary_op_binary_derivs<Vec3, Vec3, float, Vec3, float, FUNCTION>;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        exec->error_arg_types ();
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+}
+
+
+
 DECLOP (OP_cellnoise)
 {
     // NOTE: cellnoise is a step function which is locally flat
@@ -948,6 +1313,21 @@ DECLOP (OP_snoise)
             runflags, beginpoint, endpoint);
 }
 
+
+
+DECLOP (OP_pnoise)
+{
+    generic_pnoise_function<PeriodicNoise> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_psnoise)
+{
+    generic_pnoise_function<PeriodicSNoise> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+}
 
 
 }; // namespace pvt

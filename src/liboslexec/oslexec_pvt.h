@@ -331,13 +331,13 @@ public:
     virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
     virtual bool getattribute (const std::string &name, TypeDesc type, void *val);
 
-    virtual void Parameter (const char *name, TypeDesc t, const void *val);
-    virtual void Shader (const char *shaderusage,
+    virtual bool Parameter (const char *name, TypeDesc t, const void *val);
+    virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
                          const char *layername=NULL);
-    virtual void ShaderGroupBegin (void);
-    virtual void ShaderGroupEnd (void);
-    virtual void ConnectShaders (const char *srclayer, const char *srcparam,
+    virtual bool ShaderGroupBegin (void);
+    virtual bool ShaderGroupEnd (void);
+    virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
     virtual ShadingAttribStateRef state () const;
     virtual void clear_state ();

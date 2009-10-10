@@ -132,40 +132,41 @@ public:
 
     /// Set a parameter of the next shader.
     ///
-    virtual void Parameter (const char *name, TypeDesc t, const void *val) {}
+    virtual bool Parameter (const char *name, TypeDesc t, const void *val)
+        { return true; }
 #if 0
-    virtual void Parameter (const char *name, int val) {
+    virtual bool Parameter (const char *name, int val) {
         Parameter (name, TypeDesc::IntType, &val);
     }
-    virtual void Parameter (const char *name, float val) {
+    virtual bool Parameter (const char *name, float val) {
         Parameter (name, TypeDesc::FloatType, &val);
     }
-    virtual void Parameter (const char *name, double val) {}
-    virtual void Parameter (const char *name, const char *val) {}
-    virtual void Parameter (const char *name, const std::string &val) {}
-    virtual void Parameter (const char *name, TypeDesc t, const int *val) {}
-    virtual void Parameter (const char *name, TypeDesc t, const float *val) {}
-    virtual void Parameter (const char *name, TypeDesc t, const char **val) {}
+    virtual bool Parameter (const char *name, double val) {}
+    virtual bool Parameter (const char *name, const char *val) {}
+    virtual bool Parameter (const char *name, const std::string &val) {}
+    virtual bool Parameter (const char *name, TypeDesc t, const int *val) {}
+    virtual bool Parameter (const char *name, TypeDesc t, const float *val) {}
+    virtual bool Parameter (const char *name, TypeDesc t, const char **val) {}
 #endif
 
     /// Create a new shader instance, either replacing the one for the
     /// specified usage (if not within a group) or appending to the 
     /// current group (if a group has been started).
-    virtual void Shader (const char *shaderusage,
+    virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
                          const char *layername=NULL) = 0;
 
     /// Signal the start of a new shader group.
     ///
-    virtual void ShaderGroupBegin (void) = 0;
+    virtual bool ShaderGroupBegin (void) = 0;
 
     /// Signal the end of a new shader group.
     ///
-    virtual void ShaderGroupEnd (void) = 0;
+    virtual bool ShaderGroupEnd (void) = 0;
 
     /// Connect two shaders within the current group
     ///
-    virtual void ConnectShaders (const char *srclayer, const char *srcparam,
+    virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam)=0;
 
     /// Return a reference-counted (but opaque) reference to the current

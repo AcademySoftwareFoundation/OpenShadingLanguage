@@ -365,8 +365,11 @@ ShadingSystemImpl::loadshader (const char *cname)
         r->resolve_ops ();
     }
 
-    if (r && m_debug)
-        info ("%s", r->print ().c_str());
+    if (r && m_debug) {
+        std::string s = r->print ();
+        if (s.length())
+            info ("%s", s.c_str());
+    }
 
     return r;
 }

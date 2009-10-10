@@ -287,56 +287,70 @@ ShadingSystemImpl::printstats () const
 
 
 
-void
+bool
 ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
 {
     m_pending_params.push_back (ParamRef (ustring(name), t, val));
+    return true;
 }
 
 
 
-void
+bool
 ShadingSystemImpl::ShaderGroupBegin (void)
 {
     if (m_in_group) {
         error ("Nested ShaderGroupBegin() calls");
-        return;
+        return false;
     }
     m_in_group = true;
     m_group_use = ShadUseUnknown;
+    return true;
 }
 
 
 
-void
+bool
 ShadingSystemImpl::ShaderGroupEnd (void)
 {
+    if (! m_in_group) {
+        error ("ShaderGroupEnd() was called without ShaderGroupBegin()");
+        return false;
+    }
     m_in_group = false;
     m_group_use = ShadUseUnknown;
+    return true;
 }
 
 
 
-void
+bool
 ShadingSystemImpl::Shader (const char *shaderusage,
                            const char *shadername,
                            const char *layername)
 {
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
-        // FIXME -- some kind of error return?
-        return;
+        error ("Could not find shader \"%s\"", shadername);
+        return false;
     }
 
     ShaderUse use = shaderuse_from_name (shaderusage);
     if (use == ShadUseUnknown) {
-        error ("Unknown shader usage '%s'", shaderusage);
-        return;
+        error ("Unknown shader usage \"%s\"", shaderusage);
+        return false;
     }
 
     // Make sure we have a current attrib state
     if (! m_curattrib)
         m_curattrib.reset (new ShadingAttribState);
+
+    // If somebody is already hanging onto the shader state, clone it before
+    // we modify it.
+    if (! m_curattrib.unique ()) {
+        ShadingAttribStateRef newstate (new ShadingAttribState (*m_curattrib));
+        m_curattrib = newstate;
+    }
 
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
     instance->parameters (m_pending_params);
@@ -351,27 +365,30 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         if (m_group_use == ShadUseUnknown) {  // First shader in group
             m_group_use = use;
         } else if (use != m_group_use) {
-            error ("Shader usage '%s' does not match current group (%s)",
+            error ("Shader usage \"%s\" does not match current group (%s)",
                    shaderusage, shaderusename (m_group_use));
-            return;
+            return false;
         }
     }
 
     shadergroup.append (instance);
     // FIXME -- check for duplicate layer name within the group?
+
+    return true;
 }
 
 
 
-void
+bool
 ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
                                    const char *dstlayer, const char *dstparam)
 {
     if (! m_in_group) {
-        error ("ConectShaders can only be called within ShaderGroupBegin/End");
-        return;
+        error ("ConnectShaders can only be called within ShaderGroupBegin/End");
+        return false;
     }
-    // FIXME
+    // FIXME - unimplemented!
+    return false;
 }
 
 

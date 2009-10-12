@@ -87,15 +87,18 @@ debug:
 profile:
 	${MAKE} PROFILE=1 --no-print-directory
 
-# 'make cmakesetup' constructs the build directory and runs 'cmake'
-# there, generating makefiles to build the project.
+# 'make cmakesetup' constructs the build directory and runs 'cmake' there,
+# generating makefiles to build the project.  For speed, it only does this when
+# ${build_dir}/Makefile doesn't already exist, in which case we rely on the
+# cmake generated makefiles to regenerate themselves when necessary.
 cmakesetup:
-	cmake -E make_directory ${build_dir}
-	( cd ${build_dir} ; \
-	  cmake -DCMAKE_INSTALL_PREFIX=${working_dir}/${dist_dir} \
-	        ${MY_CMAKE_FLAGS} \
-		-DBOOST_ROOT=${BOOST_HOME} \
-		../../src )
+	@ (if [ ! -e ${build_dir}/Makefile ] ; then \
+		cmake -E make_directory ${build_dir} ; \
+		cd ${build_dir} ; \
+		cmake -DCMAKE_INSTALL_PREFIX=${working_dir}/${dist_dir} \
+			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
+			../../src ; \
+	 fi)
 
 # 'make cmake' does a basic build (after first setting it up)
 cmake: cmakesetup
@@ -107,10 +110,6 @@ cmakeinstall: cmake
 
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
-
-# 'make fast' builds assuming cmake has already run.  Use with caution!
-fast: 
-	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} install )
 
 # 'make test' does a full build and then runs all tests
 test: cmake

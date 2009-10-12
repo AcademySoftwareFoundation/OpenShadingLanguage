@@ -214,12 +214,16 @@ static GlobalTable globals[] = {
     { "v", TypeDesc::TypeFloat },
     { "dPdu", TypeDesc::TypeVector },
     { "dPdv", TypeDesc::TypeVector },
+#if 0
+    // Light variables -- we don't seem to be on a route to support this
+    // kind of light shader, so comment these out for now.
     { "L", TypeDesc::TypeVector },
     { "Cl", TypeDesc::TypeColor },
     { "Ps", TypeDesc::TypePoint },
     { "Ns", TypeDesc::TypeNormal },
     { "Pl", TypeDesc::TypePoint },
     { "Nl", TypeDesc::TypeNormal },
+#endif
     { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
     { "Oi", TypeDesc::TypeColor },
     { "time", TypeDesc::TypeFloat },

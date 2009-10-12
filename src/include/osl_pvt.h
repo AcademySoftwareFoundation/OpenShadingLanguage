@@ -316,11 +316,11 @@ public:
              a.arraylength() == b.arraylength());
     }
 
-    /// Is type b is assignable to a?  It is if they are the equivalent(),
-    /// or if a is a float or float-aggregate and b is a float or int.
-    friend bool assignable (const TypeSpec &a, const TypeSpec &b) {
-        return equivalent (a, b) || 
-            (a.is_floatbased() && (b.is_float() || b.is_int()));
+    /// Is type src is assignable to dst?  It is if they are the equivalent(),
+    /// or if dst is a float or float-aggregate and src is a float or int.
+    friend bool assignable (const TypeSpec &dst, const TypeSpec &src) {
+        return equivalent (dst, src) || 
+            (dst.is_floatbased() && (src.is_float() || src.is_int()));
     }
 
 private:

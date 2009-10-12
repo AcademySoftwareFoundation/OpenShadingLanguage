@@ -258,50 +258,50 @@ Dual2<Vec3> lerp(const Dual2<float> &t, const Dual2<Vec3> &a, const Dual2<Vec3> 
 
 
 // 1,2,3 and 4 dimensional gradient functions - perform a dot product against a
-// randomly chosen edge vector of the hypercube, when the number of edges is not
-// exactly a power of 2 (such as in dimension 3), replicate the edges to avoid
-// an expensive mod operation.
+// randomly chosen vector. Note that the gradient vector is not normalized, but
+// this only affects the overal "scale" of the result, so we simply account for
+// the scale by multiplying in the corresponding "perlin" function.
+// These factors were experimentally calculated to be:
+//    1D:   0.188
+//    2D:   0.507
+//    3D:   0.936
+//    4D:   0.870
 
 template <typename T>
 inline T grad (int hash, const T &x) {
-    static const float G1[2] = { -1, 1 };
-
-    int h = hash & 0x1;
-    return x * G1[h];
+    int h = hash & 15;
+    float g = 1 + (h & 7);  // 1, 2, .., 8
+    if (h&8) g = -g;        // random sign
+    return g * x;           // dot-product
 }
 
 template <typename T>
 inline T grad (int hash, const T &x, const T &y) {
-    static const float G2[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-
-    int h = hash & 0x3;
-    return x * G2[h][0] + y * G2[h][1];
+    // 8 possible directions (+-1,+-2) and (+-2,+-1)
+    int h = hash & 7;
+    T u = h<4 ? x : y;
+    T v = h<4 ? y : x;
+    // compute the dot product with (x,y).
+    return ((h&1) ? -u : u) + ((h&2) ? -2.0f * v : 2.0f * v);
 }
- 
+
 template <typename T>
 inline T grad (int hash, const T &x, const T &y, const T &z) {
-    static const float G3[16][3] = {
-            { 1, 1, 0 }, { -1, 1, 0 }, { 1, -1, 0 }, { -1, -1, 0 }, { 1, 0, 1 }, { -1, 0, 1 },
-            { 1, 0, -1 }, { -1, 0, -1 }, { 0, 1, 1 }, { 0, -1, 1 }, { 0, 1, -1 }, { 0, -1, -1 },
-            { 1, 1, 0 }, { -1, 1, 0 }, { 0, -1, 1 }, { 0, -1, -1 } };
-
+    // use vectors pointing to the edges of the cube
     int h = hash & 15;
-    return x * G3[h][0] + y * G3[h][1] + z * G3[h][2];
+    T u = h<8 ? x : y;
+    T v = h<4 ? y : h==12||h==14 ? x : z;
+    return ((h&1) ? -u : u) + ((h&2) ? -v : v);
 }
 
 template <typename T>
 inline T grad (int hash, const T &x, const T &y, const T &z, const T &w) {
-    static const float G4[32][4] = {
-            { -1, -1, -1, 0 }, { -1, -1, 1, 0 }, { -1, 1, -1, 0 }, { -1, 1, 1, 0 }, { 1, -1, -1, 0 },
-            { 1, -1, 1, 0 }, { 1, 1, -1, 0 }, { 1, 1, 1, 0 }, { -1, -1, 0, -1 }, { -1, 1, 0, -1 },
-            { 1, -1, 0, -1 }, { 1, 1, 0, -1 }, { -1, -1, 0, 1 }, { -1, 1, 0, 1 }, { 1, -1, 0, 1 },
-            { 1, 1, 0, 1 }, { -1, 0, -1, -1 }, { 1, 0, -1, -1 }, { -1, 0, -1, 1 }, { 1, 0, -1, 1 },
-            { -1, 0, 1, -1 }, { 1, 0, 1, -1 }, { -1, 0, 1, 1 }, { 1, 0, 1, 1 }, { 0, -1, -1, -1 },
-            { 0, -1, -1, 1 }, { 0, -1, 1, -1 }, { 0, -1, 1, 1 }, { 0, 1, -1, -1 }, { 0, 1, -1, 1 },
-            { 0, 1, 1, -1 }, { 0, 1, 1, 1 } };
-
+    // use vectors pointing to the edges of the hypercube
     int h = hash & 31;
-    return x * G4[h][0] + y * G4[h][1] + z * G4[h][2] + w * G4[h][3];
+    T u = h<24 ? x : y;
+    T v = h<16 ? y : z;
+    T s = h<8  ? z : w;
+    return ((h&1)? -u : u) + ((h&2)? -v : v) + ((h&4)? -s : s);
 }
 
 typedef Imath::Vec3<int> Vec3i;
@@ -367,6 +367,33 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual
                         Vec3(rx.dy() , ry.dy() , rz.dy() ));
 }
 
+template <typename T>
+inline T scale1 (const T &result) { return 0.2500f * result; }
+template <typename T>
+inline T scale2 (const T &result) { return 0.6616f * result; }
+template <typename T>
+inline T scale3 (const T &result) { return 0.9820f * result; }
+template <typename T>
+inline T scale4 (const T &result) { return 0.8344f * result; }
+
+template <typename T>
+inline Dual2<T> scale1 (const Dual2<T> &result) {
+    return Dual2<T> (scale1 (result.val()), scale1 (result.dx()), scale1 (result.dy()));
+}
+template <typename T>
+inline Dual2<T> scale2 (const Dual2<T> &result) {
+    return Dual2<T> (scale2 (result.val()), scale2 (result.dx()), scale2 (result.dy()));
+}
+template <typename T>
+inline Dual2<T> scale3 (const Dual2<T> &result) {
+    return Dual2<T> (scale3 (result.val()), scale3 (result.dx()), scale3 (result.dy()));
+}
+template <typename T>
+inline Dual2<T> scale4 (const Dual2<T> &result) {
+    return Dual2<T> (scale4 (result.val()), scale4 (result.dx()), scale4 (result.dy()));
+}
+
+
 template <typename V, typename H, typename T>
 inline void perlin (V& result, H& hash, const T &x) {
     int X; T fx = floorfrac(x, &X);
@@ -374,6 +401,7 @@ inline void perlin (V& result, H& hash, const T &x) {
 
     result = lerp (u, grad (hash (X  ), fx     ),
                       grad (hash (X+1), fx-1.0f));
+    result = scale1 (result);
 }
 
 template <typename V, typename H, typename T>
@@ -388,6 +416,7 @@ inline void perlin (V &result, const H &hash, const T &x, const T &y) {
                                grad (hash (X+1, Y  ), fx-1.0f, fy     )),
                       lerp (u, grad (hash (X  , Y+1), fx     , fy-1.0f),
                                grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f)));
+    result = scale2 (result);
 }
 
 
@@ -409,6 +438,7 @@ inline void perlin (V &result, const H &hash, const T &x, const T &y, const T &z
                                         grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f )),
                                lerp (u, grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
                                         grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ))));
+    result = scale3 (result);
 }
 
 template <typename V, typename H, typename T>
@@ -439,7 +469,7 @@ inline void perlin (V &result, const H &hash, const T &x, const T &y, const T &z
                                                  grad (hash (X+1, Y  , Z+1, W+1), fx-1.0f, fy     , fz-1.0f, fw-1.0f)),
                                         lerp (u, grad (hash (X  , Y+1, Z+1, W+1), fx     , fy-1.0f, fz-1.0f, fw-1.0f),
                                                  grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f)))));
-
+    result = scale4 (result);
 }
 
 struct HashScalar {
@@ -1334,4 +1364,46 @@ DECLOP (OP_psnoise)
 }; // namespace OSL
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE
+#endif
+
+#if 0 // only when testing the statistics of perlin noise to normalize the range
+
+#include <boost/random.hpp>
+
+void test_perlin(int d) {
+    HashScalar h;
+    float noise_min = +std::numeric_limits<float>::max();
+    float noise_max = -std::numeric_limits<float>::max();
+    float noise_avg = 0;
+    float noise_avg2 = 0;
+    float noise_stddev;
+    boost::mt19937 rndgen;
+    boost::uniform_01<boost::mt19937, float> rnd(rndgen);
+    printf("Running perlin-%d noise test ...\n", d);
+    const int n = 100000000;
+    const float r = 1024;
+    for (int i = 0; i < n; i++) {
+        float noise;
+        float nx = rnd(); nx = (2 * nx - 1) * r;
+        float ny = rnd(); ny = (2 * ny - 1) * r;
+        float nz = rnd(); nz = (2 * nz - 1) * r;
+        float nw = rnd(); nw = (2 * nw - 1) * r;
+        switch (d) {
+            case 1: perlin(noise, h, nx); break;
+            case 2: perlin(noise, h, nx, ny); break;
+            case 3: perlin(noise, h, nx, ny, nz); break;
+            case 4: perlin(noise, h, nx, ny, nz, nw); break;
+        }
+        if (noise_min > noise) noise_min = noise;
+        if (noise_max < noise) noise_max = noise;
+        noise_avg += noise;
+        noise_avg2 += noise * noise;
+    }
+    noise_avg /= n;
+    noise_stddev = std::sqrt((noise_avg2 - noise_avg * noise_avg * n) / n);
+    printf("Result: perlin-%d noise stats:\n\tmin: %.17g\n\tmax: %.17g\n\tavg: %.17g\n\tdev: %.17g\n",
+            d, noise_min, noise_max, noise_avg, noise_stddev);
+    printf("Normalization: %.17g\n", 1.0f / std::max(fabsf(noise_min), fabsf(noise_max)));
+}
+
 #endif

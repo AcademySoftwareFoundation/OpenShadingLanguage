@@ -148,9 +148,11 @@ ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes,
         ++m_nargs;
     }
 
+#ifdef DEBUG
     std::cerr << "Registered closure primitive '" << m_name << "'\n";
     std::cerr << "   " << m_nargs << " arguments : " << m_argcodes << "\n";
     std::cerr << "   needs " << m_argmem << " bytes for arguments\n";
+#endif
 }
 
 
@@ -162,7 +164,9 @@ ClosurePrimitive::~ClosurePrimitive ()
     ClosurePrimMap::iterator todelete = prim_map->find (m_name);
     ASSERT (todelete != prim_map->end() && todelete->second == this);
     prim_map->erase (todelete);
+#ifdef DEBUG
     std::cerr << "De-registered closure primitive '" << m_name << "'\n";
+#endif
 }
 
 

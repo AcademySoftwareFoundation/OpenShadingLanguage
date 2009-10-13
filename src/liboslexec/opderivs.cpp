@@ -137,6 +137,126 @@ DECLOP (OP_Dy)
 
 
 
+DECLOP (OP_calculatenormal)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &P (exec->sym (args[1]));
+    DASSERT (Result.type_spec().is_triple());
+    DASSERT (P.type_spec().is_triple());
+
+    if (P.is_varying() && P.has_derivs()) {
+        // output normal is always varying
+        exec->adjust_varying (Result, true, Result.data() != P.data());
+        DASSERT (Result.is_varying());
+        VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
+        VaryingRef<Dual2<Vec3> > p ((Dual2<Vec3> *)P.data(), P.step());
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = p[i].dx().cross(p[i].dy());
+        if (Result.has_derivs())
+            exec->zero_derivs (Result);  // 2nd order derivs are always zero
+    } else {
+        // P doesn't have derivs, so we can't compute a good normal
+        exec->adjust_varying (Result, false);
+        exec->zero (Result);
+    }
+}
+
+
+DECLOP (OP_area)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &P (exec->sym (args[1]));
+    DASSERT (Result.type_spec().is_float());
+    DASSERT (P.type_spec().is_triple());
+
+    if (P.is_varying() && P.has_derivs()) {
+        // differential area is always varying
+        exec->adjust_varying (Result, true, Result.data() != P.data());
+        DASSERT (Result.is_varying());
+        VaryingRef<Float> result ((Float *)Result.data(), Result.step());
+        VaryingRef<Dual2<Vec3> > p ((Dual2<Vec3> *)P.data(), P.step());
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = (p[i].dx().cross(p[i].dy())).length();
+        if (Result.has_derivs())
+            exec->zero_derivs (Result);  // 2nd order derivs are always zero
+    } else {
+        // P doesn't have derivs, so differential area is 0
+        exec->adjust_varying (Result, false);
+        exec->zero (Result);
+    }
+}
+
+
+
+inline float
+filter_width (float dx, float dy) {
+    return sqrtf (dx * dx + dy * dy);
+}
+
+inline Vec3
+filter_width (const Vec3 &dx, const Vec3 &dy) {
+    return Vec3 (filter_width (dx.x, dy.x),
+                 filter_width (dx.y, dy.y),
+                 filter_width (dx.z, dy.z));
+}
+
+template <typename T>
+DECLOP (filterwidth_guts)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Src (exec->sym (args[1]));
+
+    if (Src.is_varying() && Src.has_derivs()) {
+        // differential area is always varying
+        exec->adjust_varying (Result, true, Result.data() != Src.data());
+        DASSERT (Result.is_varying());
+        VaryingRef<T> result ((T *)Result.data(), Result.step());
+        VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = filter_width(src[i].dx(), src[i].dy());
+        if (Result.has_derivs())
+            exec->zero_derivs (Result);  // 2nd order derivs are always zero
+    } else {
+        // P doesn't have derivs, so differential area is 0
+        exec->adjust_varying (Result, false);
+        exec->zero (Result);
+    }
+}
+
+
+DECLOP (OP_filterwidth)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Src (exec->sym (args[1]));
+
+    OpImpl impl = NULL;
+    if (Result.typespec().is_float() && Src.typespec().is_float())
+        impl = filterwidth_guts<float>;
+    else if (Result.typespec().is_triple() && Src.typespec().is_triple())
+        impl = filterwidth_guts<Vec3>;
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+        return;
+    } else {
+        exec->error_arg_types ();
+        ASSERT (0 && "Filterwidth type can't be handled");
+    }
+}
+
+
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

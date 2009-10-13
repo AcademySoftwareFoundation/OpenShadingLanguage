@@ -806,7 +806,7 @@ static const char * builtin_func_args [] = {
     "expm1", ANY_ONE_FLOAT_BASED, NULL,
     "fabs", ANY_ONE_FLOAT_BASED, "ii",  NULL,
     "faceforward", "vvvv", "vvv", NULL,
-    "filterwidth", DERIV_ARGS, NULL,
+    "filterwidth", "ff", "vp", "vv", NULL,
     "floor", ANY_ONE_FLOAT_BASED, NULL,
     "fmod", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL, // alias for mod()
     "format", "ss*", NULL,

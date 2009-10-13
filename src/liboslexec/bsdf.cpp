@@ -94,7 +94,7 @@ void
 ClosurePrimitive::make_orthonormals (const Vec3 &N, const Vec3& T, Vec3 &x, Vec3& y)
 {
     y = N.cross(T);
-    x = N.cross(y);
+    x = y.cross(N);
 }
 
 

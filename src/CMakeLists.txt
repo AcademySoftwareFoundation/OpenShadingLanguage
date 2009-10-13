@@ -77,6 +77,7 @@ add_subdirectory (liboslquery)
 add_subdirectory (liboslexec)
 
 add_subdirectory (oslc)
+add_subdirectory (shaders)
 add_subdirectory (oslinfo)
 add_subdirectory (testshade)
 

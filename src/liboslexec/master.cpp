@@ -248,6 +248,8 @@ static OpNameEntry op_name_entries[] = {
     { "mxcompassign", OP_mxcompassign },
     { "mxcompref", OP_mxcompref },
     { "max", OP_max },
+    { "microfacet_beckmann", OP_microfacet_beckmann },
+    { "microfacet_ggx", OP_microfacet_ggx },
     { "min", OP_min },
     { "mix", OP_mix },
     { "mod", OP_mod },
@@ -284,6 +286,7 @@ static OpNameEntry op_name_entries[] = {
     { "transpose", OP_transpose },
     { "trunc", OP_trunc },
     { "vector", OP_vector },
+    { "ward", OP_ward },
     { "while", OP_for },
     { "xor", OP_xor },
     { NULL, NULL}

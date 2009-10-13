@@ -145,6 +145,8 @@ DECLOP (OP_lt);
 DECLOP (OP_luminance);
 DECLOP (OP_matrix);
 DECLOP (OP_max);
+DECLOP (OP_microfacet_beckmann);
+DECLOP (OP_microfacet_ggx);
 DECLOP (OP_min);
 DECLOP (OP_mix);
 DECLOP (OP_mxcompassign);
@@ -203,7 +205,7 @@ DECLOP (OP_transpose);
 //DECLOP (OP_translucence);
 DECLOP (OP_trunc);
 DECLOP (OP_vector);
-//DECLOP (OP_ward);
+DECLOP (OP_ward);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);

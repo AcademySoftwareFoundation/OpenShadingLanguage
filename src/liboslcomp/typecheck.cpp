@@ -870,6 +870,9 @@ static const char * builtin_func_args [] = {
     "cooktorrance", "Cf", NULL,
     "diffuse", "Cn", NULL,
     "phong", "Cnf", NULL,
+    "microfacet_beckmann", "Cnff", NULL,
+    "microfacet_ggx", "Cnff", NULL,
+    "ward", "Cnvff", NULL,
     "transparent", "C", NULL,
     "emission", "C", NULL,
     "orennayar", "Cnf", NULL,
@@ -879,7 +882,6 @@ static const char * builtin_func_args [] = {
     "specular", "Cnf", NULL,
     "subsurface", "C.", NULL,
     "translucence", "C", NULL,
-    "ward", "Cvvff", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

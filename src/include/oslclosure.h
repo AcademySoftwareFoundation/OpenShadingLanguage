@@ -108,6 +108,52 @@ public:
     /// something orthogonal.  Then N x a is mutually orthogonal to the other two.
     static void make_orthonormals (const Vec3 &N, Vec3 &a, Vec3 &b);
 
+    /// Helper function: make two unit vectors that are orthogonal to N and
+    /// each other. The x vector will point roughly in the same direction as the
+    /// tangent vector T. We assume that T and N are already normalized.
+    static void make_orthonormals (const Vec3 &N, const Vec3& T, Vec3 &x, Vec3& y);
+
+    /// Helper function to compute fresnel reflectance R of a dieletric. The
+    /// transmission can be computed as 1-R. This routine accounts for total
+    /// internal reflection. The cosi is the angle between the incomming ray and
+    /// the surface normal, eta is the ratio of the indices of refraction
+    /// (target over source).
+    static inline float fresnel_dielectric (float cosi, float eta) {
+        float c = fabsf(cosi);
+        float g2 = eta * eta - 1 + c * c;
+        if (g2 > 0) {
+            float g = sqrtf(g2);
+            float a = (g - c) / (g + c);
+            float b = (c * (g + c) - 1) / (c * (g - c) + 1);
+            return 0.5f * a * a * (1 + b * b);
+        } else
+            return 1; // Total Internal Reflection
+    }
+
+    /// Helper function to compute fresnel reflectance R of a conductor. These
+    /// materials do not transmit any light. cosi is the angle between the
+    /// incomming ray and the surface normal, eta and k give the complex index
+    /// of refraction of the surface.
+    static inline float fresnel_conductor (float cosi, float eta, float k) {
+        float tmp_f = eta * eta + k * k;
+        float tmp = tmp_f * cosi * cosi;
+        float Rparl2 = (tmp - (2.0f * eta * cosi) + 1) /
+                       (tmp + (2.0f * eta * cosi) + 1);
+        float Rperp2 = (tmp_f - (2.0f * eta * cosi) + cosi * cosi) /
+                       (tmp_f + (2.0f * eta * cosi) + cosi * cosi);
+        return (Rparl2 + Rperp2) * 0.5f;
+    }
+
+    /// Helper function to compute an approximation of fresnel reflectance based
+    /// only on the reflectance at normal incidence. cosi is the angle between
+    /// the incoming ray and the surface normal, R0 is the reflectance at normal
+    /// indidence (cosi==0).
+    static inline float fresnel_shlick (float cosi, float R0) {
+        float cosi2 = cosi * cosi;
+        float cosi5 = cosi2 * cosi2 * cosi;
+        return R0 + (1 - cosi5) * (1 - R0);
+    }
+
 private:
     ustring m_name;
     Category m_category;

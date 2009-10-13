@@ -90,6 +90,12 @@ ClosurePrimitive::make_orthonormals (const Vec3 &N, Vec3 &a, Vec3 &b)
     b = N.cross (a);
 }
 
+void
+ClosurePrimitive::make_orthonormals (const Vec3 &N, const Vec3& T, Vec3 &x, Vec3& y)
+{
+    y = N.cross(T);
+    x = N.cross(y);
+}
 
 
 void
@@ -294,11 +300,402 @@ public:
 };
 
 
+// anisotropic ward - leaks energy at grazing angles
+// see http://www.graphics.cornell.edu/~bjw/wardnotes.pdf 
+class WardClosure : public BSDFClosure {
+public:
+    WardClosure () : BSDFClosure ("ward", "nvff") { }
+
+    struct params_t {
+        Vec3 N;
+        Vec3 T;
+        float ax, ay;
+    };
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            // we are viewing the surface from the same side as the normal
+            axis = params->N;
+            angle = (float) M_PI;
+            return true;
+        }
+        // we are below the surface
+        return false;
+    }
+
+    Color3 eval (const void *paramsptr,
+                 const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        float cosNI = params->N.dot(omega_in);
+        // get half vector and get x,y basis on the surface for anisotropy
+        Vec3 H = omega_in + omega_out; // no need to normalize
+        Vec3 X, Y;
+        make_orthonormals(params->N, params->T, X, Y);
+        // eq. 4
+        float dotx = H.dot(X) / params->ax;
+        float doty = H.dot(Y) / params->ay;
+        float dotn = H.dot(params->N);
+        float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
+        float denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
+        float out = cosNI * expf(-exp_arg) / denom;
+        return Color3 (out, out, out);
+    }
+
+    void sample (const void *paramsptr,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            // get x,y basis on the surface for anisotropy
+            Vec3 X, Y;
+            make_orthonormals(params->N, params->T, X, Y);
+            // generate random angles for the half vector
+            // eq. 7 (taking care around discontinuities to keep
+            //        output angle in the right quadrant)
+            // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
+            //                  and sin(atan(x)) == x/sqrt(1+x^2)
+            float alphaRatio = params->ay / params->ax;
+            float cosPhi, sinPhi;
+            if (randu < 0.25f) {
+                float val = 4 * randu;
+                float tanPhi = alphaRatio * tanf((float) M_PI_2 * val);
+                cosPhi = 1 / sqrtf(1 + tanPhi * tanPhi);
+                sinPhi = tanPhi * cosPhi;
+            } else if (randu < 0.5) {
+                float val = 1 - 4 * (0.5f - randu);
+                float tanPhi = alphaRatio * tanf((float) M_PI_2 * val);
+                // phi = (float) M_PI - phi;
+                cosPhi = -1 / sqrtf(1 + tanPhi * tanPhi);
+                sinPhi = -tanPhi * cosPhi;
+            } else if (randu < 0.75f) {
+                float val = 4 * (randu - 0.5f);
+                float tanPhi = alphaRatio * tanf((float) M_PI_2 * val);
+                //phi = (float) M_PI + phi;
+                cosPhi = -1 / sqrtf(1 + tanPhi * tanPhi);
+                sinPhi = tanPhi * cosPhi;
+            } else {
+                float val = 1 - 4 * (1 - randu);
+                float tanPhi = alphaRatio * tanf((float) M_PI_2 * val);
+                // phi = 2 * (float) M_PI - phi;
+                cosPhi = 1 / sqrtf(1 + tanPhi * tanPhi);
+                sinPhi = -tanPhi * cosPhi;
+            }
+            // eq. 6
+            // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
+            //                  and sin(atan(x)) == x/sqrt(1+x^2)
+            float thetaDenom = (cosPhi * cosPhi) / (params->ax * params->ax) + (sinPhi * sinPhi) / (params->ay * params->ay);
+            float tanTheta2 = -logf(1 - randv) / thetaDenom;
+            float cosTheta  = 1 / sqrtf(1 + tanTheta2);
+            float sinTheta  = cosTheta * sqrtf(tanTheta2);
+
+            Vec3 h; // already normalized becaused expressed from spherical coordinates
+            h.x = sinTheta * cosPhi;
+            h.y = sinTheta * sinPhi;
+            h.z = cosTheta;
+            // compute terms that are easier in local space
+            float dotx = h.x / params->ax;
+            float doty = h.y / params->ay;
+            float dotn = h.z;
+            // transform to world space
+            h = h.x * X + h.y * Y + h.z * params->N;
+            // generate the final sample
+            float oh = h.dot(omega_out);
+            omega_in.x = 2 * oh * h.x - omega_out.x;
+            omega_in.y = 2 * oh * h.y - omega_out.y;
+            omega_in.z = 2 * oh * h.z - omega_out.z;
+            // eq. 9
+            float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
+            float denom = 4 * (float) M_PI * params->ax * params->ay * oh * dotn * dotn * dotn;
+            pdf = expf(-exp_arg) / denom;
+        } else
+            pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+    }
+
+    float pdf (const void *paramsptr,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        Vec3 H = omega_in + omega_out;
+        H.normalize(); // needed for denominator
+        Vec3 X, Y;
+        make_orthonormals(params->N, params->T, X, Y);
+        // eq. 9
+        float dotx = H.dot(X) / params->ax;
+        float doty = H.dot(Y) / params->ay;
+        float dotn = H.dot(params->N);
+        float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
+        float denom = 4 * (float) M_PI * params->ax * params->ay * H.dot(omega_out) * dotn * dotn * dotn;
+        return expf(-exp_arg) / denom;
+    }
+};
+
+
+// microfacet model with GGX facet distribution
+// see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf 
+class MicrofacetGGXClosure : public BSDFClosure {
+public:
+    MicrofacetGGXClosure () : BSDFClosure ("microfacet_ggx", "nff") { }
+
+    struct params_t {
+        Vec3 N;
+        float ag;   // width parameter (roughness)
+        float R0;   // fresnel reflectance at incidence
+    };
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            // we are viewing the surface from the same side as the normal
+            axis = params->N;
+            angle = (float) M_PI;
+            return true;
+        }
+        // we are below the surface
+        return false;
+    }
+
+    Color3 eval (const void *paramsptr,
+                 const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        float cosNI = params->N.dot(omega_in);
+        // get half vector
+        Vec3 Hr = omega_in + omega_out;
+        Hr.normalize();
+        // eq. 20: (F*G*D)/(4*in*on)
+        // eq. 33: first we calculate D(m) with m=Hr:
+        float alpha2 = params->ag * params->ag;
+        float cosThetaM = Hr.dot(params->N);
+        float cosThetaM2 = cosThetaM * cosThetaM;
+        float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
+        float cosThetaM4 = cosThetaM2 * cosThetaM2;
+        float D = alpha2 / ((float) M_PI * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
+        // eq. 34: now calculate G1(i,m) and G1(o,m)
+        float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
+        float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
+        float G = G1o * G1i;
+        // fresnel term between outgoing direction and microfacet
+        float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
+        float out = (F * G * D) * 0.25f / cosNI;
+        return Color3 (out, out, out);
+    }
+
+    void sample (const void *paramsptr,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            Vec3 X, Y;
+            make_orthonormals(params->N, X, Y);
+            // generate a random microfacet normal m
+            // eq. 35,36:
+            // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
+            //                  and sin(atan(x)) == x/sqrt(1+x^2)
+            float alpha2 = params->ag * params->ag;
+            float tanThetaM2 = alpha2 * randu / (1 - randu);
+            float cosThetaM  = 1 / sqrtf(1 + tanThetaM2);
+            float sinThetaM  = cosThetaM * sqrtf(tanThetaM2);
+            float phiM = 2 * float(M_PI) * randv;
+            Vec3 m = (cosf(phiM) * sinThetaM) * X +
+                     (sinf(phiM) * sinThetaM) * Y +
+                                   cosThetaM  * params->N;
+            float cosMO = m.dot(omega_out);
+            if (cosMO > 0) {
+                // microfacet normal is visible to this ray
+                // eq. 33
+                float cosThetaM2 = cosThetaM * cosThetaM;
+                float cosThetaM4 = cosThetaM2 * cosThetaM2;
+                float D = alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
+                // eq. 24
+                float pm = D * cosThetaM;
+                // convert into pdf of the sampled direction
+                // eq. 38 - but see also:
+                // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+                pdf = pm * 0.25f / cosMO;
+                // eq. 39 - compute actual reflected direction
+                omega_in = 2 * cosMO * m - omega_out;
+                return;
+            }
+        }
+        pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+    }
+
+    float pdf (const void *paramsptr,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        // get microfacet normal m (half-vector)
+        Vec3 m = omega_in + omega_out;
+        m.normalize();
+        float cosMO = m.dot(omega_out);
+        if (cosMO > 0) {
+            // eq. 33
+            float cosThetaM = params->N.dot(m);
+            float cosThetaM2 = cosThetaM * cosThetaM;
+            float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
+            float cosThetaM4 = cosThetaM2 * cosThetaM2;
+            float alpha2 = params->ag * params->ag;
+            float D = alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
+            // eq. 24
+            float pm = D * cosThetaM;
+            // convert into pdf of the sampled direction
+            // eq. 38 - but see also:
+            // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+            return pm * 0.25f / cosMO;
+        }
+        return 0;
+    }
+};
+
+
+// microfacet model with Beckmann facet distribution
+// see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf 
+class MicrofacetBeckmannClosure : public BSDFClosure {
+public:
+    MicrofacetBeckmannClosure () : BSDFClosure ("microfacet_beckman", "nff") { }
+
+    struct params_t {
+        Vec3 N;
+        float ab;   // width parameter (roughness)
+        float R0;   // fresnel reflectance at incidence
+    };
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            // we are viewing the surface from the same side as the normal
+            axis = params->N;
+            angle = (float) M_PI;
+            return true;
+        }
+        // we are below the surface
+        return false;
+    }
+
+    Color3 eval (const void *paramsptr,
+                 const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        float cosNI = params->N.dot(omega_in);
+        // get half vector
+        Vec3 Hr = omega_in + omega_out;
+        Hr.normalize();
+        // eq. 20: (F*G*D)/(4*in*on)
+        // eq. 25: first we calculate D(m) with m=Hr:
+        float alpha2 = params->ab * params->ab;
+        float cosThetaM = Hr.dot(params->N);
+        float cosThetaM2 = cosThetaM * cosThetaM;
+        float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
+        float cosThetaM4 = cosThetaM2 * cosThetaM2;
+        float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
+        // eq. 26, 27: now calculate G1(i,m) and G1(o,m)
+        float ao = 1 / (params->ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
+        float ai = 1 / (params->ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
+        float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
+        float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
+        float G = G1o * G1i;
+        // fresnel term between outgoing direction and microfacet
+        float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
+        float out = (F * G * D) * 0.25f / cosNI;
+        return Color3 (out, out, out);
+    }
+
+    void sample (const void *paramsptr,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            Vec3 X, Y;
+            make_orthonormals(params->N, X, Y);
+            // generate a random microfacet normal m
+            // eq. 35,36:
+            // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
+            //                  and sin(atan(x)) == x/sqrt(1+x^2)
+            float alpha2 = params->ab * params->ab;
+            float tanThetaM = -alpha2 * logf(1 - randu);
+            float cosThetaM = 1 / sqrtf(1 + tanThetaM * tanThetaM);
+            float sinThetaM = cosThetaM * tanThetaM;
+            float phiM = 2 * float(M_PI) * randv;
+            Vec3 m = (cosf(phiM) * sinThetaM) * X +
+                     (sinf(phiM) * sinThetaM) * Y +
+                                   cosThetaM  * params->N;
+            float cosMO = m.dot(omega_out);
+            if (cosMO > 0) {
+                // microfacet normal is visible to this ray
+                // eq. 25
+                float cosThetaM2 = cosThetaM * cosThetaM;
+                float tanThetaM2 = tanThetaM * tanThetaM;
+                float cosThetaM4 = cosThetaM2 * cosThetaM2;
+                float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
+                // eq. 24
+                float pm = D * cosThetaM;
+                // convert into pdf of the sampled direction
+                // eq. 38 - but see also:
+                // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+                pdf = pm * 0.25f / cosMO;
+                // eq. 39 - compute actual reflected direction
+                omega_in = 2 * cosMO * m - omega_out;
+                return;
+            }
+        }
+        pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+    }
+
+    float pdf (const void *paramsptr,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        const params_t *params = (const params_t *) paramsptr;
+        // get microfacet normal m (half-vector)
+        Vec3 m = omega_in + omega_out;
+        m.normalize();
+        float cosMO = m.dot(omega_out);
+        if (cosMO > 0) {
+            // eq. 25
+            float alpha2 = params->ab * params->ab;
+            float cosThetaM = params->N.dot(m);
+            float cosThetaM2 = cosThetaM * cosThetaM;
+            float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
+            float cosThetaM4 = cosThetaM2 * cosThetaM2;
+            float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
+            // eq. 24
+            float pm = D * cosThetaM;
+            // convert into pdf of the sampled direction
+            // eq. 38 - but see also:
+            // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+            return pm * 0.25f / cosMO;
+        }
+        return 0;
+    }
+};
 
 // these are all singletons
 DiffuseClosure diffuse_closure_primitive;
 TransparentClosure transparent_closure_primitive;
 PhongClosure phong_closure_primitive;
+WardClosure ward_closure_primitive;
+MicrofacetGGXClosure microfacet_ggx_closure;
+MicrofacetBeckmannClosure microfacet_beckmann_closure;
+
 
 }; // namespace pvt
 }; // namespace OSL

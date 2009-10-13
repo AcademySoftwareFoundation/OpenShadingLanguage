@@ -1,8 +1,10 @@
-#SET ( public_docs languagespecpdf )
+set (public_docs osl-languagespec.pdf)
+# Some day: CLA-INDIVIDUAL CLA-CORPORATE
 
-#INSTALL ( FILES ${public_docs} DESTINATION doc )
+install (FILES ${public_docs} DESTINATION doc COMPONENT documentation)
 
-#INSTALL ( FILES ${PROJECT_SOURCE_DIR}/../LICENSE
-#                ${PROJECT_SOURCE_DIR}/../INSTALL
-#                ${PROJECT_SOURCE_DIR}/../CHANGES
-#          DESTINATION . )
+install ( FILES ${PROJECT_SOURCE_DIR}/../LICENSE
+                # ${PROJECT_SOURCE_DIR}/../INSTALL
+                # ${PROJECT_SOURCE_DIR}/../CHANGES
+          DESTINATION . )
+

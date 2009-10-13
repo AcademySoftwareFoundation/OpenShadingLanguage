@@ -231,6 +231,37 @@ private:
 
 
 
+/// Describe one end of a parameter connetion: the parameter number, and
+/// optinally an array index and/or channel number within that parameter.
+struct ConnectedParam {
+    int param;            ///< Parameter number (in the symbol table)
+    int arrayindex;       ///< Array index (-1 for not an index)
+    int channel;          ///< Channel number (-1 for no channel selection)
+    int offset;           ///< Offset into the data of the element/channel
+    TypeSpec type;        ///< Type of data being connected
+
+    ConnectedParam () : param(-1), arrayindex(-1), channel(-1), offset(0) { }
+
+    bool valid () const { return (param >= 0); }
+};
+
+
+
+/// Describe a parameter connection to an earlier layer.
+///
+struct Connection {
+    int srclayer;          ///< Layer (within our group) of the source
+    ConnectedParam src;    ///< Which source parameter (or part thereof)
+    ConnectedParam dst;    ///< Which destination parameter (or part thereof)
+
+    Connection (int srclay, const ConnectedParam &srccon,
+                const ConnectedParam &dstcon)
+        : srclayer (srclay), src (srccon), dst (dstcon)
+    { }
+};
+
+
+
 /// ShaderInstance is a particular instance of a shader, with its own
 /// set of parameter values, coordinate transform, and connections to
 /// other instances within the same shader group.
@@ -239,6 +270,10 @@ public:
     typedef ShaderInstanceRef ref;
     ShaderInstance (ShaderMaster::ref master, const char *layername="");
     ~ShaderInstance () { }
+
+    /// Return the layer name of this instance
+    ///
+    ustring layername () const { return m_layername; }
 
     /// Return a pointer to the master for this instance.
     ///
@@ -270,6 +305,13 @@ public:
     /// symbol.
     size_t heapround ();
 
+    /// Add a connection
+    ///
+    void add_connection (int srclayer, const ConnectedParam &srccon,
+                         const ConnectedParam &dstcon) {
+        m_connections.push_back (Connection (srclayer, srccon, dstcon));
+    }
+
 private:
     bool heap_size_calculated () const { return m_heapsize >= 0; }
     void calc_heap_size ();
@@ -283,6 +325,7 @@ private:
     int m_heapsize;                     ///< Heap space needed per point
     int m_heapround;                    ///< Heap padding for odd npoints
     int m_numclosures;                  ///< Number of non-global closures
+    std::vector<Connection> m_connections; ///< Connected input params
 
     friend class ShadingExecution;
 };
@@ -400,6 +443,19 @@ public:
 private:
     void printstats () const;
     void init_global_heap_offsets ();
+
+    /// Find the index of the named layer in the current shader group.
+    /// If found, return the index >= 0 and put a pointer to the instance
+    /// in inst; if not found, return -1 and set inst to NULL.
+    /// (This is a helper for ConnectShaders.)
+    int find_named_layer_in_group (ustring layername, ShaderInstance * &inst);
+
+    /// Turn a connectionname (such as "Kd" or "Cout[1]", etc.) into a
+    /// ConnectedParam descriptor.  This routine is strictly a helper for
+    /// ConnectShaders, and will issue error messages on its behalf.
+    /// The return value will not be valid() if there is an error.
+    ConnectedParam decode_connected_param (const char *connectionname,
+                               const char *layername, ShaderInstance *inst);
 
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system

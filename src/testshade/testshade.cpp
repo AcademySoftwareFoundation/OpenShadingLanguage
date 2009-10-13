@@ -55,6 +55,8 @@ static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static bool debug = false;
 static int xres = 1, yres = 1;
+static std::string layername;
+static std::vector<std::string> connections;
 
 
 
@@ -64,7 +66,9 @@ add_shader (int argc, const char *argv[])
     shadingsys->attribute ("debug", (int)debug);
     for (int i = 0;  i < argc;  i++) {
         shadernames.push_back (argv[i]);
-        shadingsys->Shader ("surface", argv[i]);
+        shadingsys->Shader ("surface", argv[i],
+                            layername.length() ? layername.c_str() : NULL);
+        layername.clear ();
     }
     return 0;
 }
@@ -83,6 +87,10 @@ getargs (int argc, const char *argv[])
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
+                "--layer %s", &layername, "Set next layer name",
+                "--connect %L %L %L %L", 
+                    &connections, &connections, &connections, &connections,
+                    "Connect fromlayer fromoutput tolayer toinput",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
@@ -107,9 +115,30 @@ main (int argc, const char *argv[])
     // Create a new shading system.
     Timer timer;
     SimpleRenderer rend;
-    shadingsys = ShadingSystem::create (&rend);
+    ErrorHandler errhandler;
+    shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
 
+    shadingsys->ShaderGroupBegin ();
     getargs (argc, argv);
+
+    if (debug)
+        errhandler.verbosity (ErrorHandler::VERBOSE);
+
+    for (size_t i = 0;  i < connections.size();  i += 4) {
+        if (i+3 < connections.size()) {
+            std::cout << "Connect " 
+                      << connections[i] << "." << connections[i+1]
+                      << " to " << connections[i+2] << "." << connections[i+3]
+                      << "\n";
+            shadingsys->ConnectShaders (connections[i].c_str(),
+                                        connections[i+1].c_str(),
+                                        connections[i+2].c_str(),
+                                        connections[i+3].c_str());
+        }
+    }
+
+    shadingsys->ShaderGroupEnd ();
+
     // getargs called 'add_shader' for each shader mentioned on the command
     // line.  So now we should have a valid shading state.
     ShadingAttribStateRef shaderstate = shadingsys->state ();

@@ -384,12 +384,61 @@ bool
 ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
                                    const char *dstlayer, const char *dstparam)
 {
+    // Basic sanity checks -- make sure it's a legal time to call
+    // ConnectShaders, and that the layer and parameter names are not empty.
     if (! m_in_group) {
         error ("ConnectShaders can only be called within ShaderGroupBegin/End");
         return false;
     }
-    // FIXME - unimplemented!
-    return false;
+    if (!srclayer || !srclayer[0] || !srcparam || !srcparam[0]) {
+        error ("ConnectShaders: badly formed source layer/parameter");
+        return false;
+    }
+    if (!dstlayer || !dstlayer[0] || !dstparam || !dstparam[0]) {
+        error ("ConnectShaders: badly formed destination layer/parameter");
+        return false;
+    }
+
+    // Decode the layers, finding the indices within our group and
+    // pointers to the instances.  Error and return if they are not found,
+    // or if it's not connecting an earlier src to a later dst.
+    ShaderInstance *srcinst, *dstinst;
+    int srcinstindex = find_named_layer_in_group (ustring(srclayer), srcinst);
+    int dstinstindex = find_named_layer_in_group (ustring(dstlayer), dstinst);
+    if (! srcinst) {
+        error ("ConnectShaders: source layer \"%s\" not found", srclayer);
+        return false;
+    }
+    if (! dstinst) {
+        error ("ConnectShaders: destination layer \"%s\" not found", dstlayer);
+        return false;
+    }
+    if (dstinstindex <= srcinstindex) {
+        error ("ConnectShaders: destination layer must follow source layer\n");
+        return false;
+    }
+
+    // Decode the parameter names, find their symbols in their
+    // respective layers, and also decode requrest to attach specific
+    // array elements or color/vector channels.
+    ConnectedParam srccon = decode_connected_param(srcparam, srclayer, srcinst);
+    ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
+    if (! (srccon.valid() && dstcon.valid()))
+        return false;
+
+    if (! assignable (dstcon.type, srccon.type)) {
+        error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",
+               srccon.type.c_str(), srcparam, dstcon.type.c_str(), dstparam);
+        return false;
+    }
+
+    dstinst->add_connection (srcinstindex, srccon, dstcon);
+
+    if (debug())
+        m_err->message ("ConnectShaders %s %s -> %s %s\n",
+                        srclayer, srcparam, dstlayer, dstparam);
+
+    return true;
 }
 
 
@@ -416,6 +465,99 @@ ShadingSystemImpl::get_context ()
     return shared_ptr<ShadingContext> (new ShadingContext (*this));
 }
 
+
+
+int
+ShadingSystemImpl::find_named_layer_in_group (ustring layername,
+                                              ShaderInstance * &inst)
+{
+    ShaderGroup &group (m_curattrib->shadergroup (m_group_use));
+    for (int i = 0;  i < group.nlayers();  ++i) {
+        if (group[i]->layername() == layername) {
+            inst = group[i];
+            return i;
+        }
+    }
+    inst = NULL;
+    return -1;
+}
+
+
+
+ConnectedParam
+ShadingSystemImpl::decode_connected_param (const char *connectionname,
+                                   const char *layername, ShaderInstance *inst)
+{
+    ConnectedParam c;  // initializes to "invalid"
+
+    // Look for a bracket in the "parameter name"
+    const char *bracket = strchr (connectionname, '[');
+    // Grab just the part of the param name up to the bracket
+    ustring param (connectionname, 0,
+                   bracket ? size_t(bracket-connectionname) : ustring::npos);
+
+    // Search for the param with that name, fail if not found
+    c.param = inst->master()->findsymbol (param);
+    if (c.param < 0) {
+        error ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
+               param.c_str(), layername, inst->master()->shadername().c_str());
+        return c;
+    }
+
+    Symbol *sym = inst->master()->symbol (c.param);
+    ASSERT (sym);
+
+    // Only params, output params, and globals are legal for connections
+    if (! (sym->symtype() == SymTypeParam ||
+           sym->symtype() == SymTypeOutputParam ||
+           sym->symtype() == SymTypeGlobal)) {
+        error ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
+               param.c_str(), layername, inst->master()->shadername().c_str());
+        c.param = -1;  // mark as invalid
+        return c;
+    }
+
+    c.type = sym->typespec();
+
+    if (bracket && c.type.arraylength()) {
+        // There was at least one set of brackets that appears to be
+        // selecting an array element.
+        c.arrayindex = atoi (bracket+1);
+        if (c.arrayindex >= c.type.arraylength()) {
+            error ("ConnectShaders: cannot request array element %s from a %s",
+                   connectionname, c.type.c_str());
+            c.arrayindex = c.type.arraylength() - 1;  // clamp it
+        }
+        c.type.make_array (0);              // chop to the element type
+        c.offset += c.type.simpletype().size() * c.arrayindex;
+        bracket = strchr (bracket+1, '[');  // skip to next bracket
+    }
+
+    if (bracket && ! c.type.is_closure() &&
+            c.type.aggregate() != TypeDesc::SCALAR) {
+        // There was at least one set of brackets that appears to be 
+        // selecting a color/vector component.
+        c.channel = atoi (bracket+1);
+        if (c.channel >= (int)c.type.aggregate()) {
+            error ("ConnectShaders: cannot request component %s from a %s",
+                   connectionname, c.type.c_str());
+            c.channel = (int)c.type.aggregate() - 1;  // clamp it
+        }
+        // chop to just the scalar part
+        c.type = TypeSpec ((TypeDesc::BASETYPE)c.type.simpletype().basetype);
+        c.offset += c.type.simpletype().size() * c.channel;
+        bracket = strchr (bracket+1, '[');     // skip to next bracket
+    }
+
+    // Deal with left over brackets
+    if (bracket) {
+        // Still a leftover bracket, no idea what to do about that
+        error ("ConnectShaders: don't know how to connect '%s' when \"%s\" is a \"%s\"",
+               connectionname, param.c_str(), c.type.c_str());
+        c.param = -1;  // mark as invalid
+    }
+    return c;
+}
 
 
 

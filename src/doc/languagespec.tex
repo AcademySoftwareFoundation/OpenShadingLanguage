@@ -3061,18 +3061,18 @@ $v$.  Results are undefined if the knots do not specifiy a monotonic
 \index{functions!derivatives and area}
 \index{derivatives}
 
-\apiitem{float {\ce deltau} (float x), {\ce deltav} (float x) \\
-vector {\ce deltau} (point x), {\ce deltav} (point x) \\
-vector {\ce deltau} (vector x), {\ce deltav} (vector x)\\
-color {\ce deltau} (color x), {\ce deltav} (color x)}
-\indexapi{deltau()} \indexapi{deltav()}
-Compute differentials of the argument $x$, i.e., the approximate change
-in $x$ between adjacent shading samples in each of two principal
-directions.  Depending on the renderer implementation, those directions
-may be $x$ and $y$ on the imaging plane, may be parametric $u$ and $v$
-on the surface, or something else.  Do not confuse the ``u'' and ``v''
-in the name with a guarantee that it is tied to the surface parameters.
-\apiend
+%\apiitem{float {\ce deltau} (float x), {\ce deltav} (float x) \\
+%vector {\ce deltau} (point x), {\ce deltav} (point x) \\
+%vector {\ce deltau} (vector x), {\ce deltav} (vector x)\\
+%color {\ce deltau} (color x), {\ce deltav} (color x)}
+%\indexapi{deltau()} \indexapi{deltav()}
+%Compute differentials of the argument $x$, i.e., the approximate change
+%in $x$ between adjacent shading samples in each of two principal
+%directions.  Depending on the renderer implementation, those directions
+%may be $x$ and $y$ on the imaging plane, may be parametric $u$ and $v$
+%on the surface, or something else.  Do not confuse the ``u'' and ``v''
+%in the name with a guarantee that it is tied to the surface parameters.
+%\apiend
 
 \apiitem{float {\ce Dx} (float a), {\ce Dy} (float a) \\
 vector {\ce Dx} (point a), {\ce Dy} (point a) \\
@@ -3086,18 +3086,18 @@ implementation, those directions may be aligned to the imagine plane,
 on the surface of the object, or something else.
 \apiend
 
-\begin{annotate}
-\QUESTION I'm uncomfortable with these definitions.  Does this make
-sense at all in a renderer-agnostic way?  Is it horribly confusing to
-call it ``u'' and ``v'' in a ray tracer that's probably computing
-derivatives with respect to screen x and y?  If we called it deltax,
-deltay, Dx, Dy, would that be confusing in a renderer that really was
-Reyes-like and shading in parameter space?
-
-For that matter, is there any legitimate use for differentials or
-derivatives along the principal directions, or is the only really
-useful quantity filterwidth()?
-\end{annotate}
+%\begin{annotate}
+%\QUESTION I'm uncomfortable with these definitions.  Does this make
+%sense at all in a renderer-agnostic way?  Is it horribly confusing to
+%call it ``u'' and ``v'' in a ray tracer that's probably computing
+%derivatives with respect to screen x and y?  If we called it deltax,
+%deltay, Dx, Dy, would that be confusing in a renderer that really was
+%Reyes-like and shading in parameter space?
+%
+%For that matter, is there any legitimate use for differentials or
+%derivatives along the principal directions, or is the only really
+%useful quantity filterwidth()?
+%\end{annotate}
 
 \apiitem{float {\ce filterwidth} (float x) \\
 vector {\ce filterwidth} (point x) \\

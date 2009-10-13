@@ -312,6 +312,14 @@ public:
         m_connections.push_back (Connection (srclayer, srccon, dstcon));
     }
 
+    /// How many connections to earlier layers do we have?
+    ///
+    int nconnections () const { return (int) m_connections.size (); }
+
+    /// Return a reference to the i-th connection to an earlier layer.
+    ///
+    const Connection & connection (int i) const { return m_connections[i]; }
+
 private:
     bool heap_size_calculated () const { return m_heapsize >= 0; }
     void calc_heap_size ();
@@ -566,6 +574,8 @@ public:
     /// Return NULL if no such symbol is found.
     Symbol * symbol (ShaderUse use, ustring name);
 
+    ExecutionLayers &execlayer (ShaderUse use) { return m_exec[(int)use]; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -703,6 +713,14 @@ public:
     /// coordinate system to "common" space for the given shading point.
     void get_matrix (Matrix44 &result, ustring from, int whichpoint=0);
 
+    /// Return the ShaderUse of this execution.
+    ///
+    ShaderUse shaderuse () const { return m_use; }
+
+    /// Return the instance of this execution.
+    ///
+    ShaderInstance *instance () const { return m_instance; }
+
     /// Pass an error along to the ShadingSystem.
     ///
     void error (const char *message, ...);
@@ -715,6 +733,18 @@ public:
     void error_arg_types ();
 
 private:
+    /// Helper for bind(): run initialization code for parameters
+    ///
+    void bind_initialize_params (ShaderInstance *inst);
+
+    /// Helper for bind(): take care of connections to earlier layers
+    ///
+    void bind_connections (ShaderInstance *inst);
+
+    /// Helper for bind(): establish all connections to earlier layers
+    /// for a given symbol.
+    void bind_connection (ShaderInstance *inst, int symindex);
+
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?
     ShadingContext *m_context;    ///< Ptr to our shading context

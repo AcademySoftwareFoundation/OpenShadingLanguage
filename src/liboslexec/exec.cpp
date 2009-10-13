@@ -300,8 +300,98 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                                 sym.step(), sym.size());
     }
 
+    // Handle all of the symbols that are connected to earlier layers.
+    bind_connections (m_instance);
+
+    // Run parameter initialization code
+    bind_initialize_params (m_instance);
+
+    // OK, we're successfully bound.
     m_bound = true;
     m_executed = false;
+}
+
+
+
+void
+ShadingExecution::bind_initialize_params (ShaderInstance *inst)
+{
+    ShaderMaster *master = inst->master();
+    for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
+        Symbol *sym = master->symbol (i);
+        if (sym->valuesource() == Symbol::DefaultVal) {
+        } else if (sym->valuesource() == Symbol::DefaultVal) {
+            // FIXME -- need to execute init ops, if there are any
+        } else if (sym->valuesource() == Symbol::InstanceVal) {
+            // FIXME -- eventually, copy the instance values here,
+            // rather than above in bind(), so that we skip the
+            // unnecessary copying if the values came from geom or
+            // connections.  As it stands now, there is some redundancy.
+        } else if (sym->valuesource() == Symbol::GeomVal) {
+            ASSERT (0);  // FIXME -- to do: interpolate from geometry
+        } else if (sym->valuesource() == Symbol::ConnectedVal) {
+            // Nothing to do if it fully came from an earlier layer
+        }
+    }
+}
+
+
+
+void
+ShadingExecution::bind_connections (ShaderInstance *inst)
+{
+    for (int i = 0;  i < inst->nconnections();  ++i) {
+        const Connection &con (inst->connection (i));
+        Symbol *s = inst->symbol (con.dst.param);
+        DASSERT (s);
+        s->connected (true);
+        bind_connection (inst, con.dst.param);
+    }
+}
+
+
+
+void
+ShadingExecution::bind_connection (ShaderInstance *inst, int symindex)
+{
+    Symbol &dstsym (sym (symindex));
+#ifdef DEBUG
+    std::cerr << "bind_connection " << inst->layername() << ' ' << symindex 
+              << " " << dstsym.name() << "\n";
+#endif
+    ExecutionLayers &execlayers (context()->execlayer (shaderuse()));
+    for (int i = 0;  i < inst->nconnections();  ++i) {
+        const Connection &con (inst->connection (i));
+        if (con.dst.param == symindex) {
+            Symbol &srcsym (execlayers[con.srclayer].sym (con.src.param));
+#ifdef DEBUG
+            std::cerr << "  found connection " << srcsym.name() 
+                      << " " << dstsym.name() << "\n";
+#endif
+
+            // Try to identify the simple case where we can just alias the
+            // variable, with no copying.
+            bool simple = (equivalent(srcsym.typespec(), dstsym.typespec()) &&
+                           srcsym.symtype() != SymTypeGlobal &&
+                           dstsym.symtype() != SymTypeGlobal);
+            if (simple) {
+#ifdef DEBUG
+                std::cerr << "  simple: setting " << srcsym.name() << " to " 
+                          << (void *)srcsym.data() << " (" << dstsym.name()
+                          << "), was " << (void *)dstsym.data() << "\n";
+#endif
+                dstsym.data (srcsym.data ());
+                dstsym.step (srcsym.step ());
+                // dstsym.dataoffset (srcsym->dataoffset ());  needed?
+                dstsym.valuesource (Symbol::ConnectedVal);
+            } else {
+                // More complex case -- casting is involved, or only a
+                // partial copy (such as just cone component).
+                ASSERT (0 && "Partial copies not yet supported");  // FIXME
+            }
+            dstsym.connected (true);
+        }
+    }
 }
 
 

@@ -68,6 +68,7 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
         if (i >= 0) {
             if (shadingsys().debug())
                 shadingsys().info ("    found %d", i);
+            symbol(i)->valuesource (Symbol::InstanceVal);
 #if 0
             if (s.typespec().simpletype().basetype == TypeDesc::INT) {
                 s.data (&(m_iparams[s.dataoffset()]));

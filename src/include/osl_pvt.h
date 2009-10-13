@@ -340,6 +340,7 @@ public:
         : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
+          m_connected(false), m_valuesource(DefaultVal),
           m_scope(0), m_dataoffset(-1), 
           m_node(declaration_node), m_alias(NULL)
           
@@ -438,6 +439,16 @@ public:
     ///
     int derivsize () const { return m_has_derivs ? 3*m_size : m_size; }
 
+    bool connected () const { return m_connected; }
+    void connected (bool c) { m_connected = true; }
+
+    /// Where did the symbol's value come from?
+    ///
+    enum ValueSource { DefaultVal, InstanceVal, GeomVal, ConnectedVal };
+
+    ValueSource valuesource () const { return (ValueSource) m_valuesource; }
+    void valuesource (ValueSource v) { m_valuesource = v; }
+
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point
@@ -447,6 +458,8 @@ protected:
     SymType m_symtype;          ///< Kind of symbol (param, local, etc.)
     bool m_has_derivs;          ///< Step to derivs (0 == has no derivs)
     bool m_const_initializer;   ///< initializer is a constant expression
+    bool m_connected;           ///< Connected to an earlier layer
+    char m_valuesource;         ///< Where did the value come from?
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol

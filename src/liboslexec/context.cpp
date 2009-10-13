@@ -139,7 +139,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         execlayers[layer].bind (this, use, layer, sgroup[layer]);
         // FIXME -- for now, we're executing layers unconditionally.
-        // Eventually, we only want to execut them here if they have
+        // Eventually, we only want to execute them here if they have
         // side effects (including generating final renderer outputs).
         // Layers without side effects should be executed lazily, only
         // as their outputs are needed by other layers.

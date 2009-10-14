@@ -142,8 +142,8 @@ DECLOP (OP_calculatenormal)
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &P (exec->sym (args[1]));
-    DASSERT (Result.type_spec().is_triple());
-    DASSERT (P.type_spec().is_triple());
+    DASSERT (Result.typespec().is_triple());
+    DASSERT (P.typespec().is_triple());
 
     if (P.is_varying() && P.has_derivs()) {
         // output normal is always varying
@@ -169,8 +169,8 @@ DECLOP (OP_area)
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
     Symbol &P (exec->sym (args[1]));
-    DASSERT (Result.type_spec().is_float());
-    DASSERT (P.type_spec().is_triple());
+    DASSERT (Result.typespec().is_float());
+    DASSERT (P.typespec().is_triple());
 
     if (P.is_varying() && P.has_derivs()) {
         // differential area is always varying

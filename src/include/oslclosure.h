@@ -345,7 +345,7 @@ private:
         Component (const ClosurePrimitive *prim, const Color3 &w) 
             : cprim(prim), nargs(prim->nargs()), memoffset(0), weight(w) { }
         Component (const Component &x) : cprim(x.cprim), nargs(cprim->nargs()),
-                                         memoffset(0), weight(x.weight) { }
+                                         memoffset(x.memoffset), weight(x.weight) { }
     };
 
     /// Return the i-th component of this closure.

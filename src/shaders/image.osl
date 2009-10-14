@@ -53,7 +53,5 @@ image
             float UImin = 0, float UImax = 1 ]]
   )
 {
-    s *= 40;
-    t *= 40;
     Cout = texture(filename, s, t, "sblur", sblur, "tblur", tblur, "swrap", swrap, "twrap", twrap);
 }

@@ -57,6 +57,47 @@ static bool debug = false;
 static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
+static std::vector<std::string> iparams, fparams, vparams, sparams;
+static float fparamdata[1000];   // bet that's big enough
+static int fparamindex = 0;
+static int iparamdata[1000];
+static int iparamindex = 0;
+static ustring sparamdata[1000];
+static int sparamindex = 0;
+static ErrorHandler errhandler;
+
+
+
+static void
+inject_params ()
+{
+    for (size_t p = 0;  p < fparams.size();  p += 2) {
+        fparamdata[fparamindex] = atof (fparams[p+1].c_str());
+        shadingsys->Parameter (fparams[p].c_str(), TypeDesc::TypeFloat,
+                               &fparamdata[fparamindex]);
+        fparamindex += 1;
+    }
+    for (size_t p = 0;  p < iparams.size();  p += 2) {
+        iparamdata[iparamindex] = atoi (iparams[p+1].c_str());
+        shadingsys->Parameter (iparams[p].c_str(), TypeDesc::TypeInt,
+                               &iparamdata[iparamindex]);
+        iparamindex += 1;
+    }
+    for (size_t p = 0;  p < vparams.size();  p += 4) {
+        fparamdata[fparamindex+0] = atof (vparams[p+1].c_str());
+        fparamdata[fparamindex+1] = atof (vparams[p+2].c_str());
+        fparamdata[fparamindex+2] = atof (vparams[p+3].c_str());
+        shadingsys->Parameter (vparams[p].c_str(), TypeDesc::TypeVector,
+                               &fparamdata[fparamindex]);
+        fparamindex += 3;
+    }
+    for (size_t p = 0;  p < sparams.size();  p += 2) {
+        sparamdata[sparamindex] = ustring (sparams[p+1]);
+        shadingsys->Parameter (sparams[p].c_str(), TypeDesc::TypeString,
+                               &sparamdata[sparamindex]);
+        sparamindex += 1;
+    }
+}
 
 
 
@@ -64,11 +105,21 @@ static int
 add_shader (int argc, const char *argv[])
 {
     shadingsys->attribute ("debug", (int)debug);
+    if (debug)
+        errhandler.verbosity (ErrorHandler::VERBOSE);
+
     for (int i = 0;  i < argc;  i++) {
+        inject_params ();
+
         shadernames.push_back (argv[i]);
         shadingsys->Shader ("surface", argv[i],
                             layername.length() ? layername.c_str() : NULL);
+
         layername.clear ();
+        iparams.clear ();
+        fparams.clear ();
+        vparams.clear ();
+        sparams.clear ();
     }
     return 0;
 }
@@ -88,7 +139,19 @@ getargs (int argc, const char *argv[])
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
                 "--layer %s", &layername, "Set next layer name",
-                "--connect %L %L %L %L", 
+                "--fparam %L %L",
+                        &fparams, &fparams,
+                        "Add a float param (args: name value)",
+                "--iparam %L %L",
+                        &iparams, &iparams,
+                        "Add an integer param (args: name value)",
+                "--vparam %L %L %L %L",
+                        &vparams, &vparams, &vparams, &vparams,
+                        "Add a vector or color param (args: name xval yval zval)",
+                "--sparam %L %L",
+                        &sparams, &sparams,
+                        "Add a string param (args: name value)",
+                "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
 //                "-v", &verbose, "Verbose output",
@@ -115,14 +178,10 @@ main (int argc, const char *argv[])
     // Create a new shading system.
     Timer timer;
     SimpleRenderer rend;
-    ErrorHandler errhandler;
     shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
 
     shadingsys->ShaderGroupBegin ();
     getargs (argc, argv);
-
-    if (debug)
-        errhandler.verbosity (ErrorHandler::VERBOSE);
 
     for (size_t i = 0;  i < connections.size();  i += 4) {
         if (i+3 < connections.size()) {

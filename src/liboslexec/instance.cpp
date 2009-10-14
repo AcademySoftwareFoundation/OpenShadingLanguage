@@ -66,21 +66,21 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
                                p.name().c_str(), p.type().c_str());
         int i = m_master->findparam (p.name());
         if (i >= 0) {
-            if (shadingsys().debug())
-                shadingsys().info ("    found %d", i);
-            symbol(i)->valuesource (Symbol::InstanceVal);
-#if 0
-            if (s.typespec().simpletype().basetype == TypeDesc::INT) {
-                s.data (&(m_iparams[s.dataoffset()]));
-            } else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT) {
-                s.data (&(m_fparams[s.dataoffset()]));
-            } else if (s.typespec().simpletype().basetype == TypeDesc::STRING) {
-                s.data (&(m_sparams [s.dataoffset()]));
+            Symbol *s = symbol(i);
+            s->valuesource (Symbol::InstanceVal);
+            if (s->typespec().simpletype().basetype == TypeDesc::INT) {
+                memcpy (&m_iparams[s->dataoffset()], p.data(),
+                        s->typespec().simpletype().size());
+            } else if (s->typespec().simpletype().basetype == TypeDesc::FLOAT) {
+                memcpy (&m_fparams[s->dataoffset()], p.data(),
+                        s->typespec().simpletype().size());
+            } else if (s->typespec().simpletype().basetype == TypeDesc::STRING) {
+                memcpy (&m_sparams[s->dataoffset()], p.data(),
+                        s->typespec().simpletype().size());
             }
-//          shadingsys().info ("    sym %s offset %ull address %p",
-//                             s.name().c_str(),
-//                             (unsigned long long)s.dataoffset(), s.data());
-#endif
+          shadingsys().info ("    sym %s offset %ull address %p",
+                             s->name().c_str(),
+                             (unsigned long long)s->dataoffset(), s->data());
         }
     }
 }

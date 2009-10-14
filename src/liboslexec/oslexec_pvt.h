@@ -135,15 +135,12 @@ public:
         : m_name(name), m_type(type), m_data(data), m_is_local(false)
     {
         if (type == TypeDesc::TypeInt) {
-            m_data = &m_local_data.i;
             m_local_data.i = *(const int *)data;
             m_is_local = true;
         } else if (type == TypeDesc::TypeFloat) {
-            m_data = &m_local_data.f;
             m_local_data.f = *(const float *)data;
             m_is_local = true;
         } else if (type == TypeDesc::TypeString) {
-            m_data = &m_local_data.s;
             m_local_data.s = ustring(*(const char **)data).c_str();
             m_is_local = true;
         }
@@ -151,7 +148,7 @@ public:
     ~ParamRef () { }
     ustring name () const { return m_name; }
     TypeDesc type () const { return m_type; }
-    const void *data () const { return m_data; }
+    const void *data () const { return m_is_local ? &m_local_data : m_data; }
 private:
     ustring m_name;         ///< Parameter name
     TypeDesc m_type;        ///< Parameter type

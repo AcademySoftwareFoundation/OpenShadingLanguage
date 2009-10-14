@@ -36,31 +36,78 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
-class UniformEmissiveClosure : public EmissiveClosure {
+/// Variable cone emissive closure
+/// 
+/// This primitive emits in a cone having a configurable
+/// penumbra area where the light decays to 0 reaching the
+/// outer_angle limit. It can also behave as a lambertian emitter
+/// if the provided angles are PI/2, which is the default
+///
+class GenericEmissiveClosure : public EmissiveClosure {
 public:
-    UniformEmissiveClosure () : EmissiveClosure ("emission", "") { }
+    GenericEmissiveClosure () : EmissiveClosure ("emission", "ff") { }
+    
+    struct params_t {
+        // Two params, angles both
+        // first is the outer_angle where penumbra starts
+        float inner_angle; // must be between 0 and outer_angle
+        // and second the angle where light ends
+        float outer_angle;
+    };
 
     Color3 eval (const void *paramsptr, const Vec3 &N, 
                  const Vec3 &omega_out) const
     {
-        // make sure the outgoing direction is on the right side of the surface
-        const float invpi = N.dot(omega_out) > 0 ? (float) (0.5f * M_1_PI) : 0.0f;
-        return Color3(invpi, invpi, invpi);
+        const params_t *params = (const params_t *) paramsptr;
+        float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
+        if (outer_angle < 0.0f) 
+            outer_angle = 0.0f;
+        float inner_angle = params->inner_angle < outer_angle ? params->inner_angle : outer_angle;
+        if (inner_angle < 0.0f) 
+            inner_angle = 0.0f;
+        float cosNO = N.dot(omega_out);
+        float cosU  = cosf(inner_angle);
+        float cosA  = cosf(outer_angle);
+        float res;
+        // Normalization factor
+        float totalemit = ((1.0f - cosU*cosU) + 
+                           // The second term of this sum is just an 
+                           // approximation. The actual integral is of
+                           // the "smooth step" we are using later is
+                           // way more complicated. this will work as
+                           // long as the penumbra is not too big
+                           (cosU*cosU - cosA*cosA)*0.5f) * float(M_PI);
+        if (cosNO > cosU) // Total light
+            res = 1.0f / totalemit;
+        else if (cosNO > cosA) { // penumbra, apply smooth step
+            float x = 1.0f - (outer_angle - acos(cosNO)) / (outer_angle - inner_angle);
+            //res = (1.0 - 2*x*x + x*x*x*x) / totalemit;
+            res = (1.0f - x*x*(3-2*x)) / totalemit;
+        }
+        else res = 0.0f; // out of cone
+        
+        return Color3(res, res, res);
     }
 
     void sample (const void *paramsptr, const Vec3 &N, float randu, float randv,
                  Vec3 &omega_out, float &pdf) const
     {
-        // sample a random direction uniformly on the hemisphere
+        // We don't do anything sophisticated here for the step
+        // We just sample the whole cone uniformly to the cosine
         Vec3 T, B;
         make_orthonormals(N, T, B);
+        const params_t *params = (const params_t *) paramsptr;
+        float outer_angle = params->outer_angle < M_PI*0.5 ? params->outer_angle : M_PI*0.5;
+        if (outer_angle < 0.0f) 
+            outer_angle = 0.0f;
+        float cosA  = cosf(outer_angle);
         float phi = 2 * (float) M_PI * randu;
-        float cosTheta = randv;
-        float sinTheta = sqrtf(1 - cosTheta * cosTheta);
+        float cosTheta = sqrtf(1.0f - (1.0f - cosA*cosA) * randv);
+        float sinTheta = sqrtf(1.0f - cosTheta * cosTheta);
         omega_out = (cosf(phi) * sinTheta) * T +
                     (sinf(phi) * sinTheta) * B +
                                  cosTheta  * N;
-        pdf = (float) (0.5f * M_1_PI);
+        pdf = 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
     }
 
     /// Return the probability distribution function in the direction omega_out,
@@ -69,13 +116,21 @@ public:
     float pdf (const void *paramsptr, const Vec3 &N,
                const Vec3 &omega_out) const
     {
-        // make sure the outgoing direction is on the right side of the surface
-        return N.dot(omega_out) > 0 ? (float) (0.5f * M_1_PI) : 0.0f;
+        const params_t *params = (const params_t *) paramsptr;
+        float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
+        if (outer_angle < 0.0f) 
+            outer_angle = 0.0f;
+        float cosNO = N.dot(omega_out);
+        float cosA  = cosf(outer_angle);
+        if (cosNO < cosA)
+            return 0.0f;
+        else
+            return 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
     }
 };
 
 // these are all singletons
-UniformEmissiveClosure uniform_emissive_closure_primitive;
+GenericEmissiveClosure cone_emissive_closure_primitive;
 
 }; // namespace pvt
 }; // namespace OSL

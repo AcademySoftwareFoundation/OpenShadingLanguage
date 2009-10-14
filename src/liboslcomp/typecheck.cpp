@@ -874,7 +874,7 @@ static const char * builtin_func_args [] = {
     "microfacet_ggx", "Cnff", NULL,
     "ward", "Cnvff", NULL,
     "transparent", "C", NULL,
-    "emission", "C", NULL,
+    "emission", "C", "Cf", "Cff", NULL,
     "orennayar", "Cnf", NULL,
     "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,
     "refraction", "Cf", "Cff", "Csf", "Csff", 

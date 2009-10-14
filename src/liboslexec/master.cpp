@@ -117,6 +117,9 @@ ShaderMaster::resolve_syms ()
         }
         ++i;
     }
+    // Make it easy for quick lookups of common symbols
+    m_Psym = findsymbol (Strings::P);
+    m_Nsym = findsymbol (Strings::N);
 }
 
 

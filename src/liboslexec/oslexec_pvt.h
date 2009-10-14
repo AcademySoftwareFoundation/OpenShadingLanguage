@@ -224,6 +224,9 @@ private:
     std::vector<float> m_fconsts;       ///< float constant values
     std::vector<ustring> m_sconsts;     ///< string constant values
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
+    // Quick lookups of common symbols, -1 if not in symbol table:
+    int m_Psym, m_Nsym;
+
     friend class OSOReaderToMaster;
     friend class ShaderInstance;
     friend class ShadingExecution;
@@ -616,8 +619,12 @@ public:
     void run (int beginop, int endop);
 
     /// Get a reference to the symbol with the given index.
-    ///
+    /// Beware -- it had better be a valid index!
     Symbol &sym (int index) { return m_symbols[index]; }
+
+    /// Get a pointer to the symbol with the given index, or NULL if
+    /// the index is < 0.
+    Symbol *symptr (int index) { return index >= 0 ? &m_symbols[index]: NULL; }
 
     /// Return the current instruction pointer index.
     ///
@@ -683,8 +690,7 @@ public:
     /// Find the named symbol.  Return NULL if no such symbol is found.
     ///
     Symbol * symbol (ustring name) {
-        int s = m_master->findsymbol (name);
-        return s >= 0 ? &m_symbols[s] : NULL;
+        return symptr (m_master->findsymbol (name));
     }
 
     /// Format the value of sym using the printf-like format (taking a
@@ -731,6 +737,14 @@ public:
     /// Generic type mismatch error
     ///
     void error_arg_types ();
+
+    /// Quick link to the global P symbol, or NULL if there is none.
+    ///
+    Symbol *Psym () { return symptr (m_master->m_Psym); }
+
+    /// Quick link to the global N symbol, or NULL if there is none.
+    ///
+    Symbol *Nsym () { return symptr (m_master->m_Nsym); }
 
 private:
     /// Helper for bind(): run initialization code for parameters

@@ -566,7 +566,7 @@ public:
 // see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf 
 class MicrofacetBeckmannClosure : public BSDFClosure {
 public:
-    MicrofacetBeckmannClosure () : BSDFClosure ("microfacet_beckman", "nff") { }
+    MicrofacetBeckmannClosure () : BSDFClosure ("microfacet_beckmann", "nff") { }
 
     struct params_t {
         Vec3 N;

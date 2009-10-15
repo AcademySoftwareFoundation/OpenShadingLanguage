@@ -198,14 +198,14 @@ public:
 
     /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
     /// (pointing away from the surface), and random deviates randu and
-    /// randv on [0,1), return a sampled direction omega_in and the PDF value
-    /// in that direction.
+    /// randv on [0,1), return a sampled direction omega_in, the PDF value
+    /// in that direction and the evaluation of the color.
     /// Unlike the other methods, this routine can be called even if the
     /// get_cone routine returned false. This is to allow singular BRDFs to pick
     /// directions from infinitely small cones.
     virtual void sample (const void *paramsptr,
                          const Vec3 &omega_out, float randu, float randv,
-                         Vec3 &omega_in, float &pdf) const = 0;
+                         Vec3 &omega_in, float &pdf, Color3 &eval) const = 0;
 
     /// Return the probability distribution function in the direction omega_in,
     /// given the parameters and incident direction omega_out.  This MUST match

@@ -162,7 +162,7 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -170,9 +170,12 @@ public:
            // we are viewing the surface from above - send a ray out with cosine
            // distribution over the hemisphere
            sample_cos_hemisphere (params->N, omega_out, randu, randv, omega_in, pdf);
+           eval.setValue(pdf, pdf, pdf);
         } else {
            // no samples if we look at the surface from the wrong side
-           pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+           pdf = 0; 
+           omega_in.setValue(0.0f, 0.0f, 0.0f);
+           eval.setValue(0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -206,12 +209,12 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         // only one direction is possible
         omega_in = -omega_out;
         pdf = 1;
-        
+        eval.setValue(1, 1, 1);
     }
 
     float pdf (const void *paramsptr,
@@ -264,28 +267,39 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
         if (cosNO > 0) {
-           // reflect the view vector
-           Vec3 R = (2 * cosNO) * params->N - omega_out;
-           Vec3 T, B;
-           make_orthonormals (R, T, B);
-           float phi = 2 * (float) M_PI * randu;
-           float cosTheta = powf(randv, 1 / (params->exponent + 1));
-           float sinTheta = sqrtf(1 - cosTheta * cosTheta);
-           omega_in = (cosf(phi) * sinTheta) * T +
-                      (sinf(phi) * sinTheta) * B +
-                      (            cosTheta) * R;
-           // make sure the direction we chose is still in the right hemisphere
-           if (params->N.dot(omega_in) > 0) {
-              pdf = (params->exponent + 1) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
-              return;
-           }
+            // reflect the view vector
+            Vec3 R = (2 * cosNO) * params->N - omega_out;
+            Vec3 T, B;
+            make_orthonormals (R, T, B);
+            float phi = 2 * (float) M_PI * randu;
+            float cosTheta = powf(randv, 1 / (params->exponent + 1));
+            float sinTheta = sqrtf(1 - cosTheta * cosTheta);
+            omega_in = (cosf(phi) * sinTheta) * T +
+                       (sinf(phi) * sinTheta) * B +
+                       (            cosTheta) * R;
+            // common terms for pdf and eval
+            float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
+            float cosNI = params->N.dot(omega_in);
+            float power;
+            // make sure the direction we chose is still in the right hemisphere
+            if (cosNI > 0)
+            {
+                pdf = (params->exponent + 1) * common;
+                power = cosNI * (params->exponent + 2) * common;
+            }
+            else
+                power = pdf = 0.0f;
+            eval.setValue(power, power, power);
+            return;
         }
-        pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+        pdf = 0; 
+        omega_in.setValue(0.0f, 0.0f, 0.0f);
+        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr,
@@ -349,7 +363,7 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -415,8 +429,16 @@ public:
             float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
             float denom = 4 * (float) M_PI * params->ax * params->ay * oh * dotn * dotn * dotn;
             pdf = expf(-exp_arg) / denom;
-        } else
-            pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+            float cosNI = params->N ^ omega_in;
+            // compiler will reuse expressions already computed
+            denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
+            float power = cosNI * expf(-exp_arg) / denom;
+            eval.setValue(power, power, power);
+        } else {
+            pdf = 0;
+            omega_in.setValue(0.0f, 0.0f, 0.0f);
+            eval.setValue(0.0f, 0.0f, 0.0f);
+        }
     }
 
     float pdf (const void *paramsptr,
@@ -494,7 +516,7 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -528,10 +550,19 @@ public:
                 pdf = pm * 0.25f / cosMO;
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
+                float cosNI = params->N.dot(omega_in);
+                float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
+                float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
+                float G = G1o * G1i;
+                float F = fresnel_shlick(m.dot(omega_out), params->R0);
+                float power = (F * G * D) * 0.25f / cosNI;
+                eval.setValue(power, power, power);
                 return;
             }
         }
-        pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+        pdf = 0; 
+        omega_in.setValue(0.0f, 0.0f, 0.0f);
+        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr,
@@ -620,7 +651,7 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -655,10 +686,21 @@ public:
                 pdf = pm * 0.25f / cosMO;
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
+                float cosNI = params->N.dot(omega_in);
+                float ao = 1 / (params->ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
+                float ai = 1 / (params->ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
+                float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
+                float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
+                float G = G1o * G1i;
+                float F = fresnel_shlick(m.dot(omega_out), params->R0);
+                float power = (F * G * D) * 0.25f / cosNI;
+                eval.setValue(power, power, power);
                 return;
             }
         }
-        pdf = 0, omega_in.setValue(0.0f, 0.0f, 0.0f);
+        pdf = 0;
+        omega_in.setValue(0.0f, 0.0f, 0.0f);
+        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr,

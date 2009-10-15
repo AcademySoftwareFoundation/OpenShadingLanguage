@@ -61,9 +61,9 @@ public:
 
     void sample (const void *paramsptr,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
-        pdf = 0, omega_in.setValue(0, 0, 0);
+        pdf = 0, omega_in.setValue(0, 0, 0), eval.setValue(0, 0, 0);
     }
 
     float pdf (const void *paramsptr,

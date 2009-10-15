@@ -172,7 +172,7 @@ public:
     ///
     Symbol *make_constant (float f);
 
-    std::string output_filename (const std::string &inputfilename);
+    std::string output_filename () const { return m_output_filename; }
 
     /// Push the designated function on the stack, to keep track of
     /// nesting and so recursed methods can query which is the current
@@ -206,7 +206,7 @@ public:
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
-
+    std::string default_output_filename ();
     void write_oso_file (const std::string &outfilename);
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_formal_default (const ASTvariable_declaration *node) const;
@@ -222,6 +222,7 @@ private:
     oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing
+    std::string m_output_filename; ///< Output filename
     ASTNode::ref m_shader;    ///< The shader's syntax tree
     bool m_err;               ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table

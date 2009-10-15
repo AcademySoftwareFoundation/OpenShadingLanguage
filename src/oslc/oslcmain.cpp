@@ -47,6 +47,7 @@ usage ()
         "Usage:  oslc [options] file\n"
         "  Options:\n"
         "\t--help         Print this usage message\n"
+        "\t-o filename    Specify output filename\n"
         "\t-v             Verbose mode\n"
         "\t-Ipath         Add path to the #include search path\n"
         "\t-Dsym[=val]    Define preprocessor symbol\n"
@@ -62,14 +63,24 @@ main (int argc, const char *argv[])
 {
     std::vector <std::string> args;
 
+    if (argc <= 1) {
+        usage ();
+        return EXIT_SUCCESS;
+    }
+
     for (int a = 1;  a < argc;  ++a) {
         if (! strcmp (argv[a], "--help") | ! strcmp (argv[a], "-h")) {
             usage ();
             return EXIT_SUCCESS;
         }
         else if (! strcmp (argv[a], "-v") ||
-            ! strcmp (argv[a], "-d")) {
+                 ! strcmp (argv[a], "-d")) {
             // Valid command-line argument
+            args.push_back (argv[a]);
+        }
+        else if (! strcmp (argv[a], "-o") && a < argc-1) {
+            args.push_back (argv[a]);
+            ++a;
             args.push_back (argv[a]);
         }
         else {
@@ -77,7 +88,7 @@ main (int argc, const char *argv[])
             bool ok = compiler->compile (argv[a], args);
             if (ok) {
                 std::cout << "Compiled " << argv[a] << " -> " 
-                          << compiler->output_filename(argv[a]) << "\n";
+                          << compiler->output_filename() << "\n";
             } else {
                 std::cout << "FAILED " << argv[a] << "\n";
                 return EXIT_FAILURE;

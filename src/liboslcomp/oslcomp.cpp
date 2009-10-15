@@ -129,6 +129,7 @@ OSLCompilerImpl::compile (const std::string &filename,
 {
     std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
 
+    m_output_filename.clear ();
     for (size_t i = 0;  i < options.size();  ++i) {
         if (options[i] == "-v") {
             // verbose mode
@@ -136,7 +137,11 @@ OSLCompilerImpl::compile (const std::string &filename,
         } else if (options[i] == "-d") {
             // debug mode
             m_debug = true;
+        } else if (options[i] == "-o" && i < options.size()-1) {
+            ++i;
+            m_output_filename = options[i];
         } else {
+            std::cerr << "arg " << options[i] << "\n";
             // something meant for the cpp command
             cppcommand += "\"";
             cppcommand += options[i];
@@ -188,8 +193,9 @@ OSLCompilerImpl::compile (const std::string &filename,
         }
  
         if (! error_encountered()) {
-            std::string outname = output_filename (filename);
-            write_oso_file (outname);
+            if (m_output_filename.size() == 0)
+                m_output_filename = default_output_filename ();
+            write_oso_file (m_output_filename);
         }
 
         oslcompiler = NULL;
@@ -246,7 +252,7 @@ OSLCompilerImpl::initialize_globals ()
 
 
 std::string
-OSLCompilerImpl::output_filename (const std::string &inputfilename)
+OSLCompilerImpl::default_output_filename ()
 {
     if (m_shader && shader_decl())
         return shader_decl()->shadername().string() + ".oso";

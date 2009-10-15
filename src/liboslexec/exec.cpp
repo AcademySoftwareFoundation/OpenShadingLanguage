@@ -397,6 +397,14 @@ ShadingExecution::bind_connection (ShaderInstance *inst, int symindex)
 
 
 void
+ShadingExecution::unbind ()
+{
+    m_bound = false;
+}
+
+
+
+void
 ShadingExecution::run (Runflag *rf)
 {
     if (m_executed)

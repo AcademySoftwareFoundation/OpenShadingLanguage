@@ -215,12 +215,9 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
 std::string
 ShadingSystemImpl::geterror () const
 {
+    PerThreadInfo *threadinfo = get_perthread_info ();
     std::string e;
-    std::string *errptr = m_errormessage.get ();
-    if (errptr) {
-        e = *errptr;
-        errptr->clear ();
-    }
+    std::swap (e, threadinfo->errormessage);  // will clear the stored one
     return e;
 }
 
@@ -229,18 +226,13 @@ ShadingSystemImpl::geterror () const
 void
 ShadingSystemImpl::error (const char *message, ...)
 {
-    std::string *errptr = m_errormessage.get ();
-    if (! errptr) {
-        errptr = new std::string;
-        m_errormessage.reset (errptr);
-    }
-    ASSERT (errptr != NULL);
-    if (errptr->size())
-        *errptr += '\n';
+    std::string &err (get_perthread_info()->errormessage);
+    if (err.size())
+        err += '\n';
     va_list ap;
     va_start (ap, message);
     std::string msg = Strutil::vformat (message, ap);
-    *errptr += msg;
+    err += msg;
     m_err->error (msg);
     va_end (ap);
 }
@@ -461,10 +453,42 @@ ShadingSystemImpl::clear_state ()
 
 
 
-shared_ptr<ShadingContext>
+ShadingContext *
 ShadingSystemImpl::get_context ()
 {
-    return shared_ptr<ShadingContext> (new ShadingContext (*this));
+    PerThreadInfo *threadinfo = get_perthread_info ();
+    if (threadinfo->context_pool.empty()) {
+        return new ShadingContext (*this);
+    } else {
+        return threadinfo->pop_context ();
+    }
+}
+
+
+
+void
+ShadingSystemImpl::release_context (ShadingContext *sc)
+{
+    PerThreadInfo *threadinfo = get_perthread_info ();
+    threadinfo->context_pool.push (sc);
+}
+
+
+
+ShadingContext *
+ShadingSystemImpl::PerThreadInfo::pop_context ()
+{
+    ShadingContext *sc = context_pool.top ();
+    context_pool.pop ();
+    return sc;
+}
+
+
+
+ShadingSystemImpl::PerThreadInfo::~PerThreadInfo ()
+{
+    while (! context_pool.empty())
+        delete pop_context ();
 }
 
 

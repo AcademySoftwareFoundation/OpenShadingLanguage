@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <vector>
+#include <stack>
 #include <map>
 
 #include "OpenImageIO/thread.h"
@@ -54,6 +55,8 @@ namespace pvt {
 class ShadingSystemImpl;
 class ShadingContext;
 class ShadingExecution;
+class ShaderInstance;
+typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 
 
 
@@ -411,9 +414,13 @@ public:
 
     ShaderMaster::ref loadshader (const char *name);
 
-    /// Return a "blank" ShadingContext that we can use.
+    /// Get a ShadingContext that we can use.
     ///
-    shared_ptr<ShadingContext> get_context ();
+    ShadingContext *get_context ();
+
+    /// Return a ShadingContext to the pool.
+    ///
+    void release_context (ShadingContext *sc);
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 
@@ -465,6 +472,25 @@ private:
     ConnectedParam decode_connected_param (const char *connectionname,
                                const char *layername, ShaderInstance *inst);
 
+    struct PerThreadInfo {
+        std::string errormessage;    ///< Saved error string, per thread
+        std::stack<ShadingContext *> context_pool;
+
+        ShadingContext *pop_context ();  ///< Get the pool top and then pop
+        ~PerThreadInfo ();
+    };
+
+    /// Get the per-thread info, create it if necessary.
+    ///
+    PerThreadInfo *get_perthread_info () const {
+        PerThreadInfo *p = m_perthread_info.get ();
+        if (! p) {
+            p = new PerThreadInfo;
+            m_perthread_info.reset (p);
+        }
+        return p;
+    }
+
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system
     ErrorHandler *m_err;                  ///< Error handler
@@ -481,9 +507,7 @@ private:
     std::map<ustring,int> m_global_heap_offsets; ///< Heap offsets of globals
     size_t m_global_heap_total;           ///< Heap size for globals
     mutable mutex m_mutex;                ///< Thread safety
-    /// Saved error string, per-thread
-    ///
-    mutable boost::thread_specific_ptr<std::string> m_errormessage;
+    mutable thread_specific_ptr<PerThreadInfo> m_perthread_info;
 
     atomic_int m_stat_shaders_loaded;     ///< Stat: shaders loaded
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
@@ -606,6 +630,8 @@ public:
     ///
     void bind (ShadingContext *context, ShaderUse use, int layerindex,
                ShaderInstance *instance);
+
+    void unbind ();
 
     /// Execute the shader with the supplied runflags.
     ///

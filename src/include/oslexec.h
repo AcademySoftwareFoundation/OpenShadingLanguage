@@ -46,12 +46,6 @@ typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 class ShaderGlobals;
 class ClosureColor;
 
-namespace pvt {
-class ShaderInstance;
-typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
-};
-using pvt::ShaderInstanceRef;
-
 
 
 /// Opaque pointer to whatever the renderer uses to represent a

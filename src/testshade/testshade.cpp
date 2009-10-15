@@ -282,7 +282,7 @@ main (int argc, const char *argv[])
     // FIXME -- this will eventually be replaced with a public
     // ShadingSystem call that encapsulates it.
     ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
-    shared_ptr<ShadingContext> ctx = ssi->get_context ();
+    ShadingContext *ctx = ssi->get_context ();
     ctx->bind (npoints, *shaderstate, shaderglobals);
     double bindtime = timer ();
     timer.reset ();
@@ -324,6 +324,7 @@ main (int argc, const char *argv[])
         }
         img.save ();
     }
+    ssi->release_context (ctx);
 
     if (debug) {
         std::cout << "\n";

@@ -40,7 +40,6 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 
 using namespace OSL;
-using namespace OSL::pvt;
 
 
 

@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec.h"
 #include "simplerend.h"
 using namespace OSL;
-using namespace OSL::pvt;
 
 
 namespace OSL {

@@ -136,6 +136,9 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     if (nlayers > execlayers.size())
         execlayers.resize (nlayers);
 
+    for (size_t layer = 0;  layer < nlayers;  ++layer)
+        execlayers[layer].unbind ();
+
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         execlayers[layer].bind (this, use, layer, sgroup[layer]);
         // FIXME -- for now, we're executing layers unconditionally.

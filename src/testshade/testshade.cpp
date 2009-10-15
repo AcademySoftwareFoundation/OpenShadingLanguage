@@ -218,6 +218,8 @@ main (int argc, const char *argv[])
     shaderglobals.dPdx.init (&gP_dx[0], sizeof(gP_dx[0]));
     shaderglobals.dPdy.init (&gP_dy[0], sizeof(gP_dy[0]));
     shaderglobals.N.init (&gN[0], sizeof(gN[0]));
+    shaderglobals.dNdx.init(0, 0); // no derivs
+    shaderglobals.dNdy.init(0, 0); // no derivs
     shaderglobals.Ng.init (&gN[0], sizeof(gN[0]));  // Ng = N for now
     shaderglobals.u.init (&gu[0], sizeof(gu[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));

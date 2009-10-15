@@ -29,8 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////
 /// \file
 ///
-/// Shader interpreter implementation of assignment: '=' in all its
-/// flavors.
+/// Shader interpreter implementation of derivative related operations
 ///
 /////////////////////////////////////////////////////////////////////////
 

@@ -825,6 +825,14 @@ public:
     ///
     size_t numclosures ();
 
+    /// Called when the shaders of the attrib state change -- this
+    /// invalidates the heap size computations.
+    void changed_shaders () {
+        m_heapsize = -1;
+        m_heapround = -1;
+        m_numclosures = -1;
+    }
+
 private:
     bool heap_size_calculated () const { return m_heapsize >= 0; }
     void calc_heap_size ();

@@ -373,6 +373,8 @@ ShadingSystemImpl::Shader (const char *shaderusage,
     }
 
     shadergroup.append (instance);
+    m_curattrib->changed_shaders ();
+
     // FIXME -- check for duplicate layer name within the group?
 
     return true;

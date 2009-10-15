@@ -53,6 +53,7 @@ static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
+static std::string dataformatname = "";
 static bool debug = false;
 static int xres = 1, yres = 1;
 static std::string layername;
@@ -138,6 +139,8 @@ getargs (int argc, const char *argv[])
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
+                "-od %s", &dataformatname, "Set the output data format to one of:\n"
+                        "\t\t\tuint8, half, float",
                 "--layer %s", &layername, "Set next layer name",
                 "--fparam %L %L",
                         &fparams, &fparams,
@@ -299,9 +302,16 @@ main (int argc, const char *argv[])
                   << outputfiles[i]<< "\n";
         TypeDesc t = sym->typespec().simpletype();
         TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
+        TypeDesc outtypebase = tbase;
+        if (dataformatname == "uint8")
+            outtypebase = TypeDesc::UINT8;
+        else if (dataformatname == "half")
+            outtypebase = TypeDesc::HALF;
+        else if (dataformatname == "float")
+            outtypebase = TypeDesc::FLOAT;
         int nchans = t.numelements() * t.aggregate;
         pixel.resize (nchans);
-        OpenImageIO::ImageSpec spec (xres, yres, nchans, tbase);
+        OpenImageIO::ImageSpec spec (xres, yres, nchans, outtypebase);
         OpenImageIO::ImageBuf img (outputfiles[i], spec);
         img.zero ();
         for (int y = 0, n = 0;  y < yres;  ++y) {

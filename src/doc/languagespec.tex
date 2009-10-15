@@ -3673,18 +3673,50 @@ FIXME
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce emission} (...)}
+\apiitem{\colorclosure\ {\ce emission} (\emph{...params...}) \\
+\colorclosure\ {\ce emission} (vector axis, float angle, \emph{...params...})}
 \indexapi{emission}
-Returns a \colorclosure that represents a glowing or self-illuminating
-surface.
+
+Returns a \colorclosure that represents a glowing/emissive surface.
+By default, light is emitted in a full hemisphere centered around the
+surface normal.  Optionally, \emph{axis} and \emph{angle} parameters
+may explicitly specify the emission cone (\emph{axis} = \N and
+\emph{angle} = {\cf PI/2} indicate the full hemisphere around \N).
+
+The emission closure returns a radiance value (e.g.,
+$\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$) that, integrated
+over all angles, yields a power density of 1.0 (e.g.,
+$\mathrm{W}\cdot\mathrm{m}^{-2}$).  This may be multiplied by a scalar
+to adjust the desired power density of your light.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\apiitem{"penumbra", <float>}
+\vspace{12pt}
+
+Specifies a transition angle for light to fall off.  If $\alpha$ is the
+angle between the axis and an illumination direction, then light is
+emitted evenly in all diretions for which $\alpha \le \mathit{angle} -
+\mathit{penumbra}$, no light is emitted in directions for which $\alpha
+> \mathit{angle}$, and the illumination falls gradually for
+$\mathit{angle} - \mathit{penumbra} < \alpha \le \mathit{angle}$.  If
+\emph{penumbra} is not supplied, it defaults to 0, indicating a hard
+cutoff at the cone boundary.
+
+\apiend
+\vspace{-16pt}
+
+
 \apiend
 
 
+\begin{comment}
 FIXME
 environment
 shadow
 indirect
 occlusion
+\end{comment}
 
 
 

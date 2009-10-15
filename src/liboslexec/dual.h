@@ -185,7 +185,7 @@ Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
 template<class T>
 Dual2<T> operator* (const Dual2<T> &a, const T &b)
 {
-    return Dual2<T> (a.val()*b, a.dx()*b, a.dx()*b);
+    return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
 }
 
 
@@ -194,7 +194,7 @@ Dual2<T> operator* (const Dual2<T> &a, const T &b)
 template<class T>
 Dual2<T> operator* (const T &b, const Dual2<T> &a)
 {
-    return Dual2<T> (a.val()*b, a.dx()*b, a.dx()*b);
+    return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
 }
 
 

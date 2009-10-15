@@ -11,7 +11,7 @@ if len(sys.argv) > 2 :
 
 # A command to run
 command = path + "oslc/oslc test.osl > out.txt"
-command = command + "; " + path + "testshade/testshade -g 512 512 "
+command = command + "; " + path + "testshade/testshade -g 512 512 -od uint8 "
 command = command + "-o Cout_f1 test_f1.tif "
 command = command + "-o Cout_f2 test_f2.tif "
 command = command + "-o Cout_f3 test_f3.tif "

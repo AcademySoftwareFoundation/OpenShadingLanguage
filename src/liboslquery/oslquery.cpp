@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <unistd.h>
 
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/dassert.h"
+#include "OpenImageIO/filesystem.h"
 
 #include "oslquery.h"
 #include "../liboslexec/osoreader.h"
@@ -267,7 +267,23 @@ OSLQuery::open (const std::string &shadername,
                 const std::string &searchpath)
 {
     OSOReaderQuery oso (*this);
-    std::string filename = shadername;   // FIXME -- do search, etc.
+    std::string filename = shadername;
+
+    // Add file extension if not already there
+    if (Filesystem::file_extension (filename) != std::string("oso"))
+        filename += ".oso";
+
+    // Apply search paths
+    if (! searchpath.empty ()) {
+        std::vector<std::string> dirs;
+        Filesystem::searchpath_split (searchpath, dirs);
+        filename = Filesystem::searchpath_find (filename, dirs);
+    }
+    if (filename.empty() ||  access (filename.c_str(), R_OK) < 0) {
+        m_error = std::string("File \"") + shadername + "\" could not be found";
+        return false;
+    }
+
     bool ok = oso.parse (filename);
     return ok;
 }

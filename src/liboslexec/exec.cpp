@@ -459,6 +459,7 @@ ShadingExecution::run (int beginop, int endop)
     const int *args = &m_master->m_args[0];
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         Opcode &op (this->op ());
+#if 0
         if (m_debug) {
             m_shadingsys->info ("instruction %d: %s", m_ip, op.opname().c_str());
             m_shadingsys->info ("Before running %s, values are:",
@@ -469,6 +470,7 @@ ShadingExecution::run (int beginop, int endop)
                                     printsymbolval(s).c_str());
             }
         }
+#endif
         ASSERT (op.implementation() && "Unimplemented op!");
         op (this, op.nargs(), args+op.firstarg(),
             m_runflags, m_beginpoint, m_endpoint);
@@ -476,6 +478,7 @@ ShadingExecution::run (int beginop, int endop)
         // FIXME -- this is a good place to do all sorts of other sanity
         // checks, like seeing if any nans have crept in from each op.
 
+#if 0
         if (m_debug) {
             m_shadingsys->info ("After running %s, new values are:",
                                 op.opname().c_str());
@@ -485,6 +488,7 @@ ShadingExecution::run (int beginop, int endop)
                                     printsymbolval(s).c_str());
             }
         }
+#endif
     }
 }
 

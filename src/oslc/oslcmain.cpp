@@ -83,6 +83,10 @@ main (int argc, const char *argv[])
             ++a;
             args.push_back (argv[a]);
         }
+        else if (argv[a][0] == '-' &&
+                 (argv[a][1] == 'D' || argv[a][1] == 'U')) {
+            args.push_back (argv[a]);
+        }
         else {
             boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());
             bool ok = compiler->compile (argv[a], args);

@@ -173,7 +173,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
 {
     lock_guard guard (m_mutex);  // Thread safety
     if (name == "searchpath:shader" && type == TypeDesc::STRING) {
-        m_searchpath = ustring (*(const char **)val);
+        m_searchpath = std::string (*(const char **)val);
         Filesystem::searchpath_split (m_searchpath, m_searchpath_dirs);
         return true;
     }

@@ -38,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cerrno>
 
+#include <boost/filesystem.hpp>
+
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 
@@ -127,6 +129,11 @@ bool
 OSLCompilerImpl::compile (const std::string &filename,
                           const std::vector<std::string> &options)
 {
+    if (! boost::filesystem::exists (filename)) {
+        error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
+        return false;
+    }
+
     std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
 
     m_output_filename.clear ();

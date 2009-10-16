@@ -468,7 +468,7 @@ typespec
                 }
         | CLOSURE simple_typename
                 {
-                    oslcompiler->current_typespec (TypeSpec (lextype ($1), true));
+                    oslcompiler->current_typespec (TypeSpec (lextype ($2), true));
                     $$ = 0;
                 }
         | IDENTIFIER /* struct name */

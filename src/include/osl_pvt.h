@@ -319,6 +319,8 @@ public:
     /// Is type src is assignable to dst?  It is if they are the equivalent(),
     /// or if dst is a float or float-aggregate and src is a float or int.
     friend bool assignable (const TypeSpec &dst, const TypeSpec &src) {
+        if (dst.is_closure() || src.is_closure())
+            return (dst.is_closure() && src.is_closure());
         return equivalent (dst, src) || 
             (dst.is_floatbased() && (src.is_float() || src.is_int()));
     }

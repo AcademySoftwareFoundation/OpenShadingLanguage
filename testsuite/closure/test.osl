@@ -5,7 +5,8 @@ test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5)
     printf ("  Ci = %s\n", Ci);
 
     printf ("adding specular term:");
-    Ci += Ks * phong(N, exponent);
+    closure spec = Ks * phong(N, exponent);  // also test assignment
+    Ci += spec;
     printf ("  Ci = %s\n", Ci);
 
     // mix in transparency

@@ -67,7 +67,7 @@ TypeSpec::string () const
         else if (m_simple == TypeDesc::TypeMatrix)
             str += "matrix";
         else
-            str = simpletype().c_str();
+            str += simpletype().c_str();
     }
     return str;
 }

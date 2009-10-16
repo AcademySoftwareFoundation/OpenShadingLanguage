@@ -952,7 +952,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     if (code[i] == '[') {
         ++i;
         t.make_array (-1);   // signal arrayness, unknown length
-        if (isdigit(code[i])) {
+        if (isdigit(code[i]) || code[i] == ']') {
             t.make_array (atoi (code+i));
             while (isdigit(code[i]))
                 ++i;

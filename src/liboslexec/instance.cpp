@@ -78,9 +78,10 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
                 memcpy (&m_sparams[s->dataoffset()], p.data(),
                         s->typespec().simpletype().size());
             }
-          shadingsys().info ("    sym %s offset %ull address %p",
-                             s->name().c_str(),
-                             (unsigned long long)s->dataoffset(), s->data());
+            if (shadingsys().debug())
+                shadingsys().info ("    sym %s offset %ull address %p",
+                        s->name().c_str(),
+                        (unsigned long long)s->dataoffset(), s->data());
         }
     }
 }

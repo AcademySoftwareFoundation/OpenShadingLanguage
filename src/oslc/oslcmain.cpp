@@ -84,7 +84,7 @@ main (int argc, const char *argv[])
             args.push_back (argv[a]);
         }
         else if (argv[a][0] == '-' &&
-                 (argv[a][1] == 'D' || argv[a][1] == 'U')) {
+                 (argv[a][1] == 'D' || argv[a][1] == 'U' || argv[a][1] == 'I')) {
             args.push_back (argv[a]);
         }
         else {

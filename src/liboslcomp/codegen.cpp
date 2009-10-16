@@ -159,6 +159,32 @@ ASTNode::emitcode (const char *opname, size_t nargs, Symbol **args)
 
 
 Symbol *
+ASTNode::coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat)
+{
+    if (equivalent (sym->typespec(), type))
+        return sym;   // No coercion necessary
+
+    if (acceptfloat && sym->typespec().is_float())
+        return sym;
+
+    if (sym->symtype() == SymTypeConst && sym->typespec().is_int() &&
+            type.is_floatbased()) {
+        // It's not only the wrong type, it's a constant of the wrong
+        // type. We need a new constant of the right type.
+        ConstantSymbol *constsym = (ConstantSymbol *) sym;
+        sym = m_compiler->make_constant (constsym->floatval ());
+        if (type.is_float() || acceptfloat)
+            return sym;
+    }
+
+    Symbol *t = m_compiler->make_temporary (type);
+    emitcode ("assign", t, sym);
+    return t;
+}
+
+
+
+Symbol *
 ASTNode::codegen (Symbol *dest)
 {
     codegen_children ();
@@ -660,6 +686,9 @@ ASTfunction_call::codegen (Symbol *dest)
             dest = m_compiler->make_temporary (typespec());
     }
 
+    std::vector<TypeSpec> polyargs;
+    m_compiler->typespecs_from_codes (func()->argcodes().c_str()+1, polyargs);
+
     // Generate code for all the individual arguments.  Remember the
     // individual indices for arguments that are array elements or
     // vector/color/matrix components.
@@ -670,17 +699,24 @@ ASTfunction_call::codegen (Symbol *dest)
     int argdest_return_offset = 0;
     ASTNode *a = args().get();
     for (int i = 0;  a;  a = a->nextptr(), ++i) {
+        Symbol *thisarg = NULL;
         if (a->nodetype() == index_node /* FIXME && arg is written to */) {
             // Special case for individual array elements or vec/col/matrix
             // components being passed as output params of the function --
             // these aren't really lvalues, so we need to restore their
             // values.  We save the indices we genearate code for here...
             ASTindex *indexnode = dynamic_cast<ASTindex *> (a);
-            argdest.push_back (indexnode->codegen (NULL, index[i], index2[i], index3[i]));
+            thisarg = indexnode->codegen (NULL, index[i], index2[i], index3[i]);
             indexed_output_params = true;
         } else {
-            argdest.push_back (a->codegen ());
+            thisarg = a->codegen ();
         }
+        // Handle type coercion of the argument
+        if (i < (int)polyargs.size() &&
+                polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN)) {
+            thisarg = coerce (thisarg, polyargs[i]);
+        }
+        argdest.push_back (thisarg);
     }
 
     if (is_user_function ()) {
@@ -729,7 +765,7 @@ ASTfunction_call::codegen (Symbol *dest)
 
     } else {
         // Built-in function
-        if (! typespec().is_void()) {    // Insert the resturn dest if non-void
+        if (! typespec().is_void()) {    // Insert the return dest if non-void
             argdest.insert (argdest.begin(), dest);
             argdest_return_offset = 1;
         }

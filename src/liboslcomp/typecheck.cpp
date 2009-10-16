@@ -670,8 +670,10 @@ ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
         code += advance;
         if (check_arglist (m_name.c_str(), args(), code, coerce)) {
             // Return types also must match if not coercible
-            if (coerce || expected == TypeSpec() || expected == returntype)
+            if (coerce || expected == TypeSpec() || expected == returntype) {
+                m_sym = poly;
                 return returntype;
+            }
         }
     }
     return TypeSpec();
@@ -936,6 +938,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
         break;
     case '?' : break; // anything will match, so keep 'UNKNOWN'
     case '*' : break; // anything will match, so keep 'UNKNOWN'
+    case '.' : break; // anything will match, so keep 'UNKNOWN'
     default:
         std::cerr << "Don't know how to decode type code '" 
                   << code << "' " << (int)code[0] << "\n";
@@ -1043,6 +1046,20 @@ OSLCompilerImpl::code_from_type (TypeSpec type)
     }
 
     return out;
+}
+
+
+
+void
+OSLCompilerImpl::typespecs_from_codes (const char *code,
+                                       std::vector<TypeSpec> &types)
+{
+    types.clear ();
+    while (code && *code) {
+        int advance;
+        types.push_back (type_from_code (code, &advance));
+        code += advance;
+    }
 }
 
 

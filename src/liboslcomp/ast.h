@@ -255,6 +255,11 @@ protected:
     /// intermediate code, returning the label (address) of the new op.
     int emitcode (const char *opname, size_t nargs, Symbol **args);
 
+    /// Coerce sym into being the desired type.  Maybe it already is, or
+    /// maybe a temporary needs to be created.  Only do float->triple
+    /// coercion if acceptfloat is false.
+    Symbol *coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat=false);
+
 protected:
     NodeType m_nodetype;          ///< Type of node this is
     ref m_next;                   ///< Next node in the list
@@ -684,11 +689,13 @@ public:
 
 private:
     /// Typecheck all polymorphic versions, return UNKNOWN if no match was
-    /// found, or a real type if there was a match.
+    /// found, or a real type if there was a match.  Also, upon matching,
+    /// re-jigger m_sym to point to the specific polymorphic match.
     TypeSpec typecheck_all_poly (TypeSpec expected, bool coerce);
 
     ustring m_name;
     Symbol *m_sym;
+    FunctionSymbol *m_poly;
 };
 
 

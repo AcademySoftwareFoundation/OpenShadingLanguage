@@ -134,6 +134,10 @@ public:
     /// and turn it into a human-readable string.
     std::string typelist_from_code (const char *code);
 
+    /// Take a type code string (possibly containing many types) and
+    /// turn it into a TypeSpec vector.
+    void typespecs_from_codes (const char *code, std::vector<TypeSpec> &types);
+
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
     int emitcode (const char *opname, size_t nargs, Symbol **args,

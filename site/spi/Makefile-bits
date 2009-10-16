@@ -25,8 +25,15 @@ ifeq (${OPENIMAGEIO_NAMESPACE},)
 OPENIMAGEIO_NAMESPACE='OpenImageIO_Arnold'
 endif
 
+# if this is a debug build then use OIIO's debug build
+ifeq (${DEBUG},1)
+OIIO_VARIANT='.debug'
+else
+OIIO_VARIANT=''
+endif
+
 ifeq (${IMAGEIOHOME},)
-MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/linux64/ \
+MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/linux64${OIIO_VARIANT}/ \
         -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE} \
         -DOPENIMAGEIO_NAMESPACE:STRING=${OPENIMAGEIO_NAMESPACE}
 else

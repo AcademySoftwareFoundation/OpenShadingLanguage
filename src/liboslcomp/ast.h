@@ -340,7 +340,12 @@ public:
     ref meta () const { return child (1); }
 
     void make_param (bool param=true) { m_isparam = param; }
-    void make_output (bool out=true) { m_isoutput = out; }
+    void make_output (bool out=true) {
+        ASSERT (m_sym->symtype() == SymTypeParam);
+        m_isoutput = out;
+        if (out)
+            m_sym->symtype (SymTypeOutputParam);
+    }
     void make_meta (bool meta=true) { m_ismetadata = meta; }
 
     void add_meta (ASTNode *meta) {

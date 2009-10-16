@@ -365,6 +365,10 @@ public:
     ///
     SymType symtype () const { return m_symtype; }
 
+    /// Reset the symbol type.  Use with caution!
+    ///
+    void symtype (SymType newsymtype) { m_symtype = newsymtype; }
+
     /// Numerical ID of the scope in which this symbol was declared.
     ///
     int scope () const { return m_scope; }

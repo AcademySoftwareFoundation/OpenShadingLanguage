@@ -44,13 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // All the things we need from OpenImageIO
 #include "OpenImageIO/errorhandler.h"
-#include "OpenImageIO/refcnt.h"
 #include "OpenImageIO/texture.h"
 #include "OpenImageIO/typedesc.h"
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/varyingref.h"
-
-
 
 
 #ifdef OSL_NAMESPACE

@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "oslconfig.h"
-
+#include "OpenImageIO/refcnt.h"             // just to get shared_ptr from boost ?!
 
 
 #ifdef OSL_NAMESPACE

@@ -43,7 +43,7 @@ Sony Pictures Imageworks terms, above.
 #include <string>
 #include <vector>
 
-#include "oslconfig.h"
+#include "OpenImageIO/typedesc.h"
 #include "export.h"
 
 
@@ -72,7 +72,7 @@ public:
         bool isstruct;                   ///< is it a structure?
         bool isclosure;                  ///< is it a closure?
         std::vector<int> idefault;       ///< default int values
-        std::vector<OSL::Float> fdefault;    ///< default float values
+        std::vector<float> fdefault;     ///< default float values
         std::vector<std::string> sdefault;   ///< default string values
         std::vector<std::string> spacename;  ///< space name for matrices and
                                              ///<  triples, for each array elem.

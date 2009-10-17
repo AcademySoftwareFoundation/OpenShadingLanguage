@@ -60,10 +60,12 @@ Language Specification
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
-% email should go here
+\emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 12 August, 2009}}
+\date{{\large Date: 12 August, 2009 \\
+(with corrections, 17 Oct 2009)
+}}
 
 
 \include{macros}
@@ -1438,21 +1440,14 @@ be equivalent to either \cameraspace or \worldspace.
 Some computations may be easier in a coordinate system other than
 \currentspace.  For example, it is much more convenient to apply a
 ``solid texture'' to a moving object in its \objectspace than in
-\currentspace.  For these reasons, SL provides built-in functions that
-allow you to transform points among different coordinate systems.  The
-built-in functions {\cf transform, vtransform, ntransform} can be used
-to transform points, vectors, and normals, respectively, from one
-coordinate system to another (see Section~\ref{chap:stdlibrary}).  Note,
+\currentspace.  For these reasons, SL provides a built-in 
+{\cf transform} function that
+allows you to transform points, vectors, and normals 
+among different coordinate systems (see Section~\ref{chap:stdlib:geom}).  Note,
 however, that \langname does not keep track of which point variables are
 in which coordinate systems.  It is the responsibility of the shader
 programmer to keep track of this and ensure that, for example, lighting
 computations are performed using quantities in \commonspace.
-
-Be very careful to use the right transformation routines for the right
-point-like types.  Transforming with the wrong matrix math will
-introduce subtle and difficult-to-fix errors in your code.  Therefore,
-it is important to always use {\cf transform} for points, {\cf
-  vtransform} for vectors, and {\cf ntransform} for normals.
 
 Several coordinate systems are predefined by name, listed in
 Table~\ref{tab:spacenames}.  Additionally, a renderer will probably
@@ -2036,8 +2031,8 @@ multiplication and matrix multiplication by the inverse of another
 matrix.
 
 The integer and bit-wise operators {\cf \%}, {\cf <<}, {\cf >>},
-{\cf \&}, {\cf \verb|^|}, and {\cf |} may only be used with expressions
-of type \inttype.
+{\cf \&}, {\cf |}, {\cf \verb|^|}, and {\cf \verb|~|} may only be 
+used with expressions of type \inttype.
 
 For details on which operators are allowed, please consult the operator
 tables for each individual type in Chapter~\ref{chap:types}.
@@ -2307,7 +2302,7 @@ displacement shader, changing this variable displaces the surface. \\
   viewing position to the shading position \P. \\
 \hline
 \normal\ {\ce N} & The surface ``Shading'' normal of the surface at
-\P.  In a displacement shader, changing \N yields bump mapping. \\
+\P.  Changing \N yields bump mapping. \\
 \hline
 \normal\ {\ce Ng} & The true surface normal at {\cf P}.  This can differ
   from {\cf N}; {\cf N} can be overridden in various ways including bump
@@ -3082,7 +3077,7 @@ color {\ce Dx} (color a), {\ce Dy} (color a)}
 Compute an approximation to the partial derivatives of $a$ with respect to
 each of two principal directions, $\partial a / \partial x$ and
 $\partial a / \partial y$.  Depending on the renderer
-implementation, those directions may be aligned to the imagine plane,
+implementation, those directions may be aligned to the image plane,
 on the surface of the object, or something else.
 \apiend
 
@@ -3194,16 +3189,21 @@ positions.
 \apiitem{void {\ce printf} (string fmt, ...)}
 \indexapi{printf()}
 
-Much as in C, {\cf printf()} takes a format string {\cf fmt} and an argument list, and
-prints the resulting formatted string to the console.  
+Much as in C, {\cf printf()} takes a format string {\cf fmt} and an
+argument list, and prints the resulting formatted string to the console.
 
-Where the
-fmt contains the characters {\cf \%f}, {\cf \%c}, {\cf \%p}, {\cf
-\%m}, and {\cf \%s}, {\cf printf} will substitute arguments, in order,
-from the argument list (assuming that the argument types are \float,
-\color, point-like, \matrix, and {\cf string}, respectively).  In addition,
-{\cf \%d} and {\cf \%i} will also print \float's, truncating and
-printing them as if they were integers.
+Where the {\cf fmt} contains the characters {\cf \%d}, {\cf \%i}, {\cf \%f},
+{\cf \%g}, and {\cf \%s}, {\cf printf} will substitute arguments, in
+order.  The {\cf \%d} and {\cf \%i} arguments expect an {\cf int}
+argument; {\cf \%f} and {\cf \%g} expect a \float, \color, point-like,
+or \matrix argument (for multi-component types such as \color, the
+format will be applied to each of the components); and {\cf \%s} expects
+a {\cf string} argument.  In addition, {\cf \%d} and {\cf \%i} will also
+print \float's, truncating and printing them as if they were integers.
+
+All of the substition commands follow the usual C/C++ formatting rules,
+so format commands such as {\cf "\%6.2f"}, etc., should work as
+expected.
 \apiend
 
 \apiitem{string {\ce format} (string fmt, ...)}

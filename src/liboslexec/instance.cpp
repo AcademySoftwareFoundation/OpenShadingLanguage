@@ -79,7 +79,7 @@ ShaderInstance::parameters (const std::vector<ParamRef> &params)
                         s->typespec().simpletype().size());
             }
             if (shadingsys().debug())
-                shadingsys().info ("    sym %s offset %ull address %p",
+                shadingsys().info ("    sym %s offset %llu address %p",
                         s->name().c_str(),
                         (unsigned long long)s->dataoffset(), s->data());
         }
@@ -124,13 +124,13 @@ ShaderInstance::calc_heap_size ()
         m_heapsize += size + pad;
 
         if (shadingsys().debug())
-            shadingsys().info (" sym %s given %ull bytes on heap (including %ull padding)",
+            shadingsys().info (" sym %s given %llu bytes on heap (including %llu padding)",
                                s.mangled().c_str(),
                                (unsigned long long)size,
                                (unsigned long long)pad);
     }
     if (shadingsys().debug()) {
-        shadingsys().info (" Heap needed %ull, %d closures on the heap",
+        shadingsys().info (" Heap needed %llu, %d closures on the heap",
                            (unsigned long long)m_heapsize, m_numclosures);
         shadingsys().info (" Padding for alignment = %d", m_heapround);
     }

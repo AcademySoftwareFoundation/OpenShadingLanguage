@@ -78,12 +78,12 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // FIXME: the next statement is totally bogus, yet harmless.
     heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
     if (shadingsys().debug())
-        shadingsys().info ("  need heap %ull vs %ull",
+        shadingsys().info ("  need heap %llu vs %llu",
                            (unsigned long long)heap_size_needed,
                            (unsigned long long)m_heap.size());
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
-            shadingsys().info ("  ShadingContext %p growing heap to %ull",
+            shadingsys().info ("  ShadingContext %p growing heap to %llu",
                                this, (unsigned long long) heap_size_needed);
         m_heap.resize (heap_size_needed);
     }
@@ -93,11 +93,11 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // Set up closure storage
     size_t closures_needed = m_npoints * sas.numclosures ();
     if (shadingsys().debug())
-        shadingsys().info ("  need closures %d vs %ull", closures_needed,
+        shadingsys().info ("  need closures %d vs %llu", closures_needed,
                            (unsigned long long) m_closures.size());
     if (closures_needed > m_closures.size()) {
         if (shadingsys().debug())
-            shadingsys().info ("  ShadingContext %p growing closures to %ull",
+            shadingsys().info ("  ShadingContext %p growing closures to %llu",
                                this, (unsigned long long)closures_needed);
         m_closures.resize (closures_needed);
     }

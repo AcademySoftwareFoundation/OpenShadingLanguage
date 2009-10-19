@@ -305,9 +305,10 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             ASSERT (0 && "Should never get here");
         }
         if (m_debug)
-            m_shadingsys->info ("  bound %s to address %p, step %d, size %d",
+            m_shadingsys->info ("  bound %s to address %p, step %d, size %d %s",
                                 sym.mangled().c_str(), sym.data(),
-                                sym.step(), sym.size());
+                                sym.step(), sym.size(),
+                                sym.has_derivs() ? "(derivs)" : "(no derivs)");
     }
 
     // Handle all of the symbols that are connected to earlier layers.
@@ -665,7 +666,7 @@ ShadingExecution::format_symbol (const std::string &format,
         if (n > 1 && i < n-1)
             s += ' ';
     }
-    if (m_debug && sym.has_derivs() && sym.is_varying() &&
+    if (m_debug && sym.has_derivs() && // sym.is_varying() &&
             type.basetype == TypeDesc::FLOAT) {
         s += " {dx=";
         data += sym.deriv_step ();

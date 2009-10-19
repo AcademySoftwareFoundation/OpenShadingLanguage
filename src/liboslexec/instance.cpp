@@ -106,8 +106,11 @@ ShaderInstance::calc_heap_size ()
             s.has_derivs (true);
 
 #if 1
-        // FIXME -- test code by assuming all locals and temps carry derivs
-        if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
+        // FIXME -- test code by assuming all locals, temps, and params
+        // carry derivs
+        if ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
+             s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
+                s.typespec().is_floatbased())
             s.has_derivs (true);
 #endif
 

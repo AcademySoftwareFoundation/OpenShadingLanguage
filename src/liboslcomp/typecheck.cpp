@@ -305,7 +305,7 @@ ASTreturn_statement::typecheck (TypeSpec expected)
             // If we are returning a value, it must be assignable to the
             // kind of type the function actually returns.  This check
             // will also catch returning a value from a void function.
-            TypeSpec et = expr()->typespec ();
+            TypeSpec et = expr()->typecheck (myfunc->typespec());
             if (! assignable (myfunc->typespec(), et)) {
                 error ("Cannot return a '%s' from '%s %s()'",
                        et.string().c_str(), myfunc->typespec().string().c_str(),

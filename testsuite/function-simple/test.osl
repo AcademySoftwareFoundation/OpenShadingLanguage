@@ -2,7 +2,7 @@ float sqr (float a)
 {
     float z = a * a;
     printf ("%g*%g = %g\n", a, a, z);
-    return z;
+    return a*a;
 }
 
 

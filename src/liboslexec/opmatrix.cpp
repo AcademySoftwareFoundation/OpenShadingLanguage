@@ -64,7 +64,7 @@ DECLOP (OP_matrix)
     Symbol &Space (exec->sym (args[1]));
     bool using_space = (nargs == 3 || nargs == 18);
     int nfloats = nargs - 1 - (int)using_space;
-    DASSERT (nargs == 1 || nargs == 16);
+    DASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
     VaryingRef<Float> f[16];
     bool varying_args = false;
     for (int i = 0;  i < nfloats;  ++i) {

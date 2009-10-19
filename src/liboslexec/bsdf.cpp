@@ -152,7 +152,7 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -160,7 +160,7 @@ public:
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
@@ -179,7 +179,7 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -200,14 +200,14 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         // should never be called - because get_cone is empty
         return Color3 (0.0f, 0.0f, 0.0f);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
@@ -217,7 +217,7 @@ public:
         eval.setValue(1, 1, 1);
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         // the pdf for an arbitrary direction is 0 because only a single
@@ -253,7 +253,7 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -265,7 +265,7 @@ public:
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
@@ -282,27 +282,30 @@ public:
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * R;
-            // common terms for pdf and eval
-            float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
-            float cosNI = params->N.dot(omega_in);
-            float power;
-            // make sure the direction we chose is still in the right hemisphere
-            if (cosNI > 0)
+            if ((Ng ^ omega_in) > 0.0f)
             {
-                pdf = (params->exponent + 1) * common;
-                power = cosNI * (params->exponent + 2) * common;
+                // common terms for pdf and eval
+                float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
+                float cosNI = params->N.dot(omega_in);
+                float power;
+                // make sure the direction we chose is still in the right hemisphere
+                if (cosNI > 0)
+                {
+                    pdf = (params->exponent + 1) * common;
+                    power = cosNI * (params->exponent + 2) * common;
+                }
+                else
+                    power = pdf = 0.0f;
+                eval.setValue(power, power, power);
+                return;
             }
-            else
-                power = pdf = 0.0f;
-            eval.setValue(power, power, power);
-            return;
         }
         pdf = 0; 
         omega_in.setValue(0.0f, 0.0f, 0.0f);
         eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -341,7 +344,7 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -361,7 +364,7 @@ public:
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
@@ -425,23 +428,25 @@ public:
             omega_in.x = 2 * oh * h.x - omega_out.x;
             omega_in.y = 2 * oh * h.y - omega_out.y;
             omega_in.z = 2 * oh * h.z - omega_out.z;
-            // eq. 9
-            float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-            float denom = 4 * (float) M_PI * params->ax * params->ay * oh * dotn * dotn * dotn;
-            pdf = expf(-exp_arg) / denom;
-            float cosNI = params->N ^ omega_in;
-            // compiler will reuse expressions already computed
-            denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
-            float power = cosNI * expf(-exp_arg) / denom;
-            eval.setValue(power, power, power);
-        } else {
-            pdf = 0;
-            omega_in.setValue(0.0f, 0.0f, 0.0f);
-            eval.setValue(0.0f, 0.0f, 0.0f);
+            if ((Ng ^ omega_in) > 0.0f) {
+                // eq. 9
+                float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
+                float denom = 4 * (float) M_PI * params->ax * params->ay * oh * dotn * dotn * dotn;
+                pdf = expf(-exp_arg) / denom;
+                float cosNI = params->N ^ omega_in;
+                // compiler will reuse expressions already computed
+                denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
+                float power = cosNI * expf(-exp_arg) / denom;
+                eval.setValue(power, power, power);
+                return;
+            }
         }
+        pdf = 0;
+        omega_in.setValue(0.0f, 0.0f, 0.0f);
+        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -487,7 +492,7 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -514,7 +519,7 @@ public:
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
@@ -550,14 +555,16 @@ public:
                 pdf = pm * 0.25f / cosMO;
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
-                float cosNI = params->N.dot(omega_in);
-                float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
-                float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
-                float G = G1o * G1i;
-                float F = fresnel_shlick(m.dot(omega_out), params->R0);
-                float power = (F * G * D) * 0.25f / cosNI;
-                eval.setValue(power, power, power);
-                return;
+                if ((Ng ^ omega_in) > 0.0f) {
+                    float cosNI = params->N.dot(omega_in);
+                    float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
+                    float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
+                    float G = G1o * G1i;
+                    float F = fresnel_shlick(m.dot(omega_out), params->R0);
+                    float power = (F * G * D) * 0.25f / cosNI;
+                    eval.setValue(power, power, power);
+                    return;
+                }
             }
         }
         pdf = 0; 
@@ -565,7 +572,7 @@ public:
         eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -620,7 +627,7 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -649,7 +656,7 @@ public:
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
@@ -686,16 +693,18 @@ public:
                 pdf = pm * 0.25f / cosMO;
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
-                float cosNI = params->N.dot(omega_in);
-                float ao = 1 / (params->ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
-                float ai = 1 / (params->ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
-                float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
-                float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
-                float G = G1o * G1i;
-                float F = fresnel_shlick(m.dot(omega_out), params->R0);
-                float power = (F * G * D) * 0.25f / cosNI;
-                eval.setValue(power, power, power);
-                return;
+                if ((Ng ^ omega_in) > 0.0f) {
+                    float cosNI = params->N.dot(omega_in);
+                    float ao = 1 / (params->ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
+                    float ai = 1 / (params->ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
+                    float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
+                    float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
+                    float G = G1o * G1i;
+                    float F = fresnel_shlick(m.dot(omega_out), params->R0);
+                    float power = (F * G * D) * 0.25f / cosNI;
+                    eval.setValue(power, power, power);
+                    return;
+                }
             }
         }
         pdf = 0;
@@ -703,7 +712,7 @@ public:
         eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         const params_t *params = (const params_t *) paramsptr;

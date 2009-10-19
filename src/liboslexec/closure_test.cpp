@@ -53,20 +53,20 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr,
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         return Color3 (0, 0, 0);
     }
 
-    void sample (const void *paramsptr,
+    void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
                  Vec3 &omega_in, float &pdf, Color3 &eval) const
     {
         pdf = 0, omega_in.setValue(0, 0, 0), eval.setValue(0, 0, 0);
     }
 
-    float pdf (const void *paramsptr,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         return 0;

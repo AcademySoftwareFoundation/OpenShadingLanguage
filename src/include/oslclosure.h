@@ -193,7 +193,7 @@ public:
     /// It is safe to assume that the omega_in vector is inside the cone returned
     /// above. If the get_cone method returned false, this function will never be
     /// called.
-    virtual Color3 eval (const void *paramsptr,
+    virtual Color3 eval (const void *paramsptr, const Vec3 &Ng,
                          const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
 
     /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
@@ -203,7 +203,7 @@ public:
     /// Unlike the other methods, this routine can be called even if the
     /// get_cone routine returned false. This is to allow singular BRDFs to pick
     /// directions from infinitely small cones.
-    virtual void sample (const void *paramsptr,
+    virtual void sample (const void *paramsptr, const Vec3 &Ng,
                          const Vec3 &omega_out, float randu, float randv,
                          Vec3 &omega_in, float &pdf, Color3 &eval) const = 0;
 
@@ -213,7 +213,7 @@ public:
     /// It is safe to assume that the omega_in vector is inside the cone returned
     /// above. If the get_cone method returned false, this function will never be
     /// called. This means that singular BSDFs should not return 1 here.
-    virtual float pdf (const void *paramsptr,
+    virtual float pdf (const void *paramsptr, const Vec3 &Ng,
                        const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
 };
 
@@ -231,21 +231,21 @@ public:
     /// normal N and the viewing direction omega_out, compute the outgoing
     /// radiance along omega_out (which points away from the light's
     /// surface).
-    virtual Color3 eval (const void *paramsptr, const Vec3 &N, 
+    virtual Color3 eval (const void *paramsptr, const Vec3 &Ng, 
                          const Vec3 &omega_out) const = 0;
 
     /// Sample the emission direction -- Given instance parameters, the light's
     /// surface normal and random deviates randu and randv on [0,1), return a
     /// sampled direction omega_out (pointing away from the light's surface) and
     /// the PDF value in that direction.
-    virtual void sample (const void *paramsptr, const Vec3 &N,
+    virtual void sample (const void *paramsptr, const Vec3 &Ng,
                          float randu, float randv,
                          Vec3 &omega_out, float &pdf) const = 0;
 
     /// Return the probability distribution function in the direction omega_out,
     /// given the parameters and the light's surface normal.  This MUST match
     /// the PDF computed by sample().
-    virtual float pdf (const void *paramsptr, const Vec3 &N,
+    virtual float pdf (const void *paramsptr, const Vec3 &Ng,
                        const Vec3 &omega_out) const = 0;
 };
 

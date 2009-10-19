@@ -55,7 +55,7 @@ public:
         float outer_angle;
     };
 
-    Color3 eval (const void *paramsptr, const Vec3 &N, 
+    Color3 eval (const void *paramsptr, const Vec3 &Ng, 
                  const Vec3 &omega_out) const
     {
         const params_t *params = (const params_t *) paramsptr;
@@ -65,7 +65,7 @@ public:
         float inner_angle = params->inner_angle < outer_angle ? params->inner_angle : outer_angle;
         if (inner_angle < 0.0f) 
             inner_angle = 0.0f;
-        float cosNO = N.dot(omega_out);
+        float cosNO = Ng.dot(omega_out);
         float cosU  = cosf(inner_angle);
         float cosA  = cosf(outer_angle);
         float res;
@@ -89,13 +89,13 @@ public:
         return Color3(res, res, res);
     }
 
-    void sample (const void *paramsptr, const Vec3 &N, float randu, float randv,
+    void sample (const void *paramsptr, const Vec3 &Ng, float randu, float randv,
                  Vec3 &omega_out, float &pdf) const
     {
         // We don't do anything sophisticated here for the step
         // We just sample the whole cone uniformly to the cosine
         Vec3 T, B;
-        make_orthonormals(N, T, B);
+        make_orthonormals(Ng, T, B);
         const params_t *params = (const params_t *) paramsptr;
         float outer_angle = params->outer_angle < M_PI*0.5 ? params->outer_angle : M_PI*0.5;
         if (outer_angle < 0.0f) 
@@ -106,21 +106,21 @@ public:
         float sinTheta = sqrtf(1.0f - cosTheta * cosTheta);
         omega_out = (cosf(phi) * sinTheta) * T +
                     (sinf(phi) * sinTheta) * B +
-                                 cosTheta  * N;
+                                 cosTheta  * Ng;
         pdf = 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
     }
 
     /// Return the probability distribution function in the direction omega_out,
     /// given the parameters and the light's surface normal.  This MUST match
     /// the PDF computed by sample().
-    float pdf (const void *paramsptr, const Vec3 &N,
+    float pdf (const void *paramsptr, const Vec3 &Ng,
                const Vec3 &omega_out) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
         if (outer_angle < 0.0f) 
             outer_angle = 0.0f;
-        float cosNO = N.dot(omega_out);
+        float cosNO = Ng.dot(omega_out);
         float cosA  = cosf(outer_angle);
         if (cosNO < cosA)
             return 0.0f;

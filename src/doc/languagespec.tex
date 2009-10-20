@@ -63,8 +63,8 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 12 August, 2009 \\
-(with corrections, 17 Oct 2009)
+\date{{\large Date: 19 October, 2009 \\
+%(with corrections, 19 Oct 2009)
 }}
 
 
@@ -160,7 +160,7 @@ hardest to change later.
 \label{chap:bigpicture}
 
 This chapter attempts to lay out the major concepts of \langname,
-define key nomenclature, and sketch out how individual shader fit 
+define key nomenclature, and sketch out how individual shaders fit 
 together in the context of a renderer as a whole.
 
 \begin{annotate}
@@ -187,8 +187,8 @@ in its output {\cf Cout}:
 
 \medskip
 
-The shader's inputs and outputs are called \emph{parameters}.  Input
-parameters have default values, specified in the shader code, but may
+The shader's inputs and outputs are called \emph{shader parameters}.  
+Parameters have default values, specified in the shader code, but may
 also be given new values by the renderer at runtime.  
 
 \subsection*{Shader instances}
@@ -342,7 +342,7 @@ For example, a surface shader may compute its result like this:
 
 \begin{code}
     color paint = texture ("file.tx", u, v);
-    Ci = paint * lambert();
+    Ci = paint * lambert (N);
 \end{code}
 
 \noindent In this example, the variable {\cf paint} will take on a
@@ -363,12 +363,12 @@ The closures output by surface and volume shaders can do a number of
 interesting things that a mere number cannot:
 
 \begin{itemize}
+\item Evaluate: given input and output light directions, compute the
+  proportion of light propagating from input to output.
 \item Sample: given just an input (or output) direction, choose a
   scattering direction with a probability distribution that is
   proportional to the amount of light that will end up going in various
   directions.
-\item Evaluate: given input and output light directions, compute the
-  proportion of light propagating from input to output.
 \item Integrate: given all lights and a view direction, compute
   the total amount of light leaving the surface in the view direction.
 \item Recompute: given changes only to lights (or only to one light),
@@ -404,7 +404,7 @@ information, to yield the amount of light visible to the camera.
 \begin{annotate}
 At present, this document is written as if the integrators are built
 into the renderer itself (or implemented as renderer plug-ins).  At a
-later time, we may consider making it possibe for integrators themselves
+later time, we may consider making it possible for integrators themselves
 to be written in \langname.
 \end{annotate}
 
@@ -631,12 +631,15 @@ Following are brief descriptions of the basic types of shaders:
 Surface shaders determine the basic material properties of a surface and
 how it reacts to light.  They are responsible for computing a
 \colorclosure that describes the material, and optionally setting
-\opacity and other user-defined output variables.  They may not alter
+other user-defined output variables.  They may not alter
 the position of the surface.
 
 Surface shaders are written as if they describe the behavior of a single
 point on the primitive, and the renderer will choose the positions
 surface at which the shader must be evaluated.
+
+Surface shaders also are used to describe emissive objects, i.e., light
+sources.  OSL does not need a separate shader type to describe lights.
 
 \subsection*{{\cf displacement} shaders}
 
@@ -653,17 +656,20 @@ side of the medium.  They are similar to {\cf surface} shaders, except
 that they may be called from positions that do not lie upon (and are not
 necessarily associated with) any particular primitive.
 
+\begin{comment}
 \subsection*{{\cf light} shaders}
 
 Light shaders describe how much energy a light source deposits at a
 given destination.
+\end{comment}
+
 
 \subsection*{{\cf shader} generic shaders}
 
 Generic shaders are used for utility code, generic routines that may be
 called as individual layers in a shader group.  Generic shaders need not
 specify a shader type, and therefore may be reused from inside surface,
-displacement, volume, or light shader groups.  But as a result, they may
+displacement, or volume shader groups.  But as a result, they may
 not contain any functionality that cannot be performed from inside all
 shader types (for example, they may not alter \P, which can only be done
 from within a displacement shader).
@@ -854,7 +860,7 @@ constants (not computed expression).
 Metadata about the shader as a whole is placed between the shader name
 and the parameter list.  Metadata about shader parameters are placed
 immediately after the parameter's initializing expression, but before
-the comma or closing parenthesis that terminates the parameter
+the comma or closing parentheses that terminates the parameter
 description.
 
 Below is an example shader declaration showing the use of shader and
@@ -1443,7 +1449,7 @@ Some computations may be easier in a coordinate system other than
 \currentspace.  For these reasons, SL provides a built-in 
 {\cf transform} function that
 allows you to transform points, vectors, and normals 
-among different coordinate systems (see Section~\ref{chap:stdlib:geom}).  Note,
+among different coordinate systems (see Section~\ref{sec:stdlib:geom}).  Note,
 however, that \langname does not keep track of which point variables are
 in which coordinate systems.  It is the responsibility of the shader
 programmer to keep track of this and ensure that, for example, lighting
@@ -2077,8 +2083,8 @@ component is nonzero, \emph{false} all components are zero.  Strings are
 considered \emph{true} if they are nonempty, \emph{false} if they are
 the empty string (\qkw{}).
 
-\item another expression enclosed in parenthesis: {\cf ( )}.
-  Parenthesis may be used to guarantee associativity of operations.
+\item another expression enclosed in parentheses: {\cf ( )}.
+  Parentheses may be used to guarantee associativity of operations.
 
 \item Type casts, specified either by having the type name in 
 parentheses in front of the value to cast (C-style typecasts)
@@ -2316,41 +2322,40 @@ displacement shader, changing this variable displaces the surface. \\
 \vector\ {\ce dPdu}, {\ce dPdv} & Partial derivatives $\partial
 P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 \hline
-\vector\ {\ce L} & Direction of incoming light (points from {\cf Ps} to
-         {\cf Pl}). \\
-\hline
-\color\ {\ce Cl} & Incoming light color at P. \\
-\hline
-\point\ {\ce Ps} & Position at which the light is being queried 
+%\vector\ {\ce L} & Direction of incoming light (points from {\cf Ps} to
+%         {\cf Pl}). \\
+%\hline
+%\color\ {\ce Cl} & Incoming light color at P. \\
+%\hline
+%\point\ {\ce Ps} & Position at which the light is being queried 
 %(i.e., the position passed to \illuminance). 
-\\
-\hline
-\normal\ {\ce Ns} & Axis about which the light is being queried
+%\\
+%\hline
+%\normal\ {\ce Ns} & Axis about which the light is being queried
 % (i.e., the axis passed to \illuminance), or the surface's \N if no
 % axis was passed to \illuminance). 
-\\
-\hline
-\point\ {\ce Pl} & Position of the light source. \\
-\hline
-\normal\ {\ce Nl} & Normal on the light (area light sources only). \\[1ex]
-\hline
-\color\ {\ce \Ci} & Incident ray color --- the color of the light leaving the surface from \P in the direction {\cf -I}. \\
-\hline
-\color\ {\ce \opacity} & Incident ray opacity --- the degree to which the viewer can ``see through'' the surface at \P. \\[1ex]
-\hline
+%\\
+%\hline
+%\point\ {\ce Pl} & Position of the light source. \\
+%\hline
+%\normal\ {\ce Nl} & Normal on the light (area light sources only). \\[1ex]
+%\hline
 \float\ {\ce time} & Current shutter time for the point being shaded. \\
 \hline
 \float\ {\ce dtime} & The amount of time covered by this shading sample. \\
 \hline
 \vector\ {\ce dPdtime} & How the surface position \P is moving per unit time.\\
 \hline
+\closurecolor\ {\ce \Ci} & Incident radience --- a closure representing the color of the light leaving the surface from \P in the direction {\cf -I}. \\
+\hline
+%\color\ {\ce \opacity} & Incident ray opacity --- the degree to which the viewer can ``see through'' the surface at \P. \\[1ex]
 \end{tabular}
 \caption{Global variables available inside shaders.
 \label{tab:globalvars}}
 \end{table}
 
 
-
+\begin{comment}  % old table
 \begin{table}
 \begin{tabular}{|p{1in}p{0.75in}p{0.75in}p{0.75in}p{1.7in}|}
 \hline
@@ -2362,12 +2367,12 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 {\cf Ng}      & R     & R  &  &  \\
 {\cf dPdu}    & R     & R  &  &  \\
 {\cf dPdv}    & R     & R  &  &  \\
-%{\cf u, v}    & R     & R  & R$^1$ & R$^1$ \\
-\Ci           & RW    &    & RW    & \\
-\Oi           & RW    &    & RW    & \\
+{\cf u, v}    & R     & R  & R$^1$ & R$^1$ \\
 {\cf time}    & R     & R  & R     & R \\
 {\cf dtime}   & R     & R  & R     & R \\
 {\cf dPdtime} & R     & R  & R     & R \\
+\Ci           & RW    &    & RW    & \\
+\Oi           & RW    &    & RW    & \\
 %{\cf L}       & R$^2$ &    & R$^2$ & RW \\
 {\cf L}       &       &    &       & RW \\
 %{\cf Cl}      & R$^2$ &    & R$^2$ & RW \\
@@ -2378,6 +2383,26 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 %{\cf Nl}      &       &    & R$^2$ & R \\
 {\cf Pl}      &       &    &  & R \\
 {\cf Nl}      &       &    &  & R \\
+\hline 
+\end{tabular}
+\end{comment}
+
+\begin{table}[c]
+\begin{tabular}{|p{1in}p{0.75in}p{0.75in}p{0.75in}|}
+\hline
+{\bf Variable} & surface & displacement & volume  \\
+\hline
+\P            & R     & RW & R      \\
+\I            & R     &    & R    \\
+\N            & RW    & RW &    \\
+{\cf Ng}      & R     & R  &    \\
+{\cf dPdu}    & R     & R  &    \\
+{\cf dPdv}    & R     & R  &    \\
+{\cf u, v}    & R     & R  & R   \\
+{\cf time}    & R     & R  & R       \\
+{\cf dtime}   & R     & R  & R       \\
+{\cf dPdtime} & R     & R  & R       \\
+\Ci           & RW    &    & RW     \\
 \hline 
 \end{tabular}
 
@@ -3915,7 +3940,8 @@ nothing (empty, no token).
     "(" <shader-formal-params-opt> ")" "{" <statement-list> "}"
 
 <shadertype> ::= "displacement" | "imager" | "integrator" | 
-    "light" | "shader" | "surface" | "volume"
+    "shader" | "surface" | "volume"
+% "light"
 
 <shader-formal-params> ::= <shader-formal-param> \{ "," <shader-formal-param> \}
 

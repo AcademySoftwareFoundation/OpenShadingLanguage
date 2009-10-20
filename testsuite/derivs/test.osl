@@ -69,4 +69,23 @@ test ()
                 a, Dx(a), Dy(a));
     }
 
+    {
+        // Test component reference
+        float a = P[0], b = P[1];
+        printf ("\n");
+        printf ("comp ref: P = %g, Dx(P) = %g, Dy(P) = %g\n", P, Dx(P), Dy(P));
+        printf ("  P[0] = %g, Dx(P[0]) = %g, Dy(P[0]) = %g\n",
+                a, Dx(a), Dy(a));
+        printf ("  P[1] = %g, Dx(P[1]) = %g, Dy(P[1]) = %g\n",
+                b, Dx(b), Dy(b));
+    }
+
+    {
+        // Test component reference
+        color C = 0;
+        C[0] = u;
+        C[1] = v;
+        printf ("\n");
+        printf ("comp assign: C[0]=u, C[1]=v: now C = %g, Dx(C) = %g, Dy(C) = %g\n", C, Dx(C), Dy(C));
+    }
 }

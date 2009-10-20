@@ -225,6 +225,16 @@ public:
         }
         result = v[i];
     }
+    void operator() (Dual2<float> &result, const Dual2<Vec3> &v, int i) {
+        if (i < 0 || i > 2) {
+            const Symbol &V (m_exec->sym (m_exec->op().firstarg()+1));
+            m_exec->error ("Index out of range: %s %s[%d]\n",
+                           V.typespec().string().c_str(),
+                           V.name().c_str(), i);
+            i = clamp (i, 0, 2);
+        }
+        result.set (v.val()[i], v.dx()[i], v.dy()[i]);
+    }
 private:
     ShadingExecution *m_exec;
 };
@@ -302,6 +312,7 @@ DECLOP (OP_normal)
 // result = vec[index]
 DECLOP (OP_compref)
 {
+#ifdef DEBUG
     DASSERT (nargs == 3);
     Symbol &Result (exec->sym (args[0]));
     Symbol &V (exec->sym (args[1]));
@@ -310,8 +321,9 @@ DECLOP (OP_compref)
              ! V.typespec().is_closure() && ! I.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && V.typespec().is_triple() &&
              I.typespec().is_int());
+#endif
 
-    binary_op_guts<Float,Vec3,int,Compref> (Result, V, I, exec,
+    binary_op_unary_derivs<float,Vec3,int,Compref> (exec, nargs, args,
                                             runflags, beginpoint, endpoint);
 }
 
@@ -328,16 +340,12 @@ static DECLOP (specialized_compassign)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Result.is_varying() | Index.is_varying() | Val.is_varying());
 
-    // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
     // Loop over points, do the operation
-    VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
-    VaryingRef<int> index ((int *)Index.data(), Index.step());
-    VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
-    if (result.is_uniform()) {
+    if (Result.is_uniform()) {
         // Uniform case
+        VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
+        VaryingRef<int> index ((int *)Index.data(), Index.step());
+        VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
         int c = *index;
         if (c < 0 || c > 2) {
             exec->error ("Index out of range: %s %s[%d]\n",
@@ -346,19 +354,50 @@ static DECLOP (specialized_compassign)
             c = clamp (c, 0, 2);
         }
         (*result)[c] = (Float) *val;
+        if (Result.has_derivs ())
+            exec->zero_derivs (Result);
     } else {
-        // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                int c = index[i];
-                if (c < 0 || c > 2) {
-                    exec->error ("Index out of range: %s %s[%d]\n",
-                                 Result.typespec().string().c_str(),
-                                 Result.name().c_str(), c);
-                    c = clamp (c, 0, 2);
+        // Fully varying case -- but break out deriv support
+        if (Result.has_derivs() && Val.has_derivs()) {
+            VaryingRef<Dual2<Vec3> > result ((Dual2<Vec3> *)Result.data(), Result.step());
+            VaryingRef<int> index ((int *)Index.data(), Index.step());
+            VaryingRef<Dual2<SRC> > val ((Dual2<SRC> *)Val.data(), Val.step());
+            for (int i = beginpoint;  i < endpoint;  ++i) {
+                if (runflags[i]) {
+                    int c = index[i];
+                    if (c < 0 || c > 2) {
+                        exec->error ("Index out of range: %s %s[%d]\n",
+                                     Result.typespec().string().c_str(),
+                                     Result.name().c_str(), c);
+                        c = clamp (c, 0, 2);
+                    }
+                    Vec3 rval = result[i].val();
+                    Vec3 rdx  = result[i].dx();
+                    Vec3 rdy  = result[i].dy();
+                    rval[c] = (Float) val[i].val();
+                    rdx[c]  = (Float) val[i].dx();
+                    rdy[c]  = (Float) val[i].dy();
+                    result[i].set (rval, rdx, rdy);
                 }
-                result[i][c] = (Float) val[i];
             }
+        } else {
+            VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
+            VaryingRef<int> index ((int *)Index.data(), Index.step());
+            VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
+            for (int i = beginpoint;  i < endpoint;  ++i) {
+                if (runflags[i]) {
+                    int c = index[i];
+                    if (c < 0 || c > 2) {
+                        exec->error ("Index out of range: %s %s[%d]\n",
+                                     Result.typespec().string().c_str(),
+                                     Result.name().c_str(), c);
+                        c = clamp (c, 0, 2);
+                    }
+                    result[i][c] = (Float) val[i];
+                }
+            }
+            if (Result.has_derivs ())
+                exec->zero_derivs (Result);
         }
     }
 }

@@ -257,6 +257,43 @@ quaternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C, Symbol &D,
 }
 
 
+
+// this is a quaternary function where only the "A" and "B" arguments contribute
+// to the result's derivatives
+template <typename RET, typename ATYPE, typename BTYPE,
+          typename CTYPE, typename DTYPE, typename FUNCTION>
+DECLOP (quaternary_op_binary_derivs)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+    Symbol &D (exec->sym (args[4]));
+
+    if (Result.has_derivs()) {
+        if (A.has_derivs()) {
+            if (B.has_derivs())
+                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                        runflags, beginpoint, endpoint, false);
+            else
+                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                        runflags, beginpoint, endpoint, false);
+        } else if (B.has_derivs()) {
+            quaternary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                    runflags, beginpoint, endpoint, false);
+        } else {
+            quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                    runflags, beginpoint, endpoint,true);
+        }
+    } else {
+        quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
+                runflags, beginpoint, endpoint, false);
+    }
+}
+
+
+
 // Heavy lifting of the math and other ternary ops, this is a templated
 // version that knows the types of the arguments and the operation to
 // perform (given by a functor).
@@ -405,6 +442,27 @@ DECLOP (binary_op)
     } else {
         binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
                                                   runflags, beginpoint, endpoint, false);
+    }
+}
+
+
+
+// this is a binary function where only the "A" argument contributes to the
+// result's derivatives
+template <typename RET, typename ATYPE, typename BTYPE, typename FUNCTION>
+DECLOP (binary_op_unary_derivs)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+
+    if (Result.has_derivs() && A.has_derivs()) {
+        binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
+                runflags, beginpoint, endpoint, false);
+    } else {
+        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
+                runflags, beginpoint, endpoint, true);
     }
 }
 

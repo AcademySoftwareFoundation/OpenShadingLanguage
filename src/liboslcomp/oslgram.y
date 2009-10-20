@@ -424,8 +424,8 @@ shadertype
                         $$ = ShadTypeDisplacement;
                     else if (! strcmp ($1, "volume"))
                         $$ = ShadTypeVolume;
-                    else if (! strcmp ($1, "light"))
-                        $$ = ShadTypeLight;
+                    // else if (! strcmp ($1, "light"))
+                    //    $$ = ShadTypeLight;
                     else {
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),

@@ -70,6 +70,69 @@ test ()
     }
 
     {
+        float a = tan(u);
+        printf ("\n");
+        printf ("tan: a = tan(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = cosh(u);
+        printf ("\n");
+        printf ("cosh: a = cosh(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = sinh(u);
+        printf ("\n");
+        printf ("sinh: a = sinh(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = tanh(u);
+        printf ("\n");
+        printf ("tanh: a = tanh(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = acos(u);
+        printf ("\n");
+        printf ("acos: a = acos(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = asin(u);
+        printf ("\n");
+        printf ("asin: a = asin(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = atan(u);
+        printf ("\n");
+        printf ("atan: a = atan(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = degrees(u);
+        printf ("\n");
+        printf ("degrees: a = degrees(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = radians(u);
+        printf ("\n");
+        printf ("radians: a = radians(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
         // Test component reference
         float a = P[0], b = P[1];
         printf ("\n");

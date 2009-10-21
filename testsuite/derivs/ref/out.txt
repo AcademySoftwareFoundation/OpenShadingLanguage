@@ -62,6 +62,51 @@ sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
 sin: a = sin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
 sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
 
+tan: a = tan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+tan: a = tan(u); a = 1.55741, Dx(a) = 1.71276, Dy(a) = 0
+tan: a = tan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+tan: a = tan(u); a = 1.55741, Dx(a) = 1.71276, Dy(a) = 0
+
+cosh: a = cosh(u); a = 1, Dx(a) = 0, Dy(a) = 0
+cosh: a = cosh(u); a = 1.54308, Dx(a) = 0.587601, Dy(a) = 0
+cosh: a = cosh(u); a = 1, Dx(a) = 0, Dy(a) = 0
+cosh: a = cosh(u); a = 1.54308, Dx(a) = 0.587601, Dy(a) = 0
+
+sinh: a = sinh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+sinh: a = sinh(u); a = 1.1752, Dx(a) = 0.77154, Dy(a) = 0
+sinh: a = sinh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+sinh: a = sinh(u); a = 1.1752, Dx(a) = 0.77154, Dy(a) = 0
+
+tanh: a = tanh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+tanh: a = tanh(u); a = 0.761594, Dx(a) = 0.209987, Dy(a) = 0
+tanh: a = tanh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+tanh: a = tanh(u); a = 0.761594, Dx(a) = 0.209987, Dy(a) = 0
+
+acos: a = acos(u); a = 1.5708, Dx(a) = -0.5, Dy(a) = -0
+acos: a = acos(u); a = 0, Dx(a) = 0, Dy(a) = 0
+acos: a = acos(u); a = 1.5708, Dx(a) = -0.5, Dy(a) = -0
+acos: a = acos(u); a = 0, Dx(a) = 0, Dy(a) = 0
+
+asin: a = asin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+asin: a = asin(u); a = 1.5708, Dx(a) = 0, Dy(a) = 0
+asin: a = asin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+asin: a = asin(u); a = 1.5708, Dx(a) = 0, Dy(a) = 0
+
+atan: a = atan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
+atan: a = atan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
+
+degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
+degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
+degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
+degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
+
+radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
+radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
+radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
+radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
+
 comp ref: P = 0 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 comp ref: P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 comp ref: P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0

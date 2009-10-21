@@ -234,24 +234,109 @@ Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
                      bvalinv * ( - aval_bval * b.dy()));
 }
 
-
+// f(x) = cos(x), f'(x) = -sin(x)
 template<class T>
 Dual2<T> cos (const Dual2<T> &a)
 {
-    float sina, cosa;
+    T sina, cosa;
     sina = std::sin (a.val());
     cosa = std::cos (a.val());
     return Dual2<T> (cosa, -sina * a.dx(), -sina * a.dy());
 }
 
-
+// f(x) = sin(x),  f'(x) = cos(x)
 template<class T>
 Dual2<T> sin (const Dual2<T> &a)
 {
-    float sina, cosa;
+    T sina, cosa;
     sina = std::sin (a.val());
     cosa = std::cos (a.val());
     return Dual2<T> (sina, cosa * a.dx(), cosa * a.dy());
+}
+
+// f(x) = tan(x), f'(x) = sec^2(x)
+template<class T>
+Dual2<T> tan (const Dual2<T> &a)
+{
+   T tana, cosa, sec2a;
+   tana  = std::tan (a.val());
+   cosa  = std::cos (a.val());
+   sec2a = T(1)/(cosa*cosa);
+   return Dual2<T> (tana, sec2a * a.dx(), sec2a * a.dy());
+}
+
+// f(x) = cosh(x), f'(x) = sinh(x)
+template<class T>
+Dual2<T> cosh (const Dual2<T> &a)
+{
+   T cosha, sinha;
+   cosha = std::cosh(a.val());
+   sinha = std::sinh(a.val());
+   return Dual2<T> (cosha, sinha * a.dx(), sinha * a.dy());
+}
+
+// f(x) = sinh(x), f'(x) = cosh(x)
+template<class T>
+Dual2<T> sinh (const Dual2<T> &a)
+{
+   T cosha, sinha;
+   cosha = std::cosh(a.val());
+   sinha = std::sinh(a.val());
+   return Dual2<T> (sinha, cosha * a.dx(), cosha * a.dy());
+}
+
+// f(x) = tanh(x), f'(x) = sech^2(x)
+template<class T>
+Dual2<T> tanh (const Dual2<T> &a)
+{
+   T cosha, tanha, sech2a;
+   tanha = std::tanh(a.val());
+   cosha = std::cosh(a.val());
+   sech2a = T(1)/(cosha*cosha);
+   return Dual2<T> (tanha, sech2a * a.dx(), sech2a * a.dy());
+}
+
+// f(x) = acos(x), f'(x) = -1/(sqrt(1 - x^2))
+template<class T>
+Dual2<T> acos (const Dual2<T> &a)
+{
+   if (a.val() >= T(1)) 
+      return Dual2<T> (T(0), T(0), T(0));
+   if (a.val() <= T(-1)) 
+      return Dual2<T> (T(M_PI), T(0), T(0));
+
+   T arccosa, denom;
+   arccosa = std::acos (a.val());
+   denom   = -T(1) / std::sqrt (T(1) - a.val()*a.val());
+
+   return Dual2<T> (arccosa, denom * a.dx(), denom * a.dy());
+}
+
+// f(x) = asin(x), f'(x) = 1/(sqrt(1 - x^2))
+template<class T>
+Dual2<T> asin (const Dual2<T> &a)
+{
+   if (a.val() >= T(1)) 
+      return Dual2<T> (T(M_PI/2), T(0), T(0));
+   if (a.val() <= T(-1)) 
+      return Dual2<T> (T(-M_PI/2), T(0), T(0));
+
+   float arcsina, denom;
+   arcsina = std::asin (a.val());
+   denom   = T(1) / std::sqrt (T(1) - a.val()*a.val());
+
+   return Dual2<T> (arcsina, denom * a.dx(), denom * a.dy());
+}
+
+// f(x) = atan(x), f'(x) = 1/(1 + x^2)
+template<class T>
+Dual2<T> atan (const Dual2<T> &a)
+{
+   T arctana, denom;
+   arctana = std::atan (a.val());
+   denom   = T(1) / (T(1) + a.val()*a.val());
+
+   return Dual2<T> (arctana, denom * a.dx(), denom * a.dy());
 }
 
 

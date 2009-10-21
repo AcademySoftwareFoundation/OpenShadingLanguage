@@ -66,7 +66,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/varyingref.h"
 
-
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif
@@ -76,106 +75,97 @@ namespace pvt {
 
 namespace {
 
+// this helper template calls the scalar versions of the function, Func, for
+// each of the Vec'3 components.
+template <typename Func> class Vec3Adaptor 
+{
+public:
+    Vec3Adaptor (ShadingExecution *) { }
+    inline void operator() (Vec3 &result, const Vec3 &x) { 
+       Func func;
+       func (result.x, x.x);
+       func (result.y, x.y);
+       func (result.z, x.z);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a)
+    {
+        Func func;
+        Dual2<float> ax, ay, az;
+        func (ax, Dual2<float> (a.val().x, a.dx().x, a.dy().x));
+        func (ay, Dual2<float> (a.val().y, a.dx().y, a.dy().y));
+        func (az, Dual2<float> (a.val().z, a.dx().z, a.dy().z));
+        result.set (Vec3( ax.val(), ay.val(), az.val()),
+                    Vec3( ax.dx(),  ay.dx(),  az.dx() ),
+                    Vec3( ax.dy(),  ay.dy(),  az.dy() ));
+    }
+};
+
 // Functors for the math functions
 
 // regular trigonometric functions
 
-inline Vec3 cos (const Vec3 &x) {
-    return Vec3 (cosf(x[0]), cosf(x[1]), cosf(x[2]));
-}
-
-inline Vec3 sin (const Vec3 &x) {
-    return Vec3 (sinf(x[0]), sinf(x[1]), sinf(x[2]));
-}
-
 class Cos {
 public:
-    Cos (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = cosf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = cos (x); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x) {
-        result = cos (x);
-    }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a) {
-        Vec3 sina, cosa;
-        sina = sin (a.val());
-        cosa = cos (a.val());
-        result.set (cosa, -sina * a.dx(), -sina * a.dy());
-    }
+    Cos (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::cos (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = cos (x); }
 };
 
 class Sin {
 public:
-    Sin (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = sinf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = sin (x); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x) {
-        result = sin (x);
-    }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a) {
-        Vec3 sina, cosa;
-        sina = sin (a.val());
-        cosa = cos (a.val());
-        result.set (sina, cosa * a.dx(), cosa * a.dy());
-    }
+    Sin (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::sin (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = sin (x); }
 };
 
 class Tan {
 public:
-    Tan (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = tanf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (tanf (x[0]), tanf (x[1]), tanf (x[2]));
-    }
+    Tan (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::tan (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = tan (x); }
 };
 
 // inverse trigonometric functions
 
 class ACos {
 public:
-    ACos (ShadingExecution *) { }
+    ACos (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = safe_acosf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (safe_acosf (x[0]), safe_acosf (x[1]), safe_acosf (x[2]));
-    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = acos (x); }
 private:
     inline float safe_acosf (float x) {
         if (x >=  1.0f) return 0.0f;
         if (x <= -1.0f) return M_PI;
-        return acosf (x);
+        return std::acos (x);
     }
 };
 
 class ASin {
 public:
-    ASin (ShadingExecution *) { }
+    ASin (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = safe_asinf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (safe_asinf (x[0]), safe_asinf (x[1]), safe_asinf (x[2]));
-    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = asin (x); }
 private:
-    static inline float safe_asinf (float x) {
+    inline float safe_asinf (float x) {
         if (x >=  1.0f) return  M_PI/2;
         if (x <= -1.0f) return -M_PI/2;
-        return asinf (x);
+        return std::asin (x);
     }
 };
 
 class ATan {
 public:
-    ATan (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = atanf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (atanf (x[0]), atanf (x[1]), atanf (x[2]));
-    }
+    ATan (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::atan (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = atan (x); }
 };
 
 class ATan2 {
 public:
-    ATan2 (ShadingExecution *) { }
-    inline void operator() (float &result, float y, float x) { result = atan2f (y, x); }
+    ATan2 (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float y, float x) { result = std::atan2 (y, x); }
     inline void operator() (Vec3 &result, const Vec3 &y, const Vec3 &x) {
-        result = Vec3 (atan2f (y[0], x[0]), atan2f (y[1], x[1]), atan2f (y[2], x[2]));
+        result = Vec3 (std::atan2 (y[0], x[0]), std::atan2 (y[1], x[1]), std::atan2 (y[2], x[2]));
     }
 };
 
@@ -183,16 +173,16 @@ public:
 
 class Degrees {
 public:
-    Degrees (ShadingExecution *) { }
+    Degrees (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = x*180.0/M_PI; }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = x*Float(180.0/M_PI); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = x*Dual2<float>(180.0f/M_PI); }
 };
 
 class Radians {
 public:
-    Radians (ShadingExecution *) { }
+    Radians (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = x*M_PI/180.0; }
-    inline void operator() (Vec3 &result, Vec3 &x) { result = x*Float(M_PI/180.0); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = x*Dual2<float>(M_PI/180.0); }
 };
 
 
@@ -200,29 +190,23 @@ public:
 
 class Cosh {
 public:
-    Cosh (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = coshf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (coshf (x[0]), coshf (x[1]), coshf (x[2]));
-    }
+    Cosh (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::cosh (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = cosh (x); }
 };
 
 class Sinh {
 public:
-    Sinh (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = sinhf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (sinhf (x[0]), sinhf (x[1]), sinhf (x[2]));
-    }
+    Sinh (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::sinh (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = sinh (x); }
 };
 
 class Tanh {
 public:
-    Tanh (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = tanhf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (tanhf (x[0]), tanhf (x[1]), tanhf (x[2]));
-    }
+    Tanh (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::tanh (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = tanh (x); }
 };
 
 // logarithmic/exponential functions
@@ -795,7 +779,7 @@ DECLOP (generic_unary_function_shadeop)
 
     // We allow two flavors: float = func (float), and triple = func (triple).
     if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-        impl = unary_op<Vec3,Vec3, FUNCTION >;
+        impl = unary_op<Vec3,Vec3, Vec3Adaptor<FUNCTION> >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float()) {
         impl = unary_op<float,float, FUNCTION >;
@@ -903,25 +887,25 @@ DECLOP (OP_sin)
 
 DECLOP (OP_tan)
 {
-    generic_unary_function_shadeop_noderivs<Tan> (exec, nargs, args, 
+    generic_unary_function_shadeop<Tan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_acos)
 {
-    generic_unary_function_shadeop_noderivs<ACos> (exec, nargs, args, 
+    generic_unary_function_shadeop<ACos> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_asin)
 {
-    generic_unary_function_shadeop_noderivs<ASin> (exec, nargs, args, 
+    generic_unary_function_shadeop<ASin> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_atan)
 {
-    generic_unary_function_shadeop_noderivs<ATan> (exec, nargs, args, 
+    generic_unary_function_shadeop<ATan> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -933,31 +917,31 @@ DECLOP (OP_atan2)
 
 DECLOP (OP_degrees)
 {
-    generic_unary_function_shadeop_noderivs<Degrees> (exec, nargs, args, 
+    generic_unary_function_shadeop<Degrees> (exec, nargs, args, 
                                              runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_radians)
 {
-    generic_unary_function_shadeop_noderivs<Radians> (exec, nargs, args, 
+    generic_unary_function_shadeop<Radians> (exec, nargs, args, 
                                              runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_cosh)
 {
-    generic_unary_function_shadeop_noderivs<Cosh> (exec, nargs, args, 
+    generic_unary_function_shadeop<Cosh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_sinh)
 {
-    generic_unary_function_shadeop_noderivs<Sinh> (exec, nargs, args, 
+    generic_unary_function_shadeop<Sinh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_tanh)
 {
-    generic_unary_function_shadeop_noderivs<Tanh> (exec, nargs, args, 
+    generic_unary_function_shadeop<Tanh> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

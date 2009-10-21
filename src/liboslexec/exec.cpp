@@ -268,10 +268,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             }
         } else if (sym.symtype() == SymTypeParam ||
                    sym.symtype() == SymTypeOutputParam) {
-//            ASSERT (sym.dataoffset() < 0 &&
-//                    "Param should not yet have a data offset");
-//            sym.dataoffset (m_context->heap_allot (sym.typespec().simpletype().size()) * m_npoints);
-            size_t addr = context->heap_allot (sym.typespec().simpletype().size() * m_npoints);
+            size_t addr = context->heap_allot (sym.derivsize() * m_npoints);
             sym.data (m_context->heapaddr (addr));
             sym.step (0);  // FIXME
             // Copy the parameter value
@@ -287,6 +284,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
                 memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
                         sym.typespec().simpletype().size());
+            zero_derivs (sym);
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);

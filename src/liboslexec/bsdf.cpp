@@ -350,6 +350,8 @@ public:
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
         float cosNI = params->N.dot(omega_in);
+        if (cosNI * cosNO <= 0.0f)
+           return Color3 (0,0,0);
         // get half vector and get x,y basis on the surface for anisotropy
         Vec3 H = omega_in + omega_out; // no need to normalize
         Vec3 X, Y;

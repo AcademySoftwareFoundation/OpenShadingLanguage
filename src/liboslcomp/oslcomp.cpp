@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/filesystem.hpp>
 
 #include "OpenImageIO/strutil.h"
+#include "OpenImageIO/sysutil.h"
 #include "OpenImageIO/dassert.h"
 
 #include "oslcomp_pvt.h"
@@ -135,6 +136,27 @@ OSLCompilerImpl::compile (const std::string &filename,
     }
 
     std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
+
+    // Determine where the installed shader include directory is, and
+    // look for ../shaders/stdosl.h and force it to include.
+    std::string program = Sysutil::this_program_path ();
+    if (program.size()) {
+        boost::filesystem::path path (program);  // our program
+        path = path.parent_path ();  // now the bin dir of our program
+        path = path.parent_path ();  // now the parent dir
+        path = path / "shaders";
+        bool found = false;
+        if (boost::filesystem::exists (path)) {
+            path = path / "stdosl.h";
+            if (boost::filesystem::exists (path)) {
+                cppcommand += std::string("-include ") + path.string() + " ";
+                found = true;
+            }
+        }
+        if (! found)
+            warning (ustring(filename), 0, "Unable to find \"%s\"",
+                     path.string().c_str());
+    }
 
     m_output_filename.clear ();
     for (size_t i = 0;  i < options.size();  ++i) {

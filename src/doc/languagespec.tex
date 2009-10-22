@@ -2446,14 +2446,18 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 \medskip
 
 \begin{tabular}{p{1in} p{3in}}
-{\cf M\_PI}       & $\pi$ \\ \\
-{\cf M\_PI\_2}    & $\pi/2$ \\ \\
-{\cf M\_PI\_4}    & $\pi/4$ \\ \\
-{\cf M\_E}        & $e$ \\ \\
-{\cf M\_LN2}      & $\ln 2$ \\ \\
-{\cf M\_LN10}     & $\ln 10$ \\ \\
-{\cf M\_SQRT2}    & $\sqrt{2}$ \\ \\
-{\cf M\_SQRT1\_2} & $\sqrt{1/2}$  \\ \\
+{\cf M\_PI}        & $\pi$          \\[0.5ex]
+{\cf M\_PI\_2}     & $\pi/2$        \\[0.5ex]
+{\cf M\_PI\_4}     & $\pi/4$        \\[0.5ex]
+{\cf M\_2\_PI}     & $2/\pi$        \\[0.5ex]
+{\cf M\_2\_SQRTPI} & $2/\sqrt{\pi}$ \\[0.5ex]
+{\cf M\_E}         & $e$            \\[0.5ex]
+{\cf M\_LN2}       & $\ln 2$        \\[0.5ex]
+{\cf M\_LN10}      & $\ln 10$       \\[0.5ex]
+{\cf M\_LOG2E}     & $\log_2 e$     \\[0.5ex]
+{\cf M\_LOG10E}    & $\log_{10} e$  \\[0.5ex]
+{\cf M\_SQRT2}     & $\sqrt{2}$     \\[0.5ex]
+{\cf M\_SQRT1\_2}  & $\sqrt{1/2}$   \\[0.5ex]
 \end{tabular}
 
 \subsection{Mathematical functions}
@@ -2950,7 +2954,7 @@ This makes it ideal to use as a basis function for pattern generation.
 The return \emph{type} may be any of \float, \color, \point, \vector, or
 \normal, depending on the type of the variable the result is assigned to
 (or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float \noise
+(e.g., \point), each component is an uncorrelated \float\ \noise
 function.
 \apiend
 
@@ -3003,7 +3007,7 @@ distributed over $[0,1]$.
 The return \emph{type} may be any of \float, \color, \point, \vector, or
 \normal, depending on the type of the variable the result is assigned to
 (or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float \cellnoise
+(e.g., \point), each component is an uncorrelated \float\ \cellnoise
 function.
 \apiend
 
@@ -3023,7 +3027,7 @@ animation (provided its input is \emph{precisely} identical).
 The return \emph{type} may be any of \float, \color, \point, \vector, or
 \normal, depending on the type of the variable the result is assigned to
 (or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float {\cf hash}
+(e.g., \point), each component is an uncorrelated \float\ {\cf hash}
 function.
 \apiend
 
@@ -3036,7 +3040,7 @@ frame to frame.
 The return \emph{type} may be any of \float, \color, \point, \vector, or
 \normal, depending on the type of the variable the result is assigned to
 (or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float {\cf random()}
+(e.g., \point), each component is an uncorrelated \float\ {\cf random()}
 function.
 \apiend
 

@@ -37,7 +37,7 @@ namespace OSL {
 namespace pvt {
 
 /// Variable cone emissive closure
-/// 
+///
 /// This primitive emits in a cone having a configurable
 /// penumbra area where the light decays to 0 reaching the
 /// outer_angle limit. It can also behave as a lambertian emitter
@@ -46,7 +46,7 @@ namespace pvt {
 class GenericEmissiveClosure : public EmissiveClosure {
 public:
     GenericEmissiveClosure () : EmissiveClosure ("emission", "ff") { }
-    
+
     struct params_t {
         // Two params, angles both
         // first is the outer_angle where penumbra starts
@@ -55,23 +55,23 @@ public:
         float outer_angle;
     };
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng, 
-                 const Vec3 &omega_out) const
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
-        if (outer_angle < 0.0f) 
+        if (outer_angle < 0.0f)
             outer_angle = 0.0f;
         float inner_angle = params->inner_angle < outer_angle ? params->inner_angle : outer_angle;
-        if (inner_angle < 0.0f) 
+        if (inner_angle < 0.0f)
             inner_angle = 0.0f;
         float cosNO = Ng.dot(omega_out);
         float cosU  = cosf(inner_angle);
         float cosA  = cosf(outer_angle);
         float res;
         // Normalization factor
-        float totalemit = ((1.0f - cosU*cosU) + 
-                           // The second term of this sum is just an 
+        float totalemit = ((1.0f - cosU*cosU) +
+                           // The second term of this sum is just an
                            // approximation. The actual integral is of
                            // the "smooth step" we are using later is
                            // way more complicated. this will work as
@@ -85,12 +85,13 @@ public:
             res = (1.0f - x*x*(3-2*x)) / totalemit;
         }
         else res = 0.0f; // out of cone
-        
+
+        labels = Labels(Labels::LIGHT);
         return Color3(res, res, res);
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng, float randu, float randv,
-                 Vec3 &omega_out, float &pdf) const
+                 Vec3 &omega_out, float &pdf, Labels &labels) const
     {
         // We don't do anything sophisticated here for the step
         // We just sample the whole cone uniformly to the cosine
@@ -98,7 +99,7 @@ public:
         make_orthonormals(Ng, T, B);
         const params_t *params = (const params_t *) paramsptr;
         float outer_angle = params->outer_angle < M_PI*0.5 ? params->outer_angle : M_PI*0.5;
-        if (outer_angle < 0.0f) 
+        if (outer_angle < 0.0f)
             outer_angle = 0.0f;
         float cosA  = cosf(outer_angle);
         float phi = 2 * (float) M_PI * randu;
@@ -108,6 +109,7 @@ public:
                     (sinf(phi) * sinTheta) * B +
                                  cosTheta  * Ng;
         pdf = 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
+        labels = Labels(Labels::LIGHT);
     }
 
     /// Return the probability distribution function in the direction omega_out,
@@ -118,7 +120,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
-        if (outer_angle < 0.0f) 
+        if (outer_angle < 0.0f)
             outer_angle = 0.0f;
         float cosNO = Ng.dot(omega_out);
         float cosA  = cosf(outer_angle);

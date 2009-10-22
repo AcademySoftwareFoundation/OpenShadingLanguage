@@ -153,16 +153,17 @@ public:
     }
 
     Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in) const
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cos_pi = params->N.dot(omega_in) * (float) M_1_PI;
+        labels = Labels( Labels::SURFACE | Labels::REFLECT | Labels::DIFFUSE );
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -177,6 +178,7 @@ public:
            omega_in.setValue(0.0f, 0.0f, 0.0f);
            eval.setValue(0.0f, 0.0f, 0.0f);
         }
+        labels = Labels( Labels::SURFACE | Labels::REFLECT | Labels::DIFFUSE );
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -201,7 +203,7 @@ public:
     }
 
     Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in) const
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         // should never be called - because get_cone is empty
         return Color3 (0.0f, 0.0f, 0.0f);
@@ -209,12 +211,13 @@ public:
 
     void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
     {
         // only one direction is possible
         omega_in = -omega_out;
         pdf = 1;
         eval.setValue(1, 1, 1);
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -254,7 +257,7 @@ public:
     }
 
     Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in) const
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -262,15 +265,17 @@ public:
         // reflect the view vector
         Vec3 R = (2 * cosNO) * params->N - omega_out;
         float out = cosNI * ((params->exponent + 2) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent));
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         if (cosNO > 0) {
             // reflect the view vector
             Vec3 R = (2 * cosNO) * params->N - omega_out;
@@ -345,7 +350,7 @@ public:
     }
 
     Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in) const
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -363,15 +368,17 @@ public:
         float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
         float denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
         float out = cosNI * expf(-exp_arg) / denom;
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
             Vec3 X, Y;
@@ -495,7 +502,7 @@ public:
     }
 
     Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in) const
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -518,15 +525,17 @@ public:
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
         float out = (F * G * D) * 0.25f / cosNI;
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
             make_orthonormals(params->N, X, Y);
@@ -630,7 +639,7 @@ public:
     }
 
     Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in) const
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -655,15 +664,17 @@ public:
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
         float out = (F * G * D) * 0.25f / cosNI;
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
                  const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval) const
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
             make_orthonormals(params->N, X, Y);

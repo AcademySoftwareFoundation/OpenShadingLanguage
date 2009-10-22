@@ -39,6 +39,41 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
+/// Label set representation for rays
+///
+/// It is just an integer, but I'm wrapping it into a class to
+/// give some room for future extensions and encapsulate the
+/// constants
+///
+class Labels {
+public:
+    // Camera and light nodes of the path, though camera won't be used yet
+    static const int CAMERA   = 1<<8;
+    static const int LIGHT    = 1<<7;
+    static const int SURFACE  = 1<<6;
+    static const int VOLUME   = 1<<5;
+    // A path node can either be transmit or reflect
+    static const int TRANSMIT = 1<<4;
+    static const int REFLECT  = 1<<3;
+    // Three different modes depending on the width of
+    // the scattering cone
+    static const int DIFFUSE  = 1<<2; // typical 2PI hemisphere
+    static const int GLOSSY   = 1<<1; // blurry reflections and transmissions
+    static const int SINGULAR = 1<<0; // perfect mirrors and glass
+
+    Labels():m_set(0) {};
+    Labels(int l):m_set(l) {};
+    /// Returns true is this label is completely included in the given one
+    bool match(const Labels &l)const { return (m_set & l.m_set) == m_set; };
+    bool empty()const { return m_set == 0; };
+    /// Add labels to the existing ones
+    void add(const Labels &l) { m_set |= l.m_set; };
+    void clear() { m_set = 0; };
+
+//private:
+    // Actual label set (ored integer)
+    int m_set;
+};
 
 /// Base class representation of a radiance color closure.
 /// For each BSDF or emission profile, the renderer should create a
@@ -194,7 +229,7 @@ public:
     /// above. If the get_cone method returned false, this function will never be
     /// called.
     virtual Color3 eval (const void *paramsptr, const Vec3 &Ng,
-                         const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
+                         const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const = 0;
 
     /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
     /// (pointing away from the surface), and random deviates randu and
@@ -205,7 +240,7 @@ public:
     /// directions from infinitely small cones.
     virtual void sample (const void *paramsptr, const Vec3 &Ng,
                          const Vec3 &omega_out, float randu, float randv,
-                         Vec3 &omega_in, float &pdf, Color3 &eval) const = 0;
+                         Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const = 0;
 
     /// Return the probability distribution function in the direction omega_in,
     /// given the parameters and incident direction omega_out.  This MUST match
@@ -232,7 +267,7 @@ public:
     /// radiance along omega_out (which points away from the light's
     /// surface).
     virtual Color3 eval (const void *paramsptr, const Vec3 &Ng, 
-                         const Vec3 &omega_out) const = 0;
+                         const Vec3 &omega_out, Labels &labels) const = 0;
 
     /// Sample the emission direction -- Given instance parameters, the light's
     /// surface normal and random deviates randu and randv on [0,1), return a
@@ -240,7 +275,7 @@ public:
     /// the PDF value in that direction.
     virtual void sample (const void *paramsptr, const Vec3 &Ng,
                          float randu, float randv,
-                         Vec3 &omega_out, float &pdf) const = 0;
+                         Vec3 &omega_out, float &pdf, Labels &labels) const = 0;
 
     /// Return the probability distribution function in the direction omega_out,
     /// given the parameters and the light's surface normal.  This MUST match

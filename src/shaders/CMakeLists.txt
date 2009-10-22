@@ -29,6 +29,8 @@ foreach (_shadername ${shader_source})
     osl_compile (${_shadername} shader_objs shader_headers)
 endforeach ()
 
+exec_program ("cmake -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h ${CMAKE_CURRENT_BINARY_DIR}")
+
 add_custom_target (shaders ALL
                    DEPENDS ${shader_objs}
                    SOURCES ${shader_source} ${shader_headers})

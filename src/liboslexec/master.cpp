@@ -191,6 +191,7 @@ static OpNameEntry op_name_entries[] = {
     { "abs", OP_fabs },  // alias for fabs()
     { "acos", OP_acos },
     { "add", OP_add },
+    { "and", OP_and },
     { "area", OP_area },
     { "aref", OP_aref },
     { "arraylength", OP_arraylength },
@@ -265,6 +266,7 @@ static OpNameEntry op_name_entries[] = {
     { "noise", OP_noise },
     { "normal", OP_normal },
     { "normalize", OP_normalize },
+    { "or", OP_or },
     { "phong", OP_phong },
     { "pnoise", OP_pnoise },
     { "point", OP_point },

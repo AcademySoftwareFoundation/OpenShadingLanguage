@@ -90,6 +90,19 @@ public:
 };
 
 
+class LogicAnd {
+public:
+    LogicAnd (ShadingExecution *) { }
+    inline void operator() (int &result, int a, int b) { result = (a && b); }
+};
+
+
+class LogicOr {
+public:
+    LogicOr (ShadingExecution *) { }
+    inline void operator() (int &result, int a, int b) { result = (a || b); }
+};
+
 };  // End anonymous namespace
 
 
@@ -233,6 +246,55 @@ DECLOP (OP_compl)
     unary_op_noderivs<int,int,Compl> (exec, nargs, args,
                                       runflags, beginpoint, endpoint);
 }
+
+
+
+DECLOP (OP_and)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    DASSERT (! Result.typespec().is_closure() &&
+             ! Result.typespec().is_structure() &&
+             ! Result.typespec().is_array());
+    DASSERT (! A.typespec().is_closure() &&
+             ! A.typespec().is_structure() &&
+             ! A.typespec().is_array());
+    DASSERT (! B.typespec().is_closure() &&
+             ! B.typespec().is_structure() &&
+             ! B.typespec().is_array());
+    DASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
+             B.typespec().is_int());
+
+    binary_op_guts<int,int,int,LogicAnd> (Result, A, B, exec,
+                                          runflags, beginpoint, endpoint);
+}
+
+
+
+DECLOP (OP_or)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    DASSERT (! Result.typespec().is_closure() &&
+             ! Result.typespec().is_structure() &&
+             ! Result.typespec().is_array());
+    DASSERT (! A.typespec().is_closure() &&
+             ! A.typespec().is_structure() &&
+             ! A.typespec().is_array());
+    DASSERT (! B.typespec().is_closure() &&
+             ! B.typespec().is_structure() &&
+             ! B.typespec().is_array());
+    DASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
+             B.typespec().is_int());
+
+    binary_op_guts<int,int,int,LogicOr> (Result, A, B, exec,
+                                         runflags, beginpoint, endpoint);
+}
+
 
 
 }; // namespace pvt

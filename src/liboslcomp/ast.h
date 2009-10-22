@@ -137,6 +137,16 @@ public:
     /// course).
     virtual Symbol *codegen (Symbol *dest = NULL);
 
+    /// Generate IR code for this node make sure it's boiled down to an
+    /// int (i.e. if not already an int, generate one that's 1 if the
+    /// original code was non-zero or non-empty string).  The optional
+    /// 'dest' is a request for the caller to store the results in a
+    /// particular place (which it can't always do, of course).  If
+    /// 'boolify' is true and the normal code generates an int, convert
+    /// it to a 0 or 1 value.  If 'invert' is true, invert the result.
+    Symbol *codegen_int (Symbol *dest = NULL,
+                         bool boolify=false, bool invert=false);
+
     /// Append a new node (specified by raw pointer) onto the end of the
     /// sequence that *this belongs to.  Return *this.
     ASTNode *append (ASTNode *newnode) {
@@ -608,6 +618,9 @@ public:
 
     ref left () const { return child (0); }
     ref right () const { return child (1); }
+private:
+    // Special code generation for short-circuiting logical ops
+    Symbol *codegen_logic (Symbol *dest);
 };
 
 

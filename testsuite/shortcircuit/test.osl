@@ -1,0 +1,41 @@
+int truefunc ()
+{
+    printf (" func returning true\n");
+    return 1;
+}
+
+
+int falsefunc ()
+{
+    printf (" func returning false\n");
+    return 0;
+}
+
+
+void test_all_and ()
+{
+    printf ("true && true is %d\n\n", truefunc() && truefunc());
+    printf ("true && false is %d\n\n", truefunc() && falsefunc());
+    printf ("false && true is %d\n\n", falsefunc() && truefunc());
+    printf ("false && false is %d\n\n", falsefunc() && falsefunc());
+}
+
+
+
+void test_all_or ()
+{
+    printf ("true || true is %d\n\n", truefunc() || truefunc());
+    printf ("true || false is %d\n\n", truefunc() || falsefunc());
+    printf ("false || true is %d\n\n", falsefunc() || truefunc());
+    printf ("false || false is %d\n\n", falsefunc() || falsefunc());
+}
+
+
+
+shader
+test ()
+{
+    printf ("test && and || short-circuiting:\n\n");
+    test_all_and ();
+    test_all_or ();
+}

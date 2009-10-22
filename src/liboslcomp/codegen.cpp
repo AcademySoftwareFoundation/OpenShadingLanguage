@@ -55,7 +55,7 @@ OSLCompilerImpl::add_op_args (size_t nargs, Symbol **args)
     size_t n = m_opargs.size ();
     for (size_t i = 0;  i < nargs;  ++i) {
         ASSERT (args[i]);
-        m_opargs.push_back (args[i]);
+        m_opargs.push_back (args[i]->dealias());
     }
     return n;
 }
@@ -213,6 +213,30 @@ ASTNode::codegen_list (ref node)
         node->codegen ();
         node = node->next ();
     }
+}
+
+
+
+Symbol *
+ASTNode::codegen_int (Symbol *, bool boolify, bool invert)
+{
+    Symbol *dest = codegen ();
+    TypeSpec type = dest->typespec ();
+    if (! type.is_int() || boolify || invert) {
+        // If they're not using an int as the condition, then it's an
+        // implied comparison to zero.
+        Symbol *tempvar = m_compiler->make_temporary (TypeDesc::TypeInt);
+        Symbol *zerovar = NULL;
+        if (type.is_string())
+            zerovar = m_compiler->make_constant (ustring(""));
+        else if (type.is_int())
+            zerovar = m_compiler->make_constant ((int)0);
+        else
+            zerovar = m_compiler->make_constant (0.0f);
+        emitcode (invert ? "eq" : "neq", tempvar, dest, zerovar);
+        dest = tempvar;
+    }
+    return dest;
 }
 
 
@@ -473,18 +497,7 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
 Symbol *
 ASTconditional_statement::codegen (Symbol *)
 {
-    Symbol *condvar = cond()->codegen ();
-    TypeSpec condtype = condvar->typespec();
-    if (! condtype.is_int()) {
-        // If they're not using an int as the condition, then it's an
-        // implied comparison to zero.
-        Symbol *tempvar = m_compiler->make_temporary (TypeDesc::TypeInt);
-        Symbol *zerovar = condtype.is_string() ? 
-                            m_compiler->make_constant (ustring("")) : 
-                            m_compiler->make_constant (0.0f);
-        emitcode ("ne", tempvar, condvar, zerovar);
-        condvar = tempvar;
-    }
+    Symbol *condvar = cond()->codegen_int ();
 
     // Generate the op for the 'if' itself.  Record its label, so that we
     // can go back and patch it with the jump destinations.
@@ -523,18 +536,7 @@ ASTloop_statement::codegen (Symbol *)
     codegen_list (init());
 
     int condlabel = m_compiler->next_op_label ();
-    Symbol *condvar = cond()->codegen ();
-    TypeSpec condtype = condvar->typespec();
-    if (! condtype.is_int()) {
-        // If they're not using an int as the condition, then it's an
-        // implied comparison to zero.
-        Symbol *tempvar = m_compiler->make_temporary (TypeDesc::TypeInt);
-        Symbol *zerovar = condtype.is_string() ? 
-            m_compiler->make_constant (ustring("")) : 
-            m_compiler->make_constant (0.0f);
-        emitcode ("ne", tempvar, condvar, zerovar);
-        condvar = tempvar;
-    }
+    Symbol *condvar = cond()->codegen_int ();
 
     // Retroactively add the argument
     size_t argstart = m_compiler->add_op_args (1, &condvar);
@@ -563,6 +565,11 @@ ASTunary_expression::codegen (Symbol *dest)
 {
     // Code generation for unary expressions (-x, !x, etc.)
 
+    if (m_op == Not) {
+        // Special case for logical ops
+        return expr()->codegen_int (NULL, true /*boolify*/, true /*invert*/);
+    }
+
     // Generate the code for our expression
     Symbol *esym = expr()->codegen ();
 
@@ -589,6 +596,10 @@ ASTunary_expression::codegen (Symbol *dest)
 Symbol *
 ASTbinary_expression::codegen (Symbol *dest)
 {
+    // Special case for logal ops that short-circuit
+    if (m_op == And || m_op == Or)
+        return codegen_logic (dest);
+
     Symbol *lsym = left()->codegen ();
     Symbol *rsym = right()->codegen ();
     if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
@@ -619,9 +630,39 @@ ASTbinary_expression::codegen (Symbol *dest)
         }
     }
 
-    // FIXME -- we want && and || to properly short-circuit
-
     emitcode (opword(), dest, lsym, rsym);
+    return dest;
+}
+
+
+
+Symbol *
+ASTbinary_expression::codegen_logic (Symbol *dest)
+{
+    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
+        dest = m_compiler->make_temporary (typespec());
+    Symbol *lsym = left()->codegen_int (dest);
+
+    int ifop = emitcode ("if", lsym);
+    int falselabel;
+    m_compiler->push_nesting (false);
+
+    if (m_op == And) {
+        Symbol *rsym = right()->codegen_int ();
+        // Fixme -- make sure it's an int
+        emitcode ("and", dest, lsym, rsym);
+        falselabel = m_compiler->next_op_label ();
+        emitcode ("assign", dest, m_compiler->make_constant((int)0));
+    } else { /* Or */
+        emitcode ("assign", dest, m_compiler->make_constant((int)1));
+        falselabel = m_compiler->next_op_label ();
+        Symbol *rsym = right()->codegen_int ();
+        emitcode ("or", dest, rsym, rsym);
+    }
+
+    int donelabel = m_compiler->next_op_label ();
+    m_compiler->pop_nesting (false);
+    m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
     return dest;
 }
 

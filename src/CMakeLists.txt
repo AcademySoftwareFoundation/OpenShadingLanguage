@@ -100,9 +100,9 @@ endmacro ()
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison 
             derivs exponential function-simple function-outputelem
-            geomath hyperb ieee_fp if incdec intbits layers loop matrix
-            miscmath noise pnoise
-            oslc-err-paramdefault
+            geomath hyperb ieee_fp if incdec intbits layers 
+            logic loop matrix miscmath noise pnoise
+            oslc-err-paramdefault shortcircuit
             texture-alpha texture-blur texture-firstchannel texture-simple 
             texture-width texture-wrap
             trig typecast vecctr vector )

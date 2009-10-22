@@ -1,0 +1,100 @@
+void test_and (int a, int b)
+{
+    printf ("%d && %d is %d\n", a, b, a && b);
+}
+
+void test_or (int a, int b)
+{
+    printf ("%d || %d is %d\n", a, b, a || b);
+}
+
+void test_not (int a)
+{
+    printf ("! %d is %d\n", a, !a);
+}
+
+
+
+void test_all_and (int a, int b)
+{
+    test_and (a, a);
+    test_and (a, b);
+    test_and (b, a);
+    test_and (b, b);
+}
+
+void test_all_or (int a, int b)
+{
+    test_or (a, a);
+    test_or (a, b);
+    test_or (b, a);
+    test_or (b, b);
+}
+
+void test_all_not (int a, int b)
+{
+    test_not (a);
+    test_not (b);
+}
+
+
+
+void test_not (float a)
+{
+    printf ("! %g is %d\n", a, !a);
+}
+
+void test_and (float a, float b)
+{
+    printf ("%g && %g is %d\n", a, b, a && b);
+}
+
+void test_or (float a, float b)
+{
+    printf ("%g || %g is %d\n", a, b, a || b);
+}
+
+
+
+void test_all_and (float a, float b)
+{
+    test_and (a, a);
+    test_and (a, b);
+    test_and (b, a);
+    test_and (b, b);
+}
+
+void test_all_or (float a, float b)
+{
+    test_or (a, a);
+    test_or (a, b);
+    test_or (b, a);
+    test_or (b, b);
+}
+
+void test_all_not (float a, float b)
+{
+    test_not (a);
+    test_not (b);
+}
+
+
+
+
+shader
+test ()
+{
+    printf ("test && and || on integers:\n");
+    int a = 0, b = 2;
+    test_all_and (a, b);
+    test_all_or (a, b);
+    test_all_not (a, b);
+
+    {
+        printf ("\ntest && and || on coerced floats:\n");
+        float a = 0, b = 2.3;
+        test_all_and (a, b);
+        test_all_or (a, b);
+        test_all_not (a, b);
+    }
+}

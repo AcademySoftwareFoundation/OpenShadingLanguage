@@ -1,0 +1,32 @@
+Compiled test.osl -> test.oso
+test && and || short-circuiting:
+
+ func returning true
+ func returning true
+true && true is 1
+
+ func returning true
+ func returning false
+true && false is 0
+
+ func returning false
+false && true is 0
+
+ func returning false
+false && false is 0
+
+ func returning true
+true || true is 1
+
+ func returning true
+true || false is 1
+
+ func returning false
+ func returning true
+false || true is 1
+
+ func returning false
+ func returning false
+false || false is 0
+
+

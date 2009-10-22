@@ -142,8 +142,13 @@ OSLCompilerImpl::compile (const std::string &filename,
     std::string program = Sysutil::this_program_path ();
     if (program.size()) {
         boost::filesystem::path path (program);  // our program
+#if BOOST_VERSION >= 103600
         path = path.parent_path ();  // now the bin dir of our program
         path = path.parent_path ();  // now the parent dir
+#else
+        path = path.branch_path ();  // now the bin dir of our program
+        path = path.branch_path ();  // now the parent dir
+#endif
         path = path / "shaders";
         bool found = false;
         if (boost::filesystem::exists (path)) {

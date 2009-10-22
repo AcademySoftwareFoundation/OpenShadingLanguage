@@ -187,18 +187,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                 sym.has_derivs (false);
                 sym.data (globals->I.ptr());  sym.step (globals->I.step());
             } else if (sym.name() == Strings::N) {
-                if (globals->dNdx.ptr() && globals->dNdy.ptr()) {
-                    // Derivs supplied
-                    sym.has_derivs (true);
-                    void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Vec3> > N ((Dual2<Vec3> *)addr, sym.step());
-                    for (int i = 0;  i < npoints();  ++i)
-                        N[i].set (globals->N[i], globals->dNdx[i], globals->dNdy[i]);
-                } else {
-                    // No derivs anyway -- don't copy the user's data
-                    sym.has_derivs (false);
-                    sym.data (globals->N.ptr());  sym.step (globals->N.step());
-                }
+                sym.has_derivs (false);
+                sym.data (globals->N.ptr());  sym.step (globals->N.step());
             } else if (sym.name() == Strings::Ng) {
                 sym.has_derivs (false);
                 sym.data (globals->Ng.ptr());  sym.step (globals->Ng.step());

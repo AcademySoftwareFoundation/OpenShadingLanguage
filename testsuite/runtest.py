@@ -55,4 +55,13 @@ def runtest (command, outputs, cleanfiles="", failureok=0) :
         else :
             print "FAIL"
 
+    # if everything passed, get rid of the temporary files
+    if err == 0 :
+        for out in outputs+cleanfiles :
+            print "\tremoving " + out
+            try :
+                cmpresult = os.remove (out)
+            except OSError :
+                continue
+            
     return (err)

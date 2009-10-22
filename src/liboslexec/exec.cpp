@@ -555,16 +555,16 @@ ShadingExecution::zero (Symbol &sym)
 {
     size_t size = sym.has_derivs() ? sym.deriv_step()*3 : sym.size();
     if (sym.is_uniform ())
-        memset (sym.data(), size, 0);
+        memset (sym.data(), 0, size);
     else if (sym.is_varying() && all_points_on()) {
         // Varying, but we can do one big memset
-        memset (sym.data(), size * m_npoints, 0);
+        memset (sym.data(), 0, size * m_npoints);
     } else {
         // Varying, with some points on and some off
         char *data = (char *)sym.data() + m_beginpoint * sym.step();
         for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step())
             if (m_runflags[i])
-                memset (data, size, 0);
+                memset (data, 0, size);
     }
 }
 
@@ -578,12 +578,12 @@ ShadingExecution::zero_derivs (Symbol &sym)
     size_t deriv_size = 2 * deriv_step;
     char *data = (char *)sym.data() + deriv_step;
     if (sym.is_uniform ())
-        memset (data, deriv_size, 0);
+        memset (data, 0, deriv_size);
     else {
         data += m_beginpoint * sym.step();
         for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step())
             if (m_runflags[i])
-                memset (data, deriv_size, 0);
+                memset (data, 0, deriv_size);
     }
 }
 

@@ -65,7 +65,6 @@ DECLOP (triple_ctr)
     bool vary = (X.is_varying() | Y.is_varying() | Z.is_varying());
     exec->adjust_varying (Result, vary, false /* can't alias */);
 
-    // FIXME -- clear derivs for now, make it right later.
     if (Result.has_derivs ())
         exec->zero_derivs (Result);
 
@@ -88,6 +87,24 @@ DECLOP (triple_ctr)
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = Vec3 (x[i], y[i], z[i]);
+
+        if (Result.has_derivs()) {
+            // Ugh, handle derivs piece-meal because we may get any subset
+            // of x,y,z with or without derivs.
+            VaryingRef<Dual2<Vec3> > result ((Dual2<Vec3> *)Result.data(), Result.step());
+            for (int c = 0;  c < 3;  ++c) {
+                // Call it 'x', but we're really looping over X, Y, Z
+                Symbol &X (exec->sym (args[1+c]));  // get right symbol
+                if (X.has_derivs ()) {
+                    VaryingRef<Dual2<float> > x ((Dual2<float> *)X.data(), X.step());
+                    for (int i = beginpoint;  i < endpoint;  ++i)
+                        if (runflags[i]) {
+                            result[i].dx()[c] = x[i].dx();
+                            result[i].dy()[c] = x[i].dy();
+                        }
+                }
+            }
+        }
     }
 }
 
@@ -113,7 +130,6 @@ DECLOP (triple_ctr_transform)
                  globals->time.is_varying());
     exec->adjust_varying (Result, vary, false /* can't alias */);
 
-    // FIXME -- clear derivs for now, make it right later.
     if (Result.has_derivs ())
         exec->zero_derivs (Result);
 
@@ -164,6 +180,40 @@ DECLOP (triple_ctr_transform)
                 else
                     M.multDirMatrix (result[i], result[i]);
             }
+
+        if (Result.has_derivs()) {
+            // Ugh, handle derivs piece-meal because we may get any subset
+            // of x,y,z with or without derivs.
+            VaryingRef<Dual2<Vec3> > result ((Dual2<Vec3> *)Result.data(), Result.step());
+            Dual2<float> zero (0.0f);
+            VaryingRef<Dual2<float> > xdir, ydir, zdir;
+            if (X.has_derivs ())
+                xdir.init ((Dual2<float> *)X.data(), X.step());
+            else
+                xdir.init (&zero, 0);
+            if (Y.has_derivs ())
+                ydir.init ((Dual2<float> *)Y.data(), Y.step());
+            else
+                ydir.init (&zero, 0);
+            if (Z.has_derivs ())
+                zdir.init ((Dual2<float> *)Z.data(), Z.step());
+            else
+                zdir.init (&zero, 0);
+            ustring last_space;
+            for (int i = beginpoint;  i < endpoint;  ++i)
+                if (runflags[i]) {
+                    if (space[i] != last_space || globals->time.is_varying()) {
+                        exec->get_matrix (M, space[i], i);
+                        if (xformtype == (int)TypeDesc::NORMAL)
+                            M = M.inverse().transpose();
+                        last_space = space[i];
+                    }
+                    Vec3 dPdx (xdir[i].dx(), ydir[i].dx(), zdir[i].dx());
+                    Vec3 dPdy (xdir[i].dy(), ydir[i].dy(), zdir[i].dy());
+                    M.multDirMatrix (dPdx, result[i].dx());
+                    M.multDirMatrix (dPdy, result[i].dy());
+                }
+        }
     }
 }
 

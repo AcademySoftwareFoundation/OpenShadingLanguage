@@ -151,4 +151,21 @@ test ()
         printf ("\n");
         printf ("comp assign: C[0]=u, C[1]=v: now C = %g, Dx(C) = %g, Dy(C) = %g\n", C, Dx(C), Dy(C));
     }
+
+    {
+        // Test triple construction
+        color C = color (u, v, 0);
+        printf ("\nTriple construction:\n");
+        printf ("  color(u,v,0) = %g, Dx = %g, Dy = %g\n", C, Dx(C), Dy(C));
+        point p;
+        p = point (u,v,0);
+        printf ("  point (%g,%g,0) = %g, Dx = %g, Dy = %g\n",
+                u, v, p, Dx(p), Dy(p));
+        p = point ("shader",u,v,0);
+        printf ("  point (\"shader\",%g,%g,0) = %g, Dx = %g, Dy = %g\n",
+                u, v, p, Dx(p), Dy(p));
+        vector V = vector ("shader",u,v,0);
+        printf ("  vector (\"shader\",%g,%g,0) = %g, Dx = %g, Dy = %g\n",
+                u, v, V, Dx(V), Dy(V));
+    }
 }

@@ -77,14 +77,21 @@ public:
     /// Return the real value of *this.
     ///
     const T& val () const { return m_val; }
+    T& val () { return m_val; }
 
     /// Return the partial derivative with respect to x
     ///
     const T& dx () const { return m_dx; }
+    T& dx () { return m_dx; }
 
     /// Return the partial derivative with respect to y
     ///
     const T& dy () const { return m_dy; }
+    T& dy () { return m_dy; }
+
+    void set_val (const T &val) { m_val = val; }
+    void set_dx  (const T &dx)  { m_dx  = dx;  }
+    void set_dy  (const T &dy)  { m_dy  = dy;  }
 
     /// Return the special dual number (i == 0 is the dx imaginary
     /// number, i == 1 is the dy imaginary number).

@@ -250,6 +250,12 @@ public:
     /// called. This means that singular BSDFs should not return 1 here.
     virtual float pdf (const void *paramsptr, const Vec3 &Ng,
                        const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
+    /// Return true if the closure implements absolute transparency.
+    /// It is not nice to have this function but we need it for handling transparent
+    /// shadows in the integrator. With this we avoid calling the closure at all
+    /// and we only use the weight as the transparent color. We will have to relay
+    /// on this method until we write a more sophisticated integrator.
+    virtual bool isTransparent() const { return false; };
 };
 
 

@@ -228,6 +228,8 @@ public:
         return 0;
     }
 
+    virtual bool isTransparent() const { return true; };
+
 };
 
 // vanilla phong - leaks energy at grazing angles

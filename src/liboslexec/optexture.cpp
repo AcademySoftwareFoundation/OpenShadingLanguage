@@ -73,10 +73,6 @@ DECLOP (OP_texture)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* Assume texture always varies */);
 
-    // FIXME -- we should allow derivs of texture
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
     float zero = 0.0f;
     VaryingRef<float> result ((float *)Result.data(), Result.step());
     VaryingRef<float> s ((float *)S.data(), S.step());
@@ -85,6 +81,7 @@ DECLOP (OP_texture)
     VaryingRef<ustring> swrap (NULL), twrap (NULL);
     VaryingRef<int> firstchannel (NULL);
     VaryingRef<float> alpha (NULL);
+    Symbol* Alpha = NULL;
 
     TextureSystem *texturesys = exec->texturesys ();
     TextureOptions options;
@@ -154,6 +151,7 @@ DECLOP (OP_texture)
         } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             exec->adjust_varying (Val, true);
             alpha.init ((float *)Val.data(), Val.step());
+            Alpha = &Val;
 
         } else {
             exec->error ("Unknown texture optional argument: \"%s\", <%s>",
@@ -169,6 +167,20 @@ DECLOP (OP_texture)
     if (Result.has_derivs() || alpha) {
         tempresult = true;
         r = ALLOCA (float, endpoint*options.nchannels);
+        // allocate some space to track the derivatives of the result
+        // NOTE: even though OIIO doesn't need derivatives from S and T to
+        // compute the gradients, we need them on the OSL side to be able to
+        // rotate the gradients via the chain rule
+        if (S.has_derivs() && T.has_derivs()) {
+            options.dresultds = ALLOCA (float, endpoint*options.nchannels);
+            options.dresultdt = ALLOCA (float, endpoint*options.nchannels);
+        } else {
+            // we won't be able to provide derivatives properly
+            if (Result.has_derivs())
+                exec->zero_derivs(Result);
+            if (Alpha && Alpha->has_derivs())
+                exec->zero_derivs(*Alpha);
+        }
     }
     for (int i = beginpoint;  i < endpoint;  ++i) {
         // FIXME -- this calls texture system separately for each point!
@@ -206,6 +218,24 @@ DECLOP (OP_texture)
             for (int i = beginpoint;  i < endpoint;  ++i)
                 if (runflags[i])
                     alpha[i] = r[i*options.nchannels+resultchans];
+        }
+        // now figure out derivatives (as needed)
+        // we use the multi-variate chain rule:
+        // dTdx = dTds * dsdx + dTdt * dtdx
+        // dTdy = dTds * dsdy + dTdt * dtdy
+        if (options.dresultds) {
+            for (int i = beginpoint;  i < endpoint;  ++i) {
+                if (runflags[i]) {
+                    for (int c = 0;  c < resultchans;  ++c) {
+                        (&result[i])[1 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdx[i] + options.dresultdt[i*options.nchannels+c] * dtdx[i];
+                        (&result[i])[2 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdy[i] + options.dresultdt[i*options.nchannels+c] * dtdy[i];
+                    }
+                    if (alpha) {
+                        (&alpha[i])[1] = options.dresultds[i*options.nchannels+resultchans] * dsdx[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdx[i];
+                        (&alpha[i])[2] = options.dresultds[i*options.nchannels+resultchans] * dsdy[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdy[i];
+                    }
+                }
+            }
         }
     }
 }

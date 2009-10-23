@@ -106,7 +106,7 @@ ustring emission ("emission");
 ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
 ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v");
 ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");
-ustring Ci ("Ci"), Oi ("Oi");
+ustring Ci ("Ci");
 ustring width ("width"), swidth ("swidth"), twidth ("twidth");
 ustring blur ("blur"), sblur ("sblur"), tblur ("tblur");
 ustring wrap ("wrap"), swrap ("swrap"), twrap ("twrap");

@@ -265,7 +265,6 @@ static GlobalTable globals[] = {
     { "Nl", TypeDesc::TypeNormal },
 #endif
     { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
-    { "Oi", TypeDesc::TypeColor },
     { "time", TypeDesc::TypeFloat },
     { "dtime", TypeDesc::TypeFloat },
     { "dPdtime", TypeDesc::TypeVector },

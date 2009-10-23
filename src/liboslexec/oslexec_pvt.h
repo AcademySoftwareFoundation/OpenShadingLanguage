@@ -879,7 +879,7 @@ namespace Strings {
     extern ustring microfacet_beckmann, microfacet_ggx;
     extern ustring emission;
     extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime;
-    extern ustring Ci, Oi;
+    extern ustring Ci;
     extern ustring width, swidth, twidth, blur, sblur, tblur;
     extern ustring wrap, swrap, twrap, black, clamp, periodic, mirror;
     extern ustring firstchannel, fill, alpha;

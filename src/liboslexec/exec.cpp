@@ -237,9 +237,6 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             } else if (sym.name() == Strings::Ci) {
                 sym.has_derivs (false);
                 sym.data (globals->Ci.ptr());  sym.step (globals->Ci.step());
-            } else if (sym.name() == Strings::Oi) {
-                sym.has_derivs (false);
-                sym.data (globals->Oi.ptr());  sym.step (globals->Oi.step());
             }
             if (sym.data() == NULL) {
                 if (sym.dataoffset() >= 0) {
@@ -274,7 +271,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
                 memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
                         sym.typespec().simpletype().size());
-            zero_derivs (sym);
+            if (sym.has_derivs())
+               zero_derivs (sym);
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);

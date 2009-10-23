@@ -215,7 +215,6 @@ public:
     VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
 
     VaryingRef<ClosureColor *> Ci;     ///< Output colors
-    VaryingRef<Color3> Oi;             ///< Output opacities
 };
 
 

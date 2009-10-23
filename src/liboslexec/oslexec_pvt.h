@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 
 #include "OpenImageIO/thread.h"
+#include "OpenImageIO/paramlist.h"
 
 #include "oslexec.h"
 #include "oslclosure.h"
@@ -126,42 +127,6 @@ public:
     }
 private:
     value_t m_current, m_requested, m_peak;
-};
-
-
-
-/// Reference to a shader Parameter from the user/app.  Use local
-/// storage for simple scalar types (a single int, float, or string).
-class ParamRef {
-public:
-    ParamRef (ustring name, TypeDesc type, const void *data)
-        : m_name(name), m_type(type), m_data(data), m_is_local(false)
-    {
-        if (type == TypeDesc::TypeInt) {
-            m_local_data.i = *(const int *)data;
-            m_is_local = true;
-        } else if (type == TypeDesc::TypeFloat) {
-            m_local_data.f = *(const float *)data;
-            m_is_local = true;
-        } else if (type == TypeDesc::TypeString) {
-            m_local_data.s = ustring(*(const char **)data).c_str();
-            m_is_local = true;
-        }
-    }
-    ~ParamRef () { }
-    ustring name () const { return m_name; }
-    TypeDesc type () const { return m_type; }
-    const void *data () const { return m_is_local ? &m_local_data : m_data; }
-private:
-    ustring m_name;         ///< Parameter name
-    TypeDesc m_type;        ///< Parameter type
-    const void *m_data;     ///< Pointer to data -- we are not the owner!
-    bool m_is_local;        ///< Do we use local storage?
-    union {
-        int i;
-        float f;
-        const char *s;
-    } m_local_data;         ///< Local storage for small simple types
 };
 
 
@@ -288,7 +253,7 @@ public:
 
     /// Apply pending parameters
     /// 
-    void parameters (const std::vector<ParamRef> &params);
+    void parameters (const ParamValueList &params);
 
     /// How much heap space this instance needs per point being shaded?
     /// As a side effect, set the dataoffset for each symbol (as if there
@@ -502,7 +467,7 @@ private:
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group
-    std::vector<ParamRef> m_pending_params; ///< Pending Parameter() values
+    ParamValueList m_pending_params;      ///< Pending Parameter() values
     ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
     std::map<ustring,int> m_global_heap_offsets; ///< Heap offsets of globals
     size_t m_global_heap_total;           ///< Heap size for globals

@@ -54,13 +54,13 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
 
 
 void
-ShaderInstance::parameters (const std::vector<ParamRef> &params)
+ShaderInstance::parameters (const ParamValueList &params)
 {
     m_iparams = m_master->m_idefaults;
     m_fparams = m_master->m_fdefaults;
     m_sparams = m_master->m_sdefaults;
     m_symbols = m_master->m_symbols;
-    BOOST_FOREACH (const ParamRef &p, params) {
+    BOOST_FOREACH (const ParamValue &p, params) {
         if (shadingsys().debug())
             shadingsys().info (" PARAMETER %s %s",
                                p.name().c_str(), p.type().c_str());

@@ -283,7 +283,11 @@ ShadingSystemImpl::printstats () const
 bool
 ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
 {
-    m_pending_params.push_back (ParamRef (ustring(name), t, val));
+    // We work very hard not to do extra copies of the data.  First,
+    // grow the pending list by one (empty) slot...
+    m_pending_params.resize (m_pending_params.size() + 1);
+    // ...then initialize it in place
+    m_pending_params.back().init (name, t, 1, val);
     return true;
 }
 

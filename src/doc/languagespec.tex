@@ -80,7 +80,7 @@ Editor: Larry Gritz \\
 \def\void{{\cf void}\xspace}
 \def\C{{\cf Ci}\xspace}
 \def\Ci{{\cf Ci}\xspace}
-\def\opacity{{\cf Oi}\xspace}
+%\def\opacity{{\cf Oi}\xspace}
 \def\Oi{{\cf Oi}\xspace}
 \def\I{{\cf I}\xspace}
 \def\N{{\cf N}\xspace}
@@ -2372,7 +2372,7 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 {\cf dtime}   & R     & R  & R     & R \\
 {\cf dPdtime} & R     & R  & R     & R \\
 \Ci           & RW    &    & RW    & \\
-\Oi           & RW    &    & RW    & \\
+%\Oi           & RW    &    & RW    & \\
 %{\cf L}       & R$^2$ &    & R$^2$ & RW \\
 {\cf L}       &       &    &       & RW \\
 %{\cf Cl}      & R$^2$ &    & R$^2$ & RW \\
@@ -4633,8 +4633,8 @@ I think me too, but I'm hedging my bets while I think about it more.
 \item[Global variables.] The set of ``built-in'' variables describing the
   common renderer inputs to all shaders (as opposed to shader-specific
   parameters).  These include position (\P), surface normal (\N),
-  surface tangents (\dPdu, \dPdv), as well as standard color (\Ci) and
-  opacity (\Oi) outputs.  Different \emph{shader types} support
+  surface tangents (\dPdu, \dPdv), as well as standard radiance output (\Ci).
+  Different \emph{shader types} support
   different subsets of the global variables.
 
 \item[Graphics state.] See \emph{attribute state}.
@@ -4654,7 +4654,7 @@ I think me too, but I'm hedging my bets while I think about it more.
 
 \item[Output parameter.] A read/write \emph{shader parameter} allows a
   shader to provide outputs beyond the \emph{global variables} such as
-  \Ci and \Oi.  Can also refer to a read/write parameter to a
+  \Ci.  Can also refer to a read/write parameter to a
   \emph{shader function}, allowing a function to provide more outputs
   than a simple return value.
 

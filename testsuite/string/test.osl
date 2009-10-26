@@ -1,0 +1,18 @@
+
+
+shader
+test ()
+{
+    printf ("test string operations:\n\n");
+
+    // Test format
+    string s = format ("P = %g", P);
+    printf ("formtted string: '%s'\n", s);
+
+    // Test concat
+    printf ("\n");
+    string a = "foo", b = "bar", c = "baz";
+    printf ("concat(\"%s\", \"%s\", \"%s\") = \"%s\"\n",
+            a, b, c, concat(a,b,c));
+    
+}

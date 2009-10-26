@@ -120,18 +120,95 @@ DECLOP (OP_printf)
     bool varying = format.is_varying ();
     for (int i = 1;  i < nargs;  ++i)
         varying |= exec->sym(args[i]).is_varying ();
-    if (varying) {
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i]) {
-                std::string s = format_args (exec, format[i].c_str(),
-                                             nargs-1, args+1, i);
-                exec->message ("%s", s.c_str());
-            }
-    } else {
-        // Uniform case
-        std::string s = format_args (exec, (*format).c_str(),
-                                     nargs-1, args+1, 0);
-        exec->message ("%s", s.c_str());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            std::string s = format_args (exec, format[i].c_str(),
+                                         nargs-1, args+1, i);
+            exec->message ("%s", s.c_str());
+            if (! varying)
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_error)
+{
+    ASSERT (nargs >= 1);
+    Symbol &Format (exec->sym (args[0]));
+    ASSERT (Format.typespec().is_string ());
+    VaryingRef<ustring> format ((ustring *)Format.data(), Format.step());
+    bool varying = format.is_varying ();
+    for (int i = 1;  i < nargs;  ++i)
+        varying |= exec->sym(args[i]).is_varying ();
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            std::string s = format_args (exec, format[i].c_str(),
+                                         nargs-1, args+1, i);
+            exec->error ("Shader error [%s]: %s",
+                         exec->instance()->master()->shadername().c_str(),
+                         s.c_str());
+            if (! varying)
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_format)
+{
+    ASSERT (nargs >= 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Format (exec->sym (args[1]));
+    ASSERT (Result.typespec().is_string ());
+    ASSERT (Format.typespec().is_string ());
+
+    // Adjust the result's uniform/varying status
+    bool varying = Format.is_varying ();
+    for (int i = 2;  i < nargs;  ++i)
+        varying |= exec->sym(args[i]).is_varying ();
+    exec->adjust_varying (Result, varying);
+
+    VaryingRef<ustring> result ((ustring *)Result.data(), Result.step());
+    VaryingRef<ustring> format ((ustring *)Format.data(), Format.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i] = format_args (exec, format[i].c_str(),
+                                     nargs-2, args+2, i);
+            if (! varying)
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_concat)
+{
+    ASSERT (nargs >= 1);
+    Symbol &Result (exec->sym (args[0]));
+    ASSERT (Result.typespec().is_string ());
+
+    // Adjust the result's uniform/varying status and construct our
+    // format string.
+    bool varying = false;
+    std::string format;
+    for (int i = 1;  i < nargs;  ++i) {
+        varying |= exec->sym(args[i]).is_varying ();
+        format += std::string ("%s");
+    }
+    exec->adjust_varying (Result, varying);
+
+    VaryingRef<ustring> result ((ustring *)Result.data(), Result.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i] = ustring (format_args (exec, format.c_str(),
+                                              nargs-1, args+1, i));
+            if (! varying)
+                break;
+        }
     }
 }
 

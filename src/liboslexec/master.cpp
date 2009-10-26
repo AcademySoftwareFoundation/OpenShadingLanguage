@@ -209,6 +209,7 @@ static OpNameEntry op_name_entries[] = {
     { "compassign", OP_compassign },
     { "compl", OP_compl },
     { "compref", OP_compref },
+    { "concat", OP_concat },
     { "cos", OP_cos },
     { "cosh", OP_cosh },
     { "cross", OP_cross },
@@ -226,6 +227,7 @@ static OpNameEntry op_name_entries[] = {
     { "eq", OP_eq },
     { "erf", OP_erf },
     { "erfc", OP_erfc },
+    { "error", OP_error },
     { "exp", OP_exp },
     { "exp2", OP_exp2 },
     { "expm1", OP_expm1 },
@@ -234,6 +236,7 @@ static OpNameEntry op_name_entries[] = {
     { "floor", OP_floor },
     { "fmod", OP_mod },  // alias for mod()
     { "for", OP_for },
+    { "format", OP_format },
     { "fresnel", OP_fresnel },
     { "ge", OP_ge },
     { "gt", OP_gt },

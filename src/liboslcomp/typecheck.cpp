@@ -612,6 +612,7 @@ bool
 ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
                         const char *formals, bool coerce)
 {
+    // std::cerr << "ca " << funcname << " formals='" << formals << "\n";
     for ( ;  arg;  arg = arg->next()) {
         if (! *formals)   // More formal args, but no more actual args
             return false;
@@ -635,6 +636,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             }
             if (arg->typespec().is_array())
                 return false;   // wanted any scalar, got an array
+            formals += 1;
             continue;  // match anything
         }
 
@@ -816,7 +818,7 @@ static const char * builtin_func_args [] = {
     "fresnel", "xvvff", "xvvfffvv", NULL,
     "getattribute", "is?", NULL,  // FIXME -- further checking?
     "getmessage", "iss?", NULL,  // FIXME -- further checking?
-    "gettextureinfo", "iss?", NULL,  // FIXME -- further checking?
+    "gettextureinfo", "iss?", "iss?[]", NULL,  // FIXME -- further checking?
     "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,
     "isfinite", "if", NULL,
     "isindirectray", "i", NULL,
@@ -987,7 +989,7 @@ OSLCompilerImpl::typelist_from_code (const char *code)
         } else if (*code == 'T') {
             ret += "...";
         } else if (*code == '?') {
-            ret += "any";
+            ret += "<any>";
         } else {            
             TypeSpec t = type_from_code (code, &advance);
             ret += t.string();

@@ -242,6 +242,49 @@ DECLOP (OP_texture)
 
 
 
+DECLOP (OP_gettextureinfo)
+{
+    // Grab the required arguments: result, filename, dataname, output data
+    DASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_int());
+    Symbol &Filename (exec->sym (args[1]));
+    DASSERT (Filename.typespec().is_string());
+    Symbol &Dataname (exec->sym (args[2]));
+    DASSERT (Dataname.typespec().is_string());
+    Symbol &Data (exec->sym (args[3]));
+
+    TextureSystem *texturesys = exec->texturesys ();
+
+    // Adjust the result's uniform/varying status
+    bool varying = Filename.is_varying() | Dataname.is_varying();
+    exec->adjust_varying (Result, varying);
+    exec->adjust_varying (Data, varying);
+    exec->zero_derivs (Result);
+    exec->zero_derivs (Data);
+    varying |= Result.is_varying() | Data.is_varying();
+
+    VaryingRef<int> result ((int *)Result.data(), Result.step());
+    VaryingRef<ustring> filename ((ustring *)Filename.data(), Filename.step());
+    VaryingRef<ustring> dataname ((ustring *)Dataname.data(), Dataname.step());
+    VaryingRef<char> data ((char *)Data.data(), Data.step());
+    
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        // FIXME -- this calls get_texture_info separately for each
+        // point.  We should batch it into groups that share the same
+        // texture filename and data name.  Though it being varying is
+        // already probably a rare case, so it's not very high priority.
+        if (runflags[i]) {
+            result[i] = texturesys->get_texture_info (filename[i], dataname[i],
+                                  Data.typespec().simpletype(), &data[i]);
+        }
+        if (! varying)
+            break;
+    }
+}
+
+
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

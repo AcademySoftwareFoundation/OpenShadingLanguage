@@ -123,7 +123,7 @@ DECLOP (OP_fresnel);
 DECLOP (OP_ge);
 //DECLOP (OP_getattribute);
 //DECLOP (OP_getmessage);
-//DECLOP (OP_gettextureinfo);
+DECLOP (OP_gettextureinfo);
 DECLOP (OP_gt);
 //DECLOP (OP_hash);
 DECLOP (OP_hypot);

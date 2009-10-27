@@ -1,0 +1,33 @@
+
+
+shader
+test (string filename = "../common/textures/grid.tx")
+{
+    int r;
+
+    int resolution[2];
+    r = gettextureinfo (filename, "resolution", resolution);
+    printf ("%s resolution: %d %d (%d)\n", filename, resolution[0], resolution[1], r);
+
+    int channels;
+    r = gettextureinfo (filename, "channels", channels);
+    printf ("%s channels: %d (%d)\n", filename, channels, r);
+
+    string texturetype;
+    r = gettextureinfo (filename, "texturetype", texturetype);
+    printf ("%s texturetype: %s (%d)\n", filename, texturetype, r);
+
+    string textureformat;
+    r = gettextureinfo (filename, "textureformat", textureformat);
+    printf ("%s textureformat: %s (%d)\n", filename, textureformat, r);
+
+    // Test arbitrary metadata
+    string datetime;
+    r = gettextureinfo (filename, "DateTime", datetime);
+    printf ("%s datetime: %s (%d)\n", filename, datetime, r);
+
+    // Test failure
+    string foobar = "not found";
+    r = gettextureinfo (filename, "foobar", foobar);
+    printf ("%s foobar: %s (%d)\n", filename, foobar, r);
+}

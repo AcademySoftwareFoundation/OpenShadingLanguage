@@ -102,6 +102,7 @@ ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
 ustring null ("null"), default_("default");
 ustring diffuse ("diffuse"), phong ("phong"), ward ("ward"), transparent ("transparent");
 ustring microfacet_beckmann ("microfacet_beckmann"), microfacet_ggx ("microfacet_ggx");
+ustring reflection ("reflection"), refraction ("refraction"), dielectric ("dielectric");
 ustring emission ("emission");
 ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
 ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v");

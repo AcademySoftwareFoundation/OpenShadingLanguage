@@ -151,19 +151,42 @@ public:
 
     /// Helper function to compute fresnel reflectance R of a dieletric. The
     /// transmission can be computed as 1-R. This routine accounts for total
-    /// internal reflection. The cosi is the angle between the incomming ray and
-    /// the surface normal, eta is the ratio of the indices of refraction
-    /// (target over source).
-    static inline float fresnel_dielectric (float cosi, float eta) {
-        float c = fabsf(cosi);
-        float g2 = eta * eta - 1 + c * c;
-        if (g2 > 0) {
-            float g = sqrtf(g2);
-            float a = (g - c) / (g + c);
-            float b = (c * (g + c) - 1) / (c * (g - c) + 1);
-            return 0.5f * a * a * (1 + b * b);
-        } else
-            return 1; // Total Internal Reflection
+    /// internal reflection. eta is the ratio of the indices of refraction
+    /// (inside medium over outside medium - for example ~1.333 for water from
+    /// air). The inside medium is defined as the region of space the normal N
+    /// is pointing away from.
+    /// This routine also computes the refracted direction T from the incoming
+    /// direction I (which should be pointing away from the surface). The normal
+    /// should always point in its canonical direction so that this routine can
+    /// flip the refraction coefficient as needed.
+    static inline float fresnel_dielectric (float eta, const Vec3& N, const Vec3& I, Vec3& R, Vec3& T) {
+        float cos = N.dot(I), neta;
+        Vec3 Nn;
+        if (cos > 0) {
+            // we are on the outside of the surface, going in
+            neta = 1 / eta;
+            Nn   = N;
+        } else {
+            // we are inside the surface, 
+            cos  = -cos;
+            neta = eta;
+            Nn   = -N;
+        }
+        R = (2 * cos) * Nn - I;
+        float arg = 1 - (neta * neta * (1 - (cos * cos)));
+        if (arg < 0) {
+            T.setValue(0, 0, 0);
+            return 1; // total internal reflection
+        } else {
+            float nK = (neta * cos) - std::sqrt(arg);
+            T = -(neta * I) + (nK * Nn);
+            // compute Fresnel terms
+            float cosTheta1 =  Nn.dot(R);
+            float cosTheta2 = -Nn.dot(T);
+            float pPara = (cosTheta1 - eta * cosTheta2) / (cosTheta1 + eta * cosTheta2);
+            float pPerp = (eta * cosTheta1 - cosTheta2) / (eta * cosTheta1 + cosTheta2);
+            return 0.5f * (pPara * pPara + pPerp * pPerp);
+        }
     }
 
     /// Helper function to compute fresnel reflectance R of a conductor. These

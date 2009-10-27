@@ -225,6 +225,94 @@ DECLOP (OP_microfacet_beckmann)
 
 
 
+DECLOP (OP_reflection)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &R0 (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (R0.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> r0 ((float *)R0.data(), R0.step());
+
+    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::reflection);
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i]->set (prim);
+            result[i]->set_parameter (0, 0, &(n[i]));
+            result[i]->set_parameter (0, 1, &(r0[i]));
+        }
+    }
+}
+
+
+
+DECLOP (OP_refraction)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &Eta (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (Eta.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> eta ((float *)Eta.data(), Eta.step());
+
+    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::refraction);
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i]->set (prim);
+            result[i]->set_parameter (0, 0, &(n[i]));
+            result[i]->set_parameter (0, 1, &(eta[i]));
+        }
+    }
+}
+
+
+
+DECLOP (OP_dielectric)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &Eta (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (Eta.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> eta ((float *)Eta.data(), Eta.step());
+
+    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::dielectric);
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i]->set (prim);
+            result[i]->set_parameter (0, 0, &(n[i]));
+            result[i]->set_parameter (0, 1, &(eta[i]));
+        }
+    }
+}
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

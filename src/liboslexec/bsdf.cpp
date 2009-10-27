@@ -217,7 +217,7 @@ public:
         omega_in = -omega_out;
         pdf = 1;
         eval.setValue(1, 1, 1);
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
+        labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::TRANSPARENCY | Labels::SINGULAR);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -754,6 +754,162 @@ public:
     }
 };
 
+class ReflectionClosure : public BSDFClosure {
+public:
+    ReflectionClosure () : BSDFClosure ("reflection", "nf") { }
+
+    struct params_t {
+        Vec3  N;    // shading normal
+        float R0;   // fresnel reflectance at incidence
+    };
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        // does not need to be integrated directly
+        return false;
+    }
+
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    {
+        // should never be called - because get_cone is empty
+        return Color3 (0.0f, 0.0f, 0.0f);
+    }
+
+    void sample (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+    {
+        // only one direction is possible
+        const params_t* params = (const params_t*) paramsptr;
+        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
+        float cosNO = params->N.dot(omega_out);
+        if (cosNO > 0) {
+            omega_in = (2 * cosNO) * params->N - omega_out;
+            pdf = 1;
+            float value = fresnel_shlick(cosNO, params->R0);
+            eval.setValue(value, value, value);
+        } else {
+            pdf = 0;
+            eval.setValue(0, 0, 0);
+            omega_in.setValue(0, 0, 0);
+        }
+    }
+
+    float pdf (const void *paramsptr, const Vec3 &Ng,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        // the pdf for an arbitrary direction is 0 because only a single
+        // direction is actually possible
+        return 0;
+    }
+};
+
+class RefractionClosure : public BSDFClosure {
+public:
+    RefractionClosure () : BSDFClosure ("refraction", "nf") { }
+
+    struct params_t {
+        Vec3  N;     // shading normal
+        float eta;   // ratio of indices of refraction (inside / outside)
+    };
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        // does not need to be integrated directly
+        return false;
+    }
+
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    {
+        // should never be called - because get_cone is empty
+        return Color3 (0.0f, 0.0f, 0.0f);
+    }
+
+    void sample (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+    {
+        const params_t* params = (const params_t*) paramsptr;
+        labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
+        Vec3 R, T;
+        float Ft = 1 - fresnel_dielectric(params->eta, params->N, omega_out, R, T);
+        if (Ft > 0) {
+            pdf = 1;
+            eval.setValue(Ft, Ft, Ft);
+            omega_in = T;
+            return;
+        }
+        pdf = 0;
+        eval.setValue(0, 0, 0);
+        omega_in.setValue(0, 0, 0);
+    }
+
+    float pdf (const void *paramsptr, const Vec3 &Ng,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        // the pdf for an arbitrary direction is 0 because only a single
+        // direction is actually possible
+        return 0;
+    }
+};
+
+class DielectricClosure : public BSDFClosure {
+public:
+    DielectricClosure () : BSDFClosure ("dielectric", "nf") { }
+
+    struct params_t {
+        Vec3  N;     // shading normal
+        float eta;   // ratio of indices of refraction (inside / outside)
+    };
+
+    bool get_cone(const void *paramsptr,
+                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        // does not need to be integrated directly
+        return false;
+    }
+
+    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    {
+        // should never be called - because get_cone is empty
+        return Color3 (0.0f, 0.0f, 0.0f);
+    }
+
+    void sample (const void *paramsptr, const Vec3 &Ng,
+                 const Vec3 &omega_out, float randu, float randv,
+                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+    {
+        const params_t* params = (const params_t*) paramsptr;
+        Vec3 R, T;
+        // randomly choose between reflection/refraction
+        float Fr = fresnel_dielectric(params->eta, params->N, omega_out, R, T);
+        if (randu < Fr) {
+            eval.setValue(Fr, Fr, Fr);
+            pdf = Fr;
+            omega_in = R;
+            labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
+        } else {
+            pdf = 1 - Fr;
+            eval.setValue(pdf, pdf, pdf);
+            omega_in = T;
+            labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
+        }
+    }
+
+    float pdf (const void *paramsptr, const Vec3 &Ng,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        // the pdf for an arbitrary direction is 0 because only a single
+        // direction is actually possible
+        return 0;
+    }
+};
+
 // these are all singletons
 DiffuseClosure diffuse_closure_primitive;
 TransparentClosure transparent_closure_primitive;
@@ -761,7 +917,9 @@ PhongClosure phong_closure_primitive;
 WardClosure ward_closure_primitive;
 MicrofacetGGXClosure microfacet_ggx_closure;
 MicrofacetBeckmannClosure microfacet_beckmann_closure;
-
+ReflectionClosure reflection_closure;
+RefractionClosure refraction_closure;
+DielectricClosure dielectric_closure;
 
 }; // namespace pvt
 }; // namespace OSL

@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 19 October, 2009 \\
+\date{{\large Date: 28 October, 2009 \\
 %(with corrections, 19 Oct 2009)
 }}
 
@@ -1765,6 +1765,11 @@ scalar, assign it to a \colorclosure variable, etc. --- but you may not
 assign it to an ordinary \color or examine its individual component's
 numeric values.
 
+It is legal to assign {\cf 0} to a closure, which is understood to mean
+setting it to a \emph{null closure} (even though in all other
+circumstances, assigning a {\cf float} to a \closure would not be
+allowed).
+
 At present, the only type of \closure supported by \langname is the
 \colorclosure, and the only allowed operations are those that let you
 form a linear combination of \colorclosure's.  Additional closure types
@@ -3296,9 +3301,9 @@ Should we look at Pystring and add useful things here?
 \index{functions!texture}
 \index{texture mapping}
 
-\apiitem{\emph{type} \textbf{texture} (string filename, float s, float t, \emph{...params...}) \\
+\apiitem{\emph{type} \textbf{texture} (string filename, float s, float t, \pl) \\
 \emph{type} \textbf{texture} (string filename, float s, float t, \\
-\spc\spc\spc float dsdx, float dtdx, float dsdy, float dtdy, \emph{...params...})}
+\spc\spc\spc float dsdx, float dtdx, float dsdy, float dtdy, \pl)}
 \indexapi{texture()}
 
 Perform a texture lookup of an image file, indexed by 2D coordinates
@@ -3432,12 +3437,13 @@ type in the metadata or other header information of the texture file.
 
 \apiend
 
+\newpage
 \section{Light and Shadows}
 \label{sec:stdlib:light}
 \index{light and shadow functions}
 \index{functions!light and shadows}
 
-\apiitem{\colorclosure\ {\ce diffuse} (normal N)}
+\apiitem{\colorclosure\ {\ce diffuse} (normal N, \pl)}
 \indexapi{diffuse()}
 
 Returns a \colorclosure that represents the Lambertian diffuse
@@ -3448,11 +3454,23 @@ $\Omega$ is the set of all outgoing directions in the hemisphere
 surrounding $N$, and $Cl(P,\omega)$ is the incident radiance at
 \P coming from the direction $-\omega$.
 
-Like all \colorclosure's, this ``value'' is symbolic and is may be
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
 fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf lambert()} was
+\colorclosure, you may program \emph{as if} {\cf diffuse()} was
 implemented as follows:
 
 \begin{code}
@@ -3466,7 +3484,7 @@ implemented as follows:
 \end{code}
 \apiend
 
-\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness)}
+\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness, \pl)}
 \indexapi{orennayar()}
 
 Returns a \colorclosure that represents the diffuse reflectance of a
@@ -3475,7 +3493,19 @@ rough surface, implementing the Oren-Nayar reflectance formula.  The
 microstructure of the material is, with 0 being perfectly smooth and
 giving an appearance identical to {\cf lambert()}.
 
-Like all \colorclosure's, this ``value'' is symbolic and is may be
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
 fact that the shader cannot examine the numeric values of the
@@ -3507,14 +3537,57 @@ implemented as follows:
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce cooktorrance} (normal N, float roughness)}
+\apiitem{\colorclosure\ {\ce phong} (normal N, float exponent, \pl)}
+\indexapi{phong()}
+
+Returns a \colorclosure that represents specular reflectance of the
+surface using the Phong BRDF.  The \emph{exponent} parameter
+indicates how smooth or rough the material is.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf phong()} was
+implemented as follows:
+
+\begin{code}
+    code eventually will go here
+\end{code}
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce cooktorrance} (normal N, float roughness, \pl)}
 \indexapi{cooktorrance()}
 
 Returns a \colorclosure that represents specular reflectance of the
 surface using the Cook-Torrence BRDF.  The \emph{roughness} parameter
 indicates how smooth or rough the microstructure of the material is.
 
-Like all \colorclosure's, this ``value'' is symbolic and is may be
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
 fact that the shader cannot examine the numeric values of the
@@ -3527,21 +3600,35 @@ implemented as follows:
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce ward} (normal N, vector xdir, vector ydir, float xrough, float yrough)}
+\apiitem{\colorclosure\ {\ce ward} (normal N, vector T, \\
+  \bigspc float xrough, float yrough, \pl)}
 \indexapi{ward()}
 
 Returns a \colorclosure that represents the anisotropic specular
-reflectance of the surface at \P.  The \emph{xdir} and \emph{ydir}
-vectors, both presumed to be unit-length and perpendicular to \N, 
+reflectance of the surface at \P.  The \N and {\cf T} vectors,
+both presumed to be unit-length, are the surface normal and tangent,
+used to
 establish a local coordinate system for the anisotropic effects.
 The \emph{xrough} and \emph{yrough} specify the amount of roughness
-in the \emph{xdir} and \emph{ydir} directions, respectively.
+in the {\cf T} and {\cf T} $\times$ {\cf N} directions, respectively.
 
-Like all \colorclosure's, this ``value'' is symbolic and is may be
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
 fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf diffuse()} was
+\colorclosure, you may program \emph{as if} {\cf ward()} was
 implemented as follows:
 
 \begin{code}
@@ -3550,8 +3637,8 @@ implemented as follows:
     normal Nf = faceforward (normalize(N), I);
     vector V = -normalize(I);
     float cos_theta_r = clamp (dot(Nf,V), 0.0001, 1);
-    vector X = xdir / xroughness;
-    vector Y = ydir / yroughness;
+    vector X = T / xroughness;
+    vector Y = cross(T,N) / yroughness;
     color C = 0;
     for all lights within the hemisphere defined by (P, Nf, PI/2) {
         /* L is the direction of light i, Cl is its incoming radiance */
@@ -3569,36 +3656,137 @@ implemented as follows:
 \end{code}
 \apiend
 
-\apiitem{\colorclosure\ {\ce reflection} () \\
-\colorclosure\ {\ce reflection} (float angle) \\
-\colorclosure\ {\ce reflection} (string source) \\
-\colorclosure\ {\ce reflection} (string source, float angle)}
+
+\apiitem{\colorclosure\ {\ce microfacet_beckmann} (normal N, float roughness,
+  float R0, \pl)}
+\indexapi{microfacet_beckmann()}
+
+Returns a \colorclosure that represents specular reflectance of the
+surface using a Beckmann microfacet BRDF (as described in Walter et al., 
+``Microfacet Models for Refraction through Rough Surfaces,''
+Eurographics Symposium on Rendering, 2007).
+
+The {\cf roughness} controls how rough the microstructure of the surface
+is.  The {\cf R0} parameter supplies the reflectance fraction at normal
+(perpendicular to the surface) incidence.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+\begin{comment}
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf microfacet_beckmann()} was
+implemented as follows:
+\begin{code}
+    code eventually will go here
+\end{code}
+\end{comment}
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce microfacet_ggx} (normal N, float roughness,
+  float R0, \pl)}
+\indexapi{microfacet_ggx()}
+
+Returns a \colorclosure that represents specular reflectance of the
+surface using the ``GGX'' microfacet BRDF described in Walter et al., 
+``Microfacet Models for Refraction through Rough Surfaces,''
+Eurographics Symposium on Rendering, 2007.
+
+The {\cf roughness} controls how rough the microstructure of the surface
+is.  The {\cf R0} parameter supplies the reflectance fraction at normal
+(perpendicular to the surface) incidence.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+\begin{comment}
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf microfacet_ggx()} was
+implemented as follows:
+\begin{code}
+    code eventually will go here
+\end{code}
+\end{comment}
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce reflection} (normal N, \pl) \\
+\colorclosure\ {\ce reflection} (normal N, float R0, \pl)}
 \indexapi{reflection()}
 
 Returns a \colorclosure that represents sharp mirror-like reflection
-from the surface.  The reflection direction will be automatically
-computed to be
+from the surface.  The reflection direction will be automatically computed
+based on the incident angle.
+
+If the optional {\cf R0} parameter is supplied, it is the reflectance
+fraction at normal (perpendicular to the surface) incidence and is used
+to compute the reflectance amount at other angles according to Shlick's
+approximation.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf reflection()} was
+implemented as follows:
 
 \begin{code}
-      reflect (normalize(I), normalize(faceforward(N,I)))
+    vector R = reflect (I, N);
+    return trace (R);
 \end{code}
-\vspace{-12pt}
 
+\begin{comment}
 If \emph{source} is supplied, it indicates the name of a geometry set to
 ray-trace against, or of an environment map to read (if not set, the
 renderer will use a global default).  If \emph{angle} is supplied, it
 specifies the angle (in radians) of a cone of centered around the
 reflection direction, from which reflection information will be sampled
 (this results in a blurry reflection).
+\end{comment}
 
 \apiend
 
+\begin{comment}   % DEPRECATED
 \apiitem{\colorclosure\ {\ce reflection} (vector R) \\
 \colorclosure\ {\ce reflection} (vector R, float angle) \\
 \colorclosure\ {\ce reflection} (string source, vector R) \\
 \colorclosure\ {\ce reflection} (string source, vector R, float angle)}
 \indexapi{reflection()}
-
 These alternative versions of {\cf reflection()} explicitly specify a
 reflection direction \emph{R}.  These are only supplied for the rare
 case where you need to use a nonphysical reflection direction, and
@@ -3607,47 +3795,67 @@ you can avoid by using the version of {\cf reflection()} that
 automatically calculates the reflection vector for you.  View-dependence
 may confuse or defeat clever renderer speedups or intelligent sampling
 strategies.  Use with caution!
-
 \apiend
+\end{comment}
 
 
-\apiitem{\colorclosure\ {\ce refraction} (float eta) \\
-\colorclosure\ {\ce refraction} (float eta, float angle) \\
-\colorclosure\ {\ce refraction} (string source, float eta) \\
-\colorclosure\ {\ce refraction} (string source, float eta, float angle)}
+\apiitem{\colorclosure\ {\ce refraction} (normal N, float eta, \pl)}
 \indexapi{refraction()}
 
 Returns a \colorclosure that represents sharp glass-like refraction of
-objects ``behind'' the surface.  The refraction direction will be
-automatically computed to be
+objects ``behind'' the surface.  The \emph{eta} parameter is the ratio
+of the index of refraction of the medium on the ``inside'' of the
+surface divided by the index of refration of the medium on the
+``outside'' of the surface.  The ``outside'' direction is the one
+specified by \N.
+
+The refraction direction will be automatically computed based on the
+incident angle and \emph{eta}, and the radiance returned will be
+automatically scaled by the Fresnel factor for dielectrics.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf refraction()} was
+implemented as follows:
 
 \begin{code}
-      normal Nf = normalize(faceforward(N,I));
-      return refract (normalize(I), Nf, dot(I,N) < 0 ? eta : 1/eta);
+    float Kr, Kt;
+    vector R, T;
+    fresnel (I, N, eta, Kr, Kt, R, T);
+    return Kt * trace (T);
 \end{code}
-\vspace{-12pt}
 
-\noindent where \emph{eta} is the ratio of the index of refraction of
-the medium on the ``inside'' of the surface divided by the index of
-refration of the medium on the ``outside'' of the surface.  The
-``outside'' direction is the one in the direction of the geometric
-primitive's normals.
-
+\begin{comment}
 If \emph{source} is supplied, it indicates the name of a geometry set to
 ray-trace against, or of an environment map to read (if not set, the
 renderer will use a global default).  If \emph{angle} is supplied, it
 specifies the angle (in radians) of a cone of centered around the
 refraction direction, from which refraction information will be sampled
 (this results in a blurred refraction).
+\end{comment}
 
 \apiend
 
+\begin{comment}   % DEPRECATED
 \apiitem{\colorclosure\ {\ce refraction} (vector R, float eta) \\
 \colorclosure\ {\ce refraction} (vector R, float eta, float angle) \\
 \colorclosure\ {\ce refraction} (string source, vector R, float eta) \\
 \colorclosure\ {\ce refraction} (string source, vector R, float eta, float angle)}
 \indexapi{refraction()}
-
 These alternative versions of {\cf refraction()} explicitly specify a
 refraction direction \emph{R}.  These are only supplied for the rare
 case where you need to use a nonphysical refraction direction, and
@@ -3656,11 +3864,84 @@ you can avoid by using the version of {\cf refraction()} that
 automatically calculates the refraction vector for you.  View-dependence
 may confuse or defeat clever renderer speedups or intelligent sampling
 strategies.  Use with caution!
+\apiend
+\end{comment}
+
+
+\apiitem{\colorclosure\ {\ce dielectric} (normal N, float eta, \pl)}
+\indexapi{dielectric()}
+
+Returns a \colorclosure that represents both the reflection and
+refraction from delectric materials such as glass or transparent
+plastic.  The \emph{eta} parameter is the ratio of the index of
+refraction of the medium on the ``inside'' of the surface divided by the
+index of refration of the medium on the ``outside'' of the surface.  The
+``outside'' direction is the one specified by \N.
+
+The reflection and refraction directions will be automatically computed
+based on the incident angle and \emph{eta}, and the radiance returned
+will be automatically scaled by the Fresnel factors for dielectrics.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf dielectric()} was
+implemented as follows:
+
+\begin{code}
+    float Kr, Kt;
+    vector R, T;
+    fresnel (I, N, eta, Kr, Kt, R, T);
+    return Kr * trace (R) + Kt * trace (T);
+\end{code}
 
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce translucence} ()}
+\apiitem{\colorclosure\ {\ce transparent} (\pl)}
+\indexapi{transparent()}
+
+Returns a \colorclosure that shows the light \emph{behind} the surface
+without any refractive bending of the light directions.
+
+Additional optional arguments may be passed as token/value pairs:
+
+\hspace{0.5in}None currently supported.
+\vspace{.25in}
+%\apiitem{"penumbra", <float>}
+%\vspace{12pt}
+%Specifies...
+%\apiend
+%\vspace{-16pt}
+
+Like all \colorclosure's, the return ``value'' is symbolic and is may be
+evaluated at a later time convenient to the renderer in order to compute
+the exitant radiance in the direction {\cf -I}.  But aside from the
+fact that the shader cannot examine the numeric values of the
+\colorclosure, you may program \emph{as if} {\cf transparent()} was
+implemented as follows:
+
+\begin{code}
+    return trace (I);
+\end{code}
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce translucence} (\pl)}
 \indexapi{translucence()}
 
 Returns a \colorclosure that represents the Lambertian diffuse
@@ -3677,7 +3958,7 @@ will add one or more physically-accurate, translucence function.
 \apiend
 
 
-
+\begin{comment}
 \apiitem{\colorclosure\ {\ce ambient} () \\
 \colorclosure\ {\ce ambient} (vector N)}
 \indexapi{ambient}
@@ -3689,8 +3970,10 @@ positions will only be considered if they are in front of the surface
 geometry.
 
 \apiend
+\end{comment}
 
-\apiitem{\colorclosure\ {\ce subsurface} (...)}
+
+\apiitem{\colorclosure\ {\ce subsurface} (\pl)}
 \indexapi{subsurface}
 Returns a \colorclosure that represents the amount of \emph{subsurface
 scattering} exhibited by the surface.
@@ -3702,8 +3985,8 @@ FIXME
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce emission} (\emph{...params...}) \\
-\colorclosure\ {\ce emission} (vector axis, float angle, \emph{...params...})}
+\apiitem{\colorclosure\ {\ce emission} (\pl) \\
+\colorclosure\ {\ce emission} (vector axis, float angle, \pl)}
 \indexapi{emission}
 
 Returns a \colorclosure that represents a glowing/emissive surface.

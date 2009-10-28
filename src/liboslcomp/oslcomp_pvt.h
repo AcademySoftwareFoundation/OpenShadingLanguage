@@ -176,6 +176,10 @@ public:
     ///
     Symbol *make_constant (float f);
 
+    /// Make a constant triple symbol
+    ///
+    Symbol *make_constant (TypeDesc type, float x, float y, float z);
+
     std::string output_filename () const { return m_output_filename; }
 
     /// Push the designated function on the stack, to keep track of

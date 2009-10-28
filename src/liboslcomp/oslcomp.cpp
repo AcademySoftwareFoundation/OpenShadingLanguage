@@ -333,6 +333,8 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
         oso ("%d", sym->intval());
     else if (sym->typespec().is_float())
         oso ("%g", sym->floatval());
+    else if (sym->typespec().is_triple())
+        oso ("%g %g %g", sym->vecval()[0], sym->vecval()[1], sym->vecval()[2]);
     else {
         ASSERT (0 && "Only know how to output const vals that are single int, float, string");
     }
@@ -367,14 +369,33 @@ OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) 
             else
                 oso ("0 ");  // FIXME?
         } else if (type.is_triple()) {
-            float f = 0;
-            if (lit && lit->typespec().is_int())
-                f = lit->intval();
-            else if (lit && lit->typespec().is_float())
-                f = lit->floatval();
-            else
-                f = 0;  // FIXME?
-            oso ("%g %g %g ", f, f, f);
+            if (lit && lit->typespec().is_int()) {
+                float f = lit->intval();
+                oso ("%g %g %g ", f, f, f);
+            } else if (lit && lit->typespec().is_float()) {
+                float f = lit->floatval();
+                oso ("%g %g %g ", f, f, f);
+            } else if (init->nodetype() == ASTNode::type_constructor_node &&
+                     init->typespec() == type) {
+                ASTtype_constructor *ctr = dynamic_cast<ASTtype_constructor *>(init.get());
+                ASTNode::ref val = ctr->args();
+                float f[3];
+                for (int c = 0;  c < 3;  ++c) {
+                    if (val.get() && val->nodetype() == ASTNode::literal_node) {
+                        f[c] = ((ASTliteral *)val.get())->floatval ();
+                        val = val->next();
+                    } else {
+                        f[c] = 0;
+                    }
+                }
+                oso ("%g %g %g ", f[0], f[1], f[2]);
+                // FIXME -- we're still generating both the init ops as
+                // well as these constant values.  That's not good.  We need
+                // to mark the node as being adequately defaulted so it
+                // doesn't double-generate the code.
+            } else {
+                oso ("0 0 0 ");
+            }
         } else if (type.is_matrix()) {
             float f = 0;
             if (lit && lit->typespec().is_int())

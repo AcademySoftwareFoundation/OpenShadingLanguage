@@ -138,6 +138,24 @@ OSLCompilerImpl::make_constant (float val)
 
 
 
+Symbol *
+OSLCompilerImpl::make_constant (TypeDesc type, float x, float y, float z)
+{
+    Vec3 val (x, y, z);
+    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+        if (sym->typespec().simpletype() == type && sym->vecval() == val)
+            return sym;
+    }
+    // It's not a constant we've added before
+    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ConstantSymbol *s = new ConstantSymbol (name, type, x, y, z);
+    symtab().insert (s);
+    m_const_syms.push_back (s);
+    return s;
+}
+
+
+
 int
 ASTNode::emitcode (const char *opname, Symbol *arg0, 
                    Symbol *arg1, Symbol *arg2, Symbol *arg3)
@@ -693,6 +711,24 @@ ASTtype_constructor::codegen (Symbol *dest)
 {
     if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
         dest = m_compiler->make_temporary (typespec());
+
+    // Handle simple case of a triple constructed from 3 float literals
+    if (typespec().is_triple()) {
+        bool all_literals = true;
+        ASTNode::ref val = args();
+        float f[3];
+        for (int c = 0;  c < 3;  ++c, val = val->next()) {
+            if (val->nodetype() == ASTNode::literal_node)
+                f[c] = ((ASTliteral *)val.get())->floatval ();
+            else
+                all_literals = false;
+        }
+        if (all_literals)
+            return m_compiler->make_constant (typespec().simpletype(),
+                                              f[0], f[1], f[2]);
+        // Doesn't fit the pattern, drop to the usual case...
+    }
+
     std::vector<Symbol *> argdest;
     argdest.push_back (dest);
     for (ref a = args();  a;  a = a->next()) {

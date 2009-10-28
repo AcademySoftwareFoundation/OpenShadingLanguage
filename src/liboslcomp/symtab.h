@@ -181,15 +181,19 @@ public:
         : Symbol(n, TypeDesc::TypeInt, SymTypeConst), m_i(val) { }
     ConstantSymbol (ustring n, float val)
         : Symbol(n, TypeDesc::TypeFloat, SymTypeConst), m_f(val) { }
+    ConstantSymbol (ustring n, TypeDesc type, float x, float y, float z)
+        : Symbol(n, type, SymTypeConst), m_v(x,y,z) { }
 
     ustring strval () const { return m_s; }
     int intval () const { return m_i; }
     float floatval () const { return m_typespec.is_int() ? (float)m_i : m_f; }
+    const Vec3 &vecval () const { return m_v; }
 
 private:
     ustring m_s;
     int m_i;
     float m_f;
+    Vec3 m_v;
 };
 
 

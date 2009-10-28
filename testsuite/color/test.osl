@@ -1,6 +1,9 @@
 shader
-test ()
+test (color cparam = color (.1, .7, .2))
 {
+    printf ("  parameter initialization test: cparam = %g\n", cparam);
+    printf ("\n");
+
     {
         float a = 0.1, b = 0.2, c = 0.5;
         printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));

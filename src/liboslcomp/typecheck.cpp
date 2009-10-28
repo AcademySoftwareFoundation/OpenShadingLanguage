@@ -102,6 +102,14 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
     typecheck_children (m_typespec);
     int i = 0;
     for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
+        // Special case: ok to assign a literal 0 to a closure to
+        // initialize it.
+        if (m_sym->typespec().is_closure() && ! in->typespec().is_closure() &&
+            (in->typespec().is_float() || in->typespec().is_int()) &&
+            in->nodetype() == literal_node &&
+            ((ASTliteral *)in.get())->floatval() == 0.0f) {
+            continue;  // it's ok
+        }
         if (! m_sym->typespec().is_array() && i > 0)
             error ("Can't assign array initializers to non-array %s %s",
                    m_typespec.string().c_str(), m_name.c_str());
@@ -280,6 +288,15 @@ ASTassign_expression::typecheck (TypeSpec expected)
     if (vt.is_array() || et.is_array()) {
         error ("Can't assign entire arrays");
         return TypeSpec();
+    }
+
+    // Special case: ok to assign a literal 0 to a closure to
+    // initialize it.
+    if (vt.is_closure() && ! et.is_closure() &&
+        (et.is_float() || et.is_int()) &&
+        expr()->nodetype() == literal_node &&
+        ((ASTliteral *)&(*expr()))->floatval() == 0.0f) {
+        return TypeSpec(); // it's ok
     }
 
     // Expression must be of a type assignable to the lvalue

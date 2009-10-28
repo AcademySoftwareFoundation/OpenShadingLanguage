@@ -161,6 +161,32 @@ assign_closure (ShadingExecution *exec, int nargs, const int *args,
 
 
 
+static void
+clear_closure (ShadingExecution *exec, int nargs, const int *args,
+               Runflag *runflags, int beginpoint, int endpoint)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, false);
+
+    // Loop over points, do the assignment.
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    if (result.is_uniform()) {
+        // Uniform case
+        result[0]->clear ();
+    } else {
+        // Potentially varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i]->clear ();
+    }
+    // N.B. You can't take a derivative of a closure
+}
+
+
+
 DECLOP (OP_assign)
 {
     ASSERT (nargs == 2);
@@ -174,6 +200,11 @@ DECLOP (OP_assign)
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
         if (Result.typespec().is_closure() && Src.typespec().is_closure())
             impl = assign_closure;
+        else if (Result.typespec().is_closure() && 
+                 (Src.typespec().is_int() || Src.typespec().is_float())) {
+            // Special case:  closure = 0 -> clear it
+            impl = clear_closure;
+        }
         // otherwise, it's an error
     } else if (Result.typespec().is_structure()) {
         // FIXME -- not handled yet

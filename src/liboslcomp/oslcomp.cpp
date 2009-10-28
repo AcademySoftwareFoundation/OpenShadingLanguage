@@ -351,7 +351,10 @@ OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) 
 
     for (ASTNode::ref init = node->init();  init;  init = init->next()) {
         ASTliteral *lit = dynamic_cast<ASTliteral *>(init.get());
-        if (type.is_int()) {
+        if (type.is_closure()) {
+            // this clause avoid trouble and assertions if the following
+            // is_int(), is_float(), etc, encounter a closure.
+        } else if (type.is_int()) {
             if (lit && lit->typespec().is_int())
                 oso ("%d ", lit->intval());
             else

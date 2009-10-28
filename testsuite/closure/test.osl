@@ -1,5 +1,7 @@
 shader
-test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5)
+test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5,
+      // test closure params
+      closure color closureparam = 0.0)
 {
     Ci = Kd * diffuse (N);
     printf ("  Ci = %s\n", Ci);
@@ -18,4 +20,7 @@ test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5)
     printf ("adding emission:");
     Ci += emission();
     printf ("  Ci = %s\n", Ci);
+
+    closure color xclosure = 0;
+    xclosure = 0;
 }

@@ -227,13 +227,11 @@ DECLOP (OP_microfacet_beckmann)
 
 DECLOP (OP_reflection)
 {
-    DASSERT (nargs == 3);
+    DASSERT (nargs == 2 || nargs == 3);
     Symbol &Result (exec->sym (args[0]));
     Symbol &N (exec->sym (args[1]));
-    Symbol &R0 (exec->sym (args[2]));
     DASSERT (Result.typespec().is_closure());
     DASSERT (N.typespec().is_triple());
-    DASSERT (R0.typespec().is_float());
 
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* closures always vary */);
@@ -241,8 +239,17 @@ DECLOP (OP_reflection)
 
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
-    VaryingRef<float> r0 ((float *)R0.data(), R0.step());
-
+    float one = 1.0f;
+    VaryingRef<float> r0;
+    if (nargs == 3) {
+        // explicit R0 (reflectance at the normal direction)
+        Symbol &R0 (exec->sym (args[2]));
+        DASSERT (R0.typespec().is_float());
+        r0.init((float *)R0.data(), R0.step());
+    } else {
+        // R0 not provided, assume 1.0 (disables fresnel)
+        r0.init(&one, 0);
+    }
     const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::reflection);
     for (int i = beginpoint;  i < endpoint;  ++i) {
         if (runflags[i]) {

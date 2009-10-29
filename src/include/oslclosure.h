@@ -65,8 +65,9 @@ public:
     Labels():m_set(0) {};
     Labels(int l):m_set(l) {};
     /// Returns true is this label is completely included in the given one
-    bool match(const Labels &l)const { return (m_set & l.m_set) == m_set; };
+    bool match(const Labels &l) const { return (m_set & l.m_set) == m_set; };
     bool empty()const { return m_set == 0; };
+    bool has(int flag) const { return (m_set & flag) != 0; }
     /// Add labels to the existing ones
     void add(const Labels &l) { m_set |= l.m_set; };
     void clear() { m_set = 0; };
@@ -159,59 +160,22 @@ public:
     /// direction I (which should be pointing away from the surface). The normal
     /// should always point in its canonical direction so that this routine can
     /// flip the refraction coefficient as needed.
-    static inline float fresnel_dielectric (float eta, const Vec3& N, const Vec3& I, Vec3& R, Vec3& T) {
-        float cos = N.dot(I), neta;
-        Vec3 Nn;
-        if (cos > 0) {
-            // we are on the outside of the surface, going in
-            neta = 1 / eta;
-            Nn   = N;
-        } else {
-            // we are inside the surface, 
-            cos  = -cos;
-            neta = eta;
-            Nn   = -N;
-        }
-        R = (2 * cos) * Nn - I;
-        float arg = 1 - (neta * neta * (1 - (cos * cos)));
-        if (arg < 0) {
-            T.setValue(0, 0, 0);
-            return 1; // total internal reflection
-        } else {
-            float nK = (neta * cos) - std::sqrt(arg);
-            T = -(neta * I) + (nK * Nn);
-            // compute Fresnel terms
-            float cosTheta1 =  Nn.dot(R);
-            float cosTheta2 = -Nn.dot(T);
-            float pPara = (cosTheta1 - eta * cosTheta2) / (cosTheta1 + eta * cosTheta2);
-            float pPerp = (eta * cosTheta1 - cosTheta2) / (eta * cosTheta1 + cosTheta2);
-            return 0.5f * (pPara * pPara + pPerp * pPerp);
-        }
-    }
+    static float fresnel_dielectric (float eta, const Vec3 &N,
+            const Vec3 &I, const Vec3 &dIdx, const Vec3 &dIdy,
+            Vec3 &R, Vec3 &dRdx, Vec3 &dRdy,
+            Vec3& T, Vec3 &dTdx, Vec3 &dTdy);
 
     /// Helper function to compute fresnel reflectance R of a conductor. These
     /// materials do not transmit any light. cosi is the angle between the
     /// incomming ray and the surface normal, eta and k give the complex index
     /// of refraction of the surface.
-    static inline float fresnel_conductor (float cosi, float eta, float k) {
-        float tmp_f = eta * eta + k * k;
-        float tmp = tmp_f * cosi * cosi;
-        float Rparl2 = (tmp - (2.0f * eta * cosi) + 1) /
-                       (tmp + (2.0f * eta * cosi) + 1);
-        float Rperp2 = (tmp_f - (2.0f * eta * cosi) + cosi * cosi) /
-                       (tmp_f + (2.0f * eta * cosi) + cosi * cosi);
-        return (Rparl2 + Rperp2) * 0.5f;
-    }
+    static float fresnel_conductor (float cosi, float eta, float k);
 
     /// Helper function to compute an approximation of fresnel reflectance based
     /// only on the reflectance at normal incidence. cosi is the angle between
     /// the incoming ray and the surface normal, R0 is the reflectance at normal
     /// indidence (cosi==0).
-    static inline float fresnel_shlick (float cosi, float R0) {
-        float cosi2 = cosi * cosi;
-        float cosi5 = cosi2 * cosi2 * cosi;
-        return R0 + (1 - cosi5) * (1 - R0);
-    }
+    static float fresnel_shlick (float cosi, float R0);
 
 private:
     ustring m_name;
@@ -262,9 +226,14 @@ public:
     /// Unlike the other methods, this routine can be called even if the
     /// get_cone routine returned false. This is to allow singular BRDFs to pick
     /// directions from infinitely small cones.
+    /// The caller is responsible for initializing the values of the output
+    /// arguments with zeros so that early exits from this function are
+    /// simplified.
     virtual void sample (const void *paramsptr, const Vec3 &Ng,
-                         const Vec3 &omega_out, float randu, float randv,
-                         Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const = 0;
+                         const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                         float randu, float randv,
+                         Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                         float &pdf, Color3 &eval, Labels &labels) const = 0;
 
     /// Return the probability distribution function in the direction omega_in,
     /// given the parameters and incident direction omega_out.  This MUST match

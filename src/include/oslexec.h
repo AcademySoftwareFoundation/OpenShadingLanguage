@@ -215,6 +215,8 @@ public:
     VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
 
     VaryingRef<ClosureColor *> Ci;     ///< Output colors
+
+    bool leftHanded;                   ///< flips the meaning of calculatenormal()
 };
 
 

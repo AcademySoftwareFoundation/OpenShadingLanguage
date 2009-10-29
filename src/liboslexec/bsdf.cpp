@@ -96,6 +96,72 @@ ClosurePrimitive::make_orthonormals (const Vec3 &N, const Vec3& T, Vec3 &x, Vec3
     y = N.cross(T);
     x = y.cross(N);
 }
+    
+float
+ClosurePrimitive::fresnel_dielectric (float eta, const Vec3 &N,
+        const Vec3 &I, const Vec3 &dIdx, const Vec3 &dIdy,
+        Vec3 &R, Vec3 &dRdx, Vec3 &dRdy,
+        Vec3& T, Vec3 &dTdx, Vec3 &dTdy)
+{
+    float cos = N.dot(I), neta;
+    Vec3 Nn;
+    // compute reflection
+    R = (2 * cos) * N - I;
+    dRdx = (2 * N.dot(dIdx)) * N - dIdx;
+    dRdy = (2 * N.dot(dIdy)) * N - dIdy;
+    // check which side of the surface we are on
+    if (cos > 0) {
+        // we are on the outside of the surface, going in
+        neta = 1 / eta;
+        Nn   = N;
+    } else {
+        // we are inside the surface, 
+        cos  = -cos;
+        neta = eta;
+        Nn   = -N;
+    }
+    R = (2 * cos) * Nn - I;
+    float arg = 1 - (neta * neta * (1 - (cos * cos)));
+    if (arg < 0) {
+        T.setValue(0, 0, 0);
+        dTdx.setValue(0, 0, 0);
+        dTdy.setValue(0, 0, 0);
+        return 1; // total internal reflection
+    } else {
+        float dnp = std::sqrt(arg);
+        float nK = (neta * cos) - dnp;
+        T = -(neta * I) + (nK * Nn);
+        dTdx = -(neta * dIdx) + ((neta - neta * neta * cos / dnp) * dIdx.dot(Nn)) * Nn;
+        dTdy = -(neta * dIdy) + ((neta - neta * neta * cos / dnp) * dIdy.dot(Nn)) * Nn;
+        // compute Fresnel terms
+        float cosTheta1 = cos; // N.R
+        float cosTheta2 = -Nn.dot(T);
+        float pPara = (cosTheta1 - eta * cosTheta2) / (cosTheta1 + eta * cosTheta2);
+        float pPerp = (eta * cosTheta1 - cosTheta2) / (eta * cosTheta1 + cosTheta2);
+        return 0.5f * (pPara * pPara + pPerp * pPerp);
+    }
+}
+
+
+float
+ClosurePrimitive::fresnel_conductor (float cosi, float eta, float k)
+{
+    float tmp_f = eta * eta + k * k;
+    float tmp = tmp_f * cosi * cosi;
+    float Rparl2 = (tmp - (2.0f * eta * cosi) + 1) /
+                   (tmp + (2.0f * eta * cosi) + 1);
+    float Rperp2 = (tmp_f - (2.0f * eta * cosi) + cosi * cosi) /
+                   (tmp_f + (2.0f * eta * cosi) + cosi * cosi);
+    return (Rparl2 + Rperp2) * 0.5f;
+}
+
+float
+ClosurePrimitive::fresnel_shlick (float cosi, float R0)
+{
+    float cosi2 = cosi * cosi;
+    float cosi5 = cosi2 * cosi2 * cosi;
+    return R0 + (1 - cosi5) * (1 - R0);
+}
 
 
 void
@@ -162,8 +228,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -172,13 +240,8 @@ public:
            // distribution over the hemisphere
            sample_cos_hemisphere (params->N, omega_out, randu, randv, omega_in, pdf);
            eval.setValue(pdf, pdf, pdf);
-        } else {
-           // no samples if we look at the surface from the wrong side
-           pdf = 0; 
-           omega_in.setValue(0.0f, 0.0f, 0.0f);
-           eval.setValue(0.0f, 0.0f, 0.0f);
+           labels = Labels( Labels::SURFACE | Labels::REFLECT | Labels::DIFFUSE );
         }
-        labels = Labels( Labels::SURFACE | Labels::REFLECT | Labels::DIFFUSE );
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -210,11 +273,15 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         // only one direction is possible
         omega_in = -omega_out;
+        domega_in_dx = -domega_out_dx;
+        domega_in_dy = -domega_out_dy;
         pdf = 1;
         eval.setValue(1, 1, 1);
         labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::TRANSPARENCY | Labels::SINGULAR);
@@ -272,8 +339,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -289,7 +358,7 @@ public:
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * R;
-            if ((Ng ^ omega_in) > 0.0f)
+            if ((Ng ^ omega_in) > 0)
             {
                 // common terms for pdf and eval
                 float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
@@ -300,16 +369,10 @@ public:
                 {
                     pdf = (params->exponent + 1) * common;
                     power = cosNI * (params->exponent + 2) * common;
+                    eval.setValue(power, power, power);
                 }
-                else
-                    power = pdf = 0.0f;
-                eval.setValue(power, power, power);
-                return;
             }
         }
-        pdf = 0; 
-        omega_in.setValue(0.0f, 0.0f, 0.0f);
-        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -375,8 +438,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -449,12 +514,8 @@ public:
                 denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
                 float power = cosNI * expf(-exp_arg) / denom;
                 eval.setValue(power, power, power);
-                return;
             }
         }
-        pdf = 0;
-        omega_in.setValue(0.0f, 0.0f, 0.0f);
-        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -532,8 +593,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -576,13 +639,9 @@ public:
                     float F = fresnel_shlick(m.dot(omega_out), params->R0);
                     float power = (F * G * D) * 0.25f / cosNI;
                     eval.setValue(power, power, power);
-                    return;
                 }
             }
         }
-        pdf = 0; 
-        omega_in.setValue(0.0f, 0.0f, 0.0f);
-        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -671,8 +730,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
@@ -718,13 +779,9 @@ public:
                     float F = fresnel_shlick(m.dot(omega_out), params->R0);
                     float power = (F * G * D) * 0.25f / cosNI;
                     eval.setValue(power, power, power);
-                    return;
                 }
             }
         }
-        pdf = 0;
-        omega_in.setValue(0.0f, 0.0f, 0.0f);
-        eval.setValue(0.0f, 0.0f, 0.0f);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -778,8 +835,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         // only one direction is possible
         const params_t* params = (const params_t*) paramsptr;
@@ -787,13 +846,11 @@ public:
         float cosNO = params->N.dot(omega_out);
         if (cosNO > 0) {
             omega_in = (2 * cosNO) * params->N - omega_out;
+            domega_in_dx = 2 * params->N.dot(domega_out_dx) * params->N - domega_out_dx;
+            domega_in_dy = 2 * params->N.dot(domega_out_dy) * params->N - domega_out_dy;
             pdf = 1;
             float value = fresnel_shlick(cosNO, params->R0);
             eval.setValue(value, value, value);
-        } else {
-            pdf = 0;
-            eval.setValue(0, 0, 0);
-            omega_in.setValue(0, 0, 0);
         }
     }
 
@@ -830,22 +887,26 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t* params = (const params_t*) paramsptr;
         labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
-        Vec3 R, T;
-        float Ft = 1 - fresnel_dielectric(params->eta, params->N, omega_out, R, T);
+        Vec3 R, dRdx, dRdy;
+        Vec3 T, dTdx, dTdy;
+        float Ft = 1 - fresnel_dielectric(params->eta, params->N,
+                                          omega_out, domega_out_dx, domega_out_dy,
+                                          R, dRdx, dRdy,
+                                          T, dTdx, dTdy);
         if (Ft > 0) {
             pdf = 1;
             eval.setValue(Ft, Ft, Ft);
             omega_in = T;
-            return;
+            domega_in_dx = dTdx;
+            domega_in_dy = dTdy;
         }
-        pdf = 0;
-        eval.setValue(0, 0, 0);
-        omega_in.setValue(0, 0, 0);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -881,22 +942,32 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t* params = (const params_t*) paramsptr;
-        Vec3 R, T;
+        Vec3 R, dRdx, dRdy;
+        Vec3 T, dTdx, dTdy;
         // randomly choose between reflection/refraction
-        float Fr = fresnel_dielectric(params->eta, params->N, omega_out, R, T);
+        float Fr = fresnel_dielectric(params->eta, params->N,
+                                      omega_out, domega_out_dx, domega_out_dy,
+                                      R, dRdx, dRdy,
+                                      T, dTdx, dTdy);
         if (randu < Fr) {
             eval.setValue(Fr, Fr, Fr);
             pdf = Fr;
             omega_in = R;
+            domega_in_dx = dRdx;
+            domega_in_dy = dRdy;
             labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
         } else {
             pdf = 1 - Fr;
             eval.setValue(pdf, pdf, pdf);
             omega_in = T;
+            domega_in_dx = dTdx;
+            domega_in_dy = dTdy;
             labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
         }
     }

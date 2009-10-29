@@ -60,8 +60,10 @@ public:
     }
 
     void sample (const void *paramsptr, const Vec3 &Ng,
-                 const Vec3 &omega_out, float randu, float randv,
-                 Vec3 &omega_in, float &pdf, Color3 &eval, Labels &labels) const
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
     {
         pdf = 0, omega_in.setValue(0, 0, 0), eval.setValue(0, 0, 0);
     }

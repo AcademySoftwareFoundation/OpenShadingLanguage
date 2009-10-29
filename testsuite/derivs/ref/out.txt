@@ -97,6 +97,11 @@ atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
 atan: a = atan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
 atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
 
+atan2: a = atan2(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0
+atan2: a = atan2(u,v) at (1,0); a = 1.5708, Dx(a) = 0, Dy(a) = 0.5
+atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = -0.5, Dy(a) = 0
+atan2: a = atan2(u,v) at (1,1); a = 0.785398, Dx(a) = -0.25, Dy(a) = 0.25
+
 degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
 degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
 degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
@@ -106,6 +111,106 @@ radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
 radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
 radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
 radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
+
+log: a = log(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+log: a = log(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+log2: a = log2(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log2: a = log2(u); a = 0, Dx(a) = 0.721348, Dy(a) = 0
+log2: a = log2(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log2: a = log2(u); a = 0, Dx(a) = 0.721348, Dy(a) = 0
+
+log10: a = log10(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log10: a = log10(u); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+log10: a = log10(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log10: a = log10(u); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+
+exp: a = exp(u); a = 1, Dx(a) = 0.5, Dy(a) = 0
+exp: a = exp(u); a = 2.71828, Dx(a) = 1.35914, Dy(a) = 0
+exp: a = exp(u); a = 1, Dx(a) = 0.5, Dy(a) = 0
+exp: a = exp(u); a = 2.71828, Dx(a) = 1.35914, Dy(a) = 0
+
+exp2: a = exp2(u); a = 1, Dx(a) = 0.346574, Dy(a) = 0
+exp2: a = exp2(u); a = 2, Dx(a) = 0.693147, Dy(a) = 0
+exp2: a = exp2(u); a = 1, Dx(a) = 0.346574, Dy(a) = 0
+exp2: a = exp2(u); a = 2, Dx(a) = 0.693147, Dy(a) = 0
+
+expm1: a = expm1(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+expm1: a = expm1(u); a = 1.71828, Dx(a) = 1.35914, Dy(a) = 0
+expm1: a = expm1(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+expm1: a = expm1(u); a = 1.71828, Dx(a) = 1.35914, Dy(a) = 0
+
+erf: a = erf(u); a = 0, Dx(a) = 0.56419, Dy(a) = 0
+erf: a = erf(u); a = 0.842701, Dx(a) = 0.207554, Dy(a) = 0
+erf: a = erf(u); a = 0, Dx(a) = 0.56419, Dy(a) = 0
+erf: a = erf(u); a = 0.842701, Dx(a) = 0.207554, Dy(a) = 0
+
+erfc: a = erfc(u); a = 1, Dx(a) = -0.56419, Dy(a) = -0
+erfc: a = erfc(u); a = 0.157299, Dx(a) = -0.207554, Dy(a) = -0
+erfc: a = erfc(u); a = 1, Dx(a) = -0.56419, Dy(a) = -0
+erfc: a = erfc(u); a = 0.157299, Dx(a) = -0.207554, Dy(a) = -0
+
+sqrt: a = sqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
+sqrt: a = sqrt(u); a = 1, Dx(a) = 0.25, Dy(a) = 0
+sqrt: a = sqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
+sqrt: a = sqrt(u); a = 1, Dx(a) = 0.25, Dy(a) = 0
+
+inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
+inversesqrt: a = inversesqrt(u); a = 1, Dx(a) = -0.25, Dy(a) = -0
+inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
+inversesqrt: a = inversesqrt(u); a = 1, Dx(a) = -0.25, Dy(a) = -0
+
+pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, 3); a = 1, Dx(a) = 1.5, Dy(a) = 0
+pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, 3); a = 1, Dx(a) = 1.5, Dy(a) = 0
+
+pow: a = pow(u, v) at (0,0); a = 1, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, v) at (1,0); a = 1, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+log: a = log(u,10); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+log: a = log(u,10); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+
+log: a = log(u,v) at (0,0); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,v) at (1,0); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,v) at (0,1); a = 3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,v) at (1,1); a = 3.40282e+38, Dx(a) = 0, Dy(a) = 0
+
+clamp: a = clamp(sin(u),u,v) is clamp(0,0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
+clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
+clamp: a = clamp(sin(u),u,v) is clamp(0,0,1); a = 0, Dx(a) = 0.5, Dy(a) = 0
+clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+min: a = min(u,v) at (0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
+min: a = min(u,v) at (1,0); a = 0, Dx(a) = 0, Dy(a) = 0.5
+min: a = min(u,v) at (0,1); a = 0, Dx(a) = 0.5, Dy(a) = 0
+min: a = min(u,v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+max: a = max(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0.5
+max: a = max(u,v) at (1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
+max: a = max(u,v) at (0,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
+max: a = max(u,v) at (1,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
+
+mix: a = mix(u,v,sin(u)) at (0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
+mix: a = mix(u,v,sin(u)) at (1,0); a = 0.158529, Dx(a) = -0.190887, Dy(a) = 0.420735
+mix: a = mix(u,v,sin(u)) at (0,1); a = 0, Dx(a) = 1, Dy(a) = 0
+mix: a = mix(u,v,sin(u)) at (1,1); a = 1, Dx(a) = 0.0792645, Dy(a) = 0.420735
+
+hypot: a = hypot(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0
+hypot: a = hypot(u,v) at (1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
+hypot: a = hypot(u,v) at (0,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
+hypot: a = hypot(u,v) at (1,1); a = 1.41421, Dx(a) = 0.353553, Dy(a) = 0.353553
+
+hypot: a = hypot(u,v,3) at (0,0); a = 3, Dx(a) = 0, Dy(a) = 0
+hypot: a = hypot(u,v,3) at (1,0); a = 3.16228, Dx(a) = 0.158114, Dy(a) = 0
+hypot: a = hypot(u,v,3) at (0,1); a = 3.16228, Dx(a) = 0, Dy(a) = 0.158114
+hypot: a = hypot(u,v,3) at (1,1); a = 3.31662, Dx(a) = 0.150756, Dy(a) = 0.150756
 
 comp ref: P = 0 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 comp ref: P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0

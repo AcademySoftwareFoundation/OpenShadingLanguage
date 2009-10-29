@@ -328,7 +328,7 @@ Dual2<T> asin (const Dual2<T> &a)
    if (a.val() <= T(-1)) 
       return Dual2<T> (T(-M_PI/2), T(0), T(0));
 
-   float arcsina, denom;
+   T arcsina, denom;
    arcsina = std::asin (a.val());
    denom   = T(1) / std::sqrt (T(1) - a.val()*a.val());
 
@@ -344,6 +344,273 @@ Dual2<T> atan (const Dual2<T> &a)
    denom   = T(1) / (T(1) + a.val()*a.val());
 
    return Dual2<T> (arctana, denom * a.dx(), denom * a.dy());
+}
+
+
+// f(x,x) = atan2(y,x); f'(x) =  y x' / (x^2 + y^2),
+//                      f'(y) = -x y' / (x^2 + y^2)
+// reference:  http://en.wikipedia.org/wiki/Atan2 
+// (above link has other formulations)
+template<class T>
+Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
+{
+   if (y.val() == T(0) && x.val() == T(0))
+      return Dual2<T> (T(0), T(0), T(0));
+
+   T atan2xy;
+   atan2xy = std::atan2 (y.val(), x.val());
+   T denom = T(1) / (x.val()*x.val() + y.val()*y.val());
+   return Dual2<T> ( atan2xy, (y.val()*x.dx() - x.val()*y.dx())*denom,
+                              (y.val()*x.dy() - x.val()*y.dy())*denom );
+}
+
+
+// to compute pow(u,v), we need the dual-form representation of
+// the pow() operator.  In general, the dual-form of the primitive 
+// function 'g' is:
+//   g(<u,u'>, <v,v'>) = < g(u,v), dgdu(u,v)u' + dgdv(u,v)v' >
+//   (from http://en.wikipedia.org/wiki/Automatic_differentiation)
+// so, pow(u,v) = < u^v, vu^(v-1) u' + log(u)u^v v' >
+template<class T>
+Dual2<T> pow (const Dual2<T> &u, const Dual2<T> &v)
+{
+#define MYTRUNC(x)  ((x < T(0)) ? std::ceil(x) : std::floor(x))
+   // assume 0^x is always zero unless x==0
+   if (u.val() == T(0))
+   {
+      if (v.val() == T(0))
+         return Dual2<T> ( T(1), T(0), T(0) );
+      else
+         return Dual2<T> ( T(0), T(0), T(0) );
+   }
+   // return 0 instead of an imaginary number
+   if (u.val() < T(0) && ( MYTRUNC (v.val()) != v.val()) )
+      return Dual2<T> ( T(0), T(0), T(0) );
+   T powuv   = std::pow (u.val(), v.val());
+   T powuvm1 = powuv / u.val(); // u^(v-1)
+   T logu    = std::log (u.val());
+   return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
+                            v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
+#undef MYTRUNC
+}
+
+
+// f(x) = log(a), f'(x) = 1/x
+// (log base e)
+template<class T>
+Dual2<T> log (const Dual2<T> &a)
+{
+   // do we want to print an error message?
+   if (a.val() <= T(0))
+      return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+
+   T loga, inv_a;
+   loga  = std::log (a.val());
+   inv_a = T(1)/a.val();
+
+   return Dual2<T> (loga, inv_a * a.dx(), inv_a * a.dy());
+}
+
+// f(x) = log(a)/log(b)  -- leverage Dual2<T>log() and Dua2<T>operator/()
+// (log base e)
+template<class T>
+Dual2<T> log (const Dual2<T> &a, const Dual2<T> &b)
+{
+   // do we want to print an error message?
+   if (a.val() <= T(0) || b.val() <= T(0) || b.val() == T(1))
+      if (b.val() == T(1))
+         return Dual2<T> (T(std::numeric_limits<T>::max()), T(0), T(0));
+      else
+         return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+
+   Dual2<T> loga, logb;
+   loga  = log (a);
+   logb  = log (b);
+
+   return loga/logb;
+}
+
+// f(x) = log2(x), f'(x) = 1/(x*log2)
+// (log base 2)
+template<class T>
+Dual2<T> log2 (const Dual2<T> &a)
+{
+   // do we want to print an error message?
+   if (a.val() <= T(0))
+      return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+
+   T log2, log2a, inv_a_log2;
+
+   log2       = std::log (T(2));
+   log2a      = std::log (a.val()) / log2;
+   inv_a_log2 = T(1)/(a.val() * log2);
+
+   return Dual2<T> (log2a, inv_a_log2 * a.dx(), inv_a_log2 * a.dy());
+}
+
+// f(x) = log10(x), f'(x) = 1/(x*log10)
+// (log base 10)
+template<class T>
+Dual2<T> log10 (const Dual2<T> &a)
+{
+   // do we want to print an error message?
+   if (a.val() <= T(0))
+      return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+
+   T log10, log10a, inv_a_log10;
+   log10       = std::log (T(10));
+   log10a      = std::log10 (a.val());
+   inv_a_log10 = T(1)/(a.val() * log10);
+
+   return Dual2<T> (log10a, inv_a_log10 * a.dx(), inv_a_log10 * a.dy());
+}
+
+// f(x) = e^x, f'(x) = e^x
+template<class T>
+Dual2<T> exp (const Dual2<T> &a)
+{
+   T expa;
+   expa  = std::exp (a.val());
+
+   return Dual2<T> (expa, expa * a.dx(), expa * a.dy());
+}
+
+// f(x) = 2^x, f'(x) = (2^x)*log(2)
+template<class T>
+Dual2<T> exp2 (const Dual2<T> &a)
+{
+   T exp2a, ln2;
+   exp2a  = std::pow (T(2), a.val());
+   ln2    = std::log (T(2));
+
+   return Dual2<T> (exp2a, exp2a*ln2*a.dx(), exp2a*ln2*a.dy());
+}
+
+// f(x) = e^x - 1, f'(x) = e^x
+template<class T>
+Dual2<T> expm1 (const Dual2<T> &a)
+{
+   float expm1a, expa;
+   expm1a = expm1f (a.val());
+   expa   = std::exp (a.val());
+
+   return Dual2<T> (expm1a, expa * a.dx(), expa * a.dy());
+}
+
+// f(x) = erf(x), f'(x) = (2e^(-x^2))/sqrt(pi)
+template<class T>
+Dual2<T> erf (const Dual2<T> &a)
+{
+   T erfa, derfadx;
+   erfa    = erff (a.val()); // float version!
+   derfadx = T(2)*std::exp(-a.val()*a.val())/std::sqrt(T(M_PI));
+
+   return Dual2<T> (erfa, derfadx * a.dx(), derfadx * a.dy());
+}
+
+// f(x) = erfc(x), f'(x) = -(2e^(-x^2))/sqrt(pi)
+template<class T>
+Dual2<T> erfc (const Dual2<T> &a)
+{
+   T erfca, derfcadx;
+   erfca    = erfcf (a.val()); // float version!
+   derfcadx = -T(2)*std::exp(-a.val()*a.val())/std::sqrt(T(M_PI));
+
+   return Dual2<T> (erfca, derfcadx * a.dx(), derfcadx * a.dy());
+}
+
+// f(x) = sqrt(x), f'(x) = 1/(2*sqrt(x))
+template<class T>
+Dual2<T> sqrt (const Dual2<T> &a)
+{
+   // do we want to print an error message?
+   if (a.val() <= T(0))
+      return Dual2<T> (T(0), T(0), T(0));
+
+   T sqrta, inv_2sqrta;
+   sqrta      = std::sqrt(a.val());
+   inv_2sqrta = T(1)/(T(2)*sqrta);
+
+   return Dual2<T> (sqrta, inv_2sqrta * a.dx(), inv_2sqrta * a.dy());
+}
+
+// f(x) = 1/sqrt(x), f'(x) = -1/(2*x^(3/2))
+template<class T>
+Dual2<T> inversesqrt (const Dual2<T> &a)
+{
+   // do we want to print an error message?
+   if (a.val() <= T(0))
+      return Dual2<T> (T(0), T(0), T(0));
+
+   T sqrta, inv_neg2asqrta;
+   sqrta          = std::sqrt(a.val());
+   inv_neg2asqrta = -T(1)/(T(2)*a.val()*sqrta);
+
+   return Dual2<T> (T(1)/sqrta, inv_neg2asqrta * a.dx(), inv_neg2asqrta * a.dy());
+}
+
+// (fx) = x*(1-a) + y*a, f'(x) = (1-a)x' + (y - x)*a' + a*y'
+template<class T>
+Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
+{
+   T mixval = x.val()*(T(1)-a.val()) + y.val()*a.val();
+
+   return Dual2<T> (mixval, (T(1) - a.val())*x.dx() + (y.val() - x.val())*a.dx() + a.val()*y.dx(),
+                            (T(1) - a.val())*x.dy() + (y.val() - x.val())*a.dy() + a.val()*y.dy());
+}
+
+// f(x) = sqrt(x*x + y*y), f'(x) = (x x' + y y')/sqrt(x*x + y*y)
+template<class T>
+Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y)
+{
+   if (x.val() == T(0) && y.val() == T(0))
+      return Dual2<T> (T(0), T(0), T(0));
+
+   T hypotxy =  std::sqrt(x.val()*x.val() + y.val()*y.val());
+   T denom = T(1) / hypotxy;
+
+   return Dual2<T> (hypotxy, (x.val()*x.dx() + y.val()*y.dx()) * denom,
+                             (x.val()*x.dy() + y.val()*y.dy()) * denom);
+}
+
+// f(x) = sqrt(x*x + y*y + z*z), f'(x) = (x x' + y y' + z z')/sqrt(x*x + y*y + z*z)
+template<class T>
+Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &z)
+{
+   if (x.val() == T(0) && y.val() == T(0) && z.val() == T(0))
+      return Dual2<T> (T(0), T(0), T(0));
+
+   T hypotxyz =  std::sqrt(x.val()*x.val() + y.val()*y.val() + z.val()*z.val());
+   T denom = T(1) / hypotxyz;
+
+   return Dual2<T> (hypotxyz, (x.val()*x.dx() + y.val()*y.dx() + z.val()*z.dx()) * denom,
+                              (x.val()*x.dy() + y.val()*y.dy() + z.val()*z.dy()) * denom);
+}
+
+template<class T>
+Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
+{
+   if (x.val() > y.val())
+      return y;
+   else 
+      return x;
+}
+
+template<class T>
+Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
+{
+   if (x.val() > y.val())
+      return x;
+   else 
+      return y;
+}
+
+template<class T>
+Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &maxv)
+{
+   if (x.val() < minv.val()) return minv;
+   else if (x.val() > maxv.val()) return maxv;
+   else return x;
 }
 
 

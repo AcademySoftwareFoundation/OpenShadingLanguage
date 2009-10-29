@@ -98,6 +98,94 @@ public:
                     Vec3( ax.dx(),  ay.dx(),  az.dx() ),
                     Vec3( ax.dy(),  ay.dy(),  az.dy() ));
     }
+    inline void operator() (Vec3 &result, const Vec3 &a, float &b) { 
+       Func func;
+       // OPT: this leads to 3 evaluations(?) of b when we really only need 1!!!
+       func (result.x, a.x, b);
+       func (result.y, a.y, b);
+       func (result.z, a.z, b);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a, const Dual2<float> &b)
+    {
+        Func func;
+        Dual2<float> ax, ay, az;
+        // OPT: this leads to 3 evaluations(?) of b when we really only need 1!!!
+        func (ax, Dual2<float> (a.val().x, a.dx().x, a.dy().x), b);
+        func (ay, Dual2<float> (a.val().y, a.dx().y, a.dy().y), b);
+        func (az, Dual2<float> (a.val().z, a.dx().z, a.dy().z), b);
+        result.set (Vec3( ax.val(), ay.val(), az.val()),
+                    Vec3( ax.dx(),  ay.dx(),  az.dx() ),
+                    Vec3( ax.dy(),  ay.dy(),  az.dy() ));
+    }
+    inline void operator() (Vec3 &result, const Vec3 &a, const Vec3 &b) { 
+       Func func;
+       func (result.x, a.x, b.x);
+       func (result.y, a.y, b.y);
+       func (result.z, a.z, b.z);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a, const Dual2<Vec3> &b)
+    {
+        Func func;
+        Dual2<float> ax, ay, az;
+        // OPT: this leads to 3 evaluations(?) of b when we really only need 1!!!
+        func (ax, Dual2<float> (a.val().x, a.dx().x, a.dy().x),
+                  Dual2<float> (b.val().x, b.dx().x, b.dy().x) );
+        func (ay, Dual2<float> (a.val().y, a.dx().y, a.dy().y),
+                  Dual2<float> (b.val().y, b.dx().y, b.dy().y) );
+        func (az, Dual2<float> (a.val().z, a.dx().z, a.dy().z),
+                  Dual2<float> (b.val().z, b.dx().z, b.dy().z) );
+        result.set (Vec3( ax.val(), ay.val(), az.val()),
+                    Vec3( ax.dx(),  ay.dx(),  az.dx() ),
+                    Vec3( ax.dy(),  ay.dy(),  az.dy() ));
+    }
+    inline void operator() (Vec3 &result, const Vec3 &a, const Vec3 &b, float c) { 
+       Func func;
+       func (result.x, a.x, b.x, c);
+       func (result.y, a.y, b.y, c);
+       func (result.z, a.z, b.z, c);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a, const Dual2<Vec3> &b, const Dual2<float> &c)
+    {
+        Func func;
+        Dual2<float> ax, ay, az;
+        // OPT: leads to three potential evaluations of c
+        func (ax, Dual2<float> (a.val().x, a.dx().x, a.dy().x),
+                  Dual2<float> (b.val().x, b.dx().x, b.dy().x),
+                  Dual2<float> (c.val(),   c.dx(),   c.dy()) );
+        func (ay, Dual2<float> (a.val().y, a.dx().y, a.dy().y),
+                  Dual2<float> (b.val().y, b.dx().y, b.dy().y),
+                  Dual2<float> (c.val(),   c.dx(),   c.dy()) );
+        func (az, Dual2<float> (a.val().z, a.dx().z, a.dy().z),
+                  Dual2<float> (b.val().z, b.dx().z, b.dy().z),
+                  Dual2<float> (c.val(),   c.dx(),   c.dy()) );
+        result.set (Vec3( ax.val(), ay.val(), az.val()),
+                    Vec3( ax.dx(),  ay.dx(),  az.dx() ),
+                    Vec3( ax.dy(),  ay.dy(),  az.dy() ));
+    }
+    inline void operator() (Vec3 &result, const Vec3 &a, const Vec3 &b, const Vec3 &c) { 
+       Func func;
+       func (result.x, a.x, b.x, c.x);
+       func (result.y, a.y, b.y, c.y);
+       func (result.z, a.z, b.z, c.z);
+    }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a, const Dual2<Vec3> &b, const Dual2<Vec3> &c)
+    {
+        Func func;
+        Dual2<float> ax, ay, az;
+
+        func (ax, Dual2<float> (a.val().x, a.dx().x, a.dy().x),
+                  Dual2<float> (b.val().x, b.dx().x, b.dy().x),
+                  Dual2<float> (c.val().x, c.dx().x, c.dy().x) );
+        func (ay, Dual2<float> (a.val().y, a.dx().y, a.dy().y),
+                  Dual2<float> (b.val().y, b.dx().y, b.dy().y),
+                  Dual2<float> (c.val().y, c.dx().y, c.dy().y) );
+        func (az, Dual2<float> (a.val().z, a.dx().z, a.dy().z),
+                  Dual2<float> (b.val().z, b.dx().z, b.dy().z),
+                  Dual2<float> (c.val().z, c.dx().z, c.dy().z) );
+        result.set (Vec3( ax.val(), ay.val(), az.val()),
+                    Vec3( ax.dx(),  ay.dx(),  az.dx() ),
+                    Vec3( ax.dy(),  ay.dy(),  az.dy() ));
+    }
 };
 
 // Functors for the math functions
@@ -164,8 +252,8 @@ class ATan2 {
 public:
     ATan2 (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float y, float x) { result = std::atan2 (y, x); }
-    inline void operator() (Vec3 &result, const Vec3 &y, const Vec3 &x) {
-        result = Vec3 (std::atan2 (y[0], x[0]), std::atan2 (y[1], x[1]), std::atan2 (y[2], x[2]));
+    inline void operator() (Dual2<float> &result, const Dual2<float> &y, const Dual2<float> &x) {
+        result = atan2 (y,x);
     }
 };
 
@@ -213,102 +301,54 @@ public:
 
 class Log {
 public:
-    Log (ShadingExecution *exec) : m_exec(exec) { }
+    Log (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = safe_log (x, M_E);}
     inline void operator() (float &result, float x, float b) { result = safe_log (x, b);  }
-    inline void operator() (Vec3 &result, const Vec3 &x)    { result = safe_log (x, M_E);} 
-    inline void operator() (Vec3 &result, const Vec3 &x, float b) { result = safe_log (x, b);}
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { 
+        result = log (x);
+    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &b) { 
+        result = log (x, b);
+    }
 private:
     inline float safe_log (float f, float b) {
         if (f <= 0.0f || b <= 0.0f || b == 1.0f) {
-            m_exec->error ("attempted to compute log(%g, %g)", f, b);
             if (b == 1.0) 
                 return std::numeric_limits<float>::max();
             else
                 return -std::numeric_limits<float>::max();
         } else {
             // OPT: faster to check if (b==M_E)?
-            return logf (f)/ logf (b);
+            return std::log (f)/ std::log (b);
         }
     }
-    inline Vec3 safe_log (const Vec3 &x, float b) {
-        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f || b <= 0.0f || b == 1.0f) {
-            m_exec->error ("attempted to compute log(%g %g %g, %g)", x[0], x[1], x[2], b);
-            if (b == 0.0) {
-                const float neg_flt_max = -std::numeric_limits<float>::max();
-                return Vec3 (neg_flt_max, neg_flt_max, neg_flt_max);
-            } else if (b == 1.0) {
-                const float flt_max = std::numeric_limits<float>::max();
-                return Vec3 (flt_max, flt_max, flt_max);
-            } else {
-                float inv_log_b = 1.0/logf (b);
-                float x0 = (x[0] <= 0) ? -std::numeric_limits<float>::max() : logf (x[0])*inv_log_b;
-                float x1 = (x[1] <= 0) ? -std::numeric_limits<float>::max() : logf (x[1])*inv_log_b;
-                float x2 = (x[2] <= 0) ? -std::numeric_limits<float>::max() : logf (x[2])*inv_log_b;
-                return Vec3 (x0, x1, x2);
-            }
-        } else {
-            float inv_log_b = 1.0/logf (b);
-            return Vec3 (logf (x[0])*inv_log_b, logf (x[1])*inv_log_b, logf (x[2])*inv_log_b);
-        }
-    }
-    ShadingExecution *m_exec;
 };
 
 class Log2 {
 public:
-    Log2 (ShadingExecution *exec) : m_exec(exec) { }
+    Log2 (ShadingExecution *exec = NULL)  { }
     inline void operator() (float &result, float x) { result = safe_log2f (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_log2f (x); }
-private:
-    inline float safe_log2f (float f) {
-        if (f <= 0.0f) {
-            m_exec->error ("attempted to compute log2(%g)", f);
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = log2 (x); }
+    inline float safe_log2f(float x) {
+        if (x <= 0.0f)
             return -std::numeric_limits<float>::max();
-        } else {
-            return log2f (f);
-        }
+        else
+            return log2f(x);
     }
-    inline Vec3 safe_log2f (const Vec3 &x) {
-        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) {
-            m_exec->error ("attempted to compute log2(%g %g %g)", x[0], x[1], x[2]);
-            float x0 = (x[0] <= 0) ? -std::numeric_limits<float>::max() : log2f (x[0]);
-            float x1 = (x[1] <= 0) ? -std::numeric_limits<float>::max() : log2f (x[1]);
-            float x2 = (x[2] <= 0) ? -std::numeric_limits<float>::max() : log2f (x[2]);
-            return Vec3 (x0, x1, x2);
-        } else {
-            return Vec3( log2f (x[0]), log2f (x[1]), log2f (x[2]));
-        }
-    }
-    ShadingExecution *m_exec;
 };
 
 class Log10 {
 public:
-    Log10 (ShadingExecution *exec) : m_exec(exec) { }
+    Log10 (ShadingExecution *exec = NULL)  { }
     inline void operator() (float &result, float x) { result = safe_log10f (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_log10f (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = log10 (x); }
 private:
-    inline float safe_log10f (float f) {
-        if (f <= 0.0f) {
-            m_exec->error ("attempted to compute log10(%g)", f);
+    inline float safe_log10f(float x) {
+        if (x <= 0.0f)
             return -std::numeric_limits<float>::max();
-        } else {
-            return log10f (f);
-        }
+        else
+            return log10f(x);
     }
-    inline Vec3 safe_log10f (const Vec3 &x) {
-        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) {
-            m_exec->error ("attempted to compute log10(%g %g %g)", x[0], x[1], x[2]);
-            float x0 = (x[0] <= 0) ? -std::numeric_limits<float>::max() : log10f (x[0]);
-            float x1 = (x[1] <= 0) ? -std::numeric_limits<float>::max() : log10f (x[1]);
-            float x2 = (x[2] <= 0) ? -std::numeric_limits<float>::max() : log10f (x[2]);
-            return Vec3 (x0, x1, x2);
-        } else {
-            return Vec3 (log10f (x[0]), log10f (x[1]), log10f (x[2]));
-        }
-    }
-    ShadingExecution *m_exec;
 };
 
 class Logb {
@@ -341,70 +381,63 @@ private:
 
 class Exp {
 public:
-    Exp (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = expf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (expf (x[0]), expf (x[1]), expf (x[2]));
-    }
+    Exp (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = std::exp (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = exp (x); }
 };
 
 class Exp2 {
 public:
-    Exp2 (ShadingExecution *) { }
+    Exp2 (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = exp2f (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (exp2f (x[0]), exp2f (x[1]), exp2f (x[2]));
-    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = exp2 (x); }
 };
 
 class Expm1 {
 public:
-    Expm1 (ShadingExecution *) { }
+    Expm1 (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = expm1f (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (expm1f (x[0]), expm1f (x[1]), expm1f (x[2]));
-    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = expm1 (x); }
 };
 
 class Pow {
 public:
-    Pow (ShadingExecution *exec) : m_exec(exec) { }
+    Pow (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float y) { result = safe_pow (x, y); }
-    inline void operator() (Vec3 &result, const Vec3 &x, float y) { result = safe_pow (x, y); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) { 
+        result = pow (x, y);
+    }
 private:
     inline float safe_pow (float x, float y) {
-        if (x <= 0.0f &&  (y < 0.0f  || truncf(y) != y) ) {
-            m_exec->error ("attempted to compute pow(%g, %g)", x, y);
-           return  0.0f;
-        } else {
-            return powf (x, y);
+        if (x == 0.0f) 
+        {
+           if (y == 0.0f)
+              return 1.0f;
+           else
+              return 0.0f;
+        }
+        else 
+        {
+           if (x < 0.0f && truncf (y) != y) 
+              return 0.0f;
+           else 
+              return std::pow (x,y);
         }
     }
-    inline Vec3 safe_pow (const Vec3 &x, float y) {
-        if ( (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) && 
-              (y < 0.0f || truncf(y) != y) ) {
-            m_exec->error ("attempted to compute log(%g %g %g, %g)", x[0], x[1], x[2], y);
-            float x0 = (x[0] <= 0) ? 0.0f : powf (x[0], y);
-            float x1 = (x[1] <= 0) ? 0.0f : powf (x[1], y);
-            float x2 = (x[2] <= 0) ? 0.0f : powf (x[2], y);
-            return Vec3 (x0, x1, x2);
-        } else {
-            return Vec3 (powf (x[0], y), powf (x[1], y), powf (x[2], y));
-        }
-    }
-    ShadingExecution *m_exec;
 };
 
 class Erf {
 public:
     Erf (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = erff(x); }
+    inline void operator() (float &result, float x) { result = erff (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = erf (x); }
 };
 
 class Erfc {
 public:
     Erfc (ShadingExecution *) { }
-    inline void operator() (float &result, float x) { result = erfcf(x); }
+    inline void operator() (float &result, float x) { result = erfcf (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = erfc (x); }
 };
 
 
@@ -471,58 +504,31 @@ private:
 
 class Sqrt {
 public:
-    Sqrt (ShadingExecution *exec) : m_exec(exec) { }
+    Sqrt (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = safe_sqrt (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_sqrt(x); }
-private:
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = sqrt(x); }
     inline float safe_sqrt (float f) {
-        if (f < 0.0f) {
-            m_exec->error ("attempted to compute sqrt(%g)", f);
+        if (f <= 0.0f) {
             return 0.0f;
         } else {
-            return sqrtf (f);
+            return std::sqrt (f);
         }
     }
-    inline Vec3 safe_sqrt (const Vec3 &x) {
-        if (x[0] < 0.0f || x[1] < 0.0f || x[2] < 0.0f) {
-            m_exec->error ("attempted to compute sqrt(%g %g %g)", x[0], x[1], x[2]);
-            float x0 = (x[0] < 0) ? 0.0f : sqrtf (x[0]);
-            float x1 = (x[1] < 0) ? 0.0f : sqrtf (x[1]);
-            float x2 = (x[2] < 0) ? 0.0f : sqrtf (x[2]);
-            return Vec3 (x0, x1, x2);
-        } else {
-            return Vec3( sqrtf (x[0]), sqrtf (x[1]), sqrtf (x[2]));
-        }
-    }
-    ShadingExecution *m_exec;
 };
 
 class InverseSqrt {
 public:
-    InverseSqrt (ShadingExecution *exec) : m_exec(exec) { }
-    inline void operator() (float &result, float x) { result = safe_invsqrt (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) { result = safe_invsqrt(x); }
+    InverseSqrt (ShadingExecution *exec = NULL) { }
+    inline void operator() (float &result, float x) { result = safe_inversesqrt (x); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = inversesqrt(x); }
 private:
-    inline float safe_invsqrt (float f) {
+    inline float safe_inversesqrt (float f) {
         if (f <= 0.0f) {
-            m_exec->error ("attempted to compute inversesqrt(%g)", f);
             return 0.0f;
         } else {
             return 1.0f/sqrtf (f);
         }
     }
-    inline Vec3 safe_invsqrt (const Vec3 &x) {
-        if (x[0] <= 0.0f || x[1] <= 0.0f || x[2] <= 0.0f) {
-            m_exec->error ("attempted to compute inversesqrt(%g %g %g)", x[0], x[1], x[2]);
-            float x0 = (x[0] <= 0) ? 0.0f : 1.0f/sqrtf (x[0]);
-            float x1 = (x[1] <= 0) ? 0.0f : 1.0f/sqrtf (x[1]);
-            float x2 = (x[2] <= 0) ? 0.0f : 1.0f/sqrtf (x[2]);
-            return Vec3 (x0, x1, x2);
-        } else {
-            return Vec3( 1.0f/sqrtf (x[0]), 1.0f/sqrtf (x[1]), 1.0f/sqrtf (x[2]));
-        }
-    }
-    ShadingExecution *m_exec;
 };
 
 class IsNan {
@@ -545,12 +551,12 @@ public:
 
 class Clamp {
 public:
-    Clamp (ShadingExecution *) { }
+    Clamp (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float minv, float maxv) {
         result = clamp(x, minv, maxv);
     }
-    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) {
-        result = clamp(x, minv, maxv);
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &minx, const Dual2<float> &maxv) { 
+        result = dual_clamp(x, minx, maxv);
     }
 private:
     inline float clamp(float x, float minv, float maxv) {
@@ -558,20 +564,14 @@ private:
         else if (x > maxv) return maxv;
         else return x;
     }
-    inline Vec3 clamp(const Vec3 &x, const Vec3 &minv, const Vec3 &maxv) {
-        float x0 = clamp(x[0], minv[0], maxv[0]);
-        float x1 = clamp(x[1], minv[1], maxv[1]);
-        float x2 = clamp(x[2], minv[2], maxv[2]);
-        return Vec3 (x0, x1, x2);
-    }
 };
 
 class Max {
 public:
-    Max (ShadingExecution *) { }
+    Max (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float y) { result = max(x,y); }
-    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y) { 
-        result = Vec3 (max (x[0], y[0]), max (x[1], y[1]), max (x[2], y[2]));
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) { 
+        result = dual_max(x, y);
     }
 private:
     inline float max (float x, float y) { 
@@ -582,10 +582,10 @@ private:
 
 class Min {
 public:
-    Min (ShadingExecution *) { }
+    Min (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float y) { result = min(x,y); }
-    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y) { 
-        result = Vec3 (min (x[0], y[0]), min (x[1], y[1]), min (x[2], y[2]));
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) { 
+        result = dual_min (x, y);
     }
 private:
     inline float min (float x, float y) { 
@@ -596,16 +596,12 @@ private:
 
 class Mix {
 public:
-    Mix (ShadingExecution *) { }
+    Mix (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float y, float a) {
         result = x*(1.0f-a) + y*a;
     }
-    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y, float a) {
-        result = x*(1.0f-a) + y*a;
-    }
-    inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y, const Vec3 &a) { 
-        Vec3 one(1.0f, 1.0f, 1.0f);
-        result = x*(one-a) + y*a;
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &a) {
+        result = mix(x, y, a);
     }
 };
 
@@ -619,12 +615,18 @@ public:
 
 class Hypot {
 public:
-    Hypot (ShadingExecution *) { }
+    Hypot (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float y) {
-        result = sqrtf (x*x + y*y);
+        result = std::sqrt (x*x + y*y);
+    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) {
+        result = dual_hypot(x, y);
     }
     inline void operator() (float &result, float x, float y, float z) {
-        result = sqrtf (x*x + y*y + z*z);
+        result = std::sqrt (x*x + y*y + z*z);
+    }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z) {
+        result = dual_hypot(x, y, z);
     }
 };
 
@@ -803,7 +805,7 @@ DECLOP (generic_unary_function_shadeop)
 // one for the individual types (but that doesn't do any more polymorphic
 // resolution or sanity checks).
 template<class FUNCTION>
-DECLOP (generic_binary_function_shadeop)
+DECLOP (generic_binary_function_shadeop_noderivs)
 {
     // 3 args, result and two inputs.
     ASSERT (nargs == 3);
@@ -819,6 +821,42 @@ DECLOP (generic_binary_function_shadeop)
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
         impl = binary_op_noderivs<float,float,float, FUNCTION >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        exec->error_arg_types ();
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+}
+
+// Generic template for implementing "T func(T, T)" where T can be either
+// float or triple.  This expands to a function that checks the arguments
+// for valid type combinations, then dispatches to a further specialized
+// one for the individual types (but that doesn't do any more polymorphic
+// resolution or sanity checks).
+template<class FUNCTION>
+DECLOP (generic_binary_function_shadeop)
+{
+    // 3 args, result and two inputs.
+    ASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && !B.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float, float), and triple = func (triple, triple)
+    if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple()) {
+        impl = binary_op<Vec3,Vec3,Vec3, Vec3Adaptor<FUNCTION> >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
+        impl = binary_op<float,float,float, FUNCTION >;
     }
 
     if (impl) {
@@ -852,7 +890,7 @@ DECLOP (generic_ternary_function_shadeop)
 
     // We allow two flavors: float = func (float, float, float), and triple = func (triple, triple, triple)
     if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_triple()) {
-        impl = ternary_op<Vec3,Vec3,Vec3,Vec3, FUNCTION >;
+        impl = ternary_op<Vec3,Vec3,Vec3,Vec3, Vec3Adaptor<FUNCTION> >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float() && C.typespec().is_float()) {
         impl = ternary_op<float,float,float,float, FUNCTION >;
@@ -869,6 +907,44 @@ DECLOP (generic_ternary_function_shadeop)
         ASSERT (0 && "Function arg type can't be handled");
     }
 }
+
+// Generic template for implementing "T func(T, T, T)" where T can be either
+// float or triple.  This expands to a function that checks the arguments
+// for valid type combinations, then dispatches to a further specialized
+// one for the individual types (but that doesn't do any more polymorphic
+// resolution or sanity checks).
+template<class FUNCTION>
+DECLOP (generic_ternary_function_shadeop_noderivs)
+{
+    // 3 args, result and two inputs.
+    ASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+    ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && !B.typespec().is_closure() && ! C.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float, float, float), and triple = func (triple, triple, triple)
+    if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_triple()) {
+        impl = ternary_op_noderivs<Vec3,Vec3,Vec3,Vec3, FUNCTION >;
+    }
+    else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float() && C.typespec().is_float()) {
+        impl = ternary_op_noderivs<float,float,float,float, FUNCTION >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        exec->error_arg_types ();
+        ASSERT (0 && "Function arg type can't be handled");
+    }
+}
+
 
 
 };  // End anonymous namespace
@@ -960,10 +1036,10 @@ DECLOP (OP_log)
     if (nargs == 2) {
         ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
         if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-            impl = unary_op_noderivs<Vec3,Vec3, Log>;
+            impl = unary_op<Vec3,Vec3, Vec3Adaptor<Log> >;
         }
         else if (Result.typespec().is_float() && A.typespec().is_float()){
-            impl = unary_op_noderivs<float,float, Log>;
+            impl = unary_op<float,float, Log>;
         }
         else {
             exec->error_arg_types ();
@@ -976,10 +1052,10 @@ DECLOP (OP_log)
         Symbol &B (exec->sym (args[2]));
         ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
         if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_float()) {
-            impl = binary_op_noderivs<Vec3,Vec3,float, Log>;
+            impl = binary_op<Vec3,Vec3,float, Vec3Adaptor<Log> >;
         }
         else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()){
-            impl = binary_op_noderivs<float,float,float, Log>;
+            impl = binary_op<float,float,float, Log>;
         }
         else {
             exec->error_arg_types ();
@@ -998,13 +1074,13 @@ DECLOP (OP_log)
 
 DECLOP (OP_log2)
 {
-    generic_unary_function_shadeop_noderivs<Log2> (exec, nargs, args, 
+    generic_unary_function_shadeop<Log2> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_log10)
 {
-    generic_unary_function_shadeop_noderivs<Log10> (exec, nargs, args, 
+    generic_unary_function_shadeop<Log10> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1016,19 +1092,19 @@ DECLOP (OP_logb)
 
 DECLOP (OP_exp)
 {
-    generic_unary_function_shadeop_noderivs<Exp> (exec, nargs, args, 
+    generic_unary_function_shadeop<Exp> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_exp2)
 {
-    generic_unary_function_shadeop_noderivs<Exp2> (exec, nargs, args, 
+    generic_unary_function_shadeop<Exp2> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_expm1)
 {
-    generic_unary_function_shadeop_noderivs<Expm1> (exec, nargs, args, 
+    generic_unary_function_shadeop<Expm1> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1045,10 +1121,10 @@ DECLOP (OP_pow)
 
     ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
     if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_float()) {
-        impl = binary_op_noderivs<Vec3,Vec3,float, Pow>;
+        impl = binary_op<Vec3,Vec3,float, Vec3Adaptor<Pow> >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()){
-        impl = binary_op_noderivs<float,float,float, Pow>;
+        impl = binary_op<float,float,float, Pow>;
     }
     else {
         exec->error_arg_types ();
@@ -1066,14 +1142,14 @@ DECLOP (OP_pow)
 
 DECLOP (OP_erf)
 {
-    unary_op_noderivs<float,float,Erf> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    unary_op<float,float,Erf> (exec, nargs, args, 
+                               runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_erfc)
 {
-    unary_op_noderivs<float,float,Erfc> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    unary_op<float,float,Erfc> (exec, nargs, args, 
+                                runflags, beginpoint, endpoint);
 }
 
 // The fabs() function can be of the form:
@@ -1144,13 +1220,13 @@ DECLOP (OP_sign)
 
 DECLOP (OP_sqrt)
 {
-    generic_unary_function_shadeop_noderivs<Sqrt> (exec, nargs, args, 
+    generic_unary_function_shadeop<Sqrt> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_inversesqrt)
 {
-    generic_unary_function_shadeop_noderivs<InverseSqrt> (exec, nargs, args, 
+    generic_unary_function_shadeop<InverseSqrt> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1205,10 +1281,10 @@ DECLOP (OP_mix)
 
     ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure() && ! C.typespec().is_closure());
     if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_triple()) {
-        impl = ternary_op<Vec3,Vec3,Vec3,float, Mix>;
+        impl = ternary_op<Vec3,Vec3,Vec3,Vec3, Vec3Adaptor<Mix> >;
     }
     else if (Result.typespec().is_triple() && A.typespec().is_triple() && B.typespec().is_triple() && C.typespec().is_float()) {
-        impl = ternary_op<Vec3,Vec3,Vec3,float, Mix>;
+        impl = ternary_op<Vec3,Vec3,Vec3,float, Vec3Adaptor<Mix> >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float() && C.typespec().is_float()){
         impl = ternary_op<float,float,float,float, Mix>;
@@ -1248,7 +1324,7 @@ DECLOP (OP_hypot)
     if (nargs == 3) {
         ASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure() && ! B.typespec().is_closure());
         if (Result.typespec().is_float() && A.typespec().is_float() && B.typespec().is_float()) {
-            impl = binary_op_noderivs<float,float,float, Hypot>;
+            impl = binary_op<float,float,float, Hypot>;
         }
         else {
             exec->error_arg_types ();
@@ -1280,7 +1356,7 @@ DECLOP (OP_hypot)
 
 DECLOP (OP_smoothstep)
 {
-    ternary_op<float,float,float,float, Smoothstep> (exec, nargs, args, 
+    ternary_op_noderivs<float,float,float,float, Smoothstep> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 
@@ -1292,7 +1368,7 @@ DECLOP (OP_reflect)
 
 DECLOP (OP_refract)
 {
-    ternary_op<Vec3,Vec3,Vec3,float, Refract> (exec, nargs, args, 
+    ternary_op_noderivs<Vec3,Vec3,Vec3,float, Refract> (exec, nargs, args, 
                                          runflags, beginpoint, endpoint);
 }
 

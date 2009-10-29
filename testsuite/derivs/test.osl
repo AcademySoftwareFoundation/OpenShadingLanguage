@@ -119,6 +119,14 @@ test ()
     }
 
     {
+        float a = atan2(u,v);
+        printf ("\n");
+        printf ("atan2: a = atan2(u,v) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+
+    {
         float a = degrees(u);
         printf ("\n");
         printf ("degrees: a = degrees(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
@@ -130,6 +138,146 @@ test ()
         printf ("\n");
         printf ("radians: a = radians(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
                 a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = log(u);
+        printf ("\n");
+        printf ("log: a = log(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = log2(u);
+        printf ("\n");
+        printf ("log2: a = log2(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = log10(u);
+        printf ("\n");
+        printf ("log10: a = log10(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = exp(u);
+        printf ("\n");
+        printf ("exp: a = exp(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = exp2(u);
+        printf ("\n");
+        printf ("exp2: a = exp2(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = expm1(u);
+        printf ("\n");
+        printf ("expm1: a = expm1(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = erf(u);
+        printf ("\n");
+        printf ("erf: a = erf(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = erfc(u);
+        printf ("\n");
+        printf ("erfc: a = erfc(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = sqrt(u);
+        printf ("\n");
+        printf ("sqrt: a = sqrt(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = inversesqrt(u);
+        printf ("\n");
+        printf ("inversesqrt: a = inversesqrt(u); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = pow(u,3);
+        printf ("\n");
+        printf ("pow: a = pow(u, 3); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = pow(u,v);
+        printf ("\n");
+        printf ("pow: a = pow(u, v) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = log(u,10);
+        printf ("\n");
+        printf ("log: a = log(u,10); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = log(u,v);
+        printf ("\n");
+        printf ("log: a = log(u,v) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = clamp(sin(u),u,v);
+        printf ("\n");
+        printf ("clamp: a = clamp(sin(u),u,v) is clamp(%g,%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                sin(u), u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = min(u,v);
+        printf ("\n");
+        printf ("min: a = min(u,v) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = max(u,v);
+        printf ("\n");
+        printf ("max: a = max(u,v) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = mix(u,v,sin(u));
+        printf ("\n");
+        printf ("mix: a = mix(u,v,sin(u)) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = hypot(u,v);
+        printf ("\n");
+        printf ("hypot: a = hypot(u,v) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
+    }
+
+    {
+        float a = hypot(u,v,3);
+        printf ("\n");
+        printf ("hypot: a = hypot(u,v,3) at (%g,%g); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                u, v, a, Dx(a), Dy(a));
     }
 
     {

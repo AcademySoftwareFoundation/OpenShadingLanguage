@@ -301,7 +301,8 @@ template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
 inline void
 ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
                 ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint)
+                Runflag *runflags, int beginpoint, int endpoint,
+                bool zero_derivs=true)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying() | B.is_varying() | C.is_varying(),
@@ -335,12 +336,14 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
             if (runflags[i])
                 function (result[i], a[i], b[i], c[i]);
     }
+    if (zero_derivs && Result.has_derivs ())
+        exec->zero_derivs (Result);
 }
 
 // Wrapper around ternary_op_guts that does has he call signature of an
 // ordinary shadeop.
 template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
-DECLOP (ternary_op)
+DECLOP (ternary_op_noderivs)
 {
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
@@ -352,6 +355,63 @@ DECLOP (ternary_op)
                                               runflags, beginpoint, endpoint);
 }
 
+// Wrapper around ternary_op_guts that does has he call signature of an
+// ordinary shadeop, with support for derivatives
+template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
+DECLOP (ternary_op)
+{
+    // Get references to the symbols this op accesses
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &A (exec->sym (args[1]));
+    Symbol &B (exec->sym (args[2]));
+    Symbol &C (exec->sym (args[3]));
+
+    if (Result.has_derivs()) {
+        if (A.has_derivs()) {
+           if (B.has_derivs()) {
+               if (C.has_derivs()) {
+                   ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, Dual2<BTYPE>, Dual2<CTYPE>, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               } else {
+                   ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, Dual2<BTYPE>, CTYPE, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               }
+           }
+           else {
+               if (C.has_derivs()) {
+                   ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, BTYPE, Dual2<CTYPE>, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               } else {
+                   ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, BTYPE, CTYPE, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               }
+           }
+        }
+        else {
+           if (B.has_derivs()) {
+               if (C.has_derivs()) {
+                   ternary_op_guts<Dual2<RET>, ATYPE, Dual2<BTYPE>, Dual2<CTYPE>, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               } else {
+                   ternary_op_guts<Dual2<RET>, ATYPE, Dual2<BTYPE>, CTYPE, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               }
+           } else {
+               if (C.has_derivs()) {
+                   ternary_op_guts<Dual2<RET>, ATYPE, BTYPE, Dual2<CTYPE>, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+               } else {
+                   ternary_op_guts<Dual2<RET>, ATYPE, BTYPE, CTYPE, FUNCTION>
+                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, true);
+               }
+           }
+        }
+    }
+    else {
+        ternary_op_guts<RET,ATYPE,BTYPE,CTYPE,FUNCTION> (Result, A, B, C, exec,
+                                              runflags, beginpoint, endpoint, false);
+    }
+}
 
 
 // Heavy lifting of the math and other binary ops, this is a templated

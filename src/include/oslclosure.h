@@ -48,8 +48,9 @@ namespace OSL {
 class Labels {
 public:
     // Camera and light nodes of the path, though camera won't be used yet
-    static const int CAMERA       = 1<<9;
-    static const int LIGHT        = 1<<8;
+    static const int CAMERA       = 1<<10;
+    static const int LIGHT        = 1<<9;
+    static const int BACKGROUND   = 1<<8;
     static const int SURFACE      = 1<<7;
     static const int VOLUME       = 1<<6;
     // A path node can either be transmit or reflect
@@ -60,7 +61,7 @@ public:
     static const int DIFFUSE      = 1<<3; // typical 2PI hemisphere
     static const int GLOSSY       = 1<<2; // blurry reflections and transmissions
     static const int SINGULAR     = 1<<1; // perfect mirrors and glass
-    static const int TRANSPARENCY = 1<<0; // Special case for transparent shadows
+    static const int STRAIGHT     = 1<<0; // Special case for transparent shadows
 
     Labels():m_set(0) {};
     Labels(int l):m_set(l) {};

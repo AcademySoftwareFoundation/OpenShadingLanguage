@@ -310,7 +310,7 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
     else if (ts.is_int() && init->nodetype() == ASTNode::literal_node)
         oso ("%d", ((const ASTliteral *)init)->intval());
     else if (ts.is_float() && init->nodetype() == ASTNode::literal_node)
-        oso ("%g", ((const ASTliteral *)init)->floatval());
+        oso ("%.17g", ((const ASTliteral *)init)->floatval());
     // FIXME -- what about type constructors?
     else {
         std::cout << "Error, don't know how to print metadata " 
@@ -332,9 +332,9 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
     else if (sym->typespec().is_int())
         oso ("%d", sym->intval());
     else if (sym->typespec().is_float())
-        oso ("%g", sym->floatval());
+        oso ("%.17g", sym->floatval());
     else if (sym->typespec().is_triple())
-        oso ("%g %g %g", sym->vecval()[0], sym->vecval()[1], sym->vecval()[2]);
+        oso ("%.17g %.17g %.17g", sym->vecval()[0], sym->vecval()[1], sym->vecval()[2]);
     else {
         ASSERT (0 && "Only know how to output const vals that are single int, float, string");
     }
@@ -365,16 +365,16 @@ OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) 
             if (lit && lit->typespec().is_int())
                 oso ("%d ", lit->intval());
             else if (lit && lit->typespec().is_float())
-                oso ("%g ", lit->floatval());
+                oso ("%.17g ", lit->floatval());
             else
                 oso ("0 ");  // FIXME?
         } else if (type.is_triple()) {
             if (lit && lit->typespec().is_int()) {
                 float f = lit->intval();
-                oso ("%g %g %g ", f, f, f);
+                oso ("%.17g %.17g %.17g ", f, f, f);
             } else if (lit && lit->typespec().is_float()) {
                 float f = lit->floatval();
-                oso ("%g %g %g ", f, f, f);
+                oso ("%.17g %.17g %.17g ", f, f, f);
             } else if (init->nodetype() == ASTNode::type_constructor_node &&
                      init->typespec() == type) {
                 ASTtype_constructor *ctr = dynamic_cast<ASTtype_constructor *>(init.get());
@@ -388,7 +388,7 @@ OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) 
                         f[c] = 0;
                     }
                 }
-                oso ("%g %g %g ", f[0], f[1], f[2]);
+                oso ("%.17g %.17g %.17g ", f[0], f[1], f[2]);
                 // FIXME -- we're still generating both the init ops as
                 // well as these constant values.  That's not good.  We need
                 // to mark the node as being adequately defaulted so it
@@ -404,7 +404,7 @@ OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) 
                 f = lit->floatval();
             else
                 f = 0;  // FIXME?
-            oso ("%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g ",
+            oso ("%.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g ",
                  f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
         } else if (type.is_string()) {
             if (lit && lit->typespec().is_string())

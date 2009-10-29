@@ -70,6 +70,18 @@ DECLOP (OP_texture)
     Symbol &T (exec->sym (args[3]));
     DASSERT (S.typespec().is_float() && T.typespec().is_float());
 
+    // Figure out if we are texture(name,s,t,...) or
+    // texture(name,s,t,dsdx,dtdx,dsdy,dtdy).
+    bool user_derivs = false;
+    int first_optional_arg = 4;
+    if (nargs > 4 && exec->sym(args[4]).typespec().is_float()) {
+        user_derivs = true;
+        first_optional_arg = 8;
+        DASSERT (exec->sym(args[5]).typespec().is_float());
+        DASSERT (exec->sym(args[6]).typespec().is_float());
+        DASSERT (exec->sym(args[7]).typespec().is_float());
+    }
+
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, true /* Assume texture always varies */);
 
@@ -91,14 +103,24 @@ DECLOP (OP_texture)
 
     // Set up derivs
     VaryingRef<float> dsdx, dsdy, dtdx, dtdy;
-    if (S.has_derivs()) {
+    if (user_derivs) {
+        Symbol &Dsdx (exec->sym (args[4]));
+        Symbol &Dsdy (exec->sym (args[6]));
+        dsdx.init ((float *)Dsdx.data(), Dsdx.step());
+        dsdy.init ((float *)Dsdy.data(), Dsdy.step());
+    } else if (S.has_derivs()) {
         dsdx.init ((float *)S.data() + 1, S.step());
         dsdy.init ((float *)S.data() + 2, S.step());
     } else {
         dsdx.init (&zero);
         dsdy.init (&zero);
     }
-    if (T.has_derivs()) {
+    if (user_derivs) {
+        Symbol &Dtdx (exec->sym (args[5]));
+        Symbol &Dtdy (exec->sym (args[7]));
+        dtdx.init ((float *)Dtdx.data(), Dtdx.step());
+        dtdy.init ((float *)Dtdy.data(), Dtdy.step());
+    } else if (T.has_derivs()) {
         dtdx.init ((float *)T.data() + 1, T.step());
         dtdy.init ((float *)T.data() + 2, T.step());
     } else {
@@ -107,7 +129,7 @@ DECLOP (OP_texture)
     }
 
     // Parse all the optional arguments
-    for (int a = 4;  a < nargs;  ++a) {
+    for (int a = first_optional_arg;  a < nargs;  ++a) {
         Symbol &Name (exec->sym (args[a]));
         DASSERT (Name.typespec().is_string() &&
                  "optional texture token must be a string");

@@ -1,0 +1,11 @@
+shader
+test (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    float uwidth = u*u * 10;
+    float vwidth = v*v * 5;
+    Cout = (color) texture (filename, u, v,
+                            Dx(u)*uwidth, Dx(v)*vwidth,
+                            Dy(u)*uwidth, Dy(v)*vwidth);
+}
+

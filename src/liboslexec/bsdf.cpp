@@ -284,7 +284,7 @@ public:
         domega_in_dy = -domega_out_dy;
         pdf = 1;
         eval.setValue(1, 1, 1);
-        labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::TRANSPARENCY | Labels::SINGULAR);
+        labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,

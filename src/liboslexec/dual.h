@@ -613,6 +613,19 @@ Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &ma
    else return x;
 }
 
+// f(t) = (3-2t)t^2,   t = (x-e0)/(e1-e0)
+template<class T>
+Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<T> &x)
+{
+   if (x.val() < e0.val()) {
+      return Dual2<T> (T(0), T(0), T(0));
+   }
+   else if (x.val() >= e1.val()) {
+      return Dual2<T> (T(1), T(0), T(0));
+   }
+   Dual2<T> t = (x - e0)/(e1-e0);
+   return  (T(3) - T(2)*t)*t*t;
+}
 
 }; // namespace OSL
 

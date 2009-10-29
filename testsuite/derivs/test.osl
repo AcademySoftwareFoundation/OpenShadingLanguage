@@ -281,6 +281,13 @@ test ()
     }
 
     {
+        float a = smoothstep(v,3,u);
+        printf ("\n");
+        printf ("smoothstep: a = smoothstep(v,3,u) = (smoothstep(%g,3,%g)); a = %g, Dx(a) = %g, Dy(a) = %g\n",
+                v, u, a, Dx(a), Dy(a));
+    }
+
+    {
         // Test component reference
         float a = P[0], b = P[1];
         printf ("\n");

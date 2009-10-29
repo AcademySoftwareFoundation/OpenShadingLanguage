@@ -212,6 +212,11 @@ hypot: a = hypot(u,v,3) at (1,0); a = 3.16228, Dx(a) = 0.158114, Dy(a) = 0
 hypot: a = hypot(u,v,3) at (0,1); a = 3.16228, Dx(a) = 0, Dy(a) = 0.158114
 hypot: a = hypot(u,v,3) at (1,1); a = 3.31662, Dx(a) = 0.150756, Dy(a) = 0.150756
 
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(0,3,0)); a = 0, Dx(a) = 0, Dy(a) = -0
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(0,3,1)); a = 0.259259, Dx(a) = 0.222222, Dy(a) = -0.148148
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(1,3,0)); a = 0, Dx(a) = 0, Dy(a) = 0
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(1,3,1)); a = 0, Dx(a) = 0, Dy(a) = -0
+
 comp ref: P = 0 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 comp ref: P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 comp ref: P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0

@@ -294,6 +294,16 @@ class Dot {
 public:
     Dot (ShadingExecution *) { }
     void operator() (float &result, const Vec3 &a, const Vec3 &b) { result = a.dot (b); }
+    void operator() (Dual2<float> &result, const Dual2<Vec3> &a, const Dual2<Vec3> &b) {
+        Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+        Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+        Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+        Dual2<float> bx = Dual2<float> (b.val().x, b.dx().x, b.dy().x);
+        Dual2<float> by = Dual2<float> (b.val().y, b.dx().y, b.dy().y);
+        Dual2<float> bz = Dual2<float> (b.val().z, b.dx().z, b.dy().z);
+
+        result = ax*bx + ay*by + az*bz;
+    }
 };
 
 
@@ -301,6 +311,22 @@ class Cross {
 public:
     Cross (ShadingExecution *) { }
     void operator() (Vec3 &result, const Vec3 &a, const Vec3 &b) { result = a.cross (b); }
+    void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a, const Dual2<Vec3> &b) {
+        Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+        Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+        Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+        Dual2<float> bx = Dual2<float> (b.val().x, b.dx().x, b.dy().x);
+        Dual2<float> by = Dual2<float> (b.val().y, b.dx().y, b.dy().y);
+        Dual2<float> bz = Dual2<float> (b.val().z, b.dx().z, b.dy().z);
+
+        Dual2<float> nx = ay*bz - az*by;
+        Dual2<float> ny = az*bx - ax*bz;
+        Dual2<float> nz = ax*by - ay*bx;
+
+        result.set (Vec3(nx.val(), ny.val(), nz.val()),
+                    Vec3(nx.dx(),  ny.dx(),  nz.dx()  ),
+                    Vec3(nx.dy(),  ny.dy(),  nz.dy()  ));
+    }
 };
 
 
@@ -308,6 +334,13 @@ class Length {
 public:
     Length (ShadingExecution *) { }
     void operator() (float &result, const Vec3 &a) { result = a.length(); }
+    void operator() (Dual2<float> &result, const Dual2<Vec3> &a)
+    {
+        Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+        Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+        Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+        result = sqrt(ax*ax + ay*ay + az*az);
+    }
 };
 
 
@@ -315,6 +348,25 @@ class Normalize {
 public:
     Normalize (ShadingExecution *) { }
     void operator() (Vec3 &result, const Vec3 &a) { result = a.normalized(); }
+    void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &a)
+    {
+        if (a.val().x == 0 && a.val().y == 0 && a.val().z == 0) {
+            result.set (Vec3(0, 0, 0),
+                        Vec3(0, 0, 0),
+                        Vec3(0, 0, 0));
+        } else {
+            Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+            Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+            Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+            Dual2<float> inv_length = 1.0f / sqrt(ax*ax + ay*ay + az*az);
+            ax = ax*inv_length;
+            ay = ay*inv_length;
+            az = az*inv_length;
+            result.set (Vec3(ax.val(), ay.val(), az.val()),
+                        Vec3(ax.dx(),  ay.dx(),  az.dx() ),
+                        Vec3(ax.dy(),  ay.dy(),  az.dy() ));
+        }
+    }
 };
 
 
@@ -326,6 +378,20 @@ public:
         float y = a[1] - b[1];
         float z = a[2] - b[2];
         result = sqrtf (x*x + y*y + z*z);
+    }
+    void operator() (Dual2<float> &result, const Dual2<Vec3> &a, const Dual2<Vec3> &b) {
+        Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+        Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+        Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+        Dual2<float> bx = Dual2<float> (b.val().x, b.dx().x, b.dy().x);
+        Dual2<float> by = Dual2<float> (b.val().y, b.dx().y, b.dy().y);
+        Dual2<float> bz = Dual2<float> (b.val().z, b.dx().z, b.dy().z);
+
+        Dual2<float> dx = bx - ax;
+        Dual2<float> dy = by - ay;
+        Dual2<float> dz = bz - az;
+
+        result = sqrt(dx*dx + dy*dy + dz*dz);
     }
 };
 
@@ -488,16 +554,13 @@ DECLOP (OP_compassign)
 DECLOP (OP_dot)
 {
     DASSERT (nargs == 3);
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-    Symbol &B (exec->sym (args[2]));
-    DASSERT (! Result.typespec().is_closure() && 
-             ! A.typespec().is_closure() && ! B.typespec().is_closure());
-    DASSERT (Result.typespec().is_float() && A.typespec().is_triple() &&
-             B.typespec().is_triple());
+    DASSERT (! exec->sym(args[0]).typespec().is_closure() &&
+             ! exec->sym(args[1]).typespec().is_closure() && ! exec->sym(args[2]).typespec().is_closure());
+    DASSERT (exec->sym(args[0]).typespec().is_float()  &&
+             exec->sym(args[1]).typespec().is_triple() && exec->sym(args[2]).typespec().is_triple());
 
-    binary_op_guts<Float,Vec3,Vec3,Dot> (Result, A, B, exec,
-                                         runflags, beginpoint, endpoint);
+    binary_op<Float, Vec3, Vec3, Dot> (exec, nargs, args,
+                                       runflags, beginpoint, endpoint);
 }
 
 
@@ -505,16 +568,13 @@ DECLOP (OP_dot)
 DECLOP (OP_cross)
 {
     DASSERT (nargs == 3);
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-    Symbol &B (exec->sym (args[2]));
-    DASSERT (! Result.typespec().is_closure() && 
-             ! A.typespec().is_closure() && ! B.typespec().is_closure());
-    DASSERT (Result.typespec().is_triple() && A.typespec().is_triple() &&
-             B.typespec().is_triple());
+    DASSERT (! exec->sym(args[0]).typespec().is_closure() &&
+             ! exec->sym(args[1]).typespec().is_closure() && ! exec->sym(args[2]).typespec().is_closure());
+    DASSERT (exec->sym(args[0]).typespec().is_triple() &&
+             exec->sym(args[1]).typespec().is_triple() && exec->sym(args[2]).typespec().is_triple());
 
-    binary_op_guts<Vec3,Vec3,Vec3,Cross> (Result, A, B, exec,
-                                          runflags, beginpoint, endpoint);
+    binary_op<Vec3, Vec3, Vec3, Cross> (exec, nargs, args,
+                                       runflags, beginpoint, endpoint);
 }
 
 
@@ -528,8 +588,8 @@ DECLOP (OP_length)
              ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && A.typespec().is_triple());
 
-    unary_op_guts_noderivs<Float,Vec3,Length> (Result, A, exec,
-                                               runflags, beginpoint, endpoint);
+    unary_op_guts<Float,Vec3,Length> (Result, A, exec,
+                                      runflags, beginpoint, endpoint);
 }
 
 
@@ -543,8 +603,8 @@ DECLOP (OP_normalize)
              ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_triple() && A.typespec().is_triple());
 
-    unary_op_guts_noderivs<Vec3,Vec3,Normalize> (Result, A, exec,
-                                                 runflags, beginpoint, endpoint);
+    unary_op_guts<Vec3,Vec3,Normalize> (Result, A, exec,
+                                        runflags, beginpoint, endpoint);
 }
 
 
@@ -552,16 +612,13 @@ DECLOP (OP_normalize)
 DECLOP (OP_distance)
 {
     DASSERT (nargs == 3);
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &A (exec->sym (args[1]));
-    Symbol &B (exec->sym (args[2]));
-    DASSERT (! Result.typespec().is_closure() && 
-             ! A.typespec().is_closure() && ! B.typespec().is_closure());
-    DASSERT (Result.typespec().is_float() && A.typespec().is_triple() &&
-             B.typespec().is_triple());
+    DASSERT (! exec->sym(args[0]).typespec().is_closure() &&
+             ! exec->sym(args[1]).typespec().is_closure() && ! exec->sym(args[2]).typespec().is_closure());
+    DASSERT (exec->sym(args[0]).typespec().is_float()  &&
+             exec->sym(args[1]).typespec().is_triple() && exec->sym(args[2]).typespec().is_triple());
 
-    binary_op_guts<Float,Vec3,Vec3,Distance> (Result, A, B, exec,
-                                              runflags, beginpoint, endpoint);
+    binary_op<Float,Vec3,Vec3,Distance> (exec, nargs, args,
+                                         runflags, beginpoint, endpoint);
 }
 
 

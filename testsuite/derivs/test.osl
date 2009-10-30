@@ -299,12 +299,55 @@ test ()
     }
 
     {
+       vector a = vector(u+v, -u-v, u+v);
+       vector b = vector(u+v,  u+v, u+v);
+       float d = dot(a, b);
+       printf ("\n");
+       printf ("dot product: d = dot(%g, %g) = %g  Dx(d) = %g  Dy(d) = %g\n",
+             a, b, d, Dx(d), Dy(d));
+    }
+
+    {
+       vector a = vector(u+v, -u-v, u+v);
+       vector b = vector(u+v,  u+v, u+v);
+       vector c = cross(a, b);
+       printf ("\n");
+       printf ("cross product: c = cross(%g, %g) = %g  Dx(c) = %g  Dy(c) = %g\n",
+             a, b, c, Dx(c), Dy(c));
+    }
+
+    {
         // Test component reference
         color C = 0;
         C[0] = u;
         C[1] = v;
         printf ("\n");
         printf ("comp assign: C[0]=u, C[1]=v: now C = %g, Dx(C) = %g, Dy(C) = %g\n", C, Dx(C), Dy(C));
+    }
+
+    {
+       vector a = vector(u+v, u-v, u+v);
+       vector n = normalize(a);
+       printf ("\n");
+       printf ("normalize: n = normalize(%g) = %g  Dx(n) = %g  Dy(n) = %g\n",
+             a, n, Dx(n), Dy(n));
+    }
+
+    {
+       vector a = vector(u+v, u-v, u+v);
+       float l = length(a);
+       printf ("\n");
+       printf ("length: l = length(%g) = %g  Dx(l) = %g  Dy(l) = %g\n",
+             a, l, Dx(l), Dy(l));
+    }
+
+    {
+       vector a = vector(u+v, -u-v, u+v);
+       vector b = vector(u+v,  u+v, u+v);
+       float d = distance(a, b);
+       printf ("\n");
+       printf ("distance: d = distance(%g, %g) = %g  Dx(d) = %g  Dy(d) = %g\n",
+             a, b, d, Dx(d), Dy(d));
     }
 
     {

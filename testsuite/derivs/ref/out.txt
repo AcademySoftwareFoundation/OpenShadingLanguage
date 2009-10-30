@@ -230,10 +230,35 @@ comp ref: P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
   P[1] = 1, Dx(P[1]) = 0, Dy(P[1]) = 0.5
   P[1] = 1, Dx(P[1]) = 0, Dy(P[1]) = 0.5
 
+dot product: d = dot(0 -0 0, 0 0 0) = 0  Dx(d) = 0  Dy(d) = 0
+dot product: d = dot(1 -1 1, 1 1 1) = 1  Dx(d) = 1  Dy(d) = 1
+dot product: d = dot(1 -1 1, 1 1 1) = 1  Dx(d) = 1  Dy(d) = 1
+dot product: d = dot(2 -2 2, 2 2 2) = 4  Dx(d) = 2  Dy(d) = 2
+
+cross product: c = cross(0 -0 0, 0 0 0) = -0 0 0  Dx(c) = -0 0 0  Dy(c) = -0 0 0
+cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -2 0 2  Dy(c) = -2 0 2
+cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -2 0 2  Dy(c) = -2 0 2
+cross product: c = cross(2 -2 2, 2 2 2) = -8 0 8  Dx(c) = -4 0 4  Dy(c) = -4 0 4
+
 comp assign: C[0]=u, C[1]=v: now C = 0 0 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
 comp assign: C[0]=u, C[1]=v: now C = 1 0 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
 comp assign: C[0]=u, C[1]=v: now C = 0 1 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
 comp assign: C[0]=u, C[1]=v: now C = 1 1 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
+
+normalize: n = normalize(0 0 0) = 0 0 0  Dx(n) = 0 0 0  Dy(n) = 0 0 0
+normalize: n = normalize(1 1 1) = 0.57735 0.57735 0.57735  Dx(n) = 2.98023e-08 2.98023e-08 2.98023e-08  Dy(n) = 0.19245 -0.3849 0.19245
+normalize: n = normalize(1 -1 1) = 0.57735 -0.57735 0.57735  Dx(n) = 0.19245 0.3849 0.19245  Dy(n) = 2.98023e-08 -2.98023e-08 2.98023e-08
+normalize: n = normalize(2 0 2) = 0.707107 0 0.707107  Dx(n) = 1.49012e-08 0.176777 1.49012e-08  Dy(n) = 1.49012e-08 -0.176777 1.49012e-08
+
+length: l = length(0 0 0) = 0  Dx(l) = 0  Dy(l) = 0
+length: l = length(1 1 1) = 1.73205  Dx(l) = 0.866025  Dy(l) = 0.288675
+length: l = length(1 -1 1) = 1.73205  Dx(l) = 0.288675  Dy(l) = 0.866025
+length: l = length(2 0 2) = 2.82843  Dx(l) = 0.707107  Dy(l) = 0.707107
+
+distance: d = distance(0 -0 0, 0 0 0) = 0  Dx(d) = 0  Dy(d) = 0
+distance: d = distance(1 -1 1, 1 1 1) = 2  Dx(d) = 1  Dy(d) = 1
+distance: d = distance(1 -1 1, 1 1 1) = 2  Dx(d) = 1  Dy(d) = 1
+distance: d = distance(2 -2 2, 2 2 2) = 4  Dx(d) = 1  Dy(d) = 1
 
 Triple construction:
   color(u,v,0) = 0 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0

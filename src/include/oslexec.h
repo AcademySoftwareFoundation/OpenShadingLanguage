@@ -216,7 +216,7 @@ public:
 
     VaryingRef<ClosureColor *> Ci;     ///< Output colors
 
-    bool leftHanded;                   ///< flips the meaning of calculatenormal()
+    bool flipHandedness;               ///< flips the meaning of calculatenormal()
 };
 
 

@@ -222,7 +222,7 @@ main (int argc, const char *argv[])
     shaderglobals.u.init (&gu[0], sizeof(gu[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
-    shaderglobals.leftHanded = false;
+    shaderglobals.flipHandedness = false;
     float time = 0.0f;
     shaderglobals.time.init (&time, 0);
 

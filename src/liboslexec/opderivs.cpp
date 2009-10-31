@@ -150,13 +150,13 @@ DECLOP (OP_calculatenormal)
         DASSERT (Result.is_varying());
         VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
         VaryingRef<Dual2<Vec3> > p ((Dual2<Vec3> *)P.data(), P.step());
-        if (exec->context()->globals()->leftHanded) { 
-            // Left Handed coordinate system: Y ^ X = +Z
+        if (exec->context()->globals()->flipHandedness) { 
+            // flip the default rule: Y ^ X = Normal
             for (int i = beginpoint;  i < endpoint;  ++i)
                 if (runflags[i])
                     result[i] = p[i].dy().cross(p[i].dx());
         } else {
-            // Right Handed coordinate system: X ^ Y = +Z
+            // regular rule: X ^ Y = Normal
             for (int i = beginpoint;  i < endpoint;  ++i)
                 if (runflags[i])
                     result[i] = p[i].dx().cross(p[i].dy());

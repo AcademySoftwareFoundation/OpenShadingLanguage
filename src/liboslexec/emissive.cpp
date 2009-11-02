@@ -86,7 +86,7 @@ public:
         }
         else res = 0.0f; // out of cone
 
-        labels = Labels(Labels::LIGHT);
+        labels.set (Labels::LIGHT, Labels::NONE, Labels::NONE);
         return Color3(res, res, res);
     }
 
@@ -109,7 +109,7 @@ public:
                     (sinf(phi) * sinTheta) * B +
                                  cosTheta  * Ng;
         pdf = 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
-        labels = Labels(Labels::LIGHT);
+        labels.set (Labels::LIGHT, Labels::NONE, Labels::NONE);
     }
 
     /// Return the probability distribution function in the direction omega_out,

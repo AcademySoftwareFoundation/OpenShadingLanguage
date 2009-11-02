@@ -41,41 +41,70 @@ namespace OSL {
 
 /// Label set representation for rays
 ///
-/// It is just an integer, but I'm wrapping it into a class to
-/// give some room for future extensions and encapsulate the
-/// constants
+/// Now labels are represented as an array of ustrings (pointers) with a
+/// maximum of 8 (3 basic labels + 5 custom). The three basic labels are
+/// event type, direction and scattering. Any label set returned by a
+/// closure must define these three labels in that exact order. Even when
+/// some of them might be NULL. Every label in fact is supposed to be sorted
+/// according to the hierarchy.
 ///
 class Labels {
 public:
-    // Camera and light nodes of the path, though camera won't be used yet
-    static const int CAMERA       = 1<<10;
-    static const int LIGHT        = 1<<9;
-    static const int BACKGROUND   = 1<<8;
-    static const int SURFACE      = 1<<7;
-    static const int VOLUME       = 1<<6;
-    // A path node can either be transmit or reflect
-    static const int TRANSMIT     = 1<<5;
-    static const int REFLECT      = 1<<4;
-    // Three different modes depending on the width of
-    // the scattering cone
-    static const int DIFFUSE      = 1<<3; // typical 2PI hemisphere
-    static const int GLOSSY       = 1<<2; // blurry reflections and transmissions
-    static const int SINGULAR     = 1<<1; // perfect mirrors and glass
-    static const int STRAIGHT     = 1<<0; // Special case for transparent shadows
+    static const int MAXLENGTH = 8;
 
-    Labels():m_set(0) {};
-    Labels(int l):m_set(l) {};
-    /// Returns true is this label is completely included in the given one
-    bool match(const Labels &l) const { return (m_set & l.m_set) == m_set; };
-    bool empty()const { return m_set == 0; };
-    bool has(int flag) const { return (m_set & flag) != 0; }
+    static const ustring NONE;
+    // Event type
+    static const ustring CAMERA;
+    static const ustring LIGHT;
+    static const ustring BACKGROUND;
+    static const ustring SURFACE;
+    static const ustring VOLUME;
+    // Direction
+    static const ustring TRANSMIT;
+    static const ustring REFLECT;
+    // Scattering
+    static const ustring DIFFUSE;  // typical 2PI hemisphere
+    static const ustring GLOSSY;   // blurry reflections and transmissions
+    static const ustring SINGULAR; // perfect mirrors and glass
+    static const ustring STRAIGHT; // Special case for transparent shadows
+
+    Labels():m_size(0) {};
+    // With the API we have we won't be using this constructor but you never know
+    // sets the basice three built in labels
+    Labels(ustring event_type, ustring direction, ustring scattering):m_size(0)
+      { m_set[0]=event_type; m_set[1]=direction; m_set[2]=scattering; m_size=3; };
+
+    // Sets the basice three built in labels
+    void set(ustring event_type, ustring direction, ustring scattering)
+      { m_set[0]=event_type; m_set[1]=direction; m_set[2]=scattering; m_size=m_size<3 ? 3 : m_size; };
+
+    // Add a label to the set, meant for custom ones
+    void append(ustring label) { m_set[m_size++] = label; };
+
+    /// Returns true if all its labels are included in the given ones
+    /// It could eventually do 8 comparisons. we are using it temporarily
+    bool match(const Labels &l) const;
+    bool empty()const { return m_size == 0; };
+    // This is something we should only use for debug
+    bool has(ustring label) const
+      { for (int i=0;i<m_size;++i) if (m_set[i]==label) return true; return false; };
+
+    // Fast label checking methods for the integrator (only basic builtin labels)
+    bool hasEventType (ustring label) const { return m_size > 0 && m_set[0] == label; };
+    bool hasDirection (ustring label) const { return m_size > 1 && m_set[1] == label; };
+    bool hasScattering(ustring label) const { return m_size > 2 && m_set[2] == label; };
+
+    // Label access methods
+    size_t size() const { return m_size; };
+    ustring label(int i) const { return m_set[i]; };
+
     /// Add labels to the existing ones
-    void add(const Labels &l) { m_set |= l.m_set; };
-    void clear() { m_set = 0; };
+    void clear() { m_size = 0; };
 
-//private:
-    // Actual label set (ored integer)
-    int m_set;
+private:
+    // Actual label set (NULL terminated array)
+    ustring m_set[MAXLENGTH];
+    int m_size;
 };
 
 /// Base class representation of a radiance color closure.

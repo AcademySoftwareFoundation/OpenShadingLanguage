@@ -223,7 +223,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float cos_pi = params->N.dot(omega_in) * (float) M_1_PI;
-        labels = Labels( Labels::SURFACE | Labels::REFLECT | Labels::DIFFUSE );
+        labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
@@ -240,7 +240,7 @@ public:
            // distribution over the hemisphere
            sample_cos_hemisphere (params->N, omega_out, randu, randv, omega_in, pdf);
            eval.setValue(pdf, pdf, pdf);
-           labels = Labels( Labels::SURFACE | Labels::REFLECT | Labels::DIFFUSE );
+           labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
         }
     }
 
@@ -284,7 +284,7 @@ public:
         domega_in_dy = -domega_out_dy;
         pdf = 1;
         eval.setValue(1, 1, 1);
-        labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
+        labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
     }
 
     float pdf (const void *paramsptr, const Vec3 &Ng,
@@ -334,7 +334,7 @@ public:
         // reflect the view vector
         Vec3 R = (2 * cosNO) * params->N - omega_out;
         float out = cosNI * ((params->exponent + 2) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent));
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
@@ -346,7 +346,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             // reflect the view vector
             Vec3 R = (2 * cosNO) * params->N - omega_out;
@@ -433,7 +433,7 @@ public:
         float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
         float denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
         float out = cosNI * expf(-exp_arg) / denom;
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
@@ -445,7 +445,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
             Vec3 X, Y;
@@ -588,7 +588,7 @@ public:
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
         float out = (F * G * D) * 0.25f / cosNI;
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
@@ -600,7 +600,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
             make_orthonormals(params->N, X, Y);
@@ -725,7 +725,7 @@ public:
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
         float out = (F * G * D) * 0.25f / cosNI;
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
@@ -737,7 +737,7 @@ public:
     {
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::GLOSSY);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
             make_orthonormals(params->N, X, Y);
@@ -842,7 +842,7 @@ public:
     {
         // only one direction is possible
         const params_t* params = (const params_t*) paramsptr;
-        labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
+        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
         float cosNO = params->N.dot(omega_out);
         if (cosNO > 0) {
             omega_in = (2 * cosNO) * params->N - omega_out;
@@ -893,7 +893,7 @@ public:
                  float &pdf, Color3 &eval, Labels &labels) const
     {
         const params_t* params = (const params_t*) paramsptr;
-        labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
+        labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
         float Ft = 1 - fresnel_dielectric(params->eta, params->N,
@@ -961,14 +961,14 @@ public:
             omega_in = R;
             domega_in_dx = dRdx;
             domega_in_dy = dRdy;
-            labels = Labels(Labels::SURFACE | Labels::REFLECT | Labels::SINGULAR);
+            labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
         } else {
             pdf = 1 - Fr;
             eval.setValue(pdf, pdf, pdf);
             omega_in = T;
             domega_in_dx = dTdx;
             domega_in_dy = dTdy;
-            labels = Labels(Labels::SURFACE | Labels::TRANSMIT | Labels::SINGULAR);
+            labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
         }
     }
 

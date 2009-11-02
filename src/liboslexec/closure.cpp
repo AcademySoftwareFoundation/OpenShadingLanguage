@@ -311,6 +311,30 @@ operator<< (std::ostream &out, const ClosureColor &closure)
 
 
 
+const ustring Labels::NONE       = ustring(NULL);
+const ustring Labels::CAMERA     = ustring("C");
+const ustring Labels::LIGHT      = ustring("L");
+const ustring Labels::BACKGROUND = ustring("B");
+const ustring Labels::SURFACE    = ustring("F");
+const ustring Labels::VOLUME     = ustring("V");
+const ustring Labels::TRANSMIT   = ustring("T");
+const ustring Labels::REFLECT    = ustring("R");
+const ustring Labels::DIFFUSE    = ustring("D");
+const ustring Labels::GLOSSY     = ustring("G");
+const ustring Labels::SINGULAR   = ustring("S");
+const ustring Labels::STRAIGHT   = ustring("s");
+
+
+
+bool Labels::match(const Labels &l) const
+{
+   int mp, op;
+   for (mp=0, op=0; mp < m_size && op < l.m_size; ++op)
+      if (m_set[mp] == l.m_set[op])
+         mp++;
+   return mp == m_size;
+}
+
 //}; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

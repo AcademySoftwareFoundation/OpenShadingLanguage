@@ -266,9 +266,10 @@ ASTshader_declaration::codegen (Symbol *dest)
         ASSERT (f->nodetype() == ASTNode::variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *) f.get();
         if (v->init()) {
-            // If the initializer is a single literal, we will output
-            // it as a constant in the symbol definition, no need for ops.
-            if (v->init()->nodetype() == literal_node && ! v->init()->next())
+            // If the initializer is a literal and we output it as a
+            // constant in the symbol definition, no need for ops.
+            std::string out;
+            if (v->param_default_literals (out))
                 continue;
 
             m_compiler->codegen_method (v->name());
@@ -276,7 +277,7 @@ ASTshader_declaration::codegen (Symbol *dest)
         }
     }
 
-    m_compiler->codegen_method (ustring ("main"));
+    m_compiler->codegen_method (ustring ("___main___"));
     codegen_list (statements());
     return NULL;
 }
@@ -341,6 +342,94 @@ ASTassign_expression::codegen (Symbol *dest)
     }
 
     return dest;
+}
+
+
+
+bool
+ASTvariable_declaration::param_default_literals (std::string &out)
+{
+    TypeSpec type = sym()->typespec().elementtype();
+
+    // FIXME -- this only works for single values or arrays made of
+    // literals.  Needs to be seriously beefed up.
+
+    out.clear ();
+    bool completed = true;  // have we output the full initialization?
+
+    for (ASTNode::ref init = this->init();  init;  init = init->next()) {
+        ASTliteral *lit = dynamic_cast<ASTliteral *>(init.get());
+        if (type.is_closure()) {
+            // this clause avoid trouble and assertions if the following
+            // is_int(), i_float(), etc, encounter a closure.
+            completed = (lit != NULL);
+        } else if (type.is_int()) {
+            if (lit && lit->typespec().is_int())
+                out += Strutil::format ("%d ", lit->intval());
+            else {
+                out += "0 ";  // FIXME?
+                completed = false;
+            }
+        } else if (type.is_float()) {
+            if (lit && lit->typespec().is_int())
+                out += Strutil::format ("%d ", lit->intval());
+            else if (lit && lit->typespec().is_float())
+                out += Strutil::format ("%.8g ", lit->floatval());
+            else {
+                out += "0 ";  // FIXME?
+                completed = false;
+            }
+        } else if (type.is_triple()) {
+            if (lit && lit->typespec().is_int()) {
+                float f = lit->intval();
+                out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
+            } else if (lit && lit->typespec().is_float()) {
+                float f = lit->floatval();
+                out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
+            } else if (init->nodetype() == ASTNode::type_constructor_node &&
+                     init->typespec() == type) {
+                ASTtype_constructor *ctr = dynamic_cast<ASTtype_constructor *>(init.get());
+                ASTNode::ref val = ctr->args();
+                float f[3];
+                for (int c = 0;  c < 3;  ++c) {
+                    if (val.get() && val->nodetype() == ASTNode::literal_node) {
+                        f[c] = ((ASTliteral *)val.get())->floatval ();
+                        val = val->next();
+                    } else {
+                        f[c] = 0;
+                        completed = false;
+                    }
+                }
+                out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[1], f[2]);
+            } else {
+                out += "0 0 0 ";
+                completed = false;
+            }
+        } else if (type.is_matrix()) {
+            float f = 0;
+            if (lit && lit->typespec().is_int())
+                f = lit->intval();
+            else if (lit && lit->typespec().is_float())
+                f = lit->floatval();
+            else {
+                f = 0;  // FIXME?
+                completed = false;
+            }
+            out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                 f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
+        } else if (type.is_string()) {
+            if (lit && lit->typespec().is_string())
+                out += Strutil::format ("\"%s\" ", lit->strval());
+            else {
+                out += "\"\" ";  // FIXME?
+                completed = false;
+            }
+        }
+        else {
+            ASSERT (0 && "help with initializer");
+        }
+    }
+    return completed;
 }
 
 

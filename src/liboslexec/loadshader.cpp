@@ -265,9 +265,6 @@ OSOReaderToMaster::hint (const char *hintstring)
 void
 OSOReaderToMaster::codemarker (const char *name)
 {
-#if 0
-    m_reading_param = false;
-#endif
     m_sourcefile.clear();
 }
 

@@ -344,8 +344,8 @@ public:
           m_has_derivs(false), m_const_initializer(false),
           m_connected(false), m_valuesource(DefaultVal),
           m_scope(0), m_dataoffset(-1), 
-          m_node(declaration_node), m_alias(NULL)
-          
+          m_node(declaration_node), m_alias(NULL),
+          m_initbegin(0), m_initend(0)
     { }
     virtual ~Symbol () { }
 
@@ -470,6 +470,7 @@ protected:
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol
     Symbol *m_alias;            ///< Another symbol that this is an alias for
+    int m_initbegin, m_initend; ///< Range of init ops (for params)
 };
 
 

@@ -368,6 +368,12 @@ public:
 
     bool is_output () const { return m_isoutput; }
 
+    /// For shader params, generate the string that gives the
+    /// intialization of literal values and place it in 'out'.
+    /// Return whether the full initialization is comprised only of
+    /// literals (and no init ops are needed).
+    bool param_default_literals (std::string &out);
+
 private:
     ustring m_name;
     Symbol *m_sym;

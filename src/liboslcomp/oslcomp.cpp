@@ -175,7 +175,6 @@ OSLCompilerImpl::compile (const std::string &filename,
             ++i;
             m_output_filename = options[i];
         } else {
-            std::cerr << "arg " << options[i] << "\n";
             // something meant for the cpp command
             cppcommand += "\"";
             cppcommand += options[i];
@@ -310,7 +309,7 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
     else if (ts.is_int() && init->nodetype() == ASTNode::literal_node)
         oso ("%d", ((const ASTliteral *)init)->intval());
     else if (ts.is_float() && init->nodetype() == ASTNode::literal_node)
-        oso ("%.17g", ((const ASTliteral *)init)->floatval());
+        oso ("%.8g", ((const ASTliteral *)init)->floatval());
     // FIXME -- what about type constructors?
     else {
         std::cout << "Error, don't know how to print metadata " 
@@ -332,89 +331,11 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
     else if (sym->typespec().is_int())
         oso ("%d", sym->intval());
     else if (sym->typespec().is_float())
-        oso ("%.17g", sym->floatval());
+        oso ("%.8g", sym->floatval());
     else if (sym->typespec().is_triple())
-        oso ("%.17g %.17g %.17g", sym->vecval()[0], sym->vecval()[1], sym->vecval()[2]);
+        oso ("%.8g %.8g %.8g", sym->vecval()[0], sym->vecval()[1], sym->vecval()[2]);
     else {
         ASSERT (0 && "Only know how to output const vals that are single int, float, string");
-    }
-}
-
-
-
-void
-OSLCompilerImpl::write_oso_formal_default (const ASTvariable_declaration *node) const
-{
-    Symbol *sym = node->sym();
-    TypeSpec type = sym->typespec().elementtype();
-
-    // FIXME -- this only works for single values or arrays made of
-    // literals.  Needs to be seriously beefed up.
-
-    for (ASTNode::ref init = node->init();  init;  init = init->next()) {
-        ASTliteral *lit = dynamic_cast<ASTliteral *>(init.get());
-        if (type.is_closure()) {
-            // this clause avoid trouble and assertions if the following
-            // is_int(), is_float(), etc, encounter a closure.
-        } else if (type.is_int()) {
-            if (lit && lit->typespec().is_int())
-                oso ("%d ", lit->intval());
-            else
-                oso ("0 ");  // FIXME?
-        } else if (type.is_float()) {
-            if (lit && lit->typespec().is_int())
-                oso ("%d ", lit->intval());
-            else if (lit && lit->typespec().is_float())
-                oso ("%.17g ", lit->floatval());
-            else
-                oso ("0 ");  // FIXME?
-        } else if (type.is_triple()) {
-            if (lit && lit->typespec().is_int()) {
-                float f = lit->intval();
-                oso ("%.17g %.17g %.17g ", f, f, f);
-            } else if (lit && lit->typespec().is_float()) {
-                float f = lit->floatval();
-                oso ("%.17g %.17g %.17g ", f, f, f);
-            } else if (init->nodetype() == ASTNode::type_constructor_node &&
-                     init->typespec() == type) {
-                ASTtype_constructor *ctr = dynamic_cast<ASTtype_constructor *>(init.get());
-                ASTNode::ref val = ctr->args();
-                float f[3];
-                for (int c = 0;  c < 3;  ++c) {
-                    if (val.get() && val->nodetype() == ASTNode::literal_node) {
-                        f[c] = ((ASTliteral *)val.get())->floatval ();
-                        val = val->next();
-                    } else {
-                        f[c] = 0;
-                    }
-                }
-                oso ("%.17g %.17g %.17g ", f[0], f[1], f[2]);
-                // FIXME -- we're still generating both the init ops as
-                // well as these constant values.  That's not good.  We need
-                // to mark the node as being adequately defaulted so it
-                // doesn't double-generate the code.
-            } else {
-                oso ("0 0 0 ");
-            }
-        } else if (type.is_matrix()) {
-            float f = 0;
-            if (lit && lit->typespec().is_int())
-                f = lit->intval();
-            else if (lit && lit->typespec().is_float())
-                f = lit->floatval();
-            else
-                f = 0;  // FIXME?
-            oso ("%.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g ",
-                 f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
-        } else if (type.is_string()) {
-            if (lit && lit->typespec().is_string())
-                oso ("\"%s\" ", lit->strval());
-            else
-                oso ("\"\" ");  // FIXME?
-        }
-        else {
-            ASSERT (0 && "help with initializer");
-        }
     }
 }
 
@@ -437,9 +358,9 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
         oso ("\t");
     } else if (v && (sym->symtype() == SymTypeParam ||
                     sym->symtype() == SymTypeOutputParam)) {
-        oso ("\t");
-        write_oso_formal_default (v);
-        oso ("\t");
+        std::string out;
+        v->param_default_literals (out);
+        oso ("\t%s\t", out.c_str());
     }
 
     int hints = 0;

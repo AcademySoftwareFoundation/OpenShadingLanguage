@@ -716,6 +716,9 @@ private:
     /// re-jigger m_sym to point to the specific polymorphic match.
     TypeSpec typecheck_all_poly (TypeSpec expected, bool coerce);
 
+    // Handle all the special cases for built-ins.
+    void typecheck_builtin_specialcase (Symbol *dest = NULL);
+
     ustring m_name;
     Symbol *m_sym;
     FunctionSymbol *m_poly;

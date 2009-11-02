@@ -233,9 +233,24 @@ public:
     virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
                              float time) = 0;
 
+    /// Get the 4x4 matrix that transforms by the specified
+    /// transformation at the given time.  The default implementation is
+    /// to use get_matrix and invert it, but a particular renderer may
+    /// have a better technique and overload the implementation.
+    virtual bool get_inverse_matrix (Matrix44 &result, TransformationPtr xform,
+                                     float time);
+
     /// Get the 4x4 matrix that transforms points from the named
     /// 'from' coordinate system to "common" space at the given time.
     virtual bool get_matrix (Matrix44 &result, ustring from, float time) = 0;
+
+    /// Get the 4x4 matrix that transforms points from "common" space to
+    /// the named 'to' coordinate system to at the given time.  The
+    /// default implementation is to use get_matrix and invert it, but a
+    /// particular renderer may have a better technique and overload the
+    /// implementation.
+    virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
+
 };
 
 

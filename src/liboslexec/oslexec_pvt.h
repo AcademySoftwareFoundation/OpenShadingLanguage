@@ -707,6 +707,16 @@ public:
     /// coordinate system to "common" space for the given shading point.
     void get_matrix (Matrix44 &result, ustring from, int whichpoint=0);
 
+    /// Get the 4x4 matrix that transforms points from "common" space to
+    /// the named 'from' coordinate system for the given shading point.
+    void get_inverse_matrix (Matrix44 &result, ustring from, int whichpoint=0);
+
+    /// Get the 4x4 matrix that transforms points from the named "from"
+    /// coordinate system to the named 'to' coordinate system to at the
+    /// given shading point.
+    void get_matrix (Matrix44 &result, ustring from,
+                     ustring to, int whichpoint=0);
+
     /// Return the ShaderUse of this execution.
     ///
     ShaderUse shaderuse () const { return m_use; }

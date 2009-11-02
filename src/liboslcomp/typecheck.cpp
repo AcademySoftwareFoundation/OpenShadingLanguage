@@ -700,33 +700,58 @@ ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
 
 
 
+void
+ASTfunction_call::typecheck_builtin_specialcase (Symbol *dest)
+{
+    if (m_name == "transform") {
+        // Special case for transform: under the covers, it selects
+        // vector or normal special versions depending on its use.
+        if (typespec().simpletype() == TypeDesc::TypeVector)
+            m_name = ustring ("transformv");
+        else if (typespec().simpletype() == TypeDesc::TypeNormal)
+            m_name = ustring ("transformn");
+    }
+}
+
+
+
 TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
 {
     typecheck_children ();
 
+    bool match = false;
+
     // Look for an exact match, including expected return type
     m_typespec = typecheck_all_poly (expected, false);
     if (m_typespec != TypeSpec())
-        return m_typespec;
+        match = true;
 
     // Now look for an exact match on args, but any assignable return type
-    if (expected != TypeSpec()) {
+    if (! match && expected != TypeSpec()) {
         m_typespec = typecheck_all_poly (TypeSpec(), false);
         if (m_typespec != TypeSpec())
-            return m_typespec;
+            match = true;
     }
 
     // Now look for a coercible match of args, exact march on return type
-    m_typespec = typecheck_all_poly (expected, true);
-    if (m_typespec != TypeSpec())
-        return m_typespec;
+    if (! match) {
+        m_typespec = typecheck_all_poly (expected, true);
+        if (m_typespec != TypeSpec())
+            match = true;
+    }
 
     // All that failed, try for a coercible match on everything
-    if (expected != TypeSpec()) {
+    if (! match && expected != TypeSpec()) {
         m_typespec = typecheck_all_poly (TypeSpec(), true);
         if (m_typespec != TypeSpec())
-            return m_typespec;
+            match = true;
+    }
+
+    if (match) {
+        if (! is_user_function ())
+            typecheck_builtin_specialcase ();
+        return m_typespec;
     }
 
     // Couldn't find any way to match any polymorphic version of the

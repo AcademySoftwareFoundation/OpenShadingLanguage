@@ -1,30 +1,62 @@
+void all_transforms (point p, string to, int derivs)
+{
+    printf ("\ntransform to '%s':\n", to);
+    if (derivs)
+        printf ("  p = %g, Dx(p) = %g, Dy(p) = %g\n", p, Dx(p), Dy(p));
+    point px = transform (to, (point)p);
+    printf (" transform(\"%s\", point(%g)) = %g\n", to, p, px);
+    if (derivs)
+        printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
+                to, p, Dx(px), Dy(px));
+    vector vx = transform (to, (vector)p);
+    printf (" transform(\"%s\", vector(%g)) = %g\n", to, p, vx);
+    if (derivs)
+        printf ("  derivs of transform(\"%s\", vector(%g)): Dx = %g, Dy = %g\n",
+                to, p, Dx(vx), Dy(vx));
+    printf (" transform(\"%s\", normal(%g)) = %g\n", to,
+            p, transform(to, (normal)p));
+}
+
+
+
+void all_transforms (point p, string from, string to)
+{
+    printf ("\ntransform '%s' to '%s':\n", from, to);
+    printf (" transform(\"%s\", \"%s\", point(%g)) = %g\n", from, to,
+            p, transform(from, to, (point)p));
+    printf (" transform(\"%s\", \"%s\", vector(%g)) = %g\n", from, to,
+            p, transform(from, to, (vector)p));
+    printf (" transform(\"%s\", \"%s\", normal(%g)) = %g\n", from, to,
+            p, transform(from, to, (normal)p));
+}
+
+
+
+void do_test (point z, point p, int derivs)
+{
+    all_transforms (p, "shader", 1);
+    all_transforms (z, "shader", 0);
+
+    all_transforms (p, "common", "shader");
+    all_transforms (z, "common", "shader");
+
+    all_transforms (p, "shader", "common");
+    all_transforms (z, "shader", "common");
+
+    all_transforms (p, "shader", "object");
+    all_transforms (z, "shader", "object");
+}
+
+
+
 shader
 test ()
 {
-    {
-        float a = 0.1, b = 0.2, c = 0.5;
-        point p = point (a,b,c);
-        vector v = vector (a,b,c);
-        normal n = normal (a,b,c);
-        printf ("  triple = (%g, %g, %g)\n", a, b, c);
-        printf ("  transform(\"shader\", point(%g)) = %g\n", 
-                p, transform("shader", p);
-        printf ("  transform(\"shader\", vector(%g)) = %g\n", 
-                v, transform("shader", v);
-        printf ("  transform(\"shader\", normal(%g)) = %g\n", 
-                n, transform("shader", n);
-    }
+    point z = point (0, 0, 0);
+    point p = point (1, 1.41421, 0);
+    do_test (z, p, 0);
 
-#if 0
-    {
-        printf (" varying:\n");
-        float a = u;
-        float b = 1.0 + v;
-        float c = 0.5;
-
-        printf ("  point (%g, %g, %g) = %g\n", a, b, c, point(a,b,c));
-        printf ("  vector (%g, %g, %g) = %g\n", a, b, c, vector(a,b,c));
-        printf ("  normal (%g, %g, %g) = %g\n", a, b, c, normal(a,b,c));
-    }
-#endif
+    printf ("\n\n varying:\n\n");
+    p += vector (u, v, 0);
+    do_test (z, p, 1);
 }

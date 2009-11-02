@@ -105,7 +105,7 @@ TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison
             oslc-err-paramdefault shortcircuit string
             texture-alpha texture-blur texture-firstchannel texture-simple 
             texture-width texture-withderivs texture-wrap
-            trig typecast vecctr vector )
+            transform trig typecast vecctr vector )
 
 
 

@@ -213,27 +213,12 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
 
 
 
-std::string
-ShadingSystemImpl::geterror () const
-{
-    PerThreadInfo *threadinfo = get_perthread_info ();
-    std::string e;
-    std::swap (e, threadinfo->errormessage);  // will clear the stored one
-    return e;
-}
-
-
-
 void
 ShadingSystemImpl::error (const char *message, ...)
 {
-    std::string &err (get_perthread_info()->errormessage);
-    if (err.size())
-        err += '\n';
     va_list ap;
     va_start (ap, message);
     std::string msg = Strutil::vformat (message, ap);
-    err += msg;
     m_err->error (msg);
     va_end (ap);
 }

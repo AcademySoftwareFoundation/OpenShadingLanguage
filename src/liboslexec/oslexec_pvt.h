@@ -372,7 +372,6 @@ public:
     ///
     void info (const char *message, ...);
 
-    virtual std::string geterror () const;
     virtual std::string getstats (int level=1) const;
 
     ErrorHandler &errhandler () const { return *m_err; }
@@ -438,7 +437,6 @@ private:
                                const char *layername, ShaderInstance *inst);
 
     struct PerThreadInfo {
-        std::string errormessage;    ///< Saved error string, per thread
         std::stack<ShadingContext *> context_pool;
 
         ShadingContext *pop_context ();  ///< Get the pool top and then pop

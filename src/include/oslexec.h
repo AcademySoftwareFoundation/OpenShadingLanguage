@@ -171,12 +171,6 @@ public:
     /// specified.
     virtual void clear_state () = 0;
 
-    /// If any of the API routines returned false indicating an error,
-    /// this routine will return the error string (and clear any error
-    /// flags).  If no error has occurred since the last time geterror()
-    /// was called, it will return an empty string.
-    virtual std::string geterror () const = 0;
-
     /// Return the statistics output as a huge string.
     ///
     virtual std::string getstats (int level=1) const = 0;

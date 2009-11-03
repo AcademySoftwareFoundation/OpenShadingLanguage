@@ -255,24 +255,31 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             }
         } else if (sym.symtype() == SymTypeParam ||
                    sym.symtype() == SymTypeOutputParam) {
-            size_t addr = context->heap_allot (sym.derivsize() * m_npoints);
-            sym.data (m_context->heapaddr (addr));
-            sym.step (0);  // FIXME
-            // Copy the parameter value
-            // FIXME -- if the parameter is not being overridden and is
-            // not writeable, I think we should just point to the parameter
-            // data, not copy it?  Or does it matter?
-            if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-                memcpy (sym.data(), &instance->m_fparams[sym.dataoffset()],
-                        sym.typespec().simpletype().size());
-            else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-                memcpy (sym.data(), &instance->m_iparams[sym.dataoffset()],
-                        sym.typespec().simpletype().size());
-            else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-                memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
-                        sym.typespec().simpletype().size());
-            if (sym.has_derivs())
-               zero_derivs (sym);
+            if (sym.typespec().is_closure()) {
+                // Special case -- closures store pointers in the heap
+                sym.dataoffset (m_context->closure_allot (m_npoints));
+                sym.data (m_context->heapaddr (sym.dataoffset()));
+                sym.step (sizeof (ClosureColor *));
+            } else {
+                size_t addr = context->heap_allot (sym.derivsize() * m_npoints);
+                sym.data (m_context->heapaddr (addr));
+                sym.step (0);  // FIXME
+                // Copy the parameter value
+                // FIXME -- if the parameter is not being overridden and is
+                // not writeable, I think we should just point to the parameter
+                // data, not copy it?  Or does it matter?
+                if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+                    memcpy (sym.data(), &instance->m_fparams[sym.dataoffset()],
+                            sym.typespec().simpletype().size());
+                else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
+                    memcpy (sym.data(), &instance->m_iparams[sym.dataoffset()],
+                            sym.typespec().simpletype().size());
+                else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
+                    memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
+                            sym.typespec().simpletype().size());
+                if (sym.has_derivs())
+                   zero_derivs (sym);
+            }
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);

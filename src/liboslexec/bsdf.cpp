@@ -241,6 +241,11 @@ public:
            sample_cos_hemisphere (params->N, omega_out, randu, randv, omega_in, pdf);
            eval.setValue(pdf, pdf, pdf);
            labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
+           // TODO: find a better approximation for the diffuse bounce
+           domega_in_dx = (2 * params->N.dot(domega_out_dx)) * params->N - domega_out_dx;
+           domega_in_dy = (2 * params->N.dot(domega_out_dy)) * params->N - domega_out_dy;
+           domega_in_dx *= 125;
+           domega_in_dy *= 125;
         }
     }
 
@@ -350,6 +355,8 @@ public:
         if (cosNO > 0) {
             // reflect the view vector
             Vec3 R = (2 * cosNO) * params->N - omega_out;
+            domega_in_dx = (2 * params->N.dot(domega_out_dx)) * params->N - domega_out_dx;
+            domega_in_dy = (2 * params->N.dot(domega_out_dy)) * params->N - domega_out_dy;
             Vec3 T, B;
             make_orthonormals (R, T, B);
             float phi = 2 * (float) M_PI * randu;
@@ -370,6 +377,12 @@ public:
                     pdf = (params->exponent + 1) * common;
                     power = cosNI * (params->exponent + 2) * common;
                     eval.setValue(power, power, power);
+                    // Since there is some blur to this reflection, make the
+                    // derivatives a bit bigger. In theory this varies with the
+                    // exponent but the exact relationship is complex and
+                    // requires more ops than are practical.
+                    domega_in_dx *= 10;
+                    domega_in_dy *= 10;
                 }
             }
         }
@@ -514,6 +527,14 @@ public:
                 denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
                 float power = cosNI * expf(-exp_arg) / denom;
                 eval.setValue(power, power, power);
+                domega_in_dx = (2 * params->N.dot(domega_out_dx)) * params->N - domega_out_dx;
+                domega_in_dy = (2 * params->N.dot(domega_out_dy)) * params->N - domega_out_dy;
+                // Since there is some blur to this reflection, make the
+                // derivatives a bit bigger. In theory this varies with the
+                // roughness but the exact relationship is complex and
+                // requires more ops than are practical.
+                domega_in_dx *= 10;
+                domega_in_dy *= 10;
             }
         }
     }
@@ -639,6 +660,14 @@ public:
                     float F = fresnel_shlick(m.dot(omega_out), params->R0);
                     float power = (F * G * D) * 0.25f / cosNI;
                     eval.setValue(power, power, power);
+                    domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
+                    domega_in_dy = (2 * m.dot(domega_out_dy)) * m - domega_out_dy;
+                    // Since there is some blur to this reflection, make the
+                    // derivatives a bit bigger. In theory this varies with the
+                    // roughness but the exact relationship is complex and
+                    // requires more ops than are practical.
+                    domega_in_dx *= 10;
+                    domega_in_dy *= 10;
                 }
             }
         }
@@ -779,6 +808,14 @@ public:
                     float F = fresnel_shlick(m.dot(omega_out), params->R0);
                     float power = (F * G * D) * 0.25f / cosNI;
                     eval.setValue(power, power, power);
+                    domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
+                    domega_in_dy = (2 * m.dot(domega_out_dy)) * m - domega_out_dy;
+                    // Since there is some blur to this reflection, make the
+                    // derivatives a bit bigger. In theory this varies with the
+                    // roughness but the exact relationship is complex and
+                    // requires more ops than are practical.
+                    domega_in_dx *= 10;
+                    domega_in_dy *= 10;
                 }
             }
         }

@@ -112,7 +112,7 @@ cmakeinstall: cmake
 dist : cmakeinstall
 
 # 'make test' does a full build and then runs all tests
-test: cmake
+test: cmakeinstall
 	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} test )
 
 # 'make package' builds everything and then makes an installable package 

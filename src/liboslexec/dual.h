@@ -347,6 +347,16 @@ Dual2<T> atan (const Dual2<T> &a)
 }
 
 
+/// Make a simple way to extract the value of a dual<T> and a regular T with
+/// uniform syntax.
+template<class T>
+inline T value (const Dual2<T> &f) { return f.val(); }
+
+template<class T>
+inline T value (const T &f) { return f; }
+
+
+
 // f(x,x) = atan2(y,x); f'(x) =  y x' / (x^2 + y^2),
 //                      f'(y) = -x y' / (x^2 + y^2)
 // reference:  http://en.wikipedia.org/wiki/Atan2 

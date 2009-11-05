@@ -222,8 +222,12 @@ DECLOP (OP_texture)
                                            r);
             if (! ok) {
                 std::string err = texturesys->geterror ();
-                if (err.length())
-                    exec->error ("%s", err.c_str());
+                if (err.length()) {
+                    exec->error ("texture lookup failed (%s:%d): %s",
+                        exec->op().sourcefile().c_str(),
+                        exec->op().sourceline(),
+                        err.c_str());
+                }
             }
          }
     }
@@ -282,8 +286,10 @@ DECLOP (OP_gettextureinfo)
     bool varying = Filename.is_varying() | Dataname.is_varying();
     exec->adjust_varying (Result, varying);
     exec->adjust_varying (Data, varying);
-    exec->zero_derivs (Result);
-    exec->zero_derivs (Data);
+    if (Result.has_derivs())
+       exec->zero_derivs (Result);
+    if (Data.has_derivs())
+       exec->zero_derivs (Data);
     varying |= Result.is_varying() | Data.is_varying();
 
     VaryingRef<int> result ((int *)Result.data(), Result.step());
@@ -299,6 +305,15 @@ DECLOP (OP_gettextureinfo)
         if (runflags[i]) {
             result[i] = texturesys->get_texture_info (filename[i], dataname[i],
                                   Data.typespec().simpletype(), &data[i]);
+            if (!result[i]) {
+                std::string err = texturesys->geterror ();
+                if (err.length()) {
+                    exec->error ("gettextureinfo failed (%s:%d): %s",
+                        exec->op().sourcefile().c_str(),
+                        exec->op().sourceline(),
+                        err.c_str());
+                }
+            }
         }
         if (! varying)
             break;

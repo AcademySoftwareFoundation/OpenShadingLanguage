@@ -100,7 +100,7 @@ public:
     }
 
     const Dual2<T> & operator= (const T &x) {
-        init (x, T(0), T(0));
+        set (x, T(0), T(0));
         return *this;
     }
 

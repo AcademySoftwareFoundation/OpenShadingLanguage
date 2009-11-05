@@ -1,3 +1,22 @@
+void test_strlen (string s)
+{
+    printf ("strlen(\"%s\") = %d\n", s, strlen(s));
+}
+
+
+void test_substr (string s, int begin, int len)
+{
+    printf ("substr(\"%s\", %d, %d) = \"%s\"\n",
+            s, begin, len, substr(s,begin,len));
+}
+
+
+void test_substr (string s, int begin)
+{
+    printf ("substr(\"%s\", %d) = \"%s\"\n",
+            s, begin, substr(s,begin));
+}
+
 
 
 shader
@@ -14,5 +33,18 @@ test ()
     string a = "foo", b = "bar", c = "baz";
     printf ("concat(\"%s\", \"%s\", \"%s\") = \"%s\"\n",
             a, b, c, concat(a,b,c));
-    
+
+    // Test strlen
+    printf ("\n");
+    test_strlen ("");
+    test_strlen ("abc");
+
+    // Test substr
+    printf ("\n");
+    test_substr ("abcdefg", 0);
+    test_substr ("abcdefg", 3);
+    test_substr ("abcdefg", -2);
+    test_substr ("abcdefg", 3, 2);
+    test_substr ("abcdefg", 0, 20);
+    test_substr ("abcdefg", 0, -4);
 }

@@ -37,6 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
+#include <ImathFun.h>
+
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -206,6 +208,62 @@ DECLOP (OP_concat)
         if (runflags[i]) {
             result[i] = ustring (format_args (exec, format.c_str(),
                                               nargs-1, args+1, i));
+            if (! varying)
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_strlen)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &S (exec->sym (args[1]));
+    DASSERT (Result.typespec().is_int() && S.typespec().is_string());
+
+    exec->adjust_varying (Result, S.is_varying(), false /* can't alias */);
+
+    VaryingRef<int> result ((int *)Result.data(), Result.step());
+    VaryingRef<ustring> s ((ustring *)S.data(), S.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            result[i] = s[i].length ();
+            if (! Result.is_varying())
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_substr)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &S (exec->sym (args[1]));
+    Symbol &Start (exec->sym (args[2]));
+    Symbol &Length (exec->sym (args[3]));
+    DASSERT (Result.typespec().is_string() && S.typespec().is_string() &&
+             Start.typespec().is_int() && Length.typespec().is_int());
+
+    bool varying = S.is_varying() | Start.is_varying() | Length.is_varying();
+    exec->adjust_varying (Result, varying);
+
+    VaryingRef<ustring> result ((ustring *)Result.data(), Result.step());
+    VaryingRef<ustring> s ((ustring *)S.data(), S.step());
+    VaryingRef<int> start ((int *)Start.data(), Start.step());
+    VaryingRef<int> length ((int *)Length.data(), Length.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            const ustring &str (s[i]);
+            int b = start[i];
+            if (b < 0)
+                b += str.length();
+            b = Imath::clamp (b, 0, (int)str.length());
+            int len = Imath::clamp (length[i], 0, (int)str.length());
+            result[i] = ustring (s[i], b, len);
             if (! varying)
                 break;
         }

@@ -901,6 +901,8 @@ static const char * builtin_func_args [] = {
     "snoise", NOISE_ARGS, NULL,
     "sqrt", ANY_ONE_FLOAT_BASED, NULL,
     "step", "fff", NULL,
+    "strlen", "is", NULL,
+    "substr", "ssii", NULL,
     "tan", ANY_ONE_FLOAT_BASED, NULL,
     "tanh", ANY_ONE_FLOAT_BASED, NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 

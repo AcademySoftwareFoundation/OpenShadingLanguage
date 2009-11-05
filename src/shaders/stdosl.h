@@ -83,5 +83,12 @@ normal transform (string fromspace, string tospace, normal x)
 
 
 
+// Define substr(string,start) in terms of substr(string,start,len)
+string substr (string s, int start)
+{
+    return substr (s, start, strlen(s));
+}
+
+
 
 #endif /* STDOSL_H */

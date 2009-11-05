@@ -8,3 +8,13 @@ formtted string: 'P = 1 1 1'
 
 concat("foo", "bar", "baz") = "foobarbaz"
 
+strlen("") = 0
+strlen("abc") = 3
+
+substr("abcdefg", 0) = "abcdefg"
+substr("abcdefg", 3) = "defg"
+substr("abcdefg", -2) = "fg"
+substr("abcdefg", 3, 2) = "de"
+substr("abcdefg", 0, 20) = "abcdefg"
+substr("abcdefg", 0, -4) = ""
+

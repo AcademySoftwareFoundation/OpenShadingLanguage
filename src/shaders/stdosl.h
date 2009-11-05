@@ -47,4 +47,41 @@
 
 
 
+// Implementation of transform-with-named-space in terms of matrices:
+
+point transform (string tospace, point x)
+{
+    return transform (matrix ("common", tospace), x);
+}
+
+point transform (string fromspace, string tospace, point x)
+{
+    return transform (matrix (fromspace, tospace), x);
+}
+
+
+vector transform (string tospace, vector x)
+{
+    return transform (matrix ("common", tospace), x);
+}
+
+vector transform (string fromspace, string tospace, vector x)
+{
+    return transform (matrix (fromspace, tospace), x);
+}
+
+
+normal transform (string tospace, normal x)
+{
+    return transform (matrix ("common", tospace), x);
+}
+
+normal transform (string fromspace, string tospace, normal x)
+{
+    return transform (matrix (fromspace, tospace), x);
+}
+
+
+
+
 #endif /* STDOSL_H */

@@ -141,51 +141,38 @@ multDirMatrix (const Matrix44 &M, Dual2<Vec3> &in, Dual2<Vec3> &out)
 
 
 
-/// Implementation of transform (to, triple) and transform (from, to, triple).
+/// Implementation of transform (matrix, triple).
 /// Templated on the type of transformation needed (point, vector, normal).
 template<int xformtype>
-DECLOP (triple_transform)
+DECLOP (triple_matrix_transform)
 {
-    DASSERT (nargs == 3 || nargs == 4);
+    DASSERT (nargs == 3);
     Symbol &Result (exec->sym (args[0]));
-    bool using_fromspace = (nargs == 4);
-    Symbol &FromSpace (exec->sym (args[1]));
-    Symbol &ToSpace (exec->sym (args[1+using_fromspace]));
-    Symbol &V (exec->sym (args[2+using_fromspace]));
+    Symbol &Matrix (exec->sym (args[1]));
+    Symbol &V (exec->sym (args[2]));
     DASSERT (! Result.typespec().is_closure() &&
              Result.typespec().is_triple() &&
              ! V.typespec().is_closure() && V.typespec().is_triple() &&
-             FromSpace.typespec().is_string() &&
-             ToSpace.typespec().is_string());
+             Matrix.typespec().is_matrix());
 
     // Adjust the result's uniform/varying status
     ShaderGlobals *globals = exec->context()->globals();
-    bool vary = (ToSpace.is_varying() | FromSpace.is_varying() |
-                 V.is_varying() | globals->time.is_varying());
+    bool vary = (Matrix.is_varying() | V.is_varying() |
+                 globals->time.is_varying());
     exec->adjust_varying (Result, vary, Result.data() == V.data());
 
     VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
-    VaryingRef<ustring> fromspace;
-    if (using_fromspace)
-        fromspace.init ((ustring *)FromSpace.data(), FromSpace.step());
-    else
-        fromspace.init (&Strings::common, 0);
-    VaryingRef<ustring> tospace ((ustring *)ToSpace.data(), ToSpace.step());
+    VaryingRef<Matrix44> matrix ((Matrix44 *)Matrix.data(), Matrix.step());
     VaryingRef<Vec3> v ((Vec3 *)V.data(), V.step());
-    Matrix44 M;
     if (! vary) {
         // Computations are uniform.
-        if (xformtype == (int)TypeDesc::NORMAL) {
-            exec->get_matrix (M, *tospace, *fromspace);  // inverse
-            M = M.transpose();
-        } else {
-            exec->get_matrix (M, *fromspace, *tospace);
-        }
         Vec3 r;
         if (xformtype == (int)TypeDesc::POINT)
-            M.multVecMatrix (*v, r);
+            matrix[0].multVecMatrix (*v, r);
+        else if (xformtype == (int)TypeDesc::VECTOR)
+            matrix[0].multDirMatrix (*v, r);
         else
-            M.multDirMatrix (*v, r);
+            matrix[0].inverse().transpose().multDirMatrix (*v, r);
         for (int i = beginpoint;  i < endpoint;  ++i) {
             if (runflags[i])
                 result[i] = r;
@@ -194,26 +181,18 @@ DECLOP (triple_transform)
         }
         if (Result.has_derivs ())
             exec->zero_derivs (Result);
-    } else {
-        // Fully varying case
+    } else if (Matrix.is_uniform()) {
+        // V is varying, but matrix is not.  This means that we can
+        // inverse-transpose it just once (for normals), and that we
+        // need not consider its derivatives.
         VaryingRef<Dual2<Vec3> > dresult ((Dual2<Vec3> *)Result.data(), Result.step());
         VaryingRef<Dual2<Vec3> > dv ((Dual2<Vec3> *)V.data(), V.step());
         bool derivs = Result.has_derivs() && V.has_derivs();
-        ustring last_tospace, last_fromspace;
+        Matrix44 M (*matrix);
+        if (xformtype == (int)TypeDesc::NORMAL)
+            M = M.inverse().transpose();
         for (int i = beginpoint;  i < endpoint;  ++i) {
             if (runflags[i]) {
-                if (fromspace[i] != last_fromspace ||
-                      tospace[i] != last_tospace || 
-                      globals->time.is_varying()) {
-                    if (xformtype == (int)TypeDesc::NORMAL) {
-                        exec->get_matrix (M, tospace[i], fromspace[i], i);
-                        M = M.transpose();
-                    } else {
-                        exec->get_matrix (M, fromspace[i], tospace[i], i);
-                    }
-                    last_fromspace = fromspace[i];
-                    last_tospace = tospace[i];
-                }
                 if (derivs) {
                     if (xformtype == (int)TypeDesc::POINT)
                         multVecMatrix (M, dv[i], dresult[i]);
@@ -229,6 +208,41 @@ DECLOP (triple_transform)
             }
         }
         if (Result.has_derivs() && ! V.has_derivs())
+            exec->zero_derivs (Result);
+    } else {
+        // Fully varying case
+        VaryingRef<Dual2<Vec3> > dresult ((Dual2<Vec3> *)Result.data(), Result.step());
+        VaryingRef<Dual2<Vec3> > dv ((Dual2<Vec3> *)V.data(), V.step());
+        bool derivs = Result.has_derivs() && V.has_derivs();
+        // FIXME? -- we are purposely not considering M having derivatives.
+        // Give us the chills to consider the proper derivs of an 
+        // inverse-transpose, and it seems like an exceedingly rare case
+        // to construct a spatially-varying matrix and needs its derivs.
+        // Hopefully nobody will ever complain.
+        for (int i = beginpoint;  i < endpoint;  ++i) {
+            if (runflags[i]) {
+                if (derivs) {
+                    // V has derivs, but M does not
+                    Matrix44 M (matrix[i]);
+                    if (xformtype == (int)TypeDesc::NORMAL)
+                        M = M.inverse().transpose();
+                    if (xformtype == (int)TypeDesc::POINT)
+                        multVecMatrix (M, dv[i], dresult[i]);
+                    else
+                        multDirMatrix (M, dv[i], dresult[i]);
+                } else {
+                    // No derivs
+                    if (xformtype == (int)TypeDesc::POINT) {
+                        matrix[i].multVecMatrix (v[i], result[i]);
+                    } else if (xformtype == (int)TypeDesc::VECTOR) {
+                        matrix[i].multDirMatrix (v[i], result[i]);
+                    } else {
+                        matrix[i].inverse().transpose().multDirMatrix (v[i], result[i]);
+                    }
+                }
+            }
+        }
+        if (Result.has_derivs() && ! derivs)
             exec->zero_derivs (Result);
     }
 }
@@ -550,7 +564,7 @@ DECLOP (OP_normal)
 
 DECLOP (OP_transform)
 {
-    triple_transform<TypeDesc::POINT> (exec, nargs, args,
+    triple_matrix_transform<TypeDesc::POINT> (exec, nargs, args,
                                        runflags, beginpoint, endpoint);
 }
 
@@ -558,7 +572,7 @@ DECLOP (OP_transform)
 
 DECLOP (OP_transformv)
 {
-    triple_transform<TypeDesc::VECTOR> (exec, nargs, args,
+    triple_matrix_transform<TypeDesc::VECTOR> (exec, nargs, args,
                                         runflags, beginpoint, endpoint);
 }
 
@@ -566,7 +580,7 @@ DECLOP (OP_transformv)
 
 DECLOP (OP_transformn)
 {
-    triple_transform<TypeDesc::NORMAL> (exec, nargs, args,
+    triple_matrix_transform<TypeDesc::NORMAL> (exec, nargs, args,
                                         runflags, beginpoint, endpoint);
 }
 

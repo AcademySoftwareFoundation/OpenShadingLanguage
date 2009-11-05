@@ -581,7 +581,7 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     static const char *float_patterns[] = { "ff", NULL };
     static const char *triple_patterns[] = { "cf", "cfff", "csfff",
                                              "cc", "cp", "cv", "cn", NULL };
-    static const char *matrix_patterns[] = { "mf", "msf",
+    static const char *matrix_patterns[] = { "mf", "msf", "mss",
                                              "mffffffffffffffff",
                                              "msffffffffffffffff", NULL };
     // Select the pattern for the type of constructor we are...
@@ -905,7 +905,7 @@ static const char * builtin_func_args [] = {
     "tanh", ANY_ONE_FLOAT_BASED, NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
                "vsff.", "vsffffff.", NULL,
-    "transform", "psp", "vsv", "nsn", "pssp", "vssv", "nssn",
+    "transform", /* "psp", "vsv", "nsn", "pssp", "vssv", "nssn", */
                  "pmp", "vmv", "nmn", NULL,
     "transformc", "csc", "cssc", NULL,
     "transformu", "fsf", "fssf", NULL,

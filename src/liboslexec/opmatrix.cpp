@@ -51,20 +51,13 @@ namespace OSL {
 namespace pvt {
 
 
-
-/// matrix constructor.  Comes in several varieties:
-///    matrix (float)
-///    matrix (space, float)
-///    matrix (...16 floats...)
-///    matrix (space, ...16 floats...)
-DECLOP (OP_matrix)
+// Specialized version of matrix constructor from floats, without or without
+// a space name, and in 1-float and 16-float varieties.
+template <bool using_space, int nfloats>
+static DECLOP (OP_matrix_specialized_floats)
 {
     Symbol &Result (exec->sym (args[0]));
-    DASSERT (Result.typespec().is_matrix());
     Symbol &Space (exec->sym (args[1]));
-    bool using_space = (nargs == 3 || nargs == 18);
-    int nfloats = nargs - 1 - (int)using_space;
-    DASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
     VaryingRef<Float> f[16];
     bool varying_args = false;
     for (int i = 0;  i < nfloats;  ++i) {
@@ -138,6 +131,95 @@ DECLOP (OP_matrix)
                 }
                 result[i] = R;
             }
+    }
+}
+
+
+
+// Specialized version of matrix constructor from "from" and "to" space
+// names.
+DECLOP (OP_matrix_specialized_fromto)
+{
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &From (exec->sym (args[1]));
+    Symbol &To (exec->sym (args[2]));
+    bool varying_args = From.is_varying() | To.is_varying();
+    ShaderGlobals *globals = exec->context()->globals();
+    varying_args |= globals->time.is_varying();  // maybe moving coord systems!
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, varying_args, false /* can't alias */);
+
+    if (Result.has_derivs ())
+        exec->zero_derivs (Result);
+
+    VaryingRef<Matrix44> result ((Matrix44 *)Result.data(), Result.step());
+    VaryingRef<ustring> from ((ustring *)From.data(), From.step());
+    VaryingRef<ustring> to ((ustring *)To.data(), To.step());
+    if (! varying_args) {
+        // Uniform case
+        Matrix44 R;
+        exec->get_matrix (R, from[0], to[0]);
+        if (result.is_uniform()) {
+            // just one copy if result is uniform, too
+            *result = R;
+        } else {
+            // Computation uniform, but copy to varying result variable
+            for (int i = beginpoint;  i < endpoint;  ++i)
+                if (runflags[i])
+                    result[i] = R;
+        }
+    } else {
+        // Fully varying case
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                exec->get_matrix (result[i], from[i], to[i], i);
+    }
+}
+
+
+
+/// matrix constructor.  Comes in several varieties:
+///    matrix (float)
+///    matrix (space, float)
+///    matrix (...16 floats...)
+///    matrix (space, ...16 floats...)
+///    matrix (fromspace, tospace)
+DECLOP (OP_matrix)
+{
+    Symbol &Result (exec->sym (args[0]));
+    ASSERT (Result.typespec().is_matrix());
+    bool using_space = (nargs == 3 || nargs == 18);
+    bool using_two_spaces = (nargs == 3 && exec->sym(args[2]).typespec().is_string());
+    int nfloats = nargs - 1 - (int)using_space;
+    ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
+
+    OpImpl impl = NULL;
+    if (using_two_spaces) {
+        impl = OP_matrix_specialized_fromto;
+    } else if (using_space) {
+        if (nfloats == 1) {
+            impl = OP_matrix_specialized_floats<true,1>;
+        } else if (nfloats == 16) {
+            impl = OP_matrix_specialized_floats<true,16>;
+        }
+    } else {
+        if (nfloats == 1) {
+            impl = OP_matrix_specialized_floats<false,1>;
+        } else if (nfloats == 16) {
+            impl = OP_matrix_specialized_floats<false,16>;
+        }
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        exec->error_arg_types ();
+        ASSERT (0 && "Invalid matrix ctr args");
     }
 }
 

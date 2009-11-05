@@ -1594,6 +1594,17 @@ onto the $4 \times 4$ matrix with components $m_{0,0} ... m_{3,3}$.
 Note that although we have used {\cf "shader"} and {\cf "world"}
 space in our examples, any named space is acceptable.
 
+A matrix may also be constructed from the names of two coordinate
+systems, yielding the matrix that transforms coordinates from the
+first named space to the second named space:
+
+\begin{code}
+    matrix m = matrix ("object", "world");
+\end{code}
+
+\noindent The example returns the \emph{object-to-world} transformation
+matrix.
+
 Matrix variables can be tested for equality and inequality with the
 {\cf ==} and {\cf !=} boolean operators.  Also, the {\cf *} operator
 between matrices denotes matrix multiplication, while {\cf m1 / m2}
@@ -2897,6 +2908,12 @@ Constructs a \matrix relative to the named space, multiplying it by the
 
 Note that {\cf matrix (space, 1)} returns the 
 \emph{space}-to-{\cf common} transformation matrix.
+\apiend
+
+\apiitem{matrix {\ce matrix} (string fromspace, string tospace)}
+\indexapi{matrix()}
+Constructs a \matrix that can be used to transform coordinates from
+\emph{fromspace} to \emph{tospace}.
 \apiend
 
 \apiitem{float {\ce determinant} (matrix M)}

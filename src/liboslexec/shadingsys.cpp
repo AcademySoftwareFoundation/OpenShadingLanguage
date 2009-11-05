@@ -313,6 +313,10 @@ ShadingSystemImpl::Shader (const char *shaderusage,
                            const char *shadername,
                            const char *layername)
 {
+    // Make sure we have a current attrib state
+    if (! m_curattrib)
+        m_curattrib.reset (new ShadingAttribState);
+
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
         error ("Could not find shader \"%s\"", shadername);
@@ -324,10 +328,6 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         error ("Unknown shader usage \"%s\"", shaderusage);
         return false;
     }
-
-    // Make sure we have a current attrib state
-    if (! m_curattrib)
-        m_curattrib.reset (new ShadingAttribState);
 
     // If somebody is already hanging onto the shader state, clone it before
     // we modify it.

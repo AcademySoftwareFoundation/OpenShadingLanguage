@@ -667,6 +667,21 @@ ASTfunction_call::opname () const
 
 
 
+void
+ASTfunction_call::print (std::ostream &out, int indentlevel) const 
+{
+    ASTNode::print (out, indentlevel);
+#if 0
+    if (is_user_function()) { 
+        out << "\n";
+        user_function()->print (out, indentlevel+1);
+        out << "\n";
+    }
+#endif
+}
+
+
+
 const char *
 ASTliteral::childname (size_t i) const
 {

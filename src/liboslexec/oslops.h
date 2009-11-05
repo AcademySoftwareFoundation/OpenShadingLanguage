@@ -174,8 +174,8 @@ DECLOP (OP_reflection);
 DECLOP (OP_refract);
 DECLOP (OP_refraction);
 //DECLOP (OP_raylevel);
-//DECLOP (OP_regex_match);
-//DECLOP (OP_regex_search);
+DECLOP (OP_regex_match);
+DECLOP (OP_regex_search);
 //DECLOP (OP_rotate);
 DECLOP (OP_round);
 //DECLOP (OP_setattribute);
@@ -209,6 +209,7 @@ DECLOP (OP_transpose);
 DECLOP (OP_trunc);
 DECLOP (OP_vector);
 DECLOP (OP_ward);
+DECLOP (OP_warning);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);

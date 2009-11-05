@@ -667,6 +667,11 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;   // ok, move on to next arg
         if (coerce && assignable (formaltype, argtype))
             continue;
+        // Allow a fixed-length array match to a formal array with
+        // unspecified length, if the element types are the same.
+        if (formaltype.arraylength() < 0 && argtype.arraylength() &&
+              formaltype.elementtype() == argtype.elementtype())
+            continue;
 
         // anything that gets this far we don't consider a match
         return false;
@@ -891,6 +896,8 @@ static const char * builtin_func_args [] = {
     "raylevel", "i", NULL,
     "reflect", "vvv", NULL,
     "refract", "vvvf", NULL,
+    "regex_match", "iss", "isi[]s", NULL,
+    "regex_search", "iss", "isi[]s", NULL,
     "rotate", "ppfpp", NULL,
     "round", ANY_ONE_FLOAT_BASED, NULL,
     "setmessage", "vs?", NULL,
@@ -913,6 +920,7 @@ static const char * builtin_func_args [] = {
     "transformu", "fsf", "fssf", NULL,
     "transpose", "mm", NULL,
     "trunc", ANY_ONE_FLOAT_BASED, NULL,
+    "warning", "xs*", NULL,   // FIXME -- further checking
 
     "ambient", "C", "Cn", NULL,
     "cooktorrance", "Cf", NULL,
@@ -1002,7 +1010,8 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
         ++i;
         t.make_array (-1);   // signal arrayness, unknown length
         if (isdigit(code[i]) || code[i] == ']') {
-            t.make_array (atoi (code+i));
+            if (isdigit(code[i]))
+                t.make_array (atoi (code+i));
             while (isdigit(code[i]))
                 ++i;
             if (code[i] == ']')

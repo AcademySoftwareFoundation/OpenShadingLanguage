@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stack>
 #include <map>
 
+#include <boost/regex.hpp>
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/paramlist.h"
 
@@ -476,7 +477,7 @@ private:
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
     PeakCounter<int> m_stat_instances;    ///< Stat: instances
     PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
-
+    atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
     friend class ShadingContext;
 };
 
@@ -563,6 +564,11 @@ public:
 
     ExecutionLayers &execlayer (ShaderUse use) { return m_exec[(int)use]; }
 
+    /// Return a reference to a compiled regular expression for the
+    /// given string, being careful to cache already-created ones so we
+    /// aren't constantly compiling new ones.
+    const boost::regex & find_regex (ustring r);
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -577,6 +583,7 @@ private:
     int m_curlight;                     ///< Current light index
     int m_curuse;                       ///< Current use that we're running
     int m_nlayers[ShadUseLast];         ///< Number of layers for each use
+    std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
     friend class ShadingExecution;
 };
 

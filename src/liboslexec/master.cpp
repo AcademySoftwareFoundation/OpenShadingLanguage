@@ -283,6 +283,8 @@ static OpNameEntry op_name_entries[] = {
     { "reflection", OP_reflection },
     { "refract", OP_refract },
     { "refraction", OP_refraction },
+    { "regex_match", OP_regex_match },
+    { "regex_search", OP_regex_search },
     { "round", OP_round },
     { "shl", OP_shl },
     { "shr", OP_shr },
@@ -307,6 +309,7 @@ static OpNameEntry op_name_entries[] = {
     { "trunc", OP_trunc },
     { "vector", OP_vector },
     { "ward", OP_ward },
+    { "warning", OP_warning },
     { "while", OP_for },
     { "xor", OP_xor },
     { NULL, NULL}

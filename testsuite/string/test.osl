@@ -18,6 +18,31 @@ void test_substr (string s, int begin)
 }
 
 
+void test_regex_match (string s, string r)
+{
+    printf ("regex_match (\"%s\", \"%s\") = %d\n",
+            s, r, regex_match (s, r));
+}
+
+
+
+void test_regex_search (string s, string r)
+{
+    printf ("regex_match (\"%s\", \"%s\") = %d\n",
+            s, r, regex_search (s, r));
+}
+
+
+void test_regex_search (string s, int results[6], string r)
+{
+    printf ("regex_match (\"%s\", \"%s\") = %d\n",
+            s, r, regex_search (s, results, r));
+    for (int i = 0;  i < arraylength(results);  ++i) {
+        printf ("    results[%d] = %d\n", i, results[i]);
+    }
+}
+
+
 
 shader
 test ()
@@ -47,4 +72,15 @@ test ()
     test_substr ("abcdefg", 3, 2);
     test_substr ("abcdefg", 0, 20);
     test_substr ("abcdefg", 0, -4);
+
+    // Regular expressions
+    printf ("\n");
+    test_regex_match ("foo", "f");         // should not match
+    test_regex_match ("foo", "f[Oo]{2}");  // should match
+    test_regex_match ("foo", ".*o");       // should match
+    test_regex_search ("foobar.baz", "bark");     // should not match
+    test_regex_search ("foobar.baz", "bar");      // should match
+    test_regex_search ("foobar.baz", "[oO]{2}");  // should match
+    int results[6];
+    test_regex_search ("foobar.baz", results, "(f[Oo]{2}).*(.az)");
 }

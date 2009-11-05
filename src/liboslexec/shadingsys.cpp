@@ -250,6 +250,7 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Masters:   " << m_stat_shaders_loaded << "\n";
     out << "    Instances: " << m_stat_instances << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
+    out << "  Regex's compiled: " << m_stat_regexes << "\n";
     // FIXME
     return out.str();
 }

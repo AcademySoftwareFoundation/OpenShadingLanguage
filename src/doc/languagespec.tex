@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 28 October, 2009 \\
+\date{{\large Date: 5 November, 2009 \\
 %(with corrections, 19 Oct 2009)
 }}
 
@@ -3284,15 +3284,9 @@ concatentated onto the end of the text file named by {\cf filename}.
 Concatenates a list of strings, returning the aggregate string.
 \apiend
 
-\begin{annotate}
-I'm still gathering requirements for regular expression matching
-functions.
-\end{annotate}
-
-\apiitem{int {\ce regex_match} (string subject, string regex)}
-\indexapi{match()}
-Returns 1 if the entire string \emph{subject} matches a standard POSIX 
-regular expression \emph{regex}, 0 if it does not.
+\apiitem{int {\ce strlen} (string s)}
+\indexapi{strlen()}
+Return the number of characters in string {\ce s}.
 \apiend
 
 \apiitem{string {\ce substr} (string s, int start, int length)\\
@@ -3304,6 +3298,59 @@ is omitted, return the rest of \emph{s}, starting with \emph{start}.  If
 \emph{start} is negative, it counts backwards from the end of the string
 (for example, {\cf substr(s,-1)} returns just the last character of
 \emph{s}).
+\apiend
+
+\apiitem{int {\ce regex_search} (string subject, string regex) \\
+int {\ce regex_search} (string subject, int results[], string regex)}
+\indexapi{regex_search()}
+Returns 1 if any substring of \emph{subject} matches a standard POSIX 
+regular expression \emph{regex}, 0 if it does not.
+
+In the form that also supplies a {\cf results} array, when a match is
+found, the array will be filled in as follows: 
+
+\begin{tabular}{p{1.5in} p{3.5in}}
+{\cf\small results[0]} & the character index of the start of the
+  sequence that matched the regular expression. \\
+{\cf\small results[1]} & the character index of the end (i.e.,
+  one past the last matching character) of the sequence that matched the
+  regular expression. \\
+{\cf\small results[}$2i$ {\cf ]} & the character index of the
+  start of the sequence that matched sub-expression $i$ of the regular
+  expression. \\
+{\cf\small results[}$2i+1$ {\cf]} & the character index of the
+  end (i.e., one past the last matching character) of the sequence that
+  matched sub-expression $i$ of the regular expression.
+\end{tabular}
+
+\noindent Sub-expressions are denoted by surrounding them in
+parentheses. in the regular expression.
+
+A few examples illustrate regular expression searching:
+
+\begin{code}
+    regex_search ("foobar.baz", "bar")    = 1
+    regex_search ("foobar.baz", "bark")   = 0
+
+    int match[2];
+    regex_search ("foobar.baz", match, "[Oo]{2}") = 1
+                                      (match[0] == 1, match[1] == 3)
+    substr ("foobar.baz", match[0], match[1]-match[0]) = "oo"
+
+    int match[6];
+    regex_search ("foobar.baz", match, "(f[Oo]{2}).*(.az)") = 1
+    substr ("foobar.baz", match[0], match[1]-match[0]) = "foobar.baz"
+    substr ("foobar.baz", match[2], match[3]-match[2]) = "foo"
+    substr ("foobar.baz", match[4], match[5]-match[4]) = "baz"
+\end{code}
+
+\apiend
+
+\apiitem{int {\ce regex_match} (string subject, string regex) \\
+int {\ce regex_match} (string subject, int results[], string regex)}
+\indexapi{regex_match()}
+Identical to {\cf regex_search}, except that it must match the
+\emph{whole} {\cf subject} string, not merely a substring.
 \apiend
 
 

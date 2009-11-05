@@ -18,3 +18,17 @@ substr("abcdefg", 3, 2) = "de"
 substr("abcdefg", 0, 20) = "abcdefg"
 substr("abcdefg", 0, -4) = ""
 
+regex_match ("foo", "f") = 0
+regex_match ("foo", "f[Oo]{2}") = 1
+regex_match ("foo", ".*o") = 1
+regex_match ("foobar.baz", "bark") = 0
+regex_match ("foobar.baz", "bar") = 1
+regex_match ("foobar.baz", "[oO]{2}") = 1
+regex_match ("foobar.baz", "(f[Oo]{2}).*(.az)") = 1
+    results[0] = 0
+    results[1] = 10
+    results[2] = 0
+    results[3] = 3
+    results[4] = 7
+    results[5] = 10
+

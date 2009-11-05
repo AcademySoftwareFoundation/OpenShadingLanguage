@@ -164,5 +164,21 @@ ShadingContext::symbol (ShaderUse use, ustring name)
 }
 
 
+
+const boost::regex &
+ShadingContext::find_regex (ustring r)
+{
+    std::map<ustring,boost::regex>::const_iterator found;
+    found = m_regex_map.find (r);
+    if (found != m_regex_map.end())
+        return found->second;
+    // otherwise, it wasn't found, add it
+    m_regex_map[r].assign (r.c_str());
+    m_shadingsys.m_stat_regexes += 1;
+    // std::cerr << "Made new regex for " << r << "\n";
+    return m_regex_map[r];
+}
+
+
 }; // namespace pvt
 }; // namespace OSL

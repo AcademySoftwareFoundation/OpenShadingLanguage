@@ -698,6 +698,7 @@ public:
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
     const char *opname () const;
+    void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
 

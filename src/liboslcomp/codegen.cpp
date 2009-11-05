@@ -185,6 +185,13 @@ ASTNode::coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat)
     if (acceptfloat && sym->typespec().is_float())
         return sym;
 
+    if (type.arraylength() == -1 && sym->typespec().is_array() &&
+        equivalent (sym->typespec().elementtype(), type.elementtype())) {
+        // coercion not necessary to pass known length array to 
+        // array parameter of unspecified length.
+        return sym;
+    }
+
     if (sym->symtype() == SymTypeConst && sym->typespec().is_int() &&
             type.is_floatbased()) {
         // It's not only the wrong type, it's a constant of the wrong
@@ -879,7 +886,8 @@ ASTfunction_call::codegen (Symbol *dest)
         }
         // Handle type coercion of the argument
         if (i < (int)polyargs.size() &&
-                polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN)) {
+                polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN) &&
+                polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN, -1)) {
             thisarg = coerce (thisarg, polyargs[i]);
         }
         argdest.push_back (thisarg);

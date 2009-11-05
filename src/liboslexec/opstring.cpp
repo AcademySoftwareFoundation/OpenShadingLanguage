@@ -159,6 +159,30 @@ DECLOP (OP_error)
 
 
 
+DECLOP (OP_warning)
+{
+    ASSERT (nargs >= 1);
+    Symbol &Format (exec->sym (args[0]));
+    ASSERT (Format.typespec().is_string ());
+    VaryingRef<ustring> format ((ustring *)Format.data(), Format.step());
+    bool varying = format.is_varying ();
+    for (int i = 1;  i < nargs;  ++i)
+        varying |= exec->sym(args[i]).is_varying ();
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            std::string s = format_args (exec, format[i].c_str(),
+                                         nargs-1, args+1, i);
+            exec->warning ("Shader warning [%s]: %s",
+                           exec->instance()->master()->shadername().c_str(),
+                           s.c_str());
+            if (! varying)
+                break;
+        }
+    }
+}
+
+
+
 DECLOP (OP_format)
 {
     ASSERT (nargs >= 2);
@@ -268,6 +292,125 @@ DECLOP (OP_substr)
                 break;
         }
     }
+}
+
+
+
+// This template function does regex_match or regex_search, with or
+// without match results being saved, and will be specialized for one of
+// those 4 cases by template expansion.
+template <bool fullmatch, bool do_match_results>
+DECLOP (regex_search_specialized)
+{
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Subject (exec->sym (args[1]));
+    Symbol &Match (exec->sym (args[2]));
+    TypeDesc matchtype = Match.typespec().simpletype();
+    Symbol &Pattern (exec->sym (args[2+do_match_results]));
+    DASSERT (Result.typespec().is_int() && Subject.typespec().is_string() &&
+             Pattern.typespec().is_string());
+    DASSERT (!do_match_results || 
+             (Match.typespec().is_array() &&
+              Match.typespec().elementtype().is_int()));
+    bool varying = Subject.is_varying() | Pattern.is_varying();
+    exec->adjust_varying (Result, varying);
+    if (do_match_results) {
+        ASSERT (matchtype.arraylen && matchtype.elementtype() == TypeDesc::INT);
+        exec->adjust_varying (Match, varying);
+    }
+
+    VaryingRef<int> result ((int *)Result.data(), Result.step());
+    VaryingRef<ustring> subject ((ustring *)Subject.data(), Subject.step());
+    VaryingRef<ustring> pattern ((ustring *)Pattern.data(), Pattern.step());
+    ustring last_pattern;
+    boost::match_results<std::string::const_iterator> mresults;
+    const boost::regex *regex = NULL;
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            if (! regex || pattern[i] != last_pattern) {
+                regex = &exec->context()->find_regex (pattern[i]);
+                last_pattern = pattern[i];
+            }
+            if (do_match_results && matchtype.arraylen > 0) {
+                std::string::const_iterator start = subject[i].string().begin();
+                result[i] = fullmatch ? 
+                    boost::regex_match (subject[i].string(), mresults, *regex) :
+                    boost::regex_search (subject[i].string(), mresults, *regex);
+                int *m = (int *)((char *)Match.data() + i*Match.step());
+                for (int r = 0;  r < matchtype.arraylen;  ++r) {
+                    if (r/2 < (int)mresults.size()) {
+                        if ((r & 1) == 0)
+                            m[r] = mresults[r/2].first - start;
+                        else
+                            m[r] = mresults[r/2].second - start;
+                    } else {
+                        m[r] = pattern[i].length();
+                    }
+                }
+            } else {
+                result[i] = fullmatch ? regex_match (subject[i].c_str(), *regex)
+                                  : regex_search (subject[i].c_str(), *regex);
+            }
+            if (! varying)
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_regex_search)
+{
+    ASSERT (nargs == 3 || nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Subject (exec->sym (args[1]));
+    bool do_match_results = (nargs == 4);
+    Symbol &Match (exec->sym (args[2]));
+    Symbol &Pattern (exec->sym (args[2+do_match_results]));
+    ASSERT (Result.typespec().is_int() && Subject.typespec().is_string() &&
+            Pattern.typespec().is_string());
+    ASSERT (!do_match_results || 
+            (Match.typespec().is_array() &&
+             Match.typespec().elementtype().is_int()));
+
+    OpImpl impl = NULL;
+    if (do_match_results)
+        impl = regex_search_specialized<false, true>;
+    else
+        impl = regex_search_specialized<false, false>;
+    impl (exec, nargs, args, runflags, beginpoint, endpoint);
+    // Use the specialized one for next time!  Never have to check the
+    // types or do the other sanity checks again.
+    // FIXME -- is this thread-safe?
+    exec->op().implementation (impl);
+}
+
+
+
+DECLOP (OP_regex_match)
+{
+    ASSERT (nargs == 3 || nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &Subject (exec->sym (args[1]));
+    bool do_match_results = (nargs == 4);
+    Symbol &Match (exec->sym (args[2]));
+    Symbol &Pattern (exec->sym (args[2+do_match_results]));
+    ASSERT (Result.typespec().is_int() && Subject.typespec().is_string() &&
+            Pattern.typespec().is_string());
+    ASSERT (!do_match_results || 
+            (Match.typespec().is_array() &&
+             Match.typespec().elementtype().is_int()));
+
+    OpImpl impl = NULL;
+    if (do_match_results)
+        impl = regex_search_specialized<true, true>;
+    else
+        impl = regex_search_specialized<true, false>;
+    impl (exec, nargs, args, runflags, beginpoint, endpoint);
+    // Use the specialized one for next time!  Never have to check the
+    // types or do the other sanity checks again.
+    // FIXME -- is this thread-safe?
+    exec->op().implementation (impl);
 }
 
 

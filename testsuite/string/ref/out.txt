@@ -18,6 +18,20 @@ substr("abcdefg", 3, 2) = "de"
 substr("abcdefg", 0, 20) = "abcdefg"
 substr("abcdefg", 0, -4) = ""
 
+startswith ("abcdef", "abc") = 1
+startswith ("abcdef", "def") = 0
+startswith ("abcdef", "abcdefghi") = 0
+startswith ("abcdef", "") = 1
+startswith ("", "abc") = 0
+startswith ("", "") = 1
+endswith ("abcdef", "abc") = 0
+endswith ("abcdef", "def") = 1
+endswith ("abcdef", "abcdefghi") = 0
+endswith ("abcdef", "ghiabcdef") = 0
+endswith ("abcdef", "") = 1
+endswith ("", "abc") = 0
+endswith ("", "") = 1
+
 regex_match ("foo", "f") = 0
 regex_match ("foo", "f[Oo]{2}") = 1
 regex_match ("foo", ".*o") = 1

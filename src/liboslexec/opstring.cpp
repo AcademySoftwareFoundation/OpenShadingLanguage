@@ -262,6 +262,66 @@ DECLOP (OP_strlen)
 
 
 
+DECLOP (OP_startswith)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &S (exec->sym (args[1]));
+    Symbol &Substr (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_int() && S.typespec().is_string() &&
+             Substr.typespec().is_string());
+
+    exec->adjust_varying (Result, S.is_varying() | Substr.is_varying(),
+                          false /* can't alias */);
+
+    VaryingRef<int> result ((int *)Result.data(), Result.step());
+    VaryingRef<ustring> s ((ustring *)S.data(), S.step());
+    VaryingRef<ustring> substr ((ustring *)Substr.data(), Substr.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            int c = strncmp (s[i].c_str(), substr[i].c_str(), substr[i].size());
+            result[i] = (c == 0);
+            if (! Result.is_varying())
+                break;
+        }
+    }
+}
+
+
+
+DECLOP (OP_endswith)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &S (exec->sym (args[1]));
+    Symbol &Substr (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_int() && S.typespec().is_string() &&
+             Substr.typespec().is_string());
+
+    exec->adjust_varying (Result, S.is_varying() | Substr.is_varying(),
+                          false /* can't alias */);
+
+    VaryingRef<int> result ((int *)Result.data(), Result.step());
+    VaryingRef<ustring> s ((ustring *)S.data(), S.step());
+    VaryingRef<ustring> substr ((ustring *)Substr.data(), Substr.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            size_t len = substr[i].length ();
+            if (len > s[i].length())
+                result[i] = 0;
+            else {
+                int c = strncmp (s[i].c_str() + s[i].length() - len,
+                                 substr[i].c_str(), substr[i].size());
+                result[i] = (c == 0);
+            }
+            if (! Result.is_varying())
+                break;
+        }
+    }
+}
+
+
+
 DECLOP (OP_substr)
 {
     DASSERT (nargs == 3);

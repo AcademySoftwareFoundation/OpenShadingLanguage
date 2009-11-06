@@ -848,6 +848,7 @@ static const char * builtin_func_args [] = {
     "displace", "xf", "xsf", "xv", NULL,
     "distance", "fpp", "fppp", NULL,
     "dot", "fvv", NULL,
+    "endswith", "iss", NULL,
     "erf", "ff", NULL,
     "erfc", "ff", NULL,
     "error", "xs*", NULL,   // FIXME -- further checking
@@ -907,6 +908,7 @@ static const char * builtin_func_args [] = {
     "smoothstep", "ffff", NULL,
     "snoise", NOISE_ARGS, NULL,
     "sqrt", ANY_ONE_FLOAT_BASED, NULL,
+    "startswith", "iss", NULL,
     "step", "fff", NULL,
     "strlen", "is", NULL,
     "substr", "ssii", NULL,

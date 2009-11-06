@@ -43,6 +43,20 @@ void test_regex_search (string s, int results[6], string r)
 }
 
 
+void test_startswith (string s, string substr)
+{
+    printf ("startswith (\"%s\", \"%s\") = %d\n",
+            s, substr, startswith (s, substr));
+}
+
+
+void test_endswith (string s, string substr)
+{
+    printf ("endswith (\"%s\", \"%s\") = %d\n",
+            s, substr, endswith (s, substr));
+}
+
+
 
 shader
 test ()
@@ -72,6 +86,22 @@ test ()
     test_substr ("abcdefg", 3, 2);
     test_substr ("abcdefg", 0, 20);
     test_substr ("abcdefg", 0, -4);
+
+    // Test startswith/endswith
+    printf ("\n");
+    test_startswith ("abcdef", "abc");
+    test_startswith ("abcdef", "def");
+    test_startswith ("abcdef", "abcdefghi");
+    test_startswith ("abcdef", "");
+    test_startswith ("", "abc");
+    test_startswith ("", "");
+    test_endswith ("abcdef", "abc");
+    test_endswith ("abcdef", "def");
+    test_endswith ("abcdef", "abcdefghi");
+    test_endswith ("abcdef", "ghiabcdef");
+    test_endswith ("abcdef", "");
+    test_endswith ("", "abc");
+    test_endswith ("", "");
 
     // Regular expressions
     printf ("\n");

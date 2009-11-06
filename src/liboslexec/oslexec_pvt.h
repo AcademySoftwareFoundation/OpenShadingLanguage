@@ -749,6 +749,10 @@ public:
     ///
     Symbol *Nsym () { return symptr (m_master->m_Nsym); }
 
+    /// Query the renderer's attribute -- if a specifid object is *not* specified (empty ustring())
+    /// then the renderer services should look in the standard places (currently shaded object, then
+    /// the global render/scene state.
+   bool get_renderer_attribute(void *renderstate, ustring object, ustring name, TypeDesc type, void *val);
 private:
     /// Helper for bind(): run initialization code for parameters
     ///

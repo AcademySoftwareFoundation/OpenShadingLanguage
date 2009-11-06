@@ -214,6 +214,7 @@ main (int argc, const char *argv[])
     std::vector<Vec3> gN (npoints);
     std::vector<float> gu (npoints);
     std::vector<float> gv (npoints);
+    std::vector<void *> rstates (npoints, (void *)0);
     shaderglobals.P.init (&gP[0], sizeof(gP[0]));
     shaderglobals.dPdx.init (&gP_dx[0], sizeof(gP_dx[0]));
     shaderglobals.dPdy.init (&gP_dy[0], sizeof(gP_dy[0]));
@@ -222,6 +223,7 @@ main (int argc, const char *argv[])
     shaderglobals.u.init (&gu[0], sizeof(gu[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
     shaderglobals.v.init (&gv[0], sizeof(gv[0]));
+    shaderglobals.renderstate.init (&rstates[0], sizeof(rstates[0]));
     shaderglobals.flipHandedness = false;
     float time = 0.0f;
     shaderglobals.time.init (&time, 0);

@@ -205,6 +205,8 @@ public:
     VaryingRef<float> dtime;           ///< Time interval for each sample
     VaryingRef<Vec3> dPdtime;          ///< Velocity
 
+    VaryingRef<void *> renderstate;    ///< Renderer context for each sample
+
     VaryingRef<TransformationPtr> object2common; /// Object->common xform
     VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
 
@@ -237,6 +239,13 @@ public:
     /// Get the 4x4 matrix that transforms points from the named
     /// 'from' coordinate system to "common" space at the given time.
     virtual bool get_matrix (Matrix44 &result, ustring from, float time) = 0;
+
+    /// Get the named attribute from the renderer, write it into 'val',
+    /// and return whether it was successfully found or not.  If no object
+    /// is specified (object == ""), the renderer should search *first* for 
+    /// the attribute on the currently shaded object, and next, if unsuccessful, 
+    /// for the currently shaded "scene".
+    virtual bool get_attribute (void *renderstate, ustring object, ustring name, TypeDesc type, void *val ) = 0;
 
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system to at the given time.  The

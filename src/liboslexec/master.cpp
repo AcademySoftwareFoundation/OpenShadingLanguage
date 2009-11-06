@@ -240,6 +240,7 @@ static OpNameEntry op_name_entries[] = {
     { "format", OP_format },
     { "fresnel", OP_fresnel },
     { "ge", OP_ge },
+    { "getattribute", OP_getattribute },
     { "gettextureinfo", OP_gettextureinfo },
     { "gt", OP_gt },
     { "hypot", OP_hypot },

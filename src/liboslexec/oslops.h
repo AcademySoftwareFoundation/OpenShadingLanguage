@@ -121,7 +121,7 @@ DECLOP (OP_format);
 //DECLOP (OP_fprintf);
 DECLOP (OP_fresnel);
 DECLOP (OP_ge);
-//DECLOP (OP_getattribute);
+DECLOP (OP_getattribute);
 //DECLOP (OP_getmessage);
 DECLOP (OP_gettextureinfo);
 DECLOP (OP_gt);

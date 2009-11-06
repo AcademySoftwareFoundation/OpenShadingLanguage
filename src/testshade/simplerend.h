@@ -59,6 +59,7 @@ public:
 
     void name_transform (const char *name, const Transformation &xform);
 
+    virtual bool get_attribute (void *renderstate, ustring object, ustring name, TypeDesc type, void *val );
 private:
     typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;
     TransformMap m_named_xforms;

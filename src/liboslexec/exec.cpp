@@ -733,7 +733,11 @@ ShadingExecution::get_matrix (Matrix44 &result, ustring from, int whichpoint)
     }
 }
 
-
+bool 
+ShadingExecution::get_renderer_attribute(void *renderstate, ustring object, ustring name, TypeDesc type, void *val)
+{
+    return m_renderer->get_attribute(renderstate, object, name, type, val);
+}
 
 void
 ShadingExecution::get_inverse_matrix (Matrix44 &result,

@@ -67,6 +67,11 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
     m_named_xforms[ustring(name)] = M;
 }
 
+bool
+SimpleRenderer::get_attribute (void *renderstate, ustring object,  ustring name, TypeDesc type, void *val)
+{
+    return false;
+}
 
 };  // namespace OSL
 

@@ -338,7 +338,8 @@ public:
         float cosNI = params->N.dot(omega_in);
         // reflect the view vector
         Vec3 R = (2 * cosNO) * params->N - omega_out;
-        float out = cosNI * ((params->exponent + 2) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent));
+        float cosRI = R.dot(omega_in);
+        float out = (cosRI > 0) ? cosNI * ((params->exponent + 2) * 0.5f * (float) M_1_PI * powf(cosRI, params->exponent)) : 0;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
@@ -361,7 +362,8 @@ public:
             make_orthonormals (R, T, B);
             float phi = 2 * (float) M_PI * randu;
             float cosTheta = powf(randv, 1 / (params->exponent + 1));
-            float sinTheta = sqrtf(1 - cosTheta * cosTheta);
+            float sinTheta2 = 1 - cosTheta * cosTheta;
+            float sinTheta = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * R;
@@ -394,7 +396,8 @@ public:
         const params_t *params = (const params_t *) paramsptr;
         float cosNO = params->N.dot(omega_out);
         Vec3 R = (2 * cosNO) * params->N - omega_out;
-        return (params->exponent + 1) * 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
+        float cosRI = R.dot(omega_in);
+        return cosRI > 0 ? (params->exponent + 1) * 0.5f * (float) M_1_PI * powf(cosRI, params->exponent) : 0;
     }
 
 };

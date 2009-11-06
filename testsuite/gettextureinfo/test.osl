@@ -26,8 +26,14 @@ test (string filename = "../common/textures/grid.tx")
     r = gettextureinfo (filename, "DateTime", datetime);
     printf ("%s datetime: %s (%d)\n", filename, datetime, r);
 
-    // Test failure
+    // Test failure of unfound info name
     string foobar = "not found";
     r = gettextureinfo (filename, "foobar", foobar);
     printf ("%s foobar: %s (%d)\n", filename, foobar, r);
+
+    // Test failure of unfound file name
+    string data = "not found";
+    string badfile = "badfile";
+    r = gettextureinfo (badfile, "textureformat", data);
+    printf ("%s data: %s (%d)\n", badfile, data, r);
 }

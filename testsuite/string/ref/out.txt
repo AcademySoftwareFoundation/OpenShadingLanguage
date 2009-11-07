@@ -1,6 +1,8 @@
 Compiled test.osl -> test.oso
 test string operations:
 
+Testing abutting string literals: "foobarbaz"
+
 formtted string: 'P = 0 0 1'
 formtted string: 'P = 1 0 1'
 formtted string: 'P = 0 1 1'

@@ -1673,6 +1673,14 @@ literals may contain escape sequences such as \verb|\n| (newline),
 \verb|\r| (carriage return), \verb|\t| (tab), \verb|\"| (double quote),
 \verb|\\| (backslash).
 
+Two quote-quoted string literals that are separated only by whitespace
+(spaces, tabs, or newlines) will be automatically concatenated into a
+single string literal.  In other words,
+\begin{code}
+      "foo"  "bar"
+\end{code}
+\noindent is exactly equivalent to \qkw{foobar}.
+
 \section{\void}
 \label{sec:types:void}
 \indexapi{void} \index{types!{\cf void}}

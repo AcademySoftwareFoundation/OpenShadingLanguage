@@ -63,7 +63,12 @@ test ()
 {
     printf ("test string operations:\n\n");
 
+    // test source code string concatenation:
+    printf ("Testing abutting string literals: \"%s\"\n",
+            "foo" "bar" "baz");
+
     // Test format
+    printf ("\n");
     string s = format ("P = %g", P);
     printf ("formtted string: '%s'\n", s);
 

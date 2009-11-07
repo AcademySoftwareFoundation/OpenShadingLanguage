@@ -121,6 +121,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> type_constructor function_call function_args_opt function_args
 %type <n> assign_expression ternary_expression typecast_expression
 %type <n> binary_expression
+%type <s> string_literal_group
 
 // Define operator precedence, lowest-to-highest
 %left <i> ','
@@ -593,7 +594,7 @@ expression_opt
 expression
         : INT_LITERAL           { $$ = new ASTliteral (oslcompiler, $1); }
         | FLOAT_LITERAL         { $$ = new ASTliteral (oslcompiler, $1); }
-        | STRING_LITERAL        { $$ = new ASTliteral (oslcompiler, ustring($1)); }
+        | string_literal_group  { $$ = new ASTliteral (oslcompiler, ustring($1)); }
         | variable_ref
         | incdec_op variable_lvalue 
                 {
@@ -840,6 +841,14 @@ typecast_expression
                     $$ = new ASTtypecast_expression (oslcompiler, 
                                                      TypeSpec (lextype ($2)),
                                                      $4);
+                }
+        ;
+
+string_literal_group
+        : STRING_LITERAL
+        | string_literal_group STRING_LITERAL
+                {
+                    $$ = ustring (std::string($1) + std::string($2)).c_str();
                 }
         ;
 

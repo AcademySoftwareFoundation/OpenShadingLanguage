@@ -45,7 +45,7 @@ DECLOP (OP_getattribute)
     Symbol &Attribute   (exec->sym (args[1+object_specified]));
     Symbol &Destination (exec->sym (args[2+object_specified]));
     DASSERT (Attribute.typespec().is_string() && ObjectName.typespec().is_string());
-    DASSERT (!Result.typespec().is_closure() && !ObjectName.typespec().is_closure() && !Attribute.typespec().is_closure() && Destination.typespec().is_closure());
+    DASSERT (!Result.typespec().is_closure() && !ObjectName.typespec().is_closure() && !Attribute.typespec().is_closure() && !Destination.typespec().is_closure());
 
     ShaderGlobals *globals = exec->context()->globals();
 

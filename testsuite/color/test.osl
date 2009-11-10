@@ -1,11 +1,15 @@
 shader
-test (color cparam = color (.1, .7, .2))
+test (color cparam = color (.1, .7, .2),
+      color cparam2 = color (.1),
+      color cparam3 = color ("hsv", .1, .2, .3))
 {
     printf ("  parameter initialization test: cparam = %g\n", cparam);
+    printf ("  parameter initialization test2: cparam2 = %g\n", cparam2);
     printf ("\n");
 
     {
         float a = 0.1, b = 0.2, c = 0.5;
+        printf ("  color (%g) = %g\n", a, color(a));
         printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
     }
 
@@ -15,6 +19,7 @@ test (color cparam = color (.1, .7, .2))
         float b = v;
         float c = 0.5;
 
+        printf ("  color (%g) = %g\n", a, color(a));
         printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
     }
 

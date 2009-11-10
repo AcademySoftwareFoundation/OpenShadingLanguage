@@ -398,7 +398,10 @@ ASTvariable_declaration::param_default_literals (std::string &out)
                 ASTtype_constructor *ctr = dynamic_cast<ASTtype_constructor *>(init.get());
                 ASTNode::ref val = ctr->args();
                 float f[3];
+                int nargs = 0;
                 for (int c = 0;  c < 3;  ++c) {
+                    if (val.get())
+                        ++nargs;
                     if (val.get() && val->nodetype() == ASTNode::literal_node) {
                         f[c] = ((ASTliteral *)val.get())->floatval ();
                         val = val->next();
@@ -407,7 +410,10 @@ ASTvariable_declaration::param_default_literals (std::string &out)
                         completed = false;
                     }
                 }
-                out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[1], f[2]);
+                if (nargs == 1)
+                    out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[0], f[0]);
+                else
+                    out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[1], f[2]);
             } else {
                 out += "0 0 0 ";
                 completed = false;
@@ -813,11 +819,14 @@ ASTtype_constructor::codegen (Symbol *dest)
         bool all_literals = true;
         ASTNode::ref val = args();
         float f[3];
-        for (int c = 0;  c < 3;  ++c, val = val->next()) {
-            if (val->nodetype() == ASTNode::literal_node)
+        for (int c = 0;  c < 3;  ++c) {
+            if (val->nodetype() == ASTNode::literal_node &&
+                (val->typespec().is_float() || val->typespec().is_int()))
                 f[c] = ((ASTliteral *)val.get())->floatval ();
             else
                 all_literals = false;
+            if (val->next())
+                val = val->next();
         }
         if (all_literals)
             return m_compiler->make_constant (typespec().simpletype(),
@@ -827,7 +836,8 @@ ASTtype_constructor::codegen (Symbol *dest)
 
     std::vector<Symbol *> argdest;
     argdest.push_back (dest);
-    for (ref a = args();  a;  a = a->next()) {
+    int nargs = 0;
+    for (ref a = args();  a;  a = a->next(), ++nargs) {
         Symbol *argval = a->codegen();
         if (argval->typespec().is_int()) {
             // Coerce to float if it's an int
@@ -844,7 +854,10 @@ ASTtype_constructor::codegen (Symbol *dest)
         }
         argdest.push_back (argval);
     }
-    emitcode (typespec().string().c_str(), argdest.size(), &argdest[0]);
+    if (nargs == 1)
+        emitcode ("assign", argdest.size(), &argdest[0]);
+    else
+        emitcode (typespec().string().c_str(), argdest.size(), &argdest[0]);
     return dest;
 }
 

@@ -96,6 +96,10 @@ public:
     ///
     virtual void codemarker (const char *name) { }
 
+    /// Mark the end of the code section
+    ///
+    virtual void codeend () { }
+
     /// Add an instruction.
     ///
     virtual void instruction (int label, const char *opcode) { }

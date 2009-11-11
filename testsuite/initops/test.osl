@@ -1,0 +1,11 @@
+shader test (float a = 3*sin(u),
+             float b = v*a)
+{
+    // The calling "run.py" should override a.
+
+    // This test's output should verify that (1) the value of a is as
+    // passed in, NOT the default value from the ops above; and (2) that
+    // b is correctly initialized IN TERMS OF a.
+
+    printf ("a=%g, b=%g\n", a, b);
+}

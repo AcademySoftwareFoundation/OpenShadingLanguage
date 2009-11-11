@@ -190,6 +190,7 @@ private:
     std::vector<float> m_fconsts;       ///< float constant values
     std::vector<ustring> m_sconsts;     ///< string constant values
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
+    int m_maincodebegin, m_maincodeend; ///< Main shader code range
     // Quick lookups of common symbols, -1 if not in symbol table:
     int m_Psym, m_Nsym;
 

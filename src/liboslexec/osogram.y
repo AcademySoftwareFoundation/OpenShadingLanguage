@@ -113,6 +113,7 @@ TypeDesc lextype (int lex);
 oso_file
         : version shader_declaration symbols_opt codemarker instructions
                 {
+                    OSOReader::osoreader->codeend ();
                     $$ = 0;
                 }
 	;

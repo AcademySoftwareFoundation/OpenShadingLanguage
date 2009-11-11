@@ -1,0 +1,11 @@
+Compiled test.osl -> test.oso
+a=10, b=0
+a=10, b=0
+a=10, b=0
+a=10, b=5
+a=10, b=5
+a=10, b=5
+a=10, b=10
+a=10, b=10
+a=10, b=10
+

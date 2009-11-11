@@ -69,6 +69,7 @@ public:
     virtual void symdefault (const char *def);
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
+    virtual void codeend ();
     virtual void instruction (int label, const char *opcode);
     virtual void instruction_arg (const char *name);
     virtual void instruction_jump (int target);
@@ -77,13 +78,15 @@ public:
     ShaderMaster::ref master () const { return m_master; }
 
 private:
-    ShadingSystemImpl &m_shadingsys;
-    ShaderMaster::ref m_master;
-    size_t m_firstarg;
-    size_t m_nargs;
-    bool m_reading_instruction;
-    ustring m_sourcefile;
-    int m_sourceline;
+    ShadingSystemImpl &m_shadingsys;  ///< Reference to the shading system
+    ShaderMaster::ref m_master;       ///< Reference to our master
+    size_t m_firstarg;                ///< First argument in current op
+    size_t m_nargs;                   ///< Number of args so far in current op
+    bool m_reading_instruction;       ///< Are we reading an op?
+    ustring m_sourcefile;             ///< Current source file parsed
+    int m_sourceline;                 ///< Current source code line parsed
+    ustring m_codesection;            ///< Which entry point are the ops for?
+    int m_codesym;                    ///< Which param is being initialized?
 };
 
 
@@ -92,6 +95,8 @@ bool
 OSOReaderToMaster::parse (const std::string &filename)
 {
     m_master->m_osofilename = filename;
+    m_codesection.clear ();
+    m_codesym = -1;
     return OSOReader::parse (filename);
 }
 
@@ -266,6 +271,44 @@ void
 OSOReaderToMaster::codemarker (const char *name)
 {
     m_sourcefile.clear();
+    int nextop = (int) m_master->m_ops.size();
+
+    codeend ();   // Mark the end spot, if we were parsing ops before
+
+    m_codesection = ustring (name);
+    m_codesym = m_master->findsymbol (m_codesection);
+    if (m_codesym >= 0)
+        m_master->symbol(m_codesym)->initbegin (nextop);
+#if 0
+    std::cerr << "Read code marker " << m_codesection
+              << " at instruction " << nextop
+              << ", sym " << m_codesym
+              << " (" << (m_codesym >= 0 ? m_master->symbol(m_codesym)->name() : ustring()) << ")"
+              << "\n";
+#endif
+    if (m_codesection && m_codesection == "___main___") {
+        m_master->m_maincodebegin = nextop;
+    } else if (m_codesym < 0) {
+        m_shadingsys.error ("Parsing shader %s: don't know what to do with code section \"%s\"",
+                            m_master->shadername().c_str(), name);
+    }
+}
+
+
+
+void
+OSOReaderToMaster::codeend ()
+{
+    int nextop = (int) m_master->m_ops.size();
+    if (m_codesym >= 0) {
+        // If we were previously chalking up the code to init ops for a
+        // symbol, mark the end.
+        m_master->symbol(m_codesym)->initend (nextop);
+    } else if (m_codesection && m_codesection == "___main___") {
+        // If we were previously reading ops for the ___main___ entry
+        // point, mark its end properly.
+        m_master->m_maincodeend = nextop;
+    }
 }
 
 
@@ -295,7 +338,8 @@ OSOReaderToMaster::instruction_arg (const char *name)
     }
     // ERROR! -- FIXME
 //    m_master->m_args.push_back (0);  // FIXME
-    m_shadingsys.error ("Parsing shader: unknown arg %s", name);
+    m_shadingsys.error ("Parsing shader %s: unknown arg %s",
+                        m_master->shadername().c_str(), name);
 }
 
 

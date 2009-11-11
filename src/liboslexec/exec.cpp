@@ -320,12 +320,19 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 void
 ShadingExecution::bind_initialize_params (ShaderInstance *inst)
 {
+    Runflag *runflags = ALLOCA (Runflag, m_npoints);
     ShaderMaster *master = inst->master();
     for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
-        Symbol *sym = master->symbol (i);
+        Symbol *sym = inst->symbol (i);
         if (sym->valuesource() == Symbol::DefaultVal) {
-        } else if (sym->valuesource() == Symbol::DefaultVal) {
-            // FIXME -- need to execute init ops, if there are any
+            // Execute init ops, if there are any
+            if (sym->initbegin() != sym->initend()) {
+                for (int i = 0;  i < m_npoints;  ++i)
+                    runflags[i] = RunflagOn;
+                push_runflags (runflags, 0, m_npoints);
+                run (sym->initbegin(), sym->initend());
+                pop_runflags ();
+            }
         } else if (sym->valuesource() == Symbol::InstanceVal) {
             // FIXME -- eventually, copy the instance values here,
             // rather than above in bind(), so that we skip the
@@ -432,10 +439,7 @@ ShadingExecution::run (Runflag *rf)
     }
 
     push_runflags (runflags, 0, m_npoints);
-
-    // FIXME -- this runs every op.  Really, we just want the main code body.
-    run (0, (int)m_master->m_ops.size());
-
+    run (m_master->m_maincodebegin, (int)m_master->m_maincodeend);
     pop_runflags ();
 
     m_executed = true;

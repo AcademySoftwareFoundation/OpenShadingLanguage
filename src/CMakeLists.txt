@@ -98,12 +98,13 @@ endmacro ()
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
 #TESTSUITE ( oslc-empty )
-TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison 
+TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison
             derivs exponential function-simple function-outputelem
-            geomath gettextureinfo hyperb ieee_fp if incdec intbits layers 
+            geomath gettextureinfo hyperb
+            ieee_fp if incdec initops intbits layers
             logic loop matrix miscmath noise pnoise
             oslc-err-paramdefault shortcircuit string
-            texture-alpha texture-blur texture-firstchannel texture-simple 
+            texture-alpha texture-blur texture-firstchannel texture-simple
             texture-width texture-withderivs texture-wrap
             transform trig typecast vecctr vector )
 

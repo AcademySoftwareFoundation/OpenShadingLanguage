@@ -476,6 +476,11 @@ public:
     ValueSource valuesource () const { return (ValueSource) m_valuesource; }
     void valuesource (ValueSource v) { m_valuesource = v; }
 
+    int initbegin () const { return m_initbegin; }
+    void initbegin (int i) { m_initbegin = i; }
+    int initend () const { return m_initend; }
+    void initend (int i) { m_initend = i; }
+
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point

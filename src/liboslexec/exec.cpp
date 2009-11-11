@@ -323,7 +323,7 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
     Runflag *runflags = ALLOCA (Runflag, m_npoints);
     ShaderMaster *master = inst->master();
     for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
-        Symbol *sym = inst->symbol (i);
+        Symbol *sym = symptr (i);
         if (sym->valuesource() == Symbol::DefaultVal) {
             // Execute init ops, if there are any
             if (sym->initbegin() != sym->initend()) {
@@ -353,11 +353,15 @@ ShadingExecution::bind_connections (ShaderInstance *inst)
 {
     for (int i = 0;  i < inst->nconnections();  ++i) {
         const Connection &con (inst->connection (i));
-        Symbol *s = inst->symbol (con.dst.param);
+        Symbol *s = symptr (con.dst.param);
         DASSERT (s);
         s->connected (true);
         bind_connection (inst, con.dst.param);
     }
+    // FIXME -- you know, the connectivity is fixed for the whole group
+    // and its instances.  We *could* mark them as connected and possibly
+    // do some of the other connection work once per instance rather than
+    // once per execution.  Come back to this later and investigate.
 }
 
 

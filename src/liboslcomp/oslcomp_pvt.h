@@ -152,6 +152,10 @@ public:
     /// think twice about how you use this so you don't "leak" arguments.
     size_t add_op_args (size_t nargs, Symbol **args);
 
+    /// Return a reference to the last opcode that we added.
+    ///
+    Opcode & lastop () { return m_ircode.back(); }
+
     /// Return a reference to a given IR opcode.
     ///
     Opcode & ircode (int index) { return m_ircode[index]; }
@@ -220,6 +224,7 @@ private:
     void write_oso_symbol (const Symbol *sym) const;
     void write_oso_metadata (const ASTNode *metanode) const;
     void oso (const char *fmt, ...) const;
+    void track_variable_usage ();
 
     ASTshader_declaration *shader_decl () const {
         return dynamic_cast<ASTshader_declaration *>(m_shader.get());

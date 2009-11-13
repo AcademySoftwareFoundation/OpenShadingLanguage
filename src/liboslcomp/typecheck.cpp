@@ -810,6 +810,11 @@ ASTfunction_call::typecheck (TypeSpec expected)
 //    * - 0 or more args of any type
 //    . - 2*n args of alternating string/value
 //    C - color closure
+//
+// There are also entries that don't describe polymorphisms, but just mark
+// the functions as having special properties:
+//   "!rw"    nonstandard behavior about which args are read vs written.
+//
 
 #define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
 #define NOISE_ARGS "ff", "fff", "fp", "fpf", \
@@ -863,10 +868,10 @@ static const char * builtin_func_args [] = {
     "fmod", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL, // alias for mod()
     "format", "ss*", NULL,
     "fprintf", "xs*", NULL,   // FIXME -- further checking
-    "fresnel", "xvvff", "xvvfffvv", NULL,
-    "getattribute", "is?", "iss?", NULL,  // FIXME -- further checking?
-    "getmessage", "iss?", NULL,  // FIXME -- further checking?
-    "gettextureinfo", "iss?", "iss?[]", NULL,  // FIXME -- further checking?
+    "fresnel", "xvvff", "xvvfffvv", "!rw", NULL,
+    "getattribute", "is?", "iss?", "!rw", NULL,  // FIXME -- further checking?
+    "getmessage", "iss?", "!rw", NULL,  // FIXME -- further checking?
+    "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,
     "isfinite", "if", NULL,
     "isindirectray", "i", NULL,
@@ -958,10 +963,16 @@ OSLCompilerImpl::initialize_builtin_funcs ()
         ustring funcname (builtin_func_args[i++]);
         // Count the number of polymorphic versions
         int npoly = 0;
-        for (npoly = 0;  builtin_func_args[i+npoly];  ++npoly) ;
+        bool readwrite_special_case = false;
+        for (npoly = 0;  builtin_func_args[i+npoly];  ++npoly) {
+            if (! strcmp (builtin_func_args[i+npoly], "!rw"))
+                readwrite_special_case = true;
+        }
         // Now add them in reverse order, so the order in the table is
         // the priority order for approximate matches.
         for (int j = npoly-1;  j >= 0;  --j) {
+            if (builtin_func_args[i+j][0] == '!')  // Skip special hints
+                continue;
             ustring poly (builtin_func_args[i+j]);
             Symbol *last = symtab().clash (funcname);
             ASSERT (last == NULL || last->symtype() == SymTypeFunction);
@@ -969,6 +980,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
             FunctionSymbol *f = new FunctionSymbol (funcname, rettype);
             f->nextpoly ((FunctionSymbol *)last);
             f->argcodes (poly);
+            f->readwrite_special_case (readwrite_special_case);
             symtab().insert (f);
         }
         i += npoly;

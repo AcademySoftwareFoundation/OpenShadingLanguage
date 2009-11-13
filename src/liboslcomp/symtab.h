@@ -126,7 +126,8 @@ typedef std::vector<StructSpec *> StructList;
 class FunctionSymbol : public Symbol {
 public:
     FunctionSymbol (ustring n, TypeSpec type, ASTNode *node=NULL)
-        : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL)
+        : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL),
+          m_readwrite_special_case(false)
     { }
 
     void nextpoly (FunctionSymbol *nextpoly) { m_nextpoly = nextpoly; }
@@ -159,6 +160,9 @@ public:
         m_function_loop_nesting = 0;
     }
 
+    void readwrite_special_case (bool s) { m_readwrite_special_case = s; }
+    bool readwrite_special_case () const { return m_readwrite_special_case; }
+
 private:
     ustring m_argcodes;              ///< Encoded arg types
     FunctionSymbol *m_nextpoly;      ///< Next polymorphic version
@@ -167,6 +171,7 @@ private:
     bool m_complex_return;           ///< Return is not last statement unconditionally executed
     int m_function_loop_nesting;     ///< Loop nesting level within the func
     int m_function_total_nesting;    ///< Total nesting level within the func
+    bool m_readwrite_special_case;   ///< Unusual in how it r/w's its args
 };
 
 
@@ -215,6 +220,8 @@ class SymbolTable {
 public:
     typedef hash_map<ustring, Symbol *,ustringHash> ScopeTable;
     typedef std::vector<ScopeTable> ScopeTableStack;
+    typedef SymbolPtrVec::iterator iterator;
+    typedef SymbolPtrVec::const_iterator const_iterator;
 
     SymbolTable (OSLCompilerImpl &comp)
         : m_comp(comp), m_scopeid(-1), m_nextscopeid(0)
@@ -271,10 +278,10 @@ public:
     ///
     void print ();
 
-    SymbolPtrVec::iterator symbegin () { return m_allsyms.begin(); }
-    const SymbolPtrVec::const_iterator symbegin () const { return m_allsyms.begin(); }
-    SymbolPtrVec::iterator symend () { return m_allsyms.end(); }
-    const SymbolPtrVec::const_iterator symend () const { return m_allsyms.end(); }
+    SymbolPtrVec::iterator begin () { return m_allsyms.begin(); }
+    const SymbolPtrVec::const_iterator begin () const { return m_allsyms.begin(); }
+    SymbolPtrVec::iterator end () { return m_allsyms.end(); }
+    const SymbolPtrVec::const_iterator end () const { return m_allsyms.end(); }
 
 private:
     OSLCompilerImpl &m_comp;         ///< Back-reference to compiler

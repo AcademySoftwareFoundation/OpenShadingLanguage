@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cerrno>
 
 #include <boost/filesystem.hpp>
+#include <boost/foreach.hpp>
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/sysutil.h"
@@ -223,6 +224,7 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         if (! error_encountered()) {
             oslcompiler->shader()->codegen ();
+            track_variable_usage ();
         }
  
         if (! error_encountered()) {
@@ -373,6 +375,11 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
         }
     }
 
+    if (hints++ == 0)
+        oso ("\t");
+    oso ("%%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
+         sym->firstwrite(), sym->lastwrite());
+
     oso ("\n");
 }
 
@@ -401,21 +408,18 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     oso ("\n");
 
     // Output params, so they are first
-    for (SymbolPtrVec::const_iterator s = symtab().symbegin();
-             s != symtab().symend();  ++s) {
-        if ((*s)->symtype() == SymTypeParam ||
-                (*s)->symtype() == SymTypeOutputParam) {
-            write_oso_symbol (*s);
-        }
+    BOOST_FOREACH (const Symbol *s, symtab()) {
+        if (s->symtype() == SymTypeParam || s->symtype() == SymTypeOutputParam)
+            write_oso_symbol (s);
     }
     // Output globals, locals, temps, const
-    for (SymbolPtrVec::const_iterator s = symtab().symbegin();
-             s != symtab().symend();  ++s) {
-        if ((*s)->symtype() == SymTypeLocal ||
-                (*s)->symtype() == SymTypeTemp ||
-                (*s)->symtype() == SymTypeGlobal ||
-                (*s)->symtype() == SymTypeConst) {
-            write_oso_symbol (*s);
+    BOOST_FOREACH (const Symbol *s, symtab()) {
+        if (s->symtype() == SymTypeLocal || s->symtype() == SymTypeTemp ||
+            s->symtype() == SymTypeGlobal || s->symtype() == SymTypeConst) {
+            // Don't bother writing symbols that are never used
+            if (s->lastuse() >= 0) {
+                write_oso_symbol (s);
+            }
         }
     }
 
@@ -457,6 +461,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 
         // Hints
         bool firsthint = true;
+        // Hint the source file/line
         if (op->sourcefile()) {
             if (op->sourcefile() != lastfile) {
                 lastfile = op->sourcefile();
@@ -468,6 +473,18 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
                 oso ("%c%%line{%d}", firsthint ? '\t' : ' ', lastline);
                 firsthint = false;
             }
+        }
+        // Hint which args are read/written
+        if (op->nargs()) {
+            oso ("%c%%argrw{\"", firsthint ? '\t' : ' ');
+            for (int i = 0;  i < op->nargs();  ++i) {
+                if (op->argwrite(i))
+                    oso (op->argread(i) ? "W" : "w");
+                else
+                    oso (op->argread(i) ? "r" : "-");
+            }
+            oso ("\"}");
+            firsthint = false;
         }
         oso ("\n");
     }
@@ -555,6 +572,30 @@ OSLCompilerImpl::pop_nesting (bool isloop)
         --m_loop_nesting;
     if (current_function())
         current_function()->pop_nesting (isloop);
+}
+
+
+
+/// Called after code is generated, this function loops over all the ops
+/// and figures out the lifetimes of all variables, based on whether the
+/// args in each op are read or written.
+void
+OSLCompilerImpl::track_variable_usage ()
+{
+    // Clear the lifetimes for all symbols
+    BOOST_FOREACH (Symbol *s, symtab())
+        s->clear_rw ();
+
+    // For each op, mark its arguments as being used at that op
+    int opnum = 0;
+    BOOST_FOREACH (Opcode &op, m_ircode) {
+        for (int a = 0;  a < op.nargs();  ++a) {
+            Symbol *s = m_opargs[op.firstarg()+a];
+            s = s->dealias();
+            s->mark_rw (opnum, op.argread(a), op.argwrite(a));
+        }
+        ++opnum;
+    }
 }
 
 

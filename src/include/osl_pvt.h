@@ -481,6 +481,32 @@ public:
     int initend () const { return m_initend; }
     void initend (int i) { m_initend = i; }
 
+    /// Clear read/write usage info.
+    ///
+    void clear_rw () {
+        m_firstread = m_firstwrite = std::numeric_limits<int>::max();
+        m_lastread = m_lastwrite = -1;
+    }
+    /// Mark whether the symbol was read and/or written on the given op.
+    ///
+    void mark_rw (int op, bool read, bool write) {
+        if (read) {
+            m_firstread = std::min (m_firstread, op);
+            m_lastread = std::max (m_lastread, op);
+        }
+        if (write) {
+            m_firstwrite = std::min (m_firstwrite, op);
+            m_lastwrite = std::max (m_lastwrite, op);
+        }
+    }
+
+    int firstread () const  { return m_firstread; }
+    int lastread () const   { return m_lastread; }
+    int firstwrite () const { return m_firstwrite; }
+    int lastwrite () const  { return m_lastwrite; }
+    int firstuse () const   { return std::min (firstread(), firstwrite()); }
+    int lastuse () const    { return std::max (lastread(), lastwrite()); }
+
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point
@@ -497,6 +523,8 @@ protected:
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol
     Symbol *m_alias;            ///< Another symbol that this is an alias for
     int m_initbegin, m_initend; ///< Range of init ops (for params)
+    int m_firstread, m_lastread;///< First and last op the sym is read
+    int m_firstwrite, m_lastwrite;///< First and last op the sym is written
 };
 
 
@@ -518,7 +546,9 @@ class Opcode {
 public:
     Opcode (ustring op, ustring method, size_t firstarg=0, size_t nargs=0)
         : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
-          m_method(method), m_impl(NULL)
+          m_method(method), m_impl(NULL), 
+          m_argread(~1), // Default - all args are read except the first
+          m_argwrite(1)  // Default - first arg only is written by the op
     {
         m_jump[0] = -1;
         m_jump[1] = -1;
@@ -566,6 +596,15 @@ public:
     ///
     static const unsigned int max_jumps = 4;
 
+    /// What's the farthest address that we jump to?
+    ///
+    int farthest_jump () const {
+        int f = jump(0);
+        for (unsigned int i = 1;  i < max_jumps;  ++i)
+            f = std::max (f, jump(i));
+        return f;
+    }
+
     void implementation (OpImpl impl) { m_impl = impl; }
     OpImpl implementation () const { return m_impl; }
 
@@ -574,6 +613,43 @@ public:
     void operator() (ShadingExecution *exec, int nargs, const int *args,
                      Runflag *runflags, int beginpoint, int endpoint) {
         m_impl (exec, m_nargs, args, runflags, beginpoint, endpoint);
+    }
+
+    /// Is the argument number 'arg' read by the op?
+    ///
+    bool argread (int arg) const {
+        return (arg < 32) ? (m_argread & (1 << arg)) : true;
+    }
+    /// Is the argument number 'arg' written by the op?
+    ///
+    bool argwrite (int arg) const {
+        return (arg < 32) ? (m_argwrite & (1 << arg)) : false;
+    }
+    /// Declare that argument number 'arg' is read by this op.
+    ///
+    void argread (int arg, bool val) {
+        if (arg < 32) {
+            if (val)
+                m_argread |= (1 << arg);
+            else
+                m_argread &= ~(1 << arg);
+        }
+    }
+    /// Declare that argument number 'arg' is written by this op.
+    ///
+    void argwrite (int arg, bool val) {
+        if (arg < 32) {
+            if (val)
+                m_argwrite |= (1 << arg);
+            else
+                m_argwrite &= ~(1 << arg);
+        }
+    }
+    /// Declare that argument number 'arg' is only written (not read!) by
+    /// this op.
+    void argwriteonly (int arg) {
+        argread (arg, false);
+        argwrite (arg, true);
     }
 
 private:
@@ -585,6 +661,13 @@ private:
     ustring m_sourcefile;           ///< Source filename for this op
     int m_sourceline;               ///< Line of source code for this op
     OpImpl m_impl;                  ///< Implementation of this op
+    unsigned int m_argread;         ///< Bit field - which args are read
+    unsigned int m_argwrite;        ///< Bit field - which args are written
+    // N.B. We only have 32 bits for m_argread and m_argwrite.  We live
+    // with this, and it's ok because there are very few ops that allow
+    // more than 32 args, and those that do are read-only that far out.
+    // Seems silly to add complexity here to deal with arbitrary param
+    // counts and read/write-ability for cases that never come up.
 };
 
 

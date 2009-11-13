@@ -622,6 +622,9 @@ ASTconditional_statement::codegen (Symbol *)
     // Generate the op for the 'if' itself.  Record its label, so that we
     // can go back and patch it with the jump destinations.
     int ifop = emitcode ("if", condvar);
+    // "if" is unusual in that it doesn't write its first argument
+    oslcompiler->lastop().argread (0, true);
+    oslcompiler->lastop().argwrite (0, false);
 
     // Generate the code for the 'true' and 'false' code blocks, recording
     // the jump destinations for 'else' and the next op after the if.
@@ -651,6 +654,8 @@ ASTloop_statement::codegen (Symbol *)
     // Generate the op for the loop itself.  Record its label, so that we
     // can go back and patch it with the jump destinations.
     int loop_op = emitcode (opname());
+    // Loop ops read their first arg in addition to writing it
+    oslcompiler->lastop().argread (0, true);
         
     oslcompiler->push_nesting (true);
     codegen_list (init());
@@ -661,6 +666,7 @@ ASTloop_statement::codegen (Symbol *)
     // Retroactively add the argument
     size_t argstart = m_compiler->add_op_args (1, &condvar);
     m_compiler->ircode(loop_op).set_args (argstart, 1);
+    // N.B. the arg is both read and written -- already the default state
 
     int bodylabel = m_compiler->next_op_label ();
     codegen_list (stmt());
@@ -764,6 +770,9 @@ ASTbinary_expression::codegen_logic (Symbol *dest)
     Symbol *lsym = left()->codegen_int (dest);
 
     int ifop = emitcode ("if", lsym);
+    // "if" is unusual in that it doesn't write its first argument
+    oslcompiler->lastop().argread (0, true);
+    oslcompiler->lastop().argwrite (0, false);
     int falselabel;
     m_compiler->push_nesting (false);
 
@@ -863,6 +872,28 @@ ASTtype_constructor::codegen (Symbol *dest)
 
 
 
+void
+ASTfunction_call::codegen_handle_special_cases ()
+{
+    Opcode &op (m_compiler->lastop ());
+    ustring opname = op.opname();
+    if (func()->readwrite_special_case()) {
+        if (opname == "fresnel") {
+            // This function has some output args
+            op.argwriteonly (3);
+            op.argwriteonly (4);
+            op.argwriteonly (5);
+            op.argwriteonly (6);
+        } else if (opname == "getattribute" || opname == "getmessage" ||
+                   opname == "gettextureinfo") {
+            // these all write to their last argument
+            op.argwriteonly (op.nargs() - 1);
+        }
+    }
+}
+
+
+
 Symbol *
 ASTfunction_call::codegen (Symbol *dest)
 {
@@ -945,6 +976,7 @@ ASTfunction_call::codegen (Symbol *dest)
             Symbol *condvar = m_compiler->make_constant (0);
             size_t argstart = m_compiler->add_op_args (1, &condvar);
             m_compiler->ircode(loop_op).set_args (argstart, 1);
+            m_compiler->ircode(loop_op).argread (0, true);  // read also
             int endlabel = m_compiler->next_op_label ();
             m_compiler->ircode(loop_op).set_jump (startlabel, startlabel,
                                                   endlabel, endlabel);
@@ -957,6 +989,13 @@ ASTfunction_call::codegen (Symbol *dest)
             argdest_return_offset = 1;
         }
         emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
+        if (typespec().is_void()) {
+            // Void functions DO read their first arg, DON'T write it
+            m_compiler->lastop().argread (0, true);
+            m_compiler->lastop().argwrite (0, false);
+        }
+        if (func()->readwrite_special_case ())
+            codegen_handle_special_cases ();
     }
 
     if (indexed_output_params) {

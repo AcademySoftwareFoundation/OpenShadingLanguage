@@ -73,5 +73,17 @@ SimpleRenderer::get_attribute (void *renderstate, ustring object,  ustring name,
     return false;
 }
 
+bool
+SimpleRenderer::get_userdata (int npoints, ustring name, TypeDesc type, void *renderstate, int renderstate_stepsize, void *val, int val_stepsize)
+{
+    return false;
+}
+
+bool
+SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
+{
+    return false;
+}
+
 };  // namespace OSL
 

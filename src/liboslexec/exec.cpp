@@ -307,6 +307,9 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     // Handle all of the symbols that are connected to earlier layers.
     bind_connections (m_instance);
 
+    // Mark symbols that map to user-data on the geometry
+    bind_mark_geom_variables (m_instance);
+
     // Run parameter initialization code
     bind_initialize_params (m_instance);
 
@@ -339,7 +342,21 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
             // unnecessary copying if the values came from geom or
             // connections.  As it stands now, there is some redundancy.
         } else if (sym->valuesource() == Symbol::GeomVal) {
-            ASSERT (0);  // FIXME -- to do: interpolate from geometry
+            ShaderGlobals *globals = m_context->m_globals;
+            if (get_renderer_userdata (m_npoints, 
+                                        sym->name(), sym->typespec().simpletype(),
+                                        &globals->renderstate[0], globals->renderstate.step(),
+                                        sym->data(), sym->step())) {
+                // user-data doesn't provide derivates yet
+                if (sym->has_derivs())
+                    zero_derivs(*sym);
+            }
+            else {
+#ifdef DEBUG
+                std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
+#endif
+            }
+
         } else if (sym->valuesource() == Symbol::ConnectedVal) {
             // Nothing to do if it fully came from an earlier layer
         }
@@ -347,6 +364,21 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
 }
 
 
+
+void
+ShadingExecution::bind_mark_geom_variables (ShaderInstance *inst)
+{
+    ShaderGlobals *globals (m_context->m_globals);
+    ShaderMaster *master = inst->master();
+    for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
+        Symbol *sym = symptr (i);
+        if (sym->valuesource() != Symbol::ConnectedVal) {
+            if (renderer_has_userdata (sym->name(), sym->typespec().simpletype(), &globals->renderstate[0])) {
+               sym->valuesource(Symbol::GeomVal);
+            }
+        }
+    }
+}
 
 void
 ShadingExecution::bind_connections (ShaderInstance *inst)
@@ -746,6 +778,26 @@ ShadingExecution::get_renderer_attribute(void *renderstate, ustring object, ustr
 {
     return m_renderer->get_attribute(renderstate, object, name, type, val);
 }
+
+bool
+ShadingExecution::get_renderer_userdata(int npoints, ustring name, TypeDesc type, 
+                                        void *renderstate, int renderstate_stepsize, 
+                                        void *val, int val_stepsize)
+{
+   return m_renderer->get_userdata(npoints, name, type, 
+                                   renderstate, renderstate_stepsize,
+                                   val, val_stepsize);
+}
+
+
+
+bool
+ShadingExecution::renderer_has_userdata(ustring name, TypeDesc type, void *renderstate)
+{
+    return m_renderer->has_userdata(name, type, renderstate);
+}
+
+
 
 void
 ShadingExecution::get_inverse_matrix (Matrix44 &result,

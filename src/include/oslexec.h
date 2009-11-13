@@ -247,6 +247,17 @@ public:
     /// for the currently shaded "scene".
     virtual bool get_attribute (void *renderstate, ustring object, ustring name, TypeDesc type, void *val ) = 0;
 
+    /// Get the named user-data from the current object and write it into
+    /// 'val'.  This function provides and array of renderstates 'npoints'
+    /// in size, and a block of memory in which to store the user data (pointed
+    /// to by val).  Both arrays have a stride of 'stepsize'.
+    virtual bool get_userdata (int npoints, ustring name, TypeDesc type, 
+                               void *renderstates,  int renderstates_stepsize,
+                               void *val, int val_stepsize ) = 0;
+
+    /// Does the current object have the named user-data associated with it?
+    virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate) = 0;
+
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system to at the given time.  The
     /// default implementation is to use get_matrix and invert it, but a

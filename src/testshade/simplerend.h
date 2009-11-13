@@ -60,6 +60,10 @@ public:
     void name_transform (const char *name, const Transformation &xform);
 
     virtual bool get_attribute (void *renderstate, ustring object, ustring name, TypeDesc type, void *val );
+    virtual bool get_userdata (int npoints, ustring name, TypeDesc type, 
+                               void *renderstate, int renderstate_stepsize, 
+                               void *val,         int val_stepsize);
+    virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
 private:
     typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;
     TransformMap m_named_xforms;

@@ -754,6 +754,18 @@ public:
     /// then the renderer services should look in the standard places (currently shaded object, then
     /// the global render/scene state.
    bool get_renderer_attribute(void *renderstate, ustring object, ustring name, TypeDesc type, void *val);
+
+   /// Query the renderer for the named user-data on the current geometry.  This
+   /// function accepts an array of renderstate pointers and writes its value
+   /// in the memory region pointed to by 'val'.
+   bool get_renderer_userdata(int npoints, ustring name, TypeDesc type, 
+                              void *renderstate, int renderstate_stepsize, 
+                              void *val, int val_stepsize);
+
+   /// Determine whether the currently shaded object has the named user-data 
+   /// attached
+   bool renderer_has_userdata (ustring name, TypeDesc type, void *renderstate);
+
 private:
     /// Helper for bind(): run initialization code for parameters
     ///
@@ -766,6 +778,10 @@ private:
     /// Helper for bind(): establish all connections to earlier layers
     /// for a given symbol.
     void bind_connection (ShaderInstance *inst, int symindex);
+
+    /// Helper for bind(): marks all parameters which correspond to
+    /// geometric user-data
+    void bind_mark_geom_variables (ShaderInstance *inst);
 
     ShaderUse m_use;              ///< Our shader use
     ShaderUse m_layerindex;       ///< Which layer are we?

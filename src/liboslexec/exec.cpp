@@ -774,9 +774,18 @@ ShadingExecution::get_matrix (Matrix44 &result, ustring from, int whichpoint)
 }
 
 bool 
-ShadingExecution::get_renderer_attribute(void *renderstate, ustring object, ustring name, TypeDesc type, void *val)
+ShadingExecution::get_renderer_array_attribute(void *renderstate, ustring object, 
+                                               TypeDesc type, ustring name, 
+                                               int index, void *val)
 {
-    return m_renderer->get_attribute(renderstate, object, name, type, val);
+    return m_renderer->get_array_attribute(renderstate, object, type, name, index, val);
+}
+
+bool 
+ShadingExecution::get_renderer_attribute(void *renderstate, ustring object, 
+                                         TypeDesc type, ustring name, void *val)
+{
+    return m_renderer->get_attribute(renderstate, object, type, name, val);
 }
 
 bool

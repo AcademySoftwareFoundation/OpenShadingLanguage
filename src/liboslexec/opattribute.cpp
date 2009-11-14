@@ -36,16 +36,59 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
+
 DECLOP (OP_getattribute)
 {
-    DASSERT (nargs == 3 || nargs == 4);
-    const bool object_specified = (nargs == 4);
-    Symbol &Result      (exec->sym (args[0]));
-    Symbol &ObjectName  (exec->sym (args[1]));
-    Symbol &Attribute   (exec->sym (args[1+object_specified]));
-    Symbol &Destination (exec->sym (args[2+object_specified]));
-    DASSERT (Attribute.typespec().is_string() && ObjectName.typespec().is_string());
-    DASSERT (!Result.typespec().is_closure() && !ObjectName.typespec().is_closure() && !Attribute.typespec().is_closure() && !Destination.typespec().is_closure());
+    // getattribute() has four "flavors":
+    //   * getattribute (attribute_name, value)
+    //   * getattribute (attribute_name, index, value)
+    //   * getattribute (object, attribute_name, value)
+    //   * getattribute (object, attribute_name, index, value)
+
+    DASSERT (nargs >= 3 && nargs <= 5);
+
+    bool object_lookup = false;
+    bool array_lookup  = false;
+
+    // slot indices when (nargs==3)
+    int result_slot = 0; // never changes
+    int attrib_slot = 1;
+    int object_slot = 0; // initially not used
+    int index_slot  = 0; // initially not used
+    int dest_slot   = 2;
+
+    // figure out which "flavor" of getattribute() to use
+    if (nargs == 5) {
+        object_slot = 1;
+        attrib_slot = 2;
+        index_slot  = 3;
+        dest_slot   = 4;
+        array_lookup  = true;
+        object_lookup = true;
+    }
+    else if (nargs == 4) {
+        if (exec->sym (args[2]).typespec().is_int()) {
+            attrib_slot = 1;
+            index_slot  = 2;
+            dest_slot   = 3;
+            array_lookup = true;
+        }
+        else {
+            object_slot = 1;
+            attrib_slot = 2;
+            dest_slot   = 3;
+            object_lookup = true;
+        }
+    }
+    Symbol &Result      (exec->sym (args[result_slot]));
+    Symbol &ObjectName  (exec->sym (args[object_slot])); // might be aliased to Result
+    Symbol &Index       (exec->sym (args[index_slot ])); // might be aliased to Result
+    Symbol &Attribute   (exec->sym (args[attrib_slot]));
+    Symbol &Destination (exec->sym (args[dest_slot  ]));
+
+    DASSERT (!Result.typespec().is_closure()    && !ObjectName.typespec().is_closure() && 
+             !Attribute.typespec().is_closure() && !Index.typespec().is_closure()      && 
+             !Destination.typespec().is_closure());
 
     ShaderGlobals *globals = exec->context()->globals();
 
@@ -55,30 +98,27 @@ DECLOP (OP_getattribute)
     exec->adjust_varying (Destination, true);
 
     TypeDesc attribute_type;
-    VaryingRef<int>     result         ((int *)Result.data(),         Result.step());
-    VaryingRef<ustring> object_name    ((ustring *)ObjectName.data(), ObjectName.step());
-    VaryingRef<ustring> attribute_name ((ustring *)Attribute.data(),  Attribute.step());
+    VaryingRef<int>     result         ((int *)Result.data(),         Result.step()     );
+    VaryingRef<ustring> object_name    ((ustring *)ObjectName.data(), ObjectName.step() ); // might be aliased to Result
+    VaryingRef<ustring> attribute_name ((ustring *)Attribute.data(),  Attribute.step()  );
     VaryingRef<void *>  destination    ((void *)Destination.data(),   Destination.step());
+    VaryingRef<int>     index          ((int *)Index.data(),          Index.step()      ); // might be aliased to Result
 
     attribute_type = Destination.typespec().simpletype();
 
-    // FIXME:  what about arrays?
-   
-    if (result.is_uniform()) {
-        // Uniform case
-        void *d = &destination[0];
-        *result = exec->get_renderer_attribute( *globals->renderstate, 
-                                                object_specified ? object_name[0] : ustring(),
-                                                *attribute_name, attribute_type, d); //destination;
-    } else {
-        // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                void *d = &destination[i];
-                result[i] = exec->get_renderer_attribute(globals->renderstate[i], 
-                                                         object_specified ? object_name[i] : ustring(),
-                                                         attribute_name[i], attribute_type, d); //destination[i)
-            }
+    // always fully varying case
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            //void *d = &destination[i];
+            result[i] = array_lookup ? 
+               exec->get_renderer_array_attribute(globals->renderstate[i], 
+                                                  object_lookup ? object_name[i] : ustring(),
+                                                  attribute_type, attribute_name[i],
+                                                  index[i], &destination[i]) :
+               exec->get_renderer_attribute(globals->renderstate[i], 
+                                            object_lookup ? object_name[i] : ustring(),
+                                            attribute_type, attribute_name[i],
+                                            &destination[i]);
         }
     }
     // FIXME: Disable derivatives (for now)

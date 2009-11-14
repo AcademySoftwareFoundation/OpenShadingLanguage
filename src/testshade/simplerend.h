@@ -59,7 +59,11 @@ public:
 
     void name_transform (const char *name, const Transformation &xform);
 
-    virtual bool get_attribute (void *renderstate, ustring object, ustring name, TypeDesc type, void *val );
+    virtual bool get_array_attribute (void *renderstate, ustring object,
+                                      TypeDesc type, ustring name,
+                                      int index, void *val );
+    virtual bool get_attribute (void *renderstate, ustring object,
+                                TypeDesc type, ustring name, void *val);
     virtual bool get_userdata (int npoints, ustring name, TypeDesc type, 
                                void *renderstate, int renderstate_stepsize, 
                                void *val,         int val_stepsize);

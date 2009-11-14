@@ -240,12 +240,19 @@ public:
     /// 'from' coordinate system to "common" space at the given time.
     virtual bool get_matrix (Matrix44 &result, ustring from, float time) = 0;
 
-    /// Get the named attribute from the renderer, write it into 'val',
-    /// and return whether it was successfully found or not.  If no object
-    /// is specified (object == ""), the renderer should search *first* for 
-    /// the attribute on the currently shaded object, and next, if unsuccessful, 
-    /// for the currently shaded "scene".
-    virtual bool get_attribute (void *renderstate, ustring object, ustring name, TypeDesc type, void *val ) = 0;
+    /// Get the named attribute from the renderer and if found then
+    /// write it into 'val'.  Otherwise, return false.  If no object is
+    /// specified (object == ustring()), then the renderer should search *first*
+    /// for the attribute on the currently shaded object, and next, if
+    /// unsuccessful, on the currently shaded "scene". 
+    virtual bool get_attribute (void *renderstate, ustring object,
+                                TypeDesc type, ustring name, void *val ) = 0;
+
+    /// Similar to get_attribute();  this method will return the 'index'
+    /// element of an attribute array.
+    virtual bool get_array_attribute (void *renderstate, ustring object,
+                                TypeDesc type, ustring name,
+                                int index, void *val ) = 0;
 
     /// Get the named user-data from the current object and write it into
     /// 'val'.  This function provides and array of renderstates 'npoints'

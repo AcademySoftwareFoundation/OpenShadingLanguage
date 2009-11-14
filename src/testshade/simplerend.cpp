@@ -68,7 +68,16 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
 }
 
 bool
-SimpleRenderer::get_attribute (void *renderstate, ustring object,  ustring name, TypeDesc type, void *val)
+SimpleRenderer::get_array_attribute (void *renderstate, ustring object,
+                                     TypeDesc type, ustring name,
+                                     int index, void *val)
+{
+    return false;
+}
+
+bool
+SimpleRenderer::get_attribute (void *renderstate, ustring object,
+                               TypeDesc type, ustring name, void *val)
 {
     return false;
 }

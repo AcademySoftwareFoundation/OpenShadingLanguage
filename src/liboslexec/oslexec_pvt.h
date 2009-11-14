@@ -768,10 +768,19 @@ public:
     ///
     Symbol *Nsym () { return symptr (m_master->m_Nsym); }
 
-    /// Query the renderer's attribute -- if a specifid object is *not* specified (empty ustring())
-    /// then the renderer services should look in the standard places (currently shaded object, then
-    /// the global render/scene state.
-   bool get_renderer_attribute(void *renderstate, ustring object, ustring name, TypeDesc type, void *val);
+    /// Get the named attribute from the renderer and if found then
+    /// write it into 'val'.  Otherwise, return false.  If no object is
+    /// specified (object == ustring()), then the renderer should search *first*
+    /// for the attribute on the currently shaded object, and next, if
+    /// unsuccessful, on the currently shaded "scene". 
+    bool get_renderer_attribute(void *renderstate, ustring object,
+                                        TypeDesc type, ustring name, void *val);
+
+    /// Similar to get_renderer_attribute();  this method will return the 'index'
+    /// element of an attribute array.
+    bool get_renderer_array_attribute (void *renderstate, ustring object,
+                                               TypeDesc type, ustring name,
+                                               int index, void *val);
 
    /// Query the renderer for the named user-data on the current geometry.  This
    /// function accepts an array of renderstate pointers and writes its value

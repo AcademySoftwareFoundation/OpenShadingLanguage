@@ -869,7 +869,7 @@ static const char * builtin_func_args [] = {
     "format", "ss*", NULL,
     "fprintf", "xs*", NULL,   // FIXME -- further checking
     "fresnel", "xvvff", "xvvfffvv", "!rw", NULL,
-    "getattribute", "is?", "iss?", "!rw", NULL,  // FIXME -- further checking?
+    "getattribute", "is?", "iss?", "isi?", "issi?", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "iss?", "!rw", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,

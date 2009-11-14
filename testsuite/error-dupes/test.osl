@@ -1,0 +1,19 @@
+shader
+test ()
+{
+    // Make several different warnings
+    warning ("hi\n");
+    warning ("there\n");
+    // Now make sure that dupes are suppressed
+    warning ("hi\n");
+    warning ("hi\n");
+    warning ("hi\n");
+
+    // Make several different errors
+    error ("hi\n");
+    error ("there\n");
+    // Now make sure that dupes are suppressed
+    error ("hi\n");
+    error ("hi\n");
+    error ("hi\n");
+}

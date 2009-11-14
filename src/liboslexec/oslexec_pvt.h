@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <stack>
 #include <map>
+#include <list>
 
 #include <boost/regex.hpp>
 #include "OpenImageIO/thread.h"
@@ -369,10 +370,22 @@ public:
     /// Internal error reporting routine, with printf-like arguments.
     ///
     void error (const char *message, ...);
-
+    /// Internal warning reporting routine, with printf-like arguments.
+    ///
+    void warning (const char *message, ...);
     /// Internal info printing routine, with printf-like arguments.
     ///
     void info (const char *message, ...);
+    /// Internal message printing routine, with printf-like arguments.
+    ///
+    void message (const char *message, ...);
+
+    /// Error reporting routines that take a pre-formatted string only.
+    ///
+    void error (const std::string &message);
+    void warning (const std::string &message);
+    void info (const std::string &message);
+    void message (const std::string &message);
 
     virtual std::string getstats (int level=1) const;
 
@@ -458,7 +471,12 @@ private:
 
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system
+
     ErrorHandler *m_err;                  ///< Error handler
+    std::list<std::string> m_errseen, m_warnseen;
+    static const int m_errseenmax = 32;
+    mutable mutex m_errmutex;
+
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
     int m_statslevel;                     ///< Statistics level

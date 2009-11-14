@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
@@ -214,25 +215,101 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
 
 
 void
-ShadingSystemImpl::error (const char *message, ...)
+ShadingSystemImpl::error (const char *format, ...)
 {
     va_list ap;
-    va_start (ap, message);
-    std::string msg = Strutil::vformat (message, ap);
-    m_err->error (msg);
+    va_start (ap, format);
+    std::string msg = Strutil::vformat (format, ap);
+    error (msg);
     va_end (ap);
 }
 
 
 
 void
-ShadingSystemImpl::info (const char *message, ...)
+ShadingSystemImpl::warning (const char *format, ...)
 {
     va_list ap;
-    va_start (ap, message);
-    std::string msg = Strutil::vformat (message, ap);
-    m_err->info (msg);
+    va_start (ap, format);
+    std::string msg = Strutil::vformat (format, ap);
+    warning (msg);
     va_end (ap);
+}
+
+
+
+void
+ShadingSystemImpl::info (const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string msg = Strutil::vformat (format, ap);
+    info (msg);
+    va_end (ap);
+}
+
+
+
+void
+ShadingSystemImpl::message (const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string msg = Strutil::vformat (format, ap);
+    message (msg);
+    va_end (ap);
+}
+
+
+
+void
+ShadingSystemImpl::error (const std::string &msg)
+{
+    lock_guard guard (m_errmutex);
+    int n = 0;
+    BOOST_FOREACH (std::string &s, m_errseen) {
+        if (s == msg)
+            return;
+        ++n;
+    }
+    if (n >= m_errseenmax)
+        m_errseen.pop_front ();
+    m_errseen.push_back (msg);
+    m_err->error (msg);
+}
+
+
+
+void
+ShadingSystemImpl::warning (const std::string &msg)
+{
+    lock_guard guard (m_errmutex);
+    int n = 0;
+    BOOST_FOREACH (std::string &s, m_warnseen) {
+        if (s == msg)
+            return;
+        ++n;
+    }
+    if (n >= m_errseenmax)
+        m_warnseen.pop_front ();
+    m_warnseen.push_back (msg);
+    m_err->warning (msg);
+}
+
+
+
+void
+ShadingSystemImpl::info (const std::string &msg)
+{
+    m_err->info (msg);
+}
+
+
+
+void
+ShadingSystemImpl::message (const std::string &msg)
+{
+    m_err->message (msg);
 }
 
 

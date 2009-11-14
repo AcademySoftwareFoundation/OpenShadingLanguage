@@ -67,7 +67,7 @@ ShadingExecution::error (const char *message, ...)
     va_list ap;
     va_start (ap, message);
     std::string e = Strutil::vformat (message, ap);
-    m_shadingsys->errhandler().error (e);
+    m_shadingsys->error (e);
     va_end (ap);
 }
 
@@ -79,7 +79,7 @@ ShadingExecution::warning (const char *message, ...)
     va_list ap;
     va_start (ap, message);
     std::string e = Strutil::vformat (message, ap);
-    m_shadingsys->errhandler().warning (e);
+    m_shadingsys->warning (e);
     va_end (ap);
 }
 
@@ -91,7 +91,7 @@ ShadingExecution::info (const char *message, ...)
     va_list ap;
     va_start (ap, message);
     std::string e = Strutil::vformat (message, ap);
-    m_shadingsys->errhandler().info (e);
+    m_shadingsys->info (e);
     va_end (ap);
 }
 
@@ -103,7 +103,7 @@ ShadingExecution::message (const char *message, ...)
     va_list ap;
     va_start (ap, message);
     std::string e = Strutil::vformat (message, ap);
-    m_shadingsys->errhandler().message (e);
+    m_shadingsys->message (e);
     va_end (ap);
 }
 

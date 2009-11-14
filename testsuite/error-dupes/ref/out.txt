@@ -1,0 +1,10 @@
+Compiled test.osl -> test.oso
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: there
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: there
+
+

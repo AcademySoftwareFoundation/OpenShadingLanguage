@@ -33,8 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/foreach.hpp>
 
 #include <OpenImageIO/dassert.h>
-#include <OpenImageIO/hash.h>
-#include <OpenImageIO/thread.h>
 
 #include "oslconfig.h"
 #include "oslclosure.h"
@@ -42,178 +40,54 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-namespace {
-
-typedef hash_map<ustring, const OSL::ClosurePrimitive *, ustringHash> ClosurePrimMap;
-static ClosurePrimMap *prim_map = NULL;
-// N.B. The reason we have a pointer here is to avoid linkage problems 
-// where some orders of static constructions would lead to errors.
-// Case in point: if the hash table has not been constructed in time
-// for a ClosurePrimitive subclass ctr that needs it.
-static mutex closure_mutex;
-
-};
-
-
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif
 namespace OSL {
 
-//namespace pvt {   // OSL::pvt
 
-
-
-/// Grab the first type from 'code' (an encoded arg type string), return
-/// the TypeDesc corresponding to it, and if advance the code pointer to
-/// the next type.
-static TypeDesc
-typedesc_from_code (const char * &codestart)
+std::ostream &
+operator<< (std::ostream &out, const ClosurePrimitive &prim)
 {
-    const char *code = codestart;
-    TypeDesc t;
-    switch (*code) {
-    case 'i' : t = TypeDesc::TypeInt;          break;
-    case 'f' : t = TypeDesc::TypeFloat;        break;
-    case 'c' : t = TypeDesc::TypeColor;        break;
-    case 'p' : t = TypeDesc::TypePoint;        break;
-    case 'v' : t = TypeDesc::TypeVector;       break;
-    case 'n' : t = TypeDesc::TypeNormal;       break;
-    case 'm' : t = TypeDesc::TypeMatrix;       break;
-    case 's' : t = TypeDesc::TypeString;       break;
-    case 'x' : t = TypeDesc (TypeDesc::NONE);  break;
-    default:
-        std::cerr << "Don't know how to decode type code '" 
-                  << code << "' " << (int)(*code) << "\n";
-        ASSERT (0);   // FIXME
-        ++codestart;
-        return TypeDesc();
-    }
-    ++code;
-
-    if (*code == '[') {
-        ++code;
-        t.arraylen = -1;   // signal arrayness, unknown length
-        if (isdigit (*code)) {
-            t.arraylen = atoi (code);
-            while (isdigit (*code))
-                ++code;
-            if (*code == ']')
-                ++code;
-        }
-    }
-
-    codestart = code;
-    return t;
+    // http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.11
+    prim.print_on(out);
+    return out;
 }
 
 
-
-
-ClosurePrimitive::ClosurePrimitive (const char *name, const char *argtypes,
-                                    int category)
-    : m_name(name), m_category((Category)category),
-      m_nargs(0), m_argcodes(argtypes)
+char*
+ClosureColor::allocate_component (size_t num_bytes)
 {
-    ASSERT (m_name.length());
-    // Base class ctr of a closure primitive registers it
-    lock_guard guard (closure_mutex);
-    if (! prim_map)
-        prim_map = new ClosurePrimMap;
-    ClosurePrimMap::const_iterator found = prim_map->find (m_name);
-    ASSERT (found == prim_map->end());
-    (*prim_map)[m_name] = this;
+    // FIXME: alignment ??
 
+    // Resize memory to fit size of the new component
+    m_mem.resize (num_bytes);
 
-    m_argmem = 0;
-    for (const char *code = m_argcodes.c_str();  code && *code; ) {
-        // Grab the next type code.  This automatically advances code!
-        TypeDesc t = typedesc_from_code (code);
-
-        // Add that type to our type list
-        m_argtypes.push_back (t);
-
-        // Round up the mem used if this type needs particular alignment
-        if (t.basetype == TypeDesc::STRING) {
-            // strings are really pointers that need to be aligned
-            m_argmem = (m_argmem + sizeof(char *) - 1) & (~ sizeof(char *));
-        }
-
-        // Add the offset for this argument = mem used so far
-        m_argoffsets.push_back (m_argmem);
-
-        // Account for mem used for this argument
-        m_argmem += t.size ();
-
-        ++m_nargs;
-    }
-
-#ifdef DEBUG
-    std::cerr << "Registered closure primitive '" << m_name << "'\n";
-    std::cerr << "   " << m_nargs << " arguments : " << m_argcodes << "\n";
-    std::cerr << "   needs " << m_argmem << " bytes for arguments\n";
-#endif
-}
-
-
-
-ClosurePrimitive::~ClosurePrimitive ()
-{
-    // Base class of a closure primitive registers it
-    lock_guard guard (closure_mutex);
-    ClosurePrimMap::iterator todelete = prim_map->find (m_name);
-    ASSERT (todelete != prim_map->end() && todelete->second == this);
-    prim_map->erase (todelete);
-#ifdef DEBUG
-    std::cerr << "De-registered closure primitive '" << m_name << "'\n";
-#endif
-}
-
-
-
-const ClosurePrimitive *
-ClosurePrimitive::primitive (ustring name)
-{
-    ClosurePrimMap::const_iterator found;
-    {
-        lock_guard guard (closure_mutex);
-        if (! prim_map)
-            return NULL;
-        found = prim_map->find (name);
-    }
-    if (found != prim_map->end())
-        return found->second;
-    // Oh no, not found!  Return NULL;
-    return NULL;
-}
-
-
-
-void
-ClosureColor::add_component (const ClosurePrimitive *cprim,
-                             const Color3 &weight, const void *params)
-{
     // Make a new component
-    m_components.push_back (Component (cprim, weight));
-    Component &newcomp (m_components.back ());
+    m_components.clear();
+    m_components.push_back (Component (Color3 (1, 1, 1), 0));
 
-    // Grow our memory
-    size_t oldmemsize = m_mem.size ();
-    newcomp.memoffset = oldmemsize;
-    m_mem.resize (oldmemsize + cprim->argmem ());
-
-    // Copy the params, if supplied
-    if (params)
-        memcpy (&m_mem[oldmemsize], params, cprim->argmem ());
+    // Return the block of memory for the caller to new the ClosurePrimitive into
+    return &m_mem[0];
 }
-
 
 
 void
 ClosureColor::add (const ClosureColor &A)
 {
-    BOOST_FOREACH (const Component &Acomp, A.m_components)
-        add_component (Acomp.cprim, Acomp.weight, &A.m_mem[Acomp.memoffset]);
+    // Grow our memory
+    size_t num_bytes = A.m_mem.size ();
+    size_t oldmemsize = m_mem.size ();
+    m_mem.resize (oldmemsize + num_bytes);
+
+    // Copy A's memory at the end of ours
+    memcpy(&m_mem[oldmemsize], &A.m_mem[0], num_bytes);
+
+    // Copy A's components and adjust memory offsets to refer to new position
+    BOOST_FOREACH (const Component &c, A.m_components) {
+        m_components.push_back(c);
+        m_components.back().memoffset += oldmemsize;
+    }
 }
 
 
@@ -225,28 +99,6 @@ ClosureColor::add (const ClosureColor &A, const ClosureColor &B)
         *this = A;
     add (B);
 }
-
-
-
-#if 0
-void
-ClosureColor::sub (const ClosureColor &A)
-{
-    for (int a = 0;  a < A.m_ncomps;  ++a)
-        add (A.m_components[a], -A.m_weight[a]);
-}
-
-
-
-void
-ClosureColor::sub (const ClosureColor &A, const ClosureColor &B)
-{
-    if (this != &A)
-        *this = A;
-    sub (B);
-}
-#endif
-
 
 
 void
@@ -272,39 +124,13 @@ ClosureColor::mul (float w)
 std::ostream &
 operator<< (std::ostream &out, const ClosureColor &closure)
 {
-    for (size_t c = 0;  c < closure.m_components.size();  ++c) {
-        const ClosureColor::Component &comp (closure.m_components[c]);
-        const ClosurePrimitive *cprim = comp.cprim;
+    for (int c = 0;  c < closure.ncomponents(); c++) {
+        const Color3 &weight = closure.weight (c);
+        const ClosurePrimitive *cprim = closure.prim (c);
         if (c)
             out << "\n\t+ ";
-        out << "(" << comp.weight[0] << ", "
-            << comp.weight[1] << ", " << comp.weight[2] << ") * ";
-        out << cprim->name() << " (";
-
-        for (int a = 0;  a < comp.nargs;  ++a) {
-            const char *data = &closure.m_mem[comp.memoffset] + cprim->argoffset(a);
-            TypeDesc t = cprim->argtype (a);
-            if (a)
-                out << ", ";
-            if (t.aggregate != TypeDesc::SCALAR || t.arraylen)
-                out << "(";
-            int n = t.numelements() * (int)t.aggregate;
-            for (int i = 0;  i < n;  ++i) {
-                if (i)
-                    out << ", ";
-                if (t.basetype == TypeDesc::FLOAT) {
-                    out << ((const float *)data)[i];
-                } else if (t.basetype == TypeDesc::INT) {
-                    out << ((const int *)data)[i];
-                } else if (t.basetype == TypeDesc::STRING) {
-                    out << '\"' << ((const char **)data)[i] << '\"';
-                }
-            }
-            if (t.aggregate != TypeDesc::SCALAR || t.arraylen)
-                out << ")";
-        }
-
-        out << ")";
+        out << "(" << weight[0] << ", " << weight[1] << ", " << weight[2] << ") * ";
+        out << *cprim;
     }
     return out;
 }
@@ -335,7 +161,7 @@ bool Labels::match(const Labels &l) const
    return mp == m_size;
 }
 
-//}; // namespace pvt
+
 }; // namespace OSL
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE

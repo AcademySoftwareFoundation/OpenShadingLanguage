@@ -28,7 +28,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "oslops.h"
 #include "oslclosure.h"
+
+#include <cmath>
+
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -44,25 +48,26 @@ namespace pvt {
 /// if the provided angles are PI/2, which is the default
 ///
 class GenericEmissiveClosure : public EmissiveClosure {
+    // Two params, angles both
+    // first is the outer_angle where penumbra starts
+    float m_inner_angle; // must be between 0 and outer_angle
+    // and second the angle where light ends
+    float m_outer_angle;
 public:
-    GenericEmissiveClosure () : EmissiveClosure ("emission", "ff") { }
+    GenericEmissiveClosure (float inner_angle, float outer_angle) :
+        m_inner_angle (inner_angle), m_outer_angle (outer_angle) { }
 
-    struct params_t {
-        // Two params, angles both
-        // first is the outer_angle where penumbra starts
-        float inner_angle; // must be between 0 and outer_angle
-        // and second the angle where light ends
-        float outer_angle;
-    };
+    void print_on (std::ostream &out) const {
+        out << "emission (" << m_inner_angle << ", " << m_outer_angle << ")";
+    }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
+        float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
         if (outer_angle < 0.0f)
             outer_angle = 0.0f;
-        float inner_angle = params->inner_angle < outer_angle ? params->inner_angle : outer_angle;
+        float inner_angle = m_inner_angle < outer_angle ? m_inner_angle : outer_angle;
         if (inner_angle < 0.0f)
             inner_angle = 0.0f;
         float cosNO = Ng.dot(omega_out);
@@ -80,7 +85,7 @@ public:
         if (cosNO > cosU) // Total light
             res = 1.0f / totalemit;
         else if (cosNO > cosA) { // penumbra, apply smooth step
-            float x = 1.0f - (outer_angle - acos(cosNO)) / (outer_angle - inner_angle);
+            float x = 1.0f - (outer_angle - acosf(cosNO)) / (outer_angle - inner_angle);
             //res = (1.0 - 2*x*x + x*x*x*x) / totalemit;
             res = (1.0f - x*x*(3-2*x)) / totalemit;
         }
@@ -90,15 +95,14 @@ public:
         return Color3(res, res, res);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng, float randu, float randv,
+    void sample (const Vec3 &Ng, float randu, float randv,
                  Vec3 &omega_out, float &pdf, Labels &labels) const
     {
         // We don't do anything sophisticated here for the step
         // We just sample the whole cone uniformly to the cosine
         Vec3 T, B;
         make_orthonormals(Ng, T, B);
-        const params_t *params = (const params_t *) paramsptr;
-        float outer_angle = params->outer_angle < M_PI*0.5 ? params->outer_angle : M_PI*0.5;
+        float outer_angle = m_outer_angle < M_PI*0.5 ? m_outer_angle : M_PI*0.5;
         if (outer_angle < 0.0f)
             outer_angle = 0.0f;
         float cosA  = cosf(outer_angle);
@@ -115,11 +119,10 @@ public:
     /// Return the probability distribution function in the direction omega_out,
     /// given the parameters and the light's surface normal.  This MUST match
     /// the PDF computed by sample().
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float outer_angle = params->outer_angle < float(M_PI*0.5) ? params->outer_angle : float(M_PI*0.5);
+        float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
         if (outer_angle < 0.0f)
             outer_angle = 0.0f;
         float cosNO = Ng.dot(omega_out);
@@ -131,8 +134,44 @@ public:
     }
 };
 
-// these are all singletons
-GenericEmissiveClosure cone_emissive_closure_primitive;
+
+DECLOP (OP_emission)
+{
+    DASSERT (nargs >= 1 && nargs <= 3);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_closure());
+    VaryingRef<float> inn, out;
+
+    float halfPi = float (M_PI) * 0.5f;
+
+    if (nargs > 1) { // we have a inner_angle 
+        Symbol &inner_angle  (exec->sym (args[1]));
+        DASSERT (inner_angle.typespec().is_float());
+        inn.init ((float *)inner_angle.data(), inner_angle.step());
+    } else
+        inn.init (&halfPi, 0);
+
+    if (nargs > 2) { // we have an outer_angle
+        Symbol &outer_angle  (exec->sym (args[2]));
+        DASSERT (outer_angle.typespec().is_float());
+        out.init ((float *)outer_angle.data(), outer_angle.step());
+    } else
+        out.init (inn.ptr(), inn.step());
+       
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (GenericEmissiveClosure));
+            new (mem) GenericEmissiveClosure(inn[i], out[i]);
+        }
+    }
+}
+
+
 
 }; // namespace pvt
 }; // namespace OSL

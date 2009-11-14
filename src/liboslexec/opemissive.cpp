@@ -37,47 +37,6 @@ namespace OSL {
 namespace pvt {
 
 
-static Color3 one (1.0f, 1.0f, 1.0f);
-static float halfPi = M_PI*0.5;
-
-
-DECLOP (OP_emission)
-{
-    DASSERT (nargs >= 1 && nargs <= 3);
-    Symbol &Result (exec->sym (args[0]));
-    DASSERT (Result.typespec().is_closure());
-    VaryingRef<float> inn, out;
-    if (nargs > 1) { // we have a inner_angle 
-        Symbol &inner_angle  (exec->sym (args[1]));
-        DASSERT (inner_angle.typespec().is_float());
-        inn.init ((float *)inner_angle.data(), inner_angle.step());
-    }
-    else
-        inn.init (&halfPi, 0);
-    if (nargs > 2) { // we have an outer_angle
-        Symbol &outer_angle  (exec->sym (args[2]));
-        DASSERT (outer_angle.typespec().is_float());
-        out.init ((float *)outer_angle.data(), outer_angle.step());
-    }
-    else
-        out.init (inn.ptr(), inn.step());
-       
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, true /* closures always vary */);
-    // N.B. Closures don't have derivs
-    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
-
-    // Since emit takes no args, we can construct it just once.
-    const ClosurePrimitive *prim = ClosurePrimitive::primitive (Strings::emission);
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            result[i]->set (prim);
-            result[i]->set_parameter (0, 0, &(inn[i]));
-            result[i]->set_parameter (0, 1, &(out[i]));
-        }
-    }
-}
-
 
 
 }; // namespace pvt

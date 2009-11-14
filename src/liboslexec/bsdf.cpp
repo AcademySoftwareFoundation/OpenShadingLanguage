@@ -196,21 +196,20 @@ namespace pvt {
 
 
 class DiffuseClosure : public BSDFClosure {
+    Vec3 m_N;
 public:
-    DiffuseClosure () : BSDFClosure ("diffuse", "n") { }
+    DiffuseClosure (const Vec3 &N) : m_N(N) {}
 
-    struct params_t {
-        Vec3 N;
-    };
+    void print_on (std::ostream &out) const {
+        out << "diffuse ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
            // we are viewing the surface from the same side as the normal
-           axis = params->N;
+           axis = m_N;
            angle = (float) M_PI;
            return true;
         }
@@ -218,66 +217,88 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cos_pi = params->N.dot(omega_in) * (float) M_1_PI;
+        float cos_pi = m_N.dot(omega_in) * (float) M_1_PI;
         labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
            // we are viewing the surface from above - send a ray out with cosine
            // distribution over the hemisphere
-           sample_cos_hemisphere (params->N, omega_out, randu, randv, omega_in, pdf);
+           sample_cos_hemisphere (m_N, omega_out, randu, randv, omega_in, pdf);
            eval.setValue(pdf, pdf, pdf);
            labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
            // TODO: find a better approximation for the diffuse bounce
-           domega_in_dx = (2 * params->N.dot(domega_out_dx)) * params->N - domega_out_dx;
-           domega_in_dy = (2 * params->N.dot(domega_out_dy)) * params->N - domega_out_dy;
+           domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+           domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
            domega_in_dx *= 125;
            domega_in_dy *= 125;
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        return pdf_cos_hemisphere (params->N, omega_in);
+        return pdf_cos_hemisphere (m_N, omega_in);
     }
 
 };
 
+DECLOP (OP_diffuse)
+{
+    DASSERT (nargs == 2);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (DiffuseClosure));
+            new (mem) DiffuseClosure(n[i]);
+        }
+    }
+}
 
 class TransparentClosure : public BSDFClosure {
 public:
-    TransparentClosure () : BSDFClosure ("transparent", "") { }
+    TransparentClosure () { }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    void print_on (std::ostream &out) const {
+        out << "transparent ()";
+    }
+
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
         // does not need to be integrated directly
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         // should never be called - because get_cone is empty
         return Color3 (0.0f, 0.0f, 0.0f);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
@@ -292,7 +313,7 @@ public:
         labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         // the pdf for an arbitrary direction is 0 because only a single
@@ -304,25 +325,48 @@ public:
 
 };
 
+DECLOP (OP_transparent)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_closure());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (TransparentClosure));
+            new (mem) TransparentClosure();
+        }
+    }
+}
+
+
 // vanilla phong - leaks energy at grazing angles
 // see Global Illumination Compendium entry (66) 
 class PhongClosure : public BSDFClosure {
+    Vec3 m_N;
+    float m_exponent;
 public:
-    PhongClosure () : BSDFClosure ("phong", "nf") { }
+    PhongClosure (const Vec3 &N, float exponent) :
+        m_N (N), m_exponent (exponent) { }
 
-    struct params_t {
-        Vec3 N;
-        float exponent;
-    };
+    void print_on (std::ostream &out) const {
+        out << "phong ((";
+        out << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_exponent << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             // we are viewing the surface from the same side as the normal
-            axis = params->N;
+            axis = m_N;
             angle = (float) M_PI;
             return true;
         }
@@ -330,38 +374,36 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
-        float cosNI = params->N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         // reflect the view vector
-        Vec3 R = (2 * cosNO) * params->N - omega_out;
+        Vec3 R = (2 * cosNO) * m_N - omega_out;
         float cosRI = R.dot(omega_in);
-        float out = (cosRI > 0) ? cosNI * ((params->exponent + 2) * 0.5f * (float) M_1_PI * powf(cosRI, params->exponent)) : 0;
+        float out = (cosRI > 0) ? cosNI * ((m_exponent + 2) * 0.5f * (float) M_1_PI * powf(cosRI, m_exponent)) : 0;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO) * params->N - omega_out;
-            domega_in_dx = (2 * params->N.dot(domega_out_dx)) * params->N - domega_out_dx;
-            domega_in_dy = (2 * params->N.dot(domega_out_dy)) * params->N - domega_out_dy;
+            Vec3 R = (2 * cosNO) * m_N - omega_out;
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
             Vec3 T, B;
             make_orthonormals (R, T, B);
             float phi = 2 * (float) M_PI * randu;
-            float cosTheta = powf(randv, 1 / (params->exponent + 1));
+            float cosTheta = powf(randv, 1 / (m_exponent + 1));
             float sinTheta2 = 1 - cosTheta * cosTheta;
             float sinTheta = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
             omega_in = (cosf(phi) * sinTheta) * T +
@@ -370,14 +412,14 @@ public:
             if ((Ng ^ omega_in) > 0)
             {
                 // common terms for pdf and eval
-                float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), params->exponent);
-                float cosNI = params->N.dot(omega_in);
+                float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), m_exponent);
+                float cosNI = m_N.dot(omega_in);
                 float power;
                 // make sure the direction we chose is still in the right hemisphere
                 if (cosNI > 0)
                 {
-                    pdf = (params->exponent + 1) * common;
-                    power = cosNI * (params->exponent + 2) * common;
+                    pdf = (m_exponent + 1) * common;
+                    power = cosNI * (m_exponent + 2) * common;
                     eval.setValue(power, power, power);
                     // Since there is some blur to this reflection, make the
                     // derivatives a bit bigger. In theory this varies with the
@@ -390,39 +432,68 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
-        Vec3 R = (2 * cosNO) * params->N - omega_out;
+        float cosNO = m_N.dot(omega_out);
+        Vec3 R = (2 * cosNO) * m_N - omega_out;
         float cosRI = R.dot(omega_in);
-        return cosRI > 0 ? (params->exponent + 1) * 0.5f * (float) M_1_PI * powf(cosRI, params->exponent) : 0;
+        return cosRI > 0 ? (m_exponent + 1) * 0.5f * (float) M_1_PI * powf(cosRI, m_exponent) : 0;
     }
 
 };
+
+DECLOP (OP_phong)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &exponent (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (exponent.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> exp ((float *)exponent.data(), exponent.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (PhongClosure));
+            new (mem) PhongClosure(n[i], exp[i]);
+        }
+    }
+}
+
 
 
 // anisotropic ward - leaks energy at grazing angles
 // see http://www.graphics.cornell.edu/~bjw/wardnotes.pdf 
 class WardClosure : public BSDFClosure {
+    Vec3 m_N;
+    Vec3 m_T;
+    float m_ax, m_ay;
 public:
-    WardClosure () : BSDFClosure ("ward", "nvff") { }
+    WardClosure (const Vec3 &N, const Vec3 &T, float ax, float ay) :
+        m_N (N), m_T (T), m_ax (ax), m_ay (ay) { }
 
-    struct params_t {
-        Vec3 N;
-        Vec3 T;
-        float ax, ay;
-    };
+    void print_on (std::ostream &out) const {
+        out << "ward ((";
+        out << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), (";
+        out << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), ";
+        out << m_ax << ", " << m_ay << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             // we are viewing the surface from the same side as the normal
-            axis = params->N;
+            axis = m_N;
             angle = (float) M_PI;
             return true;
         }
@@ -430,48 +501,46 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
-        float cosNI = params->N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         if (cosNI * cosNO <= 0.0f)
            return Color3 (0,0,0);
         // get half vector and get x,y basis on the surface for anisotropy
         Vec3 H = omega_in + omega_out; // no need to normalize
         Vec3 X, Y;
-        make_orthonormals(params->N, params->T, X, Y);
+        make_orthonormals(m_N, m_T, X, Y);
         // eq. 4
-        float dotx = H.dot(X) / params->ax;
-        float doty = H.dot(Y) / params->ay;
-        float dotn = H.dot(params->N);
+        float dotx = H.dot(X) / m_ax;
+        float doty = H.dot(Y) / m_ay;
+        float dotn = H.dot(m_N);
         float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-        float denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
+        float denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
         float out = cosNI * expf(-exp_arg) / denom;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
             Vec3 X, Y;
-            make_orthonormals(params->N, params->T, X, Y);
+            make_orthonormals(m_N, m_T, X, Y);
             // generate random angles for the half vector
             // eq. 7 (taking care around discontinuities to keep
             //        output angle in the right quadrant)
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
             //                  and sin(atan(x)) == x/sqrt(1+x^2)
-            float alphaRatio = params->ay / params->ax;
+            float alphaRatio = m_ay / m_ax;
             float cosPhi, sinPhi;
             if (randu < 0.25f) {
                 float val = 4 * randu;
@@ -500,7 +569,7 @@ public:
             // eq. 6
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
             //                  and sin(atan(x)) == x/sqrt(1+x^2)
-            float thetaDenom = (cosPhi * cosPhi) / (params->ax * params->ax) + (sinPhi * sinPhi) / (params->ay * params->ay);
+            float thetaDenom = (cosPhi * cosPhi) / (m_ax * m_ax) + (sinPhi * sinPhi) / (m_ay * m_ay);
             float tanTheta2 = -logf(1 - randv) / thetaDenom;
             float cosTheta  = 1 / sqrtf(1 + tanTheta2);
             float sinTheta  = cosTheta * sqrtf(tanTheta2);
@@ -510,11 +579,11 @@ public:
             h.y = sinTheta * sinPhi;
             h.z = cosTheta;
             // compute terms that are easier in local space
-            float dotx = h.x / params->ax;
-            float doty = h.y / params->ay;
+            float dotx = h.x / m_ax;
+            float doty = h.y / m_ay;
             float dotn = h.z;
             // transform to world space
-            h = h.x * X + h.y * Y + h.z * params->N;
+            h = h.x * X + h.y * Y + h.z * m_N;
             // generate the final sample
             float oh = h.dot(omega_out);
             omega_in.x = 2 * oh * h.x - omega_out.x;
@@ -523,15 +592,15 @@ public:
             if ((Ng ^ omega_in) > 0.0f) {
                 // eq. 9
                 float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-                float denom = 4 * (float) M_PI * params->ax * params->ay * oh * dotn * dotn * dotn;
+                float denom = 4 * (float) M_PI * m_ax * m_ay * oh * dotn * dotn * dotn;
                 pdf = expf(-exp_arg) / denom;
-                float cosNI = params->N ^ omega_in;
+                float cosNI = m_N.dot(omega_in);
                 // compiler will reuse expressions already computed
-                denom = (4 * (float) M_PI * params->ax * params->ay * sqrtf(cosNO * cosNI));
+                denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
                 float power = cosNI * expf(-exp_arg) / denom;
                 eval.setValue(power, power, power);
-                domega_in_dx = (2 * params->N.dot(domega_out_dx)) * params->N - domega_out_dx;
-                domega_in_dy = (2 * params->N.dot(domega_out_dy)) * params->N - domega_out_dy;
+                domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+                domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
                 // Since there is some blur to this reflection, make the
                 // derivatives a bit bigger. In theory this varies with the
                 // roughness but the exact relationship is complex and
@@ -542,45 +611,81 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
-        const params_t *params = (const params_t *) paramsptr;
         Vec3 H = omega_in + omega_out;
         H.normalize(); // needed for denominator
         Vec3 X, Y;
-        make_orthonormals(params->N, params->T, X, Y);
+        make_orthonormals(m_N, m_T, X, Y);
         // eq. 9
-        float dotx = H.dot(X) / params->ax;
-        float doty = H.dot(Y) / params->ay;
-        float dotn = H.dot(params->N);
+        float dotx = H.dot(X) / m_ax;
+        float doty = H.dot(Y) / m_ay;
+        float dotn = H.dot(m_N);
         float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-        float denom = 4 * (float) M_PI * params->ax * params->ay * H.dot(omega_out) * dotn * dotn * dotn;
+        float denom = 4 * (float) M_PI * m_ax * m_ay * H.dot(omega_out) * dotn * dotn * dotn;
         return expf(-exp_arg) / denom;
     }
 };
+
+DECLOP (OP_ward)
+{
+    DASSERT (nargs == 5);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &T (exec->sym (args[2]));
+    Symbol &Ax (exec->sym (args[3]));
+    Symbol &Ay (exec->sym (args[4]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (T.typespec().is_triple());
+    DASSERT (Ax.typespec().is_float());
+    DASSERT (Ay.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<Vec3> t ((Vec3 *)T.data(), T.step());
+    VaryingRef<float> ax ((float *)Ax.data(), Ax.step());
+    VaryingRef<float> ay ((float *)Ay.data(), Ay.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (WardClosure));
+            new (mem) WardClosure(n[i], t[i], ax[i], ay[i]);
+        }
+    }
+}
+
 
 
 // microfacet model with GGX facet distribution
 // see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf 
 class MicrofacetGGXClosure : public BSDFClosure {
+    Vec3 m_N;
+    float m_ag;   // width parameter (roughness)
+    float m_R0;   // fresnel reflectance at incidence
 public:
-    MicrofacetGGXClosure () : BSDFClosure ("microfacet_ggx", "nff") { }
+    MicrofacetGGXClosure (const Vec3 &N, float ag, float R0) :
+        m_N (N), m_ag (ag), m_R0 (R0) { }
 
-    struct params_t {
-        Vec3 N;
-        float ag;   // width parameter (roughness)
-        float R0;   // fresnel reflectance at incidence
-    };
+    void print_on (std::ostream &out) const {
+        out << "microfacet_ggx (";
+        out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_ag << ", ";
+        out << m_R0;
+        out << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             // we are viewing the surface from the same side as the normal
-            axis = params->N;
+            axis = m_N;
             angle = (float) M_PI;
             return true;
         }
@@ -588,19 +693,18 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
-        float cosNI = params->N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         // get half vector
         Vec3 Hr = omega_in + omega_out;
         Hr.normalize();
         // eq. 20: (F*G*D)/(4*in*on)
         // eq. 33: first we calculate D(m) with m=Hr:
-        float alpha2 = params->ag * params->ag;
-        float cosThetaM = Hr.dot(params->N);
+        float alpha2 = m_ag * m_ag;
+        float cosThetaM = Hr.dot(m_N);
         float cosThetaM2 = cosThetaM * cosThetaM;
         float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
         float cosThetaM4 = cosThetaM2 * cosThetaM2;
@@ -610,36 +714,35 @@ public:
         float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
         float G = G1o * G1i;
         // fresnel term between outgoing direction and microfacet
-        float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
+        float F = fresnel_shlick(Hr.dot(omega_out), m_R0);
         float out = (F * G * D) * 0.25f / cosNI;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
-            make_orthonormals(params->N, X, Y);
+            make_orthonormals(m_N, X, Y);
             // generate a random microfacet normal m
             // eq. 35,36:
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
             //                  and sin(atan(x)) == x/sqrt(1+x^2)
-            float alpha2 = params->ag * params->ag;
+            float alpha2 = m_ag * m_ag;
             float tanThetaM2 = alpha2 * randu / (1 - randu);
             float cosThetaM  = 1 / sqrtf(1 + tanThetaM2);
             float sinThetaM  = cosThetaM * sqrtf(tanThetaM2);
             float phiM = 2 * float(M_PI) * randv;
             Vec3 m = (cosf(phiM) * sinThetaM) * X +
                      (sinf(phiM) * sinThetaM) * Y +
-                                   cosThetaM  * params->N;
+                                   cosThetaM  * m_N;
             float cosMO = m.dot(omega_out);
             if (cosMO > 0) {
                 // microfacet normal is visible to this ray
@@ -656,11 +759,11 @@ public:
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
                 if ((Ng ^ omega_in) > 0.0f) {
-                    float cosNI = params->N.dot(omega_in);
+                    float cosNI = m_N.dot(omega_in);
                     float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
                     float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
                     float G = G1o * G1i;
-                    float F = fresnel_shlick(m.dot(omega_out), params->R0);
+                    float F = fresnel_shlick(m.dot(omega_out), m_R0);
                     float power = (F * G * D) * 0.25f / cosNI;
                     eval.setValue(power, power, power);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
@@ -676,21 +779,20 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
-        const params_t *params = (const params_t *) paramsptr;
         // get microfacet normal m (half-vector)
         Vec3 m = omega_in + omega_out;
         m.normalize();
         float cosMO = m.dot(omega_out);
         if (cosMO > 0) {
             // eq. 33
-            float cosThetaM = params->N.dot(m);
+            float cosThetaM = m_N.dot(m);
             float cosThetaM2 = cosThetaM * cosThetaM;
             float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
             float cosThetaM4 = cosThetaM2 * cosThetaM2;
-            float alpha2 = params->ag * params->ag;
+            float alpha2 = m_ag * m_ag;
             float D = alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
             // eq. 24
             float pm = D * cosThetaM;
@@ -703,27 +805,61 @@ public:
     }
 };
 
+DECLOP (OP_microfacet_ggx)
+{
+    DASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &Ag (exec->sym (args[2]));
+    Symbol &R0 (exec->sym (args[3]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (Ag.typespec().is_float());
+    DASSERT (R0.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> ag ((float *)Ag.data(), Ag.step());
+    VaryingRef<float> r0 ((float *)R0.data(), R0.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (MicrofacetGGXClosure));
+            new (mem) MicrofacetGGXClosure(n[i], ag[i], r0[i]);
+        }
+    }
+}
+
+
 
 // microfacet model with Beckmann facet distribution
 // see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf 
 class MicrofacetBeckmannClosure : public BSDFClosure {
+    Vec3 m_N;
+    float m_ab;   // width parameter (roughness)
+    float m_R0;   // fresnel reflectance at incidence
 public:
-    MicrofacetBeckmannClosure () : BSDFClosure ("microfacet_beckmann", "nff") { }
+    MicrofacetBeckmannClosure (const Vec3 &N, float ab, float R0) :
+        m_N (N), m_ab (ab), m_R0 (R0) { }
 
-    struct params_t {
-        Vec3 N;
-        float ab;   // width parameter (roughness)
-        float R0;   // fresnel reflectance at incidence
-    };
+    void print_on (std::ostream &out) const {
+        out << "microfacet_beckmann (";
+        out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_ab << ", ";
+        out << m_R0;
+        out << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             // we are viewing the surface from the same side as the normal
-            axis = params->N;
+            axis = m_N;
             angle = (float) M_PI;
             return true;
         }
@@ -731,60 +867,58 @@ public:
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
-        float cosNI = params->N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         // get half vector
         Vec3 Hr = omega_in + omega_out;
         Hr.normalize();
         // eq. 20: (F*G*D)/(4*in*on)
         // eq. 25: first we calculate D(m) with m=Hr:
-        float alpha2 = params->ab * params->ab;
-        float cosThetaM = Hr.dot(params->N);
+        float alpha2 = m_ab * m_ab;
+        float cosThetaM = Hr.dot(m_N);
         float cosThetaM2 = cosThetaM * cosThetaM;
         float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
         float cosThetaM4 = cosThetaM2 * cosThetaM2;
         float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
         // eq. 26, 27: now calculate G1(i,m) and G1(o,m)
-        float ao = 1 / (params->ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
-        float ai = 1 / (params->ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
+        float ao = 1 / (m_ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
+        float ai = 1 / (m_ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
         float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
         float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
         float G = G1o * G1i;
         // fresnel term between outgoing direction and microfacet
-        float F = fresnel_shlick(Hr.dot(omega_out), params->R0);
+        float F = fresnel_shlick(Hr.dot(omega_out), m_R0);
         float out = (F * G * D) * 0.25f / cosNI;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t *params = (const params_t *) paramsptr;
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
-            make_orthonormals(params->N, X, Y);
+            make_orthonormals(m_N, X, Y);
             // generate a random microfacet normal m
             // eq. 35,36:
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
             //                  and sin(atan(x)) == x/sqrt(1+x^2)
-            float alpha2 = params->ab * params->ab;
+            float alpha2 = m_ab * m_ab;
             float tanThetaM = -alpha2 * logf(1 - randu);
             float cosThetaM = 1 / sqrtf(1 + tanThetaM * tanThetaM);
             float sinThetaM = cosThetaM * tanThetaM;
             float phiM = 2 * float(M_PI) * randv;
             Vec3 m = (cosf(phiM) * sinThetaM) * X +
                      (sinf(phiM) * sinThetaM) * Y +
-                                   cosThetaM  * params->N;
+                                   cosThetaM  * m_N;
             float cosMO = m.dot(omega_out);
             if (cosMO > 0) {
                 // microfacet normal is visible to this ray
@@ -802,13 +936,13 @@ public:
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
                 if ((Ng ^ omega_in) > 0.0f) {
-                    float cosNI = params->N.dot(omega_in);
-                    float ao = 1 / (params->ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
-                    float ai = 1 / (params->ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
+                    float cosNI = m_N.dot(omega_in);
+                    float ao = 1 / (m_ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
+                    float ai = 1 / (m_ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
                     float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
                     float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
                     float G = G1o * G1i;
-                    float F = fresnel_shlick(m.dot(omega_out), params->R0);
+                    float F = fresnel_shlick(m.dot(omega_out), m_R0);
                     float power = (F * G * D) * 0.25f / cosNI;
                     eval.setValue(power, power, power);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
@@ -824,18 +958,17 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
-        const params_t *params = (const params_t *) paramsptr;
         // get microfacet normal m (half-vector)
         Vec3 m = omega_in + omega_out;
         m.normalize();
         float cosMO = m.dot(omega_out);
         if (cosMO > 0) {
             // eq. 25
-            float alpha2 = params->ab * params->ab;
-            float cosThetaM = params->N.dot(m);
+            float alpha2 = m_ab * m_ab;
+            float cosThetaM = m_N.dot(m);
             float cosThetaM2 = cosThetaM * cosThetaM;
             float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
             float cosThetaM4 = cosThetaM2 * cosThetaM2;
@@ -851,50 +984,87 @@ public:
     }
 };
 
+
+
+DECLOP (OP_microfacet_beckmann)
+{
+    DASSERT (nargs == 4);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &Ab (exec->sym (args[2]));
+    Symbol &R0 (exec->sym (args[3]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (Ab.typespec().is_float());
+    DASSERT (R0.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> ab ((float *)Ab.data(), Ab.step());
+    VaryingRef<float> r0 ((float *)R0.data(), R0.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (MicrofacetBeckmannClosure));
+            new (mem) MicrofacetBeckmannClosure(n[i], ab[i], r0[i]);
+        }
+    }
+}
+
+
+
+
 class ReflectionClosure : public BSDFClosure {
+    Vec3  m_N;    // shading normal
+    float m_R0;   // fresnel reflectance at incidence
 public:
-    ReflectionClosure () : BSDFClosure ("reflection", "nf") { }
+    ReflectionClosure (const Vec3 &N, float R0) :
+        m_N (N), m_R0 (R0) { }
 
-    struct params_t {
-        Vec3  N;    // shading normal
-        float R0;   // fresnel reflectance at incidence
-    };
+    void print_on (std::ostream &out) const {
+        out << "reflection (";
+        out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_R0;
+        out << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
         // does not need to be integrated directly
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         // should never be called - because get_cone is empty
         return Color3 (0.0f, 0.0f, 0.0f);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
         // only one direction is possible
-        const params_t* params = (const params_t*) paramsptr;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
-        float cosNO = params->N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
-            omega_in = (2 * cosNO) * params->N - omega_out;
-            domega_in_dx = 2 * params->N.dot(domega_out_dx) * params->N - domega_out_dx;
-            domega_in_dy = 2 * params->N.dot(domega_out_dy) * params->N - domega_out_dy;
+            omega_in = (2 * cosNO) * m_N - omega_out;
+            domega_in_dx = 2 * m_N.dot(domega_out_dx) * m_N - domega_out_dx;
+            domega_in_dy = 2 * m_N.dot(domega_out_dy) * m_N - domega_out_dy;
             pdf = 1;
-            float value = fresnel_shlick(cosNO, params->R0);
+            float value = fresnel_shlick(cosNO, m_R0);
             eval.setValue(value, value, value);
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         // the pdf for an arbitrary direction is 0 because only a single
@@ -903,40 +1073,80 @@ public:
     }
 };
 
+
+
+DECLOP (OP_reflection)
+{
+    DASSERT (nargs == 2 || nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    float one = 1.0f;
+    VaryingRef<float> r0;
+    if (nargs == 3) {
+        // explicit R0 (reflectance at the normal direction)
+        Symbol &R0 (exec->sym (args[2]));
+        DASSERT (R0.typespec().is_float());
+        r0.init((float *)R0.data(), R0.step());
+    } else {
+        // R0 not provided, assume 1.0 (disables fresnel)
+        r0.init(&one, 0);
+    }
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (ReflectionClosure));
+            new (mem) ReflectionClosure(n[i], r0[i]);
+        }
+    }
+}
+
+
 class RefractionClosure : public BSDFClosure {
+    Vec3  m_N;     // shading normal
+    float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    RefractionClosure () : BSDFClosure ("refraction", "nf") { }
+    RefractionClosure (const Vec3 &N, float eta) :
+        m_N (N), m_eta (eta) {}
 
-    struct params_t {
-        Vec3  N;     // shading normal
-        float eta;   // ratio of indices of refraction (inside / outside)
-    };
+    void print_on (std::ostream &out) const {
+        out << "refraction (";
+        out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_eta;
+        out << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
         // does not need to be integrated directly
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         // should never be called - because get_cone is empty
         return Color3 (0.0f, 0.0f, 0.0f);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t* params = (const params_t*) paramsptr;
         labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
-        float Ft = 1 - fresnel_dielectric(params->eta, params->N,
+        float Ft = 1 - fresnel_dielectric(m_eta, m_N,
                                           omega_out, domega_out_dx, domega_out_dy,
                                           R, dRdx, dRdy,
                                           T, dTdx, dTdy);
@@ -949,7 +1159,7 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         // the pdf for an arbitrary direction is 0 because only a single
@@ -958,40 +1168,72 @@ public:
     }
 };
 
+
+DECLOP (OP_refraction)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &Eta (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (Eta.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> eta ((float *)Eta.data(), Eta.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (RefractionClosure));
+            new (mem) RefractionClosure(n[i], eta[i]);
+        }
+    }
+}
+
+
+
 class DielectricClosure : public BSDFClosure {
+    Vec3  m_N;     // shading normal
+    float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    DielectricClosure () : BSDFClosure ("dielectric", "nf") { }
+    DielectricClosure (const Vec3 &N, float eta) :
+        m_N (N), m_eta (eta) {}
 
-    struct params_t {
-        Vec3  N;     // shading normal
-        float eta;   // ratio of indices of refraction (inside / outside)
-    };
+    void print_on (std::ostream &out) const {
+        out << "dielectric (";
+        out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_eta;
+        out << ")";
+    }
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
         // does not need to be integrated directly
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         // should never be called - because get_cone is empty
         return Color3 (0.0f, 0.0f, 0.0f);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        const params_t* params = (const params_t*) paramsptr;
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
         // randomly choose between reflection/refraction
-        float Fr = fresnel_dielectric(params->eta, params->N,
+        float Fr = fresnel_dielectric(m_eta, m_N,
                                       omega_out, domega_out_dx, domega_out_dy,
                                       R, dRdx, dRdy,
                                       T, dTdx, dTdy);
@@ -1012,7 +1254,7 @@ public:
         }
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         // the pdf for an arbitrary direction is 0 because only a single
@@ -1021,16 +1263,33 @@ public:
     }
 };
 
-// these are all singletons
-DiffuseClosure diffuse_closure_primitive;
-TransparentClosure transparent_closure_primitive;
-PhongClosure phong_closure_primitive;
-WardClosure ward_closure_primitive;
-MicrofacetGGXClosure microfacet_ggx_closure;
-MicrofacetBeckmannClosure microfacet_beckmann_closure;
-ReflectionClosure reflection_closure;
-RefractionClosure refraction_closure;
-DielectricClosure dielectric_closure;
+
+DECLOP (OP_dielectric)
+{
+    DASSERT (nargs == 3);
+    Symbol &Result (exec->sym (args[0]));
+    Symbol &N (exec->sym (args[1]));
+    Symbol &Eta (exec->sym (args[2]));
+    DASSERT (Result.typespec().is_closure());
+    DASSERT (N.typespec().is_triple());
+    DASSERT (Eta.typespec().is_float());
+
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (Result, true /* closures always vary */);
+    // N.B. Closures don't have derivs
+
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<Vec3> n ((Vec3 *)N.data(), N.step());
+    VaryingRef<float> eta ((float *)Eta.data(), Eta.step());
+
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (DielectricClosure));
+            new (mem) DielectricClosure(n[i], eta[i]);
+        }
+    }
+}
+
 
 }; // namespace pvt
 }; // namespace OSL

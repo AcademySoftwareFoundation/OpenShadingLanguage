@@ -44,22 +44,28 @@ using namespace OSL;
 namespace {
 
 class MyClosure : public BSDFClosure {
-public:
-    MyClosure () : BSDFClosure ("my", "f") { }
+    float m_f;
 
-    bool get_cone(const void *paramsptr,
-                  const Vec3 &omega_out, Vec3 &axis, float &angle) const
+public:
+    MyClosure (float f) : m_f (f) { }
+
+    void print_on (std::ostream &out) const
+    {
+        out << "my (" << m_f << ")";
+    }
+
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
     {
         return false;
     }
 
-    Color3 eval (const void *paramsptr, const Vec3 &Ng,
+    Color3 eval (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
     {
         return Color3 (0, 0, 0);
     }
 
-    void sample (const void *paramsptr, const Vec3 &Ng,
+    void sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
@@ -68,14 +74,21 @@ public:
         pdf = 0, omega_in.setValue(0, 0, 0), eval.setValue(0, 0, 0);
     }
 
-    float pdf (const void *paramsptr, const Vec3 &Ng,
+    float pdf (const Vec3 &Ng,
                const Vec3 &omega_out, const Vec3 &omega_in) const
     {
         return 0;
     }
 };
 
-MyClosure myclosure;
+ClosureColor create_component(const Color3& w, float f) {
+    ClosureColor c;
+    char* mem = c.allocate_component (sizeof (MyClosure));
+    new (mem) MyClosure(f);
+    c *= w;
+    return c;
+}
+
 
 } // anonymous namespace
 
@@ -88,16 +101,14 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
 #endif
    // Create a closure with one component
     ClosureColor c;
-    c.add_component (ClosurePrimitive::primitive (ustring("my")), Color3(.1, .1, .1));
-    float f = 0.33f;
-    c.set_parameter (0, 0, &f);
+    c += create_component (Color3(.1, .1, .1), 0.33f);
+
     BOOST_CHECK_EQUAL (c.ncomponents(), 1);
 
     // Add another component with different params.  It should now look
     // like two components, not combine with the others.
-    c.add_component (ClosurePrimitive::primitive (ustring("my")), Color3(.4, .4, .4));
-    f = 0.5;
-    c.set_parameter (1, 0, &f);
+    c += create_component (Color3(.4, .4, .4), 0.5f);
+
     BOOST_CHECK_EQUAL (c.ncomponents(), 2);
     BOOST_CHECK_EQUAL (c.weight(1), Color3 (0.4, 0.4, 0.4));
     std::cout << "c = " << c << "\n";

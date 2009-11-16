@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 6 November, 2009 \\
+\date{{\large Date: 16 November, 2009 \\
 %(with corrections, 19 Oct 2009)
 }}
 
@@ -3742,17 +3742,15 @@ implemented as follows:
 
 
 \apiitem{\colorclosure\ {\ce microfacet_beckmann} (normal N, float roughness,
-  float R0, \pl)}
+  float eta, \pl)}
 \indexapi{microfacet_beckmann()}
 
 Returns a \colorclosure that represents specular reflectance of the
 surface using a Beckmann microfacet BRDF (as described in Walter et al., 
 ``Microfacet Models for Refraction through Rough Surfaces,''
 Eurographics Symposium on Rendering, 2007).
-
 The {\cf roughness} controls how rough the microstructure of the surface
-is.  The {\cf R0} parameter supplies the reflectance fraction at normal
-(perpendicular to the surface) incidence.
+is.  The {\cf eta} parameter is the index of refraction of the material.
 
 Additional optional arguments may be passed as token/value pairs:
 
@@ -3780,17 +3778,15 @@ implemented as follows:
 
 
 \apiitem{\colorclosure\ {\ce microfacet_ggx} (normal N, float roughness,
-  float R0, \pl)}
+  float eta, \pl)}
 \indexapi{microfacet_ggx()}
 
 Returns a \colorclosure that represents specular reflectance of the
 surface using the ``GGX'' microfacet BRDF described in Walter et al., 
 ``Microfacet Models for Refraction through Rough Surfaces,''
 Eurographics Symposium on Rendering, 2007.
-
 The {\cf roughness} controls how rough the microstructure of the surface
-is.  The {\cf R0} parameter supplies the reflectance fraction at normal
-(perpendicular to the surface) incidence.
+is.  The {\cf eta} parameter is the index of refraction of the material.
 
 Additional optional arguments may be passed as token/value pairs:
 
@@ -3817,18 +3813,13 @@ implemented as follows:
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce reflection} (normal N, \pl) \\
-\colorclosure\ {\ce reflection} (normal N, float R0, \pl)}
+\apiitem{\colorclosure\ \colorclosure\ {\ce reflection} (normal N, float eta, \pl)}
 \indexapi{reflection()}
 
 Returns a \colorclosure that represents sharp mirror-like reflection
 from the surface.  The reflection direction will be automatically computed
-based on the incident angle.
-
-If the optional {\cf R0} parameter is supplied, it is the reflectance
-fraction at normal (perpendicular to the surface) incidence and is used
-to compute the reflectance amount at other angles according to Shlick's
-approximation.
+based on the incident angle.  The {\cf eta} parameter is the index of
+refraction of the material.
 
 Additional optional arguments may be passed as token/value pairs:
 
@@ -4116,12 +4107,14 @@ occlusion
 
 
 
+\newpage
 \section{Renderer state and message passing}
 \label{sec:stdlib:state}
 \index{functions!renderer state}
 \index{message passing}
 
-\apiitem{int {\ce getattribute} (string name, output \emph{type} destination)}
+\apiitem{int {\ce getattribute} (string name, output \emph{type} destination) \\
+int {\ce getattribute} (string name, int arrayindex, output \emph{type} destination)}
 \indexapi{getattribute()}
 Searches for the renderer attribute with the given \emph{name} (first
 searching per-object attributes on the current object, then if not found
@@ -4130,6 +4123,13 @@ searching scene-wide attributes).  If found and it matches the type of
 \emph{destination} and {\cf getattribute} will return {\cf 1}.  If not
 found, or the type does not match, \emph{destination} will not be
 modified and {\cf getattribute} will return {\cf 0}.
+
+The second form of this function, with the {\cf arrayindex} parameter,
+retrieves the individual indexed element of the named array.  In this
+case, \emph{name} must be an array attribute, the type of
+\emph{destination} must be the type of the array element (not the type
+of the whole array), and the value of \emph{arrayindex} must be a valid
+index given the array's size.
 \apiend
 
 \apiitem{void {\ce setmessage} (string name, output \emph{type} value)}

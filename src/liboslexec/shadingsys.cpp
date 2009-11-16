@@ -127,7 +127,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       TextureSystem *texturesystem,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
-      m_statslevel (0), m_debug (false), m_in_group (false),
+      m_statslevel (0), m_debug (false), m_commonspace_synonym("world"),
+      m_in_group (false),
       m_global_heap_total (0)
 {
     m_stat_shaders_loaded = 0;
@@ -185,6 +186,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     }
     if (name == "debug" && type == TypeDesc::INT) {
         m_debug = *(const int *)val;
+        return true;
+    }
+    if (name == "commonspace" && type == TypeDesc::STRING) {
+        m_commonspace_synonym = ustring (*(const char **)val);
         return true;
     }
     return false;

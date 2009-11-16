@@ -434,6 +434,8 @@ public:
         return x + align_padding (x, alignment);
     }
 
+    ustring commonspace_synonym () const { return m_commonspace_synonym; }
+
 private:
     void printstats () const;
     void init_global_heap_offsets ();
@@ -483,6 +485,7 @@ private:
     bool m_debug;                         ///< Debugging output
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
+    ustring m_commonspace_synonym;        ///< Synonym for "common" space
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values

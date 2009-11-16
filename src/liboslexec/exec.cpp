@@ -751,7 +751,7 @@ ShadingExecution::printsymbolval (Symbol &sym)
 void
 ShadingExecution::get_matrix (Matrix44 &result, ustring from, int whichpoint)
 {
-    if (from == Strings::common) {
+    if (from == Strings::common || from == m_shadingsys->commonspace_synonym()) {
         result.makeIdentity ();
         return;
     }
@@ -812,7 +812,7 @@ void
 ShadingExecution::get_inverse_matrix (Matrix44 &result,
                                       ustring to, int whichpoint)
 {
-    if (to == Strings::common) {
+    if (to == Strings::common || to == m_shadingsys->commonspace_synonym()) {
         result.makeIdentity ();
         return;
     }

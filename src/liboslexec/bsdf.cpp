@@ -142,6 +142,21 @@ ClosurePrimitive::fresnel_dielectric (float eta, const Vec3 &N,
     }
 }
 
+float
+ClosurePrimitive::fresnel_dielectric(float cosi, float eta)
+{
+    // compute fresnel reflectance without explicitly computing
+    // the refracted direction
+    float c = fabsf(cosi);
+    float g = eta * eta - 1 + c * c;
+    if (g > 0) {
+        g = sqrtf(g);
+        float A = (g - c) / (g + c);
+        float B = (c * (g + c) - 1) / (c * (g - c) + 1);
+        return 0.5f * A * A * (1 + B * B);
+    }
+    return 1.0f; // TIR (no refracted component)
+}
 
 float
 ClosurePrimitive::fresnel_conductor (float cosi, float eta, float k)
@@ -155,13 +170,6 @@ ClosurePrimitive::fresnel_conductor (float cosi, float eta, float k)
     return (Rparl2 + Rperp2) * 0.5f;
 }
 
-float
-ClosurePrimitive::fresnel_shlick (float cosi, float R0)
-{
-    float cosi2 = cosi * cosi;
-    float cosi5 = cosi2 * cosi2 * cosi;
-    return R0 + (1 - cosi5) * (1 - R0);
-}
 
 
 void

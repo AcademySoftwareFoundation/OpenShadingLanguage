@@ -171,17 +171,18 @@ public:
             Vec3 &R, Vec3 &dRdx, Vec3 &dRdy,
             Vec3& T, Vec3 &dTdx, Vec3 &dTdy);
 
+    /// Helper function to compute fresnel reflectance R of a dielectric. This
+    /// formulation does not explicitly compute the refracted vector so should
+    /// only be used for reflective materials. cosi is the angle between the
+    /// incomming ray and the surface normal, eta gives the index of refraction
+    /// of the surface.
+    static float fresnel_dielectric (float cosi, float eta);
+
     /// Helper function to compute fresnel reflectance R of a conductor. These
     /// materials do not transmit any light. cosi is the angle between the
     /// incomming ray and the surface normal, eta and k give the complex index
     /// of refraction of the surface.
     static float fresnel_conductor (float cosi, float eta, float k);
-
-    /// Helper function to compute an approximation of fresnel reflectance based
-    /// only on the reflectance at normal incidence. cosi is the angle between
-    /// the incoming ray and the surface normal, R0 is the reflectance at normal
-    /// indidence (cosi==0).
-    static float fresnel_shlick (float cosi, float R0);
 
 private:
     Category m_category;

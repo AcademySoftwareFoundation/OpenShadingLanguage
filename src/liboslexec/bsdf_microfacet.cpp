@@ -44,20 +44,20 @@ namespace pvt {
 class MicrofacetGGXClosure : public BSDFClosure {
     Vec3 m_N;
     float m_ag;   // width parameter (roughness)
-    float m_R0;   // fresnel reflectance at incidence
+    float m_eta;  // index of refraction (for fresnel term)
 public:
     CLOSURE_CTOR (MicrofacetGGXClosure)
     {
-        CLOSURE_FETCH_ARG (m_N , 1);
-        CLOSURE_FETCH_ARG (m_ag, 2);
-        CLOSURE_FETCH_ARG (m_R0, 3);
+        CLOSURE_FETCH_ARG (m_N  , 1);
+        CLOSURE_FETCH_ARG (m_ag , 2);
+        CLOSURE_FETCH_ARG (m_eta, 3);
     }
 
     void print_on (std::ostream &out) const {
         out << "microfacet_ggx (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_ag << ", ";
-        out << m_R0;
+        out << m_eta;
         out << ")";
     }
 
@@ -95,7 +95,7 @@ public:
         float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
         float G = G1o * G1i;
         // fresnel term between outgoing direction and microfacet
-        float F = fresnel_shlick(Hr.dot(omega_out), m_R0);
+        float F = fresnel_dielectric(Hr.dot(omega_out), m_eta);
         float out = (F * G * D) * 0.25f / cosNO;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
@@ -144,7 +144,7 @@ public:
                     float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
                     float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
                     float G = G1o * G1i;
-                    float F = fresnel_shlick(m.dot(omega_out), m_R0);
+                    float F = fresnel_dielectric(m.dot(omega_out), m_eta);
                     float power = (F * G * D) * 0.25f / cosNO;
                     eval.setValue(power, power, power);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
@@ -191,13 +191,13 @@ public:
 class MicrofacetBeckmannClosure : public BSDFClosure {
     Vec3 m_N;
     float m_ab;   // width parameter (roughness)
-    float m_R0;   // fresnel reflectance at incidence
+    float m_eta;  // index of refraction (for fresnel term)
 public:
     CLOSURE_CTOR (MicrofacetBeckmannClosure)
     {
-        CLOSURE_FETCH_ARG (m_N , 1);
-        CLOSURE_FETCH_ARG (m_ab, 2);
-        CLOSURE_FETCH_ARG (m_R0, 3);
+        CLOSURE_FETCH_ARG (m_N  , 1);
+        CLOSURE_FETCH_ARG (m_ab , 2);
+        CLOSURE_FETCH_ARG (m_eta, 3);
     }
 
     void print_on (std::ostream &out) const
@@ -205,7 +205,7 @@ public:
         out << "microfacet_beckmann (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_ab << ", ";
-        out << m_R0;
+        out << m_eta;
         out << ")";
     }
 
@@ -245,7 +245,7 @@ public:
         float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
         float G = G1o * G1i;
         // fresnel term between outgoing direction and microfacet
-        float F = fresnel_shlick(Hr.dot(omega_out), m_R0);
+        float F = fresnel_dielectric(Hr.dot(omega_out), m_eta);
         float out = (F * G * D) * 0.25f / cosNO;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
@@ -297,7 +297,7 @@ public:
                     float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
                     float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
                     float G = G1o * G1i;
-                    float F = fresnel_shlick(m.dot(omega_out), m_R0);
+                    float F = fresnel_dielectric(m.dot(omega_out), m_eta);
                     float power = (F * G * D) * 0.25f / cosNO;
                     eval.setValue(power, power, power);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;

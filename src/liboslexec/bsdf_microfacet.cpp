@@ -96,7 +96,7 @@ public:
         float G = G1o * G1i;
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_shlick(Hr.dot(omega_out), m_R0);
-        float out = (F * G * D) * 0.25f / cosNI;
+        float out = (F * G * D) * 0.25f / cosNO;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
@@ -145,7 +145,7 @@ public:
                     float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
                     float G = G1o * G1i;
                     float F = fresnel_shlick(m.dot(omega_out), m_R0);
-                    float power = (F * G * D) * 0.25f / cosNI;
+                    float power = (F * G * D) * 0.25f / cosNO;
                     eval.setValue(power, power, power);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
                     domega_in_dy = (2 * m.dot(domega_out_dy)) * m - domega_out_dy;
@@ -246,7 +246,7 @@ public:
         float G = G1o * G1i;
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_shlick(Hr.dot(omega_out), m_R0);
-        float out = (F * G * D) * 0.25f / cosNI;
+        float out = (F * G * D) * 0.25f / cosNO;
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         return Color3 (out, out, out);
     }
@@ -298,7 +298,7 @@ public:
                     float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
                     float G = G1o * G1i;
                     float F = fresnel_shlick(m.dot(omega_out), m_R0);
-                    float power = (F * G * D) * 0.25f / cosNI;
+                    float power = (F * G * D) * 0.25f / cosNO;
                     eval.setValue(power, power, power);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
                     domega_in_dy = (2 * m.dot(domega_out_dy)) * m - domega_out_dy;

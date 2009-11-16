@@ -124,9 +124,9 @@ multVecMatrix (const Matrix44 &M, Dual2<Vec3> &in, Dual2<Vec3> &out)
     M.multVecMatrix (din, dout);
 
     // Rearrange back into Dual2<Vec3>
-    out.set (Vec3 (dout[0].val(), dout[0].dx(), dout[0].dy()),
-             Vec3 (dout[1].val(), dout[1].dx(), dout[1].dy()),
-             Vec3 (dout[2].val(), dout[2].dx(), dout[2].dy()));
+    out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
+             Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
+             Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
 }
 
 

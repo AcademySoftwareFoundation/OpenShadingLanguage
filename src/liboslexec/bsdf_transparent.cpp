@@ -26,18 +26,72 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cmath>
+
 #include "oslops.h"
 #include "oslexec_pvt.h"
-
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif
+
 namespace OSL {
 namespace pvt {
 
 
-static Color3 one (1.0f, 1.0f, 1.0f);
+class TransparentClosure : public BSDFClosure {
+public:
+    CLOSURE_CTOR (TransparentClosure) { }
+
+    void print_on (std::ostream &out) const {
+        out << "transparent ()";
+    }
+
+    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    {
+        // does not need to be integrated directly
+        return false;
+    }
+
+    Color3 eval (const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    {
+        // should never be called - because get_cone is empty
+        return Color3 (0.0f, 0.0f, 0.0f);
+    }
+
+    void sample (const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
+    {
+        // only one direction is possible
+        omega_in = -omega_out;
+        domega_in_dx = -domega_out_dx;
+        domega_in_dy = -domega_out_dy;
+        pdf = 1;
+        eval.setValue(1, 1, 1);
+        labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
+    }
+
+    float pdf (const Vec3 &Ng,
+               const Vec3 &omega_out, const Vec3 &omega_in) const
+    {
+        // the pdf for an arbitrary direction is 0 because only a single
+        // direction is actually possible
+        return 0;
+    }
+
+    virtual bool isTransparent() const { return true; };
+
+};
+
+DECLOP (OP_transparent)
+{
+    closure_op_guts<TransparentClosure> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+}
 
 
 }; // namespace pvt

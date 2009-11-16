@@ -657,6 +657,47 @@ DECLOP (unary_op)
 }
 
 
+/// Implements the opcode for a specific ClosurePrimitive in the "standard way
+template <typename Primitive> inline
+DECLOP (closure_op_guts)
+{
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_closure());
+    /* Adjust the result's uniform/varying status */
+    exec->adjust_varying (Result, true /* closures always vary */);
+    /* N.B. Closures don't have derivs */
+    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    for (int i = beginpoint;  i < endpoint;  ++i) {
+        if (runflags[i]) {
+            char* mem = result[i]->allocate_component (sizeof (Primitive));
+            new (mem) Primitive (i, exec, nargs, args);
+            // TODO: get labels, sidedness, etc ...
+        }
+    }
+}
+
+/// Fetch the value of an opcode argument given its index in the arglist
+template <typename T> inline
+void fetch_value (T &v, int argidx, int idx, ShadingExecution *exec, int nargs, const int *args)
+{
+    DASSERT (argidx < nargs);
+    // TODO: typecheck assert?
+    Symbol &Sym = exec->sym (args[argidx]);
+    VaryingRef<T> values ((T*) Sym.data(), Sym.step());
+    v = values[idx];
+}
+
+/// Standard form for a closure constructor
+#define CLOSURE_CTOR(name)              \
+    name (int idx, ShadingExecution *exec, int nargs, const int *args)
+
+/// Helper macros to extract values from the opcopde argument list
+#define CLOSURE_FETCH_ARG(v, argidx)    \
+    fetch_value(v, argidx, idx, exec, nargs, args)
+
+
+
+
 
 // Proxy type that derives from Vec3 but allows some additional operations
 // not normally supported by Imath::Vec3.  This is purely for convenience.

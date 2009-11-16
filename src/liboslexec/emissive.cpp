@@ -54,8 +54,17 @@ class GenericEmissiveClosure : public EmissiveClosure {
     // and second the angle where light ends
     float m_outer_angle;
 public:
-    GenericEmissiveClosure (float inner_angle, float outer_angle) :
-        m_inner_angle (inner_angle), m_outer_angle (outer_angle) { }
+    CLOSURE_CTOR (GenericEmissiveClosure)
+    {
+        if (nargs >= 2 && exec->sym (args[1]).typespec().is_float())
+            CLOSURE_FETCH_ARG (m_inner_angle, 1);
+        else
+            m_inner_angle = float(M_PI) * 0.5f;
+        if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
+            CLOSURE_FETCH_ARG (m_outer_angle, 2);
+        else
+            m_outer_angle = m_inner_angle;
+    }
 
     void print_on (std::ostream &out) const {
         out << "emission (" << m_inner_angle << ", " << m_outer_angle << ")";
@@ -137,38 +146,8 @@ public:
 
 DECLOP (OP_emission)
 {
-    DASSERT (nargs >= 1 && nargs <= 3);
-    Symbol &Result (exec->sym (args[0]));
-    DASSERT (Result.typespec().is_closure());
-    VaryingRef<float> inn, out;
-
-    float halfPi = float (M_PI) * 0.5f;
-
-    if (nargs > 1) { // we have a inner_angle 
-        Symbol &inner_angle  (exec->sym (args[1]));
-        DASSERT (inner_angle.typespec().is_float());
-        inn.init ((float *)inner_angle.data(), inner_angle.step());
-    } else
-        inn.init (&halfPi, 0);
-
-    if (nargs > 2) { // we have an outer_angle
-        Symbol &outer_angle  (exec->sym (args[2]));
-        DASSERT (outer_angle.typespec().is_float());
-        out.init ((float *)outer_angle.data(), outer_angle.step());
-    } else
-        out.init (inn.ptr(), inn.step());
-       
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, true /* closures always vary */);
-    // N.B. Closures don't have derivs
-    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
-
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            char* mem = result[i]->allocate_component (sizeof (GenericEmissiveClosure));
-            new (mem) GenericEmissiveClosure(inn[i], out[i]);
-        }
-    }
+    closure_op_guts<GenericEmissiveClosure> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
 }
 
 

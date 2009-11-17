@@ -139,6 +139,15 @@ SymbolTable::find (ustring name, Symbol *last) const
 
 
 
+Symbol *
+SymbolTable::find_exact (ustring mangled_name) const
+{
+    ScopeTable::const_iterator s = m_allmangled.find (mangled_name);
+    return (s != m_allmangled.end()) ? s->second : NULL;
+}
+
+
+
 Symbol * 
 SymbolTable::clash (ustring name) const
 {
@@ -155,6 +164,7 @@ SymbolTable::insert (Symbol *sym)
     sym->scope (scopeid ());
     m_scopetables.back()[sym->name()] = sym;
     m_allsyms.push_back (sym);
+    m_allmangled[ustring(sym->mangled())] = sym;
 }
 
 

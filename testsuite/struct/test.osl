@@ -1,0 +1,46 @@
+// struct declaration in global scope
+struct Astruct {
+    float f;
+    float i;
+    point p;
+    string s;
+};
+
+
+struct Bstruct {
+    vector v;
+    float i;
+};
+
+
+
+shader
+test ()
+{
+    printf ("test struct\n");
+
+    // Make one
+    Astruct a;
+
+    // Structure assignment
+    a.f = M_PI;
+    a.i = 42;
+    a.p = point (0, 1, 2);
+    a.s = "foobar";
+
+    // Structure selection
+    printf ("a == { %g, %i, [%g], %s }\n", a.f, a.i, a.p, a.s);
+
+    Bstruct b;
+
+    // Structure assignment
+    Astruct c;
+    c = a;
+    printf ("\n");
+    printf ("after c=a, a == { %g, %i, [%g], %s }\n", c.f, c.i, c.p, c.s);
+
+    // Make sure it's ok with varying
+    printf ("\n");
+    a.p = P;
+    printf ("after a.p=P, a == { %g, %i, [%g], %s }\n", a.f, a.i, a.p, a.s);
+}

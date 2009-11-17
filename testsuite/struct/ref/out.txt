@@ -1,0 +1,11 @@
+Compiled test.osl -> test.oso
+test struct
+a == { 3.14159, 42, [0 1 2], foobar }
+
+after c=a, a == { 3.14159, 42, [0 1 2], foobar }
+
+after a.p=P, a == { 3.14159, 42, [0 0 1], foobar }
+after a.p=P, a == { 3.14159, 42, [1 0 1], foobar }
+after a.p=P, a == { 3.14159, 42, [0 1 1], foobar }
+after a.p=P, a == { 3.14159, 42, [1 1 1], foobar }
+

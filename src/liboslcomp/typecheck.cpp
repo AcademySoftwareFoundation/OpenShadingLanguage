@@ -221,9 +221,15 @@ ASTindex::typecheck (TypeSpec expected)
 TypeSpec
 ASTstructselect::typecheck (TypeSpec expected)
 {
+    // The ctr already figured out if this was a valid structure selection
+    if (m_fieldid < 0 || m_mangledsym == NULL)
+        return TypeSpec();
+
+    typecheck_children ();
+    StructSpec *structspec (oslcompiler->symtab().structure (m_structid));
+    m_typespec = structspec->field(m_fieldid).type;
     m_is_lvalue = lvalue()->is_lvalue();
-    return ASTNode::typecheck (expected);
-    // FIXME -- this is totally wrong
+    return m_typespec;
 }
 
 
@@ -297,6 +303,21 @@ ASTassign_expression::typecheck (TypeSpec expected)
         expr()->nodetype() == literal_node &&
         ((ASTliteral *)&(*expr()))->floatval() == 0.0f) {
         return TypeSpec(); // it's ok
+    }
+
+    // If either argument is a structure, they better both be the same
+    // exact kind of structure.
+    if (vt.is_structure() || et.is_structure()) {
+        int vts = vt.structure(), ets = et.structure();
+        if (vts == ets)
+            return m_typespec = vt;
+        // Otherwise, a structure mismatch
+        const char *etname = et.is_structure() ? 
+            m_compiler->symtab().structure(ets)->name().c_str() : et.c_str();
+        const char *vtname = vt.is_structure() ? 
+            m_compiler->symtab().structure(vts)->name().c_str() : vt.c_str();
+        error ("Cannot assign '%s' to '%s'", etname, vtname);
+        return TypeSpec();
     }
 
     // Expression must be of a type assignable to the lvalue
@@ -411,7 +432,6 @@ higherprecision (const TypeDesc &a, const TypeDesc &b)
 TypeSpec
 ASTbinary_expression::typecheck (TypeSpec expected)
 {
-    // FIXME - closures
     typecheck_children (expected);
     TypeSpec l = left()->typespec();
     TypeSpec r = right()->typespec();
@@ -419,8 +439,11 @@ ASTbinary_expression::typecheck (TypeSpec expected)
     // No binary ops work on structs or arrays
     if (l.is_structure() || r.is_structure() ||
         l.is_array() || r.is_array()) {
-        error ("Not allowed: '%s %s %s'",
-               l.string().c_str(), opname(), r.string().c_str());
+        const char *lname = l.is_structure() ? 
+            m_compiler->symtab().structure(l.structure())->name().c_str() : l.c_str();
+        const char *rname = r.is_structure() ? 
+            m_compiler->symtab().structure(r.structure())->name().c_str() : r.c_str();
+        error ("Not allowed: '%s %s %s'", lname, opname(), rname);
         return TypeSpec ();
     }
 

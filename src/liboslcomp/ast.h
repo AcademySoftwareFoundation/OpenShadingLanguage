@@ -393,6 +393,8 @@ public:
     void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
+    ustring name () const { return m_name; }
+    std::string mangled () const { return m_sym->mangled(); }
 private:
     ustring m_name;
     Symbol *m_sym;
@@ -471,18 +473,21 @@ public:
 class ASTstructselect : public ASTNode
 {
 public:
-    ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr, ustring field)
-        : ASTNode (structselect_node, comp, 0, expr), m_field(field)
-    { }
+    ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr, ustring field);
     const char *nodetypename () const { return "structselect"; }
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref lvalue () const { return child (0); }
     ustring field () const { return m_field; }
 private:
-    ustring m_field;
+    ustring m_field;         ///< Name of the field
+    int m_structid;          ///< index of the structure
+    int m_fieldid;           ///< index of the field within the structure
+    ustring m_mangledfield;  ///< Mangled name of the field variable
+    Symbol *m_mangledsym;    ///< Symbol of the field variable
 };
 
 

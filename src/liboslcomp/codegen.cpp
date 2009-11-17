@@ -324,30 +324,39 @@ ASTreturn_statement::codegen (Symbol *dest)
 Symbol *
 ASTassign_expression::codegen (Symbol *dest)
 {
+    ASSERT (m_op == Assign);  // all else handled by binary_op
+
     ASTindex *index = NULL;
     if (var()->nodetype() == index_node) {
         // Assigning to an individual component or array element
         index = (ASTindex *) var().get();
     }
     dest = index ? NULL : var()->codegen();
-    if (m_op == Assign) {
-        Symbol *operand = expr()->codegen (dest);
-        // FIXME -- what about coerced types, do we need a temp and copy here?
-        if (index)
-            index->codegen_assign (operand);
-        else if (operand != dest)
-            emitcode ("assign", dest, operand);
-    } else {
-        Symbol *operand = expr()->codegen ();
-        // FIXME -- what about coerced types, do we need a temp and copy here?
-        if (index) {
-            index->codegen_assign (operand);
-            // FIXME -- wrong
+    Symbol *operand = expr()->codegen (dest);
+
+    if (typespec().is_structure()) {
+        // Assignment of struct copies each element individually
+        StructSpec *structspec;
+        structspec = oslcompiler->symtab().structure (typespec().structure());
+        for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+            const StructSpec::FieldSpec &field (structspec->field(i));
+            ustring vname = ustring::format ("___%s_%s", dest->mangled().c_str(),
+                                             field.name.c_str());
+            ustring ename = ustring::format ("___%s_%s", operand->mangled().c_str(),
+                                             field.name.c_str());
+            Symbol *vsym = m_compiler->symtab().find_exact (vname);
+            Symbol *esym = m_compiler->symtab().find_exact (ename);
+            emitcode ("assign", vsym, esym);
         }
-        else
-            emitcode (opword(), dest, dest, operand);
+        
+        return dest;  // FIXME -- do we need a dummy structure?
     }
 
+
+    if (index)
+        index->codegen_assign (operand);
+    else if (operand != dest)
+        emitcode ("assign", dest, operand);
     return dest;
 }
 
@@ -610,6 +619,14 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
     } else {
         ASSERT (0);
     }
+}
+
+
+
+Symbol *
+ASTstructselect::codegen (Symbol *dest)
+{
+    return m_mangledsym;
 }
 
 

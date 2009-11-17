@@ -250,6 +250,10 @@ public:
     ///
     void insert (Symbol *sym);
 
+    /// Find the full mangled lookup from the full list of symbols.
+    /// (No scope stack involved.)
+    Symbol * find_exact (ustring mangled_name) const;
+
     /// Make a new structure type and name it.  Return the index of the
     /// new structure.
     int new_struct (ustring name);
@@ -270,6 +274,10 @@ public:
     ///
     void pop ();
 
+    /// Find a structure record by name.
+    ///
+    StructSpec *structure (int id) { return m_structs[id]; }
+
     /// delete all symbols that have ever been entered into the table.
     /// After doing this, beware following any Symbol pointers left over!
     void delete_syms ();
@@ -289,6 +297,7 @@ private:
     StructList m_structs;            ///< All the structures we use
     ScopeTableStack m_scopetables;   ///< Stack of symbol scopes
     std::stack<int> m_scopestack;    ///< Stack of current scope IDs
+    ScopeTable m_allmangled;         ///< All syms, mangled, in a hash table
     int m_scopeid;                   ///< Current scope ID
     int m_nextscopeid;               ///< Next unique scope ID
 };

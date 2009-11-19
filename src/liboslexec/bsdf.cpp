@@ -199,36 +199,6 @@ ClosurePrimitive::pdf_cos_hemisphere (const Vec3 &N, const Vec3 &omega_in)
 }
 
 
-
-void 
-ClosurePrimitive::sample_uniform_hemisphere (const Vec3 &N, const Vec3 &omega_out,
-                                             float randu, float randv, 
-                                             Vec3 &omega_in, float &pdf)
-{
-    float z = randu;
-    float r = sqrtf(std::max(0.f, 1.f - z*z));
-    float phi = 2.f * M_PI * randv;
-    float x = r * cosf(phi);
-    float y = r * sinf(phi);
-    
-    Vec3 T, B;
-    make_orthonormals (N, T, B);
-    omega_in = x * T + y * B + z * N;
-    pdf = 0.5f * (float) M_1_PI;
-    
-}
-
-
-
-float
-ClosurePrimitive::pdf_uniform_hemisphere (const Vec3 &N, const Vec3 &omega_in)
-{
-    float costheta = N.dot (omega_in);  
-    return costheta > 0.f ? (0.5f * (float) M_1_PI) : 0.f;
-}
-
-
-
 }; // namespace OSL
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE

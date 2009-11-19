@@ -210,10 +210,8 @@ DECLOP (OP_transpose);
 //DECLOP (OP_translucence);
 DECLOP (OP_trunc);
 DECLOP (OP_vector);
-DECLOP (OP_velvet);
 DECLOP (OP_ward);
 DECLOP (OP_warning);
-DECLOP (OP_westin);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);

@@ -311,10 +311,8 @@ static OpNameEntry op_name_entries[] = {
     { "transpose", OP_transpose },
     { "trunc", OP_trunc },
     { "vector", OP_vector },
-    { "velvet", OP_velvet },
     { "ward", OP_ward },
     { "warning", OP_warning },
-    { "westin", OP_westin },
     { "while", OP_for },
     { "xor", OP_xor },
     { NULL, NULL}

@@ -907,7 +907,6 @@ namespace Strings {
     extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
     extern ustring null, default_;
     extern ustring diffuse, phong, ward, transparent;
-    extern ustring westin, velvet;
     extern ustring microfacet_beckmann, microfacet_ggx;
     extern ustring reflection, refraction, dielectric;
     extern ustring emission;

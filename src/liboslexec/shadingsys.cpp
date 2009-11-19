@@ -102,6 +102,7 @@ ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
 ustring null ("null"), default_("default");
 ustring diffuse ("diffuse"), phong ("phong"), ward ("ward"), transparent ("transparent");
+ustring westin ("westin"), velvet ("velvet");
 ustring microfacet_beckmann ("microfacet_beckmann"), microfacet_ggx ("microfacet_ggx");
 ustring reflection ("reflection"), refraction ("refraction"), dielectric ("dielectric");
 ustring emission ("emission");

@@ -276,7 +276,7 @@ ASTshader_declaration::codegen (Symbol *dest)
             // If the initializer is a literal and we output it as a
             // constant in the symbol definition, no need for ops.
             std::string out;
-            if (v->param_default_literals (out))
+            if (v->param_default_literals (v->sym(), out))
                 continue;
 
             m_compiler->codegen_method (v->name());
@@ -363,94 +363,115 @@ ASTassign_expression::codegen (Symbol *dest)
 
 
 bool
-ASTvariable_declaration::param_default_literals (std::string &out)
+ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
+                                                    ASTNode *init,
+                                                    std::string &out)
 {
-    TypeSpec type = sym()->typespec().elementtype();
-
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
+    ASTliteral *lit = dynamic_cast<ASTliteral *>(init);
+    bool completed = true;  // have we output the full initialization?
+    TypeSpec type = sym->typespec().elementtype();
+    if (type.is_closure()) {
+        // this clause avoid trouble and assertions if the following
+        // is_int(), i_float(), etc, encounter a closure.
+        completed = (lit != NULL);
+    } else if (type.is_structure()) {
+        // No initializers for struct
+        completed = false;
+    } else if (type.is_int()) {
+        if (lit && lit->typespec().is_int())
+            out += Strutil::format ("%d ", lit->intval());
+        else {
+            out += "0 ";  // FIXME?
+            completed = false;
+        }
+    } else if (type.is_float()) {
+        if (lit && lit->typespec().is_int())
+            out += Strutil::format ("%d ", lit->intval());
+        else if (lit && lit->typespec().is_float())
+            out += Strutil::format ("%.8g ", lit->floatval());
+        else {
+            out += "0 ";  // FIXME?
+            completed = false;
+        }
+    } else if (type.is_triple()) {
+        if (lit && lit->typespec().is_int()) {
+            float f = lit->intval();
+            out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
+        } else if (lit && lit->typespec().is_float()) {
+            float f = lit->floatval();
+            out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
+        } else if (init && init->typespec() == type &&
+                   init->nodetype() == ASTNode::type_constructor_node) {
+            ASTtype_constructor *ctr = (ASTtype_constructor *) init;
+            ASTNode::ref val = ctr->args();
+            float f[3];
+            int nargs = 0;
+            for (int c = 0;  c < 3;  ++c) {
+                if (val.get())
+                    ++nargs;
+                if (val.get() && val->nodetype() == ASTNode::literal_node) {
+                    f[c] = ((ASTliteral *)val.get())->floatval ();
+                    val = val->next();
+                } else {
+                    f[c] = 0;
+                    completed = false;
+                }
+            }
+            if (nargs == 1)
+                out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[0], f[0]);
+            else
+                out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[1], f[2]);
+        } else {
+            out += "0 0 0 ";
+            completed = false;
+        }
+    } else if (type.is_matrix()) {
+        float f = 0;
+        if (lit && lit->typespec().is_int())
+            f = lit->intval();
+        else if (lit && lit->typespec().is_float())
+            f = lit->floatval();
+        else {
+            f = 0;  // FIXME?
+            completed = false;
+        }
+        out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
+    } else if (type.is_string()) {
+        if (lit && lit->typespec().is_string())
+            out += Strutil::format ("\"%s\" ", lit->strval());
+        else {
+            out += "\"\" ";  // FIXME?
+            completed = false;
+        }
+    }
+    else {
+        ASSERT (0 && "help with initializer");
+    }
+    return completed;
+}
 
+
+
+bool
+ASTvariable_declaration::param_default_literals (const Symbol *sym, std::string &out)
+{
     out.clear ();
     bool completed = true;  // have we output the full initialization?
 
-    for (ASTNode::ref init = this->init();  init;  init = init->next()) {
-        ASTliteral *lit = dynamic_cast<ASTliteral *>(init.get());
-        if (type.is_closure()) {
-            // this clause avoid trouble and assertions if the following
-            // is_int(), i_float(), etc, encounter a closure.
-            completed = (lit != NULL);
-        } else if (type.is_int()) {
-            if (lit && lit->typespec().is_int())
-                out += Strutil::format ("%d ", lit->intval());
-            else {
-                out += "0 ";  // FIXME?
-                completed = false;
-            }
-        } else if (type.is_float()) {
-            if (lit && lit->typespec().is_int())
-                out += Strutil::format ("%d ", lit->intval());
-            else if (lit && lit->typespec().is_float())
-                out += Strutil::format ("%.8g ", lit->floatval());
-            else {
-                out += "0 ";  // FIXME?
-                completed = false;
-            }
-        } else if (type.is_triple()) {
-            if (lit && lit->typespec().is_int()) {
-                float f = lit->intval();
-                out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
-            } else if (lit && lit->typespec().is_float()) {
-                float f = lit->floatval();
-                out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
-            } else if (init->nodetype() == ASTNode::type_constructor_node &&
-                     init->typespec() == type) {
-                ASTtype_constructor *ctr = dynamic_cast<ASTtype_constructor *>(init.get());
-                ASTNode::ref val = ctr->args();
-                float f[3];
-                int nargs = 0;
-                for (int c = 0;  c < 3;  ++c) {
-                    if (val.get())
-                        ++nargs;
-                    if (val.get() && val->nodetype() == ASTNode::literal_node) {
-                        f[c] = ((ASTliteral *)val.get())->floatval ();
-                        val = val->next();
-                    } else {
-                        f[c] = 0;
-                        completed = false;
-                    }
-                }
-                if (nargs == 1)
-                    out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[0], f[0]);
-                else
-                    out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[1], f[2]);
-            } else {
-                out += "0 0 0 ";
-                completed = false;
-            }
-        } else if (type.is_matrix()) {
-            float f = 0;
-            if (lit && lit->typespec().is_int())
-                f = lit->intval();
-            else if (lit && lit->typespec().is_float())
-                f = lit->floatval();
-            else {
-                f = 0;  // FIXME?
-                completed = false;
-            }
-            out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
-                 f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
-        } else if (type.is_string()) {
-            if (lit && lit->typespec().is_string())
-                out += Strutil::format ("\"%s\" ", lit->strval());
-            else {
-                out += "\"\" ";  // FIXME?
-                completed = false;
-            }
+    if (init() && sym->fieldid() < 0) {
+        // Normal vars with initializers -- generate them
+        for (ASTNode::ref i = init();  i;  i = i->next()) {
+            completed &= param_one_default_literal (sym, i.get(), out);
         }
-        else {
-            ASSERT (0 && "help with initializer");
-        }
+    } else {
+        // If there are NO initializers or it's a struct field,
+        // we still need to make a usable default.
+        completed &= param_one_default_literal (sym, NULL, out);
     }
+
     return completed;
 }
 
@@ -459,6 +480,10 @@ ASTvariable_declaration::param_default_literals (std::string &out)
 Symbol *
 ASTvariable_declaration::codegen (Symbol *)
 {
+    // Handle structure initialization separately
+    if (m_sym->typespec().is_structure())
+        return codegen_struct_initializers ();
+
     // Loop over a list of initializers (it's just 1 if not an array)...
     int i = 0;
     for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
@@ -483,6 +508,34 @@ ASTvariable_declaration::codegen (Symbol *)
             }
         }
     }        
+    return m_sym;
+}
+
+
+
+Symbol *
+ASTvariable_declaration::codegen_struct_initializers ()
+{
+    int i = 0;
+    for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
+        // Structure element -- assign to the i-th member field
+        StructSpec *structspec =
+            m_compiler->symtab().structure (m_typespec.structure());
+        const StructSpec::FieldSpec &field (structspec->field(i));
+        ustring fieldname =
+            ustring::format ("___%s_%s", m_sym->mangled().c_str(),
+                             field.name.c_str());
+        Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
+
+        if (m_sym->symtype() == SymTypeParam ||
+                m_sym->symtype() == SymTypeOutputParam) {
+            m_compiler->codegen_method (fieldname);
+        }
+
+        Symbol *dest = in->codegen (fieldsym);
+        if (dest != fieldsym)
+            emitcode ("assign", fieldsym, dest);
+    }
     return m_sym;
 }
 

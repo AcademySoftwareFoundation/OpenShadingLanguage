@@ -200,9 +200,10 @@ typespec
                     current_typespec = TypeSpec (lextype ($2), true);
                     $$ = 0;
                 }
-        | STRUCT IDENTIFIER /* struct name */
+        | STRUCT IDENTIFIER
                 {
-                    // FIXME
+                    current_typespec = TypeSpec ($2, 1);
+                    // FIXME -- we're not distinguishing among structs
                     $$ = 0;
                 }
         ;

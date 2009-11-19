@@ -277,6 +277,7 @@ public:
     /// Find a structure record by name.
     ///
     StructSpec *structure (int id) { return m_structs[id]; }
+    const StructSpec *structure (int id) const { return m_structs[id]; }
 
     /// delete all symbols that have ever been entered into the table.
     /// After doing this, beware following any Symbol pointers left over!

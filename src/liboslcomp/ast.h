@@ -270,6 +270,11 @@ protected:
     /// coercion if acceptfloat is false.
     Symbol *coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat=false);
 
+    /// Return the c_str giving a human-readable name of a type, fully
+    /// accounting for exotic types like structs, etc.
+    /// N.B.: just conveniently wraps the compiler's identical method.
+    const char *type_c_str (const TypeSpec &type) const;
+
 protected:
     NodeType m_nodetype;          ///< Type of node this is
     ref m_next;                   ///< Next node in the list
@@ -372,9 +377,23 @@ public:
     /// intialization of literal values and place it in 'out'.
     /// Return whether the full initialization is comprised only of
     /// literals (and no init ops are needed).
-    bool param_default_literals (std::string &out);
+    bool param_default_literals (const Symbol *sym, std::string &out);
 
 private:
+    /// Special type checking for structure initializers
+    ///
+    TypeSpec typecheck_struct_initializers ();
+    /// Special code generation for structure initializers
+    ///
+    Symbol *codegen_struct_initializers ();
+
+    /// Helper for param_default_literals: generate the string that gives
+    /// the intialization of the literal value (and/or the default, if
+    /// init==NULL) and append it to 'out'.  Return whether the full
+    /// initialization is comprised only of literals (no init ops needed).
+    bool param_one_default_literal (const Symbol *sym, ASTNode *init,
+                                    std::string &out);
+
     ustring m_name;
     Symbol *m_sym;
     bool m_isparam;

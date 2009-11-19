@@ -347,7 +347,7 @@ void
 OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
 {
     oso ("%s\t%s\t%s", sym->symtype_shortname(),
-         sym->typespec().string().c_str(), sym->mangled().c_str());
+         type_c_str(sym->typespec()), sym->mangled().c_str());
 
     ASTvariable_declaration *v = NULL;
     if (sym->node())
@@ -361,7 +361,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
     } else if (v && (sym->symtype() == SymTypeParam ||
                     sym->symtype() == SymTypeOutputParam)) {
         std::string out;
-        v->param_default_literals (out);
+        v->param_default_literals (sym, out);
         oso ("\t%s\t", out.c_str());
     }
 
@@ -377,8 +377,16 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
 
     if (hints++ == 0)
         oso ("\t");
-    oso ("%%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
+    oso (" %%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
          sym->firstwrite(), sym->lastwrite());
+
+    if (sym->fieldid() >= 0) {
+        if (hints++ == 0)
+            oso ("\t");
+        ASTvariable_declaration *vd = (ASTvariable_declaration *) sym->node();
+        oso (" %%mystruct{%s} %%structfield{%d}",
+             vd->sym()->mangled().c_str(), sym->fieldid());
+    }
 
     oso ("\n");
 }
@@ -572,6 +580,17 @@ OSLCompilerImpl::pop_nesting (bool isloop)
         --m_loop_nesting;
     if (current_function())
         current_function()->pop_nesting (isloop);
+}
+
+
+
+const char *
+OSLCompilerImpl::type_c_str (const TypeSpec &type) const
+{
+    if (type.is_structure())
+        return ustring::format ("struct %s", symtab().structure(type.structure())->name().c_str()).c_str();
+    else
+        return type.c_str();
 }
 
 

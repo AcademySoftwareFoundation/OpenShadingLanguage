@@ -338,8 +338,6 @@ ShaderMaster::resolve_ops ()
     }
 
     BOOST_FOREACH (Opcode &op, m_ops) {
-        if (shadingsys().debug())
-            shadingsys().info ("resolving %s", op.opname().c_str());
         std::map<ustring,OpImpl>::const_iterator found;
         found = ops_table.find (op.opname());
         if (found != ops_table.end())

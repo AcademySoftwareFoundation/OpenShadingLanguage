@@ -162,6 +162,14 @@ ASTNode::printchildren (std::ostream &out, int indentlevel) const
 
 
 const char *
+ASTNode::type_c_str (const TypeSpec &type) const
+{
+    return m_compiler->type_c_str (type);
+}
+
+
+
+const char *
 ASTshader_declaration::childname (size_t i) const
 {
     static const char *name[] = { "metadata", "formals", "statements" };
@@ -282,6 +290,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
             ustring fieldname = ustring::format ("___%s_%s", name.c_str(),
                                                  field.name.c_str());
             Symbol *sym = new Symbol (fieldname, field.type, symtype, this);
+            sym->fieldid (i);
             oslcompiler->symtab().insert (sym);
         }
     }

@@ -363,7 +363,7 @@ public:
         : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
-          m_connected(false), m_valuesource(DefaultVal),
+          m_connected(false), m_valuesource(DefaultVal), m_fieldid(-1),
           m_scope(0), m_dataoffset(-1), 
           m_node(declaration_node), m_alias(NULL),
           m_initbegin(0), m_initend(0)
@@ -384,7 +384,7 @@ public:
 
     /// Kind of symbol this is (param, local, etc.)
     ///
-    SymType symtype () const { return m_symtype; }
+    SymType symtype () const { return (SymType) m_symtype; }
 
     /// Reset the symbol type.  Use with caution!
     ///
@@ -434,7 +434,7 @@ public:
     /// Return a string representation ("param", "global", etc.) of this
     /// symbol.
     const char *symtype_shortname () const {
-        return symtype_shortname(m_symtype);
+        return symtype_shortname(symtype());
     }
 
     /// Return a pointer to the symbol's data.
@@ -476,6 +476,9 @@ public:
     ValueSource valuesource () const { return (ValueSource) m_valuesource; }
     void valuesource (ValueSource v) { m_valuesource = v; }
 
+    int fieldid () const { return m_fieldid; }
+    void fieldid (int id) { m_fieldid = id; }
+
     int initbegin () const { return m_initbegin; }
     void initbegin (int i) { m_initbegin = i; }
     int initend () const { return m_initend; }
@@ -513,11 +516,12 @@ protected:
     int m_size;                 ///< Size of data (in bytes)
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
-    SymType m_symtype;          ///< Kind of symbol (param, local, etc.)
+    char m_symtype;             ///< Kind of symbol (param, local, etc.)
     bool m_has_derivs;          ///< Step to derivs (0 == has no derivs)
     bool m_const_initializer;   ///< initializer is a constant expression
     bool m_connected;           ///< Connected to an earlier layer
     char m_valuesource;         ///< Where did the value come from?
+    short m_fieldid;            ///< Struct field of this var (or -1)
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol

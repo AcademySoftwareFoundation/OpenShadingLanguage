@@ -100,6 +100,12 @@ TypeSpec
 ASTvariable_declaration::typecheck (TypeSpec expected)
 {
     typecheck_children (m_typespec);
+
+    if (m_typespec.is_structure()) {
+        // struct initialization handled separately
+        return typecheck_struct_initializers ();
+    }
+
     int i = 0;
     for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
         // Special case: ok to assign a literal 0 to a closure to
@@ -112,12 +118,36 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
         }
         if (! m_sym->typespec().is_array() && i > 0)
             error ("Can't assign array initializers to non-array %s %s",
-                   m_typespec.string().c_str(), m_name.c_str());
+                   type_c_str(m_typespec), m_name.c_str());
         if (! assignable(m_sym->typespec().elementtype(), in->typespec()))
-            error ("can't assign '%s' to %s %s (%s)",
-                   in->typespec().string().c_str(),
-                   m_sym->typespec().string().c_str(), m_name.c_str(),
-                   m_sym->typespec().elementtype().string().c_str());
+            error ("can't assign '%s' to %s %s",
+                   type_c_str(in->typespec()),
+                   type_c_str(m_sym->typespec()), m_name.c_str());
+    }
+    return m_typespec;
+}
+
+
+ 
+TypeSpec
+ASTvariable_declaration::typecheck_struct_initializers ()
+{
+    ASSERT (m_typespec.is_structure());
+    int structid = m_typespec.structure();
+    StructSpec *structspec (m_compiler->symtab().structure (structid));
+    int numfields = (int)structspec->numfields();
+    int i = 0;
+    for (ASTNode::ref in = init();  in; in = in->next(), ++i) {
+        if (i >= numfields) {
+            error ("Too many initializers for '%s %s'",
+                   type_c_str(m_typespec), m_name.c_str());
+            break;
+        }
+        const StructSpec::FieldSpec &field (structspec->field(i));
+        if (! assignable(field.type, in->typespec()))
+            error ("can't assign '%s' to '%s %s.%s'",
+                   type_c_str(in->typespec()),
+                   type_c_str(field.type), m_name.c_str(), field.name.c_str());
     }
     return m_typespec;
 }
@@ -190,7 +220,7 @@ ASTindex::typecheck (TypeSpec expected)
         tnew.vecsemantics = TypeDesc::NOXFORM;
         m_typespec = tnew;
         if (index2())
-            error ("can't use [][] on a %s", t.string().c_str());
+            error ("can't use [][] on a %s", type_c_str(t));
     } else if (t.aggregate() == TypeDesc::MATRIX44) {
         indextype = "component";
         TypeDesc tnew = t.simpletype();
@@ -208,7 +238,7 @@ ASTindex::typecheck (TypeSpec expected)
     for (size_t c = 1;  c < nchildren();  ++c)
         if (! child(c)->typespec().is_int())
             error ("%s index must be an integer, not a %s", 
-                   indextype, index()->typespec().string().c_str());
+                   indextype, type_c_str(index()->typespec()));
 
     // If the thing we're indexing is an lvalue, so is the indexed element
     m_is_lvalue = lvalue()->is_lvalue();
@@ -312,18 +342,13 @@ ASTassign_expression::typecheck (TypeSpec expected)
         if (vts == ets)
             return m_typespec = vt;
         // Otherwise, a structure mismatch
-        const char *etname = et.is_structure() ? 
-            m_compiler->symtab().structure(ets)->name().c_str() : et.c_str();
-        const char *vtname = vt.is_structure() ? 
-            m_compiler->symtab().structure(vts)->name().c_str() : vt.c_str();
-        error ("Cannot assign '%s' to '%s'", etname, vtname);
+        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         return TypeSpec();
     }
 
     // Expression must be of a type assignable to the lvalue
     if (! assignable (vt, et)) {
-        error ("Cannot assign '%s' to '%s'",
-               et.string().c_str(), vt.string().c_str());
+        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         // FIXME - can we print the variable in question?
         return TypeSpec();
     }
@@ -346,14 +371,14 @@ ASTreturn_statement::typecheck (TypeSpec expected)
             TypeSpec et = expr()->typecheck (myfunc->typespec());
             if (! assignable (myfunc->typespec(), et)) {
                 error ("Cannot return a '%s' from '%s %s()'",
-                       et.string().c_str(), myfunc->typespec().string().c_str(),
+                       type_c_str(et), type_c_str(myfunc->typespec()),
                        myfunc->name().c_str());
             }
         } else {
             // If we are not returning a value, it must be a void function.
             if (! myfunc->typespec().is_void ())
                 error ("You must return a '%s' from function '%s'",
-                       myfunc->typespec().string().c_str(),
+                       type_c_str(myfunc->typespec()),
                        myfunc->name().c_str());
         }
         // If the function has other statements AFTER 'return', or if
@@ -380,14 +405,14 @@ ASTunary_expression::typecheck (TypeSpec expected)
     typecheck_children (expected);
     TypeSpec t = expr()->typespec();
     if (t.is_structure()) {
-        error ("Can't do '%s' to a %s.", opname(), t.string().c_str());
+        error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
         return TypeSpec ();
     }
     switch (m_op) {
     case Sub :
     case Add :
         if (t.is_string()) {
-            error ("Can't do '%s' to a %s.", opname(), t.string().c_str());
+            error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
             return TypeSpec ();
         }
         m_typespec = t;
@@ -437,13 +462,9 @@ ASTbinary_expression::typecheck (TypeSpec expected)
     TypeSpec r = right()->typespec();
 
     // No binary ops work on structs or arrays
-    if (l.is_structure() || r.is_structure() ||
-        l.is_array() || r.is_array()) {
-        const char *lname = l.is_structure() ? 
-            m_compiler->symtab().structure(l.structure())->name().c_str() : l.c_str();
-        const char *rname = r.is_structure() ? 
-            m_compiler->symtab().structure(r.structure())->name().c_str() : r.c_str();
-        error ("Not allowed: '%s %s %s'", lname, opname(), rname);
+    if (l.is_structure() || r.is_structure() || l.is_array() || r.is_array()) {
+        error ("Not allowed: '%s %s %s'",
+               type_c_str(l), opname(), type_c_str(r));
         return TypeSpec ();
     }
 
@@ -461,7 +482,7 @@ ASTbinary_expression::typecheck (TypeSpec expected)
         }
         // If we got this far, it's an op that's not allowed
         error ("Not allowed: '%s %s %s'",
-               l.string().c_str(), opname(), r.string().c_str());
+               type_c_str(l), opname(), type_c_str(r));
         return TypeSpec ();
     }
 
@@ -536,7 +557,7 @@ ASTbinary_expression::typecheck (TypeSpec expected)
 
     // If we got this far, it's an op that's not allowed
     error ("Not allowed: '%s %s %s'",
-           l.string().c_str(), opname(), r.string().c_str());
+           type_c_str(l), opname(), type_c_str(r));
     return TypeSpec ();
 }
 
@@ -560,7 +581,7 @@ ASTternary_expression::typecheck (TypeSpec expected)
     // No arrays
     if (t.is_array() || t.is_array()) {
         error ("Not allowed: '%s ? %s : %s'",
-               c.string().c_str(), t.string().c_str(), f.string().c_str());
+               type_c_str(c), type_c_str(t), type_c_str(f));
         return TypeSpec ();
     }
 
@@ -570,7 +591,7 @@ ASTternary_expression::typecheck (TypeSpec expected)
         m_typespec = higherprecision (t.simpletype(), f.simpletype());
     else
         error ("Not allowed: '%s ? %s : %s'",
-               c.string().c_str(), t.string().c_str(), f.string().c_str());
+               type_c_str(c), type_c_str(t), type_c_str(f));
 
     return m_typespec;
 }
@@ -586,8 +607,8 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
     if (! assignable (m_typespec, t) &&
         ! (m_typespec.is_int() && t.is_float()) && // (int)float is ok
         ! (m_typespec.is_triple() && t.is_triple()))
-        error ("Cannot cast '%s' to '%s'", t.string().c_str(),
-               m_typespec.string().c_str());
+        error ("Cannot cast '%s' to '%s'", type_c_str(t),
+               type_c_str(m_typespec));
     return m_typespec;
 }
 
@@ -616,7 +637,7 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     else if (typespec().is_matrix())
         patterns = matrix_patterns;
     if (! patterns) {
-        error ("Cannot construct type '%s'", typespec().string().c_str());
+        error ("Cannot construct type '%s'", type_c_str(typespec()));
         return m_typespec;
     }
 
@@ -626,14 +647,14 @@ ASTtype_constructor::typecheck (TypeSpec expected)
         bool coerce = co;
         for (const char **pat = patterns;  *pat;  ++pat) {
             const char *code = *pat;
-            if (check_arglist (typespec().string().c_str(), args(), code + 1, coerce))
+            if (check_arglist (type_c_str(typespec()), args(), code + 1, coerce))
                 return m_typespec;
         }
     }
 
     // If we made it this far, no match could be found.
     std::string err = Strutil::format ("Cannot construct %s (", 
-                                       typespec().string().c_str());
+                                       type_c_str(typespec()));
     for (ref a = args();  a;  a = a->next()) {
         err += a->typespec().string();
         if (a->next())
@@ -794,7 +815,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
         if (choices.length())
             choices += "\n";
         choices += Strutil::format ("\t%s %s (%s)",
-                              returntype.string().c_str(), m_name.c_str(),
+                              type_c_str(returntype), m_name.c_str(),
                               m_compiler->typelist_from_code(code).c_str());
     }
 

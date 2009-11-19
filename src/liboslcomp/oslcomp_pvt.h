@@ -112,6 +112,7 @@ public:
     /// Return a reference to the symbol table.
     ///
     SymbolTable &symtab () { return m_symtab; }
+    const SymbolTable &symtab () const { return m_symtab; }
 
     TypeSpec current_typespec () const { return m_current_typespec; }
     void current_typespec (TypeSpec t) { m_current_typespec = t; }
@@ -214,6 +215,10 @@ public:
     /// the compiler is done recursively descending.  Pass true for
     /// 'isloop' if it's a loop.
     void pop_nesting (bool isloop=false);
+
+    /// Return the c_str giving a human-readable name of a type, fully
+    /// accounting for exotic types like structs, etc.
+    const char *type_c_str (const TypeSpec &type) const;
 
 private:
     void initialize_globals ();

@@ -4319,7 +4319,7 @@ nothing (empty, no token).
 <shader-formal-param> ::= <outputspec> <typespec> <identifier>
                                <initializer> <metadata-block-opt>
 \alt <outputspec> <typespec> <identifier> <arrayspec>
-          <array-initializer> <metadata-block-opt>
+          <initializer-list> <metadata-block-opt>
 
 <metadata-block> ::= "[[" <metadata> \{ "," <metadata> \} "]]"
 
@@ -4357,11 +4357,11 @@ nothing (empty, no token).
 <def-expressions> ::= <def-expression> \{ "," <def-expression> \}
 
 <def-expression> ::= <identifier> <initializer-opt>
-\alt <identifier> <arrayspec> <array-initializer-opt>
+\alt <identifier> <arrayspec> <initializer-list-opt>
 
 <initializer> ::= "=" <expression>
 
-<array-initializer> ::= "=" "{" <expression-list> "}"
+<initializer-list> ::= "=" "{" <expression-list> "}"
 
 <typespec> ::= <simple-typename> 
 \alt "closure" <simple-typename>

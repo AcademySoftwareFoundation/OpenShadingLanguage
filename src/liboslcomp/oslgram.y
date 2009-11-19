@@ -108,7 +108,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> function_formal_params function_formal_param
 %type <n> struct_declaration field_declarations field_declaration
 %type <n> variable_declaration def_expressions def_expression
-%type <n> initializer_opt initializer array_initializer_opt array_initializer 
+%type <n> initializer_opt initializer initializer_list_opt initializer_list
 %type <i> shadertype outputspec arrayspec simple_typename
 %type <n> typespec 
 %type <n> statement_list statement scoped_statements local_declaration
@@ -216,7 +216,7 @@ shader_formal_param
                                             "shader parameter '%s' MUST have a default initializer", $3);
                     }
                 }
-        | outputspec typespec IDENTIFIER arrayspec array_initializer metadata_block_opt
+        | outputspec typespec IDENTIFIER arrayspec initializer_list metadata_block_opt
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
@@ -226,6 +226,21 @@ shader_formal_param
                                                        ustring($3), $5, true);
                     var->make_output ($1);
                     var->add_meta ($6);
+                    $$ = var;
+                }
+        | outputspec typespec IDENTIFIER initializer_list metadata_block_opt
+                {
+                    // Grab the current declaration type, modify it to be array
+                    TypeSpec t = oslcompiler->current_typespec();
+                    if (! t.is_structure())
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Can't use '= {...}' initializer except with arrays or struct (%s)", $3);
+                    ASTvariable_declaration *var;
+                    var = new ASTvariable_declaration (oslcompiler, t,
+                                                       ustring($3), $4, true);
+                    var->make_output ($1);
+                    var->add_meta ($5);
                     $$ = var;
                 }
         ;
@@ -250,7 +265,7 @@ metadatum
                     var->make_meta (true);
                     $$ = var;
                 }
-        | simple_typename IDENTIFIER arrayspec array_initializer
+        | simple_typename IDENTIFIER arrayspec initializer_list
                 {
                     TypeDesc simple = lextype ($1);
                     simple.arraylen = $3;
@@ -386,13 +401,23 @@ def_expression
                     $$ = new ASTvariable_declaration (oslcompiler,
                                                       t, ustring($1), $2);
                 }
-        | IDENTIFIER arrayspec array_initializer_opt
+        | IDENTIFIER arrayspec initializer_list_opt
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     $$ = new ASTvariable_declaration (oslcompiler, t, 
                                                       ustring($1), $3);
+                }
+        | IDENTIFIER initializer_list
+                {
+                    TypeSpec t = oslcompiler->current_typespec();
+                    if (! t.is_structure())
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Can't use '= {...}' initializer except with arrays or struct (%s)", $1);
+                    $$ = new ASTvariable_declaration (oslcompiler,
+                                                      t, ustring($1), $2);
                 }
         ;
 
@@ -405,12 +430,12 @@ initializer
         : '=' expression                { $$ = $2; }
         ;
 
-array_initializer_opt
-        : array_initializer
+initializer_list_opt
+        : initializer_list
         | /* empty */                   { $$ = 0; }
         ;
 
-array_initializer
+initializer_list
         : '=' '{' expression_list '}'   { $$ = $3; }
         ;
 

@@ -1,7 +1,7 @@
 // struct declaration in global scope
 struct Astruct {
     float f;
-    float i;
+    int i;
     point p;
     string s;
 };
@@ -15,7 +15,9 @@ struct Bstruct {
 
 
 shader
-test ()
+test (
+    Astruct aparam = { 1.0, 0, point(3,4,5), "foo!" }
+)
 {
     printf ("test struct\n");
 
@@ -43,4 +45,9 @@ test ()
     printf ("\n");
     a.p = P;
     printf ("after a.p=P, a == { %g, %i, [%g], %s }\n", a.f, a.i, a.p, a.s);
+
+    // Make sure it came in ok as a param
+    printf ("\n");
+    printf ("struct param:  aparam == { %g, %i, [%g], %s }\n",
+            aparam.f, aparam.i, aparam.p, aparam.s);
 }

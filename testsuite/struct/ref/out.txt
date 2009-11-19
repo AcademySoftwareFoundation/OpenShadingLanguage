@@ -9,3 +9,5 @@ after a.p=P, a == { 3.14159, 42, [1 0 1], foobar }
 after a.p=P, a == { 3.14159, 42, [0 1 1], foobar }
 after a.p=P, a == { 3.14159, 42, [1 1 1], foobar }
 
+struct param:  aparam == { 1, 0, [3 4 5], foo! }
+

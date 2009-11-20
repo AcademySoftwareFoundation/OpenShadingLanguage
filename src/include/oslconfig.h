@@ -38,9 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 // All the things we need from Imath
-#include <ImathVec.h>
-#include <ImathColor.h>
-#include <ImathMatrix.h>
+#include <OpenEXR/ImathVec.h>
+#include <OpenEXR/ImathColor.h>
+#include <OpenEXR/ImathMatrix.h>
 
 // All the things we need from OpenImageIO
 #include "OpenImageIO/errorhandler.h"

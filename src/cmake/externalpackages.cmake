@@ -45,13 +45,9 @@ mark_as_advanced (ILMBASE_VERSION)
 setup_path (ILMBASE_HOME "${THIRD_PARTY_TOOLS_HOME}"
             "Location of the ILMBase library install")
 mark_as_advanced (ILMBASE_HOME)
-find_path (ILMBASE_INCLUDE_AREA half.h
+find_path (ILMBASE_INCLUDE_AREA OpenEXR/half.h
            ${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}
-           ${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}/OpenEXR
-           ${ILMBASE_HOME}/include/OpenEXR
-           /usr/include/OpenEXR
-           /usr/local/include/OpenEXR
-           /opt/local/include/OpenEXR
+           ${ILMBASE_HOME}/include
           )
 foreach (_lib Imath Half IlmThread Iex)
     find_library (ILMBASE_LIBS_${_lib} ${_lib}
@@ -66,6 +62,7 @@ message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
 if (ILMBASE_INCLUDE_AREA AND ILMBASE_LIBRARIES)
     set (ILMBASE_FOUND true)
     include_directories ("${ILMBASE_INCLUDE_AREA}")
+    include_directories ("${ILMBASE_INCLUDE_AREA}/OpenEXR")
 else ()
     message (FATAL_ERROR "ILMBASE not found!")
 endif ()
@@ -84,14 +81,10 @@ mark_as_advanced (OPENEXR_VERSION_DIGITS)
 setup_path (OPENEXR_HOME "${THIRD_PARTY_TOOLS_HOME}"
             "Location of the OpenEXR library install")
 mark_as_advanced (OPENEXR_HOME)
-find_path (OPENEXR_INCLUDE_AREA OpenEXRConfig.h
+find_path (OPENEXR_INCLUDE_AREA OpenEXR/OpenEXRConfig.h
            ${OPENEXR_HOME}/include
-           ${OPENEXR_HOME}/include/OpenEXR
            ${ILMBASE_HOME}/include/openexr-${OPENEXR_VERSION}
-           ${ILMBASE_HOME}/include/openexr-${OPENEXR_VERSION}/OpenEXR
-           /usr/include/OpenEXR
-           /usr/local/include/OpenEXR
-           /opt/local/include/OpenEXR )
+          )
 find_library (OPENEXR_LIBRARY IlmImf
               PATHS ${OPENEXR_HOME}/lib
                     ${OPENEXR_HOME}/lib64
@@ -102,6 +95,7 @@ message (STATUS "OPENEXR_LIBRARY = ${OPENEXR_LIBRARY}")
 if (OPENEXR_INCLUDE_AREA AND OPENEXR_LIBRARY)
     set (OPENEXR_FOUND true)
     include_directories (${OPENEXR_INCLUDE_AREA})
+    include_directories (${OPENEXR_INCLUDE_AREA}/OpenEXR)
 else ()
     message (STATUS "OPENEXR not found!")
 endif ()
@@ -154,52 +148,26 @@ message (STATUS "OPENGL_FOUND=${OPENGL_FOUND} USE_OPENGL=${USE_OPENGL}")
 ###########################################################################
 
 ###########################################################################
-# Qt setup
-
-if (USE_QT)
-    if (USE_OPENGL)
-        set (QT_USE_QTOPENGL true)
-    endif ()
-    find_package (Qt4)
-endif ()
-message (STATUS "QT4_FOUND=${QT4_FOUND}")
-
-# end Qt setup
-###########################################################################
-
-###########################################################################
-# Gtest (Google Test) setup
-
-set (GTEST_VERSION 1.3.0)
-find_library (GTEST_LIBRARY
-              NAMES gtest
-              PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/)
-find_path (GTEST_INCLUDES gtest/gtest.h
-           ${THIRD_PARTY_TOOLS}/include/gtest-${GTEST_VERSION})
-if (GTEST_INCLUDES AND GTEST_LIBRARY)
-    set (GTEST_FOUND TRUE)
-    message (STATUS "Gtest includes = ${GTEST_INCLUDES}")
-    message (STATUS "Gtest library = ${GTEST_LIBRARY}")
-else ()
-    message (STATUS "Gtest not found")
-endif ()
-
-# end Gtest setup
-###########################################################################
-
-###########################################################################
 # TBB (Intel Thread Building Blocks) setup
 
 setup_path (TBB_HOME "${THIRD_PARTY_TOOLS_HOME}"
             "Location of the TBB library install")
 mark_as_advanced (TBB_HOME)
 if (USE_TBB)
-    set (TBB_VERSION 21_20080605oss)
-    find_library (TBB_LIBRARY
-                  NAMES tbb
-                  PATHS ${TBB_HOME}/lib
-                  PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/
-                 )
+    set (TBB_VERSION 22_004oss)
+    if (MSVC)
+        find_library (TBB_LIBRARY
+                      NAMES tbb
+                      PATHS ${TBB_HOME}/lib
+                      PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/
+                      ${TBB_HOME}/tbb-${TBB_VERSION}/lib/
+                     )
+        find_library (TBB_DEBUG_LIBRARY
+                      NAMES tbb_debug
+                      PATHS ${TBB_HOME}/lib
+                      PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/
+                      ${TBB_HOME}/tbb-${TBB_VERSION}/lib/)
+    endif (MSVC)
     find_path (TBB_INCLUDES tbb/tbb_stddef.h
                ${TBB_HOME}/include/tbb${TBB_VERSION}
                ${THIRD_PARTY_TOOLS}/include/tbb${TBB_VERSION}

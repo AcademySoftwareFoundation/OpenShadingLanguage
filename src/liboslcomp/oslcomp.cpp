@@ -260,11 +260,11 @@ static GlobalTable globals[] = {
     // kind of light shader, so comment these out for now.
     { "L", TypeDesc::TypeVector },
     { "Cl", TypeDesc::TypeColor },
-    { "Ps", TypeDesc::TypePoint },
     { "Ns", TypeDesc::TypeNormal },
     { "Pl", TypeDesc::TypePoint },
     { "Nl", TypeDesc::TypeNormal },
 #endif
+    { "Ps", TypeDesc::TypePoint },
     { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
     { "time", TypeDesc::TypeFloat },
     { "dtime", TypeDesc::TypeFloat },

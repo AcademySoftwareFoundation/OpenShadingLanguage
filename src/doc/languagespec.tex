@@ -2345,14 +2345,14 @@ displacement shader, changing this variable displaces the surface. \\
 \hline
 \vector\ {\ce dPdu}, {\ce dPdv} & Partial derivatives $\partial
 P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
-\hline
+%\hline
 %\vector\ {\ce L} & Direction of incoming light (points from {\cf Ps} to
 %         {\cf Pl}). \\
 %\hline
 %\color\ {\ce Cl} & Incoming light color at P. \\
 %\hline
-%\point\ {\ce Ps} & Position at which the light is being queried 
-%(i.e., the position passed to \illuminance). 
+\point\ {\ce Ps} & Position at which the light is being queried 
+    (currently only used for light attentuation shaders) \\
 %\\
 %\hline
 %\normal\ {\ce Ns} & Axis about which the light is being queried
@@ -2363,7 +2363,7 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 %\point\ {\ce Pl} & Position of the light source. \\
 %\hline
 %\normal\ {\ce Nl} & Normal on the light (area light sources only). \\[1ex]
-%\hline
+\hline
 \float\ {\ce time} & Current shutter time for the point being shaded. \\
 \hline
 \float\ {\ce dtime} & The amount of time covered by this shading sample. \\

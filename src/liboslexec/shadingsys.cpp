@@ -106,7 +106,7 @@ ustring microfacet_beckmann ("microfacet_beckmann"), microfacet_ggx ("microfacet
 ustring reflection ("reflection"), refraction ("refraction"), dielectric ("dielectric");
 ustring emission ("emission");
 ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
-ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v");
+ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v"), Ps ("Ps");
 ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");
 ustring Ci ("Ci");
 ustring width ("width"), swidth ("swidth"), twidth ("twidth");
@@ -682,6 +682,10 @@ ShadingSystemImpl::init_global_heap_offsets ()
     m_global_heap_offsets[ustring("dPdu")] = m_global_heap_total;
     m_global_heap_total += triple_size;
     m_global_heap_offsets[ustring("dPdv")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("dPdtime")] = m_global_heap_total;
+    m_global_heap_total += triple_size;
+    m_global_heap_offsets[ustring("Ps")] = m_global_heap_total;
     m_global_heap_total += triple_size;
 
     m_global_heap_offsets[ustring("u")] = m_global_heap_total;

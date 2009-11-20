@@ -204,6 +204,8 @@ public:
     VaryingRef<float> time;            ///< Time for each sample
     VaryingRef<float> dtime;           ///< Time interval for each sample
     VaryingRef<Vec3> dPdtime;          ///< Velocity
+    VaryingRef<Vec3> Ps;               ///< Point being lit
+    VaryingRef<Vec3> dPsdx, dPsdy;     ///< Derivs of Ps
 
     VaryingRef<void *> renderstate;    ///< Renderer context for each sample
 

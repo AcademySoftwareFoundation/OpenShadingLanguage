@@ -42,7 +42,7 @@ namespace pvt {
 class ReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
 public:
-    CLOSURE_CTOR (ReflectionClosure)
+    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(None)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
     }
@@ -52,17 +52,21 @@ public:
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        // does not need to be integrated directly
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        // should never be called - because get_cone is empty
-        return Color3 (0.0f, 0.0f, 0.0f);
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -82,14 +86,6 @@ public:
             eval.setValue(1, 1, 1);
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // the pdf for an arbitrary direction is 0 because only a single
-        // direction is actually possible
-        return 0;
-    }
 };
 
 
@@ -99,7 +95,7 @@ class FresnelReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (FresnelReflectionClosure)
+    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(None)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -112,17 +108,21 @@ public:
         out << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        // does not need to be integrated directly
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        // should never be called - because get_cone is empty
-        return Color3 (0.0f, 0.0f, 0.0f);
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -143,14 +143,6 @@ public:
             eval.setValue(value, value, value);
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // the pdf for an arbitrary direction is 0 because only a single
-        // direction is actually possible
-        return 0;
-    }
 };
 
 
@@ -158,10 +150,10 @@ public:
 DECLOP (OP_reflection)
 {
     if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
-        closure_op_guts<FresnelReflectionClosure> (exec, nargs, args,
+        closure_op_guts<FresnelReflectionClosure, 3> (exec, nargs, args,
                 runflags, beginpoint, endpoint);
     else
-        closure_op_guts<ReflectionClosure> (exec, nargs, args,
+        closure_op_guts<ReflectionClosure, 2> (exec, nargs, args,
                 runflags, beginpoint, endpoint);
 }
 

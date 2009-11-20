@@ -41,7 +41,7 @@ namespace pvt {
 class DiffuseClosure : public BSDFClosure {
     Vec3 m_N;
 public:
-    CLOSURE_CTOR (DiffuseClosure)
+    CLOSURE_CTOR (DiffuseClosure) : BSDFClosure(side)
     {
         CLOSURE_FETCH_ARG (m_N, 1);
     }
@@ -51,25 +51,22 @@ public:
         out << "diffuse ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        float cosNO = m_N.dot(omega_out);
-        if (cosNO > 0) {
-           // we are viewing the surface from the same side as the normal
-           axis = m_N;
-           angle = (float) M_PI;
-           return true;
-        }
-        // we are below the surface
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::DIFFUSE);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cos_pi = m_N.dot(omega_in) * (float) M_1_PI;
-        labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
+        float cos_pi = fabsf(m_N.dot(omega_in)) * (float) M_1_PI;
+        pdf = cos_pi;
         return Color3 (cos_pi, cos_pi, cos_pi);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -92,18 +89,11 @@ public:
            domega_in_dy *= 125;
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        return pdf_cos_hemisphere (m_N, omega_in);
-    }
-
 };
 
 DECLOP (OP_diffuse)
 {
-    closure_op_guts<DiffuseClosure> (exec, nargs, args,
+    closure_op_guts<DiffuseClosure, 2> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 

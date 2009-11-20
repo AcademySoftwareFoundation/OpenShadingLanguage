@@ -906,10 +906,7 @@ namespace Strings {
     extern ustring camera, common, object, shader;
     extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
     extern ustring null, default_;
-    extern ustring diffuse, phong, ward, transparent;
-    extern ustring microfacet_beckmann, microfacet_ggx;
-    extern ustring reflection, refraction, dielectric;
-    extern ustring emission;
+    extern ustring sidedness, front, back, both;
     extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
     extern ustring Ci;
     extern ustring width, swidth, twidth, blur, sblur, tblur;

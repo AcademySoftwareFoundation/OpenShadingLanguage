@@ -658,20 +658,47 @@ DECLOP (unary_op)
 
 
 /// Implements the opcode for a specific ClosurePrimitive in the "standard way
-template <typename Primitive> inline
+template <typename Primitive, int NumArgs> inline
 DECLOP (closure_op_guts)
 {
+    ASSERT (nargs >= NumArgs); // TODO: switch to DASSERT at some point
+
     Symbol &Result (exec->sym (args[0]));
     DASSERT (Result.typespec().is_closure());
     /* Adjust the result's uniform/varying status */
     exec->adjust_varying (Result, true /* closures always vary */);
+
+    /* try to parse token/values pair (if there are any) */
+    VaryingRef<ustring> sidedness(NULL, 0);
+    for (int tok = NumArgs; tok < nargs; tok += 2) {
+        Symbol &Name (exec->sym (args[tok]));
+        DASSERT (Name.typespec().is_string() && "optional closure token must be a string");
+        DASSERT (tok + 1 < nargs && "malformed argument list for closure");
+        ustring name = * (ustring *) Name.data();
+        Symbol &Val (exec->sym (args[tok + 1]));
+        if (name == Strings::sidedness && Val.typespec().is_string()) {
+            sidedness.init((ustring*) Val.data(), Val.step());
+        }
+        // TODO: custom labels
+    }
+
     /* N.B. Closures don't have derivs */
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     for (int i = beginpoint;  i < endpoint;  ++i) {
         if (runflags[i]) {
             char* mem = result[i]->allocate_component (sizeof (Primitive));
-            new (mem) Primitive (i, exec, nargs, args);
-            // TODO: get labels, sidedness, etc ...
+            ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
+            if (sidedness) {
+                if (sidedness[i] == Strings::front)
+                    side = ClosurePrimitive::Front;
+                else if (sidedness[i] == Strings::back)
+                    side = ClosurePrimitive::Back;
+                else if (sidedness[i] == Strings::both)
+                    side = ClosurePrimitive::Both;
+                else
+                    side = ClosurePrimitive::None;
+            }
+            new (mem) Primitive (i, exec, nargs, args, side);
         }
     }
 }
@@ -689,14 +716,11 @@ void fetch_value (T &v, int argidx, int idx, ShadingExecution *exec, int nargs, 
 
 /// Standard form for a closure constructor
 #define CLOSURE_CTOR(name)              \
-    name (int idx, ShadingExecution *exec, int nargs, const int *args)
+    name (int idx, ShadingExecution *exec, int nargs, const int *args, Sidedness side)
 
 /// Helper macros to extract values from the opcopde argument list
 #define CLOSURE_FETCH_ARG(v, argidx)    \
     fetch_value(v, argidx, idx, exec, nargs, args)
-
-
-
 
 
 // Proxy type that derives from Vec3 but allows some additional operations

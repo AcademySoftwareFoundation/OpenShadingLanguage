@@ -100,7 +100,6 @@ public:
 
     /// Add labels to the existing ones
     void clear() { m_size = 0; };
-
 private:
     // Actual label set (NULL terminated array)
     ustring m_set[MAXLENGTH];
@@ -118,6 +117,14 @@ public:
     enum Category {
         BSDF,           ///< It's reflective and/or transmissive
         Emissive        ///< It's emissive (like a light)
+    };
+
+    // Describe a closure's sidedness
+    enum Sidedness {
+        None  = 0,
+        Front = 1,
+        Back  = 2,
+        Both  = 3
     };
 
     ClosurePrimitive (Category category) :
@@ -194,29 +201,26 @@ private:
 /// for a BSDF-like material: eval(), sample(), pdf().
 class BSDFClosure : public ClosurePrimitive {
 public:
-    BSDFClosure () : ClosurePrimitive (BSDF) { }
+    BSDFClosure (Sidedness side) : ClosurePrimitive (BSDF), m_sidedness(side) { }
     ~BSDFClosure () { }
 
-    /// Return the evaluation cone -- Given instance parameters, and viewing
-    /// direction omega_out (pointing away from the surface), returns the cone of
-    /// directions this BSDF is sensitive to light from. If the incoming
-    /// direction is in the wrong hemisphere, or if this BSDF is singular, this
-    /// method should return false rather than return a degenerate cone. If this
-    /// method returns true, axis must be normalized and angle must be in the
-    /// range (0, 2*pi]. Note that the cone can have an angle greater than pi,
-    /// this allows a surface to potentially gather light from the entire sphere
-    /// of directions.
-    virtual bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const = 0;
 
-    /// Evaluate the BSDF -- Given instance parameters, viewing direction omega_out
-    /// and lighting direction omega_in (both pointing away from the surface),
-    /// compute the amount of radiance to be transfered between these two
-    /// directions.
-    /// It is safe to assume that the omega_in vector is inside the cone returned
-    /// above. If the get_cone method returned false, this function will never be
-    /// called.
-    virtual Color3 eval (const Vec3 &Ng,
-                         const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const = 0;
+    /// Given the side from which we are viewing this closure, return which side
+    /// it is sensitive to light on.
+    Sidedness get_light_side(Sidedness viewing_side) const {
+        return Sidedness (m_sidedness & viewing_side);
+    }
+
+    /// Return the labels associated with this scattering event
+    virtual Labels get_labels() const = 0;
+
+    /// Evaluate the extended BRDF and BTDF kernels -- Given viewing direction
+    /// omega_out and lighting direction omega_in (both pointing away from the
+    /// surface), compute the amount of radiance to be transfered between these
+    /// two directions. This also computes the probability of sampling the
+    /// direction omega_in from the sample method.
+    virtual Color3 eval_reflect  (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const = 0;
+    virtual Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const = 0;
 
     /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
     /// (pointing away from the surface), and random deviates randu and
@@ -234,21 +238,8 @@ public:
                          Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                          float &pdf, Color3 &eval, Labels &labels) const = 0;
 
-    /// Return the probability distribution function in the direction omega_in,
-    /// given the parameters and incident direction omega_out.  This MUST match
-    /// the PDF computed by sample().
-    /// It is safe to assume that the omega_in vector is inside the cone returned
-    /// above. If the get_cone method returned false, this function will never be
-    /// called. This means that singular BSDFs should not return 1 here.
-    virtual float pdf (const Vec3 &Ng,
-                       const Vec3 &omega_out, const Vec3 &omega_in) const = 0;
-
-    /// Return true if the closure implements absolute transparency.
-    /// It is not nice to have this function but we need it for handling transparent
-    /// shadows in the integrator. With this we avoid calling the closure at all
-    /// and we only use the weight as the transparent color. We will have to relay
-    /// on this method until we write a more sophisticated integrator.
-    virtual bool isTransparent() const { return false; };
+private:
+    Sidedness m_sidedness;
 };
 
 
@@ -257,15 +248,22 @@ public:
 /// for an emissive material.
 class EmissiveClosure : public ClosurePrimitive {
 public:
-    EmissiveClosure () : ClosurePrimitive (Emissive) { }
+    EmissiveClosure (Sidedness side) : ClosurePrimitive (Emissive), m_sidedness (side) { }
     ~EmissiveClosure () { }
+
+    /// Returns true if light is emitted on the specified side of this closure
+    bool is_light_side(Sidedness viewing_side) const {
+        return (viewing_side & m_sidedness) != 0;
+    }
+
+    /// Return the labels associated with this emissive event.
+    virtual Labels get_labels() const = 0;
 
     /// Evaluate the emission -- Given instance parameters, the light's surface
     /// normal N and the viewing direction omega_out, compute the outgoing
     /// radiance along omega_out (which points away from the light's
     /// surface).
-    virtual Color3 eval (const Vec3 &Ng, 
-                         const Vec3 &omega_out, Labels &labels) const = 0;
+    virtual Color3 eval (const Vec3 &Ng, const Vec3 &omega_out) const = 0;
 
     /// Sample the emission direction -- Given instance parameters, the light's
     /// surface normal and random deviates randu and randv on [0,1), return a
@@ -280,6 +278,8 @@ public:
     /// the PDF computed by sample().
     virtual float pdf (const Vec3 &Ng,
                        const Vec3 &omega_out) const = 0;
+private:
+    Sidedness m_sidedness;
 };
 
 

@@ -45,12 +45,14 @@ class MicrofacetGGXClosure : public BSDFClosure {
     Vec3 m_N;
     float m_ag;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
+    Sidedness m_sidedness;
 public:
-    CLOSURE_CTOR (MicrofacetGGXClosure)
+    CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(side)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ag , 2);
         CLOSURE_FETCH_ARG (m_eta, 3);
+        m_sidedness = side;
     }
 
     void print_on (std::ostream &out) const {
@@ -61,21 +63,12 @@ public:
         out << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        float cosNO = m_N.dot(omega_out);
-        if (cosNO > 0) {
-            // we are viewing the surface from the same side as the normal
-            axis = m_N;
-            angle = (float) M_PI;
-            return true;
-        }
-        // we are below the surface
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::GLOSSY);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cosNO = m_N.dot(omega_out);
         float cosNI = m_N.dot(omega_in);
@@ -97,8 +90,19 @@ public:
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_dielectric(Hr.dot(omega_out), m_eta);
         float out = (F * G * D) * 0.25f / cosNO;
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
+        // eq. 24
+        float pm = D * cosThetaM;
+        // convert into pdf of the sampled direction
+        // eq. 38 - but see also:
+        // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+        pdf = pm * 0.25f / Hr.dot(omega_out);
         return Color3 (out, out, out);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -159,31 +163,6 @@ public:
             }
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // get microfacet normal m (half-vector)
-        Vec3 m = omega_in + omega_out;
-        m.normalize();
-        float cosMO = m.dot(omega_out);
-        if (cosMO > 0) {
-            // eq. 33
-            float cosThetaM = m_N.dot(m);
-            float cosThetaM2 = cosThetaM * cosThetaM;
-            float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
-            float cosThetaM4 = cosThetaM2 * cosThetaM2;
-            float alpha2 = m_ag * m_ag;
-            float D = alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
-            // eq. 24
-            float pm = D * cosThetaM;
-            // convert into pdf of the sampled direction
-            // eq. 38 - but see also:
-            // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
-            return pm * 0.25f / cosMO;
-        }
-        return 0;
-    }
 };
 
 // microfacet model with Beckmann facet distribution
@@ -193,7 +172,7 @@ class MicrofacetBeckmannClosure : public BSDFClosure {
     float m_ab;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (MicrofacetBeckmannClosure)
+    CLOSURE_CTOR (MicrofacetBeckmannClosure) : BSDFClosure(side)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ab , 2);
@@ -209,21 +188,12 @@ public:
         out << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        float cosNO = m_N.dot(omega_out);
-        if (cosNO > 0) {
-            // we are viewing the surface from the same side as the normal
-            axis = m_N;
-            angle = (float) M_PI;
-            return true;
-        }
-        // we are below the surface
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::GLOSSY);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cosNO = m_N.dot(omega_out);
         float cosNI = m_N.dot(omega_in);
@@ -247,8 +217,19 @@ public:
         // fresnel term between outgoing direction and microfacet
         float F = fresnel_dielectric(Hr.dot(omega_out), m_eta);
         float out = (F * G * D) * 0.25f / cosNO;
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
+        // eq. 24
+        float pm = D * cosThetaM;
+        // convert into pdf of the sampled direction
+        // eq. 38 - but see also:
+        // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+        pdf = pm * 0.25f / Hr.dot(omega_out);
         return Color3 (out, out, out);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -312,44 +293,19 @@ public:
             }
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // get microfacet normal m (half-vector)
-        Vec3 m = omega_in + omega_out;
-        m.normalize();
-        float cosMO = m.dot(omega_out);
-        if (cosMO > 0) {
-            // eq. 25
-            float alpha2 = m_ab * m_ab;
-            float cosThetaM = m_N.dot(m);
-            float cosThetaM2 = cosThetaM * cosThetaM;
-            float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
-            float cosThetaM4 = cosThetaM2 * cosThetaM2;
-            float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
-            // eq. 24
-            float pm = D * cosThetaM;
-            // convert into pdf of the sampled direction
-            // eq. 38 - but see also:
-            // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
-            return pm * 0.25f / cosMO;
-        }
-        return 0;
-    }
 };
 
 
 
 DECLOP (OP_microfacet_ggx)
 {
-    closure_op_guts<MicrofacetGGXClosure> (exec, nargs, args,
+    closure_op_guts<MicrofacetGGXClosure, 4> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 
 DECLOP (OP_microfacet_beckmann)
 {
-    closure_op_guts<MicrofacetBeckmannClosure> (exec, nargs, args,
+    closure_op_guts<MicrofacetBeckmannClosure, 4> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 

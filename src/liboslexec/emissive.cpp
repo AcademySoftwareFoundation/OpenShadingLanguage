@@ -54,7 +54,7 @@ class GenericEmissiveClosure : public EmissiveClosure {
     // and second the angle where light ends
     float m_outer_angle;
 public:
-    CLOSURE_CTOR (GenericEmissiveClosure)
+    CLOSURE_CTOR (GenericEmissiveClosure) : EmissiveClosure(side)
     {
         if (nargs >= 2 && exec->sym (args[1]).typespec().is_float())
             CLOSURE_FETCH_ARG (m_inner_angle, 1);
@@ -70,8 +70,11 @@ public:
         out << "emission (" << m_inner_angle << ", " << m_outer_angle << ")";
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, Labels &labels) const
+    Labels get_labels() const {
+        return Labels (Labels::LIGHT, Labels::NONE, Labels::NONE);
+    }
+
+    Color3 eval (const Vec3 &Ng, const Vec3 &omega_out) const
     {
         float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
         if (outer_angle < 0.0f)
@@ -79,7 +82,7 @@ public:
         float inner_angle = m_inner_angle < outer_angle ? m_inner_angle : outer_angle;
         if (inner_angle < 0.0f)
             inner_angle = 0.0f;
-        float cosNO = Ng.dot(omega_out);
+        float cosNO = fabsf(Ng.dot(omega_out));
         float cosU  = cosf(inner_angle);
         float cosA  = cosf(outer_angle);
         float res;
@@ -99,8 +102,6 @@ public:
             res = (1.0f - x*x*(3-2*x)) / totalemit;
         }
         else res = 0.0f; // out of cone
-
-        labels.set (Labels::LIGHT, Labels::NONE, Labels::NONE);
         return Color3(res, res, res);
     }
 
@@ -146,8 +147,16 @@ public:
 
 DECLOP (OP_emission)
 {
-    closure_op_guts<GenericEmissiveClosure> (exec, nargs, args,
+    if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
+        closure_op_guts<GenericEmissiveClosure, 3> (exec, nargs, args,
             runflags, beginpoint, endpoint);
+    else if (nargs >= 2 && exec->sym (args[1]).typespec().is_float())
+        closure_op_guts<GenericEmissiveClosure, 2> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+    else
+        closure_op_guts<GenericEmissiveClosure, 1> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+
 }
 
 

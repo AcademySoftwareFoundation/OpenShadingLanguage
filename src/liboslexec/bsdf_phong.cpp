@@ -44,7 +44,7 @@ class PhongClosure : public BSDFClosure {
     Vec3 m_N;
     float m_exponent;
 public:
-    CLOSURE_CTOR (PhongClosure)
+    CLOSURE_CTOR (PhongClosure) : BSDFClosure(side)
     {
         CLOSURE_FETCH_ARG (m_N       , 1);
         CLOSURE_FETCH_ARG (m_exponent, 2);
@@ -56,30 +56,32 @@ public:
         out << m_exponent << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        float cosNO = m_N.dot(omega_out);
-        if (cosNO > 0) {
-            // we are viewing the surface from the same side as the normal
-            axis = m_N;
-            angle = (float) M_PI;
-            return true;
-        }
-        // we are below the surface
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::GLOSSY);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cosNO = m_N.dot(omega_out);
         float cosNI = m_N.dot(omega_in);
         // reflect the view vector
         Vec3 R = (2 * cosNO) * m_N - omega_out;
         float cosRI = R.dot(omega_in);
-        float out = (cosRI > 0) ? cosNI * ((m_exponent + 2) * 0.5f * (float) M_1_PI * powf(cosRI, m_exponent)) : 0;
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
-        return Color3 (out, out, out);
+        if (cosRI > 0) {
+            float common = 0.5f * (float) M_1_PI * powf(cosRI, m_exponent);
+            float out = cosNI * (m_exponent + 2) * common;
+            pdf = (m_exponent + 1) * common;
+            return Color3 (out, out, out);
+        }
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -126,21 +128,11 @@ public:
             }
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        float cosNO = m_N.dot(omega_out);
-        Vec3 R = (2 * cosNO) * m_N - omega_out;
-        float cosRI = R.dot(omega_in);
-        return cosRI > 0 ? (m_exponent + 1) * 0.5f * (float) M_1_PI * powf(cosRI, m_exponent) : 0;
-    }
-
 };
 
 DECLOP (OP_phong)
 {
-    closure_op_guts<PhongClosure> (exec, nargs, args,
+    closure_op_guts<PhongClosure, 3> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 

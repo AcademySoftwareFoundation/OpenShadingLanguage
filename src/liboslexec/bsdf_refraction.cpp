@@ -42,7 +42,7 @@ class RefractionClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (RefractionClosure)
+    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(None)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -55,17 +55,21 @@ public:
         out << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        // does not need to be integrated directly
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        // should never be called - because get_cone is empty
-        return Color3 (0.0f, 0.0f, 0.0f);
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -89,14 +93,6 @@ public:
             domega_in_dy = dTdy;
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // the pdf for an arbitrary direction is 0 because only a single
-        // direction is actually possible
-        return 0;
-    }
 };
 
 
@@ -105,7 +101,7 @@ class DielectricClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (DielectricClosure)
+    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(None)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -118,17 +114,21 @@ public:
         out << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        // does not need to be integrated directly
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        // should never be called - because get_cone is empty
-        return Color3 (0.0f, 0.0f, 0.0f);
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -160,28 +160,20 @@ public:
             labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // the pdf for an arbitrary direction is 0 because only a single
-        // direction is actually possible
-        return 0;
-    }
 };
 
 
 
 DECLOP (OP_refraction)
 {
-    closure_op_guts<RefractionClosure> (exec, nargs, args,
+    closure_op_guts<RefractionClosure, 3> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 
 
 DECLOP (OP_dielectric)
 {
-    closure_op_guts<DielectricClosure> (exec, nargs, args,
+    closure_op_guts<DielectricClosure, 3> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 

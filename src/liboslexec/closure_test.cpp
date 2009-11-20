@@ -47,21 +47,27 @@ class MyClosure : public BSDFClosure {
     float m_f;
 
 public:
-    MyClosure (float f) : m_f (f) { }
+    MyClosure (float f) : BSDFClosure(None), m_f (f) { }
 
     void print_on (std::ostream &out) const
     {
         out << "my (" << m_f << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::NONE);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -72,12 +78,6 @@ public:
                  float &pdf, Color3 &eval, Labels &labels) const
     {
         pdf = 0, omega_in.setValue(0, 0, 0), eval.setValue(0, 0, 0);
-    }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        return 0;
     }
 };
 

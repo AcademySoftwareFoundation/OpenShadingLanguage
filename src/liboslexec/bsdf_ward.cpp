@@ -45,7 +45,7 @@ class WardClosure : public BSDFClosure {
     Vec3 m_T;
     float m_ax, m_ay;
 public:
-    CLOSURE_CTOR (WardClosure)
+    CLOSURE_CTOR (WardClosure) : BSDFClosure(side)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
         CLOSURE_FETCH_ARG (m_T , 2);
@@ -60,28 +60,20 @@ public:
         out << m_ax << ", " << m_ay << ")";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        float cosNO = m_N.dot(omega_out);
-        if (cosNO > 0) {
-            // we are viewing the surface from the same side as the normal
-            axis = m_N;
-            angle = (float) M_PI;
-            return true;
-        }
-        // we are below the surface
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::GLOSSY);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cosNO = m_N.dot(omega_out);
         float cosNI = m_N.dot(omega_in);
         if (cosNI * cosNO <= 0.0f)
            return Color3 (0,0,0);
         // get half vector and get x,y basis on the surface for anisotropy
-        Vec3 H = omega_in + omega_out; // no need to normalize
+        Vec3 H = omega_in + omega_out;
+        H.normalize();  // normalize needed for pdf
         Vec3 X, Y;
         make_orthonormals(m_N, m_T, X, Y);
         // eq. 4
@@ -90,9 +82,18 @@ public:
         float dotn = H.dot(m_N);
         float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
         float denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
-        float out = cosNI * expf(-exp_arg) / denom;
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
+        float exp_val = expf(-exp_arg);
+        float out = cosNI * exp_val / denom;
+        float oh = H.dot(omega_out);
+        denom = 4 * (float) M_PI * m_ax * m_ay * oh * dotn * dotn * dotn;
+        pdf = exp_val / denom;
         return Color3 (out, out, out);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -182,27 +183,11 @@ public:
             }
         }
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        Vec3 H = omega_in + omega_out;
-        H.normalize(); // needed for denominator
-        Vec3 X, Y;
-        make_orthonormals(m_N, m_T, X, Y);
-        // eq. 9
-        float dotx = H.dot(X) / m_ax;
-        float doty = H.dot(Y) / m_ay;
-        float dotn = H.dot(m_N);
-        float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-        float denom = 4 * (float) M_PI * m_ax * m_ay * H.dot(omega_out) * dotn * dotn * dotn;
-        return expf(-exp_arg) / denom;
-    }
 };
 
 DECLOP (OP_ward)
 {
-    closure_op_guts<WardClosure> (exec, nargs, args,
+    closure_op_guts<WardClosure, 5> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 

@@ -41,23 +41,27 @@ namespace pvt {
 
 class TransparentClosure : public BSDFClosure {
 public:
-    CLOSURE_CTOR (TransparentClosure) { }
+    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(None) { }
 
     void print_on (std::ostream &out) const {
         out << "transparent ()";
     }
 
-    bool get_cone(const Vec3 &omega_out, Vec3 &axis, float &angle) const
+    Labels get_labels() const
     {
-        // does not need to be integrated directly
-        return false;
+        return Labels(Labels::NONE, Labels::NONE, Labels::STRAIGHT);
     }
 
-    Color3 eval (const Vec3 &Ng,
-                 const Vec3 &omega_out, const Vec3 &omega_in, Labels &labels) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        // should never be called - because get_cone is empty
-        return Color3 (0.0f, 0.0f, 0.0f);
+        pdf = 0;
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        pdf = 0;
+        return Color3 (0, 0, 0);
     }
 
     void sample (const Vec3 &Ng,
@@ -74,22 +78,11 @@ public:
         eval.setValue(1, 1, 1);
         labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
     }
-
-    float pdf (const Vec3 &Ng,
-               const Vec3 &omega_out, const Vec3 &omega_in) const
-    {
-        // the pdf for an arbitrary direction is 0 because only a single
-        // direction is actually possible
-        return 0;
-    }
-
-    virtual bool isTransparent() const { return true; };
-
 };
 
 DECLOP (OP_transparent)
 {
-    closure_op_guts<TransparentClosure> (exec, nargs, args,
+    closure_op_guts<TransparentClosure, 1> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
 

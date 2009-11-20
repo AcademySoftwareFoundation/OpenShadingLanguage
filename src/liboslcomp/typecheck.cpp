@@ -622,12 +622,13 @@ ASTtype_constructor::typecheck (TypeSpec expected)
 
     // Hijack the usual function arg-checking routines.
     // So we have a set of valid patterns for each type constructor:
-    static const char *float_patterns[] = { "ff", NULL };
+    static const char *float_patterns[] = { "ff", "fi", NULL };
     static const char *triple_patterns[] = { "cf", "cfff", "csfff",
                                              "cc", "cp", "cv", "cn", NULL };
     static const char *matrix_patterns[] = { "mf", "msf", "mss",
                                              "mffffffffffffffff",
-                                             "msffffffffffffffff", NULL };
+                                             "msffffffffffffffff", "mm", NULL };
+    static const char *int_patterns[] = { "if", "ii", NULL };
     // Select the pattern for the type of constructor we are...
     const char **patterns = NULL;
     if (typespec().is_float())
@@ -636,6 +637,8 @@ ASTtype_constructor::typecheck (TypeSpec expected)
         patterns = triple_patterns;
     else if (typespec().is_matrix())
         patterns = matrix_patterns;
+    else if (typespec().is_int())
+        patterns = int_patterns;
     if (! patterns) {
         error ("Cannot construct type '%s'", type_c_str(typespec()));
         return m_typespec;

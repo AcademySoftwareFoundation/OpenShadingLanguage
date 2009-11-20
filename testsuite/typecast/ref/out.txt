@@ -1,16 +1,37 @@
 Compiled test.osl -> test.oso
 Testing basic typecasts:
- (float)5 = 5
- (int)6.5 = 6
+ (float)5 = 5.000000
+ (int)6.500000 = 6
  (color) (point 0.25 0.5 0.75) = 0.25 0.5 0.75
+
+Testing type constructors:
+ float(5) = 5.000000
+ int(6.500000) = 6
+ color(point 0.25 0.5 0.75) = 0.25 0.5 0.75
+
  varying:
- (float)5 = 5
- (int)6.5 = 6
- (int)7.5 = 7
- (int)6.5 = 6
- (int)7.5 = 7
+ (float)5 = 5.000000
+ (float)6 = 6.000000
+ (float)5 = 5.000000
+ (float)6 = 6.000000
+ (int)6.500000 = 6
+ (int)7.500000 = 7
+ (int)6.500000 = 6
+ (int)7.500000 = 7
  (color) (point 0.25 0.5 0.75) = 0.25 0.5 0.75
  (color) (point 0.25 0.5 1.75) = 0.25 0.5 1.75
  (color) (point 0.25 0.5 0.75) = 0.25 0.5 0.75
  (color) (point 0.25 0.5 1.75) = 0.25 0.5 1.75
+ float(5) = 5.000000
+ float(6) = 6.000000
+ float(5) = 5.000000
+ float(6) = 6.000000
+ int(6.500000) = 6
+ int(7.500000) = 7
+ int(6.500000) = 6
+ int(7.500000) = 7
+ color(point 0.25 0.5 0.75) = 0.25 0.5 0.75
+ color(point 0.25 0.5 1.75) = 0.25 0.5 1.75
+ color(point 0.25 0.5 0.75) = 0.25 0.5 0.75
+ color(point 0.25 0.5 1.75) = 0.25 0.5 1.75
 

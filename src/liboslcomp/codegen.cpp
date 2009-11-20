@@ -918,7 +918,7 @@ ASTtype_constructor::codegen (Symbol *dest)
     int nargs = 0;
     for (ref a = args();  a;  a = a->next(), ++nargs) {
         Symbol *argval = a->codegen();
-        if (argval->typespec().is_int()) {
+        if (argval->typespec().is_int() && !typespec().is_int()) {
             // Coerce to float if it's an int
             if (a->nodetype() == literal_node) {
                 // It's a literal int, so let's make a literal float

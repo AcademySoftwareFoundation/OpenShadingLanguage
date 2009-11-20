@@ -7,30 +7,45 @@ test ()
 
     printf ("Testing basic typecasts:\n");
     float g = (float) i;
-    printf (" (float)%d = %g\n", i, g);
+    printf (" (float)%d = %f\n", i, g);
     int j = (int) f;
-    printf (" (int)%g = %d\n", f, j);
+    printf (" (int)%f = %d\n", f, j);
 
     color c = (color)p;
     printf (" (color) (point %g) = %g\n", p, c);
+
+    printf ("\nTesting type constructors:\n");
+    g = float(i);
+    printf (" float(%d) = %f\n", i, g);
+    j = int(f);
+    printf (" int(%f) = %d\n", f, j);
+    c = color(p);
+    printf (" color(point %g) = %g\n", p, c);
 
     // Also test typecasts of array elements
     // point q[2] = { ... };
     // color c = (color) q[1];
 
     {
-        printf (" varying:\n");
-        int i = 5;
+        printf ("\n varying:\n");
+        int i = 5 + (int)u;
         float f = 6.5 + u;
         point p = point (0.25, 0.5, 0.75+u);
 
         float g = (float) i;
-        printf (" (float)%d = %g\n", i, g);
+        printf (" (float)%d = %f\n", i, g);
         int j = (int) f;
-        printf (" (int)%g = %d\n", f, j);
+        printf (" (int)%f = %d\n", f, j);
 
         color c = (color)p;
         printf (" (color) (point %g) = %g\n", p, c);
+
+        g = float(i);
+        printf (" float(%d) = %f\n", i, g);
+        j = int(f);
+        printf (" int(%f) = %d\n", f, j);
+        c = color(p);
+        printf (" color(point %g) = %g\n", p, c);
 
         // Also test typecasts of array elements
         // point q[2] = { ... };

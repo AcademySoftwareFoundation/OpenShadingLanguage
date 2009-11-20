@@ -14,6 +14,13 @@ struct Bstruct {
 
 
 
+void test_output_param (output float fout)
+{
+    fout = 310.5;
+}
+
+
+
 shader
 test (
     Astruct aparam = { 1.0, 0, point(3,4,5), "foo!" }
@@ -33,6 +40,11 @@ test (
     // Structure selection
     printf ("a == { %g, %i, [%g], %s }\n", a.f, a.i, a.p, a.s);
 
+    // Make sure it came in ok as a param
+    printf ("\n");
+    printf ("struct param:  aparam == { %g, %i, [%g], %s }\n",
+            aparam.f, aparam.i, aparam.p, aparam.s);
+
     Bstruct b;
 
     // Structure assignment
@@ -41,13 +53,26 @@ test (
     printf ("\n");
     printf ("after c=a, a == { %g, %i, [%g], %s }\n", c.f, c.i, c.p, c.s);
 
-    // Make sure it's ok with varying
+    // Make sure we can address individual components of struct fields
     printf ("\n");
+    printf ("components of fields: a.p = %g, a.p[1] = %g\n", a.p, a.p[1]);
+
+    // Make sure we can pass structure elements back and forth to functions
+    printf ("\n");
+    printf ("Pass structure element to functions:\n");
+    printf (" sqrt(a.f=%g) = %g\n", a.f, sqrt(a.f));
+    a.f = sqrt(a.f);
+    printf (" after 'a.f = sqrt(a.f)', a.f = %g\n", a.f);
+    a.p[2] = sqrt (a.p[2]);
+    printf (" after 'a.p[2] = sqrt(a.p[2])', a.p[2] = %g\n", a.p[2]);
+
+    test_output_param (a.f);
+    printf (" after writing via a function output arg, a.f = %g\n", a.f);
+    test_output_param (a.p[0]);
+    printf (" after writing via a function output arg, a.p = %g\n", a.p);
+
+    // Make sure it's ok with varying
+    printf ("\n\nVarying:\n");
     a.p = P;
     printf ("after a.p=P, a == { %g, %i, [%g], %s }\n", a.f, a.i, a.p, a.s);
-
-    // Make sure it came in ok as a param
-    printf ("\n");
-    printf ("struct param:  aparam == { %g, %i, [%g], %s }\n",
-            aparam.f, aparam.i, aparam.p, aparam.s);
 }

@@ -776,19 +776,19 @@ public:
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene". 
-    bool get_renderer_attribute(void *renderstate, ustring object,
+    bool get_renderer_attribute(void *renderstate, bool derivatives, ustring object,
                                         TypeDesc type, ustring name, void *val);
 
     /// Similar to get_renderer_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    bool get_renderer_array_attribute (void *renderstate, ustring object,
+    bool get_renderer_array_attribute (void *renderstate, bool derivatives, ustring object,
                                                TypeDesc type, ustring name,
                                                int index, void *val);
 
    /// Query the renderer for the named user-data on the current geometry.  This
    /// function accepts an array of renderstate pointers and writes its value
    /// in the memory region pointed to by 'val'.
-   bool get_renderer_userdata(int npoints, ustring name, TypeDesc type, 
+   bool get_renderer_userdata(int npoints, bool derivatives, ustring name, TypeDesc type, 
                               void *renderstate, int renderstate_stepsize, 
                               void *val, int val_stepsize);
 

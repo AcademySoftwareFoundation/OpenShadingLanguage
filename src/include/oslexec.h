@@ -247,20 +247,22 @@ public:
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene". 
-    virtual bool get_attribute (void *renderstate, ustring object,
-                                TypeDesc type, ustring name, void *val ) = 0;
+    virtual bool get_attribute (void *renderstate, bool derivatives, 
+                                ustring object, TypeDesc type, ustring name, 
+                                void *val ) = 0;
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute (void *renderstate, ustring object,
-                                TypeDesc type, ustring name,
-                                int index, void *val ) = 0;
+    virtual bool get_array_attribute (void *renderstate, bool derivatives, 
+                                      ustring object, TypeDesc type, 
+                                      ustring name, int index, void *val ) = 0;
 
     /// Get the named user-data from the current object and write it into
     /// 'val'.  This function provides and array of renderstates 'npoints'
     /// in size, and a block of memory in which to store the user data (pointed
     /// to by val).  Both arrays have a stride of 'stepsize'.
-    virtual bool get_userdata (int npoints, ustring name, TypeDesc type, 
+    virtual bool get_userdata (int npoints, bool derivatives, 
+                               ustring name, TypeDesc type, 
                                void *renderstates,  int renderstates_stepsize,
                                void *val, int val_stepsize ) = 0;
 

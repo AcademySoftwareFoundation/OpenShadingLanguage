@@ -356,16 +356,12 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
             // unnecessary copying if the values came from geom or
             // connections.  As it stands now, there is some redundancy.
         } else if (sym->valuesource() == Symbol::GeomVal) {
+            adjust_varying(*sym, true, false /* don't keep old values */);
             ShaderGlobals *globals = m_context->m_globals;
-            if (get_renderer_userdata (m_npoints, 
+            if (!get_renderer_userdata (m_npoints, true /*we want derivatives */,
                                         sym->name(), sym->typespec().simpletype(),
                                         &globals->renderstate[0], globals->renderstate.step(),
                                         sym->data(), sym->step())) {
-                // user-data doesn't provide derivates yet
-                if (sym->has_derivs())
-                    zero_derivs(*sym);
-            }
-            else {
 #ifdef DEBUG
                 std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
 #endif
@@ -788,26 +784,27 @@ ShadingExecution::get_matrix (Matrix44 &result, ustring from, int whichpoint)
 }
 
 bool 
-ShadingExecution::get_renderer_array_attribute(void *renderstate, ustring object, 
+ShadingExecution::get_renderer_array_attribute(void *renderstate, bool derivatives, ustring object, 
                                                TypeDesc type, ustring name, 
                                                int index, void *val)
 {
-    return m_renderer->get_array_attribute(renderstate, object, type, name, index, val);
+    return m_renderer->get_array_attribute(renderstate, derivatives, object, type, name, index, val);
 }
 
 bool 
-ShadingExecution::get_renderer_attribute(void *renderstate, ustring object, 
+ShadingExecution::get_renderer_attribute(void *renderstate, bool derivatives, ustring object, 
                                          TypeDesc type, ustring name, void *val)
 {
-    return m_renderer->get_attribute(renderstate, object, type, name, val);
+    return m_renderer->get_attribute(renderstate, derivatives, object, type, name, val);
 }
 
 bool
-ShadingExecution::get_renderer_userdata(int npoints, ustring name, TypeDesc type, 
+ShadingExecution::get_renderer_userdata(int npoints, bool derivatives, 
+                                        ustring name, TypeDesc type, 
                                         void *renderstate, int renderstate_stepsize, 
                                         void *val, int val_stepsize)
 {
-   return m_renderer->get_userdata(npoints, name, type, 
+   return m_renderer->get_userdata(npoints, derivatives, name, type, 
                                    renderstate, renderstate_stepsize,
                                    val, val_stepsize);
 }

@@ -109,21 +109,19 @@ DECLOP (OP_getattribute)
     // always fully varying case
     for (int i = beginpoint;  i < endpoint;  ++i) {
         if (runflags[i]) {
-            //void *d = &destination[i];
             result[i] = array_lookup ? 
-               exec->get_renderer_array_attribute(globals->renderstate[i], 
+               exec->get_renderer_array_attribute(globals->renderstate[i],  
+                                                  true /* want derivatives */,
                                                   object_lookup ? object_name[i] : ustring(),
                                                   attribute_type, attribute_name[i],
                                                   index[i], &destination[i]) :
                exec->get_renderer_attribute(globals->renderstate[i], 
+                                            true /* want derivatives */,
                                             object_lookup ? object_name[i] : ustring(),
                                             attribute_type, attribute_name[i],
                                             &destination[i]);
         }
     }
-    // FIXME: Disable derivatives (for now)
-    if (Destination.has_derivs())
-        exec->zero_derivs (Destination);
 }
 
 

@@ -670,6 +670,8 @@ DECLOP (closure_op_guts)
 
     /* try to parse token/values pair (if there are any) */
     VaryingRef<ustring> sidedness(NULL, 0);
+    VaryingRef<ustring> labels[ClosurePrimitive::MAXCUSTOM+1];
+    int nlabels = 0;
     for (int tok = NumArgs; tok < nargs; tok += 2) {
         Symbol &Name (exec->sym (args[tok]));
         DASSERT (Name.typespec().is_string() && "optional closure token must be a string");
@@ -678,6 +680,15 @@ DECLOP (closure_op_guts)
         Symbol &Val (exec->sym (args[tok + 1]));
         if (name == Strings::sidedness && Val.typespec().is_string()) {
             sidedness.init((ustring*) Val.data(), Val.step());
+        } else if (name == Strings::label && Val.typespec().is_string()) {
+            if (nlabels == ClosurePrimitive::MAXCUSTOM)
+                exec->error ("Too many labels to closure (%s:%d)",
+                                     exec->op().sourcefile().c_str(),
+                                     exec->op().sourceline());
+            else {
+               labels[nlabels].init((ustring*) Val.data(), Val.step());
+               nlabels++;
+            }
         } else {
             exec->error ("Unknown closure optional argument: \"%s\", <%s> (%s:%d)",
                                      name.c_str(),
@@ -685,7 +696,6 @@ DECLOP (closure_op_guts)
                                      exec->op().sourcefile().c_str(),
                                      exec->op().sourceline());
         }
-        // TODO: custom labels
     }
 
     /* N.B. Closures don't have derivs */
@@ -704,7 +714,11 @@ DECLOP (closure_op_guts)
                 else
                     side = ClosurePrimitive::None;
             }
-            new (mem) Primitive (i, exec, nargs, args, side);
+            ClosurePrimitive *prim = new (mem) Primitive (i, exec, nargs, args, side);
+            for (int l = 0; l < nlabels; ++l)
+               prim->set_custom_label(l, labels[l][i]);
+            // Label list must be NONE terminated
+            prim->set_custom_label(nlabels, Labels::NONE);
         }
     }
 }

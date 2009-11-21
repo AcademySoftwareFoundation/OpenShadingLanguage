@@ -49,7 +49,7 @@ class MicrofacetGGXClosure : public BSDFClosure {
     float m_ag;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(side)
+    CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(side, Labels::GLOSSY)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ag , 2);
@@ -62,11 +62,6 @@ public:
         out << m_ag << ", ";
         out << m_eta;
         out << ")";
-    }
-
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::GLOSSY);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
@@ -105,17 +100,16 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 Ngf, Nf;
         if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return;
+            return Labels::NONE;
         float cosNO = Nf.dot(omega_out);
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
             make_orthonormals(Nf, X, Y);
@@ -169,6 +163,7 @@ public:
                 }
             }
         }
+        return Labels::REFLECT;
     }
 };
 
@@ -179,7 +174,7 @@ class MicrofacetBeckmannClosure : public BSDFClosure {
     float m_ab;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (MicrofacetBeckmannClosure) : BSDFClosure(side)
+    CLOSURE_CTOR (MicrofacetBeckmannClosure) : BSDFClosure(side, Labels::GLOSSY)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ab , 2);
@@ -193,11 +188,6 @@ public:
         out << m_ab << ", ";
         out << m_eta;
         out << ")";
-    }
-
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::GLOSSY);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
@@ -238,17 +228,16 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 Ngf, Nf;
         if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return;
+            return Labels::NONE;
         float cosNO = Nf.dot(omega_out);
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
             make_orthonormals(Nf, X, Y);
@@ -305,6 +294,7 @@ public:
                 }
             }
         }
+        return Labels::REFLECT;
     }
 };
 

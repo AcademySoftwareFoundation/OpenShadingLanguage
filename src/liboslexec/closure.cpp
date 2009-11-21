@@ -149,17 +149,7 @@ const ustring Labels::DIFFUSE    = ustring("D");
 const ustring Labels::GLOSSY     = ustring("G");
 const ustring Labels::SINGULAR   = ustring("S");
 const ustring Labels::STRAIGHT   = ustring("s");
-
-
-
-bool Labels::match(const Labels &l) const
-{
-   int mp, op;
-   for (mp=0, op=0; mp < m_size && op < l.m_size; ++op)
-      if (m_set[mp] == l.m_set[op])
-         mp++;
-   return mp == m_size;
-}
+const ustring Labels::STOP       = ustring("__stop__");
 
 
 }; // namespace OSL

@@ -41,15 +41,10 @@ namespace pvt {
 
 class TransparentClosure : public BSDFClosure {
 public:
-    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, false) { }
+    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, false) { }
 
     void print_on (std::ostream &out) const {
         out << "transparent ()";
-    }
-
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::STRAIGHT);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
@@ -62,11 +57,11 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         // only one direction is possible
         omega_in = -omega_out;
@@ -74,7 +69,7 @@ public:
         domega_in_dy = -domega_out_dy;
         pdf = 1;
         eval.setValue(1, 1, 1);
-        labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
+        return Labels::TRANSMIT;
     }
 };
 

@@ -42,7 +42,7 @@ namespace pvt {
 class ReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
 public:
-    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(side, false)
+    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(side, Labels::SINGULAR, false)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
     }
@@ -50,11 +50,6 @@ public:
     void print_on (std::ostream &out) const {
         out << "reflection (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
-    }
-
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
@@ -67,17 +62,16 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 Ngf, Nf;
         if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return;
+            return Labels::NONE;
         // only one direction is possible
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
         float cosNO = Nf.dot(omega_out);
         if (cosNO > 0) {
             omega_in = (2 * cosNO) * Nf - omega_out;
@@ -88,6 +82,7 @@ public:
                 eval.setValue(1, 1, 1);
             }
         }
+        return Labels::REFLECT;
     }
 };
 
@@ -98,7 +93,7 @@ class FresnelReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(side, false)
+    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(side, Labels::SINGULAR, false)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -111,11 +106,6 @@ public:
         out << ")";
     }
 
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
-    }
-
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         pdf = 0;
@@ -128,17 +118,16 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 Ngf, Nf;
         if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return;
+            return Labels::NONE;
         // only one direction is possible
-        labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
         float cosNO = Nf.dot(omega_out);
         if (cosNO > 0) {
             omega_in = (2 * cosNO) * Nf - omega_out;
@@ -150,6 +139,7 @@ public:
                 eval.setValue(value, value, value);
             }
         }
+        return Labels::REFLECT;
     }
 };
 

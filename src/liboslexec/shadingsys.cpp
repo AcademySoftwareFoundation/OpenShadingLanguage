@@ -101,6 +101,7 @@ ustring object ("object"), shader ("shader");
 ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
 ustring null ("null"), default_("default");
+ustring label ("label");
 ustring sidedness ("sidedness"), front ("front"), back ("back"), both ("both");
 ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
 ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v"), Ps ("Ps");

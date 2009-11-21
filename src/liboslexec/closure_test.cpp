@@ -47,16 +47,11 @@ class MyClosure : public BSDFClosure {
     float m_f;
 
 public:
-    MyClosure (float f) : BSDFClosure(None, None), m_f (f) { }
+    MyClosure (float f) : BSDFClosure(None, Labels::NONE, false), m_f (f) { }
 
     void print_on (std::ostream &out) const
     {
         out << "my (" << m_f << ")";
-    }
-
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::NONE);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
@@ -69,13 +64,14 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         pdf = 0, omega_in.setValue(0, 0, 0), eval.setValue(0, 0, 0);
+        return Labels::NONE;
     }
 };
 

@@ -70,10 +70,6 @@ public:
         out << "emission (" << m_inner_angle << ", " << m_outer_angle << ")";
     }
 
-    Labels get_labels() const {
-        return Labels (Labels::LIGHT, Labels::NONE, Labels::NONE);
-    }
-
     Color3 eval (const Vec3 &Ng, const Vec3 &omega_out) const
     {
         float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
@@ -106,7 +102,7 @@ public:
     }
 
     void sample (const Vec3 &Ng, float randu, float randv,
-                 Vec3 &omega_out, float &pdf, Labels &labels) const
+                 Vec3 &omega_out, float &pdf) const
     {
         // We don't do anything sophisticated here for the step
         // We just sample the whole cone uniformly to the cosine
@@ -123,7 +119,6 @@ public:
                     (sinf(phi) * sinTheta) * B +
                                  cosTheta  * Ng;
         pdf = 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
-        labels.set (Labels::LIGHT, Labels::NONE, Labels::NONE);
     }
 
     /// Return the probability distribution function in the direction omega_out,

@@ -41,7 +41,7 @@ namespace pvt {
 class DiffuseClosure : public BSDFClosure {
     Vec3 m_N;
 public:
-    CLOSURE_CTOR (DiffuseClosure) : BSDFClosure(side)
+    CLOSURE_CTOR (DiffuseClosure) : BSDFClosure(side, Labels::DIFFUSE)
     {
         CLOSURE_FETCH_ARG (m_N, 1);
     }
@@ -51,11 +51,6 @@ public:
         out << "diffuse ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::DIFFUSE);
-    }
-
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cos_pi = fabsf(m_N.dot(omega_in)) * (float) M_1_PI;
@@ -68,11 +63,11 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 Ngf, Nf;
         if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
@@ -81,7 +76,6 @@ public:
            sample_cos_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
            if (Ngf.dot(omega_in) > 0) {
                eval.setValue(pdf, pdf, pdf);
-               labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
                // TODO: find a better approximation for the diffuse bounce
                domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
                domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
@@ -90,6 +84,7 @@ public:
            } else
                pdf = 0;
         }
+        return Labels::REFLECT;
     }
 };
 
@@ -98,7 +93,7 @@ public:
 class TranslucentClosure : public BSDFClosure {
     Vec3 m_N;
 public:
-    CLOSURE_CTOR (TranslucentClosure) : BSDFClosure(side, true, false)
+    CLOSURE_CTOR (TranslucentClosure) : BSDFClosure(side, Labels::DIFFUSE, true, false)
     {
         CLOSURE_FETCH_ARG (m_N, 1);
     }
@@ -108,11 +103,6 @@ public:
         out << "translucent ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::DIFFUSE);
-    }
-
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
@@ -125,11 +115,11 @@ public:
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 Ngf, Nf;
         if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
@@ -138,7 +128,6 @@ public:
            sample_cos_hemisphere (-Nf, omega_out, randu, randv, omega_in, pdf);
            if (Ngf.dot(omega_in) < 0) {
                eval.setValue(pdf, pdf, pdf);
-               labels.set ( Labels::SURFACE, Labels::TRANSMIT, Labels::DIFFUSE );
                // TODO: find a better approximation for the diffuse bounce
                domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
                domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
@@ -147,6 +136,7 @@ public:
            } else
                pdf = 0;
         }
+        return Labels::TRANSMIT;
     }
 };
 

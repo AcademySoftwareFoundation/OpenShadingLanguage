@@ -42,7 +42,7 @@ class RefractionClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(Both, false)
+    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(Both, Labels::SINGULAR, false)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -55,11 +55,6 @@ public:
         out << ")";
     }
 
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
-    }
-
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
@@ -70,13 +65,12 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
-        labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
         float Ft = 1 - fresnel_dielectric(m_eta, m_N,
@@ -90,6 +84,7 @@ public:
             domega_in_dx = dTdx;
             domega_in_dy = dTdy;
         }
+        return Labels::TRANSMIT;
     }
 };
 
@@ -99,7 +94,7 @@ class DielectricClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(Both, false)
+    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(Both, Labels::SINGULAR, false)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -112,11 +107,6 @@ public:
         out << ")";
     }
 
-    Labels get_labels() const
-    {
-        return Labels(Labels::NONE, Labels::NONE, Labels::SINGULAR);
-    }
-
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
@@ -127,11 +117,11 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    void sample (const Vec3 &Ng,
+    ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                 float &pdf, Color3 &eval, Labels &labels) const
+                 float &pdf, Color3 &eval) const
     {
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
@@ -146,14 +136,14 @@ public:
             omega_in = R;
             domega_in_dx = dRdx;
             domega_in_dy = dRdy;
-            labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
+            return Labels::REFLECT;
         } else {
             pdf = 1 - Fr;
             eval.setValue(pdf, pdf, pdf);
             omega_in = T;
             domega_in_dx = dTdx;
             domega_in_dy = dTdy;
-            labels.set (Labels::SURFACE, Labels::TRANSMIT, Labels::SINGULAR);
+            return Labels::TRANSMIT;
         }
     }
 };

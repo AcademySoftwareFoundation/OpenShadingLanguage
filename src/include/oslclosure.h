@@ -39,18 +39,13 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
-/// Label set representation for rays
+/// Labels for light walks
 ///
-/// Now labels are represented as an array of ustrings (pointers) with a
-/// maximum of 8 (3 basic labels + 5 custom). The three basic labels are
-/// event type, direction and scattering. Any label set returned by a
-/// closure must define these three labels in that exact order. Even when
-/// some of them might be NULL. Every label in fact is supposed to be sorted
-/// according to the hierarchy.
+/// This is the leftover of a class which used to hold all the labels
+/// Now just acts as a little namespace for the basic definitions
 ///
 class Labels {
 public:
-    static const int MAXLENGTH = 8;
 
     static const ustring NONE;
     // Event type
@@ -68,42 +63,8 @@ public:
     static const ustring SINGULAR; // perfect mirrors and glass
     static const ustring STRAIGHT; // Special case for transparent shadows
 
-    Labels():m_size(0) {};
-    // With the API we have we won't be using this constructor but you never know
-    // sets the basice three built in labels
-    Labels(ustring event_type, ustring direction, ustring scattering):m_size(0)
-      { m_set[0]=event_type; m_set[1]=direction; m_set[2]=scattering; m_size=3; };
+    static const ustring STOP;     // end of a surface description
 
-    // Sets the basice three built in labels
-    void set(ustring event_type, ustring direction, ustring scattering)
-      { m_set[0]=event_type; m_set[1]=direction; m_set[2]=scattering; m_size=m_size<3 ? 3 : m_size; };
-
-    // Add a label to the set, meant for custom ones
-    void append(ustring label) { m_set[m_size++] = label; };
-
-    /// Returns true if all its labels are included in the given ones
-    /// It could eventually do 8 comparisons. we are using it temporarily
-    bool match(const Labels &l) const;
-    bool empty()const { return m_size == 0; };
-    // This is something we should only use for debug
-    bool has(ustring label) const
-      { for (int i=0;i<m_size;++i) if (m_set[i]==label) return true; return false; };
-
-    // Fast label checking methods for the integrator (only basic builtin labels)
-    bool hasEventType (ustring label) const { return m_size > 0 && m_set[0] == label; };
-    bool hasDirection (ustring label) const { return m_size > 1 && m_set[1] == label; };
-    bool hasScattering(ustring label) const { return m_size > 2 && m_set[2] == label; };
-
-    // Label access methods
-    size_t size() const { return m_size; };
-    ustring label(int i) const { return m_set[i]; };
-
-    /// Add labels to the existing ones
-    void clear() { m_size = 0; };
-private:
-    // Actual label set (NULL terminated array)
-    ustring m_set[MAXLENGTH];
-    int m_size;
 };
 
 /// Base class representation of a radiance color closure. These are created on
@@ -127,19 +88,29 @@ public:
         Both  = 3
     };
 
+    // Maximum allowed custom labels
+    static const int MAXCUSTOM = 5;
+
     ClosurePrimitive (Category category) :
-        m_category (category) { }
+        m_category (category) { m_custom_labels[0] = Labels::NONE; }
 
     virtual ~ClosurePrimitive () { }
+
+    /// Meant to be used by the opcode to set custom labels
+    ///
+    void set_custom_label (int i, ustring label) { m_custom_labels[i] = label; }
 
     /// Return the category of material this primitive represents.
     ///
     int category () const { return m_category; }
+    /// Get the custom labels (Labels::NONE terminated)
+    ///
+    const ustring *get_custom_labels()const { return m_custom_labels; }
 
     /// Stream operator output (for debugging)
     ///
     virtual void print_on (std::ostream &out) const = 0;
- 
+
     friend std::ostream& operator<< (std::ostream& o, const ClosurePrimitive& b);
 
     /// Helper function: sample cosine-weighted hemisphere.
@@ -193,6 +164,8 @@ public:
 
 private:
     Category m_category;
+    // Labels::NONE terminated custom label list
+    ustring  m_custom_labels[MAXCUSTOM + 1];
 };
 
 
@@ -201,11 +174,12 @@ private:
 /// for a BSDF-like material: eval(), sample(), pdf().
 class BSDFClosure : public ClosurePrimitive {
 public:
-    BSDFClosure (Sidedness side, bool needs_eval = true, bool reflective_eval = true) :
+    BSDFClosure (Sidedness side, ustring scattering, bool needs_eval = true, bool reflective_eval = true) :
         ClosurePrimitive (BSDF),
         m_sidedness(side),
         m_needs_eval(needs_eval),
-        m_reflective_eval (reflective_eval) { }
+        m_reflective_eval (reflective_eval),
+        m_scattering_label(scattering) { }
     ~BSDFClosure () { }
 
 
@@ -218,9 +192,9 @@ public:
                 Sidedness (m_sidedness & viewing_side) :
                 Sidedness (m_sidedness ^ viewing_side);
     }
-
-    /// Return the labels associated with this scattering event
-    virtual Labels get_labels() const = 0;
+    /// Return the scattering label for this primitive
+    ///
+    ustring scattering () const { return m_scattering_label; }
 
     /// Evaluate the extended BRDF and BTDF kernels -- Given viewing direction
     /// omega_out and lighting direction omega_in (both pointing away from the
@@ -239,12 +213,12 @@ public:
     /// directions from infinitely small cones.
     /// The caller is responsible for initializing the values of the output
     /// arguments with zeros so that early exits from this function are
-    /// simplified.
-    virtual void sample (const Vec3 &Ng,
+    /// simplified. Returns the direction label (R or T).
+    virtual ustring sample (const Vec3 &Ng,
                          const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                          float randu, float randv,
                          Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
-                         float &pdf, Color3 &eval, Labels &labels) const = 0;
+                         float &pdf, Color3 &eval) const = 0;
 
 protected:
     /// Helper function to perform a faceforward on the geometric and shading
@@ -273,6 +247,8 @@ private:
     Sidedness m_sidedness;
     bool m_needs_eval;
     bool m_reflective_eval;
+    // A bsdf can only perform one type of scattering
+    ustring  m_scattering_label;
 };
 
 
@@ -289,9 +265,6 @@ public:
         return (viewing_side & m_sidedness) != 0;
     }
 
-    /// Return the labels associated with this emissive event.
-    virtual Labels get_labels() const = 0;
-
     /// Evaluate the emission -- Given instance parameters, the light's surface
     /// normal N and the viewing direction omega_out, compute the outgoing
     /// radiance along omega_out (which points away from the light's
@@ -304,7 +277,7 @@ public:
     /// the PDF value in that direction.
     virtual void sample (const Vec3 &Ng,
                          float randu, float randv,
-                         Vec3 &omega_out, float &pdf, Labels &labels) const = 0;
+                         Vec3 &omega_out, float &pdf) const = 0;
 
     /// Return the probability distribution function in the direction omega_out,
     /// given the parameters and the light's surface normal.  This MUST match

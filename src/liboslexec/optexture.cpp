@@ -176,8 +176,11 @@ DECLOP (OP_texture)
             Alpha = &Val;
 
         } else {
-            exec->error ("Unknown texture optional argument: \"%s\", <%s>",
-                         name.c_str(), valtype.c_str());
+            exec->error ("Unknown texture optional argument: \"%s\", <%s> (%s:%d)",
+                         name.c_str(),
+                         valtype.c_str(),
+                         exec->op().sourcefile().c_str(),
+                         exec->op().sourceline());
         }
     }
 

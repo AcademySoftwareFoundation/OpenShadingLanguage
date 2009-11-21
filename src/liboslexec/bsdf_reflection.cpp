@@ -42,7 +42,7 @@ namespace pvt {
 class ReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
 public:
-    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(None)
+    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(side, false)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
     }
@@ -59,13 +59,11 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -75,15 +73,20 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return;
         // only one direction is possible
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
-        float cosNO = m_N.dot(omega_out);
+        float cosNO = Nf.dot(omega_out);
         if (cosNO > 0) {
-            omega_in = (2 * cosNO) * m_N - omega_out;
-            domega_in_dx = 2 * m_N.dot(domega_out_dx) * m_N - domega_out_dx;
-            domega_in_dy = 2 * m_N.dot(domega_out_dy) * m_N - domega_out_dy;
-            pdf = 1;
-            eval.setValue(1, 1, 1);
+            omega_in = (2 * cosNO) * Nf - omega_out;
+            if (Ngf.dot(omega_in) > 0) {
+                domega_in_dx = 2 * Nf.dot(domega_out_dx) * Nf - domega_out_dx;
+                domega_in_dy = 2 * Nf.dot(domega_out_dy) * Nf - domega_out_dy;
+                pdf = 1;
+                eval.setValue(1, 1, 1);
+            }
         }
     }
 };
@@ -95,7 +98,7 @@ class FresnelReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(None)
+    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(side, false)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -131,16 +134,21 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return;
         // only one direction is possible
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::SINGULAR);
-        float cosNO = m_N.dot(omega_out);
+        float cosNO = Nf.dot(omega_out);
         if (cosNO > 0) {
-            omega_in = (2 * cosNO) * m_N - omega_out;
-            domega_in_dx = 2 * m_N.dot(domega_out_dx) * m_N - domega_out_dx;
-            domega_in_dy = 2 * m_N.dot(domega_out_dy) * m_N - domega_out_dy;
-            pdf = 1;
-            float value = fresnel_dielectric(cosNO, m_eta);
-            eval.setValue(value, value, value);
+            omega_in = (2 * cosNO) * Nf - omega_out;
+            if (Ngf.dot(omega_in) > 0) {
+                domega_in_dx = 2 * Nf.dot(domega_out_dx) * Nf - domega_out_dx;
+                domega_in_dy = 2 * Nf.dot(domega_out_dy) * Nf - domega_out_dy;
+                pdf = 1;
+                float value = fresnel_dielectric(cosNO, m_eta);
+                eval.setValue(value, value, value);
+            }
         }
     }
 };

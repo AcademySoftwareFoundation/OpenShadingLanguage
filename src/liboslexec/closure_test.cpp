@@ -47,7 +47,7 @@ class MyClosure : public BSDFClosure {
     float m_f;
 
 public:
-    MyClosure (float f) : BSDFClosure(None), m_f (f) { }
+    MyClosure (float f) : BSDFClosure(None, None), m_f (f) { }
 
     void print_on (std::ostream &out) const
     {
@@ -61,13 +61,11 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 

@@ -67,10 +67,10 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cosNO = m_N.dot(omega_out);
-        float cosNI = m_N.dot(omega_in);
-        if (cosNI * cosNO <= 0.0f)
-           return Color3 (0,0,0);
+        float cosNO = fabsf(m_N.dot(omega_out));
+        float cosNI = fabsf(m_N.dot(omega_in));
+        if (cosNI * cosNO <= 0)
+           return Color3 (0, 0, 0);
         // get half vector and get x,y basis on the surface for anisotropy
         Vec3 H = omega_in + omega_out;
         H.normalize();  // normalize needed for pdf
@@ -79,7 +79,7 @@ public:
         // eq. 4
         float dotx = H.dot(X) / m_ax;
         float doty = H.dot(Y) / m_ay;
-        float dotn = H.dot(m_N);
+        float dotn = fabsf(H.dot(m_N));
         float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
         float denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
         float exp_val = expf(-exp_arg);
@@ -92,7 +92,6 @@ public:
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -102,12 +101,15 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        float cosNO = m_N.dot(omega_out);
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return;
+        float cosNO = Nf.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
             Vec3 X, Y;
-            make_orthonormals(m_N, m_T, X, Y);
+            make_orthonormals(Nf, m_T, X, Y);
             // generate random angles for the half vector
             // eq. 7 (taking care around discontinuities to keep
             //        output angle in the right quadrant)
@@ -156,30 +158,32 @@ public:
             float doty = h.y / m_ay;
             float dotn = h.z;
             // transform to world space
-            h = h.x * X + h.y * Y + h.z * m_N;
+            h = h.x * X + h.y * Y + h.z * Nf;
             // generate the final sample
             float oh = h.dot(omega_out);
             omega_in.x = 2 * oh * h.x - omega_out.x;
             omega_in.y = 2 * oh * h.y - omega_out.y;
             omega_in.z = 2 * oh * h.z - omega_out.z;
-            if ((Ng ^ omega_in) > 0.0f) {
-                // eq. 9
-                float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-                float denom = 4 * (float) M_PI * m_ax * m_ay * oh * dotn * dotn * dotn;
-                pdf = expf(-exp_arg) / denom;
-                float cosNI = m_N.dot(omega_in);
-                // compiler will reuse expressions already computed
-                denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
-                float power = cosNI * expf(-exp_arg) / denom;
-                eval.setValue(power, power, power);
-                domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
-                domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
-                // Since there is some blur to this reflection, make the
-                // derivatives a bit bigger. In theory this varies with the
-                // roughness but the exact relationship is complex and
-                // requires more ops than are practical.
-                domega_in_dx *= 10;
-                domega_in_dy *= 10;
+            if (Ngf.dot(omega_in) > 0) {
+                float cosNI = Nf.dot(omega_in);
+                if (cosNI > 0) {
+                    // eq. 9
+                    float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
+                    float denom = 4 * (float) M_PI * m_ax * m_ay * oh * dotn * dotn * dotn;
+                    pdf = expf(-exp_arg) / denom;
+                    // compiler will reuse expressions already computed
+                    denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
+                    float power = cosNI * expf(-exp_arg) / denom;
+                    eval.setValue(power, power, power);
+                    domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
+                    domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
+                    // Since there is some blur to this reflection, make the
+                    // derivatives a bit bigger. In theory this varies with the
+                    // roughness but the exact relationship is complex and
+                    // requires more ops than are practical.
+                    domega_in_dx *= 10;
+                    domega_in_dy *= 10;
+                }
             }
         }
     }

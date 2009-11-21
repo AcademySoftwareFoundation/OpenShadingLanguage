@@ -64,23 +64,21 @@ public:
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cosNO = m_N.dot(omega_out);
-        float cosNI = m_N.dot(omega_in);
         // reflect the view vector
         Vec3 R = (2 * cosNO) * m_N - omega_out;
         float cosRI = R.dot(omega_in);
         if (cosRI > 0) {
+            float cosNI = fabsf(m_N.dot(omega_in));
             float common = 0.5f * (float) M_1_PI * powf(cosRI, m_exponent);
             float out = cosNI * (m_exponent + 2) * common;
             pdf = (m_exponent + 1) * common;
             return Color3 (out, out, out);
         }
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -90,13 +88,16 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        float cosNO = m_N.dot(omega_out);
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return;
+        float cosNO = Nf.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO) * m_N - omega_out;
-            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
-            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
+            Vec3 R = (2 * cosNO) * Nf - omega_out;
+            domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
+            domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
             Vec3 T, B;
             make_orthonormals (R, T, B);
             float phi = 2 * (float) M_PI * randu;
@@ -106,18 +107,17 @@ public:
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * R;
-            if ((Ng ^ omega_in) > 0)
+            if (Ngf.dot(omega_in) > 0)
             {
                 // common terms for pdf and eval
-                float common = 0.5f * (float) M_1_PI * powf(R.dot(omega_in), m_exponent);
-                float cosNI = m_N.dot(omega_in);
-                float power;
+                float cosNI = Nf.dot(omega_in);
                 // make sure the direction we chose is still in the right hemisphere
                 if (cosNI > 0)
                 {
+                    float common = 0.5f * (float) M_1_PI * powf(cosTheta, m_exponent);
                     pdf = (m_exponent + 1) * common;
-                    power = cosNI * (m_exponent + 2) * common;
-                    eval.setValue(power, power, power);
+                    float out = cosNI * (m_exponent + 2) * common;
+                    eval.setValue(out, out, out);
                     // Since there is some blur to this reflection, make the
                     // derivatives a bit bigger. In theory this varies with the
                     // exponent but the exact relationship is complex and

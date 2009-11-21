@@ -65,7 +65,6 @@ public:
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -75,18 +74,21 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        float cosNO = m_N.dot(omega_out);
-        if (cosNO > 0) {
-           // we are viewing the surface from above - send a ray out with cosine
+        Vec3 Ngf, Nf;
+        if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
+           // we are viewing the surface from the right side - send a ray out with cosine
            // distribution over the hemisphere
-           sample_cos_hemisphere (m_N, omega_out, randu, randv, omega_in, pdf);
-           eval.setValue(pdf, pdf, pdf);
-           labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
-           // TODO: find a better approximation for the diffuse bounce
-           domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
-           domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
-           domega_in_dx *= 125;
-           domega_in_dy *= 125;
+           sample_cos_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
+           if (Ngf.dot(omega_in) > 0) {
+               eval.setValue(pdf, pdf, pdf);
+               labels.set ( Labels::SURFACE, Labels::REFLECT, Labels::DIFFUSE );
+               // TODO: find a better approximation for the diffuse bounce
+               domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
+               domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
+               domega_in_dx *= 125;
+               domega_in_dy *= 125;
+           } else
+               pdf = 0;
         }
     }
 };

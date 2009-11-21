@@ -42,7 +42,7 @@ class RefractionClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(None)
+    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(Both, false)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -62,13 +62,11 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -101,7 +99,7 @@ class DielectricClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(None)
+    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(Both, false)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -121,13 +119,11 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 

@@ -38,6 +38,9 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
+// TODO: refactor these two classes so they share everything by the microfacet
+//       distribution terms
+
 
 // microfacet model with GGX facet distribution
 // see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf 
@@ -45,14 +48,12 @@ class MicrofacetGGXClosure : public BSDFClosure {
     Vec3 m_N;
     float m_ag;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
-    Sidedness m_sidedness;
 public:
     CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(side)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ag , 2);
         CLOSURE_FETCH_ARG (m_eta, 3);
-        m_sidedness = side;
     }
 
     void print_on (std::ostream &out) const {
@@ -70,15 +71,15 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cosNO = m_N.dot(omega_out);
-        float cosNI = m_N.dot(omega_in);
+        float cosNO = fabsf(m_N.dot(omega_out));
+        float cosNI = fabsf(m_N.dot(omega_in));
         // get half vector
         Vec3 Hr = omega_in + omega_out;
         Hr.normalize();
         // eq. 20: (F*G*D)/(4*in*on)
         // eq. 33: first we calculate D(m) with m=Hr:
         float alpha2 = m_ag * m_ag;
-        float cosThetaM = Hr.dot(m_N);
+        float cosThetaM = fabsf(m_N.dot(Hr));
         float cosThetaM2 = cosThetaM * cosThetaM;
         float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
         float cosThetaM4 = cosThetaM2 * cosThetaM2;
@@ -101,7 +102,6 @@ public:
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -111,11 +111,14 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        float cosNO = m_N.dot(omega_out);
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return;
+        float cosNO = Nf.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
-            make_orthonormals(m_N, X, Y);
+            make_orthonormals(Nf, X, Y);
             // generate a random microfacet normal m
             // eq. 35,36:
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
@@ -127,30 +130,34 @@ public:
             float phiM = 2 * float(M_PI) * randv;
             Vec3 m = (cosf(phiM) * sinThetaM) * X +
                      (sinf(phiM) * sinThetaM) * Y +
-                                   cosThetaM  * m_N;
+                                   cosThetaM  * Nf;
             float cosMO = m.dot(omega_out);
             if (cosMO > 0) {
-                // microfacet normal is visible to this ray
-                // eq. 33
-                float cosThetaM2 = cosThetaM * cosThetaM;
-                float cosThetaM4 = cosThetaM2 * cosThetaM2;
-                float D = alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
-                // eq. 24
-                float pm = D * cosThetaM;
-                // convert into pdf of the sampled direction
-                // eq. 38 - but see also:
-                // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
-                pdf = pm * 0.25f / cosMO;
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
-                if ((Ng ^ omega_in) > 0.0f) {
-                    float cosNI = m_N.dot(omega_in);
+                if (Ngf.dot(omega_in) > 0) {
+                    // microfacet normal is visible to this ray
+                    // eq. 33
+                    float cosThetaM2 = cosThetaM * cosThetaM;
+                    float cosThetaM4 = cosThetaM2 * cosThetaM2;
+                    float D = alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
+                    // eq. 24
+                    float pm = D * cosThetaM;
+                    // convert into pdf of the sampled direction
+                    // eq. 38 - but see also:
+                    // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+                    pdf = pm * 0.25f / cosMO;
+                    // eval BRDF*cosNI
+                    float cosNI = Nf.dot(omega_in);
+                    // eq. 34: now calculate G1(i,m) and G1(o,m)
                     float G1o = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNO * cosNO) / (cosNO * cosNO)));
                     float G1i = 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNI * cosNI) / (cosNI * cosNI))); 
                     float G = G1o * G1i;
+                    // fresnel term between outgoing direction and microfacet
                     float F = fresnel_dielectric(m.dot(omega_out), m_eta);
-                    float power = (F * G * D) * 0.25f / cosNO;
-                    eval.setValue(power, power, power);
+                    // eq. 20: (F*G*D)/(4*in*on)
+                    float out = (F * G * D) * 0.25f / cosNO;
+                    eval.setValue(out, out, out);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
                     domega_in_dy = (2 * m.dot(domega_out_dy)) * m - domega_out_dy;
                     // Since there is some blur to this reflection, make the
@@ -195,15 +202,15 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cosNO = m_N.dot(omega_out);
-        float cosNI = m_N.dot(omega_in);
+        float cosNO = fabsf(m_N.dot(omega_out));
+        float cosNI = fabsf(m_N.dot(omega_in));
         // get half vector
         Vec3 Hr = omega_in + omega_out;
         Hr.normalize();
         // eq. 20: (F*G*D)/(4*in*on)
         // eq. 25: first we calculate D(m) with m=Hr:
         float alpha2 = m_ab * m_ab;
-        float cosThetaM = Hr.dot(m_N);
+        float cosThetaM = fabsf(m_N.dot(Hr));
         float cosThetaM2 = cosThetaM * cosThetaM;
         float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
         float cosThetaM4 = cosThetaM2 * cosThetaM2;
@@ -228,7 +235,6 @@ public:
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
@@ -238,11 +244,14 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval, Labels &labels) const
     {
-        float cosNO = m_N.dot(omega_out);
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return;
+        float cosNO = Nf.dot(omega_out);
         labels.set (Labels::SURFACE, Labels::REFLECT, Labels::GLOSSY);
         if (cosNO > 0) {
             Vec3 X, Y;
-            make_orthonormals(m_N, X, Y);
+            make_orthonormals(Nf, X, Y);
             // generate a random microfacet normal m
             // eq. 35,36:
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
@@ -254,33 +263,37 @@ public:
             float phiM = 2 * float(M_PI) * randv;
             Vec3 m = (cosf(phiM) * sinThetaM) * X +
                      (sinf(phiM) * sinThetaM) * Y +
-                                   cosThetaM  * m_N;
+                                   cosThetaM  * Nf;
             float cosMO = m.dot(omega_out);
             if (cosMO > 0) {
-                // microfacet normal is visible to this ray
-                // eq. 25
-                float cosThetaM2 = cosThetaM * cosThetaM;
-                float tanThetaM2 = tanThetaM * tanThetaM;
-                float cosThetaM4 = cosThetaM2 * cosThetaM2;
-                float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
-                // eq. 24
-                float pm = D * cosThetaM;
-                // convert into pdf of the sampled direction
-                // eq. 38 - but see also:
-                // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
-                pdf = pm * 0.25f / cosMO;
                 // eq. 39 - compute actual reflected direction
                 omega_in = 2 * cosMO * m - omega_out;
-                if ((Ng ^ omega_in) > 0.0f) {
-                    float cosNI = m_N.dot(omega_in);
+                if (Ngf.dot(omega_in) > 0) {
+                    // microfacet normal is visible to this ray
+                    // eq. 25
+                    float cosThetaM2 = cosThetaM * cosThetaM;
+                    float tanThetaM2 = tanThetaM * tanThetaM;
+                    float cosThetaM4 = cosThetaM2 * cosThetaM2;
+                    float D = expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
+                    // eq. 24
+                    float pm = D * cosThetaM;
+                    // convert into pdf of the sampled direction
+                    // eq. 38 - but see also:
+                    // eq. 17 in http://www.graphics.cornell.edu/~bjw/wardnotes.pdf
+                    pdf = pm * 0.25f / cosMO;
+                    // Eval BRDF*cosNI
+                    float cosNI = Nf.dot(omega_in);
+                    // eq. 26, 27: now calculate G1(i,m) and G1(o,m)
                     float ao = 1 / (m_ab * sqrtf((1 - cosNO * cosNO) / (cosNO * cosNO)));
                     float ai = 1 / (m_ab * sqrtf((1 - cosNI * cosNI) / (cosNI * cosNI)));
                     float G1o = ao < 1.6f ? (3.535f * ao + 2.181f * ao * ao) / (1 + 2.276f * ao + 2.577f * ao * ao) : 1.0f;
                     float G1i = ai < 1.6f ? (3.535f * ai + 2.181f * ai * ai) / (1 + 2.276f * ai + 2.577f * ai * ai) : 1.0f;
                     float G = G1o * G1i;
+                    // fresnel term between outgoing direction and microfacet
                     float F = fresnel_dielectric(m.dot(omega_out), m_eta);
-                    float power = (F * G * D) * 0.25f / cosNO;
-                    eval.setValue(power, power, power);
+                    // eq. 20: (F*G*D)/(4*in*on)
+                    float out = (F * G * D) * 0.25f / cosNO;
+                    eval.setValue(out, out, out);
                     domega_in_dx = (2 * m.dot(domega_out_dx)) * m - domega_out_dx;
                     domega_in_dy = (2 * m.dot(domega_out_dy)) * m - domega_out_dy;
                     // Since there is some blur to this reflection, make the

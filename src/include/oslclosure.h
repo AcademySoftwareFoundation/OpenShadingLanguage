@@ -201,14 +201,17 @@ private:
 /// for a BSDF-like material: eval(), sample(), pdf().
 class BSDFClosure : public ClosurePrimitive {
 public:
-    BSDFClosure (Sidedness side) : ClosurePrimitive (BSDF), m_sidedness(side) { }
+    BSDFClosure (Sidedness side, bool needs_eval = true) :
+        ClosurePrimitive (BSDF),
+        m_sidedness(side),
+        m_needs_eval(needs_eval) { }
     ~BSDFClosure () { }
 
 
     /// Given the side from which we are viewing this closure, return which side
     /// it is sensitive to light on.
     Sidedness get_light_side(Sidedness viewing_side) const {
-        return Sidedness (m_sidedness & viewing_side);
+        return m_needs_eval ? Sidedness (m_sidedness & viewing_side) : None;
     }
 
     /// Return the labels associated with this scattering event
@@ -238,8 +241,32 @@ public:
                          Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                          float &pdf, Color3 &eval, Labels &labels) const = 0;
 
+protected:
+    /// Helper function to perform a faceforward on the geometric and shading
+    /// normals according to what is allowed by the sidedness flag
+    bool faceforward (const Vec3 &omega_out,
+                      const Vec3 &Ng, const Vec3 &N,
+                      Vec3 &Ngf, Vec3 &Nf) const {
+        // figure out sidedness
+        float cosNgO = Ng.dot(omega_out);
+        if (cosNgO > 0 && (m_sidedness & Front)) {
+            Nf = N;
+            Ngf = Ng;
+            return true;
+        } else if (cosNgO < 0 && (m_sidedness & Back)) {
+            // we are behind the surface
+            Nf = -N;
+            Ngf = -Ng;
+            return true;
+        } else {
+            // on the wrong side of the surface
+            return false;
+        }
+    }
+
 private:
     Sidedness m_sidedness;
+    bool m_needs_eval;
 };
 
 

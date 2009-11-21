@@ -678,6 +678,12 @@ DECLOP (closure_op_guts)
         Symbol &Val (exec->sym (args[tok + 1]));
         if (name == Strings::sidedness && Val.typespec().is_string()) {
             sidedness.init((ustring*) Val.data(), Val.step());
+        } else {
+            exec->error ("Unknown closure optional argument: \"%s\", <%s> (%s:%d)",
+                                     name.c_str(),
+                                     Val.typespec().c_str(),
+                                     exec->op().sourcefile().c_str(),
+                                     exec->op().sourceline());
         }
         // TODO: custom labels
     }

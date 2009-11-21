@@ -41,7 +41,7 @@ namespace pvt {
 
 class TransparentClosure : public BSDFClosure {
 public:
-    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(None) { }
+    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, false) { }
 
     void print_on (std::ostream &out) const {
         out << "transparent ()";
@@ -54,13 +54,11 @@ public:
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        pdf = 0;
         return Color3 (0, 0, 0);
     }
 

@@ -207,7 +207,7 @@ DECLOP (OP_transformn);
 DECLOP (OP_transformv);
 DECLOP (OP_transparent);
 DECLOP (OP_transpose);
-//DECLOP (OP_translucence);
+DECLOP (OP_translucent);
 DECLOP (OP_trunc);
 DECLOP (OP_vector);
 DECLOP (OP_ward);

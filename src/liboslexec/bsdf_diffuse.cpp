@@ -93,11 +93,79 @@ public:
     }
 };
 
+
+
+class TranslucentClosure : public BSDFClosure {
+    Vec3 m_N;
+public:
+    CLOSURE_CTOR (TranslucentClosure) : BSDFClosure(side, true, false)
+    {
+        CLOSURE_FETCH_ARG (m_N, 1);
+    }
+
+    void print_on (std::ostream &out) const
+    {
+        out << "translucent ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
+    }
+
+    Labels get_labels() const
+    {
+        return Labels(Labels::NONE, Labels::NONE, Labels::DIFFUSE);
+    }
+
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    {
+        float cos_pi = fabsf(m_N.dot(omega_in)) * (float) M_1_PI;
+        pdf = cos_pi;
+        return Color3 (cos_pi, cos_pi, cos_pi);
+    }
+
+    void sample (const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval, Labels &labels) const
+    {
+        Vec3 Ngf, Nf;
+        if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
+           // we are viewing the surface from the right side - send a ray out with cosine
+           // distribution over the hemisphere
+           sample_cos_hemisphere (-Nf, omega_out, randu, randv, omega_in, pdf);
+           if (Ngf.dot(omega_in) < 0) {
+               eval.setValue(pdf, pdf, pdf);
+               labels.set ( Labels::SURFACE, Labels::TRANSMIT, Labels::DIFFUSE );
+               // TODO: find a better approximation for the diffuse bounce
+               domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
+               domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
+               domega_in_dx *= -125;
+               domega_in_dy *= -125;
+           } else
+               pdf = 0;
+        }
+    }
+};
+
+
+
 DECLOP (OP_diffuse)
 {
     closure_op_guts<DiffuseClosure, 2> (exec, nargs, args,
             runflags, beginpoint, endpoint);
 }
+
+
+
+DECLOP (OP_translucent)
+{
+    closure_op_guts<TranslucentClosure, 2> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+}
+
 
 }; // namespace pvt
 }; // namespace OSL

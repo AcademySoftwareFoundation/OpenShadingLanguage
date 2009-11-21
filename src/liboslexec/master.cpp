@@ -307,6 +307,7 @@ static OpNameEntry op_name_entries[] = {
     { "transform", OP_transform },
     { "transformn", OP_transformn },
     { "transformv", OP_transformv },
+    { "translucent", OP_translucent },
     { "transparent", OP_transparent },
     { "transpose", OP_transpose },
     { "trunc", OP_trunc },

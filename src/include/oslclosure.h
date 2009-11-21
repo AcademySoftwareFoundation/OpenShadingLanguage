@@ -201,17 +201,22 @@ private:
 /// for a BSDF-like material: eval(), sample(), pdf().
 class BSDFClosure : public ClosurePrimitive {
 public:
-    BSDFClosure (Sidedness side, bool needs_eval = true) :
+    BSDFClosure (Sidedness side, bool needs_eval = true, bool reflective_eval = true) :
         ClosurePrimitive (BSDF),
         m_sidedness(side),
-        m_needs_eval(needs_eval) { }
+        m_needs_eval(needs_eval),
+        m_reflective_eval (reflective_eval) { }
     ~BSDFClosure () { }
 
 
     /// Given the side from which we are viewing this closure, return which side
     /// it is sensitive to light on.
     Sidedness get_light_side(Sidedness viewing_side) const {
-        return m_needs_eval ? Sidedness (m_sidedness & viewing_side) : None;
+        if (!m_needs_eval)
+            return None;
+        return m_reflective_eval ?
+                Sidedness (m_sidedness & viewing_side) :
+                Sidedness (m_sidedness ^ viewing_side);
     }
 
     /// Return the labels associated with this scattering event
@@ -267,6 +272,7 @@ protected:
 private:
     Sidedness m_sidedness;
     bool m_needs_eval;
+    bool m_reflective_eval;
 };
 
 

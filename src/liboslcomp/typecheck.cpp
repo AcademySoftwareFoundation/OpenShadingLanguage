@@ -128,11 +128,20 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTvariable_declaration::typecheck_struct_initializers ()
 {
     ASSERT (m_typespec.is_structure());
+
+    if (init() && ! init()->next() && init()->typespec() == m_typespec) {
+        // Special case: just one initializer, it's a whole struct of
+        // the right type.
+        return m_typespec;
+    }
+
+    // General case -- per-field initializers
+
     int structid = m_typespec.structure();
     StructSpec *structspec (m_compiler->symtab().structure (structid));
     int numfields = (int)structspec->numfields();
@@ -1054,6 +1063,13 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     case 'C' : // color closure
         t = TypeSpec (TypeDesc::TypeColor, true);
         break;
+    case 'S' : // structure
+        // Following the 'S' is the numeric structure ID
+        t = TypeSpec ("struct", atoi (code+i+1));
+        // Skip to the last digit
+        while (isdigit(code[i+1]))
+            ++i;
+        break;
     case '?' : break; // anything will match, so keep 'UNKNOWN'
     case '*' : break; // anything will match, so keep 'UNKNOWN'
     case '.' : break; // anything will match, so keep 'UNKNOWN'
@@ -1080,8 +1096,6 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
         }
     }
 
-    // FIXME -- closures, structs
-
     if (advance)
         *advance = i;
     return t;
@@ -1106,7 +1120,7 @@ OSLCompilerImpl::typelist_from_code (const char *code)
             ret += "<any>";
         } else {            
             TypeSpec t = type_from_code (code, &advance);
-            ret += t.string();
+            ret += type_c_str(t);
         }
         code += advance;
         if (*code == '[') {
@@ -1130,7 +1144,7 @@ OSLCompilerImpl::code_from_type (TypeSpec type)
     std::string out;
     TypeDesc elem = type.elementtype().simpletype();
     if (type.is_structure()) {
-        ASSERT (0 && "code_from_type doesn't handle struct yet");
+        out = Strutil::format ("S%d", type.structure());
     } else if (type.is_closure()) {
         out = 'C';
     } else {

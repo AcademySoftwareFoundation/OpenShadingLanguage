@@ -337,19 +337,13 @@ ASTassign_expression::codegen (Symbol *dest)
     if (typespec().is_structure()) {
         // Assignment of struct copies each element individually
         StructSpec *structspec;
-        structspec = oslcompiler->symtab().structure (typespec().structure());
+        structspec = m_compiler->symtab().structure (typespec().structure());
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
-            const StructSpec::FieldSpec &field (structspec->field(i));
-            ustring vname = ustring::format ("___%s_%s", dest->mangled().c_str(),
-                                             field.name.c_str());
-            ustring ename = ustring::format ("___%s_%s", operand->mangled().c_str(),
-                                             field.name.c_str());
-            Symbol *vsym = m_compiler->symtab().find_exact (vname);
-            Symbol *esym = m_compiler->symtab().find_exact (ename);
-            emitcode ("assign", vsym, esym);
+            Symbol *dfield, *ofield;
+            m_compiler->struct_field_pair (dest, operand, i, dfield, ofield);
+            emitcode ("assign", dfield, ofield);
         }
-        
-        return dest;  // FIXME -- do we need a dummy structure?
+        return dest;
     }
 
 
@@ -516,6 +510,24 @@ ASTvariable_declaration::codegen (Symbol *)
 Symbol *
 ASTvariable_declaration::codegen_struct_initializers ()
 {
+    if (init() && ! init()->next() && init()->typespec() == m_typespec) {
+        // Special case: just one initializer, it's a whole struct of
+        // the right type.
+        Symbol *initsym = init()->codegen (m_sym);
+        if (initsym != m_sym) {
+            StructSpec *structspec = m_compiler->symtab().structure (m_typespec.structure());
+            for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+                Symbol *symfield, *initfield;
+                m_compiler->struct_field_pair (m_sym, initsym, i,
+                                               symfield, initfield);
+                emitcode ("assign", symfield, initfield);
+            }
+        }
+        return m_sym;
+    }
+
+    // General case -- per-field initializers
+
     int i = 0;
     for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
         // Structure element -- assign to the i-th member field
@@ -523,7 +535,7 @@ ASTvariable_declaration::codegen_struct_initializers ()
             m_compiler->symtab().structure (m_typespec.structure());
         const StructSpec::FieldSpec &field (structspec->field(i));
         ustring fieldname =
-            ustring::format ("___%s_%s", m_sym->mangled().c_str(),
+            ustring::format ("%s___%s", m_sym->mangled().c_str(),
                              field.name.c_str());
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
 
@@ -1016,12 +1028,22 @@ ASTfunction_call::codegen (Symbol *dest)
         ASTNode *form = user_function()->formals().get();
         ASTNode *a = args().get();
         for (int i = 0;  a;  a = a->nextptr(), form = form->nextptr(), ++i) {
-            ASTvariable_declaration *f = dynamic_cast<ASTvariable_declaration *>(form);
+            ASTvariable_declaration *f = (ASTvariable_declaration *) form;
             f->sym()->alias (argdest[i]);
-        }
 
-        // Typecheck the function
-        user_function()->typecheck (typespec ());
+            // If the formal parameter is a struct, we also need to alias
+            // each of the fields
+            const TypeSpec &ftype (f->sym()->typespec());
+            if (ftype.is_structure()) {
+                StructSpec *structspec = oslcompiler->symtab().structure (ftype.structure());
+                for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
+                    Symbol *fsym, *asym;
+                    m_compiler->struct_field_pair (f->sym(), argdest[i], fi,
+                                                   fsym, asym);
+                    fsym->alias (asym);
+                }
+            }
+        }
 
         // Return statements inside the middle of a function (not the
         // last statement in the function, or inside a conditional)

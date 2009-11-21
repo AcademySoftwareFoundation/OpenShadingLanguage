@@ -20,6 +20,19 @@ void test_output_param (output float fout)
 }
 
 
+float func_with_struct_param (Astruct ap)
+{
+    return ap.f * 2;
+}
+
+
+
+void func_with_struct_output_param (output Astruct ap)
+{
+    ap.i *= 14;
+}
+
+
 
 shader
 test (
@@ -51,7 +64,12 @@ test (
     Astruct c;
     c = a;
     printf ("\n");
-    printf ("after c=a, a == { %g, %i, [%g], %s }\n", c.f, c.i, c.p, c.s);
+    printf ("after c=a, c == { %g, %i, [%g], %s }\n", c.f, c.i, c.p, c.s);
+
+    // Structure assignment upon declaration
+    Astruct d = a;
+    printf ("\n");
+    printf ("after Astruct d=a, d == { %g, %i, [%g], %s }\n", d.f, d.i, d.p, d.s);
 
     // Make sure we can address individual components of struct fields
     printf ("\n");
@@ -70,6 +88,15 @@ test (
     printf (" after writing via a function output arg, a.f = %g\n", a.f);
     test_output_param (a.p[0]);
     printf (" after writing via a function output arg, a.p = %g\n", a.p);
+
+    {
+        Astruct aa = a;
+        printf ("\nPass whole struct as function argument:\n");
+        float f = func_with_struct_param (aa);
+        printf ("  func_with_struct_param(aa) = %g\n", f);
+        func_with_struct_output_param (aa);
+        printf ("  after func_with_struct_output_param(aa), aa.i = %d\n", aa.i);
+    }
 
     // Make sure it's ok with varying
     printf ("\n\nVarying:\n");

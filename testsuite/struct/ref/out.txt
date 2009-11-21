@@ -4,7 +4,9 @@ a == { 3.14159, 42, [0 1 2], foobar }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
 
-after c=a, a == { 3.14159, 42, [0 1 2], foobar }
+after c=a, c == { 3.14159, 42, [0 1 2], foobar }
+
+after Astruct d=a, d == { 3.14159, 42, [0 1 2], foobar }
 
 components of fields: a.p = 0 1 2, a.p[1] = 1
 
@@ -14,6 +16,10 @@ Pass structure element to functions:
  after 'a.p[2] = sqrt(a.p[2])', a.p[2] = 1.41421
  after writing via a function output arg, a.f = 310.5
  after writing via a function output arg, a.p = 310.5 1 1.41421
+
+Pass whole struct as function argument:
+  func_with_struct_param(aa) = 621
+  after func_with_struct_output_param(aa), aa.i = 588
 
 
 Varying:

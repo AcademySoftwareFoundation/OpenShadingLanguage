@@ -220,6 +220,13 @@ public:
     /// accounting for exotic types like structs, etc.
     const char *type_c_str (const TypeSpec &type) const;
 
+    /// Given symbols sym1 and sym2, both the same kind of struct, and the
+    /// index of a field we're interested, find the symbols that represent
+    /// that field in the each sym and place them in field1 and field2,
+    /// respectively.
+    void struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
+                            Symbol * &field1, Symbol * &field2);
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();

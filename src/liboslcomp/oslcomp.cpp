@@ -595,6 +595,32 @@ OSLCompilerImpl::type_c_str (const TypeSpec &type) const
 
 
 
+void
+OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
+                                    Symbol * &field1, Symbol * &field2)
+{
+    ASSERT (sym1 && sym2 && sym1->typespec().is_structure() &&
+            sym1->typespec().structure() && sym2->typespec().structure());
+    // Find the StructSpec for the type of struct that the symbols are
+    const TypeSpec &type = sym1->typespec();
+    StructSpec *structspec = symtab().structure (type.structure());
+    ASSERT (structspec && fieldnum < (int)structspec->numfields());
+    // Find the FieldSpec for the field we are interested in
+    const StructSpec::FieldSpec &field (structspec->field(fieldnum));
+    // Construct mangled names that describe the symbols for the
+    // individual fields
+    ustring name1 = ustring::format ("%s___%s", sym1->mangled().c_str(),
+                                     field.name.c_str());
+    ustring name2 = ustring::format ("%s___%s", sym2->mangled().c_str(),
+                                     field.name.c_str());
+    // Retrieve the symbols
+    field1 = symtab().find_exact (name1);
+    field2 = symtab().find_exact (name2);
+    ASSERT (field1 && field2);
+}
+
+
+
 /// Called after code is generated, this function loops over all the ops
 /// and figures out the lifetimes of all variables, based on whether the
 /// args in each op are read or written.

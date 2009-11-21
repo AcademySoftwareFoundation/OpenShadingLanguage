@@ -228,7 +228,7 @@ SymbolTable::print ()
 {
     if (m_structs.size()) {
         std::cout << "Structure table:\n";
-        int structid = 0;
+        int structid = 1;
         BOOST_FOREACH (const StructSpec * s, m_structs) {
             if (! s)
                 continue;

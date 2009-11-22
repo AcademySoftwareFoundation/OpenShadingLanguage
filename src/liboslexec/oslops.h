@@ -70,6 +70,7 @@ DECLOP (OP_asin);
 DECLOP (OP_atan);
 DECLOP (OP_atan2);
 DECLOP (OP_assign);
+DECLOP (OP_background);
 DECLOP (OP_bitand);
 DECLOP (OP_bitor);
 //DECLOP (OP_bump);

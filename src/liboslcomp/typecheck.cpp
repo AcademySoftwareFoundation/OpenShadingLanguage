@@ -891,6 +891,7 @@ static const char * builtin_func_args [] = {
     "asin", ANY_ONE_FLOAT_BASED, NULL,
     "atan", ANY_ONE_FLOAT_BASED, NULL,
     "atan2", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
+    "background", "C.", NULL,
     "bump", "xf", "xsf", "xv", NULL,
     "calculatenormal", "vp", NULL,
     "ceil", ANY_ONE_FLOAT_BASED, NULL,

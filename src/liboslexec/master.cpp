@@ -199,6 +199,7 @@ static OpNameEntry op_name_entries[] = {
     { "assign", OP_assign },
     { "atan", OP_atan },
     { "atan2", OP_atan2 },
+    { "background", OP_background },
     { "bitand", OP_bitand },
     { "bitor", OP_bitor },
     { "calculatenormal", OP_calculatenormal },

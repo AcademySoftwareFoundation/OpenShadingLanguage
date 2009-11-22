@@ -77,7 +77,8 @@ public:
     /// between the closure primitives and the integrators.
     enum Category {
         BSDF,           ///< It's reflective and/or transmissive
-        Emissive        ///< It's emissive (like a light)
+        Emissive,       ///< It's emissive (like a light)
+        Background,     ///< It's the background
     };
 
     // Describe a closure's sidedness
@@ -286,6 +287,18 @@ public:
                        const Vec3 &omega_out) const = 0;
 private:
     Sidedness m_sidedness;
+};
+
+
+
+/// Subclass of ClosurePrimitive that contains the serves to
+/// flag a background color. No methods needed yet, only the
+/// weight is going to be used
+class BackgroundClosure : public ClosurePrimitive {
+public:
+    BackgroundClosure () : ClosurePrimitive (Background) { }
+    ~BackgroundClosure () { }
+
 };
 
 

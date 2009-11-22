@@ -534,9 +534,8 @@ ASTvariable_declaration::codegen_struct_initializers ()
         StructSpec *structspec =
             m_compiler->symtab().structure (m_typespec.structure());
         const StructSpec::FieldSpec &field (structspec->field(i));
-        ustring fieldname =
-            ustring::format ("%s___%s", m_sym->mangled().c_str(),
-                             field.name.c_str());
+        ustring fieldname = ustring::format ("%s.%s", m_sym->mangled().c_str(),
+                                             field.name.c_str());
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
 
         if (m_sym->symtype() == SymTypeParam ||

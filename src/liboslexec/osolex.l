@@ -73,9 +73,9 @@ STRDUMMY \"(\\.|[^\\"])*\"
   */
 
  /* Identifier: alphanumeric, may contain digits after the first character.
-  * Also '$' is allowed!
+  * Also '$' and '.' are allowed!
   */
-IDENT           ({ALPHA}|[_$])({ALPHA}|{DIGIT}|[_$])*
+IDENT           ({ALPHA}|[_$])({ALPHA}|{DIGIT}|[_$\.])*
  /* C preprocessor (cpp) directives */
 COMMENT         \#[^\n]*\n
  /* Hints */

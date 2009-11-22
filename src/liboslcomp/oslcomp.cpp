@@ -609,9 +609,9 @@ OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
     const StructSpec::FieldSpec &field (structspec->field(fieldnum));
     // Construct mangled names that describe the symbols for the
     // individual fields
-    ustring name1 = ustring::format ("%s___%s", sym1->mangled().c_str(),
+    ustring name1 = ustring::format ("%s.%s", sym1->mangled().c_str(),
                                      field.name.c_str());
-    ustring name2 = ustring::format ("%s___%s", sym2->mangled().c_str(),
+    ustring name2 = ustring::format ("%s.%s", sym2->mangled().c_str(),
                                      field.name.c_str());
     // Retrieve the symbols
     field1 = symtab().find_exact (name1);

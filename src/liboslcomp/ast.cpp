@@ -290,7 +290,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         StructSpec *structspec (oslcompiler->symtab().structure (structid));
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
             const StructSpec::FieldSpec &field (structspec->field(i));
-            ustring fieldname = ustring::format ("%s___%s",
+            ustring fieldname = ustring::format ("%s.%s",
                                                  m_sym->name().c_str(),
                                                  field.name.c_str());
             Symbol *sym = new Symbol (fieldname, field.type, symtype, this);
@@ -425,7 +425,7 @@ ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
     // Construct the mangled symbol name and a pointer to the mangled
     // field, so we don't have to do it over and over again.
     const StructSpec::FieldSpec &fieldrec (structspec->field(m_fieldid));
-    m_mangledfield = ustring::format ("%s___%s", var->name().c_str(),
+    m_mangledfield = ustring::format ("%s.%s", var->name().c_str(),
                                       fieldrec.name.c_str());
     m_mangledsym = comp->symtab().find (m_mangledfield);
 }

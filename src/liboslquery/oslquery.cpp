@@ -233,6 +233,14 @@ OSOReaderQuery::hint (const char *hintstring)
         }
         m_query.m_params[m_query.nparams()-1].metadata.push_back (p);
     }
+    if (m_reading_param && ! strncmp (hintstring, "%structfields{", 14)) {
+        hintstring += 14;
+        OSLQuery::Parameter &param (m_query.m_params[m_query.nparams()-1]);
+        while (*hintstring) {
+            std::string afield = readuntil (&hintstring, ',', '}');
+            param.fields.push_back (afield);
+        }
+    }
     // std::cerr << "Hint '" << hintstring << "'\n";
 }
 

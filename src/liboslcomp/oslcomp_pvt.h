@@ -125,19 +125,20 @@ public:
     /// If 'advance' is non-NULL, set *advance to the number of
     /// characters taken by the first code so the caller can advance
     /// their pointer to the next code in the string.
-    TypeSpec type_from_code (const char *code, int *advance=NULL);
+    TypeSpec type_from_code (const char *code, int *advance=NULL) const;
 
     /// Return the argument checking code ("p", "v", etc.) corresponding
     /// to the type.
-    std::string code_from_type (TypeSpec type);
+    std::string code_from_type (TypeSpec type) const;
 
     /// Take a type code string (possibly containing many types)
     /// and turn it into a human-readable string.
-    std::string typelist_from_code (const char *code);
+    std::string typelist_from_code (const char *code) const;
 
     /// Take a type code string (possibly containing many types) and
     /// turn it into a TypeSpec vector.
-    void typespecs_from_codes (const char *code, std::vector<TypeSpec> &types);
+    void typespecs_from_codes (const char *code,
+                               std::vector<TypeSpec> &types) const;
 
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.

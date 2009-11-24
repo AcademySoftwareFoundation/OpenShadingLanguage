@@ -185,7 +185,11 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
         const OSLQuery::Parameter *p = g.getparam (i);
         if (!p)
             break;
-        std::string typestring = p->type.c_str();
+        std::string typestring;
+        if (p->isstruct)
+            typestring = "struct";
+        else
+            typestring = p->type.c_str();
         if (verbose) {
             std::cout << "    \"" << p->name << "\" \""
                       << (p->isoutput ? "output " : "") << typestring << "\"\n";
@@ -193,7 +197,23 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
             std::cout << (p->isoutput ? "output " : "") << typestring << ' ' 
                       << p->name << ' ';
         }
-        if (! p->validdefault) {
+        if (p->isstruct) {
+            if (verbose)
+                std::cout << "\t\t";
+            std::cout << "fields: {";
+            for (size_t f = 0;  f < p->fields.size();  ++f) {
+                if (f)
+                    std::cout << ", ";
+                std::string fieldname = p->name + '.' + p->fields[f];
+                const OSLQuery::Parameter *field = g.getparam (fieldname);
+                if (field)
+                    std::cout << field->type.c_str() << ' ' << p->fields[f];
+                else
+                    std::cout << "UNKNOWN";
+            }
+            std::cout << "}\n";
+        }
+        else if (! p->validdefault) {
             if (verbose)
                  std::cout << "\t\tUnknown default value\n";
             else std::cout << "nodefault\n";

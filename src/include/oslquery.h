@@ -76,6 +76,7 @@ public:
         std::vector<std::string> sdefault;   ///< default string values
         std::vector<std::string> spacename;  ///< space name for matrices and
                                              ///<  triples, for each array elem.
+        std::vector<std::string> fields; ///< Names of this struct's fields
         std::vector<Parameter> metadata; ///< Meta-data about the param
         Parameter ()
             : isoutput(false), validdefault(false), varlenarray(false),

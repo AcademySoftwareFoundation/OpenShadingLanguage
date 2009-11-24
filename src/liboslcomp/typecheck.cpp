@@ -1047,7 +1047,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
 
 
 TypeSpec
-OSLCompilerImpl::type_from_code (const char *code, int *advance)
+OSLCompilerImpl::type_from_code (const char *code, int *advance) const
 {
     TypeSpec t;
     int i = 0;
@@ -1105,7 +1105,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
 
 
 std::string
-OSLCompilerImpl::typelist_from_code (const char *code)
+OSLCompilerImpl::typelist_from_code (const char *code) const
 {
     std::string ret;
     while (*code) {
@@ -1140,7 +1140,7 @@ OSLCompilerImpl::typelist_from_code (const char *code)
 
 
 std::string
-OSLCompilerImpl::code_from_type (TypeSpec type)
+OSLCompilerImpl::code_from_type (TypeSpec type) const
 {
     std::string out;
     TypeDesc elem = type.elementtype().simpletype();
@@ -1186,7 +1186,7 @@ OSLCompilerImpl::code_from_type (TypeSpec type)
 
 void
 OSLCompilerImpl::typespecs_from_codes (const char *code,
-                                       std::vector<TypeSpec> &types)
+                                       std::vector<TypeSpec> &types) const
 {
     types.clear ();
     while (code && *code) {

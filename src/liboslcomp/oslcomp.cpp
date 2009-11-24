@@ -380,11 +380,27 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
     oso (" %%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
          sym->firstwrite(), sym->lastwrite());
 
+    if (sym->typespec().is_structure()) {
+        if (hints++ == 0)
+            oso ("\t");
+        int structid = sym->typespec().structure();
+        const StructSpec *structspec (symtab().structure (structid));
+        std::string fieldlist, signature;
+        for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+            if (i > 0)
+                fieldlist += ",";
+            fieldlist += structspec->field(i).name.string();
+            signature += code_from_type (structspec->field(i).type);
+        }
+        oso (" %%struct{\"%s\"} %%structfields{%s} %%structfieldtypes{\"%s\"} %%structnfields{%d}",
+             structspec->mangled().c_str(), fieldlist.c_str(),
+             signature.c_str(), structspec->numfields());
+    }
     if (sym->fieldid() >= 0) {
         if (hints++ == 0)
             oso ("\t");
         ASTvariable_declaration *vd = (ASTvariable_declaration *) sym->node();
-        oso (" %%mystruct{%s} %%structfield{%d}",
+        oso (" %%mystruct{%s} %%mystructfield{%d}",
              vd->sym()->mangled().c_str(), sym->fieldid());
     }
 

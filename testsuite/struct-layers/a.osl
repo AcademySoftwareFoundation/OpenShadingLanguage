@@ -2,7 +2,7 @@
 
 shader a (coords st_in = { 0, 1 },
           output coords st_out = { 0, 0 },
-          output shading_result r = { transparent(), 0.0 }
+          output shading_result r = { 0, 0 }
     )
 {
     printf ("a: st_in = %g, %g\n", st_in.s, st_in.t);

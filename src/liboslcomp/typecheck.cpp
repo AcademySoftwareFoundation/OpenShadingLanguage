@@ -152,6 +152,14 @@ ASTvariable_declaration::typecheck_struct_initializers ()
             break;
         }
         const StructSpec::FieldSpec &field (structspec->field(i));
+        // Special case: ok to assign a literal 0 to a closure to
+        // initialize it.
+        if (field.type.is_closure() && ! in->typespec().is_closure() &&
+            (in->typespec().is_float() || in->typespec().is_int()) &&
+            in->nodetype() == literal_node &&
+            ((ASTliteral *)in.get())->floatval() == 0.0f) {
+            continue;  // it's ok
+        }
         if (! assignable(field.type, in->typespec()))
             error ("can't assign '%s' to '%s %s.%s'",
                    type_c_str(in->typespec()),

@@ -142,8 +142,7 @@ ASTvariable_declaration::typecheck_struct_initializers ()
 
     // General case -- per-field initializers
 
-    int structid = m_typespec.structure();
-    StructSpec *structspec (m_compiler->symtab().structure (structid));
+    const StructSpec *structspec (m_typespec.structspec());
     int numfields = (int)structspec->numfields();
     int i = 0;
     for (ASTNode::ref in = init();  in; in = in->next(), ++i) {
@@ -265,7 +264,7 @@ ASTstructselect::typecheck (TypeSpec expected)
         return TypeSpec();
 
     typecheck_children ();
-    StructSpec *structspec (oslcompiler->symtab().structure (m_structid));
+    StructSpec *structspec (TypeSpec::structspec (m_structid));
     m_typespec = structspec->field(m_fieldid).type;
     m_is_lvalue = lvalue()->is_lvalue();
     return m_typespec;

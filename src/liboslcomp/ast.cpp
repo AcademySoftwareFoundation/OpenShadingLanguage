@@ -286,8 +286,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (type.is_structure ()) {
         ASSERT (! m_ismetadata);
         // Add the fields as individual declarations
-        int structid = type.structure();
-        StructSpec *structspec (oslcompiler->symtab().structure (structid));
+        StructSpec *structspec (type.structspec());
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
             const StructSpec::FieldSpec &field (structspec->field(i));
             ustring fieldname = ustring::format ("%s.%s",
@@ -408,7 +407,7 @@ ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
 
     // Make sure the named field exists in this struct type
     m_structid = var->typespec().structure();
-    StructSpec *structspec (oslcompiler->symtab().structure (m_structid));
+    StructSpec *structspec (var->typespec().structspec());
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         if (structspec->field(i).name == field) {
             m_fieldid = i;

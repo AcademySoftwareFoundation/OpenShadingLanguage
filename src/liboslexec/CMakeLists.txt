@@ -10,7 +10,7 @@ SET ( liboslexec_srcs
           opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp opnoise.cpp 
           opstring.cpp optexture.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
-          rendservices.cpp
+          rendservices.cpp typespec.cpp
     )
 FILE ( GLOB compiler_headers "*.h" )
 

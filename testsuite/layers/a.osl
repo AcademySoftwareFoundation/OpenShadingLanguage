@@ -1,6 +1,6 @@
 shader a (float Kd = 0.5,
           float f_out = 0,
-          color c_out = 0
+          output color c_out = 0
     )
 {
     f_out = Kd;

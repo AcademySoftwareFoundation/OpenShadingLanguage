@@ -54,6 +54,7 @@ void yyerror (const char *err);
 #define reader OSOReader::reader
 
 static TypeSpec current_typespec;
+static std::string current_shader_name;
 
 // Forward declaration
 #ifdef OSL_NAMESPACE
@@ -130,6 +131,7 @@ shader_declaration
         : shader_type IDENTIFIER 
                 {
                     OSOReader::osoreader->shader ($1, $2);
+                    current_shader_name = $2;
                 }
             hints_opt ENDOFLINE
                 {
@@ -202,8 +204,9 @@ typespec
                 }
         | STRUCT IDENTIFIER
                 {
-                    current_typespec = TypeSpec ($2, 1);
-                    // FIXME -- we're not distinguishing among structs
+                    // Prepend the shader name to make globally unique
+                    std::string mangled = current_shader_name + "_" + $2;
+                    current_typespec = TypeSpec (mangled.c_str(), 0);
                     $$ = 0;
                 }
         ;

@@ -4344,8 +4344,11 @@ nothing (empty, no token).
 
 <field-declarations> ::= <field-declaration> \{ <field-declaration> \}
 
-<field-declaration> ::= <typespec> <identifier> ";"
-\alt <typespec> <identifier> <arrayspec> ";"
+<field-declaration> ::= <typespec> <typed-field-list> ";"
+
+<typed-field-list> ::= <typed-field> \{ "," <typed-field> \}
+
+<typed-field> ::= <identifier> <arrayspec-opt>
 
 <local-declaration> ::= <function-declaration>
 \alt <variable-declaration>

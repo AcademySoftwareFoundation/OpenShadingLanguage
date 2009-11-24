@@ -1,5 +1,5 @@
 SET ( liboslcomp_srcs ast.cpp codegen.cpp oslcomp.cpp symtab.cpp typecheck.cpp
-      ../liboslexec/oslexec.cpp
+      ../liboslexec/oslexec.cpp ../liboslexec/typespec.cpp
     )
 FILE ( GLOB compiler_headers "*.h" )
 

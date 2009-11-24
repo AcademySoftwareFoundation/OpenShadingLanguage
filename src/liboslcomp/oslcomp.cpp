@@ -383,8 +383,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
     if (sym->typespec().is_structure()) {
         if (hints++ == 0)
             oso ("\t");
-        int structid = sym->typespec().structure();
-        const StructSpec *structspec (symtab().structure (structid));
+        const StructSpec *structspec (sym->typespec().structspec());
         std::string fieldlist, signature;
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
             if (i > 0)
@@ -604,7 +603,7 @@ const char *
 OSLCompilerImpl::type_c_str (const TypeSpec &type) const
 {
     if (type.is_structure())
-        return ustring::format ("struct %s", symtab().structure(type.structure())->name().c_str()).c_str();
+        return ustring::format ("struct %s", type.structspec()->name().c_str()).c_str();
     else
         return type.c_str();
 }
@@ -618,8 +617,7 @@ OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
     ASSERT (sym1 && sym2 && sym1->typespec().is_structure() &&
             sym1->typespec().structure() && sym2->typespec().structure());
     // Find the StructSpec for the type of struct that the symbols are
-    const TypeSpec &type = sym1->typespec();
-    StructSpec *structspec = symtab().structure (type.structure());
+    StructSpec *structspec (sym1->typespec().structspec());
     ASSERT (structspec && fieldnum < (int)structspec->numfields());
     // Find the FieldSpec for the field we are interested in
     const StructSpec::FieldSpec &field (structspec->field(fieldnum));

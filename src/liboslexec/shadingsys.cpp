@@ -488,8 +488,25 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     // array elements or color/vector channels.
     ConnectedParam srccon = decode_connected_param(srcparam, srclayer, srcinst);
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
-    if (! (srccon.valid() && dstcon.valid()))
+    if (! (srccon.valid() && dstcon.valid())) {
+        
         return false;
+    }
+
+    if (srccon.type.is_structure() && dstcon.type.is_structure() &&
+            equivalent (srccon.type, dstcon.type)) {
+        // If the connection is whole struct-to-struct (and they are
+        // structs with equivalent data layout), implement it underneath
+        // as connections between their respective fields.
+        StructSpec *srcstruct = srccon.type.structspec();
+        StructSpec *dststruct = dstcon.type.structspec();
+        for (size_t i = 0;  i < srcstruct->numfields();  ++i) {
+            std::string s = Strutil::format("%s.%s", srcparam, srcstruct->field(i).name.c_str());
+            std::string d = Strutil::format("%s.%s", dstparam, dststruct->field(i).name.c_str());
+            ConnectShaders (srclayer, s.c_str(), dstlayer, d.c_str());
+        }
+        return true;
+    }
 
     if (! assignable (dstcon.type, srccon.type)) {
         error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",

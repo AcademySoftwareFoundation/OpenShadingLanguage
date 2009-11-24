@@ -336,8 +336,7 @@ ASTassign_expression::codegen (Symbol *dest)
 
     if (typespec().is_structure()) {
         // Assignment of struct copies each element individually
-        StructSpec *structspec;
-        structspec = m_compiler->symtab().structure (typespec().structure());
+        StructSpec *structspec = typespec().structspec ();
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
             Symbol *dfield, *ofield;
             m_compiler->struct_field_pair (dest, operand, i, dfield, ofield);
@@ -515,7 +514,7 @@ ASTvariable_declaration::codegen_struct_initializers ()
         // the right type.
         Symbol *initsym = init()->codegen (m_sym);
         if (initsym != m_sym) {
-            StructSpec *structspec = m_compiler->symtab().structure (m_typespec.structure());
+            StructSpec *structspec (m_typespec.structspec());
             for (int i = 0;  i < (int)structspec->numfields();  ++i) {
                 Symbol *symfield, *initfield;
                 m_compiler->struct_field_pair (m_sym, initsym, i,
@@ -531,8 +530,7 @@ ASTvariable_declaration::codegen_struct_initializers ()
     int i = 0;
     for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
         // Structure element -- assign to the i-th member field
-        StructSpec *structspec =
-            m_compiler->symtab().structure (m_typespec.structure());
+        StructSpec *structspec (m_typespec.structspec());
         const StructSpec::FieldSpec &field (structspec->field(i));
         ustring fieldname = ustring::format ("%s.%s", m_sym->mangled().c_str(),
                                              field.name.c_str());
@@ -1034,7 +1032,7 @@ ASTfunction_call::codegen (Symbol *dest)
             // each of the fields
             const TypeSpec &ftype (f->sym()->typespec());
             if (ftype.is_structure()) {
-                StructSpec *structspec = oslcompiler->symtab().structure (ftype.structure());
+                StructSpec *structspec (ftype.structspec());
                 for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
                     Symbol *fsym, *asym;
                     m_compiler->struct_field_pair (f->sym(), argdest[i], fi,

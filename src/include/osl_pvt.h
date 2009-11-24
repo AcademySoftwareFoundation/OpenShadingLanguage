@@ -33,6 +33,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/dassert.h"
 
+#include <boost/tr1/memory.hpp>
+using std::tr1::shared_ptr;
+
+
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -43,6 +47,7 @@ namespace pvt {
 
 class ASTNode;
 class ShadingExecution;
+class StructSpec;
 
 
 /// Kinds of shaders
@@ -128,11 +133,10 @@ public:
 
     /// Construct a TypeSpec describing a struct or array of structs,
     /// by supplying the struct name, structure id, and array length
-    /// (if it's an array of structures).
-    TypeSpec (const char *name, int structid, int arraylen=0)
-        : m_simple(TypeDesc::UNKNOWN, arraylen), m_structure((short)structid),
-          m_closure(false)
-    { }
+    /// (if it's an array of structures).  If structid == 0, search
+    /// the existing table for a (globally) matching name and use that
+    /// struct if it exists, otherwise add an entry to the struct table.
+    TypeSpec (const char *name, int structid, int arraylen=0);
 
     /// Express the type as a string
     ///
@@ -177,6 +181,30 @@ public:
     /// Return the structure ID of this typespec, or 0 if it's not a
     /// struct.
     int structure () const { return m_structure; }
+
+    /// Return the structspec for this structure.
+    ///
+    StructSpec *structspec () const { return structspec(m_structure); }
+
+    /// Find a structure record by id number.
+    ///
+    static StructSpec *structspec (int id) {
+        return id ? m_structs[id].get() : NULL;
+    }
+
+    /// Find a structure index by name, or return 0 if not found.
+    /// If 'add' is true, add the struct if not already found.
+    static int structure_id (const char *name, bool add=false);
+
+    /// Make room for one new structure and return its index.
+    ///
+    static int new_struct (StructSpec *n);
+
+    static StructSpec *last_struct () { return m_structs.back().get(); }
+
+    static std::vector<shared_ptr<StructSpec> > & struct_list () {
+        return m_structs;
+    }
 
     /// Is this an array (either a simple array, or an array of structs)?
     ///
@@ -329,13 +357,9 @@ public:
     }
 
     /// Types are equivalent if they are identical, or if both are
-    /// vector-like (and match their array-ness and closure-ness).
-    friend bool equivalent (const TypeSpec &a, const TypeSpec &b) {
-        return (a == b) || 
-            (a.is_vectriple_based() && b.is_vectriple_based() &&
-             a.is_closure() == b.is_closure() &&
-             a.arraylength() == b.arraylength());
-    }
+    /// vector-like (and match their array-ness and closure-ness), or
+    /// if both are structures with matching fields.
+    friend bool equivalent (const TypeSpec &a, const TypeSpec &b);
 
     /// Is type src is assignable to dst?  It is if they are the equivalent(),
     /// or if dst is a float or float-aggregate and src is a float or int.
@@ -350,6 +374,61 @@ private:
     TypeDesc m_simple;     ///< Data if it's a simple type
     short m_structure;     ///< 0 is not a structure, >=1 for structure id
     bool  m_closure;       ///< Is it a closure? (m_simple also used)
+
+    /// Static table describing the layout of structures
+    ///
+    static std::vector<shared_ptr<StructSpec> > m_structs;
+};
+
+
+
+/// Describe the layout of an OSL 'struct'.
+/// Basically it's just a list of all the individual fields' names and
+/// types.
+class StructSpec {
+public:
+    /// Construct a new struct with the given name, in the given scope.
+    ///
+    StructSpec (ustring name, int scope) : m_name(name), m_scope(scope) { }
+
+    /// Description of a single structure field -- just a type and name.
+    ///
+    struct FieldSpec {
+        FieldSpec (const TypeSpec &t, ustring n) : type(t), name(n) { }
+        TypeSpec type;
+        ustring name;
+    };
+
+    /// Append a new field (with type and name) to this struct.
+    ///
+    void add_field (const TypeSpec &type, ustring name) {
+        m_fields.push_back (FieldSpec (type, name));
+    }
+
+    /// The name of this struct (may not be unique across all scopes).
+    ///
+    ustring name () const { return m_name; }
+
+    /// The unique mangled name (with scope embedded) of this struct.
+    ///
+    std::string mangled () const;
+
+    /// The scope number where this struct was defined.
+    ///
+    int scope () const { return m_scope; }
+
+    /// Number of fields in the struct.
+    ///
+    size_t numfields () const { return m_fields.size(); }
+
+    /// Return a reference to an individual FieldSpec for one field
+    /// of the struct, indexed numerically (starting with 0).
+    const FieldSpec & field (size_t i) const { return m_fields[i]; }
+
+private:
+    ustring m_name;                    ///< Structure name (unmangled)
+    int m_scope;                       ///< Structure's scope id
+    std::vector<FieldSpec> m_fields;   ///< List of fields of the struct
 };
 
 

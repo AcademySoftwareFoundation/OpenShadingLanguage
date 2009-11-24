@@ -64,59 +64,9 @@ class ASTfunction_definition;
 
 
 
-/// Describe the layout of an OSL 'struct'.
-/// Basically it's just a list of all the individual fields' names and
-/// types.
-class StructSpec {
-public:
-    /// Construct a new struct with the given name, in the given scope.
-    ///
-    StructSpec (ustring name, int scope) : m_name(name), m_scope(scope) { }
-
-    /// Description of a single structure field -- just a type and name.
-    ///
-    struct FieldSpec {
-        FieldSpec (const TypeSpec &t, ustring n) : type(t), name(n) { }
-        TypeSpec type;
-        ustring name;
-    };
-
-    /// Append a new field (with type and name) to this struct.
-    ///
-    void add_field (const TypeSpec &type, ustring name) {
-        m_fields.push_back (FieldSpec (type, name));
-    }
-
-    /// The name of this struct (may not be unique across all scopes).
-    ///
-    ustring name () const { return m_name; }
-
-    /// The unique mangled name (with scope embedded) of this struct.
-    ///
-    std::string mangled () const;
-
-    /// The scope number where this struct was defined.
-    ///
-    int scope () const { return m_scope; }
-
-    /// Number of fields in the struct.
-    ///
-    size_t numfields () const { return m_fields.size(); }
-
-    /// Return a reference to an individual FieldSpec for one field
-    /// of the struct, indexed numerically (starting with 0).
-    const FieldSpec & field (size_t i) const { return m_fields[i]; }
-
-private:
-    ustring m_name;                    ///< Structure name (unmangled)
-    int m_scope;                       ///< Structure's scope id
-    std::vector<FieldSpec> m_fields;   ///< List of fields of the struct
-};
-
-
 /// Handy typedef for a vector of pointers to StructSpec's.
 ///
-typedef std::vector<StructSpec *> StructList;
+typedef std::vector<shared_ptr<StructSpec> > StructList;
 
 
 
@@ -228,7 +178,7 @@ public:
     {
         m_scopetables.reserve (20);  // So unlikely to ever copy tables
         push ();                     // Create scope 0 -- global scope
-        m_structs.push_back (NULL);  // Create dummy struct
+//        m_structs.resize (1);        // Create dummy struct
     }
     ~SymbolTable () {
         delete_syms ();
@@ -274,11 +224,6 @@ public:
     ///
     void pop ();
 
-    /// Find a structure record by name.
-    ///
-    StructSpec *structure (int id) { return m_structs[id]; }
-    const StructSpec *structure (int id) const { return m_structs[id]; }
-
     /// delete all symbols that have ever been entered into the table.
     /// After doing this, beware following any Symbol pointers left over!
     void delete_syms ();
@@ -295,7 +240,6 @@ public:
 private:
     OSLCompilerImpl &m_comp;         ///< Back-reference to compiler
     SymbolPtrVec m_allsyms;          ///< Master list of all symbols
-    StructList m_structs;            ///< All the structures we use
     ScopeTableStack m_scopetables;   ///< Stack of symbol scopes
     std::stack<int> m_scopestack;    ///< Stack of current scope IDs
     ScopeTable m_allmangled;         ///< All syms, mangled, in a hash table

@@ -107,6 +107,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> function_declaration function_formal_params_opt 
 %type <n> function_formal_params function_formal_param
 %type <n> struct_declaration field_declarations field_declaration
+%type <n> typed_field_list typed_field
 %type <n> variable_declaration def_expressions def_expression
 %type <n> initializer_opt initializer initializer_list_opt initializer_list
 %type <i> shadertype outputspec arrayspec simple_typename
@@ -364,18 +365,27 @@ field_declarations
         ;
 
 field_declaration
-        : typespec IDENTIFIER ';'
+        : typespec typed_field_list ';'
+        ;
+
+typed_field_list
+        : typed_field
+        | typed_field_list ',' typed_field
+        ;
+
+typed_field
+        : IDENTIFIER
                 {
                     TypeSpec t = oslcompiler->current_typespec();
-                    oslcompiler->symtab().add_struct_field (t, ustring($2));
+                    oslcompiler->symtab().add_struct_field (t, ustring($1));
                     $$ = 0;
                 }
-        | typespec IDENTIFIER arrayspec ';'
+        | IDENTIFIER arrayspec
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    t.make_array ($3);
-                    oslcompiler->symtab().add_struct_field (t, ustring($2));
+                    t.make_array ($2);
+                    oslcompiler->symtab().add_struct_field (t, ustring($1));
                     $$ = 0;
                 }
         ;

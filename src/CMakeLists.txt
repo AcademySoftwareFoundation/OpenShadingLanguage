@@ -104,7 +104,8 @@ TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison
             geomath gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers
             logic loop matrix miscmath noise pnoise
-            oslc-err-paramdefault shortcircuit string struct
+            oslc-err-paramdefault shortcircuit string 
+            struct struct-layers
             texture-alpha texture-blur texture-firstchannel texture-simple
             texture-width texture-withderivs texture-wrap
             transform trig typecast vecctr vector )

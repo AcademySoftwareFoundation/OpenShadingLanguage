@@ -1,0 +1,16 @@
+#include "defs.h"
+
+shader a (coords st_in = { 0, 1 },
+          output coords st_out = { 0, 0 },
+          output shading_result r = { transparent(), 0.0 }
+    )
+{
+    printf ("a: st_in = %g, %g\n", st_in.s, st_in.t);
+    st_out = st_in;
+    st_out.s = 42;
+    printf ("a: st_out = %g, %g\n", st_out.s, st_out.t);
+    r.Copac = color (0.8, 0.7, 0.6);
+    r.Cout  = color (0.6, 0.5, 0.4) * microfacet_ggx (N, 0.5, 20) +
+              color (0.4, 0.5, 0.6) * phong(N, st_out.s);
+    printf ("a: r = %s, %s\n", r.Copac, r.Cout);
+}

@@ -172,8 +172,7 @@ SymbolTable::insert (Symbol *sym)
 int
 SymbolTable::new_struct (ustring name)
 {
-    m_structs.push_back (new StructSpec (name, scopeid()));
-    int structid = (int) m_structs.size() - 1;
+    int structid = TypeSpec::new_struct (new StructSpec (name, scopeid()));
     insert (new Symbol (name, TypeSpec ("",structid), SymTypeType));
     return structid;
 }
@@ -183,7 +182,7 @@ SymbolTable::new_struct (ustring name)
 void
 SymbolTable::add_struct_field (const TypeSpec &type, ustring name)
 {
-    m_structs.back()->add_field (type, name);
+    TypeSpec::last_struct()->add_field (type, name);
 }
 
 
@@ -215,9 +214,7 @@ SymbolTable::delete_syms ()
     for (SymbolPtrVec::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
         delete (*i);
     m_allsyms.clear ();
-    for (StructList::iterator i = m_structs.begin(); i != m_structs.end(); ++i)
-        delete (*i);
-    m_structs.clear ();
+    TypeSpec::struct_list().clear ();
 }
 
 
@@ -226,10 +223,10 @@ SymbolTable::delete_syms ()
 void
 SymbolTable::print ()
 {
-    if (m_structs.size()) {
+    if (TypeSpec::struct_list().size()) {
         std::cout << "Structure table:\n";
         int structid = 1;
-        BOOST_FOREACH (const StructSpec * s, m_structs) {
+        BOOST_FOREACH (shared_ptr<StructSpec> &s, TypeSpec::struct_list()) {
             if (! s)
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();
@@ -254,7 +251,7 @@ SymbolTable::print ()
         std::cout << "\t" << s->mangled() << " : ";
         if (s->is_structure()) {
             std::cout << "struct " << s->typespec().structure() << " "
-                      << m_structs[s->typespec().structure()]->name();
+                      << s->typespec().structspec()->name();
         } else {
             std::cout << s->typespec().string();
         }

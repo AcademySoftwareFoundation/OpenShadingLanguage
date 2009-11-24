@@ -84,7 +84,9 @@ ShaderMaster::resolve_syms ()
         if (s.typespec().is_closure()) {
             s.size (sizeof (ClosureColor *)); // heap stores ptrs to closures
         } else if (s.typespec().is_structure()) {
-            ASSERT (0 && "Struct sizing not yet implemented"); // FIXME
+            // structs are just placeholders, their fields are separate
+            // symbols that hold the real data.
+            s.size (0);
         } else {
             s.size (s.typespec().simpletype().size());
             // FIXME -- some day we may want special padding here, like

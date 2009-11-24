@@ -117,10 +117,9 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
     Symbol sym (ustring(name), typespec, symtype);
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Skip structs for now, they're just placeholders
-        if (typespec.is_structure())
-            return;
-
-        if (typespec.simpletype().basetype == TypeDesc::FLOAT)
+        if (typespec.is_structure()) {
+        }
+        else if (typespec.simpletype().basetype == TypeDesc::FLOAT)
             sym.dataoffset ((int) m_master->m_fdefaults.size());
         else if (typespec.simpletype().basetype == TypeDesc::INT)
             sym.dataoffset ((int) m_master->m_idefaults.size());
@@ -246,6 +245,8 @@ static std::string
 readuntil (std::string &source, const std::string &stop, bool do_trim=false)
 {
     size_t e = source.find_first_of (stop);
+    if (e == source.npos)
+        return std::string ();
     std::string r (source, 0, e);
     source.erase (0, e == source.npos ? e : e+1);
     if (do_trim)
@@ -265,6 +266,21 @@ OSOReaderToMaster::hint (const char *hintstring)
     }
     if (extract_prefix (h, "%line{")) {
         m_sourceline = atoi (h.c_str());
+        return;
+    }
+    if (extract_prefix (h, "%structfields{")) {
+        ASSERT (m_master->m_symbols.size() && "structfields hint but no sym");
+        Symbol &sym (m_master->m_symbols.back());
+        StructSpec *structspec = sym.typespec().structspec();
+        if (structspec->numfields() == 0) {
+            while (1) {
+                std::string afield = readuntil (h, ",}", true);
+                if (! afield.length())
+                    break;
+//                std::cerr << " struct field " << afield << "\n";
+                structspec->add_field (TypeSpec(), ustring(afield));
+            }
+        }
         return;
     }
 }

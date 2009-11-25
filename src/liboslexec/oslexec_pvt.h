@@ -291,6 +291,14 @@ public:
     ///
     const Connection & connection (int i) const { return m_connections[i]; }
 
+    /// Return whether this instance can be bound or not
+    ///
+    bool is_bound() const { return !m_rebindable; }
+
+    /// Sets this instance as having been bound
+    ///
+    void set_bound() { m_rebindable = false; }
+
 private:
     bool heap_size_calculated () const { return m_heapsize >= 0; }
     void calc_heap_size ();
@@ -305,6 +313,7 @@ private:
     int m_heapround;                    ///< Heap padding for odd npoints
     int m_numclosures;                  ///< Number of non-global closures
     std::vector<Connection> m_connections; ///< Connected input params
+    bool m_rebindable;                  ///< Has ths instance *ever* been bound?
 
     friend class ShadingExecution;
 };

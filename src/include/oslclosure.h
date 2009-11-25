@@ -359,6 +359,10 @@ public:
         return reinterpret_cast<const ClosurePrimitive*>(&m_mem[component(i).memoffset]);
     }
 
+    /// This allows for fast stealing of closure data avoiding reallocation
+    void swap(ClosureColor &source) { m_components.swap(source.m_components);
+                                      m_mem.swap(source.m_mem); }
+
 private:
 
     /// Light-weight struct to hold a single component of the Closure.

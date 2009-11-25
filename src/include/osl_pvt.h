@@ -189,7 +189,7 @@ public:
     /// Find a structure record by id number.
     ///
     static StructSpec *structspec (int id) {
-        return id ? m_structs[id].get() : NULL;
+        return id ? struct_list()[id].get() : NULL;
     }
 
     /// Find a structure index by name, or return 0 if not found.
@@ -200,11 +200,13 @@ public:
     ///
     static int new_struct (StructSpec *n);
 
-    static StructSpec *last_struct () { return m_structs.back().get(); }
+    /// Return a pointer to the last structure added to the end of the
+    /// structure list.
+    static StructSpec *last_struct () { return struct_list().back().get(); }
 
-    static std::vector<shared_ptr<StructSpec> > & struct_list () {
-        return m_structs;
-    }
+    /// Return a reference to the structure list.
+    ///
+    static std::vector<shared_ptr<StructSpec> > & struct_list ();
 
     /// Is this an array (either a simple array, or an array of structs)?
     ///
@@ -374,10 +376,6 @@ private:
     TypeDesc m_simple;     ///< Data if it's a simple type
     short m_structure;     ///< 0 is not a structure, >=1 for structure id
     bool  m_closure;       ///< Is it a closure? (m_simple also used)
-
-    /// Static table describing the layout of structures
-    ///
-    static std::vector<shared_ptr<StructSpec> > m_structs;
 };
 
 

@@ -357,9 +357,11 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
             // unnecessary copying if the values came from geom or
             // connections.  As it stands now, there is some redundancy.
         } else if (sym->valuesource() == Symbol::GeomVal) {
-            adjust_varying(*sym, true, false /* don't keep old values */);
+            bool derivatives = (sym->typespec().is_float() || sym->typespec().is_triple());
+            if (derivatives)
+                adjust_varying(*sym, true, false /* don't keep old values */);
             ShaderGlobals *globals = m_context->m_globals;
-            if (!get_renderer_userdata (m_npoints, true /*we want derivatives */,
+            if (!get_renderer_userdata (m_npoints, derivatives,
                                         sym->name(), sym->typespec().simpletype(),
                                         &globals->renderstate[0], globals->renderstate.step(),
                                         sym->data(), sym->step())) {

@@ -107,16 +107,18 @@ DECLOP (OP_getattribute)
     attribute_type = Destination.typespec().simpletype();
 
     // always fully varying case
+    bool derivatives = (Destination.typespec().is_float() || Destination.typespec().is_triple());
+
     for (int i = beginpoint;  i < endpoint;  ++i) {
         if (runflags[i]) {
             result[i] = array_lookup ? 
                exec->get_renderer_array_attribute(globals->renderstate[i],  
-                                                  true /* want derivatives */,
+                                                  derivatives /* want derivatives */,
                                                   object_lookup ? object_name[i] : ustring(),
                                                   attribute_type, attribute_name[i],
                                                   index[i], &destination[i]) :
                exec->get_renderer_attribute(globals->renderstate[i], 
-                                            true /* want derivatives */,
+                                            derivatives /* want derivatives */,
                                             object_lookup ? object_name[i] : ustring(),
                                             attribute_type, attribute_name[i],
                                             &destination[i]);

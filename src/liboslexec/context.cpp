@@ -155,7 +155,12 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
 Symbol *
 ShadingContext::symbol (ShaderUse use, ustring name)
 {
-    for (int layer = (int)m_exec[use].size()-1;  layer >= 0;  --layer) {
+    ShaderGroup &sgroup (m_attribs->shadergroup (use));
+    size_t nlayers = sgroup.nlayers ();
+   
+    ASSERT(nlayers <= m_exec[use].size()); 
+
+    for (int layer = (int)nlayers-1;  layer >= 0;  --layer) {
         Symbol *sym = m_exec[use][layer].symbol (name);
         if (sym)
             return sym;

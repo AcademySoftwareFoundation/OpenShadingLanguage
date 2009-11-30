@@ -52,11 +52,9 @@ public:
     static const ustring CAMERA;
     static const ustring LIGHT;
     static const ustring BACKGROUND;
-    static const ustring SURFACE;
-    static const ustring VOLUME;
-    // Direction
     static const ustring TRANSMIT;
     static const ustring REFLECT;
+    static const ustring VOLUME;
     // Scattering
     static const ustring DIFFUSE;  // typical 2PI hemisphere
     static const ustring GLOSSY;   // blurry reflections and transmissions

@@ -141,7 +141,6 @@ const ustring Labels::NONE       = ustring(NULL);
 const ustring Labels::CAMERA     = ustring("C");
 const ustring Labels::LIGHT      = ustring("L");
 const ustring Labels::BACKGROUND = ustring("B");
-const ustring Labels::SURFACE    = ustring("F");
 const ustring Labels::VOLUME     = ustring("V");
 const ustring Labels::TRANSMIT   = ustring("T");
 const ustring Labels::REFLECT    = ustring("R");

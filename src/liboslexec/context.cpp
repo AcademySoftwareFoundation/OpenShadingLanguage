@@ -155,8 +155,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
 Symbol *
 ShadingContext::symbol (ShaderUse use, ustring name)
 {
-    ShaderGroup &sgroup (m_attribs->shadergroup (use));
-    size_t nlayers = sgroup.nlayers ();
+    size_t nlayers = m_nlayers[use];
    
     ASSERT(nlayers <= m_exec[use].size()); 
 

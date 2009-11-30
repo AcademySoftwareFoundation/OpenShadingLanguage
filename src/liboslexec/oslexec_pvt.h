@@ -291,13 +291,21 @@ public:
     ///
     const Connection & connection (int i) const { return m_connections[i]; }
 
-    /// Return whether this instance can be bound or not
-    ///
-    bool is_bound() const { return !m_rebindable; }
+    /// Return whether this instance can be re-bound, which is a
+    /// shortcut performed when a ShadingExecution::bind realizes that
+    /// it's using the same instance as last time, and can save a lot of
+    /// the work of a fresh bind.  But this can be fooled if an instance
+    /// was freed and then a new instance uses the same address.  So we
+    /// check also whether the instance is "rebindable" also, which
+    /// really just means "has it ever been bound since first created"
+    /// (it starts off life not rebindable).
+    bool rebindable() const { return m_rebindable; }
 
-    /// Sets this instance as having been bound
-    ///
-    void set_bound() { m_rebindable = false; }
+    /// Sets this instance as rebindable (i.e. has been fully bound once,
+    /// so is safe to rebind).  This is thread-safe because the instance
+    /// is initialized with m_rebindable=false and it's flipped to true
+    /// only once in its life, at a point when it's safe to rebind.
+    void set_rebindable () { m_rebindable = true; }
 
 private:
     bool heap_size_calculated () const { return m_heapsize >= 0; }

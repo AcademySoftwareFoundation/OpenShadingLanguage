@@ -103,7 +103,7 @@ TESTSUITE ( arithmetic array blendmath cellnoise closure color comparison
             function-simple function-outputelem
             geomath gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers
-            logic loop matrix miscmath noise pnoise
+            logic loop matrix miscmath missing-shader noise pnoise
             oslc-err-paramdefault shortcircuit string 
             struct struct-layers
             texture-alpha texture-blur texture-firstchannel texture-simple

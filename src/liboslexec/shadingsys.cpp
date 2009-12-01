@@ -585,6 +585,9 @@ int
 ShadingSystemImpl::find_named_layer_in_group (ustring layername,
                                               ShaderInstance * &inst)
 {
+    inst = NULL;
+    if (m_group_use >= ShadUseUnknown)
+        return -1;
     ShaderGroup &group (m_curattrib->shadergroup (m_group_use));
     for (int i = 0;  i < group.nlayers();  ++i) {
         if (group[i]->layername() == layername) {
@@ -592,7 +595,6 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
             return i;
         }
     }
-    inst = NULL;
     return -1;
 }
 

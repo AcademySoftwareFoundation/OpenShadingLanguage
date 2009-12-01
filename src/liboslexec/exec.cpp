@@ -49,7 +49,7 @@ namespace pvt {   // OSL::pvt
 
 ShadingExecution::ShadingExecution ()
     : m_context(NULL), m_instance(NULL), m_master(NULL),
-      m_bound(false), m_debug(false)
+      m_bound(false), m_debug(false), m_last_instance_id(-1)
 {
 }
 
@@ -143,14 +143,14 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 
     // Take various shortcuts if we are re-binding the same instance as
     // last time.
-    bool rebind = (m_context == context && m_instance == instance && instance->rebindable());
+    bool rebind = (instance->id() == m_last_instance_id);
     if (! rebind) {
         m_context = context;
         m_instance = instance;
         m_master = instance->master ();
         m_shadingsys = &context->shadingsys ();
         m_renderer = m_shadingsys->renderer ();
-        instance->set_rebindable ();
+        m_last_instance_id = instance->id ();
         ASSERT (m_master && m_context && m_shadingsys && m_renderer);
         // FIXME -- if the number of points we need now is <= last time
         // we bound to this context, we can even skip much of the work

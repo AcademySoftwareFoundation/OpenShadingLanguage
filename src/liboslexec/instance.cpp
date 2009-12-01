@@ -47,8 +47,10 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_symbols(m_master->m_symbols),
       m_layername(layername), m_heapsize(-1 /*uninitialized*/),
-      m_heapround(0), m_numclosures(-1), m_rebindable(false)
+      m_heapround(0), m_numclosures(-1)
 {
+    static int next_id = 0; // We can statically init an int, not an atomic
+    m_id = ++(*(atomic_int *)&next_id);
 }
 
 

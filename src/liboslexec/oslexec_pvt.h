@@ -291,21 +291,9 @@ public:
     ///
     const Connection & connection (int i) const { return m_connections[i]; }
 
-    /// Return whether this instance can be re-bound, which is a
-    /// shortcut performed when a ShadingExecution::bind realizes that
-    /// it's using the same instance as last time, and can save a lot of
-    /// the work of a fresh bind.  But this can be fooled if an instance
-    /// was freed and then a new instance uses the same address.  So we
-    /// check also whether the instance is "rebindable" also, which
-    /// really just means "has it ever been bound since first created"
-    /// (it starts off life not rebindable).
-    bool rebindable() const { return m_rebindable; }
-
-    /// Sets this instance as rebindable (i.e. has been fully bound once,
-    /// so is safe to rebind).  This is thread-safe because the instance
-    /// is initialized with m_rebindable=false and it's flipped to true
-    /// only once in its life, at a point when it's safe to rebind.
-    void set_rebindable () { m_rebindable = true; }
+    /// Return the unique ID of this instance.
+    ///
+    int id () const { return m_id; }
 
 private:
     bool heap_size_calculated () const { return m_heapsize >= 0; }
@@ -320,8 +308,8 @@ private:
     int m_heapsize;                     ///< Heap space needed per point
     int m_heapround;                    ///< Heap padding for odd npoints
     int m_numclosures;                  ///< Number of non-global closures
+    int m_id;                           ///< Unique ID for the instance
     std::vector<Connection> m_connections; ///< Connected input params
-    bool m_rebindable;                  ///< Has ths instance *ever* been bound?
 
     friend class ShadingExecution;
 };
@@ -842,6 +830,7 @@ private:
     bool m_executed;              ///< Have we been executed?
     bool m_debug;                 ///< Debug mode
     SymbolVec m_symbols;          ///< Our own copy of the syms
+    int m_last_instance_id;       ///< ID of last instance bound
 
     // A word about runflags and the runflag stack: the head of the
     // stack contains a copy of the CURRENT run state.  This is so that

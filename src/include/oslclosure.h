@@ -74,9 +74,10 @@ public:
     /// to customize/extend this list as long as there is coordination
     /// between the closure primitives and the integrators.
     enum Category {
-        BSDF,           ///< It's reflective and/or transmissive
-        Emissive,       ///< It's emissive (like a light)
-        Background,     ///< It's the background
+        BSDF,           ///< Reflective and/or transmissive surface
+        BSSRDF,         ///< Sub-surface light transfer
+        Emissive,       ///< Light emission
+        Background,     ///< Background emission
     };
 
     // Describe a closure's sidedness
@@ -170,7 +171,7 @@ private:
 
 
 /// Subclass of ClosurePrimitive that contains the methods needed
-/// for a BSDF-like material: eval(), sample(), pdf().
+/// for a BSDF-like material.
 class BSDFClosure : public ClosurePrimitive {
 public:
     BSDFClosure (Sidedness side, ustring scattering, bool needs_eval = true, bool reflective_eval = true) :
@@ -250,7 +251,20 @@ private:
     ustring  m_scattering_label;
 };
 
+/// Subclass of ClosurePrimitive that contains the methods needed
+/// for a BSSSRDF-like material.
+class BSSRDFClosure : public ClosurePrimitive {
+public:
+    BSSRDFClosure() : ClosurePrimitive(BSSRDF) { }
+    ~BSSRDFClosure() { }
 
+    /// Evaluate the amount of light transfered between two points seperated by
+    /// a distance r.
+    virtual Color3 eval(float r) const = 0;
+
+    /// Return the maximum distance for which eval returns a non-zero value.
+    virtual float max_radius() const = 0;
+};
 
 /// Subclass of ClosurePrimitive that contains the methods needed
 /// for an emissive material.

@@ -204,6 +204,7 @@ static OpNameEntry op_name_entries[] = {
     { "background", OP_background },
     { "bitand", OP_bitand },
     { "bitor", OP_bitor },
+    { "bssrdf_cubic", OP_bssrdf_cubic },
     { "calculatenormal", OP_calculatenormal },
     { "ceil", OP_ceil },
     { "cellnoise", OP_cellnoise },

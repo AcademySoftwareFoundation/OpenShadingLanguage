@@ -73,6 +73,7 @@ DECLOP (OP_assign);
 DECLOP (OP_background);
 DECLOP (OP_bitand);
 DECLOP (OP_bitor);
+DECLOP (OP_bssrdf_cubic);
 //DECLOP (OP_bump);
 DECLOP (OP_calculatenormal);
 DECLOP (OP_ceil);

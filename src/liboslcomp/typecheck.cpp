@@ -1011,7 +1011,7 @@ static const char * builtin_func_args [] = {
 //    "refraction", "Cf", "Cff", "Csf", "Csff", 
 //                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
     "specular", "Cnf", NULL,
-    "subsurface", "C.", NULL,
+    "bssrdf_cubic", "Cc.", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

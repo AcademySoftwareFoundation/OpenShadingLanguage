@@ -896,6 +896,7 @@ public:
         m_heapsize = -1;
         m_heapround = -1;
         m_numclosures = -1;
+        m_heap_size_calculated = 0;
     }
 
 private:

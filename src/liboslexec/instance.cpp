@@ -47,7 +47,7 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_symbols(m_master->m_symbols),
       m_layername(layername), m_heapsize(-1 /*uninitialized*/),
-      m_heapround(0), m_numclosures(-1)
+      m_heapround(0), m_numclosures(-1), m_heap_size_calculated(0)
 {
     static int next_id = 0; // We can statically init an int, not an atomic
     m_id = ++(*(atomic_int *)&next_id);
@@ -93,6 +93,15 @@ ShaderInstance::parameters (const ParamValueList &params)
 void
 ShaderInstance::calc_heap_size ()
 {
+    // Because heap size may not be computed until mid-bind, we must
+    // protect against multiple threads computing it on an Instance
+    // simultaneously.
+    static spin_mutex heap_size_mutex;
+    spin_lock lock (heap_size_mutex);
+
+    if (m_heap_size_calculated)
+        return;   // Another thread did it before we got the lock
+
     if (shadingsys().debug())
         shadingsys().info ("calc_heapsize on %s", m_master->shadername().c_str());
     m_heapsize = 0;
@@ -139,6 +148,8 @@ ShaderInstance::calc_heap_size ()
                            (unsigned long long)m_heapsize, m_numclosures);
         shadingsys().info (" Padding for alignment = %d", m_heapround);
     }
+
+    m_heap_size_calculated = 1;
 }
 
 
@@ -178,6 +189,15 @@ ShaderInstance::numclosures ()
 void
 ShadingAttribState::calc_heap_size ()
 {
+    // Because heap size may not be computed until mid-bind, we must
+    // protect against multiple threads computing it on a
+    // ShadingAttribState simultaneously.
+    static spin_mutex heap_size_mutex;
+    spin_lock lock (heap_size_mutex);
+
+    if (m_heap_size_calculated)
+        return;   // Another thread did it before we got the lock
+
     m_heapsize = 0;
     m_heapround = 0;
     m_numclosures = 0;
@@ -188,6 +208,8 @@ ShadingAttribState::calc_heap_size ()
             m_numclosures += m_shaders[i][lay]->numclosures ();
         }
     }
+    
+    m_heap_size_calculated = 1;
 }
 
 

@@ -296,7 +296,7 @@ public:
     int id () const { return m_id; }
 
 private:
-    bool heap_size_calculated () const { return m_heapsize >= 0; }
+    bool heap_size_calculated () const { return m_heap_size_calculated; }
     void calc_heap_size ();
 
     ShaderMaster::ref m_master;         ///< Reference to the master
@@ -309,6 +309,7 @@ private:
     int m_heapround;                    ///< Heap padding for odd npoints
     int m_numclosures;                  ///< Number of non-global closures
     int m_id;                           ///< Unique ID for the instance
+    int m_heap_size_calculated;         ///< Has the heap size been computed?
     std::vector<Connection> m_connections; ///< Connected input params
 
     friend class ShadingExecution;
@@ -867,7 +868,8 @@ class ShadingAttribState
 {
 public:
     ShadingAttribState () : m_heapsize (-1 /*uninitialized*/),
-                            m_heapround (-1), m_numclosures (-1) { }
+                            m_heapround (-1), m_numclosures (-1),
+                            m_heap_size_calculated (0) { }
     ~ShadingAttribState () { }
 
     /// Return a reference to the shader group for a particular use
@@ -897,13 +899,14 @@ public:
     }
 
 private:
-    bool heap_size_calculated () const { return m_heapsize >= 0; }
+    bool heap_size_calculated () const { return m_heap_size_calculated; }
     void calc_heap_size ();
 
     OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
     int m_heapsize;                  ///< Heap space needed per point
     int m_heapround;                 ///< Heap padding for odd npoints
     int m_numclosures;               ///< Number of non-global closures
+    int m_heap_size_calculated;      ///< Has the heap size been computed?
 };
 
 

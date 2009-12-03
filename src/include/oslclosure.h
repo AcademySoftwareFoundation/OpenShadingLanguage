@@ -55,6 +55,7 @@ public:
     static const ustring TRANSMIT;
     static const ustring REFLECT;
     static const ustring VOLUME;
+    static const ustring OBJECT;
     // Scattering
     static const ustring DIFFUSE;  // typical 2PI hemisphere
     static const ustring GLOSSY;   // blurry reflections and transmissions

@@ -955,6 +955,7 @@ void
 ASTfunction_call::codegen_handle_special_cases ()
 {
     Opcode &op (m_compiler->lastop ());
+    Symbol **args = &(m_compiler->opargs()[op.firstarg()]);
     ustring opname = op.opname();
     if (func()->readwrite_special_case()) {
         if (opname == "fresnel") {
@@ -967,6 +968,29 @@ ASTfunction_call::codegen_handle_special_cases ()
                    opname == "gettextureinfo") {
             // these all write to their last argument
             op.argwriteonly (op.nargs() - 1);
+        } else if (func()->texture_args()) {
+            // texture-like function, look out for "alpha"
+            int firstopt = 2;  // first optional argument
+            while (firstopt < op.nargs() &&
+                   ! args[firstopt]->typespec().is_string())
+                ++firstopt;
+            // Loop through the optional args, look for "alpha"
+            for (int a = firstopt;  a < op.nargs()-1;  a += 2) {
+                Symbol *s = args[a];
+                if (s->typespec().is_string() && s->symtype() == SymTypeConst &&
+                    ((ConstantSymbol *)s)->strval() == "alpha") {
+                    // 'alpha' writes to the next arg!
+                    if (a+1 < 32)
+                        op.argwriteonly (a+1);   // mark writeable
+                    else {
+                        // We can only designate the first 32 args
+                        // writeable.  So swap it with earlier optional args.
+                        std::swap (args[firstopt],   args[a]);
+                        std::swap (args[firstopt+1], args[a+1]);
+                        op.argwriteonly (firstopt+1);
+                    }
+                }
+            }
         }
     }
 }

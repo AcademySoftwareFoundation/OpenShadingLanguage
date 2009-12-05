@@ -162,6 +162,10 @@ public:
     ///
     Opcode & ircode (int index) { return m_ircode[index]; }
 
+    /// Return a reference to the full opargs list.
+    ///
+    SymbolPtrVec & opargs () { return m_opargs; }
+
     /// Specify that subsequent opcodes are for a particular method
     ///
     void codegen_method (ustring method) { m_codegenmethod = method; }

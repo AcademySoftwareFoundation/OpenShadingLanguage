@@ -876,7 +876,9 @@ ASTfunction_call::typecheck (TypeSpec expected)
 //
 // There are also entries that don't describe polymorphisms, but just mark
 // the functions as having special properties:
-//   "!rw"    nonstandard behavior about which args are read vs written.
+//   "!rw"      nonstandard behavior about which args are read vs written.
+//   "!printf"  has a printf-like argument list
+//   "!tex"     has a texture()-like token/value pair optinal argument list
 //
 
 #define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
@@ -920,7 +922,7 @@ static const char * builtin_func_args [] = {
     "endswith", "iss", NULL,
     "erf", "ff", NULL,
     "erfc", "ff", NULL,
-    "error", "xs*", NULL,   // FIXME -- further checking
+    "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
     "exp", ANY_ONE_FLOAT_BASED, NULL,
     "exp2", ANY_ONE_FLOAT_BASED, NULL,
@@ -930,8 +932,8 @@ static const char * builtin_func_args [] = {
     "filterwidth", "ff", "vp", "vv", NULL,
     "floor", ANY_ONE_FLOAT_BASED, NULL,
     "fmod", "fff", "ccf", "ccc", "ppf", "ppp", "vvf", "vvv", NULL, // alias for mod()
-    "format", "ss*", NULL,
-    "fprintf", "xs*", NULL,   // FIXME -- further checking
+    "format", "ss*", "!printf", NULL,
+    "fprintf", "xs*", "!printf", NULL,
     "fresnel", "xvvff", "xvvfffvv", "!rw", NULL,
     "getattribute", "is?", "iss?", "isi?", "issi?", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "iss?", "!rw", NULL,  // FIXME -- further checking?
@@ -959,7 +961,7 @@ static const char * builtin_func_args [] = {
     "normalize", "vv", "nn", NULL,
     "pnoise", PNOISE_ARGS, NULL,
     "pow", "fff", "ccf", "ppf", "vvf", "nnf", NULL,
-    "printf", "xs*", NULL,   // FIXME -- further checking
+    "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "radians", ANY_ONE_FLOAT_BASED, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
@@ -984,7 +986,7 @@ static const char * builtin_func_args [] = {
     "tan", ANY_ONE_FLOAT_BASED, NULL,
     "tanh", ANY_ONE_FLOAT_BASED, NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
-               "vsff.", "vsffffff.", NULL,
+                 "vsff.", "vsffffff.", "!tex", "!rw", NULL,
     "transform", /* "psp", "vsv", "nsn", "pssp", "vssv", "nssn", */
                  "pmp", "vmv", "nmn", NULL,
     "transformc", "csc", "cssc", NULL,
@@ -1025,12 +1027,19 @@ OSLCompilerImpl::initialize_builtin_funcs ()
 {
     for (int i = 0;  builtin_func_args[i];  ++i) {
         ustring funcname (builtin_func_args[i++]);
-        // Count the number of polymorphic versions
+        // Count the number of polymorphic versions and look for any
+        // special hint markers.
         int npoly = 0;
         bool readwrite_special_case = false;
+        bool texture_args = false;
+        bool printf_args = false;
         for (npoly = 0;  builtin_func_args[i+npoly];  ++npoly) {
             if (! strcmp (builtin_func_args[i+npoly], "!rw"))
                 readwrite_special_case = true;
+            else if (! strcmp (builtin_func_args[i+npoly], "!tex"))
+                texture_args = true;
+            else if (! strcmp (builtin_func_args[i+npoly], "!printf"))
+                printf_args = true;
         }
         // Now add them in reverse order, so the order in the table is
         // the priority order for approximate matches.
@@ -1045,6 +1054,8 @@ OSLCompilerImpl::initialize_builtin_funcs ()
             f->nextpoly ((FunctionSymbol *)last);
             f->argcodes (poly);
             f->readwrite_special_case (readwrite_special_case);
+            f->texture_args (texture_args);
+            f->printf_args (printf_args);
             symtab().insert (f);
         }
         i += npoly;

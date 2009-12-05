@@ -77,7 +77,8 @@ class FunctionSymbol : public Symbol {
 public:
     FunctionSymbol (ustring n, TypeSpec type, ASTNode *node=NULL)
         : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL),
-          m_readwrite_special_case(false)
+          m_readwrite_special_case(false), m_texture_args(false),
+          m_printf_args(false)
     { }
 
     void nextpoly (FunctionSymbol *nextpoly) { m_nextpoly = nextpoly; }
@@ -113,6 +114,12 @@ public:
     void readwrite_special_case (bool s) { m_readwrite_special_case = s; }
     bool readwrite_special_case () const { return m_readwrite_special_case; }
 
+    void texture_args (bool s) { m_texture_args = s; }
+    bool texture_args () const { return m_texture_args; }
+
+    void printf_args (bool s) { m_printf_args = s; }
+    bool printf_args () const { return m_printf_args; }
+
 private:
     ustring m_argcodes;              ///< Encoded arg types
     FunctionSymbol *m_nextpoly;      ///< Next polymorphic version
@@ -122,6 +129,8 @@ private:
     int m_function_loop_nesting;     ///< Loop nesting level within the func
     int m_function_total_nesting;    ///< Total nesting level within the func
     bool m_readwrite_special_case;   ///< Unusual in how it r/w's its args
+    bool m_texture_args;             ///< Has texture-like token/value args
+    bool m_printf_args;              ///< Has printf-like varargs
 };
 
 

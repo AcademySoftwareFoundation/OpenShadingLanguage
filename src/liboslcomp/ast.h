@@ -744,7 +744,7 @@ private:
     // Handle all the special cases for built-ins.
     void typecheck_builtin_specialcase (Symbol *dest = NULL);
 
-    // Handle special caes where the function does something other
+    // Handle special case where the function does something other
     // than read all arguments and write the first one.
     void codegen_handle_special_cases ();
 

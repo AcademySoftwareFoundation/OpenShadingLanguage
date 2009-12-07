@@ -127,6 +127,27 @@ DECLOP (OP_getattribute)
 }
 
 
+
+DECLOP (OP_surfacearea)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result      (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_float());
+    ShaderGlobals *globals = exec->context()->globals();
+
+    exec->adjust_varying (Result, globals->surfacearea.is_varying());
+    VaryingRef<float> result ((float *)Result.data(), Result.step());
+    if (result.is_uniform()) {
+        result[0] = globals->surfacearea[0];
+    } else {
+        for (int i = beginpoint;  i < endpoint;  ++i) {
+            if (runflags[i])
+                result[i] = globals->surfacearea[i];
+        }
+    }
+}
+
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

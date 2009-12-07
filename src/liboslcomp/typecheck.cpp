@@ -984,6 +984,7 @@ static const char * builtin_func_args [] = {
     "step", "fff", NULL,
     "strlen", "is", NULL,
     "substr", "ssii", NULL,
+    "surfacearea", "f", NULL,
     "tan", ANY_ONE_FLOAT_BASED, NULL,
     "tanh", ANY_ONE_FLOAT_BASED, NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 

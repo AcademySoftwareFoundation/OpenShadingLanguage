@@ -306,6 +306,7 @@ static OpNameEntry op_name_entries[] = {
     { "strlen", OP_strlen },
     { "sub", OP_sub },
     { "substr", OP_substr },
+    { "surfacearea", OP_surfacearea },
     { "tan", OP_tan },
     { "tanh", OP_tanh },
     { "texture", OP_texture },

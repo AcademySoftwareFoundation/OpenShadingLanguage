@@ -215,6 +215,7 @@ public:
     VaryingRef<ClosureColor *> Ci;     ///< Output colors
 
     bool flipHandedness;               ///< flips the meaning of calculatenormal()
+    VaryingRef<float> surfacearea;     ///< Total area of the object (not exposed)
 };
 
 

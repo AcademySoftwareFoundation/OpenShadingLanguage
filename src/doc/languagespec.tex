@@ -44,7 +44,7 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{0.1}
+\def\versionnumber{0.9}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 16 November, 2009 \\
+\date{{\large Date: 1 December, 2009 \\
 %(with corrections, 19 Oct 2009)
 }}
 
@@ -165,8 +165,8 @@ together in the context of a renderer as a whole.
 
 \begin{annotate}
 Other than the background material of this chapter, the rest of this
-specification deals strictly with the language itself.  There will, in
-the future, be separate (shorter) documents explaining in detail the use
+specification deals strictly with the language itself.  In the future, 
+there will be separate (shorter) documents explaining in detail the use
 of the language compiler, the renderer-side issues, the library and APIs
 for how a renderer actually causes shaders to be evaluated, and so on.
 \end{annotate}
@@ -404,7 +404,7 @@ information, to yield the amount of light visible to the camera.
 \begin{annotate}
 At present, this document is written as if the integrators are built
 into the renderer itself (or implemented as renderer plug-ins).  At a
-later time, we may consider making it possible for integrators themselves
+later time, we indend to make it possible for integrators themselves
 to be written in \langname.
 \end{annotate}
 
@@ -907,7 +907,6 @@ Describes the purpose and use of the shader or parameter.
 Provides a URL for full documentation of the shader or parameter.
 \apiend
 
-\NEW % 1/22/09
 \apiitem{string units}
 Gives the assumed units, if any, for the parameter (e.g., \qkw{cm},
 \qkw{sec}, \qkw{degrees}).
@@ -916,7 +915,6 @@ assumption is being violated (for example, the compiler can warn
 if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
 \apiend
 
-\NEW % 1/22/09
 \apiitem{int normalized}
 For a \vector or \normal, a nonzero value is a a hint that the shader
 expects the vector to be unit length.  The renderer may use this hint to
@@ -1762,10 +1760,10 @@ structure to have a field that is another structure.  For example:
     d[2].b[4] = 0.25;     // Element of a field of a struct in an array
 \end{code}
 
-\begin{annotate}
-\QUESTION Is this restriction (no ``structure recursion'') acceptable?
-It certainly makes the implementation of the language easier.
-\end{annotate}
+%\begin{annotate}
+%\QUESTION Is this restriction (no ``structure recursion'') acceptable?
+%It certainly makes the implementation of the language easier.
+%\end{annotate}
 
 \index{types|)}   % end of chapter
 
@@ -2575,11 +2573,11 @@ Computes $\sqrt{x^2+y^2}$ and $\sqrt{x^2+y^2+z^z}$, respectively.
 Absolute value of $x$.  (The two functions are synonyms.)
 \apiend
 
-\begin{annotate}
-Should we fully return to C conventions, with abs() being for integers
-and fabs being for float?  Or should abs() simply be overloaded, like
-you'd do in C++ if we were starting from scratch today?
-\end{annotate}
+%\begin{annotate}
+%Should we fully return to C conventions, with abs() being for integers
+%and fabs being for float?  Or should abs() simply be overloaded, like
+%you'd do in C++ if we were starting from scratch today?
+%\end{annotate}
 
 \apiitem{\emph{type} {\ce sign} (\emph{type} x)}
 \indexapi{sign()}
@@ -2706,9 +2704,9 @@ Returns the distance between two points.
 Returns the distance from {\cf Q} to the closest point on the line
 segment joining {\cf P0} and {\cf P1}.
 
-\begin{annotate}
-\QUESTION In RMan this was called `ptlined'.  Do we like that better, or `distance'?
-\end{annotate}
+%\begin{annotate}
+%\QUESTION In RMan this was called `ptlined'.  Do we like that better, or `distance'?
+%\end{annotate}
 \apiend
 
 \apiitem{vector {\ce normalize} (vector V) \\
@@ -2881,9 +2879,9 @@ Transforms color \emph{Cfrom} from color space \emph{fromspace} to
 color space \emph{tospace}.  If \emph{fromspace} is not supplied,
 it is assumed to be transforming from \rgbspace.
 
-\begin{annotate}
-\QUESTION Should this be renamed `ctransform' to match RMan?
-\end{annotate}
+%\begin{annotate}
+%\QUESTION Should this be renamed `ctransform' to match RMan?
+%\end{annotate}
 \apiend
 
 
@@ -3115,19 +3113,6 @@ $v$.  Results are undefined if the knots do not specifiy a monotonic
 \index{functions!derivatives and area}
 \index{derivatives}
 
-%\apiitem{float {\ce deltau} (float x), {\ce deltav} (float x) \\
-%vector {\ce deltau} (point x), {\ce deltav} (point x) \\
-%vector {\ce deltau} (vector x), {\ce deltav} (vector x)\\
-%color {\ce deltau} (color x), {\ce deltav} (color x)}
-%\indexapi{deltau()} \indexapi{deltav()}
-%Compute differentials of the argument $x$, i.e., the approximate change
-%in $x$ between adjacent shading samples in each of two principal
-%directions.  Depending on the renderer implementation, those directions
-%may be $x$ and $y$ on the imaging plane, may be parametric $u$ and $v$
-%on the surface, or something else.  Do not confuse the ``u'' and ``v''
-%in the name with a guarantee that it is tied to the surface parameters.
-%\apiend
-
 \apiitem{float {\ce Dx} (float a), {\ce Dy} (float a) \\
 vector {\ce Dx} (point a), {\ce Dy} (point a) \\
 vector {\ce Dx} (vector a), {\ce Dy} (vector a)\\
@@ -3139,19 +3124,6 @@ $\partial a / \partial y$.  Depending on the renderer
 implementation, those directions may be aligned to the image plane,
 on the surface of the object, or something else.
 \apiend
-
-%\begin{annotate}
-%\QUESTION I'm uncomfortable with these definitions.  Does this make
-%sense at all in a renderer-agnostic way?  Is it horribly confusing to
-%call it ``u'' and ``v'' in a ray tracer that's probably computing
-%derivatives with respect to screen x and y?  If we called it deltax,
-%deltay, Dx, Dy, would that be confusing in a renderer that really was
-%Reyes-like and shading in parameter space?
-%
-%For that matter, is there any legitimate use for differentials or
-%derivatives along the principal directions, or is the only really
-%useful quantity filterwidth()?
-%\end{annotate}
 
 \apiitem{float {\ce filterwidth} (float x) \\
 vector {\ce filterwidth} (point x) \\
@@ -3196,11 +3168,11 @@ used: \qkw{catmull-rom}, \qkw{box}, \qkw{triangle}, or \qkw{gaussian}.
 If no {\cf filter} parameter is supplied, a Catmull-Rom filter will be
 used.
 
-\begin{annotate}
-\QUESTION This is similar to RenderMan's ``filterstep'', but not quite.
-Is it better to call it ``filterstep'' even if it doesn't exactly match,
-or should we stick to the changed name to match the changed functionality?
-\end{annotate}
+%\begin{annotate}
+%\QUESTION This is similar to RenderMan's ``filterstep'', but not quite.
+%Is it better to call it ``filterstep'' even if it doesn't exactly match,
+%or should we stick to the changed name to match the changed functionality?
+%\end{annotate}
 \apiend
 
 
@@ -3374,9 +3346,9 @@ Identical to {\cf regex_search}, except that it must match the
 \apiend
 
 
-\begin{annotate}
-Should we look at Pystring and add useful things here?
-\end{annotate}
+%\begin{annotate}
+%Should we look at Pystring and add useful things here?
+%\end{annotate}
 
 
 \section{Texture}
@@ -4023,13 +3995,6 @@ Returns a \colorclosure that represents the Lambertian diffuse
 translucence of a smooth surface, which is much like {\cf diffuse()}
 except that it gathers light from the \emph{far} side of the surface.
 
-\begin{annotate}
-Is a general term such as ``translucence'' too presumptuous for a simple
-backfacing lambert?  Should we instead call this {\cf backdiffuse},
-{\cf backlambert}, or something more specific?  Since probably later we
-will add one or more physically-accurate, translucence function.
-\end{annotate}
-
 \apiend
 
 
@@ -4489,28 +4454,35 @@ how all these concepts fit together.
 \end{annotate}
 
 
-\chapter{Discussion}
+\chapter{Design Discussion}
 \label{chap:discussion}
 \begin{annotate}
 
-In this chapter, which will presumably not be included in the final
-language specicification document, we discuss some of the design choices
-we've made, as well as topics for which decisions have not yet been
-made.  
+In this chapter, we discuss and justify some of the design choices we've
+made.  This specification is a living document.  Nothing is permanently
+set in stone.  There will someday be a 2.0 spec.  It's easier to add
+things we left out than to take out things that turned out to be
+unnecessary things or a bad idea.
 
-Readers: this is your chance.  Any topic that makes it into this chapter
-really deserves careful thought and feedback.
+Right now, this is just a hodge-podge of topics.  Some day I will give
+it a more coherent form.
 
-This specification is a living document.  Nothing is permanently set in
-stone.  There will someday be a 2.0 spec.  It's easier to add things we
-left out than to take out things that turned out to be unnecessary
-things or a bad idea.
+\medskip 
+
+{\bf Meta-discussion: the editing of this chapter has NOT kept pace with
+  development and solidification of the rest of the spec.  It's largely
+  written as questioning design choices -- questions that were
+  appropriate in much older versions of this spec, but which now are set
+  in stone and will not be changed for version 1.0.  Some of the
+  discussion is truly anachronistic, debating ``A versus B'' when we in
+  fact have long since chosen C.  In any case, until I clean this up,
+  please view this chapter as insight into some of the early design
+  choices, NOT as a list of actual outstanding issues to be addressed.}
 
 \section{Variables, Functions, and Scoping}
 
 \subsection{Separate namespace for functions?}
 
-\NEW
 RSL and GSL had separate symbol tables for functions and for all other
 variables, for example allowing a variable or parameter "foo" and also a
 function called "foo". This is not for any principled reason, but just a
@@ -4673,7 +4645,7 @@ future version of the spec.
 
 \subsection{More C++-like overall syntax}
 
-I've considered that rather than 
+I've considered that rather than the RSL-like
 
 \begin{code}
     surface plastic (float Kd = 0.5, float Ks = 0.5)
@@ -4736,9 +4708,10 @@ ways, OSL is NOT C++, and maybe it makes things more confusing if it
 looks just like C++ but doesn't act just like it, or if some things look
 just like C++ but others clearly aren't.
 
-I'm currently tempted to stick to the syntax in this document, and not
-to exactly replicate C++'s class structure.  But I think it's worth
-opening it to discussion, if others want to argue strongly for it.
+I'm currently inclined to stick to the syntax in this document, and not
+to exactly replicate C++'s class structure.  But it's something we
+could consider for future releases of the spec if people feel strongly
+about it.
 
 
 \section{Global variables}
@@ -4752,11 +4725,10 @@ parameterization?), versus something more generic such as {\cf T} and
 allegedly computed)?
 
 In this document, I'm tentatively using the RenderMan-inspired {\cf Ci}
-and {\cf Oi} for output color and opacity.  (The ``i'' is for
-\emph{incident}.)  In Gelato, I used {\cf C} and {\cf opacity}, which I
+and for output radiance.  (The ``i'' is for
+\emph{incident}.)  In Gelato, we used {\cf C}, which I
 think was slightly less obtuse (though loses the advantage of being
-familiar to RenderMan experts).  Other names are also up for grabs if
-people feel strongly.
+familiar to RenderMan experts).  
 
 
 \subsection{Global variables and view-dependence}

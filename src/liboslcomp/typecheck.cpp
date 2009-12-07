@@ -898,6 +898,7 @@ static const char * builtin_func_args [] = {
     "area", "fp", NULL,
     "arraylength", "i?[]", NULL,
     "asin", ANY_ONE_FLOAT_BASED, NULL,
+    "ashikhmin_velvet", "Cnff.", NULL,
     "atan", ANY_ONE_FLOAT_BASED, NULL,
     "atan2", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
     "background", "C.", NULL,
@@ -1014,6 +1015,7 @@ static const char * builtin_func_args [] = {
 //                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
     "specular", "Cnf", NULL,
     "bssrdf_cubic", "Cc.", NULL,
+    "westin_velvet", "Cnfff.", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

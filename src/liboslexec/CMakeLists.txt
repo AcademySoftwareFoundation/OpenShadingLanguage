@@ -1,6 +1,7 @@
 SET ( liboslexec_srcs
           shadingsys.cpp closure.cpp
           bsdf.cpp bsdf_diffuse.cpp bsdf_microfacet.cpp bsdf_phong.cpp
+          bsdf_westin_velvet.cpp bsdf_ashikhmin_velvet.cpp
           bsdf_reflection.cpp bsdf_refraction.cpp bsdf_transparent.cpp bsdf_ward.cpp
           bssrdf.cpp
           emissive.cpp background.cpp

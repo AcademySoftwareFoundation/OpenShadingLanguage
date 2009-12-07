@@ -194,6 +194,7 @@ static OpNameEntry op_name_entries[] = {
     { "acos", OP_acos },
     { "add", OP_add },
     { "and", OP_and },
+    { "ashikhmin_velvet", OP_ashikhmin_velvet},
     { "area", OP_area },
     { "aref", OP_aref },
     { "arraylength", OP_arraylength },
@@ -318,6 +319,7 @@ static OpNameEntry op_name_entries[] = {
     { "vector", OP_vector },
     { "ward", OP_ward },
     { "warning", OP_warning },
+    { "westin_velvet", OP_westin_velvet},
     { "while", OP_for },
     { "xor", OP_xor },
     { NULL, NULL}

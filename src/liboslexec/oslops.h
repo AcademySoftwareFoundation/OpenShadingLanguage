@@ -63,6 +63,7 @@ DECLOP (OP_acos);
 DECLOP (OP_add);
 //DECLOP (OP_ambient);
 DECLOP (OP_and);
+DECLOP (OP_ashikhmin_velvet);
 DECLOP (OP_area);
 DECLOP (OP_aref);
 DECLOP (OP_arraylength);
@@ -214,6 +215,7 @@ DECLOP (OP_trunc);
 DECLOP (OP_vector);
 DECLOP (OP_ward);
 DECLOP (OP_warning);
+DECLOP (OP_westin_velvet);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);

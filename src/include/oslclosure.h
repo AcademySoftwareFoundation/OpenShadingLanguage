@@ -119,9 +119,10 @@ public:
     static void sample_cos_hemisphere (const Vec3 &N, const Vec3 &omega_out,
                         float randu, float randv, Vec3 &omega_in, float &pdf);
 
-    /// Helper function: return the PDF for cosine-weighted hemisphere.
+    /// Helper function: sample uniform-weighted hemisphere.
     ///
-    static float pdf_cos_hemisphere (const Vec3 &N, const Vec3 &omega_in);
+    static void sample_uniform_hemisphere (const Vec3 &N, const Vec3 &omega_out,
+                        float randu, float randv, Vec3 &omega_in, float &pdf);
 
     /// Helper function: make two unit vectors that are orthogonal to N and
     /// each other.  This assumes that N is already normalized.  We get the

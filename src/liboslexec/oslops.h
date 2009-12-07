@@ -129,6 +129,8 @@ DECLOP (OP_getattribute);
 //DECLOP (OP_getmessage);
 DECLOP (OP_gettextureinfo);
 DECLOP (OP_gt);
+DECLOP (OP_hair_diffuse);
+DECLOP (OP_hair_specular);
 //DECLOP (OP_hash);
 DECLOP (OP_hypot);
 DECLOP (OP_if);

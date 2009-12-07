@@ -249,6 +249,8 @@ static OpNameEntry op_name_entries[] = {
     { "getattribute", OP_getattribute },
     { "gettextureinfo", OP_gettextureinfo },
     { "gt", OP_gt },
+    { "hair_diffuse", OP_hair_diffuse },
+    { "hair_specular", OP_hair_specular },
     { "hypot", OP_hypot },
     { "if", OP_if },
     { "inversesqrt", OP_inversesqrt },

@@ -4039,7 +4039,9 @@ The emission closure returns a radiance value (e.g.,
 $\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$) that, integrated
 over all angles, yields a power density of 1.0 (e.g.,
 $\mathrm{W}\cdot\mathrm{m}^{-2}$).  This may be multiplied by a scalar
-to adjust the desired power density of your light.
+to adjust the desired power density of your light.  If you divide by
+{\cf surfacearea()}, then you can easily specify the total emissive
+power of the light (e.g., $\mathrm{W}$), regardless of its physical size.
 
 Additional optional arguments may be passed as token/value pairs:
 
@@ -4167,6 +4169,16 @@ the same type are present, they will be searched starting with the
 last one executed, and moving backwards in execution order (in other
 words, later-executed shaders in the network effectively take precedence
 over parameteters or messages from earlier-executed shaders).
+\apiend
+
+\NEW  % 12/7/09
+\apiitem{int {\ce surfacearea} ()}
+\indexapi{surfacearea()}
+Returns the surface area of the area light geometry being shaded.  This
+is meant to be used in conjunction with {\cf emission()} in order to 
+produce the correct emissive radiance given a user preference for a
+total wattage for the area light source.  The value of this function 
+is not expected to be meaningful for non-light shaders.
 \apiend
 
 \apiitem{int {\ce raylevel} ()}

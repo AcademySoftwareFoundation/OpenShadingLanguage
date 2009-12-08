@@ -321,10 +321,6 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
     exec->adjust_varying (Result, A.is_varying() | B.is_varying() | C.is_varying(),
                           A.data() == Result.data() || B.data() == Result.data() || C.data() == Result.data());
 
-    // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
     // Loop over points, do the operation
     VaryingRef<RET> result ((RET *)Result.data(), Result.step());
     VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());

@@ -100,16 +100,12 @@ class HairSpecularClosure : public BSDFClosure {
 public:
     CLOSURE_CTOR (HairSpecularClosure) : BSDFClosure(Both, Labels::GLOSSY)
     {
-        float roughness;
         // Tangent vector
         CLOSURE_FETCH_ARG (m_T, 1);
         // specular offset
         CLOSURE_FETCH_ARG (m_offset, 2);
         // roughness for the specular as used in spi shaders
-        CLOSURE_FETCH_ARG (roughness, 3);
-        // copying the exponente they were using before
-        m_exp = roughness > std::numeric_limits<float>::min() ? roughness : std::numeric_limits<float>::min();
-        m_exp = 4.0f / m_exp;
+        CLOSURE_FETCH_ARG (m_exp, 3);
         m_cos_off = cosf(m_offset);
         m_sin_off = sinf(m_offset);
     }

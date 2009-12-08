@@ -445,11 +445,11 @@ public:
 
 class FAbs {
 public:
-    FAbs (ShadingExecution *) { }
+    FAbs (ShadingExecution *exec = NULL) { }
     inline void operator() (int &result, int x) { result = abs (x); }
     inline void operator() (float &result, float x) { result = fabsf (x); }
-    inline void operator() (Vec3 &result, const Vec3 &x) {
-        result = Vec3 (fabsf (x[0]), fabsf (x[1]), fabsf (x[2]));
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x) {
+       result = x.val() >= 0 ? x : -x;
     }
 };
 
@@ -1169,10 +1169,10 @@ DECLOP (OP_fabs)
 
     // We allow two flavors: float = func (float), and triple = func (triple)
     if (Result.typespec().is_triple() && A.typespec().is_triple()) {
-        impl = unary_op_noderivs<Vec3,Vec3, FAbs >;
+        impl = unary_op<Vec3,Vec3, Vec3Adaptor<FAbs> >;
     }
     else if (Result.typespec().is_float() && A.typespec().is_float()) {
-        impl = unary_op_noderivs<float,float, FAbs >;
+        impl = unary_op<float,float, FAbs >;
     }
     else if (Result.typespec().is_int() && A.typespec().is_int()) {
         impl = unary_op_noderivs<int,int, FAbs >;

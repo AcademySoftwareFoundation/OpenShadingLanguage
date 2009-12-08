@@ -217,6 +217,15 @@ protected:
         return len;
     }
 
+    /// A is the head of a list of nodes, return a pointer to the n-th
+    /// node in the list (or NULL if the list isn't long enough).
+    static const ASTNode *list_nth (const ref &A, int n) {
+        for (const ASTNode *node = A.get(); node; node = node->nextptr(), --n)
+            if (n == 0)
+                return node;
+        return NULL;
+    }
+
     /// Return the number of child nodes.
     ///
     size_t nchildren () const { return m_children.size(); }
@@ -728,9 +737,15 @@ public:
 
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
     ref args () const { return child (0); }
+
+    /// Is it a user-defined function (as opposed to an OSL built-in)?
+    ///
     bool is_user_function () const {
         return func()->node() != NULL;
     }
+
+    /// Pointer to the ASTfunction_declaration node that defines the user
+    /// function, or NULL if it's not a user-defined function.
     ASTfunction_declaration * user_function () const {
         return (ASTfunction_declaration *) func()->node();
     }
@@ -741,16 +756,30 @@ private:
     /// re-jigger m_sym to point to the specific polymorphic match.
     TypeSpec typecheck_all_poly (TypeSpec expected, bool coerce);
 
-    // Handle all the special cases for built-ins.
-    void typecheck_builtin_specialcase (Symbol *dest = NULL);
+    /// Handle all the special cases for built-ins.  This includes
+    /// irregular patterns of which args are read vs written, special 
+    /// checks for printf- and texture-like, etc.
+    void typecheck_builtin_specialcase ();
 
     // Handle special case where the function does something other
     // than read all arguments and write the first one.
     void codegen_handle_special_cases ();
 
-    ustring m_name;
-    Symbol *m_sym;
-    FunctionSymbol *m_poly;
+    /// Declare that argument number 'arg' takes derivatives.
+    ///
+    void argtakesderivs (int arg, bool val) {
+        if (arg < 32) {
+            if (val)
+                m_argtakesderivs |= (1 << arg);
+            else
+                m_argtakesderivs &= ~(1 << arg);
+        }
+    }
+
+    ustring m_name;                 ///< Name of the function being called
+    Symbol *m_sym;                  ///< Symbol of the function
+    FunctionSymbol *m_poly;         ///< The specific polymorphic variant
+    unsigned int m_argtakesderivs;  ///< Bit field for which args take derivs
 };
 
 

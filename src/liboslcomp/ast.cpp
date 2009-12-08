@@ -705,7 +705,8 @@ ASTtype_constructor::childname (size_t i) const
 
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
                                     ASTNode *args)
-    : ASTNode (function_call_node, comp, 0, args), m_name(name)
+    : ASTNode (function_call_node, comp, 0, args), m_name(name),
+      m_argtakesderivs(0)
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {

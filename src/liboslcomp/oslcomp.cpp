@@ -78,7 +78,7 @@ OSLCompilerImpl::OSLCompilerImpl ()
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_debug(false), m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
-      m_total_nesting(0), m_loop_nesting(0)
+      m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL)
 {
     initialize_globals ();
     initialize_builtin_funcs ();
@@ -92,6 +92,7 @@ OSLCompilerImpl::~OSLCompilerImpl ()
         fclose (m_sourcefile);
         m_sourcefile = NULL;
     }
+    delete m_derivsym;
 }
 
 
@@ -224,6 +225,7 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         if (! error_encountered()) {
             oslcompiler->shader()->codegen ();
+            track_variable_dependencies ();
             track_variable_usage ();
         }
  
@@ -344,8 +346,9 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
 
 
 void
-OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
+OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 {
+    // symtype / datatype / name
     oso ("%s\t%s\t%s", sym->symtype_shortname(),
          type_c_str(sym->typespec()), sym->mangled().c_str());
 
@@ -354,18 +357,25 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
         v = dynamic_cast<ASTvariable_declaration *>(sym->node());
 
     // Print default values
+    bool isparam = (sym->symtype() == SymTypeParam ||
+                    sym->symtype() == SymTypeOutputParam);
     if (sym->symtype() == SymTypeConst) {
         oso ("\t");
         write_oso_const_value (dynamic_cast<const ConstantSymbol *>(sym));
         oso ("\t");
-    } else if (v && (sym->symtype() == SymTypeParam ||
-                    sym->symtype() == SymTypeOutputParam)) {
+    } else if (v && isparam) {
         std::string out;
         v->param_default_literals (sym, out);
         oso ("\t%s\t", out.c_str());
     }
 
+    //
+    // Now output all the hints, which is most of the work!
+    //
+
     int hints = 0;
+
+    // %meta{} encodes metadata (handled by write_oso_metadata)
     if (v) {
         ASSERT (v);
         for (ASTNode::ref m = v->meta();  m;  m = m->next()) {
@@ -375,11 +385,15 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
         }
     }
 
+    // %read and %write give the range of ops over which a symbol is used.
     if (hints++ == 0)
         oso ("\t");
     oso (" %%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
          sym->firstwrite(), sym->lastwrite());
 
+    // %struct, %structfields, and %structfieldtypes document the
+    // definition of a structure and which other symbols comprise the
+    // individual fields.
     if (sym->typespec().is_structure()) {
         if (hints++ == 0)
             oso ("\t");
@@ -395,12 +409,48 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym) const
              structspec->mangled().c_str(), fieldlist.c_str(),
              signature.c_str(), structspec->numfields());
     }
+    // %mystruct and %mystructfield document the symbols holding structure
+    // fields, linking them back to the structures they are part of.
     if (sym->fieldid() >= 0) {
         if (hints++ == 0)
             oso ("\t");
         ASTvariable_declaration *vd = (ASTvariable_declaration *) sym->node();
         oso (" %%mystruct{%s} %%mystructfield{%d}",
              vd->sym()->mangled().c_str(), sym->fieldid());
+    }
+
+    // %derivparam hint marks parameters that have derivatives taken of
+    // them (including indirectly, through dependencies).
+    const SymPtrSet &derivparams (m_symdeps[m_derivsym]);
+    if (isparam  &&  derivparams.find(sym) != derivparams.end()) {
+        if (hints++ == 0)
+            oso ("\t");
+        oso (" %%derivparam");
+    }
+
+    // %inputdep marks, for potential OUTPUTs, which input parameters or
+    // globals they depend upon.  This is so that derivativeness, etc.,
+    // may be back-propagated as shader networks are linked together.
+    if (isparam || sym->symtype() == SymTypeGlobal) {
+        // FIXME
+        const SymPtrSet &deps (m_symdeps[sym]);
+        std::vector<const Symbol *> inputdeps;
+        BOOST_FOREACH (const Symbol *d, deps)
+            if (d->symtype() == SymTypeParam ||
+                  d->symtype() == SymTypeOutputParam ||
+                  d->symtype() == SymTypeGlobal)
+                inputdeps.push_back (d);
+        if (inputdeps.size()) {
+            if (hints++ == 0)
+                oso ("\t");
+            oso (" %%inputdep{");
+            for (size_t i = 0;  i < inputdeps.size();  ++i) {
+                if (i)
+                    oso (",");
+                oso ("%s",  inputdeps[i]->mangled().c_str());
+            }
+            oso ("}");
+        }
     }
 
     oso ("\n");
@@ -426,7 +476,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     oso ("%s %s", shaderdecl->shadertypename(), 
          shaderdecl->shadername().c_str());
 
-    // FIXME -- output hints and metadata
+    // FIXME -- output global hints and metadata
 
     oso ("\n");
 
@@ -446,7 +496,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         }
     }
 
-    // FIXME -- output all opcodes
+    // Output all opcodes
     int lastline = -1;
     ustring lastfile;
     ustring lastmethod ("___uninitialized___");
@@ -482,9 +532,15 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
             if (op->jump(i) >= 0)
                 oso ("%d ", op->jump(i));
 
-        // Hints
+        //
+        // Opcode Hints
+        //
+
         bool firsthint = true;
-        // Hint the source file/line
+
+        // %filename and %line document the source code file and line that
+        // contained code that generated this op.  To avoid clutter, we
+        // only output these hints when they DIFFER from the previous op.
         if (op->sourcefile()) {
             if (op->sourcefile() != lastfile) {
                 lastfile = op->sourcefile();
@@ -497,7 +553,8 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
                 firsthint = false;
             }
         }
-        // Hint which args are read/written
+
+        // %argrw documents which arguments are read, written, or both (rwW).
         if (op->nargs()) {
             oso ("%c%%argrw{\"", firsthint ? '\t' : ' ');
             for (int i = 0;  i < op->nargs();  ++i) {
@@ -509,6 +566,22 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
             oso ("\"}");
             firsthint = false;
         }
+
+        // %argderivs documents which arguments have derivs taken of
+        // them by the op.
+        if (op->argtakesderivs_all()) {
+            oso (" %%argderivs{");
+            bool any = false;;
+            for (int i = 0;  i < op->nargs();  ++i)
+                if (op->argtakesderivs(i)) {
+                    if (any++)
+                        oso (",");
+                    oso ("%d", i);
+                }
+            oso ("}");
+            firsthint = false;
+        }
+
         oso ("\n");
     }
 
@@ -654,6 +727,161 @@ OSLCompilerImpl::track_variable_usage ()
             s->mark_rw (opnum, op.argread(a), op.argwrite(a));
         }
         ++opnum;
+    }
+}
+
+
+
+// Add to the dependency map that "A depends on B".
+static void
+add_dependency (SymDependencyMap &dmap, const Symbol *A, const Symbol *B)
+{
+    dmap[A].insert (B);
+    // Perform unification -- all of B's dependencies are now
+    // dependencies of A.
+    BOOST_FOREACH (const Symbol *r, dmap[B])
+        dmap[A].insert (r);
+}
+
+
+
+void
+OSLCompilerImpl::track_variable_dependencies ()
+{
+    // Here we run through all the ops, for each one marking its
+    // 'written' arguments as dependent upon its 'read' arguments (and
+    // performing unification as we go), yielding a dependency map that
+    // lets us look up any symbol and see the set of other symbols on
+    // which it ever depends on during execution of the shader.
+    //
+    // It's important to note that this is simplistically conservative
+    // in that it overestimates dependencies.  To see why this is the
+    // case, consider the following code:
+    //       // inputs a,b; outputs x,y; local variable t
+    //       t = a;
+    //       x = t;
+    //       t = b;
+    //       y = t;
+    // We can see that x depends on a and y depends on b.  But the
+    // dependency analysis we do below thinks that y also depends on a
+    // (because t depended on both a and b, but at different times).
+    //
+    // This naivite will never miss a dependency, but it may
+    // overestimate dependencies.  (Hence we call this "conservative"
+    // rather than "wrong.")  We deem this acceptable for now, since
+    // it's so much easer to implement the conservative dependency
+    // analysis, and it's not yet clear that getting it closer to
+    // optimal will have any performance impact on final shaders. Also
+    // because this is probably no worse than the "dependency slop" that
+    // would happen with loops and conditionals.  But we certainly may
+    // revisit with a more sophisticated algorithm if this crops up
+    // a legitimate issue.
+    //
+    // Because of this conservative approach, it is critical that this
+    // analysis is done BEFORE temporaries are coalesced (which would
+    // cause them to be reassigned in exactly the way that confuses this
+    // analysis).
+
+    m_symdeps.clear ();
+    std::vector<Symbol *> read, written;
+    int opnum = 0;
+    // We define a pseudo-symbol just for tracking derivatives.  This
+    // symbol "depends on" whatever things have derivs taken of them.
+    if (! m_derivsym)
+        m_derivsym = new Symbol (ustring("$derivs"), TypeSpec(), SymTypeGlobal);
+    // Loop over all ops...
+    for (OpcodeVec::const_iterator op = m_ircode.begin();
+           op != m_ircode.end(); ++op, ++opnum) {
+        // Gather the list of syms read and written by the op.  Reuse the
+        // vectors defined outside the loop to cut down on malloc/free.
+        read.clear ();
+        written.clear ();
+        syms_used_in_op_range (op, op+1, &read, &written);
+
+        // FIXME -- special cases here!  like if any ops implicitly read
+        // or write to globals without them needing to be arguments.
+
+        bool deriv = op->argtakesderivs_all();
+        // For each sym written by the op...
+        BOOST_FOREACH (const Symbol *wsym, written) {
+            // For each sym read by the op...
+            BOOST_FOREACH (const Symbol *rsym, read) {
+                if (rsym->symtype() != SymTypeConst)
+                    add_dependency (m_symdeps, wsym, rsym);
+            }
+            if (deriv) {
+                // If the op takes derivs, make the pseudo-symbol m_derivsym
+                // depend on those arguments.
+                for (int a = 0;  a < op->nargs();  ++a)
+                    if (op->argtakesderivs(a))
+                        add_dependency (m_symdeps, m_derivsym, 
+                                        m_opargs[a+op->firstarg()]);
+            }
+        }
+    }
+
+#if 0
+    // Helpful for debugging
+
+    std::cerr << "track_variable_dependencies\n";
+    std::cerr << "\nDependencies:\n";
+    BOOST_FOREACH (SymDependencyMap::value_type &m, m_symdeps) {
+        std::cerr << m.first->mangled() << " depends on ";
+        BOOST_FOREACH (const Symbol *d, m.second)
+            std::cerr << d->mangled() << ' ';
+        std::cerr << "\n";
+    }
+    std::cerr << "\n\n";
+
+    // Invert the dependency
+    SymDependencyMap influences;
+    BOOST_FOREACH (SymDependencyMap::value_type &m, m_symdeps)
+        BOOST_FOREACH (const Symbol *d, m.second)
+            influences[d].insert (m.first);
+
+    std::cerr << "\nReverse dependencies:\n";
+    BOOST_FOREACH (SymDependencyMap::value_type &m, influences) {
+        std::cerr << m.first->mangled() << " contributes to ";
+        BOOST_FOREACH (const Symbol *d, m.second)
+            std::cerr << d->mangled() << ' ';
+        std::cerr << "\n";
+    }
+    std::cerr << "\n\n";
+#endif
+}
+
+
+
+bool
+OSLCompilerImpl::op_uses_sym (const Opcode &op, const Symbol *sym,
+                              bool read, bool write)
+{
+    // Loop through all the op's arguments, see if one matches sym
+    for (int i = 0;  i < op.nargs();  ++i)
+        if (m_opargs[i+op.firstarg()] == sym &&
+            (read && op.argread(i)) || (write && op.argwrite(i)))
+            return true;
+    return false;
+}
+
+
+
+void
+OSLCompilerImpl::syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
+                                        OpcodeVec::const_iterator opend,
+                                        std::vector<Symbol *> *rsyms,
+                                        std::vector<Symbol *> *wsyms)
+{
+    for (OpcodeVec::const_iterator op = opbegin; op != opend;  ++op) {
+        for (int i = 0;  i < op->nargs();  ++i) {
+            Symbol *s = m_opargs[i+op->firstarg()];
+            if (rsyms && op->argread(i))
+                if (std::find (rsyms->begin(), rsyms->end(), s) == rsyms->end())
+                    rsyms->push_back (s);
+            if (wsyms && op->argwrite(i))
+                if (std::find (wsyms->begin(), wsyms->end(), s) == wsyms->end())
+                    wsyms->push_back (s);
+        }
     }
 }
 

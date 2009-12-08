@@ -629,7 +629,8 @@ public:
         : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
           m_method(method), m_impl(NULL), 
           m_argread(~1), // Default - all args are read except the first
-          m_argwrite(1)  // Default - first arg only is written by the op
+          m_argwrite(1), // Default - first arg only is written by the op
+          m_argtakesderivs(0) // Default - doesn't take derivs
     {
         m_jump[0] = -1;
         m_jump[1] = -1;
@@ -733,6 +734,31 @@ public:
         argwrite (arg, true);
     }
 
+    /// Does the argument number 'arg' take derivatives?
+    ///
+    bool argtakesderivs (int arg) const {
+        return (arg < 32) ? (m_argtakesderivs & (1 << arg)) : false;
+    }
+
+    /// Declare that argument number 'arg' takes derivatives.
+    ///
+    void argtakesderivs (int arg, bool val) {
+        if (arg < 32) {
+            if (val)
+                m_argtakesderivs |= (1 << arg);
+            else
+                m_argtakesderivs &= ~(1 << arg);
+        }
+    }
+
+    /// Set the entire argtakesderivs at once with a full bitfield.
+    ///
+    void argtakesderivs_all (unsigned int bits) { m_argtakesderivs = bits; }
+
+    /// Return the entire argtakesderivs at once with a full bitfield.
+    ///
+    unsigned int argtakesderivs_all () const { return m_argtakesderivs; }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument
@@ -744,6 +770,7 @@ private:
     OpImpl m_impl;                  ///< Implementation of this op
     unsigned int m_argread;         ///< Bit field - which args are read
     unsigned int m_argwrite;        ///< Bit field - which args are written
+    unsigned int m_argtakesderivs;  ///< Bit field - which args take derivs
     // N.B. We only have 32 bits for m_argread and m_argwrite.  We live
     // with this, and it's ok because there are very few ops that allow
     // more than 32 args, and those that do are read-only that far out.

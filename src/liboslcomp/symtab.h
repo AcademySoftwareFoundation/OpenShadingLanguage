@@ -78,7 +78,7 @@ public:
     FunctionSymbol (ustring n, TypeSpec type, ASTNode *node=NULL)
         : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL),
           m_readwrite_special_case(false), m_texture_args(false),
-          m_printf_args(false)
+          m_printf_args(false), m_takes_derivs(false)
     { }
 
     void nextpoly (FunctionSymbol *nextpoly) { m_nextpoly = nextpoly; }
@@ -120,6 +120,9 @@ public:
     void printf_args (bool s) { m_printf_args = s; }
     bool printf_args () const { return m_printf_args; }
 
+    void takes_derivs (bool s) { m_takes_derivs = s; }
+    bool takes_derivs () const { return m_takes_derivs; }
+
 private:
     ustring m_argcodes;              ///< Encoded arg types
     FunctionSymbol *m_nextpoly;      ///< Next polymorphic version
@@ -131,6 +134,7 @@ private:
     bool m_readwrite_special_case;   ///< Unusual in how it r/w's its args
     bool m_texture_args;             ///< Has texture-like token/value args
     bool m_printf_args;              ///< Has printf-like varargs
+    bool m_takes_derivs;             ///< Takes derivatives of its args
 };
 
 

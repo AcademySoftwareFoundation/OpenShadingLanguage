@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <stack>
+#include <set>
 
 #include "OpenImageIO/ustring.h"
 
@@ -49,6 +50,16 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 namespace pvt {
+
+
+
+/// Set of symbols, identified by pointers.
+///
+typedef std::set<const Symbol *> SymPtrSet;
+
+/// For each symbol, have a list of the symbols it depends on (or that
+/// depends on it).
+typedef std::map<const Symbol *, SymPtrSet> SymDependencyMap;
 
 
 
@@ -238,10 +249,36 @@ private:
     std::string default_output_filename ();
     void write_oso_file (const std::string &outfilename);
     void write_oso_const_value (const ConstantSymbol *sym) const;
-    void write_oso_symbol (const Symbol *sym) const;
+    void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
     void oso (const char *fmt, ...) const;
     void track_variable_usage ();
+    void track_variable_dependencies ();
+
+    /// Does this read or write the symbol identified by 'sym'?  The
+    /// optional 'read' and 'write' arguments determine whether it is
+    /// considering reading or writing (or, by default, both).
+    bool op_uses_sym (const Opcode &op, const Symbol *sym,
+                      bool read=true, bool write=true);
+    /// Does this arg read the symbol identified by 'sym'?
+    ///
+    bool op_reads_sym (const Opcode &op, const Symbol *sym) {
+        return op_uses_sym (op, sym, true, false);
+    }
+    /// Does this arg read the symbol identified by 'sym'?
+    ///
+    bool op_writes_sym (const Opcode &op, const Symbol *sym) {
+        return op_uses_sym (op, sym, false, true);
+    }
+
+    /// Add all symbols used in the op range [opbegin,opend) to rsyms
+    /// and/or wsyms.  Pass NULL if you don't care abou one or the other.
+    /// Pass both pointers to the same vector if you want both reads and
+    /// writes recorded to the same place.
+    void syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
+                                OpcodeVec::const_iterator opend,
+                                std::vector<Symbol *> *rsyms,
+                                std::vector<Symbol *> *wsyms);
 
     ASTshader_declaration *shader_decl () const {
         return dynamic_cast<ASTshader_declaration *>(m_shader.get());
@@ -260,7 +297,7 @@ private:
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
     OpcodeVec m_ircode;       ///< Generated IR code
-    std::vector<Symbol *> m_opargs;  ///< Arguments for all instructions
+    SymbolPtrVec m_opargs;    ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
@@ -272,6 +309,8 @@ private:
     std::stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
     int m_total_nesting;      ///< total conditional nesting level (0 == none)
     int m_loop_nesting;       ///< just loop nesting level (0 == none)
+    SymDependencyMap m_symdeps; ///< Symbol-to-symbol dependencies
+    Symbol *m_derivsym;       ///< Pseudo-symbol to track deriv dependencies
 };
 
 

@@ -1101,12 +1101,16 @@ ASTfunction_call::codegen (Symbol *dest)
             argdest.insert (argdest.begin(), dest);
             argdest_return_offset = 1;
         }
+        // Emit the actual op
         emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
         if (typespec().is_void()) {
             // Void functions DO read their first arg, DON'T write it
             m_compiler->lastop().argread (0, true);
             m_compiler->lastop().argwrite (0, false);
         }
+        // Propagate derivative-taking info to the opcode
+        m_compiler->lastop().argtakesderivs_all (m_argtakesderivs);
+        // Handle all remaining special cases in a separate function
         if (func()->readwrite_special_case ())
             codegen_handle_special_cases ();
     }

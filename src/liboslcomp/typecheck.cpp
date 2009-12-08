@@ -769,7 +769,7 @@ ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
 
 
 void
-ASTfunction_call::typecheck_builtin_specialcase (Symbol *dest)
+ASTfunction_call::typecheck_builtin_specialcase ()
 {
     if (m_name == "transform") {
         // Special case for transform: under the covers, it selects
@@ -778,6 +778,36 @@ ASTfunction_call::typecheck_builtin_specialcase (Symbol *dest)
             m_name = ustring ("transformv");
         else if (typespec().simpletype() == TypeDesc::TypeNormal)
             m_name = ustring ("transformn");
+    }
+
+    if (func()->takes_derivs()) {
+        // Special handling for the few functions that take derivatives
+        // of their arguments.  Mark those with argtakesderivs.
+        // N.B. This counts arguments in the same way that opcodes do --
+        // assuming "arg 0" is the return value.
+        size_t nargs = listlength(args());
+        if (m_name == "area") {
+            argtakesderivs (1, true);
+        } else if (m_name == "aastep") {
+            // all but the 5-arg version take derivs of edge param
+            argtakesderivs (1, nargs<5);
+            // aastep(f,f) and aastep(f,f,str) take derivs of s param
+            if (nargs == 2 || list_nth(args(),2)->typespec().is_string())
+                argtakesderivs (2, true);
+        } else if (m_name == "bump" || m_name == "displace") {
+            // FIXME -- come back to this
+        } else if (m_name == "calculatenormal") {
+            argtakesderivs (1, true);
+        } else if (m_name == "Dx" || m_name == "Dy") {
+            argtakesderivs (1, true);
+        } else if (m_name == "texture") {
+            if (nargs == 3 || list_nth(args(),3)->typespec().is_string()) {
+                argtakesderivs (2, true);
+                argtakesderivs (3, true);
+            }
+        } else {
+            ASSERT (0 && "Missed a takes_derivs case!");
+        }
     }
 }
 
@@ -879,7 +909,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
 //   "!rw"      nonstandard behavior about which args are read vs written.
 //   "!printf"  has a printf-like argument list
 //   "!tex"     has a texture()-like token/value pair optinal argument list
-//
+//   "!deriv"   takes derivs of its arguments
 
 #define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
 #define NOISE_ARGS "ff", "fff", "fp", "fpf", \
@@ -888,22 +918,21 @@ ASTfunction_call::typecheck (TypeSpec expected)
 #define PNOISE_ARGS "fff", "fffff", "fpp", "fpfpf", \
                     "cff", "cffff", "cpp", "cpfpf", \
                     "vff", "vffff", "vpp", "vpfpf"
-#define DERIV_ARGS "ff", "vp", "vv", "vn", "cc"
 
 static const char * builtin_func_args [] = {
 
-    "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", NULL,
+    "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", "!deriv", NULL,
     "abs", ANY_ONE_FLOAT_BASED,  "ii", NULL,  // alias for fabs()
     "acos", ANY_ONE_FLOAT_BASED, NULL,
-    "area", "fp", NULL,
+    "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
     "asin", ANY_ONE_FLOAT_BASED, NULL,
     "ashikhmin_velvet", "Cnff.", NULL,
     "atan", ANY_ONE_FLOAT_BASED, NULL,
     "atan2", "fff", "ccc", "ppp", "vvv", "nnn", NULL,
     "background", "C.", NULL,
-    "bump", "xf", "xsf", "xv", NULL,
-    "calculatenormal", "vp", NULL,
+    "bump", "xf", "xsf", "xv", "!deriv", NULL,
+    "calculatenormal", "vp", "!deriv", NULL,
     "ceil", ANY_ONE_FLOAT_BASED, NULL,
     "cellnoise", NOISE_ARGS, NULL,
     "clamp", "ffff", "cccc", "pppp", "vvvv", "nnnn", NULL,
@@ -911,13 +940,11 @@ static const char * builtin_func_args [] = {
     "cos", ANY_ONE_FLOAT_BASED, NULL,
     "cosh", ANY_ONE_FLOAT_BASED, NULL,
     "cross", "vvv", NULL,
-    "Dx", DERIV_ARGS, NULL,
-    "Dy", DERIV_ARGS, NULL,
+    "Dx", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
+    "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "degrees", ANY_ONE_FLOAT_BASED, NULL,
-    "deltau", DERIV_ARGS, NULL,
-    "deltav", DERIV_ARGS, NULL,
     "determinant", "fm", NULL,
-    "displace", "xf", "xsf", "xv", NULL,
+    "displace", "xf", "xsf", "xv", "!deriv", NULL,
     "distance", "fpp", "fppp", NULL,
     "dot", "fvv", NULL,
     "endswith", "iss", NULL,
@@ -988,7 +1015,7 @@ static const char * builtin_func_args [] = {
     "tan", ANY_ONE_FLOAT_BASED, NULL,
     "tanh", ANY_ONE_FLOAT_BASED, NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
-                 "vsff.", "vsffffff.", "!tex", "!rw", NULL,
+               "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
     "transform", /* "psp", "vsv", "nsn", "pssp", "vssv", "nssn", */
                  "pmp", "vmv", "nmn", NULL,
     "transformc", "csc", "cssc", NULL,
@@ -1023,7 +1050,6 @@ static const char * builtin_func_args [] = {
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS
 #undef PNOISE_ARGS
-#undef DERIV_ARGS
 };
 
 
@@ -1038,6 +1064,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
         bool readwrite_special_case = false;
         bool texture_args = false;
         bool printf_args = false;
+        bool takes_derivs = false;
         for (npoly = 0;  builtin_func_args[i+npoly];  ++npoly) {
             if (! strcmp (builtin_func_args[i+npoly], "!rw"))
                 readwrite_special_case = true;
@@ -1045,6 +1072,8 @@ OSLCompilerImpl::initialize_builtin_funcs ()
                 texture_args = true;
             else if (! strcmp (builtin_func_args[i+npoly], "!printf"))
                 printf_args = true;
+            else if (! strcmp (builtin_func_args[i+npoly], "!deriv"))
+                takes_derivs = true;
         }
         // Now add them in reverse order, so the order in the table is
         // the priority order for approximate matches.
@@ -1061,6 +1090,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
             f->readwrite_special_case (readwrite_special_case);
             f->texture_args (texture_args);
             f->printf_args (printf_args);
+            f->takes_derivs (takes_derivs);
             symtab().insert (f);
         }
         i += npoly;

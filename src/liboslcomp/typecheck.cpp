@@ -780,6 +780,61 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             m_name = ustring ("transformn");
     }
 
+    // Void functions DO read their first arg, DON'T write it
+    if (typespec().is_void()) {
+        argread (0, true);
+        argwrite (0, false);
+    }
+
+    if (func()->readwrite_special_case()) {
+        if (m_name == "fresnel") {
+            // This function has some output args
+            argwriteonly (3);
+            argwriteonly (4);
+            argwriteonly (5);
+            argwriteonly (6);
+        } else if (m_name == "getattribute" || m_name == "getmessage" ||
+                   m_name == "gettextureinfo") {
+            // these all write to their last argument
+            argwriteonly ((int)listlength(args()));
+        } else if (func()->texture_args()) {
+            // texture-like function, look out for "alpha"
+
+            std::vector<ASTNode::ref> argvec;
+            list_to_vec (args(), argvec);
+
+            // Find the beginning of the optional arguments -- it will be
+            // the first string argument AFTER the filename.
+            int nargs = (int) listlength(args());
+            int firstopt = 2;
+            while (firstopt < nargs &&
+                   ! argvec[firstopt]->typespec().is_string())
+                ++firstopt;
+
+            // Loop through the optional args, look for "alpha"
+            for (int a = firstopt;  a < (int)argvec.size()-1;  a += 2) {
+                ASTNode *s = argvec[a].get();
+                if (s->typespec().is_string() &&
+                    s->nodetype() == ASTNode::literal_node &&
+                    ! strcmp (((ASTliteral *)s)->strval(), "alpha")) {
+                    // 'alpha' writes to the next arg!
+                    if (a+2 < 32)
+                        argwriteonly (a+2);   // mark writeable
+                    else {
+                        // We can only designate the first 32 args
+                        // writeable.  So swap it with earlier optional args.
+                        std::swap (argvec[firstopt],   argvec[a]);
+                        std::swap (argvec[firstopt+1], argvec[a+1]);
+                        argwriteonly (firstopt+1);
+                        firstopt += 2;  // advance in case another is needed
+                    }
+                }
+            }
+
+            m_children[0] = vec_to_list (argvec);
+        }
+    }
+
     if (func()->takes_derivs()) {
         // Special handling for the few functions that take derivatives
         // of their arguments.  Mark those with argtakesderivs.

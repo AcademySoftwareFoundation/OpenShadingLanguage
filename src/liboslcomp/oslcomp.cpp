@@ -76,7 +76,8 @@ OSLCompilerImpl *oslcompiler = NULL;
 OSLCompilerImpl::OSLCompilerImpl ()
     : m_lexer(NULL), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
-      m_verbose(false), m_debug(false), m_next_temp(0), m_next_const(0),
+      m_verbose(false), m_debug(false), m_optimizelevel(1),
+      m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL)
 {
@@ -176,6 +177,12 @@ OSLCompilerImpl::compile (const std::string &filename,
         } else if (options[i] == "-o" && i < options.size()-1) {
             ++i;
             m_output_filename = options[i];
+        } else if (options[i] == "-O0") {
+            m_optimizelevel = 0;
+        } else if (options[i] == "-O" || options[i] == "-O1") {
+            m_optimizelevel = 1;
+        } else if (options[i] == "-O2") {
+            m_optimizelevel = 2;
         } else {
             // something meant for the cpp command
             cppcommand += "\"";
@@ -213,20 +220,22 @@ OSLCompilerImpl::compile (const std::string &filename,
         cpppipe = NULL;
 
         if (! parseerr) {
-            oslcompiler->shader()->typecheck ();
+            shader()->typecheck ();
         }
 
         // Print the parse tree if there were no errors
         if (m_debug) {
-            oslcompiler->symtab().print ();
-            if (oslcompiler->shader())
-                oslcompiler->shader()->print (std::cout);
+            symtab().print ();
+            if (shader())
+                shader()->print (std::cout);
         }
 
         if (! error_encountered()) {
-            oslcompiler->shader()->codegen ();
+            shader()->codegen ();
             track_variable_dependencies ();
             track_variable_usage ();
+            if (m_optimizelevel >= 1)
+                coalesce_temporaries ();
         }
  
         if (! error_encountered()) {
@@ -419,18 +428,16 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
              vd->sym()->mangled().c_str(), sym->fieldid());
     }
 
-    // %derivparam hint marks parameters that have derivatives taken of
-    // them (including indirectly, through dependencies).
-    const SymPtrSet &derivparams (m_symdeps[m_derivsym]);
-    if (isparam  &&  derivparams.find(sym) != derivparams.end()) {
+    // %derivs hint marks symbols that need to carry derivatives
+    if (sym->has_derivs()) {
         if (hints++ == 0)
             oso ("\t");
-        oso (" %%derivparam");
+        oso (" %%derivs");
     }
 
-    // %inputdep marks, for potential OUTPUTs, which input parameters or
-    // globals they depend upon.  This is so that derivativeness, etc.,
-    // may be back-propagated as shader networks are linked together.
+    // %depends marks, for potential OUTPUTs, which symbols they depend
+    // upon.  This is so that derivativeness, etc., may be
+    // back-propagated as shader networks are linked together.
     if (isparam || sym->symtype() == SymTypeGlobal) {
         // FIXME
         const SymPtrSet &deps (m_symdeps[sym]);
@@ -438,12 +445,14 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
         BOOST_FOREACH (const Symbol *d, deps)
             if (d->symtype() == SymTypeParam ||
                   d->symtype() == SymTypeOutputParam ||
-                  d->symtype() == SymTypeGlobal)
+                  d->symtype() == SymTypeGlobal ||
+                  d->symtype() == SymTypeLocal ||
+                  d->symtype() == SymTypeTemp)
                 inputdeps.push_back (d);
         if (inputdeps.size()) {
             if (hints++ == 0)
                 oso ("\t");
-            oso (" %%inputdep{");
+            oso (" %%depends{");
             for (size_t i = 0;  i < inputdeps.size();  ++i) {
                 if (i)
                     oso (",");
@@ -708,6 +717,32 @@ OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
 
 
 
+/// Verify that the given symbol (written by the given op) is legal to
+/// be written.
+void
+OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
+                                       const Symbol *sym)
+{
+    // We can never write to constant symbols
+    if (sym->symtype() == SymTypeConst) {
+        error (op.sourcefile(), op.sourceline(),
+               "Attempted to write to a constant value");
+    }
+
+    // Params can only write if it's part of their initialization
+    if (sym->symtype() == SymTypeParam && 
+        (opnum < sym->initbegin() || opnum >= sym->initend())) {
+        error (op.sourcefile(), op.sourceline(),
+               "Cannot write to input parameter '%s'",
+               sym->name().c_str());
+    }
+
+    // FIXME -- check for writing to globals.  But it's tricky, depends on
+    // what kind of shader we are.
+}
+
+
+
 /// Called after code is generated, this function loops over all the ops
 /// and figures out the lifetimes of all variables, based on whether the
 /// args in each op are read or written.
@@ -721,10 +756,51 @@ OSLCompilerImpl::track_variable_usage ()
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
     BOOST_FOREACH (Opcode &op, m_ircode) {
+        // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
-            Symbol *s = m_opargs[op.firstarg()+a];
-            s = s->dealias();
+            SymbolPtr &s = m_opargs[op.firstarg()+a];
+            s = s->dealias();   // Make sure it's de-aliased
+
+            // Mark that it's read and/or written for this op
             s->mark_rw (opnum, op.argread(a), op.argwrite(a));
+
+            // Here's a good place to check that we aren't writing to
+            // places we shouldn't.
+            if (op.argwrite(a))
+                check_write_legality (op, opnum, s);
+        }
+
+        // If this is a loop op, we need to mark its control variable
+        // (the only arg) as used for the duration of the loop!
+        if (op.opname() == "for" || op.opname() == "while" ||
+                op.opname() == "dowhile") {
+            ASSERT (op.nargs() == 1);  // loops should have just one arg
+            Symbol * &s = m_opargs[op.firstarg()];
+            s->mark_rw (opnum+1, true, true);
+            s->mark_rw (op.farthest_jump()-1, true, true);
+        }
+
+        ++opnum;
+    }
+
+    // Special case: temporaries referenced both inside AND outside a
+    // loop need their lifetimes extended to cover the entire loop so
+    // they aren't accidentally coalesced incorrectly.  The specific
+    // danger is for a function that contains a loop, and the function
+    // is passed an argument that is a temporary calculation.
+    opnum = 0;
+    BOOST_FOREACH (Opcode &op, m_ircode) {
+        if (op.opname() == "for" || op.opname() == "while" ||
+                op.opname() == "dowhile") {
+            int loopend = op.farthest_jump() - 1;
+            BOOST_FOREACH (Symbol *s, symtab()) {
+                if (s->symtype() == SymTypeTemp && 
+                    ((s->firstuse() < opnum && s->lastuse() >= opnum) ||
+                     (s->firstuse() < loopend && s->lastuse() >= loopend))) {
+                    s->mark_rw (opnum, true, true);
+                    s->mark_rw (loopend, true, true);
+                }
+            }
         }
         ++opnum;
     }
@@ -745,15 +821,14 @@ add_dependency (SymDependencyMap &dmap, const Symbol *A, const Symbol *B)
 
 
 
+/// Run through all the ops, for each one marking its 'written'
+/// arguments as dependent upon its 'read' arguments (and performing
+/// unification as we go), yielding a dependency map that lets us look
+/// up any symbol and see the set of other symbols on which it ever
+/// depends on during execution of the shader.
 void
 OSLCompilerImpl::track_variable_dependencies ()
 {
-    // Here we run through all the ops, for each one marking its
-    // 'written' arguments as dependent upon its 'read' arguments (and
-    // performing unification as we go), yielding a dependency map that
-    // lets us look up any symbol and see the set of other symbols on
-    // which it ever depends on during execution of the shader.
-    //
     // It's important to note that this is simplistically conservative
     // in that it overestimates dependencies.  To see why this is the
     // case, consider the following code:
@@ -820,6 +895,10 @@ OSLCompilerImpl::track_variable_dependencies ()
         }
     }
 
+    // Mark all symbols needing derivatives as such
+    BOOST_FOREACH (const Symbol *d, m_symdeps[m_derivsym])
+        const_cast<Symbol *>(d)->has_derivs (true);
+
 #if 0
     // Helpful for debugging
 
@@ -848,6 +927,64 @@ OSLCompilerImpl::track_variable_dependencies ()
     }
     std::cerr << "\n\n";
 #endif
+}
+
+
+
+// Is the symbol coalescable?
+inline bool
+coalescable (const Symbol *s)
+{
+    return (s->symtype() == SymTypeTemp &&     // only coalesce temporaries
+            s->everused() &&                   // only if they're used
+            s->dealias() == s &&               // only if not already aliased
+            ! s->typespec().is_structure() &&  // only if not a struct
+            s->fieldid() < 0);                 //    or a struct field
+}
+
+
+
+/// Coalesce temporaries.  During code generation, we make a new
+/// temporary EVERY time we need one.  Now we examine them all and merge
+/// ones of identical type and non-overlapping lifetimes.
+void
+OSLCompilerImpl::coalesce_temporaries ()
+{
+    // We keep looping until we can't coalesce any more.
+    int ncoalesced = 1;
+    while (ncoalesced) {
+        ncoalesced = 0;   // assume we're done, unless we coalesce something
+        SymbolPtrVec::iterator s;
+        for (s = m_symtab.begin(); s != m_symtab.end();  ++s) {
+            // Skip syms that can't be (or don't need to be) coalesced
+            if (! coalescable(*s))
+                continue;
+
+            int sfirst = (*s)->firstuse ();
+            int slast  = (*s)->lastuse ();
+
+            // Loop through every other symbol
+            for (SymbolPtrVec::iterator t = s+1;  t != m_symtab.end();  ++t) {
+                // Coalesce s and t if both syms are coalescable,
+                // equivalent types, and have nonoverlapping lifetimes.
+                if (coalescable (*t) &&
+                      equivalent ((*s)->typespec(), (*t)->typespec()) &&
+                      (slast < (*t)->firstuse() || sfirst > (*t)->lastuse())) {
+                    // Make all future t references alias to s
+                    (*t)->alias (*s);
+                    // s gets union of the lifetimes
+                    (*s)->union_rw ((*t)->firstread(), (*t)->lastread(),
+                                    (*t)->firstwrite(), (*t)->lastwrite());
+                    sfirst = (*s)->firstuse ();
+                    slast  = (*s)->lastuse ();
+                    // t gets marked as unused
+                    (*t)->clear_rw ();
+                    ++ncoalesced;
+                }
+            }
+        }
+        // std::cerr << "Coalesced " << ncoalesced << "\n";
+    }
 }
 
 

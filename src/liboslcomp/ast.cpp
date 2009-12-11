@@ -262,10 +262,11 @@ ASTfunction_declaration::print (std::ostream &out, int indentlevel) const
 ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
                                                   ustring name, ASTNode *init,
-                                                  bool isparam, bool ismeta)
+                                                  bool isparam, bool ismeta,
+                                                  bool isoutput)
     : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
       m_name(name), m_sym(NULL), 
-      m_isparam(isparam), m_isoutput(false), m_ismetadata(ismeta)
+      m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta)
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
@@ -277,7 +278,8 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         error ("\"%s\" : sorry, can't start with three underscores",
                name.c_str());
     }
-    SymType symtype = isparam ? SymTypeParam : SymTypeLocal;
+    SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
+                              : SymTypeLocal;
     m_sym = new Symbol (name, type, symtype, this);
     if (! m_ismetadata)
         oslcompiler->symtab().insert (m_sym);
@@ -706,7 +708,9 @@ ASTtype_constructor::childname (size_t i) const
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
                                     ASTNode *args)
     : ASTNode (function_call_node, comp, 0, args), m_name(name),
-      m_argtakesderivs(0)
+      m_argread(~1),      // Default - all args are read except the first
+      m_argwrite(1),      // Default - first arg only is written by the op
+      m_argtakesderivs(0) // Default - doesn't take derivs
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {

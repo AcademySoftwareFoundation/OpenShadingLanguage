@@ -443,7 +443,9 @@ public:
           m_connected(false), m_valuesource(DefaultVal), m_fieldid(-1),
           m_scope(0), m_dataoffset(-1), 
           m_node(declaration_node), m_alias(NULL),
-          m_initbegin(0), m_initend(0)
+          m_initbegin(0), m_initend(0),
+          m_firstread(std::numeric_limits<int>::max()), m_lastread(-1),
+          m_firstwrite(std::numeric_limits<int>::max()), m_lastwrite(-1)
     { }
     virtual ~Symbol () { }
 
@@ -572,12 +574,19 @@ public:
     void mark_rw (int op, bool read, bool write) {
         if (read) {
             m_firstread = std::min (m_firstread, op);
-            m_lastread = std::max (m_lastread, op);
+            m_lastread  = std::max (m_lastread, op);
         }
         if (write) {
             m_firstwrite = std::min (m_firstwrite, op);
-            m_lastwrite = std::max (m_lastwrite, op);
+            m_lastwrite  = std::max (m_lastwrite, op);
         }
+    }
+
+    void union_rw (int fr, int lr, int fw, int lw) {
+        m_firstread  = std::min (m_firstread, fr);
+        m_lastread   = std::max (m_lastread, lr);
+        m_firstwrite = std::min (m_firstwrite, fw);
+        m_lastwrite  = std::max (m_lastwrite, lw);
     }
 
     int firstread () const  { return m_firstread; }
@@ -586,6 +595,7 @@ public:
     int lastwrite () const  { return m_lastwrite; }
     int firstuse () const   { return std::min (firstread(), firstwrite()); }
     int lastuse () const    { return std::max (lastread(), lastwrite()); }
+    bool everused () const  { return lastuse() >= 0; }
 
 protected:
     void *m_data;               ///< Pointer to the data
@@ -611,6 +621,7 @@ protected:
 
 
 typedef std::vector<Symbol> SymbolVec;
+typedef Symbol * SymbolPtr;
 typedef std::vector<Symbol *> SymbolPtrVec;
 
 
@@ -751,9 +762,13 @@ public:
         }
     }
 
-    /// Set the entire argtakesderivs at once with a full bitfield.
+    /// Set the read, write, and takesderivs bit fields all at once.
     ///
-    void argtakesderivs_all (unsigned int bits) { m_argtakesderivs = bits; }
+    void set_argbits (unsigned int read, unsigned int wr, unsigned int deriv) {
+        m_argread = read;
+        m_argwrite = wr;
+        m_argtakesderivs = deriv;
+    }
 
     /// Return the entire argtakesderivs at once with a full bitfield.
     ///

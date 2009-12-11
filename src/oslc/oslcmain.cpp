@@ -52,6 +52,7 @@ usage ()
         "\t-Ipath         Add path to the #include search path\n"
         "\t-Dsym[=val]    Define preprocessor symbol\n"
         "\t-Usym          Undefine preprocessor symbol\n"
+        "\t-O0, -O1, -O2  Set optimization level (default=1)\n"
         "\t-d             Debug mode\n"
         ;
 }
@@ -74,7 +75,9 @@ main (int argc, const char *argv[])
             return EXIT_SUCCESS;
         }
         else if (! strcmp (argv[a], "-v") ||
-                 ! strcmp (argv[a], "-d")) {
+                 ! strcmp (argv[a], "-d") ||
+                 ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
+                 ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2")) {
             // Valid command-line argument
             args.push_back (argv[a]);
         }

@@ -182,6 +182,10 @@ public:
     ///
     void codegen_method (ustring method) { m_codegenmethod = method; }
 
+    /// Which method or parameter is currently undergoing code generation?
+    /// "___main___" indicates the main body of code.
+    ustring codegen_method () const { return m_codegenmethod; }
+
     /// Make a temporary symbol of the given type.
     ///
     Symbol *make_temporary (const TypeSpec &type);
@@ -255,6 +259,8 @@ private:
     void oso (const char *fmt, ...) const;
     void track_variable_usage ();
     void track_variable_dependencies ();
+    void coalesce_temporaries ();
+    void check_write_legality (const Opcode &op, int opnum, const Symbol *sym);
 
     /// Does this read or write the symbol identified by 'sym'?  The
     /// optional 'read' and 'write' arguments determine whether it is
@@ -297,6 +303,7 @@ private:
     bool m_current_output;        ///< Currently-declared output status
     bool m_verbose;           ///< Verbose mode
     bool m_debug;             ///< Debug mode
+    int m_optimizelevel;      ///< Optimization level
     OpcodeVec m_ircode;       ///< Generated IR code
     SymbolPtrVec m_opargs;    ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index

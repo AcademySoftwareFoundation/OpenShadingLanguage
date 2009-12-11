@@ -280,7 +280,9 @@ ASTshader_declaration::codegen (Symbol *dest)
                 continue;
 
             m_compiler->codegen_method (v->name());
+            v->sym()->initbegin (m_compiler->next_op_label ());
             v->codegen ();
+            v->sym()->initend (m_compiler->next_op_label ());
         }
     }
 
@@ -527,6 +529,9 @@ ASTvariable_declaration::codegen_struct_initializers ()
 
     // General case -- per-field initializers
 
+    bool paraminit = (m_compiler->codegen_method() != "___main___" &&
+                      (m_sym->symtype() == SymTypeParam ||
+                       m_sym->symtype() == SymTypeOutputParam));
     int i = 0;
     for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
         // Structure element -- assign to the i-th member field
@@ -536,14 +541,18 @@ ASTvariable_declaration::codegen_struct_initializers ()
                                              field.name.c_str());
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
 
-        if (m_sym->symtype() == SymTypeParam ||
-                m_sym->symtype() == SymTypeOutputParam) {
+        if (paraminit) {
+            // Delineate and remember the init ops for this field individually
             m_compiler->codegen_method (fieldname);
+            fieldsym->initbegin (m_compiler->next_op_label ());
         }
 
         Symbol *dest = in->codegen (fieldsym);
         if (dest != fieldsym)
             emitcode ("assign", fieldsym, dest);
+
+        if (paraminit)
+            fieldsym->initend (m_compiler->next_op_label ());
     }
     return m_sym;
 }
@@ -951,47 +960,40 @@ ASTtype_constructor::codegen (Symbol *dest)
 
 
 
-void
-ASTfunction_call::codegen_handle_special_cases ()
+bool
+ASTfunction_call::argread (int arg) const
 {
-    Opcode &op (m_compiler->lastop ());
-    Symbol **args = &(m_compiler->opargs()[op.firstarg()]);
-    ustring opname = op.opname();
-    if (func()->readwrite_special_case()) {
-        if (opname == "fresnel") {
-            // This function has some output args
-            op.argwriteonly (3);
-            op.argwriteonly (4);
-            op.argwriteonly (5);
-            op.argwriteonly (6);
-        } else if (opname == "getattribute" || opname == "getmessage" ||
-                   opname == "gettextureinfo") {
-            // these all write to their last argument
-            op.argwriteonly (op.nargs() - 1);
-        } else if (func()->texture_args()) {
-            // texture-like function, look out for "alpha"
-            int firstopt = 2;  // first optional argument
-            while (firstopt < op.nargs() &&
-                   ! args[firstopt]->typespec().is_string())
-                ++firstopt;
-            // Loop through the optional args, look for "alpha"
-            for (int a = firstopt;  a < op.nargs()-1;  a += 2) {
-                Symbol *s = args[a];
-                if (s->typespec().is_string() && s->symtype() == SymTypeConst &&
-                    ((ConstantSymbol *)s)->strval() == "alpha") {
-                    // 'alpha' writes to the next arg!
-                    if (a+1 < 32)
-                        op.argwriteonly (a+1);   // mark writeable
-                    else {
-                        // We can only designate the first 32 args
-                        // writeable.  So swap it with earlier optional args.
-                        std::swap (args[firstopt],   args[a]);
-                        std::swap (args[firstopt+1], args[a+1]);
-                        op.argwriteonly (firstopt+1);
-                    }
-                }
-            }
+    if (is_user_function()) {
+        // assume all are readable except return value
+        if (! typespec().is_void() && arg == 0)
+            return false;
+        else
+            return true;
+    } else {  // built-in function
+        return (arg < 32) ? (m_argread & (1 << arg)) : true;
+    }
+}
+
+
+
+bool
+ASTfunction_call::argwrite (int arg) const
+{
+    if (is_user_function()) {
+        // assume all are readable except return value
+        if (typespec().is_void()) {
+            ASTvariable_declaration *formal = (ASTvariable_declaration *)
+                list_nth (user_function()->formals(), arg);
+            return formal->is_output ();
+        } else {
+            if (arg == 0)
+                return true;  // return value always writes
+            ASTvariable_declaration *formal = (ASTvariable_declaration *)
+                list_nth (user_function()->formals(), arg-1);
+            return formal->is_output ();
         }
+    } else {  // built-in function
+        return (arg < 32) ? (m_argwrite & (1 << arg)) : false;
     }
 }
 
@@ -1018,9 +1020,11 @@ ASTfunction_call::codegen (Symbol *dest)
     bool indexed_output_params = false;
     int argdest_return_offset = 0;
     ASTNode *a = args().get();
+
+    int returnarg = !typespec().is_void();
     for (int i = 0;  a;  a = a->nextptr(), ++i) {
         Symbol *thisarg = NULL;
-        if (a->nodetype() == index_node /* FIXME && arg is written to */) {
+        if (a->nodetype() == index_node && argwrite(i+returnarg)) {
             // Special case for individual array elements or vec/col/matrix
             // components being passed as output params of the function --
             // these aren't really lvalues, so we need to restore their
@@ -1103,16 +1107,9 @@ ASTfunction_call::codegen (Symbol *dest)
         }
         // Emit the actual op
         emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
-        if (typespec().is_void()) {
-            // Void functions DO read their first arg, DON'T write it
-            m_compiler->lastop().argread (0, true);
-            m_compiler->lastop().argwrite (0, false);
-        }
         // Propagate derivative-taking info to the opcode
-        m_compiler->lastop().argtakesderivs_all (m_argtakesderivs);
-        // Handle all remaining special cases in a separate function
-        if (func()->readwrite_special_case ())
-            codegen_handle_special_cases ();
+        m_compiler->lastop().set_argbits (m_argread, m_argwrite,
+                                          m_argtakesderivs);
     }
 
     if (indexed_output_params) {

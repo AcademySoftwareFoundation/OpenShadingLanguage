@@ -205,8 +205,8 @@ shader_formal_param
                     ASTvariable_declaration *var;
                     TypeSpec t = oslcompiler->current_typespec();
                     var = new ASTvariable_declaration (oslcompiler,
-                                                  t, ustring ($3), $4, true);
-                    var->make_output ($1);
+                                                  t, ustring ($3), $4, true,
+                                                  false, $1 /*output*/);
                     var->add_meta ($5);
                     $$ = var;
                     // Initializer is not really optional on a shader param,
@@ -224,8 +224,8 @@ shader_formal_param
                     t.make_array ($4);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
-                                                       ustring($3), $5, true);
-                    var->make_output ($1);
+                                                   ustring($3), $5, true,
+                                                   false, $1 /*output*/);
                     var->add_meta ($6);
                     $$ = var;
                 }
@@ -239,8 +239,8 @@ shader_formal_param
                                             "Can't use '= {...}' initializer except with arrays or struct (%s)", $3);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t,
-                                                       ustring($3), $4, true);
-                    var->make_output ($1);
+                                                   ustring($3), $4, true,
+                                                   false, $1 /*output*/);
                     var->add_meta ($5);
                     $$ = var;
                 }
@@ -263,7 +263,6 @@ metadatum
                     var = new ASTvariable_declaration (oslcompiler, lextype($1),
                                                        ustring ($2), $3, false,
                                                        true /* ismeta */);
-                    var->make_meta (true);
                     $$ = var;
                 }
         | simple_typename IDENTIFIER arrayspec initializer_list
@@ -275,7 +274,6 @@ metadatum
                     var = new ASTvariable_declaration (oslcompiler, t, 
                                                        ustring ($2), $4, false,
                                                        true /* ismeata */);
-                    var->make_meta (true);
                     $$ = var;
                 }
         ;
@@ -316,8 +314,8 @@ function_formal_param
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler,
                                               oslcompiler->current_typespec(),
-                                              ustring ($3), NULL);
-                    var->make_output ($1);
+                                              ustring ($3), NULL,
+                                              false, false, $1);
                     $$ = var;
                 }
         | outputspec typespec IDENTIFIER arrayspec
@@ -327,8 +325,8 @@ function_formal_param
                     t.make_array ($4);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
-                                                       ustring($3), NULL);
-                    var->make_output ($1);
+                                                       ustring($3), NULL,
+                                                       false, false, $1);
                     $$ = var;
                 }
         ;

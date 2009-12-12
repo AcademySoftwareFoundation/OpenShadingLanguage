@@ -954,6 +954,16 @@ OSLCompilerImpl::coalesce_temporaries ()
     int ncoalesced = 1;
     while (ncoalesced) {
         ncoalesced = 0;   // assume we're done, unless we coalesce something
+
+        // We use a greedy algorithm that loops over each symbol, and
+        // then examines all higher-numbered symbols (in order) and
+        // tries to merge the first one it can find that doesn't overlap
+        // lifetimes.  The temps were created as we generated code, so
+        // they are already sorted by their "first use".  Thus, for any
+        // pair t1 and t2 that are merged, it is guaranteed that t2 is
+        // the symbol whose first use the earliest of all symbols whose
+        // lifetimes do not overlap t1.
+
         SymbolPtrVec::iterator s;
         for (s = m_symtab.begin(); s != m_symtab.end();  ++s) {
             // Skip syms that can't be (or don't need to be) coalesced

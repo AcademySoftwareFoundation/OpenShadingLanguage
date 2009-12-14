@@ -56,23 +56,25 @@ public:
         out << m_exponent << ")";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
-        float cosNO = m_N.dot(omega_out);
-        // reflect the view vector
-        Vec3 R = (2 * cosNO) * m_N - omega_out;
-        float cosRI = R.dot(omega_in);
-        if (cosRI > 0) {
-            float cosNI = fabsf(m_N.dot(omega_in));
-            float common = 0.5f * (float) M_1_PI * powf(cosRI, m_exponent);
-            float out = cosNI * (m_exponent + 2) * common;
-            pdf = (m_exponent + 1) * common;
-            return Color3 (out, out, out);
+        float cosNI = normal_sign * m_N.dot(omega_in);
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        if (cosNI > 0 && cosNO > 0) {
+           // reflect the view vector
+           Vec3 R = (2 * cosNO * normal_sign) * m_N - omega_out;
+           float cosRI = R.dot(omega_in);
+           if (cosRI > 0) {
+               float common = 0.5f * (float) M_1_PI * powf(cosRI, m_exponent);
+               float out = cosNI * (m_exponent + 2) * common;
+               pdf = (m_exponent + 1) * common;
+               return Color3 (out, out, out);
+           }
         }
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }

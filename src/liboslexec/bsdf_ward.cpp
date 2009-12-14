@@ -60,32 +60,33 @@ public:
         out << m_ax << ", " << m_ay << ")";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
-        float cosNO = fabsf(m_N.dot(omega_out));
-        float cosNI = fabsf(m_N.dot(omega_in));
-        if (cosNI * cosNO <= 0)
-           return Color3 (0, 0, 0);
-        // get half vector and get x,y basis on the surface for anisotropy
-        Vec3 H = omega_in + omega_out;
-        H.normalize();  // normalize needed for pdf
-        Vec3 X, Y;
-        make_orthonormals(m_N, m_T, X, Y);
-        // eq. 4
-        float dotx = H.dot(X) / m_ax;
-        float doty = H.dot(Y) / m_ay;
-        float dotn = fabsf(H.dot(m_N));
-        float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-        float denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
-        float exp_val = expf(-exp_arg);
-        float out = cosNI * exp_val / denom;
-        float oh = H.dot(omega_out);
-        denom = 4 * (float) M_PI * m_ax * m_ay * oh * dotn * dotn * dotn;
-        pdf = exp_val / denom;
-        return Color3 (out, out, out);
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        float cosNI = normal_sign * m_N.dot(omega_in);
+        if (cosNI > 0 && cosNO > 0) {
+            // get half vector and get x,y basis on the surface for anisotropy
+            Vec3 H = omega_in + omega_out;
+            H.normalize();  // normalize needed for pdf
+            Vec3 X, Y;
+            make_orthonormals(normal_sign * m_N, m_T, X, Y);
+            // eq. 4
+            float dotx = H.dot(X) / m_ax;
+            float doty = H.dot(Y) / m_ay;
+            float dotn = normal_sign * H.dot(m_N);
+            float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
+            float denom = (4 * (float) M_PI * m_ax * m_ay * sqrtf(cosNO * cosNI));
+            float exp_val = expf(-exp_arg);
+            float out = cosNI * exp_val / denom;
+            float oh = H.dot(omega_out);
+            denom = 4 * (float) M_PI * m_ax * m_ay * oh * dotn * dotn * dotn;
+            pdf = exp_val / denom;
+            return Color3 (out, out, out);
+        }
+        return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }

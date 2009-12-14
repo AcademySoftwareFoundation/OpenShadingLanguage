@@ -63,22 +63,21 @@ public:
         out << ")";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
     {
-        float cosine, sine, westin;
-
-        cosine = std::max(omega_out.dot(omega_in), 0.0f);
-        westin = powf(cosine, 1.0f/m_roughness) * m_backscatter;
-        
-        cosine = fabsf(m_N.dot(omega_out));      
-        sine = sqrtf(std::max(1.0f - cosine*cosine, 0.f));
-
-        westin += powf(sine, m_edginess) * fabsf(m_N.dot(omega_in));
-        
-        return Color3 (westin, westin, westin);
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        float cosNI = normal_sign * m_N.dot(omega_in);
+        if (cosNO > 0 && cosNI > 0) {
+            float cosine = omega_out.dot(omega_in);
+            float westin = cosine > 0 ? powf(cosine, 1 / m_roughness) * m_backscatter : 0;
+            float sine = sqrtf(std::max(1 - cosNO * cosNO, 0.f));
+            westin += powf(sine, m_edginess) * cosNI;
+            return Color3 (westin, westin, westin);
+        }
+        return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
     {
         return Color3 (0, 0, 0);
     }

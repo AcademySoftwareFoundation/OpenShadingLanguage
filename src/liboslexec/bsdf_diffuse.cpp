@@ -51,14 +51,14 @@ public:
         out << "diffuse ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
-        float cos_pi = fabsf(m_N.dot(omega_in)) * (float) M_1_PI;
+        float cos_pi = std::max(normal_sign * m_N.dot(omega_in),0.0f) * (float) M_1_PI;
         pdf = cos_pi;
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -103,14 +103,14 @@ public:
         out << "translucent ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
-        float cos_pi = fabsf(m_N.dot(omega_in)) * (float) M_1_PI;
+        float cos_pi = std::max(-normal_sign * m_N.dot(omega_in), 0.0f) * (float) M_1_PI;
         pdf = cos_pi;
         return Color3 (cos_pi, cos_pi, cos_pi);
     }

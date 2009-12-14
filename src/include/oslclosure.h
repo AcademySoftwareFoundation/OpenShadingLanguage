@@ -202,9 +202,12 @@ public:
     /// omega_out and lighting direction omega_in (both pointing away from the
     /// surface), compute the amount of radiance to be transfered between these
     /// two directions. This also computes the probability of sampling the
-    /// direction omega_in from the sample method.
-    virtual Color3 eval_reflect  (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const = 0;
-    virtual Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const = 0;
+    /// direction omega_in from the sample method. The parameter normal_sign
+    /// tells this function which side the normal should be pointing to account
+    /// for sidedness: its value will be +1 when the surface is viewed from the
+    /// front side, and -1 when viewed from the back side.
+    virtual Color3 eval_reflect  (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const = 0;
+    virtual Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const = 0;
 
     /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
     /// (pointing away from the surface), and random deviates randu and

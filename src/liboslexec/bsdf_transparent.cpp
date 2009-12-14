@@ -47,12 +47,12 @@ public:
         out << "transparent ()";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }

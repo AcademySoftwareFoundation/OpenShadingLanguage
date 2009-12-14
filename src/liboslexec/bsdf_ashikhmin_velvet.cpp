@@ -62,39 +62,41 @@ public:
         out << ")";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
-        
-        Vec3 H = omega_in + omega_out;
-        H.normalize();
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        float cosNI = normal_sign * m_N.dot(omega_in);
+        if (cosNO > 0 && cosNI > 0) {
+            Vec3 H = omega_in + omega_out;
+            H.normalize();
 
-        float D, G, F;
-        float cosNO = m_N.dot(omega_out);
-        float cosNI = m_N.dot(omega_in);
-        float cosNH = m_N.dot(H);
-        float cosHO = fabs(omega_out.dot(H));
-        
-        float cosNHdivHO = cosNH/cosHO;     
-        cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
+            float cosNH = normal_sign * m_N.dot(H);
+            float cosHO = fabs(omega_out.dot(H));
 
-        float fac1 = 2.f * fabs(cosNHdivHO * cosNO);
-        float fac2 = 2.f * fabs(cosNHdivHO * cosNI);
-               
-        float cotangent =  cosNH / sqrtf(std::max((1.f - cosNH*cosNH), 0.f)); 
-  
-        D = expf(-(cotangent*cotangent) / m_sigma);
-        G = std::min(1.f, std::min(fac1, fac2));
-        // Schlick approximation of Fresnel reflectance
-        float cosi2 = cosNO * cosNO;
-        float cosi5 = cosi2 * cosi2 * cosNO;
-        F =  m_R0 + (1 - cosi5) * (1 - m_R0);
-       
-        float out = (D*G*F)/cosNO; 
+            float cosNHdivHO = cosNH / cosHO;     
+            cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
 
-        return Color3 (out, out, out);
+            float fac1 = 2 * fabs(cosNHdivHO * cosNO);
+            float fac2 = 2 * fabs(cosNHdivHO * cosNI);
+
+            float cotangent =  cosNH / sqrtf(std::max((1 - cosNH * cosNH), 0.0f)); 
+
+            float D = expf(-(cotangent * cotangent) / m_sigma);
+            float G = std::min(1.0f, std::min(fac1, fac2));
+            // Schlick approximation of Fresnel reflectance
+            float cosi2 = cosNO * cosNO;
+            float cosi5 = cosi2 * cosi2 * cosNO;
+            float F =  m_R0 + (1 - cosi5) * (1 - m_R0);
+
+            float out = (D * G * F) / cosNO; 
+
+            pdf = 0.5f * (float) M_1_PI;
+            return Color3 (out, out, out);
+        }
+        return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }

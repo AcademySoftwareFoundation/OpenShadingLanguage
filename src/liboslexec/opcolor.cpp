@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
+#include "dual.h"
 
 #include "OpenImageIO/varyingref.h"
 
@@ -142,7 +143,13 @@ class Luminance {
 public:
     Luminance (ShadingExecution *) { }
     void operator() (float &result, const Color3 &c) {
-       result = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+        result = 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
+    }
+    void operator() (Dual2<float> &result, const Dual2<Color3> &c) {
+        Dual2<float> c0 (c.val()[0], c.dx()[0], c.dy()[0]);
+        Dual2<float> c1 (c.val()[1], c.dx()[1], c.dy()[1]);
+        Dual2<float> c2 (c.val()[2], c.dx()[2], c.dy()[2]);
+        result = 0.2126f * c0 + 0.7152f * c1 + 0.0722f * c2;
     }
 };
 
@@ -239,8 +246,7 @@ DECLOP (OP_luminance)
     DASSERT (! Result.typespec().is_closure() && ! C.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
-    unary_op_guts_noderivs<Float, Color3, Luminance> (Result, C, exec, runflags,
-                                                      beginpoint, endpoint);
+    unary_op_guts<Float, Color3, Luminance> (Result, C, exec, runflags, beginpoint, endpoint);
 }
 
 

@@ -99,7 +99,7 @@ DECLOP (OP_aref)
     ASSERT (! Result.typespec().is_closure() && ! Src.typespec().is_closure());
     ASSERT (! Index.typespec().is_closure() && Index.typespec().is_int());
     ASSERT (Src.typespec().is_array() && ! Result.typespec().is_array() &&
-            Result.typespec() == Src.typespec().elementtype());
+            equivalent (Result.typespec(), Src.typespec().elementtype()));
     OpImpl impl = NULL;
     if (Result.typespec().is_float()) {
         impl = specialized_aref<float>;

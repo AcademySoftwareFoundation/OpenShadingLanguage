@@ -330,7 +330,6 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 
     // OK, we're successfully bound.
     m_bound = true;
-    m_executed = false;
 }
 
 
@@ -459,6 +458,7 @@ void
 ShadingExecution::unbind ()
 {
     m_bound = false;
+    m_executed = false;
 }
 
 
@@ -535,6 +535,33 @@ ShadingExecution::run (int beginop, int endop)
             }
         }
 #endif
+    }
+}
+
+
+
+void
+ShadingExecution::run_connected_layer (int layer)
+{
+    ExecutionLayers &execlayers (context()->execlayer(context()->use()));
+    ShadingExecution &connected (execlayers[layer]);
+    ASSERT (! connected.executed ());
+
+    // Run the earlier layer!
+    connected.run ();
+
+    // Now re-bind the connections between that layer and all other
+    // later layers that have not yet executed.
+    for (int i = layer+1;  i < (int)execlayers.size();  ++i) {
+        ShadingExecution &exec (execlayers[i]);
+        if (exec.m_bound && ! exec.m_executed) {
+            ShaderInstance *inst = exec.instance();
+            for (int c = 0;  c < inst->nconnections();  ++c) {
+                const Connection &con (inst->connection (c));
+                if (con.srclayer == layer)
+                    exec.bind_connection (inst, con.dst.param);
+            }
+        }
     }
 }
 

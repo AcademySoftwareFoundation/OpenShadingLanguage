@@ -283,6 +283,22 @@ OSOReaderToMaster::hint (const char *hintstring)
         }
         return;
     }
+    if (extract_prefix (h, "%read{")) {
+        ASSERT (m_master->m_symbols.size() && "read hint but no sym");
+        Symbol &sym (m_master->m_symbols.back());
+        int first, last;
+        sscanf (h.c_str(), "%d,%d", &first, &last);
+        sym.set_read (first, last);
+        return;
+    }
+    if (extract_prefix (h, "%write{")) {
+        ASSERT (m_master->m_symbols.size() && "read hint but no sym");
+        Symbol &sym (m_master->m_symbols.back());
+        int first, last;
+        sscanf (h.c_str(), "%d,%d", &first, &last);
+        sym.set_write (first, last);
+        return;
+    }
 }
 
 

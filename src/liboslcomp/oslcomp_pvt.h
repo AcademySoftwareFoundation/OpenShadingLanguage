@@ -157,6 +157,11 @@ public:
     int emitcode (const char *opname, size_t nargs, Symbol **args,
                   ASTNode *node);
 
+    /// Insert a new opcode in front of the desired position.  Then
+    /// it's necessary to adjust all the jump targets!
+    int insert_code (int position, const char *opname,
+                     size_t nargs, Symbol **args, ASTNode *node);
+
     /// Return the label (opcode address) for the next opcode that will
     /// be emitted.
     int next_op_label () { return (int)m_ircode.size(); }
@@ -257,8 +262,9 @@ private:
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
     void oso (const char *fmt, ...) const;
-    void track_variable_usage ();
+    void track_variable_lifetimes ();
     void track_variable_dependencies ();
+    void add_useparam ();
     void coalesce_temporaries ();
     void check_write_legality (const Opcode &op, int opnum, const Symbol *sym);
 

@@ -232,8 +232,9 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         if (! error_encountered()) {
             shader()->codegen ();
+            add_useparam ();
             track_variable_dependencies ();
-            track_variable_usage ();
+            track_variable_lifetimes ();
             if (m_optimizelevel >= 1)
                 coalesce_temporaries ();
         }
@@ -735,6 +736,7 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
         error (op.sourcefile(), op.sourceline(),
                "Cannot write to input parameter '%s'",
                sym->name().c_str());
+        error (op.sourcefile(), op.sourceline(), "  (op %d)", opnum);
     }
 
     // FIXME -- check for writing to globals.  But it's tricky, depends on
@@ -747,7 +749,7 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
 /// and figures out the lifetimes of all variables, based on whether the
 /// args in each op are read or written.
 void
-OSLCompilerImpl::track_variable_usage ()
+OSLCompilerImpl::track_variable_lifetimes ()
 {
     // Clear the lifetimes for all symbols
     BOOST_FOREACH (Symbol *s, symtab())
@@ -758,8 +760,9 @@ OSLCompilerImpl::track_variable_usage ()
     BOOST_FOREACH (Opcode &op, m_ircode) {
         // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
-            SymbolPtr &s = m_opargs[op.firstarg()+a];
-            s = s->dealias();   // Make sure it's de-aliased
+            SymbolPtr s = m_opargs[op.firstarg()+a];
+            ASSERT (s->dealias() == s);
+            // s = s->dealias();   // Make sure it's de-aliased
 
             // Mark that it's read and/or written for this op
             s->mark_rw (opnum, op.argread(a), op.argwrite(a));
@@ -1030,6 +1033,57 @@ OSLCompilerImpl::syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
                     wsyms->push_back (s);
         }
     }
+}
+
+
+
+/// Add a 'useparam' before any op that reads parameters.  This is what
+/// tells the runtime that it needs to run the layer it came from, if
+/// not already done.
+void
+OSLCompilerImpl::add_useparam ()
+{
+    // Loop over all ops...
+    for (size_t opnum = 0;  opnum < m_ircode.size();  ++opnum) {
+        Opcode &op (m_ircode[opnum]);  // handy ref to the op
+        SymbolPtrVec params;           // list of params referenced by this op
+        // For each argument...
+        for (int a = 0;  a < op.nargs();  ++a) {
+            SymbolPtr s = m_opargs[op.firstarg()+a];
+            DASSERT (s->dealias() == s);
+            // If this arg is a param and is read, remember it
+            if ((s->symtype() == SymTypeParam ||
+                 s->symtype() == SymTypeOutputParam) &&
+                op.argread(a) && op.opname() != "useparam") {
+                //std::cerr << "used " << s->mangled() << " @ " << opnum << "\n";
+                // Don't add it more than once
+                if (std::find (params.begin(), params.end(), s) == params.end())
+                    params.push_back (s);
+            }
+        }
+
+        // If the arg we are examining read any params, insert a "useparam"
+        // op whose arguments are the list of params we are about to use.
+        if (params.size()) {
+            insert_code (opnum, "useparam", params.size(), &(params[0]), NULL);
+            // All ops are "read"
+            m_ircode[opnum].argwrite (0, false);
+            m_ircode[opnum].argread (0, true);
+            // We have no parse node, but we set the new instruction's
+            // "source" to the one of the statement right after.
+            m_ircode[opnum].source (m_ircode[opnum+1].sourcefile(),
+                                    m_ircode[opnum+1].sourceline());
+            // Set the method id to the same as the statement right after
+            m_ircode[opnum].method (m_ircode[opnum+1].method());
+            // Skip the op we just added
+            ++opnum;
+        }
+    }
+
+    // FIXME - this needlessly inserts a "useparam" op multiple times if
+    // a param is accessed multiple times.  Once it does "useparam" once
+    // in the main code block and not inside any loop or conditional, it
+    // need not do it again.  But we can come back to this later.
 }
 
 

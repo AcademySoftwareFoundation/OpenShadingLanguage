@@ -47,7 +47,8 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_symbols(m_master->m_symbols),
       m_layername(layername), m_heapsize(-1 /*uninitialized*/),
-      m_heapround(0), m_numclosures(-1), m_heap_size_calculated(0)
+      m_heapround(0), m_numclosures(-1), m_heap_size_calculated(0),
+      m_writes_globals(false)
 {
     static int next_id = 0; // We can statically init an int, not an atomic
     m_id = ++(*(atomic_int *)&next_id);
@@ -107,14 +108,17 @@ ShaderInstance::calc_heap_size ()
     m_heapsize = 0;
     m_numclosures = 0;
     m_heapround = 0;
+    m_writes_globals = false;
     BOOST_FOREACH (/*const*/ Symbol &s, m_symbols) {
         // Skip if the symbol is a type that doesn't need heap space
         if (s.symtype() == SymTypeConst /* || s.symtype() == SymTypeGlobal */)
             continue;
 
         // assume globals have derivs
-        if (s.symtype() == SymTypeGlobal)
+        if (s.symtype() == SymTypeGlobal) {
             s.has_derivs (true);
+            m_writes_globals |= s.everwritten ();
+        }
 
 #if 1
         // FIXME -- test code by assuming all locals, temps, and params
@@ -148,6 +152,7 @@ ShaderInstance::calc_heap_size ()
         shadingsys().info (" Heap needed %llu, %d closures on the heap",
                            (unsigned long long)m_heapsize, m_numclosures);
         shadingsys().info (" Padding for alignment = %d", m_heapround);
+        shadingsys().info (" Writes globals: %d", m_writes_globals);
     }
 
     m_heap_size_calculated = 1;

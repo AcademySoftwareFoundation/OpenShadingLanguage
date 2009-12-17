@@ -66,11 +66,47 @@ int
 OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
                            ASTNode *node)
 {
-    int opnum = (int) m_ircode.size();
+    // Reduce to a call to insert_code at the end of the ops
+    return insert_code ((int) m_ircode.size(), opname, nargs, args, node);
+}
+
+
+
+int
+OSLCompilerImpl::insert_code (int opnum, const char *opname,
+                              size_t nargs, Symbol **args, ASTNode *node)
+{
     Opcode op (ustring (opname), m_codegenmethod, m_opargs.size(), nargs);
-    op.source (node->sourcefile(), node->sourceline());
-    m_ircode.push_back (op);
+    if (node)
+        op.source (node->sourcefile(), node->sourceline());
+    m_ircode.insert (m_ircode.begin()+opnum, op);
     add_op_args (nargs, args);
+
+    // Unless we were inserting at the end, we may need to adjust
+    // the jump addresses of other ops and the param init ranges.
+    if (opnum < (int)m_ircode.size()-1) {
+        // Adjust jump offsets
+        for (size_t n = 0;  n < m_ircode.size();  ++n) {
+            Opcode &c (m_ircode[n]);
+            for (int j = 0; j < (int)Opcode::max_jumps && c.jump(j) >= 0; ++j) {
+                if (c.jump(j) > opnum) {
+                    c.jump(j) = c.jump(j) + 1;
+                    // std::cerr << "Adjusting jump target at op " << n << "\n";
+                }
+            }
+        }
+        // Adjust param init ranges
+        BOOST_FOREACH (Symbol *s, symtab()) {
+            if (s->symtype() == SymTypeParam ||
+                  s->symtype() == SymTypeOutputParam) {
+                if (s->initbegin() > opnum)
+                    s->initbegin (s->initbegin()+1);
+                if (s->initend() > opnum)
+                    s->initend (s->initend()+1);
+            }
+        }
+    }
+
     return opnum;
 }
 

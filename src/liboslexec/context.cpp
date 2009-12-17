@@ -140,13 +140,15 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
         execlayers[layer].unbind ();
 
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
-        execlayers[layer].bind (this, use, layer, sgroup[layer]);
-        // FIXME -- for now, we're executing layers unconditionally.
-        // Eventually, we only want to execute them here if they have
-        // side effects (including generating final renderer outputs).
-        // Layers without side effects should be executed lazily, only
-        // as their outputs are needed by other layers.
-        execlayers[layer].run (rf);
+        ShadingExecution &exec (execlayers[layer]);
+        exec.bind (this, use, layer, sgroup[layer]);
+        // Only execute layers that write globals (or, in the future,
+        // have other side effects?) or the last layer of the sequence.
+        if (exec.instance()->writes_globals() || layer == nlayers-1 ||
+                ! m_shadingsys.m_lazylayers)
+            exec.run (rf);
+        // FIXME -- is it possible to also only bind when needed?  Or is
+        // there some reason why that won't work?
     }
 }
 

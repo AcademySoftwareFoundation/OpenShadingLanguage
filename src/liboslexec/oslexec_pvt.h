@@ -295,6 +295,10 @@ public:
     ///
     int id () const { return m_id; }
 
+    /// Does this instance potentially write to any global vars?
+    ///
+    bool writes_globals () const { return m_writes_globals; }
+
 private:
     bool heap_size_calculated () const { return m_heap_size_calculated; }
     void calc_heap_size ();
@@ -310,6 +314,7 @@ private:
     int m_numclosures;                  ///< Number of non-global closures
     int m_id;                           ///< Unique ID for the instance
     int m_heap_size_calculated;         ///< Has the heap size been computed?
+    bool m_writes_globals;              ///< Do I have side effects?
     std::vector<Connection> m_connections; ///< Connected input params
 
     friend class ShadingExecution;
@@ -487,11 +492,15 @@ private:
 
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
+
+    // Options
     int m_statslevel;                     ///< Statistics level
     bool m_debug;                         ///< Debugging output
+    bool m_lazylayers;                    ///< Evaluate layers on demand?
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
+
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values
@@ -501,11 +510,13 @@ private:
     mutable mutex m_mutex;                ///< Thread safety
     mutable thread_specific_ptr<PerThreadInfo> m_perthread_info;
 
+    // Stats
     atomic_int m_stat_shaders_loaded;     ///< Stat: shaders loaded
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
     PeakCounter<int> m_stat_instances;    ///< Stat: instances
     PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
     atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
+
     friend class ShadingContext;
 };
 
@@ -542,6 +553,10 @@ public:
     /// runflags are not supplied, they will be auto-generated with all
     /// points turned on.
     void execute (ShaderUse use, Runflag *rf=NULL);
+
+    /// Return the current shader use being executed.
+    ///
+    ShaderUse use () const { return (ShaderUse) m_curuse; }
 
     /// Return the number of points being shaded.
     ///
@@ -590,6 +605,8 @@ public:
     /// Return NULL if no such symbol is found.
     Symbol * symbol (ShaderUse use, ustring name);
 
+    /// Return a refreence to the ExecutionLayers corresponding to the
+    /// given shader use.
     ExecutionLayers &execlayer (ShaderUse use) { return m_exec[(int)use]; }
 
     /// Return a reference to a compiled regular expression for the
@@ -791,16 +808,26 @@ public:
                                                TypeDesc type, ustring name,
                                                int index, void *val);
 
-   /// Query the renderer for the named user-data on the current geometry.  This
-   /// function accepts an array of renderstate pointers and writes its value
-   /// in the memory region pointed to by 'val'.
-   bool get_renderer_userdata(int npoints, bool derivatives, ustring name, TypeDesc type, 
-                              void *renderstate, int renderstate_stepsize, 
-                              void *val, int val_stepsize);
+    /// Query the renderer for the named user-data on the current
+    /// geometry.  Thi s function accepts an array of renderstate
+    /// pointers and writes its value in the memory region pointed to by
+    /// 'val'.
+    bool get_renderer_userdata (int npoints, bool derivatives, ustring name,
+                                TypeDesc type, void *renderstate, 
+                                int renderstate_stepsize, 
+                                void *val, int val_stepsize);
 
-   /// Determine whether the currently shaded object has the named user-data 
-   /// attached
-   bool renderer_has_userdata (ustring name, TypeDesc type, void *renderstate);
+    /// Determine whether the currently shaded object has the named
+    /// user-data attached
+    bool renderer_has_userdata (ustring name, TypeDesc type, void *renderstate);
+
+    /// Has this layer already executed?
+    ///
+    bool executed () const { return m_executed; }
+
+    /// Run an earlier layer; called when a connected parameter is needed
+    /// and it's time to lazily execute the earlier layer.
+    void run_connected_layer (int layer);
 
 private:
     /// Helper for bind(): run initialization code for parameters
@@ -820,7 +847,6 @@ private:
     void bind_mark_geom_variables (ShaderInstance *inst);
 
     ShaderUse m_use;              ///< Our shader use
-    ShaderUse m_layerindex;       ///< Which layer are we?
     ShadingContext *m_context;    ///< Ptr to our shading context
     ShaderInstance *m_instance;   ///< Ptr to the shader instance
     ShaderMaster *m_master;       ///< Ptr to the instance's master

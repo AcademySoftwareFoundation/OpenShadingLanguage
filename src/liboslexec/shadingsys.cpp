@@ -125,7 +125,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       TextureSystem *texturesystem,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
-      m_statslevel (0), m_debug (false), m_commonspace_synonym("world"),
+      m_statslevel (0), m_debug (false), m_lazylayers (true),
+      m_commonspace_synonym("world"),
       m_in_group (false),
       m_global_heap_total (0)
 {
@@ -186,6 +187,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_debug = *(const int *)val;
         return true;
     }
+    if (name == "lazylayers" && type == TypeDesc::INT) {
+        m_lazylayers = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -210,6 +215,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "debug" && type == TypeDesc::INT) {
         *(int *)val = m_debug;
+        return true;
+    }
+    if (name == "lazylayers" && type == TypeDesc::INT) {
+        *(int *)val = m_lazylayers;
         return true;
     }
     return false;

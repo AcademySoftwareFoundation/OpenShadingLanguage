@@ -103,7 +103,7 @@ TESTSUITE ( arithmetic array array-derivs
             derivs error-dupes exponential
             function-simple function-outputelem
             geomath gettextureinfo hyperb
-            ieee_fp if incdec initops intbits layers
+            ieee_fp if incdec initops intbits layers layers-lazy
             logic loop matrix miscmath missing-shader noise pnoise
             oslc-err-paramdefault shortcircuit string 
             struct struct-layers

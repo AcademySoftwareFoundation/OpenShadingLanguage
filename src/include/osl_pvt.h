@@ -596,7 +596,13 @@ public:
     int firstuse () const   { return std::min (firstread(), firstwrite()); }
     int lastuse () const    { return std::max (lastread(), lastwrite()); }
     bool everused () const  { return lastuse() >= 0; }
-
+    bool everwritten () const { return lastwrite() >= 0; }
+    void set_read (int first, int last) {
+        m_firstread = first;  m_lastread = last;
+    }
+    void set_write (int first, int last) {
+        m_firstwrite = first;  m_lastwrite = last;
+    }
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point
@@ -652,6 +658,7 @@ public:
     int firstarg () const { return m_firstarg; }
     int nargs () const { return m_nargs; }
     ustring method () const { return m_method; }
+    void method (ustring method) { m_method = method; }
     void source (ustring sourcefile, int sourceline) {
         m_sourcefile = sourcefile;
         m_sourceline = sourceline;
@@ -684,6 +691,7 @@ public:
     /// Return the i'th jump target address (-1 for none).
     ///
     int jump (int i) const { return m_jump[i]; }
+    int &jump (int i) { return m_jump[i]; }
 
     /// Maximum jump targets an op can have.
     ///

@@ -66,6 +66,7 @@ static int iparamindex = 0;
 static ustring sparamdata[1000];
 static int sparamindex = 0;
 static ErrorHandler errhandler;
+static int iters = 1;
 
 
 
@@ -157,6 +158,7 @@ getargs (int argc, const char *argv[])
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
+                "--iters %d", &iters, "Number of iterations",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
@@ -283,21 +285,29 @@ main (int argc, const char *argv[])
         }
     }
 
-    double setuptime = timer ();
-    timer.reset ();
-    timer.start ();
-
-    // Request a shading context, bind it, execute the shaders.
-    // FIXME -- this will eventually be replaced with a public
-    // ShadingSystem call that encapsulates it.
     ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
     ShadingContext *ctx = ssi->get_context ();
-    ctx->bind (npoints, *shaderstate, shaderglobals);
-    double bindtime = timer ();
-    timer.reset ();
-    timer.start ();
-    ctx->execute (ShadUseSurface);
-    bool runtime = timer ();
+
+    double setuptime = timer ();
+    double bindtime = 0, runtime = 0;
+
+    for (int iter = 0;  iter < iters;  ++iter) {
+        timer.reset ();
+        timer.start ();
+        // Request a shading context, bind it, execute the shaders.
+        // FIXME -- this will eventually be replaced with a public
+        // ShadingSystem call that encapsulates it.
+        ctx = ssi->get_context ();
+        ctx->bind (npoints, *shaderstate, shaderglobals);
+        bindtime += timer ();
+        timer.reset ();
+        timer.start ();
+        ctx->execute (ShadUseSurface);
+        runtime += timer ();
+        if (iter < iters-1)
+            ssi->release_context (ctx);
+    }
+
     std::cout << "\n";
 
     std::vector<float> pixel;

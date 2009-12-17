@@ -1,0 +1,18 @@
+void dump (string xname, float x)
+{
+    printf ("%s: %g, derivs %g %g\n", xname, x, Dx(x), Dy(x));
+}
+
+
+shader test ( )
+{
+    dump ("u", u);
+    dump ("v", v);
+
+    float a[4];
+    a[0] = u;
+    a[1] = v;
+    dump ("a[0]", a[0]);
+    dump ("a[1]", a[1]);
+
+}

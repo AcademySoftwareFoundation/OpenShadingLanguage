@@ -121,7 +121,8 @@ ShaderInstance::calc_heap_size ()
         // carry derivs
         if ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
              s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
-                !s.typespec().is_closure() && s.typespec().is_floatbased())
+                !s.typespec().is_closure() &&
+                s.typespec().elementtype().is_floatbased())
             s.has_derivs (true);
 #endif
 

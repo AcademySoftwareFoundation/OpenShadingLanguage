@@ -62,10 +62,6 @@ static DECLOP (specialized_aref)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Src.is_varying() || Index.is_varying());
 
-    // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
     // Loop over points, do the assignment.
     VaryingRef<T> result ((T *)Result.data(), Result.step());
     VaryingRef<T> src ((T *)Src.data(), Src.step());
@@ -74,17 +70,47 @@ static DECLOP (specialized_aref)
         // Uniform case
         int ind = *index;
         *result = T ((&src[0])[ind]);
+        if (Result.has_derivs ())
+            exec->zero_derivs (Result);
     } else if (index.is_uniform()) {
         // Uniform index, potentially varying src array
         int ind = *index;
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = T ((&src[i])[ind]);
+
+        if (Result.has_derivs ()) {
+            if (Src.is_varying() && Src.has_derivs()) {
+                int len = Src.typespec().arraylength();
+                VaryingRef<Dual2<T> > result ((Dual2<T> *)Result.data(), Result.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i]) {
+                        result[i].set_dx ((&src[i])[ind+len]);
+                        result[i].set_dy ((&src[i])[ind+2*len]);
+                    }
+            } else {
+                exec->zero_derivs (Result);
+            }
+        }
     } else {
         // Fully varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 result[i] = T ((&src[i])[index[i]]);
+
+        if (Result.has_derivs ()) {
+            if (Src.is_varying() && Src.has_derivs()) {
+                int len = Src.typespec().arraylength();
+                VaryingRef<Dual2<T> > result ((Dual2<T> *)Result.data(), Result.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i]) {
+                        result[i].set_dx ((&src[i])[index[i]+len]);
+                        result[i].set_dy ((&src[i])[index[i]+2*len]);
+                    }
+            } else {
+                exec->zero_derivs (Result);
+            }
+        }
     }
 }
 
@@ -142,10 +168,6 @@ static DECLOP (specialized_aassign)
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, Src.is_varying() || Index.is_varying());
 
-    // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
     // Loop over points, do the assignment.
     VaryingRef<T> result ((T *)Result.data(), Result.step());
     VaryingRef<int> index ((int *)Index.data(), Index.step());
@@ -154,17 +176,47 @@ static DECLOP (specialized_aassign)
         // Uniform case
         int ind = *index;
         (&result[0])[ind] = *src;
+        if (Result.has_derivs ())
+            exec->zero_derivs (Result);
     } else if (index.is_uniform()) {
         // Uniform index, potentially varying src array
         int ind = *index;
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 (&result[i])[ind] = src[i];
+
+        if (Result.has_derivs()) {
+            if (Src.is_varying() && Src.has_derivs()) {
+                int len = Result.typespec().arraylength();
+                VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i]) {
+                        (&result[i])[ind+len] = src[i].dx();
+                        (&result[i])[ind+2*len] = src[i].dy();
+                    }
+            } else {
+                exec->zero_derivs (Result);
+            }
+        }
     } else {
         // Fully varying case
         for (int i = beginpoint;  i < endpoint;  ++i)
             if (runflags[i])
                 (&result[i])[index[i]] = src[i];
+
+        if (Result.has_derivs()) {
+            if (Src.is_varying() && Src.has_derivs()) {
+                int len = Result.typespec().arraylength();
+                VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i]) {
+                        (&result[i])[index[i]+len] = src[i].dx();
+                        (&result[i])[index[i]+2*len] = src[i].dy();
+                    }
+            } else {
+                exec->zero_derivs (Result);
+            }
+        }
     }
 }
 

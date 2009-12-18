@@ -447,7 +447,17 @@ public:
           m_firstread(std::numeric_limits<int>::max()), m_lastread(-1),
           m_firstwrite(std::numeric_limits<int>::max()), m_lastwrite(-1)
     { }
+    Symbol () { }  // Default ctr needed for vector resize
     virtual ~Symbol () { }
+
+    const Symbol & operator= (const Symbol &a) {
+        // Make absolutely sure that symbol copying goes blazingly fast,
+        // since by design we have made this structure hold no unique
+        // pointers and have no elements that aren't safe to memcpy, even
+        // though the compiler probably can't figure that out.
+        memcpy (this, &a, sizeof(Symbol));
+        return *this;
+    }
 
     /// The symbol's (unmangled) name, guaranteed unique only within the
     /// symbol's declaration scope.

@@ -132,6 +132,13 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
+    m_stat_groups = 0;
+    m_stat_groupinstances = 0;
+    m_stat_regexes = 0;
+    m_layers_executed_uncond = 0;
+    m_layers_executed_lazy = 0;
+    m_layers_executed_never = 0;
+
     init_global_heap_offsets ();
 
     // If client didn't supply an error handler, just use the default
@@ -339,8 +346,28 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Masters:   " << m_stat_shaders_loaded << "\n";
     out << "    Instances: " << m_stat_instances << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
+    out << "  Shading groups:   " << m_stat_groups << "\n";
+    out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
+    float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);
+    out << "    Avg instances per group: " 
+        << Strutil::format ("%.1f", iperg) << "\n";
+
+    long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
+                          m_layers_executed_never;
+    out << Strutil::format ("  Total layers run: %10lld\n", totalexec);
+    totalexec = std::max (totalexec, 1LL);  // prevent div by 0
+    out << Strutil::format ("    Unconditional:  %10lld  (%.1f%%)\n",
+                            (long long)m_layers_executed_uncond,
+                            (100.0*m_layers_executed_uncond)/totalexec);
+    out << Strutil::format ("    On demand:      %10lld  (%.1f%%)\n",
+                            (long long)m_layers_executed_lazy,
+                            (100.0*m_layers_executed_lazy)/totalexec);
+    out << Strutil::format ("    Skipped:        %10lld  (%.1f%%)\n",
+                            (long long)m_layers_executed_never,
+                            (100.0*m_layers_executed_never)/totalexec);
+
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
-    // FIXME
+
     return out.str();
 }
 
@@ -433,6 +460,7 @@ ShadingSystemImpl::Shader (const char *shaderusage,
     if (! m_in_group || m_group_use == ShadUseUnknown) {
         // A singleton, or the first in a group
         shadergroup.clear ();
+        m_stat_groups += 1;
     }
     if (m_in_group) {
         if (m_group_use == ShadUseUnknown) {  // First shader in group
@@ -446,6 +474,7 @@ ShadingSystemImpl::Shader (const char *shaderusage,
 
     shadergroup.append (instance);
     m_curattrib->changed_shaders ();
+    m_stat_groupinstances += 1;
 
     // FIXME -- check for duplicate layer name within the group?
 

@@ -159,7 +159,17 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     }
 
     m_npoints = m_context->npoints ();
-    m_symbols = m_instance->m_symbols;  // fresh copy of symbols from instance
+
+    // Make a fresh copy of symbols from the instance.  Don't copy the
+    // whole vector, which may do an element-by-element copy of each
+    // Symbol.  We humans know that the definition of Symbol has no
+    // elements that can't be memcpy'd, there is no allocated memory
+    // that can leak, so we go the fast route and memcpy.
+    m_symbols.resize (m_instance->m_symbols.size());
+    if (m_symbols.size())
+        memcpy (&m_symbols[0], &m_instance->m_symbols[0], 
+                m_instance->m_symbols.size() * sizeof(Symbol));
+
     ShaderGlobals *globals (m_context->m_globals);
 
     // FIXME: bind the symbols -- get the syms ready and pointing to the
@@ -543,12 +553,18 @@ ShadingExecution::run (int beginop, int endop)
 void
 ShadingExecution::run_connected_layer (int layer)
 {
-    ExecutionLayers &execlayers (context()->execlayer(context()->use()));
+    ShadingContext *ctx = context();
+    ShaderUse use = ctx->use();
+    ExecutionLayers &execlayers (ctx->execlayer (use));
     ShadingExecution &connected (execlayers[layer]);
     ASSERT (! connected.executed ());
 
     // Run the earlier layer!
+    ShaderGroup &sgroup (ctx->attribs()->shadergroup (use));
+    if (! connected.m_bound)
+        connected.bind (ctx, use, layer, sgroup[layer]);
     connected.run ();
+    ctx->m_lazy_evals += 1;
 
     // Now re-bind the connections between that layer and all other
     // later layers that have not yet executed.
@@ -558,7 +574,7 @@ ShadingExecution::run_connected_layer (int layer)
             ShaderInstance *inst = exec.instance();
             for (int c = 0;  c < inst->nconnections();  ++c) {
                 const Connection &con (inst->connection (c));
-                if (con.srclayer == layer)
+                if (con.srclayer == layer && execlayers[con.srclayer].m_bound)
                     exec.bind_connection (inst, con.dst.param);
             }
         }

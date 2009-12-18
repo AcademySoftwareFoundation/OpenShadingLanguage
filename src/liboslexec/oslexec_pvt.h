@@ -240,7 +240,7 @@ class ShaderInstance {
 public:
     typedef ShaderInstanceRef ref;
     ShaderInstance (ShaderMaster::ref master, const char *layername="");
-    ~ShaderInstance () { }
+    ~ShaderInstance ();
 
     /// Return the layer name of this instance
     ///
@@ -515,9 +515,15 @@ private:
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
     PeakCounter<int> m_stat_instances;    ///< Stat: instances
     PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
+    int m_stat_groups;                    ///< Stat: shading groups
+    int m_stat_groupinstances;            ///< Stat: total inst in all groups
     atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
+    atomic_ll m_layers_executed_uncond;   ///< Stat: Unconditional execs
+    atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs
+    atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
 
     friend class ShadingContext;
+    friend class ShaderInstance;
 };
 
 
@@ -614,6 +620,10 @@ public:
     /// aren't constantly compiling new ones.
     const boost::regex & find_regex (ustring r);
 
+    /// Return a pointer to the shading attribs for this context.
+    ///
+    ShadingAttribState *attribs () { return m_attribs; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -629,6 +639,7 @@ private:
     int m_curuse;                       ///< Current use that we're running
     int m_nlayers[ShadUseLast];         ///< Number of layers for each use
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
+    int m_lazy_evals;                   ///< Running tab of lazy evals
     friend class ShadingExecution;
 };
 

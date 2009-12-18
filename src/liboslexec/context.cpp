@@ -87,8 +87,8 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
                                this, (unsigned long long) heap_size_needed);
         m_heap.resize (heap_size_needed);
     }
-    // Zero out everything in the heap
-    memset (&m_heap[0], 0, m_heap.size());
+    // Zero out the heap memory we will be using
+    memset (&m_heap[0], 0, heap_size_needed);
 
     // Set up closure storage
     size_t closures_needed = m_npoints * sas.numclosures ();
@@ -139,17 +139,27 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     for (size_t layer = 0;  layer < nlayers;  ++layer)
         execlayers[layer].unbind ();
 
+    m_lazy_evals = 0;
+    int uncond_evals = 0;
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);
-        exec.bind (this, use, layer, sgroup[layer]);
+        ShaderInstance *inst = sgroup[layer];
+        exec.bind (this, use, layer, inst);
         // Only execute layers that write globals (or, in the future,
         // have other side effects?) or the last layer of the sequence.
-        if (exec.instance()->writes_globals() || layer == nlayers-1 ||
-                ! m_shadingsys.m_lazylayers)
+        if (inst->writes_globals() || layer == nlayers-1 ||
+                ! m_shadingsys.m_lazylayers) {
+            // exec.bind (this, use, layer, inst);
             exec.run (rf);
+            ++uncond_evals;
+        }
         // FIXME -- is it possible to also only bind when needed?  Or is
         // there some reason why that won't work?
     }
+
+    shadingsys().m_layers_executed_uncond += uncond_evals;
+    shadingsys().m_layers_executed_lazy += m_lazy_evals;
+    shadingsys().m_layers_executed_never += nlayers - uncond_evals - m_lazy_evals;
 }
 
 

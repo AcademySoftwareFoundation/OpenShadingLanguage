@@ -52,6 +52,14 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
 {
     static int next_id = 0; // We can statically init an int, not an atomic
     m_id = ++(*(atomic_int *)&next_id);
+    shadingsys().m_stat_instances += 1;
+}
+
+
+
+ShaderInstance::~ShaderInstance ()
+{
+    shadingsys().m_stat_instances -= 1;
 }
 
 

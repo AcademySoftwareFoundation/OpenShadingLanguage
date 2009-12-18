@@ -70,6 +70,16 @@ ShaderInstance::parameters (const ParamValueList &params)
         int i = m_master->findparam (p.name());
         if (i >= 0) {
             Symbol *s = symbol(i);
+            // don't allow assignment of closures
+            if (s->typespec().is_closure()) {
+                shadingsys().warning ("skipping assignment of closure: %s", s->name().c_str());
+                continue;
+            }
+            // check type of parameter and matching symbol
+            if (s->typespec().simpletype() != p.type()) {
+                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", s->name().c_str(), s->typespec().c_str(), p.type().c_str());
+                continue;
+            }
             s->valuesource (Symbol::InstanceVal);
             if (s->typespec().simpletype().basetype == TypeDesc::INT) {
                 memcpy (&m_iparams[s->dataoffset()], p.data(),
@@ -85,6 +95,9 @@ ShaderInstance::parameters (const ParamValueList &params)
                 shadingsys().info ("    sym %s offset %llu address %p",
                         s->name().c_str(),
                         (unsigned long long)s->dataoffset(), s->data());
+        }
+        else {
+            shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name().c_str());
         }
     }
 }

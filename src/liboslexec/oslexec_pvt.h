@@ -669,11 +669,17 @@ public:
 
     /// Get a reference to the symbol with the given index.
     /// Beware -- it had better be a valid index!
-    Symbol &sym (int index) { return m_symbols[index]; }
+    Symbol &sym (int index) {
+        DASSERT (index < (int)m_symbols.size() && index >= 0);
+        return m_symbols[index];
+    }
 
     /// Get a pointer to the symbol with the given index, or NULL if
     /// the index is < 0.
-    Symbol *symptr (int index) { return index >= 0 ? &m_symbols[index]: NULL; }
+    Symbol *symptr (int index) {
+        DASSERT (index < (int)m_symbols.size());
+        return index >= 0 ? &m_symbols[index]: NULL;
+    }
 
     /// Return the current instruction pointer index.
     ///
@@ -847,11 +853,11 @@ private:
 
     /// Helper for bind(): take care of connections to earlier layers
     ///
-    void bind_connections (ShaderInstance *inst);
+    void bind_connections ();
 
-    /// Helper for bind(): establish all connections to earlier layers
-    /// for a given symbol.
-    void bind_connection (ShaderInstance *inst, int symindex);
+    /// Helper for bind(): establish a connections to an earlier layer.
+    ///
+    void bind_connection (const Connection &con);
 
     /// Helper for bind(): marks all parameters which correspond to
     /// geometric user-data

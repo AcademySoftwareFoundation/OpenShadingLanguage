@@ -102,7 +102,7 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
         m_closures.resize (closures_needed);
     }
     // Zero out the closures
-    for (size_t i = 0;  i < m_closures.size();  ++i)
+    for (size_t i = 0;  i < closures_needed;  ++i)
         m_closures[i].clear ();
 
     // Calculate number of layers we need for each use

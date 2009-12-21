@@ -330,7 +330,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     }
 
     // Handle all of the symbols that are connected to earlier layers.
-    bind_connections (m_instance);
+    bind_connections ();
 
     // Mark symbols that map to user-data on the geometry
     bind_mark_geom_variables (m_instance);
@@ -402,15 +402,10 @@ ShadingExecution::bind_mark_geom_variables (ShaderInstance *inst)
 }
 
 void
-ShadingExecution::bind_connections (ShaderInstance *inst)
+ShadingExecution::bind_connections ()
 {
-    for (int i = 0;  i < inst->nconnections();  ++i) {
-        const Connection &con (inst->connection (i));
-        Symbol *s = symptr (con.dst.param);
-        DASSERT (s);
-        s->connected (true);
-        bind_connection (inst, con.dst.param);
-    }
+    for (int i = 0;  i < m_instance->nconnections();  ++i)
+        bind_connection (m_instance->connection (i));
     // FIXME -- you know, the connectivity is fixed for the whole group
     // and its instances.  We *could* mark them as connected and possibly
     // do some of the other connection work once per instance rather than
@@ -420,46 +415,46 @@ ShadingExecution::bind_connections (ShaderInstance *inst)
 
 
 void
-ShadingExecution::bind_connection (ShaderInstance *inst, int symindex)
+ShadingExecution::bind_connection (const Connection &con)
 {
+    int symindex = con.dst.param;
     Symbol &dstsym (sym (symindex));
 #if 0
-    std::cerr << "bind_connection " << inst->layername() << ' ' << symindex 
-              << " " << dstsym.name() << "\n";
+    std::cerr << " bind_connection: layer " << con.srclayer << ' '
+              << m_instance->layername() << ' ' << symindex 
+              << " to " << m_instance->layername() << ' '
+              << dstsym.name() << "\n";
 #endif
     ExecutionLayers &execlayers (context()->execlayer (shaderuse()));
-    for (int i = 0;  i < inst->nconnections();  ++i) {
-        const Connection &con (inst->connection (i));
-        if (con.dst.param == symindex) {
-            Symbol &srcsym (execlayers[con.srclayer].sym (con.src.param));
+    ShadingExecution &srcexec (execlayers[con.srclayer]);
+    ASSERT (srcexec.m_bound);
+    Symbol &srcsym (srcexec.sym (con.src.param));
 #if 0
-            std::cerr << "  found connection " << srcsym.name() 
-                      << " " << dstsym.name() << "\n";
+    std::cerr << "  found connection " << srcsym.name()
+              << " " << dstsym.name() << "\n";
 #endif
 
-            // Try to identify the simple case where we can just alias the
-            // variable, with no copying.
-            bool simple = (equivalent(srcsym.typespec(), dstsym.typespec()) &&
-                           srcsym.symtype() != SymTypeGlobal &&
-                           dstsym.symtype() != SymTypeGlobal);
-            if (simple) {
+    // Try to identify the simple case where we can just alias the
+    // variable, with no copying.
+    bool simple = (equivalent(srcsym.typespec(), dstsym.typespec()) &&
+                   srcsym.symtype() != SymTypeGlobal &&
+                   dstsym.symtype() != SymTypeGlobal);
+    if (simple) {
 #if 0
-                std::cerr << "  simple: setting " << srcsym.name() << " to " 
-                          << (void *)srcsym.data() << " (" << dstsym.name()
-                          << "), was " << (void *)dstsym.data() << "\n";
+        std::cerr << "  simple: setting " << srcsym.name() << " to " 
+                  << (void *)srcsym.data() << " (" << dstsym.name()
+                  << "), was " << (void *)dstsym.data() << "\n";
 #endif
-                dstsym.data (srcsym.data ());
-                dstsym.step (srcsym.step ());
-                // dstsym.dataoffset (srcsym->dataoffset ());  needed?
-                dstsym.valuesource (Symbol::ConnectedVal);
-            } else {
-                // More complex case -- casting is involved, or only a
-                // partial copy (such as just cone component).
-                ASSERT (0 && "Partial copies not yet supported");  // FIXME
-            }
-            dstsym.connected (true);
-        }
+        dstsym.data (srcsym.data ());
+        dstsym.step (srcsym.step ());
+        // dstsym.dataoffset (srcsym->dataoffset ());  needed?
+        dstsym.valuesource (Symbol::ConnectedVal);
+    } else {
+        // More complex case -- casting is involved, or only a
+        // partial copy (such as just cone component).
+        ASSERT (0 && "Partial copies not yet supported");  // FIXME
     }
+    dstsym.connected (true);
 }
 
 
@@ -561,6 +556,7 @@ ShadingExecution::run_connected_layer (int layer)
 
     // Run the earlier layer!
     ShaderGroup &sgroup (ctx->attribs()->shadergroup (use));
+    size_t nlayers = (int) sgroup.nlayers ();
     if (! connected.m_bound)
         connected.bind (ctx, use, layer, sgroup[layer]);
     connected.run ();
@@ -568,14 +564,14 @@ ShadingExecution::run_connected_layer (int layer)
 
     // Now re-bind the connections between that layer and all other
     // later layers that have not yet executed.
-    for (int i = layer+1;  i < (int)execlayers.size();  ++i) {
+    for (int i = layer+1;  i < (int)nlayers;  ++i) {
         ShadingExecution &exec (execlayers[i]);
         if (exec.m_bound && ! exec.m_executed) {
             ShaderInstance *inst = exec.instance();
             for (int c = 0;  c < inst->nconnections();  ++c) {
                 const Connection &con (inst->connection (c));
-                if (con.srclayer == layer && execlayers[con.srclayer].m_bound)
-                    exec.bind_connection (inst, con.dst.param);
+                if (con.srclayer == layer)
+                    exec.bind_connection (con);
             }
         }
     }

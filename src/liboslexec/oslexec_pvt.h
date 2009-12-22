@@ -497,6 +497,7 @@ private:
     int m_statslevel;                     ///< Statistics level
     bool m_debug;                         ///< Debugging output
     bool m_lazylayers;                    ///< Evaluate layers on demand?
+    bool m_clearmemory;                   ///< Zero mem before running shader?
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space

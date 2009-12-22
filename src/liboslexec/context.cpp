@@ -88,7 +88,8 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
         m_heap.resize (heap_size_needed);
     }
     // Zero out the heap memory we will be using
-    memset (&m_heap[0], 0, heap_size_needed);
+    if (shadingsys().m_clearmemory)
+        memset (&m_heap[0], 0, heap_size_needed);
 
     // Set up closure storage
     size_t closures_needed = m_npoints * sas.numclosures ();

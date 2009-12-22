@@ -1081,6 +1081,7 @@ static const char * builtin_func_args [] = {
 
     "ambient", "C", "Cn", NULL,
     "cooktorrance", "Cf", NULL,
+    "cloth", "Cnfffffffvccccffffifffff.", NULL,
     "diffuse", "Cn.", NULL,
     "hair_diffuse", "Cv.", NULL,
     "hair_specular", "Cvff.", NULL,

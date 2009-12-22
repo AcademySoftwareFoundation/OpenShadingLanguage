@@ -83,6 +83,34 @@ normal transform (string fromspace, string tospace, normal x)
 
 
 
+
+closure color cloth(normal N, float s, float t, color diff_warp, color diff_weft, 
+                    color spec_warp, color spec_weft, float fresnel_warp, float fresnel_weft,
+                    float spread_x_mult, float spread_y_mult, int pattern, float pattern_angle,
+                    float warp_width_scale, float weft_width_scale, float thread_count_mult_u,
+                    float thread_count_mult_v)
+{
+
+    return cloth(N, s, t, Dx(s), Dx(t), Dy(s), Dy(t), area(P), dPdu, diff_warp, diff_weft, spec_warp, spec_weft,
+                 fresnel_warp, fresnel_weft, spread_x_mult, spread_y_mult, pattern, pattern_angle, 
+                 warp_width_scale, weft_width_scale, thread_count_mult_u, thread_count_mult_v);
+}
+
+closure color cloth(normal N, float s, float t, color diff_warp, color diff_weft, 
+                    color spec_warp, color spec_weft, float fresnel_warp, float fresnel_weft,
+                    float spread_x_mult, float spread_y_mult, int pattern, float pattern_angle,
+                    float warp_width_scale, float weft_width_scale, float thread_count_mult_u,
+                    float thread_count_mult_v, string tok, string val)
+{
+
+    return cloth(N, s, t, Dx(s), Dx(t), Dy(s), Dy(t), area(P), dPdu, diff_warp, diff_weft, spec_warp, spec_weft,
+                 fresnel_warp, fresnel_weft, spread_x_mult, spread_y_mult, pattern, pattern_angle, 
+                 warp_width_scale, weft_width_scale, thread_count_mult_u, thread_count_mult_v, tok, val);
+}
+
+
+
+
 // Define substr(string,start) in terms of substr(string,start,len)
 string substr (string s, int start)
 {

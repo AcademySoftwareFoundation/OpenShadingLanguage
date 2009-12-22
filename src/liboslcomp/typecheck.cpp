@@ -1101,7 +1101,8 @@ static const char * builtin_func_args [] = {
 //                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
     "specular", "Cnf", NULL,
     "bssrdf_cubic", "Cc.", NULL,
-    "westin_velvet", "Cnfff.", NULL,
+    "westin_backscatter", "Cnf.", NULL,
+    "westin_sheen", "Cnf.", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

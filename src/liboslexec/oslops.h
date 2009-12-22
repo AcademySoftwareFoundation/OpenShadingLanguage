@@ -221,7 +221,8 @@ DECLOP (OP_useparam);
 DECLOP (OP_vector);
 DECLOP (OP_ward);
 DECLOP (OP_warning);
-DECLOP (OP_westin_velvet);
+DECLOP (OP_westin_backscatter);
+DECLOP (OP_westin_sheen);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);

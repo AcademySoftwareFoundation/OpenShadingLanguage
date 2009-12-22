@@ -325,7 +325,8 @@ static OpNameEntry op_name_entries[] = {
     { "vector", OP_vector },
     { "ward", OP_ward },
     { "warning", OP_warning },
-    { "westin_velvet", OP_westin_velvet},
+    { "westin_backscatter", OP_westin_backscatter},
+    { "westin_sheen", OP_westin_sheen},
     { "while", OP_for },
     { "xor", OP_xor },
     { NULL, NULL}

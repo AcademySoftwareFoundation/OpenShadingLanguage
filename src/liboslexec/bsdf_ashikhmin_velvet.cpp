@@ -42,7 +42,7 @@ class AshikhminVelvetClosure : public BSDFClosure {
     Vec3 m_N;
     float m_sigma;
     float m_R0;
-
+    float m_invsigma2;
 public:
     CLOSURE_CTOR (AshikhminVelvetClosure) : BSDFClosure(side, Labels::DIFFUSE)
     {
@@ -51,6 +51,7 @@ public:
         CLOSURE_FETCH_ARG (m_R0, 3);
 
         m_sigma = std::max(m_sigma, 0.01f);
+        m_invsigma2 = 1 / (m_sigma * m_sigma);
     }
 
     void print_on (std::ostream &out) const
@@ -71,24 +72,26 @@ public:
             H.normalize();
 
             float cosNH = normal_sign * m_N.dot(H);
-            float cosHO = fabs(omega_out.dot(H));
+            float cosHO = fabsf(omega_out.dot(H));
 
-            float cosNHdivHO = cosNH / cosHO;     
+            float cosNHdivHO = cosNH / cosHO;
             cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
 
-            float fac1 = 2 * fabs(cosNHdivHO * cosNO);
-            float fac2 = 2 * fabs(cosNHdivHO * cosNI);
+            float fac1 = 2 * fabsf(cosNHdivHO * cosNO);
+            float fac2 = 2 * fabsf(cosNHdivHO * cosNI);
 
-            float cotangent =  cosNH / sqrtf(std::max((1 - cosNH * cosNH), 0.0f)); 
+            float sinNH2 = 1 - cosNH * cosNH;
+            float sinNH4 = sinNH2 * sinNH2;
+            float cotangent2 =  (cosNH * cosNH) / sinNH2; 
 
-            float D = expf(-(cotangent * cotangent) / m_sigma);
-            float G = std::min(1.0f, std::min(fac1, fac2));
+            float D = expf(-cotangent2 * m_invsigma2) * m_invsigma2 * float(M_1_PI) / sinNH4;
+            float G = std::min(1.0f, std::min(fac1, fac2)); // TODO: derive G from D analytically
             // Schlick approximation of Fresnel reflectance
             float cosi2 = cosNO * cosNO;
             float cosi5 = cosi2 * cosi2 * cosNO;
             float F =  m_R0 + (1 - cosi5) * (1 - m_R0);
 
-            float out = (D * G * F) / cosNO; 
+            float out = 0.25f * (D * G * F) / cosNO;
 
             pdf = 0.5f * (float) M_1_PI;
             return Color3 (out, out, out);
@@ -113,42 +116,43 @@ public:
             // we are viewing the surface from above - send a ray out with uniform
             // distribution over the hemisphere
             sample_uniform_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
-            if (Ngf.dot(omega_in) > 0) {           
+            if (Ngf.dot(omega_in) > 0) {
                 Vec3 H = omega_in + omega_out;
                 H.normalize();
 
-                float D, G, F;
                 float cosNI = Nf.dot(omega_in);
                 float cosNO = Nf.dot(omega_out);
                 float cosNH = Nf.dot(H);
-                float cosHO = fabs(omega_out.dot(H));
+                float cosHO = fabsf(omega_out.dot(H));
 
-                float cosNHdivHO = cosNH/cosHO;     
+                float cosNHdivHO = cosNH / cosHO;
                 cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
 
-                float fac1 = 2.f * fabs(cosNHdivHO * cosNO);
-                float fac2 = 2.f * fabs(cosNHdivHO * cosNI);
-               
-                float cotangent =  cosNH / sqrtf(std::max((1.f - cosNH*cosNH), 0.f)); 
-        
-                D = expf(-(cotangent*cotangent) / m_sigma);
-                G = std::min(1.f, std::min(fac1, fac2));
+                float fac1 = 2 * fabsf(cosNHdivHO * cosNO);
+                float fac2 = 2 * fabsf(cosNHdivHO * cosNI);
+
+                float sinNH2 = 1 - cosNH * cosNH;
+                float sinNH4 = sinNH2 * sinNH2;
+                float cotangent2 =  (cosNH * cosNH) / sinNH2; 
+
+                float D = expf(-cotangent2 * m_invsigma2) * m_invsigma2 * float(M_1_PI) / sinNH4;
+                float G = std::min(1.0f, std::min(fac1, fac2)); // TODO: derive G from D analytically
                 // Schlick approximation of Fresnel reflectance
                 float cosi2 = cosNO * cosNO;
                 float cosi5 = cosi2 * cosi2 * cosNO;
-                F =  m_R0 + (1 - cosi5) * (1 - m_R0);
-       
-                float power = (D*G*F)/cosNO;            
-           
+                float F =  m_R0 + (1 - cosi5) * (1 - m_R0);
+
+                float power = 0.25f * (D * G * F) / cosNO;
+
                 eval.setValue(power, power, power);
 
                 // TODO: find a better approximation for the retroreflective bounce
                 domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
                 domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
                 domega_in_dx *= 125;
-                domega_in_dy *= 125;    
+                domega_in_dy *= 125;
             } else
-                pdf = 0;      
+                pdf = 0;
         }
         return Labels::REFLECT;
     }

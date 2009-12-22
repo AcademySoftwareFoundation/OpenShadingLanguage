@@ -535,7 +535,7 @@ public:
         Color3 DE_st (0, 0, 0);  // diffuse result * col, current single thread segment
         Color3 DE_f  (0, 0, 0);  // diffuse result * col, filtered aggregate 
 
-        float btf, brdf_spec;
+        float btf = 0, brdf_spec;
         Point2 BTF_center, BTF_semimajor;
 
         // stuff for brdf_spec derived from btf "thread segment" highlight ellipse area here...

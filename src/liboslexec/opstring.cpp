@@ -324,7 +324,7 @@ DECLOP (OP_endswith)
 
 DECLOP (OP_substr)
 {
-    DASSERT (nargs == 3);
+    DASSERT (nargs == 4);
     Symbol &Result (exec->sym (args[0]));
     Symbol &S (exec->sym (args[1]));
     Symbol &Start (exec->sym (args[2]));

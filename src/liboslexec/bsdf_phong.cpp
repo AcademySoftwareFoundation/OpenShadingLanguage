@@ -134,6 +134,126 @@ DECLOP (OP_phong)
 }
 
 
+
+class PhongRampClosure : public BSDFClosure {
+    static const int MAXCOLORS = 8;
+    Vec3 m_N;
+    float m_exponent;
+    Color3 m_colors[MAXCOLORS];
+    int m_ncolors;
+public:
+    CLOSURE_CTOR (PhongRampClosure) : BSDFClosure(side, Labels::GLOSSY)
+    {
+        CLOSURE_FETCH_ARG (m_N       , 1);
+        CLOSURE_FETCH_ARG (m_exponent, 2);
+        DASSERT (3 < nargs);
+        // Fill our internal color array with the one provided
+        Symbol &Colors (exec->sym (args[3]));
+        DASSERT (Colors.typespec().is_array() && Colors.typespec().elementtype().is_triple());
+        Color3 *m = (Color3 *)((char *)Colors.data() + idx * Colors.step());
+        TypeDesc colorstype = Colors.typespec().simpletype();
+        DASSERT (0 < colorstype.arraylen && colorstype.arraylen <= MAXCOLORS);
+        m_ncolors = colorstype.arraylen;
+        for (int r = 0;  r < colorstype.arraylen;  ++r)
+            m_colors[r] = m[r];
+    }
+
+    void print_on (std::ostream &out) const {
+        out << "phong_ramp((";
+        out << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
+        out << m_exponent << ")";
+    }
+
+    Color3 get_color (float pos) const
+    {
+        float npos = pos * (float)(m_ncolors - 1);
+        int ipos = (int)npos;
+        if (ipos >= (m_ncolors - 1))
+            return m_colors[m_ncolors - 1];
+        float offset = npos - (float)ipos;
+        return m_colors[ipos] * (1.0f - offset) + m_colors[ipos+1] * offset;
+    }
+
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    {
+        float cosNI = normal_sign * m_N.dot(omega_in);
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        if (cosNI > 0 && cosNO > 0) {
+            // reflect the view vector
+            Vec3 R = (2 * cosNO * normal_sign) * m_N - omega_out;
+            float cosRI = R.dot(omega_in);
+            if (cosRI > 0) {
+                float cosp = powf(cosRI, m_exponent);
+                float common = 0.5f * (float) M_1_PI * cosp;
+                float out = cosNI * (m_exponent + 2) * common;
+                pdf = (m_exponent + 1) * common;
+                return get_color(cosp) * out;
+            }
+        }
+        return Color3 (0, 0, 0);
+    }
+
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    {
+        return Color3 (0, 0, 0);
+    }
+
+    ustring sample (const Vec3 &Ng,
+                 const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
+                 float randu, float randv,
+                 Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
+                 float &pdf, Color3 &eval) const
+    {
+        Vec3 Ngf, Nf;
+        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
+            return Labels::NONE;
+        float cosNO = Nf.dot(omega_out);
+        if (cosNO > 0) {
+            // reflect the view vector
+            Vec3 R = (2 * cosNO) * Nf - omega_out;
+            domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
+            domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
+            Vec3 T, B;
+            make_orthonormals (R, T, B);
+            float phi = 2 * (float) M_PI * randu;
+            float cosTheta = powf(randv, 1 / (m_exponent + 1));
+            float sinTheta2 = 1 - cosTheta * cosTheta;
+            float sinTheta = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
+            omega_in = (cosf(phi) * sinTheta) * T +
+                       (sinf(phi) * sinTheta) * B +
+                       (            cosTheta) * R;
+            if (Ngf.dot(omega_in) > 0)
+            {
+                // common terms for pdf and eval
+                float cosNI = Nf.dot(omega_in);
+                // make sure the direction we chose is still in the right hemisphere
+                if (cosNI > 0)
+                {
+                    float cosp = powf(cosTheta, m_exponent);
+                    float common = 0.5f * (float) M_1_PI * cosp;
+                    pdf = (m_exponent + 1) * common;
+                    float out = cosNI * (m_exponent + 2) * common;
+                    eval = get_color(cosp) * out;
+                    // Since there is some blur to this reflection, make the
+                    // derivatives a bit bigger. In theory this varies with the
+                    // exponent but the exact relationship is complex and
+                    // requires more ops than are practical.
+                    domega_in_dx *= 10;
+                    domega_in_dy *= 10;
+                }
+            }
+        }
+        return Labels::REFLECT;
+    }
+};
+
+DECLOP (OP_phong_ramp)
+{
+    closure_op_guts<PhongRampClosure, 4> (exec, nargs, args,
+            runflags, beginpoint, endpoint);
+}
+
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

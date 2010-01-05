@@ -255,6 +255,7 @@ static OpNameEntry op_name_entries[] = {
     { "hypot", OP_hypot },
     { "if", OP_if },
     { "inversesqrt", OP_inversesqrt },
+    { "phong_ramp", OP_phong_ramp },
     { "isfinite", OP_isfinite },
     { "isinf", OP_isinf },
     { "isnan", OP_isnan },

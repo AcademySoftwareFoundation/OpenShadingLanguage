@@ -1022,6 +1022,7 @@ static const char * builtin_func_args [] = {
     "getmessage", "iss?", "!rw", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,
+    "phong_ramp", "Cnfc[].", NULL,
     "isfinite", "if", NULL,
     "isindirectray", "i", NULL,
     "isinf", "if", NULL,

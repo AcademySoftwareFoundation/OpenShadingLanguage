@@ -1,0 +1,67 @@
+//
+// Test struct that has a field consisting of an array
+//
+
+
+
+// struct declaration in global scope
+struct Astruct {
+    float f;
+    int i[5];
+    point p;
+};
+
+
+
+
+void test_output_param (output float fout)
+{
+    fout = 310.5;
+}
+
+
+float func_with_struct_param (Astruct ap)
+{
+    return ap.f * 2;
+}
+
+
+
+void func_with_struct_output_param (output Astruct ap)
+{
+    ap.i[1] *= 14;
+}
+
+
+
+shader
+test (
+    Astruct aparam = { 1.0, {10,11,12,13,14}, point(3,4,5) }
+)
+{
+    printf ("test struct\n");
+
+    // Make sure it came in ok as a param
+    printf ("struct param:  aparam == { %g, [%i], [%g] }\n",
+            aparam.f, aparam.i, aparam.p);
+
+    // Make one
+    Astruct a;
+
+    // Field assignment
+    a.f = M_PI;
+    a.i[0] = 1;
+    a.i[1] = 2;
+    a.i[2] = 3;
+    a.i[3] = 4;
+    a.i[4] = 5;
+    a.p = point (0, 1, 2);
+    printf ("\n");
+    printf ("a == { %g, [%i], [%g] }\n", a.f, a.i, a.p);
+
+    // Structure assignment
+    Astruct c;
+    c = a;
+    printf ("\n");
+    printf ("after c=a, c == { %g, [%i], [%g] }\n", c.f, c.i, c.p);
+}

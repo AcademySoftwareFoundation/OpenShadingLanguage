@@ -106,7 +106,7 @@ TESTSUITE ( arithmetic array array-derivs
             ieee_fp if incdec initops intbits layers layers-lazy
             logic loop matrix miscmath missing-shader noise pnoise
             oslc-err-paramdefault shortcircuit string 
-            struct struct-layers
+            struct struct-err struct-layers struct-with-array
             texture-alpha texture-blur texture-firstchannel texture-simple
             texture-width texture-withderivs texture-wrap
             transform trig typecast vecctr vector )

@@ -109,7 +109,8 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> struct_declaration field_declarations field_declaration
 %type <n> typed_field_list typed_field
 %type <n> variable_declaration def_expressions def_expression
-%type <n> initializer_opt initializer initializer_list_opt initializer_list
+%type <n> initializer_opt initializer initializer_list_opt initializer_list 
+%type <n> compound_initializer init_expression_list init_expression
 %type <i> shadertype outputspec arrayspec simple_typename
 %type <n> typespec 
 %type <n> statement_list statement scoped_statements local_declaration
@@ -225,7 +226,8 @@ shader_formal_param
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
                                                    ustring($3), $5, true,
-                                                   false, $1 /*output*/);
+                                                   false, $1 /*output*/,
+                                                   true /* initializer list */);
                     var->add_meta ($6);
                     $$ = var;
                 }
@@ -240,7 +242,8 @@ shader_formal_param
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t,
                                                    ustring($3), $4, true,
-                                                   false, $1 /*output*/);
+                                                   false, $1 /*output*/,
+                                                   true /* initializer list */);
                     var->add_meta ($5);
                     $$ = var;
                 }
@@ -272,8 +275,9 @@ metadatum
                     TypeSpec t (simple, t.is_closure());
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
-                                                       ustring ($2), $4, false,
-                                                       true /* ismeata */);
+                                     ustring ($2), $4, false,
+                                     true /* ismeata */, false /* output */,
+                                     true /* initializer list */);
                     $$ = var;
                 }
         ;
@@ -415,7 +419,8 @@ def_expression
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     $$ = new ASTvariable_declaration (oslcompiler, t, 
-                                                      ustring($1), $3);
+                                 ustring($1), $3, false, false, false,
+                                 true /* initializer list */);
                 }
         | IDENTIFIER initializer_list
                 {
@@ -424,8 +429,9 @@ def_expression
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
                                             "Can't use '= {...}' initializer except with arrays or struct (%s)", $1);
-                    $$ = new ASTvariable_declaration (oslcompiler,
-                                                      t, ustring($1), $2);
+                    $$ = new ASTvariable_declaration (oslcompiler, t,
+                                 ustring($1), $2, false, false, false,
+                                 true /* initializer list */);
                 }
         ;
 
@@ -444,7 +450,27 @@ initializer_list_opt
         ;
 
 initializer_list
-        : '=' '{' expression_list '}'   { $$ = $3; }
+        : '=' compound_initializer      { $$ = $2; }
+        ;
+
+compound_initializer
+        : '{' init_expression_list '}'
+                {
+                    $$ = new ASTcompound_initializer (oslcompiler, $2);
+                }
+        ;
+
+init_expression_list
+        : init_expression
+        | init_expression_list ',' init_expression
+                {
+                    $$ = concat ($1, $3)
+                }
+        ;
+
+init_expression
+        : expression
+        | compound_initializer
         ;
 
 shadertype

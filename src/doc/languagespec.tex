@@ -4341,7 +4341,13 @@ nothing (empty, no token).
 
 <initializer> ::= "=" <expression>
 
-<initializer-list> ::= "=" "{" <expression-list> "}"
+<initializer-list> ::= "=" <compound-initializer>
+
+<compound-initializer> ::= "{" <init-expression-list> "}"
+
+<init-expression-list> ::= <init-expression> \{ "," <init-expression> \}
+
+<init-expression> ::= <expression> | <compound-initializer>
 
 <typespec> ::= <simple-typename> 
 \alt "closure" <simple-typename>

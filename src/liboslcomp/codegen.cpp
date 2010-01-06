@@ -360,6 +360,15 @@ ASTreturn_statement::codegen (Symbol *dest)
 
 
 Symbol *
+ASTcompound_initializer::codegen (Symbol *dest)
+{
+    ASSERT(0 && "compound codegen");
+    return NULL;
+}
+
+
+
+Symbol *
 ASTassign_expression::codegen (Symbol *dest)
 {
     ASSERT (m_op == Assign);  // all else handled by binary_op
@@ -378,7 +387,19 @@ ASTassign_expression::codegen (Symbol *dest)
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
             Symbol *dfield, *ofield;
             m_compiler->struct_field_pair (dest, operand, i, dfield, ofield);
-            emitcode ("assign", dfield, ofield);
+            if (dfield->typespec().is_array()) {
+                // field is an array
+                TypeSpec elemtype = dfield->typespec().elementtype();
+                Symbol *tmp = m_compiler->make_temporary (elemtype);
+                for (int e = 0;  e < dfield->typespec().arraylength();  ++e) {
+                    Symbol *index = m_compiler->make_constant (e);
+                    emitcode ("aref", tmp, ofield, index);
+                    emitcode ("aassign", dfield, index, tmp);
+                }
+            } else {
+                // field is a scalar
+                emitcode ("assign", dfield, ofield);
+            }
         }
         return dest;
     }
@@ -511,18 +532,37 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym, std::string 
 Symbol *
 ASTvariable_declaration::codegen (Symbol *)
 {
+    if (! init())
+        return m_sym;
+
+    // If it's a compound initializer, look at the individual pieces
+    ref init = this->init();
+    if (init->nodetype() == compound_initializer_node) {
+        init = ((ASTcompound_initializer *)init.get())->initlist();
+    }
+
     // Handle structure initialization separately
     if (m_sym->typespec().is_structure())
-        return codegen_struct_initializers ();
+        return codegen_struct_initializers (init);
 
+    codegen_initlist (init, m_typespec, m_sym);
+
+    return m_sym;
+}
+
+
+
+void
+ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
+                                           Symbol *sym)
+{
     // Loop over a list of initializers (it's just 1 if not an array)...
-    int i = 0;
-    for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
-        Symbol *dest = in->codegen (m_sym);
-        if (dest != m_sym) {
-            if (m_sym->typespec().is_array()) {
+    for (int i = 0;  init;  init = init->next(), ++i) {
+        Symbol *dest = init->codegen (sym);
+        if (dest != sym) {
+            if (sym->typespec().is_array()) {
                 // Array variable -- assign to the i-th element
-                TypeSpec elemtype = m_sym->typespec().elementtype();
+                TypeSpec elemtype = sym->typespec().elementtype();
                 if (! equivalent (elemtype, dest->typespec())) {
                     // We only allow A[ind] = x if the type of x is
                     // equivalent to that of A's elements.  You can't,
@@ -532,25 +572,24 @@ ASTvariable_declaration::codegen (Symbol *)
                     dest = m_compiler->make_temporary (elemtype);
                     emitcode ("assign", dest, tmp);
                 }
-                emitcode ("aassign", m_sym, m_compiler->make_constant(i), dest);
+                emitcode ("aassign", sym, m_compiler->make_constant(i), dest);
             } else {
                 // Non-array variable, just a simple assignment
-                emitcode ("assign", m_sym, dest);
+                emitcode ("assign", sym, dest);
             }
         }
     }        
-    return m_sym;
 }
 
 
 
 Symbol *
-ASTvariable_declaration::codegen_struct_initializers ()
+ASTvariable_declaration::codegen_struct_initializers (ref init)
 {
-    if (init() && ! init()->next() && init()->typespec() == m_typespec) {
+    if (! init->next() && init->typespec() == m_typespec) {
         // Special case: just one initializer, it's a whole struct of
         // the right type.
-        Symbol *initsym = init()->codegen (m_sym);
+        Symbol *initsym = init->codegen (m_sym);
         if (initsym != m_sym) {
             StructSpec *structspec (m_typespec.structspec());
             for (int i = 0;  i < (int)structspec->numfields();  ++i) {
@@ -568,8 +607,7 @@ ASTvariable_declaration::codegen_struct_initializers ()
     bool paraminit = (m_compiler->codegen_method() != "___main___" &&
                       (m_sym->symtype() == SymTypeParam ||
                        m_sym->symtype() == SymTypeOutputParam));
-    int i = 0;
-    for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
+    for (int i = 0;  init;  init = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
         StructSpec *structspec (m_typespec.structspec());
         const StructSpec::FieldSpec &field (structspec->field(i));
@@ -583,9 +621,16 @@ ASTvariable_declaration::codegen_struct_initializers ()
             fieldsym->initbegin (m_compiler->next_op_label ());
         }
 
-        Symbol *dest = in->codegen (fieldsym);
-        if (dest != fieldsym)
-            emitcode ("assign", fieldsym, dest);
+        if (init->nodetype() == compound_initializer_node) {
+            // Initialize the field with a compound initializer
+            codegen_initlist (((ASTcompound_initializer *)init.get())->initlist(),
+                              field.type, fieldsym);
+        } else {
+            // Initialize the field with a scalar initializer
+            Symbol *dest = init->codegen (fieldsym);
+            if (dest != fieldsym)
+                emitcode ("assign", fieldsym, dest);
+        }
 
         if (paraminit)
             fieldsym->initend (m_compiler->next_op_label ());

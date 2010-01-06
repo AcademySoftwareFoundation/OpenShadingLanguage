@@ -1,0 +1,4 @@
+test.osl:29: error: Cannot assign 'struct Bstruct' to 'struct Astruct'
+test.osl:32: error: Cannot assign 'int' to 'struct Bstruct'
+test.osl:35: error: Cannot initialize structure 'c' with a scalar value
+FAILED test.osl

@@ -263,10 +263,11 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
                                                   ustring name, ASTNode *init,
                                                   bool isparam, bool ismeta,
-                                                  bool isoutput)
+                                                  bool isoutput, bool initlist)
     : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
       m_name(name), m_sym(NULL), 
-      m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta)
+      m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
+      m_initlist(initlist)
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
@@ -509,6 +510,22 @@ const char *
 ASTreturn_statement::childname (size_t i) const
 {
     return "expression";  // only child
+}
+
+
+
+ASTcompound_initializer::ASTcompound_initializer (OSLCompilerImpl *comp,
+                                                  ASTNode *exprlist)
+    : ASTNode (compound_initializer_node, comp, Nothing, exprlist)
+{
+}
+
+
+
+const char *
+ASTcompound_initializer::childname (size_t i) const
+{
+    return "expression_list";
 }
 
 

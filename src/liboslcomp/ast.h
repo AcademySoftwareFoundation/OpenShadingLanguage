@@ -65,7 +65,7 @@ public:
     ///
     enum NodeType {
         unknown_node, shader_declaration_node, function_declaration_node,
-        variable_declaration_node,
+        variable_declaration_node, compound_initializer_node,
         variable_ref_node, preincdec_node, postincdec_node,
         index_node, structselect_node,
         conditional_statement_node,
@@ -374,7 +374,8 @@ class ASTvariable_declaration : public ASTNode
 public:
     ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
                              ustring name, ASTNode *init, bool isparam=false,
-                             bool ismeta=false, bool isoutput=false);
+                             bool ismeta=false, bool isoutput=false,
+                             bool initlist=false);
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
@@ -402,25 +403,33 @@ public:
     bool param_default_literals (const Symbol *sym, std::string &out);
 
 private:
-    /// Special type checking for structure initializers
-    ///
-    TypeSpec typecheck_struct_initializers ();
-    /// Special code generation for structure initializers
-    ///
-    Symbol *codegen_struct_initializers ();
+    // Helper: type check an initializer list -- either a single item to
+    // a scalar, or a list to an array.
+    void typecheck_initlist (ref init, TypeSpec type, const char *name);
 
-    /// Helper for param_default_literals: generate the string that gives
-    /// the intialization of the literal value (and/or the default, if
-    /// init==NULL) and append it to 'out'.  Return whether the full
-    /// initialization is comprised only of literals (no init ops needed).
+    // Special type checking for structure initializers
+    TypeSpec typecheck_struct_initializers (ref init);
+
+    // Helper: generate code for an initializer list -- either a single
+    // item to a scalar, or a list to an array.
+    void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
+
+    // Special code generation for structure initializers
+    Symbol *codegen_struct_initializers (ref init);
+
+    // Helper for param_default_literals: generate the string that gives
+    // the intialization of the literal value (and/or the default, if
+    // init==NULL) and append it to 'out'.  Return whether the full
+    // initialization is comprised only of literals (no init ops needed).
     bool param_one_default_literal (const Symbol *sym, ASTNode *init,
                                     std::string &out);
 
-    ustring m_name;
-    Symbol *m_sym;
-    bool m_isparam;
-    bool m_isoutput;
-    bool m_ismetadata;
+    ustring m_name;     ///< Name of the symbol (unmangled)
+    Symbol *m_sym;      ///< Ptr to the symbol this declares
+    bool m_isparam;     ///< Is this a parameter?
+    bool m_isoutput;    ///< Is this an output parameter?
+    bool m_ismetadata;  ///< Is this declaration a piece of metadata?
+    bool m_initlist;    ///< Was initialized with a list (versus just an expr)
 };
 
 
@@ -612,6 +621,19 @@ public:
     Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
+};
+
+
+
+class ASTcompound_initializer : public ASTNode
+{
+public:
+    ASTcompound_initializer (OSLCompilerImpl *comp, ASTNode *exprlist);
+    const char *nodetypename () const { return "compound_initializer"; }
+    const char *childname (size_t i) const;
+    Symbol *codegen (Symbol *dest = NULL);
+
+    ref initlist () const { return child (0); }
 };
 
 

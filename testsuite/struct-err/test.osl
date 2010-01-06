@@ -1,0 +1,37 @@
+// struct declaration in global scope
+struct Astruct {
+    float f;
+    int i;
+    point p;
+    string s;
+};
+
+
+struct Bstruct {
+    vector v;
+    float i;
+};
+
+
+
+
+shader
+test (
+    Astruct aparam = { 1.0, 0, point(3,4,5), "foo!" }
+)
+{
+    printf ("test struct errors\n");
+
+    Astruct a;
+    Bstruct b;
+
+    // Assign the wrong kind of structure
+    a = b;
+
+    // Assign a scalar
+    b = 0;
+
+    // Construct it improperly
+    Astruct c = 0;
+
+}

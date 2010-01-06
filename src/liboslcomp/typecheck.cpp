@@ -101,40 +101,72 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 {
     typecheck_children (m_typespec);
 
-    if (m_typespec.is_structure()) {
-        // struct initialization handled separately
-        return typecheck_struct_initializers ();
+    if (! init())
+        return m_typespec;
+
+    if (m_typespec.is_structure() && ! m_initlist &&
+        init()->typespec().structure() != m_typespec.structure()) {
+        // Can't do:  struct foo = 1
+        error ("Cannot initialize structure '%s' with a scalar value",
+               name().c_str());
     }
 
-    int i = 0;
-    for (ASTNode::ref in = init();  in;  in = in->next(), ++i) {
-        // Special case: ok to assign a literal 0 to a closure to
-        // initialize it.
-        if (m_sym->typespec().is_closure() && ! in->typespec().is_closure() &&
-            (in->typespec().is_float() || in->typespec().is_int()) &&
-            in->nodetype() == literal_node &&
-            ((ASTliteral *)in.get())->floatval() == 0.0f) {
-            continue;  // it's ok
-        }
-        if (! m_sym->typespec().is_array() && i > 0)
-            error ("Can't assign array initializers to non-array %s %s",
-                   type_c_str(m_typespec), m_name.c_str());
-        if (! assignable(m_sym->typespec().elementtype(), in->typespec()))
-            error ("can't assign '%s' to %s %s",
-                   type_c_str(in->typespec()),
-                   type_c_str(m_sym->typespec()), m_name.c_str());
+    // If it's a compound initializer, look at the individual pieces
+    ref init = this->init();
+    if (init->nodetype() == compound_initializer_node) {
+        ASSERT (! init->nextptr() &&
+                "compound_initializer should be the only initializer");
+        init = ((ASTcompound_initializer *)init.get())->initlist();
     }
+
+    if (m_typespec.is_structure()) {
+        // struct initialization handled separately
+        return typecheck_struct_initializers (init);
+    }
+
+    typecheck_initlist (init, m_typespec, m_name.c_str());
+
     return m_typespec;
 }
 
 
 
+void
+ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
+                                             const char *name)
+{
+    // Loop over a list of initializers (it's just 1 if not an array)...
+    for (int i = 0;  init;  init = init->next(), ++i) {
+        // Check for too many initializers for an array
+        if (type.is_array() && i > type.arraylength()) {
+            error ("Too many initializers for a '%s'", type_c_str(type));
+            break;
+        }
+        // Special case: ok to assign a literal 0 to a closure to
+        // initialize it.
+        if (type.is_closure() && ! init->typespec().is_closure() &&
+              init->typespec().is_int_or_float() &&
+              init->nodetype() == literal_node &&
+            ((ASTliteral *)init.get())->floatval() == 0.0f) {
+            continue;  // it's ok
+        }
+        if (! type.is_array() && i > 0)
+            error ("Can't assign array initializers to non-array %s %s",
+                   type_c_str(type), name);
+        if (! assignable(type.elementtype(), init->typespec()))
+            error ("Can't assign '%s' to %s %s", type_c_str(init->typespec()),
+                   type_c_str(type), name);
+    }
+}
+
+
+
 TypeSpec
-ASTvariable_declaration::typecheck_struct_initializers ()
+ASTvariable_declaration::typecheck_struct_initializers (ref init)
 {
     ASSERT (m_typespec.is_structure());
 
-    if (init() && ! init()->next() && init()->typespec() == m_typespec) {
+    if (! init->next() && init->typespec() == m_typespec) {
         // Special case: just one initializer, it's a whole struct of
         // the right type.
         return m_typespec;
@@ -144,25 +176,40 @@ ASTvariable_declaration::typecheck_struct_initializers ()
 
     const StructSpec *structspec (m_typespec.structspec());
     int numfields = (int)structspec->numfields();
-    int i = 0;
-    for (ASTNode::ref in = init();  in; in = in->next(), ++i) {
+    for (int i = 0;  init;  init = init->next(), ++i) {
         if (i >= numfields) {
             error ("Too many initializers for '%s %s'",
                    type_c_str(m_typespec), m_name.c_str());
             break;
         }
         const StructSpec::FieldSpec &field (structspec->field(i));
-        // Special case: ok to assign a literal 0 to a closure to
-        // initialize it.
-        if (field.type.is_closure() && ! in->typespec().is_closure() &&
-            (in->typespec().is_float() || in->typespec().is_int()) &&
-            in->nodetype() == literal_node &&
-            ((ASTliteral *)in.get())->floatval() == 0.0f) {
+
+        if (init->nodetype() == compound_initializer_node) {
+            // Initializer is itself a compound, it ought to be initializing
+            // a field that is an array.
+            if (field.type.is_array ()) {
+                ustring fieldname = ustring::format ("%s.%s", m_sym->name().c_str(),
+                                                     field.name.c_str());
+                typecheck_initlist (((ASTcompound_initializer *)init.get())->initlist(),
+                                    field.type, fieldname.c_str());
+            } else {
+                error ("Can't use '{...}' for a struct field that is not an array");
+            }
+            continue;
+        }
+
+        // Ok to assign a literal 0 to a closure to initialize it.
+        if (field.type.is_closure() && ! init->typespec().is_closure() &&
+            (init->typespec().is_float() || init->typespec().is_int()) &&
+            init->nodetype() == literal_node &&
+            ((ASTliteral *)init.get())->floatval() == 0.0f) {
             continue;  // it's ok
         }
-        if (! assignable(field.type, in->typespec()))
-            error ("can't assign '%s' to '%s %s.%s'",
-                   type_c_str(in->typespec()),
+
+        // Normal initializer, normal field.
+        if (! assignable(field.type, init->typespec()))
+            error ("Can't assign '%s' to '%s %s.%s'",
+                   type_c_str(init->typespec()),
                    type_c_str(field.type), m_name.c_str(), field.name.c_str());
     }
     return m_typespec;

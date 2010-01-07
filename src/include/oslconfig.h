@@ -75,7 +75,7 @@ namespace OSL {
                                           OSL_LIBRARY_VERSION_PATCH)
 
 // Magic macros to make OSL_LIBRARY_VERSION_STRING that looks like "1.2.3"
-#define OSL_MAKE_VERSION_STRING2(a,b,c) (#a "." #b "." #c)
+#define OSL_MAKE_VERSION_STRING2(a,b,c) #a "." #b "." #c
 #define OSL_MAKE_VERSION_STRING(a,b,c) OSL_MAKE_VERSION_STRING2(a,b,c)
 #define OSL_LIBRARY_VERSION_STRING OSL_MAKE_VERSION_STRING(OSL_LIBRARY_VERSION_MAJOR, OSL_LIBRARY_VERSION_MINOR, OSL_LIBRARY_VERSION_PATCH)
 

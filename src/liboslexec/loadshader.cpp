@@ -61,7 +61,7 @@ public:
       { }
     virtual ~OSOReaderToMaster () { }
     virtual bool parse (const std::string &filename);
-    virtual void version (const char *specid, float version) { }
+    virtual void version (const char *specid, int major, int minor);
     virtual void shader (const char *shadertype, const char *name);
     virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
     virtual void symdefault (int def);
@@ -87,6 +87,7 @@ private:
     int m_sourceline;                 ///< Current source code line parsed
     ustring m_codesection;            ///< Which entry point are the ops for?
     int m_codesym;                    ///< Which param is being initialized?
+    int m_oso_major, m_oso_minor;     ///< oso file format version
 };
 
 
@@ -98,6 +99,15 @@ OSOReaderToMaster::parse (const std::string &filename)
     m_codesection.clear ();
     m_codesym = -1;
     return OSOReader::parse (filename);
+}
+
+
+
+void
+OSOReaderToMaster::version (const char *specid, int major, int minor)
+{
+    m_oso_major = major;
+    m_oso_minor = minor;
 }
 
 

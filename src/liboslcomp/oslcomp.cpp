@@ -479,8 +479,9 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     }
 
     // FIXME -- remove the hard-coded version!
-    oso ("OpenShadingLanguage 0.0\n");
-    oso ("# Compiled by oslc FIXME-VERSION\n");
+    oso ("OpenShadingLanguage %d.%02d\n",
+         OSO_FILE_VERSION_MAJOR, OSO_FILE_VERSION_MINOR);
+    oso ("# Compiled by oslc %s\n", OSL_LIBRARY_VERSION_STRING);
 
     ASTshader_declaration *shaderdecl = shader_decl();
     oso ("%s %s", shaderdecl->shadertypename(), 

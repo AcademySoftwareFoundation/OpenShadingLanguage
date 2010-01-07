@@ -65,7 +65,7 @@ public:
 
     /// Declare the shader version.
     ///
-    virtual void version (const char *specid, float version) { }
+    virtual void version (const char *specid, int major, int minor) { }
 
     /// Set the name and type of the shader
     ///

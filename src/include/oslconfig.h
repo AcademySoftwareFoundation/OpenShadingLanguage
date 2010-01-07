@@ -52,7 +52,44 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace OSL_NAMESPACE {
 #endif
 
+/// @namespace OSL
+/// @brief Main namespace enclosing most OSL functionality.
 namespace OSL {
+
+
+// Versions.  There are three different sets of version numbers:
+// (a) The version of the OSL language specification itself, i.e.,
+//     what is OSL syntax, semantics, and standard library.
+// (b) The version of the OSL library, i.e., this very software whose
+//     source code you are reading.
+// (c) The version of the .oso file format that this library uses
+//     for compiled shaders.
+// These are all independent, though loosely coupled.
+
+// Version of this library:
+#define OSL_LIBRARY_VERSION_MAJOR  0
+#define OSL_LIBRARY_VERSION_MINOR  5
+#define OSL_LIBRARY_VERSION_PATCH  0
+#define OSL_LIBRARY_VERSION_CODE (10000 * OSL_LIBRARY_VERSION_MAJOR + \
+                                    100 * OSL_LIBRARY_VERSION_MINOR + \
+                                          OSL_LIBRARY_VERSION_PATCH)
+
+// Magic macros to make OSL_LIBRARY_VERSION_STRING that looks like "1.2.3"
+#define OSL_MAKE_VERSION_STRING2(a,b,c) (#a "." #b "." #c)
+#define OSL_MAKE_VERSION_STRING(a,b,c) OSL_MAKE_VERSION_STRING2(a,b,c)
+#define OSL_LIBRARY_VERSION_STRING OSL_MAKE_VERSION_STRING(OSL_LIBRARY_VERSION_MAJOR, OSL_LIBRARY_VERSION_MINOR, OSL_LIBRARY_VERSION_PATCH)
+
+
+// Version numbers for the compiled shader format.  The major number
+// should only be changed if old .oso files should not be expected to
+// work with current versions of the library (this should be EXTREMELY
+// rare, hopefully never).  The minor number may be changed if newly
+// compiled shaders won't work for old libraries, which sometimes
+// happens but still should not be often.  Adding a new hint or a new
+// shader instruction is not considered a change to the file format!
+#define OSO_FILE_VERSION_MAJOR 1
+#define OSO_FILE_VERSION_MINOR 0
+
 
 
 /// By default, we operate with single precision float.  Change this

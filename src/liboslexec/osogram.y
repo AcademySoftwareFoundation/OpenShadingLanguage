@@ -122,7 +122,9 @@ oso_file
 version
         : IDENTIFIER FLOAT_LITERAL ENDOFLINE
                 {
-                    OSOReader::osoreader->version ($1, $2);
+                    int major = (int) $2;
+                    int minor = (int) (100*($2-major) + 0.5);
+                    OSOReader::osoreader->version ($1, major, minor);
                     $$ = 0;
                 }
         ;

@@ -454,8 +454,12 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
             if (hints++ == 0)
                 oso ("\t");
             oso (" %%depends{");
+            int deps = 0;
             for (size_t i = 0;  i < inputdeps.size();  ++i) {
-                if (i)
+                if (inputdeps[i]->symtype() == SymTypeTemp &&
+                    inputdeps[i]->dealias() != inputdeps[i])
+                    continue;   // Skip aliased temporaries
+                if (deps++)
                     oso (",");
                 oso ("%s",  inputdeps[i]->mangled().c_str());
             }

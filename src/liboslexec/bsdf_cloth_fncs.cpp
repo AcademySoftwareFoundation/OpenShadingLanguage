@@ -10,7 +10,7 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 
 /*
-float 
+float
 lerp(float t, float a, float b) {
     return (1.0f - t) * a + t * b;
 }
@@ -28,7 +28,7 @@ smoothstep(float edge0, float edge1, float x) {
     return result;
 }
 
-float 
+float
 schlick_fresnel(float cosNO, float R0) {
     // Schlick approximation of Fresnel reflectance
     float cosi2 = cosNO * cosNO;
@@ -38,22 +38,18 @@ schlick_fresnel(float cosNO, float R0) {
 }
 
 
-float computeG_Smith(const Vec3 &N, Vec3 &H, const Vec3 &omega_in, const Vec3 &omega_out)
+float computeG_Smith(const Vec3 &N, Vec3 &H, const Vec3 &omega_out, float cosNI, float cosNO)
 {
-    // get rid of need for H in parameter interface
-
-    float cosNI = N.dot(omega_in);
-    float cosNO = N.dot(omega_out);
     float cosNH = N.dot(H);
     float cosHO = fabs(omega_out.dot(H));
 
-    float cosNHdivHO = cosNH/cosHO;     
+    float cosNHdivHO = cosNH/cosHO;
     cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
 
     float fac1 = 2.f * fabs(cosNHdivHO * cosNO);
     float fac2 = 2.f * fabs(cosNHdivHO * cosNI);
 
-    return std::min(1.f, std::min(fac1, fac2));  
+    return std::min(1.f, std::min(fac1, fac2));
 }
 
 Point2 H_projected(Vec3 &H, const Vec3 &N, const Vec3 &dPdu)
@@ -71,30 +67,30 @@ Point2 H_projected(Vec3 &H, const Vec3 &N, const Vec3 &dPdu)
         base1 = dPdu;
         base1.normalize();
         base2 = base1.cross(N);
-         
+
         // get direction cosines on plane
-        // 
+        //
         H_projected2D.x = base1.dot(H_projected3D);
-        H_projected2D.y = base2.dot(H_projected3D); 
+        H_projected2D.y = base2.dot(H_projected3D);
 
         return H_projected2D;
 }
 
-Point2 ellipse_center(float Sx, float Sy, 
-                      float Kx, float Ky, 
+Point2 ellipse_center(float Sx, float Sy,
+                      float Kx, float Ky,
                       Point2 H2)
 {
     // Sx, Sy are the highlight segment width:height ratio
-    // Kx, Ky scale the offset to control how far the highlight moves from the 
+    // Kx, Ky scale the offset to control how far the highlight moves from the
     // center of the rectangular window
     // H2 is the halfvector projected onto the BTF plane
-    
+
     Point2 center;
 
     center.x = 0.5f*Sx*(Kx*H2.x+1.f);
     center.y = 0.5f*Sy*(Ky*H2.y+1.f);
 
-  
+
     return center;
 }
 
@@ -110,12 +106,12 @@ void rotate_2D(Point2 &point, float angle, Point2 origin) // origin was defaulte
     point = rotatedPoint;
 }
 
-void ellipse_foci(Point2 alpha, float eta, Point2 center, 
+void ellipse_foci(Point2 alpha, float eta, Point2 center,
                   Point2 *F1, Point2 *F2)
 
-                 
+
 {
-    // alpha is the semimajor axis, assumed to be rotated slightly 
+    // alpha is the semimajor axis, assumed to be rotated slightly
     // off vertical (just to the left of pi/2 at about 95 degrees for a warp thread, for instance)
     // eta is the eccentricity
     // F1 and F2 are the ellipse foci
@@ -127,53 +123,52 @@ void ellipse_foci(Point2 alpha, float eta, Point2 center,
     F2->y = center.y-alpha.y*eta;
 }
 
-float inside_ellipse (Point2 F1, Point2 F2, 
-                      float uu, float vv, 
+float inside_ellipse (Point2 F1, Point2 F2,
+                      float uu, float vv,
                       float alpha, float width)
 {
     float d;
 
     Vec3 F1_d, F2_d;
-    
+
     float I = 0.f;
-        
+
 
     // to check whether the point (x,y) lies inside the ellipse, recall
-    // that an ellipse is the set of points for which the sum of the 
+    // that an ellipse is the set of points for which the sum of the
     // distance from the two foci is exactly 2*alpha
     F1_d.x = F1.x-uu;  F1_d.y = F1.y-vv;
     F2_d.x = F2.x-uu;  F2_d.y = F2.y-vv;
-  
+
     d = sqrtf(F1_d.x*F1_d.x + F1_d.y*F1_d.y) + sqrtf(F2_d.x*F2_d.x + F2_d.y*F2_d.y);
+    //d = F1_d.length2() + F2_d.length2();  eh?  
 
     float ellipse = 2.f*alpha;
-    
+
     float b = ellipse + width;
     float a = std::max(ellipse - width, 0.f);
 
     // here, we smoothstep based on width, which is area*filterwidth
-    // 
-    I = 1.f - smoothstep(a, b, d); 
-  
+    //
+    I = 1.f - smoothstep(a, b, d);
+
     return I;
 }
 
 
 // line seqment circle intersection check, take two
-// 
+//
 bool intersect_circle_segment(Point2 center, float radius, Point2 p1, Point2 p2)
 {
-    Point2 dir;  
+    Point2 dir;
     Point2 diff;
 
-    //AiV2Sub(dir, p2, p1);
     dir.x = p2.x-p1.x;
     dir.y = p2.y-p1.y;
-    //AiV2Sub(diff, center, p1);
+
     diff.x = center.x-p1.x;
     diff.y = center.y-p1.y;
 
-    //float t = AiV2Dot(diff, dir) / AiV2Dot(dir, dir);
     float t = (diff.x*dir.x + diff.y*dir.y) / (dir.x*dir.x + dir.y*dir.y);
     if (t < 0.0f)
         t = 0.0f;
@@ -190,7 +185,7 @@ bool intersect_circle_segment(Point2 center, float radius, Point2 p1, Point2 p2)
     Point2 d;
     d.x = center.x - closest.x;
     d.y = center.y - closest.y;
-   
+
     float distsqr = d.x*d.x + d.y*d.y; //AiV2Dot(d,d);
 
     return distsqr <= radius * radius;
@@ -206,7 +201,7 @@ bool intersect_circle_segment(Point2 center, float radius, Point2 p1, Point2 p2)
 // Return false if the ray doesn't intersect the sphere.
 bool ray_circle(Point2 p1, Point2 p2, Point2 sc, float r, float *mu1, float *mu2)
 {
-    
+
     if(!intersect_circle_segment(sc, r, p1, p2))
         return false;
 
@@ -222,14 +217,14 @@ bool ray_circle(Point2 p1, Point2 p2, Point2 sc, float r, float *mu1, float *mu2
     c += p1.x * p1.x + p1.y * p1.y;
     c -= 2.f * (sc.x * p1.x + sc.y * p1.y);
     c -= r * r;
-   
-    // if the discriminant 'b*b-4*a*c' 
+
+    // if the discriminant 'b*b-4*a*c'
     //   is less than zero, the line doesn't intersect
     // if it equals zero, then the line is tangent to the circle,
     //   intersecting it at one point (we don't care about this case)
     // if it's greater than zero the line intersects at two points.
     bb4ac = b * b - 4 * a * c;
-    if (fabs(a) < EPSILON || bb4ac <= 0.f) {  
+    if (fabs(a) < EPSILON || bb4ac <= 0.f) {
         *mu1 = 0;
         *mu2 = 0;
         return false;
@@ -244,20 +239,14 @@ bool ray_circle(Point2 p1, Point2 p2, Point2 sc, float r, float *mu1, float *mu2
 
 inline Point2 point_on_line(float mu, Point2 p1, Point2 p2)
 {
-    Point2 tmp, pol;
+    Point2 pol;
 
-    //AiV2Sub(tmp, p2, p1);
-    tmp.x = p2.x-p1.x;
-    tmp.y = p2.y-p1.y;
-    //AiV2Scale(tmp, tmp, mu);
-    tmp.x *= mu;
-    tmp.y *= mu;
-    //AiV2Add(pol, p1, tmp);
-    pol.x = p1.x+tmp.x;
-    pol.y = p1.y+tmp.y;
-    
-    return pol; // point on line   
-}   
+    pol.x = Imath::lerp(p1.x, p2.x, mu);
+    pol.y = Imath::lerp(p1.y, p2.y, mu);
+
+    return pol; // point on line
+}
+
 
 // note that this formula works for angles from zero to 2PI!
 // hint: when theta is > PI the circle segment contains the origin
@@ -271,10 +260,10 @@ inline float seg_area(float theta)
 inline float t_area(Point2 P0, Point2 P1, Point2 P2)
 {
     Point2 tmp, tmp2;
-    //AiV2Sub(tmp, P1, P0);
+
     tmp.x = P1.x-P0.x;
     tmp.y = P1.y-P0.y;
-    //AiV2Sub(tmp2, P2, P0);
+
     tmp2.x = P2.x-P0.x;
     tmp2.y = P2.y-P0.y;
 
@@ -285,38 +274,20 @@ inline float t_area(Point2 P0, Point2 P1, Point2 P2)
 //
 inline float atan2_zero_to_pi(float y, float x)
 {
-    //printf("y: %f x: %f\n", y, x);
     float z = atan2f(y, x);
     if(z < 0.f)
-        z += PITIMES2;
+        z += 2.f * M_PI;
 
     return z;
 }
 
 
-// computeAC returns the area of the circular segment contained 
+// computeAC returns the area of the circular segment contained
 // by the surrounding M inverse transformed rectangular thread segment window
-// 
-// Sx, Sy scale the thread segment rectangle
-//float computeAC(Vec3 highlight, Vec3 *rect3)
-float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
+//
+float compute_AC(Point2 *rect, bool OUTSIDE)
+
 {
-    Point2 rect[4];
-    // fix order after M inverse
-    // 
-    rect[1].x = rect3[0].x - highlight.x; 
-    rect[1].y = rect3[0].y - highlight.y;
-
-    rect[2].x = rect3[1].x - highlight.x; 
-    rect[2].y = rect3[1].y - highlight.y;
-
-    rect[3].x = rect3[2].x - highlight.x; 
-    rect[3].y = rect3[2].y - highlight.y;
-
-    rect[0].x = rect3[3].x - highlight.x; 
-    rect[0].y = rect3[3].y - highlight.y;
-
-          
     Point2 center;
     center.x = 0.f;
     center.y = 0.f;
@@ -325,29 +296,30 @@ float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
     float radius = 1.f; // unit circle
 
     float mu1=0.f;
+
     float mu2=0.f;
     int i=0;
     int k=0;
 
     float theta[2] = {0.f, 0.f};      // two possible theta angles
 
-    // four possible intersections 
-    Intersection pList[4];      
-  
+    // four possible intersections
+    Intersection pList[4];
+
     Point2 P0, P1, P2;
 
     // find potential intersections of circle with the rectangle perimeter
-    // moving clockwise from edge to edge, mu2 is the intersection nearest the 
+    // moving clockwise from edge to edge, mu2 is the intersection nearest the
     // starting point of the edge.  mu1 is closer to the edge end point.
-    // 
+    //
 
     // first edge
     if(ray_circle(rect[0], rect[1], center, radius, &mu1, &mu2))
     {
         if(mu2 > 0.f && mu2 < 1.f)
         {
-            pList[i].p = point_on_line(mu2, rect[0], rect[1]); 
-            pList[i].edge = 1;          
+            pList[i].p = point_on_line(mu2, rect[0], rect[1]);
+            pList[i].edge = 1;
             i++;
         }
         if(mu1 > 0.f && mu1 < 1.f)
@@ -355,11 +327,11 @@ float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
             pList[i].p = point_on_line(mu1, rect[0], rect[1]);
             pList[i].edge = 1;
             i++;
-         
+
         }
     }
-    
-    // second edge   
+
+    // second edge
     if(ray_circle(rect[1], rect[2], center, radius, &mu1, &mu2))
     {
         if(mu2 > 0.f  && mu2 < 1.f)
@@ -369,13 +341,13 @@ float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
             i++;
         }
         if(mu1 > 0.f && mu1 < 1.f)
-        {     
+        {
             pList[i].p= point_on_line(mu1, rect[1], rect[2]);
             pList[i].edge = 2;
             i++;
-        }     
+        }
     }
-    
+
     // third edge
     if(ray_circle(rect[2], rect[3], center, radius, &mu1, &mu2))
     {
@@ -386,81 +358,74 @@ float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
             i++;
         }
         if(mu1 > 0.f && mu1 < 1.f)
-        {   
+        {
             pList[i].p = point_on_line(mu1, rect[2], rect[3]);
             pList[i].edge = 3;
             i++;
-        }     
+        }
     }
-    
+
     // forth edge
     if(ray_circle(rect[3], rect[0], center, radius, &mu1, &mu2))
     {
         if(mu2 > 0.f  && mu2 < 1.f)
-        {   
+        {
             pList[i].p = point_on_line(mu2, rect[3], rect[0]);
             pList[i].edge = 4;
             i++;
         }
         if(mu1 > 0.f && mu1 < 1.f)
-        {   
+        {
             pList[i].p = point_on_line(mu1, rect[3], rect[0]);
             pList[i].edge = 4;
-            i++;  
+            i++;
         }
     }
-    
+
     // early out after intersection testing... skip area finding routine
     if(i == 0 && OUTSIDE == false)
         return area;  // inside and no intersections gives area of pi
-    
+
     if(i == 0 && OUTSIDE == true)
         return 0.f;   // no intersections & not inside gives area of zero
 
-    // subtract the arctangents of pairs of intersections to obtain the directed angles from the first 
+    // subtract the arctangents of pairs of intersections to obtain the directed angles from the first
     // to the second point of each segment of rectangle perimeter that is intersected by the circle
     //
-    if(i > 4) // temporary 'till bug is fixed...
-    {   
-        printf("intersections > 4!\n");
-        i=4;
-        abort();
-    }
-
     for(int j=0; j<=i-1; j=j+2) // count by pairs of intersection points
     {
         //printf("i: %d  j: %d\n", i, j);
 
         float angle1 = atan2_zero_to_pi(pList[j].p.y, pList[j].p.x);
-        float angle2 = atan2_zero_to_pi(pList[j+1].p.y, pList[j+1].p.x);       
+        float angle2 = atan2_zero_to_pi(pList[j+1].p.y, pList[j+1].p.x);
         float ang;
 
         if(angle2 > angle1)
         {
             ang = angle2-angle1;
-           
+
             if(i==4)
             {
                 // handle for when circle strides lower right corner,
                 // intersecting edges 3 & 4 each twice
-                if(ang < M_PI && OUTSIDE==true && pList[0].edge==3)             
-                    ang = PITIMES2 - ang;                
+                if(ang < M_PI && OUTSIDE==true && pList[0].edge==3)
+                    ang = 2.f * M_PI - ang;
                 // handles for when circle strides upper left corner,
-                // intersecting edges 1 & 2 each twice 
+                // intersecting edges 1 & 2 each twice
                 else if(ang > M_PI || k==1)
-                    ang = PITIMES2 - ang;                
-            }                                          
-        }  
+                    ang = 2.f * M_PI - ang;
+            }
+        }
         else
         {
             ang = angle1-angle2;
             if(i == 2) // we need to subtract ang from 2PI when angle1 < angle2 for 2 intersections
-                ang = PITIMES2 - ang;
+                ang = 2.f * M_PI - ang;
         }
-        
+
         theta[k] = ang;
-                    
-        // test for 2 intersections on adjacent edges 
+
+        // test for 2 intersections on adjacent edges
         // NOTE: we only care about the first two intersections stored in *pList in this case.
         if(i == 2 && (pList[0].edge != pList[1].edge))
         {
@@ -471,25 +436,24 @@ float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
             P1 = pList[j].p;
             P2 = pList[j+1].p;
             i=5;
-            
+
             if(OUTSIDE == true)
             {
                 if(angle1 > angle2)
-                    theta[k] = PITIMES2 - (angle1 - angle2);                
+                    theta[k] = 2.f * M_PI - (angle1 - angle2);
                 else
-                    theta[k] = angle2 - angle1;                
+                    theta[k] = angle2 - angle1;
             }
             else
             {
                 if(angle2 > angle1)
-                    theta[k] = (angle2 - angle1);               
+                    theta[k] = (angle2 - angle1);
                 else
-                    theta[k] = PITIMES2 - (angle1 - angle2);
-                
+                    theta[k] = 2.f * M_PI - (angle1 - angle2);
+
             }
 
-
-            // intersection striding edge 4 to edge 1 
+            // intersection striding edge 4 to edge 1
             if(pList[j].edge == 1 && pList[j+1].edge == 4)
             {
                 P0 = rect[0];
@@ -497,50 +461,52 @@ float compute_AC(Vec3 highlight, Vec3 *rect3, bool OUTSIDE)
                 angle1 = angle2;
                 angle2 = tmp;
 
-                // intersection order relationship changes in order to keep going clockwise around the rectangle 
+                // intersection order relationship changes in order to keep going clockwise around the rectangle
                 if(OUTSIDE == true)
                 {
                     if(angle1 > angle2)
-                        theta[k] = PITIMES2 - (angle1 - angle2);                      
+                        theta[k] = 2.f * M_PI - (angle1 - angle2);
                     else
-                        theta[k] = angle2-angle1;                                     
+                        theta[k] = angle2-angle1;
                 }
                 else
                 {
-                    if(angle2 > angle1)                  
-                        theta[k] = angle2 - angle1;             
-                    else                                    
-                        theta[k] = PITIMES2 - (angle1 - angle2);                                      
-                }              
-            } 
+                    if(angle2 > angle1)
+                        theta[k] = angle2 - angle1;
+                    else
+                        theta[k] = 2.f * M_PI - (angle1 - angle2);
+                }
+            }
 
             break;
         }
-     
-        k++;  
+
+        k++;
     }
 
-    // if i > 0 there has been one or more intersections with the rectangle segment 
-    // 
-    if(i == 2) { 
+    // if i > 0 there has been one or more intersections with the rectangle segment
+    //
+    if(i == 2) {
         area = seg_area(theta[0]);
         return area;
     }
-   
+
     if(i == 4){
         area = M_PI - seg_area(theta[0]) - seg_area(theta[1]);
         return area;
     }
 
     // when there are two intersections on different edges (a corner is strided), a line is drawn between
-    // each intersection, forming a triangle with the rectangle corner.  
+    // each intersection, forming a triangle with the rectangle corner.
     // The summation of the triangle and circle segment area give the true segment area.
-    // 
+    //
+    // Note: there aren't really 5 intersections, here.  This case of 4 intersections is just set to 5.
+    //
     if(i == 5){
         area = seg_area(theta[0]) + fabs(t_area(P0, P1, P2));
         return area;
     }
-    
+
     return area;
 }
 

@@ -168,6 +168,22 @@ public:
         m_spread_x_mult = std::min(1.f/m_spread_x_mult, 10.f);
         m_spread_y_mult = std::min(1.f/m_spread_y_mult, 10.f);
 
+        // thread segment parameters
+        // angle            the angle of the highlight ellipse
+        // eccentricity     the eccentricity of the highlight ellipse
+        // Kx               the distance the highlight ellipse can xform in the thread segment window along x
+        // Ky               the distance the highlight ellipse can xform in the thread segment window along y
+        // alpha            length of the ellipse highlight semimajor axis
+        // Sx               thread segment window width
+        // Sy               thread segment window height
+        // diffCol          diffuse color for thread segment
+        // specCol          specular color for thread segment
+        // R0               fresnel reflectance for thread segment
+        // patternWeight    the area weighting for the thread weave pattern - used for brdf filtering
+        // beamCoverage     the footprint area of the current sample in texture space
+        // AR               area of the thread segment window.  Used for scaling ellipse highlight area result.
+        // semimajor, semiminor      ellipse highlight axes
+
         // long warp thread
         t_seg[LONGWARP].angle                   = 95.f;  // convert to radians
         t_seg[LONGWARP].eccentricity            = Imath::lerp(0.94625f, 0.995f, 1.0f-m_warp_width_scale);  // 0.995f
@@ -183,7 +199,7 @@ public:
         t_seg[LONGWARP].beamCoverage            = 1.f;
         t_seg[LONGWARP].AR                      = t_seg[LONGWARP].Sx * t_seg[LONGWARP].Sy;
         set_ellipse_axes(t_seg[LONGWARP].semimajor, t_seg[LONGWARP].semiminor,
-                         t_seg[LONGWARP].alpha, t_seg[LONGWARP].eccentricity, 
+                         t_seg[LONGWARP].alpha, t_seg[LONGWARP].eccentricity,
                          t_seg[LONGWARP].angle);
 
         // short warp thread
@@ -201,7 +217,7 @@ public:
         t_seg[SHORTWARP].beamCoverage           = 1.f;
         t_seg[SHORTWARP].AR                     = t_seg[SHORTWARP].Sx * t_seg[SHORTWARP].Sy;
         set_ellipse_axes(t_seg[SHORTWARP].semimajor, t_seg[SHORTWARP].semiminor,
-                         t_seg[SHORTWARP].alpha, t_seg[SHORTWARP].eccentricity, 
+                         t_seg[SHORTWARP].alpha, t_seg[SHORTWARP].eccentricity,
                          t_seg[SHORTWARP].angle);
 
         // long weft thread
@@ -219,7 +235,7 @@ public:
         t_seg[LONGWEFT].beamCoverage           = 1.f;
         t_seg[LONGWEFT].AR                     = t_seg[LONGWEFT].Sx * t_seg[LONGWEFT].Sy;
         set_ellipse_axes(t_seg[LONGWEFT].semimajor, t_seg[LONGWEFT].semiminor,
-                         t_seg[LONGWEFT].alpha, t_seg[LONGWEFT].eccentricity, 
+                         t_seg[LONGWEFT].alpha, t_seg[LONGWEFT].eccentricity,
                          t_seg[LONGWEFT].angle);
 
         // short weft thread
@@ -238,7 +254,7 @@ public:
         t_seg[SHORTWEFT].beamCoverage           = 1.f;
         t_seg[SHORTWEFT].AR                     = t_seg[SHORTWEFT].Sx * t_seg[SHORTWEFT].Sy;
         set_ellipse_axes(t_seg[SHORTWEFT].semimajor, t_seg[SHORTWEFT].semiminor,
-                         t_seg[SHORTWEFT].alpha, t_seg[SHORTWEFT].eccentricity, 
+                         t_seg[SHORTWEFT].alpha, t_seg[SHORTWEFT].eccentricity,
                          t_seg[SHORTWEFT].angle);
 
         Point2 uv;
@@ -254,7 +270,7 @@ public:
 
         // TWILL PATTERN
         //
-        if(m_pattern == 1)
+        if(m_pattern == 0)
         {
             col = whichtile(uu, 12);
 
@@ -283,7 +299,7 @@ public:
 
         // PLAIN WEAVE PATTERN
         //
-        if(m_pattern == 2)
+        else if(m_pattern == 1)
         {
             col = whichtile(uu, 12);
             row = whichtile(vv, 12);
@@ -291,8 +307,7 @@ public:
             uux = fmod((uu*12.f), 1.f);
             vvx = fmod((vv*12.f), 1.f);
 
-
-            if((even(row) == true && even(col) == true) || (odd(row) == true && odd(col) == true) || row == col)
+            if (((row ^ col) & 1) == 0)
                 currentThreadSegment = SHORTWEFT;
 
             else
@@ -308,7 +323,7 @@ public:
 
         // SATIN PATTERN
         //
-        if(m_pattern == 3)
+        else
         {
             uu = fmod((uv.x*m_thread_count_mult_u*1.5), 1.f);
 
@@ -323,11 +338,13 @@ public:
             if(col == 1)
                 offset = 0.25f;
             else if(col == 3)
-                offset = 0.0f;
+                offset = 0.f;
             else if(col == 5)
                 offset = 0.75f;
             else if(col == 7)
                 offset = 0.5f;
+            else
+                offset = 0.f;
 
             vvx = fmod(vvx+offset,1);
             vvx /= 0.75f;
@@ -348,25 +365,20 @@ public:
             {
                 vvx = fmod((vv*12.f), 1.f);
 
-                if(even(col))     // er... of course this is an even row.  why bother checking?
-                {
-                    currentThreadSegment = LONGWEFT;
+                currentThreadSegment = LONGWEFT;
 
-                    // need to handle this one negative case...
-                    int L = (row-1)%4;
-                        if(L < 0)
-                            L=4+L;
+                // need to handle this one negative case...
+                int L = (row-1) & 3;
 
-                    if(L == (col/2)%4)
-                        uux = uux/3.f + 0.66666f;  // right side of horizontal ellipse
+                if(L == (col/2)%4)
+                    uux = uux/3.f + 0.66666f;  // right side of horizontal ellipse
 
-                    else if((row+2)%4 == (col/2)%4)
-                        uux = uux/3.f;             // left side of horizontal ellipse
+                else if((row+2)%4 == (col/2)%4)
+                    uux = uux/3.f;             // left side of horizontal ellipse
 
-                    else
-                        currentThreadSegment = SHORTWEFT;
+                else
+                    currentThreadSegment = SHORTWEFT;
 
-                }
             }
 
             threadPattern[0] = LONGWARP;
@@ -488,30 +500,22 @@ public:
         if (!(cosNI > 0 && cosNO > 0))
             return Color3 (0, 0, 0);
 
-
-        // whittle this down to a 3x3
-        Matrix44 M;
-        Matrix44 M_inv;
-
-        M.makeIdentity();
-
-        Vec3 rect[4];
-
+        Point2 rect[4];
+        Point2 smaj_inv, smin_inv;
 
         Vec3 H = omega_in + omega_out;
         H.normalize();
         Point2 H2 = H_projected(H, m_N, m_dPdu);
 
-
         Color3 diff[4];
         // per thread segment diffuse
-        float cos_pi = cosNI * (float) M_1_PI;        
+        float cos_pi = cosNI * (float) M_1_PI;
         diff[LONGWARP]  = cos_pi * t_seg[LONGWARP].diffCol;
         diff[SHORTWARP] = diff[LONGWARP];
         diff[LONGWEFT]  = cos_pi * t_seg[LONGWEFT].diffCol;
         diff[SHORTWEFT] = diff[LONGWEFT];
-        
-        // per thread segment fresnel 
+
+        // per thread segment fresnel
         float F[4];
         F[LONGWARP] = schlick_fresnel(cosNO, t_seg[LONGWARP].R0);
         F[SHORTWARP] = F[LONGWARP];
@@ -528,12 +532,12 @@ public:
         }
 
         float I, G;
-        float AE    = 0.f;  
+        float AE    = 0.f;
         float AE_st = 0.f;  // specular area, current single thread segment
         float AE_f  = 0.f;  // specular area, filtered aggregate
 
         Color3 DE_st (0, 0, 0);  // diffuse result * col, current single thread segment
-        Color3 DE_f  (0, 0, 0);  // diffuse result * col, filtered aggregate 
+        Color3 DE_f  (0, 0, 0);  // diffuse result * col, filtered aggregate
 
         float btf = 0, brdf_spec;
         Point2 BTF_center, BTF_semimajor;
@@ -542,61 +546,55 @@ public:
         //
         for(int i=0; i<threadTypeCount; i++)
         {
+            rect[0].x=0;
+            rect[0].y=0;
 
-            rect[0].x=0;                             rect[0].y=0;                             rect[0].z = 0;
-            rect[1].x=0;                             rect[1].y=1*t_seg[threadPattern[i]].Sy;  rect[1].z = 0;
-            rect[2].x=1*t_seg[threadPattern[i]].Sx;  rect[2].y=1*t_seg[threadPattern[i]].Sy;  rect[2].z = 0;
-            rect[3].x=1*t_seg[threadPattern[i]].Sx;  rect[3].y=0;                             rect[3].z = 0;
+            rect[1].x=0;
+            rect[1].y=1*t_seg[threadPattern[i]].Sy;
 
-            M.x[0][0] = t_seg[threadPattern[i]].semimajor.x;
-            M.x[0][1] = t_seg[threadPattern[i]].semimajor.y;
-            M.x[1][0] = t_seg[threadPattern[i]].semiminor.x;
-            M.x[1][1] = t_seg[threadPattern[i]].semiminor.y;
+            rect[2].x=1*t_seg[threadPattern[i]].Sx;
+            rect[2].y=1*t_seg[threadPattern[i]].Sy;
+
+            rect[3].x=1*t_seg[threadPattern[i]].Sx;
+            rect[3].y=0;
 
             // get ellipse center for 2D half vector
             Point2 center = ellipse_center(t_seg[threadPattern[i]].Sx, t_seg[threadPattern[i]].Sy,
                                            t_seg[threadPattern[i]].Kx, t_seg[threadPattern[i]].Ky, H2);
 
-            M.x[0][3] = center.x;
-            M.x[1][3] = center.y;
+            // determinant of 2x2  (ellipse axes)
+            float det = t_seg[threadPattern[i]].semimajor.x*t_seg[threadPattern[i]].semiminor.y
+                      - t_seg[threadPattern[i]].semimajor.y*t_seg[threadPattern[i]].semiminor.x;
+            float inv = 1.f/det;
 
-            M_inv = M.inverse();
+            // cheap inverse of 2x2
+            smin_inv.y = inv*t_seg[threadPattern[i]].semiminor.y;
+            smaj_inv.y = inv*-t_seg[threadPattern[i]].semimajor.y;
 
-            Vec3 rect_xfmd[4];
+            smin_inv.x = inv*-t_seg[threadPattern[i]].semiminor.x;
+            smaj_inv.x = inv*t_seg[threadPattern[i]].semimajor.x;
 
-            for (int j = 0; j < 4; j++)
-            {
-               rect_xfmd[j].x = M_inv.x[0][0]*rect[j].x+
-                                M_inv.x[1][0]*rect[j].y+
-                                M_inv.x[2][0]*rect[j].z+
-                                M_inv.x[3][0];
-               rect_xfmd[j].y = M_inv.x[0][1]*rect[j].x+
-                                M_inv.x[1][1]*rect[j].y+
-                                M_inv.x[2][1]*rect[j].z+
-                                M_inv.x[3][1];
-               rect_xfmd[j].z = M_inv.x[0][2]*rect[j].x+
-                                M_inv.x[1][2]*rect[j].y+
-                                M_inv.x[2][2]*rect[j].z+
-                                M_inv.x[3][2];
-            }
+            // xform highlight
+            Point2 highlight_xfmd;
+            highlight_xfmd.x = smin_inv.y*center.x+
+                               smin_inv.x*center.y;
 
-            Vec3 highlight_xfmd;
-            Vec3 CENTER;
+            highlight_xfmd.y = smaj_inv.y*center.x+
+                               smaj_inv.x*center.y;
 
-            CENTER.x = center.x; CENTER.y = center.y; CENTER.z = 0.f;
+            // now move window relative to highlight and pass to compute_AC to get highlight area
+            Point2 rect_xfmd[4];
+            rect_xfmd[1].x = -highlight_xfmd.x;
+            rect_xfmd[1].y = -highlight_xfmd.y;
 
-            highlight_xfmd.x = M_inv.x[0][0]*CENTER.x+
-                               M_inv.x[1][0]*CENTER.y+
-                               M_inv.x[2][0]*CENTER.z+
-                               M_inv.x[3][0];
-            highlight_xfmd.y = M_inv.x[0][1]*CENTER.x+
-                               M_inv.x[1][1]*CENTER.y+
-                               M_inv.x[2][1]*CENTER.z+
-                               M_inv.x[3][1];
-            highlight_xfmd.z = M_inv.x[0][2]*CENTER.x+
-                               M_inv.x[1][2]*CENTER.y+
-                               M_inv.x[2][2]*CENTER.z+
-                               M_inv.x[3][2];
+            rect_xfmd[2].x = (smin_inv.x*rect[1].y) - highlight_xfmd.x;
+            rect_xfmd[2].y = (smaj_inv.x*rect[1].y) - highlight_xfmd.y;
+
+            rect_xfmd[3].x = (smin_inv.y*rect[2].x + smin_inv.x*rect[2].y) - highlight_xfmd.x;
+            rect_xfmd[3].y = (smaj_inv.y*rect[2].x + smaj_inv.x*rect[2].y) - highlight_xfmd.y;
+
+            rect_xfmd[0].x = (smin_inv.y*rect[3].x) - highlight_xfmd.x;
+            rect_xfmd[0].y = (smaj_inv.y*rect[3].x) - highlight_xfmd.y;
 
             // It's far easier to tell if we're inside or outside of the untransformed rectangle
             // instead of testing to see if the circle center is inside the transformed rectangle, which
@@ -604,14 +602,11 @@ public:
             // SO, pass boolean "isOutside" as hint to computeAC()
             bool isOutside = (center.x < rect[0].x || center.y < rect[0].y || center.x > rect[2].x || center.y > rect[2].y);
 
-            float AC = compute_AC(highlight_xfmd, rect_xfmd, isOutside);
-
-            // this can be made a 3x3 instead.
-            float det = fabs(det4x4(M));
+            float AC = compute_AC(rect_xfmd, isOutside);
 
             // ellipse segment area
             // apply per-thread type fresnel here
-            AE = (det*AC)/t_seg[threadPattern[i]].AR  * F[threadPattern[i]];
+            AE = (fabs(det)*AC)/t_seg[threadPattern[i]].AR * F[threadPattern[i]];
 
             //  grab the current single thread ellipse segment area in AE_st
             //  - to be used in LERP with AE_f (for when feature scale is under Nyquist limit (hopefully))
@@ -633,11 +628,11 @@ public:
         }  // end for threadTypeCount
         // blend between single thread and antialiased, multiple thread segment BRDF
         //
-        AE_f = Imath::lerp(AE_st, AE_f, BRDF_interp); 
+        AE_f = Imath::lerp(AE_st, AE_f, BRDF_interp);
         DE_f = Imath::lerp(DE_st, DE_f, BRDF_interp);
 
         // microfacet geometric term
-        G = computeG_Smith(m_N, H, omega_in, omega_out);
+        G = computeG_Smith(m_N, H, omega_out, cosNI, cosNO);
 
         // this bit happens when we're close enough to resolve the BTF
         if(threadCoverageEstimate < maxThreadWidthBTF)
@@ -662,9 +657,6 @@ public:
         Color3 out;
         float filtered;
         filtered = Imath::lerp(btf, brdf_spec, BTF_interp);
-        
-
-        //printf("BTF_interp: %f\n", BTF_interp);
 
         out = filtered * t_seg[currentThreadSegment].specCol;
         out += DE_f;

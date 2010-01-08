@@ -1,0 +1,21 @@
+shader b (float f_in = 41,
+          color c_in = 42
+    )
+{
+    printf ("b: f_in = %g, c_in = %g\n", f_in, c_in);
+
+    color foo = 0;
+    int result = getmessage ("foo", foo);
+    printf ("b: retrieved message 'foo', result = %d, foo = %g\n",
+            result, foo);
+
+    float bar = 0;
+    result = getmessage ("bar", bar);
+    printf ("b: retrieved bogus message 'bar', result = %d, bar = %g\n",
+            result, bar);
+
+    result = getmessage ("foo", bar);
+    printf ("b: retrieved message 'foo' with wrong type, result = %d, foo = %g\n",
+            result, bar);
+    result = getmessage ("bar", bar);
+}

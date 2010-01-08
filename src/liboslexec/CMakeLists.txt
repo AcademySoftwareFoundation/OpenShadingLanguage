@@ -10,7 +10,8 @@ SET ( liboslexec_srcs
           loadshader.cpp master.cpp 
           oparray.cpp opassign.cpp opattribute.cpp
           opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp
-          opmath.cpp opmathfunc.cpp opmatrix.cpp opmisc.cpp opnoise.cpp 
+          opmath.cpp opmathfunc.cpp opmatrix.cpp 
+          opmessage.cpp opmisc.cpp opnoise.cpp 
           opstring.cpp optexture.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
           rendservices.cpp typespec.cpp

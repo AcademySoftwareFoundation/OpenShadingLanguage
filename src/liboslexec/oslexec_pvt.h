@@ -625,6 +625,10 @@ public:
     ///
     ShadingAttribState *attribs () { return m_attribs; }
 
+    /// Return a reference to the ParamValueList containing messages.
+    ///
+    ParamValueList & messages () { return m_messages; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -640,7 +644,9 @@ private:
     int m_curuse;                       ///< Current use that we're running
     int m_nlayers[ShadUseLast];         ///< Number of layers for each use
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
+    ParamValueList m_messages;          ///< Message blackboard
     int m_lazy_evals;                   ///< Running tab of lazy evals
+
     friend class ShadingExecution;
 };
 

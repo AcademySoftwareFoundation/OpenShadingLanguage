@@ -104,7 +104,7 @@ TESTSUITE ( arithmetic array array-derivs
             function-simple function-outputelem
             geomath gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers layers-lazy
-            logic loop matrix miscmath missing-shader noise pnoise
+            logic loop matrix message miscmath missing-shader noise pnoise
             oslc-err-paramdefault shortcircuit string 
             struct struct-err struct-layers struct-with-array
             texture-alpha texture-blur texture-firstchannel texture-simple

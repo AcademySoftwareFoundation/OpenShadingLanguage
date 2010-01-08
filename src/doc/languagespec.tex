@@ -4102,22 +4102,27 @@ index given the array's size.
 \apiitem{void {\ce setmessage} (string name, output \emph{type} value)}
 \indexapi{setmessage()}
 Store a \emph{name}/\emph{value} pair in an area where it can later be
-retrieved by other shaders attached to the same objects.  If there is
+retrieved by other shaders attached to the same object.  If there is
 already a message with the same name attached to this shader invocation,
 it will be replaced by the new value.
+The message \emph{value} may be any basic scalar type or array thereof,
+but may not be a {\cf struct} or a {\cf closure}.
 \apiend
 
-\apiitem{int {\ce getmessage} (string source, string name, output \emph{type} destination)}
+%\apiitem{int {\ce getmessage} (string source, string name, output \emph{type} destination)}
+\apiitem{int {\ce getmessage} (string name, output \emph{type} destination)}
 \indexapi{getmessage()}
 Retrieve a message from another shader attached to the same object.
-Specifically, it will try retrieve the value associated with the given
-\emph{name} from a specific \emph{source}.  If the source has a value
+%Specifically, it will try retrieve the value associated with the given
+%\emph{name} from a specific \emph{source}.  If the source has a value
+If a message is found
 with the given name, and whose type matches that of \emph{destination},
 the value will be stored in \emph{destination} and {\cf getmessage()}
 will return {\cf 1}.  If no message is found that matches both the name
 and type, \emph{destination} will be unchanged and {\cf getmessage()}
 will return {\cf 0}.
 
+\begin{comment}
 The \emph{source} designates from where the message should be retrieved,
 and may have any of the following values:
 
@@ -4129,16 +4134,18 @@ Retrieve the message from the named shader type present on the object
 being shaded.
 \apiend
 \vspace{-20pt}
-
-\begin{comment}
-\apiitem{"light"}
-\vspace{10pt}
-Valid only if {\cf getmessage()} is called from within an \illuminance
-loop, retrieves the message from current light source being examined.
-\apiend
-\vspace{-20pt}
 \end{comment}
 
+%\begin{comment}
+%\apiitem{"light"}
+%\vspace{10pt}
+%Valid only if {\cf getmessage()} is called from within an \illuminance
+%loop, retrieves the message from current light source being examined.
+%\apiend
+%\vspace{-20pt}
+%\end{comment}
+
+\begin{comment}
 \apiitem{"parent"}
 \vspace{10pt}
 Retrieve the message from the shader (potentially on another object)
@@ -4169,9 +4176,10 @@ the same type are present, they will be searched starting with the
 last one executed, and moving backwards in execution order (in other
 words, later-executed shaders in the network effectively take precedence
 over parameteters or messages from earlier-executed shaders).
+\end{comment}
+
 \apiend
 
-\NEW  % 12/7/09
 \apiitem{int {\ce surfacearea} ()}
 \indexapi{surfacearea()}
 Returns the surface area of the area light geometry being shaded.  This

@@ -306,7 +306,7 @@ float compute_AC(Point2 *rect, bool OUTSIDE)
     // four possible intersections
     Intersection pList[4];
 
-    Point2 P0, P1, P2;
+    Point2 P0(0.0f,0.0f), P1(0.0f,0.0f), P2(0.0f,0.0f);
 
     // find potential intersections of circle with the rectangle perimeter
     // moving clockwise from edge to edge, mu2 is the intersection nearest the

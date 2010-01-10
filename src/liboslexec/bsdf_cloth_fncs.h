@@ -18,13 +18,16 @@ float computeG_Smith(const Vec3 &N, Vec3 &H, const Vec3 &omega_out, float cosNI,
 // stuff for "I" term which replaces microfacet slope term "D" in generalized microfacet model
 // follows...
 
-typedef struct Point2
+struct Point2
 {
     float x;
     float y;
-} Point2;
 
-const Point2 P2_ZERO = {0.f, 0.f};
+    Point2 () { }
+    Point2 (float x_, float y_) : x(x_), y(y_) { }
+};
+
+const Point2 P2_ZERO (0.f, 0.f);
 
 typedef struct Intersection
 {

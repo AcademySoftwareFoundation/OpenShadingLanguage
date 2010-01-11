@@ -4,8 +4,9 @@ all: languagespec.pdf
 
 
 # document making rule: use pdflatex
-languagespec.pdf: *.tex *.aux Figures/*.pdf
+languagespec.pdf: *.tex languagespec.aux macros.aux Figures/*.pdf
 	pdflatex languagespec
+
 
 
 # special command 'make index' to regenerate the index

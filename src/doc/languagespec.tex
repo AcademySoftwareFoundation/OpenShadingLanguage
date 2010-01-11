@@ -53,17 +53,17 @@
 %\textregistered\ 
 {\bf\sffamily \versionnumber} \medskip \\ \huge 
 Language Specification
-\\ \large (CONFIDENTIAL --- draft in progress) 
+%\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
 \author{
-\copyright Copyright 2009 Sony Pictures Imageworks. All rights reserved.
+\copyright\ Copyright 2009 Sony Pictures Imageworks, et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 1 December, 2009 \\
+\date{{\large Date: 11 January, 2010 \\
 %(with corrections, 19 Oct 2009)
 }}
 
@@ -115,9 +115,49 @@ Editor: Larry Gritz \\
 
 \maketitle
 
-%\include{speccopyr}
+\newpage
+\label{speccopyr}
 
-\vspace*{2in}
+\vspace*{0.2in}
+
+\noindent The Open Shading Language specification, source code, and
+documentation are:
+
+\vspace*{0.2in}
+
+Copyright (c) 2009 Sony Pictures Imageworks, et al.
+All Rights Reserved.
+
+\vspace*{0.2in}
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+\begin{itemize}
+\item Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+\item Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+\item Neither the name of Sony Pictures Imageworks nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+\end{itemize}
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+\newpage
 
 
 
@@ -135,9 +175,199 @@ Editor: Larry Gritz \\
 \chapter{Introduction}
 \label{chap:intro}
 
-Later there will be some words of wisdom here.
+
+Welcome to Open Shading Language!
+
+\vspace*{0.2in}
+
+Open Shading Language (OSL) is a small but rich language for
+programmable shading in advanced renderers and other applications, ideal
+for describing materials, lights, displacement, and pattern generation.
+
+OSL was developed by Sony Pictures Imageworks for use in its in-house
+renderer used for feature film animation and visual effects. The
+language specification was developed with input by other visual effects
+and animation studios who also wish to use it.
+
+OSL is distributed under the ``New BSD'' license.  In short, you are free
+to use it in your own applications, whether they are free or commercial,
+open or proprietary, as well as to modify the OSL code as you desire,
+provided that you retain the original copyright notices as described in
+the license.
+
+
+\section*{How OSL is different from other shading languages}
+
+OSL has syntax similar to C, as well as other shading languages.
+However, it is specifically designed for advanced rendering algorithms
+and has features such as radiance closures, BSDFs, and deferred ray
+tracing as first-class concepts.
+
+OSL has several unique characteristics not found in other shading
+languages (certainly not all together).  Here are some things you will
+find are different in OSL compared to other languages:
+
+\subsubsection*{Surface and volume shaders compute radiance closures, not final colors.}
+
+  OSL's surface and volume shaders compute an explicit symbolic
+  description, called a "closure", of the way a surface or volume
+  scatters light, in units of radiance.  These radiance closures may be
+  evaluated in particular directions, sampled to find important
+  directions, or saved for later evaluation and re-evaluation.
+  This new approach is ideal for a physically-based renderer that
+  supports ray tracing and global illumination.
+
+  In contrast, other shading languages usually compute just a surface
+  color as visible from a particular direction.  These old shaders are
+  "black boxes" that a renderer can do little with but execute to for
+  this once piece of information (for example, there is no effective way
+  to discover from them which directions are important to sample).
+  Furthermore, the physical units of lights and surfaces are often
+  underspecified, making it very difficult to ensure that shaders are
+  behaving in a physically correct manner.
+
+\subsubsection*{Surface and volume shaders do not loop over lights or shoot rays.}
+
+  There are no "light loops" or explicitly traced rays in OSL surface
+  shaders.  Instead, surface shaders compute a radiance closure
+  describing how the surface scatters light, and a part of the renderer
+  called an "integrator" evaluates the closures for a particular set of
+  light sources and determines in which directions rays should be
+  traced.  Effects that would ordinarily require explicit ray tracing,
+  such as reflection and refraction, are simply part of the radiance
+  closure and look like any other BSDF.
+
+  Advantages of this approach include that integration and sampling may
+  be batched or re-ordered to increase ray coherence; a "ray budget" can
+  be allocated to optimally sample the BSDF; the closures may be used by
+  for bidirectional ray tracing or Metropolis light transport; and the
+  closures may be rapidly re-evaluated with new lighting without having
+  to re-run the shaders.
+
+\subsubsection*{Surface and light shaders are the same thing.}
+
+  OSL does not have a separate kind of shader for light sources.  Lights
+  are simply surfaces that are emissive, and all lights are area lights.
+
+\subsubsection*{Transparency is just another kind of illumination.}
+
+  You don't need to explicitly set transparency/opacity variables in the
+  shader.  Transparency is just another way for light to interact with a
+  surface, and is included in the main radiance closure computed by a
+  surface shader.
+
+\subsubsection*{Renderer outputs (AOV's) are specified using ``light path expressions.''}
+
+  Sometimes it is desirable to output images containing individual
+  lighting components such as specular, diffuse, reflection, individual
+  lights, etc.  In other languages, this is usually accomplished by
+  adding a plethora of "output variables" to the shaders that collect
+  these invididual quantities.
+
+  OSL shaders need not be cluttered with any code or output variables to
+  accomplish this.  Instead, there is a regular-expression-based
+  notation for describing which light paths should contribute to which
+  outputs.  This is all done on the renderer side (though supported by
+  the OSL implementation).  If you desire a new output, there is no need
+  to modify the shaders at all; you only need to tell the renderer the
+  new light path expression.
+
+\subsubsection*{Shaders are organized into networks.}
+
+  OSL shaders are not monolithic, but rather can be organized into
+  networks of shaders (sometimes called a shader group, graph, or DAG),
+  with named outputs of some nodes being connected to named inputs of
+  other nodes within the network.  These connections may be done
+  dynamically at render time, and do not affect compilation of
+  individual shader nodes.  Furthermore, the individual nodes are
+  evaluated lazily, only their outputs are "pulled" from the later nodes
+  that depend on them (shader writers may remain blissfully unaware of
+  these details, and write shaders as if everything is evaluated
+  normally).
+
+\subsubsection*{No ``uniform'' and ``varying'' keywords in the language.}
+
+  OSL shaders are evaluated in SIMD fashion, executing shaders on many
+  points at once, but there is no need to burden shader writers with
+  declaring which variables need to be uniform or varying.  
+
+  In the open source OSL implementation, this is done both automatically
+  and dynamically, meaning that a variable can switch back and forth
+  between uniform and varying, on an instruction-by-instruction basis,
+  depending on what is assigned to it.
+
+\subsubsection*{Arbitrary derivatives without grids or extra shading points.}
+
+  In OSL, you can take derivatives of any computed quantity in a shader,
+  and use arbitrary quantities as texture coordinates and expect correct
+  filtering.  This does not require that shaded points be arranged in a
+  rectangular grid, or have any particular connectivity, or that any
+  "extra points" be shaded.  
+
+  In the open source OSL implementation, this is possible because
+  derivatives are not computed by finite differences with neighboring
+  points, but rather by "automatic differentiation", computing partial
+  differentials for the variables that lead to derivatives, without any
+  intervention required by the shader writer.
+
+
+\vspace{0.5in}
+
+
+\section*{Acknowledgements}
+
+The main developers of OSL are (in order of joining the project):
+
+\vspace*{0.2in}
+
+    Larry Gritz
+
+    Cliff Stein
+
+    Chris Kulla
+
+    Alejandro Conty
+
+    Jay Reynolds
+
+\vspace*{0.2in}
+
+We cannot possibly express sufficient gratitude to the managers at Sony
+Picutres Imageworks who allowed this project to proceed, supported it
+wholeheartedly, and permitted us to release the source, especially Rob
+Bredow, Brian Keeney, Barbara Ford, and Rene Limberger.
+
+Huge thanks also go to the crack shading team at SPI, and the brave
+lookdev TDs and CG supes willing to use OSL on their shows.  They served
+as our guinea pigs, inspiration, testers, and a fantastic source of
+feedback.  Thank you, and we hope we've been responsive to your needs.
+
+OSL was not developed in isolation.  We owe a debt to the individuals
+and studios who patiently read early drafts of the language
+specification and gave us very helpful feedback and additional ideas.
+(I hope to mention them by name after we get permission of the people
+and studios involved.)
+
+\bigskip 
+The open source OSL implementation incorporates or depends upon several
+other open source packages:
+
+\begin{itemize}
+\item {\cf OpenImageIO} \copyright\ 2008 Larry Gritz et al.  
+{\cf http://openimageio.org}
+\item Ilmbase \copyright\ 2006, Industrial Light \& Magic.
+{\cf http://www.openexr.com}
+\item Thread Building Blocks (TBB), \copyright\ 2005--2008 Intel Corporation.\\
+{\cf http://www.threadingbuildingblocks.org/}
+\item Boost \copyright\ various authors.  {\cf http://www.boost.org}
+\end{itemize}
+
+These other packages are all distributed under licenses that allow them
+to be used by and distributed with \product.
 
 \bigskip
+
+\section*{Annotations}
 
 \begin{annotate}
 When you see text in this style, it's an annotation.  These annotations
@@ -146,11 +376,13 @@ readers of early drafts, sometimes questions, sometimes guideposts
 to uncertain areas, sometimes explanations of what is to come but that
 has not yet been fully fleshed out.
 
+\begin{comment}
 Short annotations will sometimes spring up anywhere, but there's also a
 full chapter of discussion of design choices
 (Chapter~\ref{chap:discussion}).  Opinionated readers should pay
 particular attention to this chapter, as these big decisions will be the
 hardest to change later.
+\end{comment}
 
 \end{annotate}
 
@@ -1831,7 +2063,6 @@ Statements in \langname include the following types of constructs:
 \item Assignments.
 \item Control flow: {\cf if, else, while, do, for, break, continue}
 \item Function declarations.
-%\item Lighting statements: \illuminance, \illuminate
 \end{itemize}
 
 \subsection*{Scoping}
@@ -4480,6 +4711,7 @@ how all these concepts fit together.
 \end{annotate}
 
 
+\begin{comment}
 \chapter{Design Discussion}
 \label{chap:discussion}
 \begin{annotate}
@@ -4904,59 +5136,15 @@ What do you guys think?  I'm kind of leaning toward the third solution
 --- having shaders set {\cf Oi} and {\cf holdout} variables, allowing
 full control in the shader.
 
-
-\begin{comment}
-the next thing was the global variables - you still have I, L, Cl in there, and a reference to illuminance loops
-
-Another thing I've alluded to, but not yet spelled out in the current draft, is ways to use multiple entry points. Obvious ones are an opacity-only entry point for shadows, a maxdisplacement entry point for disp bounds computation, etc. I figure we'll make the most obvious ones "standard" and document how implementations are expected to use them.
-Yeah, I think both in the docs and also with compiler warnings, we should be real clear about the consequences of breaking view-independence.
-It's pretty easy in the compiler, since the view dependence only comes in through a couple places. Basically using "camera" space, and I, and maybe just a couple more things.
-multiple entry points - isn't it better to just let the compiler figure those things out ?
-Let the compiler figure it out? What do you mean?
-well i guess for max-displacement you might get something thats not accurate enough
-(i was thinking just run the shader with intervals - but yeah, might not be ideal)
-I don't see how the compiler can figure out the max displacement. I think for most shaders it would end up with a hug interval.
-huge
-Actually, it's even worse than that. With a shader group/network, the inputs (like the scaling for displacement) can easily come from other layers, who don't even know that they're computing a displacement scale factor.
-but it had to do with alpha of things seen through refractions and reflections
-Well, yeah. We're dealing with two metaphors -- light propagation, and compositing of layers. Like relativity and quantum mechanics, you can get into areas where you realize they are incompatible. The whole notion of alpha has nothing whatsoever to do with light, so it breaks down when you start taking light propagation too seriously. Yet alpha is INCREDIBLY useful! It's maddening.
-hehe yep
-AOV's are like that, too. Do they propagate through reflections, or not? Depends on what the human wants it to mean, I suppose, so probably should not be a renderer policy one way or the other.
-Do we try to propagate alpha or AOVs through reflections currently?
-no
-although i suppose the shader can do things to try and do that
-It's really hard to sort out. If AOV is "N", clearly you want it to be the front object only. (Or do you, if it's transparent?) But if it's "key light contribution", then maybe you want it to propagate through reflections, so you can do comp-based light scaling.
-But how does it propagate through indirect rays? Ugh, again the clash of metaphors. There's no such thing as AOV's in lights and cameras.
-maybe AOVs is something the renderer has to implement ?
-but yeah .. i'm not sure how to resolve all this
-it feels a bit dangerous to get into this middle ground where some things are physically motivated, but others work around it
-but then again - we're making movies, if anything we need to be able to comp over plates
-
-and about the derivatives ... aren't those view-dependent quantities in a raytracer ?
-(that might be an argument for hiding them as much as possible)
-Yes, in a sense.
-Re-cast the problem. Imagine that it's just a layout of samples. Maybe at vertices (for displacement). Maybe at every sample (for RT). Maybe along grid lines (for Reyes). Maybe regularly spaced, maybe camera-dependent. You don't know. Derivatives just reflect the spacing of the shading samples. Whether or not that spacing is view-dependent is a black box to the shader, just a renderer implementation detail.
-
-but going back to derivatives - i see the point about Du/Dv vs. Dx/Dy
-i would be fine with just "filterwidth()"
-I think me too, but I'm hedging my bets while I think about it more.
-\end{comment}
-
 \end{annotate}
-
+\end{comment}
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\part{Appendices}
+\part*{Appendices}
 \begin{appendix}
-
-%\include{typedesc}
-%\chapter{Building Unnamed Shading Language}
-
-%\include{header}
-%\include{glossary}
 
 \chapter{Glossary}
 \label{chap:glossary}

@@ -1,13 +1,22 @@
 ###########################################################################
 # OpenImageIO
 
+
+# If 'OPENIMAGEHOME' not set, use the env variable of that name if available
+if (NOT OPENIMAGEIOHOME)
+    if (NOT $ENV{OPENIMAGEIOHOME} STREQUAL "")
+        set (OPENIMAGEIOHOME $ENV{OPENIMAGEIOHOME})
+    endif ()
+endif ()
+
+
 MESSAGE ( STATUS "OPENIMAGEIOHOME = ${OPENIMAGEIOHOME}" )
 
 find_library ( OPENIMAGEIO_LIBRARY
                NAMES OpenImageIO
-               PATHS $ENV{IMAGEIOHOME}/lib/ ${OPENIMAGEIOHOME}/lib )
+               PATHS ${OPENIMAGEIOHOME}/lib )
 find_path ( OPENIMAGEIO_INCLUDES OpenImageIO/imageio.h
-            $ENV{IMAGEIOHOME}/include ${OPENIMAGEIOHOME}/include )
+            ${OPENIMAGEIOHOME}/include )
 IF (OPENIMAGEIO_INCLUDES AND OPENIMAGEIO_LIBRARY )
     SET ( OPENIMAGEIO_FOUND TRUE )
     MESSAGE ( STATUS "OpenImageIO includes = ${OPENIMAGEIO_INCLUDES}" )

@@ -32,7 +32,6 @@ license.
 
 
 
-
 How OSL is different
 --------------------
 
@@ -352,4 +351,3 @@ OpenImageIO (c) Larry Gritz, et al.     http://www.openimageio.org
 Boost - various authors                 http://www.boost.org
 IlmBase (c) Industrial Light & Magic.   http://www.openexr.com
 Thread Building Blocks (c) Intel Corp.  http://www.threadingbuildingblocks.org
-

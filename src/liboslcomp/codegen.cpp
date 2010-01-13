@@ -515,7 +515,14 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym, std::string 
 
     if (init() && sym->fieldid() < 0) {
         // Normal vars with initializers -- generate them
-        for (ASTNode::ref i = init();  i;  i = i->next()) {
+
+        // If it's a compound initializer, look at the individual pieces
+        ref init = this->init();
+        if (init->nodetype() == compound_initializer_node) {
+            init = ((ASTcompound_initializer *)init.get())->initlist();
+        }
+
+        for (ASTNode::ref i = init;  i;  i = i->next()) {
             completed &= param_one_default_literal (sym, i.get(), out);
         }
     } else {

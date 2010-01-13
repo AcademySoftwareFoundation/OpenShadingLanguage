@@ -1066,7 +1066,7 @@ static const char * builtin_func_args [] = {
     "fprintf", "xs*", "!printf", NULL,
     "fresnel", "xvvff", "xvvfffvv", "!rw", NULL,
     "getattribute", "is?", "iss?", "isi?", "issi?", "!rw", NULL,  // FIXME -- further checking?
-    "getmessage", "is?", /*"iss?",*/ "!rw", NULL,  // FIXME -- further checking?
+    "getmessage", "is?", "is?[]", /*"iss?",*/ "!rw", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,
     "phong_ramp", "Cnfc[].", NULL,
@@ -1103,7 +1103,7 @@ static const char * builtin_func_args [] = {
     "regex_search", "iss", "isi[]s", NULL,
     "rotate", "ppfpp", NULL,
     "round", ANY_ONE_FLOAT_BASED, NULL,
-    "setmessage", "xs?", NULL,
+    "setmessage", "xs?", "xs?[]", NULL,
     "sign", ANY_ONE_FLOAT_BASED, NULL,
     "sin", ANY_ONE_FLOAT_BASED, NULL,
     "sinh", ANY_ONE_FLOAT_BASED, NULL,

@@ -629,6 +629,10 @@ public:
     ///
     ParamValueList & messages () { return m_messages; }
 
+    /// Return a reference so the closure message memory.
+    ///
+    std::vector<ClosureColor> & closure_msgs () { return m_closure_msgs; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -645,6 +649,7 @@ private:
     int m_nlayers[ShadUseLast];         ///< Number of layers for each use
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
     ParamValueList m_messages;          ///< Message blackboard
+    std::vector<ClosureColor> m_closure_msgs;  // Mem for closure messages
     int m_lazy_evals;                   ///< Running tab of lazy evals
 
     friend class ShadingExecution;

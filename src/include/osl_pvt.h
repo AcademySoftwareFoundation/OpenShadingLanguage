@@ -530,6 +530,10 @@ public:
     ///
     void *data () const { return m_data; }
 
+    /// Return a pointer to the symbol's data at a particular index.
+    ///
+    void *data (int index) const { return (char *)m_data + index*m_step; }
+
     /// Specify the location of the symbol's data.
     ///
     void data (void *d) { m_data = d; }

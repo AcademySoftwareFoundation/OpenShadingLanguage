@@ -108,6 +108,7 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
 
     // Clear the message blackboard
     m_messages.clear ();
+    m_closure_msgs.clear ();
 
     // Calculate number of layers we need for each use
     for (int i = 0;  i < ShadUseLast;  ++i) {

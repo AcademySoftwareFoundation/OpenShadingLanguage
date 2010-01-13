@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 11 January, 2010 \\
-%(with corrections, 19 Oct 2009)
+(with corrections, 12 January, 2010)
 }}
 
 
@@ -4336,8 +4336,8 @@ Store a \emph{name}/\emph{value} pair in an area where it can later be
 retrieved by other shaders attached to the same object.  If there is
 already a message with the same name attached to this shader invocation,
 it will be replaced by the new value.
-The message \emph{value} may be any basic scalar type or array thereof,
-but may not be a {\cf struct} or a {\cf closure}.
+The message \emph{value} may be any basic scalar type, array, or closure,
+but may not be a {\cf struct}.
 \apiend
 
 %\apiitem{int {\ce getmessage} (string source, string name, output \emph{type} destination)}

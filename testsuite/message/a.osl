@@ -8,4 +8,9 @@ shader a (float Kd = 0.5,
     printf ("a: f_out = %g, c_out = %g\n", f_out, c_out);
     setmessage ("foo", c_out/2);
     printf ("a: set message 'foo' to %g\n", c_out/2);
+
+    // Try setting a closure message
+    closure color cc = 0.5*diffuse(N);
+    setmessage ("cc", cc);
+    printf ("a: set message 'cc' to %s\n", cc);
 }

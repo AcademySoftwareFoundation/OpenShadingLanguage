@@ -601,7 +601,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     }
 
     if (m_ircode.size() == 0)   // If no code, still need a code marker
-        oso ("code main\n");
+        oso ("code ___main___\n");
 
     oso ("\tend\n");
 

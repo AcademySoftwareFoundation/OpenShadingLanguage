@@ -13,4 +13,10 @@ shader a (float Kd = 0.5,
     closure color cc = 0.5*diffuse(N);
     setmessage ("cc", cc);
     printf ("a: set message 'cc' to %s\n", cc);
+
+    // Set an array
+    float array[4] = { 42, 43, 44, 45 };
+    setmessage ("array", array);
+    printf ("a: set message 'array' to { %g %g %g %g }\n",
+            array[0], array[1], array[2], array[3]);
 }

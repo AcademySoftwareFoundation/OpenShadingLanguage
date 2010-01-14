@@ -8,6 +8,7 @@ a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+a: set message 'array' to { 42 43 44 45 }
 b: f_in = 0.5, c_in = 0.25 1 1
 b: retrieved message 'foo', result = 1, foo = 0.125 0.5 0.5
 b: retrieved bogus message 'bar', result = 0, bar = 0
@@ -16,4 +17,5 @@ b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+b: retrieved message 'array' to { 42 43 44 45 }
 

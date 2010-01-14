@@ -21,4 +21,9 @@ shader b (float f_in = 41,
 
     result = getmessage ("cc", Ci);
     printf ("b: retrieved message 'cc' into Ci: %s\n", Ci);
+
+    float array[4] = { 0, 0, 0, 0 };
+    result = getmessage ("array", array);
+    printf ("b: retrieved message 'array' to { %g %g %g %g }\n",
+            array[0], array[1], array[2], array[3]);
 }

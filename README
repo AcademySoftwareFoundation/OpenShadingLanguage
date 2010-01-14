@@ -56,8 +56,8 @@ find are different in OSL compared to other languages:
 
   In contrast, other shading languages usually compute just a surface
   color as visible from a particular direction.  These old shaders are
-  "black boxes" that a renderer can do little with but execute to for
-  this once piece of information (for example, there is no effective way
+  "black boxes" that a renderer can do little with but execute to find
+  this one piece of information (for example, there is no effective way
   to discover from them which directions are important to sample).
   Furthermore, the physical units of lights and surfaces are often
   underspecified, making it very difficult to ensure that shaders are
@@ -99,7 +99,7 @@ find are different in OSL compared to other languages:
   lighting components such as specular, diffuse, reflection, individual
   lights, etc.  In other languages, this is usually accomplished by
   adding a plethora of "output variables" to the shaders that collect
-  these invididual quantities.
+  these individual quantities.
 
   OSL shaders need not be cluttered with any code or output variables to
   accomplish this.  Instead, there is a regular-expression-based
@@ -204,7 +204,7 @@ OK, here's the straight dope:
 
 At Sony Pictures Imageworks, OSL has been integrated into our renderer
 and pipeline, the Shading department has recoded nearly all the facility
-shaders in OSL and is approching full functionality of the shader
+shaders in OSL and is approaching full functionality of the shader
 library, and multiple shows are now doing early look development with
 OSL.
 
@@ -237,7 +237,7 @@ no longer be issues:
   shaders from an application is easier, cleaner, and needs less access
   to the internal details of the library.
 
-* The 'testshade' program runs shaders on an unwrapped flat rectanglular
+* The 'testshade' program runs shaders on an unwrapped flat rectangular
   array of points, and does not have any good way to test whether lights
   are working properly.  We will eventually have another test program
   that will render a "lit ball" that will be more indicative of how the
@@ -329,7 +329,7 @@ The main developers of OSL are (in order of joining the project):
     Jay Reynolds
 
 We cannot possibly express sufficient gratitude to the managers at Sony
-Picutres Imageworks who allowed this project to proceed, supported it
+Pictures Imageworks who allowed this project to proceed, supported it
 wholeheartedly, and permitted us to release the source, especially Rob
 Bredow, Brian Keeney, Barbara Ford, and Rene Limberger.
 

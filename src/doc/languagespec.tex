@@ -262,7 +262,7 @@ find are different in OSL compared to other languages:
   lighting components such as specular, diffuse, reflection, individual
   lights, etc.  In other languages, this is usually accomplished by
   adding a plethora of "output variables" to the shaders that collect
-  these invididual quantities.
+  these individual quantities.
 
   OSL shaders need not be cluttered with any code or output variables to
   accomplish this.  Instead, there is a regular-expression-based
@@ -314,7 +314,7 @@ find are different in OSL compared to other languages:
 \vspace{0.5in}
 
 
-\section*{Acknowledgements}
+\section*{Acknowledgments}
 
 The main developers of OSL are (in order of joining the project):
 
@@ -333,7 +333,7 @@ The main developers of OSL are (in order of joining the project):
 \vspace*{0.2in}
 
 We cannot possibly express sufficient gratitude to the managers at Sony
-Picutres Imageworks who allowed this project to proceed, supported it
+Pictures Imageworks who allowed this project to proceed, supported it
 wholeheartedly, and permitted us to release the source, especially Rob
 Bredow, Brian Keeney, Barbara Ford, and Rene Limberger.
 
@@ -561,7 +561,7 @@ information about the renderer as a whole (rendering options, etc.).
 \subsection*{Surface and volume shaders compute closures}
 
 Surface shaders (and volume shaders) do not by themselves compute the
-final color of light eminating from the surface (or along a volume).
+final color of light emanating from the surface (or along a volume).
 Rather, the compute a \emph{closure}, which is a symbolic representation
 describing the appearance of the surface, that may be more fully
 evaluated later.  This is in effect a parameterized formula, in which
@@ -613,7 +613,7 @@ interesting things that a mere number cannot:
 At present, we are assuming that the primitive closure functions (such
 as {\cf diffuse}, {\cf ward}, {\cf cooktorrance}, etc.) are all built
 into the renderer, or implemented as renderer plugins.  At a later time,
-possibly in a later draft or maybe not until a truely later version of
+possibly in a later draft or maybe not until a truly later version of
 the spec, we will fully spec it out so that closure primitive functions
 may be written in \langname.  But I fear that if we do it too soon,
 we'll screw it up.  But, yes, the eventual goal is for you to be able to
@@ -636,7 +636,7 @@ information, to yield the amount of light visible to the camera.
 \begin{annotate}
 At present, this document is written as if the integrators are built
 into the renderer itself (or implemented as renderer plug-ins).  At a
-later time, we indend to make it possible for integrators themselves
+later time, we intend to make it possible for integrators themselves
 to be written in \langname.
 \end{annotate}
 
@@ -710,7 +710,7 @@ valid and invalid identifiers are:
 \begin{code}
     opacity       // valid
     Long_name42   // valid - letters, underscores, numbers are ok
-    _foo          // valid - ok to start with an unberscore
+    _foo          // valid - ok to start with an underscore
 
     2smart        // invalid - starts with a numeral
     bigbuck$      // invalid - $ is an illegal character
@@ -726,7 +726,7 @@ are ignored entirely by the \langname compiler.  Just like in C++, there
 are two ways to designate comments in \langname:
 
 \begin{enumerate}
-\item Any text enclused by {\cf /*} and {\cf */} will be considered
+\item Any text enclosed by {\cf /*} and {\cf */} will be considered
 a comment, even if the comment spans several lines.
 
 \begin{code}
@@ -767,7 +767,7 @@ trace vector void while
 
 The following are \emph{reserved words} that currently have no special
 meaning in \langname, but we reserve them for possible future use, or
-becuase they are confusingly similar to keywords in related programming
+because they are confusingly similar to keywords in related programming
 languages: \index{reserved words}
 
 \begin{quote} {\cf
@@ -923,7 +923,7 @@ to a \languagename function (or a function in C or similar languages),
 except that shader parameters must have an \emph{initializer}, giving a
 default value for the parameter.  Shader parameter default initializers
 may be expressions (i.e., may be computed rather than restricted to
-numeric constants), and are evalutated in the order that the parameters
+numeric constants), and are evaluated in the order that the parameters
 are declared, and may include references to previously-declared
 parameters.  Formally, the grammar for a simple parameter
 declaration looks like this:
@@ -1047,7 +1047,7 @@ in order of decreasing priority:
   within the shader group, that is the value it will get.
 \item If the parameter matches the name and type of a per-primitive,
   per-face, or per-vertex \emph{primitive variable} on the particular
-  piece of geometry being shaded, the paramter's value will be computed
+  piece of geometry being shaded, the parameter's value will be computed
   by interpolating the primitive variable for each position that must be
   shaded.
 \item If there is no connection or primitive variable, the parameter may
@@ -1164,14 +1164,14 @@ present, the parameter name itself should be used as the widget label.
 Minimum and maximum values for a parameter that should never be
 exceeded.  If either the minimum or maximum is not present, valid values
 for the parameter are assumed to be unbounded in one or both directions.
-(For an {\cf int} paramter, the {\cf UImin} and/or {\cf UImax} should
+(For an {\cf int} parameter, the {\cf UImin} and/or {\cf UImax} should
 also be declared as an {\cf int}.)
 \apiend
 
 \apiitem{float UIsoftmin \\ float UIsoftmax}
 ``Soft'' minimum and maximum value for a \float parameter, that is, a
 default range for presentation in the UI, but which may be overridden by
-the user. (For an {\cf int} paramter, the {\cf UIsoftmin} and/or {\cf
+the user. (For an {\cf int} parameter, the {\cf UIsoftmin} and/or {\cf
   UIsoftmax} should also be declared as an {\cf int}.)
 \apiend
 
@@ -1184,7 +1184,7 @@ The suggested step size for incrementing or decrementing the value
 The name of another parameter that, only if nonzero (or the
 non-empty string) unlocks adjustment of this parameter.  For example,
 a parameter called \qkw{Kr} (reflectivity) may be en enabler for
-the \qkw{reflectionblur} paramter; zero reflectivity would gray-out
+the \qkw{reflectionblur} parameter; zero reflectivity would gray-out
 the blur controls, which would be ignored if there were no reflection.
 \apiend
 
@@ -1194,16 +1194,16 @@ separator immediately before this parameter.
 \apiend
 
 \apiitem{string UIgroupbegin \\ string UIgroupend}
-Denote the first and last parameters of a set of related paramters, as a
+Denote the first and last parameters of a set of related parameters, as a
 hint that an application may wish to label or visually separate a
-collection of paramters.  The string value should be the name or brief
+collection of parameters.  The string value should be the name or brief
 description of the group.
 \apiend
 
 \apiitem{string UItype} 
 Provides a hint about exactly what kind of UI widget is appropriate for
-the given paramter (if not the obvious default, such as a slider for a
-\float paramter, or a color picker for a \color parameter).  Recommended
+the given parameter (if not the obvious default, such as a slider for a
+\float parameter, or a color picker for a \color parameter).  Recommended
 values include:
 
 \vspace{-12pt}
@@ -1234,7 +1234,7 @@ values include:
 \item[\rm \qkw{enum:label0,label1,...}] Indicates that the appropriate UI
   widget is a pulldown menu that selects among the strings \qkw{label0},
   \qkw{label1}, and so on.
-  If the shader parameter is a {\cf string}, the selcted label should be
+  If the shader parameter is a {\cf string}, the selected label should be
   passed as the shader parameter value.  If the shader parameter is an
   \inttype, the selected label should indicate that the value passed
   should be 0, 1, 2, ..., the index of the selected label.
@@ -1288,7 +1288,7 @@ The return type may be any simple data type, a {\cf struct}, or a {\cf
   closure}.  Functions may not return arrays.  The return type may be
 {\cf void}, indicating that the function does not return a value (and
 should not contain a {\cf return} statement).  A {\cf return} statement
-inside the body of the function will halt execution of the fuction at
+inside the body of the function will halt execution of the function at
 that point, and designates the value that will be returned (if not a
 {\cf void} function).
 
@@ -1843,7 +1843,7 @@ a matrix can be inverted by writing {\cf 1/m}.  In addition, some
 functions will accept matrix variables as arguments, as described in
 Section~\ref{chap:stdlibrary}.
 
-Individual compoents of a matrix variable may be set or accessed
+Individual components of a matrix variable may be set or accessed
 using array notation, for example,
 
 \begin{code}
@@ -1926,7 +1926,7 @@ Arrays of any of the basic types are supported, provided that they
 are 1D and statically sized, using the usual syntax for C-like languages:
 
 \begin{code}
-    float d[10];                       // Declare an uninitilized array
+    float d[10];                       // Declare an uninitialized array
     float c[3] = { 0.1, 0.2, 3.14 };   // Initialize the array
 
     float f = c[1];                    // Access one element
@@ -2152,7 +2152,7 @@ Arrays are also supported, declared as follows:
 length).  Some examples of array variable declarations are:
 
 \begin{code}
-    float d[10];                       // Declare an uninitilized array
+    float d[10];                       // Declare an uninitialized array
     float c[3] = { 0.1, 0.2, 3.14 };   // Initialize the array
 \end{code}
 
@@ -2445,7 +2445,7 @@ braces.  For example,
 \item Any numeric expression (\inttype, \color, \point, \vector,
   \normal, \matrix), which is considered ``true'' if nonzero and
   ``false'' if zero.
-\item Any string expression, which is considerd ``true'' if it is a
+\item Any string expression, which is considered ``true'' if it is a
   nonempty string, ``false'' if it is the empty string (\qkw{}).
 \item A logical combination of expressions using the operators {\cf !}
   (not), {\cf \&\&} (logical ``and''), or {\cf ||} (logical ``or'').
@@ -2599,7 +2599,7 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 \hline
 \vector\ {\ce dPdtime} & How the surface position \P is moving per unit time.\\
 \hline
-\closurecolor\ {\ce \Ci} & Incident radience --- a closure representing the color of the light leaving the surface from \P in the direction {\cf -I}. \\
+\closurecolor\ {\ce \Ci} & Incident radiance --- a closure representing the color of the light leaving the surface from \P in the direction {\cf -I}. \\
 \hline
 %\color\ {\ce \opacity} & Incident ray opacity --- the degree to which the viewer can ``see through'' the surface at \P. \\[1ex]
 \end{tabular}

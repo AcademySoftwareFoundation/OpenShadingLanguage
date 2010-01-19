@@ -202,8 +202,17 @@ public:
     Mod (ShadingExecution *exec) : m_exec(exec) { }
     inline void operator() (int &result, int a, int b) { result = safe_mod(a, b); }
     inline void operator() (float &result, float x, float y) { result = safe_fmod(x, y); }
+    inline void operator() (Dual2<float> &result, Dual2<float> x, Dual2<float> y) {
+        result.set (safe_fmod(x.val(), y.val()), x.dx(), x.dy());
+    }
     inline void operator() (Vec3 &result, const Vec3 &x, float y) { result = safe_fmod(x, y); }
+    inline void operator() (Dual2<Vec3> &result, Dual2<Vec3> x, Dual2<float> y) {
+        result.set (safe_fmod(x.val(), y.val()), x.dx(), x.dy());
+    }
     inline void operator() (Vec3 &result, const Vec3 &x, const Vec3 &y) { result = safe_fmod(x, y); }
+    inline void operator() (Dual2<Vec3> &result, Dual2<Vec3> x, Dual2<Vec3> y) {
+        result.set (safe_fmod(x.val(), y.val()), x.dx(), x.dy());
+    }
 private:
     inline int safe_mod(int a, int b) {
         if (b == 0) {
@@ -716,15 +725,15 @@ DECLOP (OP_mod)
     }
     else if (Result.typespec().is_float() && A.typespec().is_float() &&
             B.typespec().is_float()) {
-        impl = binary_op_noderivs<float,float,float, Mod >;
+        impl = binary_op<float,float,float, Mod >;
     }
     else if (Result.typespec().is_triple() && A.typespec().is_triple() &&
             B.typespec().is_float()) {
-        impl = binary_op_noderivs<Vec3,Vec3,float, Mod >;
+        impl = binary_op<Vec3,Vec3,float, Mod >;
     }
     else if (Result.typespec().is_triple() && A.typespec().is_triple() &&
             B.typespec().is_triple()) {
-        impl = binary_op_noderivs<Vec3,Vec3,Vec3, Mod >;
+        impl = binary_op<Vec3,Vec3,Vec3, Mod >;
     }
 
     if (impl) {

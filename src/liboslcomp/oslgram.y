@@ -272,7 +272,7 @@ metadatum
                 {
                     TypeDesc simple = lextype ($1);
                     simple.arraylen = $3;
-                    TypeSpec t (simple, t.is_closure());
+                    TypeSpec t (simple, false);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
                                      ustring ($2), $4, false,

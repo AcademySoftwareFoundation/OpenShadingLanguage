@@ -1148,7 +1148,7 @@ if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
 \apiend
 
 \apiitem{int normalized}
-For a \vector or \normal, a nonzero value is a a hint that the shader
+For a \vector or \normal, a nonzero value is a hint that the shader
 expects the vector to be unit length.  The renderer may use this hint to
 print a warning if the parameter or value is not of unit length, and the
 compiler may warn if a \qkw{normalized} variable is assigned a non-unit
@@ -2069,7 +2069,7 @@ Statements in \langname include the following types of constructs:
 
 Any place where it is legal to have a statement, it is legal to have
 multiple statements enclosed by curly braces {\cf \{ \}}.  This is
-called a \emph{scope}.  Any variables or functions declared declared
+called a \emph{scope}.  Any variables or functions declared
 within a scope are only visible within that scope, and only may be used
 after their declaration.  Variables or functions that are referenced
 will always resolve to the matching name in the innermost scope relative
@@ -2823,7 +2823,7 @@ Returns 1 if $x>0$, -1 if $x<0$, 0 if $x=0$.
 
 Various rouinding methods: {\cf floor} returns the highest integer less
 than or equal to $x$; {\cf ceil} returns the lowest integer greater than
-or equal to $x$; {\cf round} returns the the closest integer to $x$, in
+or equal to $x$; {\cf round} returns the closest integer to $x$, in
 either direction; and {\cf trunc} returns the integer part of $x$
 (equivalent to {\cf floor} if $x>0$ and {\cf ceil} if $x<0$).
 \apiend
@@ -3277,7 +3277,7 @@ function.
 \indexapi{hash()}
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
 4-D coordinates.  The return values will be evenly distributed on
-$[0,1]$ and be be completely repeatable when passed the same coordinates
+$[0,1]$ and be completely repeatable when passed the same coordinates
 again, yet will be uncorrellated to hashes of any other positions
 (including nearby points).  This is like having a random value indexed
 spatially, but that will be repeatable from frame to frame of an
@@ -5168,7 +5168,7 @@ full control in the shader.
   itself).
 
 \item[Closure.] A symbolic representation of a function to be called,
-  and values for its parameters, that are packaged up to be be evaluated
+  and values for its parameters, that are packaged up to be evaluated
   at a later time to yield a final numeric value.
 
 \item[Connection.] A routing of the value of an \emph{output parameter}

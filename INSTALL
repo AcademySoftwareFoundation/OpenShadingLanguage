@@ -49,7 +49,7 @@ Here are the steps to check out, build, and test the OSL distribution:
    "linux", "linux64", "macosx", "windows", or "windows64".
 
    Note: The default is to make an optimized "release" build.  If
-   instead type type 'make debug' at the top level, you will end up with
+   instead type 'make debug' at the top level, you will end up with
    a debug build (no optimization, full symbols) in "dist/ARCH.debug".
 
 4. Add the "dist/ARCH/bin" to your $PATH, and "dist/ARCH/lib" to your

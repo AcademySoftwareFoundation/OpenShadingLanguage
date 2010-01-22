@@ -73,10 +73,12 @@ public:
     {
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
+        bool inside;
         float Ft = 1 - fresnel_dielectric(m_eta, m_N,
                                           omega_out, domega_out_dx, domega_out_dy,
                                           R, dRdx, dRdy,
-                                          T, dTdx, dTdy);
+                                          T, dTdx, dTdy,
+                                          inside);
         if (Ft > 0) {
             pdf = 1;
             eval.setValue(Ft, Ft, Ft);
@@ -125,11 +127,13 @@ public:
     {
         Vec3 R, dRdx, dRdy;
         Vec3 T, dTdx, dTdy;
+        bool inside;
         // randomly choose between reflection/refraction
         float Fr = fresnel_dielectric(m_eta, m_N,
                                       omega_out, domega_out_dx, domega_out_dy,
                                       R, dRdx, dRdy,
-                                      T, dTdx, dTdy);
+                                      T, dTdx, dTdy,
+                                      inside);
         if (randu < Fr) {
             eval.setValue(Fr, Fr, Fr);
             pdf = Fr;

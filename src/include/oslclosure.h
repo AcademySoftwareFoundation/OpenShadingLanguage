@@ -149,7 +149,8 @@ public:
     static float fresnel_dielectric (float eta, const Vec3 &N,
             const Vec3 &I, const Vec3 &dIdx, const Vec3 &dIdy,
             Vec3 &R, Vec3 &dRdx, Vec3 &dRdy,
-            Vec3& T, Vec3 &dTdx, Vec3 &dTdy);
+            Vec3 &T, Vec3 &dTdx, Vec3 &dTdy,
+            bool & is_inside);
 
     /// Helper function to compute fresnel reflectance R of a dielectric. This
     /// formulation does not explicitly compute the refracted vector so should

@@ -101,7 +101,8 @@ float
 ClosurePrimitive::fresnel_dielectric (float eta, const Vec3 &N,
         const Vec3 &I, const Vec3 &dIdx, const Vec3 &dIdy,
         Vec3 &R, Vec3 &dRdx, Vec3 &dRdy,
-        Vec3& T, Vec3 &dTdx, Vec3 &dTdy)
+        Vec3& T, Vec3 &dTdx, Vec3 &dTdy,
+        bool &is_inside)
 {
     float cos = N.dot(I), neta;
     Vec3 Nn;
@@ -114,11 +115,13 @@ ClosurePrimitive::fresnel_dielectric (float eta, const Vec3 &N,
         // we are on the outside of the surface, going in
         neta = 1 / eta;
         Nn   = N;
+        is_inside = false;
     } else {
         // we are inside the surface, 
         cos  = -cos;
         neta = eta;
         Nn   = -N;
+        is_inside = true;
     }
     R = (2 * cos) * Nn - I;
     float arg = 1 - (neta * neta * (1 - (cos * cos)));

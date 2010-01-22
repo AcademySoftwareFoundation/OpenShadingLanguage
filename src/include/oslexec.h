@@ -189,7 +189,9 @@ private:
 class ShaderGlobals
 {
 public:
-    ShaderGlobals () { }
+    ShaderGlobals () 
+        : iscameraray(true), isshadowray(false), flipHandedness(false)
+    { }
     ~ShaderGlobals () { }
 
     VaryingRef<Vec3> P;                ///< Position
@@ -215,8 +217,10 @@ public:
 
     VaryingRef<ClosureColor *> Ci;     ///< Output colors
 
-    bool flipHandedness;               ///< flips the meaning of calculatenormal()
     VaryingRef<float> surfacearea;     ///< Total area of the object (not exposed)
+    bool iscameraray;                  ///< True if computing for camera ray
+    bool isshadowray;                  ///< True if computing for shadow opacity
+    bool flipHandedness;               ///< flips the result of calculatenormal()
 };
 
 

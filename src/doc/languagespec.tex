@@ -4420,12 +4420,19 @@ total wattage for the area light source.  The value of this function
 is not expected to be meaningful for non-light shaders.
 \apiend
 
-\apiitem{int {\ce raylevel} ()}
-\indexapi{raylevel()}
-Returns the \emph{ray level} of the current shading sample --- {\cf 0}
-if the surface is viewed directly by the camera, {\cf 1} if it is a
-first-level reflection or refraction, {\cf 2} if it is a
-reflection/refraction visible in a reflection/refraction, etc.
+%\apiitem{int {\ce raylevel} ()}
+%\indexapi{raylevel()}
+%Returns the \emph{ray level} of the current shading sample --- {\cf 0}
+%if the surface is viewed directly by the camera, {\cf 1} if it is a
+%first-level reflection or refraction, {\cf 2} if it is a
+%reflection/refraction visible in a reflection/refraction, etc.
+%\apiend
+
+\apiitem{int {\ce iscameraray} ()}
+\indexapi{iscameraray()}
+Returns {\cf 1} if the results of the shader will be viewed directly by
+the camera (including straight-line transparency), {\cf 0} if it's a
+reflection or refraction.
 \apiend
 
 \apiitem{int {\ce isshadowray} ()}
@@ -4438,16 +4445,16 @@ returns {\cf 0} (indicating that the surface should be computing surface
 color, opacity, and all its other outputs).
 \apiend
 
-\apiitem{int {\ce isindirectray} ()}
-\indexapi{isindirectray()}
-Returns {\cf 1} if the shader is executing for the sole purpose of
-determining the object's appearance for an indirect (or global
-illumination) sample and therefore will not be seen distinctly in the
-final image, in which case it may be prudent for the shader to take
-shortcuts or avoid computing fine detail.  This function returns {\cf 0}
-if it is being run for ordinary visibility rays, in which case the
-results may be clearly seen and all details should be computed.
-\apiend
+%\apiitem{int {\ce isindirectray} ()}
+%\indexapi{isindirectray()}
+%Returns {\cf 1} if the shader is executing for the sole purpose of
+%determining the object's appearance for an indirect (or global
+%illumination) sample and therefore will not be seen distinctly in the
+%final image, in which case it may be prudent for the shader to take
+%shortcuts or avoid computing fine detail.  This function returns {\cf 0}
+%if it is being run for ordinary visibility rays, in which case the
+%results may be clearly seen and all details should be computed.
+%\apiend
 
 
 \section{Miscellaneous}

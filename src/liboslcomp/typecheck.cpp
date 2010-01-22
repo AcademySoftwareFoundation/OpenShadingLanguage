@@ -1069,7 +1069,7 @@ static const char * builtin_func_args [] = {
     "getmessage", "is?", "is?[]", /*"iss?",*/ "!rw", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "inversesqrt", ANY_ONE_FLOAT_BASED, NULL,
-    "phong_ramp", "Cnfc[].", NULL,
+    "iscameraray", "i", NULL,
     "isfinite", "if", NULL,
     "isindirectray", "i", NULL,
     "isinf", "if", NULL,
@@ -1096,7 +1096,7 @@ static const char * builtin_func_args [] = {
     "psnoise", PNOISE_ARGS, NULL,
     "radians", ANY_ONE_FLOAT_BASED, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
-    "raylevel", "i", NULL,
+//    "raylevel", "i", NULL,
     "reflect", "vvv", NULL,
     "refract", "vvvf", NULL,
     "regex_match", "iss", "isi[]s", NULL,
@@ -1135,6 +1135,7 @@ static const char * builtin_func_args [] = {
     "hair_specular", "Cvff.", NULL,
     "translucent", "Cn.", NULL,
     "phong", "Cnf.", NULL,
+    "phong_ramp", "Cnfc[].", NULL,
     "microfacet_beckmann", "Cnff.", NULL,
     "microfacet_beckmann_refraction", "Cnff.", NULL,
     "microfacet_ggx", "Cnff.", NULL,

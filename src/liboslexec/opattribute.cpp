@@ -148,6 +148,47 @@ DECLOP (OP_surfacearea)
 }
 
 
+
+DECLOP (OP_isshadowray)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_int());
+    ShaderGlobals *globals = exec->context()->globals();
+
+    exec->adjust_varying (Result, false);
+    VaryingRef<int> result ((float *)Result.data(), Result.step());
+    if (result.is_uniform()) {
+        result[0] = globals->isshadowray;
+    } else {
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = globals->isshadowray;
+    }
+}
+
+
+
+DECLOP (OP_iscameraray)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_int());
+    ShaderGlobals *globals = exec->context()->globals();
+
+    exec->adjust_varying (Result, false);
+    VaryingRef<int> result ((float *)Result.data(), Result.step());
+    if (result.is_uniform()) {
+        result[0] = globals->iscameraray;
+    } else {
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i])
+                result[i] = globals->iscameraray;
+    }
+}
+
+
+
 }; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

@@ -195,8 +195,16 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                     sym.data (globals->P.ptr());  sym.step (globals->P.step());
                 }
             } else if (sym.name() == Strings::I) {
-                sym.has_derivs (false);
-                sym.data (globals->I.ptr());  sym.step (globals->I.step());
+                if (globals->dIdx.ptr() && globals->dIdy.ptr()) {
+                    sym.has_derivs (true);
+                    void *addr = m_context->heap_allot (sym, true);
+                    VaryingRef<Dual2<Vec3> > I ((Dual2<Vec3> *)addr, sym.step());
+                    for (int i = 0;  i < npoints();  ++i)
+                        I[i].set (globals->I[i], globals->dIdx[i], globals->dIdy[i]);
+                } else {
+                    sym.has_derivs (false);
+                    sym.data (globals->I.ptr());  sym.step (globals->I.step());
+                }
             } else if (sym.name() == Strings::N) {
                 sym.has_derivs (false);
                 sym.data (globals->N.ptr());  sym.step (globals->N.step());

@@ -460,7 +460,11 @@ ShadingExecution::bind_connection (const Connection &con)
     } else {
         // More complex case -- casting is involved, or only a
         // partial copy (such as just cone component).
-        ASSERT (0 && "Partial copies not yet supported");  // FIXME
+        error ("Unimplemented connection type: %s %s -> %s %s\n"
+               "\tPartial copies not yet supported.",
+               srcsym.typespec().c_str(), srcsym.name().c_str(),
+               dstsym.typespec().c_str(), dstsym.name().c_str());
+        return;
     }
     dstsym.connected (true);
 }

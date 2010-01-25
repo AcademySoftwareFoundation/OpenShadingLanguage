@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009 Sony Pictures Imageworks, et al.
+Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ usage ()
 {
     std::cout <<
         "oslc -- Open Shading Language compiler\n"
-        "(c) Copyright 2009 Sony Pictures Imageworks. All Rights Reserved.\n"
+        "(c) Copyright 2009-2010 Sony Pictures Imageworks, Inc. All Rights Reserved.\n"
         "Usage:  oslc [options] file\n"
         "  Options:\n"
         "\t--help         Print this usage message\n"

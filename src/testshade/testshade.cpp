@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009 Sony Pictures Imageworks, et al.
+Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -169,7 +169,7 @@ getargs (int argc, const char *argv[])
     if (help) {
         std::cout <<
             "testshade -- Test Open Shading Language\n"
-            "(c) Copyright 2009 Sony Pictures Imageworks. All Rights Reserved.\n";
+            "(c) Copyright 2009-2010 Sony Pictures Imageworks Inc. All Rights Reserved.\n";
         ap.usage ();
         exit (EXIT_SUCCESS);
     }

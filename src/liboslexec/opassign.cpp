@@ -147,15 +147,9 @@ assign_closure (ShadingExecution *exec, int nargs, const int *args,
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     VaryingRef<ClosureColor *> src ((ClosureColor **)Src.data(), Src.step());
-    if (result.is_uniform()) {
-        // Uniform case
-        *(*result) = *(*src);
-    } else {
-        // Potentially varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                *(result[i]) = *(src[i]);
-    }
+    for (int i = beginpoint;  i < endpoint;  ++i)
+        if (runflags[i])
+            *(result[i]) = *(src[i]);
     // N.B. You can't take a derivative of a closure
 }
 
@@ -169,19 +163,14 @@ clear_closure (ShadingExecution *exec, int nargs, const int *args,
     Symbol &Result (exec->sym (args[0]));
 
     // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, false);
+    exec->adjust_varying (Result, true /* closure always vary */);
 
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
-    if (result.is_uniform()) {
-        // Uniform case
-        result[0]->clear ();
-    } else {
-        // Potentially varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i]->clear ();
-    }
+    for (int i = beginpoint;  i < endpoint;  ++i)
+        if (runflags[i])
+            result[i]->clear ();
+
     // N.B. You can't take a derivative of a closure
 }
 

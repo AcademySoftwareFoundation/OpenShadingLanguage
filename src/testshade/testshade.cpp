@@ -235,6 +235,8 @@ main (int argc, const char *argv[])
     shaderglobals.flipHandedness = false;
     float time = 0.0f;
     shaderglobals.time.init (&time, 0);
+    float surfacearea = 1;
+    shaderglobals.surfacearea.init (&surfacearea, 0);
 
     std::vector<ClosureColor> Ci (npoints);
     std::vector<ClosureColor *> Ci_ptr (npoints);

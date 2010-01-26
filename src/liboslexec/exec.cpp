@@ -521,6 +521,7 @@ ShadingExecution::run (int beginop, int endop)
                             beginop, endop);
     const int *args = &m_master->m_args[0];
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
+        DASSERT (m_ip >= 0 && m_ip < (int)m_master->m_ops.size());
         Opcode &op (this->op ());
 #if 0
         if (m_debug) {

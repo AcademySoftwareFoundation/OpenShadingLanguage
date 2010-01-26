@@ -365,6 +365,7 @@ ShaderMaster::resolve_ops ()
             op.implementation (found->second);
         else
             op.implementation (OP_missing);
+        DASSERT (op.implementation() != NULL);
     }
 }
 

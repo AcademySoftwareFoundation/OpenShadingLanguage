@@ -96,6 +96,8 @@ bool
 OSOReaderToMaster::parse (const std::string &filename)
 {
     m_master->m_osofilename = filename;
+    m_master->m_maincodebegin = 0;
+    m_master->m_maincodeend = 0;
     m_codesection.clear ();
     m_codesym = -1;
     return OSOReader::parse (filename);

@@ -232,13 +232,21 @@ OSOReaderToMaster::symdefault (const char *def)
 
 
 
+inline bool
+starts_with (const std::string &source, const std::string &pattern)
+{
+    return ! strncmp (source.c_str(), pattern.c_str(), pattern.length());
+}
+
+
+
 // If the string 'source' begins with 'pattern', erase the pattern from
 // the start of source and return true.  Otherwise, do not alter source
 // and return false.
 inline bool
 extract_prefix (std::string &source, const std::string &pattern)
 {
-    if (boost::starts_with (source, pattern)) {
+    if (starts_with (source, pattern)) {
         source.erase (0, pattern.length());
         return true;
     }

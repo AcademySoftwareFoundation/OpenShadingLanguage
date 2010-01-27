@@ -348,9 +348,6 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     // Mark symbols that map to user-data on the geometry
     bind_mark_geom_variables (m_instance);
 
-    // Run parameter initialization code
-    bind_initialize_params (m_instance);
-
     // OK, we're successfully bound.
     m_bound = true;
 }
@@ -432,19 +429,15 @@ ShadingExecution::bind_connection (const Connection &con)
 {
     int symindex = con.dst.param;
     Symbol &dstsym (sym (symindex));
-#if 0
-    std::cerr << " bind_connection: layer " << con.srclayer << ' '
-              << m_instance->layername() << ' ' << symindex 
-              << " to " << m_instance->layername() << ' '
-              << dstsym.name() << "\n";
-#endif
     ExecutionLayers &execlayers (context()->execlayer (shaderuse()));
     ShadingExecution &srcexec (execlayers[con.srclayer]);
     ASSERT (srcexec.m_bound);
     Symbol &srcsym (srcexec.sym (con.src.param));
 #if 0
-    std::cerr << "  found connection " << srcsym.name()
-              << " " << dstsym.name() << "\n";
+    std::cerr << " bind_connection: layer " << con.srclayer << ' '
+              << srcexec.instance()->layername() << ' ' << srcsym.name()
+              << " to " << m_instance->layername() << ' '
+              << dstsym.name() << "\n";
 #endif
 
     // Try to identify the simple case where we can just alias the
@@ -454,9 +447,10 @@ ShadingExecution::bind_connection (const Connection &con)
                    dstsym.symtype() != SymTypeGlobal);
     if (simple) {
 #if 0
-        std::cerr << "  simple: setting " << srcsym.name() << " to " 
-                  << (void *)srcsym.data() << " (" << dstsym.name()
-                  << "), was " << (void *)dstsym.data() << "\n";
+        std::cerr << "  simple: setting " << dstsym.name() << " to " 
+                  << srcsym.name() << ' ' << (void *)srcsym.data() 
+                  << "/" << srcsym.step() << ", was " 
+                  << (void *)dstsym.data() << "/" << dstsym.step() << "\n";
 #endif
         dstsym.data (srcsym.data ());
         dstsym.step (srcsym.step ());
@@ -496,6 +490,9 @@ ShadingExecution::run (Runflag *rf)
                             this, m_master->shadername().c_str());
 
     ASSERT (m_bound);  // We'd better be bound at this point
+
+    // Run parameter initialization code
+    bind_initialize_params (m_instance);
 
     // Make space for new runflags
     Runflag *runflags = ALLOCA (Runflag, m_npoints);

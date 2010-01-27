@@ -445,6 +445,8 @@ public:
         return x + align_padding (x, alignment);
     }
 
+    bool allow_rebind () const { return m_rebind; }
+
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
 private:
@@ -498,6 +500,7 @@ private:
     bool m_debug;                         ///< Debugging output
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_clearmemory;                   ///< Zero mem before running shader?
+    bool m_rebind;                        ///< Allow rebinding?
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
@@ -522,6 +525,7 @@ private:
     atomic_ll m_layers_executed_uncond;   ///< Stat: Unconditional execs
     atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs
     atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
+    atomic_ll m_stat_rebinds;             ///< Stat: Number of rebinds;
 
     friend class ShadingContext;
     friend class ShaderInstance;
@@ -651,6 +655,7 @@ private:
     ParamValueList m_messages;          ///< Message blackboard
     std::vector<ClosureColor> m_closure_msgs;  // Mem for closure messages
     int m_lazy_evals;                   ///< Running tab of lazy evals
+    int m_rebinds;                      ///< Running tab of rebinds
 
     friend class ShadingExecution;
 };
@@ -774,6 +779,10 @@ public:
     ///
     ShadingContext *context () const { return m_context; }
 
+    /// Get a pointer to the ShadingSystemImpl for this execution.
+    ///
+    ShadingSystemImpl *shadingsys () const { return m_shadingsys; }
+
     /// Get a pointer to the RendererServices for this execution.
     ///
     RendererServices *renderer () const { return m_renderer; }
@@ -882,6 +891,7 @@ private:
     ShadingSystemImpl *m_shadingsys; ///< Ptr to shading system
     RendererServices *m_renderer; ///< Ptr to renderer services
     int m_npoints;                ///< How many points are we running?
+    int m_npoints_bound;          ///< How many points bound with addresses?
     bool m_bound;                 ///< Have we been bound?
     bool m_executed;              ///< Have we been executed?
     bool m_debug;                 ///< Debug mode

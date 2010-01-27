@@ -126,7 +126,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_debug (false), m_lazylayers (true),
-      m_clearmemory (false),
+      m_clearmemory (false), m_rebind (false),
       m_commonspace_synonym("world"),
       m_in_group (false),
       m_global_heap_total (0)
@@ -139,6 +139,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_layers_executed_uncond = 0;
     m_layers_executed_lazy = 0;
     m_layers_executed_never = 0;
+    m_stat_rebinds = 0;
 
     init_global_heap_offsets ();
 
@@ -203,6 +204,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_clearmemory = *(const int *)val;
         return true;
     }
+    if (name == "rebind" && type == TypeDesc::INT) {
+        m_rebind = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -235,6 +240,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "clearmemory" && type == TypeDesc::INT) {
         *(int *)val = m_clearmemory;
+        return true;
+    }
+    if (name == "rebind" && type == TypeDesc::INT) {
+        *(int *)val = m_rebind;
         return true;
     }
     return false;
@@ -374,6 +383,10 @@ ShadingSystemImpl::getstats (int level) const
     out << Strutil::format ("    Skipped:        %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_never,
                             (100.0*m_layers_executed_never)/totalexec);
+
+    out << Strutil::format ("  Rebinds:  %lld / %lld  (%.1f%%)\n",
+                            (long long)m_stat_rebinds, totalexec,
+                            (100.0*m_stat_rebinds)/totalexec);
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
 

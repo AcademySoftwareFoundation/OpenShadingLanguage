@@ -55,6 +55,7 @@ static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static std::string dataformatname = "";
 static bool debug = false;
+static bool stats = false;
 static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
@@ -137,6 +138,7 @@ getargs (int argc, const char *argv[])
                 "%*", add_shader, "",
                 "--help", &help, "Print help message",
                 "--debug", &debug, "Lots of debugging info",
+                "--stats", &stats, "Print run statistics",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
@@ -347,7 +349,7 @@ main (int argc, const char *argv[])
     }
     ssi->release_context (ctx);
 
-    if (debug) {
+    if (debug || stats) {
         std::cout << "\n";
         std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Bind : " << Strutil::timeintervalformat (bindtime,2) << "\n";

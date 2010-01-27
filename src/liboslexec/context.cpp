@@ -145,6 +145,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
         execlayers[layer].unbind ();
 
     m_lazy_evals = 0;
+    m_rebinds = 0;
     int uncond_evals = 0;
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);
@@ -165,6 +166,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     shadingsys().m_layers_executed_uncond += uncond_evals;
     shadingsys().m_layers_executed_lazy += m_lazy_evals;
     shadingsys().m_layers_executed_never += nlayers - uncond_evals - m_lazy_evals;
+    shadingsys().m_stat_rebinds += m_rebinds;
 }
 
 

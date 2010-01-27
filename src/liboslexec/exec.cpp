@@ -49,6 +49,7 @@ namespace pvt {   // OSL::pvt
 
 ShadingExecution::ShadingExecution ()
     : m_context(NULL), m_instance(NULL), m_master(NULL),
+      m_npoints_bound(0),
       m_bound(false), m_debug(false), m_last_instance_id(-1)
 {
 }
@@ -135,40 +136,45 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
     ASSERT (! m_bound);  // avoid double-binding
     ASSERT (context != NULL && instance != NULL);
 
-    m_debug = context->shadingsys().debug();
+    m_shadingsys = &context->shadingsys ();
+    m_debug = shadingsys()->debug();
     if (m_debug)
-        context->shadingsys().info ("bind ctx %p use %s layer %d", context,
-                                    shaderusename(use), layerindex);
+        shadingsys()->info ("bind ctx %p use %s layer %d", context,
+                            shaderusename(use), layerindex);
     m_use = use;
 
     // Take various shortcuts if we are re-binding the same instance as
     // last time.
-    bool rebind = (instance->id() == m_last_instance_id);
-    if (! rebind) {
+    bool rebind = (shadingsys()->allow_rebind() &&
+                   instance->id() == m_last_instance_id &&
+                   m_npoints_bound >= m_context->npoints());
+    if (rebind) {
+        ++context->m_rebinds;
+    } else {
         m_context = context;
         m_instance = instance;
         m_master = instance->master ();
-        m_shadingsys = &context->shadingsys ();
         m_renderer = m_shadingsys->renderer ();
         m_last_instance_id = instance->id ();
+        m_npoints_bound = m_context->npoints ();
         ASSERT (m_master && m_context && m_shadingsys && m_renderer);
         // FIXME -- if the number of points we need now is <= last time
         // we bound to this context, we can even skip much of the work
         // below, and reuse all the heap offsets and pointers.  We can
         // do that optimization later.
+
+        // Make a fresh copy of symbols from the instance.  Don't copy the
+        // whole vector, which may do an element-by-element copy of each
+        // Symbol.  We humans know that the definition of Symbol has no
+        // elements that can't be memcpy'd, there is no allocated memory
+        // that can leak, so we go the fast route and memcpy.
+        m_symbols.resize (m_instance->m_symbols.size());
+        if (m_symbols.size() /* && !rebind */)
+            memcpy (&m_symbols[0], &m_instance->m_symbols[0], 
+                    m_instance->m_symbols.size() * sizeof(Symbol));
     }
 
     m_npoints = m_context->npoints ();
-
-    // Make a fresh copy of symbols from the instance.  Don't copy the
-    // whole vector, which may do an element-by-element copy of each
-    // Symbol.  We humans know that the definition of Symbol has no
-    // elements that can't be memcpy'd, there is no allocated memory
-    // that can leak, so we go the fast route and memcpy.
-    m_symbols.resize (m_instance->m_symbols.size());
-    if (m_symbols.size())
-        memcpy (&m_symbols[0], &m_instance->m_symbols[0], 
-                m_instance->m_symbols.size() * sizeof(Symbol));
 
     ShaderGlobals *globals (m_context->m_globals);
 
@@ -180,112 +186,99 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
             m_shadingsys->info ("  bind %s, offset %d",
                                 sym.mangled().c_str(), sym.dataoffset());
         if (sym.symtype() == SymTypeGlobal) {
-            // FIXME -- is this too wasteful here?
-            if (sym.name() == Strings::P) {
-                if (globals->dPdx.ptr() && globals->dPdy.ptr()) {
-                    // Derivs supplied
-                    sym.has_derivs (true);
-                    void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Vec3> > P ((Dual2<Vec3> *)addr, sym.step());
-                    for (int i = 0;  i < npoints();  ++i)
-                        P[i].set (globals->P[i], globals->dPdx[i], globals->dPdy[i]);
-                } else {
-                    // No derivs anyway -- don't copy the user's data
-                    sym.has_derivs (false);
-                    sym.data (globals->P.ptr());  sym.step (globals->P.step());
-                }
-            } else if (sym.name() == Strings::I) {
-                if (globals->dIdx.ptr() && globals->dIdy.ptr()) {
-                    sym.has_derivs (true);
-                    void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Vec3> > I ((Dual2<Vec3> *)addr, sym.step());
-                    for (int i = 0;  i < npoints();  ++i)
-                        I[i].set (globals->I[i], globals->dIdx[i], globals->dIdy[i]);
-                } else {
-                    sym.has_derivs (false);
-                    sym.data (globals->I.ptr());  sym.step (globals->I.step());
-                }
-            } else if (sym.name() == Strings::N) {
-                sym.has_derivs (false);
-                sym.data (globals->N.ptr());  sym.step (globals->N.step());
-            } else if (sym.name() == Strings::Ng) {
-                sym.has_derivs (false);
-                sym.data (globals->Ng.ptr());  sym.step (globals->Ng.step());
-            } else if (sym.name() == Strings::u) {
-                if (globals->dudx.ptr() && globals->dudy.ptr()) {
-                    // Derivs supplied
-                    sym.has_derivs (true);
-                    void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Float> > u ((Dual2<Float> *)addr, sym.step());
-                    for (int i = 0;  i < npoints();  ++i)
-                        u[i].set (globals->u[i], globals->dudx[i], globals->dudy[i]);
-                } else {
-                    // No derivs anyway -- don't copy the user's data
-                    sym.has_derivs (false);
-                    sym.data (globals->u.ptr());  sym.step (globals->u.step());
-                }
-            } else if (sym.name() == Strings::v) {
-                if (globals->dvdx.ptr() && globals->dvdy.ptr()) {
-                    // Derivs supplied
-                    sym.has_derivs (true);
-                    void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Float> > v ((Dual2<Float> *)addr, sym.step());
-                    for (int i = 0;  i < npoints();  ++i)
-                        v[i].set (globals->v[i], globals->dvdx[i], globals->dvdy[i]);
-                } else {
-                    // No derivs anyway -- don't copy the user's data
-                    sym.has_derivs (false);
-                    sym.data (globals->v.ptr());  sym.step (globals->v.step());
-                }
+            // FIXME -- reset sym's data pointer?
 
-            } else if (sym.name() == Strings::dPdu) {
-                sym.has_derivs (false);
-                sym.data (globals->dPdu.ptr());  sym.step (globals->dPdu.step());
-            } else if (sym.name() == Strings::dPdv) {
-                sym.has_derivs (false);
-                sym.data (globals->dPdv.ptr());  sym.step (globals->dPdv.step());
-            } else if (sym.name() == Strings::time) {
-                sym.has_derivs (false);
-                sym.data (globals->time.ptr());  sym.step (globals->time.step());
-            } else if (sym.name() == Strings::dtime) {
-                sym.has_derivs (false);
-                sym.data (globals->dtime.ptr());  sym.step (globals->dtime.step());
-            } else if (sym.name() == Strings::dPdtime) {
-                sym.has_derivs (false);
-                sym.data (globals->dPdtime.ptr());  sym.step (globals->dPdtime.step());
+            // Instead of duplicating the logic for each possible global
+            // variable, we just decode the name and store pointers to
+            // the VaringRef's (for value, and for some cases,
+            // derivatives) into valref, dxref, and dyref, then handle
+            // them with a single logic block below.  Note that rather
+            // than worry about the float and triple cases separately,
+            // we just cast them all to VR<float> for now, since it's
+            // just a pointer underneath anyway.
+            VaryingRef<float> * valref = NULL, *dxref = NULL, *dyref = NULL;
+            if (sym.name() == Strings::P) {
+                valref = (VaryingRef<float>*) &globals->P;
+                dxref = (VaryingRef<float>*) &globals->dPdx;
+                dyref = (VaryingRef<float>*) &globals->dPdy;
+            } else if (sym.name() == Strings::I) {
+                valref = (VaryingRef<float>*) &globals->I;
+                dxref = (VaryingRef<float>*) &globals->dIdx;
+                dyref = (VaryingRef<float>*) &globals->dIdy;
+            } else if (sym.name() == Strings::N) {
+                valref = (VaryingRef<float>*) &globals->N;
+            } else if (sym.name() == Strings::u) {
+                valref = &globals->u;
+                dxref = &globals->dudx;
+                dyref = &globals->dudy;
+            } else if (sym.name() == Strings::v) {
+                valref = &globals->v;
+                dxref = &globals->dvdx;
+                dyref = &globals->dvdy;
             } else if (sym.name() == Strings::Ps) {
-                if (globals->dPsdx.ptr() && globals->dPsdy.ptr()) {
+                valref = (VaryingRef<float>*) &globals->Ps;
+                dxref = (VaryingRef<float>*) &globals->dPsdx;
+                dyref = (VaryingRef<float>*) &globals->dPsdy;
+            } else if (sym.name() == Strings::I) {
+                valref = (VaryingRef<float>*) &globals->I;
+            } else if (sym.name() == Strings::Ci) {
+                valref = (VaryingRef<float>*) &globals->Ci;
+            } else if (sym.name() == Strings::Ng) {
+                valref = (VaryingRef<float>*) &globals->Ng;
+            } else if (sym.name() == Strings::dPdu) {
+                valref = (VaryingRef<float>*) &globals->dPdu;
+            } else if (sym.name() == Strings::dPdv) {
+                valref = (VaryingRef<float>*) &globals->dPdv;
+            } else if (sym.name() == Strings::time) {
+                valref = (VaryingRef<float>*) &globals->time;
+            } else if (sym.name() == Strings::dtime) {
+                valref = (VaryingRef<float>*) &globals->dtime;
+            } else if (sym.name() == Strings::dPdtime) {
+                valref = (VaryingRef<float>*) &globals->dPdtime;
+            }
+
+            if (valref && valref->ptr()) {
+                if (dxref && dxref->ptr() && dyref && dyref->ptr()) {
                     // Derivs supplied
                     sym.has_derivs (true);
-                    void *addr = m_context->heap_allot (sym, true);
-                    VaryingRef<Dual2<Vec3> > Ps ((Dual2<Vec3> *)addr, sym.step());
-                    for (int i = 0;  i < npoints();  ++i)
-                        Ps[i].set (globals->Ps[i], globals->dPsdx[i], globals->dPsdy[i]);
+                    if (rebind) {
+                        // Rebinding -- addr is ok, just reset the step
+                        sym.step (sym.derivsize());
+                    } else {
+                        m_context->heap_allot (sym, true);
+                    }
+                    if (sym.typespec().is_float()) {
+                        // It's a float -- use the valref,dxref,dyref
+                        // directly.
+                        VaryingRef<Dual2<float> > P ((Dual2<Vec3> *)sym.data(), sym.step());
+                        for (int i = 0;  i < npoints();  ++i)
+                            P[i].set ((*valref)[i], (*dxref)[i], (*dyref)[i]);
+                    } else {
+                        DASSERT (sym.typespec().is_triple());
+                        // It's a triple, so cast our
+                        // VaryingRef<float>'s back to Vec3's.
+                        VaryingRef<Dual2<Vec3> > P ((Dual2<Vec3> *)sym.data(), sym.step());
+                        for (int i = 0;  i < npoints();  ++i)
+                            P[i].set (*(Vec3 *)&((*valref)[i]),
+                                      *(Vec3 *)&((*dxref)[i]),
+                                      *(Vec3 *)&((*dyref)[i]));
+                    }
+                    // FIXME -- what if the user has already passed valref,
+                    // dxref, and dyref with just the right layout that it
+                    // could be a Dual<Vec3>?  Should we just point to it,
+                    // and avoid the data copy?
                 } else {
                     // No derivs anyway -- don't copy the user's data
                     sym.has_derivs (false);
-                    sym.data (globals->Ps.ptr());
-                    sym.step (globals->Ps.step());
+                    sym.data (valref->ptr());  sym.step (valref->step());
+                    // FIXME -- Hmmm... which is better, to avoid the copy
+                    // here but possibly have the data spread out strangely,
+                    // or to copy but then end up with the data contiguous
+                    // and in cache?  Experiment at some point.
                 }
-            } else if (sym.name() == Strings::Ci) {
-                sym.has_derivs (false);
-                sym.data (globals->Ci.ptr());  sym.step (globals->Ci.step());
+                ASSERT (sym.data() != NULL);
             }
-            if (sym.data() == NULL) {
-                if (sym.dataoffset() >= 0) {
-                    // Not specified where it lives, put it in the heap
-                    sym.data (m_context->heapaddr (sym.dataoffset()));
-                    sym.step (0);
-                    // m_shadingsys->info ("Global %s at address %d",
-                    //                     sym.name().c_str(), sym.dataoffset());
-                } else {
-                    // ASSERT (sym.dataoffset() >= 0 &&
-                    //         "Global ought to already have a dataoffset");
-                    // Skip this for now -- it includes L, Cl, etc.
-                    // FIXME
-                    sym.step (0);   // FIXME
-                }
-            }
+
         } else if (sym.symtype() == SymTypeParam ||
                    sym.symtype() == SymTypeOutputParam) {
             if (sym.typespec().is_closure()) {
@@ -317,12 +310,24 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                    sym.symtype() == SymTypeTemp) {
             ASSERT (sym.dataoffset() < 0);
             if (sym.typespec().is_closure()) {
-                // Special case -- closures store pointers in the heap
+                // Special case -- closures store pointers in the heap, and
+                // they are always varying.
                 sym.dataoffset (m_context->closure_allot (m_npoints));
                 sym.data (m_context->heapaddr (sym.dataoffset()));
                 sym.step (sizeof (ClosureColor *));
             } else {
                 m_context->heap_allot (sym);
+            }
+            if (sym.typespec().simpletype() == TypeDesc::TypeString) {
+                // Uninitialized strings in the heap can really screw
+                // things up, since they are a pointer underneath.
+                // Clear and uniformize just in case.  Another stretegy
+                // we might try someday is to have the compiler generate
+                // initializations for all string vars (or ALL vars?)
+                // that aren't unconditionally assigned by the user, but
+                // for now we're just taking care of it here.
+                sym.step (0);
+                ((ustring *)sym.data())->clear ();
             }
         } else if (sym.symtype() == SymTypeConst) {
             ASSERT (sym.data() != NULL &&

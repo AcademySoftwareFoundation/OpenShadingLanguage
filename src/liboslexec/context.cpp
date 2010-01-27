@@ -146,6 +146,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
 
     m_lazy_evals = 0;
     m_rebinds = 0;
+    m_original_runflags = rf;
     int uncond_evals = 0;
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);

@@ -357,18 +357,14 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 void
 ShadingExecution::bind_initialize_params (ShaderInstance *inst)
 {
-    Runflag *runflags = ALLOCA (Runflag, m_npoints);
     ShaderMaster *master = inst->master();
     for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
         Symbol *sym = symptr (i);
         if (sym->valuesource() == Symbol::DefaultVal) {
             // Execute init ops, if there are any
             if (sym->initbegin() != sym->initend()) {
-                for (int i = 0;  i < m_npoints;  ++i)
-                    runflags[i] = RunflagOn;
-                push_runflags (runflags, 0, m_npoints);
-                run (sym->initbegin(), sym->initend());
-                pop_runflags ();
+                run (context()->m_original_runflags,
+                     sym->initbegin(), sym->initend());
             }
         } else if (sym->valuesource() == Symbol::InstanceVal) {
             // FIXME -- eventually, copy the instance values here,
@@ -480,7 +476,7 @@ ShadingExecution::unbind ()
 
 
 void
-ShadingExecution::run (Runflag *rf)
+ShadingExecution::run (Runflag *rf, int beginop, int endop)
 {
     if (m_executed)
         return;       // Already executed
@@ -490,9 +486,6 @@ ShadingExecution::run (Runflag *rf)
                             this, m_master->shadername().c_str());
 
     ASSERT (m_bound);  // We'd better be bound at this point
-
-    // Run parameter initialization code
-    bind_initialize_params (m_instance);
 
     // Make space for new runflags
     Runflag *runflags = ALLOCA (Runflag, m_npoints);
@@ -506,10 +499,14 @@ ShadingExecution::run (Runflag *rf)
     }
 
     push_runflags (runflags, 0, m_npoints);
-    run (m_master->m_maincodebegin, (int)m_master->m_maincodeend);
+    if (beginop >= 0)   // Run just the op range supplied, and no init ops
+        run (beginop, endop);
+    else {              // Default (<0) means run param init ops + main code
+        bind_initialize_params (m_instance);  // run param init code
+        run (m_master->m_maincodebegin, m_master->m_maincodeend);
+        m_executed = true;
+    }
     pop_runflags ();
-
-    m_executed = true;
 }
 
 
@@ -569,12 +566,13 @@ ShadingExecution::run_connected_layer (int layer)
     ShadingExecution &connected (execlayers[layer]);
     ASSERT (! connected.executed ());
 
-    // Run the earlier layer!
+    // Run the earlier layer using the runflags we were originally
+    // called with.
     ShaderGroup &sgroup (ctx->attribs()->shadergroup (use));
     size_t nlayers = (int) sgroup.nlayers ();
     if (! connected.m_bound)
         connected.bind (ctx, use, layer, sgroup[layer]);
-    connected.run ();
+    connected.run (ctx->m_original_runflags);
     ctx->m_lazy_evals += 1;
 
     // Now re-bind the connections between that layer and all other

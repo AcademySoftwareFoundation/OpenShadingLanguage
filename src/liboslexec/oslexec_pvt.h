@@ -656,6 +656,7 @@ private:
     std::vector<ClosureColor> m_closure_msgs;  // Mem for closure messages
     int m_lazy_evals;                   ///< Running tab of lazy evals
     int m_rebinds;                      ///< Running tab of rebinds
+    Runflag *m_original_runflags;       ///< Runflags we were called with
 
     friend class ShadingExecution;
 };
@@ -676,9 +677,11 @@ public:
 
     void unbind ();
 
-    /// Execute the shader with the supplied runflags.
-    ///
-    void run (Runflag *rf=NULL);
+    /// Execute the shader with the supplied runflags.  If rf==NULL, new
+    /// runflags will be set up to run all points. If beginop and endop
+    /// are >= 0 they denote an op range, but if they remain at the
+    /// defaults <0, the "main" code section will be run.
+    void run (Runflag *rf=NULL, int beginop = -1, int endop = -1);
 
     /// Execute the shader with the current runflags, over the range of
     /// ops denoted by [beginop, endop).

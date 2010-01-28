@@ -830,8 +830,9 @@ ASTloop_statement::codegen (Symbol *)
     // Generate the op for the loop itself.  Record its label, so that we
     // can go back and patch it with the jump destinations.
     int loop_op = emitcode (opname());
-    // Loop ops read their first arg in addition to writing it
+    // Loop ops read their first arg, not write it
     oslcompiler->lastop().argread (0, true);
+    oslcompiler->lastop().argwrite (0, false);
         
     oslcompiler->push_nesting (true);
     codegen_list (init());
@@ -1181,7 +1182,8 @@ ASTfunction_call::codegen (Symbol *dest)
             Symbol *condvar = m_compiler->make_constant (0);
             size_t argstart = m_compiler->add_op_args (1, &condvar);
             m_compiler->ircode(loop_op).set_args (argstart, 1);
-            m_compiler->ircode(loop_op).argread (0, true);  // read also
+            m_compiler->ircode(loop_op).argread (0, true);    // read
+            m_compiler->ircode(loop_op).argwrite (0, false);  // not written
             int endlabel = m_compiler->next_op_label ();
             m_compiler->ircode(loop_op).set_jump (startlabel, startlabel,
                                                   endlabel, endlabel);

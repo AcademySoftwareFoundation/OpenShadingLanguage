@@ -374,7 +374,7 @@ public:
             // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
             //                  and sin(atan(x)) == x/sqrt(1+x^2)
             float alpha2 = m_ab * m_ab;
-            float tanThetaM = -alpha2 * logf(1 - randu);
+            float tanThetaM = sqrtf(-alpha2 * logf(1 - randu));
             float cosThetaM = 1 / sqrtf(1 + tanThetaM * tanThetaM);
             float sinThetaM = cosThetaM * tanThetaM;
             float phiM = 2 * float(M_PI) * randv;

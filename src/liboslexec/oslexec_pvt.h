@@ -447,6 +447,8 @@ public:
 
     bool allow_rebind () const { return m_rebind; }
 
+    bool debug_nan () const { return m_debugnan; }
+
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
 private:
@@ -501,6 +503,7 @@ private:
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_rebind;                        ///< Allow rebinding?
+    bool m_debugnan;                      ///< Root out NaN's?
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
@@ -886,6 +889,10 @@ private:
     /// Helper for bind(): marks all parameters which correspond to
     /// geometric user-data
     void bind_mark_geom_variables (ShaderInstance *inst);
+
+    /// Helper for run: check all the writable arguments of an op to see
+    /// if any NaN or Inf values have snuck in.
+    void check_nan (Opcode &op);
 
     ShaderUse m_use;              ///< Our shader use
     ShadingContext *m_context;    ///< Ptr to our shading context

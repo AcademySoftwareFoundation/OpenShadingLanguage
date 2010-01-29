@@ -519,14 +519,14 @@ ShadingExecution::run (int beginop, int endop)
                             this, m_master->shadername().c_str(),
                             beginop, endop);
     const int *args = &m_master->m_args[0];
+    bool debugnan = m_shadingsys->debug_nan ();
     for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
         DASSERT (m_ip >= 0 && m_ip < (int)m_master->m_ops.size());
         Opcode &op (this->op ());
 #if 0
         if (m_debug) {
-            m_shadingsys->info ("instruction %d: %s", m_ip, op.opname().c_str());
-            m_shadingsys->info ("Before running %s, values are:",
-                                op.opname().c_str());
+            m_shadingsys->info ("Before running op %d %s, values are:",
+                                m_ip, op.opname().c_str());
             for (int i = 0;  i < op.nargs();  ++i) {
                 Symbol &s (sym (args[op.firstarg()+i]));
                 m_shadingsys->info ("    %s\n%s", s.mangled().c_str(),
@@ -537,9 +537,6 @@ ShadingExecution::run (int beginop, int endop)
         ASSERT (op.implementation() && "Unimplemented op!");
         op (this, op.nargs(), args+op.firstarg(),
             m_runflags, m_beginpoint, m_endpoint);
-
-        // FIXME -- this is a good place to do all sorts of other sanity
-        // checks, like seeing if any nans have crept in from each op.
 
 #if 0
         if (m_debug) {
@@ -552,6 +549,44 @@ ShadingExecution::run (int beginop, int endop)
             }
         }
 #endif
+        if (debugnan)
+            check_nan (op);
+    }
+}
+
+
+
+void
+ShadingExecution::check_nan (Opcode &op)
+{
+    // Check every writable argument of this op, at every shading point
+    // that's turned on, check for NaN and Inf values, and print a
+    // warning if found.
+    const int *args = &m_master->m_args[0];
+    for (int a = 0;  a < op.nargs();  ++a) {
+        if (! op.argwrite (a))
+            continue;  // Skip args that weren't written
+        Symbol &s (sym (args[op.firstarg()+a]));
+        TypeDesc t (s.typespec().simpletype());
+        bool found_nan = false;
+        float badval = 0;
+        if (t.basetype == TypeDesc::FLOAT) {
+            int agg = t.aggregate;
+            for (int i = m_beginpoint;  i <= m_endpoint;  ++i) {
+                if (m_runflags[i]) {
+                    float *f = (float *)((char *)s.data()+s.step()*i);
+                    for (int c = 0;  c < agg;  ++c)
+                        if (! std::isfinite (f[c])) {
+                            badval = f[c];
+                            found_nan = true;
+                        }
+                }
+            }
+        }
+        if (found_nan)
+            m_shadingsys->warning ("Generated %g at %s, line %d (instruction %s, arg %d)",
+                                   badval, op.sourcefile().c_str(),
+                                   op.sourceline(), op.opname().c_str(), a);
     }
 }
 

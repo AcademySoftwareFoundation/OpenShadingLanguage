@@ -584,8 +584,10 @@ ShadingExecution::check_nan (Opcode &op)
             }
         }
         if (found_nan)
-            m_shadingsys->warning ("Generated %g at %s, line %d (instruction %s, arg %d)",
-                                   badval, op.sourcefile().c_str(),
+            m_shadingsys->warning ("Generated %g in shader \"%s\",\n"
+                                   "\t source \"%s\", line %d (instruction %s, arg %d)",
+                                   badval, m_master->shadername().c_str(),
+                                   op.sourcefile().c_str(),
                                    op.sourceline(), op.opname().c_str(), a);
     }
 }

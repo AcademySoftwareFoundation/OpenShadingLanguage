@@ -597,6 +597,8 @@ bool
 ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
                              int beginpoint, int endpoint, float &badval)
 {
+    if (sym.typespec().is_closure())
+        return false;
     TypeDesc t (sym.typespec().simpletype());
     badval = 0;
     if (t.basetype == TypeDesc::FLOAT) {

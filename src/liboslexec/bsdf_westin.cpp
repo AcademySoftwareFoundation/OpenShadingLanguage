@@ -150,7 +150,8 @@ public:
         float cosNI = normal_sign * m_N.dot(omega_in);
         if (cosNO > 0 && cosNI > 0) {
             float sinNO2 = 1 - cosNO * cosNO;
-            float westin = sinNO2 > 0 ? powf(sinNO2, 0.5f * m_edginess) * cosNI * float(M_1_PI) : 0;
+            pdf = cosNI * float(M_1_PI);
+            float westin = sinNO2 > 0 ? powf(sinNO2, 0.5f * m_edginess) * pdf : 0;
             return Color3 (westin, westin, westin);
         }
         return Color3 (0, 0, 0);
@@ -174,7 +175,7 @@ public:
            sample_cos_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
            if (Ngf.dot(omega_in) > 0) {
                // TODO: account for sheen when sampling
-               float cosNO = float(M_PI) * pdf;
+               float cosNO = Nf.dot(omega_out);
                float sinNO2 = 1 - cosNO * cosNO;
                float westin = sinNO2 > 0 ? powf(sinNO2, 0.5f * m_edginess) * pdf : 0;
                eval.setValue(westin, westin, westin);

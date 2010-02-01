@@ -138,6 +138,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 
     m_shadingsys = &context->shadingsys ();
     m_debug = shadingsys()->debug();
+    bool debugnan = m_shadingsys->debug_nan ();
     if (m_debug)
         shadingsys()->info ("bind ctx %p use %s layer %d", context,
                             shaderusename(use), layerindex);
@@ -340,6 +341,12 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                                 sym.mangled().c_str(), sym.data(),
                                 sym.step(), sym.size(),
                                 sym.has_derivs() ? "(derivs)" : "(no derivs)");
+        float badval;
+        if (debugnan && check_nan (sym, m_context->m_original_runflags,
+                                   0, m_npoints-1, badval))
+            m_shadingsys->warning ("Found %g in shader \"%s\" when binding %s",
+                                   badval, m_master->shadername().c_str(),
+                                   sym.name().c_str());                    
     }
 
     // Handle all of the symbols that are connected to earlier layers.
@@ -358,6 +365,7 @@ void
 ShadingExecution::bind_initialize_params (ShaderInstance *inst)
 {
     ShaderMaster *master = inst->master();
+    bool debugnan = m_shadingsys->debug_nan ();
     for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
         Symbol *sym = symptr (i);
         if (sym->valuesource() == Symbol::DefaultVal) {
@@ -383,7 +391,12 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
                 std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
 #endif
             }
-
+            float badval = 0;
+            if (debugnan && check_nan (*sym, context()->m_original_runflags,
+                                       m_beginpoint, m_endpoint, badval))
+                m_shadingsys->warning ("Found %g in shader \"%s\" when interpolating %s",
+                                       badval, m_master->shadername().c_str(),
+                                       sym->name().c_str());
         } else if (sym->valuesource() == Symbol::ConnectedVal) {
             // Nothing to do if it fully came from an earlier layer
         }
@@ -406,6 +419,8 @@ ShadingExecution::bind_mark_geom_variables (ShaderInstance *inst)
         }
     }
 }
+
+
 
 void
 ShadingExecution::bind_connections ()
@@ -562,34 +577,42 @@ ShadingExecution::check_nan (Opcode &op)
     // Check every writable argument of this op, at every shading point
     // that's turned on, check for NaN and Inf values, and print a
     // warning if found.
-    const int *args = &m_master->m_args[0];
     for (int a = 0;  a < op.nargs();  ++a) {
         if (! op.argwrite (a))
             continue;  // Skip args that weren't written
-        Symbol &s (sym (args[op.firstarg()+a]));
-        TypeDesc t (s.typespec().simpletype());
-        bool found_nan = false;
+        Symbol &s (sym (m_master->m_args[op.firstarg()+a]));
         float badval = 0;
-        if (t.basetype == TypeDesc::FLOAT) {
-            int agg = t.aggregate;
-            for (int i = m_beginpoint;  i <= m_endpoint;  ++i) {
-                if (m_runflags[i]) {
-                    float *f = (float *)((char *)s.data()+s.step()*i);
-                    for (int c = 0;  c < agg;  ++c)
-                        if (! std::isfinite (f[c])) {
-                            badval = f[c];
-                            found_nan = true;
-                        }
-                }
-            }
-        }
-        if (found_nan)
+        if (check_nan (s, m_runflags, m_beginpoint, m_endpoint, badval))
             m_shadingsys->warning ("Generated %g in shader \"%s\",\n"
-                                   "\t source \"%s\", line %d (instruction %s, arg %d)",
+                                   "\tsource \"%s\", line %d (instruction %s, arg %d)",
                                    badval, m_master->shadername().c_str(),
                                    op.sourcefile().c_str(),
                                    op.sourceline(), op.opname().c_str(), a);
     }
+}
+
+
+
+bool
+ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
+                             int beginpoint, int endpoint, float &badval)
+{
+    TypeDesc t (sym.typespec().simpletype());
+    badval = 0;
+    if (t.basetype == TypeDesc::FLOAT) {
+        int agg = t.aggregate;
+        for (int i = beginpoint;  i <= endpoint;  ++i) {
+            if (runflags == NULL || runflags[i]) {
+                float *f = (float *)((char *)sym.data()+sym.step()*i);
+                for (int c = 0;  c < agg;  ++c)
+                    if (! std::isfinite (f[c])) {
+                        badval = f[c];
+                        return true;
+                    }
+            }
+        }
+    }
+    return false;
 }
 
 

@@ -894,6 +894,12 @@ private:
     /// if any NaN or Inf values have snuck in.
     void check_nan (Opcode &op);
 
+    /// Check for NaN in a symbol.  Return true if there's a nan or inf.
+    /// If there is, put its value in 'badval'.  Adhere to the runflags if
+    /// they are non-NULL, or assume all points are on if runflags==NULL.
+    bool check_nan (Symbol &sym, Runflag *runflags,
+                    int beginpoint, int endpoint, float &badval);
+
     ShaderUse m_use;              ///< Our shader use
     ShadingContext *m_context;    ///< Ptr to our shading context
     ShaderInstance *m_instance;   ///< Ptr to the shader instance

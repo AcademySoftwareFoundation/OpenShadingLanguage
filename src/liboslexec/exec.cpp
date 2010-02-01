@@ -383,7 +383,7 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
             adjust_varying(*sym, true, false /* don't keep old values */);
             bool wants_derivatives = (sym->typespec().is_float() || sym->typespec().is_triple());
             ShaderGlobals *globals = m_context->m_globals;
-            if (!get_renderer_userdata (m_npoints, wants_derivatives,
+            if (!get_renderer_userdata(context()->m_original_runflags, m_npoints, wants_derivatives,
                                         sym->name(), sym->typespec().simpletype(),
                                         &globals->renderstate[0], globals->renderstate.step(),
                                         sym->data(), sym->step())) {
@@ -915,12 +915,12 @@ ShadingExecution::get_renderer_attribute(void *renderstate, bool derivatives, us
 }
 
 bool
-ShadingExecution::get_renderer_userdata(int npoints, bool derivatives, 
+ShadingExecution::get_renderer_userdata(Runflag *runflags, int npoints, bool derivatives, 
                                         ustring name, TypeDesc type, 
                                         void *renderstate, int renderstate_stepsize, 
                                         void *val, int val_stepsize)
 {
-   return m_renderer->get_userdata(npoints, derivatives, name, type, 
+   return m_renderer->get_userdata(runflags, npoints, derivatives, name, type, 
                                    renderstate, renderstate_stepsize,
                                    val, val_stepsize);
 }

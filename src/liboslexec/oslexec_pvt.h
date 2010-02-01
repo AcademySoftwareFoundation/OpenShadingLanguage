@@ -856,7 +856,7 @@ public:
     /// geometry.  Thi s function accepts an array of renderstate
     /// pointers and writes its value in the memory region pointed to by
     /// 'val'.
-    bool get_renderer_userdata (int npoints, bool derivatives, ustring name,
+    bool get_renderer_userdata (Runflag *runflags, int npoints, bool derivatives, ustring name,
                                 TypeDesc type, void *renderstate, 
                                 int renderstate_stepsize, 
                                 void *val, int val_stepsize);

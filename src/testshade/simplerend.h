@@ -64,7 +64,7 @@ public:
                                       int index, void *val );
     virtual bool get_attribute (void *renderstate, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
-    virtual bool get_userdata (int npoints, bool derivatives, ustring name, TypeDesc type, 
+    virtual bool get_userdata (pvt::Runflag *runflags, int npoints, bool derivatives, ustring name, TypeDesc type, 
                                void *renderstate, int renderstate_stepsize, 
                                void *val,         int val_stepsize);
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);

@@ -31,6 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "oslconfig.h"
+// osl_pvt.h is required for 'Runflags' definition
+#include "osl_pvt.h"
+
 #include "OpenImageIO/refcnt.h"             // just to get shared_ptr from boost ?!
 
 
@@ -267,7 +270,7 @@ public:
     /// 'val'.  This function provides and array of renderstates 'npoints'
     /// in size, and a block of memory in which to store the user data (pointed
     /// to by val).  Both arrays have a stride of 'stepsize'.
-    virtual bool get_userdata (int npoints, bool derivatives, 
+    virtual bool get_userdata (OSL::pvt::Runflag *runflags, int npoints, bool derivatives, 
                                ustring name, TypeDesc type, 
                                void *renderstates,  int renderstates_stepsize,
                                void *val, int val_stepsize ) = 0;

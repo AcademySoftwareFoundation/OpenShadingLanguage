@@ -342,9 +342,13 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                                 sym.step(), sym.size(),
                                 sym.has_derivs() ? "(derivs)" : "(no derivs)");
         float badval;
-        if (debugnan && check_nan (sym, m_context->m_original_runflags,
-                                   0, m_npoints-1, badval))
-            m_shadingsys->warning ("Found %g in shader \"%s\" when binding %s",
+        bool badderiv;
+        if (debugnan &&
+            (sym.symtype() != SymTypeLocal && sym.symtype() != SymTypeTemp) &&
+            check_nan (sym, m_context->m_original_runflags,
+                       0, m_npoints-1, badval, badderiv))
+            m_shadingsys->warning ("Found %s%g in shader \"%s\" when binding %s",
+                                   badderiv ? "bad derivative " : "",
                                    badval, m_master->shadername().c_str(),
                                    sym.name().c_str());                    
     }
@@ -391,10 +395,12 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
                 std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
 #endif
             }
-            float badval = 0;
+            float badval;
+            bool badderiv;
             if (debugnan && check_nan (*sym, context()->m_original_runflags,
-                                       m_beginpoint, m_endpoint, badval))
-                m_shadingsys->warning ("Found %g in shader \"%s\" when interpolating %s",
+                                       m_beginpoint, m_endpoint, badval, badderiv))
+                m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
+                                       badderiv ? "bad derivative " : "",
                                        badval, m_master->shadername().c_str(),
                                        sym->name().c_str());
         } else if (sym->valuesource() == Symbol::ConnectedVal) {
@@ -581,10 +587,12 @@ ShadingExecution::check_nan (Opcode &op)
         if (! op.argwrite (a))
             continue;  // Skip args that weren't written
         Symbol &s (sym (m_master->m_args[op.firstarg()+a]));
-        float badval = 0;
-        if (check_nan (s, m_runflags, m_beginpoint, m_endpoint, badval))
-            m_shadingsys->warning ("Generated %g in shader \"%s\",\n"
+        float badval;
+        bool badderiv;
+        if (check_nan (s, m_runflags, m_beginpoint, m_endpoint, badval, badderiv))
+            m_shadingsys->warning ("Generated %s%g in shader \"%s\",\n"
                                    "\tsource \"%s\", line %d (instruction %s, arg %d)",
+                                   badderiv ? "bad derivative " : "",
                                    badval, m_master->shadername().c_str(),
                                    op.sourcefile().c_str(),
                                    op.sourceline(), op.opname().c_str(), a);
@@ -595,22 +603,31 @@ ShadingExecution::check_nan (Opcode &op)
 
 bool
 ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
-                             int beginpoint, int endpoint, float &badval)
+                             int beginpoint, int endpoint, float &badval,
+                             bool &badderiv)
 {
     if (sym.typespec().is_closure())
         return false;
     TypeDesc t (sym.typespec().simpletype());
     badval = 0;
+    badderiv = false;
     if (t.basetype == TypeDesc::FLOAT) {
-        int agg = t.aggregate;
+        int agg = t.aggregate * t.numelements();
         for (int i = beginpoint;  i <= endpoint;  ++i) {
             if (runflags == NULL || runflags[i]) {
                 float *f = (float *)((char *)sym.data()+sym.step()*i);
-                for (int c = 0;  c < agg;  ++c)
-                    if (! std::isfinite (f[c])) {
-                        badval = f[c];
-                        return true;
-                    }
+                for (int d = 0;  d < 3;  ++d)  {  // for each of val, dx, dy
+                    for (int c = 0;  c < agg;  ++c)
+                        if (! std::isfinite (f[c])) {
+                            badval = f[c];
+                            badderiv = (d > 0);
+                            return true;
+                        }
+                    if (! sym.has_derivs())
+                        break;    // don't advance to next deriv if no derivs
+                    // Step to next derivative
+                    f = (float *)((char *)f + sym.deriv_step());
+                }
             }
         }
     }

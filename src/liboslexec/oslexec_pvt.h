@@ -299,6 +299,18 @@ public:
     ///
     bool writes_globals () const { return m_writes_globals; }
 
+    /// Should this instance only be run lazily (i.e., not
+    /// unconditionally)?
+    bool run_lazily () const { return m_run_lazily; }
+    void run_lazily (bool lazy) { m_run_lazily = lazy; }
+
+    /// Does this instance have any outgoing connections?
+    ///
+    bool outgoing_connections () const { return m_outgoing_connections; }
+    /// Set whether this instance has outgoing connections.
+    ///
+    void outgoing_connections (bool out) { m_outgoing_connections = out; }
+
 private:
     bool heap_size_calculated () const { return m_heap_size_calculated; }
     void calc_heap_size ();
@@ -315,6 +327,8 @@ private:
     int m_id;                           ///< Unique ID for the instance
     int m_heap_size_calculated;         ///< Has the heap size been computed?
     bool m_writes_globals;              ///< Do I have side effects?
+    bool m_run_lazily;                  ///< OK to run this layer lazily?
+    bool m_outgoing_connections;        ///< Any outgoing connections?
     std::vector<Connection> m_connections; ///< Connected input params
 
     friend class ShadingExecution;
@@ -501,6 +515,7 @@ private:
     int m_statslevel;                     ///< Statistics level
     bool m_debug;                         ///< Debugging output
     bool m_lazylayers;                    ///< Evaluate layers on demand?
+    bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_rebind;                        ///< Allow rebinding?
     bool m_debugnan;                      ///< Root out NaN's?

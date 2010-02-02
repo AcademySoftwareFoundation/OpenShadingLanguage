@@ -1,6 +1,8 @@
 shader b (float f_in = 41,
-          color c_in = 42
+          color c_in = 42,
+          output float out = 0
     )
 {
     printf ("Running layer B\n");
+    out = 42;
 }

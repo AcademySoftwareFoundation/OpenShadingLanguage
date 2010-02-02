@@ -154,8 +154,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
         exec.bind (this, use, layer, inst);
         // Only execute layers that write globals (or, in the future,
         // have other side effects?) or the last layer of the sequence.
-        if (inst->writes_globals() || layer == nlayers-1 ||
-                ! m_shadingsys.m_lazylayers) {
+        if (! inst->run_lazily()) {
             // exec.bind (this, use, layer, inst);
             exec.run (rf);
             ++uncond_evals;

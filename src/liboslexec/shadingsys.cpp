@@ -126,6 +126,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_debug (false), m_lazylayers (true),
+      m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
       m_commonspace_synonym("world"),
       m_in_group (false),
@@ -200,6 +201,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_lazylayers = *(const int *)val;
         return true;
     }
+    if (name == "lazyglobals" && type == TypeDesc::INT) {
+        m_lazyglobals = *(const int *)val;
+        return true;
+    }
     if (name == "clearmemory" && type == TypeDesc::INT) {
         m_clearmemory = *(const int *)val;
         return true;
@@ -240,6 +245,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "lazylayers" && type == TypeDesc::INT) {
         *(int *)val = m_lazylayers;
+        return true;
+    }
+    if (name == "lazyglobals" && type == TypeDesc::INT) {
+        *(int *)val = m_lazyglobals;
         return true;
     }
     if (name == "clearmemory" && type == TypeDesc::INT) {
@@ -447,6 +456,40 @@ ShadingSystemImpl::ShaderGroupEnd (void)
         error ("ShaderGroupEnd() was called without ShaderGroupBegin()");
         return false;
     }
+
+    // Mark the layers that can be run lazily
+    if (m_group_use != ShadUseUnknown) {
+        ShaderGroup &sgroup (m_curattrib->shadergroup (m_group_use));
+        size_t nlayers = sgroup.nlayers ();
+        for (size_t layer = 0;  layer < nlayers;  ++layer) {
+            ShaderInstance *inst = sgroup[layer];
+            if (! inst)
+                continue;
+            if (m_lazylayers) {
+                // lazylayers option turned on: unconditionally run shaders
+                // with no outgoing connections ("root" nodes, including the
+                // last in the group) or shaders that alter global variables
+                // (unless 'lazyglobals' is turned on).
+                if (m_lazyglobals)
+                    inst->run_lazily (inst->outgoing_connections());
+                else
+                    inst->run_lazily (inst->outgoing_connections() &&
+                                      ! inst->writes_globals());
+#if 0
+                // Suggested warning below... but are there use cases where
+                // people want these to run (because they will extract the
+                // results they want from output params)?
+                if (! inst->outgoing_connections() && ! inst->writes_globals())
+                    warning ("Layer \"%s\" (shader %s) will run even though it appears to have no used results",
+                             inst->layername().c_str(), inst->shadername().c_str());
+#endif
+            } else {
+                // lazylayers option turned off: never run lazily
+                inst->run_lazily (false);
+            }
+        }
+    }
+
     m_in_group = false;
     m_group_use = ShadUseUnknown;
     return true;
@@ -583,6 +626,7 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     }
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
+    srcinst->outgoing_connections (true);
 
     if (debug())
         m_err->message ("ConnectShaders %s %s -> %s %s\n",

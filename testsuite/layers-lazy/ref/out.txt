@@ -3,6 +3,7 @@ Compiled b.osl -> b.oso
 Compiled c.osl -> c.oso
 Connect alayer.f_out to clayer.f_in
 Connect alayer.c_out to clayer.c_in
+Connect blayer.out to clayer.unused
 Running layer C
 Running layer A
 a: f_out = 0.5, c_out = 0.25 0 0

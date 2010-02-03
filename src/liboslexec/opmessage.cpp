@@ -135,6 +135,7 @@ DECLOP (OP_getmessage)
     bool varying = (Name.is_varying());
     exec->adjust_varying (Result, varying);
     exec->adjust_varying (Val, varying);
+    varying |= Result.is_varying();  // adjust in case we're in a conditional
 
     VaryingRef<int> result ((int *)Result.data(), Result.step());
     VaryingRef<ustring> name ((ustring *)Name.data(), Name.step());

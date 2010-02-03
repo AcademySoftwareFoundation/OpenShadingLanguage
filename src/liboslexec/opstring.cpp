@@ -203,7 +203,7 @@ DECLOP (OP_format)
         if (runflags[i]) {
             result[i] = format_args (exec, format[i].c_str(),
                                      nargs-2, args+2, i);
-            if (! varying)
+            if (! Result.is_varying())
                 break;
         }
     }
@@ -232,7 +232,7 @@ DECLOP (OP_concat)
         if (runflags[i]) {
             result[i] = ustring (format_args (exec, format.c_str(),
                                               nargs-1, args+1, i));
-            if (! varying)
+            if (! Result.is_varying())
                 break;
         }
     }
@@ -348,7 +348,7 @@ DECLOP (OP_substr)
             b = Imath::clamp (b, 0, (int)str.length());
             int len = Imath::clamp (length[i], 0, (int)str.length());
             result[i] = ustring (s[i], b, len);
-            if (! varying)
+            if (! Result.is_varying())
                 break;
         }
     }
@@ -411,7 +411,7 @@ DECLOP (regex_search_specialized)
                 result[i] = fullmatch ? regex_match (subject[i].c_str(), *regex)
                                   : regex_search (subject[i].c_str(), *regex);
             }
-            if (! varying)
+            if (! Result.is_varying())
                 break;
         }
     }

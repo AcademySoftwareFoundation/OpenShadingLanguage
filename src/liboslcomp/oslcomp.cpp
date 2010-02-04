@@ -167,6 +167,7 @@ OSLCompilerImpl::compile (const std::string &filename,
     }
 
     m_output_filename.clear ();
+    bool preprocess_only = false;
     for (size_t i = 0;  i < options.size();  ++i) {
         if (options[i] == "-v") {
             // verbose mode
@@ -174,6 +175,8 @@ OSLCompilerImpl::compile (const std::string &filename,
         } else if (options[i] == "-d") {
             // debug mode
             m_debug = true;
+        } else if (options[i] == "-E") {
+            preprocess_only = true;
         } else if (options[i] == "-o" && i < options.size()-1) {
             ++i;
             m_output_filename = options[i];
@@ -204,7 +207,19 @@ OSLCompilerImpl::compile (const std::string &filename,
     std::filebuf fb (cpppipe);
 #endif
 
-    if (fb.is_open()) {
+    if (! cpppipe || ! fb.is_open()) {
+        // File didn't open
+        std::cerr << "Could not run '" << cppcommand.c_str() << "'\n";
+
+    } else if (preprocess_only) {
+        char buf[1024*32];
+        while (! feof (cpppipe)) {
+            if (! fgets (buf, sizeof(buf)-1, cpppipe))
+                break;
+            std::cout << buf;
+        }
+
+    } else {
         std::istream in (&fb);
         oslcompiler = this;
 
@@ -247,6 +262,9 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         oslcompiler = NULL;
     }
+
+    if (cpppipe)
+        fclose (cpppipe);
 
     return ! error_encountered();
 }

@@ -54,6 +54,7 @@ usage ()
         "\t-Usym          Undefine preprocessor symbol\n"
         "\t-O0, -O1, -O2  Set optimization level (default=1)\n"
         "\t-d             Debug mode\n"
+        "\t-E             Only preprocess the input and output to stdout\n"
         ;
 }
 
@@ -76,6 +77,7 @@ main (int argc, const char *argv[])
         }
         else if (! strcmp (argv[a], "-v") ||
                  ! strcmp (argv[a], "-d") ||
+                 ! strcmp (argv[a], "-E") ||
                  ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
                  ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2")) {
             // Valid command-line argument

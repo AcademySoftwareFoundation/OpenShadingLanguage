@@ -177,7 +177,7 @@ DECLOP (OP_getmessage)
                     ClosureColor *valclose = *(ClosureColor **) Val.data(i);
                     // then copy the closure (or clear it, if out of range)
                     if (index < (int)closure_msgs.size())
-                        *valclose = closure_msgs.back();
+                        *valclose = closure_msgs[index];
                     else
                         valclose->clear ();
                 } else {

@@ -75,8 +75,14 @@ DECLOP (OP_setmessage)
     ParamValueList &messages (exec->context()->messages());
     std::vector<ClosureColor> &closure_msgs (exec->context()->closure_msgs());
 
-    bool varying = (Name.is_varying() || Val.is_varying() ||
-                    ! exec->all_points_on());
+    // We are forcing messages to be varying here to avoid a bug
+    // we still haven't identify. This was the old line:
+    //
+    // FIXME: locate the actual bug and restore the adaptive behaviour
+    //
+    // bool varying = (Name.is_varying() || Val.is_varying() ||
+    //                 ! exec->all_points_on());
+    bool varying = true;
     TypeDesc type = Val.typespec().simpletype();
     if (Val.typespec().is_closure ())
         type = TypeDesc::TypeInt;     // Actually store closure indices only
@@ -132,10 +138,17 @@ DECLOP (OP_getmessage)
     Symbol &Val (exec->sym (args[2]));
     ASSERT (Result.typespec().is_int() && Name.typespec().is_string());
 
-    bool varying = (Name.is_varying());
+    // Now we force varying to work around an unidentified bug.
+    // This was the previous line:
+    //
+    // FIXME: locate the actual bug and restore the adaptive behaviour
+    //
+    // bool varying = (Name.is_varying());
+    bool varying = true;
     exec->adjust_varying (Result, varying);
     exec->adjust_varying (Val, varying);
-    varying |= Result.is_varying();  // adjust in case we're in a conditional
+    // And we also removed this (now) unecessary or:
+    // varying |= Result.is_varying();  // adjust in case we're in a conditional
 
     VaryingRef<int> result ((int *)Result.data(), Result.step());
     VaryingRef<ustring> name ((ustring *)Name.data(), Name.step());

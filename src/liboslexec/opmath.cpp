@@ -278,8 +278,8 @@ DECLOP (closure_binary_op)
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
 
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, true /* closures always vary */);
+    // closures are always varying
+    DASSERT(Result.typespec().is_closure() && Result.is_varying());
     // N.B. Closures don't have derivs.
 
     // Loop over points, do the operation
@@ -302,8 +302,8 @@ DECLOP (closure_unary_op)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
 
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, true /* closures always vary */);
+    // closures are always varying
+    DASSERT(Result.typespec().is_closure() && Result.is_varying());
     // N.B. Closures don't have derivs
 
     // Loop over points, do the operation

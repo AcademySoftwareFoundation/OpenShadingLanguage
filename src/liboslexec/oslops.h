@@ -674,9 +674,7 @@ DECLOP (closure_op_guts)
     ASSERT (nargs >= NumArgs); // TODO: switch to DASSERT at some point
 
     Symbol &Result (exec->sym (args[0]));
-    DASSERT (Result.typespec().is_closure());
-    /* Adjust the result's uniform/varying status */
-    exec->adjust_varying (Result, true /* closures always vary */);
+    DASSERT(Result.typespec().is_closure() && Result.is_varying());
 
     /* try to parse token/values pair (if there are any) */
     VaryingRef<ustring> sidedness(NULL, 0);

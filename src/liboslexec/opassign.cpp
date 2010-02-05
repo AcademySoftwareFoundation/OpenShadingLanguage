@@ -141,8 +141,9 @@ assign_closure (ShadingExecution *exec, int nargs, const int *args,
     Symbol &Result (exec->sym (args[0]));
     Symbol &Src (exec->sym (args[1]));
 
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, true /* closure always vary */);
+    // closures are always varying
+    DASSERT(Result.typespec().is_closure() && Result.is_varying());
+    DASSERT(Src.typespec().is_closure() && Src.is_varying());
 
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
@@ -162,8 +163,8 @@ clear_closure (ShadingExecution *exec, int nargs, const int *args,
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
 
-    // Adjust the result's uniform/varying status
-    exec->adjust_varying (Result, true /* closure always vary */);
+    // closures are always varying
+    DASSERT(Result.typespec().is_closure() && Result.is_varying());
 
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());

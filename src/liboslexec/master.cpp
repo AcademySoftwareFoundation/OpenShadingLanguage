@@ -211,6 +211,7 @@ static OpNameEntry op_name_entries[] = {
     { "cellnoise", OP_cellnoise },
     { "clamp", OP_clamp },
     { "cloth", OP_cloth },
+    { "cloth_specular", OP_cloth_specular },
     { "color", OP_color },
     { "compassign", OP_compassign },
     { "compl", OP_compl },

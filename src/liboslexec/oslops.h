@@ -81,6 +81,7 @@ DECLOP (OP_ceil);
 DECLOP (OP_cellnoise);
 DECLOP (OP_clamp);
 DECLOP (OP_cloth);
+DECLOP (OP_cloth_specular);
 DECLOP (OP_color);
 DECLOP (OP_compassign);
 DECLOP (OP_compl);
@@ -742,6 +743,18 @@ void fetch_value (T &v, int argidx, int idx, ShadingExecution *exec, int nargs, 
     v = values[idx];
 }
 
+template <typename T, int N> inline
+void fetch_value_array (T v[N], int argidx, int idx, ShadingExecution *exec, int nargs, const int *args)
+{
+    DASSERT (argidx < nargs);
+    // TODO: typecheck assert?
+    Symbol &Sym = exec->sym (args[argidx]);
+    DASSERT (N == 1 && Sym.typespec().arraylength() == 0 || N == Sym.typespec().arraylength());
+    VaryingRef<T> values ((T*) Sym.data(), Sym.step());
+    for (int i = 0; i < N; i++)
+        v[i] = (&values[idx])[i];
+}
+
 /// Standard form for a closure constructor
 #define CLOSURE_CTOR(name)              \
     name (int idx, ShadingExecution *exec, int nargs, const int *args, Sidedness side)
@@ -750,6 +763,8 @@ void fetch_value (T &v, int argidx, int idx, ShadingExecution *exec, int nargs, 
 #define CLOSURE_FETCH_ARG(v, argidx)    \
     fetch_value(v, argidx, idx, exec, nargs, args)
 
+#define CLOSURE_FETCH_ARG_ARRAY(v, N, argidx)    \
+    fetch_value_array<typeof(v[0]), N>(v, argidx, idx, exec, nargs, args)
 
 // Proxy type that derives from Vec3 but allows some additional operations
 // not normally supported by Imath::Vec3.  This is purely for convenience.

@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 11 January, 2010 \\
-(with corrections, 12 January, 2010)
+(with corrections, 8 February, 2010)
 }}
 
 
@@ -2737,7 +2737,16 @@ Convert degrees to radians or radians to degrees.
 \emph{type} {\ce sin} (\emph{type} x) \\
 \emph{type} {\ce tan} (\emph{type} x) }
 \indexapi{cos()} \indexapi{sin()} \indexapi{tan()}
-Computes the cosine, sine, and tangent of $x$ (measured in radians).
+Computes the cosine, sine, or tangent of $x$ (measured in radians).
+\apiend
+
+\NEW
+\apiitem{void {\ce sin} (\emph {type} x, output \emph{type} sinval, output
+\emph{type} cosval)}
+\indexapi{sincos()}
+Computes both the sine and cosine of $x$ (measured in radians).  If both
+are needed, this function is less expensive than calling {\cf sin()} and
+{\cf cos()} separately.
 \apiend
 
 \apiitem{\emph{type} {\ce acos} (\emph{type} x) \\

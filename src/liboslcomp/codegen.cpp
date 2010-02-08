@@ -1111,6 +1111,7 @@ ASTfunction_call::codegen (Symbol *dest)
     ASTNode *a = args().get();
 
     int returnarg = !typespec().is_void();
+    ASTNode *form = is_user_function() ? user_function()->formals().get() : NULL;
     for (int i = 0;  a;  a = a->nextptr(), ++i) {
         Symbol *thisarg = NULL;
         if (a->nodetype() == index_node && argwrite(i+returnarg)) {
@@ -1128,9 +1129,23 @@ ASTfunction_call::codegen (Symbol *dest)
         if (i < (int)polyargs.size() &&
                 polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN) &&
                 polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN, -1)) {
+            Symbol *origarg = thisarg;
             thisarg = coerce (thisarg, polyargs[i]);
+            // Error to type-coerce an output -- where would the result go?
+            if (thisarg != origarg &&
+                    ! equivalent (origarg->typespec(), form->typespec()) &&
+                    form && form->nodetype() == variable_declaration_node &&
+                    ((ASTvariable_declaration *)form)->is_output()) {
+                error ("Cannot pass '%s %s' as argument %d to %s\n\t"
+                       "because it is an output parameter that must be a %s",
+                       origarg->typespec().c_str(), origarg->name().c_str(),
+                       i+1, user_function()->func()->name().c_str(),
+                       form->typespec().c_str());
+            }
         }
         argdest.push_back (thisarg);
+        if (form)
+            form = form->nextptr();
     }
 
     if (is_user_function ()) {

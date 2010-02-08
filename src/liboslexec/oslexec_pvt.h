@@ -935,7 +935,7 @@ private:
     /// than the actual value of the symbol.
     bool check_nan (Symbol &sym, Runflag *runflags,
                     int beginpoint, int endpoint,
-                    float &badval, bool &badderiv);
+                    float &badval, bool &badderiv, int &point);
 
     ShaderUse m_use;              ///< Our shader use
     ShadingContext *m_context;    ///< Ptr to our shading context

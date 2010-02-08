@@ -287,7 +287,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                 sym.dataoffset (m_context->closure_allot (m_npoints));
                 sym.data (m_context->heapaddr (sym.dataoffset()));
                 sym.step (sizeof (ClosureColor *));
-            } else {
+            } else if (sym.typespec().simpletype().basetype != TypeDesc::UNKNOWN) {
                 size_t addr = context->heap_allot (sym.derivsize() * m_npoints);
                 sym.data (m_context->heapaddr (addr));
                 sym.step (0);  // FIXME
@@ -304,8 +304,14 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                 else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
                     memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
                             sym.typespec().simpletype().size());
-                if (sym.has_derivs())
+                else {
+                   ASSERT (0 && "unrecognized type -- no default value");
+                }
+                if (sym.has_derivs ())
                    zero_derivs (sym);
+            } else {
+               sym.data ((void*) 0); // reset data ptr -- this symbol should never be used
+               sym.step (0);
             }
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
@@ -343,10 +349,11 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                                 sym.has_derivs() ? "(derivs)" : "(no derivs)");
         float badval;
         bool badderiv;
+        int point;
         if (debugnan &&
             (sym.symtype() != SymTypeLocal && sym.symtype() != SymTypeTemp) &&
             check_nan (sym, m_context->m_original_runflags,
-                       0, m_npoints-1, badval, badderiv))
+                       0, m_npoints, badval, badderiv, point))
             m_shadingsys->warning ("Found %s%g in shader \"%s\" when binding %s",
                                    badderiv ? "bad derivative " : "",
                                    badval, m_master->shadername().c_str(),
@@ -405,8 +412,9 @@ ShadingExecution::bind_initialize_params (ShaderInstance *inst)
             }
             float badval;
             bool badderiv;
+            int point;
             if (debugnan && check_nan (*sym, context()->m_original_runflags,
-                                       m_beginpoint, m_endpoint, badval, badderiv))
+                                       m_beginpoint, m_endpoint, badval, badderiv, point))
                 m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
                                        badderiv ? "bad derivative " : "",
                                        badval, m_master->shadername().c_str(),
@@ -598,13 +606,16 @@ ShadingExecution::check_nan (Opcode &op)
         Symbol &s (sym (m_master->m_args[op.firstarg()+a]));
         float badval;
         bool badderiv;
-        if (check_nan (s, m_runflags, m_beginpoint, m_endpoint, badval, badderiv))
+        int point;
+        if (check_nan (s, m_runflags, m_beginpoint, m_endpoint, badval, badderiv, point))
             m_shadingsys->warning ("Generated %s%g in shader \"%s\",\n"
-                                   "\tsource \"%s\", line %d (instruction %s, arg %d)",
+                                   "\tsource \"%s\", line %d (instruction %s, arg %d)\n"
+                                   "\tsymbol \"%s\", %s (step %d), point %d of %d",
                                    badderiv ? "bad derivative " : "",
                                    badval, m_master->shadername().c_str(),
                                    op.sourcefile().c_str(),
-                                   op.sourceline(), op.opname().c_str(), a);
+                                   op.sourceline(), op.opname().c_str(), a,
+                                   s.name().c_str(), s.is_uniform() ? "uniform" : "varying", s.step(), point, npoints() );
     }
 }
 
@@ -613,7 +624,7 @@ ShadingExecution::check_nan (Opcode &op)
 bool
 ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
                              int beginpoint, int endpoint, float &badval,
-                             bool &badderiv)
+                             bool &badderiv, int &point)
 {
     if (sym.typespec().is_closure())
         return false;
@@ -622,7 +633,7 @@ ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
     badderiv = false;
     if (t.basetype == TypeDesc::FLOAT) {
         int agg = t.aggregate * t.numelements();
-        for (int i = beginpoint;  i <= endpoint;  ++i) {
+        for (int i = beginpoint;  i < endpoint;  ++i) {
             if (runflags == NULL || runflags[i]) {
                 float *f = (float *)((char *)sym.data()+sym.step()*i);
                 for (int d = 0;  d < 3;  ++d)  {  // for each of val, dx, dy
@@ -630,6 +641,7 @@ ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
                         if (! std::isfinite (f[c])) {
                             badval = f[c];
                             badderiv = (d > 0);
+                            point = i;
                             return true;
                         }
                     if (! sym.has_derivs())

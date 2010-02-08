@@ -167,6 +167,16 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     shadingsys().m_layers_executed_lazy += m_lazy_evals;
     shadingsys().m_layers_executed_never += nlayers - uncond_evals - m_lazy_evals;
     shadingsys().m_stat_rebinds += m_rebinds;
+#ifdef DEBUG_ADJUST_VARYING
+    for (size_t layer = 0;  layer < nlayers;  ++layer) {
+        ShadingExecution &exec (execlayers[layer]);
+        shadingsys().m_adjust_calls += exec.m_adjust_calls;
+        shadingsys().m_keep_varying += exec.m_keep_varying;
+        shadingsys().m_keep_uniform += exec.m_keep_uniform;
+        shadingsys().m_make_varying += exec.m_make_varying;
+        shadingsys().m_make_uniform += exec.m_make_uniform;
+    }
+#endif
 }
 
 

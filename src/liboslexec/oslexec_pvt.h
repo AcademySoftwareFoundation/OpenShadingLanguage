@@ -61,6 +61,11 @@ class ShadingExecution;
 class ShaderInstance;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 
+// If we define DEBUG_ADJUST_VARYING, we will get extra statistics on
+// the workings of ShadingExecution::adjust_varying.  These are
+// generally not worth the extra expense, only for debugging purposes.
+// #define DEBUG_ADJUST_VARYING
+
 
 
 /// Like an int (of type T), but also internally keeps track of the 
@@ -544,6 +549,13 @@ private:
     atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs
     atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
     atomic_ll m_stat_rebinds;             ///< Stat: Number of rebinds;
+#ifdef DEBUG_ADJUST_VARYING
+    atomic_ll m_adjust_calls;             ///< Calls to adjust_varying
+    atomic_ll m_keep_varying;             ///< Adjust_varying kept it varying
+    atomic_ll m_keep_uniform;             ///< Adjust_varying kept it uniform
+    atomic_ll m_make_varying;             ///< Adjust_varying made it varying
+    atomic_ll m_make_uniform;             ///< Adjust_varying made it uniform
+#endif
 
     friend class ShadingContext;
     friend class ShaderInstance;
@@ -761,6 +773,10 @@ public:
     ///
     bool all_points_on () const { return m_all_points_on; }
 
+    /// Has the run state diverged since the shader started running,
+    /// that is, are any of the original points turned off?
+    bool diverged () const { return (m_conditional_level != 0); }
+
     // Set the runflags to rf[0..
     void new_runflags (Runflag *rf);
 
@@ -777,6 +793,9 @@ public:
     /// Restore the runflags to the state it was in before push_runflags().
     ///
     void pop_runflags ();
+
+    void enter_conditional () { ++m_conditional_level; }
+    void exit_conditional () { --m_conditional_level; }
 
     bool debug () const { return m_debug; }
 
@@ -951,8 +970,16 @@ private:
     int m_endpoint;               ///< One past last point to shade
     bool m_all_points_on;         ///< Are all points turned on?
     RunflagStack m_runflag_stack; ///< Stack of runflags
+    int m_conditional_level;      ///< Conditional nesting level
     int m_ip;                     ///< Instruction pointer
-
+#ifdef DEBUG_ADJUST_VARYING
+    int m_adjust_calls;           ///< Calls to adjust_varying
+    int m_keep_varying;           ///< Adjust_varying kept it varying
+    int m_keep_uniform;           ///< Adjust_varying kept it uniform
+    int m_make_varying;           ///< Adjust_varying made it varying
+    int m_make_uniform;           ///< Adjust_varying made it uniform
+    friend class ShadingContext;
+#endif
 };
 
 

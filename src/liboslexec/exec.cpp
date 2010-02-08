@@ -361,6 +361,14 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
 
     // OK, we're successfully bound.
     m_bound = true;
+
+#ifdef DEBUG_ADJUST_VARYING
+    m_adjust_calls = 0;
+    m_keep_varying = 0;
+    m_keep_uniform = 0;
+    m_make_varying = 0;
+    m_make_uniform = 0;
+#endif
 }
 
 
@@ -519,6 +527,7 @@ ShadingExecution::run (Runflag *rf, int beginop, int endop)
             runflags[i] = RunflagOn;
     }
 
+    m_conditional_level = 0;
     push_runflags (runflags, 0, m_npoints);
     if (beginop >= 0)   // Run just the op range supplied, and no init ops
         run (beginop, endop);
@@ -690,7 +699,7 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
 
     // If we're inside a conditional of any kind, even a uniform assignment
     // makes the result varying.  
-    varying_assignment |= ! all_points_on();
+    varying_assignment |= diverged();
 
     // This reduces us to just four cases:
     //   case   sym    assignment   action
@@ -698,6 +707,21 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
     //    3      v         u          u (demote)
     //    4/5/6  u         v          v (promote)
     //    7      u         u          u (leave alone)
+
+#ifdef DEBUG_ADJUST_VARYING
+    ++m_adjust_calls;
+    if (sym.is_varying() == varying_assignment) {
+        if (varying_assignment)
+            ++m_keep_varying;
+        else
+            ++m_keep_uniform;
+    } else {
+        if (varying_assignment)
+            ++m_make_varying;
+        else
+            ++m_make_uniform;
+    }
+#endif
 
     // Trivial case: we need it varying and it already is, or we need it
     // uniform and it already is.
@@ -709,7 +733,7 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
         // value or we're inside a conditional.  Promote sym to varying.
         size_t size = sym.has_derivs() ? 3*sym.deriv_step() : sym.size();
         sym.step (size);
-        if (preserve_value || ! all_points_on()) {
+        if (preserve_value || diverged()) {
             // Propagate the value from slot 0 to other slots
             char *data = (char *) sym.data();
             for (int i = 1;  i < m_npoints;  ++i)
@@ -776,6 +800,8 @@ ShadingExecution::push_runflags (Runflag *runflags,
     new_runflag_range (beginpoint, endpoint);
     m_runflag_stack.push_back (Runstate (m_runflags, m_beginpoint,
                                          m_endpoint, m_all_points_on));
+    if (! m_context->m_original_runflags)
+        m_context->m_original_runflags = m_runflags;
 }
 
 

@@ -107,6 +107,8 @@ DECLOP (OP_if)
         }
     }
 
+    exec->enter_conditional ();
+
     // True clause
     exec->push_runflags (true_runflags, beginpoint, endpoint);
     exec->run (exec->ip() + 1, op.jump(0));
@@ -122,6 +124,7 @@ DECLOP (OP_if)
     // Jump to after the if (remember that the interpreter loop will
     // increment the ip one more time, so back up one.
     exec->ip (op.jump(1) - 1);
+    exec->exit_conditional ();
 
     // FIXME -- we may need to call new_runflag_range here if, during
     // execution, we may have hit a 'break' or 'continue'.
@@ -169,11 +172,16 @@ DECLOP (OP_for)
             // From here on, varying condition or potential
             // break/continue at play
 
+            // FIXME -- we should check if the condition is true
+            // everywhere, and there isn't a break/continue in the loop,
+            // we don't need to make new runflags.
+
             // Generate new runflags based on the condition
             if (! true_runflags) {
                 true_runflags = ALLOCA (Runflag, exec->npoints());
                 memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
                 exec->push_runflags (true_runflags, beginpoint, endpoint);
+                exec->enter_conditional ();
             }
             int turnedoff = 0;  // Number of points that turned off
             bool all_off = true;  // Are all points turned off?
@@ -212,6 +220,7 @@ DECLOP (OP_for)
     if (true_runflags) {
         // Restore old runflags if we ever made new ones
         exec->pop_runflags ();
+        exec->exit_conditional ();
     }
 
     // Skip to after the loop
@@ -263,11 +272,16 @@ DECLOP (OP_dowhile)
             // From here on, varying condition or potential
             // break/continue at play
 
+            // FIXME -- we should check if the condition is true
+            // everywhere, and there isn't a break/continue in the loop,
+            // we don't need to make new runflags.
+
             // Generate new runflags based on the condition
             if (! true_runflags) {
                 true_runflags = ALLOCA (Runflag, exec->npoints());
                 memcpy (true_runflags, runflags, exec->npoints() * sizeof(Runflag));
                 exec->push_runflags (true_runflags, beginpoint, endpoint);
+                exec->enter_conditional ();
             }
             int turnedoff = 0;  // Number of points that turned off
             bool all_off = true;  // Are all points turned off?
@@ -300,6 +314,7 @@ DECLOP (OP_dowhile)
     if (true_runflags) {
         // Restore old runflags if we ever made new ones
         exec->pop_runflags ();
+        exec->exit_conditional ();
     }
 
     // Skip to after the loop

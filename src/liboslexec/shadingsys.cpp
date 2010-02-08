@@ -407,6 +407,17 @@ ShadingSystemImpl::getstats (int level) const
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
 
+#ifdef DEBUG_ADJUST_VARYING
+    out << Strutil::format ("  adjust_varying:  total %lld\n", 
+                            (long long)m_adjust_calls);
+    out << Strutil::format ("    keep unif %lld, keep varying %lld\n",
+                            (long long)m_keep_uniform,
+                            (long long)m_keep_varying);
+    out << Strutil::format ("    make unif %lld, make varying %lld\n",
+                            (long long)m_make_uniform,
+                            (long long)m_make_varying);
+#endif
+
     return out.str();
 }
 

@@ -176,8 +176,12 @@ static DECLOP (specialized_aassign)
         // Uniform case
         int ind = *index;
         (&result[0])[ind] = *src;
-        if (Result.has_derivs ())
-            exec->zero_derivs (Result);
+        if (Result.has_derivs ()) {
+            // write 0's to this element only
+            int len = Result.typespec().arraylength();
+            memset(&((&result[0])[ind +     len]), 0, sizeof(T));
+            memset(&((&result[0])[ind + 2 * len]), 0, sizeof(T));
+        }
     } else if (index.is_uniform()) {
         // Uniform index, potentially varying src array
         int ind = *index;
@@ -186,16 +190,20 @@ static DECLOP (specialized_aassign)
                 (&result[i])[ind] = src[i];
 
         if (Result.has_derivs()) {
+            int len = Result.typespec().arraylength();
             if (Src.is_varying() && Src.has_derivs()) {
-                int len = Result.typespec().arraylength();
                 VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
                 for (int i = beginpoint;  i < endpoint;  ++i)
                     if (runflags[i]) {
-                        (&result[i])[ind+len] = src[i].dx();
-                        (&result[i])[ind+2*len] = src[i].dy();
+                        (&result[i])[ind +     len] = src[i].dx();
+                        (&result[i])[ind + 2 * len] = src[i].dy();
                     }
             } else {
-                exec->zero_derivs (Result);
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i]) {
+                        memset(&((&result[i])[ind +     len]), 0, sizeof(T));
+                        memset(&((&result[i])[ind + 2 * len]), 0, sizeof(T));
+                    }
             }
         }
     } else {
@@ -205,16 +213,21 @@ static DECLOP (specialized_aassign)
                 (&result[i])[index[i]] = src[i];
 
         if (Result.has_derivs()) {
+            int len = Result.typespec().arraylength();
             if (Src.is_varying() && Src.has_derivs()) {
-                int len = Result.typespec().arraylength();
                 VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
                 for (int i = beginpoint;  i < endpoint;  ++i)
                     if (runflags[i]) {
-                        (&result[i])[index[i]+len] = src[i].dx();
-                        (&result[i])[index[i]+2*len] = src[i].dy();
+                        (&result[i])[index[i] +     len] = src[i].dx();
+                        (&result[i])[index[i] + 2 * len] = src[i].dy();
                     }
             } else {
-                exec->zero_derivs (Result);
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i]) {
+                        memset(&((&result[i])[index[i] +     len]), 0, sizeof(T));
+                        memset(&((&result[i])[index[i] + 2 * len]), 0, sizeof(T));
+                    }
+
             }
         }
     }

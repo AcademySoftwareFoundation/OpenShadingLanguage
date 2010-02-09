@@ -65,6 +65,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 
 #include "OpenImageIO/varyingref.h"
+#include "OpenImageIO/fmath.h"
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -204,6 +205,67 @@ public:
     Sin (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x) { result = std::sin (x); }
     inline void operator() (Dual2<float> &result, const Dual2<float> &x) { result = sin (x); }
+};
+
+class SinCos {
+public:
+    SinCos () { }
+
+    inline void operator() (float x, float &sine, float &cosine) {
+        sincos(x, &sine, &cosine);
+    }
+    inline void operator() (const Dual2<float> &x, Dual2<float> &sine, Dual2<float> &cosine) {
+        float s_f, c_f;
+        sincos(x.val(), &s_f, &c_f);
+        float xdx = x.dx(), xdy = x.dy(); // x might be aliased
+        sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
+        cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
+    }
+    inline void operator() (const Dual2<float> &x, float &sine, Dual2<float> &cosine) {
+        float s_f, c_f;
+        sincos(x.val(), &s_f, &c_f);
+        float xdx = x.dx(), xdy = x.dy(); // x might be aliased
+        sine   = s_f;
+        cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
+    }
+    inline void operator() (const Dual2<float> &x, Dual2<float> &sine, float &cosine) {
+        float s_f, c_f;
+        sincos(x.val(), &s_f, &c_f);
+        float xdx = x.dx(), xdy = x.dy(); // x might be aliased
+        sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
+        cosine = c_f;
+    }
+    inline void operator() (const Vec3 &x, Vec3 &sine, Vec3 &cosine) {
+        for (int i = 0; i < 3; i++)
+            sincos(x[i], &sine[i], &cosine[i]);
+    }
+    inline void operator() (const Dual2<Vec3> &x, Dual2<Vec3> &sine, Dual2<Vec3> &cosine) {
+        for (int i = 0; i < 3; i++) {
+            float s_f, c_f;
+            sincos(x.val()[i], &s_f, &c_f);
+            float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
+              sine.val()[i] = s_f;   sine.dx()[i] =  c_f * xdx;   sine.dy()[i] =  c_f * xdy;
+            cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
+        }
+    }
+    inline void operator() (const Dual2<Vec3> &x, Vec3 &sine, Dual2<Vec3> &cosine) {
+        for (int i = 0; i < 3; i++) {
+            float s_f, c_f;
+            sincos(x.val()[i], &s_f, &c_f);
+            float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
+            sine[i] = s_f;
+            cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
+        }
+    }
+    inline void operator() (const Dual2<Vec3> &x, Dual2<Vec3> &sine, Vec3 &cosine) {
+        for (int i = 0; i < 3; i++) {
+            float s_f, c_f;
+            sincos(x.val()[i], &s_f, &c_f);
+            float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
+            sine.val()[i] = s_f; sine.dx()[i] =  c_f * xdx; sine.dy()[i] =  c_f * xdy;
+            cosine[i] = c_f;
+        }
+    }
 };
 
 class Tan {
@@ -1552,6 +1614,111 @@ DECLOP (OP_fresnel)
         // FIXME -- is this thread-safe?
         exec->op().implementation (impl);
     } 
+}
+
+
+template <class TYPE, class FUNCTION>
+DECLOP(sincos_op_guts)
+{
+    Symbol &A = exec->sym(args[0]);
+    Symbol &ResultSin = exec->sym(args[1]);
+    Symbol &ResultCos = exec->sym(args[2]);
+    // Adjust the result's uniform/varying status
+    exec->adjust_varying (ResultSin, A.is_varying(), A.data() == ResultSin.data());
+    exec->adjust_varying (ResultCos, A.is_varying(), A.data() == ResultCos.data());
+
+    // Loop over points, do the operation
+    FUNCTION function;
+    if (ResultSin.is_uniform() && ResultCos.is_uniform()) {
+        // Uniform case
+        function (*(TYPE *)A.data(), *((TYPE *)ResultSin.data()), *((TYPE *)ResultCos.data()));
+        if (ResultSin.has_derivs()) exec->zero_derivs (ResultSin);
+        if (ResultCos.has_derivs()) exec->zero_derivs (ResultCos);
+    } else if (A.is_uniform()) {
+        // Should have been uniform, but we are varying because of being inside
+        // a conditional. Only execute function once
+        TYPE rs, rc;
+        function (*(TYPE *)A.data(), rs, rc);
+        VaryingRef<TYPE> resultSin ((TYPE *)ResultSin.data(), ResultSin.step());
+        VaryingRef<TYPE> resultCos ((TYPE *)ResultCos.data(), ResultCos.step());
+        for (int i = beginpoint;  i < endpoint;  ++i)
+            if (runflags[i]) {
+                resultSin[i] = rs;
+                resultCos[i] = rc;
+            }
+        if (ResultSin.has_derivs()) exec->zero_derivs (ResultSin);
+        if (ResultCos.has_derivs()) exec->zero_derivs (ResultCos);
+    } else {
+        // Fully varying case
+        if (A.has_derivs() && (ResultSin.has_derivs() || ResultCos.has_derivs())) {
+            if (ResultSin.has_derivs() && ResultCos.has_derivs()) {
+                VaryingRef<Dual2<TYPE> > a ((Dual2<TYPE> *)A.data(), A.step());
+                VaryingRef<Dual2<TYPE> > resultSin ((Dual2<TYPE> *)ResultSin.data(), ResultSin.step());
+                VaryingRef<Dual2<TYPE> > resultCos ((Dual2<TYPE> *)ResultCos.data(), ResultCos.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i])
+                        function (a[i], resultSin[i], resultCos[i]);
+            } else if (ResultSin.has_derivs()) {
+                // only sine has derivs
+                VaryingRef<Dual2<TYPE> > a ((Dual2<TYPE> *)A.data(), A.step());
+                VaryingRef<Dual2<TYPE> > resultSin ((Dual2<TYPE> *)ResultSin.data(), ResultSin.step());
+                VaryingRef<TYPE> resultCos ((TYPE *)ResultCos.data(), ResultCos.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i])
+                        function (a[i], resultSin[i], resultCos[i]);
+            } else {
+                // only cosine has derivs
+                VaryingRef<Dual2<TYPE> > a ((Dual2<TYPE> *)A.data(), A.step());
+                VaryingRef<TYPE> resultSin ((TYPE *)ResultSin.data(), ResultSin.step());
+                VaryingRef<Dual2<TYPE> > resultCos ((Dual2<TYPE> *)ResultCos.data(), ResultCos.step());
+                for (int i = beginpoint;  i < endpoint;  ++i)
+                    if (runflags[i])
+                        function (a[i], resultSin[i], resultCos[i]);
+            }
+        } else {
+            // A doesn't come with derivatives, or both results don't need derivatives
+            VaryingRef<TYPE> a ((TYPE *)A.data(), A.step());
+            VaryingRef<TYPE> resultSin ((TYPE *)ResultSin.data(), ResultSin.step());
+            VaryingRef<TYPE> resultCos ((TYPE *)ResultCos.data(), ResultCos.step());
+            for (int i = beginpoint;  i < endpoint;  ++i)
+                if (runflags[i])
+                    function (a[i], resultSin[i], resultCos[i]);
+            if (ResultSin.has_derivs()) exec->zero_derivs (ResultSin);
+            if (ResultCos.has_derivs()) exec->zero_derivs (ResultCos);
+        }
+    }
+}
+
+DECLOP (OP_sincos)
+{
+    ASSERT (nargs == 3);
+    Symbol &A (exec->sym (args[0]));
+    Symbol &ResultSin (exec->sym (args[1]));
+    Symbol &ResultCos (exec->sym (args[2]));
+
+    ASSERT (! ResultSin.typespec().is_closure() &&
+            ! ResultCos.typespec().is_closure() &&
+            ! A.typespec().is_closure());
+    OpImpl impl = NULL;
+
+    // We allow two flavors: float = func (float), and triple = func (triple).
+    if (ResultSin.typespec().is_triple() && ResultCos.typespec().is_triple() && A.typespec().is_triple()) {
+        impl = sincos_op_guts<Vec3, SinCos >;
+    }
+    else if (ResultSin.typespec().is_float() && ResultCos.typespec().is_float() && A.typespec().is_float()) {
+        impl = sincos_op_guts<float, SinCos >;
+    }
+
+    if (impl) {
+        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        // Use the specialized one for next time!  Never have to check the
+        // types or do the other sanity checks again.
+        // FIXME -- is this thread-safe?
+        exec->op().implementation (impl);
+    } else {
+        exec->error_arg_types ();
+        ASSERT (0 && "Function arg type can't be handled");
+    }
 }
 
 }; // namespace pvt

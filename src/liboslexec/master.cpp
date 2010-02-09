@@ -309,6 +309,7 @@ static OpNameEntry op_name_entries[] = {
     { "shr", OP_shr },
     { "sign", OP_sign },
     { "sin", OP_sin },
+    { "sincos", OP_sincos },
     { "sinh", OP_sinh },
     { "smoothstep", OP_smoothstep },
     { "snoise", OP_snoise },

@@ -840,6 +840,9 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (4);
             argwriteonly (5);
             argwriteonly (6);
+        } else if (m_name == "sincos") {
+            argwriteonly (1);
+            argwriteonly (2);
         } else if (m_name == "getattribute" || m_name == "getmessage" ||
                    m_name == "gettextureinfo") {
             // these all write to their last argument
@@ -1106,6 +1109,7 @@ static const char * builtin_func_args [] = {
     "setmessage", "xs?", "xs?[]", NULL,
     "sign", ANY_ONE_FLOAT_BASED, NULL,
     "sin", ANY_ONE_FLOAT_BASED, NULL,
+    "sincos", "xfff", "xccc", "xppp", "xvvv", "xnnn", "!rw", NULL,
     "sinh", ANY_ONE_FLOAT_BASED, NULL,
     "smoothstep", "ffff", NULL,
     "snoise", NOISE_ARGS, NULL,

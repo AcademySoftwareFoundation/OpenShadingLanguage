@@ -1132,9 +1132,9 @@ ASTfunction_call::codegen (Symbol *dest)
             Symbol *origarg = thisarg;
             thisarg = coerce (thisarg, polyargs[i]);
             // Error to type-coerce an output -- where would the result go?
-            if (thisarg != origarg &&
+            if (thisarg != origarg && form &&
                     ! equivalent (origarg->typespec(), form->typespec()) &&
-                    form && form->nodetype() == variable_declaration_node &&
+                    form->nodetype() == variable_declaration_node &&
                     ((ASTvariable_declaration *)form)->is_output()) {
                 error ("Cannot pass '%s %s' as argument %d to %s\n\t"
                        "because it is an output parameter that must be a %s",

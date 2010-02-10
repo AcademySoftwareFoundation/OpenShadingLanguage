@@ -50,7 +50,7 @@ class MicrofacetGGXClosure : public BSDFClosure {
     float m_ag;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(Refractive ? Both : side, Labels::GLOSSY)
+    CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(Refractive ? Both : side, Labels::GLOSSY, Refractive ? Back : Front)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ag , 2);
@@ -261,7 +261,7 @@ class MicrofacetBeckmannClosure : public BSDFClosure {
     float m_ab;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (MicrofacetBeckmannClosure) : BSDFClosure(Refractive ? Both : side, Labels::GLOSSY)
+    CLOSURE_CTOR (MicrofacetBeckmannClosure) : BSDFClosure(Refractive ? Both : side, Labels::GLOSSY, Refractive ? Back : Front)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_ab , 2);

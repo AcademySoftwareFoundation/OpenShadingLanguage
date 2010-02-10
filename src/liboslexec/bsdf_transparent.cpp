@@ -41,7 +41,7 @@ namespace pvt {
 
 class TransparentClosure : public BSDFClosure {
 public:
-    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, false) { }
+    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, None) { }
 
     void print_on (std::ostream &out) const {
         out << "transparent ()";

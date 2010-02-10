@@ -43,7 +43,7 @@ namespace pvt {
 class HairDiffuseClosure : public BSDFClosure {
     Vec3 m_T;
 public:
-    CLOSURE_CTOR (HairDiffuseClosure) : BSDFClosure(Both, Labels::DIFFUSE)
+    CLOSURE_CTOR (HairDiffuseClosure) : BSDFClosure(Both, Labels::DIFFUSE, Both)
     {
         CLOSURE_FETCH_ARG (m_T, 1);
     }
@@ -98,7 +98,7 @@ class HairSpecularClosure : public BSDFClosure {
     float m_offset, m_cos_off, m_sin_off;
     float m_exp;
 public:
-    CLOSURE_CTOR (HairSpecularClosure) : BSDFClosure(Both, Labels::GLOSSY)
+    CLOSURE_CTOR (HairSpecularClosure) : BSDFClosure(Both, Labels::GLOSSY, Both)
     {
         // Tangent vector
         CLOSURE_FETCH_ARG (m_T, 1);

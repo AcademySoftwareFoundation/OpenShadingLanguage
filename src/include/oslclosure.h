@@ -177,23 +177,24 @@ private:
 /// for a BSDF-like material.
 class BSDFClosure : public ClosurePrimitive {
 public:
-    BSDFClosure (Sidedness side, ustring scattering, bool needs_eval = true, bool reflective_eval = true) :
+    BSDFClosure (Sidedness side, ustring scattering, Sidedness eval_sidedness = Front) :
         ClosurePrimitive (BSDF),
         m_sidedness(side),
-        m_needs_eval(needs_eval),
-        m_reflective_eval (reflective_eval),
-        m_scattering_label(scattering) { }
+        m_eval_sidedness (eval_sidedness),
+        m_scattering_label (scattering) { }
     ~BSDFClosure () { }
 
 
     /// Given the side from which we are viewing this closure, return which side
     /// it is sensitive to light on.
     Sidedness get_light_side(Sidedness viewing_side) const {
-        if (!m_needs_eval)
-            return None;
-        return m_reflective_eval ?
-                Sidedness (m_sidedness & viewing_side) :
-                Sidedness (m_sidedness ^ viewing_side);
+        switch (m_eval_sidedness) {
+            case None:  return None; // eval not needed
+            case Front: return Sidedness (m_sidedness & viewing_side); // same side as viewer
+            case Back:  return Sidedness (m_sidedness ^ viewing_side); // opposite side to viewer
+            case Both:  return Both; // always sensitive on both sides
+            default:    return None;
+        }
     }
     /// Return the scattering label for this primitive
     ///
@@ -250,9 +251,8 @@ protected:
     }
 
 private:
-    Sidedness m_sidedness;
-    bool m_needs_eval;
-    bool m_reflective_eval;
+    Sidedness m_sidedness;      // which sides are sensitive to light?
+    Sidedness m_eval_sidedness; // which canonical sides are sensitive to light?
     // A bsdf can only perform one type of scattering
     ustring  m_scattering_label;
 };

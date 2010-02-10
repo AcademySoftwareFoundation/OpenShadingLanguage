@@ -42,7 +42,7 @@ class RefractionClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(Both, Labels::SINGULAR, false)
+    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(Both, Labels::SINGULAR, None)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
@@ -96,7 +96,7 @@ class DielectricClosure : public BSDFClosure {
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
 public:
-    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(Both, Labels::SINGULAR, false)
+    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(Both, Labels::SINGULAR, None)
     {
         CLOSURE_FETCH_ARG (m_N  , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);

@@ -93,7 +93,7 @@ public:
 class TranslucentClosure : public BSDFClosure {
     Vec3 m_N;
 public:
-    CLOSURE_CTOR (TranslucentClosure) : BSDFClosure(side, Labels::DIFFUSE, true, false)
+    CLOSURE_CTOR (TranslucentClosure) : BSDFClosure(side, Labels::DIFFUSE, Back)
     {
         CLOSURE_FETCH_ARG (m_N, 1);
     }

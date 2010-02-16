@@ -548,6 +548,7 @@ private:
     atomic_ll m_layers_executed_uncond;   ///< Stat: Unconditional execs
     atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs
     atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
+    atomic_ll m_stat_binds;               ///< Stat: Number of binds;
     atomic_ll m_stat_rebinds;             ///< Stat: Number of rebinds;
 #ifdef DEBUG_ADJUST_VARYING
     atomic_ll m_adjust_calls;             ///< Calls to adjust_varying
@@ -685,6 +686,7 @@ private:
     ParamValueList m_messages;          ///< Message blackboard
     std::vector<ClosureColor> m_closure_msgs;  // Mem for closure messages
     int m_lazy_evals;                   ///< Running tab of lazy evals
+    int m_binds;                        ///< Running tab of binds
     int m_rebinds;                      ///< Running tab of rebinds
     Runflag *m_original_runflags;       ///< Runflags we were called with
 
@@ -702,10 +704,22 @@ public:
 
     /// Bind an arena to prepare to run the shader.
     ///
-    void bind (ShadingContext *context, ShaderUse use, int layerindex,
-               ShaderInstance *instance);
+    void bind (ShaderInstance *instance);
 
-    void unbind ();
+    /// Initialize a ShadingExecution to know what context, use, and layer
+    /// it's part of.
+    void init (ShadingContext *context, ShaderUse use, int layer) {
+        m_use = use;
+        m_layer = layer;
+        m_context = context;
+    }
+
+    /// Prepare to execute by marking the exec as not yet bound or run.
+    ///
+    void prebind () {
+        m_bound = false;
+        m_executed = false;
+    }
 
     /// Execute the shader with the supplied runflags.  If rf==NULL, new
     /// runflags will be set up to run all points. If beginop and endop
@@ -849,6 +863,10 @@ public:
     ///
     ShaderUse shaderuse () const { return m_use; }
 
+    /// Which layer are we in the shader group?
+    ///
+    int layer () const { return m_layer; }
+
     /// Return the instance of this execution.
     ///
     ShaderInstance *instance () const { return m_instance; }
@@ -918,7 +936,7 @@ private:
 
     /// Helper for bind(): establish a connections to an earlier layer.
     ///
-    void bind_connection (const Connection &con);
+    void bind_connection (const Connection &con, bool forcebind=false);
 
     /// Helper for bind(): marks all parameters which correspond to
     /// geometric user-data
@@ -938,6 +956,7 @@ private:
                     float &badval, bool &badderiv, int &point);
 
     ShaderUse m_use;              ///< Our shader use
+    int m_layer;                  ///< Our layer number
     ShadingContext *m_context;    ///< Ptr to our shading context
     ShaderInstance *m_instance;   ///< Ptr to the shader instance
     ShaderMaster *m_master;       ///< Ptr to the instance's master

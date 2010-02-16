@@ -138,24 +138,28 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     // Get a handy ref to the array of ShadeExec layer for this shade use,
     // and make sure it's big enough for the number of layers we have.
     ExecutionLayers &execlayers (m_exec[use]);
-    if (nlayers > execlayers.size())
+    if (nlayers > execlayers.size()) {
+        size_t oldlayers = execlayers.size();
         execlayers.resize (nlayers);
+        // Initialize the new layers
+        for (  ;  oldlayers < nlayers;  ++oldlayers)
+            execlayers[oldlayers].init (this, use, oldlayers);
+    }
 
     for (size_t layer = 0;  layer < nlayers;  ++layer)
-        execlayers[layer].unbind ();
+        execlayers[layer].prebind ();
 
     m_lazy_evals = 0;
     m_rebinds = 0;
+    m_binds = 0;
     m_original_runflags = rf;
     int uncond_evals = 0;
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);
         ShaderInstance *inst = sgroup[layer];
-        exec.bind (this, use, layer, inst);
         // Only execute layers that write globals (or, in the future,
         // have other side effects?) or the last layer of the sequence.
         if (! inst->run_lazily()) {
-            // exec.bind (this, use, layer, inst);
             exec.run (rf);
             ++uncond_evals;
         }
@@ -167,6 +171,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     shadingsys().m_layers_executed_lazy += m_lazy_evals;
     shadingsys().m_layers_executed_never += nlayers - uncond_evals - m_lazy_evals;
     shadingsys().m_stat_rebinds += m_rebinds;
+    shadingsys().m_stat_binds += m_binds;
 #ifdef DEBUG_ADJUST_VARYING
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);

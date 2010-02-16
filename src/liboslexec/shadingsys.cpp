@@ -140,6 +140,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_layers_executed_uncond = 0;
     m_layers_executed_lazy = 0;
     m_layers_executed_never = 0;
+    m_stat_binds = 0;
     m_stat_rebinds = 0;
 
     init_global_heap_offsets ();
@@ -401,6 +402,8 @@ ShadingSystemImpl::getstats (int level) const
                             (long long)m_layers_executed_never,
                             (100.0*m_layers_executed_never)/totalexec);
 
+    out << Strutil::format ("  Binds:  %lld\n",
+                            (long long)m_stat_binds);
     out << Strutil::format ("  Rebinds:  %lld / %lld  (%.1f%%)\n",
                             (long long)m_stat_rebinds, totalexec,
                             (100.0*m_stat_rebinds)/totalexec);

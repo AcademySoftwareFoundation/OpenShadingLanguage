@@ -130,19 +130,18 @@ ShadingExecution::error_arg_types ()
 
 
 void
-ShadingExecution::bind (ShadingContext *context, ShaderUse use,
-                        int layerindex, ShaderInstance *instance)
+ShadingExecution::bind (ShaderInstance *instance)
 {
     ASSERT (! m_bound);  // avoid double-binding
-    ASSERT (context != NULL && instance != NULL);
+    ASSERT (instance != NULL);
 
-    m_shadingsys = &context->shadingsys ();
+    m_shadingsys = &m_context->shadingsys ();
     m_debug = shadingsys()->debug();
     bool debugnan = m_shadingsys->debug_nan ();
     if (m_debug)
-        shadingsys()->info ("bind ctx %p use %s layer %d", context,
-                            shaderusename(use), layerindex);
-    m_use = use;
+        shadingsys()->info ("bind ctx %p use %s layer %d", m_context,
+                            shaderusename(shaderuse()), layer());
+    ++m_context->m_binds;
 
     // Take various shortcuts if we are re-binding the same instance as
     // last time.
@@ -150,9 +149,8 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                    instance->id() == m_last_instance_id &&
                    m_npoints_bound >= m_context->npoints());
     if (rebind) {
-        ++context->m_rebinds;
+        ++m_context->m_rebinds;
     } else {
-        m_context = context;
         m_instance = instance;
         m_master = instance->master ();
         m_renderer = m_shadingsys->renderer ();
@@ -288,7 +286,7 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                 sym.data (m_context->heapaddr (sym.dataoffset()));
                 sym.step (sizeof (ClosureColor *));
             } else if (sym.typespec().simpletype().basetype != TypeDesc::UNKNOWN) {
-                size_t addr = context->heap_allot (sym.derivsize() * m_npoints);
+                size_t addr = m_context->heap_allot (sym.derivsize() * m_npoints);
                 sym.data (m_context->heapaddr (addr));
                 sym.step (0);  // FIXME
                 // Copy the parameter value
@@ -359,9 +357,6 @@ ShadingExecution::bind (ShadingContext *context, ShaderUse use,
                                    badval, m_master->shadername().c_str(),
                                    sym.name().c_str());                    
     }
-
-    // Handle all of the symbols that are connected to earlier layers.
-    bind_connections ();
 
     // Mark symbols that map to user-data on the geometry
     bind_mark_geom_variables (m_instance);
@@ -458,13 +453,23 @@ ShadingExecution::bind_connections ()
 
 
 void
-ShadingExecution::bind_connection (const Connection &con)
+ShadingExecution::bind_connection (const Connection &con, bool forcebind)
 {
     int symindex = con.dst.param;
     Symbol &dstsym (sym (symindex));
     ExecutionLayers &execlayers (context()->execlayer (shaderuse()));
     ShadingExecution &srcexec (execlayers[con.srclayer]);
-    ASSERT (srcexec.m_bound);
+    if (! srcexec.m_bound) {
+        if (! forcebind) {
+            // If we're not forcing a full bind now (because it may be
+            // lazy), just mark the symbol as connectted but don't bind
+            // its dependency or copy any values yet.
+            dstsym.valuesource (Symbol::ConnectedVal);
+            return;
+        }
+        ShaderGroup &sgroup (context()->attribs()->shadergroup (shaderuse()));
+        srcexec.bind (sgroup[con.srclayer]);
+    }
     Symbol &srcsym (srcexec.sym (con.src.param));
 #if 0
     std::cerr << " bind_connection: layer " << con.srclayer << ' '
@@ -504,15 +509,6 @@ ShadingExecution::bind_connection (const Connection &con)
 
 
 void
-ShadingExecution::unbind ()
-{
-    m_bound = false;
-    m_executed = false;
-}
-
-
-
-void
 ShadingExecution::run (Runflag *rf, int beginop, int endop)
 {
     if (m_executed)
@@ -522,7 +518,11 @@ ShadingExecution::run (Runflag *rf, int beginop, int endop)
         m_shadingsys->info ("Running ShadeExec %p, shader %s",
                             this, m_master->shadername().c_str());
 
-    ASSERT (m_bound);  // We'd better be bound at this point
+    // Bind now if it is not already bound.
+    if (! m_bound) {
+        ShaderGroup &sgroup (context()->attribs()->shadergroup (shaderuse()));
+        bind (sgroup[layer()]);
+    }
 
     // Make space for new runflags
     Runflag *runflags = ALLOCA (Runflag, m_npoints);
@@ -540,6 +540,7 @@ ShadingExecution::run (Runflag *rf, int beginop, int endop)
     if (beginop >= 0)   // Run just the op range supplied, and no init ops
         run (beginop, endop);
     else {              // Default (<0) means run param init ops + main code
+        bind_connections ();   // Handle syms connected to earlier layers
         bind_initialize_params (m_instance);  // run param init code
         run (m_master->m_maincodebegin, m_master->m_maincodeend);
         m_executed = true;
@@ -660,20 +661,16 @@ ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
 void
 ShadingExecution::run_connected_layer (int layer)
 {
-    ShadingContext *ctx = context();
-    ShaderUse use = ctx->use();
-    ExecutionLayers &execlayers (ctx->execlayer (use));
+    ExecutionLayers &execlayers (m_context->execlayer (shaderuse()));
     ShadingExecution &connected (execlayers[layer]);
     ASSERT (! connected.executed ());
 
     // Run the earlier layer using the runflags we were originally
     // called with.
-    ShaderGroup &sgroup (ctx->attribs()->shadergroup (use));
+    ShaderGroup &sgroup (m_context->attribs()->shadergroup (shaderuse()));
     size_t nlayers = (int) sgroup.nlayers ();
-    if (! connected.m_bound)
-        connected.bind (ctx, use, layer, sgroup[layer]);
-    connected.run (ctx->m_original_runflags);
-    ctx->m_lazy_evals += 1;
+    connected.run (m_context->m_original_runflags);
+    m_context->m_lazy_evals += 1;
 
     // Now re-bind the connections between that layer and all other
     // later layers that have not yet executed.
@@ -684,7 +681,7 @@ ShadingExecution::run_connected_layer (int layer)
             for (int c = 0;  c < inst->nconnections();  ++c) {
                 const Connection &con (inst->connection (c));
                 if (con.srclayer == layer)
-                    exec.bind_connection (con);
+                    exec.bind_connection (con, true /* force dependent bind */);
             }
         }
     }

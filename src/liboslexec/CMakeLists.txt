@@ -12,7 +12,7 @@ SET ( liboslexec_srcs
           opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp
           opmath.cpp opmathfunc.cpp opmatrix.cpp 
           opmessage.cpp opmisc.cpp opnoise.cpp 
-          opstring.cpp optexture.cpp opvector.cpp
+          opspline.cpp opstring.cpp optexture.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
           rendservices.cpp typespec.cpp
     )

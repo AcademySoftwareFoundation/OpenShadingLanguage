@@ -1113,6 +1113,7 @@ static const char * builtin_func_args [] = {
     "sinh", ANY_ONE_FLOAT_BASED, NULL,
     "smoothstep", "ffff", NULL,
     "snoise", NOISE_ARGS, NULL,
+    "spline", "fsff[]", "csfc[]", "psfp[]", "vsfv[]", "nsfn[]", NULL,
     "sqrt", ANY_ONE_FLOAT_BASED, NULL,
     "startswith", "iss", NULL,
     "step", "fff", NULL,

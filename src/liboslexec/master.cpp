@@ -313,6 +313,7 @@ static OpNameEntry op_name_entries[] = {
     { "sinh", OP_sinh },
     { "smoothstep", OP_smoothstep },
     { "snoise", OP_snoise },
+    { "spline", OP_spline },
     { "sqrt", OP_sqrt },
     { "startswith", OP_startswith },
     { "step", OP_step },

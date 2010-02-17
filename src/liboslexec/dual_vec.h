@@ -90,6 +90,34 @@ make_Color3 (Dual2<float> &x, Dual2<float> &y, Dual2<float> &z)
 }
 
 
+/// Various operator* permuations between Dual2<float> and Dual2<Vec3> 
+// datatypes.
+inline Dual2<Vec3> 
+operator* (float a, Dual2<Vec3> &b)
+{
+    return Dual2<Vec3>(a*b.val(), a*b.dx(), a*b.dy());
+}
+
+inline Dual2<Vec3> 
+operator* (Dual2<Vec3> &a, float b)
+{
+    return Dual2<Vec3>(a.val()*b, a.dx()*b, a.dy()*b);
+}
+
+inline Dual2<Vec3> 
+operator* (Vec3 &a, Dual2<float> &b)
+{
+    return Dual2<Vec3>(a*b.val(), a*b.dx(), a*b.dy());
+}
+
+inline Dual2<Vec3> 
+operator* (Dual2<Vec3> &a, Dual2<float> &b)
+{
+    return Dual2<Vec3>(a.val()*b.val(), 
+                       a.val()*b.dx() + a.dx()*b.val(),
+                       a.val()*b.dy() + a.dy()*b.val());
+}
+
 
 }; // namespace OSL
 

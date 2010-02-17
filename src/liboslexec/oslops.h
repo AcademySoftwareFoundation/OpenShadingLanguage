@@ -201,7 +201,7 @@ DECLOP (OP_sincos);
 DECLOP (OP_sinh);
 DECLOP (OP_smoothstep);
 DECLOP (OP_snoise);
-//DECLOP (OP_spline);
+DECLOP (OP_spline);
 DECLOP (OP_sqrt);
 DECLOP (OP_startswith);
 DECLOP (OP_step);

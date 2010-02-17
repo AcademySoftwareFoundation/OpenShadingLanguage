@@ -1,0 +1,52 @@
+shader test(output color Cspline = 0, output color DxCspline = 0, output float Fspline = 0, output float DxFspline = 0)
+{
+   string bases[5] = { "catmull-rom", "bezier", "bspline", "hermite", "linear" };
+   color  colors[5] = { color(1,0,0),
+                        color(0,1,0),
+                        color(0,0,1),
+                        color(1,1,0),
+                        color(1,0,1) };
+ 
+   float x;
+   color colknots[13];
+   float fltknots[13];
+
+   int basis = (int)(v*5.0);
+   if (basis >= 5) basis = 4;
+
+   color knot_col = colors[basis];
+
+   colknots[ 0] =  0.0*knot_col;
+   colknots[ 1] =  0.0*knot_col;
+   colknots[ 2] =  1.0*knot_col;
+   colknots[ 3] =  1.0*knot_col;
+   colknots[ 4] =  1.0*knot_col;
+   colknots[ 5] =  0.5*knot_col;
+   colknots[ 6] =  0.5*knot_col;
+   colknots[ 7] =  0.5*knot_col;
+   colknots[ 8] =  1.0*knot_col;
+   colknots[ 9] =  1.0*knot_col;
+   colknots[10] =  1.0*knot_col;
+   colknots[11] =  0.0*knot_col;
+   colknots[12] =  0.0*knot_col;
+
+   Cspline   = spline(bases[basis], u, colknots);
+   DxCspline = 100.0*Dx(Cspline);
+
+   fltknots[ 0] =  0.0*u;
+   fltknots[ 1] =  0.0*u;
+   fltknots[ 2] =  1.0*u;
+   fltknots[ 3] =  1.0*u;
+   fltknots[ 4] =  1.0*u;
+   fltknots[ 5] =  0.5*u;
+   fltknots[ 6] =  0.5*u;
+   fltknots[ 7] =  0.5*u;
+   fltknots[ 8] =  1.0*u;
+   fltknots[ 9] =  1.0*u;
+   fltknots[10] =  1.0*u;
+   fltknots[11] =  0.0*u;
+   fltknots[12] =  0.0*u;
+
+   Fspline   = spline(bases[basis], u, fltknots);
+   DxFspline = 100.0*Dx(Fspline);
+}

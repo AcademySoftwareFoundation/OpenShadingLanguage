@@ -68,7 +68,7 @@ enum threadType
     SHORTWEFT
 };
 
-typedef struct threadSegment
+struct threadSegment
 {
     float angle;
     float eccentricity;

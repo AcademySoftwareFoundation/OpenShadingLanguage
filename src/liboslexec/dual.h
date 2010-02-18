@@ -427,11 +427,12 @@ template<class T>
 Dual2<T> log (const Dual2<T> &a, const Dual2<T> &b)
 {
    // do we want to print an error message?
-   if (a.val() <= T(0) || b.val() <= T(0) || b.val() == T(1))
+   if (a.val() <= T(0) || b.val() <= T(0) || b.val() == T(1)) {
       if (b.val() == T(1))
          return Dual2<T> (T(std::numeric_limits<T>::max()), T(0), T(0));
       else
          return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+   }
 
    Dual2<T> loga, logb;
    loga  = log (a);

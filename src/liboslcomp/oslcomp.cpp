@@ -1032,7 +1032,7 @@ OSLCompilerImpl::op_uses_sym (const Opcode &op, const Symbol *sym,
     // Loop through all the op's arguments, see if one matches sym
     for (int i = 0;  i < op.nargs();  ++i)
         if (m_opargs[i+op.firstarg()] == sym &&
-            (read && op.argread(i)) || (write && op.argwrite(i)))
+            ((read && op.argread(i)) || (write && op.argwrite(i))))
             return true;
     return false;
 }

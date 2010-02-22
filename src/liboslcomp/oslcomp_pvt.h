@@ -185,11 +185,15 @@ public:
 
     /// Specify that subsequent opcodes are for a particular method
     ///
-    void codegen_method (ustring method) { m_codegenmethod = method; }
+    void codegen_method (ustring method);
 
     /// Which method or parameter is currently undergoing code generation?
     /// "___main___" indicates the main body of code.
     ustring codegen_method () const { return m_codegenmethod; }
+
+    /// Return the name of the 'main' method.
+    ///
+    ustring main_method_name () const;
 
     /// Make a temporary symbol of the given type.
     ///
@@ -265,6 +269,7 @@ private:
     void track_variable_lifetimes ();
     void track_variable_dependencies ();
     void add_useparam ();
+    void insert_useparam (size_t opnum, SymbolPtrVec &params);
     void coalesce_temporaries ();
     void check_write_legality (const Opcode &op, int opnum, const Symbol *sym);
 
@@ -325,6 +330,7 @@ private:
     int m_loop_nesting;       ///< just loop nesting level (0 == none)
     SymDependencyMap m_symdeps; ///< Symbol-to-symbol dependencies
     Symbol *m_derivsym;       ///< Pseudo-symbol to track deriv dependencies
+    int m_main_method_start;  ///< Instruction where 'main' starts
 };
 
 

@@ -66,27 +66,16 @@ DECLOP (OP_end)
 DECLOP (OP_useparam)
 {
     DASSERT (nargs > 0);
-    ShadingContext *ctx = exec->context ();
-    ShaderInstance *inst = exec->instance ();
-    ExecutionLayers &execlayers (ctx->execlayer (ctx->use()));
-    // For each argument to useparam, which names a parameter...
+    // For each argument to useparam, which names a parameter, initialize
+    // it if it has not already been done.
     for (int a = 0;  a < nargs;  ++a) {
         Symbol &Param (exec->sym (args[a]));
         DASSERT (Param.symtype() == SymTypeParam || 
                  Param.symtype() == SymTypeOutputParam);
-        // We only need to do work if it's a "connected" value
-        if (Param.valuesource() == Symbol::ConnectedVal) {
-            // Run through all connections for this layer
-            for (int c = 0;  c < inst->nconnections();  ++c) {
-                const Connection &con (inst->connection (c));
-                // If the connection gives a value to the param we care
-                // about, AND the earlier layer it comes from has not
-                // yet been executed, do so now.
-                if (con.dst.param == args[a] &&
-                        ! execlayers[con.srclayer].executed()) {
-                    exec->run_connected_layer (con.srclayer);
-                }
-            }
+        // std::cerr << "useparam " << Param.name() << "\n";
+        if (! Param.initialized()) {
+            // std::cerr << "  not yet initialized!\n";
+            exec->bind_initialize_param (&Param, args[a]);
         }
     }
 }

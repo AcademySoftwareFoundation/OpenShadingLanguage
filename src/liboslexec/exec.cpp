@@ -277,9 +277,19 @@ ShadingExecution::bind (ShaderInstance *instance)
                 }
                 ASSERT (sym.data() != NULL);
             }
+            float badval;
+            bool badderiv;
+            int point;
+            if (debugnan && check_nan (sym, m_context->m_original_runflags,
+                                       0, m_npoints, badval, badderiv, point))
+                m_shadingsys->warning ("Found %s%g in shader \"%s\" when binding %s",
+                                       badderiv ? "bad derivative " : "",
+                                       badval, m_master->shadername().c_str(),
+                                       sym.name().c_str());                    
 
         } else if (sym.symtype() == SymTypeParam ||
                    sym.symtype() == SymTypeOutputParam) {
+            m_context->m_paramstobind++;
             if (sym.typespec().is_closure()) {
                 // Special case -- closures store pointers in the heap
                 sym.dataoffset (m_context->closure_allot (m_npoints));
@@ -288,25 +298,7 @@ ShadingExecution::bind (ShaderInstance *instance)
             } else if (sym.typespec().simpletype().basetype != TypeDesc::UNKNOWN) {
                 size_t addr = m_context->heap_allot (sym.derivsize() * m_npoints);
                 sym.data (m_context->heapaddr (addr));
-                sym.step (0);  // FIXME
-                // Copy the parameter value
-                // FIXME -- if the parameter is not being overridden and is
-                // not writeable, I think we should just point to the parameter
-                // data, not copy it?  Or does it matter?
-                if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-                    memcpy (sym.data(), &instance->m_fparams[sym.dataoffset()],
-                            sym.typespec().simpletype().size());
-                else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-                    memcpy (sym.data(), &instance->m_iparams[sym.dataoffset()],
-                            sym.typespec().simpletype().size());
-                else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-                    memcpy (sym.data(), &instance->m_sparams[sym.dataoffset()],
-                            sym.typespec().simpletype().size());
-                else {
-                   ASSERT (0 && "unrecognized type -- no default value");
-                }
-                if (sym.has_derivs ())
-                   zero_derivs (sym);
+                sym.step (0);
             } else {
                sym.data ((void*) 0); // reset data ptr -- this symbol should never be used
                sym.step (0);
@@ -345,21 +337,7 @@ ShadingExecution::bind (ShaderInstance *instance)
                                 sym.mangled().c_str(), sym.data(),
                                 sym.step(), sym.size(),
                                 sym.has_derivs() ? "(derivs)" : "(no derivs)");
-        float badval;
-        bool badderiv;
-        int point;
-        if (debugnan &&
-            (sym.symtype() != SymTypeLocal && sym.symtype() != SymTypeTemp) &&
-            check_nan (sym, m_context->m_original_runflags,
-                       0, m_npoints, badval, badderiv, point))
-            m_shadingsys->warning ("Found %s%g in shader \"%s\" when binding %s",
-                                   badderiv ? "bad derivative " : "",
-                                   badval, m_master->shadername().c_str(),
-                                   sym.name().c_str());                    
     }
-
-    // Mark symbols that map to user-data on the geometry
-    bind_mark_geom_variables (m_instance);
 
     // OK, we're successfully bound.
     m_bound = true;
@@ -376,65 +354,92 @@ ShadingExecution::bind (ShaderInstance *instance)
 
 
 void
-ShadingExecution::bind_initialize_params (ShaderInstance *inst)
+ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
 {
-    ShaderMaster *master = inst->master();
-    bool debugnan = m_shadingsys->debug_nan ();
-    for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
-        Symbol *sym = symptr (i);
-        if (sym->valuesource() == Symbol::DefaultVal) {
-            // Execute init ops, if there are any
-            if (sym->initbegin() != sym->initend()) {
-                run (context()->m_original_runflags,
-                     sym->initbegin(), sym->initend());
+    ASSERT (! sym->initialized ());
+    m_context->m_paramsbound++;
+
+    // Resolve symbols that map to user-data on the geometry
+    if (sym->valuesource() != Symbol::ConnectedVal) {
+        if (renderer_has_userdata (sym->name(), sym->typespec().simpletype(),
+                                   &m_context->m_globals->renderstate[0])) {
+            sym->valuesource(Symbol::GeomVal);
+        }
+    }
+
+    if (sym->valuesource() == Symbol::DefaultVal ||
+            sym->valuesource() == Symbol::InstanceVal) {
+
+        if (sym->valuesource() == Symbol::DefaultVal &&
+                sym->initbegin() != sym->initend()) {
+            // If it's still a default value and it's determined by init
+            // ops, run them now
+            int old_ip = m_ip;  // Save the instruction pointer
+            run (context()->m_original_runflags,
+                 sym->initbegin(), sym->initend());
+            m_ip = old_ip;
+        }
+        else if (!sym->typespec().is_closure() && !sym->typespec().is_structure()) {
+            // Otherwise, if it's a normal data type (non-closure,
+            // non-struct) copy its instance and/or default value now.
+            DASSERT (sym->step() == 0);
+            if (sym->typespec().simpletype().basetype == TypeDesc::FLOAT)
+                memcpy (sym->data(), &m_instance->m_fparams[sym->dataoffset()],
+                        sym->typespec().simpletype().size());
+            else if (sym->typespec().simpletype().basetype == TypeDesc::INT)
+                memcpy (sym->data(), &m_instance->m_iparams[sym->dataoffset()],
+                        sym->typespec().simpletype().size());
+            else if (sym->typespec().simpletype().basetype == TypeDesc::STRING)
+                memcpy (sym->data(), &m_instance->m_sparams[sym->dataoffset()],
+                        sym->typespec().simpletype().size());
+            else {
+                std::cerr << "Type is " << sym->typespec().c_str() << "\n";
+                ASSERT (0 && "unrecognized type -- no default value");
             }
-        } else if (sym->valuesource() == Symbol::InstanceVal) {
-            // FIXME -- eventually, copy the instance values here,
-            // rather than above in bind(), so that we skip the
-            // unnecessary copying if the values came from geom or
-            // connections.  As it stands now, there is some redundancy.
-        } else if (sym->valuesource() == Symbol::GeomVal) {
-            adjust_varying(*sym, true, false /* don't keep old values */);
-            bool wants_derivatives = (sym->typespec().is_float() || sym->typespec().is_triple());
-            ShaderGlobals *globals = m_context->m_globals;
-            if (!get_renderer_userdata(context()->m_original_runflags, m_npoints, wants_derivatives,
-                                        sym->name(), sym->typespec().simpletype(),
-                                        &globals->renderstate[0], globals->renderstate.step(),
-                                        sym->data(), sym->step())) {
+            if (sym->has_derivs ())
+                zero_derivs (*sym);
+            // FIXME -- is there anything to be gained by just pointing
+            // to the parameter data, not copying it?
+        }
+
+    } else if (sym->valuesource() == Symbol::GeomVal) {
+        adjust_varying(*sym, true, false /* don't keep old values */);
+        bool wants_derivatives = (sym->typespec().is_float() || sym->typespec().is_triple());
+        ShaderGlobals *globals = m_context->m_globals;
+        if (!get_renderer_userdata(context()->m_original_runflags, m_npoints, wants_derivatives,
+                                   sym->name(), sym->typespec().simpletype(),
+                                   &globals->renderstate[0], globals->renderstate.step(),
+                                   sym->data(), sym->step())) {
 #ifdef DEBUG
-                std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
+            std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
 #endif
-            }
-            float badval;
-            bool badderiv;
-            int point;
-            if (debugnan && check_nan (*sym, context()->m_original_runflags,
-                                       m_beginpoint, m_endpoint, badval, badderiv, point))
-                m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
-                                       badderiv ? "bad derivative " : "",
-                                       badval, m_master->shadername().c_str(),
-                                       sym->name().c_str());
-        } else if (sym->valuesource() == Symbol::ConnectedVal) {
-            // Nothing to do if it fully came from an earlier layer
         }
-    }
-}
-
-
-
-void
-ShadingExecution::bind_mark_geom_variables (ShaderInstance *inst)
-{
-    ShaderGlobals *globals (m_context->m_globals);
-    ShaderMaster *master = inst->master();
-    for (int i = master->m_firstparam;  i <= master->m_lastparam;  ++i) {
-        Symbol *sym = symptr (i);
-        if (sym->valuesource() != Symbol::ConnectedVal) {
-            if (renderer_has_userdata (sym->name(), sym->typespec().simpletype(), &globals->renderstate[0])) {
-               sym->valuesource(Symbol::GeomVal);
+    } else if (sym->valuesource() == Symbol::ConnectedVal) {
+        // Run through all connections for this layer
+        ExecutionLayers &execlayers (m_context->execlayer (shaderuse()));
+        for (int c = 0;  c < m_instance->nconnections();  ++c) {
+            const Connection &con (m_instance->connection (c));
+            // If the connection gives a value to this param AND the earlier
+            // layer it comes from has not yet been executed, do so now.
+            if (con.dst.param == symindex &&
+                    ! execlayers[con.srclayer].executed()) {
+                run_connected_layer (con.srclayer);
             }
         }
     }
+
+    float badval;
+    bool badderiv;
+    int point;
+    if (m_shadingsys->debug_nan() &&
+        check_nan (*sym, context()->m_original_runflags,
+                   m_beginpoint, m_endpoint, badval, badderiv, point))
+        m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
+                               badderiv ? "bad derivative " : "",
+                               badval, m_master->shadername().c_str(),
+                               sym->name().c_str());
+
+    sym->initialized (true);
 }
 
 
@@ -541,7 +546,6 @@ ShadingExecution::run (Runflag *rf, int beginop, int endop)
         run (beginop, endop);
     else {              // Default (<0) means run param init ops + main code
         bind_connections ();   // Handle syms connected to earlier layers
-        bind_initialize_params (m_instance);  // run param init code
         run (m_master->m_maincodebegin, m_master->m_maincodeend);
         m_executed = true;
     }
@@ -669,6 +673,9 @@ ShadingExecution::run_connected_layer (int layer)
     // called with.
     ShaderGroup &sgroup (m_context->attribs()->shadergroup (shaderuse()));
     size_t nlayers = (int) sgroup.nlayers ();
+#if 0
+    std::cerr << "Lazy running layer " << layer << ' ' << "\n";
+#endif
     connected.run (m_context->m_original_runflags);
     m_context->m_lazy_evals += 1;
 

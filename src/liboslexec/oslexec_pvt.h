@@ -550,6 +550,8 @@ private:
     atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
     atomic_ll m_stat_binds;               ///< Stat: Number of binds;
     atomic_ll m_stat_rebinds;             ///< Stat: Number of rebinds;
+    atomic_ll m_stat_paramstobind;        ///< Stat: All params in bound shaders
+    atomic_ll m_stat_paramsbound;         ///< Stat: Number of params bound
 #ifdef DEBUG_ADJUST_VARYING
     atomic_ll m_adjust_calls;             ///< Calls to adjust_varying
     atomic_ll m_keep_varying;             ///< Adjust_varying kept it varying
@@ -688,6 +690,8 @@ private:
     int m_lazy_evals;                   ///< Running tab of lazy evals
     int m_binds;                        ///< Running tab of binds
     int m_rebinds;                      ///< Running tab of rebinds
+    int m_paramstobind;                 ///< Total params in bound shaders
+    int m_paramsbound;                  ///< Params we actually bound
     Runflag *m_original_runflags;       ///< Runflags we were called with
 
     friend class ShadingExecution;
@@ -720,6 +724,10 @@ public:
         m_bound = false;
         m_executed = false;
     }
+
+    /// Bind the value for a particular parameter.
+    ///
+    void bind_initialize_param (Symbol *sym, int symindex);
 
     /// Execute the shader with the supplied runflags.  If rf==NULL, new
     /// runflags will be set up to run all points. If beginop and endop
@@ -926,10 +934,6 @@ public:
     void run_connected_layer (int layer);
 
 private:
-    /// Helper for bind(): run initialization code for parameters
-    ///
-    void bind_initialize_params (ShaderInstance *inst);
-
     /// Helper for bind(): take care of connections to earlier layers
     ///
     void bind_connections ();
@@ -937,10 +941,6 @@ private:
     /// Helper for bind(): establish a connections to an earlier layer.
     ///
     void bind_connection (const Connection &con, bool forcebind=false);
-
-    /// Helper for bind(): marks all parameters which correspond to
-    /// geometric user-data
-    void bind_mark_geom_variables (ShaderInstance *inst);
 
     /// Helper for run: check all the writable arguments of an op to see
     /// if any NaN or Inf values have snuck in.

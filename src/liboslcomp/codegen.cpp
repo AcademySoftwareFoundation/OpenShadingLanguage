@@ -62,6 +62,25 @@ OSLCompilerImpl::add_op_args (size_t nargs, Symbol **args)
 
 
 
+void
+OSLCompilerImpl::codegen_method (ustring method)
+{
+    m_codegenmethod = method;
+    if (method == main_method_name())
+        m_main_method_start = next_op_label ();
+}
+
+
+
+ustring
+OSLCompilerImpl::main_method_name () const
+{
+    static ustring name ("___main___");
+    return name;
+}
+
+
+
 int
 OSLCompilerImpl::emitcode (const char *opname, size_t nargs, Symbol **args,
                            ASTNode *node)
@@ -322,7 +341,7 @@ ASTshader_declaration::codegen (Symbol *dest)
         }
     }
 
-    m_compiler->codegen_method (ustring ("___main___"));
+    m_compiler->codegen_method (m_compiler->main_method_name());
     codegen_list (statements());
     return NULL;
 }
@@ -611,7 +630,7 @@ ASTvariable_declaration::codegen_struct_initializers (ref init)
 
     // General case -- per-field initializers
 
-    bool paraminit = (m_compiler->codegen_method() != "___main___" &&
+    bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
                       (m_sym->symtype() == SymTypeParam ||
                        m_sym->symtype() == SymTypeOutputParam));
     for (int i = 0;  init;  init = init->next(), ++i) {

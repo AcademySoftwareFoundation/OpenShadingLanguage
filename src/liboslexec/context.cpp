@@ -153,6 +153,8 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     m_rebinds = 0;
     m_binds = 0;
     m_original_runflags = rf;
+    m_paramstobind = 0;
+    m_paramsbound = 0;
     int uncond_evals = 0;
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);
@@ -160,6 +162,10 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
         // Only execute layers that write globals (or, in the future,
         // have other side effects?) or the last layer of the sequence.
         if (! inst->run_lazily()) {
+#if 0
+            std::cerr << "Running layer " << layer << ' ' << inst->layername()
+                      << ' ' << inst->master()->shadername() << "\n";
+#endif
             exec.run (rf);
             ++uncond_evals;
         }
@@ -172,6 +178,8 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     shadingsys().m_layers_executed_never += nlayers - uncond_evals - m_lazy_evals;
     shadingsys().m_stat_rebinds += m_rebinds;
     shadingsys().m_stat_binds += m_binds;
+    shadingsys().m_stat_paramstobind += m_paramstobind;
+    shadingsys().m_stat_paramsbound += m_paramsbound;
 #ifdef DEBUG_ADJUST_VARYING
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);

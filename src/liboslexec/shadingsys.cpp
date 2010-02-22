@@ -142,6 +142,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_layers_executed_never = 0;
     m_stat_binds = 0;
     m_stat_rebinds = 0;
+    m_stat_paramstobind = 0;
+    m_stat_paramsbound = 0;
 
     init_global_heap_offsets ();
 
@@ -407,6 +409,10 @@ ShadingSystemImpl::getstats (int level) const
     out << Strutil::format ("  Rebinds:  %lld / %lld  (%.1f%%)\n",
                             (long long)m_stat_rebinds, totalexec,
                             (100.0*m_stat_rebinds)/totalexec);
+    out << Strutil::format ("  Params bound:  %lld / %lld  (%.1f%%)\n",
+                            (long long)m_stat_paramsbound,
+                            (long long)m_stat_paramstobind,
+                            (100.0*m_stat_paramsbound)/m_stat_paramstobind);
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
 

@@ -194,14 +194,12 @@ public:
 
 DECLOP (OP_westin_backscatter)
 {
-    closure_op_guts<WestinBackscatterClosure, 3> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<WestinBackscatterClosure, 3> (exec, nargs, args);
 }
 
 DECLOP (OP_westin_sheen)
 {
-    closure_op_guts<WestinSheenClosure, 3> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<WestinSheenClosure, 3> (exec, nargs, args);
 }
 
 

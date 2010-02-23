@@ -158,16 +158,14 @@ public:
 
 DECLOP (OP_hair_diffuse)
 {
-    closure_op_guts<HairDiffuseClosure, 2> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<HairDiffuseClosure, 2> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_hair_specular)
 {
-    closure_op_guts<HairSpecularClosure, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<HairSpecularClosure, 4> (exec, nargs, args);
 }
 
 

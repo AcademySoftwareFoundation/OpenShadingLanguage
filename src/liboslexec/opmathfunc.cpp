@@ -823,7 +823,7 @@ DECLOP (generic_unary_function_shadeop_noderivs)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -853,7 +853,7 @@ DECLOP (generic_unary_function_shadeop)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -889,7 +889,7 @@ DECLOP (generic_binary_function_shadeop_noderivs)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -925,7 +925,7 @@ DECLOP (generic_binary_function_shadeop)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -962,7 +962,7 @@ DECLOP (generic_ternary_function_shadeop)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -999,7 +999,7 @@ DECLOP (generic_ternary_function_shadeop_noderivs)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1016,74 +1016,62 @@ DECLOP (generic_ternary_function_shadeop_noderivs)
 
 DECLOP (OP_cos)
 {
-    generic_unary_function_shadeop<Cos> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Cos> (exec, nargs, args);
 }
 
 DECLOP (OP_sin)
 {
-    generic_unary_function_shadeop<Sin> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Sin> (exec, nargs, args);
 }
 
 DECLOP (OP_tan)
 {
-    generic_unary_function_shadeop<Tan> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Tan> (exec, nargs, args);
 }
 
 DECLOP (OP_acos)
 {
-    generic_unary_function_shadeop<ACos> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<ACos> (exec, nargs, args);
 }
 
 DECLOP (OP_asin)
 {
-    generic_unary_function_shadeop<ASin> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<ASin> (exec, nargs, args);
 }
 
 DECLOP (OP_atan)
 {
-    generic_unary_function_shadeop<ATan> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<ATan> (exec, nargs, args);
 }
 
 DECLOP (OP_atan2)
 {
-    generic_binary_function_shadeop<ATan2> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_binary_function_shadeop<ATan2> (exec, nargs, args);
 }
 
 DECLOP (OP_degrees)
 {
-    generic_unary_function_shadeop<Degrees> (exec, nargs, args, 
-                                             runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Degrees> (exec, nargs, args);
 }
 
 DECLOP (OP_radians)
 {
-    generic_unary_function_shadeop<Radians> (exec, nargs, args, 
-                                             runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Radians> (exec, nargs, args);
 }
 
 DECLOP (OP_cosh)
 {
-    generic_unary_function_shadeop<Cosh> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Cosh> (exec, nargs, args);
 }
 
 DECLOP (OP_sinh)
 {
-    generic_unary_function_shadeop<Sinh> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Sinh> (exec, nargs, args);
 }
 
 DECLOP (OP_tanh)
 {
-    generic_unary_function_shadeop<Tanh> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Tanh> (exec, nargs, args);
 }
 
 // log() function can two forms:
@@ -1129,7 +1117,7 @@ DECLOP (OP_log)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1139,38 +1127,32 @@ DECLOP (OP_log)
 
 DECLOP (OP_log2)
 {
-    generic_unary_function_shadeop<Log2> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Log2> (exec, nargs, args);
 }
 
 DECLOP (OP_log10)
 {
-    generic_unary_function_shadeop<Log10> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Log10> (exec, nargs, args);
 }
 
 DECLOP (OP_logb)
 {
-    generic_unary_function_shadeop_noderivs<Logb> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop_noderivs<Logb> (exec, nargs, args);
 }
 
 DECLOP (OP_exp)
 {
-    generic_unary_function_shadeop<Exp> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Exp> (exec, nargs, args);
 }
 
 DECLOP (OP_exp2)
 {
-    generic_unary_function_shadeop<Exp2> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Exp2> (exec, nargs, args);
 }
 
 DECLOP (OP_expm1)
 {
-    generic_unary_function_shadeop<Expm1> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Expm1> (exec, nargs, args);
 }
 
 // pow() function can two forms:
@@ -1197,7 +1179,7 @@ DECLOP (OP_pow)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1207,14 +1189,12 @@ DECLOP (OP_pow)
 
 DECLOP (OP_erf)
 {
-    unary_op<float,float,Erf> (exec, nargs, args, 
-                               runflags, beginpoint, endpoint);
+    unary_op<float,float,Erf> (exec, nargs, args);
 }
 
 DECLOP (OP_erfc)
 {
-    unary_op<float,float,Erfc> (exec, nargs, args, 
-                                runflags, beginpoint, endpoint);
+    unary_op<float,float,Erfc> (exec, nargs, args);
 }
 
 // The fabs() function can be of the form:
@@ -1241,7 +1221,7 @@ DECLOP (OP_fabs)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1255,80 +1235,67 @@ DECLOP (OP_fabs)
 
 DECLOP (OP_floor)
 {
-    generic_unary_function_shadeop_noderivs<Floor> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop_noderivs<Floor> (exec, nargs, args);
 }
 
 DECLOP (OP_ceil)
 {
-    generic_unary_function_shadeop_noderivs<Ceil> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop_noderivs<Ceil> (exec, nargs, args);
 }
 
 DECLOP (OP_round)
 {
-    generic_unary_function_shadeop_noderivs<Round> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop_noderivs<Round> (exec, nargs, args);
 }
 
 DECLOP (OP_trunc)
 {
-    generic_unary_function_shadeop_noderivs<Trunc> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop_noderivs<Trunc> (exec, nargs, args);
 }
 
 DECLOP (OP_sign)
 {
-    generic_unary_function_shadeop_noderivs<Sign> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop_noderivs<Sign> (exec, nargs, args);
 }
 
 DECLOP (OP_sqrt)
 {
-    generic_unary_function_shadeop<Sqrt> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<Sqrt> (exec, nargs, args);
 }
 
 DECLOP (OP_inversesqrt)
 {
-    generic_unary_function_shadeop<InverseSqrt> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_unary_function_shadeop<InverseSqrt> (exec, nargs, args);
 }
 
 DECLOP (OP_isnan)
 {
-    unary_op_noderivs<int,float,IsNan> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    unary_op_noderivs<int,float,IsNan> (exec, nargs, args);
 }
 
 DECLOP (OP_isinf)
 {
-    unary_op_noderivs<int,float,IsInf> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    unary_op_noderivs<int,float,IsInf> (exec, nargs, args);
 }
 
 DECLOP (OP_isfinite)
 {
-    unary_op_noderivs<int,float,IsFinite> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    unary_op_noderivs<int,float,IsFinite> (exec, nargs, args);
 }
 
 DECLOP (OP_clamp)
 {
-    generic_ternary_function_shadeop<Clamp> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_ternary_function_shadeop<Clamp> (exec, nargs, args);
 }
 
 DECLOP (OP_max)
 {
-    generic_binary_function_shadeop<Max> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_binary_function_shadeop<Max> (exec, nargs, args);
 }
 
 DECLOP (OP_min)
 {
-    generic_binary_function_shadeop<Min> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    generic_binary_function_shadeop<Min> (exec, nargs, args);
 }
 
 // mix() function can two forms:
@@ -1360,7 +1327,7 @@ DECLOP (OP_mix)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1370,8 +1337,7 @@ DECLOP (OP_mix)
 
 DECLOP (OP_step)
 {
-    binary_op_noderivs<float,float,float,Step> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    binary_op_noderivs<float,float,float,Step> (exec, nargs, args);
 }
 
 // hypot() function can two forms:
@@ -1411,7 +1377,7 @@ DECLOP (OP_hypot)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1421,26 +1387,22 @@ DECLOP (OP_hypot)
 
 DECLOP (OP_smoothstep)
 {
-    ternary_op<float,float,float,float, Smoothstep> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    ternary_op<float,float,float,float, Smoothstep> (exec, nargs, args);
 }
 
 DECLOP (OP_reflect)
 {
-    binary_op_noderivs<Vec3,Vec3,Vec3, Reflect> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    binary_op_noderivs<Vec3,Vec3,Vec3, Reflect> (exec, nargs, args);
 }
 
 DECLOP (OP_refract)
 {
-    ternary_op_noderivs<Vec3,Vec3,Vec3,float, Refract> (exec, nargs, args, 
-                                         runflags, beginpoint, endpoint);
+    ternary_op_noderivs<Vec3,Vec3,Vec3,float, Refract> (exec, nargs, args);
 }
 
 inline void
 fresnel4_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr,
-                ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint)
+                ShadingExecution *exec)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Kr, I.is_varying() | N.is_varying() | eta.is_varying(),
@@ -1465,14 +1427,14 @@ fresnel4_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr,
         // the operation only once.
         float tKr;
         fresnel (*inI, *inN, *inEta, tKr);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                outKr[i] = tKr;
+        SHADE_LOOP_BEGIN
+            outKr[i] = tKr;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                fresnel (inI[i], inN[i], inEta[i], outKr[i]);
+        SHADE_LOOP_BEGIN
+            fresnel (inI[i], inN[i], inEta[i], outKr[i]);
+        SHADE_LOOP_END
     }
 }
 
@@ -1482,13 +1444,12 @@ DECLOP (fresnel4_op)
     Symbol &N   (exec->sym (args[1]));
     Symbol &eta (exec->sym (args[2]));
     Symbol &Kr  (exec->sym (args[3]));
-    fresnel4_op_guts(I, N, eta, Kr, exec, runflags, beginpoint, endpoint);
+    fresnel4_op_guts(I, N, eta, Kr, exec);
 }
 
 inline void
 fresnel7_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr, Symbol &Kt, Symbol &R, Symbol &T,
-                ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint)
+                ShadingExecution *exec)
 {
     // Adjust the results' uniform/varying status
     bool varying_assig = I.is_varying() | N.is_varying() | eta.is_varying();
@@ -1529,19 +1490,17 @@ fresnel7_op_guts (Symbol &I, Symbol &N, Symbol &eta, Symbol &Kr, Symbol &Kt, Sym
         float tKr, tKt;
         Vec3  tR, tT;
         fresnel (*inI, *inN, *inEta, tKr, tKt, tR, tT);
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                outKr[i] = tKr;
-                outKt[i] = tKt;
-                outR[i]  = tR;
-                outT[i]  = tT;
-            }
-        }
+        SHADE_LOOP_BEGIN
+            outKr[i] = tKr;
+            outKt[i] = tKt;
+            outR[i]  = tR;
+            outT[i]  = tT;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                fresnel (inI[i], inN[i], inEta[i], outKr[i], outKt[i], outR[i], outT[i]);
+        SHADE_LOOP_BEGIN
+            fresnel (inI[i], inN[i], inEta[i], outKr[i], outKt[i], outR[i], outT[i]);
+        SHADE_LOOP_END
     }
 }
 
@@ -1554,7 +1513,7 @@ DECLOP (fresnel7_op)
     Symbol &Kt  (exec->sym (args[4]));
     Symbol &R   (exec->sym (args[5]));
     Symbol &T   (exec->sym (args[6]));
-    fresnel7_op_guts(I, N, eta, Kr, Kt, R, T, exec, runflags, beginpoint, endpoint);
+    fresnel7_op_guts(I, N, eta, Kr, Kt, R, T, exec);
 }
 
 
@@ -1608,7 +1567,7 @@ DECLOP (OP_fresnel)
         }
     }
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1641,11 +1600,10 @@ DECLOP(sincos_op_guts)
         function (*(TYPE *)A.data(), rs, rc);
         VaryingRef<TYPE> resultSin ((TYPE *)ResultSin.data(), ResultSin.step());
         VaryingRef<TYPE> resultCos ((TYPE *)ResultCos.data(), ResultCos.step());
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i]) {
-                resultSin[i] = rs;
-                resultCos[i] = rc;
-            }
+        SHADE_LOOP_BEGIN
+            resultSin[i] = rs;
+            resultCos[i] = rc;
+        SHADE_LOOP_END
         if (ResultSin.has_derivs()) exec->zero_derivs (ResultSin);
         if (ResultCos.has_derivs()) exec->zero_derivs (ResultCos);
     } else {
@@ -1655,34 +1613,34 @@ DECLOP(sincos_op_guts)
                 VaryingRef<Dual2<TYPE> > a ((Dual2<TYPE> *)A.data(), A.step());
                 VaryingRef<Dual2<TYPE> > resultSin ((Dual2<TYPE> *)ResultSin.data(), ResultSin.step());
                 VaryingRef<Dual2<TYPE> > resultCos ((Dual2<TYPE> *)ResultCos.data(), ResultCos.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i])
-                        function (a[i], resultSin[i], resultCos[i]);
+                SHADE_LOOP_BEGIN
+                    function (a[i], resultSin[i], resultCos[i]);
+                SHADE_LOOP_END
             } else if (ResultSin.has_derivs()) {
                 // only sine has derivs
                 VaryingRef<Dual2<TYPE> > a ((Dual2<TYPE> *)A.data(), A.step());
                 VaryingRef<Dual2<TYPE> > resultSin ((Dual2<TYPE> *)ResultSin.data(), ResultSin.step());
                 VaryingRef<TYPE> resultCos ((TYPE *)ResultCos.data(), ResultCos.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i])
-                        function (a[i], resultSin[i], resultCos[i]);
+                SHADE_LOOP_BEGIN
+                    function (a[i], resultSin[i], resultCos[i]);
+                SHADE_LOOP_END
             } else {
                 // only cosine has derivs
                 VaryingRef<Dual2<TYPE> > a ((Dual2<TYPE> *)A.data(), A.step());
                 VaryingRef<TYPE> resultSin ((TYPE *)ResultSin.data(), ResultSin.step());
                 VaryingRef<Dual2<TYPE> > resultCos ((Dual2<TYPE> *)ResultCos.data(), ResultCos.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i])
-                        function (a[i], resultSin[i], resultCos[i]);
+                SHADE_LOOP_BEGIN
+                    function (a[i], resultSin[i], resultCos[i]);
+                SHADE_LOOP_END
             }
         } else {
             // A doesn't come with derivatives, or both results don't need derivatives
             VaryingRef<TYPE> a ((TYPE *)A.data(), A.step());
             VaryingRef<TYPE> resultSin ((TYPE *)ResultSin.data(), ResultSin.step());
             VaryingRef<TYPE> resultCos ((TYPE *)ResultCos.data(), ResultCos.step());
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    function (a[i], resultSin[i], resultCos[i]);
+            SHADE_LOOP_BEGIN
+                function (a[i], resultSin[i], resultCos[i]);
+            SHADE_LOOP_END
             if (ResultSin.has_derivs()) exec->zero_derivs (ResultSin);
             if (ResultCos.has_derivs()) exec->zero_derivs (ResultCos);
         }
@@ -1710,7 +1668,7 @@ DECLOP (OP_sincos)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?

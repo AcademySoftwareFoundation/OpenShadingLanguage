@@ -287,9 +287,9 @@ DECLOP (closure_binary_op)
     VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
     VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
     FUNCTION function (exec);
-    for (int i = beginpoint;  i < endpoint;  ++i)
-        if (runflags[i])
-            function (result[i], a[i], b[i]);
+    SHADE_LOOP_BEGIN
+        function (result[i], a[i], b[i]);
+    SHADE_LOOP_END
 }
 
 
@@ -310,9 +310,9 @@ DECLOP (closure_unary_op)
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
     FUNCTION function (exec);
-    for (int i = beginpoint;  i < endpoint;  ++i)
-        if (runflags[i])
-            function (result[i], a[i]);
+    SHADE_LOOP_BEGIN
+        function (result[i], a[i]);
+    SHADE_LOOP_END
 }
 
 
@@ -479,7 +479,7 @@ DECLOP (OP_add)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -535,7 +535,7 @@ DECLOP (OP_sub)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -613,7 +613,7 @@ DECLOP (OP_mul)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -689,7 +689,7 @@ DECLOP (OP_div)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -737,7 +737,7 @@ DECLOP (OP_mod)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -792,7 +792,7 @@ DECLOP (OP_neg)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?

@@ -122,7 +122,7 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
 
 
 void
-ShadingContext::execute (ShaderUse use, Runflag *rf)
+ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
 {
     // FIXME -- timers/stats
 
@@ -153,6 +153,8 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
     m_rebinds = 0;
     m_binds = 0;
     m_original_runflags = rf;
+    m_original_indices = ind;
+    m_original_nindices = nind;
     m_paramstobind = 0;
     m_paramsbound = 0;
     int uncond_evals = 0;
@@ -169,6 +171,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf)
             exec.run (rf);
             ++uncond_evals;
         }
+//        else std::cerr << "skip layer " << layer << "\n";
         // FIXME -- is it possible to also only bind when needed?  Or is
         // there some reason why that won't work?
     }

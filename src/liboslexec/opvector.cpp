@@ -79,14 +79,14 @@ DECLOP (triple_ctr)
     } else if (! vary) {
         // Result is varying, but everything else is uniform
         Vec3 r (*x, *y, *z);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = Vec3 (x[i], y[i], z[i]);
+        SHADE_LOOP_BEGIN
+            result[i] = Vec3 (x[i], y[i], z[i]);
+        SHADE_LOOP_END
 
         if (Result.has_derivs()) {
             // Ugh, handle derivs piece-meal because we may get any subset
@@ -97,11 +97,10 @@ DECLOP (triple_ctr)
                 Symbol &X (exec->sym (args[1+c]));  // get right symbol
                 if (X.has_derivs ()) {
                     VaryingRef<Dual2<float> > x ((Dual2<float> *)X.data(), X.step());
-                    for (int i = beginpoint;  i < endpoint;  ++i)
-                        if (runflags[i]) {
-                            result[i].dx()[c] = x[i].dx();
-                            result[i].dy()[c] = x[i].dy();
-                        }
+                    SHADE_LOOP_BEGIN
+                        result[i].dx()[c] = x[i].dx();
+                        result[i].dy()[c] = x[i].dy();
+                    SHADE_LOOP_END
                 }
             }
         }
@@ -173,12 +172,11 @@ DECLOP (triple_matrix_transform)
             matrix[0].multDirMatrix (*v, r);
         else
             matrix[0].inverse().transpose().multDirMatrix (*v, r);
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
             if (result.is_uniform())  // Don't loop if result is uniform
                 break;
-        }
+        SHADE_LOOP_END
         if (Result.has_derivs ())
             exec->zero_derivs (Result);
     } else if (Matrix.is_uniform()) {
@@ -191,22 +189,20 @@ DECLOP (triple_matrix_transform)
         Matrix44 M (*matrix);
         if (xformtype == (int)TypeDesc::NORMAL)
             M = M.inverse().transpose();
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                if (derivs) {
-                    if (xformtype == (int)TypeDesc::POINT)
-                        multVecMatrix (M, dv[i], dresult[i]);
-                    else
-                        multDirMatrix (M, dv[i], dresult[i]);
-                } else {
-                    // No derivs
-                    if (xformtype == (int)TypeDesc::POINT)
-                        M.multVecMatrix (v[i], result[i]);
-                    else
-                        M.multDirMatrix (v[i], result[i]);
-                }
+        SHADE_LOOP_BEGIN
+            if (derivs) {
+                if (xformtype == (int)TypeDesc::POINT)
+                    multVecMatrix (M, dv[i], dresult[i]);
+                else
+                    multDirMatrix (M, dv[i], dresult[i]);
+            } else {
+                // No derivs
+                if (xformtype == (int)TypeDesc::POINT)
+                    M.multVecMatrix (v[i], result[i]);
+                else
+                    M.multDirMatrix (v[i], result[i]);
             }
-        }
+        SHADE_LOOP_END
         if (Result.has_derivs() && ! V.has_derivs())
             exec->zero_derivs (Result);
     } else {
@@ -219,29 +215,27 @@ DECLOP (triple_matrix_transform)
         // inverse-transpose, and it seems like an exceedingly rare case
         // to construct a spatially-varying matrix and needs its derivs.
         // Hopefully nobody will ever complain.
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                if (derivs) {
-                    // V has derivs, but M does not
-                    Matrix44 M (matrix[i]);
-                    if (xformtype == (int)TypeDesc::NORMAL)
-                        M = M.inverse().transpose();
-                    if (xformtype == (int)TypeDesc::POINT)
-                        multVecMatrix (M, dv[i], dresult[i]);
-                    else
-                        multDirMatrix (M, dv[i], dresult[i]);
+        SHADE_LOOP_BEGIN
+            if (derivs) {
+                // V has derivs, but M does not
+                Matrix44 M (matrix[i]);
+                if (xformtype == (int)TypeDesc::NORMAL)
+                    M = M.inverse().transpose();
+                if (xformtype == (int)TypeDesc::POINT)
+                    multVecMatrix (M, dv[i], dresult[i]);
+                else
+                    multDirMatrix (M, dv[i], dresult[i]);
+            } else {
+                // No derivs
+                if (xformtype == (int)TypeDesc::POINT) {
+                    matrix[i].multVecMatrix (v[i], result[i]);
+                } else if (xformtype == (int)TypeDesc::VECTOR) {
+                    matrix[i].multDirMatrix (v[i], result[i]);
                 } else {
-                    // No derivs
-                    if (xformtype == (int)TypeDesc::POINT) {
-                        matrix[i].multVecMatrix (v[i], result[i]);
-                    } else if (xformtype == (int)TypeDesc::VECTOR) {
-                        matrix[i].multDirMatrix (v[i], result[i]);
-                    } else {
-                        matrix[i].inverse().transpose().multDirMatrix (v[i], result[i]);
-                    }
+                    matrix[i].inverse().transpose().multDirMatrix (v[i], result[i]);
                 }
             }
-        }
+        SHADE_LOOP_END
         if (Result.has_derivs() && ! derivs)
             exec->zero_derivs (Result);
     }
@@ -297,26 +291,25 @@ DECLOP (triple_ctr_transform)
             M.multVecMatrix (r, r);
         else
             M.multDirMatrix (r, r);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
         ustring last_space;
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i]) {
-                if (space[i] != last_space || globals->time.is_varying()) {
-                    exec->get_matrix (M, space[i], i);
-                    if (xformtype == (int)TypeDesc::NORMAL)
-                        M = M.inverse().transpose();
-                    last_space = space[i];
-                }
-                result[i] = Vec3 (x[i], y[i], z[i]);
-                if (xformtype == (int)TypeDesc::POINT)
-                    M.multVecMatrix (result[i], result[i]);
-                else
-                    M.multDirMatrix (result[i], result[i]);
+        SHADE_LOOP_BEGIN
+            if (space[i] != last_space || globals->time.is_varying()) {
+                exec->get_matrix (M, space[i], i);
+                if (xformtype == (int)TypeDesc::NORMAL)
+                    M = M.inverse().transpose();
+                last_space = space[i];
             }
+            result[i] = Vec3 (x[i], y[i], z[i]);
+            if (xformtype == (int)TypeDesc::POINT)
+                M.multVecMatrix (result[i], result[i]);
+            else
+                M.multDirMatrix (result[i], result[i]);
+        SHADE_LOOP_END
 
         if (Result.has_derivs()) {
             // Ugh, handle derivs piece-meal because we may get any subset
@@ -337,19 +330,18 @@ DECLOP (triple_ctr_transform)
             else
                 zdir.init (&zero, 0);
             ustring last_space;
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i]) {
-                    if (space[i] != last_space || globals->time.is_varying()) {
-                        exec->get_matrix (M, space[i], i);
-                        if (xformtype == (int)TypeDesc::NORMAL)
-                            M = M.inverse().transpose();
-                        last_space = space[i];
-                    }
-                    Vec3 dPdx (xdir[i].dx(), ydir[i].dx(), zdir[i].dx());
-                    Vec3 dPdy (xdir[i].dy(), ydir[i].dy(), zdir[i].dy());
-                    M.multDirMatrix (dPdx, result[i].dx());
-                    M.multDirMatrix (dPdy, result[i].dy());
+            SHADE_LOOP_BEGIN
+                if (space[i] != last_space || globals->time.is_varying()) {
+                    exec->get_matrix (M, space[i], i);
+                    if (xformtype == (int)TypeDesc::NORMAL)
+                        M = M.inverse().transpose();
+                    last_space = space[i];
                 }
+                Vec3 dPdx (xdir[i].dx(), ydir[i].dx(), zdir[i].dx());
+                Vec3 dPdy (xdir[i].dy(), ydir[i].dy(), zdir[i].dy());
+                M.multDirMatrix (dPdx, result[i].dx());
+                M.multDirMatrix (dPdy, result[i].dy());
+            SHADE_LOOP_END
         }
     }
 }
@@ -385,7 +377,7 @@ DECLOP (triple_ctr_shadeop)
             impl = triple_ctr_transform<xformtype>;
         else
             impl = triple_ctr;
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -540,48 +532,42 @@ public:
 
 DECLOP (OP_point)
 {
-    triple_ctr_shadeop<TypeDesc::POINT> (exec, nargs, args,
-                                         runflags, beginpoint, endpoint);
+    triple_ctr_shadeop<TypeDesc::POINT> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_vector)
 {
-    triple_ctr_shadeop<TypeDesc::VECTOR> (exec, nargs, args,
-                                          runflags, beginpoint, endpoint);
+    triple_ctr_shadeop<TypeDesc::VECTOR> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_normal)
 {
-    triple_ctr_shadeop<TypeDesc::NORMAL> (exec, nargs, args,
-                                          runflags, beginpoint, endpoint);
+    triple_ctr_shadeop<TypeDesc::NORMAL> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_transform)
 {
-    triple_matrix_transform<TypeDesc::POINT> (exec, nargs, args,
-                                       runflags, beginpoint, endpoint);
+    triple_matrix_transform<TypeDesc::POINT> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_transformv)
 {
-    triple_matrix_transform<TypeDesc::VECTOR> (exec, nargs, args,
-                                        runflags, beginpoint, endpoint);
+    triple_matrix_transform<TypeDesc::VECTOR> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_transformn)
 {
-    triple_matrix_transform<TypeDesc::NORMAL> (exec, nargs, args,
-                                        runflags, beginpoint, endpoint);
+    triple_matrix_transform<TypeDesc::NORMAL> (exec, nargs, args);
 }
 
 
@@ -600,8 +586,7 @@ DECLOP (OP_compref)
              I.typespec().is_int());
 #endif
 
-    binary_op_unary_derivs<float,Vec3,int,Compref> (exec, nargs, args,
-                                            runflags, beginpoint, endpoint);
+    binary_op_unary_derivs<float,Vec3,int,Compref> (exec, nargs, args);
 }
 
 
@@ -639,40 +624,36 @@ static DECLOP (specialized_compassign)
             VaryingRef<Dual2<Vec3> > result ((Dual2<Vec3> *)Result.data(), Result.step());
             VaryingRef<int> index ((int *)Index.data(), Index.step());
             VaryingRef<Dual2<SRC> > val ((Dual2<SRC> *)Val.data(), Val.step());
-            for (int i = beginpoint;  i < endpoint;  ++i) {
-                if (runflags[i]) {
-                    int c = index[i];
-                    if (c < 0 || c > 2) {
-                        exec->error ("Index out of range: %s %s[%d]\n",
-                                     Result.typespec().string().c_str(),
-                                     Result.name().c_str(), c);
-                        c = clamp (c, 0, 2);
-                    }
-                    Vec3 rval = result[i].val();
-                    Vec3 rdx  = result[i].dx();
-                    Vec3 rdy  = result[i].dy();
-                    rval[c] = (Float) val[i].val();
-                    rdx[c]  = (Float) val[i].dx();
-                    rdy[c]  = (Float) val[i].dy();
-                    result[i].set (rval, rdx, rdy);
+            SHADE_LOOP_BEGIN
+                int c = index[i];
+                if (c < 0 || c > 2) {
+                    exec->error ("Index out of range: %s %s[%d]\n",
+                                 Result.typespec().string().c_str(),
+                                 Result.name().c_str(), c);
+                    c = clamp (c, 0, 2);
                 }
-            }
+                Vec3 rval = result[i].val();
+                Vec3 rdx  = result[i].dx();
+                Vec3 rdy  = result[i].dy();
+                rval[c] = (Float) val[i].val();
+                rdx[c]  = (Float) val[i].dx();
+                rdy[c]  = (Float) val[i].dy();
+                result[i].set (rval, rdx, rdy);
+            SHADE_LOOP_END
         } else {
             VaryingRef<Vec3> result ((Vec3 *)Result.data(), Result.step());
             VaryingRef<int> index ((int *)Index.data(), Index.step());
             VaryingRef<SRC> val ((SRC *)Val.data(), Val.step());
-            for (int i = beginpoint;  i < endpoint;  ++i) {
-                if (runflags[i]) {
-                    int c = index[i];
-                    if (c < 0 || c > 2) {
-                        exec->error ("Index out of range: %s %s[%d]\n",
-                                     Result.typespec().string().c_str(),
-                                     Result.name().c_str(), c);
-                        c = clamp (c, 0, 2);
-                    }
-                    result[i][c] = (Float) val[i];
+            SHADE_LOOP_BEGIN
+                int c = index[i];
+                if (c < 0 || c > 2) {
+                    exec->error ("Index out of range: %s %s[%d]\n",
+                                 Result.typespec().string().c_str(),
+                                 Result.name().c_str(), c);
+                    c = clamp (c, 0, 2);
                 }
-            }
+                result[i][c] = (Float) val[i];
+            SHADE_LOOP_END
             if (Result.has_derivs ())
                 exec->zero_derivs (Result);
         }
@@ -699,7 +680,7 @@ DECLOP (OP_compassign)
         impl = specialized_compassign<int>;
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -720,8 +701,7 @@ DECLOP (OP_dot)
     DASSERT (exec->sym(args[0]).typespec().is_float()  &&
              exec->sym(args[1]).typespec().is_triple() && exec->sym(args[2]).typespec().is_triple());
 
-    binary_op<Float, Vec3, Vec3, Dot> (exec, nargs, args,
-                                       runflags, beginpoint, endpoint);
+    binary_op<Float, Vec3, Vec3, Dot> (exec, nargs, args);
 }
 
 
@@ -734,8 +714,7 @@ DECLOP (OP_cross)
     DASSERT (exec->sym(args[0]).typespec().is_triple() &&
              exec->sym(args[1]).typespec().is_triple() && exec->sym(args[2]).typespec().is_triple());
 
-    binary_op<Vec3, Vec3, Vec3, Cross> (exec, nargs, args,
-                                       runflags, beginpoint, endpoint);
+    binary_op<Vec3, Vec3, Vec3, Cross> (exec, nargs, args);
 }
 
 
@@ -749,8 +728,7 @@ DECLOP (OP_length)
              ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && A.typespec().is_triple());
 
-    unary_op_guts<Float,Vec3,Length> (Result, A, exec,
-                                      runflags, beginpoint, endpoint);
+    unary_op_guts<Float,Vec3,Length> (Result, A, exec);
 }
 
 
@@ -764,8 +742,7 @@ DECLOP (OP_normalize)
              ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_triple() && A.typespec().is_triple());
 
-    unary_op_guts<Vec3,Vec3,Normalize> (Result, A, exec,
-                                        runflags, beginpoint, endpoint);
+    unary_op_guts<Vec3,Vec3,Normalize> (Result, A, exec);
 }
 
 
@@ -778,8 +755,7 @@ DECLOP (OP_distance)
     DASSERT (exec->sym(args[0]).typespec().is_float()  &&
              exec->sym(args[1]).typespec().is_triple() && exec->sym(args[2]).typespec().is_triple());
 
-    binary_op<Float,Vec3,Vec3,Distance> (exec, nargs, args,
-                                         runflags, beginpoint, endpoint);
+    binary_op<Float,Vec3,Vec3,Distance> (exec, nargs, args);
 }
 
 

@@ -156,15 +156,13 @@ public:
 
 DECLOP (OP_refraction)
 {
-    closure_op_guts<RefractionClosure, 3> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<RefractionClosure, 3> (exec, nargs, args);
 }
 
 
 DECLOP (OP_dielectric)
 {
-    closure_op_guts<DielectricClosure, 3> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<DielectricClosure, 3> (exec, nargs, args);
 }
 
 

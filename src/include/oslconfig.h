@@ -123,6 +123,15 @@ typedef OpenImageIO::TextureOptions TextureOptions;
 typedef OpenImageIO::ErrorHandler ErrorHandler;
 
 
+
+// These symbols define whether the shading system uses runflags, point
+// indices, or spans.  Exactly one should be set to 1!  
+// N.B. Spans not fully supported currently.
+#define USE_RUNFLAGS   0
+#define USE_RUNINDICES 0
+#define USE_RUNSPANS   1
+
+
 }; // namespace OSL
 
 #ifdef OSL_NAMESPACE

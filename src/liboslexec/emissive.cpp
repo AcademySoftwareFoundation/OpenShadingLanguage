@@ -143,14 +143,11 @@ public:
 DECLOP (OP_emission)
 {
     if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
-        closure_op_guts<GenericEmissiveClosure, 3> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+        closure_op_guts<GenericEmissiveClosure, 3> (exec, nargs, args);
     else if (nargs >= 2 && exec->sym (args[1]).typespec().is_float())
-        closure_op_guts<GenericEmissiveClosure, 2> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+        closure_op_guts<GenericEmissiveClosure, 2> (exec, nargs, args);
     else
-        closure_op_guts<GenericEmissiveClosure, 1> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+        closure_op_guts<GenericEmissiveClosure, 1> (exec, nargs, args);
 
 }
 

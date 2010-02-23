@@ -689,8 +689,7 @@ public:
 
 DECLOP (OP_cloth)
 {
-    closure_op_guts<ClothClosure, 24> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<ClothClosure, 24> (exec, nargs, args);
 }
 
 }; // namespace pvt

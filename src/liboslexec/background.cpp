@@ -59,8 +59,7 @@ public:
 
 DECLOP (OP_background)
 {
-     closure_op_guts<GenericBackgroundClosure, 1> (exec, nargs, args,
-         runflags, beginpoint, endpoint);
+     closure_op_guts<GenericBackgroundClosure, 1> (exec, nargs, args);
 }
 
 

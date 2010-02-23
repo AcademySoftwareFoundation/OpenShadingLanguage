@@ -596,7 +596,7 @@ public:
     /// ShadUseSurface).  The context must already be bound.  If
     /// runflags are not supplied, they will be auto-generated with all
     /// points turned on.
-    void execute (ShaderUse use, Runflag *rf=NULL);
+    void execute (ShaderUse use, Runflag *rf=NULL, int *ind=NULL, int nind=0);
 
     /// Return the current shader use being executed.
     ///
@@ -693,8 +693,39 @@ private:
     int m_paramstobind;                 ///< Total params in bound shaders
     int m_paramsbound;                  ///< Params we actually bound
     Runflag *m_original_runflags;       ///< Runflags we were called with
+    RunIndex *m_original_indices;       ///< Indices we were called with
+    int m_original_nindices;            ///< Number of original indices
 
     friend class ShadingExecution;
+};
+
+
+
+// A word about runflags and the runflag stack: the head of the
+// stack contains a copy of the CURRENT run state.  This is so that
+// certain operations can affect the whole set of runstates by
+// simply iterating over the stack entries, without treating the
+// current run state as a special case.
+struct Runstate {
+    Runflag *runflags;  ///< Pointer to current runflags
+    int beginpoint;     ///< Index of first 'on' point
+    int endpoint;       ///< Index of one beyond last 'on' point
+//    bool allpointson;   ///< Are all points [0..npoints) on?
+    RunIndex *indices;  ///< Index list
+    int nindices;       ///< Length of index list
+
+    Runstate () : runflags(NULL), indices(NULL), nindices(0) { }
+    Runstate (Runflag *rf, int bp, int ep, /*bool all,*/ RunIndex *ind, int nind) {
+        init (rf, bp, ep, /*all,*/ ind, nind);
+    }
+    void init (Runflag *rf, int bp, int ep, /*bool all,*/ RunIndex *ind, int nind) {
+        runflags = rf;
+        beginpoint = bp;
+        endpoint = ep;
+//        allpointson = all;
+        indices = ind;
+        nindices = nind;
+    }
 };
 
 
@@ -733,7 +764,8 @@ public:
     /// runflags will be set up to run all points. If beginop and endop
     /// are >= 0 they denote an op range, but if they remain at the
     /// defaults <0, the "main" code section will be run.
-    void run (Runflag *rf=NULL, int beginop = -1, int endop = -1);
+    void run (Runflag *rf=NULL, int *ind=NULL, int nind=0,
+              int beginop = -1, int endop = -1);
 
     /// Execute the shader with the current runflags, over the range of
     /// ops denoted by [beginop, endop).
@@ -776,8 +808,27 @@ public:
     /// points even if preserve_value is false.)  The value must be
     /// preserved if there's a chance that any symbols being written to
     /// are also symbols being read from in the same op.
-    void adjust_varying (Symbol &sym, bool varying_assignment,
-                         bool preserve_value = true);
+    inline void adjust_varying (Symbol &sym, bool varying_assignment,
+                                bool preserve_value = true) {
+        varying_assignment |= diverged();
+        if (sym.is_varying() != varying_assignment) {
+            if (varying_assignment)
+                adjust_varying_makevarying (sym, preserve_value);
+            else {
+                if (sym.symtype() != SymTypeGlobal) { // DO NOT demote a global
+                    sym.step (0);
+                    if (sym.has_derivs()) {
+                        size_t deriv_step = sym.deriv_step();
+                        memset ((char *)sym.data()+deriv_step, 0, 2*deriv_step);
+                    }
+                }
+            }
+        }
+    }        
+
+    void adjust_varying_makevarying (Symbol &sym, bool preserve_value);
+    void adjust_varying_full (Symbol &sym, bool varying_assignment,
+                                 bool preserve_value = true);
 
     /// Set the value of sym (and its derivs, if it has them) to zero
     /// for all shading points that are turned on.
@@ -793,14 +844,32 @@ public:
 
     /// Are all shading points currently turned on for execution?
     ///
-    bool all_points_on () const { return m_all_points_on; }
+//    bool all_points_on () const { return m_runstate.allpointson; }
 
     /// Has the run state diverged since the shader started running,
     /// that is, are any of the original points turned off?
     bool diverged () const { return (m_conditional_level != 0); }
 
+    int beginpoint () const {
+#if USE_RUNFLAGS
+        return m_runstate.beginpoint;
+#else
+        return m_runstate.indices[0];  // works for indices and spans
+#endif
+    }
+
+    int endpoint () const {
+#if USE_RUNFLAGS
+        return m_runstate.endpoint;
+#elif USE_RUNINDICES
+        return m_runstate.indices[m_runstate.nindices-1] + 1;
+#elif USE_RUNSPANS
+        return m_runstate.indices[m_runstate.nindices-1];
+#endif
+    }
+
     // Set the runflags to rf[0..
-    void new_runflags (Runflag *rf);
+    void new_runflags (Runflag *rf, int *ind, int nind);
 
     /// Adjust the valid point range [m_beginpoint,m_endpoint) to
     /// newly-set runflags, but extending no farther than the begin/end
@@ -810,7 +879,8 @@ public:
 
     /// Set up a new run state, with the old one safely stored on the
     /// stack.
-    void push_runflags (Runflag *runflags, int beginpoint, int endpoint);
+    void push_runflags (Runflag *runflags, int beginpoint, int endpoint,
+                        RunIndex *indices, int nindices);
 
     /// Restore the runflags to the state it was in before push_runflags().
     ///
@@ -933,6 +1003,10 @@ public:
     /// and it's time to lazily execute the earlier layer.
     void run_connected_layer (int layer);
 
+    /// Access to the internal run state.
+    ///
+    Runstate &runstate () { return m_runstate; }
+
 private:
     /// Helper for bind(): take care of connections to earlier layers
     ///
@@ -947,13 +1021,10 @@ private:
     void check_nan (Opcode &op);
 
     /// Check for NaN in a symbol.  Return true if there's a nan or inf.
-    /// If there is, put its value in 'badval'.  Adhere to the runflags if
-    /// they are non-NULL, or assume all points are on if runflags==NULL.
-    /// 'badderiv' is true if the badness was in the derivative, rather
-    /// than the actual value of the symbol.
-    bool check_nan (Symbol &sym, Runflag *runflags,
-                    int beginpoint, int endpoint,
-                    float &badval, bool &badderiv, int &point);
+    /// If there is, put its value in 'badval'.  'badderiv' is true if
+    /// the badness was in the derivative, rather than the actual value
+    /// of the symbol.
+    bool check_nan (Symbol &sym, float &badval, bool &badderiv, int &point);
 
     ShaderUse m_use;              ///< Our shader use
     int m_layer;                  ///< Our layer number
@@ -970,24 +1041,9 @@ private:
     SymbolVec m_symbols;          ///< Our own copy of the syms
     int m_last_instance_id;       ///< ID of last instance bound
 
-    // A word about runflags and the runflag stack: the head of the
-    // stack contains a copy of the CURRENT run state.  This is so that
-    // certain operations can affect the whole set of runstates by
-    // simply iterating over the stack entries, without treating the
-    // current run state as a special case.
-    struct Runstate {
-        Runflag *runflags;
-        int beginpoint, endpoint;
-        bool allpointson;
-        Runstate (Runflag *rf, int bp, int ep, bool all) 
-            : runflags(rf), beginpoint(bp), endpoint(ep), allpointson(all) {}
-    };
     typedef std::vector<Runstate> RunflagStack;
 
-    Runflag *m_runflags;          ///< Current runflags
-    int m_beginpoint;             ///< First point to shade
-    int m_endpoint;               ///< One past last point to shade
-    bool m_all_points_on;         ///< Are all points turned on?
+    Runstate m_runstate;          ///< Current run state
     RunflagStack m_runflag_stack; ///< Stack of runflags
     int m_conditional_level;      ///< Conditional nesting level
     int m_ip;                     ///< Instruction pointer

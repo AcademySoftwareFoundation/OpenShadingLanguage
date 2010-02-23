@@ -129,8 +129,7 @@ public:
 
 DECLOP (OP_phong)
 {
-    closure_op_guts<PhongClosure, 3> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<PhongClosure, 3> (exec, nargs, args);
 }
 
 
@@ -249,8 +248,7 @@ public:
 
 DECLOP (OP_phong_ramp)
 {
-    closure_op_guts<PhongRampClosure, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<PhongRampClosure, 4> (exec, nargs, args);
 }
 
 

@@ -109,21 +109,19 @@ DECLOP (OP_getattribute)
     // always fully varying case
     bool derivatives = (Destination.typespec().is_float() || Destination.typespec().is_triple());
 
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            result[i] = array_lookup ? 
-               exec->get_renderer_array_attribute(globals->renderstate[i],  
-                                                  derivatives /* want derivatives */,
-                                                  object_lookup ? object_name[i] : ustring(),
-                                                  attribute_type, attribute_name[i],
-                                                  index[i], &destination[i]) :
-               exec->get_renderer_attribute(globals->renderstate[i], 
-                                            derivatives /* want derivatives */,
-                                            object_lookup ? object_name[i] : ustring(),
-                                            attribute_type, attribute_name[i],
-                                            &destination[i]);
-        }
-    }
+    SHADE_LOOP_BEGIN
+        result[i] = array_lookup ? 
+            exec->get_renderer_array_attribute(globals->renderstate[i],  
+                                               derivatives /* want derivatives */,
+                                               object_lookup ? object_name[i] : ustring(),
+                                               attribute_type, attribute_name[i],
+                                               index[i], &destination[i]) :
+            exec->get_renderer_attribute(globals->renderstate[i], 
+                                         derivatives /* want derivatives */,
+                                         object_lookup ? object_name[i] : ustring(),
+                                         attribute_type, attribute_name[i],
+                                         &destination[i]);
+    SHADE_LOOP_END
 }
 
 
@@ -140,10 +138,9 @@ DECLOP (OP_surfacearea)
     if (result.is_uniform()) {
         result[0] = globals->surfacearea[0];
     } else {
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i])
-                result[i] = globals->surfacearea[i];
-        }
+        SHADE_LOOP_BEGIN
+            result[i] = globals->surfacearea[i];
+        SHADE_LOOP_END
     }
 }
 
@@ -161,9 +158,9 @@ DECLOP (OP_isshadowray)
     if (result.is_uniform()) {
         result[0] = globals->isshadowray;
     } else {
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = globals->isshadowray;
+        SHADE_LOOP_BEGIN
+            result[i] = globals->isshadowray;
+        SHADE_LOOP_END
     }
 }
 
@@ -181,9 +178,9 @@ DECLOP (OP_iscameraray)
     if (result.is_uniform()) {
         result[0] = globals->iscameraray;
     } else {
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = globals->iscameraray;
+        SHADE_LOOP_BEGIN
+            result[i] = globals->iscameraray;
+        SHADE_LOOP_END
     }
 }
 

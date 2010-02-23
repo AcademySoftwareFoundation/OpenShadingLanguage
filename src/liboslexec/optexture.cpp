@@ -191,14 +191,14 @@ DECLOP (OP_texture)
     bool tempresult = false;
     if (Result.has_derivs() || alpha) {
         tempresult = true;
-        r = ALLOCA (float, endpoint*options.nchannels);
+        r = ALLOCA (float, exec->runstate().endpoint*options.nchannels);
         // allocate some space to track the derivatives of the result
         // NOTE: even though OIIO doesn't need derivatives from S and T to
         // compute the gradients, we need them on the OSL side to be able to
         // rotate the gradients via the chain rule
         if (S.has_derivs() && T.has_derivs()) {
-            options.dresultds = ALLOCA (float, endpoint*options.nchannels);
-            options.dresultdt = ALLOCA (float, endpoint*options.nchannels);
+            options.dresultds = ALLOCA (float, exec->runstate().endpoint*options.nchannels);
+            options.dresultdt = ALLOCA (float, exec->runstate().endpoint*options.nchannels);
         } else {
             // we won't be able to provide derivatives properly
             if (Result.has_derivs())
@@ -207,64 +207,63 @@ DECLOP (OP_texture)
                 exec->zero_derivs(*Alpha);
         }
     }
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        // FIXME -- this calls texture system separately for each point!
-        // We really want to batch it into groups that share the same texture
-        // filename.
-        if (runflags[i]) {
-            if (swrap)
-                options.swrap = decode_wrap (swrap[i]);
-            if (twrap)
-                options.twrap = decode_wrap (twrap[i]);
-            if (firstchannel)
-                options.firstchannel = firstchannel[i];
-
-            bool ok = texturesys->texture (filename[i], options,
-                                           runflags, i /*beginpoint*/, i+1 /*endpoint*/,
-                                           s, t, dsdx, dtdx, dsdy, dtdy,
-                                           r);
-            if (! ok) {
-                std::string err = texturesys->geterror ();
-                if (err.length()) {
-                    exec->error ("texture lookup failed (%s:%d): %s",
-                        exec->op().sourcefile().c_str(),
-                        exec->op().sourceline(),
-                        err.c_str());
-                }
+    SHADE_LOOP_BEGIN
+        if (swrap)
+            options.swrap = decode_wrap (swrap[i]);
+        if (twrap)
+            options.twrap = decode_wrap (twrap[i]);
+        if (firstchannel)
+            options.firstchannel = firstchannel[i];
+#if USE_RUNFLAGS
+        bool ok = texturesys->texture (filename[i], options,
+                                       exec->runstate().runflags, i /*beginpoint*/, i+1 /*endpoint*/,
+                                       s, t, dsdx, dtdx, dsdy, dtdy,
+                                       r);
+#else /* indices or spans -- doctor to use one point for now */
+        Runflag rf = RunflagOn;  // make one fake runflag
+        bool ok = texturesys->texture (filename[i], options,
+                                       &rf - i, i /*beginpoint*/, i+1 /*endpoint*/,
+                                       s, t, dsdx, dtdx, dsdy, dtdy,
+                                       r);
+#endif
+        if (! ok) {
+            std::string err = texturesys->geterror ();
+            if (err.length()) {
+                exec->error ("texture lookup failed (%s:%d): %s",
+                             exec->op().sourcefile().c_str(),
+                             exec->op().sourceline(),
+                             err.c_str());
             }
-         }
-    }
+        }
+    SHADE_LOOP_END
 
     if (tempresult) {
         // We need to re-copy results back to the right destinations.
         int resultchans = Result.typespec().simpletype().aggregate;
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i])
-                for (int c = 0;  c < resultchans;  ++c)
-                    (&result[i])[c] = r[i*options.nchannels+c];
-        }
+        SHADE_LOOP_BEGIN
+            for (int c = 0;  c < resultchans;  ++c)
+                (&result[i])[c] = r[i*options.nchannels+c];
+        SHADE_LOOP_END
         if (alpha) {
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    alpha[i] = r[i*options.nchannels+resultchans];
+            SHADE_LOOP_BEGIN
+                alpha[i] = r[i*options.nchannels+resultchans];
+            SHADE_LOOP_END
         }
         // now figure out derivatives (as needed)
         // we use the multi-variate chain rule:
         // dTdx = dTds * dsdx + dTdt * dtdx
         // dTdy = dTds * dsdy + dTdt * dtdy
         if (options.dresultds) {
-            for (int i = beginpoint;  i < endpoint;  ++i) {
-                if (runflags[i]) {
-                    for (int c = 0;  c < resultchans;  ++c) {
-                        (&result[i])[1 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdx[i] + options.dresultdt[i*options.nchannels+c] * dtdx[i];
-                        (&result[i])[2 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdy[i] + options.dresultdt[i*options.nchannels+c] * dtdy[i];
-                    }
-                    if (alpha) {
-                        (&alpha[i])[1] = options.dresultds[i*options.nchannels+resultchans] * dsdx[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdx[i];
-                        (&alpha[i])[2] = options.dresultds[i*options.nchannels+resultchans] * dsdy[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdy[i];
-                    }
+            SHADE_LOOP_BEGIN
+                for (int c = 0;  c < resultchans;  ++c) {
+                    (&result[i])[1 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdx[i] + options.dresultdt[i*options.nchannels+c] * dtdx[i];
+                    (&result[i])[2 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdy[i] + options.dresultdt[i*options.nchannels+c] * dtdy[i];
                 }
-            }
+                if (alpha) {
+                    (&alpha[i])[1] = options.dresultds[i*options.nchannels+resultchans] * dsdx[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdx[i];
+                    (&alpha[i])[2] = options.dresultds[i*options.nchannels+resultchans] * dsdy[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdy[i];
+                }
+            SHADE_LOOP_END
         }
     }
 }
@@ -300,27 +299,21 @@ DECLOP (OP_gettextureinfo)
     VaryingRef<ustring> dataname ((ustring *)Dataname.data(), Dataname.step());
     VaryingRef<char> data ((char *)Data.data(), Data.step());
     
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        // FIXME -- this calls get_texture_info separately for each
-        // point.  We should batch it into groups that share the same
-        // texture filename and data name.  Though it being varying is
-        // already probably a rare case, so it's not very high priority.
-        if (runflags[i]) {
-            result[i] = texturesys->get_texture_info (filename[i], dataname[i],
-                                  Data.typespec().simpletype(), &data[i]);
-            if (!result[i]) {
-                std::string err = texturesys->geterror ();
-                if (err.length()) {
-                    exec->error ("gettextureinfo failed (%s:%d): %s",
-                        exec->op().sourcefile().c_str(),
-                        exec->op().sourceline(),
-                        err.c_str());
-                }
+    // FIXME -- don't need multiple lookups if filename,dataname are uniform
+    SHADE_LOOP_BEGIN
+        result[i] = texturesys->get_texture_info (filename[i], dataname[i],
+                                      Data.typespec().simpletype(), &data[i]);
+        if (!result[i]) {
+            std::string err = texturesys->geterror ();
+            if (err.length()) {
+                exec->error ("gettextureinfo failed (%s:%d): %s",
+                             exec->op().sourcefile().c_str(),
+                             exec->op().sourceline(), err.c_str());
             }
         }
         if (! varying)
             break;
-    }
+    SHADE_LOOP_END
 }
 
 

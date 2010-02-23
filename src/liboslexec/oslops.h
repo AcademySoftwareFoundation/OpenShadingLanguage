@@ -47,8 +47,7 @@ namespace pvt {
 
 /// Macro that defines the arguments to shading opcode implementations
 ///
-#define OPARGSDECL     ShadingExecution *exec, int nargs, const int *args, \
-                       Runflag *runflags, int beginpoint, int endpoint
+#define OPARGSDECL     ShadingExecution *exec, int nargs, const int *args
 
 /// Macro that defines the full declaration of a shading opcode
 /// implementation
@@ -233,15 +232,104 @@ DECLOP (OP_xor);
 DECLOP (OP_missing);
 
 
+
+// Below are macros that define handy ways to loop over all active shade
+// points in a uniform way regardless of whether we are using runflags,
+// indices, or spans.
+//
+// Runflags are an array of npoints true/false values saying whether
+//   each point is on or off.
+// Indices are an array of nindices giving the index of each point
+//   that is on.
+// Spans are like indices, but give the [begin,end) range spans of "on"
+//   points, so the length of the array is 2*nspans.
+
+#if USE_RUNFLAGS
+# define SHADE_LOOP_RUNFLAGS_BEGIN(r,b,e)       \
+    {                                           \
+        const Runflag *runflags_ = r;           \
+        int end_ = e;                           \
+        for (int i = b;  i < end_;  ++i)        \
+            if (runflags_[i]) {
+
+# define SHADE_LOOP_BEGIN                                       \
+    SHADE_LOOP_RUNFLAGS_BEGIN (exec->runstate().runflags,       \
+                               exec->runstate().beginpoint,     \
+                               exec->runstate().endpoint)
+
+#elif USE_RUNINDICES
+# define SHADE_LOOP_INDICES_BEGIN(ind,n)                        \
+    {                                                           \
+        const RunIndex *indices_ = ind;                         \
+        int nindices_ = n;                                      \
+        for (int ind_ = 0;  ind_ < nindices_;  ++ind_) {        \
+            int i = indices_[ind_];
+
+# define SHADE_LOOP_BEGIN                                       \
+    SHADE_LOOP_INDICES_BEGIN (exec->runstate().indices,         \
+                              exec->runstate().nindices)
+
+#elif USE_RUNSPANS
+# define SHADE_LOOP_SPANS_BEGIN(ind,n)                          \
+    {                                                           \
+        const int *spans_ = ind;                                \
+        int nspans_ = n/2;                                      \
+        for ( ; nspans_; --nspans_, spans_ += 2)                \
+            for (int i = spans_[0];  i < spans_[1];  ++i) {
+
+# define SHADE_LOOP_BEGIN                                       \
+    SHADE_LOOP_SPANS_BEGIN (exec->runstate().indices,           \
+                            exec->runstate().nindices)
+
+// Utility to convert something that looks like runflags to spans
+template<class RF>
+inline bool runflags_to_spans (RF &rf, int beg, int end,
+                               int *indices, int &nindices, int onval = 1)
+{
+    bool any_off = false;
+    for (int i = beg;  i < end;  ++i) {
+        if (rf[i] == onval) {
+            indices[nindices++] = i;
+            while (i < end && rf[i] == onval)  // Skip to next 0
+                ++i;
+            indices[nindices++] = i;
+            any_off |= (i < end);  // stopped because of an off point
+        } else {
+            any_off = true;
+        }
+    }
+    return any_off;
+}
+
+// Utility to copy spans-to-spans, but only when the thing that looks like
+// runflags matches the 'onval'.
+template<class RF>
+inline bool spans_runflags_to_spans (int *spans, int spanlength, RF &rf,
+                                     int *indices, int &nindices, int onval=1)
+{
+    bool any_off = false;
+    for (int s = 0;  s < spanlength;  s += 2)
+        any_off |= runflags_to_spans (rf, spans[s], spans[s+1],
+                                      indices, nindices, onval);
+    return any_off;
+}
+
+#endif
+
+# define SHADE_LOOP_END }}
+
+#define SHADE_LOOP(x) SHADE_LOOP_BEGIN x SHADE_LOOP_END
+
+
+
+
 // Heavy lifting of the math and other ternary ops, this is a templated
 // version that knows the types of the arguments and the operation to
 // perform (given by a functor).
 template <class RET, class ATYPE, class BTYPE, class CTYPE, class DTYPE, class FUNCTION>
 inline void
 quaternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C, Symbol &D,
-                    ShadingExecution *exec, 
-                    Runflag *runflags, int beginpoint, int endpoint,
-                    bool zero_derivs=true)
+                    ShadingExecution *exec, bool zero_derivs=true)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying() | B.is_varying() | C.is_varying() | D.is_varying(),
@@ -264,14 +352,14 @@ quaternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C, Symbol &D,
         // the operation only once.
         RET r;
         function (r, *a, *b, *c, *d);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                function (result[i], a[i], b[i], c[i], d[i]);
+        SHADE_LOOP_BEGIN
+            function (result[i], a[i], b[i], c[i], d[i]);
+        SHADE_LOOP_END
     }
 
     if (zero_derivs && Result.has_derivs ())
@@ -296,21 +384,16 @@ DECLOP (quaternary_op_binary_derivs)
     if (Result.has_derivs()) {
         if (A.has_derivs()) {
             if (B.has_derivs())
-                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
-                        runflags, beginpoint, endpoint, false);
+                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec, false);
             else
-                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
-                        runflags, beginpoint, endpoint, false);
+                quaternary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec, false);
         } else if (B.has_derivs()) {
-            quaternary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
-                    runflags, beginpoint, endpoint, false);
+            quaternary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec, false);
         } else {
-            quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
-                    runflags, beginpoint, endpoint,true);
+            quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec, true);
         }
     } else {
-        quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec,
-                runflags, beginpoint, endpoint, false);
+        quaternary_op_guts<RET,ATYPE,BTYPE,CTYPE,DTYPE,FUNCTION> (Result, A, B, C, D, exec, false);
     }
 }
 
@@ -322,9 +405,7 @@ DECLOP (quaternary_op_binary_derivs)
 template <class RET, class ATYPE, class BTYPE, class CTYPE, class FUNCTION>
 inline void
 ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
-                ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint,
-                bool zero_derivs=true)
+                 ShadingExecution *exec, bool zero_derivs=true)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying() | B.is_varying() | C.is_varying(),
@@ -345,14 +426,14 @@ ternary_op_guts (Symbol &Result, Symbol &A, Symbol &B, Symbol &C,
         // the operation only once.
         RET r;
         function (r, *a, *b, *c);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                function (result[i], a[i], b[i], c[i]);
+        SHADE_LOOP_BEGIN
+            function (result[i], a[i], b[i], c[i]);
+        SHADE_LOOP_END
     }
     if (zero_derivs && Result.has_derivs ())
         exec->zero_derivs (Result);
@@ -369,8 +450,7 @@ DECLOP (ternary_op_noderivs)
     Symbol &B (exec->sym (args[2]));
     Symbol &C (exec->sym (args[3]));
 
-    ternary_op_guts<RET,ATYPE,BTYPE,CTYPE,FUNCTION> (Result, A, B, C, exec,
-                                              runflags, beginpoint, endpoint);
+    ternary_op_guts<RET,ATYPE,BTYPE,CTYPE,FUNCTION> (Result, A, B, C, exec);
 }
 
 // Wrapper around ternary_op_guts that does has he call signature of an
@@ -389,19 +469,19 @@ DECLOP (ternary_op)
            if (B.has_derivs()) {
                if (C.has_derivs()) {
                    ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, Dual2<BTYPE>, Dual2<CTYPE>, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                } else {
                    ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, Dual2<BTYPE>, CTYPE, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                }
            }
            else {
                if (C.has_derivs()) {
                    ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, BTYPE, Dual2<CTYPE>, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                } else {
                    ternary_op_guts<Dual2<RET>, Dual2<ATYPE>, BTYPE, CTYPE, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                }
            }
         }
@@ -409,25 +489,24 @@ DECLOP (ternary_op)
            if (B.has_derivs()) {
                if (C.has_derivs()) {
                    ternary_op_guts<Dual2<RET>, ATYPE, Dual2<BTYPE>, Dual2<CTYPE>, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                } else {
                    ternary_op_guts<Dual2<RET>, ATYPE, Dual2<BTYPE>, CTYPE, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                }
            } else {
                if (C.has_derivs()) {
                    ternary_op_guts<Dual2<RET>, ATYPE, BTYPE, Dual2<CTYPE>, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, false);
+                       (Result, A, B, C, exec, false);
                } else {
                    ternary_op_guts<Dual2<RET>, ATYPE, BTYPE, CTYPE, FUNCTION>
-                       (Result, A, B, C, exec, runflags, beginpoint, endpoint, true);
+                       (Result, A, B, C, exec, true);
                }
            }
         }
     }
     else {
-        ternary_op_guts<RET,ATYPE,BTYPE,CTYPE,FUNCTION> (Result, A, B, C, exec,
-                                              runflags, beginpoint, endpoint, false);
+        ternary_op_guts<RET,ATYPE,BTYPE,CTYPE,FUNCTION> (Result, A, B, C, exec, false);
     }
 }
 
@@ -439,9 +518,7 @@ DECLOP (ternary_op)
 template <class RET, class ATYPE, class BTYPE, class FUNCTION>
 inline void
 binary_op_guts (Symbol &Result, Symbol &A, Symbol &B,
-                ShadingExecution *exec, 
-                Runflag *runflags, int beginpoint, int endpoint,
-                bool zero_derivs=true)
+                ShadingExecution *exec, bool zero_derivs=true)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying() | B.is_varying(),
@@ -461,14 +538,14 @@ binary_op_guts (Symbol &Result, Symbol &A, Symbol &B,
         // the operation only once.
         RET r;
         function (r, *a, *b);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                function (result[i], a[i], b[i]);
+        SHADE_LOOP_BEGIN
+            function (result[i], a[i], b[i]);
+        SHADE_LOOP_END
     }
     if (zero_derivs && Result.has_derivs ())
         exec->zero_derivs (Result);
@@ -484,8 +561,7 @@ DECLOP (binary_op_noderivs)
     Symbol &A (exec->sym (args[1]));
     Symbol &B (exec->sym (args[2]));
 
-    binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                                              runflags, beginpoint, endpoint);
+    binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec);
 }
 
 
@@ -505,21 +581,16 @@ DECLOP (binary_op)
     if (Result.has_derivs()) {
         if (A.has_derivs()) {
             if (B.has_derivs())
-                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint, false);
+                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec, false);
             else
-                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint, false);
+                binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec, false);
         } else if (B.has_derivs()) {
-            binary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint, false);
+            binary_op_guts<Dual2<RET>,ATYPE,Dual2<BTYPE>,FUNCTION> (Result, A, B, exec, false);
         } else {
-            binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                                           runflags, beginpoint, endpoint,true);
+            binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec, true);
         }
     } else {
-        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                                                  runflags, beginpoint, endpoint, false);
+        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec, false);
     }
 }
 
@@ -536,11 +607,9 @@ DECLOP (binary_op_unary_derivs)
     Symbol &B (exec->sym (args[2]));
 
     if (Result.has_derivs() && A.has_derivs()) {
-        binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec,
-                runflags, beginpoint, endpoint, false);
+        binary_op_guts<Dual2<RET>,Dual2<ATYPE>,BTYPE,FUNCTION> (Result, A, B, exec, false);
     } else {
-        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec,
-                runflags, beginpoint, endpoint, true);
+        binary_op_guts<RET,ATYPE,BTYPE,FUNCTION> (Result, A, B, exec, true);
     }
 }
 
@@ -553,8 +622,7 @@ DECLOP (binary_op_unary_derivs)
 template <class RET, class ATYPE, class FUNCTION>
 inline void
 unary_op_guts_noderivs (Symbol &Result, Symbol &A,
-                        ShadingExecution *exec, 
-                        Runflag *runflags, int beginpoint, int endpoint)
+                        ShadingExecution *exec)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying(), A.data() == Result.data());
@@ -576,14 +644,14 @@ unary_op_guts_noderivs (Symbol &Result, Symbol &A,
         // the operation only once.
         RET r;
         function (r, *a);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                function (result[i], a[i]);
+        SHADE_LOOP_BEGIN
+            function (result[i], a[i]);
+        SHADE_LOOP_END
     }
 }
 
@@ -595,8 +663,7 @@ unary_op_guts_noderivs (Symbol &Result, Symbol &A,
 template <class RET, class ATYPE, class FUNCTION>
 inline void
 unary_op_guts (Symbol &Result, Symbol &A,
-               ShadingExecution *exec, 
-               Runflag *runflags, int beginpoint, int endpoint)
+               ShadingExecution *exec)
 {
     // Adjust the result's uniform/varying status
     exec->adjust_varying (Result, A.is_varying(), A.data() == Result.data());
@@ -615,9 +682,9 @@ unary_op_guts (Symbol &Result, Symbol &A,
         RET r;
         function (r, *(ATYPE *)A.data());
         VaryingRef<RET> result ((RET *)Result.data(), Result.step());
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
         if (Result.has_derivs())
             exec->zero_derivs (Result);
     } else {
@@ -625,15 +692,15 @@ unary_op_guts (Symbol &Result, Symbol &A,
         if (Result.has_derivs() && A.has_derivs()) {
             VaryingRef<Dual2<RET> > result ((Dual2<RET> *)Result.data(), Result.step());
             VaryingRef<Dual2<ATYPE> > a ((Dual2<ATYPE> *)A.data(), A.step());
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    function (result[i], a[i]);
+            SHADE_LOOP_BEGIN
+                function (result[i], a[i]);
+            SHADE_LOOP_END
         } else {
             VaryingRef<RET> result ((RET *)Result.data(), Result.step());
             VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    function (result[i], a[i]);
+            SHADE_LOOP_BEGIN
+                function (result[i], a[i]);
+            SHADE_LOOP_END
             if (Result.has_derivs())
                 exec->zero_derivs (Result);
         }
@@ -652,8 +719,7 @@ DECLOP (unary_op_noderivs)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
 
-    unary_op_guts_noderivs<RET,ATYPE,FUNCTION> (Result, A, exec,
-                                                runflags, beginpoint, endpoint);
+    unary_op_guts_noderivs<RET,ATYPE,FUNCTION> (Result, A, exec);
 }
 
 
@@ -664,8 +730,7 @@ DECLOP (unary_op)
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
 
-    unary_op_guts<RET,ATYPE,FUNCTION> (Result, A, exec,
-                                       runflags, beginpoint, endpoint);
+    unary_op_guts<RET,ATYPE,FUNCTION> (Result, A, exec);
 }
 
 
@@ -710,27 +775,25 @@ DECLOP (closure_op_guts)
 
     /* N.B. Closures don't have derivs */
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            char* mem = result[i]->allocate_component (sizeof (Primitive));
-            ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
-            if (sidedness) {
-                if (sidedness[i] == Strings::front)
-                    side = ClosurePrimitive::Front;
-                else if (sidedness[i] == Strings::back)
-                    side = ClosurePrimitive::Back;
-                else if (sidedness[i] == Strings::both)
-                    side = ClosurePrimitive::Both;
-                else
-                    side = ClosurePrimitive::None;
-            }
-            ClosurePrimitive *prim = new (mem) Primitive (i, exec, nargs, args, side);
-            for (int l = 0; l < nlabels; ++l)
-               prim->set_custom_label(l, labels[l][i]);
-            // Label list must be NONE terminated
-            prim->set_custom_label(nlabels, Labels::NONE);
+    SHADE_LOOP_BEGIN
+        char* mem = result[i]->allocate_component (sizeof (Primitive));
+        ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
+        if (sidedness) {
+            if (sidedness[i] == Strings::front)
+                side = ClosurePrimitive::Front;
+            else if (sidedness[i] == Strings::back)
+                side = ClosurePrimitive::Back;
+            else if (sidedness[i] == Strings::both)
+                side = ClosurePrimitive::Both;
+            else
+                side = ClosurePrimitive::None;
         }
-    }
+        ClosurePrimitive *prim = new (mem) Primitive (i, exec, nargs, args, side);
+        for (int l = 0; l < nlabels; ++l)
+            prim->set_custom_label(l, labels[l][i]);
+        // Label list must be NONE terminated
+        prim->set_custom_label(nlabels, Labels::NONE);
+    SHADE_LOOP_END
 }
 
 /// Fetch the value of an opcode argument given its index in the arglist

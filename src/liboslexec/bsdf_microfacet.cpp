@@ -479,26 +479,22 @@ public:
 
 DECLOP (OP_microfacet_ggx)
 {
-    closure_op_guts<MicrofacetGGXClosure<0>, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<MicrofacetGGXClosure<0>, 4> (exec, nargs, args);
 }
 
 DECLOP (OP_microfacet_ggx_refraction)
 {
-    closure_op_guts<MicrofacetGGXClosure<1>, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<MicrofacetGGXClosure<1>, 4> (exec, nargs, args);
 }
 
 DECLOP (OP_microfacet_beckmann)
 {
-    closure_op_guts<MicrofacetBeckmannClosure<0>, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<MicrofacetBeckmannClosure<0>, 4> (exec, nargs, args);
 }
 
 DECLOP (OP_microfacet_beckmann_refraction)
 {
-    closure_op_guts<MicrofacetBeckmannClosure<1>, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<MicrofacetBeckmannClosure<1>, 4> (exec, nargs, args);
 }
 
 

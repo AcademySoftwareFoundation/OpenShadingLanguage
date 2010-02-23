@@ -187,14 +187,14 @@ DECLOP (color_ctr_transform)
     } else if (! vary) {
         // Result is varying, but everything else is uniform
         Color3 r = to_rgb (*space, *x, *y, *z, exec);
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = r;
+        SHADE_LOOP_BEGIN
+            result[i] = r;
+        SHADE_LOOP_END
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = to_rgb (space[i], x[i], y[i], z[i], exec);
+        SHADE_LOOP_BEGIN
+            result[i] = to_rgb (space[i], x[i], y[i], z[i], exec);
+        SHADE_LOOP_END
     }
 }
 
@@ -225,7 +225,7 @@ DECLOP (OP_color)
             impl = color_ctr_transform;  // special case: colors different
         else
             impl = triple_ctr;
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -246,7 +246,7 @@ DECLOP (OP_luminance)
     DASSERT (! Result.typespec().is_closure() && ! C.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
-    unary_op_guts<Float, Color3, Luminance> (Result, C, exec, runflags, beginpoint, endpoint);
+    unary_op_guts<Float, Color3, Luminance> (Result, C, exec);
 }
 
 

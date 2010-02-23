@@ -53,8 +53,6 @@ DECLOP (OP_missing)
 
 DECLOP (OP_end)
 {
-    if (exec->debug())
-        exec->info ("Executing end!");
 }
 
 

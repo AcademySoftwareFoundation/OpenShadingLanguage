@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "dual.h"
+#include "oslops.h"
 
 
 namespace OSL {
@@ -280,8 +281,7 @@ ShadingExecution::bind (ShaderInstance *instance)
             float badval;
             bool badderiv;
             int point;
-            if (debugnan && check_nan (sym, m_context->m_original_runflags,
-                                       0, m_npoints, badval, badderiv, point))
+            if (debugnan && check_nan (sym, badval, badderiv, point))
                 m_shadingsys->warning ("Found %s%g in shader \"%s\" when binding %s",
                                        badderiv ? "bad derivative " : "",
                                        badval, m_master->shadername().c_str(),
@@ -376,6 +376,7 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
             // ops, run them now
             int old_ip = m_ip;  // Save the instruction pointer
             run (context()->m_original_runflags,
+                 context()->m_original_indices, context()->m_original_nindices,
                  sym->initbegin(), sym->initend());
             m_ip = old_ip;
         }
@@ -432,8 +433,7 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
     bool badderiv;
     int point;
     if (m_shadingsys->debug_nan() &&
-        check_nan (*sym, context()->m_original_runflags,
-                   m_beginpoint, m_endpoint, badval, badderiv, point))
+        check_nan (*sym, badval, badderiv, point))
         m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
                                badderiv ? "bad derivative " : "",
                                badval, m_master->shadername().c_str(),
@@ -447,6 +447,7 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
 void
 ShadingExecution::bind_connections ()
 {
+//    std::cerr << "  bind_connections " << m_instance->nconnections() << "\n";
     for (int i = 0;  i < m_instance->nconnections();  ++i)
         bind_connection (m_instance->connection (i));
     // FIXME -- you know, the connectivity is fixed for the whole group
@@ -514,7 +515,7 @@ ShadingExecution::bind_connection (const Connection &con, bool forcebind)
 
 
 void
-ShadingExecution::run (Runflag *rf, int beginop, int endop)
+ShadingExecution::run (Runflag *rf, int *ind, int nind, int beginop, int endop)
 {
     if (m_executed)
         return;       // Already executed
@@ -530,18 +531,68 @@ ShadingExecution::run (Runflag *rf, int beginop, int endop)
     }
 
     // Make space for new runflags
+#if USE_RUNFLAGS
     Runflag *runflags = ALLOCA (Runflag, m_npoints);
+    int *indices = NULL;
+    int nindices = 0;
     if (rf) {
         // Passed runflags -- copy those
         memcpy (runflags, rf, m_npoints*sizeof(Runflag));
+    } else if (ind) {
+        // Passed indices -- need to convert to runflags
+        memset (runflags, RunflagOff, m_npoints*sizeof(Runflag));
+        for (int i = 0;  i < nind;  ++i)
+            runflags[indices[i]] = RunflagOn;
     } else {
         // If not passed runflags, make new ones
         for (int i = 0;  i < m_npoints;  ++i)
             runflags[i] = RunflagOn;
     }
+#elif USE_RUNINDICES
+    Runflag *runflags = NULL;
+    int *indices = ALLOCA (int, m_npoints);
+    int nindices = nind;
+    if (ind) {
+        memcpy (indices, ind, nind*sizeof(indices[0]));
+    } else if (rf) {
+        // Passed runflags -- convert those to indices
+        for (int i = 0;  i < m_npoints;  ++i)
+            if (rf[i])
+                indices[nindices++] = i;
+    } else {
+        // If not passed either, make new ones
+        nindices = m_npoints;
+        for (int i = 0;  i < nindices;  ++i)
+            indices[i] = i;
+    }
+#elif USE_RUNSPANS
+    Runflag *runflags = NULL;
+    int *indices = NULL;
+    int nindices = nind;
+    if (ind) {
+        indices = ALLOCA (int, nind);
+        memcpy (indices, ind, nind*sizeof(indices[0]));
+    } else if (rf) {
+        // Passed runflags -- convert those to spans
+        indices = ALLOCA (int, m_npoints*2);
+        nindices = 0;
+        runflags_to_spans (rf, 0, m_npoints, indices, nindices);
+    } else {
+        // If not passed either, make new ones
+        indices = ALLOCA (int, 2);  // max space we could need
+        nindices = 2;
+        indices[0] = 0;
+        indices[1] = m_npoints;
+    }
+#endif
+
+    // Handle all of the symbols that are connected to earlier layers.
+//    std::cerr << "About to bind connections\n";
+    bind_connections ();
+//    std::cerr << "done bind connections\n";
 
     m_conditional_level = 0;
-    push_runflags (runflags, 0, m_npoints);
+    push_runflags (runflags, 0, m_npoints, indices, nindices);
     if (beginop >= 0)   // Run just the op range supplied, and no init ops
         run (beginop, endop);
     else {              // Default (<0) means run param init ops + main code
@@ -563,9 +614,21 @@ ShadingExecution::run (int beginop, int endop)
                             beginop, endop);
     const int *args = &m_master->m_args[0];
     bool debugnan = m_shadingsys->debug_nan ();
-    for (m_ip = beginop; m_ip < endop && m_beginpoint < m_endpoint;  ++m_ip) {
+    for (m_ip = beginop; m_ip < endop && m_runstate.beginpoint < m_runstate.endpoint;  ++m_ip) {
         DASSERT (m_ip >= 0 && m_ip < (int)m_master->m_ops.size());
         Opcode &op (this->op ());
+
+#if 0
+        // Debugging tool -- sample the run flags
+        static atomic_ll count;
+        if (((++count) % 172933ul /*1142821ul*/) == 0) {  //   12117689ul
+            std::cerr << "rf ";
+            for (int i = 0;  i < npoints();  ++i)
+                std::cerr << (int)(m_runstate.runflags[i] ? 1 : 0) << ' ';
+            std::cerr << std::endl;
+        }
+#endif
+
 #if 0
         if (m_debug) {
             m_shadingsys->info ("Before running op %d %s, values are:",
@@ -578,8 +641,7 @@ ShadingExecution::run (int beginop, int endop)
         }
 #endif
         ASSERT (op.implementation() && "Unimplemented op!");
-        op (this, op.nargs(), args+op.firstarg(),
-            m_runflags, m_beginpoint, m_endpoint);
+        op (this, op.nargs(), args+op.firstarg());
 
 #if 0
         if (m_debug) {
@@ -612,7 +674,7 @@ ShadingExecution::check_nan (Opcode &op)
         float badval;
         bool badderiv;
         int point;
-        if (check_nan (s, m_runflags, m_beginpoint, m_endpoint, badval, badderiv, point))
+        if (check_nan (s, badval, badderiv, point))
             m_shadingsys->warning ("Generated %s%g in shader \"%s\",\n"
                                    "\tsource \"%s\", line %d (instruction %s, arg %d)\n"
                                    "\tsymbol \"%s\", %s (step %d), point %d of %d",
@@ -627,8 +689,7 @@ ShadingExecution::check_nan (Opcode &op)
 
 
 bool
-ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
-                             int beginpoint, int endpoint, float &badval,
+ShadingExecution::check_nan (Symbol &sym, float &badval,
                              bool &badderiv, int &point)
 {
     if (sym.typespec().is_closure())
@@ -638,24 +699,23 @@ ShadingExecution::check_nan (Symbol &sym, Runflag *runflags,
     badderiv = false;
     if (t.basetype == TypeDesc::FLOAT) {
         int agg = t.aggregate * t.numelements();
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags == NULL || runflags[i]) {
-                float *f = (float *)((char *)sym.data()+sym.step()*i);
-                for (int d = 0;  d < 3;  ++d)  {  // for each of val, dx, dy
-                    for (int c = 0;  c < agg;  ++c)
-                        if (! std::isfinite (f[c])) {
-                            badval = f[c];
-                            badderiv = (d > 0);
-                            point = i;
-                            return true;
-                        }
-                    if (! sym.has_derivs())
-                        break;    // don't advance to next deriv if no derivs
-                    // Step to next derivative
-                    f = (float *)((char *)f + sym.deriv_step());
-                }
+        ShadingExecution *exec = this;
+        SHADE_LOOP_BEGIN
+            float *f = (float *)((char *)sym.data()+sym.step()*i);
+            for (int d = 0;  d < 3;  ++d)  {  // for each of val, dx, dy
+                for (int c = 0;  c < agg;  ++c)
+                    if (! std::isfinite (f[c])) {
+                        badval = f[c];
+                        badderiv = (d > 0);
+                        point = i;
+                        return true;
+                    }
+                if (! sym.has_derivs())
+                    break;    // don't advance to next deriv if no derivs
+                // Step to next derivative
+                f = (float *)((char *)f + sym.deriv_step());
             }
-        }
+        SHADE_LOOP_END
     }
     return false;
 }
@@ -676,7 +736,9 @@ ShadingExecution::run_connected_layer (int layer)
 #if 0
     std::cerr << "Lazy running layer " << layer << ' ' << "\n";
 #endif
-    connected.run (m_context->m_original_runflags);
+    connected.run (m_context->m_original_runflags, 
+                   m_context->m_original_indices,
+                   m_context->m_original_nindices);
     m_context->m_lazy_evals += 1;
 
     // Now re-bind the connections between that layer and all other
@@ -697,21 +759,48 @@ ShadingExecution::run_connected_layer (int layer)
 
 
 void
-ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
+ShadingExecution::adjust_varying_makevarying (Symbol &sym, bool preserve_value)
+{
+    // sym is uniform, but we're either assigning a new varying
+    // value or we're inside a conditional.  Promote sym to varying.
+    size_t size = sym.has_derivs() ? 3*sym.deriv_step() : sym.size();
+    sym.step (size);
+    if (preserve_value || diverged()) {
+        // Propagate the value from slot 0 to other slots
+        char *data = (char *) sym.data();
+#if USE_RUNFLAGS
+        SHADE_LOOP_RUNFLAGS_BEGIN (context()->m_original_runflags,
+                                   0, m_npoints)
+#elif USE_RUNINDICES
+        SHADE_LOOP_INDICES_BEGIN (context()->m_original_indices,
+                                  context()->m_original_nindices)
+#elif USE_RUNSPANS
+        SHADE_LOOP_SPANS_BEGIN (context()->m_original_indices,
+                                context()->m_original_nindices)
+#endif
+            memcpy (data + i*size, data, size);
+        SHADE_LOOP_END
+    }
+}
+
+
+
+void
+ShadingExecution::adjust_varying_full (Symbol &sym, bool varying_assignment,
                                   bool preserve_value)
 {
     // This is tricky.  To make sure we're catching all the cases, let's
     // enumerate them by the current symbol varyingness, the assignent
     // varyingness, and whether all points in the grid are active:
-    //   case   sym    assignment   all_pts_on     action
-    //    0      v         v            n           v (leave alone)
-    //    1      v         v            y           v (leave alone)
-    //    2      v         u            n           v (leave alone)
-    //    3      v         u            y           u (demote)
-    //    4      u         v            n           v (promote)
-    //    5      u         v            y           v (promote)
-    //    6      u         u            n           v (promote)
-    //    7      u         u            y           u (leave alone)
+    //   case   sym    assignment   diverged     action
+    //    0      v         v            y           v (leave alone)
+    //    1      v         v            n           v (leave alone)
+    //    2      v         u            y           v (leave alone)
+    //    3      v         u            n           u (demote)
+    //    4      u         v            y           v (promote)
+    //    5      u         v            n           v (promote)
+    //    6      u         u            y           v (promote)
+    //    7      u         u            n           u (leave alone)
 
     // If we're inside a conditional of any kind, even a uniform assignment
     // makes the result varying.  
@@ -752,16 +841,28 @@ ShadingExecution::adjust_varying (Symbol &sym, bool varying_assignment,
         if (preserve_value || diverged()) {
             // Propagate the value from slot 0 to other slots
             char *data = (char *) sym.data();
-            for (int i = 1;  i < m_npoints;  ++i)
+#if USE_RUNFLAGS
+            SHADE_LOOP_RUNFLAGS_BEGIN (context()->m_original_runflags,
+                                       0, m_npoints)
+#elif USE_RUNINDICES
+            SHADE_LOOP_INDICES_BEGIN (context()->m_original_indices,
+                                      context()->m_original_nindices)
+#elif USE_RUNSPANS
+            SHADE_LOOP_SPANS_BEGIN (context()->m_original_indices,
+                                    context()->m_original_nindices)
+#endif
                 memcpy (data + i*size, data, size);
+            SHADE_LOOP_END
         }
     } else {
         // sym is varying, but we're assigning a new uniform value AND
         // we're not inside a conditional.  Safe to demote sym to uniform.
         if (sym.symtype() != SymTypeGlobal) { // DO NOT demote a global
             sym.step (0);
-            if (sym.has_derivs())
-                zero_derivs (sym);
+            if (sym.has_derivs()) {
+                size_t deriv_step = sym.deriv_step();
+                memset ((char *)sym.data()+deriv_step, 0, 2*deriv_step);
+            }
         }
     }
 }
@@ -772,17 +873,19 @@ void
 ShadingExecution::zero (Symbol &sym)
 {
     size_t size = sym.has_derivs() ? sym.deriv_step()*3 : sym.size();
-    if (sym.is_uniform ())
+    if (sym.is_uniform ()) {
         memset (sym.data(), 0, size);
-    else if (sym.is_varying() && all_points_on()) {
+#if 0
+    } else if (sym.is_varying() && all_points_on()) {
         // Varying, but we can do one big memset
         memset (sym.data(), 0, size * m_npoints);
+#endif
     } else {
         // Varying, with some points on and some off
-        char *data = (char *)sym.data() + m_beginpoint * sym.step();
-        for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step())
-            if (m_runflags[i])
-                memset (data, 0, size);
+        ShadingExecution *exec = this;
+        SHADE_LOOP_BEGIN
+            memset ((char *)sym.data() + i * sym.step(), 0, size);
+        SHADE_LOOP_END
     }
 }
 
@@ -798,10 +901,10 @@ ShadingExecution::zero_derivs (Symbol &sym)
     if (sym.is_uniform ())
         memset (data, 0, deriv_size);
     else {
-        data += m_beginpoint * sym.step();
-        for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step())
-            if (m_runflags[i])
-                memset (data, 0, deriv_size);
+        ShadingExecution *exec = this;
+        SHADE_LOOP_BEGIN
+            memset (data + i*sym.step(), 0, deriv_size);
+        SHADE_LOOP_END
     }
 }
 
@@ -809,15 +912,23 @@ ShadingExecution::zero_derivs (Symbol &sym)
 
 void
 ShadingExecution::push_runflags (Runflag *runflags,
-                                 int beginpoint, int endpoint)
+                                 int beginpoint, int endpoint,
+                                 int *indices, int nindices)
 {
-    ASSERT (runflags != NULL);
-    m_runflags = runflags;
+    ASSERT (runflags != NULL || (indices != NULL /* && nindices != 0*/));
+    m_runstate.runflags = runflags;
+    m_runstate.init (runflags, beginpoint, endpoint, //m_runstate.allpointson,
+                     indices, nindices);
+#if USE_RUNFLAGS
     new_runflag_range (beginpoint, endpoint);
-    m_runflag_stack.push_back (Runstate (m_runflags, m_beginpoint,
-                                         m_endpoint, m_all_points_on));
+#endif
+    m_runflag_stack.push_back (m_runstate);
     if (! m_context->m_original_runflags)
-        m_context->m_original_runflags = m_runflags;
+        m_context->m_original_runflags = runflags;
+    if (! m_context->m_original_indices) {
+        m_context->m_original_indices = indices;
+        m_context->m_original_nindices = nindices;
+    }
 }
 
 
@@ -827,13 +938,11 @@ ShadingExecution::pop_runflags ()
 {
     m_runflag_stack.pop_back ();
     if (m_runflag_stack.size()) {
-        const Runstate &r (m_runflag_stack.back());
-        m_runflags = r.runflags;
-        m_beginpoint = r.beginpoint;
-        m_endpoint = r.endpoint;
-        m_all_points_on = r.allpointson;
+        m_runstate = m_runflag_stack.back();
     } else {
-        m_runflags = NULL;
+        m_runstate.runflags = NULL;
+        m_runstate.indices = NULL;
+        m_runstate.nindices = 0;
     }
 }
 
@@ -842,17 +951,19 @@ ShadingExecution::pop_runflags ()
 void
 ShadingExecution::new_runflag_range (int begin, int end)
 {
-    m_beginpoint = INT_MAX;
-    m_endpoint = -1;
-    m_all_points_on = (begin == 0 && end == m_npoints);
+    if (! m_runstate.runflags)
+        return;
+    m_runstate.beginpoint = INT_MAX;
+    m_runstate.endpoint = -1;
+//    m_runstate.allpointson = (begin == 0 && end == m_npoints);
     for (int i = begin;  i < end;  ++i) {
-        if (m_runflags[i]) {
-            if (i < m_beginpoint)
-                m_beginpoint = i;
-            if (i >= m_endpoint)
-                m_endpoint = i+1;
+        if (m_runstate.runflags[i]) {
+            if (i < m_runstate.beginpoint)
+                m_runstate.beginpoint = i;
+            if (i >= m_runstate.endpoint)
+                m_runstate.endpoint = i+1;
         } else {
-            m_all_points_on = false;
+//            m_runstate.allpointson = false;
         }
     }
 }
@@ -907,12 +1018,11 @@ ShadingExecution::printsymbolval (Symbol &sym)
 {
     std::stringstream out;
     TypeDesc type = sym.typespec().simpletype();
-    const char *data = (const char *) sym.data ();
-    data += m_beginpoint * sym.step();
-    for (int i = m_beginpoint;  i < m_endpoint;  ++i, data += sym.step()) {
+    ShadingExecution *exec = this;
+    SHADE_LOOP_BEGIN
         if (sym.is_uniform())
             out << "\tuniform";
-        else if (i == m_beginpoint || (i%8) == 0)
+        else if (i == beginpoint() || (i%8) == 0)
             out << "\t" << i << ": ";
         if (sym.typespec().is_closure())
             out << format_symbol (" %s", sym, i);
@@ -922,12 +1032,12 @@ ShadingExecution::printsymbolval (Symbol &sym)
             out << format_symbol (" %d", sym, i);
         else if (type.basetype == TypeDesc::STRING)
             out << format_symbol (" \"%s\"", sym, i);
-        if (i == m_endpoint-1 || (i%8) == 7 ||
+        if (i == endpoint()-1 || (i%8) == 7 ||
                 sym.is_uniform() || sym.typespec().is_closure())
             out << "\n";
         if (sym.is_uniform())
             break;
-    }
+    SHADE_LOOP_END
     return out.str ();
 }
 

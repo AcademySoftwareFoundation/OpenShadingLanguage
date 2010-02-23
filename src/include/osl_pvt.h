@@ -93,7 +93,11 @@ typedef unsigned char Runflag;
 
 /// Pre-defined values for Runflag's.
 ///
-enum RunflagVal { RunflagOff = 0, RunflagOn = 255 };
+enum RunflagVal { RunflagOff = 0, RunflagOn = 1 };
+
+/// Data type for indices that indicate on which shading points we want
+/// computations to be performed.
+typedef int RunIndex;
 
 
 
@@ -653,8 +657,7 @@ typedef std::vector<Symbol *> SymbolPtrVec;
 
 /// Function pointer to a shadeop implementation
 ///
-typedef void (*OpImpl) (ShadingExecution *exec, int nargs, const int *args,
-                        Runflag *runflags, int beginpoint, int endpoint);
+typedef void (*OpImpl) (ShadingExecution *exec, int nargs, const int *args);
 
 
 
@@ -731,9 +734,8 @@ public:
 
     /// Execute the op!
     ///
-    void operator() (ShadingExecution *exec, int nargs, const int *args,
-                     Runflag *runflags, int beginpoint, int endpoint) {
-        m_impl (exec, m_nargs, args, runflags, beginpoint, endpoint);
+    void operator() (ShadingExecution *exec, int nargs, const int *args) {
+        m_impl (exec, m_nargs, args);
     }
 
     /// Is the argument number 'arg' read by the op?

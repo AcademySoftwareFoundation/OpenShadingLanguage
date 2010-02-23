@@ -187,8 +187,7 @@ public:
 
 DECLOP (OP_ward)
 {
-    closure_op_guts<WardClosure, 5> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<WardClosure, 5> (exec, nargs, args);
 }
 
 

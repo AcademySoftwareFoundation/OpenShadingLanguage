@@ -161,8 +161,7 @@ public:
 
 DECLOP (OP_ashikhmin_velvet)
 {
-    closure_op_guts<AshikhminVelvetClosure, 4> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<AshikhminVelvetClosure, 4> (exec, nargs, args);
 }
 
 }; // namespace pvt

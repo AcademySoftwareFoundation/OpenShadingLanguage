@@ -1143,7 +1143,7 @@ DECLOP (generic_noise_function_noderivs)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1191,7 +1191,7 @@ DECLOP (generic_noise_function)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1256,7 +1256,7 @@ DECLOP (generic_pnoise_function)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -1273,40 +1273,35 @@ DECLOP (OP_cellnoise)
 {
     // NOTE: cellnoise is a step function which is locally flat
     //       therefore its derivatives are always 0
-    generic_noise_function_noderivs<CellNoise> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    generic_noise_function_noderivs<CellNoise> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_noise)
 {
-    generic_noise_function<Noise> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    generic_noise_function<Noise> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_snoise)
 {
-    generic_noise_function<SNoise> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    generic_noise_function<SNoise> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_pnoise)
 {
-    generic_pnoise_function<PeriodicNoise> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    generic_pnoise_function<PeriodicNoise> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_psnoise)
 {
-    generic_pnoise_function<PeriodicSNoise> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    generic_pnoise_function<PeriodicSNoise> (exec, nargs, args);
 }
 
 

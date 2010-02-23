@@ -63,13 +63,13 @@ static DECLOP (specialized_Dxy)
         VaryingRef<T> result ((T *)Result.data(), Result.step());
         VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
         if (whichd == 0) {
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = src[i].dx ();
+            SHADE_LOOP_BEGIN
+                result[i] = src[i].dx ();
+            SHADE_LOOP_END
         } else {
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = src[i].dy ();
+            SHADE_LOOP_BEGIN
+                result[i] = src[i].dy ();
+            SHADE_LOOP_END
         }
         if (Result.has_derivs())
             exec->zero_derivs (Result);  // 2nd order derivs are always zero
@@ -95,7 +95,7 @@ DECLOP (OP_Dx)
         impl = specialized_Dxy<Vec3, 0>;
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -122,7 +122,7 @@ DECLOP (OP_Dy)
         impl = specialized_Dxy<Vec3, 1>;
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -152,14 +152,14 @@ DECLOP (OP_calculatenormal)
         VaryingRef<Dual2<Vec3> > p ((Dual2<Vec3> *)P.data(), P.step());
         if (exec->context()->globals()->flipHandedness) { 
             // flip the default rule: Y ^ X = Normal
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = p[i].dy().cross(p[i].dx());
+            SHADE_LOOP_BEGIN
+                result[i] = p[i].dy().cross(p[i].dx());
+            SHADE_LOOP_END
         } else {
             // regular rule: X ^ Y = Normal
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = p[i].dx().cross(p[i].dy());
+            SHADE_LOOP_BEGIN
+                result[i] = p[i].dx().cross(p[i].dy());
+            SHADE_LOOP_END
         }
         if (Result.has_derivs())
             exec->zero_derivs (Result);  // 2nd order derivs are always zero
@@ -185,9 +185,9 @@ DECLOP (OP_area)
         DASSERT (Result.is_varying());
         VaryingRef<Float> result ((Float *)Result.data(), Result.step());
         VaryingRef<Dual2<Vec3> > p ((Dual2<Vec3> *)P.data(), P.step());
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = (p[i].dx().cross(p[i].dy())).length();
+        SHADE_LOOP_BEGIN
+            result[i] = (p[i].dx().cross(p[i].dy())).length();
+        SHADE_LOOP_END
         if (Result.has_derivs())
             exec->zero_derivs (Result);  // 2nd order derivs are always zero
     } else {
@@ -224,9 +224,9 @@ DECLOP (filterwidth_guts)
         DASSERT (Result.is_varying());
         VaryingRef<T> result ((T *)Result.data(), Result.step());
         VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = filter_width(src[i].dx(), src[i].dy());
+        SHADE_LOOP_BEGIN
+            result[i] = filter_width(src[i].dx(), src[i].dy());
+        SHADE_LOOP_END
         if (Result.has_derivs())
             exec->zero_derivs (Result);  // 2nd order derivs are always zero
     } else {
@@ -250,7 +250,7 @@ DECLOP (OP_filterwidth)
         impl = filterwidth_guts<Vec3>;
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?

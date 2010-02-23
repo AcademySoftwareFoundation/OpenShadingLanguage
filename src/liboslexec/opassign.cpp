@@ -78,13 +78,13 @@ static DECLOP (specialized_assign)
                  Result.has_derivs() && Src.has_derivs()) {
             VaryingRef<Dual2<RET> > result ((Dual2<RET> *)Result.data(), Result.step());
             VaryingRef<Dual2<SRC> > src ((Dual2<SRC> *)Src.data(), Src.step());
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = Dual2<RET> (src[i]);
+            SHADE_LOOP (
+                result[i] = Dual2<RET> (src[i]);
+            )
         } else {
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = RET (src[i]);
+            SHADE_LOOP (
+                result[i] = RET (src[i]);
+            )
             if (Result.has_derivs())
                 exec->zero_derivs (Result);
         }
@@ -117,25 +117,26 @@ static DECLOP (assign_copy)
     if (Result.is_uniform()) {
         // Uniform case
         memcpy (Result.data(), Src.data(), size);
+#if 0
     } else if (exec->all_points_on() && Src.is_varying() &&
                Result.has_derivs() == Src.has_derivs()) {
         // Simple case where a single memcpy will do
         memcpy (Result.data(), Src.data(), Src.step() * exec->npoints());
+#endif
     } else {
         // Potentially varying case
         VaryingRef<char> result ((char *)Result.data(), Result.step());
         VaryingRef<char> src ((char *)Src.data(), Src.step());
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                memcpy (&result[i], &src[i], size);
+        SHADE_LOOP_BEGIN
+            memcpy (&result[i], &src[i], size);
+        SHADE_LOOP_END
     }
 }
 
 
 
 static void
-assign_closure (ShadingExecution *exec, int nargs, const int *args,
-                Runflag *runflags, int beginpoint, int endpoint)
+assign_closure (ShadingExecution *exec, int nargs, const int *args)
 {
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
@@ -148,17 +149,16 @@ assign_closure (ShadingExecution *exec, int nargs, const int *args,
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     VaryingRef<ClosureColor *> src ((ClosureColor **)Src.data(), Src.step());
-    for (int i = beginpoint;  i < endpoint;  ++i)
-        if (runflags[i])
-            *(result[i]) = *(src[i]);
+    SHADE_LOOP_BEGIN
+        *(result[i]) = *(src[i]);
+    SHADE_LOOP_END
     // N.B. You can't take a derivative of a closure
 }
 
 
 
 static void
-clear_closure (ShadingExecution *exec, int nargs, const int *args,
-               Runflag *runflags, int beginpoint, int endpoint)
+clear_closure (ShadingExecution *exec, int nargs, const int *args)
 {
     // Get references to the symbols this op accesses
     Symbol &Result (exec->sym (args[0]));
@@ -168,9 +168,9 @@ clear_closure (ShadingExecution *exec, int nargs, const int *args,
 
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
-    for (int i = beginpoint;  i < endpoint;  ++i)
-        if (runflags[i])
-            result[i]->clear ();
+    SHADE_LOOP_BEGIN
+        result[i]->clear ();
+    SHADE_LOOP_END
 
     // N.B. You can't take a derivative of a closure
 }
@@ -223,7 +223,7 @@ DECLOP (OP_assign)
             impl = specialized_assign<MatrixProxy,int>;
     }
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?

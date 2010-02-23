@@ -221,8 +221,7 @@ struct CopySelf
 template <class ATYPE, class BTYPE, class CTYPE, class DTYPE, bool knot_derivs, class KNOT_TO_RESULT>
 inline void 
 spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &Value, Symbol &Knots,
-      ShadingExecution *exec, Runflag *runflags, int beginpoint, int endpoint,
-      bool zero_derivs=true)
+      ShadingExecution *exec, bool zero_derivs=true)
 {
     VaryingRef<ATYPE> result ((ATYPE *)Result.data(), Result.step());
     VaryingRef<BTYPE> xval   ((BTYPE *)Value.data(),  Value.step());
@@ -245,8 +244,7 @@ spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &
     // assuming spline-type is uniform
     KNOT_TO_RESULT castToResult;
 
-    for (int i = beginpoint; i < endpoint; i++)
-    {
+    SHADE_LOOP_BEGIN
         if (varying_spline)
         {
             for (basis_type = 0; basis_type < kNumSplineTypes && 
@@ -293,7 +291,7 @@ spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &
         tresult = castToResult (tresult * x + tk[2]);
         tresult = castToResult (tresult * x + tk[3]);
         assignment(result[i], tresult);
-    }
+    SHADE_LOOP_END
 }
 
 
@@ -346,29 +344,29 @@ DECLOP (OP_spline)
     {
         case (RES_DERIVS | VALU_DERIVS | KNOT_DERIVS | TRIPLES):
             spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS | VALU_DERIVS | KNOT_DERIVS):
             spline_op_guts_generic< Dual2<float>, Dual2<float>, Dual2<float>, float, true, CopySelf<Dual2<float> >  >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         //
         case (RES_DERIVS | VALU_DERIVS | TRIPLES):
             spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS | VALU_DERIVS):
             spline_op_guts_generic< Dual2<float>, Dual2<float>, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         //
         case (RES_DERIVS | TRIPLES):
             spline_op_guts_generic< Dual2<Vec3>, float, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS):
             spline_op_guts_generic< Dual2<float>, float, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
 
         // The result has no derivatives so ignore the cases where the values
@@ -376,11 +374,11 @@ DECLOP (OP_spline)
         // we're dealing with floats or triples.
         case (TRIPLES):
             spline_op_guts_generic< Vec3, float, Vec3, Vec3, false, CopySelf<Vec3> >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         case 0:
             spline_op_guts_generic< float, float, float, float, false, CopySelf<float> >(Result, Spline, array_length, Value, Knots,
-                exec, runflags, beginpoint, endpoint, false /*zero derivs?*/);
+                exec, false /*zero derivs?*/);
             break;
         //
     }

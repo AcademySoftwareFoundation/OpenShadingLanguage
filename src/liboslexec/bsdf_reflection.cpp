@@ -148,11 +148,9 @@ public:
 DECLOP (OP_reflection)
 {
     if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
-        closure_op_guts<FresnelReflectionClosure, 3> (exec, nargs, args,
-                runflags, beginpoint, endpoint);
+        closure_op_guts<FresnelReflectionClosure, 3> (exec, nargs, args);
     else
-        closure_op_guts<ReflectionClosure, 2> (exec, nargs, args,
-                runflags, beginpoint, endpoint);
+        closure_op_guts<ReflectionClosure, 2> (exec, nargs, args);
 }
 
 }; // namespace pvt

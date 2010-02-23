@@ -103,34 +103,33 @@ static DECLOP (OP_matrix_specialized_floats)
             *result = R;
         } else {
             // Computation uniform, but copy to varying result variable
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = R;
+            SHADE_LOOP_BEGIN
+                result[i] = R;
+            SHADE_LOOP_END
         }
     } else {
         // Fully varying case
         Matrix44 R, M;
         ustring last_space;
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i]) {
-                if (nfloats == 1) {
-                    Float a = f[0][i];
-                    R = Matrix44 (a, 0, 0, 0, 0, a, 0, 0, 0, 0, a, 0, 0, 0, 0, a);
-                } else {
-                    R = Matrix44 ( f[0][i],  f[1][i],  f[2][i],  f[3][i], 
-                                   f[4][i],  f[5][i],  f[6][i],  f[7][i], 
-                                   f[8][i],  f[9][i], f[10][i], f[11][i], 
-                                  f[12][i], f[13][i], f[14][i], f[15][i]);
-                }
-                if (using_space) {
-                    if (space[i] != last_space || globals->time.is_varying()) {
-                        exec->get_matrix (M, space[i], i);
-                        last_space = space[i];
-                    }
-                    R = M * R;
-                }
-                result[i] = R;
+        SHADE_LOOP_BEGIN
+            if (nfloats == 1) {
+                Float a = f[0][i];
+                R = Matrix44 (a, 0, 0, 0, 0, a, 0, 0, 0, 0, a, 0, 0, 0, 0, a);
+            } else {
+                R = Matrix44 ( f[0][i],  f[1][i],  f[2][i],  f[3][i], 
+                               f[4][i],  f[5][i],  f[6][i],  f[7][i], 
+                               f[8][i],  f[9][i], f[10][i], f[11][i], 
+                               f[12][i], f[13][i], f[14][i], f[15][i]);
             }
+            if (using_space) {
+                if (space[i] != last_space || globals->time.is_varying()) {
+                    exec->get_matrix (M, space[i], i);
+                    last_space = space[i];
+                }
+                R = M * R;
+            }
+            result[i] = R;
+        SHADE_LOOP_END
     }
 }
 
@@ -165,15 +164,15 @@ DECLOP (OP_matrix_specialized_fromto)
             *result = R;
         } else {
             // Computation uniform, but copy to varying result variable
-            for (int i = beginpoint;  i < endpoint;  ++i)
-                if (runflags[i])
-                    result[i] = R;
+            SHADE_LOOP_BEGIN
+                result[i] = R;
+            SHADE_LOOP_END
         }
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                exec->get_matrix (result[i], from[i], to[i], i);
+        SHADE_LOOP_BEGIN
+            exec->get_matrix (result[i], from[i], to[i], i);
+        SHADE_LOOP_END
     }
 }
 
@@ -212,7 +211,7 @@ DECLOP (OP_matrix)
     }
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -260,20 +259,18 @@ static DECLOP (specialized_mxcompassign)
         (*result)[r][c] = (Float) *val;
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                int r = row[i];
-                int c = col[i];
-                if (r < 0 || r > 3 || c < 0 || c > 3) {
-                    exec->error ("Index out of range: %s %s[%d][%d]\n",
-                                 Result.typespec().string().c_str(),
-                                 Result.name().c_str(), r, c);
-                    r = clamp (r, 0, 3);
-                    c = clamp (c, 0, 3);
-                }
-                result[i][r][c] = (Float) val[i];
+        SHADE_LOOP_BEGIN
+            int r = row[i];
+            int c = col[i];
+            if (r < 0 || r > 3 || c < 0 || c > 3) {
+                exec->error ("Index out of range: %s %s[%d][%d]\n",
+                             Result.typespec().string().c_str(),
+                             Result.name().c_str(), r, c);
+                r = clamp (r, 0, 3);
+                c = clamp (c, 0, 3);
             }
-        }
+            result[i][r][c] = (Float) val[i];
+        SHADE_LOOP_END
     }
 }
 
@@ -299,7 +296,7 @@ DECLOP (OP_mxcompassign)
         impl = specialized_mxcompassign<int>;
 
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -351,20 +348,18 @@ DECLOP (OP_mxcompref)
         (*result) = (*m)[r][c];
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i) {
-            if (runflags[i]) {
-                int r = row[i];
-                int c = col[i];
-                if (r < 0 || r > 3 || c < 0 || c > 3) {
-                    exec->error ("Index out of range: %s %s[%d][%d]\n",
-                                 Result.typespec().string().c_str(),
-                                 Result.name().c_str(), r, c);
-                    r = clamp (r, 0, 3);
-                    c = clamp (c, 0, 3);
-                }
-                result[i] = (m[i])[r][c];
+        SHADE_LOOP_BEGIN
+            int r = row[i];
+            int c = col[i];
+            if (r < 0 || r > 3 || c < 0 || c > 3) {
+                exec->error ("Index out of range: %s %s[%d][%d]\n",
+                             Result.typespec().string().c_str(),
+                             Result.name().c_str(), r, c);
+                r = clamp (r, 0, 3);
+                c = clamp (c, 0, 3);
             }
-        }
+            result[i] = (m[i])[r][c];
+        SHADE_LOOP_END
     }
 }
 
@@ -439,8 +434,7 @@ DECLOP (OP_determinant)
     DASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_float() && A.typespec().is_matrix());
 
-    unary_op_guts_noderivs<Float, Matrix44, Determinant> (Result, A, exec, runflags,
-                                                 beginpoint, endpoint);
+    unary_op_guts_noderivs<Float, Matrix44, Determinant> (Result, A, exec);
 }
 
 
@@ -453,8 +447,7 @@ DECLOP (OP_transpose)
     DASSERT (! Result.typespec().is_closure() && ! A.typespec().is_closure());
     DASSERT (Result.typespec().is_matrix() && A.typespec().is_matrix());
 
-    unary_op_guts_noderivs<Matrix44, Matrix44, Transpose> (Result, A, exec, runflags,
-                                                  beginpoint, endpoint);
+    unary_op_guts_noderivs<Matrix44, Matrix44, Transpose> (Result, A, exec);
 }
 
 

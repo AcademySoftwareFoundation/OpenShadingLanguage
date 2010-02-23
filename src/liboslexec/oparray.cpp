@@ -75,38 +75,35 @@ static DECLOP (specialized_aref)
     } else if (index.is_uniform()) {
         // Uniform index, potentially varying src array
         int ind = *index;
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = T ((&src[i])[ind]);
-
+        SHADE_LOOP_BEGIN
+            result[i] = T ((&src[i])[ind]);
+        SHADE_LOOP_END
         if (Result.has_derivs ()) {
             if (Src.is_varying() && Src.has_derivs()) {
                 int len = Src.typespec().arraylength();
                 VaryingRef<Dual2<T> > result ((Dual2<T> *)Result.data(), Result.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i]) {
-                        result[i].set_dx ((&src[i])[ind+len]);
-                        result[i].set_dy ((&src[i])[ind+2*len]);
-                    }
+                SHADE_LOOP_BEGIN
+                    result[i].set_dx ((&src[i])[ind+len]);
+                    result[i].set_dy ((&src[i])[ind+2*len]);
+                SHADE_LOOP_END
             } else {
                 exec->zero_derivs (Result);
             }
         }
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = T ((&src[i])[index[i]]);
+        SHADE_LOOP_BEGIN
+            result[i] = T ((&src[i])[index[i]]);
+        SHADE_LOOP_END
 
         if (Result.has_derivs ()) {
             if (Src.is_varying() && Src.has_derivs()) {
                 int len = Src.typespec().arraylength();
                 VaryingRef<Dual2<T> > result ((Dual2<T> *)Result.data(), Result.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i]) {
-                        result[i].set_dx ((&src[i])[index[i]+len]);
-                        result[i].set_dy ((&src[i])[index[i]+2*len]);
-                    }
+                SHADE_LOOP_BEGIN
+                    result[i].set_dx ((&src[i])[index[i]+len]);
+                    result[i].set_dy ((&src[i])[index[i]+2*len]);
+                SHADE_LOOP_END
             } else {
                 exec->zero_derivs (Result);
             }
@@ -139,7 +136,7 @@ DECLOP (OP_aref)
         impl = specialized_aref<ustring>;
     }
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -185,49 +182,44 @@ static DECLOP (specialized_aassign)
     } else if (index.is_uniform()) {
         // Uniform index, potentially varying src array
         int ind = *index;
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                (&result[i])[ind] = src[i];
+        SHADE_LOOP_BEGIN
+            (&result[i])[ind] = src[i];
+        SHADE_LOOP_END
 
         if (Result.has_derivs()) {
             int len = Result.typespec().arraylength();
             if (Src.is_varying() && Src.has_derivs()) {
                 VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i]) {
-                        (&result[i])[ind +     len] = src[i].dx();
-                        (&result[i])[ind + 2 * len] = src[i].dy();
-                    }
+                SHADE_LOOP_BEGIN
+                    (&result[i])[ind +     len] = src[i].dx();
+                    (&result[i])[ind + 2 * len] = src[i].dy();
+                SHADE_LOOP_END
             } else {
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i]) {
-                        memset(&((&result[i])[ind +     len]), 0, sizeof(T));
-                        memset(&((&result[i])[ind + 2 * len]), 0, sizeof(T));
-                    }
+                SHADE_LOOP_BEGIN
+                    memset(&((&result[i])[ind +     len]), 0, sizeof(T));
+                    memset(&((&result[i])[ind + 2 * len]), 0, sizeof(T));
+                SHADE_LOOP_END
             }
         }
     } else {
         // Fully varying case
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                (&result[i])[index[i]] = src[i];
+        SHADE_LOOP_BEGIN
+            (&result[i])[index[i]] = src[i];
+        SHADE_LOOP_END
 
         if (Result.has_derivs()) {
             int len = Result.typespec().arraylength();
             if (Src.is_varying() && Src.has_derivs()) {
                 VaryingRef<Dual2<T> > src ((Dual2<T> *)Src.data(), Src.step());
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i]) {
-                        (&result[i])[index[i] +     len] = src[i].dx();
-                        (&result[i])[index[i] + 2 * len] = src[i].dy();
-                    }
+                SHADE_LOOP_BEGIN
+                    (&result[i])[index[i] +     len] = src[i].dx();
+                    (&result[i])[index[i] + 2 * len] = src[i].dy();
+                SHADE_LOOP_END
             } else {
-                for (int i = beginpoint;  i < endpoint;  ++i)
-                    if (runflags[i]) {
-                        memset(&((&result[i])[index[i] +     len]), 0, sizeof(T));
-                        memset(&((&result[i])[index[i] + 2 * len]), 0, sizeof(T));
-                    }
-
+                SHADE_LOOP_BEGIN
+                    memset(&((&result[i])[index[i] +     len]), 0, sizeof(T));
+                    memset(&((&result[i])[index[i] + 2 * len]), 0, sizeof(T));
+                SHADE_LOOP_END
             }
         }
     }
@@ -258,7 +250,7 @@ DECLOP (OP_aassign)
         impl = specialized_aassign<ustring>;
     }
     if (impl) {
-        impl (exec, nargs, args, runflags, beginpoint, endpoint);
+        impl (exec, nargs, args);
         // Use the specialized one for next time!  Never have to check the
         // types or do the other sanity checks again.
         // FIXME -- is this thread-safe?
@@ -290,9 +282,9 @@ DECLOP (OP_arraylength)
     if (result.is_uniform()) {
         *result = len;
     } else {
-        for (int i = beginpoint;  i < endpoint;  ++i)
-            if (runflags[i])
-                result[i] = len;
+        SHADE_LOOP_BEGIN
+            result[i] = len;
+        SHADE_LOOP_END
     }
     if (Result.has_derivs ())
         exec->zero_derivs (Result);   // arraylength not varying

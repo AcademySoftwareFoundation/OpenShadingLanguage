@@ -75,8 +75,7 @@ public:
 
 DECLOP (OP_transparent)
 {
-    closure_op_guts<TransparentClosure, 1> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<TransparentClosure, 1> (exec, nargs, args);
 }
 
 

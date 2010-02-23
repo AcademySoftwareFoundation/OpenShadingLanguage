@@ -82,8 +82,7 @@ public:
 
 DECLOP (OP_bssrdf_cubic)
 {
-    closure_op_guts<BSSRDFCubicClosure, 2> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<BSSRDFCubicClosure, 2> (exec, nargs, args);
 }
 
 

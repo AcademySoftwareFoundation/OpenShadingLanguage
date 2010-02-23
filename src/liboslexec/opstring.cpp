@@ -122,14 +122,16 @@ DECLOP (OP_printf)
     bool varying = format.is_varying ();
     for (int i = 1;  i < nargs;  ++i)
         varying |= exec->sym(args[i]).is_varying ();
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (! varying) {
+        std::string s = format_args (exec, format[0].c_str(),
+                                     nargs-1, args+1, 0);
+        exec->message ("%s", s.c_str());
+    } else {
+        SHADE_LOOP_BEGIN
             std::string s = format_args (exec, format[i].c_str(),
                                          nargs-1, args+1, i);
             exec->message ("%s", s.c_str());
-            if (! varying)
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -144,16 +146,20 @@ DECLOP (OP_error)
     bool varying = format.is_varying ();
     for (int i = 1;  i < nargs;  ++i)
         varying |= exec->sym(args[i]).is_varying ();
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (! varying) {
+        std::string s = format_args (exec, format[0].c_str(),
+                                     nargs-1, args+1, 0);
+        exec->error ("Shader error [%s]: %s",
+                     exec->instance()->master()->shadername().c_str(),
+                     s.c_str());
+    } else {
+        SHADE_LOOP_BEGIN
             std::string s = format_args (exec, format[i].c_str(),
                                          nargs-1, args+1, i);
             exec->error ("Shader error [%s]: %s",
                          exec->instance()->master()->shadername().c_str(),
                          s.c_str());
-            if (! varying)
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -168,16 +174,20 @@ DECLOP (OP_warning)
     bool varying = format.is_varying ();
     for (int i = 1;  i < nargs;  ++i)
         varying |= exec->sym(args[i]).is_varying ();
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (! varying) {
+        std::string s = format_args (exec, format[0].c_str(),
+                                     nargs-1, args+1, 0);
+        exec->warning ("Shader warning [%s]: %s",
+                       exec->instance()->master()->shadername().c_str(),
+                       s.c_str());
+    } else {
+        SHADE_LOOP_BEGIN
             std::string s = format_args (exec, format[i].c_str(),
                                          nargs-1, args+1, i);
             exec->warning ("Shader warning [%s]: %s",
                            exec->instance()->master()->shadername().c_str(),
                            s.c_str());
-            if (! varying)
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -199,13 +209,14 @@ DECLOP (OP_format)
 
     VaryingRef<ustring> result ((ustring *)Result.data(), Result.step());
     VaryingRef<ustring> format ((ustring *)Format.data(), Format.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (Result.is_uniform()) {
+        result[0] = format_args (exec, format[0].c_str(),
+                                 nargs-2, args+2, 0);
+    } else {
+        SHADE_LOOP_BEGIN
             result[i] = format_args (exec, format[i].c_str(),
                                      nargs-2, args+2, i);
-            if (! Result.is_varying())
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -228,13 +239,14 @@ DECLOP (OP_concat)
     exec->adjust_varying (Result, varying);
 
     VaryingRef<ustring> result ((ustring *)Result.data(), Result.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (Result.is_uniform()) {
+        result[0] = ustring (format_args (exec, format.c_str(),
+                                          nargs-1, args+1, 0));
+    } else {
+        SHADE_LOOP_BEGIN
             result[i] = ustring (format_args (exec, format.c_str(),
                                               nargs-1, args+1, i));
-            if (! Result.is_varying())
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -251,12 +263,12 @@ DECLOP (OP_strlen)
 
     VaryingRef<int> result ((int *)Result.data(), Result.step());
     VaryingRef<ustring> s ((ustring *)S.data(), S.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (Result.is_uniform()) {
+        result[0] = s[0].length ();
+    } else {
+        SHADE_LOOP_BEGIN
             result[i] = s[i].length ();
-            if (! Result.is_varying())
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -277,13 +289,14 @@ DECLOP (OP_startswith)
     VaryingRef<int> result ((int *)Result.data(), Result.step());
     VaryingRef<ustring> s ((ustring *)S.data(), S.step());
     VaryingRef<ustring> substr ((ustring *)Substr.data(), Substr.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (Result.is_uniform()) {
+        int c = strncmp (s[0].c_str(), substr[0].c_str(), substr[0].size());
+        result[0] = (c == 0);
+    } else {
+        SHADE_LOOP_BEGIN
             int c = strncmp (s[i].c_str(), substr[i].c_str(), substr[i].size());
             result[i] = (c == 0);
-            if (! Result.is_varying())
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -304,8 +317,17 @@ DECLOP (OP_endswith)
     VaryingRef<int> result ((int *)Result.data(), Result.step());
     VaryingRef<ustring> s ((ustring *)S.data(), S.step());
     VaryingRef<ustring> substr ((ustring *)Substr.data(), Substr.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (Result.is_uniform()) {
+        size_t len = substr[0].length ();
+        if (len > s[0].length())
+            result[0] = 0;
+        else {
+            int c = strncmp (s[0].c_str() + s[0].length() - len,
+                             substr[0].c_str(), substr[0].size());
+            result[0] = (c == 0);
+        }
+    } else {
+        SHADE_LOOP_BEGIN
             size_t len = substr[i].length ();
             if (len > s[i].length())
                 result[i] = 0;
@@ -314,9 +336,7 @@ DECLOP (OP_endswith)
                                  substr[i].c_str(), substr[i].size());
                 result[i] = (c == 0);
             }
-            if (! Result.is_varying())
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -339,8 +359,16 @@ DECLOP (OP_substr)
     VaryingRef<ustring> s ((ustring *)S.data(), S.step());
     VaryingRef<int> start ((int *)Start.data(), Start.step());
     VaryingRef<int> length ((int *)Length.data(), Length.step());
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
+    if (Result.is_uniform()) {
+        const ustring &str (s[0]);
+        int b = start[0];
+        if (b < 0)
+            b += str.length();
+        b = Imath::clamp (b, 0, (int)str.length());
+        int len = Imath::clamp (length[0], 0, (int)str.length());
+        result[0] = ustring (s[0], b, len);
+    } else {
+        SHADE_LOOP_BEGIN
             const ustring &str (s[i]);
             int b = start[i];
             if (b < 0)
@@ -348,9 +376,7 @@ DECLOP (OP_substr)
             b = Imath::clamp (b, 0, (int)str.length());
             int len = Imath::clamp (length[i], 0, (int)str.length());
             result[i] = ustring (s[i], b, len);
-            if (! Result.is_varying())
-                break;
-        }
+        SHADE_LOOP_END
     }
 }
 
@@ -385,36 +411,34 @@ DECLOP (regex_search_specialized)
     ustring last_pattern;
     boost::match_results<std::string::const_iterator> mresults;
     const boost::regex *regex = NULL;
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            if (! regex || pattern[i] != last_pattern) {
-                regex = &exec->context()->find_regex (pattern[i]);
-                last_pattern = pattern[i];
-            }
-            if (do_match_results && matchtype.arraylen > 0) {
-                std::string::const_iterator start = subject[i].string().begin();
-                result[i] = fullmatch ? 
-                    boost::regex_match (subject[i].string(), mresults, *regex) :
-                    boost::regex_search (subject[i].string(), mresults, *regex);
-                int *m = (int *)((char *)Match.data() + i*Match.step());
-                for (int r = 0;  r < matchtype.arraylen;  ++r) {
-                    if (r/2 < (int)mresults.size()) {
-                        if ((r & 1) == 0)
-                            m[r] = mresults[r/2].first - start;
-                        else
-                            m[r] = mresults[r/2].second - start;
-                    } else {
-                        m[r] = pattern[i].length();
-                    }
-                }
-            } else {
-                result[i] = fullmatch ? regex_match (subject[i].c_str(), *regex)
-                                  : regex_search (subject[i].c_str(), *regex);
-            }
-            if (! Result.is_varying())
-                break;
+    SHADE_LOOP_BEGIN
+        if (! regex || pattern[i] != last_pattern) {
+            regex = &exec->context()->find_regex (pattern[i]);
+            last_pattern = pattern[i];
         }
-    }
+        if (do_match_results && matchtype.arraylen > 0) {
+            std::string::const_iterator start = subject[i].string().begin();
+            result[i] = fullmatch ? 
+                boost::regex_match (subject[i].string(), mresults, *regex) :
+                boost::regex_search (subject[i].string(), mresults, *regex);
+            int *m = (int *)((char *)Match.data() + i*Match.step());
+            for (int r = 0;  r < matchtype.arraylen;  ++r) {
+                if (r/2 < (int)mresults.size()) {
+                    if ((r & 1) == 0)
+                        m[r] = mresults[r/2].first - start;
+                    else
+                        m[r] = mresults[r/2].second - start;
+                } else {
+                    m[r] = pattern[i].length();
+                }
+            }
+        } else {
+            result[i] = fullmatch ? regex_match (subject[i].c_str(), *regex)
+                : regex_search (subject[i].c_str(), *regex);
+        }
+        if (! Result.is_varying())
+            break;
+    SHADE_LOOP_END
 }
 
 
@@ -438,7 +462,7 @@ DECLOP (OP_regex_search)
         impl = regex_search_specialized<false, true>;
     else
         impl = regex_search_specialized<false, false>;
-    impl (exec, nargs, args, runflags, beginpoint, endpoint);
+    impl (exec, nargs, args);
     // Use the specialized one for next time!  Never have to check the
     // types or do the other sanity checks again.
     // FIXME -- is this thread-safe?
@@ -466,7 +490,7 @@ DECLOP (OP_regex_match)
         impl = regex_search_specialized<true, true>;
     else
         impl = regex_search_specialized<true, false>;
-    impl (exec, nargs, args, runflags, beginpoint, endpoint);
+    impl (exec, nargs, args);
     // Use the specialized one for next time!  Never have to check the
     // types or do the other sanity checks again.
     // FIXME -- is this thread-safe?

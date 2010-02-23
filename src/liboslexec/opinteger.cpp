@@ -126,8 +126,7 @@ DECLOP (OP_bitand)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts<int,int,int,BitAnd> (Result, A, B, exec,
-                                        runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,BitAnd> (Result, A, B, exec);
 }
 
 
@@ -150,8 +149,7 @@ DECLOP (OP_bitor)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts<int,int,int,BitOr> (Result, A, B, exec,
-                                       runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,BitOr> (Result, A, B, exec);
 }
 
 
@@ -174,8 +172,7 @@ DECLOP (OP_xor)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts<int,int,int,Xor> (Result, A, B, exec,
-                                     runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,Xor> (Result, A, B, exec);
 }
 
 
@@ -198,8 +195,7 @@ DECLOP (OP_shl)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts<int,int,int,Shl> (Result, A, B, exec,
-                                     runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,Shl> (Result, A, B, exec);
 }
 
 
@@ -222,8 +218,7 @@ DECLOP (OP_shr)
     ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
             B.typespec().is_int());
 
-    binary_op_guts<int,int,int,Shr> (Result, A, B, exec,
-                                     runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,Shr> (Result, A, B, exec);
 }
 
 
@@ -231,10 +226,10 @@ DECLOP (OP_shr)
 DECLOP (OP_compl)
 {
     DASSERT (nargs == 2);
-#ifdef DEBUG
+//#ifdef DEBUG
     Symbol &Result (exec->sym (args[0]));
     Symbol &A (exec->sym (args[1]));
-#endif
+//#endif
     DASSERT (! Result.typespec().is_closure() &&
             ! Result.typespec().is_structure() &&
             ! Result.typespec().is_array());
@@ -243,8 +238,9 @@ DECLOP (OP_compl)
             ! A.typespec().is_array());
     DASSERT (Result.typespec().is_int() && A.typespec().is_int());
 
-    unary_op_noderivs<int,int,Compl> (exec, nargs, args,
-                                      runflags, beginpoint, endpoint);
+//    unary_op_noderivs<int,int,Compl> (exec, nargs, args,
+//                                      runflags, beginpoint_, endpoint_);
+    unary_op_guts_noderivs<int,int,Compl> (Result, A, exec);
 }
 
 
@@ -267,8 +263,7 @@ DECLOP (OP_and)
     DASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
              B.typespec().is_int());
 
-    binary_op_guts<int,int,int,LogicAnd> (Result, A, B, exec,
-                                          runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,LogicAnd> (Result, A, B, exec);
 }
 
 
@@ -291,8 +286,7 @@ DECLOP (OP_or)
     DASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
              B.typespec().is_int());
 
-    binary_op_guts<int,int,int,LogicOr> (Result, A, B, exec,
-                                         runflags, beginpoint, endpoint);
+    binary_op_guts<int,int,int,LogicOr> (Result, A, B, exec);
 }
 
 

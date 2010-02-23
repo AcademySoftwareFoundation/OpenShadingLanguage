@@ -144,16 +144,14 @@ public:
 
 DECLOP (OP_diffuse)
 {
-    closure_op_guts<DiffuseClosure, 2> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<DiffuseClosure, 2> (exec, nargs, args);
 }
 
 
 
 DECLOP (OP_translucent)
 {
-    closure_op_guts<TranslucentClosure, 2> (exec, nargs, args,
-            runflags, beginpoint, endpoint);
+    closure_op_guts<TranslucentClosure, 2> (exec, nargs, args);
 }
 
 

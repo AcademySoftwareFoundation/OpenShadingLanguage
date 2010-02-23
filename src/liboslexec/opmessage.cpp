@@ -91,40 +91,38 @@ DECLOP (OP_setmessage)
     ustring lastname;       // Last message name that we matched
     ParamValue *p = NULL;   // Pointer to the PV for the message
 
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            if (i == beginpoint || name[i] != lastname) {
-                // Different message than last time -- search anew
-                p = NULL;
-                for (size_t m = 0;  m < messages.size() && !p;  ++m)
-                    if (messages[m].name() == name[i] &&
-                          messages[m].type() == type)
-                        p = &messages[m];
-                // If the message doesn't already exist, create it
-                if (! p) {
-                    p = & messages.grow ();
-                    p->init (name[i], type,
-                             varying ? exec->npoints() : 1, NULL);
-                }
-                lastname = name[i];
+    SHADE_LOOP_BEGIN
+        if (i == exec->beginpoint() || name[i] != lastname) {
+            // Different message than last time -- search anew
+            p = NULL;
+            for (size_t m = 0;  m < messages.size() && !p;  ++m)
+                if (messages[m].name() == name[i] &&
+                    messages[m].type() == type)
+                    p = &messages[m];
+            // If the message doesn't already exist, create it
+            if (! p) {
+                p = & messages.grow ();
+                p->init (name[i], type,
+                         varying ? exec->npoints() : 1, NULL);
             }
+            lastname = name[i];
+        }
 
-            // Copy the data
-            DASSERT (p != NULL);
-            char *msgdata = (char *)p->data() + varying*datasize*i;
-            if (Val.typespec().is_closure()) {
-                // Add the closure data to the end of the closure messages
-                closure_msgs.push_back (**(ClosureColor **)Val.data(i));
-                // and store its index in the PVL
-                *(int *)msgdata = (int)closure_msgs.size() - 1;
-            } else {
-                // Non-closure types, just memcpy
-                memcpy (msgdata, Val.data(i), datasize);
-            }
+        // Copy the data
+        DASSERT (p != NULL);
+        char *msgdata = (char *)p->data() + varying*datasize*i;
+        if (Val.typespec().is_closure()) {
+            // Add the closure data to the end of the closure messages
+            closure_msgs.push_back (**(ClosureColor **)Val.data(i));
+            // and store its index in the PVL
+            *(int *)msgdata = (int)closure_msgs.size() - 1;
+        } else {
+            // Non-closure types, just memcpy
+            memcpy (msgdata, Val.data(i), datasize);
         }
         if (! varying)
             break;      // Non-uniform case can take early out
-    }
+    SHADE_LOOP_END
 }
 
 
@@ -163,46 +161,44 @@ DECLOP (OP_getmessage)
     ustring lastname;       // Last message name that we matched
     ParamValue *p = NULL;   // Pointer to the PV for the message
 
-    for (int i = beginpoint;  i < endpoint;  ++i) {
-        if (runflags[i]) {
-            if (i == beginpoint || name[i] != lastname) {
-                // Different message than last time -- search anew
-                p = NULL;
-                for (size_t m = 0;  m < messages.size() && !p;  ++m)
-                    if (messages[m].name() == name[i] &&
-                          messages[m].type() == type)
-                        p = &messages[m];
-                if (p && (! varying || Val.is_uniform()) && p->nvalues() > 1) {
-                    // all the parameters to the function were uniform,
-                    // but the message itself is varying, so adjust Val.
-                    exec->adjust_varying (Val, true);
-                    varying = true;
-                }
-                lastname = name[i];
+    SHADE_LOOP_BEGIN
+        if (i == exec->beginpoint() || name[i] != lastname) {
+            // Different message than last time -- search anew
+            p = NULL;
+            for (size_t m = 0;  m < messages.size() && !p;  ++m)
+                if (messages[m].name() == name[i] &&
+                    messages[m].type() == type)
+                    p = &messages[m];
+            if (p && (! varying || Val.is_uniform()) && p->nvalues() > 1) {
+                // all the parameters to the function were uniform,
+                // but the message itself is varying, so adjust Val.
+                exec->adjust_varying (Val, true);
+                varying = true;
             }
+            lastname = name[i];
+        }
 
-            if (p) {
-                result[i] = 1;   // found
-                char *msgdata = (char *)p->data() + varying*datasize*i;
-                if (Val.typespec().is_closure()) {
-                    // Retrieve the closure index from the PVL
-                    int index = *(int *)msgdata;
-                    ClosureColor *valclose = *(ClosureColor **) Val.data(i);
-                    // then copy the closure (or clear it, if out of range)
-                    if (index < (int)closure_msgs.size())
-                        *valclose = closure_msgs[index];
-                    else
-                        valclose->clear ();
-                } else {
-                    memcpy (Val.data(i), msgdata, datasize);
-                }
+        if (p) {
+            result[i] = 1;   // found
+            char *msgdata = (char *)p->data() + varying*datasize*i;
+            if (Val.typespec().is_closure()) {
+                // Retrieve the closure index from the PVL
+                int index = *(int *)msgdata;
+                ClosureColor *valclose = *(ClosureColor **) Val.data(i);
+                // then copy the closure (or clear it, if out of range)
+                if (index < (int)closure_msgs.size())
+                    *valclose = closure_msgs[index];
+                else
+                    valclose->clear ();
             } else {
-                result[i] = 0;   // not found
+                memcpy (Val.data(i), msgdata, datasize);
             }
+        } else {
+            result[i] = 0;   // not found
         }
         if (! varying)
             break;      // Non-uniform case can take early out
-    }
+    SHADE_LOOP_END
 
     if (Val.has_derivs ())
         exec->zero_derivs (Val);

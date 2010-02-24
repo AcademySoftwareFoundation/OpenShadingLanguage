@@ -132,7 +132,7 @@ public:
                          cos_i * cos_o * m_cos_off;
         // TODO: normalization? ha!
         float bsdf = cos_diff > 0.0f ? powf(cos_diff, m_exp) : 0.0f;
-
+        bsdf *= (float) (M_1_PI * M_1_PI);
         pdf = 0.0f;
         return Color3 (bsdf, bsdf, bsdf);
     }

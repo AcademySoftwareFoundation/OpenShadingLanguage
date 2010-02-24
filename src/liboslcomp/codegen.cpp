@@ -334,6 +334,11 @@ ASTshader_declaration::codegen (Symbol *dest)
             if (v->param_default_literals (v->sym(), out))
                 continue;
 
+            // No need for ops for a struct, its individual fields will
+            // generate their own init ops
+            if (v->sym()->typespec().is_structure())
+                continue;
+
             m_compiler->codegen_method (v->name());
             v->sym()->initbegin (m_compiler->next_op_label ());
             v->codegen ();
@@ -530,27 +535,47 @@ bool
 ASTvariable_declaration::param_default_literals (const Symbol *sym, std::string &out)
 {
     out.clear ();
-    bool completed = true;  // have we output the full initialization?
 
+    // Case 1: Normal vars with initializers, not a struct field --
+    // generate them (but handle arrays)
     if (init() && sym->fieldid() < 0) {
-        // Normal vars with initializers -- generate them
-
         // If it's a compound initializer, look at the individual pieces
         ref init = this->init();
-        if (init->nodetype() == compound_initializer_node) {
+        if (init->nodetype() == compound_initializer_node)
             init = ((ASTcompound_initializer *)init.get())->initlist();
-        }
-
-        for (ASTNode::ref i = init;  i;  i = i->next()) {
+        bool completed = true;  // have we output the full initialization?
+        for (ASTNode::ref i = init;  i;  i = i->next())
             completed &= param_one_default_literal (sym, i.get(), out);
-        }
-    } else {
-        // If there are NO initializers or it's a struct field,
-        // we still need to make a usable default.
-        completed &= param_one_default_literal (sym, NULL, out);
+        return completed;
     }
 
-    return completed;
+    // Case 2: it's a structure field, we need to walk down the init
+    // list for the right field initializer (which may itself be compound
+    // if that struct element is an array)
+    if (init() && sym->fieldid() >= 0 &&
+            init()->nodetype() == compound_initializer_node) {
+        ref init = ((ASTcompound_initializer *)this->init().get())->initlist();
+        for (int field = 0;  init && field < sym->fieldid();  ++field)
+            init = init->next();
+        if (init) {
+            if (init->nodetype() == compound_initializer_node) {
+                // The field is itself an array
+                init = ((ASTcompound_initializer *)init.get())->initlist();
+                bool completed = true;
+                for (ASTNode::ref i = init;  i;  i = i->next())
+                    completed &= param_one_default_literal (sym, i.get(), out);
+                return completed;
+            } else {
+                // Simple initializer for the field
+                return param_one_default_literal (sym, init.get(), out);
+            }
+        }
+    }
+
+    // If there are NO initializers, or if we fell through by not
+    // knowing how to handle the cases above, we still need to make a
+    // usable default.
+    return param_one_default_literal (sym, NULL, out);
 }
 
 

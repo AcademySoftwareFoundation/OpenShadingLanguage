@@ -219,8 +219,6 @@ ShadingExecution::bind (ShaderInstance *instance)
                 valref = (VaryingRef<float>*) &globals->Ps;
                 dxref = (VaryingRef<float>*) &globals->dPsdx;
                 dyref = (VaryingRef<float>*) &globals->dPsdy;
-            } else if (sym.name() == Strings::I) {
-                valref = (VaryingRef<float>*) &globals->I;
             } else if (sym.name() == Strings::Ci) {
                 valref = (VaryingRef<float>*) &globals->Ci;
             } else if (sym.name() == Strings::Ng) {
@@ -250,7 +248,7 @@ ShadingExecution::bind (ShaderInstance *instance)
                     if (sym.typespec().is_float()) {
                         // It's a float -- use the valref,dxref,dyref
                         // directly.
-                        VaryingRef<Dual2<float> > P ((Dual2<Vec3> *)sym.data(), sym.step());
+                        VaryingRef<Dual2<float> > P ((Dual2<float> *)sym.data(), sym.step());
                         for (int i = 0;  i < npoints();  ++i)
                             P[i].set ((*valref)[i], (*dxref)[i], (*dyref)[i]);
                     } else {
@@ -300,8 +298,8 @@ ShadingExecution::bind (ShaderInstance *instance)
                 sym.data (m_context->heapaddr (addr));
                 sym.step (0);
             } else {
-               sym.data ((void*) 0); // reset data ptr -- this symbol should never be used
-               sym.step (0);
+                sym.data ((void*) 0); // reset data ptr -- this symbol should never be used
+                sym.step (0);
             }
         } else if (sym.symtype() == SymTypeLocal ||
                    sym.symtype() == SymTypeTemp) {
@@ -375,8 +373,8 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
             // If it's still a default value and it's determined by init
             // ops, run them now
             int old_ip = m_ip;  // Save the instruction pointer
-            run (context()->m_original_runflags,
-                 context()->m_original_indices, context()->m_original_nindices,
+            run (m_runstate_stack.front().runflags,
+                 m_runstate_stack.front().indices, m_runstate_stack.front().nindices,
                  sym->initbegin(), sym->initend());
             m_ip = old_ip;
         }
@@ -407,13 +405,13 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
         adjust_varying(*sym, true, false /* don't keep old values */);
         bool wants_derivatives = (sym->typespec().is_float() || sym->typespec().is_triple());
         ShaderGlobals *globals = m_context->m_globals;
-        if (!get_renderer_userdata(context()->m_original_runflags, m_npoints, wants_derivatives,
+        // FIXME: runflags required here even if we are using something else
+        if (!get_renderer_userdata(m_runstate_stack.front().runflags, m_npoints, wants_derivatives,
                                    sym->name(), sym->typespec().simpletype(),
                                    &globals->renderstate[0], globals->renderstate.step(),
                                    sym->data(), sym->step())) {
-#ifdef DEBUG
-            std::cerr << "could not find previously found userdata '" << sym->name() << "'\n";
-#endif
+            m_shadingsys->error ("could not find previously found userdata: %s", sym->name().c_str());
+            ASSERT(0);
         }
     } else if (sym->valuesource() == Symbol::ConnectedVal) {
         // Run through all connections for this layer
@@ -432,6 +430,8 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
     float badval;
     bool badderiv;
     int point;
+    // FIXME: uses wrong runstate (only the currently active points will be
+    //        checked for nan, even though we evaluated all of them)
     if (m_shadingsys->debug_nan() &&
         check_nan (*sym, badval, badderiv, point))
         m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
@@ -447,7 +447,6 @@ ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
 void
 ShadingExecution::bind_connections ()
 {
-//    std::cerr << "  bind_connections " << m_instance->nconnections() << "\n";
     for (int i = 0;  i < m_instance->nconnections();  ++i)
         bind_connection (m_instance->connection (i));
     // FIXME -- you know, the connectivity is fixed for the whole group
@@ -515,7 +514,7 @@ ShadingExecution::bind_connection (const Connection &con, bool forcebind)
 
 
 void
-ShadingExecution::run (Runflag *rf, int *ind, int nind, int beginop, int endop)
+ShadingExecution::run (Runflag *runflags, int *indices, int nindices, int beginop, int endop)
 {
     if (m_executed)
         return;       // Already executed
@@ -524,83 +523,42 @@ ShadingExecution::run (Runflag *rf, int *ind, int nind, int beginop, int endop)
         m_shadingsys->info ("Running ShadeExec %p, shader %s",
                             this, m_master->shadername().c_str());
 
-    // Bind now if it is not already bound.
-    if (! m_bound) {
+    push_runstate (runflags, 0, m_context->npoints(), indices, nindices);
+
+    if (beginop >= 0) {
+        ASSERT (m_bound);
+        ASSERT (m_npoints == m_context->npoints());
+        /*
+         * Run just the op range supplied (this is used for on-demand init ops)
+         * We might be running the init ops from inside a conditional, but the
+         * init ops themselves should act as if they were run from outside.
+         *
+         * So we backup the current conditional level and reset it after we are
+         * done.
+         */
+
+        int prev_conditional_level = m_conditional_level;
+        m_conditional_level = 0;
+        run (beginop, endop);
+        m_conditional_level = prev_conditional_level;
+    } else {
+        ASSERT (!m_bound);
+        /*
+         * Default (<0) means run main code block. This should happen only once
+         * per shader.
+         */
+        // Bind symbols before running the shader
         ShaderGroup &sgroup (context()->attribs()->shadergroup (shaderuse()));
         bind (sgroup[layer()]);
-    }
+        // Handle all of the symbols that are connected to earlier layers.
+        bind_connections ();
 
-    // Make space for new runflags
-#if USE_RUNFLAGS
-    Runflag *runflags = ALLOCA (Runflag, m_npoints);
-    int *indices = NULL;
-    int nindices = 0;
-    if (rf) {
-        // Passed runflags -- copy those
-        memcpy (runflags, rf, m_npoints*sizeof(Runflag));
-    } else if (ind) {
-        // Passed indices -- need to convert to runflags
-        memset (runflags, RunflagOff, m_npoints*sizeof(Runflag));
-        for (int i = 0;  i < nind;  ++i)
-            runflags[indices[i]] = RunflagOn;
-    } else {
-        // If not passed runflags, make new ones
-        for (int i = 0;  i < m_npoints;  ++i)
-            runflags[i] = RunflagOn;
-    }
-#elif USE_RUNINDICES
-    Runflag *runflags = NULL;
-    int *indices = ALLOCA (int, m_npoints);
-    int nindices = nind;
-    if (ind) {
-        memcpy (indices, ind, nind*sizeof(indices[0]));
-    } else if (rf) {
-        // Passed runflags -- convert those to indices
-        for (int i = 0;  i < m_npoints;  ++i)
-            if (rf[i])
-                indices[nindices++] = i;
-    } else {
-        // If not passed either, make new ones
-        nindices = m_npoints;
-        for (int i = 0;  i < nindices;  ++i)
-            indices[i] = i;
-    }
-#elif USE_RUNSPANS
-    Runflag *runflags = NULL;
-    int *indices = NULL;
-    int nindices = nind;
-    if (ind) {
-        indices = ALLOCA (int, nind);
-        memcpy (indices, ind, nind*sizeof(indices[0]));
-    } else if (rf) {
-        // Passed runflags -- convert those to spans
-        indices = ALLOCA (int, m_npoints*2);
-        nindices = 0;
-        runflags_to_spans (rf, 0, m_npoints, indices, nindices);
-    } else {
-        // If not passed either, make new ones
-        indices = ALLOCA (int, 2);  // max space we could need
-        nindices = 2;
-        indices[0] = 0;
-        indices[1] = m_npoints;
-    }
-#endif
-
-    // Handle all of the symbols that are connected to earlier layers.
-//    std::cerr << "About to bind connections\n";
-    bind_connections ();
-//    std::cerr << "done bind connections\n";
-
-    m_conditional_level = 0;
-    push_runflags (runflags, 0, m_npoints, indices, nindices);
-    if (beginop >= 0)   // Run just the op range supplied, and no init ops
-        run (beginop, endop);
-    else {              // Default (<0) means run param init ops + main code
-        bind_connections ();   // Handle syms connected to earlier layers
+        m_conditional_level = 0;
         run (m_master->m_maincodebegin, m_master->m_maincodeend);
         m_executed = true;
+        ASSERT(m_conditional_level == 0); // make sure we nested our loops and ifs correctly
     }
-    pop_runflags ();
+    pop_runstate ();
 }
 
 
@@ -736,9 +694,9 @@ ShadingExecution::run_connected_layer (int layer)
 #if 0
     std::cerr << "Lazy running layer " << layer << ' ' << "\n";
 #endif
-    connected.run (m_context->m_original_runflags, 
-                   m_context->m_original_indices,
-                   m_context->m_original_nindices);
+    connected.run (m_runstate_stack.front().runflags, 
+                   m_runstate_stack.front().indices,
+                   m_runstate_stack.front().nindices);
     m_context->m_lazy_evals += 1;
 
     // Now re-bind the connections between that layer and all other
@@ -763,32 +721,34 @@ ShadingExecution::adjust_varying_makevarying (Symbol &sym, bool preserve_value)
 {
     // sym is uniform, but we're either assigning a new varying
     // value or we're inside a conditional.  Promote sym to varying.
-    size_t size = sym.has_derivs() ? 3*sym.deriv_step() : sym.size();
+    size_t size = sym.derivsize();
     sym.step (size);
     if (preserve_value || diverged()) {
         // Propagate the value from slot 0 to other slots
         char *data = (char *) sym.data();
 #if USE_RUNFLAGS
-        SHADE_LOOP_RUNFLAGS_BEGIN (context()->m_original_runflags,
-                                   0, m_npoints)
+        SHADE_LOOP_RUNFLAGS_BEGIN (m_runstate_stack.front().runflags,
+                                   m_runstate_stack.front().beginpoint,
+                                   m_runstate_stack.front().endpoint)
 #elif USE_RUNINDICES
-        SHADE_LOOP_INDICES_BEGIN (context()->m_original_indices,
-                                  context()->m_original_nindices)
+        SHADE_LOOP_INDICES_BEGIN (m_runstate_stack.front().indices,
+                                  m_runstate_stack.front().nindices)
 #elif USE_RUNSPANS
-        SHADE_LOOP_SPANS_BEGIN (context()->m_original_indices,
-                                context()->m_original_nindices)
+        SHADE_LOOP_SPANS_BEGIN (m_runstate_stack.front().indices,
+                                m_runstate_stack.front().nindices)
 #endif
-            memcpy (data + i*size, data, size);
+            if (i != 0) memcpy (data + i*size, data, size);
         SHADE_LOOP_END
     }
 }
-
 
 
 void
 ShadingExecution::adjust_varying_full (Symbol &sym, bool varying_assignment,
                                   bool preserve_value)
 {
+    // TODO: move comments to adjust_varying (this version is no longer called from anywhere)
+
     // This is tricky.  To make sure we're catching all the cases, let's
     // enumerate them by the current symbol varyingness, the assignent
     // varyingness, and whether all points in the grid are active:
@@ -911,52 +871,24 @@ ShadingExecution::zero_derivs (Symbol &sym)
 
 
 void
-ShadingExecution::push_runflags (Runflag *runflags,
+ShadingExecution::push_runstate (Runflag *runflags,
                                  int beginpoint, int endpoint,
                                  int *indices, int nindices)
 {
-    ASSERT (runflags != NULL || (indices != NULL /* && nindices != 0*/));
-    m_runstate.runflags = runflags;
+#if USE_RUNFLAGS
+    ASSERT (runflags != NULL && beginpoint < endpoint);
+#else
+    ASSERT (indices != NULL && nindices > 0);
+#endif
     m_runstate.init (runflags, beginpoint, endpoint, //m_runstate.allpointson,
                      indices, nindices);
 #if USE_RUNFLAGS
-    new_runflag_range (beginpoint, endpoint);
-#endif
-    m_runflag_stack.push_back (m_runstate);
-    if (! m_context->m_original_runflags)
-        m_context->m_original_runflags = runflags;
-    if (! m_context->m_original_indices) {
-        m_context->m_original_indices = indices;
-        m_context->m_original_nindices = nindices;
-    }
-}
-
-
-
-void
-ShadingExecution::pop_runflags ()
-{
-    m_runflag_stack.pop_back ();
-    if (m_runflag_stack.size()) {
-        m_runstate = m_runflag_stack.back();
-    } else {
-        m_runstate.runflags = NULL;
-        m_runstate.indices = NULL;
-        m_runstate.nindices = 0;
-    }
-}
-
-
-
-void
-ShadingExecution::new_runflag_range (int begin, int end)
-{
-    if (! m_runstate.runflags)
-        return;
     m_runstate.beginpoint = INT_MAX;
     m_runstate.endpoint = -1;
 //    m_runstate.allpointson = (begin == 0 && end == m_npoints);
-    for (int i = begin;  i < end;  ++i) {
+
+    // FIXME: this might be done redundantly (init-ops for example)
+    for (int i = beginpoint;  i < endpoint;  ++i) {
         if (m_runstate.runflags[i]) {
             if (i < m_runstate.beginpoint)
                 m_runstate.beginpoint = i;
@@ -965,6 +897,24 @@ ShadingExecution::new_runflag_range (int begin, int end)
         } else {
 //            m_runstate.allpointson = false;
         }
+    }
+#endif
+    m_runstate_stack.push_back (m_runstate);
+}
+
+
+
+void
+ShadingExecution::pop_runstate ()
+{
+    DASSERT(m_runstate_stack.size() > 0);
+    m_runstate_stack.pop_back ();
+    if (m_runstate_stack.size()) {
+        m_runstate = m_runstate_stack.back();
+    } else {
+        m_runstate.runflags = NULL;
+        m_runstate.indices = NULL;
+        m_runstate.nindices = 0;
     }
 }
 

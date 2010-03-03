@@ -319,6 +319,18 @@ OSOReaderToMaster::hint (const char *hintstring)
         sym.set_write (first, last);
         return;
     }
+    if (extract_prefix(h, "%argrw{")) {
+        const char* str = h.c_str();
+        ASSERT(*str == '\"');
+        str++; // skip open quote
+        size_t i = 0;
+        for (; *str != '\"'; i++, str++) {
+            ASSERT(*str == 'r' || *str == 'w' || *str == 'W' || *str == '-');
+            m_master->m_ops.back().argwrite(i, *str == 'w' || *str =='W');
+            m_master->m_ops.back().argread(i, *str == 'r' || *str =='W');
+        }
+        ASSERT(m_nargs == i);
+    }
 }
 
 

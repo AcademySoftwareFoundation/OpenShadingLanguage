@@ -33,8 +33,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/foreach.hpp>
 
 #include <OpenImageIO/dassert.h>
+#include <OpenImageIO/sysutil.h>
 
 #include "oslexec_pvt.h"
+#include "oslops.h"
 
 
 
@@ -67,8 +69,6 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     m_attribs = &sas;
     m_globals = &sg;
     m_npoints = n;
-    m_nlights = 0;
-    m_curlight = -1;
     m_curuse = ShadUseUnknown;
     m_heap_allotted = 0;
     m_closures_allotted = 0;
@@ -149,12 +149,67 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
     for (size_t layer = 0;  layer < nlayers;  ++layer)
         execlayers[layer].prebind ();
 
+    // Make space for new runflags
+#if USE_RUNFLAGS
+    Runflag *runflags = rf;
+    int *indices = NULL;
+    int nindices = 0;
+    if (rf) {
+        // Passed runflags -- done!
+    } else if (ind) {
+        runflags = ALLOCA (Runflag, m_npoints);
+        // Passed indices -- need to convert to runflags
+        memset (runflags, RunflagOff, m_npoints*sizeof(Runflag));
+        for (int i = 0;  i < nind;  ++i)
+            runflags[indices[i]] = RunflagOn;
+    } else {
+        runflags = ALLOCA (Runflag, m_npoints);
+        // If not passed runflags, make new ones
+        for (int i = 0;  i < m_npoints;  ++i)
+            runflags[i] = RunflagOn;
+    }
+#elif USE_RUNINDICES
+    Runflag *runflags = rf;
+    int *indices = ALLOCA (int, m_npoints);
+    int nindices = nind;
+    if (ind) {
+        memcpy (indices, ind, nind*sizeof(indices[0]));
+    } else if (rf) {
+        // Passed runflags -- convert those to indices
+        for (int i = 0;  i < m_npoints;  ++i)
+            if (rf[i])
+                indices[nindices++] = i;
+    } else {
+        // If not passed either, make new ones
+        nindices = m_npoints;
+        for (int i = 0;  i < nindices;  ++i)
+            indices[i] = i;
+    }
+#elif USE_RUNSPANS
+    Runflag *runflags = rf;
+    int *indices = NULL;
+    int nindices = nind;
+    if (ind) {
+        // NOTE: this assumes indices were passed in spans format
+        indices = ALLOCA (int, nind);
+        memcpy (indices, ind, nind*sizeof(indices[0]));
+    } else if (rf) {
+        // Passed runflags -- convert those to spans
+        indices = ALLOCA (int, m_npoints*2);
+        nindices = 0;
+        runflags_to_spans (rf, 0, m_npoints, indices, nindices);
+    } else {
+        // If not passed either, make new ones
+        indices = ALLOCA (int, 2);  // max space we could need
+        nindices = 2;
+        indices[0] = 0;
+        indices[1] = m_npoints;
+    }
+#endif
+
     m_lazy_evals = 0;
     m_rebinds = 0;
     m_binds = 0;
-    m_original_runflags = rf;
-    m_original_indices = ind;
-    m_original_nindices = nind;
     m_paramstobind = 0;
     m_paramsbound = 0;
     int uncond_evals = 0;
@@ -168,7 +223,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
             std::cerr << "Running layer " << layer << ' ' << inst->layername()
                       << ' ' << inst->master()->shadername() << "\n";
 #endif
-            exec.run (rf);
+            exec.run (runflags, indices, nindices);
             ++uncond_evals;
         }
 //        else std::cerr << "skip layer " << layer << "\n";

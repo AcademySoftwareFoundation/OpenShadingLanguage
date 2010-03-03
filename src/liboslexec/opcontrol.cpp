@@ -141,17 +141,17 @@ DECLOP (OP_if)
     exec->enter_conditional ();
 
     // True clause
-    exec->push_runflags (true_runflags, exec->runstate().beginpoint, exec->runstate().endpoint,
+    exec->push_runstate (true_runflags, exec->runstate().beginpoint, exec->runstate().endpoint,
                          true_indices, ntrue_indices);
     exec->run (exec->ip() + 1, op.jump(0));
-    exec->pop_runflags ();
+    exec->pop_runstate ();
 
     // False clause
     if (op.jump(0) < op.jump(1)) {
-        exec->push_runflags (false_runflags, exec->runstate().beginpoint, exec->runstate().endpoint,
+        exec->push_runstate (false_runflags, exec->runstate().beginpoint, exec->runstate().endpoint,
                              false_indices, nfalse_indices);
         exec->run (op.jump(0), op.jump(1));
-        exec->pop_runflags ();
+        exec->pop_runstate ();
     }
 
     // Jump to after the if (remember that the interpreter loop will
@@ -277,13 +277,13 @@ DECLOP (OP_for)
                 break;     // No points left on
 
             if (pushed_runstate) {
-                exec->pop_runflags ();
+                exec->pop_runstate ();
                 exec->exit_conditional ();
                 pushed_runstate = false;
             }
 
             if (diverged) {
-                exec->push_runflags (true_runflags, exec->runstate().beginpoint,
+                exec->push_runstate (true_runflags, exec->runstate().beginpoint,
                                      exec->runstate().endpoint,
                                      true_indices, nindices);
                 exec->enter_conditional ();
@@ -302,7 +302,7 @@ DECLOP (OP_for)
     }
 
     if (pushed_runstate) {
-        exec->pop_runflags ();
+        exec->pop_runstate ();
         exec->exit_conditional ();
     }
 
@@ -425,13 +425,13 @@ DECLOP (OP_dowhile)
                 break;     // No points left on
 
             if (pushed_runstate) {
-                exec->pop_runflags ();
+                exec->pop_runstate ();
                 exec->exit_conditional ();
                 pushed_runstate = false;
             }
 
             if (diverged) {
-                exec->push_runflags (true_runflags, exec->runstate().beginpoint,
+                exec->push_runstate (true_runflags, exec->runstate().beginpoint,
                                      exec->runstate().endpoint,
                                      true_indices, nindices);
                 exec->enter_conditional ();
@@ -444,7 +444,7 @@ DECLOP (OP_dowhile)
     }
 
     if (pushed_runstate) {
-        exec->pop_runflags ();
+        exec->pop_runstate ();
         exec->exit_conditional ();
     }
 

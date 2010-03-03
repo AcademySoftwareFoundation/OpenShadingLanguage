@@ -680,8 +680,6 @@ private:
     size_t m_closures_allotted;         ///< Closure memory allotted
     ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
-    int m_nlights;                      ///< Number of lights
-    int m_curlight;                     ///< Current light index
     int m_curuse;                       ///< Current use that we're running
     int m_nlayers[ShadUseLast];         ///< Number of layers for each use
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
@@ -811,6 +809,20 @@ public:
     inline void adjust_varying (Symbol &sym, bool varying_assignment,
                                 bool preserve_value = true) {
         varying_assignment |= diverged();
+#ifdef DEBUG_ADJUST_VARYING
+        ++m_adjust_calls;
+        if (sym.is_varying() == varying_assignment) {
+            if (varying_assignment)
+                ++m_keep_varying;
+            else
+                ++m_keep_uniform;
+        } else {
+            if (varying_assignment)
+                ++m_make_varying;
+            else
+                ++m_make_uniform;
+        }
+#endif
         if (sym.is_varying() != varying_assignment) {
             if (varying_assignment)
                 adjust_varying_makevarying (sym, preserve_value);
@@ -868,23 +880,14 @@ public:
 #endif
     }
 
-    // Set the runflags to rf[0..
-    void new_runflags (Runflag *rf, int *ind, int nind);
-
-    /// Adjust the valid point range [m_beginpoint,m_endpoint) to
-    /// newly-set runflags, but extending no farther than the begin/end
-    /// range given, and set m_all_points_on to true iff all points are
-    /// turned on.
-    void new_runflag_range (int begin, int end);
-
     /// Set up a new run state, with the old one safely stored on the
     /// stack.
-    void push_runflags (Runflag *runflags, int beginpoint, int endpoint,
+    void push_runstate (Runflag *runflags, int beginpoint, int endpoint,
                         RunIndex *indices, int nindices);
 
-    /// Restore the runflags to the state it was in before push_runflags().
+    /// Restore the runflags to the state it was in before push_runstate().
     ///
-    void pop_runflags ();
+    void pop_runstate ();
 
     void enter_conditional () { ++m_conditional_level; }
     void exit_conditional () { --m_conditional_level; }
@@ -1041,10 +1044,10 @@ private:
     SymbolVec m_symbols;          ///< Our own copy of the syms
     int m_last_instance_id;       ///< ID of last instance bound
 
-    typedef std::vector<Runstate> RunflagStack;
+    typedef std::vector<Runstate> RunstateStack;
 
     Runstate m_runstate;          ///< Current run state
-    RunflagStack m_runflag_stack; ///< Stack of runflags
+    RunstateStack m_runstate_stack; ///< Stack of run states
     int m_conditional_level;      ///< Conditional nesting level
     int m_ip;                     ///< Instruction pointer
 #ifdef DEBUG_ADJUST_VARYING

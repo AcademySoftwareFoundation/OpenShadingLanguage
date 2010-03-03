@@ -142,6 +142,8 @@ DECLOP (OP_surfacearea)
             result[i] = globals->surfacearea[i];
         SHADE_LOOP_END
     }
+    if (Result.has_derivs())
+       exec->zero_derivs (Result);       
 }
 
 

@@ -334,10 +334,15 @@ ASTshader_declaration::codegen (Symbol *dest)
             if (v->param_default_literals (v->sym(), out))
                 continue;
 
-            // No need for ops for a struct, its individual fields will
-            // generate their own init ops
-            if (v->sym()->typespec().is_structure())
+            if (v->sym()->typespec().is_structure()) {
+                // Special case for structs: call codegen_struct_initializers,
+                // which will generate init ops for the fields that need them.
+                ASTNode::ref finit = v->init();
+                if (finit->nodetype() == compound_initializer_node)
+                    finit = ((ASTcompound_initializer *)finit.get())->initlist();
+                v->codegen_struct_initializers (finit);
                 continue;
+            }
 
             m_compiler->codegen_method (v->name());
             v->sym()->initbegin (m_compiler->next_op_label ());
@@ -667,6 +672,12 @@ ASTvariable_declaration::codegen_struct_initializers (ref init)
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
 
         if (paraminit) {
+            // For parameter initialization, don't really generate ops if it
+            // can be statically initialized.
+            std::string out;
+            if (param_one_default_literal (fieldsym, init.get(), out))
+                continue;
+
             // Delineate and remember the init ops for this field individually
             m_compiler->codegen_method (fieldname);
             fieldsym->initbegin (m_compiler->next_op_label ());

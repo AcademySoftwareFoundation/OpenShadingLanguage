@@ -402,6 +402,9 @@ public:
     /// literals (and no init ops are needed).
     bool param_default_literals (const Symbol *sym, std::string &out);
 
+    // Special code generation for structure initializers
+    Symbol *codegen_struct_initializers (ref init);
+
 private:
     // Helper: type check an initializer list -- either a single item to
     // a scalar, or a list to an array.
@@ -413,9 +416,6 @@ private:
     // Helper: generate code for an initializer list -- either a single
     // item to a scalar, or a list to an array.
     void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
-
-    // Special code generation for structure initializers
-    Symbol *codegen_struct_initializers (ref init);
 
     // Helper for param_default_literals: generate the string that gives
     // the intialization of the literal value (and/or the default, if

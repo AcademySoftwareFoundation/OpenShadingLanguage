@@ -76,7 +76,7 @@ OSLCompilerImpl *oslcompiler = NULL;
 OSLCompilerImpl::OSLCompilerImpl ()
     : m_lexer(NULL), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
-      m_verbose(false), m_debug(false), m_optimizelevel(1),
+      m_verbose(false), m_quiet(false), m_debug(false), m_optimizelevel(1),
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
@@ -173,6 +173,9 @@ OSLCompilerImpl::compile (const std::string &filename,
         if (options[i] == "-v") {
             // verbose mode
             m_verbose = true;
+        } else if (options[i] == "-q") {
+            // quiet mode
+            m_quiet = true;
         } else if (options[i] == "-d") {
             // debug mode
             m_debug = true;

@@ -313,6 +313,7 @@ private:
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
     bool m_verbose;           ///< Verbose mode
+    bool m_quiet;             ///< Quiet mode
     bool m_debug;             ///< Debug mode
     int m_optimizelevel;      ///< Optimization level
     OpcodeVec m_ircode;       ///< Generated IR code

@@ -50,6 +50,7 @@ usage ()
         "\t--help         Print this usage message\n"
         "\t-o filename    Specify output filename\n"
         "\t-v             Verbose mode\n"
+        "\t-q             Quiet mode\n"
         "\t-Ipath         Add path to the #include search path\n"
         "\t-Dsym[=val]    Define preprocessor symbol\n"
         "\t-Usym          Undefine preprocessor symbol\n"
@@ -65,7 +66,7 @@ int
 main (int argc, const char *argv[])
 {
     std::vector <std::string> args;
-
+    bool quiet = false;
     if (argc <= 1) {
         usage ();
         return EXIT_SUCCESS;
@@ -77,12 +78,14 @@ main (int argc, const char *argv[])
             return EXIT_SUCCESS;
         }
         else if (! strcmp (argv[a], "-v") ||
+                 ! strcmp (argv[a], "-q") ||
                  ! strcmp (argv[a], "-d") ||
                  ! strcmp (argv[a], "-E") ||
                  ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
                  ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2")) {
             // Valid command-line argument
             args.push_back (argv[a]);
+            quiet |= (strcmp (argv[a], "-q") == 0);
         }
         else if (! strcmp (argv[a], "-o") && a < argc-1) {
             args.push_back (argv[a]);
@@ -97,8 +100,9 @@ main (int argc, const char *argv[])
             boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());
             bool ok = compiler->compile (argv[a], args);
             if (ok) {
-                std::cout << "Compiled " << argv[a] << " -> " 
-                          << compiler->output_filename() << "\n";
+                if (!quiet)
+                    std::cout << "Compiled " << argv[a] << " -> " 
+                              << compiler->output_filename() << "\n";
             } else {
                 std::cout << "FAILED " << argv[a] << "\n";
                 return EXIT_FAILURE;

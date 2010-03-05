@@ -66,7 +66,7 @@ DECLOP (OP_if)
         uniform = true;
         int beginpoint = exec->beginpoint();
         SHADE_LOOP_BEGIN
-            if (condition[i] != condition[beginpoint]) {
+            if ((condition[i] == 0) != (condition[beginpoint] == 0)) {
                 uniform = false;
                 break;
             }
@@ -132,10 +132,10 @@ DECLOP (OP_if)
     int ntrue_indices = 0, nfalse_indices = 0;
     spans_runflags_to_spans (exec->runstate().indices,
                              exec->runstate().nindices, condition,
-                             true_indices, ntrue_indices, 1);
+                             true_indices, ntrue_indices, true);
     spans_runflags_to_spans (exec->runstate().indices,
                              exec->runstate().nindices, condition,
-                             false_indices, nfalse_indices, 0);
+                             false_indices, nfalse_indices, false);
 #endif
 
     exec->enter_conditional ();

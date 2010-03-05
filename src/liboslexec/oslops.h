@@ -284,11 +284,11 @@ DECLOP (OP_missing);
 // Utility to convert something that looks like runflags to spans
 template<class RF>
 inline bool runflags_to_spans (RF &rf, int beg, int end,
-                               int *indices, int &nindices, int onval = 1)
+                               int *indices, int &nindices, bool onval = true)
 {
     bool any_off = false;
     for (int i = beg;  i < end;  ++i) {
-        if (rf[i] == onval) {
+        if ((rf[i] != 0) == onval) {
             indices[nindices++] = i;
             while (i < end && rf[i] == onval)  // Skip to next 0
                 ++i;
@@ -305,7 +305,7 @@ inline bool runflags_to_spans (RF &rf, int beg, int end,
 // runflags matches the 'onval'.
 template<class RF>
 inline bool spans_runflags_to_spans (int *spans, int spanlength, RF &rf,
-                                     int *indices, int &nindices, int onval=1)
+                                     int *indices, int &nindices, bool onval = true)
 {
     bool any_off = false;
     for (int s = 0;  s < spanlength;  s += 2)

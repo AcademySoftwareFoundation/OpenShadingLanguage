@@ -73,7 +73,7 @@ DECLOP (OP_useparam)
         // std::cerr << "useparam " << Param.name() << "\n";
         if (! Param.initialized()) {
             // std::cerr << "  not yet initialized!\n";
-            exec->bind_initialize_param (&Param, args[a]);
+            exec->bind_initialize_param (Param, args[a]);
         }
     }
 }

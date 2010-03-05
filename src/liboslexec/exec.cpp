@@ -337,6 +337,16 @@ ShadingExecution::bind (ShaderInstance *instance)
                                 sym.has_derivs() ? "(derivs)" : "(no derivs)");
     }
 
+    // Mark the parameters that are driven by connections
+    for (int i = 0;  i < m_instance->nconnections();  ++i) {
+        const Connection &con = m_instance->connection (i);
+        sym (con.dst.param).valuesource (Symbol::ConnectedVal);
+    }
+    // FIXME -- you know, the connectivity is fixed for the whole group
+    // and its instances.  We *could* mark them as connected and possibly
+    // do some of the other connection work once per instance rather than
+    // once per execution.  Come back to this later and investigate.
+
     // OK, we're successfully bound.
     m_bound = true;
 
@@ -352,130 +362,133 @@ ShadingExecution::bind (ShaderInstance *instance)
 
 
 void
-ShadingExecution::bind_initialize_param (Symbol *sym, int symindex)
+ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
 {
-    ASSERT (! sym->initialized ());
+    ASSERT (! sym.initialized ());
+    ASSERT (m_runstate_stack.size() > 0);
     m_context->m_paramsbound++;
 
-    // Resolve symbols that map to user-data on the geometry
-    if (sym->valuesource() != Symbol::ConnectedVal) {
-        if (renderer_has_userdata (sym->name(), sym->typespec().simpletype(),
-                                   &m_context->m_globals->renderstate[0])) {
-            sym->valuesource(Symbol::GeomVal);
+    // Lazy parameter binding: we figure out the value for this parameter based
+    // on the following priority:
+    //    1) connection(s) from an earlier layer
+    //    2) geometry attribute on the surface of the same name
+    //    3) instance values
+    //    4) default values (may include "init-ops")
+
+    if (sym.valuesource() == Symbol::ConnectedVal) {
+        // Run through all connections for this layer
+        // NOTE: more than one connection may contribute to this value if we have
+        //       partial connections (into individual array elements or components)
+        ExecutionLayers &execlayers (m_context->execlayer (shaderuse()));
+        for (int c = 0;  c < m_instance->nconnections();  ++c) {
+            const Connection &con (m_instance->connection (c));
+            // If the connection gives a value to this param
+            if (con.dst.param == symindex) {
+                // If the earlier layer it comes from has not yet been executed, do so now.
+                if (! execlayers[con.srclayer].executed())
+                   run_connected_layer (con.srclayer);
+                // Now bind the connection for this param (this copies the actual value)
+                bind_connection(con);
+            }
         }
-    }
+    } else {
+        // Resolve symbols that map to user-data on the geometry
+        // FIXME: call only one method here
+        if (renderer_has_userdata (sym.name(), sym.typespec().simpletype(),
+                                   &m_context->m_globals->renderstate[0])) {
+            // This value came from geometry
+            sym.valuesource(Symbol::GeomVal);
 
-    if (sym->valuesource() == Symbol::DefaultVal ||
-            sym->valuesource() == Symbol::InstanceVal) {
+            // Mark as not having diverged so that adjust_varying will _never_
+            // copy values (since they are not valid at this point, it would
+            // just be a waste of time)
+            int old_conditional_level = m_conditional_level;
+            m_conditional_level = 0;
+            adjust_varying(sym, true, false /* don't keep old values */);
+            m_conditional_level = old_conditional_level;
 
-        if (sym->valuesource() == Symbol::DefaultVal &&
-                sym->initbegin() != sym->initend()) {
+            bool wants_derivatives = (sym.typespec().is_float() || sym.typespec().is_triple());
+            ShaderGlobals *globals = m_context->m_globals;
+            // FIXME: runflags required here even if we are using something else
+            if (!get_renderer_userdata(m_runstate_stack.front().runflags, m_npoints, wants_derivatives,
+                                       sym.name(), sym.typespec().simpletype(),
+                                       &globals->renderstate[0], globals->renderstate.step(),
+                                       sym.data(), sym.step())) {
+                m_shadingsys->error ("could not find previously found userdata: %s", sym.name().c_str());
+                ASSERT(0);
+            } 
+        } else if (sym.valuesource() == Symbol::DefaultVal &&
+                   sym.initbegin() != sym.initend()) {
             // If it's still a default value and it's determined by init
             // ops, run them now
             int old_ip = m_ip;  // Save the instruction pointer
             run (m_runstate_stack.front().runflags,
                  m_runstate_stack.front().indices, m_runstate_stack.front().nindices,
-                 sym->initbegin(), sym->initend());
+                 sym.initbegin(), sym.initend());
             m_ip = old_ip;
-        }
-        else if (!sym->typespec().is_closure() && !sym->typespec().is_structure()) {
+        } else if (!sym.typespec().is_closure() && !sym.typespec().is_structure()) {
             // Otherwise, if it's a normal data type (non-closure,
             // non-struct) copy its instance and/or default value now.
-            DASSERT (sym->step() == 0);
-            if (sym->typespec().simpletype().basetype == TypeDesc::FLOAT)
-                memcpy (sym->data(), &m_instance->m_fparams[sym->dataoffset()],
-                        sym->typespec().simpletype().size());
-            else if (sym->typespec().simpletype().basetype == TypeDesc::INT)
-                memcpy (sym->data(), &m_instance->m_iparams[sym->dataoffset()],
-                        sym->typespec().simpletype().size());
-            else if (sym->typespec().simpletype().basetype == TypeDesc::STRING)
-                memcpy (sym->data(), &m_instance->m_sparams[sym->dataoffset()],
-                        sym->typespec().simpletype().size());
+            DASSERT (sym.step() == 0);
+            if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
+                memcpy (sym.data(), &m_instance->m_fparams[sym.dataoffset()],
+                        sym.typespec().simpletype().size());
+            else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
+                memcpy (sym.data(), &m_instance->m_iparams[sym.dataoffset()],
+                        sym.typespec().simpletype().size());
+            else if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
+                memcpy (sym.data(), &m_instance->m_sparams[sym.dataoffset()],
+                        sym.typespec().simpletype().size());
             else {
-                std::cerr << "Type is " << sym->typespec().c_str() << "\n";
+                std::cerr << "Type is " << sym.typespec().c_str() << "\n";
                 ASSERT (0 && "unrecognized type -- no default value");
             }
-            if (sym->has_derivs ())
-                zero_derivs (*sym);
+            if (sym.has_derivs ())
+                zero_derivs (sym);
             // FIXME -- is there anything to be gained by just pointing
             // to the parameter data, not copying it?
         }
-
-    } else if (sym->valuesource() == Symbol::GeomVal) {
-        adjust_varying(*sym, true, false /* don't keep old values */);
-        bool wants_derivatives = (sym->typespec().is_float() || sym->typespec().is_triple());
-        ShaderGlobals *globals = m_context->m_globals;
-        // FIXME: runflags required here even if we are using something else
-        if (!get_renderer_userdata(m_runstate_stack.front().runflags, m_npoints, wants_derivatives,
-                                   sym->name(), sym->typespec().simpletype(),
-                                   &globals->renderstate[0], globals->renderstate.step(),
-                                   sym->data(), sym->step())) {
-            m_shadingsys->error ("could not find previously found userdata: %s", sym->name().c_str());
-            ASSERT(0);
-        }
-    } else if (sym->valuesource() == Symbol::ConnectedVal) {
-        // Run through all connections for this layer
-        ExecutionLayers &execlayers (m_context->execlayer (shaderuse()));
-        for (int c = 0;  c < m_instance->nconnections();  ++c) {
-            const Connection &con (m_instance->connection (c));
-            // If the connection gives a value to this param AND the earlier
-            // layer it comes from has not yet been executed, do so now.
-            if (con.dst.param == symindex &&
-                    ! execlayers[con.srclayer].executed()) {
-                run_connected_layer (con.srclayer);
-            }
-        }
     }
-
     float badval;
     bool badderiv;
     int point;
     // FIXME: uses wrong runstate (only the currently active points will be
     //        checked for nan, even though we evaluated all of them)
     if (m_shadingsys->debug_nan() &&
-        check_nan (*sym, badval, badderiv, point))
+        check_nan (sym, badval, badderiv, point))
         m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
                                badderiv ? "bad derivative " : "",
                                badval, m_master->shadername().c_str(),
-                               sym->name().c_str());
+                               sym.name().c_str());
 
-    sym->initialized (true);
+    sym.initialized (true);
 }
 
 
 
 void
-ShadingExecution::bind_connections ()
-{
-    for (int i = 0;  i < m_instance->nconnections();  ++i)
-        bind_connection (m_instance->connection (i));
-    // FIXME -- you know, the connectivity is fixed for the whole group
-    // and its instances.  We *could* mark them as connected and possibly
-    // do some of the other connection work once per instance rather than
-    // once per execution.  Come back to this later and investigate.
-}
-
-
-
-void
-ShadingExecution::bind_connection (const Connection &con, bool forcebind)
+ShadingExecution::bind_connection (const Connection &con)
 {
     int symindex = con.dst.param;
     Symbol &dstsym (sym (symindex));
     ExecutionLayers &execlayers (context()->execlayer (shaderuse()));
     ShadingExecution &srcexec (execlayers[con.srclayer]);
-    if (! srcexec.m_bound) {
-        if (! forcebind) {
-            // If we're not forcing a full bind now (because it may be
-            // lazy), just mark the symbol as connectted but don't bind
-            // its dependency or copy any values yet.
-            dstsym.valuesource (Symbol::ConnectedVal);
-            return;
-        }
-        ShaderGroup &sgroup (context()->attribs()->shadergroup (shaderuse()));
-        srcexec.bind (sgroup[con.srclayer]);
-    }
+    ASSERT (srcexec.m_bound);
+    ASSERT (srcexec.m_executed);
     Symbol &srcsym (srcexec.sym (con.src.param));
+    if (!srcsym.initialized()) {
+        // Due to lazy-param binding, it is possible to have run the source
+        // layer but not initialized all its parameters. Also, since we have
+        // already run this layer, its runstate stack is now empty. So we must
+        // push a fresh copy of the original state
+        srcexec.push_runstate (m_runstate_stack.front().runflags,
+                               m_runstate_stack.front().beginpoint,
+                               m_runstate_stack.front().endpoint,
+                               m_runstate_stack.front().indices,
+                               m_runstate_stack.front().nindices);
+        srcexec.bind_initialize_param (srcsym, con.src.param);
+        srcexec.pop_runstate ();
+    }
 #if 0
     std::cerr << " bind_connection: layer " << con.srclayer << ' '
               << srcexec.instance()->layername() << ' ' << srcsym.name()
@@ -498,7 +511,7 @@ ShadingExecution::bind_connection (const Connection &con, bool forcebind)
         dstsym.data (srcsym.data ());
         dstsym.step (srcsym.step ());
         // dstsym.dataoffset (srcsym->dataoffset ());  needed?
-        dstsym.valuesource (Symbol::ConnectedVal);
+        ASSERT (dstsym.valuesource () == Symbol::ConnectedVal);
     } else {
         // More complex case -- casting is involved, or only a
         // partial copy (such as just cone component).
@@ -516,9 +529,6 @@ ShadingExecution::bind_connection (const Connection &con, bool forcebind)
 void
 ShadingExecution::run (Runflag *runflags, int *indices, int nindices, int beginop, int endop)
 {
-    if (m_executed)
-        return;       // Already executed
-
     if (m_debug)
         m_shadingsys->info ("Running ShadeExec %p, shader %s",
                             this, m_master->shadername().c_str());
@@ -543,6 +553,7 @@ ShadingExecution::run (Runflag *runflags, int *indices, int nindices, int begino
         m_conditional_level = prev_conditional_level;
     } else {
         ASSERT (!m_bound);
+        ASSERT (!m_executed);
         /*
          * Default (<0) means run main code block. This should happen only once
          * per shader.
@@ -550,8 +561,6 @@ ShadingExecution::run (Runflag *runflags, int *indices, int nindices, int begino
         // Bind symbols before running the shader
         ShaderGroup &sgroup (context()->attribs()->shadergroup (shaderuse()));
         bind (sgroup[layer()]);
-        // Handle all of the symbols that are connected to earlier layers.
-        bind_connections ();
 
         m_conditional_level = 0;
         run (m_master->m_maincodebegin, m_master->m_maincodeend);
@@ -687,31 +696,15 @@ ShadingExecution::run_connected_layer (int layer)
     ShadingExecution &connected (execlayers[layer]);
     ASSERT (! connected.executed ());
 
-    // Run the earlier layer using the runflags we were originally
-    // called with.
-    ShaderGroup &sgroup (m_context->attribs()->shadergroup (shaderuse()));
-    size_t nlayers = (int) sgroup.nlayers ();
 #if 0
     std::cerr << "Lazy running layer " << layer << ' ' << "\n";
 #endif
+    // Run the earlier layer using the runflags we were originally
+    // called with.
     connected.run (m_runstate_stack.front().runflags, 
                    m_runstate_stack.front().indices,
                    m_runstate_stack.front().nindices);
     m_context->m_lazy_evals += 1;
-
-    // Now re-bind the connections between that layer and all other
-    // later layers that have not yet executed.
-    for (int i = layer+1;  i < (int)nlayers;  ++i) {
-        ShadingExecution &exec (execlayers[i]);
-        if (exec.m_bound && ! exec.m_executed) {
-            ShaderInstance *inst = exec.instance();
-            for (int c = 0;  c < inst->nconnections();  ++c) {
-                const Connection &con (inst->connection (c));
-                if (con.srclayer == layer)
-                    exec.bind_connection (con, true /* force dependent bind */);
-            }
-        }
-    }
 }
 
 

@@ -756,7 +756,7 @@ public:
 
     /// Bind the value for a particular parameter.
     ///
-    void bind_initialize_param (Symbol *sym, int symindex);
+    void bind_initialize_param (Symbol &sym, int symindex);
 
     /// Execute the shader with the supplied runflags.  If rf==NULL, new
     /// runflags will be set up to run all points. If beginop and endop
@@ -1011,13 +1011,10 @@ public:
     Runstate &runstate () { return m_runstate; }
 
 private:
-    /// Helper for bind(): take care of connections to earlier layers
-    ///
-    void bind_connections ();
 
-    /// Helper for bind(): establish a connections to an earlier layer.
-    ///
-    void bind_connection (const Connection &con, bool forcebind=false);
+    /// Helper for bind_initialize_param(): establish a connection to an earlier
+    /// layer.
+    void bind_connection (const Connection &con);
 
     /// Helper for run: check all the writable arguments of an op to see
     /// if any NaN or Inf values have snuck in.

@@ -121,7 +121,7 @@ DECLOP (OP_setmessage)
             memcpy (msgdata, Val.data(i), datasize);
         }
         if (! varying)
-            break;      // Non-uniform case can take early out
+            SHADE_LOOP_EXIT      // Non-uniform case can take early out
     SHADE_LOOP_END
 }
 
@@ -197,7 +197,7 @@ DECLOP (OP_getmessage)
             result[i] = 0;   // not found
         }
         if (! varying)
-            break;      // Non-uniform case can take early out
+            SHADE_LOOP_EXIT      // Non-uniform case can take early out
     SHADE_LOOP_END
 
     if (Val.has_derivs ())

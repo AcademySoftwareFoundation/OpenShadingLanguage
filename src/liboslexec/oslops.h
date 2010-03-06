@@ -257,6 +257,8 @@ DECLOP (OP_missing);
                                exec->runstate().beginpoint,     \
                                exec->runstate().endpoint)
 
+# define SHADE_LOOP_EXIT      break;
+
 #elif USE_RUNINDICES
 # define SHADE_LOOP_INDICES_BEGIN(ind,n)                        \
     {                                                           \
@@ -269,6 +271,8 @@ DECLOP (OP_missing);
     SHADE_LOOP_INDICES_BEGIN (exec->runstate().indices,         \
                               exec->runstate().nindices)
 
+# define SHADE_LOOP_EXIT     break;
+
 #elif USE_RUNSPANS
 # define SHADE_LOOP_SPANS_BEGIN(ind,n)                          \
     {                                                           \
@@ -280,6 +284,9 @@ DECLOP (OP_missing);
 # define SHADE_LOOP_BEGIN                                       \
     SHADE_LOOP_SPANS_BEGIN (exec->runstate().indices,           \
                             exec->runstate().nindices)
+
+# define SHADE_LOOP_EXIT   { nspans_ = 1; break; }
+
 
 // Utility to convert something that looks like runflags to spans
 template<class RF>

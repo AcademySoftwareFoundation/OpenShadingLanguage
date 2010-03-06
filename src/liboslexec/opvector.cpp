@@ -172,11 +172,13 @@ DECLOP (triple_matrix_transform)
             matrix[0].multDirMatrix (*v, r);
         else
             matrix[0].inverse().transpose().multDirMatrix (*v, r);
-        SHADE_LOOP_BEGIN
-            result[i] = r;
-            if (result.is_uniform())  // Don't loop if result is uniform
-                break;
-        SHADE_LOOP_END
+        if (result.is_uniform())  // Don't loop if result is uniform
+            result[0] = r;
+        else {
+            SHADE_LOOP_BEGIN
+                result[i] = r;
+            SHADE_LOOP_END
+        }
         if (Result.has_derivs ())
             exec->zero_derivs (Result);
     } else if (Matrix.is_uniform()) {

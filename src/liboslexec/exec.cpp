@@ -979,7 +979,7 @@ ShadingExecution::printsymbolval (Symbol &sym)
                 sym.is_uniform() || sym.typespec().is_closure())
             out << "\n";
         if (sym.is_uniform())
-            break;
+            SHADE_LOOP_EXIT
     SHADE_LOOP_END
     return out.str ();
 }

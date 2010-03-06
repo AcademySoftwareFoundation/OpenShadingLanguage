@@ -288,8 +288,6 @@ DECLOP (OP_gettextureinfo)
     bool varying = Filename.is_varying() | Dataname.is_varying();
     exec->adjust_varying (Result, varying);
     exec->adjust_varying (Data, varying);
-    if (Result.has_derivs())
-       exec->zero_derivs (Result);
     if (Data.has_derivs())
        exec->zero_derivs (Data);
     varying |= Result.is_varying() | Data.is_varying();
@@ -312,7 +310,7 @@ DECLOP (OP_gettextureinfo)
             }
         }
         if (! varying)
-            break;
+            SHADE_LOOP_EXIT
     SHADE_LOOP_END
 }
 

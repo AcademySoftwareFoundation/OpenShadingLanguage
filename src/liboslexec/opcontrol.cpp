@@ -68,7 +68,7 @@ DECLOP (OP_if)
         SHADE_LOOP_BEGIN
             if ((condition[i] == 0) != (condition[beginpoint] == 0)) {
                 uniform = false;
-                break;
+                SHADE_LOOP_EXIT
             }
         SHADE_LOOP_END
     }

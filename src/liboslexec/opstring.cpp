@@ -437,7 +437,7 @@ DECLOP (regex_search_specialized)
                 : regex_search (subject[i].c_str(), *regex);
         }
         if (! Result.is_varying())
-            break;
+            SHADE_LOOP_EXIT
     SHADE_LOOP_END
 }
 

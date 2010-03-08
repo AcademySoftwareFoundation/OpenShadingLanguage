@@ -4,3 +4,4 @@ Output Cspline to color.tif
 Output DxCspline to dcolor.tif
 Output Fspline to float.tif
 Output DxFspline to dfloat.tif
+Output NumKnots to numknots.tif

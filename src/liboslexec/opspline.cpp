@@ -220,7 +220,7 @@ struct CopySelf
 //
 template <class ATYPE, class BTYPE, class CTYPE, class DTYPE, bool knot_derivs, class KNOT_TO_RESULT>
 inline void 
-spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &Value, Symbol &Knots,
+spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &Value, int num_knots, Symbol &Knots,
       ShadingExecution *exec, bool zero_derivs=true)
 {
     VaryingRef<ATYPE> result ((ATYPE *)Result.data(), Result.step());
@@ -238,7 +238,8 @@ spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &
         // If unrecognizable spline type, then default to Linear
         if (basis_type == kNumSplineTypes)
             basis_type = kLinearSpline;
-        nsegs = ((Knots.typespec().arraylength() - 4) / gBasisSet[basis_type].basis_step) + 1;
+        int knot_count = (num_knots > 0) ? std::min(num_knots, Knots.typespec().arraylength()) : Knots.typespec().arraylength();
+        nsegs = ((knot_count - 4) / gBasisSet[basis_type].basis_step) + 1;
     }
 
     // assuming spline-type is uniform
@@ -252,7 +253,8 @@ spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &
             // If unrecognizable spline type, then default to Linear
             if (basis_type == kNumSplineTypes)
                 basis_type = kLinearSpline;
-            nsegs = ((Knots.typespec().arraylength() - 4) / gBasisSet[basis_type].basis_step) + 1;
+            int knot_count = (num_knots > 0) ? std::min(num_knots, Knots.typespec().arraylength()) : Knots.typespec().arraylength();
+            nsegs = ((knot_count - 4) / gBasisSet[basis_type].basis_step) + 1;
         }
         SplineBasis &spline = gBasisSet[basis_type];
 
@@ -307,10 +309,13 @@ spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &
 
 DECLOP (OP_spline)
 {
+    bool knot_num_specified = (nargs == 5) ? true : false;
     Symbol &Result (exec->sym (args[0]));
     Symbol &Spline (exec->sym (args[1]));
     Symbol &Value  (exec->sym (args[2]));
-    Symbol &Knots  (exec->sym (args[3]));
+    Symbol &Knots  (exec->sym (args[knot_num_specified ? 4 : 3]));
+
+    int num_knots = -1;
 
     ASSERT (! Result.typespec().is_closure()  &&
             ! Spline.typespec().is_closure()  &&
@@ -319,6 +324,12 @@ DECLOP (OP_spline)
 
     ASSERT(Knots.typespec().is_array());
 
+    if (knot_num_specified) {
+       Symbol &Knot_num = (exec->sym (args[3]));
+       ASSERT(! Knot_num.typespec().is_closure());
+       VaryingRef<int> knot_count ((int *)Knot_num.data(), Knot_num.step());
+       num_knots = knot_count[0];
+    }
     // determine varying-ness
     bool varying = Value.is_varying() || Knots.is_varying() || Spline.is_varying();
     exec->adjust_varying(Result, varying, Value.data() == Result.data());
@@ -343,29 +354,29 @@ DECLOP (OP_spline)
     switch (mode)
     {
         case (RES_DERIVS | VALU_DERIVS | KNOT_DERIVS | TRIPLES):
-            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS | VALU_DERIVS | KNOT_DERIVS):
-            spline_op_guts_generic< Dual2<float>, Dual2<float>, Dual2<float>, float, true, CopySelf<Dual2<float> >  >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Dual2<float>, Dual2<float>, Dual2<float>, float, true, CopySelf<Dual2<float> >  >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         //
         case (RES_DERIVS | VALU_DERIVS | TRIPLES):
-            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS | VALU_DERIVS):
-            spline_op_guts_generic< Dual2<float>, Dual2<float>, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Dual2<float>, Dual2<float>, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         //
         case (RES_DERIVS | TRIPLES):
-            spline_op_guts_generic< Dual2<Vec3>, float, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Dual2<Vec3>, float, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS):
-            spline_op_guts_generic< Dual2<float>, float, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Dual2<float>, float, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
 
@@ -373,11 +384,11 @@ DECLOP (OP_spline)
         // and/or knots have derivatives.  This simplifies to case of whether
         // we're dealing with floats or triples.
         case (TRIPLES):
-            spline_op_guts_generic< Vec3, float, Vec3, Vec3, false, CopySelf<Vec3> >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< Vec3, float, Vec3, Vec3, false, CopySelf<Vec3> >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case 0:
-            spline_op_guts_generic< float, float, float, float, false, CopySelf<float> >(Result, Spline, array_length, Value, Knots,
+            spline_op_guts_generic< float, float, float, float, false, CopySelf<float> >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         //

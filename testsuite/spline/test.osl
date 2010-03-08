@@ -1,4 +1,4 @@
-shader test(output color Cspline = 0, output color DxCspline = 0, output float Fspline = 0, output float DxFspline = 0)
+shader test(output color Cspline = 0, output color DxCspline = 0, output float Fspline = 0, output float DxFspline = 0, output float NumKnots = 0)
 {
    string bases[5] = { "catmull-rom", "bezier", "bspline", "hermite", "linear" };
    color  colors[5] = { color(1,0,0),
@@ -49,4 +49,7 @@ shader test(output color Cspline = 0, output color DxCspline = 0, output float F
 
    Fspline   = spline(bases[basis], u, fltknots);
    DxFspline = 100.0*Dx(Fspline);
+
+   NumKnots   = spline("linear", u, 4, fltknots);
+   
 }

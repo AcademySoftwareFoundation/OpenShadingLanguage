@@ -3313,13 +3313,17 @@ function.
 \apiend
 
 \apiitem{\emph{type} {\ce spline} (string basis, float x, \emph{type} $\mathtt{y}_0$, \emph{type} $\mathtt{y}_1$, ... \emph{type} $\mathtt{y}_{n-1}$)\\
-\emph{type} {\ce spline} (string basis, float x, \emph{type} y[])}
+\emph{type} {\ce spline} (string basis, float x, \emph{type} y[]) \\
+\emph{type} {\ce spline} (string basis, float x, int nknots, \emph{type} y[])}
+
 \indexapi{spline()}
 
 As $x$ varies from 0 to 1, {\cf spline} returns the value of a cubic
 interpolation of uniformly-spaced knots $y_0$...$y_{n-1}$, or
 $y[0]$...$y[n-1]$ for the array version of the call (where $n$ is the
-length of the array).  The input value $x$ will be clamped to lie
+length of the array), or $y[0]$...$y[nknots-1]$ for the version that
+explicitly specifies the number of knots (which may be less than the
+full array length).  The input value $x$ will be clamped to lie
 on $[0,1]$.  The \emph{type} may be any of \float, \color,
 \point, \vector, or \normal; for multi-component types (e.g. \color),
 each component will be interpolated separately.
@@ -3335,8 +3339,10 @@ ignore the first and last data value, interpolating piecewise-linearly
 between $y_1$ and $y_{n-2}$.
 \apiend
 
+\begin{comment}
 \apiitem{float {\ce inversespline} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
-float {\ce inversespline} (string basis, float v, float y[])}
+float {\ce inversespline} (string basis, float v, float y[]) \\
+float {\ce inversespline} (string basis, float v, int nknots, float y[])}
 \indexapi{inversespline()}
 
 Computes the \emph{inverse} of the {\cf spline()} function --- i.e., returns
@@ -3344,7 +3350,7 @@ the value $x$ for which {\cf spline (basis, x, y...)} would return value
 $v$.  Results are undefined if the knots do not specifiy a monotonic
 (only increasing or only decreasing) spline.
 \apiend
-
+\end{comment}
 
 
 \section{Derivatives and area operators}

@@ -41,14 +41,14 @@ namespace pvt {
 class AshikhminVelvetClosure : public BSDFClosure {
     Vec3 m_N;
     float m_sigma;
-    float m_R0;
+    float m_eta;
     float m_invsigma2;
 public:
     CLOSURE_CTOR (AshikhminVelvetClosure) : BSDFClosure(side, Labels::DIFFUSE)
     {
         CLOSURE_FETCH_ARG (m_N, 1);
         CLOSURE_FETCH_ARG (m_sigma, 2);
-        CLOSURE_FETCH_ARG (m_R0, 3);
+        CLOSURE_FETCH_ARG (m_eta, 3);
 
         m_sigma = std::max(m_sigma, 0.01f);
         m_invsigma2 = 1 / (m_sigma * m_sigma);
@@ -59,7 +59,7 @@ public:
         out << "ashikhmin_velvet (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_sigma << ", ";
-        out << m_R0;
+        out << m_eta;
         out << ")";
     }
 
@@ -86,10 +86,7 @@ public:
 
             float D = expf(-cotangent2 * m_invsigma2) * m_invsigma2 * float(M_1_PI) / sinNH4;
             float G = std::min(1.0f, std::min(fac1, fac2)); // TODO: derive G from D analytically
-            // Schlick approximation of Fresnel reflectance
-            float cosi2 = cosNO * cosNO;
-            float cosi5 = cosi2 * cosi2 * cosNO;
-            float F =  m_R0 + (1 - cosi5) * (1 - m_R0);
+            float F = fresnel_dielectric(cosNO, m_eta);
 
             float out = 0.25f * (D * G * F) / cosNO;
 
@@ -137,10 +134,7 @@ public:
 
                 float D = expf(-cotangent2 * m_invsigma2) * m_invsigma2 * float(M_1_PI) / sinNH4;
                 float G = std::min(1.0f, std::min(fac1, fac2)); // TODO: derive G from D analytically
-                // Schlick approximation of Fresnel reflectance
-                float cosi2 = cosNO * cosNO;
-                float cosi5 = cosi2 * cosi2 * cosNO;
-                float F =  m_R0 + (1 - cosi5) * (1 - m_R0);
+                float F = fresnel_dielectric(cosNO, m_eta);
 
                 float power = 0.25f * (D * G * F) / cosNO;
 

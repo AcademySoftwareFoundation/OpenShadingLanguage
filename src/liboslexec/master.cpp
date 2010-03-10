@@ -241,6 +241,9 @@ static OpNameEntry op_name_entries[] = {
     { "exp2", OP_exp2 },
     { "expm1", OP_expm1 },
     { "fabs", OP_fabs },
+    { "fakefur_diffuse", OP_fakefur_diffuse},
+    { "fakefur_specular", OP_fakefur_specular},
+    { "fakefur_skin", OP_fakefur_skin },
     { "filterwidth", OP_filterwidth },
     { "floor", OP_floor },
     { "fmod", OP_mod },  // alias for mod()

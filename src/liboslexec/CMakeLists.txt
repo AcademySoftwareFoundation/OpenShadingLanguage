@@ -4,7 +4,7 @@ SET ( liboslexec_srcs
           bsdf_westin.cpp bsdf_ashikhmin_velvet.cpp
           bsdf_cloth_fncs.cpp bsdf_cloth.cpp bsdf_cloth_specular.cpp
           bsdf_reflection.cpp bsdf_refraction.cpp bsdf_transparent.cpp bsdf_ward.cpp
-          bssrdf.cpp bsdf_hair.cpp
+          bssrdf.cpp bsdf_hair.cpp bsdf_fakefur.cpp
           emissive.cpp background.cpp
           context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 

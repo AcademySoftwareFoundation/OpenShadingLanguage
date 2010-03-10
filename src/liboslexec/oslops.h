@@ -118,6 +118,9 @@ DECLOP (OP_expm1);
 DECLOP (OP_eq);
 DECLOP (OP_fabs);
 //DECLOP (OP_faceforward);
+DECLOP (OP_fakefur_diffuse);
+DECLOP (OP_fakefur_specular);
+DECLOP (OP_fakefur_skin);
 DECLOP (OP_filterwidth);
 DECLOP (OP_floor);
 //DECLOP (OP_fmod);  // alias for OP_mod

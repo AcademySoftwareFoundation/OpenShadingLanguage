@@ -116,7 +116,7 @@ ShadingExecution::error_arg_types ()
 {
     std::stringstream out;
     const Opcode &op (this->op());
-    const int *args = &m_master->m_args[0];
+    const int *args = &(instance()->args()[0]);
     out << "Don't know how to compute "
         << sym(args[op.firstarg()]).typespec().string() << " " << op.opname() << " (";
     for (int i = 1;  i < op.nargs();  ++i) {
@@ -168,10 +168,10 @@ ShadingExecution::bind (ShaderInstance *instance)
         // Symbol.  We humans know that the definition of Symbol has no
         // elements that can't be memcpy'd, there is no allocated memory
         // that can leak, so we go the fast route and memcpy.
-        m_symbols.resize (m_instance->m_symbols.size());
+        m_symbols.resize (m_instance->m_instsymbols.size());
         if (m_symbols.size() /* && !rebind */)
-            memcpy (&m_symbols[0], &m_instance->m_symbols[0], 
-                    m_instance->m_symbols.size() * sizeof(Symbol));
+            memcpy (&m_symbols[0], &m_instance->m_instsymbols[0], 
+                    m_instance->m_instsymbols.size() * sizeof(Symbol));
     }
 
     m_npoints = m_context->npoints ();
@@ -182,9 +182,11 @@ ShadingExecution::bind (ShaderInstance *instance)
     // right place in the heap,, interpolate primitive variables, handle
     // connections, initialize all parameters
     BOOST_FOREACH (Symbol &sym, m_symbols) {
+#if 0
         if (m_debug)
             m_shadingsys->info ("  bind %s, offset %d",
                                 sym.mangled().c_str(), sym.dataoffset());
+#endif
         if (sym.symtype() == SymTypeGlobal) {
             // FIXME -- reset sym's data pointer?
 
@@ -282,7 +284,7 @@ ShadingExecution::bind (ShaderInstance *instance)
             if (debugnan && check_nan (sym, badval, badderiv, point))
                 m_shadingsys->warning ("Found %s%g in shader \"%s\" when binding %s",
                                        badderiv ? "bad derivative " : "",
-                                       badval, m_master->shadername().c_str(),
+                                       badval, shadername().c_str(),
                                        sym.name().c_str());                    
 
         } else if (sym.symtype() == SymTypeParam ||
@@ -330,11 +332,13 @@ ShadingExecution::bind (ShaderInstance *instance)
         } else {
             ASSERT (0 && "Should never get here");
         }
+#if 0
         if (m_debug)
             m_shadingsys->info ("  bound %s to address %p, step %d, size %d %s",
                                 sym.mangled().c_str(), sym.data(),
                                 sym.step(), sym.size(),
                                 sym.has_derivs() ? "(derivs)" : "(no derivs)");
+#endif
     }
 
     // Mark the parameters that are driven by connections
@@ -367,6 +371,7 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
     ASSERT (! sym.initialized ());
     ASSERT (m_runstate_stack.size() > 0);
     m_context->m_paramsbound++;
+    sym.initialized (true);  //FIXME -- shouldn't be necessary utl_spi_float_v1
 
     // Lazy parameter binding: we figure out the value for this parameter based
     // on the following priority:
@@ -458,7 +463,7 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
         check_nan (sym, badval, badderiv, point))
         m_shadingsys->warning ("Found %s%g in shader \"%s\" when interpolating %s",
                                badderiv ? "bad derivative " : "",
-                               badval, m_master->shadername().c_str(),
+                               badval, shadername().c_str(),
                                sym.name().c_str());
 
     sym.initialized (true);
@@ -531,7 +536,7 @@ ShadingExecution::run (Runflag *runflags, int *indices, int nindices, int begino
 {
     if (m_debug)
         m_shadingsys->info ("Running ShadeExec %p, shader %s",
-                            this, m_master->shadername().c_str());
+                            this, shadername().c_str());
 
     push_runstate (runflags, 0, m_context->npoints(), indices, nindices);
 
@@ -563,7 +568,7 @@ ShadingExecution::run (Runflag *runflags, int *indices, int nindices, int begino
         bind (sgroup[layer()]);
 
         m_conditional_level = 0;
-        run (m_master->m_maincodebegin, m_master->m_maincodeend);
+        run (m_instance->maincodebegin(), m_instance->maincodeend());
         m_executed = true;
         ASSERT(m_conditional_level == 0); // make sure we nested our loops and ifs correctly
     }
@@ -577,13 +582,14 @@ ShadingExecution::run (int beginop, int endop)
 {
     if (m_debug)
         m_shadingsys->info ("Running ShadeExec %p, shader %s ops [%d,%d)",
-                            this, m_master->shadername().c_str(),
+                            this, shadername().c_str(),
                             beginop, endop);
-    const int *args = &m_master->m_args[0];
+    const int *args = &(instance()->args()[0]);
     bool debugnan = m_shadingsys->debug_nan ();
+    OpcodeVec &code (m_instance->ops());
     for (m_ip = beginop; m_ip < endop && m_runstate.beginpoint < m_runstate.endpoint;  ++m_ip) {
-        DASSERT (m_ip >= 0 && m_ip < (int)m_master->m_ops.size());
-        Opcode &op (this->op ());
+        DASSERT (m_ip >= 0 && m_ip < (int)instance()->ops().size());
+        Opcode &op (code[m_ip]);
 
 #if 0
         // Debugging tool -- sample the run flags
@@ -637,7 +643,7 @@ ShadingExecution::check_nan (Opcode &op)
     for (int a = 0;  a < op.nargs();  ++a) {
         if (! op.argwrite (a))
             continue;  // Skip args that weren't written
-        Symbol &s (sym (m_master->m_args[op.firstarg()+a]));
+        Symbol &s (sym (instance()->args()[op.firstarg()+a]));
         float badval;
         bool badderiv;
         int point;
@@ -646,7 +652,7 @@ ShadingExecution::check_nan (Opcode &op)
                                    "\tsource \"%s\", line %d (instruction %s, arg %d)\n"
                                    "\tsymbol \"%s\", %s (step %d), point %d of %d",
                                    badderiv ? "bad derivative " : "",
-                                   badval, m_master->shadername().c_str(),
+                                   badval, shadername().c_str(),
                                    op.sourcefile().c_str(),
                                    op.sourceline(), op.opname().c_str(), a,
                                    s.name().c_str(), s.is_uniform() ? "uniform" : "varying", s.step(), point, npoints() );

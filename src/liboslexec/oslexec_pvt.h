@@ -168,10 +168,6 @@ public:
     /// -1 if not found.
     int findsymbol (ustring name) const;
 
-    /// Find the named parameter, return its index in the symbol array, or
-    /// -1 if not found.
-    int findparam (ustring name) const;
-
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
@@ -197,8 +193,6 @@ private:
     std::vector<ustring> m_sconsts;     ///< string constant values
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
-    // Quick lookups of common symbols, -1 if not in symbol table:
-    int m_Psym, m_Nsym;
 
     friend class OSOReaderToMaster;
     friend class ShaderInstance;
@@ -251,6 +245,10 @@ public:
     ///
     ustring layername () const { return m_layername; }
 
+    /// Return the name of the shader used by this instance.
+    ///
+    const std::string &shadername () const { return m_master->shadername(); }
+
     /// Return a pointer to the master for this instance.
     ///
     ShaderMaster *master () const { return m_master.get(); }
@@ -268,9 +266,17 @@ public:
     /// was just one point being shaded).
     size_t heapsize ();
 
+    /// Find the named symbol, return its index in the symbol array, or
+    /// -1 if not found.
+    int findsymbol (ustring name) const;
+
+    /// Find the named parameter, return its index in the symbol array, or
+    /// -1 if not found.
+    int findparam (ustring name) const;
+
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
-    Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
+    Symbol *symbol (int index) { return index >= 0 ? &m_instsymbols[index] : NULL; }
 
     /// How many closures does this group use, not counting globals.
     ///
@@ -316,12 +322,39 @@ public:
     ///
     void outgoing_connections (bool out) { m_outgoing_connections = out; }
 
+    int maincodebegin () const { return m_maincodebegin; }
+    int maincodeend () const { return m_maincodeend; }
+
+    int firstparam () const { return m_firstparam; }
+    int lastparam () const { return m_lastparam; }
+
+    int Psym () const { return m_Psym; }
+    int Nsym () const { return m_Nsym; }
+
+    
+    const std::vector<int> & args () const { return m_instargs; }
+    std::vector<int> & args () { return m_instargs; }
+    int arg (int argnum) { return args()[argnum]; }
+    Symbol *argsymbol (int argnum) { return symbol(arg(argnum)); }
+    const OpcodeVec & ops () const { return m_instops; }
+    OpcodeVec & ops () { return m_instops; }
+
+    std::string print ();  // Debugging
+
+    SymbolVec &symbols () { return m_instsymbols; }
+
+    /// Make sure there's room for more symbols.
+    ///
+    void make_symbol_room (size_t moresyms=1);
+
 private:
     bool heap_size_calculated () const { return m_heap_size_calculated; }
     void calc_heap_size ();
 
     ShaderMaster::ref m_master;         ///< Reference to the master
-    SymbolVec m_symbols;                ///< Symbols used by the instance
+    SymbolVec m_instsymbols;            ///< Symbols used by the instance
+    OpcodeVec m_instops;                ///< Actual code instructions
+    std::vector<int> m_instargs;        ///< Arguments for all the ops
     ustring m_layername;                ///< Name of this layer
     std::vector<int> m_iparams;         ///< int param values
     std::vector<float> m_fparams;       ///< float param values
@@ -330,13 +363,17 @@ private:
     int m_heapround;                    ///< Heap padding for odd npoints
     int m_numclosures;                  ///< Number of non-global closures
     int m_id;                           ///< Unique ID for the instance
-    int m_heap_size_calculated;         ///< Has the heap size been computed?
+    bool m_heap_size_calculated;        ///< Has the heap size been computed?
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
     std::vector<Connection> m_connections; ///< Connected input params
+    int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
+    int m_maincodebegin, m_maincodeend; ///< Main shader code range
+    int m_Psym, m_Nsym;                 ///< Quick lookups of common syms
 
     friend class ShadingExecution;
+    friend class ShadingSystemImpl;
 };
 
 
@@ -345,16 +382,19 @@ private:
 /// ShaderInstance), and the connections among them.
 class ShaderGroup {
 public:
-    ShaderGroup () { }
+    ShaderGroup () : m_optimized(false) { }
+    ShaderGroup (const ShaderGroup &g)
+        : m_layers(g.m_layers), m_optimized(false) { }
     ~ShaderGroup () { }
 
     /// Clear the layers
     ///
-    void clear () { m_layers.clear (); }
+    void clear () { m_layers.clear ();  m_optimized = false; }
 
     /// Append a new shader instance on to the end of this group
     ///
     void append (ShaderInstanceRef newlayer) {
+        ASSERT (! m_optimized && "should not append to optimized group");
         m_layers.push_back (newlayer);
     }
 
@@ -366,8 +406,13 @@ public:
     ///
     ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
 
+    bool optimized () const { return m_optimized; }
+
 private:
     std::vector<ShaderInstanceRef> m_layers;
+    volatile bool m_optimized;       ///< Is it already optimized?
+    mutex m_mutex;                   ///< Thread-safe optimization
+    friend class ShadingSystemImpl;
 };
 
 
@@ -467,8 +512,15 @@ public:
     bool allow_rebind () const { return m_rebind; }
 
     bool debug_nan () const { return m_debugnan; }
+    bool lockgeom_default () const { return m_lockgeom_default; }
+    int optimize () const { return m_optimize; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
+
+    /// The group is set and won't be changed again; take advantage of
+    /// this by optimizing the code knowing all our instance parameters
+    /// (at least the ones that can't be overridden by the geometry).
+    void optimize_group (ShadingAttribState &attribstate, ShaderGroup &group);
 
 private:
     void printstats () const;
@@ -486,6 +538,15 @@ private:
     /// The return value will not be valid() if there is an error.
     ConnectedParam decode_connected_param (const char *connectionname,
                                const char *layername, ShaderInstance *inst);
+
+    /// Optimize one layer of a group, given what we know about its
+    /// instance variables and connections.
+    void optimize_instance (ShaderGroup &group, int layer,
+                            ShaderInstance &inst);
+
+    /// Squeeze out unused symbols and no-ops from an instance that has
+    /// been optimized.
+    void collapse (ShaderGroup &group, int layer, ShaderInstance &inst);
 
     struct PerThreadInfo {
         std::stack<ShadingContext *> context_pool;
@@ -524,6 +585,8 @@ private:
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_rebind;                        ///< Allow rebinding?
     bool m_debugnan;                      ///< Root out NaN's?
+    bool m_lockgeom_default;              ///< Default value of lockgeom
+    int m_optimize;                       ///< Runtime optimization level
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
@@ -793,7 +856,7 @@ public:
 
     /// Return a reference to the current op (pointed to by the instruction
     /// pointer).
-    Opcode & op () const { return m_master->m_ops[m_ip]; }
+    Opcode & op () const { return m_instance->ops()[m_ip]; }
 
     /// Adjust whether sym is uniform or varying, depending on what is
     /// about to be assigned to it.  In cases when sym is promoted from
@@ -897,7 +960,7 @@ public:
     /// Find the named symbol.  Return NULL if no such symbol is found.
     ///
     Symbol * symbol (ustring name) {
-        return symptr (m_master->findsymbol (name));
+        return symptr (m_instance->findsymbol (name));
     }
 
     /// Format the value of sym using the printf-like format (taking a
@@ -952,6 +1015,10 @@ public:
     ///
     ShaderInstance *instance () const { return m_instance; }
 
+    /// Return the name of the shader used by this instance.
+    ///
+    const std::string &shadername () const { return m_master->shadername(); }
+
     /// Pass an error along to the ShadingSystem.
     ///
     void error (const char *message, ...);
@@ -965,11 +1032,11 @@ public:
 
     /// Quick link to the global P symbol, or NULL if there is none.
     ///
-    Symbol *Psym () { return symptr (m_master->m_Psym); }
+    Symbol *Psym () { return symptr (m_instance->m_Psym); }
 
     /// Quick link to the global N symbol, or NULL if there is none.
     ///
-    Symbol *Nsym () { return symptr (m_master->m_Nsym); }
+    Symbol *Nsym () { return symptr (m_instance->m_Nsym); }
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is
@@ -1070,7 +1137,8 @@ class ShadingAttribState
 public:
     ShadingAttribState () : m_heapsize (-1 /*uninitialized*/),
                             m_heapround (-1), m_numclosures (-1),
-                            m_heap_size_calculated (0) { }
+                            m_heap_size_calculated (false) { }
+
     ~ShadingAttribState () { }
 
     /// Return a reference to the shader group for a particular use
@@ -1097,7 +1165,7 @@ public:
         m_heapsize = -1;
         m_heapround = -1;
         m_numclosures = -1;
-        m_heap_size_calculated = 0;
+        m_heap_size_calculated = false;
     }
 
 private:
@@ -1108,7 +1176,7 @@ private:
     int m_heapsize;                  ///< Heap space needed per point
     int m_heapround;                 ///< Heap padding for odd npoints
     int m_numclosures;               ///< Number of non-global closures
-    int m_heap_size_calculated;      ///< Has the heap size been computed?
+    bool m_heap_size_calculated;     ///< Has the heap size been computed?
 };
 
 

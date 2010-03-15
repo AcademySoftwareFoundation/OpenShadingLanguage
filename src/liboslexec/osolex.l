@@ -135,6 +135,12 @@ using namespace OSL::pvt;
                            return SYMTYPE;
                         }
 
+^temp                   {
+                           BEGIN (DECLARATION);
+                           yylval.i = SymTypeTemp;
+                           return SYMTYPE;
+                        }
+
 ^global                 {
                            BEGIN (DECLARATION);
                            yylval.i = SymTypeGlobal;

@@ -14,7 +14,10 @@ SET ( liboslexec_srcs
           opmessage.cpp opmisc.cpp opnoise.cpp 
           opspline.cpp opstring.cpp optexture.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
-          rendservices.cpp typespec.cpp
+          rendservices.cpp runtimeoptimize.cpp typespec.cpp
+          ../liboslcomp/ast.cpp ../liboslcomp/codegen.cpp
+          ../liboslcomp/oslcomp.cpp ../liboslcomp/symtab.cpp
+          ../liboslcomp/typecheck.cpp
     )
 FILE ( GLOB compiler_headers "*.h" )
 

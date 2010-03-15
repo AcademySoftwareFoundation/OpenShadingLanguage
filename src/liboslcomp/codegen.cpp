@@ -73,7 +73,7 @@ OSLCompilerImpl::codegen_method (ustring method)
 
 
 ustring
-OSLCompilerImpl::main_method_name () const
+OSLCompilerImpl::main_method_name ()
 {
     static ustring name ("___main___");
     return name;

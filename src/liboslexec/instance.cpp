@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/foreach.hpp>
 
 #include "OpenImageIO/dassert.h"
+#include "OpenImageIO/strutil.h"
 
 #include "oslexec_pvt.h"
 
@@ -45,15 +46,23 @@ namespace pvt {   // OSL::pvt
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
-    : m_master(master), m_symbols(m_master->m_symbols),
+    : m_master(master), m_instsymbols(m_master->m_symbols),
+      m_instops(m_master->m_ops), m_instargs(m_master->m_args),
       m_layername(layername), m_heapsize(-1 /*uninitialized*/),
-      m_heapround(0), m_numclosures(-1), m_heap_size_calculated(0),
+      m_heapround(0), m_numclosures(-1), m_heap_size_calculated(false),
       m_writes_globals(false), m_run_lazily(false),
-      m_outgoing_connections(false)
+      m_outgoing_connections(false),
+      m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
+      m_maincodebegin(m_master->m_maincodebegin),
+      m_maincodeend(m_master->m_maincodeend)
 {
     static int next_id = 0; // We can statically init an int, not an atomic
     m_id = ++(*(atomic_int *)&next_id);
     shadingsys().m_stat_instances += 1;
+
+    // Make it easy for quick lookups of common symbols
+    m_Psym = findsymbol (Strings::P);
+    m_Nsym = findsymbol (Strings::N);
 }
 
 
@@ -65,41 +74,67 @@ ShaderInstance::~ShaderInstance ()
 
 
 
+int
+ShaderInstance::findsymbol (ustring name) const
+{
+    for (size_t i = 0;  i < m_instsymbols.size();  ++i)
+        if (m_instsymbols[i].name() == name)
+            return (int)i;
+    return -1;
+}
+
+
+
+int
+ShaderInstance::findparam (ustring name) const
+{
+    for (int i = m_firstparam;  i <= m_lastparam;  ++i)
+        if (m_instsymbols[i].name() == name)
+            return i;
+    return -1;
+}
+
+
+
 void
 ShaderInstance::parameters (const ParamValueList &params)
 {
     m_iparams = m_master->m_idefaults;
     m_fparams = m_master->m_fdefaults;
     m_sparams = m_master->m_sdefaults;
-    m_symbols = m_master->m_symbols;
     BOOST_FOREACH (const ParamValue &p, params) {
         if (shadingsys().debug())
             shadingsys().info (" PARAMETER %s %s",
                                p.name().c_str(), p.type().c_str());
-        int i = m_master->findparam (p.name());
+        int i = findparam (p.name());
         if (i >= 0) {
             Symbol *s = symbol(i);
+            TypeSpec t = s->typespec();
             // don't allow assignment of closures
-            if (s->typespec().is_closure()) {
+            if (t.is_closure()) {
                 shadingsys().warning ("skipping assignment of closure: %s", s->name().c_str());
                 continue;
             }
+            if (t.is_structure())
+                continue;
             // check type of parameter and matching symbol
-            if (s->typespec().simpletype() != p.type()) {
-                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", s->name().c_str(), s->typespec().c_str(), p.type().c_str());
+            if (t.simpletype() != p.type()) {
+                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", s->name().c_str(), t.c_str(), p.type().c_str());
                 continue;
             }
+
+            s->step (0);
             s->valuesource (Symbol::InstanceVal);
-            if (s->typespec().simpletype().basetype == TypeDesc::INT) {
-                memcpy (&m_iparams[s->dataoffset()], p.data(),
-                        s->typespec().simpletype().size());
-            } else if (s->typespec().simpletype().basetype == TypeDesc::FLOAT) {
-                memcpy (&m_fparams[s->dataoffset()], p.data(),
-                        s->typespec().simpletype().size());
-            } else if (s->typespec().simpletype().basetype == TypeDesc::STRING) {
-                memcpy (&m_sparams[s->dataoffset()], p.data(),
-                        s->typespec().simpletype().size());
+            if (t.simpletype().basetype == TypeDesc::INT) {
+                s->data (&m_iparams[s->dataoffset()]);
+            } else if (t.simpletype().basetype == TypeDesc::FLOAT) {
+                s->data (&m_fparams[s->dataoffset()]);
+            } else if (t.simpletype().basetype == TypeDesc::STRING) {
+                s->data (&m_sparams[s->dataoffset()]);
+            } else {
+                ASSERT (0);
             }
+            memcpy (s->data(), p.data(), t.simpletype().size());
             if (shadingsys().debug())
                 shadingsys().info ("    sym %s offset %llu address %p",
                         s->name().c_str(),
@@ -125,13 +160,15 @@ ShaderInstance::calc_heap_size ()
     if (m_heap_size_calculated)
         return;   // Another thread did it before we got the lock
 
+#if 0
     if (shadingsys().debug())
         shadingsys().info ("calc_heapsize on %s", m_master->shadername().c_str());
+#endif
     m_heapsize = 0;
     m_numclosures = 0;
     m_heapround = 0;
     m_writes_globals = false;
-    BOOST_FOREACH (/*const*/ Symbol &s, m_symbols) {
+    BOOST_FOREACH (/*const*/ Symbol &s, m_instsymbols) {
         // Skip if the symbol is a type that doesn't need heap space
         if (s.symtype() == SymTypeConst /* || s.symtype() == SymTypeGlobal */)
             continue;
@@ -164,11 +201,13 @@ ShaderInstance::calc_heap_size ()
             m_heapround += pad;
         m_heapsize += size + pad;
 
+#if 0
         if (shadingsys().debug())
             shadingsys().info (" sym %s given %llu bytes on heap (including %llu padding)",
                                s.mangled().c_str(),
                                (unsigned long long)size,
                                (unsigned long long)pad);
+#endif
     }
     if (shadingsys().debug()) {
         shadingsys().info (" Heap needed %llu, %d closures on the heap",
@@ -177,7 +216,7 @@ ShaderInstance::calc_heap_size ()
         shadingsys().info (" Writes globals: %d", m_writes_globals);
     }
 
-    m_heap_size_calculated = 1;
+    m_heap_size_calculated = true;
 }
 
 
@@ -237,7 +276,7 @@ ShadingAttribState::calc_heap_size ()
         }
     }
     
-    m_heap_size_calculated = 1;
+    m_heap_size_calculated = true;
 }
 
 
@@ -266,6 +305,86 @@ ShadingAttribState::numclosures ()
     if (! heap_size_calculated ())
         calc_heap_size ();
     return (size_t) m_numclosures;
+}
+
+
+
+void
+ShaderInstance::make_symbol_room (size_t moresyms)
+{
+    if (m_instsymbols.capacity() < m_instsymbols.size()+moresyms)
+        m_instsymbols.reserve (m_instsymbols.size() + moresyms + 10);
+}
+
+
+
+std::string
+ShaderInstance::print ()
+{
+    std::stringstream out;
+    out << "Shader " << shadername() << "\n";
+    out << "  symbols:\n";
+    for (size_t i = 0;  i < m_instsymbols.size();  ++i) {
+        const Symbol &s (*symbol(i));
+        out << "    " << i << ": " << Symbol::symtype_shortname(s.symtype())
+            << " " << s.typespec().string() << " " << s.name() 
+            << " (used " << s.firstuse() << ' ' << s.lastuse() 
+            << " read " << s.firstread() << ' ' << s.lastread() 
+            << " write " << s.firstwrite() << ' ' << s.lastwrite() << ")";
+        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            out << " init [" << s.initbegin() << ',' << s.initend() << ")";
+        out << "\n";
+        if (s.symtype() == SymTypeConst) {
+            out << "\tconst: ";
+            TypeDesc t = s.typespec().simpletype();
+            int n = t.aggregate * t.numelements();
+            if (t.basetype == TypeDesc::FLOAT) {
+                for (int j = 0;  j < n;  ++j)
+                    out << ((float *)s.data())[j] << " ";
+            } else if (t.basetype == TypeDesc::INT) {
+                for (int j = 0;  j < n;  ++j)
+                    out << ((int *)s.data())[j] << " ";
+            } else if (t.basetype == TypeDesc::STRING) {
+                for (int j = 0;  j < n;  ++j)
+                    out << "\"" << ((ustring *)s.data())[j] << "\" ";
+            }
+            out << "\n";
+        }
+    }
+#if 0
+    out << "  int consts:\n    ";
+    for (size_t i = 0;  i < m_iconsts.size();  ++i)
+        out << m_iconsts[i] << ' ';
+    out << "\n";
+    out << "  float consts:\n    ";
+    for (size_t i = 0;  i < m_fconsts.size();  ++i)
+        out << m_fconsts[i] << ' ';
+    out << "\n";
+    out << "  string consts:\n    ";
+    for (size_t i = 0;  i < m_sconsts.size();  ++i)
+        out << "\"" << m_sconsts[i] << "\" ";
+    out << "\n";
+#endif
+    out << "  code:\n";
+    for (size_t i = 0;  i < m_instops.size();  ++i) {
+        const Opcode &op (m_instops[i]);
+        out << "    " << i << ": " << op.opname();
+        bool allconst = true;
+        for (int a = 0;  a < op.nargs();  ++a) {
+            out << " " << m_instsymbols[m_instargs[op.firstarg()+a]].name();
+            if (op.argread(a))
+                allconst &= m_instsymbols[m_instargs[op.firstarg()+a]].is_const();
+        }
+        for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
+            if (op.jump(j) >= 0)
+                out << " " << op.jump(j);
+//        out << "    rw " << Strutil::format("%x",op.argread_bits())
+//            << ' ' << op.argwrite_bits();
+        if (allconst)
+            out << "  CONST";
+        out << "\n";
+    }
+    return out.str ();
 }
 
 

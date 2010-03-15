@@ -73,6 +73,13 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     m_heap_allotted = 0;
     m_closures_allotted = 0;
 
+    // Optimize if we haven't already
+    for (int i = 0;  i < ShadUseLast;  ++i) {
+        ShaderGroup &group (m_attribs->shadergroup ((ShaderUse)i));
+        if (! group.optimized())
+            shadingsys().optimize_group (sas, group);
+    }
+
     // Allocate enough space on the heap
     size_t heap_size_needed = m_npoints * sas.heapsize () + sas.heapround ();
     // FIXME: the next statement is totally bogus, yet harmless.

@@ -444,7 +444,7 @@ public:
         : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
-          m_connected(false), m_initialized(false),
+          m_connected(false), m_initialized(false), m_lockgeom(false),
           m_valuesource(DefaultVal), m_fieldid(-1),
           m_scope(0), m_dataoffset(-1), 
           m_node(declaration_node), m_alias(NULL),
@@ -626,6 +626,11 @@ public:
     bool initialized () const { return m_initialized; }
     void initialized (bool init) { m_initialized = init; }
 
+    bool lockgeom () const { return m_lockgeom; }
+    void lockgeom (bool lock) { m_lockgeom = lock; }
+
+    bool is_const () const { return symtype() == SymTypeConst; }
+
 protected:
     void *m_data;               ///< Pointer to the data
     int m_step;                 ///< Step (in bytes) from point to point
@@ -633,10 +638,11 @@ protected:
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
     char m_symtype;             ///< Kind of symbol (param, local, etc.)
-    bool m_has_derivs;          ///< Step to derivs (0 == has no derivs)
-    bool m_const_initializer;   ///< initializer is a constant expression
-    bool m_connected;           ///< Connected to an earlier layer
-    bool m_initialized;         ///< If a param, has it been initialized?
+    unsigned m_has_derivs:1;    ///< Step to derivs (0 == has no derivs)
+    unsigned m_const_initializer:1; ///< initializer is a constant expression
+    unsigned m_connected:1;     ///< Connected to an earlier layer
+    unsigned m_initialized:1;   ///< If a param, has it been initialized?
+    unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
     char m_valuesource;         ///< Where did the value come from?
     short m_fieldid;            ///< Struct field of this var (or -1)
     int m_scope;                ///< Scope where this symbol was declared
@@ -677,6 +683,14 @@ public:
         m_jump[2] = -1;
         m_jump[3] = -1;
     }
+
+    void reset (ustring opname, OpImpl impl, size_t nargs) {
+        m_op = opname;
+        implementation (impl);
+        m_nargs = (int) nargs;
+        set_jump ();
+    }
+
     ustring opname () const { return m_op; }
     int firstarg () const { return m_firstarg; }
     int nargs () const { return m_nargs; }
@@ -799,6 +813,9 @@ public:
         m_argwrite = wr;
         m_argtakesderivs = deriv;
     }
+
+    unsigned int argread_bits () const { return m_argread; }
+    unsigned int argwrite_bits () const { return m_argwrite; }
 
     /// Return the entire argtakesderivs at once with a full bitfield.
     ///

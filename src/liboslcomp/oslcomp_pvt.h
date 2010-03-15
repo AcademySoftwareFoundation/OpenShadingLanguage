@@ -193,7 +193,7 @@ public:
 
     /// Return the name of the 'main' method.
     ///
-    ustring main_method_name () const;
+    static ustring main_method_name ();
 
     /// Make a temporary symbol of the given type.
     ///
@@ -257,6 +257,13 @@ public:
     void struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
                             Symbol * &field1, Symbol * &field2);
 
+    static void track_variable_lifetimes (const OpcodeVec &ircode,
+                                  SymbolPtrVec &opargs, SymbolPtrVec &allsyms);
+    static void coalesce_temporaries (SymbolPtrVec &symtab);
+    static void insert_useparam (OpcodeVec &code, size_t opnum,
+                                 SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 
+                                 SymbolPtrVec &params);
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -266,11 +273,25 @@ private:
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
     void oso (const char *fmt, ...) const;
-    void track_variable_lifetimes ();
+
+    void track_variable_lifetimes () {
+        track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());
+    }
+
     void track_variable_dependencies ();
     void add_useparam ();
     void insert_useparam (size_t opnum, SymbolPtrVec &params);
-    void coalesce_temporaries ();
+    void coalesce_temporaries () {
+        coalesce_temporaries (m_symtab.allsyms());
+    }
+
+    /// Scan through all the ops and make sure none of them write to
+    /// things that are illegal (consts, non-output params, etc.).
+    /// Must be called AFTER track_variable_lifetimes.
+    void check_for_illegal_writes ();
+
+    /// Helper for check_for_illegal_writes: check one statement and one
+    /// symbol.
     void check_write_legality (const Opcode &op, int opnum, const Symbol *sym);
 
     /// Does this read or write the symbol identified by 'sym'?  The

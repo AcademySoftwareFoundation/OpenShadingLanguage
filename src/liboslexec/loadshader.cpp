@@ -159,6 +159,7 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
         sym.dataoffset (m_shadingsys.global_heap_offset (sym.name()));
     }
 #endif
+    sym.lockgeom (m_shadingsys.lockgeom_default());
     m_master->m_symbols.push_back (sym);
 }
 
@@ -312,7 +313,7 @@ OSOReaderToMaster::hint (const char *hintstring)
         return;
     }
     if (extract_prefix (h, "%write{")) {
-        ASSERT (m_master->m_symbols.size() && "read hint but no sym");
+        ASSERT (m_master->m_symbols.size() && "write hint but no sym");
         Symbol &sym (m_master->m_symbols.back());
         int first, last;
         sscanf (h.c_str(), "%d,%d", &first, &last);
@@ -330,6 +331,13 @@ OSOReaderToMaster::hint (const char *hintstring)
             m_master->m_ops.back().argread(i, *str == 'r' || *str =='W');
         }
         ASSERT(m_nargs == i);
+    }
+    if (extract_prefix (h, "%meta{") && m_master->m_symbols.size()) {
+        Symbol &sym (m_master->m_symbols.back());
+        int lockval = -1;
+        int ok = sscanf (h.c_str(), " int , lockgeom , %d", &lockval);
+        if (ok)
+            sym.lockgeom (lockval);
     }
 }
 

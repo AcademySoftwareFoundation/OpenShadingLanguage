@@ -128,6 +128,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_statslevel (0), m_debug (false), m_lazylayers (true),
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
+      m_lockgeom_default (false), m_optimize (1),
       m_commonspace_synonym("world"),
       m_in_group (false),
       m_global_heap_total (0)
@@ -220,6 +221,14 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_debugnan = *(const int *)val;
         return true;
     }
+    if (name == "lockgeom" && type == TypeDesc::INT) {
+        m_lockgeom_default = *(const int *)val;
+        return true;
+    }
+    if (name == "optimize" && type == TypeDesc::INT) {
+        m_optimize = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -264,6 +273,14 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "debugnan" && type == TypeDesc::INT) {
         *(int *)val = m_debugnan;
+        return true;
+    }
+    if (name == "lockgeom" && type == TypeDesc::INT) {
+        *(int *)val = m_lockgeom_default;
+        return true;
+    }
+    if (name == "optimize" && type == TypeDesc::INT) {
+        *(int *)val = m_optimize;
         return true;
     }
     return false;
@@ -646,6 +663,7 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     }
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
+    dstinst->symbol(dstcon.param)->valuesource (Symbol::ConnectedVal);
     srcinst->outgoing_connections (true);
 
     if (debug())
@@ -745,14 +763,14 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
                    bracket ? size_t(bracket-connectionname) : ustring::npos);
 
     // Search for the param with that name, fail if not found
-    c.param = inst->master()->findsymbol (param);
+    c.param = inst->findsymbol (param);
     if (c.param < 0) {
         error ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
-               param.c_str(), layername, inst->master()->shadername().c_str());
+               param.c_str(), layername, inst->shadername().c_str());
         return c;
     }
 
-    Symbol *sym = inst->master()->symbol (c.param);
+    Symbol *sym = inst->symbol (c.param);
     ASSERT (sym);
 
     // Only params, output params, and globals are legal for connections
@@ -760,7 +778,7 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
            sym->symtype() == SymTypeOutputParam ||
            sym->symtype() == SymTypeGlobal)) {
         error ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
-               param.c_str(), layername, inst->master()->shadername().c_str());
+               param.c_str(), layername, inst->shadername().c_str());
         c.param = -1;  // mark as invalid
         return c;
     }

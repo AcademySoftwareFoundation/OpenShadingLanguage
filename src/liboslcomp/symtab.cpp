@@ -97,7 +97,7 @@ const char *
 Symbol::symtype_shortname (SymType s)
 {
     ASSERT ((int)s >= 0 && (int)s < (int)SymTypeType);
-    static const char *names[] = { "param", "oparam", "local", "local",
+    static const char *names[] = { "param", "oparam", "local", "temp",
                                    "global", "const", "func" };
     return names[(int)s];
 }

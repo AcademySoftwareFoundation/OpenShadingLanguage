@@ -250,6 +250,8 @@ public:
     SymbolPtrVec::iterator end () { return m_allsyms.end(); }
     const SymbolPtrVec::const_iterator end () const { return m_allsyms.end(); }
 
+    SymbolPtrVec &allsyms () { return m_allsyms; }
+
 private:
     OSLCompilerImpl &m_comp;         ///< Back-reference to compiler
     SymbolPtrVec m_allsyms;          ///< Master list of all symbols

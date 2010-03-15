@@ -251,11 +251,12 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         if (! error_encountered()) {
             shader()->codegen ();
-            add_useparam ();
+//            add_useparam ();
             track_variable_dependencies ();
             track_variable_lifetimes ();
-            if (m_optimizelevel >= 1)
-                coalesce_temporaries ();
+            check_for_illegal_writes ();
+//            if (m_optimizelevel >= 1)
+//                coalesce_temporaries ();
         }
  
         if (! error_encountered()) {
@@ -545,7 +546,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
             lastline = -1;
         }
 
-        if (m_debug && op->sourcefile()) {
+        if (/*m_debug &&*/ op->sourcefile()) {
             ustring file = op->sourcefile();
             int line = op->sourceline();
             if (file != lastfile || line != lastline)
@@ -772,32 +773,47 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
 
 
 
-/// Called after code is generated, this function loops over all the ops
-/// and figures out the lifetimes of all variables, based on whether the
-/// args in each op are read or written.
 void
-OSLCompilerImpl::track_variable_lifetimes ()
+OSLCompilerImpl::check_for_illegal_writes ()
 {
-    // Clear the lifetimes for all symbols
-    BOOST_FOREACH (Symbol *s, symtab())
-        s->clear_rw ();
-
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
     BOOST_FOREACH (Opcode &op, m_ircode) {
         // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
             SymbolPtr s = m_opargs[op.firstarg()+a];
+            if (op.argwrite(a))
+                check_write_legality (op, opnum, s);
+        }
+        ++opnum;
+    }
+}
+
+
+
+/// Called after code is generated, this function loops over all the ops
+/// and figures out the lifetimes of all variables, based on whether the
+/// args in each op are read or written.
+void
+OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
+                                           SymbolPtrVec &opargs,
+                                           SymbolPtrVec &allsyms)
+{
+    // Clear the lifetimes for all symbols
+    BOOST_FOREACH (Symbol *s, allsyms)
+        s->clear_rw ();
+
+    // For each op, mark its arguments as being used at that op
+    int opnum = 0;
+    BOOST_FOREACH (const Opcode &op, code) {
+        // Some work to do for each argument to the op...
+        for (int a = 0;  a < op.nargs();  ++a) {
+            SymbolPtr s = opargs[op.firstarg()+a];
             ASSERT (s->dealias() == s);
             // s = s->dealias();   // Make sure it's de-aliased
 
             // Mark that it's read and/or written for this op
             s->mark_rw (opnum, op.argread(a), op.argwrite(a));
-
-            // Here's a good place to check that we aren't writing to
-            // places we shouldn't.
-            if (op.argwrite(a))
-                check_write_legality (op, opnum, s);
         }
 
         // If this is a loop op, we need to mark its control variable
@@ -805,7 +821,7 @@ OSLCompilerImpl::track_variable_lifetimes ()
         if (op.opname() == "for" || op.opname() == "while" ||
                 op.opname() == "dowhile") {
             ASSERT (op.nargs() == 1);  // loops should have just one arg
-            Symbol * &s = m_opargs[op.firstarg()];
+            Symbol * &s = opargs[op.firstarg()];
             s->mark_rw (opnum+1, true, true);
             s->mark_rw (op.farthest_jump()-1, true, true);
         }
@@ -819,11 +835,11 @@ OSLCompilerImpl::track_variable_lifetimes ()
     // danger is for a function that contains a loop, and the function
     // is passed an argument that is a temporary calculation.
     opnum = 0;
-    BOOST_FOREACH (Opcode &op, m_ircode) {
+    BOOST_FOREACH (const Opcode &op, code) {
         if (op.opname() == "for" || op.opname() == "while" ||
                 op.opname() == "dowhile") {
             int loopend = op.farthest_jump() - 1;
-            BOOST_FOREACH (Symbol *s, symtab()) {
+            BOOST_FOREACH (Symbol *s, allsyms) {
                 if (s->symtype() == SymTypeTemp && 
                     ((s->firstuse() < opnum && s->lastuse() >= opnum) ||
                      (s->firstuse() < loopend && s->lastuse() >= loopend))) {
@@ -978,7 +994,7 @@ coalescable (const Symbol *s)
 /// temporary EVERY time we need one.  Now we examine them all and merge
 /// ones of identical type and non-overlapping lifetimes.
 void
-OSLCompilerImpl::coalesce_temporaries ()
+OSLCompilerImpl::coalesce_temporaries (SymbolPtrVec &symtab)
 {
     // We keep looping until we can't coalesce any more.
     int ncoalesced = 1;
@@ -995,7 +1011,7 @@ OSLCompilerImpl::coalesce_temporaries ()
         // lifetimes do not overlap t1.
 
         SymbolPtrVec::iterator s;
-        for (s = m_symtab.begin(); s != m_symtab.end();  ++s) {
+        for (s = symtab.begin(); s != symtab.end();  ++s) {
             // Skip syms that can't be (or don't need to be) coalesced
             if (! coalescable(*s))
                 continue;
@@ -1004,7 +1020,7 @@ OSLCompilerImpl::coalesce_temporaries ()
             int slast  = (*s)->lastuse ();
 
             // Loop through every other symbol
-            for (SymbolPtrVec::iterator t = s+1;  t != m_symtab.end();  ++t) {
+            for (SymbolPtrVec::iterator t = s+1;  t != symtab.end();  ++t) {
                 // Coalesce s and t if both syms are coalescable,
                 // equivalent types, and have nonoverlapping lifetimes.
                 if (coalescable (*t) &&

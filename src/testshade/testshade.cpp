@@ -55,6 +55,7 @@ static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static std::string dataformatname = "";
 static bool debug = false;
+static bool verbose = false;
 static bool stats = false;
 static int xres = 1, yres = 1;
 static std::string layername;
@@ -108,8 +109,6 @@ static int
 add_shader (int argc, const char *argv[])
 {
     shadingsys->attribute ("debug", (int)debug);
-    if (debug)
-        errhandler.verbosity (ErrorHandler::VERBOSE);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
@@ -137,6 +136,7 @@ getargs (int argc, const char *argv[])
     ap.options ("Usage:  testshade [options] shader...",
                 "%*", add_shader, "",
                 "--help", &help, "Print help message",
+                "-v", &verbose, "Verbose messages",
                 "--debug", &debug, "Lots of debugging info",
                 "--stats", &stats, "Print run statistics",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
@@ -189,6 +189,9 @@ main (int argc, const char *argv[])
 
     shadingsys->ShaderGroupBegin ();
     getargs (argc, argv);
+
+    if (debug || verbose)
+        errhandler.verbosity (ErrorHandler::VERBOSE);
 
     for (size_t i = 0;  i < connections.size();  i += 4) {
         if (i+3 < connections.size()) {

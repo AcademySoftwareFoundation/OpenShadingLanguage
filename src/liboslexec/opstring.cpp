@@ -150,15 +150,13 @@ DECLOP (OP_error)
         std::string s = format_args (exec, format[0].c_str(),
                                      nargs-1, args+1, 0);
         exec->error ("Shader error [%s]: %s",
-                     exec->instance()->master()->shadername().c_str(),
-                     s.c_str());
+                     exec->shadername().c_str(), s.c_str());
     } else {
         SHADE_LOOP_BEGIN
             std::string s = format_args (exec, format[i].c_str(),
                                          nargs-1, args+1, i);
             exec->error ("Shader error [%s]: %s",
-                         exec->instance()->master()->shadername().c_str(),
-                         s.c_str());
+                         exec->shadername().c_str(), s.c_str());
         SHADE_LOOP_END
     }
 }
@@ -178,15 +176,13 @@ DECLOP (OP_warning)
         std::string s = format_args (exec, format[0].c_str(),
                                      nargs-1, args+1, 0);
         exec->warning ("Shader warning [%s]: %s",
-                       exec->instance()->master()->shadername().c_str(),
-                       s.c_str());
+                       exec->shadername().c_str(), s.c_str());
     } else {
         SHADE_LOOP_BEGIN
             std::string s = format_args (exec, format[i].c_str(),
                                          nargs-1, args+1, i);
             exec->warning ("Shader warning [%s]: %s",
-                           exec->instance()->master()->shadername().c_str(),
-                           s.c_str());
+                           exec->shadername().c_str(), s.c_str());
         SHADE_LOOP_END
     }
 }

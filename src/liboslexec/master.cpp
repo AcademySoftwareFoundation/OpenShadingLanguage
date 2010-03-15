@@ -61,17 +61,6 @@ ShaderMaster::findsymbol (ustring name) const
 
 
 
-int
-ShaderMaster::findparam (ustring name) const
-{
-    for (int i = m_firstparam;  i <= m_lastparam;  ++i)
-        if (m_symbols[i].name() == name)
-            return i;
-    return -1;
-}
-
-
-
 void
 ShaderMaster::resolve_syms ()
 {
@@ -119,9 +108,6 @@ ShaderMaster::resolve_syms ()
         }
         ++i;
     }
-    // Make it easy for quick lookups of common symbols
-    m_Psym = findsymbol (Strings::P);
-    m_Nsym = findsymbol (Strings::N);
 }
 
 

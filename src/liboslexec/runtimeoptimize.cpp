@@ -610,7 +610,7 @@ constfold_or (OpcodeVec &ops, int opnum,
     Symbol &A (symbols[args[op.firstarg()+1]]);
     Symbol &B (symbols[args[op.firstarg()+2]]);
     if (A.is_const() && B.is_const()) {
-        DASSERT (A.is_int() && B.is_int());
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() || *(int *)B.data();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
@@ -635,7 +635,7 @@ constfold_and (OpcodeVec &ops, int opnum,
     Symbol &A (symbols[args[op.firstarg()+1]]);
     Symbol &B (symbols[args[op.firstarg()+2]]);
     if (A.is_const() && B.is_const()) {
-        DASSERT (A.is_int() && B.is_int());
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() && *(int *)B.data();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;

@@ -39,6 +39,7 @@ Sony Pictures Imageworks terms, above.
 
 #include <iostream>
 #include <string>
+#include <cstring>
 
 #include "oslquery.h"
 using namespace OSL;
@@ -243,7 +244,7 @@ main (int argc, char *argv[])
             ! strcmp(argv[a],"-help") || ! strcmp(argv[a],"--h") ||
             ! strcmp(argv[a],"--help")) {
             usage();
-            exit(0);
+            return 0;
         } else if (! strcmp(argv[a], "-p")) {
             if (a == argc-1) {
                 usage(); return(-1);

@@ -43,6 +43,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 namespace OSL {
 namespace pvt {   // OSL::pvt
 
@@ -1096,3 +1099,6 @@ ShadingExecution::get_matrix (Matrix44 &result, ustring from,
 
 }; // namespace pvt
 }; // namespace OSL
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

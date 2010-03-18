@@ -823,7 +823,7 @@ void fetch_value_array (T v[N], int argidx, int idx, ShadingExecution *exec, int
     DASSERT (argidx < nargs);
     // TODO: typecheck assert?
     Symbol &Sym = exec->sym (args[argidx]);
-    DASSERT (N == 1 && Sym.typespec().arraylength() == 0 || N == Sym.typespec().arraylength());
+    DASSERT ((N == 1 && Sym.typespec().arraylength() == 0) || N == Sym.typespec().arraylength());
     VaryingRef<T> values ((T*) Sym.data(), Sym.step());
     for (int i = 0; i < N; i++)
         v[i] = (&values[idx])[i];
@@ -837,8 +837,8 @@ void fetch_value_array (T v[N], int argidx, int idx, ShadingExecution *exec, int
 #define CLOSURE_FETCH_ARG(v, argidx)    \
     fetch_value(v, argidx, idx, exec, nargs, args)
 
-#define CLOSURE_FETCH_ARG_ARRAY(v, N, argidx)    \
-    fetch_value_array<typeof(v[0]), N>(v, argidx, idx, exec, nargs, args)
+#define CLOSURE_FETCH_ARG_ARRAY(T, v, N, argidx)    \
+    fetch_value_array<T, N>(v, argidx, idx, exec, nargs, args)
 
 // Proxy type that derives from Vec3 but allows some additional operations
 // not normally supported by Imath::Vec3.  This is purely for convenience.

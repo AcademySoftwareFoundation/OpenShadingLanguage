@@ -31,6 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simplerend.h"
 using namespace OSL;
 
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
 
 namespace OSL {
 
@@ -96,3 +99,6 @@ SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
 
 };  // namespace OSL
 
+#ifdef OSL_NAMESPACE
+}; // end namespace OSL_NAMESPACE
+#endif

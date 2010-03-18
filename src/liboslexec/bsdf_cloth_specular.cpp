@@ -101,11 +101,11 @@ public:
     {
         CLOSURE_FETCH_ARG (m_N, 1);
 
-        CLOSURE_FETCH_ARG_ARRAY (m_spec_col, 4, 2);
-        CLOSURE_FETCH_ARG_ARRAY (m_eta, 4, 3);
+        CLOSURE_FETCH_ARG_ARRAY (Color3, m_spec_col, 4, 2);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_eta, 4, 3);
 
-        CLOSURE_FETCH_ARG_ARRAY (m_thread_pattern, 4, 4); 
-        CLOSURE_FETCH_ARG_ARRAY (m_pattern_weight, 4, 5); 
+        CLOSURE_FETCH_ARG_ARRAY (int, m_thread_pattern, 4, 4); 
+        CLOSURE_FETCH_ARG_ARRAY (float, m_pattern_weight, 4, 5); 
         CLOSURE_FETCH_ARG (m_current_thread, 6);
 
         CLOSURE_FETCH_ARG (m_brdf_interp, 7);
@@ -117,12 +117,12 @@ public:
         CLOSURE_FETCH_ARG (m_area_scaled, 11);
         CLOSURE_FETCH_ARG (m_dPdu, 12);
 
-        CLOSURE_FETCH_ARG_ARRAY (m_eccentricity, 4, 13);
-        CLOSURE_FETCH_ARG_ARRAY (m_angle, 4, 14);
-        CLOSURE_FETCH_ARG_ARRAY (m_Kx, 4, 15);
-        CLOSURE_FETCH_ARG_ARRAY (m_Ky, 4, 16);
-        CLOSURE_FETCH_ARG_ARRAY (m_Sx, 4, 17);
-        CLOSURE_FETCH_ARG_ARRAY (m_Sy, 4, 18);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_eccentricity, 4, 13);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_angle, 4, 14);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_Kx, 4, 15);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_Ky, 4, 16);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_Sx, 4, 17);
+        CLOSURE_FETCH_ARG_ARRAY (float, m_Sy, 4, 18);
 
         threadTypeCount = 0; 
     

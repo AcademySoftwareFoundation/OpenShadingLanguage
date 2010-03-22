@@ -4327,18 +4327,27 @@ occlusion
 \index{message passing}
 
 \apiitem{int {\ce getattribute} (string name, output \emph{type} destination) \\
-int {\ce getattribute} (string name, int arrayindex, output \emph{type} destination)}
+int {\ce getattribute} (string name, int arrayindex, output \emph{type}
+destination)\\
+int {\ce getattribute} (string object, string name, output \emph{type} destination) \\
+int {\ce getattribute} (string object, string name, int arrayindex, output \emph{type} destination)}
 \indexapi{getattribute()}
-Searches for the renderer attribute with the given \emph{name} (first
-searching per-object attributes on the current object, then if not found
-searching scene-wide attributes).  If found and it matches the type of
+Searches for the renderer attribute with the given \emph{name}.
+If an object is explicitly named, that is the only place that will be
+searched (\qkw{global} means the global scene-wide attributes).  For the
+forms of the function with no object name, or if the object name is the
+empty string \qkw{}, the renderer will first search
+per-object attributes on the current object, then if not found it will search
+searching global scene-wide attributes.  
+
+If the attribute is found found and it matches the type of
 \emph{destination}, the attribute's value will be stored in
 \emph{destination} and {\cf getattribute} will return {\cf 1}.  If not
 found, or the type does not match, \emph{destination} will not be
 modified and {\cf getattribute} will return {\cf 0}.
 
-The second form of this function, with the {\cf arrayindex} parameter,
-retrieves the individual indexed element of the named array.  In this
+The forms of this function that have the the {\cf arrayindex} parameter
+will retrieve the individual indexed element of the named array.  In this
 case, \emph{name} must be an array attribute, the type of
 \emph{destination} must be the type of the array element (not the type
 of the whole array), and the value of \emph{arrayindex} must be a valid

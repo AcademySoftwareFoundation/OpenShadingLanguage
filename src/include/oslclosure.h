@@ -187,12 +187,64 @@ public:
 
     /// Given the side from which we are viewing this closure, return which side
     /// it is sensitive to light on.
+    ///
+    /// Here is a table for this function, notice that Front is 1, Back is 2 and 3 is Both
+    ///
+    ///  m_sidedness m_eval_sidedness viewing_side   ligh_side(result)
+    ///     None            *               *      =      None
+    ///       *           None              *      =      None
+    ///       *             *             None     =  (impossible)
+    ///     Front         Front           Front    =      Fron
+    ///     Front         Front           Back     =      None
+    ///     Front         Back            Front    =      Back
+    ///     Front         Back            Back     =      None
+    ///     Front         Both            Front    =      Both
+    ///     Front         Both            Back     =      None
+    ///     Back          Front           Front    =      None
+    ///     Back          Front           Back     =      Back
+    ///     Back          Back            Front    =      None
+    ///     Back          Back            Back     =      Fron
+    ///     Back          Both            Front    =      None
+    ///     Back          Both            Back     =      Both
+    ///     Both          Front           Front    =      Fron
+    ///     Both          Front           Back     =      Back
+    ///     Both          Back            Front    =      Back
+    ///     Both          Back            Back     =      Fron
+    ///     Both          Both            Front    =      Both
+    ///     Both          Both            Back     =      Both
+    ///
+    ///       reordered for convenience ...
+    ///
+    ///  m_sidedness m_eval_sidedness viewing_side   ligh_side(result)
+    ///       *             *             None     =  (impossible)
+    ///     None            *               *      =      None  (m_sidedness & viewing_side)
+    ///     Front         Front           Back     =      None  (m_sidedness & viewing_side)
+    ///     Front         Back            Back     =      None  (m_sidedness & viewing_side)
+    ///     Front         Both            Back     =      None  (m_sidedness & viewing_side)
+    ///     Back          Front           Front    =      None  (m_sidedness & viewing_side)
+    ///     Back          Back            Front    =      None  (m_sidedness & viewing_side)
+    ///     Back          Both            Front    =      None  (m_sidedness & viewing_side)
+    ///       *           None              *      =      None  m_eval_sidedness
+    ///     Front         Both            Front    =      Both  Both
+    ///     Back          Both            Back     =      Both  Both
+    ///     Both          Both            Front    =      Both  Both
+    ///     Both          Both            Back     =      Both  Both
+    ///     Front         Front           Front    =      Front viewing_side
+    ///     Back          Front           Back     =      Back  viewing_side
+    ///     Both          Front           Front    =      Front viewing_side
+    ///     Both          Front           Back     =      Back  viewing_side
+    ///     Front         Back            Front    =      Back  viewing_side ^ Both
+    ///     Back          Back            Back     =      Front viewing_side ^ Both
+    ///     Both          Back            Front    =      Back  viewing_side ^ Both
+    ///     Both          Back            Back     =      Front viewing_side ^ Both
+    ///
     Sidedness get_light_side(Sidedness viewing_side) const {
+        if (!((m_sidedness & viewing_side) && m_eval_sidedness))
+            return None;
         switch (m_eval_sidedness) {
-            case None:  return None; // eval not needed
-            case Front: return Sidedness (m_sidedness & viewing_side); // same side as viewer
-            case Back:  return Sidedness (m_sidedness ^ viewing_side); // opposite side to viewer
-            case Both:  return Both; // always sensitive on both sides
+            case Front: return viewing_side;
+            case Back:  return Sidedness(viewing_side ^ Both);
+            case Both:  return Both;
             default:    return None;
         }
     }

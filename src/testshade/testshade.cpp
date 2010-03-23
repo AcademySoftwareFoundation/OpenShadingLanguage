@@ -57,6 +57,7 @@ static std::string dataformatname = "";
 static bool debug = false;
 static bool verbose = false;
 static bool stats = false;
+static bool O0 = false, O1 = true, O2 = false;
 static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
@@ -109,6 +110,8 @@ static int
 add_shader (int argc, const char *argv[])
 {
     shadingsys->attribute ("debug", (int)debug);
+    shadingsys->attribute ("optimize", O2 ? 2 : (O0 ? 0 : 1));
+    shadingsys->attribute ("lockgeom", 1);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
@@ -161,6 +164,9 @@ getargs (int argc, const char *argv[])
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
                 "--iters %d", &iters, "Number of iterations",
+                "-O0", &O0, "Do no runtime shader optimization",
+                "-O1", &O1, "Do a little runtime shader optimization",
+                "-O2", &O2, "Do lots of runtime shader optimization",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || shadernames.empty()) {

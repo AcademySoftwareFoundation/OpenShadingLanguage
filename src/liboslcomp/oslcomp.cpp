@@ -776,10 +776,9 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
 void
 OSLCompilerImpl::check_for_illegal_writes ()
 {
-    // For each op, mark its arguments as being used at that op
+    // For each op, make sure any arguments it writes are legal to do so
     int opnum = 0;
     BOOST_FOREACH (Opcode &op, m_ircode) {
-        // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
             SymbolPtr s = m_opargs[op.firstarg()+a];
             if (op.argwrite(a))

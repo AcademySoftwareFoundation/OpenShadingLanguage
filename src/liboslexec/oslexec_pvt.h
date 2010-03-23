@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec.h"
 #include "oslclosure.h"
 #include "osl_pvt.h"
+#include "constantpool.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -522,6 +523,10 @@ public:
     /// (at least the ones that can't be overridden by the geometry).
     void optimize_group (ShadingAttribState &attribstate, ShaderGroup &group);
 
+    int *alloc_int_constants (size_t n) { return m_int_pool.alloc (n); }
+    float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
+    ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
+
 private:
     void printstats () const;
     void init_global_heap_offsets ();
@@ -577,6 +582,10 @@ private:
     typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
 
+    ConstantPool<int> m_int_pool;
+    ConstantPool<Float> m_float_pool;
+    ConstantPool<ustring> m_string_pool;
+
     // Options
     int m_statslevel;                     ///< Statistics level
     bool m_debug;                         ///< Debugging output
@@ -615,6 +624,9 @@ private:
     atomic_ll m_stat_rebinds;             ///< Stat: Number of rebinds;
     atomic_ll m_stat_paramstobind;        ///< Stat: All params in bound shaders
     atomic_ll m_stat_paramsbound;         ///< Stat: Number of params bound
+    atomic_ll m_stat_instructions_run;    ///< Stat: total instructions run
+    double m_stat_optimization_time;      ///< Stat: time spent optimizing
+    spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
 #ifdef DEBUG_ADJUST_VARYING
     atomic_ll m_adjust_calls;             ///< Calls to adjust_varying
     atomic_ll m_keep_varying;             ///< Adjust_varying kept it varying
@@ -753,6 +765,7 @@ private:
     int m_rebinds;                      ///< Running tab of rebinds
     int m_paramstobind;                 ///< Total params in bound shaders
     int m_paramsbound;                  ///< Params we actually bound
+    int m_instructions_run;             ///< Number of instructions run
     Runflag *m_original_runflags;       ///< Runflags we were called with
     RunIndex *m_original_indices;       ///< Indices we were called with
     int m_original_nindices;            ///< Number of original indices
@@ -852,7 +865,7 @@ public:
 
     /// Set the instruction pointer index -- JUMP!
     ///
-    void ip (int target) { m_ip = target; }
+    void ip (int target) { DASSERT(target >= 0);  m_ip = target; }
 
     /// Return a reference to the current op (pointed to by the instruction
     /// pointer).

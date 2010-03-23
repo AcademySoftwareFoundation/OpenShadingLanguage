@@ -29,8 +29,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <cmath>
 
 #include <boost/foreach.hpp>
+
+#include <OpenImageIO/timer.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -50,7 +53,7 @@ namespace pvt {   // OSL::pvt
 
 // Search for a constant whose type and value match type and data[...].
 // Return -1 if no matching const is found.
-int
+static int
 find_constant (const SymbolVec &syms, const std::vector<int> &all_consts,
                const TypeSpec &type, const void *data)
 {
@@ -67,21 +70,55 @@ find_constant (const SymbolVec &syms, const std::vector<int> &all_consts,
 
 
 
+// Search for a constant whose type and value match type and data[...],
+// returning its index if one exists, or else creating a new constant
+// and returning its index.  If copy is true, allocate new space and
+// copy the data if no matching constant was found.
 static int
-add_constant (SymbolVec &syms, std::vector<int> &all_consts,
-              int &next_newconst, const TypeSpec &type, const void *data)
+add_constant (ShaderInstance &inst, std::vector<int> &all_consts,
+              int &next_newconst, const TypeSpec &type, const void *data,
+              bool copy=false)
 {
-    int ind = find_constant (syms, all_consts, type, data);
+    int ind = find_constant (inst.symbols(), all_consts, type, data);
     if (ind < 0) {
         Symbol newconst (ustring::format ("$newconst%d", next_newconst++),
                          type, SymTypeConst);
+        if (copy) {
+            void *newdata;
+            TypeDesc t (type.simpletype());
+            size_t n = t.aggregate * t.numelements();
+            if (t.basetype == TypeDesc::INT)
+                newdata = inst.shadingsys().alloc_int_constants (n);
+            else if (t.basetype == TypeDesc::FLOAT)
+                newdata = inst.shadingsys().alloc_float_constants (n);
+            else if (t.basetype == TypeDesc::STRING)
+                newdata = inst.shadingsys().alloc_string_constants (n);
+            else { ASSERT (0 && "unsupported type for add_constant"); }
+            memcpy (newdata, data, t.size());
+            data = newdata;
+        }
         newconst.data ((void *)data);
-        ASSERT (syms.capacity() > syms.size());  // ensure we don't realloc
-        ind = (int) syms.size ();
-        syms.push_back (newconst);
+        ASSERT (inst.symbols().capacity() > inst.symbols().size() &&
+                "we shouldn't have to realloc here");
+        ind = (int) inst.symbols().size ();
+        inst.symbols().push_back (newconst);
         all_consts.push_back (ind);
     }
     return ind;
+}
+
+
+
+// Turn the current op into a simple assignment.
+void
+turn_into_assign (Opcode &op, std::vector<int> &opargs, int newarg)
+{
+    static ustring kassign("assign");
+    op.reset (kassign, OP_assign, 2);
+    opargs[op.firstarg()+1] = newarg;
+    op.argwriteonly (0);
+    op.argread (1, true);
+    op.argwrite (1, false);
 }
 
 
@@ -270,10 +307,10 @@ inline bool
 is_zero (const Symbol &A)
 {
     const TypeSpec &Atype (A.typespec());
+    static Vec3 Vzero (0, 0, 0);
     return (Atype.is_float() && *(const float *)A.data() == 0) ||
         (Atype.is_int() && *(const int *)A.data() == 0) ||
-        (Atype.is_triple() && ((const float *)A.data())[0] == 0 &&
-         ((const float *)A.data())[1] == 0 && ((const float *)A.data())[2] == 0);
+        (Atype.is_triple() && *(const Vec3 *)A.data() == Vzero);
 }
 
 
@@ -282,33 +319,47 @@ inline bool
 is_one (const Symbol &A)
 {
     const TypeSpec &Atype (A.typespec());
+    static Vec3 Vone (1, 1, 1);
+    static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     return (Atype.is_float() && *(const float *)A.data() == 1) ||
         (Atype.is_int() && *(const int *)A.data() == 1) ||
-        (Atype.is_triple() && ((const float *)A.data())[0] == 1 &&
-         ((const float *)A.data())[1] == 1 && ((const float *)A.data())[2] == 1);
+        (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
+        (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
 }
 
 
 
-int
-constfold_add (OpcodeVec &ops, int opnum,
-               std::vector<int> &args, SymbolVec &symbols,
-               std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_add)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (A.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant()) {
         if (is_zero(A)) {
-            // R = 0 + B  =>   R = 0
-            op.reset (ustring("assign"), OP_assign, 2);   // change to assign
+            // R = 0 + B  =>   R = B
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+2));
             return 1;
         }
-    } else if (B.is_const()) {
+    }
+    if (B.is_constant()) {
         if (is_zero(B)) {
-            // R = A + 0   =>   R = 0
-            op.reset (ustring("assign"), OP_assign, 2);
-            args[op.firstarg()+1] = args[op.firstarg()+2]; // arg 1 gets B
+            // R = A + 0   =>   R = A
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+1));
+            return 1;
+        }
+    }
+    if (A.is_constant() && B.is_constant()) {
+        if (A.typespec().is_float() && B.typespec().is_float()) {
+            float result = *(float *)A.data() + *(float *)B.data();
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
+            Vec3 result = *(Vec3 *)A.data() + *(Vec3 *)B.data();
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
             return 1;
         }
     }
@@ -317,17 +368,30 @@ constfold_add (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_sub (OpcodeVec &ops, int opnum,
-               std::vector<int> &args, SymbolVec &symbols,
-               std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_sub)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (B.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (B.is_constant()) {
         if (is_zero(B)) {
             // R = A - 0   =>   R = A
-            op.reset (ustring("assign"), OP_assign, 2);
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+1));
+            return 1;
+        }
+    }
+    if (A.is_constant() && B.is_constant()) {
+        if (A.typespec().is_float() && B.typespec().is_float()) {
+            float result = *(float *)A.data() - *(float *)B.data();
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
+            Vec3 result = *(Vec3 *)A.data() - *(Vec3 *)B.data();
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
             return 1;
         }
     }
@@ -336,25 +400,47 @@ constfold_sub (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_mul (OpcodeVec &ops, int opnum,
-               std::vector<int> &args, SymbolVec &symbols,
-               std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_mul)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (A.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant()) {
         if (is_one(A)) {
             // R = 1 * B  =>   R = B
-            op.reset (ustring("assign"), OP_assign, 2);   // change to assign
-            args[op.firstarg()+1] = args[op.firstarg()+2]; // arg 1 gets B
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+2));
             return 1;
         }
-    } else if (B.is_const()) {
+        if (is_zero(A)) {
+            // R = 0 * B  =>   R = 0
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+1));
+            return 1;
+        }
+    }
+    if (B.is_constant()) {
         if (is_one(B)) {
             // R = A * 1   =>   R = A
-            op.reset (ustring("assign"), OP_assign, 2);
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+1));
+            return 1;
+        }
+        if (is_zero(B)) {
+            // R = A * 0   =>   R = 0
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+2));
+            return 1;
+        }
+    }
+    if (A.is_constant() && B.is_constant()) {
+        if (A.typespec().is_float() && B.typespec().is_float()) {
+            float result = (*(float *)A.data()) * (*(float *)B.data());
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
+            Vec3 result = (*(Vec3 *)A.data()) * (*(Vec3 *)B.data());
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
             return 1;
         }
     }
@@ -363,23 +449,32 @@ constfold_mul (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_div (OpcodeVec &ops, int opnum,
-               std::vector<int> &args, SymbolVec &symbols,
-               std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_div)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (B.is_const()) {
-        if (is_one(B)) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (B.is_constant()) {
+        if (is_one(B) || is_zero(B)) {
             // R = A / 1   =>   R = A
-            op.reset (ustring("assign"), OP_assign, 2);
+            // R = A / 0   =>   R = A      because of OSL div by zero rule
+            turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+1));
             return 1;
         }
-        else if (A.is_const()) {
-            // const/const
-            // FIXME!  need to make new consts for this
+    }
+    if (A.is_constant() && B.is_constant()) {
+        if (A.typespec().is_float() && B.typespec().is_float()) {
+            float result = *(float *)A.data() / *(float *)B.data();
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
+            Vec3 result = *(Vec3 *)A.data() / *(Vec3 *)B.data();
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
         }
     }
     return 0;
@@ -387,15 +482,36 @@ constfold_div (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_eq (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_neg)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (A.is_const() && B.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    if (A.is_constant()) {
+        if (A.typespec().is_float()) {
+            float result =  - *(float *)A.data();
+            int cind = add_constant (inst, all_consts, next_newconst,
+                                     A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_triple()) {
+            Vec3 result = - *(Vec3 *)A.data();
+            int cind = add_constant (inst, all_consts, next_newconst,
+                                     A.typespec(), &result, true);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_eq)
+{
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant() && B.is_constant()) {
         bool val = false;
         if (equivalent (A.typespec(), B.typespec())) {
             val = equal_consts (A, B);
@@ -408,11 +524,10 @@ constfold_eq (OpcodeVec &ops, int opnum,
         }
         // Turn the 'eq R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -420,15 +535,12 @@ constfold_eq (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_neq (OpcodeVec &ops, int opnum,
-               std::vector<int> &args, SymbolVec &symbols,
-               std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_neq)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (A.is_const() && B.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant() && B.is_constant()) {
         bool val = false;
         if (equivalent (A.typespec(), B.typespec())) {
             val = ! equal_consts (A, B);
@@ -441,11 +553,10 @@ constfold_neq (OpcodeVec &ops, int opnum,
         }
         // Turn the 'neq R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -453,18 +564,15 @@ constfold_neq (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_lt (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_lt)
 {
     static const int int_zero = 0, int_one = 1;
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
     const TypeSpec &ta (A.typespec()); 
     const TypeSpec &tb (B.typespec()); 
-    if (A.is_const() && B.is_const()) {
+    if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
@@ -478,11 +586,10 @@ constfold_lt (OpcodeVec &ops, int opnum,
         } else {
             return 0;  // unhandled case
         }
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -490,18 +597,15 @@ constfold_lt (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_le (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_le)
 {
     static const int int_zero = 0, int_one = 1;
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
     const TypeSpec &ta (A.typespec()); 
     const TypeSpec &tb (B.typespec()); 
-    if (A.is_const() && B.is_const()) {
+    if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
@@ -515,11 +619,10 @@ constfold_le (OpcodeVec &ops, int opnum,
         } else {
             return 0;  // unhandled case
         }
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -527,18 +630,15 @@ constfold_le (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_gt (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_gt)
 {
     static const int int_zero = 0, int_one = 1;
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
     const TypeSpec &ta (A.typespec()); 
     const TypeSpec &tb (B.typespec()); 
-    if (A.is_const() && B.is_const()) {
+    if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
@@ -552,11 +652,10 @@ constfold_gt (OpcodeVec &ops, int opnum,
         } else {
             return 0;  // unhandled case
         }
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -564,18 +663,15 @@ constfold_gt (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_ge (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_ge)
 {
     static const int int_zero = 0, int_one = 1;
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
     const TypeSpec &ta (A.typespec()); 
     const TypeSpec &tb (B.typespec()); 
-    if (A.is_const() && B.is_const()) {
+    if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
@@ -589,11 +685,10 @@ constfold_ge (OpcodeVec &ops, int opnum,
         } else {
             return 0;  // unhandled case
         }
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -601,24 +696,20 @@ constfold_ge (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_or (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_or)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (A.is_const() && B.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant() && B.is_constant()) {
         DASSERT (A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() || *(int *)B.data();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -626,24 +717,20 @@ constfold_or (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_and (OpcodeVec &ops, int opnum,
-               std::vector<int> &args, SymbolVec &symbols,
-               std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_and)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &B (symbols[args[op.firstarg()+2]]);
-    if (A.is_const() && B.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant() && B.is_constant()) {
         DASSERT (A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() && *(int *)B.data();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = add_constant (symbols, all_consts,
+        int cind = add_constant (inst, all_consts,
                                  next_newconst, TypeDesc::TypeInt,
                                  val ? &int_one : &int_zero);
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -651,14 +738,11 @@ constfold_and (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_if (OpcodeVec &ops, int opnum,
-              std::vector<int> &args, SymbolVec &symbols,
-              std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_if)
 {
-    Opcode &op (ops[opnum]);
-    Symbol &C (symbols[args[op.firstarg()+0]]);
-    if (C.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &C (*inst.argsymbol(op.firstarg()+0));
+    if (C.is_constant()) {
         int result = -1;   // -1 == we don't know
         if (C.typespec().is_int())
             result = (((int *)C.data())[0] != 0);
@@ -668,47 +752,44 @@ constfold_if (OpcodeVec &ops, int opnum,
             result = (((Vec3 *)C.data())[0] != Vec3(0,0,0));
         else if (C.typespec().is_string()) {
             ustring s = ((ustring *)C.data())[0];
-            result = (s.c_str() == NULL || s.length() == 0);
+            result = (s.length() != 0);
         }
         int changed = 0;
-        if (result > 0)
+        if (result > 0) {
             for (int i = op.jump(0);  i < op.jump(1);  ++i, ++changed)
-                ops[i].reset (ustring("nop"), OP_nop, 0);
-        else if (result == 0)
+                inst.ops()[i].reset (ustring("nop"), OP_nop, 0);
+            op.reset (ustring("nop"), OP_nop, 0);
+            return changed+1;
+        } else if (result == 0) {
             for (int i = opnum+1;  i < op.jump(0);  ++i, ++changed)
-                ops[i].reset (ustring("nop"), OP_nop, 0);
-        op.reset (ustring("nop"), OP_nop, 0);
-        return changed+1;
+                inst.ops()[i].reset (ustring("nop"), OP_nop, 0);
+            op.reset (ustring("nop"), OP_nop, 0);
+            return changed+1;
+        }
     }
     return 0;
 }
 
 
 
-int
-constfold_aref (OpcodeVec &ops, int opnum,
-                std::vector<int> &args, SymbolVec &symbols,
-                std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_aref)
 {
     // Array reference -- crops up more than you think in production shaders!
     // Try to turn R=A[I] into R=C if A and I are const.
-    Opcode &op (ops[opnum]);
-    Symbol &R (symbols[args[op.firstarg()+0]]);
-    Symbol &A (symbols[args[op.firstarg()+1]]);
-    Symbol &Index (symbols[args[op.firstarg()+2]]);
-    if (A.is_const() && Index.is_const()) {
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &R (*inst.argsymbol(op.firstarg()+0));
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &Index (*inst.argsymbol(op.firstarg()+2));
+    DASSERT (A.typespec().is_array() && Index.typespec().is_int());
+    if (A.is_constant() && Index.is_constant()) {
         TypeSpec elemtype = A.typespec().elementtype();
         ASSERT (elemtype.is_float() || elemtype.is_triple() || elemtype.is_int());
         ASSERT (equivalent(elemtype, R.typespec()));
         int index = *(int *)Index.data();
-        int cind = add_constant (symbols, all_consts, next_newconst, elemtype,
-                                 (char *)A.data() + index*elemtype.simpletype().size());
-        std::cerr << "    array index " << index << ": ";
-        if (elemtype.is_float())
-            std::cerr << (*(float *)((char *)A.data() + index*elemtype.simpletype().size()));
-        std::cerr << "\n";
-        op.reset (ustring("assign"), OP_assign, 2);
-        args[op.firstarg()+1] = cind;
+        DASSERT (index < A.typespec().arraylength());
+        int cind = add_constant (inst, all_consts, next_newconst, elemtype,
+                                 (char *)A.data() + index*elemtype.simpletype().size(), true);
+        turn_into_assign (op, inst.args(), cind);
         return 1;
     }
     return 0;
@@ -716,15 +797,307 @@ constfold_aref (OpcodeVec &ops, int opnum,
 
 
 
-int
-constfold_useparam (OpcodeVec &ops, int opnum,
-                    std::vector<int> &args, SymbolVec &symbols,
-                    std::vector<int> &all_consts, int &next_newconst)
+DECLFOLDER(constfold_compref)
+{
+    // Component reference
+    // Try to turn R=A[I] into R=C if A and I are const.
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &A (*inst.argsymbol(op.firstarg()+1));
+    Symbol &Index (*inst.argsymbol(op.firstarg()+2));
+    if (A.is_constant() && Index.is_constant()) {
+        ASSERT (A.typespec().is_triple() && Index.typespec().is_int());
+        int index = *(int *)Index.data();
+        int cind = add_constant (inst, all_consts, next_newconst,
+                                 TypeDesc::TypeFloat, (float *)A.data() + index);
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_strlen)
+{
+    // Try to turn R=strlen(s) into R=C
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &S (*inst.argsymbol(op.firstarg()+1));
+    if (S.is_constant()) {
+        ASSERT (S.typespec().is_string());
+        int result = (int) (*(ustring *)S.data()).length();
+        int cind = add_constant (inst, all_consts,
+                                 next_newconst, TypeDesc::TypeInt,
+                                 &result, true /* make a copy */);
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_endswith)
+{
+    // Try to turn R=endswith(s,e) into R=C
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &S (*inst.argsymbol(op.firstarg()+1));
+    Symbol &E (*inst.argsymbol(op.firstarg()+2));
+    if (S.is_constant() && E.is_constant()) {
+        ASSERT (S.typespec().is_string() && E.typespec().is_string());
+        ustring s = *(ustring *)S.data();
+        ustring e = *(ustring *)E.data();
+        size_t elen = e.length(), slen = s.length();
+        int result = 0;
+        if (elen <= slen)
+            result = (strncmp (s.c_str()+slen-elen, e.c_str(), elen) == 0);
+        int cind = add_constant (inst, all_consts,
+                                 next_newconst, TypeDesc::TypeInt,
+                                 &result, true /* make a copy */);
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_concat)
+{
+    // Try to turn R=concat(s,...) into R=C
+    Opcode &op (inst.ops()[opnum]);
+    ustring result;
+    for (int i = 1;  i < op.nargs();  ++i) {
+        Symbol &S (*inst.argsymbol(op.firstarg()+i));
+        if (! S.is_constant())
+            return 0;  // something non-constant
+        ustring old = result;
+        ustring s = *(ustring *)S.data();
+        result = ustring::format ("%s%s", old.c_str() ? old.c_str() : "",
+                                  s.c_str() ? s.c_str() : "");
+    }
+    // If we made it this far, all args were constants, and the
+    // concatenation is in result.
+    int cind = add_constant (inst, all_consts,
+                             next_newconst, TypeDesc::TypeString,
+                             &result, true /* make a copy */);
+    turn_into_assign (op, inst.args(), cind);
+    return 1;
+}
+
+
+
+inline float clamp (float x, float minv, float maxv)
+{
+    if (x < minv) return minv;
+    else if (x > maxv) return maxv;
+    else return x;
+}
+
+
+
+DECLFOLDER(constfold_clamp)
+{
+    // Try to turn R=clamp(x,min,max) into R=C
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &X (*inst.argsymbol(op.firstarg()+1));
+    Symbol &Min (*inst.argsymbol(op.firstarg()+2));
+    Symbol &Max (*inst.argsymbol(op.firstarg()+3));
+    if (X.is_constant() && Min.is_constant() && Max.is_constant()) {
+        DASSERT (equivalent(X.typespec(), Min.typespec()) &&
+                 equivalent(X.typespec(), Max.typespec()));
+        DASSERT (X.typespec().is_float() || X.typespec().is_triple());
+        const float *x = (const float *) X.data();
+        const float *min = (const float *) Min.data();
+        const float *max = (const float *) Max.data();
+        float result[3];
+        result[0] = clamp (x[0], min[0], max[0]);
+        if (X.typespec().is_triple()) {
+            result[1] = clamp (x[1], min[1], max[1]);
+            result[2] = clamp (x[2], min[2], max[2]);
+        }
+        int cind = add_constant (inst, all_consts,
+                                 next_newconst, X.typespec(),
+                                 &result, true /* make a copy */);
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_sqrt)
+{
+    // Try to turn R=sqrt(x) into R=C
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &X (*inst.argsymbol(op.firstarg()+1));
+    if (X.is_constant() &&
+          (X.typespec().is_float() || X.typespec().is_triple())) {
+        const float *x = (const float *) X.data();
+        float result[3];
+        result[0] = sqrtf (std::max (0.0f, x[0]));
+        if (X.typespec().is_triple()) {
+            result[1] = sqrtf (std::max (0.0f, x[1]));
+            result[2] = sqrtf (std::max (0.0f, x[2]));
+        }
+        int cind = add_constant (inst, all_consts,
+                                 next_newconst, X.typespec(),
+                                 &result, true /* make a copy */);
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_matrix)
+{
+    // Try to turn R=matrix(from,to) into R=1 if it's an identity transform
+    Opcode &op (inst.ops()[opnum]);
+    if (op.nargs() == 3) {
+        Symbol &From (*inst.argsymbol(op.firstarg()+1));
+        Symbol &To (*inst.argsymbol(op.firstarg()+2));
+        if (From.is_constant() && From.typespec().is_string() &&
+            To.is_constant() && To.typespec().is_string()) {
+            ustring from = *(ustring *)From.data();
+            ustring to = *(ustring *)To.data();
+            ustring commonsyn = inst.shadingsys().commonspace_synonym();
+            if (from == to || (from == Strings::common && to == commonsyn) ||
+                              (from == commonsyn && to == Strings::common)) {
+                static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+                int cind = add_constant (inst, all_consts, next_newconst,
+                                         TypeDesc::TypeMatrix, &ident);
+                turn_into_assign (op, inst.args(), cind);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_transform)
+{
+    // Try to turn R=transform(M,P) into R=P if it's an identity transform
+    Opcode &op (inst.ops()[opnum]);
+    Symbol &M (*inst.argsymbol(op.firstarg()+1));
+    Symbol &P (*inst.argsymbol(op.firstarg()+2));
+    if (op.nargs() == 3 && M.typespec().is_matrix() &&
+          M.is_constant() && is_one(M)) {
+        ASSERT (P.typespec().is_triple());
+        turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+2));
+        return 1;
+    }
+    return 0;
+}
+
+
+
+
+DECLFOLDER(constfold_useparam)
 {
     // Just eliminate useparam (from shaders compiled with old oslc)
-    Opcode &op (ops[opnum]);
+    Opcode &op (inst.ops()[opnum]);
     op.reset (ustring("nop"), OP_nop, 0);
     return 1;
+}
+
+
+
+static std::map<ustring,OpFolder> folder_table;
+
+
+void
+initialize_folder_table ()
+{
+    static spin_mutex folder_table_mutex;
+    static bool folder_table_initialized = false;
+    spin_lock lock (folder_table_mutex);
+    if (folder_table_initialized)
+        return;   // already initialized
+#define INIT2(name,folder) folder_table[ustring(#name)] = folder
+#define INIT(name) folder_table[ustring(#name)] = constfold_##name;
+
+    INIT (add);    INIT (sub);
+    INIT (mul);    INIT (div);
+    INIT (neg);
+    INIT (eq);     INIT (neq);
+    INIT (le);     INIT (ge);
+    INIT (lt);     INIT (gt);
+    INIT (or);     INIT (and);
+    INIT (if);
+    INIT (compref);
+    INIT (aref);
+    INIT (strlen);
+    INIT (endswith);
+    INIT (concat);
+    INIT (clamp);
+    INIT (sqrt);
+    INIT (matrix);
+    INIT2 (transform, constfold_transform);
+    INIT2 (transformv, constfold_transform);
+    INIT2 (transformn, constfold_transform);
+    INIT (useparam);
+#undef INIT
+#undef INIT2
+
+    folder_table_initialized = true;
+}
+
+
+
+// Identify basic blocks by assigning a basic block ID for each
+// instruction.  Within any basic bock, there are no jumps in or out.
+// Also note which instructions are inside conditional states.
+void
+find_basic_blocks (OpcodeVec &code, SymbolVec &symbols,
+                   std::vector<int> &bblockids,
+                   std::vector<bool> &in_conditional, int maincodebegin)
+{
+    in_conditional.clear ();
+    in_conditional.resize (code.size(), false);
+    for (int i = 0;  i < (int)code.size();  ++i) {
+        if (code[i].jump(0) >= 0)
+            std::fill (in_conditional.begin()+i,
+                       in_conditional.begin()+code[i].farthest_jump(), true);
+    }
+
+    // Start by setting all basic block IDs to 0
+    bblockids.clear ();
+    bblockids.resize (code.size(), 0);
+    int bbid = 1;  // next basic block ID to use
+
+    // First, keep track of all the spots where blocks begin
+    std::vector<bool> block_begin (code.size(), false);
+
+    // Init ops start basic blocks
+    BOOST_FOREACH (const Symbol &s, symbols) {
+        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam &&
+                s.initbegin() >= 0)
+            block_begin[s.initbegin()] = true;
+    }
+
+    // Main code starts a basic block
+    block_begin[maincodebegin] = true;
+
+    // Anyplace that's the target of a jump instruction starts a basic block
+    for (int i = 0;  i < (int)code.size();  ++i) {
+        for (int j = 0;  j < (int)Opcode::max_jumps;  ++j) {
+            if (code[i].jump(j) >= 0)
+                block_begin[code[i].jump(j)] = true;
+            else
+                break;
+        }
+    }
+
+    // Now color the blocks with unique identifiers
+    for (int i = 0;  i < (int)code.size();  ++i) {
+        if (block_begin[i])
+            ++bbid;
+        bblockids[i] = bbid;
+    }
 }
 
 
@@ -734,12 +1107,16 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                                       ShaderInstance &inst)
 {
     if (debug()) {
-        std::cerr << "Optimzing level " << optimize() << ' ' << Strutil::format("%p",&inst) << "\n";
         std::cerr << "Optimizing layer " << layer << " " << inst.layername()
                   << ' ' << inst.shadername() << "\n";
         std::cerr << "Before optimizing instance, I get: \n" << inst.print() 
                   << "\n--------------------------------\n\n";
     }
+
+    initialize_folder_table ();
+
+    size_t old_nsyms = inst.symbols().size();
+    size_t old_nops = inst.ops().size();
 
     // Start by making a list of the indices of all constants.
     std::vector<int> all_consts;
@@ -763,7 +1140,7 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 // Make a new const using the param's instance values
                 inst.make_symbol_room (1);
                 s = inst.symbol(i);  // In case make_symbol_room changed ptrs
-                int cind = add_constant (inst.symbols(), all_consts,
+                int cind = add_constant (inst, all_consts,
                                          next_newconst, s->typespec(), s->data());
                 // Alias this symbol to the new const
                 symbol_aliases[i] = cind;
@@ -780,42 +1157,66 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
     int totalchanged = 0;
     for (int pass = 0;  pass < 10;  ++pass) {
 
-        // Track which statements are inside conditional states
+        // Track basic blocks and conditional states
         std::vector<bool> in_conditional (inst.ops().size(), false);
+        std::vector<int> bblockids;
+        find_basic_blocks (inst.ops(), inst.symbols(),
+                           bblockids, in_conditional, inst.m_maincodebegin);
 
-        int opnum = 0;
+        // Constant aliases valid for just this basic block
+        std::vector<int> block_aliases;
+        block_aliases.resize (inst.symbols().size(), -1);
+
         int changed = 0;
-        BOOST_FOREACH (Opcode &op, inst.ops()) {
+        int lastblock = -1;
+        for (int opnum = 0;  opnum < (int)inst.ops().size();  ++opnum) {
+            Opcode &op (inst.ops()[opnum]);
+            ASSERT (&op == &(inst.ops()[opnum]));
             // Find the farthest this instruction jumps to (-1 for ops
             // that don't jump) so we can mark conditional regions.
             int jumpend = op.farthest_jump();
             for (int i = (int)opnum+1;  i < jumpend;  ++i)
                 in_conditional[i] = true;
 
+            // If we've just moved to a new basic block, clear the aliases
+            if (lastblock != bblockids[opnum]) {
+                block_aliases.clear ();
+                block_aliases.resize (inst.symbols().size(), -1);
+                lastblock = bblockids[opnum];
+            }
+
             // De-alias the args to the op and figure out if there are
             // any constants involved.
             bool any_const_args = false;
             for (int i = 0;  i < op.nargs();  ++i) {
                 int argindex = op.firstarg() + i;
-                if (op.argwrite(i))  // Don't alias args that are written
-                    continue;
+                int argsymindex = inst.arg(argindex);
+                if (op.argwrite(i)) {
+                    // Written arg -> no longer aliases anything
+                    block_aliases[argsymindex] = -1;
+                    continue;    // Don't alias args that are written
+                }
                 do {
+                    if (block_aliases[argsymindex] >= 0 && ! op.argwrite(i)) {
+                        // block-specific alias for the sym
+                        inst.args()[argindex] = block_aliases[argsymindex];
+                        continue;
+                    }
                     IntMap::const_iterator found;
-                    found = symbol_aliases.find (inst.arg (argindex));
-                    if (found != symbol_aliases.end()) {  // an alias for the sym
+                    found = symbol_aliases.find (argsymindex);
+                    if (found != symbol_aliases.end()) {
+                        // permanent alias for the sym
                         inst.args()[argindex] = found->second;
                         continue;
                     }
                 } while (0);
-                any_const_args |= inst.argsymbol(argindex)->is_const();
+                any_const_args |= inst.argsymbol(argindex)->is_constant();
             }
 
             // We aren't currently doing anything to optimize ops that have
             // no const args, so don't bother looking further in that case.
-            if (! any_const_args) {
-                ++opnum;
+            if (! any_const_args)
                 continue;
-            }
 
             // Make sure there's room for at least one more symbol, so that
             // we can add a const if we need to, without worrying about the
@@ -827,57 +1228,12 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
             //
             // FIXME -- eventually replace the following cascacing 'if'
             // with a hash lookup and single function call.
-            if (optimize() < 2) {
-                // no constant folding
-            } else if (op.implementation() == OP_mul) {
-                changed += constfold_mul (inst.ops(), opnum, inst.args(),
-                           inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_div) {
-                changed += constfold_div (inst.ops(), opnum, inst.args(),
-                           inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_add) {
-                changed += constfold_add (inst.ops(), opnum, inst.args(),
-                           inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_sub) {
-                changed += constfold_sub (inst.ops(), opnum, inst.args(),
-                           inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_eq) {
-                changed += constfold_eq (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_neq) {
-                changed += constfold_neq (inst.ops(), opnum, inst.args(),
-                           inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_le) {
-                changed += constfold_le (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_ge) {
-                changed += constfold_ge (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_lt) {
-                changed += constfold_lt (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_gt) {
-                changed += constfold_gt (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_or) {
-                changed += constfold_or (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_and) {
-                changed += constfold_and (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-            } else if (op.implementation() == OP_if) {
-                changed += constfold_if (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-#if 0
-// Comment out for now -- it's broken, but I'm not sure why
-            } else if (op.implementation() == OP_aref) {
-                std::cerr << "\n\nAref opt: " << inst.shadername() << ' ' << opnum << "\n";
-                changed += constfold_aref (inst.ops(), opnum, inst.args(),
-                          inst.symbols(), all_consts, next_newconst);
-#endif
-            } else if (op.implementation() == OP_useparam) {
-                changed += constfold_useparam (inst.ops(), opnum, inst.args(),
-                                inst.symbols(), all_consts, next_newconst);
+            if (optimize() >= 2) {
+                std::map<ustring,OpFolder>::const_iterator found;
+                found = folder_table.find (op.opname());
+                if (found != folder_table.end())
+                    changed = (*found->second) (inst, opnum,
+                                                all_consts, next_newconst);
             }
 
             // Now we handle assignments.
@@ -890,7 +1246,51 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 Symbol *A (inst.argsymbol(op.firstarg()+1));
                 bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||
                                        R->symtype() == SymTypeTemp);
-                if (A->is_const() && R->typespec() == A->typespec() &&
+
+                // Odd but common case: two instructions in a row assign
+                // to the same variable.  Get rid of the first.
+                for (int f = opnum+1;  f < (int)inst.ops().size() && bblockids[f] == bblockids[opnum];  ++f) {
+                    Opcode &opf (inst.ops()[f]);
+                    if (opf.implementation() == OP_nop)
+                        continue;
+                    if (opf.implementation() == OP_assign) {
+                        if (inst.argsymbol(opf.firstarg()) == R) {
+                            // Both assigning to the same variable!  Kill one.
+                            op.reset (ustring("nop"), OP_nop, 0);
+                            ++changed;
+                        }
+                    }
+                    break;
+                }
+                if (op.implementation() == OP_nop)
+                    continue;
+
+                if (block_aliases[inst.arg(op.firstarg())] == inst.arg(op.firstarg()+1) ||
+                    block_aliases[inst.arg(op.firstarg()+1)] == inst.arg(op.firstarg())) {
+                    // We're re-assigning something already aliased, skip it
+                    op.reset (ustring("nop"), OP_nop, 0);
+                    ++changed;
+                    continue;
+                }
+                if (A->is_constant() && A->typespec().is_int() &&
+                    ! R->typespec().is_closure() && R->typespec().is_float()) {
+                    float result = *(int *)A->data();
+                    int cind = add_constant (inst, all_consts, next_newconst,
+                                             R->typespec(),
+                                             &result, true /* make a copy */);
+                    turn_into_assign (op, inst.args(), cind);
+                    ++changed;
+                }
+
+                if (A->is_constant() &&
+                        equivalent(R->typespec(), A->typespec())) {
+                    block_aliases[inst.arg(op.firstarg())] =
+                        inst.arg(op.firstarg()+1);
+//                  std::cerr << opnum << " aliasing " << R->mangled() " to "
+//                        << inst.argsymbol(op.firstarg()+1)->mangled() << "\n";
+                }
+
+                if (A->is_constant() && R->typespec() == A->typespec() &&
                     R_local_or_tmp &&
                     R->firstwrite() == opnum && R->lastwrite() == opnum) {
                     // This local or temp is written only once in the
@@ -899,11 +1299,11 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     // constant.
                     int cind = inst.args()[op.firstarg()+1];
                     symbol_aliases[inst.args()[op.firstarg()]] = cind;
-                    inst.args()[op.firstarg()] = cind;
-                    R = A;
+                    op.reset (ustring("nop"), OP_nop, 0);
                     ++changed;
+                    continue;
                 }
-                else if (A->is_const() && R->typespec() == A->typespec() &&
+                else if (A->is_constant() && R->typespec() == A->typespec() &&
                          R->symtype() == SymTypeOutputParam &&
                          R->firstwrite() == opnum && R->lastwrite() == opnum &&
                          !in_conditional[opnum]) {
@@ -925,8 +1325,6 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     ++changed;
                 }
             }
-
-            ++opnum;
         }
 
         totalchanged += changed;
@@ -947,7 +1345,7 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
 
         // If only a couple things changed, we know that we almost never get
         // more benefit from another pass, so avoid the expense.
-        if (changed < 3)
+        if (changed < 1)
             break;
     }
 
@@ -972,10 +1370,13 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
     // Get rid of nop instructions and unused symbols.
     if (optimize() >= 1) {
         collapse (group, layer, inst);
+        info ("Optimized %s: New syms %llu/%llu, ops %llu/%llu",
+              inst.shadername().c_str(),
+              inst.symbols().size(), old_nsyms,
+              inst.ops().size(), old_nops);
     } else {
         inst.m_maincodeend = (int)inst.ops().size();
-        info ("Processed %s",
-              inst.shadername().c_str());
+        info ("Processed %s", inst.shadername().c_str());
     }
 
     if (debug())
@@ -993,7 +1394,15 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
     // Make a new symbol table that removes all the unused symbols.
     //
 
-    size_t old_nsyms = inst.symbols().size();
+#if 0  // FIXME -- come back to this
+    // Mark our params that feed to later layers
+    for (int lay = layer+1;  lay < group.nlayers();  ++lay) {
+        BOOST_FOREACH (Connection &c, group[lay]->m_connections)
+            if (c.srclayer == layer)
+                inst.symbol(c.src.param)->connected_down (true);
+    }
+#endif
+
     SymbolVec new_symbols;          // buffer for new symbol table
     std::vector<int> symbol_remap;  // mapping of old sym index to new
     int total_syms = 0;             // number of new symbols we'll need
@@ -1002,7 +1411,8 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
     BOOST_FOREACH (const Symbol &s, inst.symbols()) {
         symbol_remap.push_back (total_syms);
         if (s.everused() ||
-              s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            (s.symtype() == SymTypeParam /*&& s.connected_down()*/) ||
+              s.symtype() == SymTypeOutputParam)
             ++total_syms;
     }
 
@@ -1010,7 +1420,8 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
     new_symbols.reserve (total_syms);
     BOOST_FOREACH (const Symbol &s, inst.symbols()) {
         if (s.everused() ||
-              s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            (s.symtype() == SymTypeParam /*&& s.connected_down()*/) ||
+              s.symtype() == SymTypeOutputParam)
             new_symbols.push_back (s);
     }
 
@@ -1046,7 +1457,6 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
     //
     // Make new code that removes all the nops
     //
-    size_t old_nops = inst.ops().size();
     OpcodeVec new_ops;              // buffer for new code
     std::vector<int> op_remap;      // mapping of old opcode indices to new
     int total_ops = 0;              // number of new ops we'll need
@@ -1077,11 +1487,6 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
 
     // Swap the new code for the old.
     std::swap (inst.m_instops, new_ops);
-
-    info ("Optimized %s: New syms %llu/%llu, ops %llu/%llu",
-          inst.shadername().c_str(),
-          inst.symbols().size(), old_nsyms,
-          inst.ops().size(), old_nops);
 }
 
 
@@ -1090,20 +1495,26 @@ void
 ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate, 
                                    ShaderGroup &group)
 {
+    Timer timer;
     lock_guard lock (group.m_mutex);
-    if (group.optimized())
+    if (group.optimized()) {
+        spin_lock (m_stat_mutex);
+        m_stat_optimization_time += timer();
         return;
+    }
     int nlayers = (int) group.nlayers ();
     for (int layer = 0;  layer < nlayers;  ++layer) {
         ShaderInstance *inst = group[layer];
         if (inst) {
             optimize_instance (group, layer, *inst);
-            ASSERT (!inst->m_heap_size_calculated);
+            // ASSERT (!inst->m_heap_size_calculated);
             inst->m_heap_size_calculated = false;
         }
     }
     attribstate.changed_shaders ();
     group.m_optimized = true;
+    spin_lock (m_stat_mutex);
+    m_stat_optimization_time += timer();
 }
 
 

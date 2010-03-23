@@ -374,7 +374,7 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
     ASSERT (! sym.initialized ());
     ASSERT (m_runstate_stack.size() > 0);
     m_context->m_paramsbound++;
-    sym.initialized (true);  //FIXME -- shouldn't be necessary utl_spi_float_v1
+    sym.initialized (true);
 
     // Lazy parameter binding: we figure out the value for this parameter based
     // on the following priority:
@@ -468,8 +468,6 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
                                badderiv ? "bad derivative " : "",
                                badval, shadername().c_str(),
                                sym.name().c_str());
-
-    sym.initialized (true);
 }
 
 
@@ -590,7 +588,9 @@ ShadingExecution::run (int beginop, int endop)
     const int *args = &(instance()->args()[0]);
     bool debugnan = m_shadingsys->debug_nan ();
     OpcodeVec &code (m_instance->ops());
+    int instructions_run = 0;
     for (m_ip = beginop; m_ip < endop && m_runstate.beginpoint < m_runstate.endpoint;  ++m_ip) {
+        ++instructions_run;
         DASSERT (m_ip >= 0 && m_ip < (int)instance()->ops().size());
         Opcode &op (code[m_ip]);
 
@@ -633,6 +633,7 @@ ShadingExecution::run (int beginop, int endop)
         if (debugnan)
             check_nan (op);
     }
+    m_context->m_instructions_run += instructions_run;
 }
 
 

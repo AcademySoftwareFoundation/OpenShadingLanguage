@@ -376,7 +376,7 @@ ShaderInstance::print ()
         for (int a = 0;  a < op.nargs();  ++a) {
             out << " " << m_instsymbols[m_instargs[op.firstarg()+a]].name();
             if (op.argread(a))
-                allconst &= m_instsymbols[m_instargs[op.firstarg()+a]].is_const();
+                allconst &= m_instsymbols[m_instargs[op.firstarg()+a]].is_constant();
         }
         for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
             if (op.jump(j) >= 0)

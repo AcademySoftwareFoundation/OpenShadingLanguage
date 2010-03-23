@@ -444,7 +444,8 @@ public:
         : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
-          m_connected(false), m_initialized(false), m_lockgeom(false),
+          m_connected(false), m_connected_down(false),
+          m_initialized(false), m_lockgeom(false),
           m_valuesource(DefaultVal), m_fieldid(-1),
           m_scope(0), m_dataoffset(-1), 
           m_node(declaration_node), m_alias(NULL),
@@ -566,6 +567,8 @@ public:
 
     bool connected () const { return m_connected; }
     void connected (bool c) { m_connected = true; }
+    bool connected_down () const { return m_connected_down; }
+    void connected_down (bool c) { m_connected_down = true; }
 
     /// Where did the symbol's value come from?
     ///
@@ -629,7 +632,7 @@ public:
     bool lockgeom () const { return m_lockgeom; }
     void lockgeom (bool lock) { m_lockgeom = lock; }
 
-    bool is_const () const { return symtype() == SymTypeConst; }
+    bool is_constant () const { return symtype() == SymTypeConst; }
 
 protected:
     void *m_data;               ///< Pointer to the data
@@ -641,6 +644,7 @@ protected:
     unsigned m_has_derivs:1;    ///< Step to derivs (0 == has no derivs)
     unsigned m_const_initializer:1; ///< initializer is a constant expression
     unsigned m_connected:1;     ///< Connected to an earlier layer
+    unsigned m_connected_down:1;///< Connected to a later/downtream layer
     unsigned m_initialized:1;   ///< If a param, has it been initialized?
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
     char m_valuesource;         ///< Where did the value come from?

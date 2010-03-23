@@ -222,6 +222,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
     m_binds = 0;
     m_paramstobind = 0;
     m_paramsbound = 0;
+    m_instructions_run = 0;
     int uncond_evals = 0;
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);
@@ -248,6 +249,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
     shadingsys().m_stat_binds += m_binds;
     shadingsys().m_stat_paramstobind += m_paramstobind;
     shadingsys().m_stat_paramsbound += m_paramsbound;
+    shadingsys().m_stat_instructions_run += m_instructions_run;
 #ifdef DEBUG_ADJUST_VARYING
     for (size_t layer = 0;  layer < nlayers;  ++layer) {
         ShadingExecution &exec (execlayers[layer]);

@@ -191,7 +191,8 @@ DECLOP (OP_assign)
         if (Result.typespec().is_closure() && Src.typespec().is_closure())
             impl = assign_closure;
         else if (Result.typespec().is_closure() && 
-                 (Src.typespec().is_int() || Src.typespec().is_float())) {
+                 (Src.typespec().is_int() || Src.typespec().is_float() ||
+                  Src.typespec().is_color())) {
             // Special case:  closure = 0 -> clear it
             impl = clear_closure;
         }

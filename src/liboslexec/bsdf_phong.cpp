@@ -50,8 +50,18 @@ public:
         CLOSURE_FETCH_ARG (m_exponent, 2);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const PhongClosure *comp = (const PhongClosure *)other;
+        return m_N == comp->m_N && m_exponent == comp->m_exponent &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "phong"; }
+
     void print_on (std::ostream &out) const {
-        out << "phong ((";
+        out << name() << " ((";
         out << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_exponent << ")";
     }
@@ -157,8 +167,23 @@ public:
             m_colors[r] = m[r];
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const PhongRampClosure *comp = (const PhongRampClosure *)other;
+        if (! (m_N == comp->m_N && m_exponent == comp->m_exponent && 
+               m_ncolors == comp->m_ncolors && BSDFClosure::mergeable(other)))
+            return false;
+        for (int i = 0;  i < m_ncolors;  ++i)
+            if (m_colors[i] != comp->m_colors[i])
+                return false;
+        return true;
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "phong_ramp"; }
+
     void print_on (std::ostream &out) const {
-        out << "phong_ramp((";
+        out << name() << " ((";
         out << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_exponent << ")";
     }

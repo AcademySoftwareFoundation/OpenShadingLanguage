@@ -48,8 +48,18 @@ public:
         CLOSURE_FETCH_ARG (m_eta, 2);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const RefractionClosure *comp = (const RefractionClosure *)other;
+        return m_N == comp->m_N && m_eta == comp->m_eta &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "refraction"; }
+
     void print_on (std::ostream &out) const {
-        out << "refraction (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_eta;
         out << ")";
@@ -102,8 +112,18 @@ public:
         CLOSURE_FETCH_ARG (m_eta, 2);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const DielectricClosure *comp = (const DielectricClosure *)other;
+        return m_N == comp->m_N && m_eta == comp->m_eta &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "dielectric"; }
+
     void print_on (std::ostream &out) const {
-        out << "dielectric (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_eta;
         out << ")";

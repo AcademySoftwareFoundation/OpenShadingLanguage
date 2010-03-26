@@ -147,6 +147,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_paramsbound = 0;
     m_stat_instructions_run = 0;
     m_stat_optimization_time = 0;
+    m_stat_biggest_Ci = 0;
+    m_stat_total_Ci_components = 0;
+    m_stat_small_Ci_components = 0;
+    m_stat_zero_Ci_components = 0;
+    m_stat_total_Cis = 0;
+    m_stat_Ci_has_small_components = 0;
 
     init_global_heap_offsets ();
 
@@ -438,6 +444,15 @@ ShadingSystemImpl::getstats (int level) const
         << Strutil::timeintervalformat (m_stat_optimization_time) << "\n";
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
+    out << "  Largest Ci closure constructed: " << m_stat_biggest_Ci 
+        << " components\n";
+    out << "  Tiny weight components: " << m_stat_small_Ci_components << " / " 
+        << m_stat_total_Ci_components << " (" <<
+        (100.0 * (long long) m_stat_small_Ci_components) / (long long) m_stat_total_Ci_components << "% of components, present in "
+        << (100.0 * (long long) m_stat_Ci_has_small_components) / (long long) m_stat_total_Cis << "% of Ci's)\n";
+    out << "  Zero weight components: " << m_stat_zero_Ci_components << " / " 
+        << m_stat_total_Ci_components << " (" <<
+        (100.0 * (long long) m_stat_zero_Ci_components) / (long long) m_stat_total_Ci_components << ")\n";
 
 #ifdef DEBUG_ADJUST_VARYING
     out << Strutil::format ("  adjust_varying:  total %lld\n", 

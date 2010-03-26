@@ -66,8 +66,20 @@ public:
             m_outer_angle = m_inner_angle;
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const GenericEmissiveClosure *comp = (const GenericEmissiveClosure *)other;
+        return m_inner_angle == comp->m_inner_angle &&
+            m_outer_angle == comp->m_outer_angle && 
+            m_sidedness == comp->m_sidedness &&
+            EmissiveClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "emission"; }
+
     void print_on (std::ostream &out) const {
-        out << "emission (" << m_inner_angle << ", " << m_outer_angle << ")";
+        out << name() << " (" << m_inner_angle << ", " << m_outer_angle << ")";
     }
 
     Color3 eval (const Vec3 &Ng, const Vec3 &omega_out) const

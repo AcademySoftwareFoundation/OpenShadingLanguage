@@ -50,9 +50,19 @@ public:
         m_invroughness = m_roughness > 0 ? 1 / m_roughness : 0;
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const WestinBackscatterClosure *comp = (const WestinBackscatterClosure *)other;
+        return m_N == comp->m_N && m_roughness == comp->m_roughness &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "westin_backscatter"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "westin_backscatter (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_roughness;
         out << ")";
@@ -135,9 +145,19 @@ public:
         CLOSURE_FETCH_ARG (m_edginess, 2);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const WestinSheenClosure *comp = (const WestinSheenClosure *)other;
+        return m_N == comp->m_N && m_edginess == comp->m_edginess &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "westin_sheen"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "westin_sheen (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_edginess;
         out << ")";

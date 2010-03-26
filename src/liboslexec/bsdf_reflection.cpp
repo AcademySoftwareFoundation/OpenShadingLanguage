@@ -47,8 +47,17 @@ public:
         CLOSURE_FETCH_ARG (m_N , 1);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const ReflectionClosure *comp = (const ReflectionClosure *)other;
+        return m_N == comp->m_N && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "reflection"; }
+
     void print_on (std::ostream &out) const {
-        out << "reflection (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
@@ -98,6 +107,16 @@ public:
         CLOSURE_FETCH_ARG (m_N , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);
     }
+
+    bool mergeable (const ClosurePrimitive *other) const {
+        const FresnelReflectionClosure *comp = (const FresnelReflectionClosure *)other;
+        return m_N == comp->m_N && m_eta == comp->m_eta &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "reflection_fresnel"; }
 
     void print_on (std::ostream &out) const {
         out << "reflection (";

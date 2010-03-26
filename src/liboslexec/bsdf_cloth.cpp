@@ -452,9 +452,31 @@ public:
 
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const ClothClosure *comp = (const ClothClosure *)other;
+#define COMP(x) x == comp->x
+#define COMP4(x) COMP(x[0]) && COMP(x[1]) && COMP(x[2]) && COMP(x[3])
+        return COMP(m_N) && COMP(m_s) && COMP(m_t) && 
+            COMP(m_dsdx) && COMP(m_dtdx) && COMP(m_dsdy) && COMP(m_dtdy) &&
+            COMP(m_area_scaled) && COMP(m_dPdu) &&
+            COMP(m_diff_warp_col) && COMP(m_diff_weft_col) &&
+            COMP(m_spec_warp_col) && COMP(m_spec_weft_col) &&
+            COMP(m_fresnel_warp) && COMP(m_fresnel_weft) &&
+            COMP(m_spread_x_mult) && COMP(m_spread_y_mult) &&
+            COMP(m_pattern) && COMP(m_pattern_angle) &&
+            COMP(m_warp_width_scale) && COMP(m_weft_width_scale) &&
+            COMP(m_thread_count_mult_u) && COMP(m_thread_count_mult_v) &&
+            BSDFClosure::mergeable(other);
+#undef COMP4
+#undef COMP
+    }
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "cloth"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "cloth (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
 
         out << m_s << ",";

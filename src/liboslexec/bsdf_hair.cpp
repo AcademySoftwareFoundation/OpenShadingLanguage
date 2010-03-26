@@ -48,9 +48,18 @@ public:
         CLOSURE_FETCH_ARG (m_T, 1);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const HairDiffuseClosure *comp = (const HairDiffuseClosure *)other;
+        return m_T == comp->m_T && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "hair_diffuse"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "hair_diffuse ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "))";
+        out << name() << " ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "))";
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
@@ -110,9 +119,19 @@ public:
         m_sin_off = sinf(m_offset);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const HairSpecularClosure *comp = (const HairSpecularClosure *)other;
+        return m_T == comp->m_T && m_offset == comp->m_offset &&
+            m_exp == comp->m_exp && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "hair_specular"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "hair_specular ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), " << m_offset << ")";
+        out << name() << " ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), " << m_offset << ")";
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

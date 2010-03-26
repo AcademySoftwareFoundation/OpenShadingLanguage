@@ -61,9 +61,19 @@ public:
         }
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const BSSRDFCubicClosure *comp = (const BSSRDFCubicClosure *)other;
+        return m_radius == comp->m_radius && BSSRDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "bssrdf_cubic"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "bssrdf_cubic ((" << m_radius[0] << ", " << m_radius[1] << ", " << m_radius[2] << "))";
+        out << name() << " ((" << m_radius[0] << ", " << m_radius[1] << ", " << m_radius[2] << "), ("
+            << m_scale[0] << ", " << m_scale[1] << ", " << m_scale[2] << "))";
     }
 
     Color3 eval (float r) const

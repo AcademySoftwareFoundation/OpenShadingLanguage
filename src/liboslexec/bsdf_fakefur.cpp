@@ -105,6 +105,25 @@ public:
 
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const FakefurDiffuseClosure *comp = (const FakefurDiffuseClosure *)other;
+        return m_N == comp->m_N && m_T == comp->m_T &&
+            m_fur_reflectivity == comp->m_fur_reflectivity &&
+            m_fur_transmission == comp->m_fur_transmission &&
+            m_shadow_start == comp->m_shadow_start &&
+            m_shadow_end == comp->m_shadow_end &&
+            m_fur_attenuation == comp->m_fur_attenuation &&
+            m_fur_density == comp->m_fur_density &&
+            m_fur_avg_radius == comp->m_fur_avg_radius &&
+            m_fur_length == comp->m_fur_length &&
+            m_fur_shadow_fraction == comp->m_fur_shadow_fraction &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "fakefur_diffuse"; }
+
     void print_on (std::ostream &out) const
     {
         out << "fakefur_diffuse_N ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << ")";
@@ -248,6 +267,25 @@ public:
 
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const FakefurSpecularClosure *comp = (const FakefurSpecularClosure *)other;
+        return m_N == comp->m_N && m_T == comp->m_T &&
+            m_offset == comp->m_offset && m_exp == comp->m_exp &&
+            m_fur_reflectivity == comp->m_fur_reflectivity &&
+            m_fur_transmission == comp->m_fur_transmission &&
+            m_shadow_start == comp->m_shadow_start &&
+            m_shadow_end == comp->m_shadow_end &&
+            m_fur_attenuation == comp->m_fur_attenuation &&
+            m_fur_density == comp->m_fur_density &&
+            m_fur_avg_radius == comp->m_fur_avg_radius &&
+            m_fur_length == comp->m_fur_length &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "fakefur_specular"; }
+
     void print_on (std::ostream &out) const
     {
         out << "fakefur_specular_N ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << ")";
@@ -357,6 +395,24 @@ public:
         CLOSURE_FETCH_ARG (m_fur_avg_radius, 9);
         CLOSURE_FETCH_ARG (m_fur_length, 10);
     }
+
+    bool mergeable (const ClosurePrimitive *other) const {
+        const FakefurSkinClosure *comp = (const FakefurSkinClosure *)other;
+        return m_N == comp->m_N && m_T == comp->m_T &&
+            m_fur_reflectivity == comp->m_fur_reflectivity &&
+            m_fur_transmission == comp->m_fur_transmission &&
+            m_shadow_start == comp->m_shadow_start &&
+            m_shadow_end == comp->m_shadow_end &&
+            m_fur_attenuation == comp->m_fur_attenuation &&
+            m_fur_density == comp->m_fur_density &&
+            m_fur_avg_radius == comp->m_fur_avg_radius &&
+            m_fur_length == comp->m_fur_length &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "fakefur_skin"; }
 
     void print_on (std::ostream &out) const
     {

@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/foreach.hpp>
 
 #include <OpenImageIO/dassert.h>
+#include <OpenImageIO/sysutil.h>
 
 #include "oslconfig.h"
 #include "oslclosure.h"
@@ -75,18 +76,56 @@ ClosureColor::allocate_component (size_t num_bytes)
 void
 ClosureColor::add (const ClosureColor &A)
 {
+    // Look at all of A's components, decide which can be merged with our
+    // own (just summing weights) and which need to be appended as new
+    // closure primitives.
+    int my_ncomponents = ncomponents();  // how many components I have now
+    int num_unmerged = 0;                // how many more I'll need
+    size_t new_bytes = 0;                // how much more mem I'll need
+    int *unmerged = ALLOCA (int, A.ncomponents());  // temp index list
+    for (int ac = 0;  ac < A.ncomponents();  ++ac) {
+        const ClosurePrimitive *aprim (A.prim (ac));
+        const Component &acomp (A.component (ac));
+        if (acomp.weight[0] == 0.0f && acomp.weight[1] == 0.0f &&
+                acomp.weight[2] == 0.0f)
+            continue;   // don't bother adding a 0-weighted component
+        bool merged = false;
+        for (int c = 0;  c < my_ncomponents;  ++c) {
+            if (prim(c)->name() == aprim->name() &&
+                    prim(c)->mergeable (aprim)) {
+                // We can merge with an existing component -- just add the
+                // weights
+                m_components[c].weight += acomp.weight;
+                merged = true;
+                break;
+            }
+        }
+        if (! merged) {
+            // Not a duplicate that can be merged.  Remember this component
+            // index and how much memory it'll need.
+            unmerged[num_unmerged++] = ac;
+            new_bytes += aprim->memsize();
+        }
+    }
+
+    // If we've merged everything and don't need to append, we're done
+    if (! num_unmerged)
+        return;
+
     // Grow our memory
-    size_t num_bytes = A.m_mem.size ();
     size_t oldmemsize = m_mem.size ();
-    m_mem.resize (oldmemsize + num_bytes);
+    m_mem.resize (oldmemsize + new_bytes);
 
-    // Copy A's memory at the end of ours
-    memcpy(&m_mem[oldmemsize], &A.m_mem[0], num_bytes);
-
-    // Copy A's components and adjust memory offsets to refer to new position
-    BOOST_FOREACH (const Component &c, A.m_components) {
-        m_components.push_back(c);
-        m_components.back().memoffset += oldmemsize;
+    // Append the components of A that we couldn't merge.
+    for (int i = 0;  i < num_unmerged;  ++i) {
+        int c = unmerged[i];   // next unmerged component index within A
+        const Component &acomp (A.component (c));
+        const ClosurePrimitive *aprim (A.prim (c));
+        size_t asize = aprim->memsize();
+        memcpy (&m_mem[oldmemsize], &A.m_mem[acomp.memoffset], asize);
+        m_components.push_back (acomp);
+        m_components.back().memoffset = oldmemsize;
+        oldmemsize += asize;
     }
 }
 
@@ -104,6 +143,12 @@ ClosureColor::add (const ClosureColor &A, const ClosureColor &B)
 void
 ClosureColor::mul (const Color3 &w)
 {
+    // Handle scale by 0 trivially
+    if (w[0] == 0.0f && w[1] == 0.0f && w[2] == 0.0f) {
+        clear();
+        return;
+    }
+
     // For every component, scale it
     BOOST_FOREACH (Component &c, m_components)
         c.weight *= w;
@@ -114,6 +159,12 @@ ClosureColor::mul (const Color3 &w)
 void
 ClosureColor::mul (float w)
 {
+    // Handle scale by 0 trivially
+    if (w == 0.0f) {
+        clear();
+        return;
+    }
+
     // For every component, scale it
     BOOST_FOREACH (Component &c, m_components)
         c.weight *= w;

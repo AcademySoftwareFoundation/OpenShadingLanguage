@@ -53,8 +53,19 @@ public:
         CLOSURE_FETCH_ARG (m_ay, 4);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const WardClosure *comp = (const WardClosure *)other;
+        return m_N == comp->m_N && m_T == comp->m_T &&
+            m_ax == comp->m_ax && m_ay == comp->m_ay &&
+            BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "ward"; }
+
     void print_on (std::ostream &out) const {
-        out << "ward ((";
+        out << name() << " ((";
         out << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), (";
         out << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), ";
         out << m_ax << ", " << m_ay << ")";

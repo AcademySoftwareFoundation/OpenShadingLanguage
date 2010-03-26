@@ -57,8 +57,20 @@ public:
         CLOSURE_FETCH_ARG (m_eta, 3);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const MicrofacetGGXClosure *comp = (const MicrofacetGGXClosure *)other;
+        return m_N == comp->m_N && m_ag == comp->m_ag &&
+            m_eta == comp->m_eta && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const {
+        return Refractive ? "microfacet_ggx_refraction" : "microfacet_ggx";
+    }
+
     void print_on (std::ostream &out) const {
-        out << ((Refractive == 0) ? "microfacet_ggx (" : "microfacet_ggx_refraction (");
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_ag << ", ";
         out << m_eta;
@@ -268,9 +280,22 @@ public:
         CLOSURE_FETCH_ARG (m_eta, 3);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const MicrofacetBeckmannClosure *comp = (const MicrofacetBeckmannClosure *)other;
+        return m_N == comp->m_N && m_ab == comp->m_ab &&
+            m_eta == comp->m_eta && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char * name () const {
+        return Refractive ? "microfacet_beckmann_refraction" 
+                          : "microfacet_beckmann";
+    }
+
     void print_on (std::ostream &out) const
     {
-        out << (Refractive ? "microfacet_beckmann_refractive (" : "microfacet_beckmann (");
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_ab << ", ";
         out << m_eta;

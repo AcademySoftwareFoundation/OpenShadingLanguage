@@ -260,6 +260,41 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
         shadingsys().m_make_uniform += exec.m_make_uniform;
     }
 #endif
+
+    int biggest_Ci = 0;
+    int biggest_Ci_i = 0;
+#if USE_RUNFLAGS
+    SHADE_LOOP_RUNFLAGS_BEGIN (runflags, 0, m_npoints)
+#elif USE_RUNINDICES
+    SHADE_LOOP_INDICES_BEGIN (indices, nindices)
+#elif USE_RUNSPANS
+    SHADE_LOOP_SPANS_BEGIN (indices, nindices)
+#endif
+        int n = m_globals->Ci[i]->ncomponents();
+        if (biggest_Ci < n)
+            biggest_Ci_i = i;
+        biggest_Ci = std::max (biggest_Ci, n);
+        shadingsys().m_stat_total_Ci_components += n;
+        bool has_small = false;
+        for (int j = 0;  j < n;  ++j) {
+            const Imath::Color3<float> &w (m_globals->Ci[i]->weight(j));
+            if (w[0] < 0.0001 && w[1] < 0.0001 && w[2] < 0.0001) {
+                shadingsys().m_stat_small_Ci_components += 1;
+                has_small = true;
+            }
+            if (w[0] == 0.0 && w[1] == 0.0 && w[2] == 0.0)
+                shadingsys().m_stat_zero_Ci_components += 1;
+        }
+        shadingsys().m_stat_Ci_has_small_components += has_small;
+        shadingsys().m_stat_total_Cis += 1;
+    SHADE_LOOP_END
+    if (biggest_Ci > shadingsys().m_stat_biggest_Ci) {
+        spin_lock lock (shadingsys().m_stat_mutex);
+        shadingsys().m_stat_biggest_Ci = std::max ((int)shadingsys().m_stat_biggest_Ci, biggest_Ci);
+        std::stringstream stream;
+        stream << *(m_globals->Ci[biggest_Ci_i]);
+        shadingsys().info ("Big Ci = %s\n", stream.str().c_str());
+    }
 }
 
 

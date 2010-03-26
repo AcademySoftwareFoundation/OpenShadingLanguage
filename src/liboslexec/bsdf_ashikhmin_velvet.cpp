@@ -54,9 +54,19 @@ public:
         m_invsigma2 = 1 / (m_sigma * m_sigma);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const AshikhminVelvetClosure *comp = (const AshikhminVelvetClosure *)other;
+        return m_N == comp->m_N && m_sigma == comp->m_sigma &&
+            m_eta == comp->m_eta && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "ashikmin_velvet"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "ashikhmin_velvet (";
+        out << name() << " (";
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_sigma << ", ";
         out << m_eta;

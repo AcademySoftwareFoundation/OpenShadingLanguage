@@ -108,6 +108,15 @@ public:
     ///
     const ustring *get_custom_labels()const { return m_custom_labels; }
 
+    /// How many bytes of parameter storage will this primitive need?
+    ///
+    virtual size_t memsize () const = 0;
+
+    /// The name of the closure primitive.  Must be unique so that prims
+    /// with non-matching names are definitley not the same kind of
+    /// closure primitive.
+    virtual const char * name () const = 0;
+
     /// Stream operator output (for debugging)
     ///
     virtual void print_on (std::ostream &out) const = 0;
@@ -165,6 +174,20 @@ public:
     /// of refraction of the surface.
     static float fresnel_conductor (float cosi, float eta, float k);
 
+    /// Are 'this' and 'other' identical closure primitives and thus can
+    /// be merged simply by summing their weights?  We expect every subclass
+    /// to overload this (and call back to the parent as well) -- if they
+    /// don't, component merges will happen inappropriately!
+    virtual bool mergeable (const ClosurePrimitive *other) const {
+        for (int i = 0;  i < MAXCUSTOM;  ++i) {
+            if (m_custom_labels[i] != other->m_custom_labels[i])
+                return false;
+            if (m_custom_labels[i] == Labels::NONE)
+                break;
+        }
+        return true;
+    }
+
 private:
     Category m_category;
     // Labels::NONE terminated custom label list
@@ -184,6 +207,12 @@ public:
         m_scattering_label (scattering) { }
     ~BSDFClosure () { }
 
+
+    bool mergeable (const ClosurePrimitive *other) const {
+        const BSDFClosure *comp = (const BSDFClosure *)other;
+        return m_sidedness == comp->m_sidedness &&
+            ClosurePrimitive::mergeable(other);
+    }
 
     /// Given the side from which we are viewing this closure, return which side
     /// it is sensitive to light on.
@@ -331,6 +360,12 @@ public:
     EmissiveClosure (Sidedness side) : ClosurePrimitive (Emissive), m_sidedness (side) { }
     ~EmissiveClosure () { }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const EmissiveClosure *comp = (const EmissiveClosure *)other;
+        return m_sidedness == comp->m_sidedness &&
+            ClosurePrimitive::mergeable(other);
+    }
+
     /// Returns true if light is emitted on the specified side of this closure
     bool is_light_side(Sidedness viewing_side) const {
         return (viewing_side & m_sidedness) != 0;
@@ -355,7 +390,7 @@ public:
     /// the PDF computed by sample().
     virtual float pdf (const Vec3 &Ng,
                        const Vec3 &omega_out) const = 0;
-private:
+protected:
     Sidedness m_sidedness;
 };
 

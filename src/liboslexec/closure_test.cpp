@@ -49,6 +49,15 @@ class MyClosure : public BSDFClosure {
 public:
     MyClosure (float f) : BSDFClosure(None, Labels::NONE, None), m_f (f) { }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const MyClosure *comp = (const MyClosure *)other;
+        return m_f == comp->m_f && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "my"; }
+
     void print_on (std::ostream &out) const
     {
         out << "my (" << m_f << ")";

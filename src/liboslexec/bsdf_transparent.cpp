@@ -43,8 +43,12 @@ class TransparentClosure : public BSDFClosure {
 public:
     CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, None) { }
 
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "transparent"; }
+
     void print_on (std::ostream &out) const {
-        out << "transparent ()";
+        out << name() << " ()";
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

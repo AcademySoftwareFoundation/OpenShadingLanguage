@@ -46,9 +46,18 @@ public:
         CLOSURE_FETCH_ARG (m_N, 1);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const DiffuseClosure *comp = (const DiffuseClosure *)other;
+        return m_N == comp->m_N && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "diffuse"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "diffuse ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
+        out << name() << " ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
@@ -98,9 +107,18 @@ public:
         CLOSURE_FETCH_ARG (m_N, 1);
     }
 
+    bool mergeable (const ClosurePrimitive *other) const {
+        const TranslucentClosure *comp = (const TranslucentClosure *)other;
+        return m_N == comp->m_N && BSDFClosure::mergeable(other);
+    }
+
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "translucent"; }
+
     void print_on (std::ostream &out) const
     {
-        out << "translucent ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
+        out << name() << " ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

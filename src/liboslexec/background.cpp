@@ -50,8 +50,12 @@ class GenericBackgroundClosure : public BackgroundClosure {
 public:
     CLOSURE_CTOR (GenericBackgroundClosure) { }
 
+    size_t memsize () const { return sizeof(*this); }
+
+    const char *name () const { return "background"; }
+
     void print_on (std::ostream &out) const {
-        out << "background ()";
+        out << name() << " ()";
     }
 
 };

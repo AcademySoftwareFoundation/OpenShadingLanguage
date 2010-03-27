@@ -626,12 +626,6 @@ private:
     atomic_ll m_stat_paramsbound;         ///< Stat: Number of params bound
     atomic_ll m_stat_instructions_run;    ///< Stat: total instructions run
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
-    atomic_int m_stat_biggest_Ci;         ///< Stat: biggest Ci constructed
-    atomic_ll m_stat_total_Ci_components;
-    atomic_ll m_stat_Ci_has_small_components;
-    atomic_ll m_stat_small_Ci_components;
-    atomic_ll m_stat_zero_Ci_components;
-    atomic_ll m_stat_total_Cis;
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
 #ifdef DEBUG_ADJUST_VARYING
     atomic_ll m_adjust_calls;             ///< Calls to adjust_varying

@@ -41,7 +41,7 @@ namespace pvt {
 
 class TransparentClosure : public BSDFClosure {
 public:
-    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, None) { }
+    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, Back) { }
 
     size_t memsize () const { return sizeof(*this); }
 

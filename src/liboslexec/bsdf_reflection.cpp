@@ -42,7 +42,7 @@ namespace pvt {
 class ReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
 public:
-    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(side, Labels::SINGULAR, None)
+    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(side, Labels::SINGULAR)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
     }
@@ -102,7 +102,7 @@ class FresnelReflectionClosure : public BSDFClosure {
     Vec3  m_N;    // shading normal
     float m_eta;  // index of refraction (for fresnel term)
 public:
-    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(side, Labels::SINGULAR, None)
+    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(side, Labels::SINGULAR)
     {
         CLOSURE_FETCH_ARG (m_N , 1);
         CLOSURE_FETCH_ARG (m_eta, 2);

@@ -281,6 +281,27 @@ public:
     ///
     ustring scattering () const { return m_scattering_label; }
 
+    /// Albedo function, returns the integral (or an approximation) of
+    /// the reflected light in the given out direction. It is expected to
+    /// be less than or equal to 1.0 and it is not guaranteed to be accurate.
+    /// It is meant to be used for sampling decissions. When two or more
+    /// closures are present at the same time, their albedos will be used
+    /// to compute a probability of one being chosen. So this value must reflect
+    /// the "importance" of the closure when compared to others. And as a
+    /// convention we use the integral of the radiance to omega_out for all
+    /// the possible omega_in of the eval function. An approximation is enough,
+    /// the accuracy of this number only affects the quality of the sampling.
+    ///
+    /// This value will by no means affect the apperance of the render in any
+    /// other way than sampling noise. Unless 0.0 is returned, which excludes
+    /// the bsdf from indirect lighting. And we use this value for those bsdf's
+    /// that we don't know how to sample.
+    ///
+    /// Most bsdf's are designed to integrate to 1.0, except the fresnel affected
+    /// ones. And returning 1.0 is also a safe value for when eval is too complicated
+    /// to integrate.
+    virtual float albedo (const Vec3 &omega_out, float normal_sign) const = 0;
+
     /// Evaluate the extended BRDF and BTDF kernels -- Given viewing direction
     /// omega_out and lighting direction omega_in (both pointing away from the
     /// surface), compute the amount of radiance to be transfered between these

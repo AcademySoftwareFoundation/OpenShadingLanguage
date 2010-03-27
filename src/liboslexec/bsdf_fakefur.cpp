@@ -130,6 +130,11 @@ public:
         out << "fakefur_diffuse_T ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "))";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         // T from fur tangent map is expected to be in world space
@@ -292,6 +297,12 @@ public:
         out << "fakefur_specular_T ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), " << m_offset << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        // we don't know how to sample this
+        return 0.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
 
@@ -418,6 +429,11 @@ public:
     {
         out << "fakefur_skin_N ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
         out << "fakefur_skin_T ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), ";
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

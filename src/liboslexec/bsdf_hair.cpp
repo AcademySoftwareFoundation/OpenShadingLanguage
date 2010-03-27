@@ -62,6 +62,11 @@ public:
         out << name() << " ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "))";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         float cos_a = m_T.dot(omega_in);
@@ -132,6 +137,12 @@ public:
     void print_on (std::ostream &out) const
     {
         out << name() << " ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), " << m_offset << ")";
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        // we don't know how to sample this
+        return 0.0f;
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

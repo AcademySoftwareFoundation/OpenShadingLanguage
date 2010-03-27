@@ -514,6 +514,12 @@ public:
         out << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        // we don't know how to sample this
+        return 0.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
     {
         float cosNI = m_N.dot(omega_in);

@@ -61,6 +61,11 @@ public:
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
@@ -123,6 +128,12 @@ public:
         out << "(" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "), ";
         out << m_eta;
         out << ")";
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        return fresnel_dielectric(cosNO, m_eta);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

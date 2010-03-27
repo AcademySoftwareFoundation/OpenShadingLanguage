@@ -77,6 +77,14 @@ public:
         out << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        if (Refractive == 0)
+            return fresnel_dielectric(normal_sign * m_N.dot(omega_out), m_eta);
+        else
+            return 1.0f - fresnel_dielectric(normal_sign * m_N.dot(omega_out), m_eta);
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         if (Refractive == 1) return Color3 (0, 0, 0);
@@ -300,6 +308,14 @@ public:
         out << m_ab << ", ";
         out << m_eta;
         out << ")";
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        if (Refractive == 0)
+            return fresnel_dielectric(normal_sign * m_N.dot(omega_out), m_eta);
+        else
+            return 1.0f - fresnel_dielectric(normal_sign * m_N.dot(omega_out), m_eta);
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

@@ -63,6 +63,11 @@ public:
         out << "my (" << m_f << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);

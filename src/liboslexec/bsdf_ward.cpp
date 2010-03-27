@@ -71,6 +71,11 @@ public:
         out << m_ax << ", " << m_ay << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         float cosNO = normal_sign * m_N.dot(omega_out);

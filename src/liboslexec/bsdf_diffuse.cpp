@@ -60,6 +60,11 @@ public:
         out << name() << " ((" << m_N[0] << ", " << m_N[1] << ", " << m_N[2] << "))";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         float cos_pi = std::max(normal_sign * m_N.dot(omega_in),0.0f) * (float) M_1_PI;
@@ -124,6 +129,11 @@ public:
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
     }
 
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

@@ -66,6 +66,11 @@ public:
         out << m_exponent << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+         return 1.0f;
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         float cosNI = normal_sign * m_N.dot(omega_in);
@@ -196,6 +201,11 @@ public:
             return m_colors[m_ncolors - 1];
         float offset = npos - (float)ipos;
         return m_colors[ipos] * (1.0f - offset) + m_colors[ipos+1] * offset;
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+         return 1.0f;
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const

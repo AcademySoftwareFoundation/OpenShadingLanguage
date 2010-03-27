@@ -73,6 +73,12 @@ public:
         out << ")";
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        return fresnel_dielectric(cosNO, m_eta);
+    }
+
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         float cosNO = normal_sign * m_N.dot(omega_out);

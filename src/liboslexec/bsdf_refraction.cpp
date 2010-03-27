@@ -75,6 +75,12 @@ public:
         return Color3 (0, 0, 0);
     }
 
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        float cosNO = normal_sign * m_N.dot(omega_out);
+        return 1.0f - fresnel_dielectric(cosNO, normal_sign > 0 ? m_eta : 1.0f / m_eta);
+    }
+
     ustring sample (const Vec3 &Ng,
                  const Vec3 &omega_out, const Vec3 &domega_out_dx, const Vec3 &domega_out_dy,
                  float randu, float randv,
@@ -137,6 +143,11 @@ public:
     Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
     {
         return Color3 (0, 0, 0);
+    }
+
+    float albedo (const Vec3 &omega_out, float normal_sign) const
+    {
+        return 1.0f;
     }
 
     ustring sample (const Vec3 &Ng,

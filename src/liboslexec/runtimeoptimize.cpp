@@ -1074,7 +1074,7 @@ find_basic_blocks (OpcodeVec &code, SymbolVec &symbols,
 
     // Init ops start basic blocks
     BOOST_FOREACH (const Symbol &s, symbols) {
-        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam &&
+        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
                 s.initbegin() >= 0)
             block_begin[s.initbegin()] = true;
     }

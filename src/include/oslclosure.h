@@ -79,6 +79,7 @@ public:
         BSSRDF,         ///< Sub-surface light transfer
         Emissive,       ///< Light emission
         Background,     ///< Background emission
+        Volume,         ///< Volume scattering
     };
 
     // Describe a closure's sidedness
@@ -159,7 +160,7 @@ public:
             const Vec3 &I, const Vec3 &dIdx, const Vec3 &dIdy,
             Vec3 &R, Vec3 &dRdx, Vec3 &dRdy,
             Vec3 &T, Vec3 &dTdx, Vec3 &dTdy,
-            bool & is_inside);
+            bool &is_inside);
 
     /// Helper function to compute fresnel reflectance R of a dielectric. This
     /// formulation does not explicitly compute the refracted vector so should
@@ -373,6 +374,39 @@ public:
     /// Return the maximum distance for which eval returns a non-zero value.
     virtual float max_radius() const = 0;
 };
+
+
+class VolumeClosure : public ClosurePrimitive {
+public:
+    VolumeClosure() : ClosurePrimitive(Volume), m_ior(1.0f), m_sigma_s(0.0f), m_sigma_a(0.0f) {}
+
+    // FIXME: should ior be stored here?
+    float ior() const { return m_ior; }
+    void ior(float i) { m_ior = i; }
+
+    // Scattering properties
+    Color3 sigma_s() const { return m_sigma_s; }
+    Color3 sigma_a() const { return m_sigma_a; }
+    void sigma_s(const Color3 &s) { m_sigma_s = s; }
+    void sigma_a(const Color3 &a) { m_sigma_s = a; }
+
+    // phase function
+    virtual Color3 eval_phase(const Vec3 &omega_in, const Vec3 &omega_out) const = 0;
+
+    bool mergeable (const ClosurePrimitive *other) const {
+        const VolumeClosure *comp = (const VolumeClosure *) other;
+        return m_ior == comp->m_ior &&
+               m_sigma_s == comp->m_sigma_s &&
+               m_sigma_a == comp->m_sigma_a &&
+               ClosurePrimitive::mergeable(other);
+    }
+
+private:
+    float m_ior;
+    Color3 m_sigma_s;   ///< Scattering coefficient
+    Color3 m_sigma_a;   ///< Absorption coefficient
+};
+
 
 /// Subclass of ClosurePrimitive that contains the methods needed
 /// for an emissive material.

@@ -6,6 +6,7 @@ SET ( liboslexec_srcs
           bsdf_reflection.cpp bsdf_refraction.cpp bsdf_transparent.cpp bsdf_ward.cpp
           bssrdf.cpp bsdf_hair.cpp bsdf_fakefur.cpp
           emissive.cpp background.cpp
+          vol_subsurface.cpp
           context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
           oparray.cpp opassign.cpp opattribute.cpp

@@ -258,7 +258,8 @@ public:
                             Symbol * &field1, Symbol * &field2);
 
     static void track_variable_lifetimes (const OpcodeVec &ircode,
-                                  SymbolPtrVec &opargs, SymbolPtrVec &allsyms);
+                                          const SymbolPtrVec &opargs,
+                                          const SymbolPtrVec &allsyms);
     static void coalesce_temporaries (SymbolPtrVec &symtab);
     static void insert_useparam (OpcodeVec &code, size_t opnum,
                                  SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 

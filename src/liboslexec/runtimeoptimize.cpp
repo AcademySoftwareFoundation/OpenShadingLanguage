@@ -76,28 +76,24 @@ find_constant (const SymbolVec &syms, const std::vector<int> &all_consts,
 // copy the data if no matching constant was found.
 static int
 add_constant (ShaderInstance &inst, std::vector<int> &all_consts,
-              int &next_newconst, const TypeSpec &type, const void *data,
-              bool copy=false)
+              int &next_newconst, const TypeSpec &type, const void *data)
 {
     int ind = find_constant (inst.symbols(), all_consts, type, data);
     if (ind < 0) {
         Symbol newconst (ustring::format ("$newconst%d", next_newconst++),
                          type, SymTypeConst);
-        if (copy) {
-            void *newdata;
-            TypeDesc t (type.simpletype());
-            size_t n = t.aggregate * t.numelements();
-            if (t.basetype == TypeDesc::INT)
-                newdata = inst.shadingsys().alloc_int_constants (n);
-            else if (t.basetype == TypeDesc::FLOAT)
-                newdata = inst.shadingsys().alloc_float_constants (n);
-            else if (t.basetype == TypeDesc::STRING)
-                newdata = inst.shadingsys().alloc_string_constants (n);
-            else { ASSERT (0 && "unsupported type for add_constant"); }
-            memcpy (newdata, data, t.size());
-            data = newdata;
-        }
-        newconst.data ((void *)data);
+        void *newdata;
+        TypeDesc t (type.simpletype());
+        size_t n = t.aggregate * t.numelements();
+        if (t.basetype == TypeDesc::INT)
+            newdata = inst.shadingsys().alloc_int_constants (n);
+        else if (t.basetype == TypeDesc::FLOAT)
+            newdata = inst.shadingsys().alloc_float_constants (n);
+        else if (t.basetype == TypeDesc::STRING)
+            newdata = inst.shadingsys().alloc_string_constants (n);
+        else { ASSERT (0 && "unsupported type for add_constant"); }
+        memcpy (newdata, data, t.size());
+        newconst.data (newdata);
         ASSERT (inst.symbols().capacity() > inst.symbols().size() &&
                 "we shouldn't have to realloc here");
         ind = (int) inst.symbols().size ();
@@ -200,19 +196,18 @@ insert_useparam (OpcodeVec &code, size_t opnum, std::vector<int> &opargs,
 
 
 
-// Add a 'useparam' before any op that reads parameters.  This is what
-// tells the runtime that it needs to run the layer it came from, if
-// not already done.
 void
-add_useparam (OpcodeVec &code, std::vector<int> &opargs,
-              SymbolPtrVec &allsyms, int &mainstart)
+ShadingSystemImpl::add_useparam (ShaderInstance &inst, SymbolPtrVec &allsyms)
 {
-    // Mark all symbols as un-initialized
-    BOOST_FOREACH (Symbol *s, allsyms)
-        s->initialized (false);
+    OpcodeVec &code (inst.ops());
+    std::vector<int> &opargs (inst.args());
 
-    if (mainstart < 0)
-        mainstart = (int)code.size();
+    // Mark all symbols as un-initialized
+    BOOST_FOREACH (Symbol &s, inst.symbols())
+        s.initialized (false);
+
+    if (inst.m_maincodebegin < 0)
+        inst.m_maincodebegin = (int)code.size();
 
     // Take care of the output params right off the bat -- as soon as the
     // shader starts running 'main'.
@@ -225,8 +220,8 @@ add_useparam (OpcodeVec &code, std::vector<int> &opargs,
         }
     }
     if (outputparams.size())
-        insert_useparam (code, mainstart, opargs, allsyms, outputparams,
-                         mainstart);
+        insert_useparam (code, inst.m_maincodebegin, opargs, allsyms, outputparams,
+                         inst.m_maincodebegin);
 
     // Figure out which statements are inside conditional states
     std::vector<bool> in_conditional (code.size(), false);
@@ -254,7 +249,7 @@ add_useparam (OpcodeVec &code, std::vector<int> &opargs,
             if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
                 continue;  // skip non-params
             // skip if we've already 'usedparam'ed it unconditionally
-            if (s->initialized() && opnum >= mainstart)
+            if (s->initialized() && opnum >= inst.m_maincodebegin)
                 continue;
             bool inside_init = (opnum >= s->initbegin() && opnum < s->initend());
             if (op.argread(a) || (op.argwrite(a) && !inside_init)) {
@@ -271,15 +266,20 @@ add_useparam (OpcodeVec &code, std::vector<int> &opargs,
         // If the arg we are examining read any params, insert a "useparam"
         // op whose arguments are the list of params we are about to use.
         if (params.size()) {
-            insert_useparam (code, opnum, opargs, allsyms, params, mainstart);
+            insert_useparam (code, opnum, opargs, allsyms, params, inst.m_maincodebegin);
             in_conditional.insert (in_conditional.begin()+opnum, false);
             // Skip the op we just added
             ++opnum;
         }
     }
+
     // Mark all symbols as un-initialized
     BOOST_FOREACH (Symbol *s, allsyms)
         s->initialized (false);
+
+    // Re-track variable lifetimes, since the inserted useparam
+    // instructions will have change the instruction numbers.
+    track_variable_lifetimes (inst, allsyms);
 }
 
 
@@ -352,13 +352,13 @@ DECLFOLDER(constfold_add)
         if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() + *(float *)B.data();
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
             Vec3 result = *(Vec3 *)A.data() + *(Vec3 *)B.data();
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
@@ -384,13 +384,13 @@ DECLFOLDER(constfold_sub)
         if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() - *(float *)B.data();
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
             Vec3 result = *(Vec3 *)A.data() - *(Vec3 *)B.data();
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
@@ -433,13 +433,13 @@ DECLFOLDER(constfold_mul)
         if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = (*(float *)A.data()) * (*(float *)B.data());
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
             Vec3 result = (*(Vec3 *)A.data()) * (*(Vec3 *)B.data());
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
@@ -466,13 +466,13 @@ DECLFOLDER(constfold_div)
         if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() / *(float *)B.data();
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
             Vec3 result = *(Vec3 *)A.data() / *(Vec3 *)B.data();
             int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result, true);
+                                     next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
@@ -490,13 +490,13 @@ DECLFOLDER(constfold_neg)
         if (A.typespec().is_float()) {
             float result =  - *(float *)A.data();
             int cind = add_constant (inst, all_consts, next_newconst,
-                                     A.typespec(), &result, true);
+                                     A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         } else if (A.typespec().is_triple()) {
             Vec3 result = - *(Vec3 *)A.data();
             int cind = add_constant (inst, all_consts, next_newconst,
-                                     A.typespec(), &result, true);
+                                     A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
@@ -788,7 +788,7 @@ DECLFOLDER(constfold_aref)
         int index = *(int *)Index.data();
         DASSERT (index < A.typespec().arraylength());
         int cind = add_constant (inst, all_consts, next_newconst, elemtype,
-                                 (char *)A.data() + index*elemtype.simpletype().size(), true);
+                                 (char *)A.data() + index*elemtype.simpletype().size());
         turn_into_assign (op, inst.args(), cind);
         return 1;
     }
@@ -826,8 +826,7 @@ DECLFOLDER(constfold_strlen)
         ASSERT (S.typespec().is_string());
         int result = (int) (*(ustring *)S.data()).length();
         int cind = add_constant (inst, all_consts,
-                                 next_newconst, TypeDesc::TypeInt,
-                                 &result, true /* make a copy */);
+                                 next_newconst, TypeDesc::TypeInt, &result);
         turn_into_assign (op, inst.args(), cind);
         return 1;
     }
@@ -851,8 +850,7 @@ DECLFOLDER(constfold_endswith)
         if (elen <= slen)
             result = (strncmp (s.c_str()+slen-elen, e.c_str(), elen) == 0);
         int cind = add_constant (inst, all_consts,
-                                 next_newconst, TypeDesc::TypeInt,
-                                 &result, true /* make a copy */);
+                                 next_newconst, TypeDesc::TypeInt, &result);
         turn_into_assign (op, inst.args(), cind);
         return 1;
     }
@@ -878,8 +876,7 @@ DECLFOLDER(constfold_concat)
     // If we made it this far, all args were constants, and the
     // concatenation is in result.
     int cind = add_constant (inst, all_consts,
-                             next_newconst, TypeDesc::TypeString,
-                             &result, true /* make a copy */);
+                             next_newconst, TypeDesc::TypeString, &result);
     turn_into_assign (op, inst.args(), cind);
     return 1;
 }
@@ -916,8 +913,7 @@ DECLFOLDER(constfold_clamp)
             result[2] = clamp (x[2], min[2], max[2]);
         }
         int cind = add_constant (inst, all_consts,
-                                 next_newconst, X.typespec(),
-                                 &result, true /* make a copy */);
+                                 next_newconst, X.typespec(), &result);
         turn_into_assign (op, inst.args(), cind);
         return 1;
     }
@@ -941,8 +937,7 @@ DECLFOLDER(constfold_sqrt)
             result[2] = sqrtf (std::max (0.0f, x[2]));
         }
         int cind = add_constant (inst, all_consts,
-                                 next_newconst, X.typespec(),
-                                 &result, true /* make a copy */);
+                                 next_newconst, X.typespec(), &result);
         turn_into_assign (op, inst.args(), cind);
         return 1;
     }
@@ -1102,21 +1097,154 @@ find_basic_blocks (OpcodeVec &code, SymbolVec &symbols,
 
 
 
+/// For 'R = A_const' where R and A are different, but coerceable, types,
+/// turn it into a constant assignment of the exact type.  Return true
+/// if a change was made, otherwise return false.
+bool
+ShadingSystemImpl::opt_coerce_assigned_constant (ShaderInstance &inst,
+                                 Opcode &op, std::vector<int> &all_consts,
+                                 int &next_newconst)
+{
+    ASSERT (op.implementation() == OP_assign);
+    Symbol *R (inst.argsymbol(op.firstarg()+0));
+    Symbol *A (inst.argsymbol(op.firstarg()+1));
+
+    if (! A->is_constant() || R->typespec().is_closure())
+        return false;   // we don't handle those cases
+
+    // turn 'R_float = A_int_const' into a float const assignment
+    if (A->typespec().is_int() && R->typespec().is_float()) {
+        float result = *(int *)A->data();
+        int cind = add_constant (inst, all_consts, next_newconst,
+                                 R->typespec(), &result);
+        turn_into_assign (op, inst.args(), cind);
+        return true;
+    }
+
+    // turn 'R_triple = A_int_const' into a float const assignment
+    if (A->typespec().is_int() && R->typespec().is_triple()) {
+        float f = *(int *)A->data();
+        Vec3 result (f, f, f);
+        int cind = add_constant (inst, all_consts, next_newconst,
+                                 R->typespec(), &result);
+        turn_into_assign (op, inst.args(), cind);
+        return true;
+    }
+
+    // turn 'R_triple = A_float_const' into a triple const assignment
+    if (A->typespec().is_float() && R->typespec().is_triple()) {
+        float f = *(float *)A->data();
+        Vec3 result (f, f, f);
+        int cind = add_constant (inst, all_consts, next_newconst,
+                                 R->typespec(), &result);
+        turn_into_assign (op, inst.args(), cind);
+        return true;
+    }
+
+    return false;
+}
+
+
+
+/// Check for assignment of output params that are written only once in
+/// the whole shader -- on this statement -- and assigned a constant, and
+/// the assignment is unconditional.  In that case, just alias it to the
+/// constant from here on out.
+///
+/// Furthermore, if nobody READS the output param prior to this
+/// assignment, let's just change its initial value to the constant and
+/// get rid of the assignment altogether!
+///
+/// Return true if the assignment is removed entirely.
+bool
+ShadingSystemImpl::opt_outparam_assign_elision (ShaderInstance &inst,
+                                int opnum, Opcode &op,
+                                std::vector<bool> &in_conditional,
+                                std::map<int,int> &symbol_aliases)
+{
+    ASSERT (op.implementation() == OP_assign);
+    Symbol *R (inst.argsymbol(op.firstarg()+0));
+    Symbol *A (inst.argsymbol(op.firstarg()+1));
+
+    if (A->is_constant() && R->typespec() == A->typespec() &&
+            R->symtype() == SymTypeOutputParam &&
+            R->firstwrite() == opnum && R->lastwrite() == opnum &&
+            !in_conditional[opnum]) {
+        // It's assigned only once, and unconditionally assigned a
+        // constant -- alias it
+        int cind = inst.args()[op.firstarg()+1];
+        symbol_aliases[inst.args()[op.firstarg()]] = cind;
+
+        // If it's also never read before this assignment, just replace its
+        // default value entirely and get rid of the assignment.
+        if (R->firstread() > opnum) {
+            TypeDesc Rtype = R->typespec().simpletype();
+            void *Rdefault = NULL;
+            if (Rtype.basetype == TypeDesc::FLOAT)
+                Rdefault = &inst.m_fparams[R->dataoffset()];
+            else if (Rtype.basetype == TypeDesc::INT)
+                Rdefault = &inst.m_iparams[R->dataoffset()];
+            else if (Rtype.basetype == TypeDesc::STRING)
+                Rdefault = &inst.m_sparams[R->dataoffset()];
+            ASSERT (Rdefault != NULL);
+            memcpy (Rdefault, A->data(), Rtype.size());
+            R->has_derivs (false);
+            R->initbegin (0);
+            R->initend (0);
+            R->valuesource (Symbol::DefaultVal);
+            op.reset (ustring("nop"), OP_nop, 0);
+            // Erase R's incoming connections
+            for (int i = 0;  i < inst.nconnections();  ++i) {
+                const Connection &c (inst.connection(i));
+                if (inst.symbol(c.dst.param) == R) {
+                    inst.m_connections.erase (inst.m_connections.begin()+i);
+                    --i;
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
+
+/// If every potentially-written argument to this op is NEVER read, turn
+/// it into a nop and return true.  We don't do this to ops that have no
+/// written args at all, since they tend to have side effects (e.g.,
+/// printf, setmessage).
+bool
+ShadingSystemImpl::opt_useless_op_elision (ShaderInstance &inst, Opcode &op)
+{
+    if (op.nargs()) {
+        bool noeffect = true;
+        bool writes_something = false;
+        for (int a = 0;  a < op.nargs();  ++a) {
+            if (op.argwrite(a)) {
+                writes_something = true;
+                Symbol *A (inst.argsymbol(op.firstarg()+a));
+                bool local_or_tmp = (A->symtype() == SymTypeLocal ||
+                                     A->symtype() == SymTypeTemp);
+                if (A->everread() || ! local_or_tmp)
+                    noeffect = false;
+            }
+        }
+        if (writes_something && noeffect) {
+            op.reset (ustring("nop"), OP_nop, 0);
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
 void
 ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                                       ShaderInstance &inst)
 {
-    if (debug()) {
-        std::cerr << "Optimizing layer " << layer << " " << inst.layername()
-                  << ' ' << inst.shadername() << "\n";
-        std::cerr << "Before optimizing instance, I get: \n" << inst.print() 
-                  << "\n--------------------------------\n\n";
-    }
-
     initialize_folder_table ();
-
-    size_t old_nsyms = inst.symbols().size();
-    size_t old_nops = inst.ops().size();
 
     // Start by making a list of the indices of all constants.
     std::vector<int> all_consts;
@@ -1153,8 +1281,8 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
     // passes, but we have a hard cutoff at 10 just to be sure we don't
     // ever get into an infinite loop from an unforseen cycle.  where we
     // end up inadvertently transforming A => B => A => etc.
-    SymbolPtrVec allsymptrs;
     int totalchanged = 0;
+    int reallydone = 0;   // Force one pass after we think we're done
     for (int pass = 0;  pass < 10;  ++pass) {
 
         // Track basic blocks and conditional states
@@ -1213,11 +1341,6 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 any_const_args |= inst.argsymbol(argindex)->is_constant();
             }
 
-            // We aren't currently doing anything to optimize ops that have
-            // no const args, so don't bother looking further in that case.
-            if (! any_const_args)
-                continue;
-
             // Make sure there's room for at least one more symbol, so that
             // we can add a const if we need to, without worrying about the
             // addresses of symbols changing when we add a new one below.
@@ -1225,10 +1348,7 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
 
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
-            //
-            // FIXME -- eventually replace the following cascacing 'if'
-            // with a hash lookup and single function call.
-            if (optimize() >= 2) {
+            if (optimize() >= 2 && any_const_args) {
                 std::map<ustring,OpFolder>::const_iterator found;
                 found = folder_table.find (op.opname());
                 if (found != folder_table.end())
@@ -1236,12 +1356,26 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                                                 all_consts, next_newconst);
             }
 
+            // Get rid of an 'if' if it contains no statements to execute
+            if (optimize() >= 2 && op.implementation() == OP_if) {
+                int jump = op.farthest_jump ();
+                bool only_nops = true;
+                for (int i = opnum+1;  i < jump && only_nops;  ++i)
+                    only_nops &= (inst.ops()[i].implementation() == OP_nop);
+                if (only_nops) {
+                    op.reset (ustring("nop"), OP_nop, 0);
+                    changed = 1;
+                    continue;
+                }
+            }
+
             // Now we handle assignments.
             //
             // N.B. This is a regular "if", not an "else if", because we
             // definitely want to catch any 'assign' statements that
             // were put in by the constant folding routines above.
-            if (optimize() >= 2 && op.implementation() == OP_assign) {
+            if (optimize() >= 2 && op.implementation() == OP_assign &&
+                    any_const_args) {
                 Symbol *R (inst.argsymbol(op.firstarg()+0));
                 Symbol *A (inst.argsymbol(op.firstarg()+1));
                 bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||
@@ -1272,15 +1406,9 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     ++changed;
                     continue;
                 }
-                if (A->is_constant() && A->typespec().is_int() &&
-                    ! R->typespec().is_closure() && R->typespec().is_float()) {
-                    float result = *(int *)A->data();
-                    int cind = add_constant (inst, all_consts, next_newconst,
-                                             R->typespec(),
-                                             &result, true /* make a copy */);
-                    turn_into_assign (op, inst.args(), cind);
-                    ++changed;
-                }
+
+                changed += opt_coerce_assigned_constant (inst, op, all_consts,
+                                                         next_newconst);
 
                 if (A->is_constant() &&
                         equivalent(R->typespec(), A->typespec())) {
@@ -1303,17 +1431,16 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     ++changed;
                     continue;
                 }
-                else if (A->is_constant() && R->typespec() == A->typespec() &&
-                         R->symtype() == SymTypeOutputParam &&
-                         R->firstwrite() == opnum && R->lastwrite() == opnum &&
-                         !in_conditional[opnum]) {
-                    // This output param is written only once in the
-                    // whole shader -- on this statement -- and it's
-                    // assigned a constant, and the assignment is
-                    // unconditional.  So just alias it to the constant from
-                    // here on out.
-                    int cind = inst.args()[op.firstarg()+1];
-                    symbol_aliases[inst.args()[op.firstarg()]] = cind;
+                if (R_local_or_tmp && ! R->everread()) {
+                    // This local is written but NEVER READ.  nop it.
+                    op.reset (ustring("nop"), OP_nop, 0);
+                    ++changed;
+                    continue;
+                }
+                if (opt_outparam_assign_elision (inst, opnum, op,
+                                                 in_conditional, symbol_aliases)) {
+                    ++changed;
+                    continue;
                 }
                 if (R == A) {
                     // Just an assignment to itself -- turn into NOP!
@@ -1325,6 +1452,9 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     ++changed;
                 }
             }
+
+            if (optimize() >= 2)
+                changed += opt_useless_op_elision (inst, op);
         }
 
         totalchanged += changed;
@@ -1332,30 +1462,69 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
 
         // Now that we've rewritten the code, we need to re-track the
         // variable lifetimes.
-        allsymptrs.clear ();
-        allsymptrs.reserve (inst.symbols().size());
-        BOOST_FOREACH (Symbol &s, inst.symbols())
-            allsymptrs.push_back (&s);
-        {
-            SymbolPtrVec oparg_ptrs;
-            BOOST_FOREACH (int a, inst.args())
-                oparg_ptrs.push_back (inst.symbol (a));
-            OSLCompilerImpl::track_variable_lifetimes (inst.ops(), oparg_ptrs, allsymptrs);
+        track_variable_lifetimes (inst);
+
+        // If nothing changed, we're done optimizing.  But wait, it may be
+        // that after re-tracking variable lifetimes, we can notice new
+        // optimizations!  So force another pass, then we're really done.
+        if (changed < 1) {
+            if (++reallydone > 3)
+                break;
+        } else {
+            reallydone = 0;
         }
-
-        // If only a couple things changed, we know that we almost never get
-        // more benefit from another pass, so avoid the expense.
-        if (changed < 1)
-            break;
     }
 
-    add_useparam (inst.ops(), inst.args(), allsymptrs, inst.m_maincodebegin);
-    {
-        SymbolPtrVec oparg_ptrs;
-        BOOST_FOREACH (int a, inst.args())
-            oparg_ptrs.push_back (inst.symbol (a));
-        OSLCompilerImpl::track_variable_lifetimes (inst.ops(), oparg_ptrs, allsymptrs);
+    // Erase this layer's incoming connections for params it no longer uses
+    for (int i = 0;  i < inst.nconnections();  ++i) {
+        const Connection &c (inst.connection(i));
+        if (! inst.symbol(c.dst.param)->everused()) {
+            inst.m_connections.erase (inst.m_connections.begin()+i);
+            --i;
+        }
     }
+}
+
+
+
+void
+ShadingSystemImpl::track_variable_lifetimes (ShaderInstance &inst,
+                                             const SymbolPtrVec &allsymptrs)
+{
+    SymbolPtrVec oparg_ptrs;
+    oparg_ptrs.reserve (inst.args().size());
+    BOOST_FOREACH (int a, inst.args())
+        oparg_ptrs.push_back (inst.symbol (a));
+
+    OSLCompilerImpl::track_variable_lifetimes (inst.ops(), oparg_ptrs, allsymptrs);
+}
+
+
+
+void
+ShadingSystemImpl::track_variable_lifetimes (ShaderInstance &inst)
+{
+    SymbolPtrVec allsymptrs;
+    allsymptrs.reserve (inst.symbols().size());
+    BOOST_FOREACH (Symbol &s, inst.symbols())
+        allsymptrs.push_back (&s);
+
+    track_variable_lifetimes (inst, allsymptrs);
+}
+
+
+
+void
+ShadingSystemImpl::post_optimize_instance (ShaderGroup &group, int layer,
+                                           ShaderInstance &inst)
+{
+    SymbolPtrVec allsymptrs;
+    allsymptrs.reserve (inst.symbols().size());
+    BOOST_FOREACH (Symbol &s, inst.symbols())
+        allsymptrs.push_back (&s);
+
+    add_useparam (inst, allsymptrs);
+
     if (optimize() >= 1) {
         OSLCompilerImpl::coalesce_temporaries (allsymptrs);
         // coalesce_temporaries may have aliased temps, now we need to
@@ -1366,42 +1535,25 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
             arg = s - &(inst.symbols()[0]);
         }
     }
-
-    // Get rid of nop instructions and unused symbols.
-    if (optimize() >= 1) {
-        collapse (group, layer, inst);
-        info ("Optimized %s: New syms %llu/%llu, ops %llu/%llu",
-              inst.shadername().c_str(),
-              inst.symbols().size(), old_nsyms,
-              inst.ops().size(), old_nops);
-    } else {
-        inst.m_maincodeend = (int)inst.ops().size();
-        info ("Processed %s", inst.shadername().c_str());
-    }
-
-    if (debug())
-        std::cerr << "After optimizing: \n" << inst.print() 
-                  << "\n--------------------------------\n\n";
 }
 
 
 
 void
-ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
-                             ShaderInstance &inst)
+ShadingSystemImpl::collapse_syms (ShaderGroup &group, int layer,
+                                  ShaderInstance &inst)
 {
     //
     // Make a new symbol table that removes all the unused symbols.
     //
 
-#if 0  // FIXME -- come back to this
-    // Mark our params that feed to later layers
+    // Mark our params that feed to later layers, so that unused params
+    // that aren't needed downstream can be removed.
     for (int lay = layer+1;  lay < group.nlayers();  ++lay) {
         BOOST_FOREACH (Connection &c, group[lay]->m_connections)
             if (c.srclayer == layer)
                 inst.symbol(c.src.param)->connected_down (true);
     }
-#endif
 
     SymbolVec new_symbols;          // buffer for new symbol table
     std::vector<int> symbol_remap;  // mapping of old sym index to new
@@ -1411,7 +1563,7 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
     BOOST_FOREACH (const Symbol &s, inst.symbols()) {
         symbol_remap.push_back (total_syms);
         if (s.everused() ||
-            (s.symtype() == SymTypeParam /*&& s.connected_down()*/) ||
+            (s.symtype() == SymTypeParam && s.connected_down()) ||
               s.symtype() == SymTypeOutputParam)
             ++total_syms;
     }
@@ -1420,7 +1572,7 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
     new_symbols.reserve (total_syms);
     BOOST_FOREACH (const Symbol &s, inst.symbols()) {
         if (s.everused() ||
-            (s.symtype() == SymTypeParam /*&& s.connected_down()*/) ||
+            (s.symtype() == SymTypeParam && s.connected_down()) ||
               s.symtype() == SymTypeOutputParam)
             new_symbols.push_back (s);
     }
@@ -1452,8 +1604,14 @@ ShadingSystemImpl::collapse (ShaderGroup &group, int layer,
 
     // Swap the new symbol list for the old.
     std::swap (inst.m_instsymbols, new_symbols);
+}
 
 
+
+void
+ShadingSystemImpl::collapse_ops (ShaderGroup &group, int layer,
+                                 ShaderInstance &inst)
+{
     //
     // Make new code that removes all the nops
     //
@@ -1502,15 +1660,56 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
         m_stat_optimization_time += timer();
         return;
     }
+
     int nlayers = (int) group.nlayers ();
+
+    // Optimize each layer
+    size_t old_nsyms = 0, old_nops = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         ShaderInstance *inst = group[layer];
-        if (inst) {
-            optimize_instance (group, layer, *inst);
-            // ASSERT (!inst->m_heap_size_calculated);
-            inst->m_heap_size_calculated = false;
-        }
+        ASSERT (inst != NULL);
+        if (debug() && optimize() >= 1) {
+            std::cerr << "Optimizing layer " << layer << " " << inst->layername()
+                      << ' ' << inst->shadername() << "\n";
+            std::cerr << "Before optimizing instance, I get: \n" << inst->print()
+                      << "\n--------------------------------\n\n";
+            }
+
+        old_nsyms += inst->symbols().size();
+        old_nops += inst->ops().size();
+        optimize_instance (group, layer, *inst);
     }
+
+    // Post-opt cleanup: add useparam, coalesce temporaries, etc.
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        ShaderInstance *inst = group[layer];
+        post_optimize_instance (group, layer, *inst);
+    }
+
+    // Get rid of nop instructions and unused symbols.
+    size_t new_nsyms = 0, new_nops = 0;
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        ShaderInstance *inst = group[layer];
+        if (optimize() >= 1) {
+            collapse_syms (group, layer, *inst);
+            collapse_ops (group, layer, *inst);
+            if (debug()) {
+                track_variable_lifetimes (*inst);
+                std::cerr << "After optimizing: \n" << inst->print() 
+                          << "\n--------------------------------\n\n";
+            }
+        }
+        new_nsyms += inst->symbols().size();
+        new_nops += inst->ops().size();
+        inst->m_heap_size_calculated = false;
+    }
+
+    info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+          new_nsyms, old_nsyms,
+          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
+          new_nops, old_nops,
+          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+
     attribstate.changed_shaders ();
     group.m_optimized = true;
     spin_lock (m_stat_mutex);

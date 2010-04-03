@@ -549,9 +549,39 @@ private:
     void optimize_instance (ShaderGroup &group, int layer,
                             ShaderInstance &inst);
 
-    /// Squeeze out unused symbols and no-ops from an instance that has
-    /// been optimized.
-    void collapse (ShaderGroup &group, int layer, ShaderInstance &inst);
+    /// Post-optimization cleanup of a layer: add 'useparam' instructions,
+    /// track variable lifetimes, coalesce temporaries.
+    void post_optimize_instance (ShaderGroup &group, int layer,
+                                 ShaderInstance &inst);
+
+    bool opt_coerce_assigned_constant (ShaderInstance &inst, Opcode &op,
+                       std::vector<int> &all_consts, int &next_newconst);
+
+    bool opt_outparam_assign_elision (ShaderInstance &inst, int opnum, 
+                              Opcode &op, std::vector<bool> &in_conditional,
+                              std::map<int,int> &symbol_aliases);
+
+    bool opt_useless_op_elision (ShaderInstance &inst, Opcode &op);
+
+    /// Track variable lifetimes for all the symbols of the instance.
+    ///
+    void track_variable_lifetimes (ShaderInstance &inst);
+
+    void track_variable_lifetimes (ShaderInstance &inst,
+                                   const SymbolPtrVec &allsymptrs);
+
+    /// Squeeze out unused symbols from an instance that has been
+    /// optimized.
+    void collapse_syms (ShaderGroup &group, int layer, ShaderInstance &inst);
+
+    /// Squeeze out nop instructions from an instance that has been
+    /// optimized.
+    void collapse_ops (ShaderGroup &group, int layer, ShaderInstance &inst);
+
+    /// Add a 'useparam' before any op that reads parameters.  This is what
+    /// tells the runtime that it needs to run the layer it came from, if
+    /// not already done.
+    void add_useparam (ShaderInstance &inst, SymbolPtrVec &allsyms);
 
     struct PerThreadInfo {
         std::stack<ShadingContext *> context_pool;

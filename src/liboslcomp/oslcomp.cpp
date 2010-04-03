@@ -795,8 +795,8 @@ OSLCompilerImpl::check_for_illegal_writes ()
 /// args in each op are read or written.
 void
 OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
-                                           SymbolPtrVec &opargs,
-                                           SymbolPtrVec &allsyms)
+                                           const SymbolPtrVec &opargs,
+                                           const SymbolPtrVec &allsyms)
 {
     // Clear the lifetimes for all symbols
     BOOST_FOREACH (Symbol *s, allsyms)
@@ -820,7 +820,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
         if (op.opname() == "for" || op.opname() == "while" ||
                 op.opname() == "dowhile") {
             ASSERT (op.nargs() == 1);  // loops should have just one arg
-            Symbol * &s = opargs[op.firstarg()];
+            SymbolPtr s = opargs[op.firstarg()];
             s->mark_rw (opnum+1, true, true);
             s->mark_rw (op.farthest_jump()-1, true, true);
         }

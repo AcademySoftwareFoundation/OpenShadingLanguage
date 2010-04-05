@@ -171,18 +171,26 @@ ShaderInstance::calc_heap_size ()
     m_numclosures = 0;
     m_heapround = 0;
     m_writes_globals = false;
+    int totalsyms = 0;
+    int derivsyms = 0;
     BOOST_FOREACH (/*const*/ Symbol &s, m_instsymbols) {
+        ++totalsyms;
+        if (s.has_derivs())
+            ++derivsyms;
+
         // Skip if the symbol is a type that doesn't need heap space
         if (s.symtype() == SymTypeConst /* || s.symtype() == SymTypeGlobal */)
             continue;
 
+        if (s.symtype() == SymTypeGlobal)
+            m_writes_globals |= s.everwritten ();
+
+#if 0
         // assume globals have derivs
         if (s.symtype() == SymTypeGlobal) {
             s.has_derivs (true);
-            m_writes_globals |= s.everwritten ();
         }
 
-#if 1
         // FIXME -- test code by assuming all locals, temps, and params
         // carry derivs
         if ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
@@ -218,6 +226,8 @@ ShaderInstance::calc_heap_size ()
         shadingsys().info (" Padding for alignment = %d", m_heapround);
         shadingsys().info (" Writes globals: %d", m_writes_globals);
     }
+    shadingsys().m_stat_total_syms += totalsyms;
+    shadingsys().m_stat_syms_with_derivs += derivsyms;
 
     m_heap_size_calculated = true;
 }
@@ -333,7 +343,9 @@ ShaderInstance::print ()
             << " " << s.typespec().string() << " " << s.name() 
             << " (used " << s.firstuse() << ' ' << s.lastuse() 
             << " read " << s.firstread() << ' ' << s.lastread() 
-            << " write " << s.firstwrite() << ' ' << s.lastwrite() << ")";
+            << " write " << s.firstwrite() << ' ' << s.lastwrite() 
+            << (s.has_derivs() ? " derivs" : "")
+            << ")";
         if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
             out << " init [" << s.initbegin() << ',' << s.initend() << ")";
         out << "\n";
@@ -383,6 +395,8 @@ ShaderInstance::print ()
                 out << " " << op.jump(j);
 //        out << "    rw " << Strutil::format("%x",op.argread_bits())
 //            << ' ' << op.argwrite_bits();
+        if (op.argtakesderivs_all())
+            out << " %derivs(" << op.argtakesderivs_all() << ") ";
         if (allconst)
             out << "  CONST";
         out << "\n";

@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stack>
 #include <map>
 #include <list>
+#include <set>
 
 #include <boost/regex.hpp>
 #include "OpenImageIO/thread.h"
@@ -554,6 +555,8 @@ private:
     void post_optimize_instance (ShaderGroup &group, int layer,
                                  ShaderInstance &inst);
 
+    void coalesce_temporaries (ShaderInstance &inst);
+
     bool opt_coerce_assigned_constant (ShaderInstance &inst, Opcode &op,
                        std::vector<int> &all_consts, int &next_newconst);
 
@@ -569,6 +572,17 @@ private:
 
     void track_variable_lifetimes (ShaderInstance &inst,
                                    const SymbolPtrVec &allsymptrs);
+
+    /// For each symbol, have a list of the symbols it depends on (or that
+    /// depends on it).
+    typedef std::map<int, std::set<int> > SymDependency;
+
+    void syms_used_in_op (ShaderInstance &inst, Opcode &op,
+                          std::vector<int> &rsyms, std::vector<int> &wsyms);
+    void track_variable_dependencies (ShaderInstance &inst, 
+                                      SymDependency &symdeps);
+
+    static void add_dependency (ShaderInstance &inst, SymDependency &dmap, int A, int B);
 
     /// Squeeze out unused symbols from an instance that has been
     /// optimized.
@@ -655,6 +669,8 @@ private:
     atomic_ll m_stat_paramstobind;        ///< Stat: All params in bound shaders
     atomic_ll m_stat_paramsbound;         ///< Stat: Number of params bound
     atomic_ll m_stat_instructions_run;    ///< Stat: total instructions run
+    atomic_int m_stat_total_syms;         ///< Stat: total syms in all insts
+    atomic_int m_stat_syms_with_derivs;   ///< Stat: syms with derivatives
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
 #ifdef DEBUG_ADJUST_VARYING

@@ -192,15 +192,18 @@ DECLOP (OP_texture)
     if (Result.has_derivs() || alpha) {
         tempresult = true;
         r = ALLOCA (float, exec->runstate().endpoint*options.nchannels);
-        // allocate some space to track the derivatives of the result
+        // allocate some space to track the derivatives of the result and/or
+        // alpha.
         // NOTE: even though OIIO doesn't need derivatives from S and T to
         // compute the gradients, we need them on the OSL side to be able to
         // rotate the gradients via the chain rule
-        if (S.has_derivs() && T.has_derivs()) {
+        if ((Result.has_derivs() || (Alpha && Alpha->has_derivs())) &&
+                S.has_derivs() && T.has_derivs()) {
             options.dresultds = ALLOCA (float, exec->runstate().endpoint*options.nchannels);
             options.dresultdt = ALLOCA (float, exec->runstate().endpoint*options.nchannels);
         } else {
-            // we won't be able to provide derivatives properly
+            // We won't be able to provide derivatives properly, or
+            // don't need to.
             if (Result.has_derivs())
                 exec->zero_derivs(Result);
             if (Alpha && Alpha->has_derivs())
@@ -255,13 +258,22 @@ DECLOP (OP_texture)
         // dTdy = dTds * dsdy + dTdt * dtdy
         if (options.dresultds) {
             SHADE_LOOP_BEGIN
-                for (int c = 0;  c < resultchans;  ++c) {
-                    (&result[i])[1 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdx[i] + options.dresultdt[i*options.nchannels+c] * dtdx[i];
-                    (&result[i])[2 * resultchans + c] = options.dresultds[i*options.nchannels+c] * dsdy[i] + options.dresultdt[i*options.nchannels+c] * dtdy[i];
-                }
-                if (alpha) {
-                    (&alpha[i])[1] = options.dresultds[i*options.nchannels+resultchans] * dsdx[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdx[i];
-                    (&alpha[i])[2] = options.dresultds[i*options.nchannels+resultchans] * dsdy[i] + options.dresultdt[i*options.nchannels+resultchans] * dtdy[i];
+                if (Result.has_derivs())
+                    for (int c = 0;  c < resultchans;  ++c) {
+                        (&result[i])[1 * resultchans + c] = 
+                            options.dresultds[i*options.nchannels+c] * dsdx[i] +
+                            options.dresultdt[i*options.nchannels+c] * dtdx[i];
+                        (&result[i])[2 * resultchans + c] = 
+                            options.dresultds[i*options.nchannels+c] * dsdy[i] +
+                            options.dresultdt[i*options.nchannels+c] * dtdy[i];
+                    }
+                if (alpha && Alpha->has_derivs()) {
+                    (&alpha[i])[1] =
+                        options.dresultds[i*options.nchannels+resultchans] * dsdx[i] +
+                        options.dresultdt[i*options.nchannels+resultchans] * dtdx[i];
+                    (&alpha[i])[2] =
+                        options.dresultds[i*options.nchannels+resultchans] * dsdy[i] +
+                        options.dresultdt[i*options.nchannels+resultchans] * dtdy[i];
                 }
             SHADE_LOOP_END
         }

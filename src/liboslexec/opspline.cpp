@@ -383,15 +383,14 @@ DECLOP (OP_spline)
         // The result has no derivatives so ignore the cases where the values
         // and/or knots have derivatives.  This simplifies to case of whether
         // we're dealing with floats or triples.
-        case (TRIPLES):
-            spline_op_guts_generic< Vec3, float, Vec3, Vec3, false, CopySelf<Vec3> >(Result, Spline, array_length, Value, num_knots, Knots,
-                exec, false /*zero derivs?*/);
+        default:
+            if (mode & TRIPLES)
+                spline_op_guts_generic< Vec3, float, Vec3, Vec3, false, CopySelf<Vec3> >(Result, Spline, array_length, Value, num_knots, Knots,
+                    exec, false /*zero derivs?*/);
+            else
+                spline_op_guts_generic< float, float, float, float, false, CopySelf<float> >(Result, Spline, array_length, Value, num_knots, Knots,
+                    exec, false /*zero derivs?*/);
             break;
-        case 0:
-            spline_op_guts_generic< float, float, float, float, false, CopySelf<float> >(Result, Spline, array_length, Value, num_knots, Knots,
-                exec, false /*zero derivs?*/);
-            break;
-        //
     }
 }
 

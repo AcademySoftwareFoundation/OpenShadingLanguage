@@ -119,6 +119,16 @@ turn_into_assign (Opcode &op, std::vector<int> &opargs, int newarg)
 
 
 
+// Turn the op into a no-op
+void
+turn_into_nop (Opcode &op)
+{
+    static ustring knop("nop");
+    op.reset (knop, OP_nop, 0);
+}
+
+
+
 // Insert instruction 'opname' with arguments 'args_to_add' into the 
 // code at instruction 'opnum'.  The existing code and concatenated 
 // argument lists can be found in code and opargs, respectively, and
@@ -212,8 +222,8 @@ ShadingSystemImpl::add_useparam (ShaderInstance &inst, SymbolPtrVec &allsyms)
     // Take care of the output params right off the bat -- as soon as the
     // shader starts running 'main'.
     std::vector<int> outputparams;
-    for (int i = 0;  i < (int)allsyms.size();  ++i) {
-        Symbol *s = allsyms[i];
+    for (int i = 0;  i < (int)inst.symbols().size();  ++i) {
+        Symbol *s = inst.symbol(i);
         if (s->symtype() == SymTypeOutputParam) {
             outputparams.push_back (i);
             s->initialized (true);
@@ -757,13 +767,13 @@ DECLFOLDER(constfold_if)
         int changed = 0;
         if (result > 0) {
             for (int i = op.jump(0);  i < op.jump(1);  ++i, ++changed)
-                inst.ops()[i].reset (ustring("nop"), OP_nop, 0);
-            op.reset (ustring("nop"), OP_nop, 0);
+                turn_into_nop (inst.ops()[i]);
+            turn_into_nop (op);
             return changed+1;
         } else if (result == 0) {
             for (int i = opnum+1;  i < op.jump(0);  ++i, ++changed)
-                inst.ops()[i].reset (ustring("nop"), OP_nop, 0);
-            op.reset (ustring("nop"), OP_nop, 0);
+                turn_into_nop (inst.ops()[i]);
+            turn_into_nop (op);
             return changed+1;
         }
     }
@@ -995,7 +1005,7 @@ DECLFOLDER(constfold_useparam)
 {
     // Just eliminate useparam (from shaders compiled with old oslc)
     Opcode &op (inst.ops()[opnum]);
-    op.reset (ustring("nop"), OP_nop, 0);
+    turn_into_nop (op);
     return 1;
 }
 
@@ -1192,7 +1202,7 @@ ShadingSystemImpl::opt_outparam_assign_elision (ShaderInstance &inst,
             R->initbegin (0);
             R->initend (0);
             R->valuesource (Symbol::DefaultVal);
-            op.reset (ustring("nop"), OP_nop, 0);
+            turn_into_nop (op);
             // Erase R's incoming connections
             for (int i = 0;  i < inst.nconnections();  ++i) {
                 const Connection &c (inst.connection(i));
@@ -1231,7 +1241,7 @@ ShadingSystemImpl::opt_useless_op_elision (ShaderInstance &inst, Opcode &op)
             }
         }
         if (writes_something && noeffect) {
-            op.reset (ustring("nop"), OP_nop, 0);
+            turn_into_nop (op);
             return true;
         }
     }
@@ -1363,7 +1373,7 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 for (int i = opnum+1;  i < jump && only_nops;  ++i)
                     only_nops &= (inst.ops()[i].implementation() == OP_nop);
                 if (only_nops) {
-                    op.reset (ustring("nop"), OP_nop, 0);
+                    turn_into_nop (op);
                     changed = 1;
                     continue;
                 }
@@ -1390,7 +1400,7 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     if (opf.implementation() == OP_assign) {
                         if (inst.argsymbol(opf.firstarg()) == R) {
                             // Both assigning to the same variable!  Kill one.
-                            op.reset (ustring("nop"), OP_nop, 0);
+                            turn_into_nop (op);
                             ++changed;
                         }
                     }
@@ -1402,7 +1412,7 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 if (block_aliases[inst.arg(op.firstarg())] == inst.arg(op.firstarg()+1) ||
                     block_aliases[inst.arg(op.firstarg()+1)] == inst.arg(op.firstarg())) {
                     // We're re-assigning something already aliased, skip it
-                    op.reset (ustring("nop"), OP_nop, 0);
+                    turn_into_nop (op);
                     ++changed;
                     continue;
                 }
@@ -1427,13 +1437,13 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     // constant.
                     int cind = inst.args()[op.firstarg()+1];
                     symbol_aliases[inst.args()[op.firstarg()]] = cind;
-                    op.reset (ustring("nop"), OP_nop, 0);
+                    turn_into_nop (op);
                     ++changed;
                     continue;
                 }
                 if (R_local_or_tmp && ! R->everread()) {
                     // This local is written but NEVER READ.  nop it.
-                    op.reset (ustring("nop"), OP_nop, 0);
+                    turn_into_nop (op);
                     ++changed;
                     continue;
                 }
@@ -1444,11 +1454,11 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 }
                 if (R == A) {
                     // Just an assignment to itself -- turn into NOP!
-                    op.reset (ustring("nop"), OP_nop, 0);
+                    turn_into_nop (op);
                     ++changed;
                 } else if (R_local_or_tmp && R->lastread() < opnum) {
                     // Don't bother assigning if we never read it again
-                    op.reset (ustring("nop"), OP_nop, 0);
+                    turn_into_nop (op);
                     ++changed;
                 }
             }
@@ -1475,7 +1485,8 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
         }
     }
 
-    // Erase this layer's incoming connections for params it no longer uses
+    // Erase this layer's incoming connections and init ops for params
+    // it no longer uses
     for (int i = 0;  i < inst.nconnections();  ++i) {
         const Connection &c (inst.connection(i));
         if (! inst.symbol(c.dst.param)->everused()) {
@@ -1483,6 +1494,13 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
             --i;
         }
     }
+    BOOST_FOREACH (Symbol &s, inst.symbols())
+        if (s.symtype() == SymTypeParam && ! s.everused() &&
+                s.initbegin() < s.initend()) {
+            for (int i = s.initbegin();  i < s.initend();  ++i)
+                turn_into_nop (inst.ops()[i]);
+            s.set_initrange (0, 0);
+        }
 }
 
 
@@ -1514,6 +1532,254 @@ ShadingSystemImpl::track_variable_lifetimes (ShaderInstance &inst)
 
 
 
+// Add to the dependency map that "symbol A depends on symbol B".
+void
+ShadingSystemImpl::add_dependency (ShaderInstance &inst,
+                                   SymDependency &dmap, int A, int B)
+{
+    ASSERT (A < (int)inst.symbols().size());
+    ASSERT (B < (int)inst.symbols().size());
+    dmap[A].insert (B);
+    // Unification -- make all of B's dependencies be dependencies of A.
+    BOOST_FOREACH (int r, dmap[B])
+        dmap[A].insert (r);
+}
+
+
+
+void
+ShadingSystemImpl::syms_used_in_op (ShaderInstance &inst, Opcode &op,
+                                    std::vector<int> &rsyms,
+                                    std::vector<int> &wsyms)
+{
+    rsyms.clear ();
+    wsyms.clear ();
+    for (int i = 0;  i < op.nargs();  ++i) {
+        int arg = inst.arg (i + op.firstarg());
+        if (op.argread(i))
+            if (std::find (rsyms.begin(), rsyms.end(), arg) == rsyms.end())
+                rsyms.push_back (arg);
+        if (op.argwrite(i))
+            if (std::find (wsyms.begin(), wsyms.end(), arg) == wsyms.end())
+                wsyms.push_back (arg);
+    }
+}
+
+
+
+// Fake symbol index for "derivatives" entry in dependency map.
+static const int DerivSym = -1;
+
+
+
+/// Run through all the ops, for each one marking its 'written'
+/// arguments as dependent upon its 'read' arguments (and performing
+/// unification as we go), yielding a dependency map that lets us look
+/// up any symbol and see the set of other symbols on which it ever
+/// depends on during execution of the shader.
+void
+ShadingSystemImpl::track_variable_dependencies (ShaderInstance &inst,
+                                                SymDependency &symdeps)
+{
+    // It's important to note that this is simplistically conservative
+    // in that it overestimates dependencies.  To see why this is the
+    // case, consider the following code:
+    //       // inputs a,b; outputs x,y; local variable t
+    //       t = a;
+    //       x = t;
+    //       t = b;
+    //       y = t;
+    // We can see that x depends on a and y depends on b.  But the
+    // dependency analysis we do below thinks that y also depends on a
+    // (because t depended on both a and b, but at different times).
+    //
+    // This naivite will never miss a dependency, but it may
+    // overestimate dependencies.  (Hence we call this "conservative"
+    // rather than "wrong.")  We deem this acceptable for now, since
+    // it's so much easer to implement the conservative dependency
+    // analysis, and it's not yet clear that getting it closer to
+    // optimal will have any performance impact on final shaders. Also
+    // because this is probably no worse than the "dependency slop" that
+    // would happen with loops and conditionals.  But we certainly may
+    // revisit with a more sophisticated algorithm if this crops up
+    // a legitimate issue.
+    //
+    // Because of this conservative approach, it is critical that this
+    // analysis is done BEFORE temporaries are coalesced (which would
+    // cause them to be reassigned in exactly the way that confuses this
+    // analysis).
+
+    symdeps.clear ();
+
+    std::vector<int> read, written;
+    // Loop over all ops...
+    BOOST_FOREACH (Opcode &op, inst.ops()) {
+        // Gather the list of syms read and written by the op.  Reuse the
+        // vectors defined outside the loop to cut down on malloc/free.
+        read.clear ();
+        written.clear ();
+        syms_used_in_op (inst, op, read, written);
+
+        // FIXME -- special cases here!  like if any ops implicitly read
+        // or write to globals without them needing to be arguments.
+
+        // For each symbol w written by the op...
+        BOOST_FOREACH (int w, written) {
+            // For each symbol r read by the op, make w depend on r.
+            // (Unless r is a constant , in which case it's not necessary.)
+            BOOST_FOREACH (int r, read)
+                if (inst.symbol(r)->symtype() != SymTypeConst)
+                    add_dependency (inst, symdeps, w, r);
+            // If the op takes derivs, make the pseudo-symbol DerivSym
+            // depend on those arguments.
+            if (op.argtakesderivs_all()) {
+                for (int a = 0;  a < op.nargs();  ++a)
+                    if (op.argtakesderivs(a))
+                        add_dependency (inst, symdeps, DerivSym,
+                                        inst.arg(a+op.firstarg()));
+            }
+        }
+    }
+
+    // Propagate derivative dependencies for any syms already known to
+    // need derivs.  It's probably marked that way because another layer
+    // downstream connects to it and needs derivatives of that
+    // connection.
+    int snum = 0;
+    BOOST_FOREACH (Symbol &s, inst.symbols()) {
+        if (s.has_derivs())
+            add_dependency (inst, symdeps, DerivSym, snum);
+        ++snum;
+    }
+
+    // Mark all symbols needing derivatives as such
+    BOOST_FOREACH (int d, symdeps[DerivSym])
+        inst.symbol(d)->has_derivs (true);
+
+#if 0
+    // Helpful for debugging
+
+    std::cerr << "track_variable_dependencies\n";
+    std::cerr << "\nDependencies:\n";
+    BOOST_FOREACH (SymDependency::value_type &m, symdeps) {
+        if (m.first == DerivSym)
+            std::cerr << "$derivs depends on ";
+        else
+            std::cerr << inst.symbol(m.first)->mangled() << " depends on ";
+        BOOST_FOREACH (int d, m.second) {
+            if (d == DerivSym)
+                std::cerr << "$derivs ";
+            else
+                std::cerr << inst.symbol(d)->mangled() << ' ';
+        }
+        std::cerr << "\n";
+    }
+    std::cerr << "\n\n";
+
+    // Invert the dependency
+    SymDependency influences;
+    BOOST_FOREACH (SymDependency::value_type &m, symdeps)
+        BOOST_FOREACH (int d, m.second)
+            influences[d].insert (m.first);
+
+    std::cerr << "\nReverse dependencies:\n";
+    BOOST_FOREACH (SymDependency::value_type &m, influences) {
+        if (m.first == DerivSym)
+            std::cerr << "$derivs contrbutes to ";
+        else
+            std::cerr << inst.symbol(m.first)->mangled() << " contributes to ";
+        BOOST_FOREACH (int d, m.second) {
+            if (d == DerivSym)
+                std::cerr << "$derivs ";
+            else
+                std::cerr << inst.symbol(d)->mangled() << ' ';
+        }
+        std::cerr << "\n";
+    }
+    std::cerr << "\n\n";
+#endif
+}
+
+
+
+// Is the symbol coalescable?
+inline bool
+coalescable (const Symbol &s)
+{
+    return (s.symtype() == SymTypeTemp &&     // only coalesce temporaries
+            s.everused() &&                   // only if they're used
+            s.dealias() == &s &&              // only if not already aliased
+            ! s.typespec().is_structure() &&  // only if not a struct
+            s.fieldid() < 0);                 //    or a struct field
+}
+
+
+
+/// Coalesce temporaries.  During code generation, we make a new
+/// temporary EVERY time we need one.  Now we examine them all and merge
+/// ones of identical type and non-overlapping lifetimes.
+void
+ShadingSystemImpl::coalesce_temporaries (ShaderInstance &inst)
+{
+    // We keep looping until we can't coalesce any more.
+    int ncoalesced = 1;
+    while (ncoalesced) {
+        ncoalesced = 0;   // assume we're done, unless we coalesce something
+
+        // We use a greedy algorithm that loops over each symbol, and
+        // then examines all higher-numbered symbols (in order) and
+        // tries to merge the first one it can find that doesn't overlap
+        // lifetimes.  The temps were created as we generated code, so
+        // they are already sorted by their "first use".  Thus, for any
+        // pair t1 and t2 that are merged, it is guaranteed that t2 is
+        // the symbol whose first use the earliest of all symbols whose
+        // lifetimes do not overlap t1.
+
+        SymbolVec::iterator s;
+        for (s = inst.symbols().begin(); s != inst.symbols().end();  ++s) {
+            // Skip syms that can't be (or don't need to be) coalesced
+            if (! coalescable(*s))
+                continue;
+
+            int sfirst = s->firstuse ();
+            int slast  = s->lastuse ();
+
+            // Loop through every other symbol
+            for (SymbolVec::iterator t = s+1; t != inst.symbols().end(); ++t) {
+                // Coalesce s and t if both syms are coalescable,
+                // equivalent types, have nonoverlapping lifetimes,
+                // and either both do or both do not need derivatives.
+                if (coalescable (*t) &&
+                      equivalent (s->typespec(), t->typespec()) &&
+                      s->has_derivs() == t->has_derivs() &&
+                      (slast < t->firstuse() || sfirst > t->lastuse())) {
+                    // Make all future t references alias to s
+                    t->alias (&(*s));
+                    // s gets union of the lifetimes
+                    s->union_rw (t->firstread(), t->lastread(),
+                                 t->firstwrite(), t->lastwrite());
+                    sfirst = s->firstuse ();
+                    slast  = s->lastuse ();
+                    // t gets marked as unused
+                    t->clear_rw ();
+                    ++ncoalesced;
+                }
+            }
+        }
+        // std::cerr << "Coalesced " << ncoalesced << "\n";
+    }
+
+    // Since we may have aliased temps, now we need to make sure all
+    // symbol refs are dealiased.
+    BOOST_FOREACH (int &arg, inst.args()) {
+        Symbol *s = inst.symbol (arg); //&(inst.symbols()[arg]);
+        s = s->dealias ();
+        arg = s - &(inst.symbols()[0]);
+    }
+}
+
+
+
 void
 ShadingSystemImpl::post_optimize_instance (ShaderGroup &group, int layer,
                                            ShaderInstance &inst)
@@ -1525,16 +1791,8 @@ ShadingSystemImpl::post_optimize_instance (ShaderGroup &group, int layer,
 
     add_useparam (inst, allsymptrs);
 
-    if (optimize() >= 1) {
-        OSLCompilerImpl::coalesce_temporaries (allsymptrs);
-        // coalesce_temporaries may have aliased temps, now we need to
-        // make sure all symbol refs are dealiased.
-        BOOST_FOREACH (int &arg, inst.m_instargs) {
-            Symbol *s = &(inst.symbols()[arg]);
-            s = s->dealias ();
-            arg = s - &(inst.symbols()[0]);
-        }
-    }
+    if (optimize() >= 1)
+        coalesce_temporaries (inst);
 }
 
 
@@ -1669,15 +1927,34 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
         ShaderInstance *inst = group[layer];
         ASSERT (inst != NULL);
         if (debug() && optimize() >= 1) {
-            std::cerr << "Optimizing layer " << layer << " " << inst->layername()
-                      << ' ' << inst->shadername() << "\n";
-            std::cerr << "Before optimizing instance, I get: \n" << inst->print()
+            std::cerr << "Before optimizing layer " << inst->layername() 
+                      << ", I get:\n" << inst->print()
                       << "\n--------------------------------\n\n";
             }
 
         old_nsyms += inst->symbols().size();
         old_nops += inst->ops().size();
         optimize_instance (group, layer, *inst);
+    }
+
+    for (int layer = nlayers-1;  layer >= 0;  --layer) {
+        ShaderInstance *inst = group[layer];
+        SymDependency symdeps;
+        track_variable_dependencies (*inst, symdeps);
+
+        // For our parameters that require derivatives, mark their
+        // upstream connections as also needing derivatives.
+        bool any = false;
+        BOOST_FOREACH (Connection &c, inst->m_connections) {
+            if (inst->symbol(c.dst.param)->has_derivs()) {
+                Symbol *source = group[c.srclayer]->symbol(c.src.param);
+                if (! source->typespec().is_closure() &&
+                    source->typespec().elementtype().is_floatbased()) {
+                    source->has_derivs (true);
+                    any = true;
+                }
+            }
+        }
     }
 
     // Post-opt cleanup: add useparam, coalesce temporaries, etc.
@@ -1695,7 +1972,8 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
             collapse_ops (group, layer, *inst);
             if (debug()) {
                 track_variable_lifetimes (*inst);
-                std::cerr << "After optimizing: \n" << inst->print() 
+                std::cerr << "After optimizing layer " << inst->layername() 
+                          << ": \n" << inst->print() 
                           << "\n--------------------------------\n\n";
             }
         }

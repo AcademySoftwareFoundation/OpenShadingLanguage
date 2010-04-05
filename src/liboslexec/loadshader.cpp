@@ -332,6 +332,16 @@ OSOReaderToMaster::hint (const char *hintstring)
         }
         ASSERT(m_nargs == i);
     }
+    if (extract_prefix(h, "%argderivs{")) {
+        while (1) {
+            std::string afield = readuntil (h, ",}", true);
+            if (! afield.length())
+                break;
+            int arg = atoi (afield.c_str());
+            if (arg >= 0)
+                m_master->m_ops.back().argtakesderivs (arg, true);
+        }
+    }
     if (extract_prefix (h, "%meta{") && m_master->m_symbols.size()) {
         Symbol &sym (m_master->m_symbols.back());
         int lockval = -1;

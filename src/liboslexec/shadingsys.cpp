@@ -146,6 +146,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_paramstobind = 0;
     m_stat_paramsbound = 0;
     m_stat_instructions_run = 0;
+    m_stat_total_syms = 0;
+    m_stat_syms_with_derivs = 0;
     m_stat_optimization_time = 0;
 
     init_global_heap_offsets ();
@@ -434,6 +436,9 @@ ShadingSystemImpl::getstats (int level) const
                             (100.0*m_stat_paramsbound)/m_stat_paramstobind);
     out << Strutil::format ("  Total instructions run:  %lld\n",
                             (long long)m_stat_instructions_run);
+    out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
+                            (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
+                            (100.0*(int)m_stat_syms_with_derivs)/(int)m_stat_total_syms);
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time) << "\n";
 

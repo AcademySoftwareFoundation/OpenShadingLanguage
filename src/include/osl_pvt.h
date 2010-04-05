@@ -584,6 +584,7 @@ public:
     void initbegin (int i) { m_initbegin = i; }
     int initend () const { return m_initend; }
     void initend (int i) { m_initend = i; }
+    void set_initrange (int b=0, int e=0) { m_initbegin = b; m_initend = e; }
 
     /// Clear read/write usage info.
     ///

@@ -793,7 +793,6 @@ DECLFOLDER(constfold_aref)
     DASSERT (A.typespec().is_array() && Index.typespec().is_int());
     if (A.is_constant() && Index.is_constant()) {
         TypeSpec elemtype = A.typespec().elementtype();
-        ASSERT (elemtype.is_float() || elemtype.is_triple() || elemtype.is_int());
         ASSERT (equivalent(elemtype, R.typespec()));
         int index = *(int *)Index.data();
         DASSERT (index < A.typespec().arraylength());
@@ -1647,6 +1646,9 @@ ShadingSystemImpl::track_variable_dependencies (ShaderInstance &inst,
     // connection.
     int snum = 0;
     BOOST_FOREACH (Symbol &s, inst.symbols()) {
+        // Globals that get written should always provide derivs
+        if (s.symtype() == SymTypeGlobal && s.everwritten())
+            s.has_derivs(true);
         if (s.has_derivs())
             add_dependency (inst, symdeps, DerivSym, snum);
         ++snum;

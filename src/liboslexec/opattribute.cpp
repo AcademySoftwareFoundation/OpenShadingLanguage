@@ -107,17 +107,15 @@ DECLOP (OP_getattribute)
     attribute_type = Destination.typespec().simpletype();
 
     // always fully varying case
-    bool derivatives = (Destination.typespec().is_float() || Destination.typespec().is_triple());
-
     SHADE_LOOP_BEGIN
         result[i] = array_lookup ? 
             exec->get_renderer_array_attribute(globals->renderstate[i],  
-                                               derivatives /* want derivatives */,
+                                               Destination.has_derivs(),
                                                object_lookup ? object_name[i] : ustring(),
                                                attribute_type, attribute_name[i],
                                                index[i], &destination[i]) :
             exec->get_renderer_attribute(globals->renderstate[i], 
-                                         derivatives /* want derivatives */,
+                                         Destination.has_derivs(),
                                          object_lookup ? object_name[i] : ustring(),
                                          attribute_type, attribute_name[i],
                                          &destination[i]);

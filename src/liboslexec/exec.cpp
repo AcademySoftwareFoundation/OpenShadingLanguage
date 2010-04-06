@@ -415,10 +415,9 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
             adjust_varying(sym, true, false /* don't keep old values */);
             m_conditional_level = old_conditional_level;
 
-            bool wants_derivatives = (sym.typespec().is_float() || sym.typespec().is_triple());
             ShaderGlobals *globals = m_context->m_globals;
             // FIXME: runflags required here even if we are using something else
-            if (!get_renderer_userdata(m_runstate_stack.front().runflags, m_npoints, wants_derivatives,
+            if (!get_renderer_userdata(m_runstate_stack.front().runflags, m_npoints, sym.has_derivs(),
                                        sym.name(), sym.typespec().simpletype(),
                                        &globals->renderstate[0], globals->renderstate.step(),
                                        sym.data(), sym.step())) {

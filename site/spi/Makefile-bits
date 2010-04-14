@@ -4,6 +4,11 @@ ifeq (${platform},linux64)
 
 ifeq ($(SP_ARCH), spinux1_x86_64)
 # put any gcc-4.4/spinux1 specific stuff here
+MY_CMAKE_FLAGS += \
+		  -DILMBASE_CUSTOM=1 \
+		  -DILMBASE_CUSTOM_LIBRARIES="SpiImath SpiHalf SpiIlmThread SpiIex" \
+		  -DOPENEXR_CUSTOM=1 \
+		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf"
 
 #BOOST_VERSION=1_42
 #Boost_LIBRARIES="-lboost_filesystem-gcc44-mt -lboost_regex-gcc44-mt -lboost_thread-gcc44-mt"

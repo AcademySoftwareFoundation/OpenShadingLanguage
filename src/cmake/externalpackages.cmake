@@ -49,16 +49,27 @@ find_path (ILMBASE_INCLUDE_AREA OpenEXR/half.h
            ${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}
            ${ILMBASE_HOME}/include
           )
-foreach (_lib Imath Half IlmThread Iex)
-    find_library (ILMBASE_LIBS_${_lib} ${_lib}
+if (ILMBASE_CUSTOM)
+    set (IlmBase_Libraries ${ILMBASE_CUSTOM_LIBRARIES})
+    separate_arguments(IlmBase_Libraries)
+else ()
+    set (IlmBase_Libraries Imath Half IlmThread Iex)
+endif ()
+
+foreach (_lib ${IlmBase_Libraries})
+    find_library (current_lib ${_lib}
                   PATHS ${ILMBASE_HOME}/lib ${ILMBASE_HOME}/lib64
                         ${ILMBASE_LIB_AREA}
                   )
+    list(APPEND ILMBASE_LIBRARIES ${current_lib})
+    # this effectively unsets ${current_lib} so that find_library()
+    # won't use the previous search results from the cache
+    set (current_lib current_lib-NOTFOUND)
 endforeach ()
-set (ILMBASE_LIBRARIES ${ILMBASE_LIBS_Imath} ${ILMBASE_LIBS_Half}
-                       ${ILMBASE_LIBS_IlmThread} ${ILMBASE_LIBS_Iex})
+
 message (STATUS "ILMBASE_INCLUDE_AREA = ${ILMBASE_INCLUDE_AREA}")
 message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
+
 if (ILMBASE_INCLUDE_AREA AND ILMBASE_LIBRARIES)
     set (ILMBASE_FOUND true)
     include_directories ("${ILMBASE_INCLUDE_AREA}")
@@ -85,11 +96,20 @@ find_path (OPENEXR_INCLUDE_AREA OpenEXR/OpenEXRConfig.h
            ${OPENEXR_HOME}/include
            ${ILMBASE_HOME}/include/openexr-${OPENEXR_VERSION}
           )
-find_library (OPENEXR_LIBRARY IlmImf
-              PATHS ${OPENEXR_HOME}/lib
-                    ${OPENEXR_HOME}/lib64
-                    ${OPENEXR_LIB_AREA}
-             )
+if (OPENEXR_CUSTOM)
+    find_library (OPENEXR_LIBRARY ${OPENEXR_CUSTOM_LIBRARY}
+                  PATHS ${OPENEXR_HOME}/lib
+                        ${OPENEXR_HOME}/lib64
+                        ${OPENEXR_LIB_AREA}
+                 )
+else ()
+    find_library (OPENEXR_LIBRARY IlmImf
+                  PATHS ${OPENEXR_HOME}/lib
+                        ${OPENEXR_HOME}/lib64
+                        ${OPENEXR_LIB_AREA}
+                 )
+endif ()
+
 message (STATUS "OPENEXR_INCLUDE_AREA = ${OPENEXR_INCLUDE_AREA}")
 message (STATUS "OPENEXR_LIBRARY = ${OPENEXR_LIBRARY}")
 if (OPENEXR_INCLUDE_AREA AND OPENEXR_LIBRARY)

@@ -12,6 +12,7 @@
 .PHONY: all debug profile clean realclean nuke doxygen
 
 working_dir	:= ${shell pwd}
+INSTALLDIR=${working_dir}
 
 # Figure out which architecture we're on
 include ${working_dir}/src/make/detectplatform.mk
@@ -32,6 +33,7 @@ top_dist_dir  := dist
 dist_dir      := ${top_dist_dir}/${platform}${variant}
 
 $(info dist_dir = ${dist_dir})
+$(info INSTALLDIR = ${INSTALLDIR})
 
 MY_MAKE_FLAGS ?=
 MY_CMAKE_FLAGS ?=
@@ -95,7 +97,7 @@ cmakesetup:
 	@ (if [ ! -e ${build_dir}/Makefile ] ; then \
 		cmake -E make_directory ${build_dir} ; \
 		cd ${build_dir} ; \
-		cmake -DCMAKE_INSTALL_PREFIX=${working_dir}/${dist_dir} \
+		cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/${dist_dir} \
 			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
 			../../src ; \
 	 fi)

@@ -1655,8 +1655,12 @@ ShadingSystemImpl::track_variable_dependencies (ShaderInstance &inst,
     }
 
     // Mark all symbols needing derivatives as such
-    BOOST_FOREACH (int d, symdeps[DerivSym])
-        inst.symbol(d)->has_derivs (true);
+    BOOST_FOREACH (int d, symdeps[DerivSym]) {
+        Symbol *s = inst.symbol(d);
+        if (! s->typespec().is_closure() && 
+                s->typespec().elementtype().is_floatbased())
+            s->has_derivs (true);
+    }
 
 #if 0
     // Helpful for debugging

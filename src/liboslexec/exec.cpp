@@ -856,7 +856,7 @@ ShadingExecution::zero (Symbol &sym)
 void
 ShadingExecution::zero_derivs (Symbol &sym)
 {
-    DASSERT (sym.has_derivs ());
+    DASSERT (sym.has_derivs () && ! sym.typespec().is_closure());
     size_t deriv_step = sym.deriv_step ();
     size_t deriv_size = 2 * deriv_step;
     char *data = (char *)sym.data() + deriv_step;

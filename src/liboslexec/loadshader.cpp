@@ -88,6 +88,7 @@ private:
     ustring m_codesection;            ///< Which entry point are the ops for?
     int m_codesym;                    ///< Which param is being initialized?
     int m_oso_major, m_oso_minor;     ///< oso file format version
+    int m_sym_default_index;          ///< Next sym default value to fill in
 };
 
 
@@ -123,32 +124,49 @@ OSOReaderToMaster::shader (const char *shadertype, const char *name)
 
 
 
+// Helper function to expand vec by 'size' elements, initializing them to 0.
+template<class T>
+inline void
+expand (std::vector<T> &vec, size_t size)
+{
+    vec.resize (vec.size() + size, T(0));
+}
+
+
+
 void
 OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 {
     Symbol sym (ustring(name), typespec, symtype);
+    TypeDesc t = typespec.simpletype();
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Skip structs for now, they're just placeholders
         if (typespec.is_structure()) {
         }
-        else if (typespec.simpletype().basetype == TypeDesc::FLOAT)
+        else if (typespec.simpletype().basetype == TypeDesc::FLOAT) {
             sym.dataoffset ((int) m_master->m_fdefaults.size());
-        else if (typespec.simpletype().basetype == TypeDesc::INT)
+            expand (m_master->m_fdefaults, t.aggregate * t.numelements());
+        } else if (typespec.simpletype().basetype == TypeDesc::INT) {
             sym.dataoffset ((int) m_master->m_idefaults.size());
-        else if (typespec.simpletype().basetype == TypeDesc::STRING)
+            expand (m_master->m_idefaults, t.aggregate * t.numelements());
+        } else if (typespec.simpletype().basetype == TypeDesc::STRING) {
             sym.dataoffset ((int) m_master->m_sdefaults.size());
-        else {
+            expand (m_master->m_sdefaults, t.aggregate * t.numelements());
+        } else {
             ASSERT (0 && "unexpected type");
         }
     }
     if (sym.symtype() == SymTypeConst) {
-        if (typespec.simpletype().basetype == TypeDesc::FLOAT)
+        if (typespec.simpletype().basetype == TypeDesc::FLOAT) {
             sym.dataoffset ((int) m_master->m_fconsts.size());
-        else if (typespec.simpletype().basetype == TypeDesc::INT)
+            expand (m_master->m_fconsts, t.aggregate * t.numelements());
+        } else if (typespec.simpletype().basetype == TypeDesc::INT) {
             sym.dataoffset ((int) m_master->m_iconsts.size());
-        else if (typespec.simpletype().basetype == TypeDesc::STRING)
+            expand (m_master->m_iconsts, t.aggregate * t.numelements());
+        } else if (typespec.simpletype().basetype == TypeDesc::STRING) {
             sym.dataoffset ((int) m_master->m_sconsts.size());
-        else {
+            expand (m_master->m_sconsts, t.aggregate * t.numelements());
+        } else {
             ASSERT (0 && "unexpected type");
         }
     }
@@ -161,6 +179,8 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 #endif
     sym.lockgeom (m_shadingsys.lockgeom_default());
     m_master->m_symbols.push_back (sym);
+    // Start the index at which we add specified defaults
+    m_sym_default_index = 0;
 }
 
 
@@ -170,19 +190,21 @@ OSOReaderToMaster::symdefault (int def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
+    size_t offset = sym.dataoffset() + m_sym_default_index;
+    ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fdefaults.push_back ((float)def);
+            m_master->m_fdefaults[offset] = (float)def;
         else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-            m_master->m_idefaults.push_back (def);
+            m_master->m_idefaults[offset] = def;
         else {
             ASSERT (0 && "unexpected type");
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fconsts.push_back ((float)def);
+            m_master->m_fconsts[offset] = (float)def;
         else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-            m_master->m_iconsts.push_back (def);
+            m_master->m_iconsts[offset] = def;
         else {
             ASSERT (0 && "unexpected type");
         }
@@ -196,15 +218,17 @@ OSOReaderToMaster::symdefault (float def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
+    size_t offset = sym.dataoffset() + m_sym_default_index;
+    ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fdefaults.push_back (def);
+            m_master->m_fdefaults[offset] = def;
         else {
             ASSERT (0 && "unexpected type");
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fconsts.push_back (def);
+            m_master->m_fconsts[offset] = def;
         else {
             ASSERT (0 && "unexpected type");
         }
@@ -218,15 +242,17 @@ OSOReaderToMaster::symdefault (const char *def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
+    size_t offset = sym.dataoffset() + m_sym_default_index;
+    ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-            m_master->m_sdefaults.push_back (ustring(def));
+            m_master->m_sdefaults[offset] = ustring(def);
         else {
             ASSERT (0 && "unexpected type");
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-            m_master->m_sconsts.push_back (ustring(def));
+            m_master->m_sconsts[offset] = ustring(def);
         else {
             ASSERT (0 && "unexpected type");
         }

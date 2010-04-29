@@ -465,6 +465,18 @@ DECLFOLDER(constfold_mul)
                                      next_newconst, A.typespec(), &result);
             turn_into_assign (op, inst.args(), cind);
             return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
+            Vec3 result = (*(Vec3 *)A.data()) * (*(float *)B.data());
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, A.typespec(), &result);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            Vec3 result = (*(float *)A.data()) * (*(Vec3 *)B.data());
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, B.typespec(), &result);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
         }
     }
     return 0;
@@ -478,10 +490,18 @@ DECLFOLDER(constfold_div)
     Symbol &A (*inst.argsymbol(op.firstarg()+1));
     Symbol &B (*inst.argsymbol(op.firstarg()+2));
     if (B.is_constant()) {
-        if (is_one(B) || is_zero(B)) {
+        if (is_one(B)) {
             // R = A / 1   =>   R = A
-            // R = A / 0   =>   R = A      because of OSL div by zero rule
             turn_into_assign (op, inst.args(), inst.arg(op.firstarg()+1));
+            return 1;
+        }
+        if (is_zero(B) && (B.typespec().is_float() ||
+                           B.typespec().is_triple() || B.typespec().is_int())) {
+            // R = A / 0   =>   R = 0      because of OSL div by zero rule
+            static float zero[3] = { 0, 0, 0 };
+            int cind = add_constant (inst, all_consts,
+                                     next_newconst, B.typespec(), &zero);
+            turn_into_assign (op, inst.args(), cind);
             return 1;
         }
     }
@@ -1475,7 +1495,6 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
         int lastblock = -1;
         for (int opnum = 0;  opnum < (int)inst.ops().size();  ++opnum) {
             Opcode &op (inst.ops()[opnum]);
-            ASSERT (&op == &(inst.ops()[opnum]));
             // Find the farthest this instruction jumps to (-1 for ops
             // that don't jump) so we can mark conditional regions.
             int jumpend = op.farthest_jump();
@@ -1487,6 +1506,28 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 block_aliases.clear ();
                 block_aliases.resize (inst.symbols().size(), -1);
                 lastblock = bblockids[opnum];
+            }
+
+            // a[i] = c  turns into nop if a[i] == c already
+            if (optimize() >= 2 && op.implementation() == OP_compassign) {
+                // Symbol *A (inst.argsymbol(op.firstarg()+0));
+                Symbol *I (inst.argsymbol(op.firstarg()+1));
+                Symbol *C (inst.argsymbol(op.firstarg()+2));
+                int Aalias = block_aliases[inst.arg(op.firstarg()+0)];
+                Symbol *AA = inst.symbol(Aalias);
+                // N.B. symbol returns NULL if Aalias is < 0
+                if (I->is_constant() && C->is_constant() &&
+                      AA && AA->is_constant() && AA->typespec().is_triple()) {
+                    ASSERT (I->typespec().is_int() && C->typespec().is_float());
+                    float *aa = (float *)AA->data();
+                    int i = *(int *)I->data();
+                    float c = *(float *)C->data();
+                    if (aa[i] == c) {
+                        turn_into_nop (op);
+                        changed = 1;
+                        continue;
+                    }
+                }
             }
 
             // De-alias the args to the op and figure out if there are
@@ -2070,9 +2111,19 @@ ShadingSystemImpl::collapse_ops (ShaderGroup &group, int layer,
         }
     }
 
-    // Miscellaneous cleanup of other things that used instruction addresses
+    // Adjust 'main' code range and init op ranges
     inst.m_maincodebegin = op_remap[inst.m_maincodebegin];
     inst.m_maincodeend = (int)new_ops.size();
+    BOOST_FOREACH (Symbol &s, inst.symbols()) {
+        if ((s.symtype() == SymTypeParam ||
+             s.symtype() == SymTypeOutputParam) && s.has_init_ops()) {
+            s.initbegin (op_remap[s.initbegin()]);
+            if (s.initend() < (int)op_remap.size())
+                s.initend (op_remap[s.initend()]);
+            else
+                s.initend ((int)new_ops.size());
+        }
+    }
 
     // Swap the new code for the old.
     std::swap (inst.m_instops, new_ops);

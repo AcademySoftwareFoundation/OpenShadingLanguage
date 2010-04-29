@@ -234,6 +234,10 @@ struct Connection {
 
 
 
+typedef std::vector<Connection> ConnectionVec;
+
+
+
 /// ShaderInstance is a particular instance of a shader, with its own
 /// set of parameter values, coordinate transform, and connections to
 /// other instances within the same shader group.
@@ -279,6 +283,7 @@ public:
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) { return index >= 0 ? &m_instsymbols[index] : NULL; }
+    const Symbol *symbol (int index) const { return index >= 0 ? &m_instsymbols[index] : NULL; }
 
     /// How many closures does this group use, not counting globals.
     ///
@@ -303,6 +308,11 @@ public:
     /// Return a reference to the i-th connection to an earlier layer.
     ///
     const Connection & connection (int i) const { return m_connections[i]; }
+
+    /// Reference to the connection list.
+    ///
+    ConnectionVec & connections () { return m_connections; }
+    const ConnectionVec & connections () const { return m_connections; }
 
     /// Return the unique ID of this instance.
     ///
@@ -557,6 +567,10 @@ private:
 
     void coalesce_temporaries (ShaderInstance &inst);
 
+    void find_constant_params (ShaderInstance &inst, ShaderGroup &group,
+                       std::vector<int> &all_consts, int &next_newconst,
+                       std::map<int,int> &symbol_aliases);
+
     bool opt_coerce_assigned_constant (ShaderInstance &inst, Opcode &op,
                        std::vector<int> &all_consts, int &next_newconst);
 
@@ -565,6 +579,11 @@ private:
                               std::map<int,int> &symbol_aliases);
 
     bool opt_useless_op_elision (ShaderInstance &inst, Opcode &op);
+
+    void make_param_use_instanceval (ShaderInstance &inst, Symbol *R);
+
+    void replace_param_value (ShaderInstance &inst, 
+                              Symbol *R, const void *newdata);
 
     /// Track variable lifetimes for all the symbols of the instance.
     ///

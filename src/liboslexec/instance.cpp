@@ -349,8 +349,13 @@ ShaderInstance::print ()
         if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
             out << " init [" << s.initbegin() << ',' << s.initend() << ")";
         out << "\n";
-        if (s.symtype() == SymTypeConst) {
-            out << "\tconst: ";
+        if (s.symtype() == SymTypeConst || 
+            ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
+             s.valuesource() == Symbol::DefaultVal && !s.has_init_ops())) {
+            if (s.symtype() == SymTypeConst)
+                out << "\tconst: ";
+            else
+                out << "\tdefault: ";
             TypeDesc t = s.typespec().simpletype();
             int n = t.aggregate * t.numelements();
             if (t.basetype == TypeDesc::FLOAT) {

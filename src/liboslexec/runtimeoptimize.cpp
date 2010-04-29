@@ -51,6 +51,18 @@ namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
+
+/// Wrapper that erases elements of c for which predicate p is true.
+/// (Unlike std::remove_if, it resizes the container so that it contains
+/// ONLY elements for which the predicate is true.)
+template<class Container, class Predicate>
+void erase_if (Container &c, const Predicate &p)
+{
+    c.erase (std::remove_if (c.begin(), c.end(), p), c.end());
+}
+
+
+
 // Search for a constant whose type and value match type and data[...].
 // Return -1 if no matching const is found.
 static int
@@ -224,7 +236,8 @@ ShadingSystemImpl::add_useparam (ShaderInstance &inst, SymbolPtrVec &allsyms)
     std::vector<int> outputparams;
     for (int i = 0;  i < (int)inst.symbols().size();  ++i) {
         Symbol *s = inst.symbol(i);
-        if (s->symtype() == SymTypeOutputParam) {
+        if (s->symtype() == SymTypeOutputParam &&
+            (s->connected() || (s->valuesource() == Symbol::DefaultVal && s->has_init_ops()))) {
             outputparams.push_back (i);
             s->initialized (true);
         }
@@ -955,6 +968,35 @@ DECLFOLDER(constfold_sqrt)
 
 
 
+DECLFOLDER(constfold_triple)
+{
+    // Turn R=triple(a,b,c) into R=C if the components are all constants
+    Opcode &op (inst.ops()[opnum]);
+    DASSERT (op.nargs() == 4 || op.nargs() == 5); 
+    bool using_space = (op.nargs() == 5);
+    Symbol &R (*inst.argsymbol(op.firstarg()+0));
+//    Symbol &Space (*inst.argsymbol(op.firstarg()+1));
+    Symbol &A (*inst.argsymbol(op.firstarg()+1+using_space));
+    Symbol &B (*inst.argsymbol(op.firstarg()+2+using_space));
+    Symbol &C (*inst.argsymbol(op.firstarg()+3+using_space));
+    if (A.is_constant() && A.typespec().is_float() &&
+            B.is_constant() && C.is_constant() && !using_space) {
+        DASSERT (A.typespec().is_float() && 
+                 B.typespec().is_float() && C.typespec().is_float());
+        float result[3];
+        result[0] = *(const float *)A.data();
+        result[1] = *(const float *)B.data();
+        result[2] = *(const float *)C.data();
+        int cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_matrix)
 {
     // Try to turn R=matrix(from,to) into R=1 if it's an identity transform
@@ -1039,6 +1081,10 @@ initialize_folder_table ()
     INIT (concat);
     INIT (clamp);
     INIT (sqrt);
+    INIT2 (color, constfold_triple);
+    INIT2 (point, constfold_triple);
+    INIT2 (normal, constfold_triple);
+    INIT2 (vector, constfold_triple);
     INIT (matrix);
     INIT2 (transform, constfold_transform);
     INIT2 (transformv, constfold_transform);
@@ -1048,6 +1094,63 @@ initialize_folder_table ()
 #undef INIT2
 
     folder_table_initialized = true;
+}
+
+
+
+// For all the instance's parameters, if they can be found to be effectively
+// constants, make constants for them an alias them to the constant.
+void
+ShadingSystemImpl::find_constant_params (ShaderInstance &inst,
+                         ShaderGroup &group, std::vector<int> &all_consts,
+                         int &next_newconst, std::map<int,int> &symbol_aliases)
+{
+    for (int i = inst.firstparam();  i <= inst.lastparam();  ++i) {
+        Symbol *s (inst.symbol(i));
+        if (// it's a paramter that can't change with the geom
+            s->symtype() == SymTypeParam && s->lockgeom() &&
+            // and it's NOT a default val that needs to run init ops
+            !(s->valuesource() == Symbol::DefaultVal && s->has_init_ops()) &&
+            // and it not a structure or closure variable...
+            !s->typespec().is_structure() && !s->typespec().is_closure())
+        {
+            // We can turn it into a constant if there's no connection,
+            // OR if the connection is itself a constant
+
+            if (s->valuesource() == Symbol::ConnectedVal) {
+                // It's connected to an earlier layer.  But see if the
+                // output var of the upstream shader is effectively constant.
+                BOOST_FOREACH (Connection &c, inst.m_connections) {
+                    if (c.dst.param == i) {
+                        Symbol *srcsym = group[c.srclayer]->symbol(c.src.param);
+                        if (!srcsym->everused() &&
+                            (srcsym->valuesource() == Symbol::DefaultVal ||
+                             srcsym->valuesource() == Symbol::InstanceVal) &&
+                            !srcsym->has_init_ops()) {
+                                inst.make_symbol_room (1);
+                                s = inst.symbol(i);  // In case make_symbol_room changed ptrs
+                                int cind = add_constant (inst, all_consts, next_newconst,
+                                                         s->typespec(), srcsym->data());
+                                // Alias this symbol to the new const
+                                symbol_aliases[i] = cind;
+                                make_param_use_instanceval (inst, s);
+                                replace_param_value (inst, s, srcsym->data());
+                                break;
+                        }
+                    }
+                }
+            } else {
+                // Not a connected value -- make a new const using the
+                // param's instance values
+                inst.make_symbol_room (1);
+                s = inst.symbol(i);  // In case make_symbol_room changed ptrs
+                int cind = add_constant (inst, all_consts, next_newconst,
+                                         s->typespec(), s->data());
+                // Alias this symbol to the new const
+                symbol_aliases[i] = cind;
+            }
+        }
+    }
 }
 
 
@@ -1155,6 +1258,91 @@ ShadingSystemImpl::opt_coerce_assigned_constant (ShaderInstance &inst,
 
 
 
+// Replace R's instance value with new data.
+void
+ShadingSystemImpl::replace_param_value (ShaderInstance &inst, 
+                                        Symbol *R, const void *newdata)
+{
+    ASSERT (R->symtype() == SymTypeParam || R->symtype() == SymTypeOutputParam);
+    TypeDesc Rtype = R->typespec().simpletype();
+    void *Rdefault = NULL;
+    DASSERT (R->dataoffset() >= 0);
+#ifdef DEBUG
+    int nvals = int(Rtype.aggregate * Rtype.numelements());
+#endif
+    if (Rtype.basetype == TypeDesc::FLOAT) {
+        Rdefault = &inst.m_fparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+nvals) <= (int)inst.m_fparams.size());
+    }
+    else if (Rtype.basetype == TypeDesc::INT) {
+        Rdefault = &inst.m_iparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+nvals) <= (int)inst.m_iparams.size());
+    }
+    else if (Rtype.basetype == TypeDesc::STRING) {
+        Rdefault = &inst.m_sparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+nvals) <= (int)inst.m_sparams.size());
+    } else {
+        ASSERT (0 && "replace_param_value: unexpected type");
+    }
+    DASSERT (Rdefault != NULL);
+    memcpy (Rdefault, newdata, Rtype.size());
+}
+
+
+
+// Predicate to test if the connection's destination is never used
+struct ConnectionDestIs
+{
+    ConnectionDestIs (const ShaderInstance &inst, const Symbol *sym)
+        : m_inst(inst), m_sym(sym) { }
+    bool operator() (const Connection &c) {
+        return m_inst.symbol(c.dst.param) == m_sym;
+    }
+private:
+    const ShaderInstance &m_inst;
+    const Symbol *m_sym;
+};
+
+
+
+// Symbol R has a connection or init ops we no longer need; turn it into a
+// a plain old instance-value parameter.
+void
+ShadingSystemImpl::make_param_use_instanceval (ShaderInstance &inst, Symbol *R)
+{
+    // Mark its source as the default value
+    R->valuesource (Symbol::InstanceVal);
+    // If it isn't a connection or computed, it doesn't need derivs.
+    R->has_derivs (false);
+
+    // Point the symbol's data pointer to its param default and make it
+    // uniform
+    void *Rdefault = NULL;
+    DASSERT (R->dataoffset() >= 0);
+    TypeDesc Rtype = R->typespec().simpletype();
+    if (Rtype.basetype == TypeDesc::FLOAT)
+        Rdefault = &inst.m_fparams[R->dataoffset()];
+    else if (Rtype.basetype == TypeDesc::INT)
+        Rdefault = &inst.m_iparams[R->dataoffset()];
+    else if (Rtype.basetype == TypeDesc::STRING)
+        Rdefault = &inst.m_sparams[R->dataoffset()];
+    DASSERT (Rdefault != NULL);
+    R->data (Rdefault);
+    R->step (0);
+
+    // Get rid of any init ops
+    if (R->has_init_ops()) {
+        for (int i = R->initbegin();  i < R->initend();  ++i)
+            turn_into_nop (inst.ops()[i]);
+        R->initbegin (0);
+        R->initend (0);
+    }
+    // Erase R's incoming connections
+    erase_if (inst.connections(), ConnectionDestIs(inst,R));
+}
+
+
+
 /// Check for assignment of output params that are written only once in
 /// the whole shader -- on this statement -- and assigned a constant, and
 /// the assignment is unconditional.  In that case, just alias it to the
@@ -1187,29 +1375,9 @@ ShadingSystemImpl::opt_outparam_assign_elision (ShaderInstance &inst,
         // If it's also never read before this assignment, just replace its
         // default value entirely and get rid of the assignment.
         if (R->firstread() > opnum) {
-            TypeDesc Rtype = R->typespec().simpletype();
-            void *Rdefault = NULL;
-            if (Rtype.basetype == TypeDesc::FLOAT)
-                Rdefault = &inst.m_fparams[R->dataoffset()];
-            else if (Rtype.basetype == TypeDesc::INT)
-                Rdefault = &inst.m_iparams[R->dataoffset()];
-            else if (Rtype.basetype == TypeDesc::STRING)
-                Rdefault = &inst.m_sparams[R->dataoffset()];
-            ASSERT (Rdefault != NULL);
-            memcpy (Rdefault, A->data(), Rtype.size());
-            R->has_derivs (false);
-            R->initbegin (0);
-            R->initend (0);
-            R->valuesource (Symbol::DefaultVal);
+            make_param_use_instanceval (inst, R);
+            replace_param_value (inst, R, A->data());
             turn_into_nop (op);
-            // Erase R's incoming connections
-            for (int i = 0;  i < inst.nconnections();  ++i) {
-                const Connection &c (inst.connection(i));
-                if (inst.symbol(c.dst.param) == R) {
-                    inst.m_connections.erase (inst.m_connections.begin()+i);
-                    --i;
-                }
-            }
             return true;
         }
     }
@@ -1249,6 +1417,19 @@ ShadingSystemImpl::opt_useless_op_elision (ShaderInstance &inst, Opcode &op)
 
 
 
+// Predicate to test if the connection's destination is never used
+struct ConnectionDestNeverUsed
+{
+    ConnectionDestNeverUsed (const ShaderInstance &inst) : m_inst(inst) { }
+    bool operator() (const Connection &c) {
+        return ! m_inst.symbol(c.dst.param)->everused();
+    }
+private:
+    const ShaderInstance &m_inst;
+};
+
+
+
 void
 ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                                       ShaderInstance &inst)
@@ -1265,24 +1446,10 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
     IntMap symbol_aliases;   // Track symbol aliases
     int next_newconst = 0;   // Index of next new constant
 
-    // Turn all geom-locked parameters into constants.  While we're at it,
-    // build up the list of all constants.
+    // Turn all geom-locked parameters into constants.
     if (optimize() >= 2) {
-        for (int i = inst.firstparam();  i <= inst.lastparam();  ++i) {
-            Symbol *s (inst.symbol(i));
-            if (s->symtype() == SymTypeParam && s->lockgeom() &&
-                s->valuesource() != Symbol::ConnectedVal &&
-                !(s->valuesource() == Symbol::DefaultVal && s->initbegin() < s->initend()) &&
-                !s->typespec().is_structure() && !s->typespec().is_closure()) {
-                // Make a new const using the param's instance values
-                inst.make_symbol_room (1);
-                s = inst.symbol(i);  // In case make_symbol_room changed ptrs
-                int cind = add_constant (inst, all_consts,
-                                         next_newconst, s->typespec(), s->data());
-                // Alias this symbol to the new const
-                symbol_aliases[i] = cind;
-            }
-        }
+        find_constant_params (inst, group, all_consts,
+                              next_newconst, symbol_aliases);
     }
 
     // Try to fold constants.  We take several passes, until we get to
@@ -1353,7 +1520,9 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
             // Make sure there's room for at least one more symbol, so that
             // we can add a const if we need to, without worrying about the
             // addresses of symbols changing when we add a new one below.
+            // We need an extra entry for block_aliases, too.
             inst.make_symbol_room (1);
+            block_aliases.resize (inst.symbols().size()+1, -1);
 
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
@@ -1486,13 +1655,8 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
 
     // Erase this layer's incoming connections and init ops for params
     // it no longer uses
-    for (int i = 0;  i < inst.nconnections();  ++i) {
-        const Connection &c (inst.connection(i));
-        if (! inst.symbol(c.dst.param)->everused()) {
-            inst.m_connections.erase (inst.m_connections.begin()+i);
-            --i;
-        }
-    }
+    erase_if (inst.connections(), ConnectionDestNeverUsed(inst));
+
     BOOST_FOREACH (Symbol &s, inst.symbols())
         if (s.symtype() == SymTypeParam && ! s.everused() &&
                 s.initbegin() < s.initend()) {
@@ -1646,8 +1810,11 @@ ShadingSystemImpl::track_variable_dependencies (ShaderInstance &inst,
     // connection.
     int snum = 0;
     BOOST_FOREACH (Symbol &s, inst.symbols()) {
-        // Globals that get written should always provide derivs
-        if (s.symtype() == SymTypeGlobal && s.everwritten())
+        // Globals that get written should always provide derivs.
+        // Exclude N, since its derivs are unreliable anyway, so no point
+        // making it cause the whole disp shader to need derivs.
+        if (s.symtype() == SymTypeGlobal && s.everwritten() &&
+              !s.typespec().is_closure() && s.mangled() != Strings::N)
             s.has_derivs(true);
         if (s.has_derivs())
             add_dependency (inst, symdeps, DerivSym, snum);

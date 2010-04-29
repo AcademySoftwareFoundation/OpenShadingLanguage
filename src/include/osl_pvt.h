@@ -585,6 +585,7 @@ public:
     int initend () const { return m_initend; }
     void initend (int i) { m_initend = i; }
     void set_initrange (int b=0, int e=0) { m_initbegin = b; m_initend = e; }
+    bool has_init_ops () const { return m_initbegin != m_initend; }
 
     /// Clear read/write usage info.
     ///

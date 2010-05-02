@@ -331,6 +331,27 @@ ShaderInstance::make_symbol_room (size_t moresyms)
 
 
 
+inline std::string
+print_vals (const Symbol &s)
+{
+    std::stringstream out;
+    TypeDesc t = s.typespec().simpletype();
+    int n = t.aggregate * t.numelements();
+    if (t.basetype == TypeDesc::FLOAT) {
+        for (int j = 0;  j < n;  ++j)
+            out << (j ? " " : "") << ((float *)s.data())[j];
+    } else if (t.basetype == TypeDesc::INT) {
+        for (int j = 0;  j < n;  ++j)
+            out << (j ? " " : "") << ((int *)s.data())[j];
+    } else if (t.basetype == TypeDesc::STRING) {
+        for (int j = 0;  j < n;  ++j)
+            out << (j ? " " : "") << "\"" << ((ustring *)s.data())[j] << "\"";
+    }
+    return out.str();
+}
+
+
+
 std::string
 ShaderInstance::print ()
 {
@@ -340,14 +361,20 @@ ShaderInstance::print ()
     for (size_t i = 0;  i < m_instsymbols.size();  ++i) {
         const Symbol &s (*symbol(i));
         out << "    " << i << ": " << Symbol::symtype_shortname(s.symtype())
-            << " " << s.typespec().string() << " " << s.name() 
-            << " (used " << s.firstuse() << ' ' << s.lastuse() 
-            << " read " << s.firstread() << ' ' << s.lastread() 
-            << " write " << s.firstwrite() << ' ' << s.lastwrite() 
-            << (s.has_derivs() ? " derivs" : "")
-            << ")";
-        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
-            out << " init [" << s.initbegin() << ',' << s.initend() << ")";
+            << " " << s.typespec().string() << " " << s.name();
+        if (s.everused())
+            out << " (used " << s.firstuse() << ' ' << s.lastuse() 
+                << " read " << s.firstread() << ' ' << s.lastread() 
+                << " write " << s.firstwrite() << ' ' << s.lastwrite();
+        else
+            out << " (unused";
+        out << (s.has_derivs() ? " derivs" : "") << ")";
+        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
+            if (s.has_init_ops())
+                out << " init [" << s.initbegin() << ',' << s.initend() << ")";
+            if (s.connected())
+                out << " connected";
+        }
         out << "\n";
         if (s.symtype() == SymTypeConst || 
             ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
@@ -356,18 +383,7 @@ ShaderInstance::print ()
                 out << "\tconst: ";
             else
                 out << "\tdefault: ";
-            TypeDesc t = s.typespec().simpletype();
-            int n = t.aggregate * t.numelements();
-            if (t.basetype == TypeDesc::FLOAT) {
-                for (int j = 0;  j < n;  ++j)
-                    out << ((float *)s.data())[j] << " ";
-            } else if (t.basetype == TypeDesc::INT) {
-                for (int j = 0;  j < n;  ++j)
-                    out << ((int *)s.data())[j] << " ";
-            } else if (t.basetype == TypeDesc::STRING) {
-                for (int j = 0;  j < n;  ++j)
-                    out << "\"" << ((ustring *)s.data())[j] << "\" ";
-            }
+            out << print_vals (s);
             out << "\n";
         }
     }
@@ -391,9 +407,12 @@ ShaderInstance::print ()
         out << "    " << i << ": " << op.opname();
         bool allconst = true;
         for (int a = 0;  a < op.nargs();  ++a) {
-            out << " " << m_instsymbols[m_instargs[op.firstarg()+a]].name();
+            const Symbol *s (argsymbol(op.firstarg()+a));
+            out << " " << s->name();
+            if (s->symtype() == SymTypeConst)
+                out << " (" << print_vals(*s) << ")";
             if (op.argread(a))
-                allconst &= m_instsymbols[m_instargs[op.firstarg()+a]].is_constant();
+                allconst &= s->is_constant();
         }
         for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
             if (op.jump(j) >= 0)

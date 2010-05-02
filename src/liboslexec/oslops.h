@@ -239,7 +239,9 @@ DECLOP (OP_missing);
 /// Macro that defines the arguments to constant-folding routines
 ///
 #define FOLDARGSDECL     ShaderInstance &inst, int opnum, \
-                         std::vector<int> &all_consts, int &next_newconst
+                         std::vector<int> &all_consts, int &next_newconst, \
+                         std::vector<int> &block_aliases
+
 /// Function pointer to a constant-folding routine
 ///
 typedef int (*OpFolder) (FOLDARGSDECL);

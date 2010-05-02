@@ -117,7 +117,7 @@ add_constant (ShaderInstance &inst, std::vector<int> &all_consts,
 
 
 
-// Turn the current op into a simple assignment.
+// Turn the current op into a simple assignment of the first argument.
 void
 turn_into_assign (Opcode &op, std::vector<int> &opargs, int newarg)
 {
@@ -127,6 +127,21 @@ turn_into_assign (Opcode &op, std::vector<int> &opargs, int newarg)
     op.argwriteonly (0);
     op.argread (1, true);
     op.argwrite (1, false);
+}
+
+
+
+// Turn the current op into a simple assignment to zero (of the first arg).
+void
+turn_into_assign_zero (Opcode &op, ShaderInstance &inst,
+                       std::vector<int> &all_consts, int &next_newconst)
+{
+    static float zero[16] = { 0, 0, 0, 0,  0, 0, 0, 0,
+                              0, 0, 0, 0,  0, 0, 0, 0 };
+    Symbol &R (*inst.argsymbol(op.firstarg()+0));
+    int cind = add_constant (inst, all_consts,
+                             next_newconst, R.typespec(), &zero);
+    turn_into_assign (op, inst.args(), cind);
 }
 
 
@@ -403,6 +418,7 @@ DECLFOLDER(constfold_sub)
             return 1;
         }
     }
+    // R = A - B, if both are constants, =>  R = C
     if (A.is_constant() && B.is_constant()) {
         if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() - *(float *)B.data();
@@ -417,6 +433,10 @@ DECLFOLDER(constfold_sub)
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
+    }
+    // R = A - A  =>  R = 0    even if not constant!
+    if (&A == &B) {
+        turn_into_assign_zero (op, inst, all_consts, next_newconst);
     }
     return 0;
 }
@@ -487,6 +507,7 @@ DECLFOLDER(constfold_mul)
 DECLFOLDER(constfold_div)
 {
     Opcode &op (inst.ops()[opnum]);
+    Symbol &R (*inst.argsymbol(op.firstarg()+0));
     Symbol &A (*inst.argsymbol(op.firstarg()+1));
     Symbol &B (*inst.argsymbol(op.firstarg()+2));
     if (B.is_constant()) {
@@ -498,24 +519,43 @@ DECLFOLDER(constfold_div)
         if (is_zero(B) && (B.typespec().is_float() ||
                            B.typespec().is_triple() || B.typespec().is_int())) {
             // R = A / 0   =>   R = 0      because of OSL div by zero rule
-            static float zero[3] = { 0, 0, 0 };
-            int cind = add_constant (inst, all_consts,
-                                     next_newconst, B.typespec(), &zero);
-            turn_into_assign (op, inst.args(), cind);
+            turn_into_assign_zero (op, inst, all_consts, next_newconst);
             return 1;
         }
     }
     if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_float() && B.typespec().is_float()) {
+        int cind = -1;
+        if (A.typespec().is_int() && B.typespec().is_int()) {
+            int result = *(int *)A.data() / *(int *)B.data();
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        } else if (A.typespec().is_float() && B.typespec().is_int()) {
+            float result = *(float *)A.data() / *(int *)B.data();
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        } else if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() / *(float *)B.data();
-            int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result);
-            turn_into_assign (op, inst.args(), cind);
-            return 1;
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        } else if (A.typespec().is_int() && B.typespec().is_float()) {
+            float result = *(int *)A.data() / *(float *)B.data();
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
         } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
             Vec3 result = *(Vec3 *)A.data() / *(Vec3 *)B.data();
-            int cind = add_constant (inst, all_consts,
-                                     next_newconst, A.typespec(), &result);
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
+            Vec3 result = *(Vec3 *)A.data() / *(float *)B.data();
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            float a = *(float *)A.data();
+            Vec3 result = Vec3(a,a,a) / *(Vec3 *)B.data();
+            cind = add_constant (inst, all_consts,
+                                 next_newconst, R.typespec(), &result);
+        }
+        if (cind >= 0) {
             turn_into_assign (op, inst.args(), cind);
             return 1;
         }
@@ -530,7 +570,13 @@ DECLFOLDER(constfold_neg)
     Opcode &op (inst.ops()[opnum]);
     Symbol &A (*inst.argsymbol(op.firstarg()+1));
     if (A.is_constant()) {
-        if (A.typespec().is_float()) {
+        if (A.typespec().is_int()) {
+            int result =  - *(int *)A.data();
+            int cind = add_constant (inst, all_consts, next_newconst,
+                                     A.typespec(), &result);
+            turn_into_assign (op, inst.args(), cind);
+            return 1;
+        } else if (A.typespec().is_float()) {
             float result =  - *(float *)A.data();
             int cind = add_constant (inst, all_consts, next_newconst,
                                      A.typespec(), &result);
@@ -815,15 +861,30 @@ DECLFOLDER(constfold_if)
 
 
 
+// Is an array known to have all elements having the same value?
+static bool
+array_all_elements_equal (const Symbol &s)
+{
+    TypeDesc t = s.typespec().simpletype();
+    size_t size = t.elementsize();
+    size_t n = t.numelements();
+    for (size_t i = 1;  i < n;  ++i)
+        if (memcmp ((const char *)s.data(), (const char *)s.data()+i*size, size))
+            return false;
+    return true;
+}
+
+
+
 DECLFOLDER(constfold_aref)
 {
-    // Array reference -- crops up more than you think in production shaders!
-    // Try to turn R=A[I] into R=C if A and I are const.
     Opcode &op (inst.ops()[opnum]);
     Symbol &R (*inst.argsymbol(op.firstarg()+0));
     Symbol &A (*inst.argsymbol(op.firstarg()+1));
     Symbol &Index (*inst.argsymbol(op.firstarg()+2));
     DASSERT (A.typespec().is_array() && Index.typespec().is_int());
+
+    // Try to turn R=A[I] into R=C if A and I are const.
     if (A.is_constant() && Index.is_constant()) {
         TypeSpec elemtype = A.typespec().elementtype();
         ASSERT (equivalent(elemtype, R.typespec()));
@@ -833,6 +894,60 @@ DECLFOLDER(constfold_aref)
                                  (char *)A.data() + index*elemtype.simpletype().size());
         turn_into_assign (op, inst.args(), cind);
         return 1;
+    }
+    // Even if the index isn't constant, we still know the answer if all
+    // the array elements are equal!
+    if (A.is_constant() && array_all_elements_equal(A)) {
+        TypeSpec elemtype = A.typespec().elementtype();
+        ASSERT (equivalent(elemtype, R.typespec()));
+        int cind = add_constant (inst, all_consts, next_newconst, elemtype,
+                                 (char *)A.data());
+        turn_into_assign (op, inst.args(), cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_compassign)
+{
+    // Component assignment
+    Opcode &op (inst.ops()[opnum]);
+    // Symbol *A (inst.argsymbol(op.firstarg()+0));
+    Symbol *I (inst.argsymbol(op.firstarg()+1));
+    Symbol *C (inst.argsymbol(op.firstarg()+2));
+    int Aalias = block_aliases[inst.arg(op.firstarg()+0)];
+    Symbol *AA = inst.symbol(Aalias);
+    // N.B. symbol returns NULL if Aalias is < 0
+
+    if (I->is_constant() && C->is_constant() && AA && AA->is_constant()) {
+        // Try to turn A[I]=C into nop if A[I] already is C
+        if (AA->typespec().is_int() && C->typespec().is_int()) {
+            int *aa = (int *)AA->data();
+            int i = *(int *)I->data();
+            int c = *(int *)C->data();
+            if (aa[i] == c) {
+                turn_into_nop (op);
+                return 1;
+            }
+        } else if (AA->typespec().is_float() && C->typespec().is_float()) {
+            float *aa = (float *)AA->data();
+            int i = *(int *)I->data();
+            float c = *(float *)C->data();
+            if (aa[i] == c) {
+                turn_into_nop (op);
+                return 1;
+            }
+        } else if (AA->typespec().is_triple() && C->typespec().is_triple()) {
+            Vec3 *aa = (Vec3 *)AA->data();
+            int i = *(int *)I->data();
+            Vec3 c = *(Vec3 *)C->data();
+            if (aa[i] == c) {
+                turn_into_nop (op);
+                return 1;
+            }
+        }
     }
     return 0;
 }
@@ -1094,6 +1209,7 @@ initialize_folder_table ()
     INIT (lt);     INIT (gt);
     INIT (or);     INIT (and);
     INIT (if);
+    INIT (compassign);
     INIT (compref);
     INIT (aref);
     INIT (strlen);
@@ -1110,10 +1226,57 @@ initialize_folder_table ()
     INIT2 (transformv, constfold_transform);
     INIT2 (transformn, constfold_transform);
     INIT (useparam);
+//    INIT (assign);  N.B. do not include here -- we want this run AFTER
+//                    all other constant folding is done, since many of
+//                    them turn other statements into assignments.
 #undef INIT
 #undef INIT2
 
     folder_table_initialized = true;
+}
+
+
+
+DECLFOLDER(constfold_assign)
+{
+    Opcode &op (inst.ops()[opnum]);
+    // Symbol *A (inst.argsymbol(op.firstarg()+0));
+    Symbol *B (inst.argsymbol(op.firstarg()+1));
+    int Aalias = block_aliases[inst.arg(op.firstarg()+0)];
+    Symbol *AA = inst.symbol(Aalias);
+    // N.B. symbol returns NULL if Aalias is < 0
+
+    if (B->is_constant() && AA && AA->is_constant()) {
+        // Try to turn A=C into nop if A already is C
+        if (AA->typespec().is_int() && B->typespec().is_int()) {
+            if (*(int *)AA->data() == *(int *)B->data()) {
+                turn_into_nop (op);
+                return 1;
+            }
+        } else if (AA->typespec().is_float() && B->typespec().is_float()) {
+            if (*(float *)AA->data() == *(float *)B->data()) {
+                turn_into_nop (op);
+                return 1;
+            }
+        } else if (AA->typespec().is_float() && B->typespec().is_int()) {
+            if (*(float *)AA->data() == *(int *)B->data()) {
+                turn_into_nop (op);
+                return 1;
+            }
+        } else if (AA->typespec().is_triple() && B->typespec().is_triple()) {
+            if (*(Vec3 *)AA->data() == *(Vec3 *)B->data()) {
+                turn_into_nop (op);
+                return 1;
+            }
+        } else if (AA->typespec().is_triple() && B->typespec().is_float()) {
+            float b = *(float *)B->data();
+            if (*(Vec3 *)AA->data() == Vec3(b,b,b)) {
+                turn_into_nop (op);
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 
@@ -1330,8 +1493,9 @@ private:
 void
 ShadingSystemImpl::make_param_use_instanceval (ShaderInstance &inst, Symbol *R)
 {
-    // Mark its source as the default value
+    // Mark its source as the default value, and not connected
     R->valuesource (Symbol::InstanceVal);
+    R->connected (false);
     // If it isn't a connection or computed, it doesn't need derivs.
     R->has_derivs (false);
 
@@ -1508,39 +1672,14 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                 lastblock = bblockids[opnum];
             }
 
-            // a[i] = c  turns into nop if a[i] == c already
-            if (optimize() >= 2 && op.implementation() == OP_compassign) {
-                // Symbol *A (inst.argsymbol(op.firstarg()+0));
-                Symbol *I (inst.argsymbol(op.firstarg()+1));
-                Symbol *C (inst.argsymbol(op.firstarg()+2));
-                int Aalias = block_aliases[inst.arg(op.firstarg()+0)];
-                Symbol *AA = inst.symbol(Aalias);
-                // N.B. symbol returns NULL if Aalias is < 0
-                if (I->is_constant() && C->is_constant() &&
-                      AA && AA->is_constant() && AA->typespec().is_triple()) {
-                    ASSERT (I->typespec().is_int() && C->typespec().is_float());
-                    float *aa = (float *)AA->data();
-                    int i = *(int *)I->data();
-                    float c = *(float *)C->data();
-                    if (aa[i] == c) {
-                        turn_into_nop (op);
-                        changed = 1;
-                        continue;
-                    }
-                }
-            }
-
-            // De-alias the args to the op and figure out if there are
-            // any constants involved.
+            // De-alias the readable args to the op and figure out if
+            // there are any constants involved.
             bool any_const_args = false;
             for (int i = 0;  i < op.nargs();  ++i) {
+                if (op.argwrite(i))
+                    continue;    // Don't de-alias args that are written
                 int argindex = op.firstarg() + i;
                 int argsymindex = inst.arg(argindex);
-                if (op.argwrite(i)) {
-                    // Written arg -> no longer aliases anything
-                    block_aliases[argsymindex] = -1;
-                    continue;    // Don't alias args that are written
-                }
                 do {
                     if (block_aliases[argsymindex] >= 0 && ! op.argwrite(i)) {
                         // block-specific alias for the sym
@@ -1567,13 +1706,19 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
 
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
-            if (optimize() >= 2 && any_const_args) {
+            if (optimize() >= 2) {
                 std::map<ustring,OpFolder>::const_iterator found;
                 found = folder_table.find (op.opname());
                 if (found != folder_table.end())
-                    changed = (*found->second) (inst, opnum,
-                                                all_consts, next_newconst);
+                    changed = (*found->second) (inst, opnum, all_consts,
+                                                next_newconst, block_aliases);
             }
+
+            // Clear local block aliases for any args that were written
+            // by this op
+            for (int i = 0;  i < op.nargs();  ++i)
+                if (op.argwrite(i))
+                    block_aliases[inst.arg(op.firstarg()+i)] = -1;
 
             // Get rid of an 'if' if it contains no statements to execute
             if (optimize() >= 2 && op.implementation() == OP_if) {
@@ -1626,8 +1771,18 @@ ShadingSystemImpl::optimize_instance (ShaderGroup &group, int layer,
                     continue;
                 }
 
-                changed += opt_coerce_assigned_constant (inst, op, all_consts,
-                                                         next_newconst);
+                if (opt_coerce_assigned_constant (inst, op, all_consts,
+                                                  next_newconst)) {
+                    // A may have changed, so we need to reset it
+                    A = inst.argsymbol(op.firstarg()+1);
+                    ++changed;
+                }
+
+                // NOW do assignment constant folding, only after we
+                // have performed all the other transformations that may
+                // turn this op into an assignment.
+                changed += constfold_assign (inst, opnum, all_consts,
+                                             next_newconst, block_aliases);
 
                 if (A->is_constant() &&
                         equivalent(R->typespec(), A->typespec())) {

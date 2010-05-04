@@ -178,6 +178,18 @@ public:
     /// optimized.
     void collapse_ops ();
 
+    /// Let the optimizer know that this (known) message was set.
+    ///
+    void register_message (ustring name);
+
+    /// Let the optimizer know that an unknown message was set.
+    ///
+    void register_unknown_message ();
+
+    /// Is it possible that the message with the given name was set?
+    ///
+    bool message_possibly_set (ustring name) const;
+
 private:
     ShadingSystemImpl &m_shadingsys;
     ShaderGroup &m_group;             ///< Group we're optimizing
@@ -189,6 +201,12 @@ private:
     int m_next_newconst;              ///< Unique ID for next new const we add
     std::map<int,int> m_symbol_aliases; ///< Global symbol aliases
     std::vector<int> m_block_aliases;   ///< Local block aliases
+    int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
+    std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
+
+    // Persistant data shared between layers
+    bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage
+    std::vector<ustring> m_messages_sent;  ///< Names of messages set
 };
 
 

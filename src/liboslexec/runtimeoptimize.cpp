@@ -325,6 +325,32 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
 
 
 
+void
+RuntimeOptimizer::register_message (ustring name)
+{
+    m_local_messages_sent.push_back (name);
+}
+
+
+
+void
+RuntimeOptimizer::register_unknown_message ()
+{
+    m_local_unknown_message_sent = true;
+}
+
+
+
+bool
+RuntimeOptimizer::message_possibly_set (ustring name) const
+{
+    return m_local_unknown_message_sent || m_unknown_message_sent ||
+        std::find (m_messages_sent.begin(), m_messages_sent.end(), name) != m_messages_sent.end() ||
+        std::find (m_local_messages_sent.begin(), m_local_messages_sent.end(), name) != m_local_messages_sent.end();
+}
+
+
+
 inline bool
 equal_consts (const Symbol &A, const Symbol &B)
 {
@@ -1144,6 +1170,44 @@ DECLFOLDER(constfold_transform)
 
 
 
+DECLFOLDER(constfold_setmessage)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+0));
+
+    // Record that the inst set a message
+    if (Name.is_constant()) {
+        ASSERT (Name.typespec().is_string());
+        rop.register_message (*(ustring *)Name.data());
+    } else {
+        rop.register_unknown_message ();
+    }
+
+    return 0;
+}
+
+
+
+
+DECLFOLDER(constfold_getmessage)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (Name.is_constant()) {
+        ASSERT (Name.typespec().is_string());
+        if (! rop.message_possibly_set (*(ustring *)Name.data())) {
+            // If the messages could not have been sent, get rid of the
+            // getmessage op, leave the destination value alone, and
+            // assign 0 to the returned status of getmessage.
+            rop.turn_into_assign_zero (op);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+
 
 DECLFOLDER(constfold_useparam)
 {
@@ -1193,6 +1257,8 @@ initialize_folder_table ()
     INIT2 (transform, constfold_transform);
     INIT2 (transformv, constfold_transform);
     INIT2 (transformn, constfold_transform);
+    INIT (setmessage);
+    INIT (getmessage);
     INIT (useparam);
 //    INIT (assign);  N.B. do not include here -- we want this run AFTER
 //                    all other constant folding is done, since many of
@@ -1611,8 +1677,6 @@ private:
 void
 RuntimeOptimizer::optimize_instance ()
 {
-    initialize_folder_table ();
-
     // Make a list of the indices of all constants.
     for (int i = 0;  i < (int)inst()->symbols().size();  ++i)
         if (inst()->symbol(i)->symtype() == SymTypeConst)
@@ -1640,6 +1704,10 @@ RuntimeOptimizer::optimize_instance ()
 
         // Constant aliases valid for just this basic block
         clear_block_aliases ();
+
+        // Clear local messages for this instance
+        m_local_unknown_message_sent = false;
+        m_local_messages_sent.clear ();
 
         int changed = 0;
         int lastblock = -1;
@@ -1824,6 +1892,20 @@ RuntimeOptimizer::optimize_instance ()
                 turn_into_nop (inst()->ops()[i]);
             s.set_initrange (0, 0);
         }
+
+    // Now that we've optimized this layer, walk through the ops and
+    // note which messages may have been sent, so subsequent layers will
+    // know.
+    for (int opnum = 0;  opnum < (int)inst()->ops().size();  ++opnum) {
+        Opcode &op (inst()->ops()[opnum]);
+        if (op.implementation() == OP_setmessage) {
+            Symbol &Name (*inst()->argsymbol(op.firstarg()+0));
+            if (Name.is_constant())
+                m_messages_sent.push_back (*(ustring *)Name.data());
+            else
+                m_unknown_message_sent = true;
+        }
+    }
 }
 
 
@@ -2249,7 +2331,13 @@ RuntimeOptimizer::collapse_ops ()
 void
 RuntimeOptimizer::optimize_group ()
 {
+    initialize_folder_table ();
+
     int nlayers = (int) m_group.nlayers ();
+
+    // Clear info about which messages have been set
+    m_unknown_message_sent = false;
+    m_messages_sent.clear ();
 
     // Optimize each layer
     size_t old_nsyms = 0, old_nops = 0;

@@ -236,23 +236,6 @@ DECLOP (OP_missing);
 
 
 
-/// Macro that defines the arguments to constant-folding routines
-///
-#define FOLDARGSDECL     ShaderInstance &inst, int opnum, \
-                         std::vector<int> &all_consts, int &next_newconst, \
-                         std::vector<int> &block_aliases
-
-/// Function pointer to a constant-folding routine
-///
-typedef int (*OpFolder) (FOLDARGSDECL);
-
-/// Macro that defines the full declaration of a shadeop constant-folder.
-/// 
-#define DECLFOLDER(name)  int name (FOLDARGSDECL)
-
-
-
-
 // Below are macros that define handy ways to loop over all active shade
 // points in a uniform way regardless of whether we are using runflags,
 // indices, or spans.

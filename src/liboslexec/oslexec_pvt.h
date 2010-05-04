@@ -386,6 +386,7 @@ private:
 
     friend class ShadingExecution;
     friend class ShadingSystemImpl;
+    friend class RuntimeOptimizer;
 };
 
 
@@ -555,67 +556,6 @@ private:
     ConnectedParam decode_connected_param (const char *connectionname,
                                const char *layername, ShaderInstance *inst);
 
-    /// Optimize one layer of a group, given what we know about its
-    /// instance variables and connections.
-    void optimize_instance (ShaderGroup &group, int layer,
-                            ShaderInstance &inst);
-
-    /// Post-optimization cleanup of a layer: add 'useparam' instructions,
-    /// track variable lifetimes, coalesce temporaries.
-    void post_optimize_instance (ShaderGroup &group, int layer,
-                                 ShaderInstance &inst);
-
-    void coalesce_temporaries (ShaderInstance &inst);
-
-    void find_constant_params (ShaderInstance &inst, ShaderGroup &group,
-                       std::vector<int> &all_consts, int &next_newconst,
-                       std::map<int,int> &symbol_aliases);
-
-    bool opt_coerce_assigned_constant (ShaderInstance &inst, Opcode &op,
-                       std::vector<int> &all_consts, int &next_newconst);
-
-    bool opt_outparam_assign_elision (ShaderInstance &inst, int opnum, 
-                              Opcode &op, std::vector<bool> &in_conditional,
-                              std::map<int,int> &symbol_aliases);
-
-    bool opt_useless_op_elision (ShaderInstance &inst, Opcode &op);
-
-    void make_param_use_instanceval (ShaderInstance &inst, Symbol *R);
-
-    void replace_param_value (ShaderInstance &inst, 
-                              Symbol *R, const void *newdata);
-
-    /// Track variable lifetimes for all the symbols of the instance.
-    ///
-    void track_variable_lifetimes (ShaderInstance &inst);
-
-    void track_variable_lifetimes (ShaderInstance &inst,
-                                   const SymbolPtrVec &allsymptrs);
-
-    /// For each symbol, have a list of the symbols it depends on (or that
-    /// depends on it).
-    typedef std::map<int, std::set<int> > SymDependency;
-
-    void syms_used_in_op (ShaderInstance &inst, Opcode &op,
-                          std::vector<int> &rsyms, std::vector<int> &wsyms);
-    void track_variable_dependencies (ShaderInstance &inst, 
-                                      SymDependency &symdeps);
-
-    static void add_dependency (ShaderInstance &inst, SymDependency &dmap, int A, int B);
-
-    /// Squeeze out unused symbols from an instance that has been
-    /// optimized.
-    void collapse_syms (ShaderGroup &group, int layer, ShaderInstance &inst);
-
-    /// Squeeze out nop instructions from an instance that has been
-    /// optimized.
-    void collapse_ops (ShaderGroup &group, int layer, ShaderInstance &inst);
-
-    /// Add a 'useparam' before any op that reads parameters.  This is what
-    /// tells the runtime that it needs to run the layer it came from, if
-    /// not already done.
-    void add_useparam (ShaderInstance &inst, SymbolPtrVec &allsyms);
-
     struct PerThreadInfo {
         std::stack<ShadingContext *> context_pool;
 
@@ -702,6 +642,7 @@ private:
 
     friend class ShadingContext;
     friend class ShaderInstance;
+    friend class RuntimeOptimizer;
 };
 
 

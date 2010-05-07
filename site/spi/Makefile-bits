@@ -1,8 +1,7 @@
 # SPI-specific settings
-ifeq (${platform},linux64)
-
 
 ifeq ($(SP_ARCH), spinux1_x86_64)
+platform=spinux1
 # put any gcc-4.4/spinux1 specific stuff here
 MY_CMAKE_FLAGS += \
 		  -DILMBASE_CUSTOM=1 \
@@ -10,18 +9,10 @@ MY_CMAKE_FLAGS += \
 		  -DOPENEXR_CUSTOM=1 \
 		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf"
 
-#BOOST_VERSION=1_42
-#Boost_LIBRARIES="-lboost_filesystem-gcc44-mt -lboost_regex-gcc44-mt -lboost_thread-gcc44-mt"
-#MY_CMAKE_FLAGS += \
-#		-DBOOST_CUSTOM=1 \
-#		-DBoost_INCLUDE_DIRS=/usr/include/boost \
-#		-DBoost_LIBRARY_DIRS=/usr/lib64 \
-#		-DBoost_LIBRARIES=$(Boost_LIBRARIES) \
-
-endif
+endif # SP_ARCH == spinux1_x86_64
 
 ifeq ($(SP_ARCH), rhel40_x86_64)
-
+platform=rhel40m64
 OPENEXR_VERSION=1.4.0
 BOOST_VERSION=1_34_1
 
@@ -38,8 +29,7 @@ MY_CMAKE_FLAGS += \
 		-DOPENEXR_VERSION=${OPENEXR_VERSION} \
 		-DOPENEXR_VERSION_DIGITS="010400" \
 		-DOPENEXR_HOME=/usr/local64/openexr/${OPENEXR_VERSION}
-
-endif #rhel40_x86_64
+endif # SP_ARCH == rhel40_x86_64
 
 
 ifeq (${OSL_NAMESPACE},)
@@ -56,10 +46,11 @@ else
 OIIO_VARIANT=''
 endif
 
+# set up OpenImageIO distribution environment
 ifeq (${OPENIMAGEIOHOME},)
-MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/linux64${OIIO_VARIANT}/ \
-        -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE} \
-        -DOPENIMAGEIO_NAMESPACE:STRING=${OPENIMAGEIO_NAMESPACE}
+MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/${platform}${OIIO_VARIANT}/ \
+                  -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE} \
+                  -DOPENIMAGEIO_NAMESPACE:STRING=${OPENIMAGEIO_NAMESPACE}
 else
 MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${IMAGEIOHOME} \
 		  -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE} \
@@ -68,4 +59,3 @@ endif
 
 $(info MY_CMAKE_FLAGS: $(MY_CMAKE_FLAGS))
 
-endif #linux64

@@ -26,15 +26,6 @@ ifdef PROFILE
     variant +=.profile
 endif
 
-# Set up variables holding the names of platform-dependent directories
-top_build_dir := build
-build_dir     := ${top_build_dir}/${platform}${variant}
-top_dist_dir  := dist
-dist_dir      := ${top_dist_dir}/${platform}${variant}
-
-$(info dist_dir = ${dist_dir})
-$(info INSTALLDIR = ${INSTALLDIR})
-
 MY_MAKE_FLAGS ?=
 MY_CMAKE_FLAGS ?=
 
@@ -69,6 +60,16 @@ endif
 ifneq (${shell uname -n | grep imageworks},)
 include ${working_dir}/site/spi/Makefile-bits
 endif
+
+# Set up variables holding the names of platform-dependent directories --
+# set these after evaluating site-specific instructions
+top_build_dir := build
+build_dir     := ${top_build_dir}/${platform}${variant}
+top_dist_dir  := dist
+dist_dir      := ${top_dist_dir}/${platform}${variant}
+
+$(info dist_dir = ${dist_dir})
+$(info INSTALLDIR = ${INSTALLDIR})
 
 
 #########################################################################

@@ -467,24 +467,7 @@ public:
     Pow (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float x, float y) { result = safe_pow (x, y); }
     inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) { 
-        result = pow (x, y);
-    }
-private:
-    inline float safe_pow (float x, float y) {
-        if (x == 0.0f) 
-        {
-           if (y == 0.0f)
-              return 1.0f;
-           else
-              return 0.0f;
-        }
-        else 
-        {
-           if (x < 0.0f && truncf (y) != y) 
-              return 0.0f;
-           else 
-              return std::pow (x,y);
-        }
+        result = safe_pow (x, y);
     }
 };
 

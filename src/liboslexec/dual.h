@@ -384,24 +384,81 @@ Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 template<class T>
 Dual2<T> pow (const Dual2<T> &u, const Dual2<T> &v)
 {
-#define MYTRUNC(x)  ((x < T(0)) ? std::ceil(x) : std::floor(x))
-   // assume 0^x is always zero unless x==0
-   if (u.val() == T(0))
-   {
-      if (v.val() == T(0))
-         return Dual2<T> ( T(1), T(0), T(0) );
-      else
-         return Dual2<T> ( T(0), T(0), T(0) );
-   }
-   // return 0 instead of an imaginary number
-   if (u.val() < T(0) && ( MYTRUNC (v.val()) != v.val()) )
-      return Dual2<T> ( T(0), T(0), T(0) );
-   T powuv   = std::pow (u.val(), v.val());
-   T powuvm1 = powuv / u.val(); // u^(v-1)
-   T logu    = std::log (u.val());
-   return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
-                            v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
-#undef MYTRUNC
+    if (v.val() == T(0))
+        return Dual2<T> ( T(1) );    // u^0 == 1
+    if (u.val() == T(0))
+        return Dual2<T> ( T(0) );    // 0^v == 0
+    if (u.val() < T(0)) {
+        if (truncf(v.val()) != v.val())
+            return T(0);  // return 0 rather than imaginary
+        // The function is not continuous in v, so assume v's derivs zero.
+        // This gets rid of the log(u), which makes life easier.
+        T powuvm1 = std::pow (u.val(), v.val()-T(1)); // u^(v-1)
+        T powuv   = powuvm1 * u.val();  // u^v
+        return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx(),
+                          v.val()*powuvm1 * u.dy() );
+    }
+    // Full case of pow(u,v) well-defined
+    T powuvm1 = std::pow (u.val(), v.val()-T(1)); // u^(v-1)
+    T powuv   = powuvm1 * u.val();  // u^v
+    T logu    = std::log (u.val());
+    return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
+                      v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
+}
+
+
+
+/// A version of pow that is robust to overflow and domain errors.
+///
+inline float
+safe_pow (float x, float y)
+{
+    // Quick return for x==0, including returning 0 (rather than Inf) when
+    // y is negative.
+    if (x == 0.0f)
+        return y == 0.0f ? 1.0f : 0.0f;
+    // Return 0 rather than NaNs for domain errors where x<0 and y not int
+    if (x < 0.0f && floorf(y) != y)
+        return 0.0f;
+    // Ask for standard pow()
+    float r = std::pow (x, y);
+    // Clamp to avoid Inf values.  We purposely clamp at considerably
+    // less than FLOAT_MAX (but still bigger than anyone is likely to
+    // need) so that subsequent additions or multiplications are less
+    // likely to overflow and end up with an Inf right afterwards.
+    const float big = 1e30;
+    if (r < -big)
+        return -big;
+    if (r > big)
+        return big;
+    return r;
+}
+
+
+
+template<class T>
+Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
+{
+    if (v.val() == T(0))
+        return Dual2<T> ( T(1) );    // u^0 == 1
+    if (u.val() == T(0))
+        return Dual2<T> ( T(0) );    // 0^v == 0
+    if (u.val() < T(0)) {
+        if (truncf(v.val()) != v.val())
+            return T(0);  // return 0 rather than imaginary
+        // The function is not continuous in v, so assume v's derivs zero.
+        // This gets rid of the log(u), which makes life easier.
+        T powuvm1 = safe_pow (u.val(), v.val()-T(1));  // u^(v-1)
+        T powuv   = powuvm1 * u.val();   // u^v
+        return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx(),
+                          v.val()*powuvm1 * u.dy() );
+    }
+    // Full case of pow(u,v) well-defined 
+    T powuvm1 = safe_pow (u.val(), v.val()-T(1));  // u^(v-1)
+    T powuv   = powuvm1 * u.val();   // u^v
+    T logu    = std::log (u.val());
+    return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
+                      v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
 }
 
 

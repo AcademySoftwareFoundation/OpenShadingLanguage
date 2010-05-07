@@ -53,6 +53,14 @@ test ()
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
         b = 0.0;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = 2.2;
+        b = 2;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = -2.2;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = 1e20;
+        printf ("  pow (%g, %g) = %g     [should be clamped, not inf!]\n",
+                a, b, pow(a,b));
     }
 
     { 

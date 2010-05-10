@@ -149,6 +149,18 @@ RuntimeOptimizer::turn_into_assign_zero (Opcode &op)
 
 
 
+// Turn the current op into a simple assignment to one (of the first arg).
+void
+RuntimeOptimizer::turn_into_assign_one (Opcode &op)
+{
+    static float one[3] = { 1, 1, 1 };
+    Symbol &R (*(inst()->argsymbol(op.firstarg()+0)));
+    int cind = add_constant (R.typespec(), &one);
+    turn_into_assign (op, cind);
+}
+
+
+
 // Turn the op into a no-op
 void
 RuntimeOptimizer::turn_into_nop (Opcode &op)
@@ -1099,6 +1111,54 @@ DECLFOLDER(constfold_sqrt)
 
 
 
+DECLFOLDER(constfold_pow)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
+
+    if (Y.is_constant() && is_zero(Y)) {
+        // x^0 == 1
+        rop.turn_into_assign_one (op);
+        return 1;
+    }
+    if (Y.is_constant() && is_one(Y)) {
+        // x^1 == x
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1));
+        return 1;
+    }
+    if (X.is_constant() && is_zero(X)) {
+        // 0^y == 0
+        rop.turn_into_assign_zero (op);
+        return 1;
+    }
+    if (X.is_constant() && Y.is_constant() && Y.typespec().is_float() &&
+            (X.typespec().is_float() || X.typespec().is_triple())) {
+        // if x and y are both constant, pre-compute x^y
+        const float *x = (const float *) X.data();
+        float y = *(const float *) Y.data();
+        int ncomps = X.typespec().is_triple() ? 3 : 1;
+        float result[3];
+        for (int i = 0;  i < ncomps;  ++i)
+            result[i] = safe_pow (x[i], y);
+        int cind = rop.add_constant (X.typespec(), &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    if (Y.is_constant() && Y.typespec().is_float() &&
+            *(const float *)Y.data() == 2.0f) {
+        // Turn x^2 into x*x, even if x is not constant
+        static ustring kmul("mul");
+        op.reset (kmul, OP_mul, 2);
+        rop.inst()->args()[op.firstarg()+2] = rop.inst()->args()[op.firstarg()+1];
+        return 1;
+    }
+
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_triple)
 {
     // Turn R=triple(a,b,c) into R=C if the components are all constants
@@ -1249,6 +1309,7 @@ initialize_folder_table ()
     INIT (concat);
     INIT (clamp);
     INIT (sqrt);
+    INIT (pow);
     INIT2 (color, constfold_triple);
     INIT2 (point, constfold_triple);
     INIT2 (normal, constfold_triple);

@@ -92,6 +92,11 @@ public:
     /// into "assign arg0 zero".
     void turn_into_assign_zero (Opcode &op);
 
+    /// Turn the op into a simple assignment of one to the previous
+    /// first argument of the op.  That is, changes "OP arg0 arg1 ..."
+    /// into "assign arg0 one".
+    void turn_into_assign_one (Opcode &op);
+
     /// Turn the op into a no-op.
     ///
     void turn_into_nop (Opcode &op);

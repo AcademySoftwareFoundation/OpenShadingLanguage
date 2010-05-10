@@ -9,6 +9,13 @@ MY_CMAKE_FLAGS += \
 		  -DOPENEXR_CUSTOM=1 \
 		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf"
 
+ifeq (${OSL_NAMESPACE},)
+OSL_NAMESPACE='OSL_Arnold'
+endif
+ifeq (${OPENIMAGEIO_NAMESPACE},)
+OPENIMAGEIO_NAMESPACE='OpenImageIO_Arnold'
+endif
+
 endif # SP_ARCH == spinux1_x86_64
 
 ifeq ($(SP_ARCH), rhel40_x86_64)
@@ -29,15 +36,15 @@ MY_CMAKE_FLAGS += \
 		-DOPENEXR_VERSION=${OPENEXR_VERSION} \
 		-DOPENEXR_VERSION_DIGITS="010400" \
 		-DOPENEXR_HOME=/usr/local64/openexr/${OPENEXR_VERSION}
-endif # SP_ARCH == rhel40_x86_64
-
-
 ifeq (${OSL_NAMESPACE},)
 OSL_NAMESPACE='OSL_Arnold'
 endif
 ifeq (${OPENIMAGEIO_NAMESPACE},)
 OPENIMAGEIO_NAMESPACE='OpenImageIO_Arnold'
 endif
+
+endif # SP_ARCH == rhel40_x86_64
+
 
 # if this is a debug build then use OIIO's debug build
 ifeq (${DEBUG},1)

@@ -398,7 +398,7 @@ OSOReaderToMaster::codemarker (const char *name)
               << " (" << (m_codesym >= 0 ? m_master->symbol(m_codesym)->name() : ustring()) << ")"
               << "\n";
 #endif
-    if (m_codesection && m_codesection == "___main___") {
+    if (m_codesection == "___main___") {
         m_master->m_maincodebegin = nextop;
     } else if (m_codesym < 0) {
         m_shadingsys.error ("Parsing shader %s: don't know what to do with code section \"%s\"",
@@ -428,7 +428,7 @@ OSOReaderToMaster::codeend ()
 void
 OSOReaderToMaster::instruction (int label, const char *opcode)
 {
-    Opcode op (ustring(opcode), ustring(""));
+    Opcode op (ustring(opcode), m_codesection);
     m_master->m_ops.push_back (op);
     m_firstarg = m_master->m_args.size();
     m_nargs = 0;

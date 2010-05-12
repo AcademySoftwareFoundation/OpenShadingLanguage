@@ -402,7 +402,8 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
     } else {
         // Resolve symbols that map to user-data on the geometry
         // FIXME: call only one method here
-        if (renderer_has_userdata (sym.name(), sym.typespec().simpletype(),
+        if (! sym.lockgeom() &&
+            renderer_has_userdata (sym.name(), sym.typespec().simpletype(),
                                    &m_context->m_globals->renderstate[0])) {
             // This value came from geometry
             sym.valuesource(Symbol::GeomVal);

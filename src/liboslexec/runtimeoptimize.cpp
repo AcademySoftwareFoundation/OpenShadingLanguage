@@ -153,10 +153,17 @@ RuntimeOptimizer::turn_into_assign_zero (Opcode &op)
 void
 RuntimeOptimizer::turn_into_assign_one (Opcode &op)
 {
-    static float one[3] = { 1, 1, 1 };
     Symbol &R (*(inst()->argsymbol(op.firstarg()+0)));
-    int cind = add_constant (R.typespec(), &one);
-    turn_into_assign (op, cind);
+    if (R.typespec().is_int()) {
+        int one = 1;
+        int cind = add_constant (R.typespec(), &one);
+        turn_into_assign (op, cind);
+    } else {
+        ASSERT (R.typespec().is_triple() || R.typespec().is_float());
+        static float one[3] = { 1, 1, 1 };
+        int cind = add_constant (R.typespec(), &one);
+        turn_into_assign (op, cind);
+    }
 }
 
 
@@ -171,25 +178,58 @@ RuntimeOptimizer::turn_into_nop (Opcode &op)
 
 
 
-// Insert instruction 'opname' with arguments 'args_to_add' into the 
-// code at instruction 'opnum'.  The existing code and concatenated 
-// argument lists can be found in code and opargs, respectively, and
-// allsyms contains pointers to all symbols.  mainstart is a reference
-// to the address where the 'main' shader begins, and may be modified
-// if the new instruction is inserted before that point.
-void
-insert_code (ustring opname, OpImpl impl,
-             std::vector<int> &args_to_add, int opnum, 
-             OpcodeVec &code, std::vector<int> &opargs,
-             SymbolPtrVec &allsyms, int &mainstart)
+/// Return true if the op is guaranteed to completely overwrite all of its
+/// writable arguments and doesn't need their prior vaues at all.  If the
+/// op uses the prior values of any writeable arguments, or in any way 
+/// preserves their original values, return false.
+/// Example: ADD -> true, since 'add r a b' completely replaces the old
+/// value of r and doesn't care what it was before (other than
+/// coincidentally, if a or b is also r).
+/// Example: COMPASSIGN -> false, since 'compassign r i x' only changes
+/// one component of r.
+#if 0
+static bool
+fully_writing_op (const Opcode &op)
 {
+    // Just do a table comparison, since there are so few ops that don't
+    // have this property.
+    static OpImpl exceptions[] = {
+        // array and component routines only partially override their result
+        OP_aassign, OP_compassign, 
+        // the "get" routines don't touch their data arg if the named
+        // item isn't found
+        OP_getattribute, OP_getmessage, OP_gettextureinfo,
+        // Anything else?
+        NULL
+    };
+    for (int i = 0; exceptions[i];  ++i)
+        if (op.implementation() == exceptions[i])
+            return false;
+    return true;
+}
+#endif
+
+
+
+/// Insert instruction 'opname' with arguments 'args_to_add' into the 
+/// code at instruction 'opnum'.  The existing code and concatenated 
+/// argument lists can be found in code and opargs, respectively, and
+/// allsyms contains pointers to all symbols.  mainstart is a reference
+/// to the address where the 'main' shader begins, and may be modified
+/// if the new instruction is inserted before that point.
+void
+RuntimeOptimizer::insert_code (int opnum, ustring opname, OpImpl impl,
+                               const std::vector<int> &args_to_add)
+{
+    OpcodeVec &code (inst()->ops());
+    std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
     Opcode op (opname, method, opargs.size(), args_to_add.size());
     op.implementation (impl);
     code.insert (code.begin()+opnum, op);
     opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
-    if (opnum < mainstart)
-        ++mainstart;
+    if (opnum < inst()->m_maincodebegin)
+        ++inst()->m_maincodebegin;
 
     // Unless we were inserting at the end, we may need to adjust
     // the jump addresses of other ops and the param init ranges.
@@ -205,13 +245,13 @@ insert_code (ustring opname, OpImpl impl,
             }
         }
         // Adjust param init ranges
-        BOOST_FOREACH (Symbol *s, allsyms) {
-            if (s->symtype() == SymTypeParam ||
-                  s->symtype() == SymTypeOutputParam) {
-                if (s->initbegin() > opnum)
-                    s->initbegin (s->initbegin()+1);
-                if (s->initend() > opnum)
-                    s->initend (s->initend()+1);
+        BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+            if (s.symtype() == SymTypeParam ||
+                  s.symtype() == SymTypeOutputParam) {
+                if (s.initbegin() > opnum)
+                    s.initbegin (s.initbegin()+1);
+                if (s.initend() > opnum)
+                    s.initend (s.initend()+1);
             }
         }
     }
@@ -219,16 +259,15 @@ insert_code (ustring opname, OpImpl impl,
 
 
 
-// Insert a 'useparam' instruction in front of instruction 'opnum', to
-// reference the symbols in 'params'.
+/// Insert a 'useparam' instruction in front of instruction 'opnum', to
+/// reference the symbols in 'params'.
 void
-insert_useparam (OpcodeVec &code, size_t opnum, std::vector<int> &opargs,
-                 SymbolPtrVec &allsyms, std::vector<int> &params_to_use,
-                 int &mainstart)
+RuntimeOptimizer::insert_useparam (size_t opnum,
+                                   std::vector<int> &params_to_use)
 {
+    OpcodeVec &code (inst()->ops());
     static ustring useparam("useparam");
-    insert_code (useparam, OP_useparam, params_to_use, opnum,
-                 code, opargs, allsyms, mainstart);
+    insert_code (opnum, useparam, OP_useparam, params_to_use);
 
     // All ops are "read"
     code[opnum].argwrite (0, false);
@@ -273,44 +312,38 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
         }
     }
     if (outputparams.size())
-        insert_useparam (code, inst()->m_maincodebegin, opargs, allsyms, outputparams,
-                         inst()->m_maincodebegin);
+        insert_useparam (inst()->m_maincodebegin, outputparams);
 
     // Figure out which statements are inside conditional states
-    std::vector<bool> in_conditional (code.size(), false);
-    for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
-        // Find the farthest this instruction jumps to (-1 for instructions
-        // that don't jump)
-        int jumpend = code[opnum].farthest_jump();
-        // Mark all instructions from here to there as inside conditionals
-        for (int i = (int)opnum+1;  i < jumpend;  ++i)
-            in_conditional[i] = true;
-    }
+    find_conditionals ();
 
     // Loop over all ops...
     for (int opnum = 0;  opnum < (int)code.size();  ++opnum) {
         Opcode &op (code[opnum]);  // handy ref to the op
         if (op.opname() == "useparam")
             continue;  // skip useparam ops themselves, if we hit one
+        bool in_main_code = (opnum >= inst()->m_maincodebegin);
         std::vector<int> params;   // list of params referenced by this op
         // For each argument...
         for (int a = 0;  a < op.nargs();  ++a) {
             int argind = op.firstarg() + a;
-            SymbolPtr s = allsyms[opargs[argind]];
+            SymbolPtr s = inst()->argsymbol (argind);
             DASSERT (s->dealias() == s);
             // If this arg is a param and is read, remember it
             if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
                 continue;  // skip non-params
             // skip if we've already 'usedparam'ed it unconditionally
-            if (s->initialized() && opnum >= inst()->m_maincodebegin)
+            if (s->initialized() && in_main_code)
                 continue;
+
             bool inside_init = (opnum >= s->initbegin() && opnum < s->initend());
             if (op.argread(a) || (op.argwrite(a) && !inside_init)) {
                 // Don't add it more than once
                 if (std::find (params.begin(), params.end(), opargs[argind]) == params.end()) {
                     params.push_back (opargs[argind]);
                     // mark as already initialized unconditionally, if we do
-                    if (! in_conditional[opnum] && op.method() == OSLCompilerImpl::main_method_name())
+                    if (! m_in_conditional[opnum] &&
+                            op.method() == OSLCompilerImpl::main_method_name())
                         s->initialized (true);
                 }
             }
@@ -319,16 +352,17 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
         // If the arg we are examining read any params, insert a "useparam"
         // op whose arguments are the list of params we are about to use.
         if (params.size()) {
-            insert_useparam (code, opnum, opargs, allsyms, params, inst()->m_maincodebegin);
-            in_conditional.insert (in_conditional.begin()+opnum, false);
+            insert_useparam (opnum, params);
+            m_in_conditional.insert (m_in_conditional.begin()+opnum,
+                                     m_in_conditional[opnum]);
             // Skip the op we just added
             ++opnum;
         }
     }
 
     // Mark all symbols as un-initialized
-    BOOST_FOREACH (Symbol *s, allsyms)
-        s->initialized (false);
+    BOOST_FOREACH (Symbol &s, inst()->symbols())
+        s.initialized (false);
 
     // Re-track variable lifetimes, since the inserted useparam
     // instructions will have change the instruction numbers.
@@ -1269,6 +1303,71 @@ DECLFOLDER(constfold_getmessage)
 
 
 
+DECLFOLDER(constfold_gettextureinfo)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
+    Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));
+    ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() && 
+            Dataname.typespec().is_string());
+
+    if (Filename.is_constant()) {
+        ustring filename = *(ustring *)Filename.data();
+
+        if (Dataname.is_constant()) {
+            ustring dataname = *(ustring *)Dataname.data();
+            TypeDesc t = Data.typespec().simpletype();
+            void *mydata = alloca (t.size ());
+            int result = rop.texturesys()->get_texture_info (filename, dataname,
+                                                             t, mydata);
+            // Now we turn
+            //       gettextureinfo result filename dataname data
+            // into this for success:
+            //       assign result 1
+            //       assign data [retrieved values]
+            // or, if it failed:
+            //       assign result 0
+            if (result) {
+                int resultarg = rop.inst()->args()[op.firstarg()+0];
+                int dataarg = rop.inst()->args()[op.firstarg()+3];
+                // If not an array, turn the getattribute into an assignment
+                // to data.  (Punt on arrays -- just let the gettextureinfo
+                // happen as before.)
+                if (! t.arraylen) {
+                    // Make data the first argument
+                    rop.inst()->args()[op.firstarg()+0] = dataarg;
+                    // Now turn it into an assignment
+                    int cind = rop.add_constant (Data.typespec(), mydata);
+                    rop.turn_into_assign (op, cind);
+                }
+
+                // Now insert a new instruction that assigns 1 to the
+                // original return result of gettextureinfo.
+                int one = 1;
+                std::vector<int> args_to_add;
+                args_to_add.push_back (resultarg);
+                args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
+                static ustring kassign("assign");
+                rop.insert_code (opnum, kassign, OP_assign, args_to_add);
+                Opcode &newop (rop.inst()->ops()[opnum]);
+                newop.argwriteonly (0);
+                newop.argread (1, true);
+                newop.argwrite (1, false);
+                return 1;
+            } else {
+                rop.turn_into_assign_zero (op);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+
+
+
 DECLFOLDER(constfold_useparam)
 {
     // Just eliminate useparam (from shaders compiled with old oslc)
@@ -1320,6 +1419,7 @@ initialize_folder_table ()
     INIT2 (transformn, constfold_transform);
     INIT (setmessage);
     INIT (getmessage);
+    INIT (gettextureinfo);
     INIT (useparam);
 //    INIT (assign);  N.B. do not include here -- we want this run AFTER
 //                    all other constant folding is done, since many of
@@ -1335,11 +1435,10 @@ initialize_folder_table ()
 DECLFOLDER(constfold_assign)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    // Symbol *A (rop.inst()->argsymbol(op.firstarg()+0));
     Symbol *B (rop.inst()->argsymbol(op.firstarg()+1));
     int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
     Symbol *AA = rop.inst()->symbol(Aalias);
-    // N.B. symbol returns NULL if Aalias is < 0
+    // N.B. symbol() returns NULL if alias is < 0
 
     if (B->is_constant() && AA && AA->is_constant()) {
         // Try to turn A=C into nop if A already is C
@@ -1430,25 +1529,36 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
 
 
 
-// Identify basic blocks by assigning a basic block ID for each
-// instruction.  Within any basic bock, there are no jumps in or out.
-// Also note which instructions are inside conditional states.
+/// Set up m_in_conditional[] to be true for all ops that are inside of
+/// conditionals, false for all unconditionally-executed ops.
 void
-find_basic_blocks (OpcodeVec &code, SymbolVec &symbols,
-                   std::vector<int> &bblockids,
-                   std::vector<bool> &in_conditional, int maincodebegin)
+RuntimeOptimizer::find_conditionals ()
 {
-    in_conditional.clear ();
-    in_conditional.resize (code.size(), false);
+    OpcodeVec &code (inst()->ops());
+
+    m_in_conditional.clear ();
+    m_in_conditional.resize (code.size(), false);
     for (int i = 0;  i < (int)code.size();  ++i) {
         if (code[i].jump(0) >= 0)
-            std::fill (in_conditional.begin()+i,
-                       in_conditional.begin()+code[i].farthest_jump(), true);
+            std::fill (m_in_conditional.begin()+i,
+                       m_in_conditional.begin()+code[i].farthest_jump(), true);
     }
+}
+
+
+
+/// Identify basic blocks by assigning a basic block ID for each
+/// instruction.  Within any basic bock, there are no jumps in or out.
+/// Also note which instructions are inside conditional states.
+void
+RuntimeOptimizer::find_basic_blocks ()
+{
+    OpcodeVec &code (inst()->ops());
+    SymbolVec &symbols (inst()->symbols());
 
     // Start by setting all basic block IDs to 0
-    bblockids.clear ();
-    bblockids.resize (code.size(), 0);
+    m_bblockids.clear ();
+    m_bblockids.resize (code.size(), 0);
     int bbid = 1;  // next basic block ID to use
 
     // First, keep track of all the spots where blocks begin
@@ -1462,7 +1572,7 @@ find_basic_blocks (OpcodeVec &code, SymbolVec &symbols,
     }
 
     // Main code starts a basic block
-    block_begin[maincodebegin] = true;
+    block_begin[inst()->m_maincodebegin] = true;
 
     // Anyplace that's the target of a jump instruction starts a basic block
     for (int i = 0;  i < (int)code.size();  ++i) {
@@ -1478,7 +1588,7 @@ find_basic_blocks (OpcodeVec &code, SymbolVec &symbols,
     for (int i = 0;  i < (int)code.size();  ++i) {
         if (block_begin[i])
             ++bbid;
-        bblockids[i] = bbid;
+        m_bblockids[i] = bbid;
     }
 }
 
@@ -1624,8 +1734,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
 ///
 /// Return true if the assignment is removed entirely.
 bool
-RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op,
-                                           std::vector<bool> &in_conditional)
+RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 {
     ASSERT (op.implementation() == OP_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
@@ -1634,7 +1743,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op,
     if (A->is_constant() && R->typespec() == A->typespec() &&
             R->symtype() == SymTypeOutputParam &&
             R->firstwrite() == opnum && R->lastwrite() == opnum &&
-            !in_conditional[opnum]) {
+            !m_in_conditional[opnum]) {
         // It's assigned only once, and unconditionally assigned a
         // constant -- alias it
         int cind = inst()->args()[op.firstarg()+1];
@@ -1735,6 +1844,99 @@ private:
 
 
 
+int
+RuntimeOptimizer::next_block_instruction (int opnum)
+{
+    int end = (int)inst()->ops().size();
+    for (int n = opnum+1; n < end && m_bblockids[n] == m_bblockids[opnum]; ++n)
+        if (inst()->ops()[n].implementation() != OP_nop)
+            return n;   // Found it!
+    return 0;   // End of ops or end of basic block
+}
+
+
+
+int
+RuntimeOptimizer::peephole2 (int opnum)
+{
+    Opcode &op (inst()->ops()[opnum]);
+    if (op.implementation() == OP_nop)
+        return 0;   // Wasn't a real instruction to start with
+
+    // Find the next instruction
+    int op2num = next_block_instruction (opnum);
+    if (! op2num)
+        return 0;    // Not a next instruction within the same block
+
+    Opcode &next (inst()->ops()[op2num]);
+
+    // N.B. Some of these transformations may look strange, you may
+    // think "nobody will write code that does that", but (a) they do;
+    // and (b) it can end up like that after other optimizations have
+    // changed the code around.
+
+    // Two assignments in a row to the same variable -- get rid of the first
+    if (op.implementation() == OP_assign &&
+          next.implementation() == OP_assign &&
+          opargsym(op,0) == opargsym(next,0)) {
+        // std::cerr << "double-assign " << opnum << " & " << op2num << ": " 
+        //           << opargsym(op,0)->mangled() << "\n";
+        turn_into_nop (op);
+        return 1;
+    }
+
+    // Ping-pong assignments can eliminate the second one:
+    //     assign a b
+    //     assign b a    <-- turn into nop
+    if (op.implementation() == OP_assign &&
+          next.implementation() == OP_assign &&
+          opargsym(op,0) == opargsym(next,1) &&
+          opargsym(op,1) == opargsym(next,0)) {
+        // std::cerr << "ping-pong assignment " << opnum << " of " 
+        //           << opargsym(op,0)->mangled() << " and "
+        //           << opargsym(op,1)->mangled() << "\n";
+        turn_into_nop (next);
+        return 1;
+    }
+
+    // Daisy chain assignments -> use common source
+    //     assign a b
+    //     assign c a
+    // turns into:
+    //     assign a b
+    //     assign c b
+    // This may allow a to be eliminated if it's not used elsewhere
+    if (op.implementation() == OP_assign &&
+          next.implementation() == OP_assign &&
+          opargsym(op,0) == opargsym(next,1) &&
+          assignable (opargsym(next,0)->typespec(), opargsym(op,1)->typespec())) {
+        turn_into_assign (next, inst()->arg(op.firstarg()+1));
+        return 1;
+    }
+
+    // Look for adjacent add and subtract of the same value:
+    //     add a a b
+    //     sub a a b
+    // (or vice versa)
+    if (((op.implementation() == OP_add && next.implementation() == OP_sub) ||
+         (op.implementation() == OP_sub && next.implementation() == OP_add)) &&
+          opargsym(op,0) == opargsym(next,0) &&
+          opargsym(op,1) == opargsym(next,1) &&
+          opargsym(op,2) == opargsym(next,2) &&
+          opargsym(op,0) == opargsym(op,1)) {
+        // std::cerr << "dueling add/sub " << opnum << " & " << op2num << ": " 
+        //           << opargsym(op,0)->mangled() << "\n";
+        turn_into_nop (op);
+        turn_into_nop (next);
+        return 2;
+    }
+
+    // No changes
+    return 0;
+}
+
+
+
 void
 RuntimeOptimizer::optimize_instance ()
 {
@@ -1758,10 +1960,8 @@ RuntimeOptimizer::optimize_instance ()
     for (int pass = 0;  pass < 10;  ++pass) {
 
         // Track basic blocks and conditional states
-        std::vector<bool> in_conditional (inst()->ops().size(), false);
-        std::vector<int> bblockids;
-        find_basic_blocks (inst()->ops(), inst()->symbols(),
-                           bblockids, in_conditional, inst()->m_maincodebegin);
+        find_conditionals ();
+        find_basic_blocks ();
 
         // Constant aliases valid for just this basic block
         clear_block_aliases ();
@@ -1778,12 +1978,12 @@ RuntimeOptimizer::optimize_instance ()
             // that don't jump) so we can mark conditional regions.
             int jumpend = op.farthest_jump();
             for (int i = (int)opnum+1;  i < jumpend;  ++i)
-                in_conditional[i] = true;
+                m_in_conditional[i] = true;
 
             // If we've just moved to a new basic block, clear the aliases
-            if (lastblock != bblockids[opnum]) {
+            if (lastblock != m_bblockids[opnum]) {
                 clear_block_aliases ();
-                lastblock = bblockids[opnum];
+                lastblock = m_bblockids[opnum];
             }
 
             // De-alias the readable args to the op and figure out if
@@ -1807,7 +2007,7 @@ RuntimeOptimizer::optimize_instance ()
                 std::map<ustring,OpFolder>::const_iterator found;
                 found = folder_table.find (op.opname());
                 if (found != folder_table.end())
-                    changed = (*found->second) (*this, opnum);
+                    changed += (*found->second) (*this, opnum);
             }
 
             // Clear local block aliases for any args that were written
@@ -1834,30 +2034,12 @@ RuntimeOptimizer::optimize_instance ()
             // N.B. This is a regular "if", not an "else if", because we
             // definitely want to catch any 'assign' statements that
             // were put in by the constant folding routines above.
-            if (m_shadingsys.optimize() >= 2 && op.implementation() == OP_assign &&
-                    inst()->argsymbol(op.firstarg()+1)->is_constant()) {
+            if (m_shadingsys.optimize() >= 2 && op.implementation() == OP_assign/* &&
+                                                                                   inst()->argsymbol(op.firstarg()+1)->is_constant()*/) {
                 Symbol *R (inst()->argsymbol(op.firstarg()+0));
                 Symbol *A (inst()->argsymbol(op.firstarg()+1));
                 bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||
                                        R->symtype() == SymTypeTemp);
-
-                // Odd but common case: two instructions in a row assign
-                // to the same variable.  Get rid of the first.
-                for (int f = opnum+1;  f < (int)inst()->ops().size() && bblockids[f] == bblockids[opnum];  ++f) {
-                    Opcode &opf (inst()->ops()[f]);
-                    if (opf.implementation() == OP_nop)
-                        continue;
-                    if (opf.implementation() == OP_assign) {
-                        if (inst()->argsymbol(opf.firstarg()) == R) {
-                            // Both assigning to the same variable!  Kill one.
-                            turn_into_nop (op);
-                            ++changed;
-                        }
-                    }
-                    break;
-                }
-                if (op.implementation() == OP_nop)
-                    continue;
 
                 if (block_alias(inst()->arg(op.firstarg())) == inst()->arg(op.firstarg()+1) ||
                     block_alias(inst()->arg(op.firstarg()+1)) == inst()->arg(op.firstarg())) {
@@ -1905,7 +2087,7 @@ RuntimeOptimizer::optimize_instance ()
                     ++changed;
                     continue;
                 }
-                if (outparam_assign_elision (opnum, op, in_conditional)) {
+                if (outparam_assign_elision (opnum, op)) {
                     ++changed;
                     continue;
                 }
@@ -1922,6 +2104,11 @@ RuntimeOptimizer::optimize_instance ()
 
             if (m_shadingsys.optimize() >= 2)
                 changed += useless_op_elision (op);
+
+            // Peephole optimization involving pair of instructions
+            if (m_shadingsys.optimize() >= 2)
+                changed += peephole2 (opnum);
+
         }
 
         totalchanged += changed;

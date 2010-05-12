@@ -566,9 +566,9 @@ public:
     int derivsize () const { return m_has_derivs ? 3*m_size : m_size; }
 
     bool connected () const { return m_connected; }
-    void connected (bool c) { m_connected = true; }
+    void connected (bool c) { m_connected = c; }
     bool connected_down () const { return m_connected_down; }
-    void connected_down (bool c) { m_connected_down = true; }
+    void connected_down (bool c) { m_connected_down = c; }
 
     /// Where did the symbol's value come from?
     ///

@@ -72,6 +72,10 @@ public:
 
     ShaderGroup &group () { return m_group; }
 
+    ShadingSystemImpl &shadingsys () const { return m_shadingsys; }
+
+    TextureSystem *texturesys () const { return shadingsys().texturesys(); }
+
     /// Search the instance for a constant whose type and value match
     /// type and data[...].  Return -1 if no matching const is found.
     int find_constant (const TypeSpec &type, const void *data);
@@ -102,6 +106,10 @@ public:
     void turn_into_nop (Opcode &op);
 
     void find_constant_params (ShaderGroup &group);
+
+    void find_conditionals ();
+
+    void find_basic_blocks ();
 
     bool coerce_assigned_constant (Opcode &op);
 
@@ -145,12 +153,16 @@ public:
     ///
     void replace_param_value (Symbol *R, const void *newdata);
 
-    bool outparam_assign_elision (int opnum, Opcode &op,
-                                  std::vector<bool> &in_conditional);
+    bool outparam_assign_elision (int opnum, Opcode &op);
 
     bool useless_op_elision (Opcode &op);
 
     void make_symbol_room (int howmany=1);
+
+    void insert_code (int opnum, ustring opname, OpImpl impl,
+                      const std::vector<int> &args_to_add);
+
+    void insert_useparam (size_t opnum, std::vector<int> &params_to_use);
 
     /// Add a 'useparam' before any op that reads parameters.  This is what
     /// tells the runtime that it needs to run the layer it came from, if
@@ -195,6 +207,21 @@ public:
     ///
     bool message_possibly_set (ustring name) const;
 
+    /// Return the index of the next instruction within the same basic
+    /// block that isn't a NOP.  If there are no more non-NOP
+    /// instructions in the same basic block as opnum, return 0.
+    int next_block_instruction (int opnum);
+
+    /// Search for pairs of ops to perform peephole optimization on.
+    /// 
+    int peephole2 (int opnum);
+
+    /// Helper: return the ptr to the symbol that is the argnum-th
+    /// argument to the given op.
+    Symbol *opargsym (Opcode &op, int argnum) {
+        return inst()->argsymbol (op.firstarg()+argnum);
+    }
+
 private:
     ShadingSystemImpl &m_shadingsys;
     ShaderGroup &m_group;             ///< Group we're optimizing
@@ -208,6 +235,8 @@ private:
     std::vector<int> m_block_aliases;   ///< Local block aliases
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
+    std::vector<int> m_bblockids;       ///< Basic block IDs for each op
+    std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage

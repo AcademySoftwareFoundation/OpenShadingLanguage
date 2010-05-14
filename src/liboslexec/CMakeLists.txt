@@ -16,6 +16,7 @@ SET ( liboslexec_srcs
           opspline.cpp opstring.cpp optexture.cpp opvector.cpp
           oslexec.cpp osoreader.cpp
           rendservices.cpp runtimeoptimize.cpp typespec.cpp
+          lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           ../liboslcomp/ast.cpp ../liboslcomp/codegen.cpp
           ../liboslcomp/oslcomp.cpp ../liboslcomp/symtab.cpp
           ../liboslcomp/typecheck.cpp
@@ -34,6 +35,10 @@ INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib )
 
 # Unit tests
 add_executable (closure_test closure_test.cpp)
+add_executable (accum_test accum_test.cpp)
 target_link_libraries ( closure_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries ( accum_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 link_ilmbase (closure_test)
+link_ilmbase (accum_test)
 add_test (unit_closure ${CMAKE_BINARY_DIR}/liboslexec/closure_test)
+add_test (unit_accum ${CMAKE_BINARY_DIR}/liboslexec/accum_test)

@@ -63,6 +63,7 @@ class MyAov : public Aov
             }
             m_received.resize(m_expected.size());
         }
+        virtual ~MyAov() {}
 
         virtual void write(void *flush_data, Color3 &color, float alpha,
                                  bool has_color, bool has_alpha)
@@ -112,7 +113,7 @@ void simulate(Accumulator &accum, const char **events, int testno)
     accum.accum(Color3(1, 1, 1));
     // Restore state and flush
     accum.popState();
-    accum.end((void *)testno);
+    accum.end((void *)(long int)testno);
 }
 
 BOOST_AUTO_TEST_CASE (accum_test)

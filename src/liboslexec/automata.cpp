@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "automata.h"
 #include "optautomata.h"
 #include <algorithm>
+#include <cstdio>
 
 
 #ifdef OSL_NAMESPACE

@@ -3490,10 +3490,11 @@ instead of printing the results, it returns the formatted text as a
 \string.
 \apiend
 
-\apiitem{void {\ce error} (string fmt, ...)}
-\indexapi{error()}
-The {\cf error()} function works similarly to {\cf printf}, but the
-results will be printed as a renderer error message, possibly including
+\apiitem{void {\ce error} (string fmt, ...) \\
+void {\ce warning} (string fmt, ...)}
+\indexapi{error()} \indexapi{warning()}
+The {\cf error()} and {\cf warning()} functions work similarly to {\cf printf}, but the
+results will be printed as a renderer error or warning message, possibly including
 information about the name of the shader and the object being shaded,
 and other diagnostic information.
 \apiend

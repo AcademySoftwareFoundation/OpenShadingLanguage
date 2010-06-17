@@ -1,0 +1,10 @@
+shader
+test ()
+{
+    float x = (u < v) ? 2.0 : 3.0;
+    printf ("uv = %g %g, (u<v ? 2.0 : 3.0) = %g\n", u, v, x);
+
+    // Test mixed types
+    point p = (u == v) ? P : 3;
+    printf ("uv = %g %g, (u==v) ? P : 3 = (%g)\n", u, v, p);
+}

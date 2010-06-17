@@ -711,6 +711,7 @@ public:
     const char *nodetypename () const { return "ternary_expression"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 
     ref cond () const { return child (0); }
     ref trueexpr () const { return child (1); }

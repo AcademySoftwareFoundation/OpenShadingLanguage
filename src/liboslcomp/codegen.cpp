@@ -869,8 +869,6 @@ ASTconditional_statement::codegen (Symbol *)
     // Fix up the 'if' to have the jump destinations.
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
 
-    // FIXME -- account for the fact that the first argument, unlike
-    // almost all other ops, is read, not written
     return NULL;
 }
 
@@ -1024,6 +1022,46 @@ ASTbinary_expression::codegen_logic (Symbol *dest)
     int donelabel = m_compiler->next_op_label ();
     m_compiler->pop_nesting (false);
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
+    return dest;
+}
+
+
+
+Symbol *
+ASTternary_expression::codegen (Symbol *dest)
+{
+    if (! dest)
+        dest = m_compiler->make_temporary (typespec());
+
+    Symbol *condvar = cond()->codegen_int ();
+
+    // Generate the op for the 'if' itself.  Record its label, so that we
+    // can go back and patch it with the jump destinations.
+    int ifop = emitcode ("if", condvar);
+    // "if" is unusual in that it doesn't write its first argument
+    oslcompiler->lastop().argread (0, true);
+    oslcompiler->lastop().argwrite (0, false);
+
+    // Generate the code for the 'true' and 'false' code blocks, recording
+    // the jump destinations for 'else' and the next op after the if.
+    oslcompiler->push_nesting (false);
+    Symbol *trueval = trueexpr()->codegen (dest);
+    if (trueval != dest)
+        emitcode ("assign", dest, trueval);
+
+    int falselabel = m_compiler->next_op_label ();
+
+    oslcompiler->push_nesting (false);
+    Symbol *falseval = falseexpr()->codegen (dest);
+    if (falseval != dest)
+        emitcode ("assign", dest, falseval);
+
+    int donelabel = m_compiler->next_op_label ();
+    oslcompiler->pop_nesting (false);
+
+    // Fix up the 'if' to have the jump destinations.
+    m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
+
     return dest;
 }
 

@@ -639,7 +639,7 @@ ASTternary_expression::typecheck (TypeSpec expected)
     if (c.is_structure())
         error ("Cannot use a struct as a condition");
     if (c.is_array())
-        error ("Cannot use a struct as a condition");
+        error ("Cannot use an array as a condition");
 
     // No arrays
     if (t.is_array() || t.is_array()) {

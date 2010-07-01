@@ -362,9 +362,13 @@ public:
     ref statements () const { return child (2); }
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
 
+    bool is_builtin () const { return m_is_builtin; }
+    void add_meta (ASTNode *meta);
+
 private:
     ustring m_name;
     Symbol *m_sym;
+    bool m_is_builtin;
 };
 
 
@@ -777,7 +781,7 @@ public:
     /// Is it a user-defined function (as opposed to an OSL built-in)?
     ///
     bool is_user_function () const {
-        return func()->node() != NULL;
+        return user_function() && !user_function()->is_builtin();
     }
 
     /// Pointer to the ASTfunction_declaration node that defines the user

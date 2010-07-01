@@ -39,5 +39,5 @@ matte
             float UImin = 0, float UImax = 1 ]]
   )
 {
-    Ci = Kd * Cs * diffuse (normalize(N));
+    Ci = Kd * Cs * diffuse (N);
 }

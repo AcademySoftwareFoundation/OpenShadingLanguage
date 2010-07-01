@@ -104,7 +104,8 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> shader_declaration 
 %type <n> shader_formal_params_opt shader_formal_params shader_formal_param
 %type <n> metadata_block_opt metadata metadatum
-%type <n> function_declaration function_formal_params_opt 
+%type <n> function_declaration function_formal_params_opt
+%type <n> function_body_or_just_decl
 %type <n> function_formal_params function_formal_param
 %type <n> struct_declaration field_declarations field_declaration
 %type <n> typed_field_list typed_field
@@ -282,18 +283,26 @@ metadatum
                 }
         ;
 
+function_body_or_just_decl
+        : '{' statement_list '}'        { $$ = $2; }
+        | ';'                           { $$ = NULL; }
+        ;
+
 function_declaration
         : typespec IDENTIFIER 
                 {
                     oslcompiler->symtab().push ();  // new scope
                     typespec_stack.push (oslcompiler->current_typespec());
                 }
-          '(' function_formal_params_opt ')' '{' statement_list '}'
+          '(' function_formal_params_opt ')' metadata_block_opt function_body_or_just_decl 
                 {
                     oslcompiler->symtab().pop ();  // restore scope
-                    $$ = new ASTfunction_declaration (oslcompiler,
-                                                      typespec_stack.top(),
-                                                      ustring($2), $5, $8, NULL);
+                    ASTfunction_declaration *f;
+                    f = new ASTfunction_declaration (oslcompiler,
+                                                     typespec_stack.top(),
+                                                     ustring($2), $5, $8, NULL);
+                    f->add_meta ($7);
+                    $$ = f;
                     typespec_stack.pop ();
                     // FIXME -- funcs don't have metadata. Should they?
                 }

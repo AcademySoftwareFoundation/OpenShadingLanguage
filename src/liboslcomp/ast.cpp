@@ -203,7 +203,7 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
                              TypeSpec type, ustring name,
                              ASTNode *form, ASTNode *stmts, ASTNode *meta)
     : ASTNode (function_declaration_node, comp, 0, meta, form, stmts),
-      m_name(name), m_sym(NULL)
+      m_name(name), m_sym(NULL), m_is_builtin(false)
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
@@ -232,6 +232,28 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 
     // Typecheck it right now, upon declaration
     typecheck (typespec ());
+}
+
+
+
+void
+ASTfunction_declaration::add_meta (ASTNode *meta)
+{
+    for (  ;  meta;  meta = meta->nextptr()) {
+        const ASTvariable_declaration *metavar = dynamic_cast<const ASTvariable_declaration *>(meta);
+        ASSERT (metavar);
+        Symbol *metasym = metavar->sym();
+        if (metasym->name() == "builtin")
+            m_is_builtin = true;
+        else if (metasym->name() == "derivs")
+            func()->takes_derivs (true);
+        else if (metasym->name() == "printf_args")
+            func()->printf_args (true);
+        else if (metasym->name() == "texture_args")
+            func()->texture_args (true);
+        else if (metasym->name() == "rw")
+            func()->readwrite_special_case (true);
+    }
 }
 
 

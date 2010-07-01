@@ -47,6 +47,112 @@
 
 
 
+// Declaration of built-in functions
+#define BUILTIN [[ int builtin = 1 ]]
+#define BUILTIN_DERIV [[ int builtin = 1, int deriv = 1 ]]
+
+#define PERCOMP1(name)                          \
+    normal name (normal x) BUILTIN;             \
+    vector name (vector x) BUILTIN;             \
+    point  name (point x) BUILTIN;              \
+    color  name (color x) BUILTIN;              \
+    float  name (float x) BUILTIN;
+
+#define PERCOMP2(name)                          \
+    normal name (normal x, normal y) BUILTIN;   \
+    vector name (vector x, vector y) BUILTIN;   \
+    point  name (point x, point y) BUILTIN;     \
+    color  name (color x, color y) BUILTIN;     \
+    float  name (float x, float y) BUILTIN;
+
+#define PERCOMP2F(name)                         \
+    normal name (normal x, float y) BUILTIN;    \
+    vector name (vector x, float y) BUILTIN;    \
+    point  name (point x, float y) BUILTIN;     \
+    color  name (color x, float y) BUILTIN;     \
+    float  name (float x, float y) BUILTIN;
+
+
+// Basic math
+PERCOMP1 (degrees)
+PERCOMP1 (radians)
+PERCOMP1 (cos)
+PERCOMP1 (sin)
+PERCOMP1 (tan)
+PERCOMP1 (acos)
+PERCOMP1 (asin)
+PERCOMP1 (atan)
+PERCOMP2 (atan2)
+PERCOMP1 (cosh)
+PERCOMP1 (sinh)
+PERCOMP1 (tanh)
+PERCOMP2F (pow)
+PERCOMP1 (exp)
+PERCOMP1 (exp2)
+PERCOMP1 (expm1)
+PERCOMP1 (log)
+PERCOMP2F (log)
+PERCOMP1 (log2)
+PERCOMP1 (log10)
+PERCOMP1 (logb)
+PERCOMP1 (sqrt)
+PERCOMP1 (inversesqrt)
+float hypot (float x, float y) BUILTIN;
+float hypot (float x, float y, float z) BUILTIN;
+PERCOMP1 (abs)
+int abs (int x) BUILTIN;
+PERCOMP1 (fabs)
+PERCOMP1 (sign)
+PERCOMP1 (floor)
+PERCOMP1 (ceil)
+PERCOMP1 (round)
+PERCOMP1 (trunc)
+PERCOMP2 (fmod)
+PERCOMP2F (fmod)
+PERCOMP2 (mod)
+PERCOMP2F (mod)
+int    mod (int x, int y) BUILTIN;
+PERCOMP2 (min)
+PERCOMP2 (max)
+normal clamp (normal x, normal minval, normal maxval) BUILTIN;
+vector clamp (vector x, vector minval, vector maxval) BUILTIN;
+point  clamp (point x, point minval, point maxval) BUILTIN;
+color  clamp (color x, color minval, color maxval) BUILTIN;
+float  clamp (float x, float minval, float maxval) BUILTIN;
+normal mix (normal x, normal y, normal a) BUILTIN;
+vector mix (vector x, vector y, vector a) BUILTIN;
+point  mix (point x, point y, point a) BUILTIN;
+color  mix (color x, color y, color a) BUILTIN;
+normal mix (normal x, normal y, float a) BUILTIN;
+vector mix (vector x, vector y, float a) BUILTIN;
+point  mix (point x, point y, float a) BUILTIN;
+color  mix (color x, color y, float a) BUILTIN;
+float  mix (float x, float y, float a) BUILTIN;
+int isnan (float x) BUILTIN;
+int isinf (float x) BUILTIN;
+int isfinite (float x) BUILTIN;
+float erf (float x) BUILTIN;
+float erfc (float x) BUILTIN;
+
+// Vector functions
+
+vector cross (vector a, vector b) BUILTIN;
+float dot (vector a, vector b) BUILTIN;
+float length (vector v) BUILTIN;
+float distance (point a, point b) BUILTIN;
+float distance (point a, point b, point q) BUILTIN;
+normal normalize (normal v) BUILTIN;
+vector normalize (vector v) BUILTIN;
+vector faceforward (vector N, vector I, vector Nref) BUILTIN;
+vector faceforward (vector N, vector I) BUILTIN;
+vector reflect (vector I, vector N) BUILTIN;
+vector refract (vector I, vector N, float eta) BUILTIN;
+point rotate (point q, float angle, point a, point b) BUILTIN;
+
+normal transform (matrix Mto, normal p) BUILTIN;
+vector transform (matrix Mto, vector p) BUILTIN;
+point transform (matrix Mto, point p) BUILTIN;
+
 // Implementation of transform-with-named-space in terms of matrices:
 
 point transform (string tospace, point x)
@@ -81,8 +187,53 @@ normal transform (string fromspace, string tospace, normal x)
     return transform (matrix (fromspace, tospace), x);
 }
 
+float transformu (string tounits, float x) BUILTIN;
+float transformu (string fromunits, string tounits, float x) BUILTIN;
 
 
+
+// Color functions
+
+float luminance (color c) {
+    return dot ((vector)c, vector(0.2126, 0.7152, 0.0722));
+}
+
+color transformc (string to, color x) BUILTIN;
+color transformc (string from, string to, color x) BUILTIN;
+
+
+// Matrix functions
+
+float determinant (matrix m) BUILTIN;
+matrix transpose (matrix m) BUILTIN;
+
+
+
+// Pattern generation
+
+float step (float edge, float x) BUILTIN;
+float smoothstep (float edge0, float edge1, float x) BUILTIN;
+
+
+// Derivatives and area operators
+
+
+// Displacement functions
+
+
+// String functions
+
+int strlen (string s) BUILTIN;
+int startswith (string s, string prefix) BUILTIN;
+int endswith (string s, string suffix) BUILTIN;
+string substr (string s, int start, int len) BUILTIN;
+string substr (string s, int start) { return substr (s, start, strlen(s)); }
+
+
+// Texture
+
+
+// Closures
 
 closure color cloth(normal N, float s, float t, color diff_warp, color diff_weft, 
                     color spec_warp, color spec_weft, float fresnel_warp, float fresnel_weft,
@@ -110,13 +261,18 @@ closure color cloth(normal N, float s, float t, color diff_warp, color diff_weft
 
 
 
-
-// Define substr(string,start) in terms of substr(string,start,len)
-string substr (string s, int start)
-{
-    return substr (s, start, strlen(s));
-}
+// Renderer state
 
 
+// Miscellaneous
+
+
+
+
+#undef BUILTIN
+#undef BUILTIN_DERIV
+#undef PERCOMP1
+#undef PERCOMP2
+#undef PERCOMP2F
 
 #endif /* STDOSL_H */

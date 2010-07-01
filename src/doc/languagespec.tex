@@ -2795,6 +2795,11 @@ Computes the logarithm of $x$ in base $e$, 2, 10, or arbitrary base $b$,
 respectively.
 \apiend
 
+\apiitem{\emph{type} {\ce logb} (\emph{type} x)}
+\indexapi{logb()}
+Returns the exponent of x, as a floating-point number.
+\apiend
+
 \apiitem{\emph{type} {\ce sqrt} (\emph{type} x) \\
 \emph{type} {\ce inversesqrt} (\emph{type} x)}
 \indexapi{sqrt()} \indexapi{inversesqrt()}
@@ -2950,7 +2955,7 @@ segment joining {\cf P0} and {\cf P1}.
 \apiend
 
 \apiitem{vector {\ce normalize} (vector V) \\
-vector {\ce normalize} (normal V)}
+normal {\ce normalize} (normal V)}
 \indexapi{normalize()}
 Return a vector in the same direction as $V$ but with length 1,
 that is, {\cf V / length(V)} .

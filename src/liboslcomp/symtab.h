@@ -73,7 +73,6 @@ namespace pvt {
 
 class OSLCompilerImpl;
 class ASTNode;  // forward declaration
-class ASTfunction_definition;
 
 
 
@@ -96,9 +95,6 @@ public:
 
     void nextpoly (FunctionSymbol *nextpoly) { m_nextpoly = nextpoly; }
     FunctionSymbol *nextpoly () const { return m_nextpoly; }
-    const ASTfunction_definition *funcdef () const {
-        return (const ASTfunction_definition *) m_node;
-    }
     void argcodes (ustring args) { m_argcodes = args; }
     ustring argcodes () const { return m_argcodes; }
 

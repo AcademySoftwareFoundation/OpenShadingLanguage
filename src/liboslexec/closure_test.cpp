@@ -49,6 +49,8 @@ class MyClosure : public BSDFClosure {
 public:
     MyClosure (float f) : BSDFClosure(None, Labels::NONE, None), m_f (f) { }
 
+    void setup() {};
+
     bool mergeable (const ClosurePrimitive *other) const {
         const MyClosure *comp = (const MyClosure *)other;
         return m_f == comp->m_f && BSDFClosure::mergeable(other);
@@ -91,7 +93,7 @@ public:
 
 ClosureColor create_component(const Color3& w, float f) {
     ClosureColor c;
-    char* mem = c.allocate_component (sizeof (MyClosure));
+    char* mem = c.allocate_component (1, sizeof (MyClosure));
     new (mem) MyClosure(f);
     c *= w;
     return c;

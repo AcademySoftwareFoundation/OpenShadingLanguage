@@ -30,6 +30,7 @@ OF THIS SOFTWARE, even IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 #include <OpenEXR/ImathFun.h>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -65,6 +66,7 @@ enum threadType
 
 
 class ClothSpecularClosure : public BSDFClosure {
+public:
     Vec3 m_N;
 
     Color3 m_spec_col[4];
@@ -97,33 +99,10 @@ private:
     Point2 semiminor[4], semimajor[4];
 
 public:
-    CLOSURE_CTOR (ClothSpecularClosure) : BSDFClosure(side, Labels::DIFFUSE)
+    ClothSpecularClosure() : BSDFClosure(Labels::DIFFUSE) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N, 1);
-
-        CLOSURE_FETCH_ARG_ARRAY (Color3, m_spec_col, 4, 2);
-        CLOSURE_FETCH_ARG_ARRAY (float, m_eta, 4, 3);
-
-        CLOSURE_FETCH_ARG_ARRAY (int, m_thread_pattern, 4, 4); 
-        CLOSURE_FETCH_ARG_ARRAY (float, m_pattern_weight, 4, 5); 
-        CLOSURE_FETCH_ARG (m_current_thread, 6);
-
-        CLOSURE_FETCH_ARG (m_brdf_interp, 7);
-        CLOSURE_FETCH_ARG (m_btf_interp, 8);
-
-        CLOSURE_FETCH_ARG (m_uux, 9);  
-        CLOSURE_FETCH_ARG (m_vvx, 10);  
-
-        CLOSURE_FETCH_ARG (m_area_scaled, 11);
-        CLOSURE_FETCH_ARG (m_dPdu, 12);
-
-        CLOSURE_FETCH_ARG_ARRAY (float, m_eccentricity, 4, 13);
-        CLOSURE_FETCH_ARG_ARRAY (float, m_angle, 4, 14);
-        CLOSURE_FETCH_ARG_ARRAY (float, m_Kx, 4, 15);
-        CLOSURE_FETCH_ARG_ARRAY (float, m_Ky, 4, 16);
-        CLOSURE_FETCH_ARG_ARRAY (float, m_Sx, 4, 17);
-        CLOSURE_FETCH_ARG_ARRAY (float, m_Sy, 4, 18);
-
         threadTypeCount = 0; 
     
         for(int i = 0; i < 4; i++){
@@ -327,10 +306,30 @@ public:
 
 };
 
-DECLOP (OP_cloth_specular)
-{
-    closure_op_guts<ClothSpecularClosure, 19> (exec, nargs, args);
-}
+
+
+ClosureParam bsdf_cloth_specular_params[] = {
+    CLOSURE_VECTOR_PARAM     (ClothSpecularClosure, m_N, false),
+    CLOSURE_COLOR_ARRAY_PARAM(ClothSpecularClosure, m_spec_col, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_eta, 4, false),
+    CLOSURE_INT_ARRAY_PARAM  (ClothSpecularClosure, m_thread_pattern, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_pattern_weight, 4, false),
+    CLOSURE_INT_PARAM        (ClothSpecularClosure, m_current_thread, false),
+    CLOSURE_FLOAT_PARAM      (ClothSpecularClosure, m_brdf_interp, false),
+    CLOSURE_FLOAT_PARAM      (ClothSpecularClosure, m_btf_interp, false),
+    CLOSURE_FLOAT_PARAM      (ClothSpecularClosure, m_uux, false),
+    CLOSURE_FLOAT_PARAM      (ClothSpecularClosure, m_vvx, false),
+    CLOSURE_FLOAT_PARAM      (ClothSpecularClosure, m_area_scaled, false),
+    CLOSURE_VECTOR_PARAM     (ClothSpecularClosure, m_dPdu, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_eccentricity, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_angle, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_Kx, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_Ky, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_Sx, 4, false),
+    CLOSURE_FLOAT_ARRAY_PARAM(ClothSpecularClosure, m_Sy, 4, false),
+    CLOSURE_FINISH_PARAM     (ClothSpecularClosure) };
+
+CLOSURE_PREPARE(bsdf_cloth_specular_prepare, ClothSpecularClosure)
 
 }; // namespace pvt
 }; // namespace OSL

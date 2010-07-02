@@ -62,7 +62,6 @@ DECLOP (OP_acos);
 DECLOP (OP_add);
 //DECLOP (OP_ambient);
 DECLOP (OP_and);
-DECLOP (OP_ashikhmin_velvet);
 DECLOP (OP_area);
 DECLOP (OP_aref);
 DECLOP (OP_arraylength);
@@ -70,17 +69,14 @@ DECLOP (OP_asin);
 DECLOP (OP_atan);
 DECLOP (OP_atan2);
 DECLOP (OP_assign);
-DECLOP (OP_background);
 DECLOP (OP_bitand);
 DECLOP (OP_bitor);
-DECLOP (OP_bssrdf_cubic);
 //DECLOP (OP_bump);
 DECLOP (OP_calculatenormal);
 DECLOP (OP_ceil);
 DECLOP (OP_cellnoise);
 DECLOP (OP_clamp);
-DECLOP (OP_cloth);
-DECLOP (OP_cloth_specular);
+DECLOP (OP_closure);
 DECLOP (OP_color);
 DECLOP (OP_compassign);
 DECLOP (OP_compl);
@@ -95,8 +91,6 @@ DECLOP (OP_degrees);
 //DECLOP (OP_deltau);
 //DECLOP (OP_deltav);
 DECLOP (OP_determinant);
-DECLOP (OP_dielectric);
-DECLOP (OP_diffuse);
 //DECLOP (OP_displace);
 DECLOP (OP_distance);
 DECLOP (OP_div);
@@ -104,7 +98,6 @@ DECLOP (OP_dot);
 DECLOP (OP_dowhile);
 DECLOP (OP_Dx);
 DECLOP (OP_Dy);
-DECLOP (OP_emission);
 //DECLOP (OP_environment);
 DECLOP (OP_end);
 DECLOP (OP_endswith);
@@ -118,9 +111,6 @@ DECLOP (OP_expm1);
 DECLOP (OP_eq);
 DECLOP (OP_fabs);
 //DECLOP (OP_faceforward);
-DECLOP (OP_fakefur_diffuse);
-DECLOP (OP_fakefur_specular);
-DECLOP (OP_fakefur_skin);
 DECLOP (OP_filterwidth);
 DECLOP (OP_floor);
 //DECLOP (OP_fmod);  // alias for OP_mod
@@ -133,15 +123,12 @@ DECLOP (OP_getattribute);
 DECLOP (OP_getmessage);
 DECLOP (OP_gettextureinfo);
 DECLOP (OP_gt);
-DECLOP (OP_hair_diffuse);
-DECLOP (OP_hair_specular);
 //DECLOP (OP_hash);
 DECLOP (OP_hypot);
 DECLOP (OP_if);
 //DECLOP (OP_incr);
 //DECLOP (OP_inversespline);
 DECLOP (OP_inversesqrt);
-DECLOP (OP_phong_ramp);
 DECLOP (OP_isnan);
 DECLOP (OP_isinf);
 DECLOP (OP_iscameraray);
@@ -158,10 +145,6 @@ DECLOP (OP_lt);
 DECLOP (OP_luminance);
 DECLOP (OP_matrix);
 DECLOP (OP_max);
-DECLOP (OP_microfacet_beckmann);
-DECLOP (OP_microfacet_beckmann_refraction);
-DECLOP (OP_microfacet_ggx);
-DECLOP (OP_microfacet_ggx_refraction);
 DECLOP (OP_min);
 DECLOP (OP_mix);
 DECLOP (OP_mxcompassign);
@@ -176,7 +159,6 @@ DECLOP (OP_normal);
 DECLOP (OP_normalize);
 DECLOP (OP_or);
 //DECLOP (OP_orennayar);
-DECLOP (OP_phong);
 DECLOP (OP_pnoise);
 DECLOP (OP_point);
 DECLOP (OP_pow);
@@ -186,9 +168,7 @@ DECLOP (OP_radians);
 //DECLOP (OP_random);
 //DECLOP (OP_raylevel);
 DECLOP (OP_reflect);
-DECLOP (OP_reflection);
 DECLOP (OP_refract);
-DECLOP (OP_refraction);
 DECLOP (OP_regex_match);
 DECLOP (OP_regex_search);
 //DECLOP (OP_rotate);
@@ -210,7 +190,6 @@ DECLOP (OP_step);
 DECLOP (OP_strlen);
 DECLOP (OP_sub);
 DECLOP (OP_substr);
-DECLOP (OP_subsurface);
 DECLOP (OP_surfacearea);
 DECLOP (OP_tan);
 DECLOP (OP_tanh);
@@ -222,14 +201,11 @@ DECLOP (OP_transformn);
 DECLOP (OP_transformv);
 DECLOP (OP_transparent);
 DECLOP (OP_transpose);
-DECLOP (OP_translucent);
 DECLOP (OP_trunc);
 DECLOP (OP_useparam);
 DECLOP (OP_vector);
 DECLOP (OP_ward);
 DECLOP (OP_warning);
-DECLOP (OP_westin_backscatter);
-DECLOP (OP_westin_sheen);
 DECLOP (OP_xor);
 
 DECLOP (OP_missing);
@@ -744,67 +720,6 @@ DECLOP (unary_op)
 }
 
 
-/// Implements the opcode for a specific ClosurePrimitive in the "standard way
-template <typename Primitive, int NumArgs> inline
-DECLOP (closure_op_guts)
-{
-    ASSERT (nargs >= NumArgs); // TODO: switch to DASSERT at some point
-
-    Symbol &Result (exec->sym (args[0]));
-    DASSERT(Result.typespec().is_closure() && Result.is_varying());
-
-    /* try to parse token/values pair (if there are any) */
-    VaryingRef<ustring> sidedness(NULL, 0);
-    VaryingRef<ustring> labels[ClosurePrimitive::MAXCUSTOM+1];
-    int nlabels = 0;
-    for (int tok = NumArgs; tok < nargs; tok += 2) {
-        Symbol &Name (exec->sym (args[tok]));
-        DASSERT (Name.typespec().is_string() && "optional closure token must be a string");
-        DASSERT (tok + 1 < nargs && "malformed argument list for closure");
-        ustring name = * (ustring *) Name.data();
-        Symbol &Val (exec->sym (args[tok + 1]));
-        if (name == Strings::sidedness && Val.typespec().is_string()) {
-            sidedness.init((ustring*) Val.data(), Val.step());
-        } else if (name == Strings::label && Val.typespec().is_string()) {
-            if (nlabels == ClosurePrimitive::MAXCUSTOM)
-                exec->error ("Too many labels to closure (%s:%d)",
-                                     exec->op().sourcefile().c_str(),
-                                     exec->op().sourceline());
-            else {
-               labels[nlabels].init((ustring*) Val.data(), Val.step());
-               nlabels++;
-            }
-        } else {
-            exec->error ("Unknown closure optional argument: \"%s\", <%s> (%s:%d)",
-                                     name.c_str(),
-                                     Val.typespec().c_str(),
-                                     exec->op().sourcefile().c_str(),
-                                     exec->op().sourceline());
-        }
-    }
-
-    /* N.B. Closures don't have derivs */
-    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
-    SHADE_LOOP_BEGIN
-        char* mem = result[i]->allocate_component (sizeof (Primitive));
-        ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
-        if (sidedness) {
-            if (sidedness[i] == Strings::front)
-                side = ClosurePrimitive::Front;
-            else if (sidedness[i] == Strings::back)
-                side = ClosurePrimitive::Back;
-            else if (sidedness[i] == Strings::both)
-                side = ClosurePrimitive::Both;
-            else
-                side = ClosurePrimitive::None;
-        }
-        ClosurePrimitive *prim = new (mem) Primitive (i, exec, nargs, args, side);
-        for (int l = 0; l < nlabels; ++l)
-            prim->set_custom_label(l, labels[l][i]);
-        // Label list must be NONE terminated
-        prim->set_custom_label(nlabels, Labels::NONE);
-    SHADE_LOOP_END
-}
 
 /// Fetch the value of an opcode argument given its index in the arglist
 template <typename T> inline
@@ -829,16 +744,15 @@ void fetch_value_array (T v[N], int argidx, int idx, ShadingExecution *exec, int
         v[i] = (&values[idx])[i];
 }
 
-/// Standard form for a closure constructor
-#define CLOSURE_CTOR(name)              \
-    name (int idx, ShadingExecution *exec, int nargs, const int *args, Sidedness side)
+bool write_closure_param(const TypeDesc &typedesc, void *data, int offset, int argidx, int idx,
+                         ShadingExecution *exec, int nargs, const int *args);
 
-/// Helper macros to extract values from the opcopde argument list
-#define CLOSURE_FETCH_ARG(v, argidx)    \
-    fetch_value(v, argidx, idx, exec, nargs, args)
-
-#define CLOSURE_FETCH_ARG_ARRAY(T, v, N, argidx)    \
-    fetch_value_array<T, N>(v, argidx, idx, exec, nargs, args)
+#define CLOSURE_PREPARE(name, classname)    \
+void name(RendererServices *, int id, void *data) \
+{                                                 \
+    memset(data, 0, sizeof(classname));           \
+    new (data) classname();                       \
+}
 
 // Proxy type that derives from Vec3 but allows some additional operations
 // not normally supported by Imath::Vec3.  This is purely for convenience.

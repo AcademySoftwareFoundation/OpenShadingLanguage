@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -41,7 +42,9 @@ namespace pvt {
 
 class TransparentClosure : public BSDFClosure {
 public:
-    CLOSURE_CTOR (TransparentClosure) : BSDFClosure(Both, Labels::STRAIGHT, Back) { }
+    TransparentClosure() : BSDFClosure(Labels::STRAIGHT, Back) { }
+
+    void setup() { m_sidedness = Both; }
 
     size_t memsize () const { return sizeof(*this); }
 
@@ -82,11 +85,12 @@ public:
     }
 };
 
-DECLOP (OP_transparent)
-{
-    closure_op_guts<TransparentClosure, 1> (exec, nargs, args);
-}
 
+
+ClosureParam bsdf_transparent_params[] = {
+    CLOSURE_FINISH_PARAM(TransparentClosure) };
+
+CLOSURE_PREPARE(bsdf_transparent_prepare, TransparentClosure)
 
 }; // namespace pvt
 }; // namespace OSL

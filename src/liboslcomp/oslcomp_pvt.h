@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslcomp.h"
 #include "ast.h"
 #include "symtab.h"
+#include "genclosure.h"
 
 
 class oslFlexLexer;
@@ -264,6 +265,8 @@ public:
     static void insert_useparam (OpcodeVec &code, size_t opnum,
                                  SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 
                                  SymbolPtrVec &params);
+
+    virtual void register_closure(const char *name, const ClosureParam *params, bool takes_keywords);
 
 private:
     void initialize_globals ();

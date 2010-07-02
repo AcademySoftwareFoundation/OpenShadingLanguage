@@ -1,5 +1,5 @@
 SET ( oslc_srcs oslcmain.cpp )
 ADD_EXECUTABLE ( oslc ${oslc_srcs} )
 LINK_ILMBASE ( oslc )
-TARGET_LINK_LIBRARIES ( oslc oslcomp ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+TARGET_LINK_LIBRARIES ( oslc oslcomp oslexec ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS oslc RUNTIME DESTINATION bin )

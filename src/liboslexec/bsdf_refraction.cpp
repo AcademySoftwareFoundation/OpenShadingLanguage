@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -39,13 +40,14 @@ namespace OSL {
 namespace pvt {
 
 class RefractionClosure : public BSDFClosure {
+public:
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
-public:
-    CLOSURE_CTOR (RefractionClosure) : BSDFClosure(Both, Labels::SINGULAR, Back)
+    RefractionClosure() : BSDFClosure(Labels::SINGULAR, Back) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N  , 1);
-        CLOSURE_FETCH_ARG (m_eta, 2);
+        m_sidedness = Both;
     }
 
     bool mergeable (const ClosurePrimitive *other) const {
@@ -109,13 +111,14 @@ public:
 
 
 class DielectricClosure : public BSDFClosure {
+public:
     Vec3  m_N;     // shading normal
     float m_eta;   // ratio of indices of refraction (inside / outside)
-public:
-    CLOSURE_CTOR (DielectricClosure) : BSDFClosure(Both, Labels::SINGULAR, Both)
+    DielectricClosure() : BSDFClosure(Labels::SINGULAR, Both) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N  , 1);
-        CLOSURE_FETCH_ARG (m_eta, 2);
+        m_sidedness = Both;
     }
 
     bool mergeable (const ClosurePrimitive *other) const {
@@ -185,17 +188,18 @@ public:
 
 
 
-DECLOP (OP_refraction)
-{
-    closure_op_guts<RefractionClosure, 3> (exec, nargs, args);
-}
+ClosureParam bsdf_refraction_params[] = {
+    CLOSURE_VECTOR_PARAM(RefractionClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (RefractionClosure, m_eta, false),
+    CLOSURE_FINISH_PARAM(RefractionClosure) };
 
+ClosureParam bsdf_dielectric_params[] = {
+    CLOSURE_VECTOR_PARAM(DielectricClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (DielectricClosure, m_eta, false),
+    CLOSURE_FINISH_PARAM(DielectricClosure) };
 
-DECLOP (OP_dielectric)
-{
-    closure_op_guts<DielectricClosure, 3> (exec, nargs, args);
-}
-
+CLOSURE_PREPARE(bsdf_refraction_prepare, RefractionClosure)
+CLOSURE_PREPARE(bsdf_dielectric_prepare, DielectricClosure)
 
 }; // namespace pvt
 }; // namespace OSL

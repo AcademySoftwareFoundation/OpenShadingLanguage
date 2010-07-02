@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -41,12 +42,11 @@ namespace pvt {
 
 
 class HairDiffuseClosure : public BSDFClosure {
-    Vec3 m_T;
 public:
-    CLOSURE_CTOR (HairDiffuseClosure) : BSDFClosure(Both, Labels::DIFFUSE, Both)
-    {
-        CLOSURE_FETCH_ARG (m_T, 1);
-    }
+    Vec3 m_T;
+    HairDiffuseClosure() : BSDFClosure(Labels::DIFFUSE, Both) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const HairDiffuseClosure *comp = (const HairDiffuseClosure *)other;
@@ -108,18 +108,14 @@ public:
 
 
 class HairSpecularClosure : public BSDFClosure {
+public:
     Vec3 m_T;
     float m_offset, m_cos_off, m_sin_off;
     float m_exp;
-public:
-    CLOSURE_CTOR (HairSpecularClosure) : BSDFClosure(Both, Labels::GLOSSY, Both)
+    HairSpecularClosure() : BSDFClosure(Labels::GLOSSY, Both) { }
+
+    void setup()
     {
-        // Tangent vector
-        CLOSURE_FETCH_ARG (m_T, 1);
-        // specular offset
-        CLOSURE_FETCH_ARG (m_offset, 2);
-        // roughness for the specular as used in spi shaders
-        CLOSURE_FETCH_ARG (m_exp, 3);
         m_cos_off = cosf(m_offset);
         m_sin_off = sinf(m_offset);
     }
@@ -186,20 +182,18 @@ public:
 
 
 
-DECLOP (OP_hair_diffuse)
-{
-    closure_op_guts<HairDiffuseClosure, 2> (exec, nargs, args);
-}
+ClosureParam bsdf_hair_diffuse_params[] = {
+    CLOSURE_VECTOR_PARAM(HairDiffuseClosure, m_T, false),
+    CLOSURE_FINISH_PARAM(HairDiffuseClosure) };
 
+ClosureParam bsdf_hair_specular_params[] = {
+    CLOSURE_VECTOR_PARAM(HairSpecularClosure, m_T, false),
+    CLOSURE_FLOAT_PARAM (HairSpecularClosure, m_offset, false),
+    CLOSURE_FLOAT_PARAM (HairSpecularClosure, m_exp, false),
+    CLOSURE_FINISH_PARAM(HairSpecularClosure) };
 
-
-DECLOP (OP_hair_specular)
-{
-    closure_op_guts<HairSpecularClosure, 4> (exec, nargs, args);
-}
-
-
-
+CLOSURE_PREPARE(bsdf_hair_diffuse_prepare, HairDiffuseClosure)
+CLOSURE_PREPARE(bsdf_hair_specular_prepare, HairSpecularClosure)
 
 }; // namespace pvt
 }; // namespace OSL

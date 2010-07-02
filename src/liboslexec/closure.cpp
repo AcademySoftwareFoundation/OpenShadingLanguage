@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslconfig.h"
 #include "oslclosure.h"
 #include "oslexec_pvt.h"
+#include "oslops.h"
 
 
 
@@ -57,7 +58,7 @@ operator<< (std::ostream &out, const ClosurePrimitive &prim)
 
 
 char*
-ClosureColor::allocate_component (size_t num_bytes)
+ClosureColor::allocate_component (int id, size_t num_bytes)
 {
     // FIXME: alignment ??
 
@@ -66,7 +67,7 @@ ClosureColor::allocate_component (size_t num_bytes)
 
     // Make a new component
     m_components.clear();
-    m_components.push_back (Component (Color3 (1, 1, 1), 0));
+    m_components.push_back (Component (id, Color3 (1, 1, 1), 0));
 
     // Return the block of memory for the caller to new the ClosurePrimitive into
     return &m_mem[0];
@@ -202,6 +203,34 @@ const ustring Labels::SINGULAR   = ustring("S");
 const ustring Labels::STRAIGHT   = ustring("s");
 const ustring Labels::STOP       = ustring("__stop__");
 
+namespace pvt {
+
+bool write_closure_param(const TypeDesc &typedesc, void *data, int offset, int argidx, int idx,
+                         ShadingExecution *exec, int nargs, const int *args)
+{
+    char *p = (char *)data + offset;
+    size_t size = typedesc.size();
+    if (argidx < nargs)
+    {
+        Symbol &sym = exec->sym (args[argidx]);
+        TypeDesc t = sym.typespec().simpletype();
+        // Treat both NORMAL and POINT as VECTOR for closure parameters
+        if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
+            t.vecsemantics = TypeDesc::VECTOR;
+        if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == typedesc)
+        {
+            char *source = (char *)sym.data() + sym.step() * idx;
+            memcpy(p, source, size);
+            return true;
+        }
+        else
+            return false;
+    }
+    else // The compiler had already checked that this arg was optional
+        return true;
+}
+
+} // namespace pvt
 
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

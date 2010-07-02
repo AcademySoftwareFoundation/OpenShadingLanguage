@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -41,14 +42,12 @@ namespace pvt {
 // vanilla phong - leaks energy at grazing angles
 // see Global Illumination Compendium entry (66) 
 class PhongClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     float m_exponent;
-public:
-    CLOSURE_CTOR (PhongClosure) : BSDFClosure(side, Labels::GLOSSY)
-    {
-        CLOSURE_FETCH_ARG (m_N       , 1);
-        CLOSURE_FETCH_ARG (m_exponent, 2);
-    }
+    PhongClosure() : BSDFClosure(Labels::GLOSSY) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const PhongClosure *comp = (const PhongClosure *)other;
@@ -142,42 +141,23 @@ public:
     }
 };
 
-DECLOP (OP_phong)
-{
-    closure_op_guts<PhongClosure, 3> (exec, nargs, args);
-}
-
-
 
 class PhongRampClosure : public BSDFClosure {
+public:
     static const int MAXCOLORS = 8;
     Vec3 m_N;
     float m_exponent;
     Color3 m_colors[MAXCOLORS];
-    int m_ncolors;
-public:
-    CLOSURE_CTOR (PhongRampClosure) : BSDFClosure(side, Labels::GLOSSY)
-    {
-        CLOSURE_FETCH_ARG (m_N       , 1);
-        CLOSURE_FETCH_ARG (m_exponent, 2);
-        DASSERT (3 < nargs);
-        // Fill our internal color array with the one provided
-        Symbol &Colors (exec->sym (args[3]));
-        DASSERT (Colors.typespec().is_array() && Colors.typespec().elementtype().is_triple());
-        Color3 *m = (Color3 *)((char *)Colors.data() + idx * Colors.step());
-        TypeDesc colorstype = Colors.typespec().simpletype();
-        DASSERT (0 < colorstype.arraylen && colorstype.arraylen <= MAXCOLORS);
-        m_ncolors = colorstype.arraylen;
-        for (int r = 0;  r < colorstype.arraylen;  ++r)
-            m_colors[r] = m[r];
-    }
+    PhongRampClosure() : BSDFClosure(Labels::GLOSSY) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const PhongRampClosure *comp = (const PhongRampClosure *)other;
         if (! (m_N == comp->m_N && m_exponent == comp->m_exponent && 
-               m_ncolors == comp->m_ncolors && BSDFClosure::mergeable(other)))
+               BSDFClosure::mergeable(other)))
             return false;
-        for (int i = 0;  i < m_ncolors;  ++i)
+        for (int i = 0;  i < MAXCOLORS;  ++i)
             if (m_colors[i] != comp->m_colors[i])
                 return false;
         return true;
@@ -195,10 +175,10 @@ public:
 
     Color3 get_color (float pos) const
     {
-        float npos = pos * (float)(m_ncolors - 1);
+        float npos = pos * (float)(MAXCOLORS - 1);
         int ipos = (int)npos;
-        if (ipos >= (m_ncolors - 1))
-            return m_colors[m_ncolors - 1];
+        if (ipos >= (MAXCOLORS - 1))
+            return m_colors[MAXCOLORS - 1];
         float offset = npos - (float)ipos;
         return m_colors[ipos] * (1.0f - offset) + m_colors[ipos+1] * offset;
     }
@@ -281,11 +261,21 @@ public:
     }
 };
 
-DECLOP (OP_phong_ramp)
-{
-    closure_op_guts<PhongRampClosure, 4> (exec, nargs, args);
-}
 
+
+ClosureParam bsdf_phong_params[] = {
+    CLOSURE_VECTOR_PARAM(PhongClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (PhongClosure, m_exponent, false),
+    CLOSURE_FINISH_PARAM(PhongClosure) };
+
+ClosureParam bsdf_phong_ramp_params[] = {
+    CLOSURE_VECTOR_PARAM     (PhongRampClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM      (PhongRampClosure, m_exponent, false),
+    CLOSURE_COLOR_ARRAY_PARAM(PhongRampClosure, m_colors, PhongRampClosure::MAXCOLORS, false),
+    CLOSURE_FINISH_PARAM     (PhongRampClosure) };
+
+CLOSURE_PREPARE(bsdf_phong_prepare, PhongClosure)
+CLOSURE_PREPARE(bsdf_phong_ramp_prepare, PhongRampClosure)
 
 }; // namespace pvt
 }; // namespace OSL

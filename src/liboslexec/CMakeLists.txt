@@ -17,6 +17,7 @@ SET ( liboslexec_srcs
           oslexec.cpp osoreader.cpp
           rendservices.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
+          opclosure.cpp builtin_closures.cpp
           ../liboslcomp/ast.cpp ../liboslcomp/codegen.cpp
           ../liboslcomp/oslcomp.cpp ../liboslcomp/symtab.cpp
           ../liboslcomp/typecheck.cpp

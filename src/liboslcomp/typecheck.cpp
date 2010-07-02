@@ -1029,8 +1029,6 @@ static const char * builtin_func_args [] = {
     "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", "!deriv", NULL,
     "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
-    "ashikhmin_velvet", "Cnff.", NULL,
-    "background", "C.", NULL,
     "bump", "xf", "xsf", "xv", "!deriv", NULL,
     "calculatenormal", "vp", "!deriv", NULL,
     "cellnoise", NOISE_ARGS, NULL,
@@ -1068,38 +1066,12 @@ static const char * builtin_func_args [] = {
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
     "warning", "xs*", NULL,   // FIXME -- further checking
 
-    "ambient", "C", "Cn", NULL,
-    "cooktorrance", "Cf", NULL,
-    "cloth", "Cnfffffffvccccffffifffff.", NULL,
-    "cloth_specular", "Cnc[4]f[4]i[4]f[4]ifffffvf[4]f[4]f[4]f[4]f[4]f[4].", NULL,
-    "diffuse", "Cn.", NULL,
-    "fakefur_diffuse", "Cnvfffffffff.", NULL,
-    "fakefur_specular", "Cnvfffffffffff.", NULL,
-    "fakefur_skin", "Cnvffffffff.", NULL,
-    "hair_diffuse", "Cv.", NULL,
-    "hair_specular", "Cvff.", NULL,
-    "translucent", "Cn.", NULL,
-    "phong", "Cnf.", NULL,
-    "phong_ramp", "Cnfc[].", NULL,
-    "microfacet_beckmann", "Cnff.", NULL,
-    "microfacet_beckmann_refraction", "Cnff.", NULL,
-    "microfacet_ggx", "Cnff.", NULL,
-    "microfacet_ggx_refraction", "Cnff.", NULL,
-    "ward", "Cnvff.", NULL,
-    "transparent", "C.", NULL,
-    "reflection", "Cn.", "Cnf.", NULL,
-    "refraction", "Cnf.", NULL,
-    "dielectric", "Cnf.", NULL,
-    "emission", "C.", "Cf.", "Cff.", NULL,
-    "orennayar", "Cnf.", NULL,
-//    "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,
-//    "refraction", "Cf", "Cff", "Csf", "Csff", 
-//                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
-    "specular", "Cnf", NULL,
-    "bssrdf_cubic", "Cc.", NULL,
-    "subsurface", "Cffcc", NULL,
-    "westin_backscatter", "Cnf.", NULL,
-    "westin_sheen", "Cnf.", NULL,
+//    "ambient", "C", "Cn", NULL,
+//    "cooktorrance", "Cf", NULL,
+////    "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,
+////    "refraction", "Cf", "Cff", "Csf", "Csff", 
+////                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
+//    "specular", "Cnf", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS
@@ -1148,6 +1120,38 @@ OSLCompilerImpl::initialize_builtin_funcs ()
             symtab().insert (f);
         }
         i += npoly;
+    }
+}
+
+
+
+void
+OSLCompilerImpl::register_closure(const char *name, const ClosureParam *params, bool takes_keywords)
+{
+    std::string poly = "C";
+    std::list<std::string> polylist;
+    int i;
+    for (i = 0; params[i].type != TypeDesc() && !params[i].optional; ++i)
+        poly += code_from_type(TypeSpec(params[i].type));
+    polylist.push_front(takes_keywords ? poly + "." : poly);
+    for (; params[i].type != TypeDesc() && params[i].optional; ++i)
+    {
+        poly += code_from_type(TypeSpec(params[i].type));
+        polylist.push_front(takes_keywords ? poly + "." : poly);
+    }
+
+    ustring uname(name);
+    Symbol *last = symtab().clash (uname);
+    ASSERT (last == NULL || last->symtype() == SymTypeFunction);
+    TypeSpec rettype = type_from_code (poly.c_str());
+
+    for (std::list<std::string>::iterator i = polylist.begin(); i != polylist.end(); ++i)
+    {
+        FunctionSymbol *f = new FunctionSymbol (uname, rettype);
+        f->nextpoly ((FunctionSymbol *)last);
+        f->argcodes (ustring(*i));
+        symtab().insert (f);
+        last = f;
     }
 }
 

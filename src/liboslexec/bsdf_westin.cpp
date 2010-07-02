@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -39,14 +40,14 @@ namespace OSL {
 namespace pvt {
 
 class WestinBackscatterClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     float m_roughness;
     float m_invroughness;
-public:
-    CLOSURE_CTOR (WestinBackscatterClosure) : BSDFClosure(side, Labels::GLOSSY)
+    WestinBackscatterClosure() : BSDFClosure(Labels::GLOSSY) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N, 1);
-        CLOSURE_FETCH_ARG (m_roughness, 2);
         m_invroughness = m_roughness > 0 ? 1 / m_roughness : 0;
     }
 
@@ -140,15 +141,13 @@ public:
 
 
 class WestinSheenClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     float m_edginess;
 //    float m_normalization;
-public:
-    CLOSURE_CTOR (WestinSheenClosure) : BSDFClosure(side, Labels::DIFFUSE)
-    {
-        CLOSURE_FETCH_ARG (m_N, 1);
-        CLOSURE_FETCH_ARG (m_edginess, 2);
-    }
+    WestinSheenClosure() : BSDFClosure(Labels::DIFFUSE) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const WestinSheenClosure *comp = (const WestinSheenClosure *)other;
@@ -222,16 +221,19 @@ public:
 };
 
 
-DECLOP (OP_westin_backscatter)
-{
-    closure_op_guts<WestinBackscatterClosure, 3> (exec, nargs, args);
-}
 
-DECLOP (OP_westin_sheen)
-{
-    closure_op_guts<WestinSheenClosure, 3> (exec, nargs, args);
-}
+ClosureParam bsdf_westin_backscatter_params[] = {
+    CLOSURE_VECTOR_PARAM(WestinBackscatterClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (WestinBackscatterClosure, m_roughness, false),
+    CLOSURE_FINISH_PARAM(WestinBackscatterClosure) };
 
+ClosureParam bsdf_westin_sheen_params[] = {
+    CLOSURE_VECTOR_PARAM(WestinSheenClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (WestinSheenClosure, m_edginess, false),
+    CLOSURE_FINISH_PARAM(WestinSheenClosure) };
+
+CLOSURE_PREPARE(bsdf_westin_backscatter_prepare, WestinBackscatterClosure)
+CLOSURE_PREPARE(bsdf_westin_sheen_prepare,        WestinSheenClosure)
 
 }; // namespace pvt
 }; // namespace OSL

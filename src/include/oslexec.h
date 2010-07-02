@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osl_pvt.h"
 
 #include "OpenImageIO/refcnt.h"             // just to get shared_ptr from boost ?!
+#include "OpenImageIO/ustring.h"
 
 
 #ifdef OSL_NAMESPACE
@@ -48,6 +49,8 @@ class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 class ShaderGlobals;
 class ClosureColor;
+class ClosureParam;
+class OSLCompiler;
 
 
 
@@ -56,6 +59,9 @@ class ClosureColor;
 typedef const void * TransformationPtr;
 
 
+// Callbacks for closure creation
+typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
+typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
 
 
 class ShadingSystem
@@ -177,6 +183,13 @@ public:
     /// Return the statistics output as a huge string.
     ///
     virtual std::string getstats (int level=1) const = 0;
+
+    virtual void register_closure(const char *name, int id, const ClosureParam *params,
+                                  int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+                                  int sidedness_offset, int labels_offset, int max_labels) = 0;
+
+    static void register_builtin_closures(ShadingSystem *ss);
+    static void register_builtin_closures(OSLCompiler *cc);
 
 private:
     // Make delete private and unimplemented in order to prevent apps

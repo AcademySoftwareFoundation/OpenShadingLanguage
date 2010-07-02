@@ -39,6 +39,40 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
+// Ids for the builtin provided closures
+
+enum {
+    CLOSURE_BSDF_DIFFUSE_ID,
+    CLOSURE_BSDF_TRANSLUCENT_ID,
+    CLOSURE_BSDF_REFLECTION_ID,
+    CLOSURE_BSDF_REFRACTION_ID,
+    CLOSURE_BSDF_DIELECTRIC_ID,
+    CLOSURE_BSDF_TRANSPARENT_ID,
+    CLOSURE_BSDF_MICROFACET_GGX_ID,
+    CLOSURE_BSDF_MICROFACET_GGX_REFRACTION_ID,
+    CLOSURE_BSDF_MICROFACET_BECKMANN_ID,
+    CLOSURE_BSDF_MICROFACET_BECKMANN_REFRACTION_ID,
+    CLOSURE_BSDF_WARD_ID,
+    CLOSURE_BSDF_PHONG_ID,
+    CLOSURE_BSDF_PHONG_RAMP_ID,
+    CLOSURE_BSDF_HAIR_DIFFUSE_ID,
+    CLOSURE_BSDF_HAIR_SPECULAR_ID,
+    CLOSURE_BSDF_ASHIKHMIN_VELVET_ID,
+    CLOSURE_BSDF_CLOTH_ID,
+    CLOSURE_BSDF_CLOTH_SPECULAR_ID,
+    CLOSURE_BSDF_FAKEFUR_DIFFUSE_ID,
+    CLOSURE_BSDF_FAKEFUR_SPECULAR_ID,
+    CLOSURE_BSDF_FAKEFUR_SKIN_ID,
+    CLOSURE_BSDF_WESTIN_BACKSCATTER_ID,
+    CLOSURE_BSDF_WESTIN_SHEEN_ID,
+    CLOSURE_BSSRDF_CUBIC_ID,
+    CLOSURE_EMISSION_ID,
+    CLOSURE_BACKGROUND_ID,
+    CLOSURE_SUBSURFACE_ID,
+
+    NBUILTIN_CLOSURES };
+
+
 /// Labels for light walks
 ///
 /// This is the leftover of a class which used to hold all the labels
@@ -97,6 +131,8 @@ public:
         m_category (category) { m_custom_labels[0] = Labels::NONE; }
 
     virtual ~ClosurePrimitive () { }
+
+    virtual void setup() {};
 
     /// Meant to be used by the opcode to set custom labels
     ///
@@ -189,10 +225,10 @@ public:
         return true;
     }
 
-private:
-    Category m_category;
     // Labels::NONE terminated custom label list
     ustring  m_custom_labels[MAXCUSTOM + 1];
+private:
+    Category m_category;
 };
 
 
@@ -204,6 +240,10 @@ public:
     BSDFClosure (Sidedness side, ustring scattering, Sidedness eval_sidedness = Front) :
         ClosurePrimitive (BSDF),
         m_sidedness(side),
+        m_eval_sidedness (eval_sidedness),
+        m_scattering_label (scattering) { }
+    BSDFClosure (ustring scattering, Sidedness eval_sidedness = Front) :
+        ClosurePrimitive (BSDF),
         m_eval_sidedness (eval_sidedness),
         m_scattering_label (scattering) { }
     ~BSDFClosure () { }
@@ -330,6 +370,7 @@ public:
                          Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                          float &pdf, Color3 &eval) const = 0;
 
+    Sidedness m_sidedness;      // which sides are sensitive to light?
 protected:
     /// Helper function to perform a faceforward on the geometric and shading
     /// normals according to what is allowed by the sidedness flag
@@ -354,7 +395,6 @@ protected:
     }
 
 private:
-    Sidedness m_sidedness;      // which sides are sensitive to light?
     Sidedness m_eval_sidedness; // which canonical sides are sensitive to light?
     // A bsdf can only perform one type of scattering
     ustring  m_scattering_label;
@@ -412,6 +452,7 @@ private:
 /// for an emissive material.
 class EmissiveClosure : public ClosurePrimitive {
 public:
+    EmissiveClosure () : ClosurePrimitive (Emissive) { }
     EmissiveClosure (Sidedness side) : ClosurePrimitive (Emissive), m_sidedness (side) { }
     ~EmissiveClosure () { }
 
@@ -445,7 +486,6 @@ public:
     /// the PDF computed by sample().
     virtual float pdf (const Vec3 &Ng,
                        const Vec3 &omega_out) const = 0;
-protected:
     Sidedness m_sidedness;
 };
 
@@ -480,7 +520,7 @@ public:
     /// ClosurePrimitive object must be placement new'd into the returned
     /// memory location
     ///
-    char* allocate_component (size_t num_bytes);
+    char* allocate_component (int id, size_t num_bytes);
 
     /// *this += A
     ///
@@ -518,6 +558,13 @@ public:
     const ClosurePrimitive * prim (int i) const {
         return reinterpret_cast<const ClosurePrimitive*>(&m_mem[component(i).memoffset]);
     }
+    /// For non ClosurePrimitive based components (defined by the user)
+    const void * raw_prim (int i) const {
+        return (void *)&m_mem[component(i).memoffset];
+    }
+
+    /// Return whether the component is a builtin closure
+    bool is_builtin (int i) const { return component(i).id < NBUILTIN_CLOSURES; }
 
     /// This allows for fast stealing of closure data avoiding reallocation
     void swap(ClosureColor &source) { m_components.swap(source.m_components);
@@ -528,11 +575,12 @@ private:
     /// Light-weight struct to hold a single component of the Closure.
     ///
     struct Component {
+        int        id;   ///< Id of the componente
         Color3 weight;   ///< Weight of this component
         int memoffset;   ///< Offset at which we can find a ClosurePrimitive*
 
-        Component (const Color3 &weight, int memoffset) :
-            weight(weight), memoffset(memoffset) { }
+        Component (int id, const Color3 &weight, int memoffset) :
+            id(id), weight(weight), memoffset(memoffset) { }
     };
 
     /// Return the i-th component of this closure.
@@ -542,7 +590,6 @@ private:
     std::vector<Component> m_components;   ///< weight + location in memory
     std::vector<char> m_mem;               ///< memory used to store components
 };
-
 
 
 

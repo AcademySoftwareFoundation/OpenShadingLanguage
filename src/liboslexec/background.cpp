@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslclosure.h"
 
@@ -48,7 +49,9 @@ namespace pvt {
 ///
 class GenericBackgroundClosure : public BackgroundClosure {
 public:
-    CLOSURE_CTOR (GenericBackgroundClosure) { }
+    GenericBackgroundClosure() { }
+
+    void setup() {};
 
     size_t memsize () const { return sizeof(*this); }
 
@@ -61,12 +64,11 @@ public:
 };
 
 
-DECLOP (OP_background)
-{
-     closure_op_guts<GenericBackgroundClosure, 1> (exec, nargs, args);
-}
 
+ClosureParam closure_background_params[] = {
+    CLOSURE_FINISH_PARAM(GenericBackgroundClosure) };
 
+CLOSURE_PREPARE(closure_background_prepare, GenericBackgroundClosure)
 
 }; // namespace pvt
 }; // namespace OSL

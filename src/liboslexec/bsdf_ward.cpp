@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -41,17 +42,13 @@ namespace pvt {
 // anisotropic ward - leaks energy at grazing angles
 // see http://www.graphics.cornell.edu/~bjw/wardnotes.pdf 
 class WardClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     Vec3 m_T;
     float m_ax, m_ay;
-public:
-    CLOSURE_CTOR (WardClosure) : BSDFClosure(side, Labels::GLOSSY)
-    {
-        CLOSURE_FETCH_ARG (m_N , 1);
-        CLOSURE_FETCH_ARG (m_T , 2);
-        CLOSURE_FETCH_ARG (m_ax, 3);
-        CLOSURE_FETCH_ARG (m_ay, 4);
-    }
+    WardClosure() : BSDFClosure(Labels::GLOSSY) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const WardClosure *comp = (const WardClosure *)other;
@@ -201,11 +198,16 @@ public:
     }
 };
 
-DECLOP (OP_ward)
-{
-    closure_op_guts<WardClosure, 5> (exec, nargs, args);
-}
 
+
+ClosureParam bsdf_ward_params[] = {
+    CLOSURE_VECTOR_PARAM(WardClosure, m_N, false),
+    CLOSURE_VECTOR_PARAM(WardClosure, m_T, false),
+    CLOSURE_FLOAT_PARAM (WardClosure, m_ax, false),
+    CLOSURE_FLOAT_PARAM (WardClosure, m_ay, false),
+    CLOSURE_FINISH_PARAM(WardClosure) };
+
+CLOSURE_PREPARE(bsdf_ward_prepare, WardClosure)
 
 }; // namespace pvt
 }; // namespace OSL

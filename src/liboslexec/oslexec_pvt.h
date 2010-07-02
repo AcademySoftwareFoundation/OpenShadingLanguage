@@ -430,6 +430,49 @@ private:
 
 
 
+class ClosureRegistry {
+public:
+
+    struct ClosureEntry {
+        // normally a closure is fully identified by its
+        // name, but we might want to have an internal id
+        // for fast dispatching
+        int                       id;
+        // The parameters
+        std::vector<ClosureParam> params;
+        // the needed size for the structure
+        int                       struct_size;
+        // Creation callbacks
+        PrepareClosureFunc        prepare;
+        SetupClosureFunc          setup;
+        // In case this closure accepts labels, this tells
+        // us what is the offset of the ustring[MAXLABELS]
+        // field inside the target struct.
+        int                       labels_offset;
+        // In case it accepts sidedness ...
+        int                       sidedness_offset;
+        // And if it does handle labels, this is the limit
+        int                       max_labels;
+    };
+
+    void register_closure(const char *name, int id, const ClosureParam *params,
+                          int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+                          int sidedness_offset, int labels_offset, int max_labels);
+
+    const ClosureEntry *get_entry(ustring name)const;
+
+private:
+
+
+    // A mapping from name to ID for the compiler
+    std::map<ustring, int>    m_closure_name_to_id;
+    // And the internal global table, indexed
+    // by the internal ID for fast dispatching
+    std::vector<ClosureEntry> m_closure_table;
+};
+
+
+
 class ShadingSystemImpl : public ShadingSystem
 {
 public:
@@ -539,6 +582,10 @@ public:
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
+    virtual void register_closure(const char *name, int id, const ClosureParam *params,
+                                  int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+                                  int sidedness_offset, int labels_offset, int max_labels);
+    const ClosureRegistry::ClosureEntry *find_closure(ustring name)const { return m_closure_registry.get_entry(name); }
 private:
     void printstats () const;
     void init_global_heap_offsets ();
@@ -639,6 +686,7 @@ private:
     atomic_ll m_make_varying;             ///< Adjust_varying made it varying
     atomic_ll m_make_uniform;             ///< Adjust_varying made it uniform
 #endif
+    ClosureRegistry m_closure_registry;
 
     friend class ShadingContext;
     friend class ShaderInstance;

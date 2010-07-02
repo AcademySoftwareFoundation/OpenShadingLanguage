@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -66,6 +67,7 @@ inline float furOpacity(float cosNI, float cosTI,
 
 
 class FakefurDiffuseClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     Vec3 m_T;
 
@@ -81,29 +83,13 @@ class FakefurDiffuseClosure : public BSDFClosure {
     // fake fur opacity function related stuff...
     float m_fur_density;
     float m_fur_avg_radius;
-    float m_fur_length;   
+    float m_fur_length;
 
-    float m_fur_shadow_fraction; 
-public:
-    CLOSURE_CTOR (FakefurDiffuseClosure) : BSDFClosure(side, Labels::DIFFUSE)
-    {
-        CLOSURE_FETCH_ARG (m_N, 1);
-        CLOSURE_FETCH_ARG (m_T, 2);
-        // fake fur illumination stuff
-        CLOSURE_FETCH_ARG (m_fur_reflectivity, 3);
-        CLOSURE_FETCH_ARG (m_fur_transmission, 4);
-        CLOSURE_FETCH_ARG (m_shadow_start, 5);
-        CLOSURE_FETCH_ARG (m_shadow_end, 6);
-        CLOSURE_FETCH_ARG (m_fur_attenuation, 7); 
-        
-        // fake fur opacity function stuff
-        CLOSURE_FETCH_ARG (m_fur_density, 8);
-        CLOSURE_FETCH_ARG (m_fur_avg_radius, 9);
-        CLOSURE_FETCH_ARG (m_fur_length, 10);
+    float m_fur_shadow_fraction;
 
-        CLOSURE_FETCH_ARG (m_fur_shadow_fraction, 11);
+    FakefurDiffuseClosure() : BSDFClosure(Labels::DIFFUSE) { }
 
-    }
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const FakefurDiffuseClosure *comp = (const FakefurDiffuseClosure *)other;
@@ -221,6 +207,8 @@ public:
 
 
 class FakefurSpecularClosure : public BSDFClosure {
+public:
+
     Vec3 m_N;
     Vec3 m_T;
     float m_offset, m_cos_off, m_sin_off;
@@ -242,34 +230,12 @@ class FakefurSpecularClosure : public BSDFClosure {
 
     float m_fur_shadow_fraction; 
 
-public:
-    CLOSURE_CTOR (FakefurSpecularClosure) : BSDFClosure(side, Labels::GLOSSY)
+    FakefurSpecularClosure() : BSDFClosure(Labels::GLOSSY) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N, 1);
-        // Tangent vector
-        CLOSURE_FETCH_ARG (m_T, 2);
-        // specular offset in radians
-        CLOSURE_FETCH_ARG (m_offset, 3);
-        // roughness for the specular as used in spi shaders
-        CLOSURE_FETCH_ARG (m_exp, 4);
-     
-        // fake fur illumination stuff
-        CLOSURE_FETCH_ARG (m_fur_reflectivity, 5);
-        CLOSURE_FETCH_ARG (m_fur_transmission, 6);
-        CLOSURE_FETCH_ARG (m_shadow_start, 7);
-        CLOSURE_FETCH_ARG (m_shadow_end, 8);
-        CLOSURE_FETCH_ARG (m_fur_attenuation, 9); 
-        
-        // fake fur opacity function stuff
-        CLOSURE_FETCH_ARG (m_fur_density, 10);
-        CLOSURE_FETCH_ARG (m_fur_avg_radius, 11);
-        CLOSURE_FETCH_ARG (m_fur_length, 12);
-
-        CLOSURE_FETCH_ARG (m_fur_shadow_fraction, 13);
-
         m_cos_off = cosf(m_offset);
         m_sin_off = sinf(m_offset);
-
     }
 
     bool mergeable (const ClosurePrimitive *other) const {
@@ -370,6 +336,8 @@ public:
 
 
 class FakefurSkinClosure : public BSDFClosure {
+public:
+
     Vec3 m_N;
     Vec3 m_T;
 
@@ -387,25 +355,9 @@ class FakefurSkinClosure : public BSDFClosure {
     float m_fur_avg_radius;
     float m_fur_length;    
   
-public:
-    CLOSURE_CTOR (FakefurSkinClosure) : BSDFClosure(side, Labels::DIFFUSE)
-    {
-        CLOSURE_FETCH_ARG (m_N, 1);
-        // Tangent vector
-        CLOSURE_FETCH_ARG (m_T, 2);
+    FakefurSkinClosure() : BSDFClosure(Labels::DIFFUSE) { }
 
-        // fake fur illumination stuff
-        CLOSURE_FETCH_ARG (m_fur_reflectivity, 3);
-        CLOSURE_FETCH_ARG (m_fur_transmission, 4);
-        CLOSURE_FETCH_ARG (m_shadow_start, 5);
-        CLOSURE_FETCH_ARG (m_shadow_end, 6);
-        CLOSURE_FETCH_ARG (m_fur_attenuation, 7); 
-        
-        // fake fur opacity function stuff
-        CLOSURE_FETCH_ARG (m_fur_density, 8);
-        CLOSURE_FETCH_ARG (m_fur_avg_radius, 9);
-        CLOSURE_FETCH_ARG (m_fur_length, 10);
-    }
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const FakefurSkinClosure *comp = (const FakefurSkinClosure *)other;
@@ -519,22 +471,53 @@ public:
 };
 
 
-DECLOP (OP_fakefur_diffuse)
-{
-    closure_op_guts<FakefurDiffuseClosure, 12> (exec, nargs, args);
-}
 
-DECLOP (OP_fakefur_specular)
-{
-    closure_op_guts<FakefurSpecularClosure, 14> (exec, nargs, args);
-}
+ClosureParam bsdf_fakefur_diffuse_params[] = {
+    CLOSURE_VECTOR_PARAM(FakefurDiffuseClosure, m_N, false),
+    CLOSURE_VECTOR_PARAM(FakefurDiffuseClosure, m_T, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_reflectivity, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_transmission, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_shadow_start, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_shadow_end, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_attenuation, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_density, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_avg_radius, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_length, false),
+    CLOSURE_FLOAT_PARAM (FakefurDiffuseClosure, m_fur_shadow_fraction, false),
+    CLOSURE_FINISH_PARAM(FakefurDiffuseClosure) };
 
-DECLOP (OP_fakefur_skin)
-{
-    closure_op_guts<FakefurSkinClosure, 11> (exec, nargs, args);
-}
+ClosureParam bsdf_fakefur_specular_params[] = {
+    CLOSURE_VECTOR_PARAM(FakefurSpecularClosure, m_N, false),
+    CLOSURE_VECTOR_PARAM(FakefurSpecularClosure, m_T, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_offset, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_exp, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_reflectivity, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_transmission, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_shadow_start, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_shadow_end, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_attenuation, false), 
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_density, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_avg_radius, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_length, false),
+    CLOSURE_FLOAT_PARAM (FakefurSpecularClosure, m_fur_shadow_fraction, false),
+    CLOSURE_FINISH_PARAM(FakefurSpecularClosure) };
 
+ClosureParam bsdf_fakefur_skin_params[] = {
+    CLOSURE_VECTOR_PARAM(FakefurSkinClosure, m_N, false),
+    CLOSURE_VECTOR_PARAM(FakefurSkinClosure, m_T, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_fur_reflectivity, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_fur_transmission, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_shadow_start, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_shadow_end, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_fur_attenuation, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_fur_density, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_fur_avg_radius, false),
+    CLOSURE_FLOAT_PARAM (FakefurSkinClosure, m_fur_length, false),
+    CLOSURE_FINISH_PARAM(FakefurSkinClosure) };
 
+CLOSURE_PREPARE(bsdf_fakefur_diffuse_prepare,  FakefurDiffuseClosure)
+CLOSURE_PREPARE(bsdf_fakefur_specular_prepare, FakefurSpecularClosure)
+CLOSURE_PREPARE(bsdf_fakefur_skin_prepare,     FakefurSkinClosure)
 
 }; // namespace pvt
 }; // namespace OSL

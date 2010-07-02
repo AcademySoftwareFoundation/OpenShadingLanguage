@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -40,12 +41,11 @@ namespace pvt {
 
 
 class ReflectionClosure : public BSDFClosure {
-    Vec3  m_N;    // shading normal
 public:
-    CLOSURE_CTOR (ReflectionClosure) : BSDFClosure(side, Labels::SINGULAR)
-    {
-        CLOSURE_FETCH_ARG (m_N , 1);
-    }
+    Vec3  m_N;    // shading normal
+    ReflectionClosure() : BSDFClosure(Labels::SINGULAR) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const ReflectionClosure *comp = (const ReflectionClosure *)other;
@@ -104,14 +104,12 @@ public:
 
 
 class FresnelReflectionClosure : public BSDFClosure {
+public:
     Vec3  m_N;    // shading normal
     float m_eta;  // index of refraction (for fresnel term)
-public:
-    CLOSURE_CTOR (FresnelReflectionClosure) : BSDFClosure(side, Labels::SINGULAR)
-    {
-        CLOSURE_FETCH_ARG (m_N , 1);
-        CLOSURE_FETCH_ARG (m_eta, 2);
-    }
+    FresnelReflectionClosure() : BSDFClosure(Labels::SINGULAR) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const FresnelReflectionClosure *comp = (const FresnelReflectionClosure *)other;
@@ -133,7 +131,10 @@ public:
     float albedo (const Vec3 &omega_out, float normal_sign) const
     {
         float cosNO = normal_sign * m_N.dot(omega_out);
-        return fresnel_dielectric(cosNO, m_eta);
+        if (m_eta > 0.0f)
+            return fresnel_dielectric(cosNO, m_eta);
+        else
+            return 1.0f;
     }
 
     Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
@@ -165,7 +166,7 @@ public:
                 domega_in_dx = 2 * Nf.dot(domega_out_dx) * Nf - domega_out_dx;
                 domega_in_dy = 2 * Nf.dot(domega_out_dy) * Nf - domega_out_dy;
                 pdf = 1;
-                float value = fresnel_dielectric(cosNO, m_eta);
+                float value = m_eta > 0.0f ? fresnel_dielectric(cosNO, m_eta) : 1.0f;
                 eval.setValue(value, value, value);
             }
         }
@@ -175,13 +176,12 @@ public:
 
 
 
-DECLOP (OP_reflection)
-{
-    if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
-        closure_op_guts<FresnelReflectionClosure, 3> (exec, nargs, args);
-    else
-        closure_op_guts<ReflectionClosure, 2> (exec, nargs, args);
-}
+ClosureParam bsdf_reflection_params[] = {
+    CLOSURE_VECTOR_PARAM(FresnelReflectionClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (FresnelReflectionClosure, m_eta, true),
+    CLOSURE_FINISH_PARAM(FresnelReflectionClosure) };
+
+CLOSURE_PREPARE(bsdf_reflection_prepare, FresnelReflectionClosure)
 
 }; // namespace pvt
 }; // namespace OSL

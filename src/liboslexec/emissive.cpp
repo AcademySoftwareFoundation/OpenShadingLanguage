@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslclosure.h"
 
@@ -48,21 +49,19 @@ namespace pvt {
 /// if the provided angles are PI/2, which is the default
 ///
 class GenericEmissiveClosure : public EmissiveClosure {
+public:
     // Two params, angles both
     // first is the outer_angle where penumbra starts
     float m_inner_angle; // must be between 0 and outer_angle
     // and second the angle where light ends
     float m_outer_angle;
-public:
-    CLOSURE_CTOR (GenericEmissiveClosure) : EmissiveClosure(side)
+    GenericEmissiveClosure() { }
+
+    void setup()
     {
-        if (nargs >= 2 && exec->sym (args[1]).typespec().is_float())
-            CLOSURE_FETCH_ARG (m_inner_angle, 1);
-        else
+        if (m_inner_angle <= 0.0f)
             m_inner_angle = float(M_PI) * 0.5f;
-        if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
-            CLOSURE_FETCH_ARG (m_outer_angle, 2);
-        else
+        if (m_outer_angle < m_inner_angle)
             m_outer_angle = m_inner_angle;
     }
 
@@ -85,11 +84,7 @@ public:
     Color3 eval (const Vec3 &Ng, const Vec3 &omega_out) const
     {
         float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
-        if (outer_angle < 0.0f)
-            outer_angle = 0.0f;
         float inner_angle = m_inner_angle < outer_angle ? m_inner_angle : outer_angle;
-        if (inner_angle < 0.0f)
-            inner_angle = 0.0f;
         float cosNO = fabsf(Ng.dot(omega_out));
         float cosU  = cosf(inner_angle);
         float cosA  = cosf(outer_angle);
@@ -152,18 +147,13 @@ public:
 };
 
 
-DECLOP (OP_emission)
-{
-    if (nargs >= 3 && exec->sym (args[2]).typespec().is_float())
-        closure_op_guts<GenericEmissiveClosure, 3> (exec, nargs, args);
-    else if (nargs >= 2 && exec->sym (args[1]).typespec().is_float())
-        closure_op_guts<GenericEmissiveClosure, 2> (exec, nargs, args);
-    else
-        closure_op_guts<GenericEmissiveClosure, 1> (exec, nargs, args);
 
-}
+ClosureParam closure_emission_params[] = {
+    CLOSURE_FLOAT_PARAM (GenericEmissiveClosure, m_inner_angle, true),
+    CLOSURE_FLOAT_PARAM (GenericEmissiveClosure, m_outer_angle, true),
+    CLOSURE_FINISH_PARAM(GenericEmissiveClosure) };
 
-
+CLOSURE_PREPARE(closure_emission_prepare, GenericEmissiveClosure)
 
 }; // namespace pvt
 }; // namespace OSL

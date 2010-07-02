@@ -26,9 +26,11 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCOMP_H
-#define OSLCOMP_H
+#ifndef GENCLOSURE_H
+#define GENCLOSURE_H
 
+#include <OpenImageIO/ustring.h>
+#include "oslconfig.h"
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -36,28 +38,34 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
-struct ClosureParam;
 
-class OSLCompiler {
-public:
-    static OSLCompiler *create ();
-
-    OSLCompiler (void) { }
-    virtual ~OSLCompiler (void) { }
-
-    /// Compile the given file, using the list of command-line options.
-    /// Return true if ok, false if the compile failed.
-    virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options) = 0;
-
-    /// Return the name of our compiled output (must be called after
-    /// compile()).
-    virtual std::string output_filename () const = 0;
-
-    virtual void register_closure(const char *name, const ClosureParam *params, bool takes_keywords) = 0;
+struct ClosureParam {
+    TypeDesc type;
+    int      offset;
+    bool     optional;
 };
 
+#define reckless_offsetof(st, fld) (((char *)&(((st *)1)->fld)) - (char *)1)
 
+#define CLOSURE_INT_PARAM(st, fld, opt) \
+    { TypeDesc::TypeInt, reckless_offsetof(st, fld), opt }
+#define CLOSURE_FLOAT_PARAM(st, fld, opt) \
+    { TypeDesc::TypeFloat, reckless_offsetof(st, fld), opt }
+#define CLOSURE_COLOR_PARAM(st, fld, opt) \
+    { TypeDesc::TypeColor, reckless_offsetof(st, fld), opt }
+#define CLOSURE_VECTOR_PARAM(st, fld, opt) \
+    { TypeDesc::TypeVector, reckless_offsetof(st, fld), opt }
+
+#define CLOSURE_INT_ARRAY_PARAM(st, fld, n, opt) \
+    { TypeDesc(TypeDesc::INT,   TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
+#define CLOSURE_VECTOR_ARRAY_PARAM(st,fld,n, opt) \
+    { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::VECTOR,  n),reckless_offsetof(st, fld), opt }
+#define CLOSURE_COLOR_ARRAY_PARAM(st,fld,n, opt) \
+    { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::COLOR,   n),reckless_offsetof(st, fld), opt }
+#define CLOSURE_FLOAT_ARRAY_PARAM(st,fld,n, opt) \
+    { TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
+
+#define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), false }
 
 }; // namespace OSL
 
@@ -67,4 +75,4 @@ using namespace OSL_NAMESPACE;
 #endif
 
 
-#endif /* OSLCOMP_H */
+#endif /* OSLCLOSURE_H */

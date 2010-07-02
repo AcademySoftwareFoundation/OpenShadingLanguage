@@ -1298,13 +1298,20 @@ ASTfunction_call::codegen (Symbol *dest)
         }
 
     } else {
+        bool isclosure = func() && func()->typespec().is_closure();
+        if (isclosure)
+        {
+            Symbol *clname = m_compiler->make_constant(m_name);
+            argdest.insert (argdest.begin(), clname);
+            argdest_return_offset++;
+        }
         // Built-in function
         if (! typespec().is_void()) {    // Insert the return dest if non-void
             argdest.insert (argdest.begin(), dest);
-            argdest_return_offset = 1;
+            argdest_return_offset++;
         }
         // Emit the actual op
-        emitcode (m_name.c_str(), argdest.size(), &argdest[0]);
+        emitcode (isclosure ? "closure" : m_name.c_str(), argdest.size(), &argdest[0]);
         // Propagate derivative-taking info to the opcode
         m_compiler->lastop().set_argbits (m_argread, m_argwrite,
                                           m_argtakesderivs);

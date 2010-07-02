@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslops.h"
+#include "genclosure.h"
 #include "oslexec_pvt.h"
 
 #ifdef OSL_NAMESPACE
@@ -39,12 +40,12 @@ namespace OSL {
 namespace pvt {
 
 class DiffuseClosure : public BSDFClosure {
-    Vec3 m_N;
 public:
-    CLOSURE_CTOR (DiffuseClosure) : BSDFClosure(side, Labels::DIFFUSE)
-    {
-        CLOSURE_FETCH_ARG (m_N, 1);
-    }
+    Vec3 m_N;
+
+    DiffuseClosure() : BSDFClosure(Labels::DIFFUSE) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const DiffuseClosure *comp = (const DiffuseClosure *)other;
@@ -105,12 +106,12 @@ public:
 
 
 class TranslucentClosure : public BSDFClosure {
-    Vec3 m_N;
 public:
-    CLOSURE_CTOR (TranslucentClosure) : BSDFClosure(side, Labels::DIFFUSE, Back)
-    {
-        CLOSURE_FETCH_ARG (m_N, 1);
-    }
+    Vec3 m_N;
+
+    TranslucentClosure() : BSDFClosure(Labels::DIFFUSE, Back) { }
+
+    void setup() {};
 
     bool mergeable (const ClosurePrimitive *other) const {
         const TranslucentClosure *comp = (const TranslucentClosure *)other;
@@ -170,18 +171,16 @@ public:
 
 
 
-DECLOP (OP_diffuse)
-{
-    closure_op_guts<DiffuseClosure, 2> (exec, nargs, args);
-}
+ClosureParam bsdf_diffuse_params[] = {
+    CLOSURE_VECTOR_PARAM(DiffuseClosure, m_N, false),
+    CLOSURE_FINISH_PARAM(DiffuseClosure) };
 
+ClosureParam bsdf_translucent_params[] = {
+    CLOSURE_VECTOR_PARAM(DiffuseClosure, m_N, false),
+    CLOSURE_FINISH_PARAM(DiffuseClosure) };
 
-
-DECLOP (OP_translucent)
-{
-    closure_op_guts<TranslucentClosure, 2> (exec, nargs, args);
-}
-
+CLOSURE_PREPARE(bsdf_diffuse_prepare, DiffuseClosure)
+CLOSURE_PREPARE(bsdf_translucent_prepare, TranslucentClosure)
 
 }; // namespace pvt
 }; // namespace OSL

@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslops.h"
+#include "genclosure.h"
 #include "oslexec_pvt.h"
 
 #ifdef OSL_NAMESPACE
@@ -39,17 +40,16 @@ namespace OSL {
 namespace pvt {
 
 class AshikhminVelvetClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     float m_sigma;
     float m_eta;
     float m_invsigma2;
-public:
-    CLOSURE_CTOR (AshikhminVelvetClosure) : BSDFClosure(side, Labels::DIFFUSE)
-    {
-        CLOSURE_FETCH_ARG (m_N, 1);
-        CLOSURE_FETCH_ARG (m_sigma, 2);
-        CLOSURE_FETCH_ARG (m_eta, 3);
 
+    AshikhminVelvetClosure() : BSDFClosure(Labels::DIFFUSE) { }
+
+    void setup()
+    {
         m_sigma = std::max(m_sigma, 0.01f);
         m_invsigma2 = 1 / (m_sigma * m_sigma);
     }
@@ -169,10 +169,15 @@ public:
 
 };
 
-DECLOP (OP_ashikhmin_velvet)
-{
-    closure_op_guts<AshikhminVelvetClosure, 4> (exec, nargs, args);
-}
+
+
+ClosureParam bsdf_ashikhmin_velvet_params[] = {
+    CLOSURE_VECTOR_PARAM(AshikhminVelvetClosure, m_N,     false),
+    CLOSURE_FLOAT_PARAM (AshikhminVelvetClosure, m_sigma, false),
+    CLOSURE_FLOAT_PARAM (AshikhminVelvetClosure, m_eta,   false),
+    CLOSURE_FINISH_PARAM(AshikhminVelvetClosure) };
+
+CLOSURE_PREPARE(bsdf_ashikhmin_velvet_prepare, AshikhminVelvetClosure)
 
 }; // namespace pvt
 }; // namespace OSL

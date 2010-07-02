@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -39,6 +40,7 @@ namespace OSL {
 namespace pvt {
 
 class BSSRDFCubicClosure : public BSSRDFClosure {
+public:
     Color3 m_radius;
     Color3 m_scale;
     float  m_max_radius;
@@ -49,10 +51,10 @@ class BSSRDFCubicClosure : public BSSRDFClosure {
     template <typename T>
     static inline T pow5 (const T &x) { T x2 = x * x; return x2 * x2 * x; }
 
-public:
-    CLOSURE_CTOR (BSSRDFCubicClosure) : BSSRDFClosure()
+    BSSRDFCubicClosure() { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_radius, 1);
         // pre-compute some terms
         m_max_radius = 0;
         for (int i = 0; i < 3; i++) {
@@ -90,12 +92,12 @@ public:
 };
 
 
-DECLOP (OP_bssrdf_cubic)
-{
-    closure_op_guts<BSSRDFCubicClosure, 2> (exec, nargs, args);
-}
 
+ClosureParam closure_bssrdf_cubic_params[] = {
+    CLOSURE_COLOR_PARAM (BSSRDFCubicClosure, m_radius, false),
+    CLOSURE_FINISH_PARAM(BSSRDFCubicClosure) };
 
+CLOSURE_PREPARE(closure_bssrdf_cubic_prepare, BSSRDFCubicClosure)
 
 }; // namespace pvt
 }; // namespace OSL

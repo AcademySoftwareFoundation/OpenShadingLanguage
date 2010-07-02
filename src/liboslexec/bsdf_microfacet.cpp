@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -46,15 +47,16 @@ namespace pvt {
 // see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
 template <int Refractive = 0>
 class MicrofacetGGXClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     float m_ag;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
-public:
-    CLOSURE_CTOR (MicrofacetGGXClosure) : BSDFClosure(Refractive ? Both : side, Labels::GLOSSY, Refractive ? Back : Front)
+    MicrofacetGGXClosure() : BSDFClosure(Labels::GLOSSY, Refractive ? Back : Front) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N  , 1);
-        CLOSURE_FETCH_ARG (m_ag , 2);
-        CLOSURE_FETCH_ARG (m_eta, 3);
+        if (Refractive)
+            m_sidedness = Both;
     }
 
     bool mergeable (const ClosurePrimitive *other) const {
@@ -277,15 +279,16 @@ public:
 // see http://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
 template <int Refractive = 0>
 class MicrofacetBeckmannClosure : public BSDFClosure {
+public:
     Vec3 m_N;
     float m_ab;   // width parameter (roughness)
     float m_eta;  // index of refraction (for fresnel term)
-public:
-    CLOSURE_CTOR (MicrofacetBeckmannClosure) : BSDFClosure(Refractive ? Both : side, Labels::GLOSSY, Refractive ? Back : Front)
+    MicrofacetBeckmannClosure() : BSDFClosure(Labels::GLOSSY, Refractive ? Back : Front) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N  , 1);
-        CLOSURE_FETCH_ARG (m_ab , 2);
-        CLOSURE_FETCH_ARG (m_eta, 3);
+        if (Refractive)
+            m_sidedness = Both;
     }
 
     bool mergeable (const ClosurePrimitive *other) const {
@@ -518,27 +521,34 @@ public:
 
 
 
-DECLOP (OP_microfacet_ggx)
-{
-    closure_op_guts<MicrofacetGGXClosure<0>, 4> (exec, nargs, args);
-}
+ClosureParam bsdf_microfacet_ggx_params[] = {
+    CLOSURE_VECTOR_PARAM(MicrofacetGGXClosure<0>, m_N, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetGGXClosure<0>, m_ag, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetGGXClosure<0>, m_eta, false),
+    CLOSURE_FINISH_PARAM(MicrofacetGGXClosure<0>) };
 
-DECLOP (OP_microfacet_ggx_refraction)
-{
-    closure_op_guts<MicrofacetGGXClosure<1>, 4> (exec, nargs, args);
-}
+ClosureParam bsdf_microfacet_ggx_refraction_params[] = {
+    CLOSURE_VECTOR_PARAM(MicrofacetGGXClosure<1>, m_N, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetGGXClosure<1>, m_ag, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetGGXClosure<1>, m_eta, false),
+    CLOSURE_FINISH_PARAM(MicrofacetGGXClosure<1>) };
 
-DECLOP (OP_microfacet_beckmann)
-{
-    closure_op_guts<MicrofacetBeckmannClosure<0>, 4> (exec, nargs, args);
-}
+ClosureParam bsdf_microfacet_beckmann_params[] = {
+    CLOSURE_VECTOR_PARAM(MicrofacetBeckmannClosure<0>, m_N, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetBeckmannClosure<0>, m_ab, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetBeckmannClosure<0>, m_eta, false),
+    CLOSURE_FINISH_PARAM(MicrofacetBeckmannClosure<0>) };
 
-DECLOP (OP_microfacet_beckmann_refraction)
-{
-    closure_op_guts<MicrofacetBeckmannClosure<1>, 4> (exec, nargs, args);
-}
+ClosureParam bsdf_microfacet_beckmann_refraction_params[] = {
+    CLOSURE_VECTOR_PARAM(MicrofacetBeckmannClosure<1>, m_N, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetBeckmannClosure<1>, m_ab, false),
+    CLOSURE_FLOAT_PARAM (MicrofacetBeckmannClosure<1>, m_eta, false),
+    CLOSURE_FINISH_PARAM(MicrofacetBeckmannClosure<1>) };
 
-
+CLOSURE_PREPARE(bsdf_microfacet_ggx_prepare,                 MicrofacetGGXClosure<0>)
+CLOSURE_PREPARE(bsdf_microfacet_ggx_refraction_prepare,      MicrofacetGGXClosure<1>)
+CLOSURE_PREPARE(bsdf_microfacet_beckmann_prepare,            MicrofacetBeckmannClosure<0>)
+CLOSURE_PREPARE(bsdf_microfacet_beckmann_refraction_prepare, MicrofacetBeckmannClosure<1>)
 
 }; // namespace pvt
 }; // namespace OSL

@@ -30,6 +30,7 @@ OF THIS SOFTWARE, even IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 #include <OpenEXR/ImathFun.h>
 
+#include "genclosure.h"
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -89,6 +90,7 @@ struct threadSegment
 
 
 class ClothClosure : public BSDFClosure {
+public:
     Vec3 m_N;
 
     float m_s;
@@ -132,39 +134,10 @@ private:
     float BTF_interp;
 
 public:
-    CLOSURE_CTOR (ClothClosure) : BSDFClosure(side, Labels::DIFFUSE)
+    ClothClosure() : BSDFClosure(Labels::DIFFUSE) { }
+
+    void setup()
     {
-        CLOSURE_FETCH_ARG (m_N, 1);
-
-        CLOSURE_FETCH_ARG (m_s, 2);
-        CLOSURE_FETCH_ARG (m_t, 3);
-
-        CLOSURE_FETCH_ARG (m_dsdx, 4);
-        CLOSURE_FETCH_ARG (m_dtdx, 5);
-        CLOSURE_FETCH_ARG (m_dsdy, 6);
-        CLOSURE_FETCH_ARG (m_dtdy, 7);
-        CLOSURE_FETCH_ARG (m_area_scaled, 8);
-        CLOSURE_FETCH_ARG (m_dPdu, 9);
-
-
-        CLOSURE_FETCH_ARG (m_diff_warp_col, 10);
-        CLOSURE_FETCH_ARG (m_diff_weft_col, 11);
-        CLOSURE_FETCH_ARG (m_spec_warp_col, 12);
-        CLOSURE_FETCH_ARG (m_spec_weft_col, 13);
-
-        CLOSURE_FETCH_ARG (m_fresnel_warp, 14);  // warp is y direction
-        CLOSURE_FETCH_ARG (m_fresnel_weft, 15);  // weft is x direction
-        CLOSURE_FETCH_ARG (m_spread_x_mult, 16);
-        CLOSURE_FETCH_ARG (m_spread_y_mult, 17);
-        CLOSURE_FETCH_ARG (m_pattern, 18);      // the weave pattern
-        CLOSURE_FETCH_ARG (m_pattern_angle, 19);
-        CLOSURE_FETCH_ARG (m_warp_width_scale, 20);
-        CLOSURE_FETCH_ARG (m_weft_width_scale, 21);
-        CLOSURE_FETCH_ARG (m_thread_count_mult_u, 22);
-        CLOSURE_FETCH_ARG (m_thread_count_mult_v, 23);
-
-        //
-
         m_spread_x_mult = std::min(1.f/m_spread_x_mult, 10.f);
         m_spread_y_mult = std::min(1.f/m_spread_y_mult, 10.f);
 
@@ -715,10 +688,35 @@ public:
 
 };
 
-DECLOP (OP_cloth)
-{
-    closure_op_guts<ClothClosure, 24> (exec, nargs, args);
-}
+
+
+ClosureParam bsdf_cloth_params[] = {
+    CLOSURE_VECTOR_PARAM(ClothClosure, m_N, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_s, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_t, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_dsdx, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_dtdx, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_dsdy, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_dtdy, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_area_scaled, false),
+    CLOSURE_VECTOR_PARAM(ClothClosure, m_dPdu, false),
+    CLOSURE_COLOR_PARAM (ClothClosure, m_diff_warp_col, false),
+    CLOSURE_COLOR_PARAM (ClothClosure, m_diff_weft_col, false),
+    CLOSURE_COLOR_PARAM (ClothClosure, m_spec_warp_col, false),
+    CLOSURE_COLOR_PARAM (ClothClosure, m_spec_weft_col, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_fresnel_warp, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_fresnel_weft, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_spread_x_mult, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_spread_y_mult, false),
+    CLOSURE_INT_PARAM   (ClothClosure, m_pattern, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_pattern_angle, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_warp_width_scale, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_weft_width_scale, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_thread_count_mult_u, false),
+    CLOSURE_FLOAT_PARAM (ClothClosure, m_thread_count_mult_v, false),
+    CLOSURE_FINISH_PARAM(ClothClosure) };
+
+CLOSURE_PREPARE(bsdf_cloth_prepare, ClothClosure)
 
 }; // namespace pvt
 }; // namespace OSL

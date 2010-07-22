@@ -65,6 +65,36 @@ make_Vec3 (Dual2<float> &x, Dual2<float> &y, Dual2<float> &z)
 
 
 
+/// Multiply a matrix times a vector with derivatives to obtain
+/// a transformed vector with derivatives.
+inline void
+multVecMatrix (const Matrix44 &M, Dual2<Vec3> &in, Dual2<Vec3> &out)
+{
+    // Rearrange into a Vec3<Dual2<float> >
+    Imath::Vec3<Dual2<float> > din, dout;
+    for (int i = 0;  i < 3;  ++i)
+        din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
+
+    // N.B. the following function has a divide by 'w'
+    M.multVecMatrix (din, dout);
+
+    // Rearrange back into Dual2<Vec3>
+    out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
+             Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
+             Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
+}
+
+/// Multiply a matrix times a direction with derivatives to obtain
+/// a transformed direction with derivatives.
+inline void
+multDirMatrix (const Matrix44 &M, Dual2<Vec3> &in, Dual2<Vec3> &out)
+{
+    M.multDirMatrix (in.val(), out.val());
+    M.multDirMatrix (in.dx(), out.dx());
+    M.multDirMatrix (in.dy(), out.dy());
+}
+
+
 
 /// Templated trick to be able to derive what type we use to represent
 /// a color, given a scalar, automatically using the right kind of Dual2.
@@ -82,11 +112,19 @@ make_Color3 (float x, float y, float z)
 }
 
 inline Dual2<Color3>
-make_Color3 (Dual2<float> &x, Dual2<float> &y, Dual2<float> &z)
+make_Color3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
     return Dual2<Color3> (Color3 (x.val(), y.val(), z.val()),
                           Color3 (x.dx(), y.dx(), z.dx()),
                           Color3 (x.dy(), y.dy(), z.dy()));
+}
+
+inline Dual2<Color3>
+make_Vec3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
+    return Dual2<Vec3> (Vec3 (x.val(), y.val(), z.val()),
+                        Vec3 (x.dx(), y.dx(), z.dx()),
+                        Vec3 (x.dy(), y.dy(), z.dy()));
 }
 
 
@@ -117,6 +155,95 @@ operator* (Dual2<Vec3> &a, Dual2<float> &b)
                        a.val()*b.dx() + a.dx()*b.val(),
                        a.val()*b.dy() + a.dy()*b.val());
 }
+
+
+inline Dual2<float>
+dot (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
+{
+    Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+    Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+    Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+    Dual2<float> bx = Dual2<float> (b.val().x, b.dx().x, b.dy().x);
+    Dual2<float> by = Dual2<float> (b.val().y, b.dx().y, b.dy().y);
+    Dual2<float> bz = Dual2<float> (b.val().z, b.dx().z, b.dy().z);
+    return ax*bx + ay*by + az*bz;
+}
+
+
+
+inline Dual2<Vec3>
+cross (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
+{
+    Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+    Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+    Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+    Dual2<float> bx = Dual2<float> (b.val().x, b.dx().x, b.dy().x);
+    Dual2<float> by = Dual2<float> (b.val().y, b.dx().y, b.dy().y);
+    Dual2<float> bz = Dual2<float> (b.val().z, b.dx().z, b.dy().z);
+
+    Dual2<float> nx = ay*bz - az*by;
+    Dual2<float> ny = az*bx - ax*bz;
+    Dual2<float> nz = ax*by - ay*bx;
+
+    return Dual2<Vec3> (Vec3(nx.val(), ny.val(), nz.val()),
+                        Vec3(nx.dx(),  ny.dx(),  nz.dx()  ),
+                        Vec3(nx.dy(),  ny.dy(),  nz.dy()  ));
+}
+
+
+
+inline Dual2<float>
+length (const Dual2<Vec3> &a)
+{
+    Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+    Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+    Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+    return sqrt(ax*ax + ay*ay + az*az);
+}
+
+
+
+inline Dual2<Vec3>
+normalize (const Dual2<Vec3> &a)
+{
+    if (a.val().x == 0 && a.val().y == 0 && a.val().z == 0) {
+        return Dual2<Vec3> (Vec3(0, 0, 0),
+                            Vec3(0, 0, 0),
+                            Vec3(0, 0, 0));
+    } else {
+        Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+        Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+        Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+        Dual2<float> inv_length = 1.0f / sqrt(ax*ax + ay*ay + az*az);
+        ax = ax*inv_length;
+        ay = ay*inv_length;
+        az = az*inv_length;
+        return Dual2<Vec3> (Vec3(ax.val(), ay.val(), az.val()),
+                            Vec3(ax.dx(),  ay.dx(),  az.dx() ),
+                            Vec3(ax.dy(),  ay.dy(),  az.dy() ));
+    }
+}
+
+
+
+inline Dual2<float>
+distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
+{
+    Dual2<float> ax = Dual2<float> (a.val().x, a.dx().x, a.dy().x);
+    Dual2<float> ay = Dual2<float> (a.val().y, a.dx().y, a.dy().y);
+    Dual2<float> az = Dual2<float> (a.val().z, a.dx().z, a.dy().z);
+    Dual2<float> bx = Dual2<float> (b.val().x, b.dx().x, b.dy().x);
+    Dual2<float> by = Dual2<float> (b.val().y, b.dx().y, b.dy().y);
+    Dual2<float> bz = Dual2<float> (b.val().z, b.dx().z, b.dy().z);
+
+    Dual2<float> dx = bx - ax;
+    Dual2<float> dy = by - ay;
+    Dual2<float> dz = bz - az;
+
+    return sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+
 
 
 }; // namespace OSL

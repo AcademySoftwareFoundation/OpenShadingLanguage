@@ -116,6 +116,7 @@ test ()
     test_regex_search ("foobar.baz", "bark");     // should not match
     test_regex_search ("foobar.baz", "bar");      // should match
     test_regex_search ("foobar.baz", "[oO]{2}");  // should match
+
     int results[6];
     test_regex_search ("foobar.baz", results, "(f[Oo]{2}).*(.az)");
 }

@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
+#include "llvm_headers.h"
 
 
 #ifdef OSL_NAMESPACE
@@ -51,7 +52,19 @@ public:
     RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group)
         : m_shadingsys(shadingsys), m_group(group),
           m_inst(NULL), m_next_newconst(0)
+#if USE_LLVM
+        , m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
+          m_llvm_passes(NULL), m_llvm_func_passes(NULL)
+#endif
     {
+    }
+
+    ~RuntimeOptimizer () {
+#if USE_LLVM
+        delete m_builder;
+        delete m_llvm_passes;
+        delete m_llvm_func_passes;
+#endif
     }
 
     void optimize_group ();
@@ -68,9 +81,9 @@ public:
     ///
     void set_inst (int layer);
 
-    ShaderInstance *inst () { return m_inst; }
+    ShaderInstance *inst () const { return m_inst; }
 
-    ShaderGroup &group () { return m_group; }
+    ShaderGroup &group () const { return m_group; }
 
     ShadingSystemImpl &shadingsys () const { return m_shadingsys; }
 
@@ -109,7 +122,7 @@ public:
 
     void find_conditionals ();
 
-    void find_basic_blocks ();
+    void find_basic_blocks (bool do_llvm = false);
 
     bool coerce_assigned_constant (Opcode &op);
 
@@ -218,9 +231,281 @@ public:
 
     /// Helper: return the ptr to the symbol that is the argnum-th
     /// argument to the given op.
-    Symbol *opargsym (Opcode &op, int argnum) {
+    Symbol *opargsym (const Opcode &op, int argnum) {
         return inst()->argsymbol (op.firstarg()+argnum);
     }
+
+    /// Create an llvm function for the whole shader group, JIT it,
+    /// and store the llvm::Function* handle to it with the ShaderGroup.
+    void build_llvm_group ();
+
+#if USE_LLVM
+    /// Set up a bunch of static things we'll need for the whole group.
+    ///
+    void initialize_llvm_group ();
+
+    /// Create an llvm function for the current shader instance.
+    /// This will end up being the group entry if 'groupentry' is true.
+    llvm::Function* build_llvm_instance (bool groupentry);
+
+    /// Build up LLVM IR code for the given range [begin,end) or
+    /// opcodes, putting them (initially) into basic block bb (or the
+    /// current basic block if bb==NULL).
+    bool build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb=NULL);
+
+    typedef std::map<std::string, llvm::AllocaInst*> AllocationMap;
+
+    void llvm_assign_initial_value (const Symbol& sym);
+    llvm::LLVMContext &llvm_context () const { return *m_llvm_context; }
+    llvm::Module *llvm_module () const { return m_llvm_module; }
+    AllocationMap &named_values () { return m_named_values; }
+    llvm::IRBuilder<> &builder () { return *m_builder; }
+
+    /// Return an llvm::Value* corresponding to the address of the given
+    /// symbol element, with derivative (0=value, 1=dx, 2=dy) and array
+    /// index (NULL if it's not an array).
+    llvm::Value *llvm_get_pointer (const Symbol& sym, int deriv=0,
+                                   llvm::Value *arrayindex=NULL);
+
+    /// Return the llvm::Value* corresponding to the given element
+    /// value, with derivative (0=value, 1=dx, 2=dy), array index (NULL
+    /// if it's not an array), and component (x=0 or scalar, y=1, z=2).
+    /// If deriv >0 and the symbol doesn't have derivatives, return 0
+    /// for the derivative.  If the component >0 and it's a scalar,
+    /// return the scalar -- this allows automatic casting to triples.
+    /// Finally, auto-cast int<->float if requested (no conversion is
+    /// performed if cast is the default of UNKNOWN).
+    llvm::Value *llvm_load_value (const Symbol& sym, int deriv,
+                                  llvm::Value *arrayindex, int component,
+                                  TypeDesc cast=TypeDesc::UNKNOWN);
+
+    /// llvm_load_value with non-constant component designation.  Does
+    /// not work with arrays or do type casts!
+    llvm::Value *llvm_load_component_value (const Symbol& sym, int deriv,
+                                            llvm::Value *component);
+
+    /// Non-array version of llvm_load_value, with default deriv &
+    /// component.
+    llvm::Value *llvm_load_value (const Symbol& sym, int deriv = 0,
+                                  int component = 0,
+                                  TypeDesc cast=TypeDesc::UNKNOWN) {
+        return llvm_load_value (sym, deriv, NULL, component, cast);
+    }
+
+    /// Legacy version
+    ///
+    llvm::Value *loadLLVMValue (const Symbol& sym, int component=0,
+                                int deriv=0, TypeDesc cast=TypeDesc::UNKNOWN) {
+        return llvm_load_value (sym, deriv, NULL, component, cast);
+    }
+
+    /// Store new_val into the given symbol, given the derivative
+    /// (0=value, 1=dx, 2=dy), array index (NULL if it's not an array),
+    /// and component (x=0 or scalar, y=1, z=2).  If deriv>0 and the
+    /// symbol doesn't have a deriv, it's a nop.  If the component >0
+    /// and it's a scalar, set the scalar.  Returns true if ok, false
+    /// upon failure.
+    bool llvm_store_value (llvm::Value *new_val, const Symbol& sym, int deriv,
+                           llvm::Value *arrayindex, int component);
+
+    /// Non-array version of llvm_store_value, with default deriv &
+    /// component.
+    bool llvm_store_value (llvm::Value *new_val, const Symbol& sym,
+                           int deriv=0, int component=0) {
+        return llvm_store_value (new_val, sym, deriv, NULL, component);
+    }
+
+    /// llvm_store_value with non-constant component designation.  Does
+    /// not work with arrays or do type casts!
+    bool llvm_store_component_value (llvm::Value *new_val, const Symbol& sym,
+                                     int deriv, llvm::Value *component);
+
+    /// Legacy version
+    ///
+    bool storeLLVMValue (llvm::Value* new_val, const Symbol& sym,
+                         int component=0, int deriv=0) {
+        return llvm_store_value (new_val, sym, deriv, component);
+    }
+
+    llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
+    llvm::Value *getLLVMSymbolBase (const Symbol &sym);
+
+    /// Generate the LLVM IR code to convert fval from a float to
+    /// an integer and return the new value.
+    llvm::Value *llvm_float_to_int (llvm::Value *fval);
+
+    /// Generate the LLVM IR code to convert ival from an int to a float
+    /// and return the new value.
+    llvm::Value *llvm_int_to_float (llvm::Value *ival);
+
+    /// Return the LLVM type handle for the SingleShaderGlobals struct.
+    ///
+    const llvm::Type *llvm_type_sg ();
+
+    /// Return the LLVM type handle for a pointer to a
+    /// SingleShaderGlobals struct.
+    const llvm::Type *llvm_type_sg_ptr ();
+
+    /// Return the SingleShaderGlobals pointer.
+    ///
+    llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
+
+    /// Return the SingleShaderGlobals pointer cast as a void*.
+    ///
+    llvm::Value *sg_void_ptr () {
+        return llvm_void_ptr (m_llvm_shaderglobals_ptr);
+    }
+
+    llvm::Value *llvm_ptr_cast (llvm::Value* val, const llvm::Type *type) {
+        return builder().CreatePointerCast(val,type);
+    }
+
+    llvm::Value *llvm_void_ptr (llvm::Value* val) {
+        return builder().CreatePointerCast(val,llvm_type_void_ptr());
+    }
+
+    llvm::Value *llvm_void_ptr (const Symbol &sym, int deriv=0) {
+        return llvm_void_ptr (llvm_get_pointer(sym, deriv));
+    }
+
+    llvm::Value *llvm_void_ptr_null () {
+        return llvm::ConstantPointerNull::get (llvm_type_void_ptr());
+    }
+
+    /// Return the LLVM type handle for a structure of the common group
+    /// data that holds all the shader params.
+    const llvm::Type *llvm_type_groupdata ();
+
+    /// Return the LLVM type handle for a pointer to the common group
+    /// data that holds all the shader params.
+    const llvm::Type *llvm_type_groupdata_ptr ();
+
+    /// Return the SingleShaderGlobals pointer.
+    ///
+    llvm::Value *groupdata_ptr () const { return m_llvm_groupdata_ptr; }
+
+    /// Return the group data pointer cast as a void*.
+    ///
+    llvm::Value *groupdata_void_ptr () {
+        return llvm_void_ptr (m_llvm_groupdata_ptr);
+    }
+
+    /// Return a ref to where the "layer_run" flag is stored for the
+    /// named layer.
+    llvm::Value *layer_run_ptr (int layer);
+
+    /// Return an llvm::Value holding the given floating point constant.
+    ///
+    llvm::Value *llvm_constant (float f);
+
+    /// Return an llvm::Value holding the given integer constant.
+    ///
+    llvm::Value *llvm_constant (int i);
+
+    /// Return an llvm::Value holding the given size_t constant.
+    ///
+    llvm::Value *llvm_constant (size_t i);
+
+    /// Return a constant void pointer to the given address
+    ///
+    llvm::Value *llvm_constant_ptr (void *p, const llvm::PointerType *type)
+    {
+        return builder().CreateIntToPtr (llvm_constant (size_t (p)), type, "const pointer");
+    }
+
+    /// Return an llvm::Value holding the given integer constant.
+    ///
+    llvm::Value *llvm_constant (ustring s);
+    llvm::Value *llvm_constant (const char *s) {
+        return llvm_constant(ustring(s));
+    }
+
+    /// Return an llvm::Value for a long long that is a packed
+    /// representation of a TypeDesc.
+    llvm::Value *llvm_constant (const TypeDesc &type);
+
+    /// Generate LLVM code to zero out the derivatives of sym.
+    ///
+    void llvm_zero_derivs (const Symbol &sym);
+
+    /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
+    /// If ptrtype is NULL, just return a void*.
+    llvm::Value *llvm_offset_ptr (llvm::Value *ptr, int offset,
+                                  const llvm::Type *ptrtype=NULL);
+
+    /// Generate code for a call to the named function with the given arg
+    /// list.  Return an llvm::Value* corresponding to the return value of
+    /// the function, if any.
+    llvm::Value *llvm_call_function (const char *name,
+                                     llvm::Value **args, int nargs);
+
+    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0) {
+        return llvm_call_function (name, &arg0, 1);
+    }
+    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
+                                     llvm::Value *arg1) {
+        llvm::Value *args[2];
+        args[0] = arg0;  args[1] = arg1;
+        return llvm_call_function (name, args, 2);
+    }
+
+    void llvm_gen_debug_printf (const std::string &message);
+
+    /// Generate code for a call to the named function with the given
+    /// arg list as symbols -- float & ints will be passed by value,
+    /// triples and matrices will be passed by address.  If deriv_ptrs
+    /// is true, pass pointers even for floats if they have derivs.
+    /// Return an llvm::Value* corresponding to the return value of the
+    /// function, if any.
+    llvm::Value *llvm_call_function (const char *name,  const Symbol **args,
+                                     int nargs, bool deriv_ptrs=false);
+    llvm::Value *llvm_call_function (const char *name, const Symbol &A,
+                                     bool deriv_ptrs=false);
+    llvm::Value *llvm_call_function (const char *name, const Symbol &A,
+                                     const Symbol &B, bool deriv_ptrs=false);
+    llvm::Value *llvm_call_function (const char *name, const Symbol &A,
+                                     const Symbol &B, const Symbol &C,
+                                     bool deriv_ptrs=false);
+
+    /// Generate the appropriate llvm type definition for an OSL TypeSpec
+    /// (this is the actual type, for example when we allocate it).
+    const llvm::Type *llvm_type (const TypeSpec &typespec);
+
+    /// Generate the parameter-passing llvm type definition for an OSL
+    /// TypeSpec.
+    const llvm::Type *llvm_pass_type (const TypeSpec &typespec);
+
+    const llvm::Type *llvm_type_float() { return m_llvm_type_float; }
+    const llvm::Type *llvm_type_triple() { return m_llvm_type_triple; }
+    const llvm::Type *llvm_type_matrix() { return m_llvm_type_matrix; }
+    const llvm::Type *llvm_type_int() { return m_llvm_type_int; }
+    const llvm::Type *llvm_type_addrint() { return m_llvm_type_addrint; }
+    const llvm::Type *llvm_type_bool() { return m_llvm_type_bool; }
+    const llvm::Type *llvm_type_void() { return m_llvm_type_void; }
+    const llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
+    const llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
+    const llvm::PointerType *llvm_type_int_ptr() { return m_llvm_type_int_ptr; }
+    const llvm::PointerType *llvm_type_void_ptr() { return m_llvm_type_char_ptr; }
+    const llvm::PointerType *llvm_type_string() { return m_llvm_type_char_ptr; }
+    const llvm::PointerType *llvm_type_ustring_ptr() { return m_llvm_type_ustring_ptr; }
+    const llvm::PointerType *llvm_type_float_ptr() { return m_llvm_type_float_ptr; }
+    const llvm::PointerType *llvm_type_triple_ptr() { return m_llvm_type_triple_ptr; }
+    const llvm::PointerType *llvm_type_matrix_ptr() { return m_llvm_type_matrix_ptr; }
+
+    /// Shorthand to create a new LLVM basic block and return its handle.
+    ///
+    llvm::BasicBlock *llvm_new_basic_block (const std::string &name) {
+        return llvm::BasicBlock::Create (llvm_context(), name, m_layer_func);
+    }
+
+    llvm::Function *layer_func () const { return m_layer_func; }
+
+    void llvm_setup_optimization_passes ();
+
+    /// Do LLVM optimization on the partcular function func.  If
+    /// interproc is true, also do full interprocedural optimization.
+    void llvm_do_optimization (llvm::Function *func, bool interproc=false);
+#endif
 
 private:
     ShadingSystemImpl &m_shadingsys;
@@ -237,6 +522,37 @@ private:
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
     std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
+
+#if USE_LLVM
+    // LLVM stuff
+    llvm::LLVMContext *m_llvm_context;
+    llvm::Module *m_llvm_module;
+    AllocationMap m_named_values;
+    std::map<const Symbol*,int> m_param_order_map;
+    llvm::IRBuilder<> *m_builder;
+    llvm::Value *m_llvm_shaderglobals_ptr;
+    llvm::Value *m_llvm_groupdata_ptr;
+    llvm::Function *m_layer_func;     ///< Current layer func we're building
+    const llvm::Type *m_llvm_type_float;
+    const llvm::Type *m_llvm_type_int;
+    const llvm::Type *m_llvm_type_addrint;
+    const llvm::Type *m_llvm_type_bool;
+    const llvm::Type *m_llvm_type_void;
+    const llvm::Type *m_llvm_type_triple;
+    const llvm::Type *m_llvm_type_matrix;
+    const llvm::PointerType *m_llvm_type_ustring_ptr;
+    const llvm::PointerType *m_llvm_type_char_ptr;
+    const llvm::PointerType *m_llvm_type_int_ptr;
+    const llvm::PointerType *m_llvm_type_float_ptr;
+    const llvm::PointerType *m_llvm_type_triple_ptr;
+    const llvm::PointerType *m_llvm_type_matrix_ptr;
+    const llvm::Type *m_llvm_type_sg;  // LLVM type of SingleShaderGlobal struct
+    const llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
+    const llvm::PointerType *m_llvm_type_prepare_closure_func;
+    const llvm::PointerType *m_llvm_type_setup_closure_func;
+    llvm::PassManager *m_llvm_passes;
+    llvm::FunctionPassManager *m_llvm_func_passes;
+#endif
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage

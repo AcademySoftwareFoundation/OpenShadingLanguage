@@ -1,5 +1,5 @@
 SET ( testshade_srcs testshade.cpp simplerend.cpp )
 ADD_EXECUTABLE ( testshade ${testshade_srcs} )
 LINK_ILMBASE ( testshade )
-TARGET_LINK_LIBRARIES ( testshade oslexec oslcomp ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+TARGET_LINK_LIBRARIES ( testshade oslexec oslcomp oslquery ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS testshade RUNTIME DESTINATION bin )

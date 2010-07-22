@@ -1,0 +1,114 @@
+Compiled test.osl -> test.oso
+Test vector functions
+
+  V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 0.5, V = (0 8 0.5)
+  dot ((0 8 0.5), (0 8 0.5)) = 64.25
+  dot ((0 8 0.5), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (0 1 0)) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 0.5) = 0 0.998053 0.0623783
+  normalize (0 0 0) = 0 0 0
+ varying:
+  V = vector (0 0 2) has components 0, 0, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 10, V = (0 8 10)
+  dot ((0 8 10), (0 8 10)) = 164
+  dot ((0 8 10), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 10) = 0 0.624695 0.780869
+  normalize (0 0 0) = 0 0 0
+Test vector functions
+
+  V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 0.5, V = (0 8 0.5)
+  dot ((0 8 0.5), (0 8 0.5)) = 64.25
+  dot ((0 8 0.5), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (0 1 0)) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 0.5) = 0 0.998053 0.0623783
+  normalize (0 0 0) = 0 0 0
+ varying:
+  V = vector (1 0 2) has components 1, 0, 2
+  After V[1] = 8, V = (1 8 2)
+  After V[2] = 11, V = (1 8 11)
+  dot ((1 8 11), (1 8 11)) = 186
+  dot ((1 8 11), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (1 8 11) = 0.0733236 0.586588 0.806559
+  normalize (0 0 0) = 0 0 0
+Test vector functions
+
+  V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 0.5, V = (0 8 0.5)
+  dot ((0 8 0.5), (0 8 0.5)) = 64.25
+  dot ((0 8 0.5), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (0 1 0)) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 0.5) = 0 0.998053 0.0623783
+  normalize (0 0 0) = 0 0 0
+ varying:
+  V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 10, V = (0 8 10)
+  dot ((0 8 10), (0 8 10)) = 164
+  dot ((0 8 10), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 10) = 0 0.624695 0.780869
+  normalize (0 0 0) = 0 0 0
+Test vector functions
+
+  V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 0.5, V = (0 8 0.5)
+  dot ((0 8 0.5), (0 8 0.5)) = 64.25
+  dot ((0 8 0.5), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (0 1 0)) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 0.5) = 0 0.998053 0.0623783
+  normalize (0 0 0) = 0 0 0
+ varying:
+  V = vector (1 1 2) has components 1, 1, 2
+  After V[1] = 8, V = (1 8 2)
+  After V[2] = 11, V = (1 8 11)
+  dot ((1 8 11), (1 8 11)) = 186
+  dot ((1 8 11), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (1 8 11) = 0.0733236 0.586588 0.806559
+  normalize (0 0 0) = 0 0 0
+

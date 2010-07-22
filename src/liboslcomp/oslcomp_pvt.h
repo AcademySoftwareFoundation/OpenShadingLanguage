@@ -138,7 +138,7 @@ public:
     /// If 'advance' is non-NULL, set *advance to the number of
     /// characters taken by the first code so the caller can advance
     /// their pointer to the next code in the string.
-    TypeSpec type_from_code (const char *code, int *advance=NULL) const;
+    static TypeSpec type_from_code (const char *code, int *advance=NULL);
 
     /// Return the argument checking code ("p", "v", etc.) corresponding
     /// to the type.

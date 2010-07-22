@@ -51,7 +51,8 @@ namespace OSL {
 namespace pvt {
 
 
-extern DECLOP (triple_ctr);   // definition is elsewhere
+DECLOP (triple_ctr);   // definition is elsewhere
+
 
 
 namespace {
@@ -119,26 +120,6 @@ xyz_to_rgb (float x, float y, float z)
 
 
 
-static Color3
-to_rgb (ustring fromspace, float a, float b, float c, ShadingExecution *exec)
-{
-    if (fromspace == Strings::RGB || fromspace == Strings::rgb)
-        return Color3 (a, b, c);
-    if (fromspace == Strings::hsv)
-        return hsv_to_rgb (a, b, c);
-    if (fromspace == Strings::hsl)
-        return hsl_to_rgb (a, b, c);
-    if (fromspace == Strings::YIQ)
-        return YIQ_to_rgb (a, b, c);
-    if (fromspace == Strings::xyz)
-        return xyz_to_rgb (a, b, c);
-
-    exec->error ("Unknown color space \"%s\"", fromspace.c_str());
-    return Color3 (a, b, c);
-}
-
-
-
 class Luminance {
 public:
     Luminance (ShadingExecution *) { }
@@ -153,6 +134,27 @@ public:
     }
 };
 
+};  // End anonymous namespace
+
+
+
+Color3
+ShadingSystemImpl::to_rgb (ustring fromspace, float a, float b, float c)
+{
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb)
+        return Color3 (a, b, c);
+    if (fromspace == Strings::hsv)
+        return hsv_to_rgb (a, b, c);
+    if (fromspace == Strings::hsl)
+        return hsl_to_rgb (a, b, c);
+    if (fromspace == Strings::YIQ)
+        return YIQ_to_rgb (a, b, c);
+    if (fromspace == Strings::xyz)
+        return xyz_to_rgb (a, b, c);
+    error ("Unknown color space \"%s\"", fromspace.c_str());
+    return Color3 (a, b, c);
+}
+
 
 
 /// Implementation of the constructor "color (string, float, float, float)".
@@ -164,6 +166,7 @@ DECLOP (color_ctr_transform)
     Symbol &X (exec->sym (args[2]));
     Symbol &Y (exec->sym (args[3]));
     Symbol &Z (exec->sym (args[4]));
+    ShadingSystemImpl &shadingsys (*exec->shadingsys());
 
     // Adjust the result's uniform/varying status
     bool vary = (Space.is_varying() |
@@ -183,23 +186,21 @@ DECLOP (color_ctr_transform)
     Matrix44 M;
     if (result.is_uniform()) {
         // Everything is uniform
-        *result = to_rgb (*space, *x, *y, *z, exec);
+        *result = shadingsys.to_rgb (*space, *x, *y, *z);
     } else if (! vary) {
         // Result is varying, but everything else is uniform
-        Color3 r = to_rgb (*space, *x, *y, *z, exec);
+        Color3 r = shadingsys.to_rgb (*space, *x, *y, *z);
         SHADE_LOOP_BEGIN
             result[i] = r;
         SHADE_LOOP_END
     } else {
         // Fully varying case
         SHADE_LOOP_BEGIN
-            result[i] = to_rgb (space[i], x[i], y[i], z[i], exec);
+            result[i] = shadingsys.to_rgb (space[i], x[i], y[i], z[i]);
         SHADE_LOOP_END
     }
 }
 
-
-};  // End anonymous namespace
 
 
 DECLOP (OP_color)
@@ -215,8 +216,8 @@ DECLOP (OP_color)
             ! X.typespec().is_closure() && ! Y.typespec().is_closure() &&
             ! Z.typespec().is_closure() && ! Space.typespec().is_closure());
     
-    // We allow two flavors: point = point(float,float,float) and
-    // point = point(string,float,float,float)
+    // We allow two flavors: color(float,float,float) and
+    // color(string,float,float,float)
     if (Result.typespec().is_triple() && X.typespec().is_float() &&
           Y.typespec().is_float() && Z.typespec().is_float() &&
           (using_space == false || Space.typespec().is_string())) {

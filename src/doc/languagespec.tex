@@ -3008,7 +3008,7 @@ vector refract (vector I, vector N, float eta)
 {
     float IdotN = dot (I, N);
     float k = 1 - eta*eta * (1 - IdotN*IdotN);
-    return (k < 0) ? point(0,0,0) : (eta*I - N * (eta*IdotN + sqrt(k)));
+    return (k < 0) ? vector(0,0,0) : (eta*I - N * (eta*IdotN + sqrt(k)));
 }
 \end{code}
 \apiend

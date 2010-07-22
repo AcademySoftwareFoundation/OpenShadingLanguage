@@ -6,6 +6,6 @@ shader b (coords x = { 0, 0 },
 {
     printf ("b: x = %g, %g\n", x.s, x.t);
     printf ("b: y = %g, %g\n", y.s, y.t);
-    printf ("b: r = %s, %s\n", r.Copac, r.Cout);
+    printf ("b: r = %g, %s\n", r.Copac, r.Cout);
 }
 

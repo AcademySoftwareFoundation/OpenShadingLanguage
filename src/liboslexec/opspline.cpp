@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "oslops.h"
 #include "dual_vec.h"
+#include "splineimpl.h"
 
 #include "OpenImageIO/varyingref.h"
 
@@ -56,6 +57,7 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
+
 namespace {
 
 // ========================================================
@@ -64,15 +66,9 @@ namespace {
 //
 // ========================================================
 
-struct SplineBasis {
-   ustring  basis_name;
-   int      basis_step;
-   Matrix44 basis;
-};
-
 static const int kNumSplineTypes = 5;
 static const int kLinearSpline = kNumSplineTypes - 1;
-static SplineBasis gBasisSet[kNumSplineTypes] = {
+static Spline::SplineBasis gBasisSet[kNumSplineTypes] = {
    { ustring("catmull-rom"), 1, Matrix44( (-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f),
                                           ( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f),
                                           (-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f),
@@ -97,105 +93,6 @@ static SplineBasis gBasisSet[kNumSplineTypes] = {
 
 
 
-// ========================================================
-//
-// Silly helper functions for handling operations involving
-// various types
-//
-// ========================================================
-
-inline Dual2<float> Clamp(Dual2<float> x, Dual2<float> minv, Dual2<float> maxv)
-{
-    return dual_clamp(x, minv, maxv);
-}
-
-inline float Clamp(float x, float minv, float maxv) {
-    if (x < minv) return minv;
-    else if (x > maxv) return maxv;
-    else return x;
-};
-
-
-
-// If necessary, eliminate the derivatives of a number
-template<class T> T removeDerivatives (const T x)              { return x;       }
-template<class T> T removeDerivatives (const Dual2<T> &x) { return x.val(); }
-
-
-
-// simple templated "copy" function
-template <class T>
-inline void assignment(T &a, T &b)
-{
-   a = b;
-}
-
-template <class T>
-inline void assignment(T &a, Dual2<T> &b)
-{
-   a = b.val();
-}
-
-
-
-// We need to know explicitly whether the knots have
-// derivatives associated with them because of the way
-// Dual2<T> forms of arrays are stored..  Arrays with 
-// derivatives are stored:
-//   T T T... T.dx T.dx T.dx... T.dy T.dy T.dy...
-// This means, we need to explicitly construct the Dual2<T>
-// form of the knots on the fly.
-// if 'is_dual' == true, then OUTTYPE == Dual2<INTYPE>
-// if 'is_dual' == false, then OUTTYPE == INTYPE
-
-// This functor will extract a T or a Dual2<T> type from a VaryingRef array
-template <class OUTTYPE, class INTYPE, bool is_dual> struct extractValueFromArray
-{
-    OUTTYPE operator()(VaryingRef<INTYPE> &value, int array_length, int i, int idx);
-};
-
-template <class OUTTYPE, class INTYPE>
-struct extractValueFromArray<OUTTYPE, INTYPE, true> 
-{
-    OUTTYPE operator()(VaryingRef<INTYPE> &value, int array_length, int i, int idx)
-    {
-        return OUTTYPE( (&value[i])[idx + 0*array_length], 
-                        (&value[i])[idx + 1*array_length],
-                        (&value[i])[idx + 2*array_length] );
-    }
-};
-
-template <class OUTTYPE, class INTYPE>
-struct extractValueFromArray<OUTTYPE, INTYPE, false> 
-{
-    OUTTYPE operator()(VaryingRef<INTYPE> &value, int array_length, int i, int idx)
-    {
-        return OUTTYPE( (&value[i])[idx] );
-    }
-};
-
-
-
-// Functors for copying the final interpolated point to the
-// spline-op Result field.  This might involve eliminating
-// derivatives.
-
-struct DualFloatToFloat
-{
-   float operator()(Dual2<float> a) { return a.val(); }
-};
-
-struct DualVec3ToVec3
-{
-   Vec3 operator()(Dual2<Vec3> a) { return a.val(); }
-};
-
-template<class T>
-struct CopySelf
-{
-   T operator()(T a) { return a; }
-};
-
 
 
 // This is the special-case version of the spline interpolation for
@@ -214,11 +111,8 @@ struct CopySelf
 // knot_derivs -- bool determining whether or not the knots have
 //                derivatives associated with them -- this is used when
 //                extracting knots from the knot array
-// KNOT_TO_RESULT -- functor which casts from CTYPE to ATYPE (in case we 
-//                   need to "downgrade" from Dual2<float> to float, for 
-//                   example)
 //
-template <class ATYPE, class BTYPE, class CTYPE, class DTYPE, bool knot_derivs, class KNOT_TO_RESULT>
+template <class ATYPE, class BTYPE, class CTYPE, class DTYPE, bool knot_derivs >
 inline void 
 spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &Value, int num_knots, Symbol &Knots,
       ShadingExecution *exec, bool zero_derivs=true)
@@ -229,76 +123,37 @@ spline_op_guts_generic(Symbol &Result, Symbol Spline, int array_length, Symbol &
     VaryingRef<ustring> spline_name ((ustring *)Spline.data(), Spline.step());
 
     bool varying_spline = Spline.is_varying();
-    int nsegs = -1;
-    int basis_type = -1;
-    if (!varying_spline)
-    {
-        for (basis_type = 0; basis_type < kNumSplineTypes && 
-            spline_name[0] != gBasisSet[basis_type].basis_name; basis_type++);
-        // If unrecognizable spline type, then default to Linear
-        if (basis_type == kNumSplineTypes)
-            basis_type = kLinearSpline;
-        int knot_count = (num_knots > 0) ? std::min(num_knots, Knots.typespec().arraylength()) : Knots.typespec().arraylength();
-        nsegs = ((knot_count - 4) / gBasisSet[basis_type].basis_step) + 1;
-    }
+    const Spline::SplineBasis *spline_basis = NULL;
+    int knot_count = (num_knots > 0) ? 
+                     std::min(num_knots, Knots.typespec().arraylength()) : 
+                     Knots.typespec().arraylength();
 
-    // assuming spline-type is uniform
-    KNOT_TO_RESULT castToResult;
+    if (!varying_spline)
+        spline_basis = Spline::getSplineBasis(spline_name[0]);
 
     SHADE_LOOP_BEGIN
         if (varying_spline)
-        {
-            for (basis_type = 0; basis_type < kNumSplineTypes && 
-                spline_name[i] != gBasisSet[basis_type].basis_name; basis_type++);
-            // If unrecognizable spline type, then default to Linear
-            if (basis_type == kNumSplineTypes)
-                basis_type = kLinearSpline;
-            int knot_count = (num_knots > 0) ? std::min(num_knots, Knots.typespec().arraylength()) : Knots.typespec().arraylength();
-            nsegs = ((knot_count - 4) / gBasisSet[basis_type].basis_step) + 1;
-        }
-        SplineBasis &spline = gBasisSet[basis_type];
+            spline_basis = Spline::getSplineBasis(spline_name[i]);
 
-        BTYPE x = Clamp(xval[i], BTYPE(0.0f), BTYPE(1.0f));
-        x = x*(float)nsegs;
-        float seg_x = removeDerivatives(x);
-        int segnum = (int)seg_x;
-        if (segnum > (nsegs-1))
-           segnum = nsegs-1;
-        // x is the position along segment 'segnum'
-        x = x - float(segnum);
-        int s = segnum*spline.basis_step;
-        int len = array_length;
-
-        // create a functor so we can cleanly(!) extract
-        // the knot elements
-        extractValueFromArray<CTYPE, DTYPE, knot_derivs> myExtract;
-        CTYPE P[4];
-        for (int k = 0; k < 4; k++) {
-            P[k] = myExtract(knots, len, i, s + k);
-        }
-
-        CTYPE tk[4];
-        for (int k = 0; k < 4; k++) {
-            tk[k] = spline.basis[k][0] * P[0] +
-                    spline.basis[k][1] * P[1] +
-                    spline.basis[k][2] * P[2] + 
-                    spline.basis[k][3] * P[3];
-        }
-
-        ATYPE tresult;
-        // The following is what we want, but this gives me template errors
-        // which I'm too lazy to decipher:
-        //    tresult = ((tk[0]*x + tk[1])*x + tk[2])*x + tk[3];
-        tresult = castToResult (tk[0]   * x + tk[1]);
-        tresult = castToResult (tresult * x + tk[2]);
-        tresult = castToResult (tresult * x + tk[3]);
-        assignment(result[i], tresult);
+        Spline::spline_evaluate<ATYPE, BTYPE, CTYPE, DTYPE, knot_derivs>(spline_basis, result[i], xval[i], &knots[i], knot_count);
     SHADE_LOOP_END
 }
 
 
 
 };  // End anonymous namespace
+
+const Spline::SplineBasis *Spline::getSplineBasis(const ustring &basis_name)
+{
+    int basis_type = -1;
+    for (basis_type = 0; basis_type < kNumSplineTypes && 
+        basis_name != gBasisSet[basis_type].basis_name; basis_type++);
+    // If unrecognizable spline type, then default to Linear
+    if (basis_type == kNumSplineTypes)
+        basis_type = kLinearSpline;
+
+    return &gBasisSet[basis_type];
+}
 
 
 
@@ -354,29 +209,29 @@ DECLOP (OP_spline)
     switch (mode)
     {
         case (RES_DERIVS | VALU_DERIVS | KNOT_DERIVS | TRIPLES):
-            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, num_knots, Knots,
+            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS | VALU_DERIVS | KNOT_DERIVS):
-            spline_op_guts_generic< Dual2<float>, Dual2<float>, Dual2<float>, float, true, CopySelf<Dual2<float> >  >(Result, Spline, array_length, Value, num_knots, Knots,
+            spline_op_guts_generic< Dual2<float>, Dual2<float>, Dual2<float>, float, true >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         //
         case (RES_DERIVS | VALU_DERIVS | TRIPLES):
-            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, num_knots, Knots,
+            spline_op_guts_generic< Dual2<Vec3>, Dual2<float>, Vec3, Vec3, false >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS | VALU_DERIVS):
-            spline_op_guts_generic< Dual2<float>, Dual2<float>, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, num_knots, Knots,
+            spline_op_guts_generic< Dual2<float>, Dual2<float>, float, float, false >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         //
         case (RES_DERIVS | TRIPLES):
-            spline_op_guts_generic< Dual2<Vec3>, float, Vec3, Vec3, false, CopySelf<Dual2<Vec3> > >(Result, Spline, array_length, Value, num_knots, Knots,
+            spline_op_guts_generic< Dual2<Vec3>, float, Vec3, Vec3, false >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
         case (RES_DERIVS):
-            spline_op_guts_generic< Dual2<float>, float, float, float, false, CopySelf<Dual2<float> > >(Result, Spline, array_length, Value, num_knots, Knots,
+            spline_op_guts_generic< Dual2<float>, float, float, float, false >(Result, Spline, array_length, Value, num_knots, Knots,
                 exec, false /*zero derivs?*/);
             break;
 
@@ -385,10 +240,10 @@ DECLOP (OP_spline)
         // we're dealing with floats or triples.
         default:
             if (mode & TRIPLES)
-                spline_op_guts_generic< Vec3, float, Vec3, Vec3, false, CopySelf<Vec3> >(Result, Spline, array_length, Value, num_knots, Knots,
+                spline_op_guts_generic< Vec3, float, Vec3, Vec3, false >(Result, Spline, array_length, Value, num_knots, Knots,
                     exec, false /*zero derivs?*/);
             else
-                spline_op_guts_generic< float, float, float, float, false, CopySelf<float> >(Result, Spline, array_length, Value, num_knots, Knots,
+                spline_op_guts_generic< float, float, float, float, false >(Result, Spline, array_length, Value, num_knots, Knots,
                     exec, false /*zero derivs?*/);
             break;
     }

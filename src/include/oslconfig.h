@@ -132,6 +132,9 @@ typedef OpenImageIO::ErrorHandler ErrorHandler;
 #define USE_RUNSPANS   1
 
 
+// Temporary measure to identify the branch with LLVM support.  Sorry.
+#define LLVM_SUPPORT   1
+
 }; // namespace OSL
 
 #ifdef OSL_NAMESPACE

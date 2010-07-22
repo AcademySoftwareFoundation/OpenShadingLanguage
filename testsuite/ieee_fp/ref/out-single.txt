@@ -1,0 +1,30 @@
+Compiled test.osl -> test.oso
+  isnan (10) = 0
+  isinf (10) = 0
+  isfinite (10) = 1
+ varying:
+  isnan (0) = 0
+  isinf (0) = 0
+  isfinite (0) = 1
+  isnan (10) = 0
+  isinf (10) = 0
+  isfinite (10) = 1
+ varying:
+  isnan (1) = 0
+  isinf (1) = 0
+  isfinite (1) = 1
+  isnan (10) = 0
+  isinf (10) = 0
+  isfinite (10) = 1
+ varying:
+  isnan (0) = 0
+  isinf (0) = 0
+  isfinite (0) = 1
+  isnan (10) = 0
+  isinf (10) = 0
+  isfinite (10) = 1
+ varying:
+  isnan (1) = 0
+  isinf (1) = 0
+  isfinite (1) = 1
+

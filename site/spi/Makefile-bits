@@ -7,7 +7,10 @@ MY_CMAKE_FLAGS += \
 		  -DILMBASE_CUSTOM=1 \
 		  -DILMBASE_CUSTOM_LIBRARIES="SpiImath SpiHalf SpiIlmThread SpiIex" \
 		  -DOPENEXR_CUSTOM=1 \
-		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf"
+		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf" \
+                  -DLLVM_CUSTOM=1 \
+		  -DLLVM_VERSION=2.7 \
+		  -DLLVM_DIRECTORY=/net/soft_scratch/apps/arnold/tools/spinux1
 
 ifeq (${OSL_NAMESPACE},)
 OSL_NAMESPACE='OSL_Arnold'

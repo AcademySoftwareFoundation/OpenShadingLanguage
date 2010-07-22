@@ -39,6 +39,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 #include "runtimeoptimize.h"
 #include "../liboslcomp/oslcomp_pvt.h"
+
+#include "llvm_headers.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -230,6 +232,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname, OpImpl impl,
     opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
     if (opnum < inst()->m_maincodebegin)
         ++inst()->m_maincodebegin;
+    ++inst()->m_maincodeend;
 
     // Unless we were inserting at the end, we may need to adjust
     // the jump addresses of other ops and the param init ranges.
@@ -1550,8 +1553,10 @@ RuntimeOptimizer::find_conditionals ()
 /// Identify basic blocks by assigning a basic block ID for each
 /// instruction.  Within any basic bock, there are no jumps in or out.
 /// Also note which instructions are inside conditional states.
+/// If do_llvm is true, also construct the m_bb_map that maps opcodes
+/// beginning BB's to llvm::BasicBlock records.
 void
-RuntimeOptimizer::find_basic_blocks ()
+RuntimeOptimizer::find_basic_blocks (bool do_llvm)
 {
     OpcodeVec &code (inst()->ops());
     SymbolVec &symbols (inst()->symbols());
@@ -1559,7 +1564,6 @@ RuntimeOptimizer::find_basic_blocks ()
     // Start by setting all basic block IDs to 0
     m_bblockids.clear ();
     m_bblockids.resize (code.size(), 0);
-    int bbid = 1;  // next basic block ID to use
 
     // First, keep track of all the spots where blocks begin
     std::vector<bool> block_begin (code.size(), false);
@@ -1567,28 +1571,34 @@ RuntimeOptimizer::find_basic_blocks ()
     // Init ops start basic blocks
     BOOST_FOREACH (const Symbol &s, symbols) {
         if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
-                s.initbegin() >= 0)
+                s.has_init_ops())
             block_begin[s.initbegin()] = true;
     }
 
     // Main code starts a basic block
     block_begin[inst()->m_maincodebegin] = true;
 
-    // Anyplace that's the target of a jump instruction starts a basic block
-    for (int i = 0;  i < (int)code.size();  ++i) {
+    for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
+        // Anyplace that's the target of a jump instruction starts a basic block
         for (int j = 0;  j < (int)Opcode::max_jumps;  ++j) {
-            if (code[i].jump(j) >= 0)
-                block_begin[code[i].jump(j)] = true;
+            if (code[opnum].jump(j) >= 0)
+                block_begin[code[opnum].jump(j)] = true;
             else
                 break;
         }
+        // The first instruction in a conditional or loop (which is not
+        // itself a jump target) also begins a basic block.  If the op has
+        // any jump targets at all, it must be a conditional or loop.
+        if (code[opnum].jump(0) >= 0)
+            block_begin[opnum+1] = true;
     }
 
     // Now color the blocks with unique identifiers
-    for (int i = 0;  i < (int)code.size();  ++i) {
-        if (block_begin[i])
+    int bbid = 1;  // next basic block ID to use
+    for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
+        if (block_begin[opnum])
             ++bbid;
-        m_bblockids[i] = bbid;
+        m_bblockids[opnum] = bbid;
     }
 }
 
@@ -2286,9 +2296,19 @@ RuntimeOptimizer::track_variable_dependencies ()
             // depend on those arguments.
             if (op.argtakesderivs_all()) {
                 for (int a = 0;  a < op.nargs();  ++a)
-                    if (op.argtakesderivs(a))
+                    if (op.argtakesderivs(a)) {
+                        // Careful -- not all globals can take derivs
+                        Symbol &s (*opargsym (op, a));
+                        if (s.symtype() == SymTypeGlobal &&
+                            ! (s.mangled() == Strings::P ||
+                               s.mangled() == Strings::I ||
+                               s.mangled() == Strings::u ||
+                               s.mangled() == Strings::v ||
+                               s.mangled() == Strings::Ps))
+                            continue;
                         add_dependency (symdeps, DerivSym,
                                         inst()->arg(a+op.firstarg()));
+                    }
             }
         }
     }
@@ -2316,6 +2336,17 @@ RuntimeOptimizer::track_variable_dependencies ()
         if (! s->typespec().is_closure() && 
                 s->typespec().elementtype().is_floatbased())
             s->has_derivs (true);
+    }
+
+    // Only some globals are allowed to have derivatives
+    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+        if (s.symtype() == SymTypeGlobal &&
+            ! (s.mangled() == Strings::P ||
+               s.mangled() == Strings::I ||
+               s.mangled() == Strings::u ||
+               s.mangled() == Strings::v ||
+               s.mangled() == Strings::Ps))
+            s.has_derivs (false);
     }
 
 #if 0
@@ -2589,13 +2620,14 @@ RuntimeOptimizer::optimize_group ()
 
     // Optimize each layer
     size_t old_nsyms = 0, old_nops = 0;
+
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         if (m_shadingsys.debug() && m_shadingsys.optimize() >= 1) {
             std::cerr << "Before optimizing layer " << inst()->layername() 
                       << ", I get:\n" << inst()->print()
                       << "\n--------------------------------\n\n";
-            }
+        }
 
         old_nsyms += inst()->symbols().size();
         old_nops += inst()->ops().size();
@@ -2652,6 +2684,25 @@ RuntimeOptimizer::optimize_group ()
           100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
           new_nops, old_nops,
           100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+
+#if USE_LLVM
+    if (m_shadingsys.use_llvm()) {
+        Timer timer;
+        // Let's punt on multithreading LLVM for the time being,
+        // just make a big lock.
+        static mutex llvm_mutex;
+        lock_guard llvm_lock (llvm_mutex);
+        
+        m_shadingsys.SetupLLVM ();
+        build_llvm_group ();
+
+        double llvm_time = timer();
+        {
+            spin_lock statlock (m_shadingsys.m_stat_mutex);
+            m_shadingsys.m_stat_llvm_time += llvm_time;
+        }
+    }
+#endif
 }
 
 

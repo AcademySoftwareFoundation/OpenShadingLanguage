@@ -681,6 +681,15 @@ Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &ma
    else return x;
 }
 
+inline float smoothstep(float e0, float e1, float x) { 
+    if (x < e0) return 0.0f;
+    else if (x >= e1) return 1.0f;
+    else {
+        float t = (x - e0)/(e1 - e0);
+        return (3.0f-2.0f*t)*(t*t);
+    }
+}
+
 // f(t) = (3-2t)t^2,   t = (x-e0)/(e1-e0)
 template<class T>
 Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<T> &x)

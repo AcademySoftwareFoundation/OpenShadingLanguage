@@ -38,7 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "oslops.h"
 
-
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif
@@ -49,8 +48,8 @@ namespace pvt {   // OSL::pvt
 
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys) 
-    : m_shadingsys(shadingsys), m_attribs(NULL),
-      m_globals(NULL)
+    : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
+      m_attribs(NULL), m_globals(NULL)
 {
     m_shadingsys.m_stat_contexts += 1;
 }
@@ -131,6 +130,81 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
 
 
 
+
+void
+ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
+{
+#if USE_LLVM
+    ShaderGroup &sgroup (attribs()->shadergroup (use));
+
+    RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
+
+    SingleShaderGlobal my_sg;
+    // Ignore runflags for now
+    ShaderGlobals& sg = *(globals());
+    size_t groupdata_size = sgroup.llvm_groupdata_size();
+    m_heap.resize (groupdata_size * m_npoints);
+#if USE_RUNFLAGS
+    for (int i = 0; i < m_npoints; i++) {
+        if (rf[i]) {
+#elif USE_RUNINDICES
+    for (int ind_ = 0;  ind_ < nind;  ++ind_) { {
+        int i = ind[ind_];
+#elif USE_RUNSPANS
+    for (int nspans_ = nind/2; nspans_; --nspans_, ind += 2) {
+        for (int i = ind[0];  i < ind[1];  ++i) {
+#else
+            { int i=0; ASSERT(0 && "not runflags, indices, or spans!");
+#endif
+            static Vec3 vzero (0,0,0);
+            my_sg.P = sg.P[i];
+            my_sg.dPdx = sg.dPdx[i];
+            my_sg.dPdy = sg.dPdy[i];
+            my_sg.I = sg.I.is_null() ? vzero : sg.I[i];
+            my_sg.dIdx = sg.dIdx.is_null() ? vzero : sg.dIdx[i];
+            my_sg.dIdy = sg.dIdy.is_null() ? vzero : sg.dIdy[i];
+            my_sg.N = sg.N[i];
+            my_sg.Ng = sg.Ng[i];
+            my_sg.u = sg.u[i];
+            my_sg.v = sg.v[i];
+            my_sg.dudx = sg.dudx[i];
+            my_sg.dudy = sg.dudy[i];
+            my_sg.dvdx = sg.dvdx[i];
+            my_sg.dvdy = sg.dvdy[i];
+            my_sg.dPdu = sg.dPdu[i];
+            my_sg.dPdv = sg.dPdv[i];
+            my_sg.time = sg.time[i];
+            my_sg.dtime = sg.dtime.is_null() ? 0.0f : sg.dtime[i];
+            my_sg.dPdtime = sg.dtime.is_null() ? vzero : sg.dPdtime[i];
+            my_sg.Ps = sg.Ps.is_null() ? vzero : sg.Ps[i];
+            my_sg.dPsdx = sg.dPsdx.is_null() ? vzero : sg.dPsdx[i];
+            my_sg.dPsdy = sg.dPsdy.is_null() ? vzero : sg.dPsdy[i];
+            my_sg.renderstate = sg.renderstate[i];
+            my_sg.context = this;
+            my_sg.object2common = sg.object2common[i];
+            my_sg.shader2common = sg.shader2common[i];
+            my_sg.Ci = sg.Ci[i];
+            my_sg.surfacearea = sg.surfacearea.is_null() ? 1.0f : sg.surfacearea[i];
+            my_sg.iscameraray = sg.iscameraray;
+            my_sg.isshadowray = sg.isshadowray;
+            my_sg.flipHandedness = sg.flipHandedness;
+            run_func (&my_sg, &m_heap[groupdata_size*i]);
+
+//            if (use == ShadUseDisplacement) {
+            // FIXME -- should only do this extra work for disp shaders,
+            // but at the moment we only use ShadUseSurface, even for disp!
+                sg.P[i] = my_sg.P;
+                sg.dPdx[i] = my_sg.dPdx;
+                sg.dPdy[i] = my_sg.dPdy;
+                sg.N[i] = my_sg.N;
+//            }
+        }
+    }
+#endif /* USE_LLVM */
+}
+
+
+
 void
 ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
 {
@@ -145,21 +219,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
     ShaderGroup &sgroup (m_attribs->shadergroup (use));
     size_t nlayers = sgroup.nlayers ();
 
-    // Get a handy ref to the array of ShadeExec layer for this shade use,
-    // and make sure it's big enough for the number of layers we have.
-    ExecutionLayers &execlayers (m_exec[use]);
-    if (nlayers > execlayers.size()) {
-        size_t oldlayers = execlayers.size();
-        execlayers.resize (nlayers);
-        // Initialize the new layers
-        for (  ;  oldlayers < nlayers;  ++oldlayers)
-            execlayers[oldlayers].init (this, use, oldlayers);
-    }
-
-    for (size_t layer = 0;  layer < nlayers;  ++layer)
-        execlayers[layer].prebind ();
-
-    // Make space for new runflags
+   // Make space for new runflags
 #if USE_RUNFLAGS
     Runflag *runflags = rf;
     int *indices = NULL;
@@ -217,6 +277,25 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
     }
 #endif
 
+    if (shadingsys().use_llvm() && sgroup.llvm_compiled_version()) {
+        execute_llvm (use, runflags, indices, nindices);
+        return;   // all done
+    }
+
+    // Get a handy ref to the array of ShadeExec layer for this shade use,
+    // and make sure it's big enough for the number of layers we have.
+    ExecutionLayers &execlayers (m_exec[use]);
+    if (nlayers > execlayers.size()) {
+        size_t oldlayers = execlayers.size();
+        execlayers.resize (nlayers);
+        // Initialize the new layers
+        for (  ;  oldlayers < nlayers;  ++oldlayers)
+            execlayers[oldlayers].init (this, use, oldlayers);
+    }
+
+    for (size_t layer = 0;  layer < nlayers;  ++layer)
+        execlayers[layer].prebind ();
+ 
     m_lazy_evals = 0;
     m_rebinds = 0;
     m_binds = 0;
@@ -268,15 +347,38 @@ Symbol *
 ShadingContext::symbol (ShaderUse use, ustring name)
 {
     size_t nlayers = m_nlayers[use];
-   
-    ASSERT(nlayers <= m_exec[use].size()); 
 
-    for (int layer = (int)nlayers-1;  layer >= 0;  --layer) {
-        Symbol *sym = m_exec[use][layer].symbol (name);
-        if (sym)
-            return sym;
+    ShaderGroup &sgroup (attribs()->shadergroup (use));
+    if (shadingsys().use_llvm() && sgroup.llvm_compiled_version()) {
+        for (int layer = (int)nlayers-1;  layer >= 0;  --layer) {
+            int symidx = sgroup[layer]->findsymbol (name);
+            if (symidx >= 0)
+                return sgroup[layer]->symbol (symidx);
+        }
+    } else {
+        ASSERT(nlayers <= m_exec[use].size()); 
+        for (int layer = (int)nlayers-1;  layer >= 0;  --layer) {
+            Symbol *sym = m_exec[use][layer].symbol (name);
+            if (sym)
+                return sym;
+        }
     }
     return NULL;
+}
+
+
+
+void *
+ShadingContext::symbol_data (Symbol &sym, int gridpoint)
+{
+    ShaderGroup &sgroup (attribs()->shadergroup ((ShaderUse)m_curuse));
+    if (shadingsys().use_llvm() && sgroup.llvm_compiled_version()) {
+        size_t offset = sgroup.llvm_groupdata_size() * gridpoint;
+        offset += sym.dataoffset();
+        return &m_heap[offset];
+    } else {
+        return (char *)sym.data() + gridpoint * sym.step();
+    }
 }
 
 

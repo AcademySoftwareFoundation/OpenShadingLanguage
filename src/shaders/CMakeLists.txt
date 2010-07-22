@@ -15,7 +15,7 @@ macro (osl_compile oslsrc objlist headers)
     add_custom_command (OUTPUT ${osofile}
         COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}
         MAIN_DEPENDENCY ${oslsrc}
-        DEPENDS ${${headers}} ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc
+        DEPENDS ${${headers}} ${oslsrc} ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endmacro ()
 

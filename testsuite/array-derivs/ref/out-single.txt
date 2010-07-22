@@ -1,0 +1,18 @@
+Compiled test.osl -> test.oso
+u: 0, derivs 0.5 0
+v: 0, derivs 0 0.5
+a[0]: 0, derivs 0.5 0
+a[1]: 0, derivs 0 0.5
+u: 1, derivs 0.5 0
+v: 0, derivs 0 0.5
+a[0]: 1, derivs 0.5 0
+a[1]: 0, derivs 0 0.5
+u: 0, derivs 0.5 0
+v: 1, derivs 0 0.5
+a[0]: 0, derivs 0.5 0
+a[1]: 1, derivs 0 0.5
+u: 1, derivs 0.5 0
+v: 1, derivs 0 0.5
+a[0]: 1, derivs 0.5 0
+a[1]: 1, derivs 0 0.5
+

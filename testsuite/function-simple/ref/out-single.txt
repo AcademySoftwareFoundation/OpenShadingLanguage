@@ -1,0 +1,10 @@
+Compiled test.osl -> test.oso
+2*2 = 4
+x = 2, y = 4
+2*2 = 4
+x = 2, y = 4
+2*2 = 4
+x = 2, y = 4
+2*2 = 4
+x = 2, y = 4
+

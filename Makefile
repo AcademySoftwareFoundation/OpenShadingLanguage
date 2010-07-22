@@ -27,7 +27,7 @@ ifdef PROFILE
 endif
 
 MY_MAKE_FLAGS ?=
-MY_CMAKE_FLAGS ?=
+MY_CMAKE_FLAGS ?= -g3
 
 ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
@@ -35,6 +35,18 @@ endif
 
 ifneq (${USE_TBB},)
 MY_CMAKE_FLAGS += -DUSE_TBB:BOOL=${USE_TBB}
+endif
+
+ifneq (${USE_LLVM},)
+MY_CMAKE_FLAGS += -DUSE_LLVM:BOOL=${USE_LLVM}
+endif
+
+ifneq (${LLVM_DIRECTORY},)
+MY_CMAKE_FLAGS += -DLLVM_CUSTOM:BOOL=1 -DLLVM_DIRECTORY:STRING=${LLVM_DIRECTORY}
+endif
+
+ifneq (${LLVM_VERSION},)
+MY_CMAKE_FLAGS += -DLLVM_VERSION:STRING=${LLVM_VERSION}
 endif
 
 ifneq (${NAMESPACE},)
@@ -176,5 +188,6 @@ help:
 	@echo "  make VERBOSE=1 ...          Show all compilation commands"
 	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
 	@echo "  make USE_TBB=0 ...          Don't use TBB"
+	@echo "  make USE_LLVM=[0|1] ...     Use/don't use LLVM"
 	@echo "  make NAMESPACE=name         Wrap everything in another namespace"
 	@echo ""

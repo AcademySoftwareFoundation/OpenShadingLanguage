@@ -59,10 +59,7 @@ DECLOP (OP_closure)
     DASSERT(Id.typespec().is_string() && Id.is_uniform());
     VaryingRef<ustring> closure_name(Id.data(), Id.step());
     const ClosureRegistry::ClosureEntry * clentry = NULL;
-    SHADE_LOOP_BEGIN
-        clentry = exec->shadingsys()->find_closure(closure_name[i]);
-        break;
-    SHADE_LOOP_END
+    clentry = exec->shadingsys()->find_closure(closure_name[exec->beginpoint()]);
     ASSERT(clentry);
     VaryingRef<ustring> sidedness(NULL, 0);
     VaryingRef<ustring> labels[ClosurePrimitive::MAXCUSTOM+1];

@@ -1,8 +1,3 @@
-#ifndef M_E
-#define M_E 2.718281828459
-#endif
-
-
 shader
 test ()
 {

@@ -356,6 +356,9 @@ public:
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL) {
+        return NULL; // generates no code on its own
+    }
 
     ref metadata () const { return child (0); }
     ref formals () const { return child (1); }

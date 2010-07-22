@@ -74,8 +74,16 @@
 
 
 // Basic math
-PERCOMP1 (degrees)
-PERCOMP1 (radians)
+normal degrees (normal x) { return x*(180.0/M_PI); }
+vector degrees (vector x) { return x*(180.0/M_PI); }
+point  degrees (point x)  { return x*(180.0/M_PI); }
+color  degrees (color x)  { return x*(180.0/M_PI); }
+float  degrees (float x)  { return x*(180.0/M_PI); }
+normal radians (normal x) { return x*(M_PI/180.0); }
+vector radians (vector x) { return x*(M_PI/180.0); }
+point  radians (point x)  { return x*(M_PI/180.0); }
+color  radians (color x)  { return x*(M_PI/180.0); }
+float  radians (float x)  { return x*(M_PI/180.0); }
 PERCOMP1 (cos)
 PERCOMP1 (sin)
 PERCOMP1 (tan)
@@ -91,17 +99,21 @@ PERCOMP1 (exp)
 PERCOMP1 (exp2)
 PERCOMP1 (expm1)
 PERCOMP1 (log)
-PERCOMP2F (log)
+point  log (point a,  float b) { return log(a)/log(b); }
+vector log (vector a, float b) { return log(a)/log(b); }
+color  log (color a,  float b) { return log(a)/log(b); }
+float  log (float a,  float b) { return log(a)/log(b); }
 PERCOMP1 (log2)
 PERCOMP1 (log10)
 PERCOMP1 (logb)
 PERCOMP1 (sqrt)
 PERCOMP1 (inversesqrt)
-float hypot (float x, float y) BUILTIN;
-float hypot (float x, float y, float z) BUILTIN;
+float hypot (float a, float b) { return sqrt (a*a + b*b); }
+float hypot (float a, float b, float c) { return sqrt (a*a + b*b + c*c); }
 PERCOMP1 (abs)
 int abs (int x) BUILTIN;
 PERCOMP1 (fabs)
+int fabs (int x) BUILTIN;
 PERCOMP1 (sign)
 PERCOMP1 (floor)
 PERCOMP1 (ceil)
@@ -114,20 +126,25 @@ PERCOMP2F (mod)
 int    mod (int x, int y) BUILTIN;
 PERCOMP2 (min)
 PERCOMP2 (max)
-normal clamp (normal x, normal minval, normal maxval) BUILTIN;
-vector clamp (vector x, vector minval, vector maxval) BUILTIN;
-point  clamp (point x, point minval, point maxval) BUILTIN;
-color  clamp (color x, color minval, color maxval) BUILTIN;
-float  clamp (float x, float minval, float maxval) BUILTIN;
-normal mix (normal x, normal y, normal a) BUILTIN;
-vector mix (vector x, vector y, vector a) BUILTIN;
-point  mix (point x, point y, point a) BUILTIN;
-color  mix (color x, color y, color a) BUILTIN;
-normal mix (normal x, normal y, float a) BUILTIN;
-vector mix (vector x, vector y, float a) BUILTIN;
-point  mix (point x, point y, float a) BUILTIN;
-color  mix (color x, color y, float a) BUILTIN;
-float  mix (float x, float y, float a) BUILTIN;
+normal clamp (normal x, normal minval, normal maxval) { return max(min(x,maxval),minval); }
+vector clamp (vector x, vector minval, vector maxval) { return max(min(x,maxval),minval); }
+point  clamp (point x, point minval, point maxval) { return max(min(x,maxval),minval); }
+color  clamp (color x, color minval, color maxval) { return max(min(x,maxval),minval); }
+float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+//normal clamp (normal x, normal minval, normal maxval) BUILTIN;
+//vector clamp (vector x, vector minval, vector maxval) BUILTIN;
+//point  clamp (point x, point minval, point maxval) BUILTIN;
+//color  clamp (color x, color minval, color maxval) BUILTIN;
+//float  clamp (float x, float minval, float maxval) BUILTIN;
+normal mix (normal x, normal y, normal a) { return x*(1-a) + y*a; }
+normal mix (normal x, normal y, float  a) { return x*(1-a) + y*a; }
+vector mix (vector x, vector y, vector a) { return x*(1-a) + y*a; }
+vector mix (vector x, vector y, float  a) { return x*(1-a) + y*a; }
+point  mix (point  x, point  y, point  a) { return x*(1-a) + y*a; }
+point  mix (point  x, point  y, float  a) { return x*(1-a) + y*a; }
+color  mix (color  x, color  y, color  a) { return x*(1-a) + y*a; }
+color  mix (color  x, color  y, float  a) { return x*(1-a) + y*a; }
+float  mix (float  x, float  y, float  a) { return x*(1-a) + y*a; }
 int isnan (float x) BUILTIN;
 int isinf (float x) BUILTIN;
 int isfinite (float x) BUILTIN;
@@ -145,8 +162,49 @@ normal normalize (normal v) BUILTIN;
 vector normalize (vector v) BUILTIN;
 vector faceforward (vector N, vector I, vector Nref) BUILTIN;
 vector faceforward (vector N, vector I) BUILTIN;
-vector reflect (vector I, vector N) BUILTIN;
-vector refract (vector I, vector N, float eta) BUILTIN;
+vector reflect (vector I, vector N) { return I - 2*dot(N,I)*N; }
+vector refract (vector I, vector N, float eta) {
+    float IdotN = dot (I, N);
+    float k = 1 - eta*eta * (1 - IdotN*IdotN);
+    return (k < 0) ? vector(0,0,0) : (eta*I - N * (eta*IdotN + sqrt(k)));
+}
+void fresnel (vector I, normal N, float eta,
+              output float Kr, output float Kt,
+              output vector R, output vector T)
+{
+    float sqr(float x) { return x*x; }
+    float c = dot(I, N);
+    if (c < 0)
+        c = -c;
+    R = reflect(I, N);
+    float g = 1.0 / sqr(eta) - 1.0 + c * c;
+    if (g >= 0.0) {
+        g = sqrt (g);
+        float beta = g - c;
+        float F = (c * (g+c) - 1.0) / (c * beta + 1.0);
+        F = 0.5 * (1.0 + sqr(F));
+        F *= sqr (beta / (g+c));
+        Kr = F;
+        Kt = (1.0 - Kr) * eta*eta;
+        // OPT: the following recomputes some of the above values, but it 
+        // gives us the same result as if the shader-writer called refract()
+        T = refract(I, N, eta);
+    } else {
+        // total internal reflection
+        Kr = 1.0;
+        Kt = 0.0;
+        T = vector (0,0,0);
+    }
+#undef sqr
+}
+
+void fresnel (vector I, normal N, float eta,
+              output float Kr, output float Kt)
+{
+    vector R, T;
+    fresnel(I, N, eta, Kr, Kt, R, T);
+}
+
 point rotate (point q, float angle, point a, point b) BUILTIN;
 
 normal transform (matrix Mto, normal p) BUILTIN;
@@ -191,7 +249,6 @@ float transformu (string tounits, float x) BUILTIN;
 float transformu (string fromunits, string tounits, float x) BUILTIN;
 
 
-
 // Color functions
 
 float luminance (color c) {
@@ -211,7 +268,7 @@ matrix transpose (matrix m) BUILTIN;
 
 // Pattern generation
 
-float step (float edge, float x) BUILTIN;
+float step (float edge, float x) { return (x>=edge) ? 1.0 : 0.0 ; }
 float smoothstep (float edge0, float edge1, float x) BUILTIN;
 
 
@@ -228,6 +285,20 @@ int startswith (string s, string prefix) BUILTIN;
 int endswith (string s, string suffix) BUILTIN;
 string substr (string s, int start, int len) BUILTIN;
 string substr (string s, int start) { return substr (s, start, strlen(s)); }
+
+// Define concat in terms of shorter concat
+string concat (string a, string b, string c) {
+    return concat(concat(a,b), c);
+}
+string concat (string a, string b, string c, string d) {
+    return concat(concat(a,b,c), d);
+}
+string concat (string a, string b, string c, string d, string e) {
+    return concat(concat(a,b,c,d), e);
+}
+string concat (string a, string b, string c, string d, string e, string f) {
+    return concat(concat(a,b,c,d,e), f);
+}
 
 
 // Texture

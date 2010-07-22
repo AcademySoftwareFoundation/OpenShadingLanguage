@@ -44,9 +44,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslclosure.h"
 #include "osl_pvt.h"
 #include "constantpool.h"
+
+
 using namespace OSL;
 using namespace OSL::pvt;
 
+namespace llvm {
+  class ExecutionEngine;
+  class Function;
+  class FunctionPassManager;
+  class LLVMContext;
+  class Linker;
+  class Module;
+  class PassManager;
+}
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -67,6 +78,12 @@ typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 // the workings of ShadingExecution::adjust_varying.  These are
 // generally not worth the extra expense, only for debugging purposes.
 // #define DEBUG_ADJUST_VARYING
+
+
+
+/// Signature of the function that LLVM generates to run the shader
+/// group.
+typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*); 
 
 
 
@@ -421,8 +438,20 @@ public:
 
     bool optimized () const { return m_optimized; }
 
+    size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
+    void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
+
+    RunLLVMGroupFunc llvm_compiled_version() const {
+        return m_llvm_compiled_version;
+    }
+    void llvm_compiled_version (RunLLVMGroupFunc func) {
+        m_llvm_compiled_version = func;
+    }
+
 private:
     std::vector<ShaderInstanceRef> m_layers;
+    RunLLVMGroupFunc m_llvm_compiled_version;
+    size_t m_llvm_groupdata_size;
     volatile bool m_optimized;       ///< Is it already optimized?
     mutex m_mutex;                   ///< Thread-safe optimization
     friend class ShadingSystemImpl;
@@ -570,6 +599,7 @@ public:
     bool debug_nan () const { return m_debugnan; }
     bool lockgeom_default () const { return m_lockgeom_default; }
     int optimize () const { return m_optimize; }
+    int use_llvm () const { return m_use_llvm; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
@@ -582,10 +612,20 @@ public:
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
+    llvm::LLVMContext *llvm_context () { return m_llvm_context; }
+    llvm::ExecutionEngine* ExecutionEngine () { return m_llvm_exec; }
+
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
                                   int sidedness_offset, int labels_offset, int max_labels);
-    const ClosureRegistry::ClosureEntry *find_closure(ustring name)const { return m_closure_registry.get_entry(name); }
+    const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
+        return m_closure_registry.get_entry(name);
+    }
+
+    /// Convert a color in the named space to RGB.
+    ///
+    Color3 to_rgb (ustring fromspace, float a, float b, float c);
+
 private:
     void printstats () const;
     void init_global_heap_offsets ();
@@ -621,6 +661,8 @@ private:
         return p;
     }
 
+    void SetupLLVM ();
+
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system
 
@@ -646,6 +688,7 @@ private:
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     int m_optimize;                       ///< Runtime optimization level
+    bool m_use_llvm;                      ///< Use LLVM to compile
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
@@ -678,6 +721,7 @@ private:
     atomic_int m_stat_total_syms;         ///< Stat: total syms in all insts
     atomic_int m_stat_syms_with_derivs;   ///< Stat: syms with derivatives
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
+    double m_stat_llvm_time;              ///< Stat: time spent on LLVM
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
 #ifdef DEBUG_ADJUST_VARYING
     atomic_ll m_adjust_calls;             ///< Calls to adjust_varying
@@ -687,6 +731,11 @@ private:
     atomic_ll m_make_uniform;             ///< Adjust_varying made it uniform
 #endif
     ClosureRegistry m_closure_registry;
+
+    // LLVM stuff
+    llvm::LLVMContext *m_llvm_context;
+    llvm::Module *m_llvm_module;
+    llvm::ExecutionEngine *m_llvm_exec;
 
     friend class ShadingContext;
     friend class ShaderInstance;
@@ -712,6 +761,10 @@ public:
     ///
     ShadingSystemImpl & shadingsys () const { return m_shadingsys; }
 
+    /// Get a pointer to the RendererServices for this execution.
+    ///
+    RendererServices *renderer () const { return m_renderer; }
+
     /// Return a pointer to our shader globals structure.
     ///
     ShaderGlobals *globals () const { return m_globals; }
@@ -726,6 +779,13 @@ public:
     /// runflags are not supplied, they will be auto-generated with all
     /// points turned on.
     void execute (ShaderUse use, Runflag *rf=NULL, int *ind=NULL, int nind=0);
+
+    /// Execute the llvm-compiled shaders for the given use (for example,
+    /// ShadUseSurface).  The context must already be bound.  If
+    /// runflags are not supplied, they will be auto-generated with all
+    /// points turned on.
+    void execute_llvm (ShaderUse use, Runflag *rf=NULL,
+                       int *ind=NULL, int nind=0);
 
     /// Return the current shader use being executed.
     ///
@@ -768,8 +828,14 @@ public:
         size_t curheap = heap_allot (n * sizeof (ClosureColor *));
         ClosureColor **ptrs = (ClosureColor **) heapaddr (curheap);
         for (size_t i = 0;  i < n;  ++i)
-            ptrs[i] = &m_closures[m_closures_allotted++];
+            ptrs[i] = closure_ptr_allot ();
         return curheap;
+    }
+
+    /// Allot a closure (from the pre-allocated set of closures for this
+    /// context) and return its pointer.
+    ClosureColor * closure_ptr_allot () {
+        return &m_closures[m_closures_allotted++];
     }
 
     /// Find the named symbol in the (already-executed!) stack of
@@ -777,6 +843,10 @@ public:
     /// later laters over earlier layers (if they name the same symbol).
     /// Return NULL if no such symbol is found.
     Symbol * symbol (ShaderUse use, ustring name);
+
+    /// Return a pointer to where the symbol's data lives for the given
+    /// grid point.
+    void *symbol_data (Symbol &sym, int gridpoint);
 
     /// Return a refreence to the ExecutionLayers corresponding to the
     /// given shader use.
@@ -801,6 +871,7 @@ public:
 
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
+    RendererServices *m_renderer;       ///< Ptr to renderer services
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<char> m_heap;           ///< Heap memory
@@ -1247,6 +1318,28 @@ private:
 };
 
 
+struct SingleShaderGlobal {
+    Vec3 P, dPdx, dPdy;    ///< Position
+    Vec3 I, dIdx, dIdy;    ///< Incident ray
+    Vec3 N;                ///< Shading normal
+    Vec3 Ng;               ///< True geometric normal
+    float u, dudx, dudy;   ///< Surface parameter u
+    float v, dvdx, dvdy;   ///< Surface parameter v
+    Vec3 dPdu, dPdv;       ///< Tangents on the surface
+    float time;            ///< Time for each sample
+    float dtime;           ///< Time interval for each sample
+    Vec3 dPdtime;          ///< Velocity
+    Vec3 Ps, dPsdx, dPsdy; ///< Point being lit
+    void* renderstate;     ///< Renderer state for each sample
+    ShadingContext* context; ///< ShadingContext
+    TransformationPtr object2common; /// Object->common xform
+    TransformationPtr shader2common; /// Shader->common xform
+    ClosureColor* Ci;      ///< Output colors
+    float surfacearea;     ///< Total area of the object (not exposed)
+    int iscameraray;       ///< True if computing for camera ray
+    int isshadowray;       ///< True if computing for shadow opacity
+    int flipHandedness;    ///< flips the result of calculatenormal()
+};
 
 namespace Strings {
     extern ustring camera, common, object, shader;

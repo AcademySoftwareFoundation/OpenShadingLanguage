@@ -1032,7 +1032,7 @@ static const char * builtin_func_args [] = {
     "bump", "xf", "xsf", "xv", "!deriv", NULL,
     "calculatenormal", "vp", "!deriv", NULL,
     "cellnoise", NOISE_ARGS, NULL,
-    "concat", "ss.", NULL,   // FIXME -- further checking
+    "concat", "sss", /*"ss.",*/ NULL,   // FIXME -- further checking
     "Dx", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,
@@ -1041,7 +1041,6 @@ static const char * builtin_func_args [] = {
     "filterwidth", "ff", "vp", "vv", NULL,
     "format", "ss*", "!printf", NULL,
     "fprintf", "xs*", "!printf", NULL,
-    "fresnel", "xvvff", "xvvfffvv", "!rw", NULL,
     "getattribute", "is?", "iss?", "isi?", "issi?", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", /*"iss?",*/ "!rw", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
@@ -1158,7 +1157,7 @@ OSLCompilerImpl::register_closure(const char *name, const ClosureParam *params, 
 
 
 TypeSpec
-OSLCompilerImpl::type_from_code (const char *code, int *advance) const
+OSLCompilerImpl::type_from_code (const char *code, int *advance)
 {
     TypeSpec t;
     int i = 0;
@@ -1172,6 +1171,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance) const
     case 'm' : t = TypeDesc::TypeMatrix;       break;
     case 's' : t = TypeDesc::TypeString;       break;
     case 'x' : t = TypeDesc (TypeDesc::NONE);  break;
+    case 'X' : t = TypeDesc (TypeDesc::PTR);   break;
     case 'C' : // color closure
         t = TypeSpec (TypeDesc::TypeColor, true);
         break;

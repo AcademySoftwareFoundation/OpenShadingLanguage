@@ -679,12 +679,7 @@ class Smoothstep {
 public:
     Smoothstep (ShadingExecution *exec = NULL) { }
     inline void operator() (float &result, float edge0, float edge1, float x) { 
-        if (x < edge0) result = 0.0f;
-        else if (x >= edge1) result = 1.0f;
-        else {
-            float t = (x - edge0)/(edge1 - edge0);
-            result = (3.0f-2.0f*t)*(t*t);
-        }
+        result = smoothstep(edge0, edge1, x);
     }
     inline void operator() (Dual2<float> &result, const Dual2<float> &edge0, const Dual2<float> &edge1, const Dual2<float> &x) {
         result = smoothstep(edge0, edge1, x);

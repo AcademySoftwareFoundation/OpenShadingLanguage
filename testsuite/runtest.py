@@ -5,7 +5,8 @@ import glob
 import sys
 from optparse import OptionParser
 
-def runtest (command, outputs, cleanfiles="", failureok=0) :
+def runtest (command, outputs, cleanfiles="", failureok=0,
+             failthresh=0, failpercent=0) :
     parser = OptionParser()
     parser.add_option("-p", "--path", help="add to executable path",
                       action="store", type="string", dest="path", default="")
@@ -30,7 +31,7 @@ def runtest (command, outputs, cleanfiles="", failureok=0) :
     # print "cmdret = " + str(cmdret)
 
     if cmdret != 0 and failureok == 0 :
-        print "FAIL"
+        print "FAIL CRASH?"
         return (1)
 
     err = 0
@@ -42,6 +43,10 @@ def runtest (command, outputs, cleanfiles="", failureok=0) :
             if extension == ".tif" or extension == ".exr" :
                 # images -- use idiff
                 cmpcommand = (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "idiff")
+                              + " -fail " + str(failthresh)
+                              + " -failpercent " + str(failpercent)
+                              + " -hardfail " + str(failthresh)
+                              + " -warn " + str(2*failthresh)
                               + " " + out + " " + testfile)
             else :
                 # anything else, mainly text files

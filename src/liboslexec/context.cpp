@@ -321,6 +321,31 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
         // there some reason why that won't work?
     }
 
+    // FIXME -- should only do this extra work for disp shaders,
+    // but at the moment we only use ShadUseSurface, even for disp!
+    //  if (use == ShadUseDisplacement)
+    {
+        ShaderGlobals& sg = *(globals());
+        Symbol *Psym = symbol (use, Strings::P);
+        Symbol *Nsym = symbol (use, Strings::N);
+#if USE_RUNFLAGS
+        SHADE_LOOP_RUNFLAGS_BEGIN (runflags, 0, m_npoints)
+#elif USE_RUNINDICES
+        SHADE_LOOP_INDICES_BEGIN (indices, nindices)
+#elif USE_RUNSPANS
+        SHADE_LOOP_SPANS_BEGIN (indices, nindices)
+#endif
+            if (Psym) {
+                Vec3 *P = (Vec3 *)symbol_data(*Psym, i);
+                sg.P[i] = P[0];
+                sg.dPdx[i] = P[1];
+                sg.dPdy[i] = P[2];
+            }
+            if (Nsym)
+                sg.N[i] = * (Vec3 *)symbol_data(*Nsym, i);
+        SHADE_LOOP_END
+    }
+
     shadingsys().m_layers_executed_uncond += uncond_evals;
     shadingsys().m_layers_executed_lazy += m_lazy_evals;
     shadingsys().m_layers_executed_never += nlayers - uncond_evals - m_lazy_evals;

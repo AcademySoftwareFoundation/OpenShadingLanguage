@@ -371,21 +371,23 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
 Symbol *
 ShadingContext::symbol (ShaderUse use, ustring name)
 {
-    size_t nlayers = m_nlayers[use];
-
     ShaderGroup &sgroup (attribs()->shadergroup (use));
+    int nlayers = sgroup.nlayers ();
     if (shadingsys().use_llvm() && sgroup.llvm_compiled_version()) {
-        for (int layer = (int)nlayers-1;  layer >= 0;  --layer) {
+        for (int layer = nlayers-1;  layer >= 0;  --layer) {
             int symidx = sgroup[layer]->findsymbol (name);
             if (symidx >= 0)
                 return sgroup[layer]->symbol (symidx);
         }
     } else {
-        ASSERT(nlayers <= m_exec[use].size()); 
-        for (int layer = (int)nlayers-1;  layer >= 0;  --layer) {
-            Symbol *sym = m_exec[use][layer].symbol (name);
-            if (sym)
-                return sym;
+        ASSERT((size_t)nlayers <= m_exec[use].size()); 
+        for (int layer = nlayers-1;  layer >= 0;  --layer) {
+            ShadingExecution  &exec (m_exec[use][layer]);
+            if (exec.instance()) {
+                Symbol *sym = exec.symbol (name);
+                if (sym)
+                    return sym;
+            }
         }
     }
     return NULL;

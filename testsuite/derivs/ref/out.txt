@@ -172,15 +172,15 @@ pow: a = pow(u, v) at (1,0); a = 1, Dx(a) = 0, Dy(a) = 0
 pow: a = pow(u, v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
 pow: a = pow(u, v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
 
-log: a = log(u,10); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,10); a = -1.47783e+38, Dx(a) = 0, Dy(a) = 0
 log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
-log: a = log(u,10); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,10); a = -1.47783e+38, Dx(a) = 0, Dy(a) = 0
 log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
 
-log: a = log(u,v) at (0,0); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u,v) at (1,0); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u,v) at (0,1); a = 3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u,v) at (1,1); a = 3.40282e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,v) at (0,0); a = 1, Dx(a) = -0, Dy(a) = -0
+log: a = log(u,v) at (1,0); a = -0, Dx(a) = -1.46937e-39, Dy(a) = -0
+log: a = log(u,v) at (0,1); a = -0, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,v) at (1,1); a = 0, Dx(a) = 0, Dy(a) = 0
 
 clamp: a = clamp(sin(u),u,v) is clamp(0,0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
 clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0

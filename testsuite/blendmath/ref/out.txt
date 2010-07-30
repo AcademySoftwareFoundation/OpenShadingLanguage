@@ -38,11 +38,11 @@ Compiled test.osl -> test.oso
   clamp (1, 0, 1) = 1
   clamp (1, 1, 2) = 1
   clamp (0, 0, 0) = 0
-  clamp (1, 1, 0) = 0
+  clamp (1, 1, 0) = 1
   clamp (1, 0, 1) = 1
   clamp (2, 1, 1) = 1
   clamp (0, 0, 0) = 0
-  clamp (1, 1, 0) = 0
+  clamp (1, 1, 0) = 1
   clamp (0, 1, 1) = 1
   clamp (1, 2, 1) = 2
   min (0, 0) = 0
@@ -102,11 +102,11 @@ Compiled test.osl -> test.oso
   clamp (1 1 1, 0 0 0, 1 1 1) = 1 1 1
   clamp (1 1 1, 1 1 1, 2 2 2) = 1 1 1
   clamp (0 0 0, 0 0 0, 0 0 0) = 0 0 0
-  clamp (1 1 1, 1 1 1, 0 0 0) = 0 0 0
+  clamp (1 1 1, 1 1 1, 0 0 0) = 1 1 1
   clamp (1 1 1, 0 0 0, 1 1 1) = 1 1 1
   clamp (2 2 2, 1 1 1, 1 1 1) = 1 1 1
   clamp (0 0 0, 0 0 0, 0 0 0) = 0 0 0
-  clamp (1 1 1, 1 1 1, 0 0 0) = 0 0 0
+  clamp (1 1 1, 1 1 1, 0 0 0) = 1 1 1
   clamp (0 0 0, 1 1 1, 1 1 1) = 1 1 1
   clamp (1 1 1, 2 2 2, 1 1 1) = 2 2 2
   min (0 0 0, 0 0 0) = 0 0 0

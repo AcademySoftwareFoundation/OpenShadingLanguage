@@ -1211,6 +1211,10 @@ public:
     /// user-data attached
     bool renderer_has_userdata (ustring name, TypeDesc type, void *renderstate);
 
+    /// Has the layer been bound?
+    ///
+    bool bound () const { return m_bound; }
+
     /// Has this layer already executed?
     ///
     bool executed () const { return m_executed; }

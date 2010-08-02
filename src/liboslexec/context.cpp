@@ -383,7 +383,7 @@ ShadingContext::symbol (ShaderUse use, ustring name)
         ASSERT((size_t)nlayers <= m_exec[use].size()); 
         for (int layer = nlayers-1;  layer >= 0;  --layer) {
             ShadingExecution  &exec (m_exec[use][layer]);
-            if (exec.instance()) {
+            if (exec.bound()) {
                 Symbol *sym = exec.symbol (name);
                 if (sym)
                     return sym;

@@ -757,7 +757,8 @@ ASTindex::codegen (Symbol *dest, Symbol * &ind,
     ind = index()->codegen ();
     ind2 = index2() ? index2()->codegen () : NULL;
     ind3 = index3() ? index3()->codegen () : NULL;
-    if (! dest)
+    // Make a destination if not given one, or if it's the wrong type
+    if (! dest || ! equivalent (dest->typespec(), typespec()))
         dest = m_compiler->make_temporary (typespec());
     if (lv->typespec().is_array()) {
         if (index3()) {

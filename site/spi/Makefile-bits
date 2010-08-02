@@ -10,7 +10,7 @@ MY_CMAKE_FLAGS += \
 		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf" \
                   -DLLVM_CUSTOM=1 \
 		  -DLLVM_VERSION=2.7 \
-		  -DLLVM_DIRECTORY=/net/soft_scratch/apps/arnold/tools/spinux1
+		  -DLLVM_DIRECTORY=/shots/spi/home/lib/arnold/spinux1/llvm_2.7
 
 ifeq (${OSL_NAMESPACE},)
 OSL_NAMESPACE='OSL_Arnold'
@@ -38,7 +38,8 @@ MY_CMAKE_FLAGS += \
 		-DILMBASE_HOME=/usr/local64/openexr/${OPENEXR_VERSION} \
 		-DOPENEXR_VERSION=${OPENEXR_VERSION} \
 		-DOPENEXR_VERSION_DIGITS="010400" \
-		-DOPENEXR_HOME=/usr/local64/openexr/${OPENEXR_VERSION}
+		-DOPENEXR_HOME=/usr/local64/openexr/${OPENEXR_VERSION} \
+		-DUSE_LLVM=0
 ifeq (${OSL_NAMESPACE},)
 OSL_NAMESPACE='OSL_Arnold'
 endif

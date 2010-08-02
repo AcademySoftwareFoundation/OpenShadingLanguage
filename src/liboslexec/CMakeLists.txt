@@ -42,7 +42,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     MESSAGE (STATUS "LLVM_COMPILE bc=${llvm_bc}")
     MESSAGE (STATUS "LLVM_COMPILE cpp=${llvm_bc_cpp}")
     SET ( ${srclist} ${${srclist}} ${llvm_bc_cpp} )
-    EXEC_PROGRAM ( llvm-config ARGS --cxxflags OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
+    EXEC_PROGRAM ( ${LLVM_DIRECTORY}/bin/llvm-config ARGS --cxxflags OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
     set (LLVM_COMPILE_FLAGS "${LLVM_COMPILE_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -g3 --combine")
     set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
     if (OSL_NAMESPACE)
@@ -55,8 +55,8 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
-      COMMAND llvm-g++ ${LLVM_COMPILE_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_SOURCE_DIR}/include -I${OPENIMAGEIOHOME}/include -I${ILMBASE_INCLUDE_AREA} -I${Boost_INCLUDE_DIRS} -S -emit-llvm -o ${llvm_asm} ${llvm_src}
-      COMMAND llvm-as -f -o ${llvm_bc} ${llvm_asm}
+      COMMAND ${LLVM_DIRECTORY}/bin/llvm-g++ ${LLVM_COMPILE_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_SOURCE_DIR}/include -I${OPENIMAGEIOHOME}/include -I${ILMBASE_INCLUDE_AREA} -I${Boost_INCLUDE_DIRS} -S -emit-llvm -o ${llvm_asm} ${llvm_src}
+      COMMAND ${LLVM_DIRECTORY}/bin/llvm-as -f -o ${llvm_bc} ${llvm_asm}
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash ${llvm_bc} ${llvm_bc_cpp}
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash

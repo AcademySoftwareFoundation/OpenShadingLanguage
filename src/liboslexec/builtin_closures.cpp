@@ -169,10 +169,19 @@ BuiltinClosure builtin_closures[NBUILTIN_CLOSURES] = {
 
 
 
-void generic_closure_setup(RendererServices *, int id, void *data)
+static void generic_closure_setup(RendererServices *, int id, void *data)
 {
    ClosurePrimitive *prim = (ClosurePrimitive *)data;
    prim->setup();
+}
+
+
+
+static bool generic_closure_compare(int id, const void *dataA, const void *dataB)
+{
+   ClosurePrimitive *primA = (ClosurePrimitive *)dataA;
+   ClosurePrimitive *primB = (ClosurePrimitive *)dataB;
+   return primA->mergeable (primB);
 }
 
 
@@ -186,7 +195,7 @@ void ShadingSystem::register_builtin_closures(ShadingSystem *ss)
         for (j = 0; clinfo->params[j].type != TypeDesc(); ++j);
         int size = clinfo->params[j].offset;
         ASSERT(clinfo->id == cid);
-        ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup,
+        ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare,
                               clinfo->sidedness_offset, reckless_offsetof(ClosurePrimitive, m_custom_labels),
                               ClosurePrimitive::MAXCUSTOM);
     }

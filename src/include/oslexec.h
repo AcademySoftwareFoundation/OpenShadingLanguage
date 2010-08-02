@@ -62,6 +62,7 @@ typedef const void * TransformationPtr;
 // Callbacks for closure creation
 typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
 typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
+typedef bool (*CompareClosureFunc)(int id, const void *dataA, const void *dataB);
 
 
 class ShadingSystem
@@ -184,8 +185,8 @@ public:
     ///
     virtual std::string getstats (int level=1) const = 0;
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+    virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
                                   int sidedness_offset, int labels_offset, int max_labels) = 0;
 
     static void register_builtin_closures(ShadingSystem *ss);

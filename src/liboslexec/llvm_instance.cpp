@@ -1062,7 +1062,12 @@ LLVMGEN (llvm_gen_add)
 
     if (Result.typespec().is_closure()) {
         ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
-        rop.llvm_call_function ("osl_add_closure_closure", Result, A, B);
+        llvm::Value *valargs[4];
+        valargs[0] = rop.sg_void_ptr();
+        valargs[1] = rop.llvm_load_value (Result);
+        valargs[2] = rop.llvm_load_value (A);
+        valargs[3] = rop.llvm_load_value (B);
+        rop.llvm_call_function ("osl_add_closure_closure", valargs, 4);
         return true;
     }
 

@@ -789,12 +789,13 @@ osl_closure_assign_indexed (void **_r, int ri, void **_x, int xi)
 }
 
 extern "C" void
-osl_add_closure_closure (void *_r, void *_a, void *_b)
+osl_add_closure_closure (void *sg_, void *_r, void *_a, void *_b)
 {
+    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
     ClosureColor *r = (ClosureColor *)_r;
     ClosureColor *a = (ClosureColor *)_a;
     ClosureColor *b = (ClosureColor *)_b;
-    r->add (*a, *b);
+    r->add (*a, *b, &sg->context->shadingsys());
 }
 
 extern "C" void

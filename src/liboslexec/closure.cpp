@@ -75,7 +75,7 @@ ClosureColor::allocate_component (int id, size_t num_bytes)
 
 
 void
-ClosureColor::add (const ClosureColor &A)
+ClosureColor::add (const ClosureColor &A, ShadingSystemImpl *ss)
 {
     // Look at all of A's components, decide which can be merged with our
     // own (just summing weights) and which need to be appended as new
@@ -85,27 +85,28 @@ ClosureColor::add (const ClosureColor &A)
     size_t new_bytes = 0;                // how much more mem I'll need
     int *unmerged = ALLOCA (int, A.ncomponents());  // temp index list
     for (int ac = 0;  ac < A.ncomponents();  ++ac) {
-        const ClosurePrimitive *aprim (A.prim (ac));
+        bool merged = false;
         const Component &acomp (A.component (ac));
         if (acomp.weight[0] == 0.0f && acomp.weight[1] == 0.0f &&
                 acomp.weight[2] == 0.0f)
             continue;   // don't bother adding a 0-weighted component
-        bool merged = false;
+        const ClosureRegistry::ClosureEntry *closure = ss->find_closure(A.id(ac));
+        DASSERT(closure != NULL);
+        CompareClosureFunc compare = closure->compare;
+        const void *araw = A.raw_prim(ac);
         for (int c = 0;  c < my_ncomponents;  ++c) {
-            if (prim(c)->name() == aprim->name() &&
-                    prim(c)->mergeable (aprim)) {
-                // We can merge with an existing component -- just add the
-                // weights
+            if (id(c) == A.id(ac) && (compare ? compare(id(c), araw, raw_prim(c)) : !memcmp(araw, raw_prim(c), closure->struct_size))) {
                 m_components[c].weight += acomp.weight;
                 merged = true;
                 break;
             }
         }
+
         if (! merged) {
             // Not a duplicate that can be merged.  Remember this component
             // index and how much memory it'll need.
             unmerged[num_unmerged++] = ac;
-            new_bytes += aprim->memsize();
+            new_bytes += closure->struct_size;
         }
     }
 
@@ -121,8 +122,9 @@ ClosureColor::add (const ClosureColor &A)
     for (int i = 0;  i < num_unmerged;  ++i) {
         int c = unmerged[i];   // next unmerged component index within A
         const Component &acomp (A.component (c));
-        const ClosurePrimitive *aprim (A.prim (c));
-        size_t asize = aprim->memsize();
+        const ClosureRegistry::ClosureEntry *closure = ss->find_closure(acomp.id);
+        DASSERT(closure != NULL);
+        size_t asize = closure->struct_size;
         memcpy (&m_mem[oldmemsize], &A.m_mem[acomp.memoffset], asize);
         m_components.push_back (acomp);
         m_components.back().memoffset = oldmemsize;
@@ -133,11 +135,11 @@ ClosureColor::add (const ClosureColor &A)
 
 
 void
-ClosureColor::add (const ClosureColor &A, const ClosureColor &B)
+ClosureColor::add (const ClosureColor &A, const ClosureColor &B, ShadingSystemImpl *ss)
 {
     if (this != &A)
         *this = A;
-    add (B);
+    add (B, ss);
 }
 
 

@@ -474,6 +474,7 @@ public:
         // Creation callbacks
         PrepareClosureFunc        prepare;
         SetupClosureFunc          setup;
+        CompareClosureFunc        compare;
         // In case this closure accepts labels, this tells
         // us what is the offset of the ustring[MAXLABELS]
         // field inside the target struct.
@@ -484,11 +485,15 @@ public:
         int                       max_labels;
     };
 
-    void register_closure(const char *name, int id, const ClosureParam *params,
-                          int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+    void register_closure(const char *name, int id, const ClosureParam *params, int size,
+                          PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
                           int sidedness_offset, int labels_offset, int max_labels);
 
     const ClosureEntry *get_entry(ustring name)const;
+    const ClosureEntry *get_entry(int id)const {
+        DASSERT((size_t)id < m_closure_table.size());
+        return &m_closure_table[id];
+    }
 
 private:
 
@@ -615,11 +620,14 @@ public:
     llvm::LLVMContext *llvm_context () { return m_llvm_context; }
     llvm::ExecutionEngine* ExecutionEngine () { return m_llvm_exec; }
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+    virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
                                   int sidedness_offset, int labels_offset, int max_labels);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
+    }
+    const ClosureRegistry::ClosureEntry *find_closure(int id) const {
+        return m_closure_registry.get_entry(id);
     }
 
     /// Convert a color in the named space to RGB.

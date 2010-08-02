@@ -319,11 +319,13 @@ DECLOP (closure_unary_op)
 
 class AddClosure {
 public:
-    AddClosure (ShadingExecution *) { }
+    AddClosure (ShadingExecution *exec):m_shadingsys(exec->shadingsys()) { }
     inline void operator() (ClosureColor *result, 
                             const ClosureColor *A, const ClosureColor *B) {
-        result->add (*A, *B);
+        result->add (*A, *B, m_shadingsys);
     }
+private:
+    ShadingSystemImpl *m_shadingsys;
 };
 
 

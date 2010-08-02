@@ -33,6 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslconfig.h"
 #include "oslclosure.h"
+#include "genclosure.h"
+#include "oslexec_pvt.h"
 
 using namespace OSL;
 
@@ -40,6 +42,8 @@ using namespace OSL;
 #define BOOST_TEST_MAIN
 #include <boost/test/included/unit_test.hpp>
 #include <boost/random.hpp>
+
+#define MY_ID NBUILTIN_CLOSURES
 
 namespace {
 
@@ -93,7 +97,7 @@ public:
 
 ClosureColor create_component(const Color3& w, float f) {
     ClosureColor c;
-    char* mem = c.allocate_component (1, sizeof (MyClosure));
+    char* mem = c.allocate_component (MY_ID, sizeof (MyClosure));
     new (mem) MyClosure(f);
     c *= w;
     return c;
@@ -102,24 +106,35 @@ ClosureColor create_component(const Color3& w, float f) {
 
 } // anonymous namespace
 
+static bool my_compare(int id, const void *dataA, const void *dataB)
+{
+   ClosurePrimitive *primA = (ClosurePrimitive *)dataA;
+   ClosurePrimitive *primB = (ClosurePrimitive *)dataB;
+   return primA->mergeable (primB);
+}
+
 BOOST_AUTO_TEST_CASE (closure_test_add)
 {
+    ShadingSystemImpl *shadingsys = new ShadingSystemImpl();
 #if BOOST_VERSION >= 103900
    // avoid warnings from boost headers
     BOOST_CHECK_CLOSE(0.0f, 0.0f, 0.001f);
     BOOST_CHECK_SMALL(0.0f, 0.001f);
 #endif
+    ClosureParam my_params[] = { CLOSURE_FINISH_PARAM(MyClosure) };
+    shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare, -1, -1, 0);
    // Create a closure with one component
     ClosureColor c;
-    c += create_component (Color3(.1, .1, .1), 0.33f);
+    c.add (create_component (Color3(.1, .1, .1), 0.33f), shadingsys);
 
     BOOST_CHECK_EQUAL (c.ncomponents(), 1);
 
     // Add another component with different params.  It should now look
     // like two components, not combine with the others.
-    c += create_component (Color3(.4, .4, .4), 0.5f);
+    c.add (create_component (Color3(.4, .4, .4), 0.5f), shadingsys);
 
     BOOST_CHECK_EQUAL (c.ncomponents(), 2);
     BOOST_CHECK_EQUAL (c.weight(1), Color3 (0.4, 0.4, 0.4));
     std::cout << "c = " << c << "\n";
+    delete shadingsys;
 }

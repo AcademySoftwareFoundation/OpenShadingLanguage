@@ -191,11 +191,11 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 }
 
 void
-ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params,
-                                    int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
+ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params, int size,
+                                    PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
                                     int sidedness_offset, int labels_offset, int max_labels)
 {
-    m_closure_registry.register_closure(name, id, params, size, prepare, setup,
+    m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare,
                                         sidedness_offset, labels_offset, max_labels);
 }
 
@@ -943,9 +943,9 @@ ShadingSystemImpl::global_heap_offset (ustring name)
 
 
 
-void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params,
-                                      int size, PrepareClosureFunc prepare, SetupClosureFunc setup,
-                                      int sidedness_offset, int labels_offset, int max_labels)
+void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params, int size,
+                                       PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
+                                       int sidedness_offset, int labels_offset, int max_labels)
 {
     if (m_closure_table.size() <= (size_t)id)
         m_closure_table.resize(id + 1);
@@ -956,6 +956,7 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     entry.struct_size = size;
     entry.prepare = prepare;
     entry.setup = setup;
+    entry.compare = compare;
     entry.labels_offset = labels_offset;
     entry.sidedness_offset = sidedness_offset;
     entry.max_labels = max_labels;

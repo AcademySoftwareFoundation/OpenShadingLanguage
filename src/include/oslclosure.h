@@ -501,7 +501,9 @@ public:
 
 };
 
-
+namespace pvt {
+class ShadingSystemImpl;
+}
 
 /// Representation of an OSL 'closure color'.  It houses a linear
 /// combination of weights * components (the components are references
@@ -524,15 +526,11 @@ public:
 
     /// *this += A
     ///
-    void add (const ClosureColor &A);
-    const ClosureColor & operator+= (const ClosureColor &A) {
-        add (A);
-        return *this;
-    }
+    void add (const ClosureColor &A, pvt::ShadingSystemImpl *ss);
 
     /// *this = a+b
     ///
-    void add (const ClosureColor &a, const ClosureColor &b);
+    void add (const ClosureColor &a, const ClosureColor &b, pvt::ShadingSystemImpl *ss);
 
     /// *this *= f
     ///
@@ -561,6 +559,10 @@ public:
     /// For non ClosurePrimitive based components (defined by the user)
     const void * raw_prim (int i) const {
         return (void *)&m_mem[component(i).memoffset];
+    }
+
+    int id (int i) const {
+        return component(i).id;
     }
 
     /// Return whether the component is a builtin closure

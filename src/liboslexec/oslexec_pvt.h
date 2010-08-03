@@ -412,14 +412,13 @@ private:
 /// ShaderInstance), and the connections among them.
 class ShaderGroup {
 public:
-    ShaderGroup () : m_optimized(false) { }
-    ShaderGroup (const ShaderGroup &g)
-        : m_layers(g.m_layers), m_optimized(false) { }
-    ~ShaderGroup () { }
+    ShaderGroup ();
+    ShaderGroup (const ShaderGroup &g);
+    ~ShaderGroup ();
 
     /// Clear the layers
     ///
-    void clear () { m_layers.clear ();  m_optimized = false; }
+    void clear () { m_layers.clear ();  m_optimized = 0;  m_executions = 0; }
 
     /// Append a new shader instance on to the end of this group
     ///
@@ -436,7 +435,8 @@ public:
     ///
     ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
 
-    bool optimized () const { return m_optimized; }
+    int optimized () const { return m_optimized; }
+    void optimized (int opt) { m_optimized = opt; }
 
     size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
     void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
@@ -448,11 +448,16 @@ public:
         m_llvm_compiled_version = func;
     }
 
+    long long int executions () const { return m_executions; }
+
+    void start_running (int npoints=1) { m_executions += npoints; }
+
 private:
     std::vector<ShaderInstanceRef> m_layers;
     RunLLVMGroupFunc m_llvm_compiled_version;
     size_t m_llvm_groupdata_size;
-    volatile bool m_optimized;       ///< Is it already optimized?
+    volatile int m_optimized;        ///< Is it already optimized?
+    atomic_ll m_executions;          ///< Number of times the group executed
     mutex m_mutex;                   ///< Thread-safe optimization
     friend class ShadingSystemImpl;
 };
@@ -696,7 +701,7 @@ private:
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     int m_optimize;                       ///< Runtime optimization level
-    bool m_use_llvm;                      ///< Use LLVM to compile
+    int m_use_llvm;                       ///< Use LLVM to compile
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space

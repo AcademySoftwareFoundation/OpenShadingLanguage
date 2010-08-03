@@ -430,6 +430,30 @@ ShaderInstance::print ()
 
 
 
+ShaderGroup::ShaderGroup ()
+    : m_llvm_compiled_version(NULL), m_optimized(0)
+{
+    m_executions = 0;
+}
+
+
+
+ShaderGroup::ShaderGroup (const ShaderGroup &g)
+    : m_layers(g.m_layers), m_llvm_compiled_version(NULL), m_optimized(0)
+{
+    m_executions = 0;
+}
+
+
+
+ShaderGroup::~ShaderGroup ()
+{
+//    std::cerr << "Shader group " << this << " executed on " 
+//              << executions() << " points\n";
+}
+
+
+
 }; // namespace OSL
 
 #ifdef OSL_NAMESPACE

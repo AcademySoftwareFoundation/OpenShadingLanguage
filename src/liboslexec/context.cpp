@@ -78,8 +78,11 @@ ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
     // Optimize if we haven't already
     for (int i = 0;  i < ShadUseLast;  ++i) {
         ShaderGroup &group (m_attribs->shadergroup ((ShaderUse)i));
-        if (group.nlayers() && ! group.optimized())
-            shadingsys().optimize_group (sas, group);
+        if (group.nlayers()) {
+            group.start_running (m_npoints);
+            if (! group.optimized())
+                shadingsys().optimize_group (sas, group);
+        }
     }
 
     // Allocate enough space on the heap

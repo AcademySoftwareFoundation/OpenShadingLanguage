@@ -3325,7 +3325,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     builder().CreateRetVoid();
 
 #ifdef DEBUG
-    llvm::errs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
+    if (shadingsys().use_llvm() >= 2)
+        llvm::errs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
 #endif
 
     delete m_builder;
@@ -3345,11 +3346,15 @@ RuntimeOptimizer::build_llvm_group ()
     int nlayers = m_group.nlayers();
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
-        func = build_llvm_instance (layer == (nlayers-1));
-        llvm_do_optimization (func, layer == (nlayers-1));
+        bool lastlayer = (layer == (nlayers-1));
+        func = build_llvm_instance (lastlayer);
+        if (lastlayer) {
+            llvm_do_optimization (func, true);
 #ifdef DEBUG
-        llvm::errs() << "func after opt  = " << *func << "\n";
+            if (shadingsys().use_llvm() >= 2)
+                llvm::errs() << "func after opt  = " << *func << "\n";
 #endif
+        }
     }
 
     // Force the JIT to happen now, while we have the lock
@@ -3495,6 +3500,7 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     //
     m_llvm_passes = new llvm::PassManager;
     llvm::PassManager &passes (*m_llvm_passes);
+    passes.add (new llvm::TargetData(llvm_module()));
 
 #if 0
     // N.B. See llvm's include/llvm/Support/StandardPasses.h to see what
@@ -3511,31 +3517,116 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
                                       false /* have exceptions */,
                                       inlining_pass);
 #else
+    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
+    fpm.add (llvm::createCFGSimplificationPass());
+
     // Change memory references to registers
     fpm.add (llvm::createPromoteMemoryToRegisterPass());
+    fpm.add (llvm::createScalarReplAggregatesPass());
     // Combine instructions where possible -- peephole opts & bit-twiddling
     fpm.add (llvm::createInstructionCombiningPass());
     // Eliminate early returns
     fpm.add (llvm::createUnifyFunctionExitNodesPass());
-    // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
-    fpm.add (llvm::createReassociatePass());
-    // Eliminate common sub-expressions
-    fpm.add (llvm::createGVNPass());
-    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-    fpm.add (llvm::createCFGSimplificationPass());
-    // More dead code elimination
-    fpm.add (llvm::createAggressiveDCEPass());
-    // Try to make stuff into registers one last time.
-    fpm.add (llvm::createPromoteMemoryToRegisterPass());
-    // Always add verifier?
-    fpm.add (llvm::createVerifierPass());
 
-    passes.add (new llvm::TargetData(llvm_module()));
+    // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
+//    fpm.add (llvm::createReassociatePass());
+    // Eliminate common sub-expressions
+//    fpm.add (llvm::createGVNPass());
+    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
+//    fpm.add (llvm::createCFGSimplificationPass());
+    // More dead code elimination
+//    fpm.add (llvm::createAggressiveDCEPass());
+    // Try to make stuff into registers one last time.
+//    fpm.add (llvm::createPromoteMemoryToRegisterPass());
+    // Always add verifier?
+//    fpm.add (llvm::createVerifierPass());
+
+
+    // passes.add (llvm::createGlobalOptimizerPass()); // Optimize out global vars
+    //  ? createIPSCCPPass()
+    //  ? createDeadArgEliminationPass
+    // Combine instructions where possible -- peephole opts & bit-twiddling
+    passes.add (llvm::createInstructionCombiningPass());
+    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
+    passes.add (llvm::createCFGSimplificationPass());
+
     // Inline small functions
-    passes.add (llvm::createFunctionInliningPass());
+    passes.add (llvm::createFunctionInliningPass());  // 250?
+//    passes.add (llvm::createFunctionInliningPass());  // 250?
+
+//    passes.add (llvm::createFunctionAttrsPass());       // Set readonly/readnone attrs
+//    passes.add (llvm::createArgumentPromotionPass());   // Scalarize uninlined fn args
+#if 0
+//    passes.add (llvm::createScalarReplAggregatesPass());  // Break up aggregate allocas
+    // if (SimplifyLibCalls)
+    //  passes.add (createSimplifyLibCallsPass());    // Library Call Optimizations
+    passes.add (llvm::createInstructionCombiningPass());  // Cleanup for scalarrepl.
+    passes.add (llvm::createJumpThreadingPass());         // Thread jumps.
+//    passes.add (llvm::createCFGSimplificationPass());  // Merge & remove BBs
+//    passes.add (llvm::createInstructionCombiningPass());  // Combine silly seq's
+    
+    //passes.add (createTailCallEliminationPass());   // Eliminate tail calls
+    //passes.add (createCFGSimplificationPass());     // Merge & remove BBs
+    passes.add (llvm::createReassociatePass());   // Reassociate expressions
+    //passes.add (createLoopRotatePass());            // Rotate Loop
+    //passes.add (createLICMPass());                  // Hoist loop invariants
+    //passes.add (createLoopUnswitchPass(OptimizeSize || OptimizationLevel < 3));
+//    passes.add (llvm::createInstructionCombiningPass());  
+    //passes.add (createIndVarSimplifyPass());        // Canonicalize indvars
+    //passes.add (createLoopDeletionPass());          // Delete dead loops
+    //if (UnrollLoops)
+#endif
+    passes.add (llvm::createLoopUnrollPass());          // Unroll small loops
+#if 0
+//    passes.add (llvm::createInstructionCombiningPass());  // Clean up after the unroller
+    //if (OptimizationLevel > 1)
+    passes.add (llvm::createGVNPass());           // Remove redundancies
+    //passes.add (createMemCpyOptPass());             // Remove memcpy / form memset
+    passes.add (llvm::createSCCPPass());          // Constant prop with SCCP
+      // Run instcombine after redundancy elimination to exploit opportunities
+    // opened up by them.
+    passes.add (llvm::createInstructionCombiningPass());
+    //passes.add (createJumpThreadingPass());         // Thread jumps
+    //passes.add (createDeadStoreEliminationPass());  // Delete dead stores
+    passes.add (llvm::createAggressiveDCEPass()); // Delete dead instructions
+    passes.add (llvm::createCFGSimplificationPass());     // Merge & remove BBs
 #endif
 
+    //if (UnitAtATime) {
+    //  passes.add (createStripDeadPrototypesPass()); // Get rid of dead prototypes
+    //  passes.add (createDeadTypeEliminationPass()); // Eliminate dead types
+      // GlobalOpt already deletes dead functions and globals, at -O3 try a
+      // late pass of GlobalDCE.  It is capable of deleting dead cycles.
+    //  if (OptimizationLevel > 2)
+    //    passes.add (createGlobalDCEPass());         // Remove dead fns and globals.    
+    //  if (OptimizationLevel > 1)
+    //    passes.add (createConstantMergePass());       // Merge dup global constants
+    //}
+
+#endif
     passes.add (llvm::createVerifierPass());
+
+    m_llvm_func_passes_optimized = new llvm::FunctionPassManager(llvm_module());
+    llvm::FunctionPassManager &fpmo (*m_llvm_func_passes_optimized);
+    fpmo.add (new llvm::TargetData(llvm_module()));
+    fpmo.add (llvm::createScalarReplAggregatesPass());
+    fpmo.add (llvm::createInstructionCombiningPass());
+    fpmo.add (llvm::createUnifyFunctionExitNodesPass());
+//    fpmo.add (llvm::createFunctionInliningPass());  // 250?
+    fpmo.add (llvm::createInstructionCombiningPass());
+    fpmo.add (llvm::createCFGSimplificationPass());
+//    fpmo.add (llvm::createFunctionInliningPass());  // 250?
+//    fpmo.add (llvm::createFunctionAttrsPass());       // Set readonly/readnone attrs
+//    fpmo.add (llvm::createArgumentPromotionPass());   // Scalarize uninlined fn args
+    fpmo.add (llvm::createInstructionCombiningPass());  // Cleanup for scalarrepl.
+    fpmo.add (llvm::createJumpThreadingPass());         // Thread jumps.
+    fpmo.add (llvm::createReassociatePass());   // Reassociate expressions
+//    fpmo.add (llvm::createLoopUnrollPass());          // Unroll small loops
+    fpmo.add (llvm::createGVNPass());           // Remove redundancies
+    fpmo.add (llvm::createSCCPPass());          // Constant prop with SCCP
+    fpmo.add (llvm::createInstructionCombiningPass());
+    fpmo.add (llvm::createAggressiveDCEPass()); // Delete dead instructions
+    fpmo.add (llvm::createCFGSimplificationPass());     // Merge & remove BBs
 }
 
 
@@ -3546,9 +3637,18 @@ RuntimeOptimizer::llvm_do_optimization (llvm::Function *func,
 {
     ASSERT (m_llvm_passes != NULL && m_llvm_func_passes != NULL);
 
+#if 0
     m_llvm_func_passes->doInitialization();
     m_llvm_func_passes->run (*func);
     m_llvm_func_passes->doFinalization();
+#else
+    for (llvm::Module::iterator i = llvm_module()->begin();
+         i != llvm_module()->end(); ++i) {
+        m_llvm_func_passes->doInitialization();
+        m_llvm_func_passes->run (*i);
+        m_llvm_func_passes->doFinalization();
+    }
+#endif
 
     if (interproc) {
         // Run module-wide (interprocedural optimization) passes
@@ -3559,9 +3659,9 @@ RuntimeOptimizer::llvm_do_optimization (llvm::Function *func,
         // function now.
 #if 1
         ASSERT (func);
-        m_llvm_func_passes->doInitialization ();
-        m_llvm_func_passes->run (*func);
-        m_llvm_func_passes->doFinalization ();
+        m_llvm_func_passes_optimized->doInitialization ();
+        m_llvm_func_passes_optimized->run (*func);
+        m_llvm_func_passes_optimized->doFinalization ();
 #endif
     }
 }

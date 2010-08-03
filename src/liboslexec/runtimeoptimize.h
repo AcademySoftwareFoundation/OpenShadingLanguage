@@ -54,7 +54,8 @@ public:
           m_inst(NULL), m_next_newconst(0)
 #if USE_LLVM
         , m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
-          m_llvm_passes(NULL), m_llvm_func_passes(NULL)
+          m_llvm_passes(NULL), m_llvm_func_passes(NULL),
+          m_llvm_func_passes_optimized(NULL)
 #endif
     {
     }
@@ -64,6 +65,7 @@ public:
         delete m_builder;
         delete m_llvm_passes;
         delete m_llvm_func_passes;
+        delete m_llvm_func_passes_optimized;
 #endif
     }
 
@@ -552,6 +554,7 @@ private:
     const llvm::PointerType *m_llvm_type_setup_closure_func;
     llvm::PassManager *m_llvm_passes;
     llvm::FunctionPassManager *m_llvm_func_passes;
+    llvm::FunctionPassManager *m_llvm_func_passes_optimized;
 #endif
 
     // Persistant data shared between layers

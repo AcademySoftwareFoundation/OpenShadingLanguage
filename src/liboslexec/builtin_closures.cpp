@@ -104,68 +104,63 @@ struct BuiltinClosure {
     const char         *name;
     ClosureParam       *params;
     PrepareClosureFunc prepare;
-    int                sidedness_offset;
 };
-
-#define BSDFSIDEOFF reckless_offsetof(BSDFClosure, m_sidedness)
-#define EMITSIDEOFF reckless_offsetof(EmissiveClosure, m_sidedness)
-#define NONESIDEOFF -1
 
 BuiltinClosure builtin_closures[NBUILTIN_CLOSURES] = {
     { CLOSURE_BSDF_DIFFUSE_ID,                        "diffuse",     pvt::bsdf_diffuse_params,
-      pvt::bsdf_diffuse_prepare,                      BSDFSIDEOFF },
+      pvt::bsdf_diffuse_prepare },
     { CLOSURE_BSDF_TRANSLUCENT_ID,                    "translucent", pvt::bsdf_translucent_params,
-      pvt::bsdf_translucent_prepare,                  BSDFSIDEOFF },
+      pvt::bsdf_translucent_prepare },
     { CLOSURE_BSDF_REFLECTION_ID,                     "reflection",  pvt::bsdf_reflection_params,
-      pvt::bsdf_reflection_prepare,                   BSDFSIDEOFF },
+      pvt::bsdf_reflection_prepare },
     { CLOSURE_BSDF_REFRACTION_ID,                     "refraction",  pvt::bsdf_refraction_params,
-      pvt::bsdf_refraction_prepare,                   BSDFSIDEOFF },
+      pvt::bsdf_refraction_prepare },
     { CLOSURE_BSDF_DIELECTRIC_ID,                     "dielectric",  pvt::bsdf_dielectric_params,
-      pvt::bsdf_dielectric_prepare,                   BSDFSIDEOFF },
+      pvt::bsdf_dielectric_prepare },
     { CLOSURE_BSDF_TRANSPARENT_ID,                    "transparent", pvt::bsdf_transparent_params,
-      pvt::bsdf_transparent_prepare,                  BSDFSIDEOFF },
+      pvt::bsdf_transparent_prepare },
     { CLOSURE_BSDF_MICROFACET_GGX_ID,                 "microfacet_ggx", pvt::bsdf_microfacet_ggx_params,
-      pvt::bsdf_microfacet_ggx_prepare,               BSDFSIDEOFF },
+      pvt::bsdf_microfacet_ggx_prepare },
     { CLOSURE_BSDF_MICROFACET_GGX_REFRACTION_ID,      "microfacet_ggx_refraction", pvt::bsdf_microfacet_ggx_refraction_params,
-      pvt::bsdf_microfacet_ggx_refraction_prepare,    BSDFSIDEOFF },
+      pvt::bsdf_microfacet_ggx_refraction_prepare },
     { CLOSURE_BSDF_MICROFACET_BECKMANN_ID,            "microfacet_beckmann", pvt::bsdf_microfacet_beckmann_params,
-      pvt::bsdf_microfacet_beckmann_prepare,          BSDFSIDEOFF },
+      pvt::bsdf_microfacet_beckmann_prepare },
     { CLOSURE_BSDF_MICROFACET_BECKMANN_REFRACTION_ID, "microfacet_beckmann_refraction", pvt::bsdf_microfacet_beckmann_refraction_params,
-      pvt::bsdf_microfacet_beckmann_refraction_prepare,BSDFSIDEOFF },
+      pvt::bsdf_microfacet_beckmann_refraction_prepare },
     { CLOSURE_BSDF_WARD_ID,                           "ward",          pvt::bsdf_ward_params,
-      pvt::bsdf_ward_prepare,                         BSDFSIDEOFF },
+      pvt::bsdf_ward_prepare },
     { CLOSURE_BSDF_PHONG_ID,                          "phong",         pvt::bsdf_phong_params,
-      pvt::bsdf_phong_prepare,                        BSDFSIDEOFF },
+      pvt::bsdf_phong_prepare },
     { CLOSURE_BSDF_PHONG_RAMP_ID,                     "phong_ramp",    pvt::bsdf_phong_ramp_params,
-      pvt::bsdf_phong_ramp_prepare,                   BSDFSIDEOFF },
+      pvt::bsdf_phong_ramp_prepare },
     { CLOSURE_BSDF_HAIR_DIFFUSE_ID,                   "hair_diffuse",  pvt::bsdf_hair_diffuse_params,
-      pvt::bsdf_hair_diffuse_prepare,                 BSDFSIDEOFF },
+      pvt::bsdf_hair_diffuse_prepare },
     { CLOSURE_BSDF_HAIR_SPECULAR_ID,                  "hair_specular", pvt::bsdf_hair_specular_params,
-      pvt::bsdf_hair_specular_prepare,                BSDFSIDEOFF },
+      pvt::bsdf_hair_specular_prepare },
     { CLOSURE_BSDF_ASHIKHMIN_VELVET_ID,               "ashikhmin_velvet", pvt::bsdf_ashikhmin_velvet_params,
-      pvt::bsdf_ashikhmin_velvet_prepare,             BSDFSIDEOFF },
+      pvt::bsdf_ashikhmin_velvet_prepare },
     { CLOSURE_BSDF_CLOTH_ID,                          "cloth",           pvt::bsdf_cloth_params,
-      pvt::bsdf_cloth_prepare,                        BSDFSIDEOFF },
+      pvt::bsdf_cloth_prepare },
     { CLOSURE_BSDF_CLOTH_SPECULAR_ID,                 "cloth_specular",  pvt::bsdf_cloth_specular_params,
-      pvt::bsdf_cloth_specular_prepare,               BSDFSIDEOFF },
+      pvt::bsdf_cloth_specular_prepare },
     { CLOSURE_BSDF_FAKEFUR_DIFFUSE_ID,                "fakefur_diffuse", pvt::bsdf_fakefur_diffuse_params,
-      pvt::bsdf_fakefur_diffuse_prepare,              BSDFSIDEOFF },
+      pvt::bsdf_fakefur_diffuse_prepare },
     { CLOSURE_BSDF_FAKEFUR_SPECULAR_ID,               "fakefur_specular",pvt::bsdf_fakefur_specular_params,
-      pvt::bsdf_fakefur_specular_prepare,             BSDFSIDEOFF },
+      pvt::bsdf_fakefur_specular_prepare },
     { CLOSURE_BSDF_FAKEFUR_SKIN_ID,                   "fakefur_skin",    pvt::bsdf_fakefur_skin_params,
-      pvt::bsdf_fakefur_skin_prepare,                 BSDFSIDEOFF },
+      pvt::bsdf_fakefur_skin_prepare },
     { CLOSURE_BSDF_WESTIN_BACKSCATTER_ID,             "westin_backscatter", pvt::bsdf_westin_backscatter_params,
-      pvt::bsdf_westin_backscatter_prepare,           BSDFSIDEOFF },
+      pvt::bsdf_westin_backscatter_prepare },
     { CLOSURE_BSDF_WESTIN_SHEEN_ID,                   "westin_sheen", pvt::bsdf_westin_sheen_params,
-      pvt::bsdf_westin_sheen_prepare,                 BSDFSIDEOFF },
+      pvt::bsdf_westin_sheen_prepare },
     { CLOSURE_BSSRDF_CUBIC_ID,                        "bssrdf_cubic", pvt::closure_bssrdf_cubic_params,
-      pvt::closure_bssrdf_cubic_prepare,              NONESIDEOFF },
+      pvt::closure_bssrdf_cubic_prepare },
     { CLOSURE_EMISSION_ID,                            "emission",     pvt::closure_emission_params,
-      pvt::closure_emission_prepare,                  EMITSIDEOFF },
+      pvt::closure_emission_prepare },
     { CLOSURE_BACKGROUND_ID,                          "background",   pvt::closure_background_params,
-      pvt::closure_background_prepare,                NONESIDEOFF },
+      pvt::closure_background_prepare },
     { CLOSURE_SUBSURFACE_ID,                          "subsurface",   pvt::closure_subsurface_params,
-      pvt::closure_subsurface_prepare,                NONESIDEOFF } };
+      pvt::closure_subsurface_prepare } };
 
 
 
@@ -196,7 +191,7 @@ void ShadingSystem::register_builtin_closures(ShadingSystem *ss)
         int size = clinfo->params[j].offset;
         ASSERT(clinfo->id == cid);
         ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare,
-                              clinfo->sidedness_offset, reckless_offsetof(ClosurePrimitive, m_custom_labels),
+                              reckless_offsetof(ClosurePrimitive, m_custom_labels),
                               ClosurePrimitive::MAXCUSTOM);
     }
 }

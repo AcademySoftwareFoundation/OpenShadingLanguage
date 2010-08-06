@@ -69,16 +69,16 @@ public:
         out << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
     {
         // pdf is implicitly 0 (no indirect sampling)
-        float cosNO = normal_sign * m_N.dot(omega_out);
-        float cosNI = normal_sign * m_N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         if (cosNO > 0 && cosNI > 0) {
             float cosine = omega_out.dot(omega_in);
             pdf = cosine > 0 ? (m_invroughness + 1) * powf(cosine, m_invroughness) : 0;
@@ -88,7 +88,7 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -99,10 +99,7 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
-        Vec3 Ngf, Nf;
-        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return Labels::NONE;
-        float cosNO = Nf.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             domega_in_dx = domega_out_dx;
             domega_in_dy = domega_out_dy;
@@ -115,10 +112,10 @@ public:
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * omega_out;
-            if (Ngf.dot(omega_in) > 0)
+            if (Ng.dot(omega_in) > 0)
             {
                 // common terms for pdf and eval
-                float cosNI = Nf.dot(omega_in);
+                float cosNI = m_N.dot(omega_in);
                 // make sure the direction we chose is still in the right hemisphere
                 if (cosNI > 0)
                 {
@@ -167,16 +164,16 @@ public:
         out << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
     {
         // pdf is implicitly 0 (no indirect sampling)
-        float cosNO = normal_sign * m_N.dot(omega_out);
-        float cosNI = normal_sign * m_N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         if (cosNO > 0 && cosNI > 0) {
             float sinNO2 = 1 - cosNO * cosNO;
             pdf = cosNI * float(M_1_PI);
@@ -186,7 +183,7 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -197,25 +194,22 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
-        Vec3 Ngf, Nf;
-        if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
-           // we are viewing the surface from the right side - send a ray out with cosine
-           // distribution over the hemisphere
-           sample_cos_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
-           if (Ngf.dot(omega_in) > 0) {
-               // TODO: account for sheen when sampling
-               float cosNO = Nf.dot(omega_out);
-               float sinNO2 = 1 - cosNO * cosNO;
-               float westin = sinNO2 > 0 ? powf(sinNO2, 0.5f * m_edginess) * pdf : 0;
-               eval.setValue(westin, westin, westin);
-               // TODO: find a better approximation for the diffuse bounce
-               domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
-               domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
-               domega_in_dx *= 125;
-               domega_in_dy *= 125;
-           } else
-               pdf = 0;
-        }
+        // we are viewing the surface from the right side - send a ray out with cosine
+        // distribution over the hemisphere
+        sample_cos_hemisphere (m_N, omega_out, randu, randv, omega_in, pdf);
+        if (Ng.dot(omega_in) > 0) {
+            // TODO: account for sheen when sampling
+            float cosNO = m_N.dot(omega_out);
+            float sinNO2 = 1 - cosNO * cosNO;
+            float westin = sinNO2 > 0 ? powf(sinNO2, 0.5f * m_edginess) * pdf : 0;
+            eval.setValue(westin, westin, westin);
+            // TODO: find a better approximation for the diffuse bounce
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
+            domega_in_dx *= 125;
+            domega_in_dy *= 125;
+        } else
+            pdf = 0;
         return Labels::REFLECT;
     }
 };

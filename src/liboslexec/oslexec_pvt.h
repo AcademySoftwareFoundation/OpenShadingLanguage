@@ -484,15 +484,13 @@ public:
         // us what is the offset of the ustring[MAXLABELS]
         // field inside the target struct.
         int                       labels_offset;
-        // In case it accepts sidedness ...
-        int                       sidedness_offset;
         // And if it does handle labels, this is the limit
         int                       max_labels;
     };
 
     void register_closure(const char *name, int id, const ClosureParam *params, int size,
                           PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                          int sidedness_offset, int labels_offset, int max_labels);
+                          int labels_offset, int max_labels);
 
     const ClosureEntry *get_entry(ustring name)const;
     const ClosureEntry *get_entry(int id)const {
@@ -627,7 +625,7 @@ public:
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                                  int sidedness_offset, int labels_offset, int max_labels);
+                                  int labels_offset, int max_labels);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
     }
@@ -1356,6 +1354,7 @@ struct SingleShaderGlobal {
     int iscameraray;       ///< True if computing for camera ray
     int isshadowray;       ///< True if computing for shadow opacity
     int flipHandedness;    ///< flips the result of calculatenormal()
+    int backfacing;        ///< True if we want to shade the back face
 };
 
 namespace Strings {

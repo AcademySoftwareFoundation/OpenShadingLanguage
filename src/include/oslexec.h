@@ -187,7 +187,7 @@ public:
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                                  int sidedness_offset, int labels_offset, int max_labels) = 0;
+                                  int labels_offset, int max_labels) = 0;
 
     static void register_builtin_closures(ShadingSystem *ss);
     static void register_builtin_closures(OSLCompiler *cc);
@@ -207,7 +207,7 @@ class ShaderGlobals
 {
 public:
     ShaderGlobals () 
-        : iscameraray(true), isshadowray(false), flipHandedness(false)
+        : iscameraray(true), isshadowray(false), flipHandedness(false), backfacing(false)
     { }
     ~ShaderGlobals () { }
 
@@ -238,6 +238,7 @@ public:
     bool iscameraray;                  ///< True if computing for camera ray
     bool isshadowray;                  ///< True if computing for shadow opacity
     bool flipHandedness;               ///< flips the result of calculatenormal()
+    bool backfacing;                   ///< True if we want to shade the back face
 };
 
 

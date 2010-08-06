@@ -51,7 +51,7 @@ class MyClosure : public BSDFClosure {
     float m_f;
 
 public:
-    MyClosure (float f) : BSDFClosure(None, Labels::NONE, None), m_f (f) { }
+    MyClosure (float f) : BSDFClosure(Labels::NONE, None), m_f (f) { }
 
     void setup() {};
 
@@ -69,17 +69,17 @@ public:
         out << "my (" << m_f << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
     BOOST_CHECK_SMALL(0.0f, 0.001f);
 #endif
     ClosureParam my_params[] = { CLOSURE_FINISH_PARAM(MyClosure) };
-    shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare, -1, -1, 0);
+    shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare, -1, 0);
    // Create a closure with one component
     ClosureColor c;
     c.add (create_component (Color3(.1, .1, .1), 0.33f), shadingsys);

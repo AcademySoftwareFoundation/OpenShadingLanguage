@@ -116,12 +116,12 @@ public:
         out << "fakefur_diffuse_T ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "))";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         // T from fur tangent map is expected to be in world space
         // 
@@ -133,7 +133,7 @@ public:
         float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
         sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
 
-        float cosNI = m_N.dot(omega_in) * normal_sign;
+        float cosNI = m_N.dot(omega_in);
         float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
         float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
     
@@ -154,7 +154,7 @@ public:
         return Color3 (bsdf, bsdf, bsdf);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
        return Color3 (0, 0, 0);
     }
@@ -165,41 +165,38 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
-        Vec3 Ngf, Nf;
-        if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
-           // we are viewing the surface from the right side - send a ray out with cosine
-           // distribution over the hemisphere
-           sample_cos_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
+        // we are viewing the surface from the right side - send a ray out with cosine
+        // distribution over the hemisphere
+        sample_cos_hemisphere (m_N, omega_out, randu, randv, omega_in, pdf);
 
-           if (Ngf.dot(omega_in) > 0) {
-               Vec3 xTO = m_T.cross(omega_out);
-               Vec3 xTI = m_T.cross(omega_in);      
-               float kappa = xTI.dot(xTO);
+        if (Ng.dot(omega_in) > 0) {
+            Vec3 xTO = m_T.cross(omega_out);
+            Vec3 xTI = m_T.cross(omega_in);      
+            float kappa = xTI.dot(xTO);
 
-               float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
-               sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
+            float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
+            sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
 
-               float cosNI = Nf.dot(omega_in);
-               float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
-               float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
+            float cosNI = m_N.dot(omega_in);
+            float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
+            float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
     
-               float furIllum = sigmaDir * sigmaSurface;
+            float furIllum = sigmaDir * sigmaSurface;
 
-               float cosTI = m_T.dot(omega_in);
-               // fake fur over skin opacity 
-               float furOpac = 1.f-furOpacity(cosNI, cosTI, m_fur_density, 
-                                       m_fur_avg_radius, m_fur_length);
+            float cosTI = m_T.dot(omega_in);
+            // fake fur over skin opacity 
+            float furOpac = 1.f-furOpacity(cosNI, cosTI, m_fur_density, 
+                                    m_fur_avg_radius, m_fur_length);
 
-               float result = pdf * furOpac * furIllum;
-               eval.setValue(result, result, result);
-               // TODO: find a better approximation for the diffuse bounce
-               domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
-               domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
-               domega_in_dx *= 125;
-               domega_in_dy *= 125;
-           } else
-                pdf = 0.0f;
-        }
+            float result = pdf * furOpac * furIllum;
+            eval.setValue(result, result, result);
+            // TODO: find a better approximation for the diffuse bounce
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
+            domega_in_dx *= 125;
+            domega_in_dy *= 125;
+        } else
+             pdf = 0.0f;
         return Labels::NONE;
     }
 };
@@ -263,13 +260,13 @@ public:
         out << "fakefur_specular_T ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), " << m_offset << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         // we don't know how to sample this
         return 0.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
 
         // T from fur tangent map is expected to be in world space
@@ -282,7 +279,7 @@ public:
         float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
         sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
 
-        float cosNI = m_N.dot(omega_in) * normal_sign;
+        float cosNI = m_N.dot(omega_in);
     
         float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
         float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
@@ -317,7 +314,7 @@ public:
         return Color3 (bsdf, bsdf, bsdf);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
        return Color3 (0, 0, 0);
     }
@@ -383,12 +380,12 @@ public:
         out << "fakefur_skin_T ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), ";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
 
         // T from fur tangent map is expected to be in world space
@@ -401,7 +398,7 @@ public:
         float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
         sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
 
-        float cosNI = m_N.dot(omega_in) * normal_sign;
+        float cosNI = m_N.dot(omega_in);
         float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
         float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
     
@@ -420,7 +417,7 @@ public:
         return Color3 (cos_pi, cos_pi, cos_pi);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
        return Color3 (0, 0, 0);
     }
@@ -431,41 +428,38 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
-        Vec3 Ngf, Nf;
-        if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
-           // we are viewing the surface from the right side - send a ray out with cosine
-           // distribution over the hemisphere
-           sample_cos_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
+        // we are viewing the surface from the right side - send a ray out with cosine
+        // distribution over the hemisphere
+        sample_cos_hemisphere (m_N, omega_out, randu, randv, omega_in, pdf);
 
-           if (Ngf.dot(omega_in) > 0) {
-               Vec3 xTO = m_T.cross(omega_out);
-               Vec3 xTI = m_T.cross(omega_in);      
-               float kappa = xTI.dot(xTO);
+        if (Ng.dot(omega_in) > 0) {
+            Vec3 xTO = m_T.cross(omega_out);
+            Vec3 xTI = m_T.cross(omega_in);      
+            float kappa = xTI.dot(xTO);
 
-               float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
-               sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
+            float sigmaDir  = (1.f+kappa)*0.5f * m_fur_reflectivity;
+            sigmaDir += (1.f-kappa)*0.5f * m_fur_transmission;
 
-               float cosNI = Nf.dot(omega_in);
-               float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
-               float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
+            float cosNI = m_N.dot(omega_in);
+            float sigmaSurfaceA = smoothstep(m_shadow_start, m_shadow_end, cosNI);
+            float sigmaSurface = m_fur_attenuation * sigmaSurfaceA;
     
-               float furIllum = sigmaDir * sigmaSurface;
+            float furIllum = sigmaDir * sigmaSurface;
 
-               float cosTI = m_T.dot(omega_in);
-               // fake fur over skin opacity 
-               float furOpac = 1.f-furOpacity(cosNI, cosTI, m_fur_density, 
-                                       m_fur_avg_radius, m_fur_length);
+            float cosTI = m_T.dot(omega_in);
+            // fake fur over skin opacity 
+            float furOpac = 1.f-furOpacity(cosNI, cosTI, m_fur_density, 
+                                    m_fur_avg_radius, m_fur_length);
 
-               float result = pdf * furOpac * furIllum;
-               eval.setValue(result, result, result);
-               // TODO: find a better approximation for the diffuse bounce
-               domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
-               domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
-               domega_in_dx *= 125;
-               domega_in_dy *= 125;
-           } else
-                pdf = 0.0f;
-        }
+            float result = pdf * furOpac * furIllum;
+            eval.setValue(result, result, result);
+            // TODO: find a better approximation for the diffuse bounce
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
+            domega_in_dx *= 125;
+            domega_in_dy *= 125;
+        } else
+             pdf = 0.0f;
         return Labels::NONE;
     }
 };

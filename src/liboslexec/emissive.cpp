@@ -69,7 +69,6 @@ public:
         const GenericEmissiveClosure *comp = (const GenericEmissiveClosure *)other;
         return m_inner_angle == comp->m_inner_angle &&
             m_outer_angle == comp->m_outer_angle && 
-            m_sidedness == comp->m_sidedness &&
             EmissiveClosure::mergeable(other);
     }
 

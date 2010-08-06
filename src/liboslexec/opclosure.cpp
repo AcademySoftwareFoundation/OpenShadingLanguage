@@ -61,7 +61,7 @@ DECLOP (OP_closure)
     const ClosureRegistry::ClosureEntry * clentry = NULL;
     clentry = exec->shadingsys()->find_closure(closure_name[exec->beginpoint()]);
     ASSERT(clentry);
-    VaryingRef<ustring> sidedness(NULL, 0);
+
     VaryingRef<ustring> labels[ClosurePrimitive::MAXCUSTOM+1];
     int nlabels = 0;
     int nformal_params = nargs;
@@ -72,10 +72,7 @@ DECLOP (OP_closure)
              ustring name = * (ustring *) Name.data();
              Symbol &Val (exec->sym (args[tok + 1]));
              if (Val.typespec().is_string()) {
-                 if (name == Strings::sidedness) {
-                     sidedness.init((ustring*) Val.data(), Val.step());
-                     tok++;
-                 } else if (name == Strings::label) {
+                 if (name == Strings::label) {
                      if (nlabels == ClosurePrimitive::MAXCUSTOM)
                          exec->error ("Too many labels to closure (%s:%d)",
                                        exec->op().sourcefile().c_str(),
@@ -109,25 +106,12 @@ DECLOP (OP_closure)
             clentry->prepare(exec->renderer(), clentry->id, mem);
         else
             memset(mem, 0, clentry->struct_size);
-        ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
-        if (sidedness) {
-            if (sidedness[i] == Strings::front)
-                side = ClosurePrimitive::Front;
-            else if (sidedness[i] == Strings::back)
-                side = ClosurePrimitive::Back;
-            else if (sidedness[i] == Strings::both)
-                side = ClosurePrimitive::Both;
-            else
-                side = ClosurePrimitive::None;
-        }
         for (size_t carg = 0; carg < clentry->params.size(); ++carg)
         {
             const ClosureParam &p = clentry->params[carg];
             ASSERT(p.offset < clentry->struct_size);
             write_closure_param(p.type, mem, p.offset, carg + 2, i, exec, nargs, args);
         }
-        if (clentry->sidedness_offset >= 0)
-            *(int *)(mem + clentry->sidedness_offset) = side;
         if (clentry->labels_offset >= 0)
         {
             int l;

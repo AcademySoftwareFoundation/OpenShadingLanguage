@@ -73,21 +73,21 @@ public:
         out << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
-        float cosNO = normal_sign * m_N.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         return fresnel_dielectric(cosNO, m_eta);
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cosNO = normal_sign * m_N.dot(omega_out);
-        float cosNI = normal_sign * m_N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
         if (cosNO > 0 && cosNI > 0) {
             Vec3 H = omega_in + omega_out;
             H.normalize();
 
-            float cosNH = normal_sign * m_N.dot(H);
+            float cosNH = m_N.dot(H);
             float cosHO = fabsf(omega_out.dot(H));
 
             float cosNHdivHO = cosNH / cosHO;
@@ -112,7 +112,7 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -123,47 +123,43 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
+        // we are viewing the surface from above - send a ray out with uniform
+        // distribution over the hemisphere
+        sample_uniform_hemisphere (m_N, omega_out, randu, randv, omega_in, pdf);
+        if (Ng.dot(omega_in) > 0) {
+            Vec3 H = omega_in + omega_out;
+            H.normalize();
 
-        Vec3 Ngf, Nf;
-        if (faceforward (omega_out, Ng, m_N, Ngf, Nf)) {
-            // we are viewing the surface from above - send a ray out with uniform
-            // distribution over the hemisphere
-            sample_uniform_hemisphere (Nf, omega_out, randu, randv, omega_in, pdf);
-            if (Ngf.dot(omega_in) > 0) {
-                Vec3 H = omega_in + omega_out;
-                H.normalize();
+            float cosNI = m_N.dot(omega_in);
+            float cosNO = m_N.dot(omega_out);
+            float cosNH = m_N.dot(H);
+            float cosHO = fabsf(omega_out.dot(H));
 
-                float cosNI = Nf.dot(omega_in);
-                float cosNO = Nf.dot(omega_out);
-                float cosNH = Nf.dot(H);
-                float cosHO = fabsf(omega_out.dot(H));
+            float cosNHdivHO = cosNH / cosHO;
+            cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
 
-                float cosNHdivHO = cosNH / cosHO;
-                cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
+            float fac1 = 2 * fabsf(cosNHdivHO * cosNO);
+            float fac2 = 2 * fabsf(cosNHdivHO * cosNI);
 
-                float fac1 = 2 * fabsf(cosNHdivHO * cosNO);
-                float fac2 = 2 * fabsf(cosNHdivHO * cosNI);
+            float sinNH2 = 1 - cosNH * cosNH;
+            float sinNH4 = sinNH2 * sinNH2;
+            float cotangent2 =  (cosNH * cosNH) / sinNH2; 
 
-                float sinNH2 = 1 - cosNH * cosNH;
-                float sinNH4 = sinNH2 * sinNH2;
-                float cotangent2 =  (cosNH * cosNH) / sinNH2; 
+            float D = expf(-cotangent2 * m_invsigma2) * m_invsigma2 * float(M_1_PI) / sinNH4;
+            float G = std::min(1.0f, std::min(fac1, fac2)); // TODO: derive G from D analytically
+            float F = fresnel_dielectric(cosNO, m_eta);
 
-                float D = expf(-cotangent2 * m_invsigma2) * m_invsigma2 * float(M_1_PI) / sinNH4;
-                float G = std::min(1.0f, std::min(fac1, fac2)); // TODO: derive G from D analytically
-                float F = fresnel_dielectric(cosNO, m_eta);
+            float power = 0.25f * (D * G * F) / cosNO;
 
-                float power = 0.25f * (D * G * F) / cosNO;
+            eval.setValue(power, power, power);
 
-                eval.setValue(power, power, power);
-
-                // TODO: find a better approximation for the retroreflective bounce
-                domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
-                domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
-                domega_in_dx *= 125;
-                domega_in_dy *= 125;
-            } else
-                pdf = 0;
-        }
+            // TODO: find a better approximation for the retroreflective bounce
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
+            domega_in_dx *= 125;
+            domega_in_dy *= 125;
+        } else
+            pdf = 0;
         return Labels::REFLECT;
     }
 

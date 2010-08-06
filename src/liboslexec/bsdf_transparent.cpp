@@ -44,7 +44,7 @@ class TransparentClosure : public BSDFClosure {
 public:
     TransparentClosure() : BSDFClosure(Labels::STRAIGHT, Back) { }
 
-    void setup() { m_sidedness = Both; }
+    void setup() {}
 
     size_t memsize () const { return sizeof(*this); }
 
@@ -54,17 +54,17 @@ public:
         out << name() << " ()";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }

@@ -62,12 +62,12 @@ public:
         out << name() << " ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "))";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         float cos_a = m_T.dot(omega_in);
         float bsdf = sqrtf(std::max(1 - cos_a*cos_a, 0.0f)) * (float) (M_1_PI * M_1_PI);
@@ -75,9 +75,9 @@ public:
         return Color3 (bsdf, bsdf, bsdf);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-       return eval_reflect(omega_out, omega_in, normal_sign, pdf);
+       return eval_reflect(omega_out, omega_in, pdf);
     }
 
     ustring sample (const Vec3 &Ng,
@@ -135,13 +135,13 @@ public:
         out << name() << " ((" << m_T[0] << ", " << m_T[1] << ", " << m_T[2] << "), " << m_offset << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         // we don't know how to sample this
         return 0.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         //float angle_i = acosf(m_T.dot(omega_in));
         //float angle_o = M_PI - (acosf(m_T.dot(omega_out)) + m_offset);
@@ -163,9 +163,9 @@ public:
         return Color3 (bsdf, bsdf, bsdf);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-       return eval_reflect(omega_out, omega_in, normal_sign, pdf);
+       return eval_reflect(omega_out, omega_in, pdf);
     }
 
     ustring sample (const Vec3 &Ng,

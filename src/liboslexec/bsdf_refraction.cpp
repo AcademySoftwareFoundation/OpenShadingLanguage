@@ -45,10 +45,7 @@ public:
     float m_eta;   // ratio of indices of refraction (inside / outside)
     RefractionClosure() : BSDFClosure(Labels::SINGULAR, Back) { }
 
-    void setup()
-    {
-        m_sidedness = Both;
-    }
+    void setup() {}
 
     bool mergeable (const ClosurePrimitive *other) const {
         const RefractionClosure *comp = (const RefractionClosure *)other;
@@ -67,20 +64,20 @@ public:
         out << ")";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
-        float cosNO = normal_sign * m_N.dot(omega_out);
-        return 1.0f - fresnel_dielectric(cosNO, normal_sign > 0 ? m_eta : 1.0f / m_eta);
+        float cosNO = m_N.dot(omega_out);
+        return 1.0f - fresnel_dielectric(cosNO, m_eta);
     }
 
     ustring sample (const Vec3 &Ng,
@@ -97,7 +94,7 @@ public:
                                           R, dRdx, dRdy,
                                           T, dTdx, dTdy,
                                           inside);
-        if (Ft > 0) {
+        if (Ft > 0 && !inside) {
             pdf = 1;
             eval.setValue(Ft, Ft, Ft);
             omega_in = T;
@@ -116,10 +113,7 @@ public:
     float m_eta;   // ratio of indices of refraction (inside / outside)
     DielectricClosure() : BSDFClosure(Labels::SINGULAR, Both) { }
 
-    void setup()
-    {
-        m_sidedness = Both;
-    }
+    void setup() { }
 
     bool mergeable (const ClosurePrimitive *other) const {
         const DielectricClosure *comp = (const DielectricClosure *)other;
@@ -138,17 +132,17 @@ public:
         out << ")";
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         return 1.0f;
     }
@@ -168,21 +162,26 @@ public:
                                       R, dRdx, dRdy,
                                       T, dTdx, dTdy,
                                       inside);
-        if (randu < Fr) {
-            eval.setValue(Fr, Fr, Fr);
-            pdf = Fr;
-            omega_in = R;
-            domega_in_dx = dRdx;
-            domega_in_dy = dRdy;
-            return Labels::REFLECT;
-        } else {
-            pdf = 1 - Fr;
-            eval.setValue(pdf, pdf, pdf);
-            omega_in = T;
-            domega_in_dx = dTdx;
-            domega_in_dy = dTdy;
-            return Labels::TRANSMIT;
+        if (!inside)
+        {
+            if (randu < Fr) {
+                eval.setValue(Fr, Fr, Fr);
+                pdf = Fr;
+                omega_in = R;
+                domega_in_dx = dRdx;
+                domega_in_dy = dRdy;
+                return Labels::REFLECT;
+            } else {
+                pdf = 1 - Fr;
+                eval.setValue(pdf, pdf, pdf);
+                omega_in = T;
+                domega_in_dx = dTdx;
+                domega_in_dy = dTdy;
+                return Labels::TRANSMIT;
+            }
         }
+        else
+            return Labels::NONE;
     }
 };
 

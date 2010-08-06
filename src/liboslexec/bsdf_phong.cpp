@@ -65,18 +65,18 @@ public:
         out << m_exponent << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
          return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cosNI = normal_sign * m_N.dot(omega_in);
-        float cosNO = normal_sign * m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
         if (cosNI > 0 && cosNO > 0) {
            // reflect the view vector
-           Vec3 R = (2 * cosNO * normal_sign) * m_N - omega_out;
+           Vec3 R = (2 * cosNO) * m_N - omega_out;
            float cosRI = R.dot(omega_in);
            if (cosRI > 0) {
                float common = 0.5f * (float) M_1_PI * powf(cosRI, m_exponent);
@@ -88,7 +88,7 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -99,15 +99,12 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
-        Vec3 Ngf, Nf;
-        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return Labels::NONE;
-        float cosNO = Nf.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO) * Nf - omega_out;
-            domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
-            domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
+            Vec3 R = (2 * cosNO) * m_N - omega_out;
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
             Vec3 T, B;
             make_orthonormals (R, T, B);
             float phi = 2 * (float) M_PI * randu;
@@ -117,10 +114,10 @@ public:
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * R;
-            if (Ngf.dot(omega_in) > 0)
+            if (Ng.dot(omega_in) > 0)
             {
                 // common terms for pdf and eval
-                float cosNI = Nf.dot(omega_in);
+                float cosNI = m_N.dot(omega_in);
                 // make sure the direction we chose is still in the right hemisphere
                 if (cosNI > 0)
                 {
@@ -183,18 +180,18 @@ public:
         return m_colors[ipos] * (1.0f - offset) + m_colors[ipos+1] * offset;
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
          return 1.0f;
     }
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
-        float cosNI = normal_sign * m_N.dot(omega_in);
-        float cosNO = normal_sign * m_N.dot(omega_out);
+        float cosNI = m_N.dot(omega_in);
+        float cosNO = m_N.dot(omega_out);
         if (cosNI > 0 && cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO * normal_sign) * m_N - omega_out;
+            Vec3 R = (2 * cosNO) * m_N - omega_out;
             float cosRI = R.dot(omega_in);
             if (cosRI > 0) {
                 float cosp = powf(cosRI, m_exponent);
@@ -207,7 +204,7 @@ public:
         return Color3 (0, 0, 0);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float& pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float& pdf) const
     {
         return Color3 (0, 0, 0);
     }
@@ -218,15 +215,12 @@ public:
                  Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                  float &pdf, Color3 &eval) const
     {
-        Vec3 Ngf, Nf;
-        if (!faceforward (omega_out, Ng, m_N, Ngf, Nf))
-            return Labels::NONE;
-        float cosNO = Nf.dot(omega_out);
+        float cosNO = m_N.dot(omega_out);
         if (cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO) * Nf - omega_out;
-            domega_in_dx = (2 * Nf.dot(domega_out_dx)) * Nf - domega_out_dx;
-            domega_in_dy = (2 * Nf.dot(domega_out_dy)) * Nf - domega_out_dy;
+            Vec3 R = (2 * cosNO) * m_N - omega_out;
+            domega_in_dx = (2 * m_N.dot(domega_out_dx)) * m_N - domega_out_dx;
+            domega_in_dy = (2 * m_N.dot(domega_out_dy)) * m_N - domega_out_dy;
             Vec3 T, B;
             make_orthonormals (R, T, B);
             float phi = 2 * (float) M_PI * randu;
@@ -236,10 +230,10 @@ public:
             omega_in = (cosf(phi) * sinTheta) * T +
                        (sinf(phi) * sinTheta) * B +
                        (            cosTheta) * R;
-            if (Ngf.dot(omega_in) > 0)
+            if (Ng.dot(omega_in) > 0)
             {
                 // common terms for pdf and eval
-                float cosNI = Nf.dot(omega_in);
+                float cosNI = m_N.dot(omega_in);
                 // make sure the direction we chose is still in the right hemisphere
                 if (cosNI > 0)
                 {

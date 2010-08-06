@@ -1029,6 +1029,7 @@ static const char * builtin_func_args [] = {
     "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", "!deriv", NULL,
     "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
+    "backfacing", "i", NULL,
     "bump", "xf", "xsf", "xv", "!deriv", NULL,
     "calculatenormal", "vp", "!deriv", NULL,
     "cellnoise", NOISE_ARGS, NULL,

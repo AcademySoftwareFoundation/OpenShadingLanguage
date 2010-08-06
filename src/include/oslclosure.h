@@ -237,11 +237,6 @@ private:
 /// for a BSDF-like material.
 class BSDFClosure : public ClosurePrimitive {
 public:
-    BSDFClosure (Sidedness side, ustring scattering, Sidedness eval_sidedness = Front) :
-        ClosurePrimitive (BSDF),
-        m_sidedness(side),
-        m_eval_sidedness (eval_sidedness),
-        m_scattering_label (scattering) { }
     BSDFClosure (ustring scattering, Sidedness eval_sidedness = Front) :
         ClosurePrimitive (BSDF),
         m_eval_sidedness (eval_sidedness),
@@ -249,74 +244,11 @@ public:
     ~BSDFClosure () { }
 
 
-    bool mergeable (const ClosurePrimitive *other) const {
-        const BSDFClosure *comp = (const BSDFClosure *)other;
-        return m_sidedness == comp->m_sidedness &&
-            ClosurePrimitive::mergeable(other);
-    }
-
-    /// Given the side from which we are viewing this closure, return which side
+    /// Assuming the side of the viewer is always Front, return which side
     /// it is sensitive to light on.
     ///
-    /// Here is a table for this function, notice that Front is 1, Back is 2 and 3 is Both
-    ///
-    ///  m_sidedness m_eval_sidedness viewing_side   ligh_side(result)
-    ///     None            *               *      =      None
-    ///       *           None              *      =      None
-    ///       *             *             None     =  (impossible)
-    ///     Front         Front           Front    =      Fron
-    ///     Front         Front           Back     =      None
-    ///     Front         Back            Front    =      Back
-    ///     Front         Back            Back     =      None
-    ///     Front         Both            Front    =      Both
-    ///     Front         Both            Back     =      None
-    ///     Back          Front           Front    =      None
-    ///     Back          Front           Back     =      Back
-    ///     Back          Back            Front    =      None
-    ///     Back          Back            Back     =      Fron
-    ///     Back          Both            Front    =      None
-    ///     Back          Both            Back     =      Both
-    ///     Both          Front           Front    =      Fron
-    ///     Both          Front           Back     =      Back
-    ///     Both          Back            Front    =      Back
-    ///     Both          Back            Back     =      Fron
-    ///     Both          Both            Front    =      Both
-    ///     Both          Both            Back     =      Both
-    ///
-    ///       reordered for convenience ...
-    ///
-    ///  m_sidedness m_eval_sidedness viewing_side   ligh_side(result)
-    ///       *             *             None     =  (impossible)
-    ///     None            *               *      =      None  (m_sidedness & viewing_side)
-    ///     Front         Front           Back     =      None  (m_sidedness & viewing_side)
-    ///     Front         Back            Back     =      None  (m_sidedness & viewing_side)
-    ///     Front         Both            Back     =      None  (m_sidedness & viewing_side)
-    ///     Back          Front           Front    =      None  (m_sidedness & viewing_side)
-    ///     Back          Back            Front    =      None  (m_sidedness & viewing_side)
-    ///     Back          Both            Front    =      None  (m_sidedness & viewing_side)
-    ///       *           None              *      =      None  m_eval_sidedness
-    ///     Front         Both            Front    =      Both  Both
-    ///     Back          Both            Back     =      Both  Both
-    ///     Both          Both            Front    =      Both  Both
-    ///     Both          Both            Back     =      Both  Both
-    ///     Front         Front           Front    =      Front viewing_side
-    ///     Back          Front           Back     =      Back  viewing_side
-    ///     Both          Front           Front    =      Front viewing_side
-    ///     Both          Front           Back     =      Back  viewing_side
-    ///     Front         Back            Front    =      Back  viewing_side ^ Both
-    ///     Back          Back            Back     =      Front viewing_side ^ Both
-    ///     Both          Back            Front    =      Back  viewing_side ^ Both
-    ///     Both          Back            Back     =      Front viewing_side ^ Both
-    ///
-    Sidedness get_light_side(Sidedness viewing_side) const {
-        if (!((m_sidedness & viewing_side) && m_eval_sidedness))
-            return None;
-        switch (m_eval_sidedness) {
-            case Front: return viewing_side;
-            case Back:  return Sidedness(viewing_side ^ Both);
-            case Both:  return Both;
-            default:    return None;
-        }
+    Sidedness get_light_side() const {
+        return m_eval_sidedness;
     }
     /// Return the scattering label for this primitive
     ///
@@ -341,18 +273,15 @@ public:
     /// Most bsdf's are designed to integrate to 1.0, except the fresnel affected
     /// ones. And returning 1.0 is also a safe value for when eval is too complicated
     /// to integrate.
-    virtual float albedo (const Vec3 &omega_out, float normal_sign) const = 0;
+    virtual float albedo (const Vec3 &omega_out) const = 0;
 
     /// Evaluate the extended BRDF and BTDF kernels -- Given viewing direction
     /// omega_out and lighting direction omega_in (both pointing away from the
     /// surface), compute the amount of radiance to be transfered between these
     /// two directions. This also computes the probability of sampling the
-    /// direction omega_in from the sample method. The parameter normal_sign
-    /// tells this function which side the normal should be pointing to account
-    /// for sidedness: its value will be +1 when the surface is viewed from the
-    /// front side, and -1 when viewed from the back side.
-    virtual Color3 eval_reflect  (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const = 0;
-    virtual Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const = 0;
+    /// direction omega_in from the sample method.
+    virtual Color3 eval_reflect  (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const = 0;
+    virtual Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const = 0;
 
     /// Sample the BSDF -- Given instance parameters, viewing direction omega_out
     /// (pointing away from the surface), and random deviates randu and
@@ -370,29 +299,7 @@ public:
                          Vec3 &omega_in, Vec3 &domega_in_dx, Vec3 &domega_in_dy,
                          float &pdf, Color3 &eval) const = 0;
 
-    Sidedness m_sidedness;      // which sides are sensitive to light?
 protected:
-    /// Helper function to perform a faceforward on the geometric and shading
-    /// normals according to what is allowed by the sidedness flag
-    bool faceforward (const Vec3 &omega_out,
-                      const Vec3 &Ng, const Vec3 &N,
-                      Vec3 &Ngf, Vec3 &Nf) const {
-        // figure out sidedness
-        float cosNgO = Ng.dot(omega_out);
-        if (cosNgO > 0 && (m_sidedness & Front)) {
-            Nf = N;
-            Ngf = Ng;
-            return true;
-        } else if (cosNgO < 0 && (m_sidedness & Back)) {
-            // we are behind the surface
-            Nf = -N;
-            Ngf = -Ng;
-            return true;
-        } else {
-            // on the wrong side of the surface
-            return false;
-        }
-    }
 
 private:
     Sidedness m_eval_sidedness; // which canonical sides are sensitive to light?
@@ -453,19 +360,7 @@ private:
 class EmissiveClosure : public ClosurePrimitive {
 public:
     EmissiveClosure () : ClosurePrimitive (Emissive) { }
-    EmissiveClosure (Sidedness side) : ClosurePrimitive (Emissive), m_sidedness (side) { }
     ~EmissiveClosure () { }
-
-    bool mergeable (const ClosurePrimitive *other) const {
-        const EmissiveClosure *comp = (const EmissiveClosure *)other;
-        return m_sidedness == comp->m_sidedness &&
-            ClosurePrimitive::mergeable(other);
-    }
-
-    /// Returns true if light is emitted on the specified side of this closure
-    bool is_light_side(Sidedness viewing_side) const {
-        return (viewing_side & m_sidedness) != 0;
-    }
 
     /// Evaluate the emission -- Given instance parameters, the light's surface
     /// normal N and the viewing direction omega_out, compute the outgoing
@@ -486,7 +381,6 @@ public:
     /// the PDF computed by sample().
     virtual float pdf (const Vec3 &Ng,
                        const Vec3 &omega_out) const = 0;
-    Sidedness m_sidedness;
 };
 
 

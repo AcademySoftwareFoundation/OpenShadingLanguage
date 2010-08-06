@@ -146,16 +146,16 @@ public:
         out << ")";
     }
 
-    float albedo (const Vec3 &omega_out, float normal_sign) const
+    float albedo (const Vec3 &omega_out) const
     {
         // we don't know how to sample this
         return 0.0f;
     }
 
 
-    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float normal_sign, float &pdf) const
+    Color3 eval_reflect (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
     {
-        Vec3 Nn = m_N * normal_sign;
+        Vec3 Nn = m_N;
         float cosNI = Nn.dot(omega_in);
         float cosNO = Nn.dot(omega_out);
 
@@ -289,7 +289,7 @@ public:
         return Color3 (out[0], out[1], out[2]);
     }
 
-    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float normal_size, float &pdf) const
+    Color3 eval_transmit (const Vec3 &omega_out, const Vec3 &omega_in, float &pdf) const
     {
         return Color3 (0.f, 0.f, 0.f);
     }

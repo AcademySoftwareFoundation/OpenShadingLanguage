@@ -823,30 +823,6 @@ osl_allocate_closure_component (void *r, int id, int size)
     return CLOSURE(r)->allocate_component (id, size);
 }
 
-extern "C" void
-osl_set_closure_sidedness_enum (void *mem, int side, int offset)
-{
-    *(int *)((char *)mem + offset) = side;
-}
-
-extern "C" void
-osl_set_closure_sidedness_name (void *mem, const char *sidedness_, int offset)
-{
-    ustring sidedness (USTR(sidedness_));
-    ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
-    if (sidedness == Strings::front)
-        side = ClosurePrimitive::Front;
-    else if (sidedness == Strings::back)
-        side = ClosurePrimitive::Back;
-    else if (sidedness == Strings::both)
-        side = ClosurePrimitive::Both;
-    else
-        side = ClosurePrimitive::None;
-    *(int *)((char *)mem + offset) = side;
-}
-
-
-
 // Matrix ops
 
 extern "C" void
@@ -1883,6 +1859,15 @@ extern "C" int osl_iscameraray (void *sg_)
     SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
 
     return sg->iscameraray;
+}
+
+
+
+extern "C" int osl_backfacing (void *sg_)
+{
+    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+
+    return sg->backfacing;
 }
 
 

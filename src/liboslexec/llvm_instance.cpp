@@ -208,6 +208,7 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back (llvm_type_int());     // iscameraray
     sg_types.push_back (llvm_type_int());     // isshadowray
     sg_types.push_back (llvm_type_int());     // flipHandedness
+    sg_types.push_back (llvm_type_int());     // backfacing
 
     return m_llvm_type_sg = llvm::StructType::get (llvm_context(), sg_types);
 }
@@ -309,7 +310,8 @@ ShaderGlobalNameToIndex (ustring name)
         ustring("object2common"), ustring("shader2common"),
         Strings::Ci,
         ustring("surfacearea"), ustring("iscameraray"),
-        ustring("isshadowray"), ustring("flipHandedness")
+        ustring("isshadowray"), ustring("flipHandedness"),
+        ustring("backfacing")
     };
 
     for (int i = 0;  i < int(sizeof(fields)/sizeof(fields[0]));  ++i)
@@ -2828,8 +2830,7 @@ LLVMGEN (llvm_gen_spline)
 // in *nformal_params the number of formal parameters (i.e. those prior
 // to the first optional argument).
 static int
-read_keyword_args (RuntimeOptimizer &rop, Opcode &op, Symbol **labels,
-                   Symbol* &sidedness_value, int *nformal_params)
+read_keyword_args (RuntimeOptimizer &rop, Opcode &op, Symbol **labels, int *nformal_params)
 {
     int nlabels = 0;
     int nargs = op.nargs();
@@ -2841,10 +2842,7 @@ read_keyword_args (RuntimeOptimizer &rop, Opcode &op, Symbol **labels,
              ustring name = * (ustring *) Name.data();
              Symbol &Val = *rop.opargsym (op, tok + 1);
              if (Val.typespec().is_string()) {
-                 if (name == Strings::sidedness) {
-                     sidedness_value = &Val;
-                     tok++;
-                 } else if (name == Strings::label) {
+                 if (name == Strings::label) {
                      if (nlabels == ClosurePrimitive::MAXCUSTOM) {
                          rop.shadingsys().error ("Too many labels to closure (%s:%d)",
                                        op.sourcefile().c_str(),
@@ -2910,10 +2908,9 @@ LLVMGEN (llvm_gen_closure)
     ASSERT(clentry);
 
     // Parse the optional arguments
-    Symbol *sidedness_value = NULL;
     Symbol *labels[ClosurePrimitive::MAXCUSTOM+1];
     int nargs;   // number of formal arguments
-    int nlabels = read_keyword_args (rop, op, labels, sidedness_value, &nargs);
+    int nlabels = read_keyword_args (rop, op, labels, &nargs);
 
     llvm::Value *render_ptr = rop.llvm_constant_ptr(rop.shadingsys().renderer(), rop.llvm_type_void_ptr());
     llvm::Value *cl_void_ptr = rop.llvm_load_value (Result);
@@ -2958,45 +2955,6 @@ LLVMGEN (llvm_gen_closure)
                 rop.llvm_call_function ("osl_memcpy", args, 3);
             }
         }
-    }
-
-    // Handle sidedness, if found
-    if (clentry->sidedness_offset < 0) {
-        // skip sidedness if the closure doesn't take it
-    } else if (sidedness_value && sidedness_value->typespec().is_string()) {
-        if (sidedness_value->is_constant()) {
-            // The sidedness string is constant -- decode it now
-            ustring sidedness = * (ustring *) sidedness_value->data();
-            ClosurePrimitive::Sidedness side = ClosurePrimitive::Front;
-            if (sidedness == Strings::front)
-                side = ClosurePrimitive::Front;
-            else if (sidedness == Strings::back)
-                side = ClosurePrimitive::Back;
-            else if (sidedness == Strings::both)
-                side = ClosurePrimitive::Both;
-            else
-                side = ClosurePrimitive::None;
-            llvm::Value *args[3];
-            args[0] = mem_void_ptr;
-            args[1] = rop.llvm_constant ((int)side);
-            args[2] = rop.llvm_constant ((int)clentry->sidedness_offset);
-            rop.llvm_call_function ("osl_set_closure_sidedness_enum", args, 3);
-        } else {
-            // Not a constant, make the decision in the shader
-            llvm::Value *args[3];
-            args[0] = mem_void_ptr;
-            args[1] = rop.llvm_load_value (*sidedness_value);
-            args[2] = rop.llvm_constant ((int)clentry->sidedness_offset);
-            rop.llvm_call_function ("osl_set_closure_sidedness_name", args, 3);
-        }
-    } else {
-        // Sidedness needed by closure, but user didn't specify -- use Front
-        // FIXME -- is this needed, or do the closures initialize themselves?
-        llvm::Value *args[3];
-        args[0] = mem_void_ptr;
-        args[1] = rop.llvm_constant ((int)ClosurePrimitive::Front);
-        args[2] = rop.llvm_constant ((int)clentry->sidedness_offset);
-        rop.llvm_call_function ("osl_set_closure_sidedness_enum", args, 3);
     }
 
     if (clentry->labels_offset >= 0) {
@@ -3046,6 +3004,7 @@ initialize_llvm_generator_table ()
     INIT (assign);
     INIT2 (atan, llvm_gen_generic);
     INIT2 (atan2, llvm_gen_generic);
+    INIT2 (backfacing, llvm_gen_get_simple_SG_field);
     INIT2 (bitand, llvm_gen_bitwise_binary_op);
     INIT2 (bitor, llvm_gen_bitwise_binary_op);
     INIT (calculatenormal);

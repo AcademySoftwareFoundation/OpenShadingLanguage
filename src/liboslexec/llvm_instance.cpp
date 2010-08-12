@@ -3507,7 +3507,6 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     fpm.add (llvm::createPromoteMemoryToRegisterPass());
     // Always add verifier?
     fpm.add (llvm::createVerifierPass());
-    fpm.doInitialization ();
 
 
     // Change memory references to registers
@@ -3528,7 +3527,6 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     fpmo.add (llvm::createPromoteMemoryToRegisterPass());
     // Always add verifier?
     fpmo.add (llvm::createVerifierPass());
-    fpmo.doInitialization ();
 
 
     passes.add (new llvm::TargetData(llvm_module()));
@@ -3660,15 +3658,15 @@ RuntimeOptimizer::llvm_do_optimization (llvm::Function *func,
     ASSERT (m_llvm_passes != NULL && m_llvm_func_passes != NULL);
 
 #if 1
-//    m_llvm_func_passes->doInitialization();
+    m_llvm_func_passes->doInitialization();
     m_llvm_func_passes->run (*func);
-//    m_llvm_func_passes->doFinalization();
+    m_llvm_func_passes->doFinalization();
 #else
     for (llvm::Module::iterator i = llvm_module()->begin();
          i != llvm_module()->end(); ++i) {
-//        m_llvm_func_passes->doInitialization();
+        m_llvm_func_passes->doInitialization();
         m_llvm_func_passes->run (*i);
-//        m_llvm_func_passes->doFinalization();
+        m_llvm_func_passes->doFinalization();
     }
 #endif
 
@@ -3679,11 +3677,11 @@ RuntimeOptimizer::llvm_do_optimization (llvm::Function *func,
         // Since the passes above inlined function calls, among other
         // things, we should rerun our whole optimization set on the master
         // function now.
-#if 1
+#if 0
         ASSERT (func);
-//        m_llvm_func_passes_optimized->doInitialization ();
+        m_llvm_func_passes_optimized->doInitialization ();
         m_llvm_func_passes_optimized->run (*func);
-//        m_llvm_func_passes_optimized->doFinalization ();
+        m_llvm_func_passes_optimized->doFinalization ();
 #endif
     }
 }

@@ -2405,42 +2405,47 @@ LLVMGEN (llvm_gen_pnoise)
     int firstperiod = (op.nargs() - 1) / 2 + 1;
 
     Symbol& Result  = *rop.opargsym (op, 0);
-    std::vector<const Symbol *> args;
     bool any_deriv_args = false;
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol *s (rop.opargsym (op, i));
-        args.push_back (s);
         any_deriv_args |= (i > 0 && i < firstperiod &&
                            s->has_derivs() && !s->typespec().is_matrix());
     }
 
     std::string name = std::string("osl_") + op.opname().string() + "_";
+    std::vector<llvm::Value *> valargs;
+    valargs.resize (op.nargs());
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol *s (rop.opargsym (op, i));
-        if (any_deriv_args && i < firstperiod && Result.has_derivs() &&
-                s->has_derivs() && !s->typespec().is_matrix())
+        bool use_derivs = any_deriv_args && i < firstperiod && Result.has_derivs() && s->has_derivs() && !s->typespec().is_matrix();
+        if (use_derivs)
             name += "d";
         if (s->typespec().is_float())
             name += "f";
         else if (s->typespec().is_triple())
             name += "v";
         else ASSERT (0);
+
+
+        if (s->typespec().simpletype().aggregate > 1 || use_derivs)
+            valargs[i] = rop.llvm_void_ptr (*s);
+        else
+            valargs[i] = rop.llvm_load_value (*s);
     }
 
     if (! Result.has_derivs() || ! any_deriv_args) {
         // Don't compute derivs -- either not needed or not provided in args
         if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
-            llvm::Value *r = rop.llvm_call_function (name.c_str(),
-                                                     &(args[1]), op.nargs()-1);
+            llvm::Value *r = rop.llvm_call_function (name.c_str(), &valargs[1], op.nargs()-1);
             rop.llvm_store_value (r, Result);
         } else {
-            rop.llvm_call_function (name.c_str(), &(args[0]), op.nargs());
+            rop.llvm_call_function (name.c_str(), &valargs[0], op.nargs());
         }
         rop.llvm_zero_derivs (Result);
     } else {
         // Cases with derivs
         ASSERT (Result.has_derivs() && any_deriv_args);
-        rop.llvm_call_function (name.c_str(), &(args[0]), op.nargs(), true);
+        rop.llvm_call_function (name.c_str(), &valargs[0], op.nargs());
     }
     return true;
 }

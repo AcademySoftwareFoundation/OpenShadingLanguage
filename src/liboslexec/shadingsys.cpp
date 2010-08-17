@@ -131,7 +131,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_statslevel (0), m_debug (false), m_lazylayers (true),
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
-      m_lockgeom_default (false), m_optimize (1), m_use_llvm(0),
+      m_lockgeom_default (false), m_optimize (1),
+      m_use_llvm(0), m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_in_group (false),
       m_global_heap_total (0),
@@ -186,9 +187,14 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     const char *llvm_env = getenv ("OSL_USE_LLVM");
     if (llvm_env && *llvm_env)
         m_use_llvm = atoi (llvm_env);
+    const char *llvm_debug_env = getenv ("OSL_LLVM_DEBUG");
+    if (llvm_debug_env && *llvm_debug_env)
+        m_llvm_debug = (atoi(llvm_debug_env) != 0);
 
     register_builtin_closures(this);
 }
+
+
 
 void
 ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params, int size,
@@ -198,6 +204,7 @@ ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam
     m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare,
                                         labels_offset, max_labels);
 }
+
 
 
 ShadingSystemImpl::~ShadingSystemImpl ()
@@ -279,6 +286,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_use_llvm = *(const int *)val;
         return true;
     }
+    if (name == "llvm_debug" && type == TypeDesc::INT) {
+        m_llvm_debug = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -335,6 +346,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "use_llvm" && type == TypeDesc::INT) {
         *(int *)val = m_use_llvm;
+        return true;
+    }
+    if (name == "llvm_debug" && type == TypeDesc::INT) {
+        *(int *)val = m_llvm_debug;
         return true;
     }
     return false;

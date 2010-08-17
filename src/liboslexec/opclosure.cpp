@@ -131,3 +131,82 @@ DECLOP (OP_closure)
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE
 #endif
+
+
+
+#if 1
+// Some wrapper functions we need to call from the LLVM-generated code.
+
+extern "C" void *
+osl_closure_allot (SingleShaderGlobal *sg)
+{
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    void *r = ctx->closure_ptr_allot ();
+    ASSERT (r && "bad closure allot");
+    return r;
+}
+
+
+extern "C" void
+osl_closure_clear (ClosureColor *r)
+{
+    r->clear ();
+}
+
+
+extern "C" void
+osl_closure_clear_indexed (ClosureColor **r, int i)
+{
+    r[i]->clear ();
+}
+
+
+extern "C" void
+osl_closure_assign (ClosureColor *r, ClosureColor *x)
+{
+    DASSERT (r);  DASSERT (x);
+    *r = *x;
+}
+
+
+extern "C" void
+osl_closure_assign_indexed (ClosureColor **r, int ri,
+                            const ClosureColor **x, int xi)
+{
+    *(r[ri]) = *(x[xi]);
+}
+
+
+extern "C" void
+osl_add_closure_closure (SingleShaderGlobal *sg, ClosureColor *r,
+                         const ClosureColor *a, const ClosureColor *b)
+{
+    r->add (*a, *b, &sg->context->shadingsys());
+}
+
+
+extern "C" void
+osl_mul_closure_color (ClosureColor *r, ClosureColor *a, const Color3 *b)
+{
+    *r = *a;
+    *r *= *b;
+}
+
+
+extern "C" void
+osl_mul_closure_float (ClosureColor *r, ClosureColor *a, float b)
+{
+    *r = *a;
+    *r *= b;
+}
+
+
+extern "C" void *
+osl_allocate_closure_component (ClosureColor *r, int id, int size)
+{
+    DASSERT (r);
+    void *mem = r->allocate_component (id, size);
+    return mem;
+}
+
+#endif

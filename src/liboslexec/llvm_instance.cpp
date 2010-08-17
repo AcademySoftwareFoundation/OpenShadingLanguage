@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -157,18 +158,89 @@ static ustring op_xor("xor");
 typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
 
 
+#define NOISE_IMPL(name)                        \
+    "osl_" #name "_ff",  "ff",                  \
+    "osl_" #name "_fff", "fff",                 \
+    "osl_" #name "_fv",  "fv",                  \
+    "osl_" #name "_fvf", "fvf",                 \
+    "osl_" #name "_vf",  "xvf",                 \
+    "osl_" #name "_vff", "xvff",                \
+    "osl_" #name "_vv",  "xvv",                 \
+    "osl_" #name "_vvf", "xvvf"
+
+#define NOISE_DERIV_IMPL(name)                  \
+    "osl_" #name "_dfdf",   "xXX",              \
+    "osl_" #name "_dfdff",  "xXXf",             \
+    "osl_" #name "_dffdf",  "xXfX",             \
+    "osl_" #name "_dfdfdf", "xXXX",             \
+    "osl_" #name "_dfdv",   "xXv",              \
+    "osl_" #name "_dfdvf",  "xXvf",             \
+    "osl_" #name "_dfvdf",  "xXvX",             \
+    "osl_" #name "_dfdvdf", "xXvX",             \
+    "osl_" #name "_dvdf",   "xvX",              \
+    "osl_" #name "_dvdff",  "xvXf",             \
+    "osl_" #name "_dvfdf",  "xvfX",             \
+    "osl_" #name "_dvdfdf", "xvXX",             \
+    "osl_" #name "_dvdv",   "xvv",              \
+    "osl_" #name "_dvdvf",  "xvvf",             \
+    "osl_" #name "_dvvdf",  "xvvX",             \
+    "osl_" #name "_dvdvdf", "xvvX"
+
+#define PNOISE_IMPL(name)                       \
+    "osl_" #name "_fff",   "fff",               \
+    "osl_" #name "_fffff", "fffff",             \
+    "osl_" #name "_fvv",   "fvv",               \
+    "osl_" #name "_fvfvf", "fvfvf",             \
+    "osl_" #name "_vff",   "xvff",              \
+    "osl_" #name "_vffff", "xvffff",            \
+    "osl_" #name "_vvv",   "xvvv",              \
+    "osl_" #name "_vvfvf", "xvvfvf"
+
+#define PNOISE_DERIV_IMPL(name)                 \
+    "osl_" #name "_dfdff",    "xXXf",           \
+    "osl_" #name "_dfdffff",  "xXXfff",         \
+    "osl_" #name "_dffdfff",  "xXfXff",         \
+    "osl_" #name "_dfdfdfff", "xXXXff",         \
+    "osl_" #name "_dfdvdv",   "xXvv",           \
+    "osl_" #name "_dfdvfvf",  "xXvfvf",         \
+    "osl_" #name "_dfvdfvf",  "xXvXvf",         \
+    "osl_" #name "_dfdvdfvf", "xXvXvf",         \
+    "osl_" #name "_dvdff",    "xvXf",           \
+    "osl_" #name "_dvdffff",  "xvXfff",         \
+    "osl_" #name "_dvfdfff",  "xvfXff",         \
+    "osl_" #name "_dvdfdfff", "xvXXff",         \
+    "osl_" #name "_dvdvv",    "xvvv",           \
+    "osl_" #name "_dvdvfvf",  "xvvfvf",         \
+    "osl_" #name "_dvvdfvf",  "xvvXvf",         \
+    "osl_" #name "_dvdvdfvf", "xvvXvf"
+
+
 
 /// Table of all functions that we may call from the LLVM-compiled code.
 /// Alternating name and argument list, much like we use in oslc's type
 /// checking.  Note that nothing that's compiled into llvm_ops.cpp ought
 /// to need a declaration here.
 static const char *llvm_helper_function_table[] = {
-#if 0
+    "osl_closure_allot", "XX",
     "osl_closure_clear", "xC",
+    "osl_closure_clear_indexed", "xXi",
     "osl_closure_assign", "xCC",
-    "osl_add_closure_closure", "xCCC",
+    "osl_closure_assign_indexed", "xXiXi",
+    "osl_add_closure_closure", "xXCCC",
     "osl_mul_closure_float", "xCCf",
     "osl_mul_closure_color", "xCCc",
+    "osl_allocate_closure_component", "XCii",
+
+#if 0
+    NOISE_IMPL(cellnoise),
+    NOISE_IMPL(noise),
+    NOISE_DERIV_IMPL(noise),
+    NOISE_IMPL(snoise),
+    NOISE_DERIV_IMPL(snoise),
+    PNOISE_IMPL(pnoise),
+    PNOISE_DERIV_IMPL(pnoise),
+    PNOISE_IMPL(psnoise),
+    PNOISE_DERIV_IMPL(psnoise),
 #endif
     NULL
 };
@@ -388,6 +460,8 @@ RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
         lt = llvm_type_matrix();
     else if (t == TypeDesc::NONE)
         lt = llvm_type_void();
+    else if (t == TypeDesc::PTR)
+        lt = llvm_type_void_ptr();
     else {
         std::cerr << "Bad llvm_type(" << typespec.c_str() << ")\n";
         ASSERT (0 && "not handling this type yet");
@@ -413,9 +487,9 @@ RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
     else if (t == TypeDesc::STRING)
         lt = llvm_type_string();
     else if (t.aggregate == TypeDesc::VEC3)
-        lt = llvm_type_triple_ptr();
+        lt = llvm_type_void_ptr(); //llvm_type_triple_ptr();
     else if (t.aggregate == TypeDesc::MATRIX44)
-        lt = llvm_type_matrix_ptr();
+        lt = llvm_type_void_ptr(); //llvm_type_matrix_ptr();
     else if (t == TypeDesc::NONE)
         lt = llvm_type_void();
     else if (t == TypeDesc::PTR)
@@ -583,13 +657,8 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
     if (!result)
         return NULL;  // Error
 
-    // Special case: a matrix is stored as a struct whose one field
-    // is an array of the values, so it needs an extra GEP.
-    TypeDesc t = sym.typespec().simpletype();
-    if (t.aggregate == TypeDesc::MATRIX44)
-        result = builder().CreateConstGEP2_32 (result, 0, 0);
-
     // If it's multi-component (triple or matrix), step to the right field
+    TypeDesc t = sym.typespec().simpletype();
     if (! sym.typespec().is_closure() && t.aggregate > 1)
         result = builder().CreateConstGEP2_32 (result, 0, component);
 
@@ -629,12 +698,7 @@ RuntimeOptimizer::llvm_load_component_value (const Symbol& sym, int deriv,
     if (!result)
         return NULL;  // Error
 
-    // Special case: a matrix is stored as a struct whose one field
-    // is an array of the values, so it needs an extra GEP.
     TypeDesc t = sym.typespec().simpletype();
-    if (t.aggregate == TypeDesc::MATRIX44)
-        result = builder().CreateConstGEP2_32 (result, 0, 0);
-
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     std::vector<llvm::Value *> indexes;
     indexes.push_back(llvm_constant(0));
@@ -664,13 +728,8 @@ RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
     if (!result)
         return false;  // Error
 
-    // Special case: a matrix is stored as a struct whose one field
-    // is an array of the values, so it needs an extra GEP.
-    TypeDesc t = sym.typespec().simpletype();
-    if (t.aggregate == TypeDesc::MATRIX44)
-        result = builder().CreateConstGEP2_32 (result, 0, 0);
-
     // If it's multi-component (triple or matrix), step to the right field
+    TypeDesc t = sym.typespec().simpletype();
     if (! sym.typespec().is_closure() && t.aggregate > 1)
         result = builder().CreateConstGEP2_32 (result, 0, component);
 
@@ -698,12 +757,7 @@ RuntimeOptimizer::llvm_store_component_value (llvm::Value* new_val,
     if (!result)
         return false;  // Error
 
-    // Special case: a matrix is stored as a struct whose one field
-    // is an array of the values, so it needs an extra GEP.
     TypeDesc t = sym.typespec().simpletype();
-    if (t.aggregate == TypeDesc::MATRIX44)
-        result = builder().CreateConstGEP2_32 (result, 0, 0);
-
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     std::vector<llvm::Value *> indexes;
     indexes.push_back(llvm_constant(0));
@@ -740,7 +794,9 @@ RuntimeOptimizer::llvm_call_function (const char *name,
     for (int i = 0;  i < nargs;  ++i)
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
+    //llvm_gen_debug_printf (std::string("start ") + std::string(name));
     llvm::Value *r = builder().CreateCall (func, args, args+nargs);
+    //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }
 
@@ -812,7 +868,8 @@ RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
                                  inst()->layername().c_str(), message.c_str());
     llvm::Value *args[3] = { sg_void_ptr(), llvm_constant("%s\n"),
                              llvm_constant(s) };
-    llvm_call_function ("osl_printf", args, 3);
+    llvm::Function *func = llvm_module()->getFunction ("osl_printf");
+    builder().CreateCall (func, args, args+3);
 }
 
 
@@ -1934,6 +1991,8 @@ LLVMGEN (llvm_gen_matrix)
             rop.llvm_call_function ("osl_prepend_matrix_from", args, 3);
         }
     }
+    if (Result.has_derivs())
+        rop.llvm_zero_derivs (Result);
     return true;
 }
 
@@ -2917,21 +2976,24 @@ LLVMGEN (llvm_gen_closure)
     int nargs;   // number of formal arguments
     int nlabels = read_keyword_args (rop, op, labels, &nargs);
 
+    // Call osl_allocate_closure_component(closure, id, size).  It returns
+    // the memory for the closure parameter data.
     llvm::Value *render_ptr = rop.llvm_constant_ptr(rop.shadingsys().renderer(), rop.llvm_type_void_ptr());
     llvm::Value *cl_void_ptr = rop.llvm_load_value (Result);
     llvm::Value *id_int = rop.llvm_constant(clentry->id);
     llvm::Value *size_int = rop.llvm_constant(clentry->struct_size);
     llvm::Value *alloc_args[3] = {cl_void_ptr, id_int, size_int};
     llvm::Value *mem_void_ptr = rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 3);
-    if (clentry->prepare)
-    {
+
+    // If the closure has a "prepare" method, call
+    // prepare(renderer, id, memptr).  If there is no prepare method, just
+    // zero out the closure parameter memory.
+    if (clentry->prepare) {
         // Call clentry->prepare(renderservices *, int id, void *mem)
         llvm::Value *funct_ptr = rop.llvm_constant_ptr((void *)clentry->prepare, rop.llvm_type_prepare_closure_func());
         llvm::Value *args[3] = {render_ptr, id_int, mem_void_ptr};
         rop.builder().CreateCall (funct_ptr, args, args+3);
-    }
-    else
-    {
+    } else {
         llvm::Value *args[2] = {mem_void_ptr, size_int};
         rop.llvm_call_function ("osl_memzero", args, 2);
     }
@@ -2969,8 +3031,9 @@ LLVMGEN (llvm_gen_closure)
         gen_fill_closure_label(rop, mem_void_ptr, clentry->labels_offset + sizeof(ustring) * l, NULL);
     }
 
-    if (clentry->setup)
-    {
+    // If the closure has a "setup" method, call
+    // setup(render_services, id, mem_ptr).
+    if (clentry->setup) {
         // Call clentry->setup(renderservices *, int id, void *mem)
         llvm::Value *funct_ptr = rop.llvm_constant_ptr((void *)clentry->setup, rop.llvm_type_setup_closure_func());
         llvm::Value *args[3] = {render_ptr, id_int, mem_void_ptr};
@@ -3189,14 +3252,16 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Set up a new IR builder
     delete m_builder;
     m_builder = new llvm::IRBuilder<> (entry_bb);
-    // llvm_gen_debug_printf ("enter layer");
+    // llvm_gen_debug_printf (std::string("enter layer ")+inst()->shadername());
 
     if (groupentry) {
-        // If this is the group entry point, clear all the "layer
-        // executed" bits.  If it's not the group entry (but rather is
-        // an upstream node), then set its bit!
-        for (int i = 0;  i < group().nlayers();  ++i)
-            builder().CreateStore (llvm_constant(0), layer_run_ptr(i));
+        if (group().nlayers() > 1) {
+            // If this is the group entry point, clear all the "layer
+            // executed" bits.  If it's not the group entry (but rather is
+            // an upstream node), then set its bit!
+            for (int i = 0;  i < group().nlayers();  ++i)
+                builder().CreateStore (llvm_constant(0), layer_run_ptr(i));
+        }
         // Group entries also need to allot space for ALL layers' params
         // that are closures (to avoid weird order of layer eval problems).
         for (int i = 0;  i < group().nlayers();  ++i) {
@@ -3216,7 +3281,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         }
     } else {
         // Not the group entry -- just mark our layer as run
-        builder().CreateStore (llvm_constant(1), layer_run_ptr(m_layer));
+        if (group().nlayers() > 1)
+            builder().CreateStore (llvm_constant(1), layer_run_ptr(m_layer));
     }
 
     // Setup the symbols
@@ -3285,13 +3351,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // llvm_gen_debug_printf ("done copying connections");
 
     // All done
-    // llvm_gen_debug_printf ("exit layer");
+    // llvm_gen_debug_printf (std::string("exit layer ")+inst()->shadername());
     builder().CreateRetVoid();
 
-#ifdef DEBUG
-    if (shadingsys().use_llvm() >= 2)
+    if (shadingsys().llvm_debug())
         llvm::errs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
-#endif
 
     delete m_builder;
     m_builder = NULL;
@@ -3312,14 +3376,24 @@ RuntimeOptimizer::build_llvm_group ()
         set_inst (layer);
         bool lastlayer = (layer == (nlayers-1));
         func = build_llvm_instance (lastlayer);
+#if 0
         llvm_do_optimization (func, lastlayer);
-        if (lastlayer) {
-#ifdef DEBUG
-            if (shadingsys().use_llvm() >= 2)
-                llvm::errs() << "func after opt  = " << *func << "\n";
 #endif
-        }
     }
+#if 1
+    m_llvm_passes->run (*llvm_module());
+#endif
+    if (shadingsys().llvm_debug())
+        llvm::errs() << "func after opt  = " << *func << "\n";
+
+#if 0
+    // Debug code to dump the resulting bitcode to a file
+    {
+        std::string err_info;
+        llvm::raw_fd_ostream out (inst()->layername().c_str(), err_info);
+        llvm::WriteBitcodeToFile (llvm_module(), out);
+    }
+#endif
 
     // Force the JIT to happen now, while we have the lock
     llvm::ExecutionEngine* ee = shadingsys().ExecutionEngine();
@@ -3367,9 +3441,8 @@ RuntimeOptimizer::initialize_llvm_group ()
     m_llvm_type_triple = llvm::StructType::get(llvm_context(), triplefields);
     m_llvm_type_triple_ptr = llvm::PointerType::get (m_llvm_type_triple, 0);
 
-    // A matrix is a struct composed of a matrix of 16 floats
-    const llvm::Type *float16 = llvm::ArrayType::get (m_llvm_type_float, 16);
-    std::vector<const llvm::Type*> matrixfields(1, float16);
+    // A matrix is a struct composed 16 floats
+    std::vector<const llvm::Type*> matrixfields(16, m_llvm_type_float);
     m_llvm_type_matrix = llvm::StructType::get(llvm_context(), matrixfields);
     m_llvm_type_matrix_ptr = llvm::PointerType::get (m_llvm_type_matrix, 0);
 
@@ -3411,28 +3484,37 @@ RuntimeOptimizer::initialize_llvm_group ()
 void
 ShadingSystemImpl::SetupLLVM ()
 {
-    // Setup already
-    if (m_llvm_exec != NULL)
-        return;
-    info ("Setting up LLVM");
-    m_llvm_context = new llvm::LLVMContext();
-    info ("Initializing Native Target");
-    llvm::InitializeNativeTarget();
+    if (! m_llvm_context) {
+        // First time through -- basic LLVM context setup
+        info ("Setting up LLVM");
+        llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
+        m_llvm_context = new llvm::LLVMContext();
+        llvm::InitializeNativeTarget();
 
+        initialize_llvm_generator_table ();
+    }
+
+
+    if (! m_llvm_module) {
 #if 1
-    //printf("Loading LLVM Bitcode\n");
-    const char *data = osl_llvm_compiled_ops_block;
-    llvm::MemoryBuffer *buf =
-        llvm::MemoryBuffer::getMemBuffer (data, data + osl_llvm_compiled_ops_size);
-    // Parse the bitcode into a Module
-    std::string err;
-    m_llvm_module = llvm::ParseBitcodeFile (buf, *llvm_context(), &err);
-    delete buf;
+        // Load the LLVM bitcode and parse it into a Module
+        const char *data = osl_llvm_compiled_ops_block;
+        llvm::MemoryBuffer *buf =
+            llvm::MemoryBuffer::getMemBuffer (data, data + osl_llvm_compiled_ops_size);
+        std::string err;
+        m_llvm_module = llvm::ParseBitcodeFile (buf, *llvm_context(), &err);
+        if (err.length())
+            std::cerr << "ParseBitcodeFile returned '" << err << "'\n";
+        delete buf;
 #else
-    m_llvm_module = new llvm::Module ("oslmodule", *llvm_context());
+        // Blank module -- not very good for anything
+        m_llvm_module = new llvm::Module ("oslmodule", *llvm_context());
 #endif
+    }
 
-    info ("Building an Execution Engine");
+    // FIXME -- let the EE leak for now!  
+
+    // Create the ExecutionEngine
     std::string error_msg;
     m_llvm_exec = llvm::ExecutionEngine::create(m_llvm_module,
                                                 false /* force interpreter */,
@@ -3441,10 +3523,10 @@ ShadingSystemImpl::SetupLLVM ()
                                                 false);
     if (! m_llvm_exec) {
         error ("Failed to create engine: %s\n", error_msg.c_str());
+        DASSERT (0);
         return;
     }
 
-    initialize_llvm_generator_table ();
 }
 
 
@@ -3472,7 +3554,34 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     llvm::FunctionPassManager &fpmo (*m_llvm_func_passes_optimized);
     fpmo.add (new llvm::TargetData(llvm_module()));
 
-#if 0
+
+#if 1
+    // Specify everything as a module pass
+
+    // Always add verifier?
+    passes.add (llvm::createVerifierPass());
+    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
+    passes.add (llvm::createCFGSimplificationPass());
+    // Change memory references to registers
+    passes.add (llvm::createPromoteMemoryToRegisterPass());
+    // Combine instructions where possible -- peephole opts & bit-twiddling
+    passes.add (llvm::createInstructionCombiningPass());
+    // Inline small functions
+    passes.add (llvm::createFunctionInliningPass());  // 250?
+    // Eliminate early returns
+    passes.add (llvm::createUnifyFunctionExitNodesPass());
+    // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
+    passes.add (llvm::createReassociatePass());
+    // Eliminate common sub-expressions
+    passes.add (llvm::createGVNPass());
+    // More dead code elimination
+    passes.add (llvm::createAggressiveDCEPass());
+    // Combine instructions where possible -- peephole opts & bit-twiddling
+    passes.add (llvm::createInstructionCombiningPass());
+    // Try to make stuff into registers one last time.
+    passes.add (llvm::createPromoteMemoryToRegisterPass());
+
+#elif 0
     // N.B. See llvm's include/llvm/Support/StandardPasses.h to see what
     // these do.
     int optlevel = 3;
@@ -3486,7 +3595,7 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
                                       true /* simplify lib calls */,
                                       false /* have exceptions */,
                                       inlining_pass);
-#elif 1
+#elif 0
     // These are the optimizations that at one point seemed to work.
 
     // Change memory references to registers

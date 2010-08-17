@@ -608,6 +608,7 @@ public:
     bool lockgeom_default () const { return m_lockgeom_default; }
     int optimize () const { return m_optimize; }
     int use_llvm () const { return m_use_llvm; }
+    int llvm_debug () const { return m_llvm_debug; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
@@ -700,6 +701,7 @@ private:
     bool m_lockgeom_default;              ///< Default value of lockgeom
     int m_optimize;                       ///< Runtime optimization level
     int m_use_llvm;                       ///< Use LLVM to compile
+    bool m_llvm_debug;                    ///< More LLVM debugging output
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space

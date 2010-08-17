@@ -699,14 +699,14 @@ MAKE_BINARY_PERCOMPONENT_OP (max, std::max, max);
 
 
 // point = M * point
-extern "C" float osl_transform_vmv(void *result, void* M_, void* v_)
+extern "C" void osl_transform_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
    M.multVecMatrix (v, VEC(result));
 }
 
-extern "C" float osl_transform_dvmdv(void *result, void* M_, void* v_)
+extern "C" void osl_transform_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
@@ -714,14 +714,14 @@ extern "C" float osl_transform_dvmdv(void *result, void* M_, void* v_)
 }
 
 // vector = M * vector
-extern "C" float osl_transformv_vmv(void *result, void* M_, void* v_)
+extern "C" void osl_transformv_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
    M.multDirMatrix (v, VEC(result));
 }
 
-extern "C" float osl_transformv_dvmdv(void *result, void* M_, void* v_)
+extern "C" void osl_transformv_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
@@ -729,14 +729,14 @@ extern "C" float osl_transformv_dvmdv(void *result, void* M_, void* v_)
 }
 
 // normal = M * normal
-extern "C" float osl_transformn_vmv(void *result, void* M_, void* v_)
+extern "C" void osl_transformn_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
    M.inverse().transpose().multDirMatrix (v, VEC(result));
 }
 
-extern "C" float osl_transformn_dvmdv(void *result, void* M_, void* v_)
+extern "C" void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
@@ -744,6 +744,8 @@ extern "C" float osl_transformn_dvmdv(void *result, void* M_, void* v_)
 }
 
 
+
+#if 0
 
 // Closure functions
 
@@ -822,6 +824,9 @@ osl_allocate_closure_component (void *r, int id, int size)
 {
     return CLOSURE(r)->allocate_component (id, size);
 }
+
+#endif
+
 
 // Matrix ops
 
@@ -1223,22 +1228,22 @@ extern "C" float osl_ ##opname## _fvf (void *x, float y) {              \
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" float osl_ ##opname## _vf (void *r, float x) {               \
+extern "C" void osl_ ##opname## _vf (void *r, float x) {                \
     implname impl(NULL);                                                \
     impl (VEC(r), x);                                                   \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _vff (void *r, float x, float y) {     \
+extern "C" void osl_ ##opname## _vff (void *r, float x, float y) {      \
     implname impl(NULL);                                                \
     impl (VEC(r), x, y);                                                \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _vv (void *r, void *x) {               \
+extern "C" void osl_ ##opname## _vv (void *r, void *x) {                \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x));                                              \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _vvf (void *r, void *x, float y) {     \
+extern "C" void osl_ ##opname## _vvf (void *r, void *x, float y) {      \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x), y);                                           \
 }
@@ -1248,83 +1253,83 @@ extern "C" float osl_ ##opname## _vvf (void *r, void *x, float y) {     \
 
 
 #define NOISE_IMPL_DERIV(opname,implname)                               \
-extern "C" float osl_ ##opname## _dfdf (void *r, void *x) {             \
+extern "C" void osl_ ##opname## _dfdf (void *r, void *x) {              \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x));                                        \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdfdf (void *r, void *x, void *y) {  \
+extern "C" void osl_ ##opname## _dfdfdf (void *r, void *x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), DFLOAT(y));                             \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdff (void *r, void *x, float y) {   \
+extern "C" void osl_ ##opname## _dfdff (void *r, void *x, float y) {    \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), Dual2<float>(y));                       \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dffdf (void *r, float x, void *y) {   \
+extern "C" void osl_ ##opname## _dffdf (void *r, float x, void *y) {    \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<float>(x), DFLOAT(y));                       \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdv (void *r, void *x) {             \
+extern "C" void osl_ ##opname## _dfdv (void *r, void *x) {              \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x));                                          \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdvdf (void *r, void *x, void *y) {  \
+extern "C" void osl_ ##opname## _dfdvdf (void *r, void *x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), DFLOAT(y));                               \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdvf (void *r, void *x, float y) {   \
+extern "C" void osl_ ##opname## _dfdvf (void *r, void *x, float y) {    \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), Dual2<float>(y));                         \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfvdf (void *r, void *x, void *y) {   \
+extern "C" void osl_ ##opname## _dfvdf (void *r, void *x, void *y) {    \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                   \
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" float osl_ ##opname## _dvdf (void *r, void *x) {             \
+extern "C" void osl_ ##opname## _dvdf (void *r, void *x) {              \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x));                                          \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdfdf (void *r, void *x, void *y) {  \
+extern "C" void osl_ ##opname## _dvdfdf (void *r, void *x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), DFLOAT(y));                               \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdff (void *r, void *x, float y) {   \
+extern "C" void osl_ ##opname## _dvdff (void *r, void *x, float y) {    \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), Dual2<float>(y));                         \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvfdf (void *r, float x, void *y) {   \
+extern "C" void osl_ ##opname## _dvfdf (void *r, float x, void *y) {    \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<float>(x), DFLOAT(y));                         \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdv (void *r, void *x) {             \
+extern "C" void osl_ ##opname## _dvdv (void *r, void *x) {              \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x));                                            \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdvdf (void *r, void *x, void *y) {  \
+extern "C" void osl_ ##opname## _dvdvdf (void *r, void *x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), DFLOAT(y));                                 \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdvf (void *r, void *x, float y) {   \
+extern "C" void osl_ ##opname## _dvdvf (void *r, void *x, float y) {    \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), Dual2<float>(y));                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvvdf (void *r, void *x, void *y) {   \
+extern "C" void osl_ ##opname## _dvvdf (void *r, void *x, void *y) {    \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                     \
 }
@@ -1371,22 +1376,22 @@ extern "C" float osl_ ##opname## _fvfvf (void *x, float y, void *px, float py) {
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" float osl_ ##opname## _vff (void *r, float x, float px) {    \
+extern "C" void osl_ ##opname## _vff (void *r, float x, float px) {    \
     implname impl(NULL);                                                \
     impl (VEC(r), x, px);                                               \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _vffff (void *r, float x, float y, float px, float py) { \
+extern "C" void osl_ ##opname## _vffff (void *r, float x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (VEC(r), x, y, px, py);                                        \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _vvv (void *r, void *x, void *px) {    \
+extern "C" void osl_ ##opname## _vvv (void *r, void *x, void *px) {    \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x), VEC(px));                                     \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _vvfvf (void *r, void *x, float y, void *px, float py) { \
+extern "C" void osl_ ##opname## _vvfvf (void *r, void *x, float y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x), y, VEC(px), py);                              \
 }
@@ -1396,83 +1401,83 @@ extern "C" float osl_ ##opname## _vvfvf (void *r, void *x, float y, void *px, fl
 
 
 #define PNOISE_IMPL_DERIV(opname,implname)                              \
-extern "C" float osl_ ##opname## _dfdff (void *r, void *x, float px) {  \
+extern "C" void osl_ ##opname## _dfdff (void *r, void *x, float px) {  \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), px);                                    \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdfdfff (void *r, void *x, void *y, float px, float py) { \
+extern "C" void osl_ ##opname## _dfdfdfff (void *r, void *x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), DFLOAT(y), px, py);                     \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdffff (void *r, void *x, float y, float px, float py) { \
+extern "C" void osl_ ##opname## _dfdffff (void *r, void *x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), Dual2<float>(y), px, py);               \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dffdfff (void *r, float x, void *y, float px, float py) { \
+extern "C" void osl_ ##opname## _dffdfff (void *r, float x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<float>(x), DFLOAT(y), px, py);               \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdvv (void *r, void *x, void *px) {  \
+extern "C" void osl_ ##opname## _dfdvv (void *r, void *x, void *px) {  \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), VEC(px));                                 \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdvdfvf (void *r, void *x, void *y, void *px, float py) { \
+extern "C" void osl_ ##opname## _dfdvdfvf (void *r, void *x, void *y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), DFLOAT(y), VEC(px), py);                  \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfdvfvf (void *r, void *x, float y, void *px, float py) { \
+extern "C" void osl_ ##opname## _dfdvfvf (void *r, void *x, float y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), Dual2<float>(y), VEC(px), py);            \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dfvdfvf (void *r, void *x, void *y, void *px, float py) { \
+extern "C" void osl_ ##opname## _dfvdfvf (void *r, void *x, void *y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<Vec3>(VEC(x)), DFLOAT(y), VEC(px), py);      \
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" float osl_ ##opname## _dvdff (void *r, void *x, float px) {  \
+extern "C" void osl_ ##opname## _dvdff (void *r, void *x, float px) {  \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), px);                                      \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdfdfff (void *r, void *x, void *y, float px, float py) { \
+extern "C" void osl_ ##opname## _dvdfdfff (void *r, void *x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), DFLOAT(y), px, py);                       \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdffff (void *r, void *x, float y, float px, float py) { \
+extern "C" void osl_ ##opname## _dvdffff (void *r, void *x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), Dual2<float>(y), px, py);                 \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvfdfff (void *r, float x, void *y, float px, float py) { \
+extern "C" void osl_ ##opname## _dvfdfff (void *r, float x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<float>(x), DFLOAT(y), px, py);                 \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdvv (void *r, void *x, void *px) {  \
+extern "C" void osl_ ##opname## _dvdvv (void *r, void *x, void *px) {  \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), VEC(px));                                   \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdvdfvf (void *r, void *x, void *y, void *px, float py) { \
+extern "C" void osl_ ##opname## _dvdvdfvf (void *r, void *x, void *y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), DFLOAT(y), VEC(px), py);                    \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvdvfvf (void *r, void *x, float y, float *px, float py) { \
+extern "C" void osl_ ##opname## _dvdvfvf (void *r, void *x, float y, float *px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), Dual2<float>(y), VEC(px), py);              \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _dvvdfvf (void *r, void *x, void *px, void *y, float py) { \
+extern "C" void osl_ ##opname## _dvvdfvf (void *r, void *x, void *px, void *y, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y), VEC(px), py);        \
 }

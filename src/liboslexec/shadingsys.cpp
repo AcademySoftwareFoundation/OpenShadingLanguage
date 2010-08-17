@@ -464,6 +464,10 @@ ShadingSystemImpl::getstats (int level) const
         return "";
     std::ostringstream out;
     out << "OSL ShadingSystem statistics (" << (void*)this << ")\n";
+    if (m_stat_shaders_requested == 0) {
+        out << "  No shaders requested\n";
+        return out.str();
+    }
     out << "  Shaders:\n";
     out << "    Requested: " << m_stat_shaders_requested << "\n";
     out << "    Loaded:    " << m_stat_shaders_loaded << "\n";
@@ -479,31 +483,31 @@ ShadingSystemImpl::getstats (int level) const
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
                           m_layers_executed_never;
     out << Strutil::format ("  Total layers run: %10lld\n", totalexec);
-    totalexec = std::max (totalexec, 1LL);  // prevent div by 0
+    double inv_totalexec = 1.0 / std::max (totalexec, 1LL);  // prevent div by 0
     out << Strutil::format ("    Unconditional:  %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_uncond,
-                            (100.0*m_layers_executed_uncond)/totalexec);
+                            (100.0*m_layers_executed_uncond) * inv_totalexec);
     out << Strutil::format ("    On demand:      %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_lazy,
-                            (100.0*m_layers_executed_lazy)/totalexec);
+                            (100.0*m_layers_executed_lazy) * inv_totalexec);
     out << Strutil::format ("    Skipped:        %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_never,
-                            (100.0*m_layers_executed_never)/totalexec);
+                            (100.0*m_layers_executed_never) * inv_totalexec);
 
     out << Strutil::format ("  Binds:  %lld\n",
                             (long long)m_stat_binds);
     out << Strutil::format ("  Rebinds:  %lld / %lld  (%.1f%%)\n",
                             (long long)m_stat_rebinds, totalexec,
-                            (100.0*m_stat_rebinds)/totalexec);
+                            (100.0*m_stat_rebinds) * inv_totalexec);
     out << Strutil::format ("  Params bound:  %lld / %lld  (%.1f%%)\n",
                             (long long)m_stat_paramsbound,
                             (long long)m_stat_paramstobind,
-                            (100.0*m_stat_paramsbound)/m_stat_paramstobind);
+                            (100.0*m_stat_paramsbound)/std::max((int)m_stat_paramstobind, 1));
     out << Strutil::format ("  Total instructions run:  %lld\n",
                             (long long)m_stat_instructions_run);
     out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
-                            (100.0*(int)m_stat_syms_with_derivs)/(int)m_stat_total_syms);
+                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time) << "\n";
     out << "  LLVM code generation: "

@@ -466,6 +466,12 @@ public:
     void swap(ClosureColor &source) { m_components.swap(source.m_components);
                                       m_mem.swap(source.m_mem); }
 
+    size_t get_memory_usage() const {
+       return sizeof(ClosureColor) +
+              sizeof(Component) * m_components.capacity() +
+              sizeof(char)      * m_mem.capacity();
+    }
+
 private:
 
     /// Light-weight struct to hold a single component of the Closure.

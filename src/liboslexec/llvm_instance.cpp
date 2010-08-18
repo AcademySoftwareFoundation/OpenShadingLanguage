@@ -759,10 +759,9 @@ RuntimeOptimizer::llvm_store_component_value (llvm::Value* new_val,
 
     TypeDesc t = sym.typespec().simpletype();
     ASSERT (t.aggregate != TypeDesc::SCALAR);
-    std::vector<llvm::Value *> indexes;
-    indexes.push_back(llvm_constant(0));
-    indexes.push_back(component);
-    result = builder().CreateGEP (result, indexes.begin(), indexes.end(), "compaccess");  // Find the component
+    // Find the component
+    llvm::Value *indexes[2] = { llvm_constant(0), component };
+    result = builder().CreateGEP (result, indexes, indexes+2, "compaccess");
 
     // Finally, store the value.
     builder().CreateStore (new_val, result);
@@ -870,6 +869,10 @@ RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
                              llvm_constant(s) };
     llvm::Function *func = llvm_module()->getFunction ("osl_printf");
     builder().CreateCall (func, args, args+3);
+    // N.B. Above we need to do the "getFunction/CreateCall" by hand,
+    // rather than call our own RuntimeOptimizer::llvm_call_function, in
+    // order to avoid infinite recursion that would result if somebody
+    // uncomments the debugging printfs in llvm_call_function itself.
 }
 
 

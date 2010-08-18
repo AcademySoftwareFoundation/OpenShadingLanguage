@@ -122,21 +122,21 @@ private:
 /// Addition of duals.
 ///
 template<class T>
-Dual2<T> operator+ (const Dual2<T> &a, const Dual2<T> &b)
+inline Dual2<T> operator+ (const Dual2<T> &a, const Dual2<T> &b)
 {
     return Dual2<T> (a.val()+b.val(), a.dx()+b.dx(), a.dy()+b.dy());
 }
 
 
 template<class T>
-Dual2<T> operator+ (const Dual2<T> &a, const T &b)
+inline Dual2<T> operator+ (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()+b, a.dx(), a.dy());
 }
 
 
 template<class T>
-Dual2<T> operator+ (const T &a, const Dual2<T> &b)
+inline Dual2<T> operator+ (const T &a, const Dual2<T> &b)
 {
     return Dual2<T> (a+b.val(), b.dx(), b.dy());
 }
@@ -145,21 +145,21 @@ Dual2<T> operator+ (const T &a, const Dual2<T> &b)
 /// Subtraction of duals.
 ///
 template<class T>
-Dual2<T> operator- (const Dual2<T> &a, const Dual2<T> &b)
+inline Dual2<T> operator- (const Dual2<T> &a, const Dual2<T> &b)
 {
     return Dual2<T> (a.val()-b.val(), a.dx()-b.dx(), a.dy()-b.dy());
 }
 
 
 template<class T>
-Dual2<T> operator- (const Dual2<T> &a, const T &b)
+inline Dual2<T> operator- (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()-b, a.dx(), a.dy());
 }
 
 
 template<class T>
-Dual2<T> operator- (const T &a, const Dual2<T> &b)
+inline Dual2<T> operator- (const T &a, const Dual2<T> &b)
 {
     return Dual2<T> (a-b.val(), -b.dx(), -b.dy());
 }
@@ -169,7 +169,7 @@ Dual2<T> operator- (const T &a, const Dual2<T> &b)
 /// Negation of duals.
 ///
 template<class T>
-Dual2<T> operator- (const Dual2<T> &a)
+inline Dual2<T> operator- (const Dual2<T> &a)
 {
     return Dual2<T> (-a.val(), -a.dx(), -a.dy());
 }
@@ -178,7 +178,7 @@ Dual2<T> operator- (const Dual2<T> &a)
 /// Multiplication of duals.
 ///
 template<class T>
-Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
+inline Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
 {
     // Use the chain rule
     return Dual2<T> (a.val()*b.val(),
@@ -190,7 +190,7 @@ Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
 /// Multiplication of dual by scalar.
 ///
 template<class T>
-Dual2<T> operator* (const Dual2<T> &a, const T &b)
+inline Dual2<T> operator* (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
 }
@@ -199,7 +199,7 @@ Dual2<T> operator* (const Dual2<T> &a, const T &b)
 /// Multiplication of dual by scalar.
 ///
 template<class T>
-Dual2<T> operator* (const T &b, const Dual2<T> &a)
+inline Dual2<T> operator* (const T &b, const Dual2<T> &a)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
 }
@@ -209,7 +209,7 @@ Dual2<T> operator* (const T &b, const Dual2<T> &a)
 /// Division of duals.
 ///
 template<class T>
-Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
+inline Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
 {
     T bvalinv = 1.0f / b.val();
     T aval_bval = a.val() * bvalinv;
@@ -222,7 +222,7 @@ Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
 /// Division of dual by scalar.
 ///
 template<class T>
-Dual2<T> operator/ (const Dual2<T> &a, const T &b)
+inline Dual2<T> operator/ (const Dual2<T> &a, const T &b)
 {
     T binv = 1.0f / b;
     return a * binv;
@@ -232,7 +232,7 @@ Dual2<T> operator/ (const Dual2<T> &a, const T &b)
 /// Division of scalar by dual.
 ///
 template<class T>
-Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
+inline Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
 {
     T bvalinv = 1.0f / b.val();
     T aval_bval = aval * bvalinv;
@@ -243,7 +243,7 @@ Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
 
 // f(x) = cos(x), f'(x) = -sin(x)
 template<class T>
-Dual2<T> cos (const Dual2<T> &a)
+inline Dual2<T> cos (const Dual2<T> &a)
 {
     T sina, cosa;
     sina = std::sin (a.val());
@@ -253,7 +253,7 @@ Dual2<T> cos (const Dual2<T> &a)
 
 // f(x) = sin(x),  f'(x) = cos(x)
 template<class T>
-Dual2<T> sin (const Dual2<T> &a)
+inline Dual2<T> sin (const Dual2<T> &a)
 {
     T sina, cosa;
     sina = std::sin (a.val());
@@ -263,7 +263,7 @@ Dual2<T> sin (const Dual2<T> &a)
 
 // f(x) = tan(x), f'(x) = sec^2(x)
 template<class T>
-Dual2<T> tan (const Dual2<T> &a)
+inline Dual2<T> tan (const Dual2<T> &a)
 {
    T tana, cosa, sec2a;
    tana  = std::tan (a.val());
@@ -274,7 +274,7 @@ Dual2<T> tan (const Dual2<T> &a)
 
 // f(x) = cosh(x), f'(x) = sinh(x)
 template<class T>
-Dual2<T> cosh (const Dual2<T> &a)
+inline Dual2<T> cosh (const Dual2<T> &a)
 {
    T cosha, sinha;
    cosha = std::cosh(a.val());
@@ -284,7 +284,7 @@ Dual2<T> cosh (const Dual2<T> &a)
 
 // f(x) = sinh(x), f'(x) = cosh(x)
 template<class T>
-Dual2<T> sinh (const Dual2<T> &a)
+inline Dual2<T> sinh (const Dual2<T> &a)
 {
    T cosha, sinha;
    cosha = std::cosh(a.val());
@@ -294,7 +294,7 @@ Dual2<T> sinh (const Dual2<T> &a)
 
 // f(x) = tanh(x), f'(x) = sech^2(x)
 template<class T>
-Dual2<T> tanh (const Dual2<T> &a)
+inline Dual2<T> tanh (const Dual2<T> &a)
 {
    T cosha, tanha, sech2a;
    tanha = std::tanh(a.val());
@@ -305,7 +305,7 @@ Dual2<T> tanh (const Dual2<T> &a)
 
 // f(x) = acos(x), f'(x) = -1/(sqrt(1 - x^2))
 template<class T>
-Dual2<T> acos (const Dual2<T> &a)
+inline Dual2<T> acos (const Dual2<T> &a)
 {
    if (a.val() >= T(1)) 
       return Dual2<T> (T(0), T(0), T(0));
@@ -321,7 +321,7 @@ Dual2<T> acos (const Dual2<T> &a)
 
 // f(x) = asin(x), f'(x) = 1/(sqrt(1 - x^2))
 template<class T>
-Dual2<T> asin (const Dual2<T> &a)
+inline Dual2<T> asin (const Dual2<T> &a)
 {
    if (a.val() >= T(1)) 
       return Dual2<T> (T(M_PI/2), T(0), T(0));
@@ -337,7 +337,7 @@ Dual2<T> asin (const Dual2<T> &a)
 
 // f(x) = atan(x), f'(x) = 1/(1 + x^2)
 template<class T>
-Dual2<T> atan (const Dual2<T> &a)
+inline Dual2<T> atan (const Dual2<T> &a)
 {
    T arctana, denom;
    arctana = std::atan (a.val());
@@ -362,7 +362,7 @@ inline T value (const T &f) { return f; }
 // reference:  http://en.wikipedia.org/wiki/Atan2 
 // (above link has other formulations)
 template<class T>
-Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
+inline Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 {
    if (y.val() == T(0) && x.val() == T(0))
       return Dual2<T> (T(0), T(0), T(0));
@@ -382,7 +382,7 @@ Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 //   (from http://en.wikipedia.org/wiki/Automatic_differentiation)
 // so, pow(u,v) = < u^v, vu^(v-1) u' + log(u)u^v v' >
 template<class T>
-Dual2<T> pow (const Dual2<T> &u, const Dual2<T> &v)
+inline Dual2<T> pow (const Dual2<T> &u, const Dual2<T> &v)
 {
     if (v.val() == T(0))
         return Dual2<T> ( T(1) );    // u^0 == 1
@@ -437,7 +437,7 @@ safe_pow (float x, float y)
 
 
 template<class T>
-Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
+inline Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
 {
     if (v.val() == T(0))
         return Dual2<T> ( T(1) );    // u^0 == 1
@@ -465,7 +465,7 @@ Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
 // f(x) = log(a), f'(x) = 1/x
 // (log base e)
 template<class T>
-Dual2<T> log (const Dual2<T> &a)
+inline Dual2<T> log (const Dual2<T> &a)
 {
    // do we want to print an error message?
    if (a.val() <= T(0))
@@ -481,7 +481,7 @@ Dual2<T> log (const Dual2<T> &a)
 // f(x) = log(a)/log(b)  -- leverage Dual2<T>log() and Dua2<T>operator/()
 // (log base e)
 template<class T>
-Dual2<T> log (const Dual2<T> &a, const Dual2<T> &b)
+inline Dual2<T> log (const Dual2<T> &a, const Dual2<T> &b)
 {
    // do we want to print an error message?
    if (a.val() <= T(0) || b.val() <= T(0) || b.val() == T(1)) {
@@ -501,7 +501,7 @@ Dual2<T> log (const Dual2<T> &a, const Dual2<T> &b)
 // f(x) = log2(x), f'(x) = 1/(x*log2)
 // (log base 2)
 template<class T>
-Dual2<T> log2 (const Dual2<T> &a)
+inline Dual2<T> log2 (const Dual2<T> &a)
 {
    // do we want to print an error message?
    if (a.val() <= T(0))
@@ -519,7 +519,7 @@ Dual2<T> log2 (const Dual2<T> &a)
 // f(x) = log10(x), f'(x) = 1/(x*log10)
 // (log base 10)
 template<class T>
-Dual2<T> log10 (const Dual2<T> &a)
+inline Dual2<T> log10 (const Dual2<T> &a)
 {
    // do we want to print an error message?
    if (a.val() <= T(0))
@@ -535,7 +535,7 @@ Dual2<T> log10 (const Dual2<T> &a)
 
 // f(x) = e^x, f'(x) = e^x
 template<class T>
-Dual2<T> exp (const Dual2<T> &a)
+inline Dual2<T> exp (const Dual2<T> &a)
 {
    T expa;
    expa  = std::exp (a.val());
@@ -545,7 +545,7 @@ Dual2<T> exp (const Dual2<T> &a)
 
 // f(x) = 2^x, f'(x) = (2^x)*log(2)
 template<class T>
-Dual2<T> exp2 (const Dual2<T> &a)
+inline Dual2<T> exp2 (const Dual2<T> &a)
 {
    T exp2a, ln2;
    exp2a  = std::pow (T(2), a.val());
@@ -556,7 +556,7 @@ Dual2<T> exp2 (const Dual2<T> &a)
 
 // f(x) = e^x - 1, f'(x) = e^x
 template<class T>
-Dual2<T> expm1 (const Dual2<T> &a)
+inline Dual2<T> expm1 (const Dual2<T> &a)
 {
    float expm1a, expa;
    expm1a = expm1f (a.val());
@@ -567,7 +567,7 @@ Dual2<T> expm1 (const Dual2<T> &a)
 
 // f(x) = erf(x), f'(x) = (2e^(-x^2))/sqrt(pi)
 template<class T>
-Dual2<T> erf (const Dual2<T> &a)
+inline Dual2<T> erf (const Dual2<T> &a)
 {
    T erfa, derfadx;
    erfa    = erff (a.val()); // float version!
@@ -578,7 +578,7 @@ Dual2<T> erf (const Dual2<T> &a)
 
 // f(x) = erfc(x), f'(x) = -(2e^(-x^2))/sqrt(pi)
 template<class T>
-Dual2<T> erfc (const Dual2<T> &a)
+inline Dual2<T> erfc (const Dual2<T> &a)
 {
    T erfca, derfcadx;
    erfca    = erfcf (a.val()); // float version!
@@ -589,7 +589,7 @@ Dual2<T> erfc (const Dual2<T> &a)
 
 // f(x) = sqrt(x), f'(x) = 1/(2*sqrt(x))
 template<class T>
-Dual2<T> sqrt (const Dual2<T> &a)
+inline Dual2<T> sqrt (const Dual2<T> &a)
 {
    // do we want to print an error message?
    if (a.val() <= T(0))
@@ -604,7 +604,7 @@ Dual2<T> sqrt (const Dual2<T> &a)
 
 // f(x) = 1/sqrt(x), f'(x) = -1/(2*x^(3/2))
 template<class T>
-Dual2<T> inversesqrt (const Dual2<T> &a)
+inline Dual2<T> inversesqrt (const Dual2<T> &a)
 {
    // do we want to print an error message?
    if (a.val() <= T(0))
@@ -619,7 +619,7 @@ Dual2<T> inversesqrt (const Dual2<T> &a)
 
 // (fx) = x*(1-a) + y*a, f'(x) = (1-a)x' + (y - x)*a' + a*y'
 template<class T>
-Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
+inline Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
 {
    T mixval = x.val()*(T(1)-a.val()) + y.val()*a.val();
 
@@ -629,7 +629,7 @@ Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
 
 // f(x) = sqrt(x*x + y*y), f'(x) = (x x' + y y')/sqrt(x*x + y*y)
 template<class T>
-Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y)
+inline Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y)
 {
    if (x.val() == T(0) && y.val() == T(0))
       return Dual2<T> (T(0), T(0), T(0));
@@ -643,7 +643,7 @@ Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y)
 
 // f(x) = sqrt(x*x + y*y + z*z), f'(x) = (x x' + y y' + z z')/sqrt(x*x + y*y + z*z)
 template<class T>
-Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &z)
+inline Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &z)
 {
    if (x.val() == T(0) && y.val() == T(0) && z.val() == T(0))
       return Dual2<T> (T(0), T(0), T(0));
@@ -656,7 +656,7 @@ Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &z)
 }
 
 template<class T>
-Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
+inline Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
 {
    if (x.val() > y.val())
       return y;
@@ -665,7 +665,7 @@ Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
 }
 
 template<class T>
-Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
+inline Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
 {
    if (x.val() > y.val())
       return x;
@@ -674,7 +674,7 @@ Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
 }
 
 template<class T>
-Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &maxv)
+inline Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &maxv)
 {
    if (x.val() < minv.val()) return minv;
    else if (x.val() > maxv.val()) return maxv;
@@ -692,7 +692,7 @@ inline float smoothstep(float e0, float e1, float x) {
 
 // f(t) = (3-2t)t^2,   t = (x-e0)/(e1-e0)
 template<class T>
-Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<T> &x)
+inline Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<T> &x)
 {
    if (x.val() < e0.val()) {
       return Dual2<T> (T(0), T(0), T(0));

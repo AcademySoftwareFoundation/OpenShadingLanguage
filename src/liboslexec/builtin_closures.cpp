@@ -166,6 +166,7 @@ BuiltinClosure builtin_closures[NBUILTIN_CLOSURES] = {
 
 static void generic_closure_setup(RendererServices *, int id, void *data)
 {
+   DASSERT (data != NULL);
    ClosurePrimitive *prim = (ClosurePrimitive *)data;
    prim->setup();
 }
@@ -174,6 +175,7 @@ static void generic_closure_setup(RendererServices *, int id, void *data)
 
 static bool generic_closure_compare(int id, const void *dataA, const void *dataB)
 {
+   DASSERT (dataA && dataB);
    ClosurePrimitive *primA = (ClosurePrimitive *)dataA;
    ClosurePrimitive *primB = (ClosurePrimitive *)dataB;
    return primA->mergeable (primB);

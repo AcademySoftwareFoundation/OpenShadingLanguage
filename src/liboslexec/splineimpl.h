@@ -91,8 +91,8 @@ inline float Clamp(float x, float minv, float maxv) {
 
 
 // Eliminate the derivatives of a number
-template<class T> T removeDerivatives (const T x)         { return x;       }
-template<class T> T removeDerivatives (const Dual2<T> &x) { return x.val(); }
+template<class T> inline T removeDerivatives (const T x)         { return x;       }
+template<class T> inline T removeDerivatives (const Dual2<T> &x) { return x.val(); }
 
 // Simple templated "copy" function
 template <class T> inline void assignment(T &a, T &b)        { a = b;       }

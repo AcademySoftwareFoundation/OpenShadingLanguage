@@ -734,7 +734,13 @@ private:
     atomic_int m_stat_total_syms;         ///< Stat: total syms in all insts
     atomic_int m_stat_syms_with_derivs;   ///< Stat: syms with derivatives
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
-    double m_stat_llvm_time;              ///< Stat: time spent on LLVM
+    double m_stat_opt_locking_time;       ///<   locking time
+    double m_stat_specialization_time;    ///<   runtime specialization time
+    double m_stat_total_llvm_time;        ///<   total time spent on LLVM
+    double m_stat_llvm_setup_time;        ///<     llvm setup time
+    double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
+    double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
+    double m_stat_llvm_jit_time;          ///<     llvm JIT time
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
 #ifdef DEBUG_ADJUST_VARYING
     atomic_ll m_adjust_calls;             ///< Calls to adjust_varying

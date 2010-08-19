@@ -26,6 +26,9 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cmath>
+#include <OpenImageIO/timer.h>
+
 #include "llvm_headers.h"
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Transforms/Scalar.h>
@@ -231,7 +234,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_mul_closure_color", "xCCc",
     "osl_allocate_closure_component", "XCii",
 
-#if 0
+#if 1
     NOISE_IMPL(cellnoise),
     NOISE_IMPL(noise),
     NOISE_DERIV_IMPL(noise),
@@ -3371,21 +3374,48 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
 void
 RuntimeOptimizer::build_llvm_group ()
 {
+    Timer timer;
     initialize_llvm_group ();
 
-    llvm::Function *func = NULL;
+    // Generate the LLVM IR for each layer
+    //
     int nlayers = m_group.nlayers();
+    llvm::Function *func = NULL;
+    std::vector<llvm::Function *> funcs (nlayers);
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         bool lastlayer = (layer == (nlayers-1));
         func = build_llvm_instance (lastlayer);
-#if 0
-        llvm_do_optimization (func, lastlayer);
-#endif
+        funcs[layer] = func;
     }
-#if 1
-    m_llvm_passes->run (*llvm_module());
+    m_stat_llvm_irgen_time = timer();  timer.reset();  timer.start();
+
+    // Optimize the LLVM IR
+
+#if 0
+    // First do the simple function passes
+    m_llvm_func_passes->doInitialization();
+    for (llvm::Module::iterator i = llvm_module()->begin();
+         i != llvm_module()->end(); ++i) {
+        m_llvm_func_passes->run (*i);
+    }
+    m_llvm_func_passes->doFinalization();
 #endif
+
+    // Next do the module passes
+    m_llvm_passes->run (*llvm_module());
+
+#if 0
+    // Now do additional highly optimized function passes on just the
+    // new functions we added for the shader layers
+    m_llvm_func_passes_optimized->doInitialization();
+    BOOST_FOREACH (llvm::Function *f, funcs)
+        m_llvm_func_passes_optimized->run (*f);
+    m_llvm_func_passes_optimized->doFinalization();
+#endif
+
+    m_stat_llvm_opt_time = timer();  timer.reset();  timer.start();
+
     if (shadingsys().llvm_debug())
         llvm::errs() << "func after opt  = " << *func << "\n";
 
@@ -3402,6 +3432,16 @@ RuntimeOptimizer::build_llvm_group ()
     llvm::ExecutionEngine* ee = shadingsys().ExecutionEngine();
     RunLLVMGroupFunc f = (RunLLVMGroupFunc) ee->getPointerToFunction(func);
     m_group.llvm_compiled_version (f);
+
+//  Experiments: can we delete the module or the function code?  Seems
+//  to crash, but I'm still playing around with it.
+//    BOOST_FOREACH (llvm::Function *f, funcs)
+//        f->deleteBody();
+//    ee->removeModule (m_llvm_module);
+//    /**/ delete m_llvm_module;
+//    m_llvm_module = NULL;
+
+    m_stat_llvm_jit_time = timer();
 }
 
 
@@ -3585,8 +3625,10 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     passes.add (llvm::createPromoteMemoryToRegisterPass());
 
 #elif 0
-    // N.B. See llvm's include/llvm/Support/StandardPasses.h to see what
-    // these do.
+    // This code would apply the standard optimizations used by
+    // llvm-gcc.  We have found that for our purposes, they spend too
+    // much time optimizing.  But useful to have for reference.  See
+    // llvm's include/llvm/Support/StandardPasses.h to see what they do.
     int optlevel = 3;
     llvm::createStandardFunctionPasses (&fpm, optlevel /*opt level*/);
     passes.add (llvm::createFunctionInliningPass(250));
@@ -3598,58 +3640,8 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
                                       true /* simplify lib calls */,
                                       false /* have exceptions */,
                                       inlining_pass);
-#elif 0
-    // These are the optimizations that at one point seemed to work.
-
-    // Change memory references to registers
-    fpm.add (llvm::createPromoteMemoryToRegisterPass());
-    // Combine instructions where possible -- peephole opts & bit-twiddling
-    fpm.add (llvm::createInstructionCombiningPass());
-    // Eliminate early returns
-    fpm.add (llvm::createUnifyFunctionExitNodesPass());
-    // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
-    fpm.add (llvm::createReassociatePass());
-    // Eliminate common sub-expressions
-    fpm.add (llvm::createGVNPass());
-    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-    fpm.add (llvm::createCFGSimplificationPass());
-    // More dead code elimination
-    fpm.add (llvm::createAggressiveDCEPass());
-    // Try to make stuff into registers one last time.
-    fpm.add (llvm::createPromoteMemoryToRegisterPass());
-    // Always add verifier?
-    fpm.add (llvm::createVerifierPass());
-
-
-    // Change memory references to registers
-    fpmo.add (llvm::createPromoteMemoryToRegisterPass());
-    // Combine instructions where possible -- peephole opts & bit-twiddling
-    fpmo.add (llvm::createInstructionCombiningPass());
-    // Eliminate early returns
-    fpmo.add (llvm::createUnifyFunctionExitNodesPass());
-    // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
-    fpmo.add (llvm::createReassociatePass());
-    // Eliminate common sub-expressions
-    fpmo.add (llvm::createGVNPass());
-    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-    fpmo.add (llvm::createCFGSimplificationPass());
-    // More dead code elimination
-    fpmo.add (llvm::createAggressiveDCEPass());
-    // Try to make stuff into registers one last time.
-    fpmo.add (llvm::createPromoteMemoryToRegisterPass());
-    // Always add verifier?
-    fpmo.add (llvm::createVerifierPass());
-
-
-    passes.add (new llvm::TargetData(llvm_module()));
-    // Inline small functions
-    passes.add (llvm::createFunctionInliningPass());
-    passes.add (llvm::createVerifierPass());
-
 #else
-    // These are the custom optimizations that seemed to get us into
-    // trouble with crashes.  I still don't know if I've done something
-    // wrong or if there is an LLVM bug revealed by this.
+    // These are our custom set of optimizations.
 
 
     // Simplify the call graph if possible (deleting unreachable blocks, etc.)
@@ -3711,7 +3703,7 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     //passes.add (createLoopDeletionPass());          // Delete dead loops
     //if (UnrollLoops)
 #endif
-    passes.add (llvm::createLoopUnrollPass());          // Unroll small loops
+////    passes.add (llvm::createLoopUnrollPass());          // Unroll small loops
 #if 0
 //    passes.add (llvm::createInstructionCombiningPass());  // Clean up after the unroller
     //if (OptimizationLevel > 1)
@@ -3743,10 +3735,7 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     fpmo.add (llvm::createScalarReplAggregatesPass());
     fpmo.add (llvm::createInstructionCombiningPass());
     fpmo.add (llvm::createUnifyFunctionExitNodesPass());
-//    fpmo.add (llvm::createFunctionInliningPass());  // 250?
-    fpmo.add (llvm::createInstructionCombiningPass());
     fpmo.add (llvm::createCFGSimplificationPass());
-//    fpmo.add (llvm::createFunctionInliningPass());  // 250?
 //    fpmo.add (llvm::createFunctionAttrsPass());       // Set readonly/readnone attrs
 //    fpmo.add (llvm::createArgumentPromotionPass());   // Scalarize uninlined fn args
     fpmo.add (llvm::createInstructionCombiningPass());  // Cleanup for scalarrepl.

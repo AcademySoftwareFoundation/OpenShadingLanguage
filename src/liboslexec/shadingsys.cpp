@@ -132,10 +132,14 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
       m_lockgeom_default (false), m_optimize (1),
-      m_use_llvm(0), m_llvm_debug(false),
+      m_use_llvm(1), m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_in_group (false),
       m_global_heap_total (0),
+      m_stat_opt_locking_time(0), m_stat_specialization_time(0),
+      m_stat_total_llvm_time(0),
+      m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
+      m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0),
       m_llvm_context (NULL),
       m_llvm_module (NULL),
       m_llvm_exec (NULL)
@@ -155,8 +159,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_instructions_run = 0;
     m_stat_total_syms = 0;
     m_stat_syms_with_derivs = 0;
-    m_stat_optimization_time = 0;
-    m_stat_llvm_time = 0;
 
     init_global_heap_offsets ();
 
@@ -510,8 +512,20 @@ ShadingSystemImpl::getstats (int level) const
                             (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time) << "\n";
-    out << "  LLVM code generation: "
-        << Strutil::timeintervalformat (m_stat_llvm_time) << "\n";
+    out << "    locking:                   "
+        << Strutil::timeintervalformat (m_stat_opt_locking_time) << "\n";
+    out << "    runtime specialization:    "
+        << Strutil::timeintervalformat (m_stat_specialization_time) << "\n";
+    if (m_stat_total_llvm_time > 0.0) {
+        out << "    LLVM setup:                "
+            << Strutil::timeintervalformat (m_stat_llvm_setup_time) << "\n";
+        out << "    LLVM IR gen:               "
+            << Strutil::timeintervalformat (m_stat_llvm_irgen_time) << "\n";
+        out << "    LLVM optimize:             "
+            << Strutil::timeintervalformat (m_stat_llvm_opt_time) << "\n";
+        out << "    LLVM JIT:                  "
+            << Strutil::timeintervalformat (m_stat_llvm_jit_time) << "\n";
+    }
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
 

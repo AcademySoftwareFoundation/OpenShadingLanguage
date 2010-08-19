@@ -96,7 +96,8 @@ examples), as you are just coding in C++, but there are some rules:
 #include "oslconfig.h"
 #include "oslclosure.h"
 #include "oslexec_pvt.h"
-#include "noiseimpl.h"
+#include "dual.h"
+//#include "noiseimpl.h"
 #include "splineimpl.h"
 using namespace OSL;
 using namespace OSL::pvt;
@@ -1194,6 +1195,8 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
 
 
 
+#if 0
+
 /***********************************************************************
  * noise routines
  */
@@ -1488,6 +1491,7 @@ PNOISE_IMPL_DERIV (pnoise, PeriodicNoise)
 PNOISE_IMPL (psnoise, PeriodicSNoise)
 PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
 
+#endif
 
 
 

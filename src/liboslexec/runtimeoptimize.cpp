@@ -2610,6 +2610,7 @@ RuntimeOptimizer::collapse_ops ()
 void
 RuntimeOptimizer::optimize_group ()
 {
+    Timer rop_timer;
     initialize_folder_table ();
 
     int nlayers = (int) m_group.nlayers ();
@@ -2679,11 +2680,7 @@ RuntimeOptimizer::optimize_group ()
         inst()->m_heap_size_calculated = false;
     }
 
-    m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-          new_nsyms, old_nsyms,
-          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
-          new_nops, old_nops,
-          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+    m_stat_specialization_time = rop_timer();
 
 #if USE_LLVM
     if (m_shadingsys.use_llvm()) {
@@ -2692,17 +2689,26 @@ RuntimeOptimizer::optimize_group ()
         // just make a big lock.
         static mutex llvm_mutex;
         lock_guard llvm_lock (llvm_mutex);
-        
+        m_stat_opt_locking_time = timer();
+
         m_shadingsys.SetupLLVM ();
+        m_stat_llvm_setup_time = timer() - m_stat_opt_locking_time;
         build_llvm_group ();
 
-        double llvm_time = timer();
-        {
-            spin_lock statlock (m_shadingsys.m_stat_mutex);
-            m_shadingsys.m_stat_llvm_time += llvm_time;
-        }
+        m_stat_total_llvm_time = timer();
     }
 #endif
+
+    m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+          new_nsyms, old_nsyms,
+          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
+          new_nops, old_nops,
+          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+    m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit)",
+                       m_stat_total_llvm_time, m_stat_specialization_time, 
+                       m_stat_opt_locking_time, m_stat_llvm_setup_time,
+                       m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
+                       m_stat_llvm_jit_time);
 }
 
 
@@ -2715,9 +2721,12 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     lock_guard lock (group.m_mutex);
     if (group.optimized()) {
         spin_lock (m_stat_mutex);
-        m_stat_optimization_time += timer();
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
         return;
     }
+    double locking_time = timer();
 
     RuntimeOptimizer rop (*this, group);
     rop.optimize_group ();
@@ -2726,6 +2735,13 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     group.m_optimized = true;
     spin_lock (m_stat_mutex);
     m_stat_optimization_time += timer();
+    m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
+    m_stat_specialization_time += rop.m_stat_specialization_time;
+    m_stat_total_llvm_time += rop.m_stat_total_llvm_time;
+    m_stat_llvm_setup_time += rop.m_stat_llvm_setup_time;
+    m_stat_llvm_irgen_time += rop.m_stat_llvm_irgen_time;
+    m_stat_llvm_opt_time += rop.m_stat_llvm_opt_time;
+    m_stat_llvm_jit_time += rop.m_stat_llvm_jit_time;
 }
 
 

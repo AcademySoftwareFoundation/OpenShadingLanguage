@@ -51,7 +51,11 @@ class RuntimeOptimizer {
 public:
     RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group)
         : m_shadingsys(shadingsys), m_group(group),
-          m_inst(NULL), m_next_newconst(0)
+          m_inst(NULL), m_next_newconst(0),
+          m_stat_opt_locking_time(0), m_stat_specialization_time(0),
+          m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
+          m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
+          m_stat_llvm_jit_time(0)
 #if USE_LLVM
         , m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
           m_llvm_passes(NULL), m_llvm_func_passes(NULL),
@@ -524,6 +528,13 @@ private:
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
     std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
+    double m_stat_opt_locking_time;       ///<   locking time
+    double m_stat_specialization_time;    ///<   specialization time
+    double m_stat_total_llvm_time;        ///<   total time spent on LLVM
+    double m_stat_llvm_setup_time;        ///<     llvm setup time
+    double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
+    double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
+    double m_stat_llvm_jit_time;          ///<     llvm JIT time
 
 #if USE_LLVM
     // LLVM stuff
@@ -560,6 +571,8 @@ private:
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage
     std::vector<ustring> m_messages_sent;  ///< Names of messages set
+
+    friend class ShadingSystemImpl;
 };
 
 

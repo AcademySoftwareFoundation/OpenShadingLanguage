@@ -211,3 +211,80 @@ DECLOP (OP_getmessage)
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE
 #endif
+
+
+#define USTR(cstr) (*((ustring *)&cstr))
+
+extern "C" void
+osl_setmessage (SingleShaderGlobal *sg, const void *name_, long long type_, void *val)
+{
+    const ustring &name (USTR(name_));
+    // recreate TypeDesc -- we just crammed it into an int!
+    TypeDesc type (*(TypeDesc *)&type_);
+    bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
+    if (is_closure)
+        type = TypeDesc::TypeInt;  // for closures, we store the index
+
+    ParamValueList &messages (sg->context->messages());
+    ParamValue *p = NULL;
+    for (size_t m = 0;  m < messages.size() && !p;  ++m)
+        if (messages[m].name() == name && messages[m].type() == type)
+            p = &messages[m];
+    // If the message doesn't already exist, create it
+    if (! p) {
+        p = & messages.grow ();
+        ASSERT (p == &(messages.back()));
+        ASSERT (p == &(messages[messages.size()-1]));
+        p->init (name, type, 1, NULL);
+    }
+    
+    if (is_closure) {
+        // Add the closure data to the end of the closure messages
+        std::vector<ClosureColor> &closure_msgs (sg->context->closure_msgs());
+        closure_msgs.push_back (*(ClosureColor *)val);
+        // and store its index in the PVL
+        *(int *)p->data() = (int)closure_msgs.size() - 1;
+    } else {
+        // Non-closure types, just memcpy
+        memcpy ((void *)p->data(), val, type.size());
+    }
+}
+
+
+
+extern "C" int
+osl_getmessage (SingleShaderGlobal *sg, const void *name_, long long type_, void *val)
+{
+    const ustring &name (USTR(name_));
+    // recreate TypeDesc -- we just crammed it into an int!
+    TypeDesc type (*(TypeDesc *)&type_);
+    bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
+    if (is_closure)
+        type = TypeDesc::TypeInt;  // for closures, we store the index
+
+    ParamValueList &messages (sg->context->messages());
+    ParamValue *p = NULL;
+    for (size_t m = 0;  m < messages.size() && !p;  ++m)
+        if (messages[m].name() == name && messages[m].type() == type)
+            p = &messages[m];
+
+    if (p) {
+        // Message found
+        if (is_closure) {
+            int index = *(const int *)p->data();
+            ClosureColor *valclose = (ClosureColor *)val;
+            std::vector<ClosureColor> &closure_msgs (sg->context->closure_msgs());
+            if (index < (int)closure_msgs.size())
+                *valclose = closure_msgs[index];
+            else
+                valclose->clear ();
+        } else {
+            // Non-closure types, just memcpy
+            memcpy (val, p->data(), type.size());
+        }
+        return 1;
+    }
+
+    // Message not found
+    return 0;
+}

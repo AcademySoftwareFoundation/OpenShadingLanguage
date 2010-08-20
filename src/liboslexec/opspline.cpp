@@ -254,3 +254,74 @@ DECLOP (OP_spline)
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE
 #endif
+
+
+
+#define USTR(cstr) (*((ustring *)&cstr))
+#define DFLOAT(x) (*(Dual2<Float> *)x)
+#define DVEC(x) (*(Dual2<Vec3> *)x)
+
+extern "C" void  osl_spline_fff(void *out, void *spline_, void *x, 
+                                float *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<float, float, float, float, false>
+      (spline, *(float *)out, *(float *)x, knots, knot_count);
+}
+
+extern "C" void  osl_spline_dfdfdf(void *out, void *spline_, void *x, 
+                                   float *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Dual2<float>, Dual2<float>, Dual2<float>, float, true>
+      (spline, DFLOAT(out), DFLOAT(x), knots, knot_count);
+}
+
+extern "C" void  osl_spline_dffdf(void *out, void *spline_, void *x, 
+                                   float *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Dual2<float>, float, Dual2<float>, float, true>
+      (spline, DFLOAT(out), *(float *)x, knots, knot_count);
+}
+
+extern "C" void  osl_spline_dfdff(void *out, void *spline_, void *x, 
+                                   float *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Dual2<float>, Dual2<float>, float, float, false>
+      (spline, DFLOAT(out), DFLOAT(x), knots, knot_count);
+}
+
+extern "C" void  osl_spline_vfv(void *out, void *spline_, void *x, 
+                                Vec3 *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Vec3, float, Vec3, Vec3, false>
+      (spline, *(Vec3 *)out, *(float *)x, knots, knot_count);
+}
+
+extern "C" void  osl_spline_dvdfv(void *out, void *spline_, void *x, 
+                                  Vec3 *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Vec3, float, Vec3, Vec3, false>
+      (spline, *(Vec3 *)out, *(float *)x, knots, knot_count);
+}
+
+extern "C" void  osl_spline_dvfdv(void *out, void *spline_, void *x, 
+                                   Vec3 *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Dual2<Vec3>, float, Dual2<Vec3>, Vec3, true>
+      (spline, DVEC(out), *(float *)x, knots, knot_count);
+}
+
+extern "C" void  osl_spline_dvdfdv(void *out, void *spline_, void *x, 
+                                   Vec3 *knots, int knot_count)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   Spline::spline_evaluate<Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true>
+      (spline, DVEC(out), DFLOAT(x), knots, knot_count);
+}
+

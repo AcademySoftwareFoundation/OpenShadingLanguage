@@ -90,15 +90,11 @@ examples), as you are just coding in C++, but there are some rules:
 
 
 #include <string>
-#include <cstdarg>
 #include <cstdio>
 
 #include "oslconfig.h"
-#include "oslclosure.h"
 #include "oslexec_pvt.h"
 #include "dual.h"
-//#include "noiseimpl.h"
-#include "splineimpl.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -115,69 +111,7 @@ using namespace OSL::pvt;
 #define DVEC(x) (*(Dual2<Vec3> *)x)
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
-#define CLOSURE(x) ((ClosureColor *)x)
 #define TYPEDESC(x) (*(TypeDesc *)&x)
-
-extern "C" const char *
-osl_closure_to_string (void *c)
-{
-    // Special case for printing closures
-    std::stringstream stream;
-    stream << *(const ClosureColor *)c;
-    return ustring(stream.str ()).c_str();
-}
-
-
-extern "C" const char *
-osl_format (const char* format_str, ...)
-{
-    va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
-    va_end (args);
-    return ustring(s).c_str();
-}
-
-
-extern "C" void
-osl_printf (void *sg_, const char* format_str, ...)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    va_list args;
-    va_start (args, format_str);
-#if 0
-    // Make super sure we know we are excuting LLVM-generated code!
-    std::string newfmt = std::string("llvm: ") + format_str;
-    format_str = newfmt.c_str();
-#endif
-    std::string s = Strutil::vformat (format_str, args);
-    va_end (args);
-    sg->context->shadingsys().message (s);
-}
-
-
-extern "C" void
-osl_error (void *sg_, const char* format_str, ...)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
-    va_end (args);
-    sg->context->shadingsys().error (s);
-}
-
-
-extern "C" void
-osl_warning (void *sg_, const char* format_str, ...)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
-    va_end (args);
-    sg->context->shadingsys().warning (s);
-}
 
 
 extern "C" void
@@ -744,89 +678,6 @@ extern "C" void osl_transformn_dvmdv(void *result, void* M_, void* v_)
    multDirMatrix (M.inverse().transpose(), v, DVEC(result));
 }
 
-
-
-#if 0
-
-// Closure functions
-
-extern "C" void *
-osl_closure_allot (void *sg_)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    ShadingContext *ctx = (ShadingContext *)sg->context;
-    void *r = ctx->closure_ptr_allot ();
-    ASSERT (r && "bad closure allot");
-    return r;
-}
-
-extern "C" void
-osl_closure_clear (void *_r)
-{
-    ClosureColor *r = (ClosureColor *)_r;
-    r->clear ();
-}
-
-extern "C" void
-osl_closure_clear_indexed (void **_r, int i)
-{
-    ClosureColor **r = (ClosureColor **)_r;
-    r[i]->clear ();
-}
-
-extern "C" void
-osl_closure_assign (void *_r, void *_x)
-{
-    DASSERT (_r);  DASSERT (_x);
-    ClosureColor *r = (ClosureColor *)_r;
-    ClosureColor *x = (ClosureColor *)_x;
-    *r = *x;
-}
-
-extern "C" void
-osl_closure_assign_indexed (void **_r, int ri, void **_x, int xi)
-{
-    ClosureColor **r = (ClosureColor **)_r;
-    ClosureColor **x = (ClosureColor **)_x;
-    *(r[ri]) = *(x[xi]);
-}
-
-extern "C" void
-osl_add_closure_closure (void *sg_, void *_r, void *_a, void *_b)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    ClosureColor *r = (ClosureColor *)_r;
-    ClosureColor *a = (ClosureColor *)_a;
-    ClosureColor *b = (ClosureColor *)_b;
-    r->add (*a, *b, &sg->context->shadingsys());
-}
-
-extern "C" void
-osl_mul_closure_float (void *_r, void *_a, float b)
-{
-    ClosureColor *r = (ClosureColor *)_r;
-    ClosureColor *a = (ClosureColor *)_a;
-    *r = *a;
-    *r *= b;
-}
-
-extern "C" void
-osl_mul_closure_color (void *_r, void *_a, void *_b)
-{
-    ClosureColor *r = (ClosureColor *)_r;
-    ClosureColor *a = (ClosureColor *)_a;
-    Color3 *b = (Color3 *)_b;
-    *r = *a;
-    *r *= *b;
-}
-
-extern "C" void *
-osl_allocate_closure_component (void *r, int id, int size)
-{
-    return CLOSURE(r)->allocate_component (id, size);
-}
-
-#endif
 
 
 // Matrix ops
@@ -1767,84 +1618,6 @@ extern "C" int osl_get_attribute_s(void *sg_,
 
 
 
-extern "C" void
-osl_setmessage (void *sg_, const void *name_, long long type_, void *val)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    const ustring &name (USTR(name_));
-    // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type (*(TypeDesc *)&type_);
-    bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
-    if (is_closure)
-        type = TypeDesc::TypeInt;  // for closures, we store the index
-
-    ParamValueList &messages (sg->context->messages());
-    ParamValue *p = NULL;
-    for (size_t m = 0;  m < messages.size() && !p;  ++m)
-        if (messages[m].name() == name && messages[m].type() == type)
-            p = &messages[m];
-    // If the message doesn't already exist, create it
-    if (! p) {
-        p = & messages.grow ();
-        ASSERT (p == &(messages.back()));
-        ASSERT (p == &(messages[messages.size()-1]));
-        p->init (name, type, 1, NULL);
-    }
-    
-    if (is_closure) {
-        // Add the closure data to the end of the closure messages
-        std::vector<ClosureColor> &closure_msgs (sg->context->closure_msgs());
-        closure_msgs.push_back (*(ClosureColor *)val);
-        // and store its index in the PVL
-        *(int *)p->data() = (int)closure_msgs.size() - 1;
-    } else {
-        // Non-closure types, just memcpy
-        memcpy ((void *)p->data(), val, type.size());
-    }
-}
-
-
-
-extern "C" int
-osl_getmessage (void *sg_, const void *name_, long long type_, void *val)
-{
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    const ustring &name (USTR(name_));
-    // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type (*(TypeDesc *)&type_);
-    bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
-    if (is_closure)
-        type = TypeDesc::TypeInt;  // for closures, we store the index
-
-    ParamValueList &messages (sg->context->messages());
-    ParamValue *p = NULL;
-    for (size_t m = 0;  m < messages.size() && !p;  ++m)
-        if (messages[m].name() == name && messages[m].type() == type)
-            p = &messages[m];
-
-    if (p) {
-        // Message found
-        if (is_closure) {
-            int index = *(const int *)p->data();
-            ClosureColor *valclose = (ClosureColor *)val;
-            std::vector<ClosureColor> &closure_msgs (sg->context->closure_msgs());
-            if (index < (int)closure_msgs.size())
-                *valclose = closure_msgs[index];
-            else
-                valclose->clear ();
-        } else {
-            // Non-closure types, just memcpy
-            memcpy (val, p->data(), type.size());
-        }
-        return 1;
-    }
-
-    // Message not found
-    return 0;
-}
-
-
-
 extern "C" float osl_surfacearea (void *sg_)
 {
     SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
@@ -1939,79 +1712,6 @@ extern "C" int osl_or_iii(int a, int b)
 }
 
 
-
-
-extern "C" void  osl_spline_fff(void *out, void *spline_, void *x, 
-                                void *knots_, int knot_count)
-{
-   float *knots = (float *)knots_;
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<float, float, float, float, false>
-      (spline, *(float *)out, *(float *)x, knots, knot_count);
-}
-
-extern "C" void  osl_spline_dfdfdf(void *out, void *spline_, void *x, 
-                                   void *knots_, int knot_count)
-{
-   float *knots = (float *)knots_; 
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Dual2<float>, Dual2<float>, Dual2<float>, float, true>
-      (spline, DFLOAT(out), DFLOAT(x), knots, knot_count);
-}
-
-extern "C" void  osl_spline_dffdf(void *out, void *spline_, void *x, 
-                                   void *knots_, int knot_count)
-{
-   float *knots = (float *)knots_; 
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Dual2<float>, float, Dual2<float>, float, true>
-      (spline, DFLOAT(out), *(float *)x, knots, knot_count);
-}
-
-extern "C" void  osl_spline_dfdff(void *out, void *spline_, void *x, 
-                                   void *knots_, int knot_count)
-{
-   float *knots = (float *)knots_; 
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Dual2<float>, Dual2<float>, float, float, false>
-      (spline, DFLOAT(out), DFLOAT(x), knots, knot_count);
-}
-
-extern "C" void  osl_spline_vfv(void *out, void *spline_, void *x, 
-                                void *knots_, int knot_count)
-{
-   Vec3 *knots = (Vec3 *)knots_;
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Vec3, float, Vec3, Vec3, false>
-      (spline, *(Vec3 *)out, *(float *)x, knots, knot_count);
-}
-
-extern "C" void  osl_spline_dvdfv(void *out, void *spline_, void *x, 
-                                  void *knots_, int knot_count)
-{
-   Vec3 *knots = (Vec3 *)knots_;
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Vec3, float, Vec3, Vec3, false>
-      (spline, *(Vec3 *)out, *(float *)x, knots, knot_count);
-}
-
-extern "C" void  osl_spline_dvfdv(void *out, void *spline_, void *x, 
-                                   void *knots_, int knot_count)
-{
-   Vec3 *knots = (Vec3 *)knots_; 
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Dual2<Vec3>, float, Dual2<Vec3>, Vec3, true>
-      (spline, DVEC(out), *(float *)x, knots, knot_count);
-}
-
-extern "C" void  osl_spline_dvdfdv(void *out, void *spline_, void *x, 
-                                   void *knots_, int knot_count)
-{
-   Vec3 *knots = (Vec3 *)knots_; 
-   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true>
-      (spline, DVEC(out), DFLOAT(x), knots, knot_count);
-}
 
 /***********************************************************************
  * Utility routines

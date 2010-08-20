@@ -234,7 +234,11 @@ static const char *llvm_helper_function_table[] = {
     "osl_mul_closure_float", "xCCf",
     "osl_mul_closure_color", "xCCc",
     "osl_allocate_closure_component", "XCii",
-
+    "osl_closure_to_string", "sX",
+    "osl_format", "ss*",
+    "osl_printf", "xXs*",
+    "osl_error", "xXs*",
+    "osl_warning", "xXs*",
 #if 1
     NOISE_IMPL(cellnoise),
     NOISE_IMPL(noise),
@@ -246,6 +250,16 @@ static const char *llvm_helper_function_table[] = {
     PNOISE_IMPL(psnoise),
     PNOISE_DERIV_IMPL(psnoise),
 #endif
+    "osl_spline_fff", "xXXXXi",
+    "osl_spline_dfdfdf", "xXXXXi",
+    "osl_spline_dfdff", "xXXXXi",
+    "osl_spline_dffdf", "xXXXXi",
+    "osl_spline_vfv", "xXXXXi",
+    "osl_spline_dvdfdv", "xXXXXi",
+    "osl_spline_dvdfv", "xXXXXi",
+    "osl_spline_dvfdv", "xXXXXi",
+    "osl_setmessage", "xXsLX",
+    "osl_getmessage", "iXsLX",
     NULL
 };
 
@@ -498,6 +512,8 @@ RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
         lt = llvm_type_void();
     else if (t == TypeDesc::PTR)
         lt = llvm_type_void_ptr();
+    else if (t == TypeDesc::LONGLONG)
+        lt = llvm_type_longlong();
     else {
         std::cerr << "Bad llvm_pass_type(" << typespec.c_str() << ")\n";
         ASSERT (0 && "not handling this type yet");
@@ -3474,6 +3490,7 @@ RuntimeOptimizer::initialize_llvm_group ()
         m_llvm_type_addrint = llvm::Type::getInt64Ty (*m_llvm_context);
     m_llvm_type_int_ptr = llvm::Type::getInt32PtrTy (*m_llvm_context);
     m_llvm_type_bool = llvm::Type::getInt1Ty (*m_llvm_context);
+    m_llvm_type_longlong = llvm::Type::getInt64Ty (*m_llvm_context);
     m_llvm_type_void = llvm::Type::getVoidTy (*m_llvm_context);
     m_llvm_type_char_ptr = llvm::Type::getInt8PtrTy (*m_llvm_context);
     m_llvm_type_int_ptr = llvm::Type::getInt32PtrTy (*m_llvm_context);

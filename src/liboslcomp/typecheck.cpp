@@ -1173,6 +1173,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     case 's' : t = TypeDesc::TypeString;       break;
     case 'x' : t = TypeDesc (TypeDesc::NONE);  break;
     case 'X' : t = TypeDesc (TypeDesc::PTR);   break;
+    case 'L' : t = TypeDesc (TypeDesc::LONGLONG); break;
     case 'C' : // color closure
         t = TypeSpec (TypeDesc::TypeColor, true);
         break;

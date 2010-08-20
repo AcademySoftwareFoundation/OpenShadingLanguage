@@ -487,6 +487,7 @@ public:
     const llvm::Type *llvm_type_int() { return m_llvm_type_int; }
     const llvm::Type *llvm_type_addrint() { return m_llvm_type_addrint; }
     const llvm::Type *llvm_type_bool() { return m_llvm_type_bool; }
+    const llvm::Type *llvm_type_longlong() { return m_llvm_type_longlong; }
     const llvm::Type *llvm_type_void() { return m_llvm_type_void; }
     const llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
     const llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
@@ -550,6 +551,7 @@ private:
     const llvm::Type *m_llvm_type_int;
     const llvm::Type *m_llvm_type_addrint;
     const llvm::Type *m_llvm_type_bool;
+    const llvm::Type *m_llvm_type_longlong;
     const llvm::Type *m_llvm_type_void;
     const llvm::Type *m_llvm_type_triple;
     const llvm::Type *m_llvm_type_matrix;

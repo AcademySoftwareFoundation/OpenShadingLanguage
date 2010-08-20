@@ -209,4 +209,14 @@ osl_allocate_closure_component (ClosureColor *r, int id, int size)
     return mem;
 }
 
+
+extern "C" const char *
+osl_closure_to_string (ClosureColor *c)
+{
+    // Special case for printing closures
+    std::stringstream stream;
+    stream << *c;
+    return ustring(stream.str ()).c_str();
+}
+
 #endif

@@ -34,6 +34,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////
 
+#include <cstdarg>
+
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
@@ -533,3 +535,53 @@ DECLOP (OP_regex_match)
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE
 #endif
+
+
+
+extern "C" const char *
+osl_format (const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+    return ustring(s).c_str();
+}
+
+
+extern "C" void
+osl_printf (SingleShaderGlobal *sg, const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+#if 0
+    // Make super sure we know we are excuting LLVM-generated code!
+    std::string newfmt = std::string("llvm: ") + format_str;
+    format_str = newfmt.c_str();
+#endif
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+    sg->context->shadingsys().message (s);
+}
+
+
+extern "C" void
+osl_error (SingleShaderGlobal *sg, const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+    sg->context->shadingsys().error (s);
+}
+
+
+extern "C" void
+osl_warning (SingleShaderGlobal *sg, const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+    sg->context->shadingsys().warning (s);
+}

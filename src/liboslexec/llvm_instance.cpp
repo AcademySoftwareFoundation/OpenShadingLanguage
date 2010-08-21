@@ -3450,12 +3450,12 @@ RuntimeOptimizer::build_llvm_group ()
     RunLLVMGroupFunc f = (RunLLVMGroupFunc) ee->getPointerToFunction(func);
     m_group.llvm_compiled_version (f);
 
-//  Experiments: can we delete the module or the function code?  Seems
-//  to crash, but I'm still playing around with it.
-//    BOOST_FOREACH (llvm::Function *f, funcs)
-//        f->deleteBody();
-//    ee->removeModule (m_llvm_module);
-//    /**/ delete m_llvm_module;
+    // Remove the IR for the group layer functions, we've already JITed it
+    // and will never need the IR again.  This saves memory, and also saves
+    // a huge amount of time since we won't re-optimize it again and again
+    // if we keep adding new shader groups to the same Module.
+    BOOST_FOREACH (llvm::Function *f, funcs)
+        f->deleteBody();
 //    m_llvm_module = NULL;
 
     m_stat_llvm_jit_time = timer();

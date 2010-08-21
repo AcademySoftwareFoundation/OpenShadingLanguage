@@ -3624,7 +3624,8 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     // Simplify the call graph if possible (deleting unreachable blocks, etc.)
     passes.add (llvm::createCFGSimplificationPass());
     // Change memory references to registers
-    passes.add (llvm::createPromoteMemoryToRegisterPass());
+//    passes.add (llvm::createPromoteMemoryToRegisterPass());
+    passes.add (llvm::createScalarReplAggregatesPass());
     // Combine instructions where possible -- peephole opts & bit-twiddling
     passes.add (llvm::createInstructionCombiningPass());
     // Inline small functions
@@ -3635,10 +3636,13 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     passes.add (llvm::createReassociatePass());
     // Eliminate common sub-expressions
     passes.add (llvm::createGVNPass());
+    passes.add (llvm::createSCCPPass());          // Constant prop with SCCP
     // More dead code elimination
     passes.add (llvm::createAggressiveDCEPass());
     // Combine instructions where possible -- peephole opts & bit-twiddling
     passes.add (llvm::createInstructionCombiningPass());
+    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
+    passes.add (llvm::createCFGSimplificationPass());
     // Try to make stuff into registers one last time.
     passes.add (llvm::createPromoteMemoryToRegisterPass());
 

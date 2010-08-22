@@ -3573,21 +3573,20 @@ ShadingSystemImpl::SetupLLVM ()
 #endif
     }
 
-    // FIXME -- let the EE leak for now!  
-
     // Create the ExecutionEngine
-    std::string error_msg;
-    m_llvm_exec = llvm::ExecutionEngine::create(m_llvm_module,
-                                                false /* force interpreter */,
-                                                &error_msg,
-                                                llvm::CodeGenOpt::Default,
-                                                false);
-    if (! m_llvm_exec) {
-        error ("Failed to create engine: %s\n", error_msg.c_str());
-        DASSERT (0);
-        return;
+    if (m_llvm_exec
+        && false /* FIXME -- leak the EE for now */) {
+        m_llvm_exec->addModule (m_llvm_module);
+    } else {
+        std::string error_msg;
+        m_llvm_exec = llvm::ExecutionEngine::create (m_llvm_module, false,
+                                                     &error_msg);
+        if (! m_llvm_exec) {
+            error ("Failed to create engine: %s\n", error_msg.c_str());
+            DASSERT (0);
+            return;
+        }
     }
-
 }
 
 

@@ -2705,7 +2705,8 @@ RuntimeOptimizer::optimize_group ()
           new_nops, old_nops,
           100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
     m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit)",
-                       m_stat_total_llvm_time, m_stat_specialization_time, 
+                       m_stat_total_llvm_time+m_stat_specialization_time,
+                       m_stat_specialization_time, 
                        m_stat_opt_locking_time, m_stat_llvm_setup_time,
                        m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
                        m_stat_llvm_jit_time);

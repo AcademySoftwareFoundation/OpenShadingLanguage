@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/PrettyStackTrace.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -3548,6 +3549,7 @@ ShadingSystemImpl::SetupLLVM ()
     if (! m_llvm_context) {
         // First time through -- basic LLVM context setup
         info ("Setting up LLVM");
+        llvm::DisablePrettyStackTrace = true;
         llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
         m_llvm_context = new llvm::LLVMContext();
         llvm::InitializeNativeTarget();

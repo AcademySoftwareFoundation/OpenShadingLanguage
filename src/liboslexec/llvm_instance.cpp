@@ -298,6 +298,8 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back (llvm_type_float());   // surfacearea
     sg_types.push_back (llvm_type_int());     // iscameraray
     sg_types.push_back (llvm_type_int());     // isshadowray
+    sg_types.push_back (llvm_type_int());     // isdiffuseray
+    sg_types.push_back (llvm_type_int());     // isglossyray
     sg_types.push_back (llvm_type_int());     // flipHandedness
     sg_types.push_back (llvm_type_int());     // backfacing
 
@@ -400,9 +402,10 @@ ShaderGlobalNameToIndex (ustring name)
         ustring("renderstate"), ustring("shadingcontext"),
         ustring("object2common"), ustring("shader2common"),
         Strings::Ci,
-        ustring("surfacearea"), ustring("iscameraray"),
-        ustring("isshadowray"), ustring("flipHandedness"),
-        ustring("backfacing")
+        ustring("surfacearea"),
+        ustring("iscameraray"), ustring("isshadowray"),
+        ustring("isdiffuseray"), ustring("isglossyray"),
+        ustring("flipHandedness"), ustring("backfacing")
     };
 
     for (int i = 0;  i < int(sizeof(fields)/sizeof(fields[0]));  ++i)
@@ -3145,7 +3148,9 @@ initialize_llvm_generator_table ()
     INIT (if);
     INIT2 (inversesqrt, llvm_gen_generic);
     INIT2 (iscameraray, llvm_gen_get_simple_SG_field);
+    INIT2 (isdiffuseray, llvm_gen_get_simple_SG_field);
     INIT2 (isfinite, llvm_gen_generic);
+    INIT2 (isglossyray, llvm_gen_get_simple_SG_field);
     INIT2 (isinf, llvm_gen_generic);
     INIT2 (isnan, llvm_gen_generic);
     INIT2 (isshadowray, llvm_gen_get_simple_SG_field);

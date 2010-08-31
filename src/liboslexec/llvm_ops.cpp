@@ -1413,14 +1413,16 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              void *result, void *dresultdx, void *dresultdy)
 {
     SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    TextureSystem *texsys = sg->context->shadingsys().texturesys();
+    RendererServices *renderer (sg->context->renderer());
     TextureOptions *opt = (TextureOptions *)opt_;
     opt->nchannels = chans;
     float dresultds[3], dresultdt[3];
     opt->dresultds = dresultdx ? dresultds : NULL;
     opt->dresultdt = dresultdy ? dresultdt : NULL;
-    bool ok = texsys->texture (USTR(name), *opt, s, t,
-                               dsdx, dtdx, dsdy, dtdy, (float *)result);
+
+    bool ok = renderer->texture (USTR(name), *opt, sg, s, t,
+                                 dsdx, dtdx, dsdy, dtdy, (float *)result);
+
     // Correct our st texture space gradients into xy-space gradients
     if (dresultdx)
         for (int i = 0;  i < chans;  ++i)
@@ -1438,15 +1440,15 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
              void *alpha, void *dalphadx, void *dalphady)
 {
     SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
-    TextureSystem *texsys = sg->context->shadingsys().texturesys();
+    RendererServices *renderer (sg->context->renderer());
     TextureOptions *opt = (TextureOptions *)opt_;
     opt->nchannels = chans + 1;
     float local_result[4], dresultds[4], dresultdt[4];
     opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
     opt->dresultdt = (dresultdy || dalphady) ? dresultdt : NULL;
 
-    bool ok = texsys->texture (USTR(name), *opt, s, t,
-                               dsdx, dtdx, dsdy, dtdy, local_result);
+    bool ok = renderer->texture (USTR(name), *opt, sg, s, t,
+                                 dsdx, dtdx, dsdy, dtdy, local_result);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -1480,12 +1482,12 @@ extern "C" int osl_get_textureinfo(void *sg_,    void *fin_,
     typedesc.aggregate = aggregate;
  
     SingleShaderGlobal *sg   = (SingleShaderGlobal *)sg_;
-    TextureSystem *texsys    = sg->context->shadingsys().texturesys();
+    RendererServices *renderer (sg->context->renderer());
 
     const ustring &filename  = USTR(fin_);
     const ustring &dataname  = USTR(dnam_);
 
-    return texsys->get_texture_info (filename, dataname, typedesc, data);
+    return renderer->get_texture_info (filename, dataname, typedesc, data);
 }
 
 
@@ -1641,6 +1643,24 @@ extern "C" int osl_iscameraray (void *sg_)
     SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
 
     return sg->iscameraray;
+}
+
+
+
+extern "C" int osl_isdiffuseray (void *sg_)
+{
+    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+
+    return sg->isdiffuseray;
+}
+
+
+
+extern "C" int osl_isglossyray (void *sg_)
+{
+    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+
+    return sg->isglossyray;
 }
 
 

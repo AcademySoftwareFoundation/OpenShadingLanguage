@@ -1361,6 +1361,8 @@ struct SingleShaderGlobal {
     float surfacearea;     ///< Total area of the object (not exposed)
     int iscameraray;       ///< True if computing for camera ray
     int isshadowray;       ///< True if computing for shadow opacity
+    int isdiffuseray;      ///< True if computing for diffuse ray
+    int isglossyray;       ///< True if computing for glossy ray
     int flipHandedness;    ///< flips the result of calculatenormal()
     int backfacing;        ///< True if we want to shade the back face
 };

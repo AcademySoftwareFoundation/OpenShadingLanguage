@@ -73,6 +73,44 @@ RendererServices::get_inverse_matrix (Matrix44 &result, ustring to, float time)
 
 
 
+// Just ask for the global shared TextureSystem.
+static TextureSystem *
+texturesys ()
+{
+    static TextureSystem *ts = NULL;
+    static spin_mutex mutex;
+    spin_lock lock (mutex);
+    if (! ts) {
+        ts = TextureSystem::create (true /* shared */);
+        // Make some good guesses about default options
+        ts->attribute ("automip",  1);
+        ts->attribute ("autotile", 64);
+    }
+    return ts;
+}
+
+
+
+bool
+RendererServices::texture (ustring filename, TextureOptions &options,
+                           SingleShaderGlobal *sg,
+                           float s, float t, float dsdx, float dtdx,
+                           float dsdy, float dtdy, float *result)
+{
+    return texturesys()->texture (filename, options, s, t,
+                                  dsdx, dtdx, dsdy, dtdy, result);
+}
+
+
+    
+bool
+RendererServices::get_texture_info (ustring filename, ustring dataname,
+                                    TypeDesc datatype, void *data)
+{
+    return texturesys()->get_texture_info (filename, dataname, datatype, data);
+}
+
+
 }; // namespace OSL
 
 #ifdef OSL_NAMESPACE

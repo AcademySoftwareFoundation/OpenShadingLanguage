@@ -190,6 +190,8 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
             my_sg.surfacearea = sg.surfacearea.is_null() ? 1.0f : sg.surfacearea[i];
             my_sg.iscameraray = sg.iscameraray;
             my_sg.isshadowray = sg.isshadowray;
+            my_sg.isdiffuseray = sg.isdiffuseray;
+            my_sg.isglossyray = sg.isglossyray;
             my_sg.flipHandedness = sg.flipHandedness;
             my_sg.backfacing = sg.backfacing;
             run_func (&my_sg, &m_heap[groupdata_size*i]);

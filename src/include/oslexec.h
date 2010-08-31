@@ -47,6 +47,7 @@ namespace OSL {
 class RendererServices;
 class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
+class SingleShaderGlobal;
 class ShaderGlobals;
 class ClosureColor;
 class ClosureParam;
@@ -207,7 +208,8 @@ class ShaderGlobals
 {
 public:
     ShaderGlobals () 
-        : iscameraray(true), isshadowray(false), flipHandedness(false), backfacing(false)
+        : iscameraray(true), isshadowray(false), isdiffuseray(false),
+          isglossyray(false), flipHandedness(false), backfacing(false)
     { }
     ~ShaderGlobals () { }
 
@@ -237,6 +239,8 @@ public:
     VaryingRef<float> surfacearea;     ///< Total area of the object (not exposed)
     bool iscameraray;                  ///< True if computing for camera ray
     bool isshadowray;                  ///< True if computing for shadow opacity
+    bool isdiffuseray;                 ///< True if computing for diffuse ray
+    bool isglossyray;                  ///< True if computing for glossy ray
     bool flipHandedness;               ///< flips the result of calculatenormal()
     bool backfacing;                   ///< True if we want to shade the back face
 };
@@ -300,6 +304,31 @@ public:
     /// implementation.
     virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
 
+    /// Filtered 2D texture lookup for a single point.
+    ///
+    /// s,t are the texture coordinates; dsdx, dtdx, dsdy, and dtdy are
+    /// the differentials of s and t change in some canonical directions
+    /// x and y.  The choice of x and y are not important to the
+    /// implementation; it can be any imposed 2D coordinates, such as
+    /// pixels in screen space, adjacent samples in parameter space on a
+    /// surface, etc.
+    ///
+    /// Return true if the file is found and could be opened by an
+    /// available ImageIO plugin, otherwise return false.
+    virtual bool texture (ustring filename, TextureOptions &options,
+                          SingleShaderGlobal *sg,
+                          float s, float t, float dsdx, float dtdx,
+                          float dsdy, float dtdy, float *result);
+
+    /// Get information about the given texture.  Return true if found
+    /// and the data has been put in *data.  Return false if the texture
+    /// doesn't exist, doesn't have the requested data, if the data
+    /// doesn't match the type requested. or some other failure.
+    virtual bool get_texture_info (ustring filename, ustring dataname,
+                                   TypeDesc datatype, void *data);
+
+private:
+    TextureSystem *m_texturesys;   // For default texture implementation
 };
 
 

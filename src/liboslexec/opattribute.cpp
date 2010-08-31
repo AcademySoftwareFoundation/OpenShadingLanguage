@@ -186,6 +186,46 @@ DECLOP (OP_iscameraray)
 
 
 
+DECLOP (OP_isdiffuseray)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_int());
+    ShaderGlobals *globals = exec->context()->globals();
+
+    exec->adjust_varying (Result, false);
+    VaryingRef<int> result ((float *)Result.data(), Result.step());
+    if (result.is_uniform()) {
+        result[0] = globals->isdiffuseray;
+    } else {
+        SHADE_LOOP_BEGIN
+            result[i] = globals->isdiffuseray;
+        SHADE_LOOP_END
+    }
+}
+
+
+
+DECLOP (OP_isglossyray)
+{
+    DASSERT (nargs == 1);
+    Symbol &Result (exec->sym (args[0]));
+    DASSERT (Result.typespec().is_int());
+    ShaderGlobals *globals = exec->context()->globals();
+
+    exec->adjust_varying (Result, false);
+    VaryingRef<int> result ((float *)Result.data(), Result.step());
+    if (result.is_uniform()) {
+        result[0] = globals->isglossyray;
+    } else {
+        SHADE_LOOP_BEGIN
+            result[i] = globals->isglossyray;
+        SHADE_LOOP_END
+    }
+}
+
+
+
 DECLOP (OP_backfacing)
 {
     DASSERT (nargs == 1);

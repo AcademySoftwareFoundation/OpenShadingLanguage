@@ -257,6 +257,8 @@ main (int argc, const char *argv[])
     shaderglobals.flipHandedness = false;
     shaderglobals.isshadowray = false;
     shaderglobals.iscameraray = false;
+    shaderglobals.isdiffuseray = false;
+    shaderglobals.isglossyray = false;
     float time = 0.0f;
     shaderglobals.time.init (&time, 0);
     float dtime = 0.f;

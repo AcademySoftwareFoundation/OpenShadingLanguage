@@ -653,6 +653,33 @@ DECLFOLDER(constfold_neg)
     return 0;
 }
 
+DECLFOLDER(constfold_abs)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (A.is_constant()) {
+        if (A.typespec().is_int()) {
+            int result = std::abs(*(int *)A.data());
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        } else if (A.typespec().is_float()) {
+            float result =  std::abs(*(float *)A.data());
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        } else if (A.typespec().is_triple()) {
+            Vec3 result = *(Vec3 *)A.data();
+            result.x = std::abs(result.x);
+            result.y = std::abs(result.y);
+            result.z = std::abs(result.z);
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        }
+    }
+    return 0;
+}
 
 
 DECLFOLDER(constfold_eq)
@@ -1397,7 +1424,7 @@ initialize_folder_table ()
 
     INIT (add);    INIT (sub);
     INIT (mul);    INIT (div);
-    INIT (neg);
+    INIT (neg);    INIT (abs);
     INIT (eq);     INIT (neq);
     INIT (le);     INIT (ge);
     INIT (lt);     INIT (gt);

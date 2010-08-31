@@ -1378,27 +1378,27 @@ osl_texture_set_twrap (void *opt, const char *x)
 }
 
 extern "C" void
-osl_texture_set_sblur (void *opt, float x)
+osl_texture_set_sblur (void *opt, float *x)
 {
-    ((TextureOptions *)opt)->sblur = x;
+    ((TextureOptions *)opt)->sblur.init (x);
 }
 
 extern "C" void
-osl_texture_set_tblur (void *opt, float x)
+osl_texture_set_tblur (void *opt, float *x)
 {
-    ((TextureOptions *)opt)->tblur = x;
+    ((TextureOptions *)opt)->tblur.init (x);
 }
 
 extern "C" void
-osl_texture_set_swidth (void *opt, float x)
+osl_texture_set_swidth (void *opt, float *x)
 {
-    ((TextureOptions *)opt)->swidth = x;
+    ((TextureOptions *)opt)->swidth.init (x);
 }
 
 extern "C" void
-osl_texture_set_twidth (void *opt, float x)
+osl_texture_set_twidth (void *opt, float *x)
 {
-    ((TextureOptions *)opt)->twidth = x;
+    ((TextureOptions *)opt)->twidth.init (x);
 }
 
 extern "C" void

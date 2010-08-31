@@ -2400,20 +2400,28 @@ LLVMGEN (llvm_gen_texture)
         
         llvm::Value *val = rop.llvm_load_value (Val);
         if (name == Strings::width && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_swidth", opt, val);
-            rop.llvm_call_function ("osl_texture_set_twidth", opt, val);
+            rop.llvm_call_function ("osl_texture_set_swidth",
+                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_twidth",
+                                    opt, rop.llvm_get_pointer(Val));
         } else if (name == Strings::swidth && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_swidth", opt, val);
+            rop.llvm_call_function ("osl_texture_set_swidth",
+                                    opt, rop.llvm_get_pointer(Val));
         } else if (name == Strings::twidth && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_twidth", opt, val);
+            rop.llvm_call_function ("osl_texture_set_twidth",
+                                    opt, rop.llvm_get_pointer(Val));
 
         } else if (name == Strings::blur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_sblur", opt, val);
-            rop.llvm_call_function ("osl_texture_set_tblur", opt, val);
+            rop.llvm_call_function ("osl_texture_set_sblur",
+                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_tblur",
+                                    opt, rop.llvm_get_pointer(Val));
         } else if (name == Strings::sblur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_sblur", opt, val);
+            rop.llvm_call_function ("osl_texture_set_sblur",
+                                    opt, rop.llvm_get_pointer(Val));
         } else if (name == Strings::tblur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_tblur", opt, val);
+            rop.llvm_call_function ("osl_texture_set_tblur",
+                                    opt, rop.llvm_get_pointer(Val));
 
         } else if (name == Strings::wrap && valtype == TypeDesc::STRING) {
             rop.llvm_call_function ("osl_texture_set_swrap", opt, val);

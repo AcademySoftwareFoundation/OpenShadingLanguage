@@ -4476,16 +4476,17 @@ returns {\cf 0} (indicating that the surface should be computing surface
 color, opacity, and all its other outputs).
 \apiend
 
-%\apiitem{int {\ce isindirectray} ()}
-%\indexapi{isindirectray()}
-%Returns {\cf 1} if the shader is executing for the sole purpose of
-%determining the object's appearance for an indirect (or global
-%illumination) sample and therefore will not be seen distinctly in the
-%final image, in which case it may be prudent for the shader to take
-%shortcuts or avoid computing fine detail.  This function returns {\cf 0}
-%if it is being run for ordinary visibility rays, in which case the
-%results may be clearly seen and all details should be computed.
-%\apiend
+\apiitem{int {\ce isdiffuseray} ()}
+\indexapi{isdiffuseray()}
+Returns {\cf 1} if the results of the shader are being used for a
+``diffuse'' indirect ray, otherwise {\cf 0}.
+\apiend
+
+\apiitem{int {\ce isglossyray} ()}
+\indexapi{isglossyray()}
+Returns {\cf 1} if the results of the shader are being used for a
+``glossy'' specular ray, otherwise {\cf 0}.
+\apiend
 
 
 \section{Miscellaneous}

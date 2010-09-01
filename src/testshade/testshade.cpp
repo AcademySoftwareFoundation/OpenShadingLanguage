@@ -323,7 +323,7 @@ main (int argc, const char *argv[])
     ShadingContext *ctx = ssi->get_context ();
 
     double setuptime = timer ();
-    double bindtime = 0, runtime = 0;
+    double runtime = 0;
 
     for (int iter = 0;  iter < iters;  ++iter) {
         timer.reset ();
@@ -332,11 +332,7 @@ main (int argc, const char *argv[])
         // FIXME -- this will eventually be replaced with a public
         // ShadingSystem call that encapsulates it.
         ctx = ssi->get_context ();
-        ctx->bind (npoints, *shaderstate, shaderglobals);
-        bindtime += timer ();
-        timer.reset ();
-        timer.start ();
-        ctx->execute (ShadUseSurface);
+        ctx->execute (ShadUseSurface, npoints, *shaderstate, shaderglobals);
         runtime += timer ();
         if (iter < iters-1)
             ssi->release_context (ctx);
@@ -381,7 +377,6 @@ main (int argc, const char *argv[])
     if (debug || stats) {
         std::cout << "\n";
         std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";
-        std::cout << "Bind : " << Strutil::timeintervalformat (bindtime,2) << "\n";
         std::cout << "Run  : " << Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";

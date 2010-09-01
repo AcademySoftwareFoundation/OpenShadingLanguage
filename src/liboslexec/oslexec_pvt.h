@@ -788,16 +788,10 @@ public:
     ///
     ShaderGlobals *globals () const { return m_globals; }
 
-    /// Set up this context for shading n points with the given shader
-    /// attribute state and shader globals.  Resolve all the memory
-    /// layout issues so that we're ready to execute().
-    void bind (int n, ShadingAttribState &sas, ShaderGlobals &sg);
-
     /// Execute the shaders for the given use (for example,
-    /// ShadUseSurface).  The context must already be bound.  If
-    /// runflags are not supplied, they will be auto-generated with all
-    /// points turned on.
-    void execute (ShaderUse use, Runflag *rf=NULL, int *ind=NULL, int nind=0);
+    /// ShadUseSurface). If runflags are not supplied, they will be
+    /// auto-generated with all points turned on.
+    void execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGlobals &sg, Runflag *rf=NULL, int *ind=NULL, int nind=0);
 
     /// Execute the llvm-compiled shaders for the given use (for example,
     /// ShadUseSurface).  The context must already be bound.  If
@@ -867,9 +861,8 @@ public:
     /// grid point.
     void *symbol_data (Symbol &sym, int gridpoint);
 
-    /// Return a refreence to the ExecutionLayers corresponding to the
-    /// given shader use.
-    ExecutionLayers &execlayer (ShaderUse use) { return m_exec[(int)use]; }
+    /// Return a reference to the ExecutionLayers
+    ExecutionLayers &execlayer () { return m_exec; }
 
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we
@@ -897,10 +890,9 @@ private:
     size_t m_heap_allotted;             ///< Heap memory allotted
     std::vector<ClosureColor> m_closures; ///< Closure memory
     size_t m_closures_allotted;         ///< Closure memory allotted
-    ExecutionLayers m_exec[ShadUseLast];///< Execution layers for the group
+    ExecutionLayers m_exec;             ///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
     int m_curuse;                       ///< Current use that we're running
-    int m_nlayers[ShadUseLast];         ///< Number of layers for each use
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
     ParamValueList m_messages;          ///< Message blackboard
     std::vector<ClosureColor> m_closure_msgs;  // Mem for closure messages

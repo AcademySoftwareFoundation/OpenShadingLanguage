@@ -64,77 +64,6 @@ ShadingContext::~ShadingContext ()
 
 
 void
-ShadingContext::bind (int n, ShadingAttribState &sas, ShaderGlobals &sg)
-{
-    if (shadingsys().debug())
-        shadingsys().info ("bind %p with %d points", (void *)this, n);
-    m_attribs = &sas;
-    m_globals = &sg;
-    m_npoints = n;
-    m_curuse = ShadUseUnknown;
-    m_heap_allotted = 0;
-    m_closures_allotted = 0;
-
-    // Optimize if we haven't already
-    for (int i = 0;  i < ShadUseLast;  ++i) {
-        ShaderGroup &group (m_attribs->shadergroup ((ShaderUse)i));
-        if (group.nlayers()) {
-            group.start_running (m_npoints);
-            if (! group.optimized())
-                shadingsys().optimize_group (sas, group);
-        }
-    }
-
-    // Allocate enough space on the heap
-    size_t heap_size_needed = m_npoints * sas.heapsize () + sas.heapround ();
-    // FIXME: the next statement is totally bogus, yet harmless.
-    heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
-    if (shadingsys().debug())
-        shadingsys().info ("  need heap %llu vs %llu",
-                           (unsigned long long)heap_size_needed,
-                           (unsigned long long)m_heap.size());
-    if (heap_size_needed > m_heap.size()) {
-        if (shadingsys().debug())
-            shadingsys().info ("  ShadingContext %p growing heap to %llu",
-                               this, (unsigned long long) heap_size_needed);
-        m_heap.resize (heap_size_needed);
-    }
-    // Zero out the heap memory we will be using
-    if (shadingsys().m_clearmemory)
-        memset (&m_heap[0], 0, heap_size_needed);
-
-    // Set up closure storage
-    size_t closures_needed = m_npoints * sas.numclosures ();
-    if (shadingsys().debug())
-        shadingsys().info ("  need closures %d vs %llu", closures_needed,
-                           (unsigned long long) m_closures.size());
-    if (closures_needed > m_closures.size()) {
-        if (shadingsys().debug())
-            shadingsys().info ("  ShadingContext %p growing closures to %llu",
-                               this, (unsigned long long)closures_needed);
-        m_closures.resize (closures_needed);
-    }
-    // Zero out the closures
-    for (size_t i = 0;  i < closures_needed;  ++i)
-        m_closures[i].clear ();
-
-    // Clear the message blackboard
-    m_messages.clear ();
-    m_closure_msgs.clear ();
-
-    // Calculate number of layers we need for each use
-    for (int i = 0;  i < ShadUseLast;  ++i) {
-        m_nlayers[i] = m_attribs->shadergroup ((ShaderUse)i).nlayers ();
-        if (shadingsys().debug())
-            shadingsys().info ("  %d layers of %s", m_nlayers[i],
-                               shaderusename((ShaderUse)i));
-    }
-}
-
-
-
-
-void
 ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
 {
 #if USE_LLVM
@@ -146,7 +75,7 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
     // Ignore runflags for now
     ShaderGlobals& sg = *(globals());
     size_t groupdata_size = sgroup.llvm_groupdata_size();
-    m_heap.resize (groupdata_size * m_npoints);
+    DASSERT(groupdata_size * m_npoints <= m_heap.size());
 #if USE_RUNFLAGS
     for (int i = 0; i < m_npoints; i++) {
         if (rf[i]) {
@@ -194,7 +123,7 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
             my_sg.isglossyray = sg.isglossyray;
             my_sg.flipHandedness = sg.flipHandedness;
             my_sg.backfacing = sg.backfacing;
-            run_func (&my_sg, &m_heap[groupdata_size*i]);
+            run_func (&my_sg, &m_heap[groupdata_size * i]);
 
 //            if (use == ShadUseDisplacement) {
             // FIXME -- should only do this extra work for disp shaders,
@@ -212,17 +141,74 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
 
 
 void
-ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
+ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGlobals &sg, Runflag *rf, int *ind, int nind)
 {
     // FIXME -- timers/stats
-
-    if (shadingsys().debug())
-        shadingsys().info ("execute %p as %s", this, shaderusename(use));
     m_curuse = use;
     ASSERT (use == ShadUseSurface);  // FIXME
 
-    // Get a handy ref to the shader group for this shader use
+    if (shadingsys().debug())
+        shadingsys().info ("execute context %p as %s for %d points", this, shaderusename(use), n);
+    m_attribs = &sas;
+    m_globals = &sg;
+    m_npoints = n;
+    m_heap_allotted = 0;
+    m_closures_allotted = 0;
+
+    // Optimize if we haven't already
     ShaderGroup &sgroup (m_attribs->shadergroup (use));
+    if (sgroup.nlayers()) {
+        sgroup.start_running (m_npoints);
+        if (! sgroup.optimized()) {
+            shadingsys().optimize_group (sas, sgroup);
+        }
+    } else {
+       // empty shader - nothing to do!
+       return; 
+    }
+    // Allocate enough space on the heap
+    size_t heap_size_needed;
+    if (shadingsys().use_llvm()) {
+        heap_size_needed = sgroup.llvm_groupdata_size() * m_npoints;
+    } else {
+        heap_size_needed = m_npoints * sas.heapsize () + sas.heapround ();
+        // FIXME: the next statement is totally bogus, yet harmless.
+        heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
+    }
+    if (shadingsys().debug())
+        shadingsys().info ("  need heap %llu vs %llu",
+                           (unsigned long long)heap_size_needed,
+                           (unsigned long long)m_heap.size());
+    if (heap_size_needed > m_heap.size()) {
+        if (shadingsys().debug())
+            shadingsys().info ("  ShadingContext %p growing heap to %llu",
+                               this, (unsigned long long) heap_size_needed);
+        m_heap.resize (heap_size_needed);
+    }
+    // Zero out the heap memory we will be using
+    if (shadingsys().m_clearmemory)
+        memset (&m_heap[0], 0, heap_size_needed);
+
+    // Set up closure storage
+    size_t closures_needed = m_npoints * sas.numclosures ();
+    if (shadingsys().debug())
+        shadingsys().info ("  need closures %d vs %llu", closures_needed,
+                           (unsigned long long) m_closures.size());
+    if (closures_needed > m_closures.size()) {
+        if (shadingsys().debug())
+            shadingsys().info ("  ShadingContext %p growing closures to %llu",
+                               this, (unsigned long long)closures_needed);
+        m_closures.resize (closures_needed);
+    }
+    // Zero out the closures
+    for (size_t i = 0;  i < closures_needed;  ++i)
+        m_closures[i].clear ();
+
+    // Clear the message blackboard
+    m_messages.clear ();
+    m_closure_msgs.clear ();
+
+    // Get a handy ref to the shader group for this shader use
     size_t nlayers = sgroup.nlayers ();
 
    // Make space for new runflags
@@ -290,7 +276,7 @@ ShadingContext::execute (ShaderUse use, Runflag *rf, int *ind, int nind)
 
     // Get a handy ref to the array of ShadeExec layer for this shade use,
     // and make sure it's big enough for the number of layers we have.
-    ExecutionLayers &execlayers (m_exec[use]);
+    ExecutionLayers &execlayers (m_exec);
     if (nlayers > execlayers.size()) {
         size_t oldlayers = execlayers.size();
         execlayers.resize (nlayers);
@@ -386,9 +372,9 @@ ShadingContext::symbol (ShaderUse use, ustring name)
                 return sgroup[layer]->symbol (symidx);
         }
     } else {
-        ASSERT((size_t)nlayers <= m_exec[use].size()); 
+        ASSERT((size_t)nlayers <= m_exec.size()); 
         for (int layer = nlayers-1;  layer >= 0;  --layer) {
-            ShadingExecution  &exec (m_exec[use][layer]);
+            ShadingExecution  &exec (m_exec[layer]);
             if (exec.bound()) {
                 Symbol *sym = exec.symbol (name);
                 if (sym)

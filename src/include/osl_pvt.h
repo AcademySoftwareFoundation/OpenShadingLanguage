@@ -72,7 +72,7 @@ ShaderType shadertype_from_name (const char *name);
 /// Uses of shaders
 ///
 enum ShaderUse {
-    ShadUseSurface, ShadUseDisplacement, ShadUseVolume, ShadUseLight,
+    ShadUseSurface, ShadUseDisplacement,
     ShadUseLast, ShadUseUnknown = ShadUseLast
 };
 

@@ -387,7 +387,7 @@ ShadingExecution::bind_initialize_param (Symbol &sym, int symindex)
         // Run through all connections for this layer
         // NOTE: more than one connection may contribute to this value if we have
         //       partial connections (into individual array elements or components)
-        ExecutionLayers &execlayers (m_context->execlayer (shaderuse()));
+        ExecutionLayers &execlayers (m_context->execlayer ());
         for (int c = 0;  c < m_instance->nconnections();  ++c) {
             const Connection &con (m_instance->connection (c));
             // If the connection gives a value to this param
@@ -477,7 +477,7 @@ ShadingExecution::bind_connection (const Connection &con)
 {
     int symindex = con.dst.param;
     Symbol &dstsym (sym (symindex));
-    ExecutionLayers &execlayers (context()->execlayer (shaderuse()));
+    ExecutionLayers &execlayers (context()->execlayer ());
     ShadingExecution &srcexec (execlayers[con.srclayer]);
     ASSERT (srcexec.m_bound);
     ASSERT (srcexec.m_executed);
@@ -710,7 +710,7 @@ ShadingExecution::check_nan (Symbol &sym, float &badval,
 void
 ShadingExecution::run_connected_layer (int layer)
 {
-    ExecutionLayers &execlayers (m_context->execlayer (shaderuse()));
+    ExecutionLayers &execlayers (m_context->execlayer ());
     ShadingExecution &connected (execlayers[layer]);
     ASSERT (! connected.executed ());
 

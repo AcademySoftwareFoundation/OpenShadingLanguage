@@ -561,13 +561,17 @@ public:
 
     ShaderMaster::ref loadshader (const char *name);
 
+    void* create_thread_info();
+
+    void destroy_thread_info(void* thread_info);
+
     /// Get a ShadingContext that we can use.
     ///
-    ShadingContext *get_context ();
+    ShadingContext *get_context (void* thread_info = NULL);
 
     /// Return a ShadingContext to the pool.
     ///
-    void release_context (ShadingContext *sc);
+    void release_context (ShadingContext *sc, void* thread_info = NULL);
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 

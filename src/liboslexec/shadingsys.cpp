@@ -787,10 +787,28 @@ ShadingSystemImpl::clear_state ()
 
 
 
-ShadingContext *
-ShadingSystemImpl::get_context ()
+
+void*
+ShadingSystemImpl::create_thread_info()
 {
-    PerThreadInfo *threadinfo = get_perthread_info ();
+    return (void*) new PerThreadInfo();
+}
+
+
+
+
+void
+ShadingSystemImpl::destroy_thread_info(void* thread_info)
+{
+    delete ((PerThreadInfo*) thread_info);
+}
+
+
+
+ShadingContext *
+ShadingSystemImpl::get_context (void* thread_info)
+{
+    PerThreadInfo *threadinfo = thread_info == NULL ? get_perthread_info () : (PerThreadInfo*) thread_info;
     if (threadinfo->context_pool.empty()) {
         return new ShadingContext (*this);
     } else {
@@ -801,9 +819,9 @@ ShadingSystemImpl::get_context ()
 
 
 void
-ShadingSystemImpl::release_context (ShadingContext *sc)
+ShadingSystemImpl::release_context (ShadingContext *sc, void* thread_info)
 {
-    PerThreadInfo *threadinfo = get_perthread_info ();
+    PerThreadInfo *threadinfo = thread_info == NULL ? get_perthread_info () : (PerThreadInfo*) thread_info;
     threadinfo->context_pool.push (sc);
 }
 

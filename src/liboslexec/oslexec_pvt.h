@@ -795,14 +795,15 @@ public:
     /// Execute the shaders for the given use (for example,
     /// ShadUseSurface). If runflags are not supplied, they will be
     /// auto-generated with all points turned on.
-    void execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGlobals &sg, Runflag *rf=NULL, int *ind=NULL, int nind=0);
+    void execute (ShaderUse use, int n, ShadingAttribState &sas,
+                  ShaderGlobals &sg,
+                  Runflag *rf=NULL, int *ind=NULL, int nind=0);
 
-    /// Execute the llvm-compiled shaders for the given use (for example,
-    /// ShadUseSurface).  The context must already be bound.  If
-    /// runflags are not supplied, they will be auto-generated with all
-    /// points turned on.
-    void execute_llvm (ShaderUse use, Runflag *rf=NULL,
-                       int *ind=NULL, int nind=0);
+    /// Execute the shaders for the given use (for example,
+    /// ShadUseSurface). If runflags are not supplied, they will be
+    /// auto-generated with all points turned on.
+    void execute (ShaderUse use, ShadingAttribState &sas,
+                  SingleShaderGlobal &ssg);
 
     /// Return the current shader use being executed.
     ///
@@ -886,6 +887,18 @@ public:
     std::vector<ClosureColor> & closure_msgs () { return m_closure_msgs; }
 
 private:
+    /// Various setup of the context done by execute().  Return true if
+    /// the function should be executed, otherwise false.
+    bool prepare_execution (ShaderUse use, ShadingAttribState &sas,
+                            int npoints);
+
+    /// Execute the llvm-compiled shaders for the given use (for example,
+    /// ShadUseSurface).  The context must already be bound.  If
+    /// runflags are not supplied, they will be auto-generated with all
+    /// points turned on.
+    void execute_llvm (ShaderUse use, Runflag *rf=NULL,
+                       int *ind=NULL, int nind=0);
+
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
@@ -1337,31 +1350,6 @@ private:
 };
 
 
-struct SingleShaderGlobal {
-    Vec3 P, dPdx, dPdy;    ///< Position
-    Vec3 I, dIdx, dIdy;    ///< Incident ray
-    Vec3 N;                ///< Shading normal
-    Vec3 Ng;               ///< True geometric normal
-    float u, dudx, dudy;   ///< Surface parameter u
-    float v, dvdx, dvdy;   ///< Surface parameter v
-    Vec3 dPdu, dPdv;       ///< Tangents on the surface
-    float time;            ///< Time for each sample
-    float dtime;           ///< Time interval for each sample
-    Vec3 dPdtime;          ///< Velocity
-    Vec3 Ps, dPsdx, dPsdy; ///< Point being lit
-    void* renderstate;     ///< Renderer state for each sample
-    ShadingContext* context; ///< ShadingContext
-    TransformationPtr object2common; /// Object->common xform
-    TransformationPtr shader2common; /// Shader->common xform
-    ClosureColor* Ci;      ///< Output colors
-    float surfacearea;     ///< Total area of the object (not exposed)
-    int iscameraray;       ///< True if computing for camera ray
-    int isshadowray;       ///< True if computing for shadow opacity
-    int isdiffuseray;      ///< True if computing for diffuse ray
-    int isglossyray;       ///< True if computing for glossy ray
-    int flipHandedness;    ///< flips the result of calculatenormal()
-    int backfacing;        ///< True if we want to shade the back face
-};
 
 namespace Strings {
     extern ustring camera, common, object, shader;

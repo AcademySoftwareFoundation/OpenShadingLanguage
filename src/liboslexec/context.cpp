@@ -71,8 +71,12 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
 
     RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
 
-    SingleShaderGlobal my_sg;
+    // Client supplied ShaderGlobals.  Pipe fit to SSG with lots of 
+    // extra copying.
+    ASSERT (globals());
+
     // Ignore runflags for now
+    SingleShaderGlobal my_sg;
     ShaderGlobals& sg = *(globals());
     size_t groupdata_size = sgroup.llvm_groupdata_size();
     DASSERT(groupdata_size * m_npoints <= m_heap.size());
@@ -140,32 +144,30 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
 
 
 
-void
-ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGlobals &sg, Runflag *rf, int *ind, int nind)
+bool
+ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
+                                   int npoints)
 {
-    // FIXME -- timers/stats
-    m_curuse = use;
-    ASSERT (use == ShadUseSurface);  // FIXME
+    DASSERT (use == ShadUseSurface);  // FIXME
 
-    if (shadingsys().debug())
-        shadingsys().info ("execute context %p as %s for %d points", this, shaderusename(use), n);
+    m_curuse = use;
     m_attribs = &sas;
-    m_globals = &sg;
-    m_npoints = n;
+    m_npoints = npoints;
     m_heap_allotted = 0;
     m_closures_allotted = 0;
 
     // Optimize if we haven't already
-    ShaderGroup &sgroup (m_attribs->shadergroup (use));
+    ShaderGroup &sgroup (sas.shadergroup (use));
     if (sgroup.nlayers()) {
-        sgroup.start_running (m_npoints);
+        sgroup.start_running (npoints);
         if (! sgroup.optimized()) {
             shadingsys().optimize_group (sas, sgroup);
         }
     } else {
        // empty shader - nothing to do!
-       return; 
+       return false; 
     }
+
     // Allocate enough space on the heap
     size_t heap_size_needed;
     if (shadingsys().use_llvm()) {
@@ -175,10 +177,6 @@ ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGl
         // FIXME: the next statement is totally bogus, yet harmless.
         heap_size_needed += m_npoints * m_shadingsys.m_global_heap_total;
     }
-    if (shadingsys().debug())
-        shadingsys().info ("  need heap %llu vs %llu",
-                           (unsigned long long)heap_size_needed,
-                           (unsigned long long)m_heap.size());
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
             shadingsys().info ("  ShadingContext %p growing heap to %llu",
@@ -200,6 +198,7 @@ ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGl
                                this, (unsigned long long)closures_needed);
         m_closures.resize (closures_needed);
     }
+
     // Zero out the closures
     for (size_t i = 0;  i < closures_needed;  ++i)
         m_closures[i].clear ();
@@ -208,7 +207,49 @@ ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas, ShaderGl
     m_messages.clear ();
     m_closure_msgs.clear ();
 
+    return true;
+}
+
+
+
+void
+ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
+                         SingleShaderGlobal &ssg)
+{
+#if USE_LLVM
+    DASSERT (shadingsys().use_llvm());
+
+    if (! prepare_execution (use, sas, 1))
+        return;
+
+    m_globals = NULL;
+    ShaderGroup &sgroup (m_attribs->shadergroup (use));
+    DASSERT (sgroup.llvm_compiled_version());
+    DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
+    ssg.context = this;
+    RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
+    run_func (&ssg, &m_heap[0]);
+#endif /* USE_LLVM */
+}
+
+
+
+void
+ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas,
+                         ShaderGlobals &sg,
+                         Runflag *rf, int *ind, int nind)
+{
+    // FIXME -- timers/stats
+    if (shadingsys().debug())
+        shadingsys().info ("execute context %p as %s for %d points", this, shaderusename(use), n);
+
+    if (! prepare_execution (use, sas, n))
+        return;
+
+    m_globals = &sg;
+
     // Get a handy ref to the shader group for this shader use
+    ShaderGroup &sgroup (m_attribs->shadergroup (use));
     size_t nlayers = sgroup.nlayers ();
 
    // Make space for new runflags

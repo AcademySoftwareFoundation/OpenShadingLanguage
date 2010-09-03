@@ -53,6 +53,9 @@ class ClosureColor;
 class ClosureParam;
 class OSLCompiler;
 
+namespace pvt {
+class ShadingContext;
+};
 
 
 /// Opaque pointer to whatever the renderer uses to represent a
@@ -243,6 +246,34 @@ public:
     bool isglossyray;                  ///< True if computing for glossy ray
     bool flipHandedness;               ///< flips the result of calculatenormal()
     bool backfacing;                   ///< True if we want to shade the back face
+};
+
+
+
+struct SingleShaderGlobal {
+    Vec3 P, dPdx, dPdy;    ///< Position
+    Vec3 I, dIdx, dIdy;    ///< Incident ray
+    Vec3 N;                ///< Shading normal
+    Vec3 Ng;               ///< True geometric normal
+    float u, dudx, dudy;   ///< Surface parameter u
+    float v, dvdx, dvdy;   ///< Surface parameter v
+    Vec3 dPdu, dPdv;       ///< Tangents on the surface
+    float time;            ///< Time for each sample
+    float dtime;           ///< Time interval for each sample
+    Vec3 dPdtime;          ///< Velocity
+    Vec3 Ps, dPsdx, dPsdy; ///< Point being lit
+    void* renderstate;     ///< Renderer state for each sample
+    pvt::ShadingContext* context; ///< ShadingContext
+    TransformationPtr object2common; /// Object->common xform
+    TransformationPtr shader2common; /// Shader->common xform
+    ClosureColor* Ci;      ///< Output colors
+    float surfacearea;     ///< Total area of the object (not exposed)
+    int iscameraray;       ///< True if computing for camera ray
+    int isshadowray;       ///< True if computing for shadow opacity
+    int isdiffuseray;      ///< True if computing for diffuse ray
+    int isglossyray;       ///< True if computing for glossy ray
+    int flipHandedness;    ///< flips the result of calculatenormal()
+    int backfacing;        ///< True if we want to shade the back face
 };
 
 

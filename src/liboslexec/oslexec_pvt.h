@@ -450,7 +450,11 @@ public:
 
     long long int executions () const { return m_executions; }
 
-    void start_running (int npoints=1) { m_executions += npoints; }
+    void start_running (int npoints=1) {
+#ifdef DEBUG
+       m_executions += npoints;
+#endif
+    }
 
 private:
     std::vector<ShaderInstanceRef> m_layers;

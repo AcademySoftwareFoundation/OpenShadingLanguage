@@ -360,7 +360,7 @@ public:
     int Psym () const { return m_Psym; }
     int Nsym () const { return m_Nsym; }
 
-    
+
     const std::vector<int> & args () const { return m_instargs; }
     std::vector<int> & args () { return m_instargs; }
     int arg (int argnum) { return args()[argnum]; }

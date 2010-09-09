@@ -165,7 +165,8 @@ extern "C" void
 osl_closure_assign (ClosureColor *r, ClosureColor *x)
 {
     DASSERT (r);  DASSERT (x);
-    *r = *x;
+    if (r != x)
+      *r = *x;
 }
 
 
@@ -188,7 +189,7 @@ osl_add_closure_closure (SingleShaderGlobal *sg, ClosureColor *r,
 extern "C" void
 osl_mul_closure_color (ClosureColor *r, ClosureColor *a, const Color3 *b)
 {
-    *r = *a;
+    if (r != a) *r = *a;
     *r *= *b;
 }
 
@@ -196,7 +197,7 @@ osl_mul_closure_color (ClosureColor *r, ClosureColor *a, const Color3 *b)
 extern "C" void
 osl_mul_closure_float (ClosureColor *r, ClosureColor *a, float b)
 {
-    *r = *a;
+    if (r != a) *r = *a;
     *r *= b;
 }
 

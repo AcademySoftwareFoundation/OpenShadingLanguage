@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include <boost/foreach.hpp>
-
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
 
@@ -55,24 +53,6 @@ operator<< (std::ostream &out, const ClosurePrimitive &prim)
     prim.print_on(out);
     return out;
 }
-
-
-char*
-ClosureColor::allocate_component (int id, size_t num_bytes)
-{
-    // FIXME: alignment ??
-
-    // Resize memory to fit size of the new component
-    m_mem.resize (num_bytes);
-
-    // Make a new component
-    m_components.clear();
-    m_components.push_back (Component (id, Color3 (1, 1, 1), 0));
-
-    // Return the block of memory for the caller to new the ClosurePrimitive into
-    return &m_mem[0];
-}
-
 
 void
 ClosureColor::add (const ClosureColor &A, ShadingSystemImpl *ss)
@@ -131,49 +111,6 @@ ClosureColor::add (const ClosureColor &A, ShadingSystemImpl *ss)
         oldmemsize += asize;
     }
 }
-
-
-
-void
-ClosureColor::add (const ClosureColor &A, const ClosureColor &B, ShadingSystemImpl *ss)
-{
-    if (this != &A)
-        *this = A;
-    add (B, ss);
-}
-
-
-void
-ClosureColor::mul (const Color3 &w)
-{
-    // Handle scale by 0 trivially
-    if (w[0] == 0.0f && w[1] == 0.0f && w[2] == 0.0f) {
-        clear();
-        return;
-    }
-
-    // For every component, scale it
-    BOOST_FOREACH (Component &c, m_components)
-        c.weight *= w;
-}
-
-
-
-void
-ClosureColor::mul (float w)
-{
-    // Handle scale by 0 trivially
-    if (w == 0.0f) {
-        clear();
-        return;
-    }
-
-    // For every component, scale it
-    BOOST_FOREACH (Component &c, m_components)
-        c.weight *= w;
-}
-
-
 
 std::ostream &
 operator<< (std::ostream &out, const ClosureColor &closure)

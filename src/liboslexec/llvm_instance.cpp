@@ -3032,6 +3032,11 @@ LLVMGEN (llvm_gen_closure)
         // memset with i32 len
         const llvm::Type* memset_types[] = { llvm::Type::getInt32Ty(rop.llvm_context()) };
 
+        // NOTE(boulos): This memset prototype is correct for
+        // LLVM-2.7, but will change in LLVM-2.8 (the ptr arguments
+        // must be specified as they become iPTRAny and isVolatile is
+        // added -- the latter necessitating a change to the
+        // CreateCall below)
         llvm::Function* memset_func = llvm::Intrinsic::getDeclaration(rop.llvm_module(), llvm::Intrinsic::memset, memset_types, 1);
         // memzero is just memset with 0 (but i8 val)
 
@@ -3051,6 +3056,11 @@ LLVMGEN (llvm_gen_closure)
     // memcpy with i32 size
     const llvm::Type* memcpy_types[] = { llvm::Type::getInt32Ty(rop.llvm_context()) };
 
+    // NOTE(boulos): As with memset above, this memcpy prototype is
+    // correct for LLVM-2.7, but will change in LLVM-2.8 (the ptr
+    // arguments must be specified as they become iPTRAny and
+    // isVolatile is added -- the latter necessitating a change to the
+    // CreateCall below)
     llvm::Function* memcpy_func = llvm::Intrinsic::getDeclaration(rop.llvm_module(), llvm::Intrinsic::memcpy, memcpy_types, 1);
 
     // Here is where we fill the struct using the params

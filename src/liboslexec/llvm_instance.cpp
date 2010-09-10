@@ -3029,10 +3029,29 @@ LLVMGEN (llvm_gen_closure)
         llvm::Value *args[3] = {render_ptr, id_int, mem_void_ptr};
         rop.builder().CreateCall (funct_ptr, args, args+3);
     } else {
-        llvm::Value *args[2] = {mem_void_ptr, size_int};
-        rop.llvm_call_function ("osl_memzero", args, 2);
+        // memset with i32 len
+        const llvm::Type* memset_types[] = { llvm::Type::getInt32Ty(rop.llvm_context()) };
+
+        llvm::Function* memset_func = llvm::Intrinsic::getDeclaration(rop.llvm_module(), llvm::Intrinsic::memset, memset_types, 1);
+        // memzero is just memset with 0 (but i8 val)
+
+        // NOTE(boulos): rop.llvm_constant(0) would return an i32
+        // version of 0, but we need the i8 version. If we make an
+        // ::llvm_constant(char val) though then we'll get ambiguity
+        // everywhere.
+        llvm::Value* zero_val = llvm::ConstantInt::get (rop.llvm_context(), llvm::APInt(8, 0));
+        // TODO(boulos): Since the closure memory is always at least
+        // composed of structs of some sort we have 4 byte alignment
+        // (and could change the code to safely do say 16-byte). Stick
+        // with 4 for now.
+        llvm::Value* align_val = rop.llvm_constant(4);
+        rop.builder().CreateCall4 (memset_func, mem_void_ptr, zero_val, size_int, align_val);
     }
 
+    // memcpy with i32 size
+    const llvm::Type* memcpy_types[] = { llvm::Type::getInt32Ty(rop.llvm_context()) };
+
+    llvm::Function* memcpy_func = llvm::Intrinsic::getDeclaration(rop.llvm_module(), llvm::Intrinsic::memcpy, memcpy_types, 1);
 
     // Here is where we fill the struct using the params
     for (int carg = 0; carg < (int)clentry->params.size(); ++carg)
@@ -3047,14 +3066,12 @@ LLVMGEN (llvm_gen_closure)
                 t.vecsemantics = TypeDesc::VECTOR;
             if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == p.type)
             {
-                llvm::Value *args[3];
-                args[0] = rop.llvm_offset_ptr (mem_void_ptr, p.offset);
-                args[1] = rop.llvm_ptr_cast(rop.getLLVMSymbolBase (sym), rop.llvm_type_void_ptr());
-                args[2] = rop.llvm_constant((int)p.type.size());
-                // We call this copy function in the hope that llvm will inline it and get rid
-                // of useless ops. It is implemented with three sequential loops. They have to be
-                // unrolled and simplified, since the number of bytes is known in advance.
-                rop.llvm_call_function ("osl_memcpy", args, 3);
+                llvm::Value* dst = rop.llvm_offset_ptr (mem_void_ptr, p.offset);
+                llvm::Value* src = rop.llvm_ptr_cast(rop.getLLVMSymbolBase (sym), rop.llvm_type_void_ptr());
+                llvm::Value* bytes = rop.llvm_constant((int)p.type.size());
+                // As above, use 4 byte alignment for now.
+                llvm::Value* align = rop.llvm_constant(4);
+                rop.builder().CreateCall4 (memcpy_func, dst, src, bytes, align);
             }
         }
     }

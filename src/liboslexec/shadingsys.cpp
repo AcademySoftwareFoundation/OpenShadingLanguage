@@ -511,20 +511,20 @@ ShadingSystemImpl::getstats (int level) const
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
                             (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
     out << "  Runtime optimization cost: "
-        << Strutil::timeintervalformat (m_stat_optimization_time) << "\n";
+        << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "
-        << Strutil::timeintervalformat (m_stat_opt_locking_time) << "\n";
+        << Strutil::timeintervalformat (m_stat_opt_locking_time, 2) << "\n";
     out << "    runtime specialization:    "
-        << Strutil::timeintervalformat (m_stat_specialization_time) << "\n";
+        << Strutil::timeintervalformat (m_stat_specialization_time, 2) << "\n";
     if (m_stat_total_llvm_time > 0.0) {
         out << "    LLVM setup:                "
-            << Strutil::timeintervalformat (m_stat_llvm_setup_time) << "\n";
+            << Strutil::timeintervalformat (m_stat_llvm_setup_time, 2) << "\n";
         out << "    LLVM IR gen:               "
-            << Strutil::timeintervalformat (m_stat_llvm_irgen_time) << "\n";
+            << Strutil::timeintervalformat (m_stat_llvm_irgen_time, 2) << "\n";
         out << "    LLVM optimize:             "
-            << Strutil::timeintervalformat (m_stat_llvm_opt_time) << "\n";
+            << Strutil::timeintervalformat (m_stat_llvm_opt_time, 2) << "\n";
         out << "    LLVM JIT:                  "
-            << Strutil::timeintervalformat (m_stat_llvm_jit_time) << "\n";
+            << Strutil::timeintervalformat (m_stat_llvm_jit_time, 2) << "\n";
     }
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";

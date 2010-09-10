@@ -1737,30 +1737,6 @@ extern "C" int osl_or_iii(int a, int b)
  * Utility routines
  */
 
-extern "C" void osl_memzero (void *_mem, int size)
-{
-    char *mem = (char *)_mem;
-    for (; size >= sizeof(size_t); mem += sizeof(size_t), size -= sizeof(size_t))
-        *((size_t *)mem) = size_t(0);
-    for (; size >= sizeof(int); mem += sizeof(int), size -= sizeof(int))
-        *((int *)mem) = 0;
-    for (; size ; mem++, size--)
-        *mem = 0;
-}
-
-extern "C" void osl_memcpy (void *_dst, const void *_src, int size)
-{
-    char *dst = (char *)_dst;
-    const char *src = (const char *)_src;
-    for (; size >= sizeof(size_t); dst += sizeof(size_t), src += sizeof(size_t), size -= sizeof(size_t))
-        *((size_t *)dst) = *((size_t *)src);
-    for (; size >= sizeof(int); dst += sizeof(int), src += sizeof(int), size -= sizeof(int))
-        *((int *)dst) = *((int *)src);
-    for (; size ; dst++, src++, size--)
-        *dst = *src;
-}
-
-
 extern "C" int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int has_derivs, void *result)

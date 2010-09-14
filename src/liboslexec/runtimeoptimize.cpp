@@ -653,6 +653,8 @@ DECLFOLDER(constfold_neg)
     return 0;
 }
 
+
+
 DECLFOLDER(constfold_abs)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -680,6 +682,7 @@ DECLFOLDER(constfold_abs)
     }
     return 0;
 }
+
 
 
 DECLFOLDER(constfold_eq)
@@ -1130,10 +1133,10 @@ DECLFOLDER(constfold_clamp)
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Min (*rop.inst()->argsymbol(op.firstarg()+2));
     Symbol &Max (*rop.inst()->argsymbol(op.firstarg()+3));
-    if (X.is_constant() && Min.is_constant() && Max.is_constant()) {
-        DASSERT (equivalent(X.typespec(), Min.typespec()) &&
-                 equivalent(X.typespec(), Max.typespec()));
-        DASSERT (X.typespec().is_float() || X.typespec().is_triple());
+    if (X.is_constant() && Min.is_constant() && Max.is_constant() &&
+        equivalent(X.typespec(), Min.typespec()) &&
+        equivalent(X.typespec(), Max.typespec()) &&
+        (X.typespec().is_float() || X.typespec().is_triple())) {
         const float *x = (const float *) X.data();
         const float *min = (const float *) Min.data();
         const float *max = (const float *) Max.data();
@@ -1142,6 +1145,58 @@ DECLFOLDER(constfold_clamp)
         if (X.typespec().is_triple()) {
             result[1] = clamp (x[1], min[1], max[1]);
             result[2] = clamp (x[2], min[2], max[2]);
+        }
+        int cind = rop.add_constant (X.typespec(), &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_min)
+{
+    // Try to turn R=min(x,y) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
+    if (X.is_constant() && Y.is_constant() &&
+        equivalent(X.typespec(), Y.typespec()) &&
+        (X.typespec().is_float() || X.typespec().is_triple())) {
+        const float *x = (const float *) X.data();
+        const float *y = (const float *) Y.data();
+        float result[3];
+        result[0] = std::min (x[0], y[0]);
+        if (X.typespec().is_triple()) {
+            result[1] = std::min (x[1], y[1]);
+            result[2] = std::min (x[2], y[2]);
+        }
+        int cind = rop.add_constant (X.typespec(), &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_max)
+{
+    // Try to turn R=max(x,y) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
+    if (X.is_constant() && Y.is_constant() &&
+        equivalent(X.typespec(), Y.typespec()) &&
+        (X.typespec().is_float() || X.typespec().is_triple())) {
+        const float *x = (const float *) X.data();
+        const float *y = (const float *) Y.data();
+        float result[3];
+        result[0] = std::max (x[0], y[0]);
+        if (X.typespec().is_triple()) {
+            result[1] = std::max (x[1], y[1]);
+            result[2] = std::max (x[2], y[2]);
         }
         int cind = rop.add_constant (X.typespec(), &result);
         rop.turn_into_assign (op, cind);
@@ -1437,6 +1492,8 @@ initialize_folder_table ()
     INIT (endswith);
     INIT (concat);
     INIT (clamp);
+    INIT (min);
+    INIT (max);
     INIT (sqrt);
     INIT (pow);
     INIT2 (color, constfold_triple);
@@ -1974,6 +2031,25 @@ RuntimeOptimizer::peephole2 (int opnum)
 
 
 
+/// Mark our params that feed to later layers, and whether we have any
+/// outgoing connections.
+void
+RuntimeOptimizer::mark_outgoing_connections ()
+{
+    inst()->outgoing_connections (false);
+    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i)
+        inst()->symbol(i)->connected_down (false);
+    for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
+        BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
+            if (c.srclayer == m_layer) {
+                inst()->symbol(c.src.param)->connected_down (true);
+                inst()->outgoing_connections (true);
+            }
+    }
+}
+
+
+
 void
 RuntimeOptimizer::optimize_instance ()
 {
@@ -2155,6 +2231,40 @@ RuntimeOptimizer::optimize_instance ()
         // variable lifetimes.
         track_variable_lifetimes ();
 
+        // Recompute which of our params have downstream connections.
+        mark_outgoing_connections ();
+
+#if 1
+        // Elide unconnected parameters that are never read.
+        for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
+            Symbol &s (*inst()->symbol(i));
+            if ((s.symtype() == SymTypeOutputParam || s.symtype() == SymTypeParam)
+                && !s.connected_down() && ! s.everread()) {
+                for (int i = s.initbegin();  i < s.initend();  ++i)
+                    turn_into_nop (inst()->ops()[i]);
+                s.set_initrange ();
+                s.clear_rw ();
+                ++changed;
+            }
+        }
+#endif
+
+        // FIXME -- we should re-evaluate whether writes_globals() is still
+        // true for this layer.
+
+        // A layer that was allowed to run lazily originally, if it no
+        // longer (post-optimized) has any outgoing connections, we
+        // don't need it at all.
+        if (inst()->run_lazily() && ! inst()->outgoing_connections()) {
+            // Not needed.  Remove all its connections and ops.
+            inst()->connections().clear ();
+            for (int i = 0;  i < (int)inst()->ops().size()-1;  ++i)
+                turn_into_nop (inst()->ops()[i]);
+            BOOST_FOREACH (Symbol &s, inst()->symbols())
+                s.clear_rw ();
+            break;  // No need to optimize any more
+        }
+
         // If nothing changed, we're done optimizing.  But wait, it may be
         // that after re-tracking variable lifetimes, we can notice new
         // optimizations!  So force another pass, then we're really done.
@@ -2170,6 +2280,8 @@ RuntimeOptimizer::optimize_instance ()
     // it no longer uses
     erase_if (inst()->connections(), ConnectionDestNeverUsed(inst()));
 
+    // Clear init ops of params that aren't used.
+    // FIXME -- is this ineffective?  Should it be never READ?
     BOOST_FOREACH (Symbol &s, inst()->symbols())
         if (s.symtype() == SymTypeParam && ! s.everused() &&
                 s.initbegin() < s.initend()) {
@@ -2525,6 +2637,8 @@ RuntimeOptimizer::collapse_syms ()
 
     // Mark our params that feed to later layers, so that unused params
     // that aren't needed downstream can be removed.
+    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i)
+        inst()->symbol(i)->connected_down (false);
     for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
         BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
             if (c.srclayer == m_layer)
@@ -2662,6 +2776,11 @@ RuntimeOptimizer::optimize_group ()
         optimize_instance ();
     }
 
+    for (int layer = nlayers-2;  layer >= 0;  --layer) {
+        set_inst (layer);
+        optimize_instance ();
+    }
+
     for (int layer = nlayers-1;  layer >= 0;  --layer) {
         set_inst (layer);
         track_variable_dependencies ();
@@ -2696,9 +2815,9 @@ RuntimeOptimizer::optimize_group ()
             collapse_ops ();
             if (m_shadingsys.debug()) {
                 track_variable_lifetimes ();
-                std::cerr << "After optimizing layer " 
-                          << inst()->layername() 
-                          << ": \n" << inst()->print() 
+                std::cerr << "After optimizing layer " << layer << " " 
+                          << inst()->layername() << " (" << inst()->id()
+                          << "): \n" << inst()->print() 
                           << "\n--------------------------------\n\n";
             }
         }

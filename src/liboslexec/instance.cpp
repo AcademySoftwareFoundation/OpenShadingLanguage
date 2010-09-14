@@ -374,6 +374,10 @@ ShaderInstance::print ()
                 out << " init [" << s.initbegin() << ',' << s.initend() << ")";
             if (s.connected())
                 out << " connected";
+            if (s.connected_down())
+                out << " down-connected";
+            if (!s.connected() && !s.connected_down())
+                out << " unconnected";
         }
         out << "\n";
         if (s.symtype() == SymTypeConst || 
@@ -448,8 +452,18 @@ ShaderGroup::ShaderGroup (const ShaderGroup &g)
 
 ShaderGroup::~ShaderGroup ()
 {
-//    std::cerr << "Shader group " << this << " executed on " 
-//              << executions() << " points\n";
+#if 0
+    if (m_layers.size()) {
+        ustring name = m_layers.back()->layername();
+        std::cerr << "Shader group " << this 
+                  << " id #" << m_layers.back()->id() << " (" 
+                  << (name.c_str() ? name.c_str() : "<unnamed>")
+                  << ") executed on " << executions() << " points\n";
+    } else {
+        std::cerr << "Shader group " << this << " (no layers?) " 
+                  << "executed on " << executions() << " points\n";
+    }
+#endif
 }
 
 

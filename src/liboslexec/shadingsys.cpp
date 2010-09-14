@@ -191,7 +191,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         m_use_llvm = atoi (llvm_env);
     const char *llvm_debug_env = getenv ("OSL_LLVM_DEBUG");
     if (llvm_debug_env && *llvm_debug_env)
-        m_llvm_debug = (atoi(llvm_debug_env) != 0);
+        m_llvm_debug = atoi(llvm_debug_env);
 
     register_builtin_closures(this);
 }

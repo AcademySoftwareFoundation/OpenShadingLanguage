@@ -928,20 +928,20 @@ llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
                 continue;  // already ran that one
             // If the earlier layer it comes from has not yet
             // been executed, do so now.
-            //if (! execlayers[con.srclayer].executed())
-            //    run_connected_layer (con.srclayer);
+            // Make code that looks like:
+            //   if (! groupdata->run[parentlayer]) {
+            //       groupdata->run[parentlayer] = 1;
+            //       parent_layer (sg, groupdata);
+            //   }
             ShaderInstance *parent = rop.group()[con.srclayer];
             llvm::Value *executed = rop.builder().CreateLoad (rop.layer_run_ptr(con.srclayer));
             executed = rop.builder().CreateICmpEQ (executed, rop.llvm_constant(0));
-            // Make code that looks like:
-            //   if (groupdata->run[parentlayer] == 0) {
-            //       parent_layer (sg, groupdata);
-            //       groupdata->run[parentlayer] = 1;
-            //   }
             llvm::BasicBlock *then_block = rop.llvm_new_basic_block ("");
             llvm::BasicBlock *after_block = rop.llvm_new_basic_block ("");
             rop.builder().CreateCondBr (executed, then_block, after_block);
             rop.builder().SetInsertPoint (then_block);
+            rop.builder().CreateStore (rop.llvm_constant(1),
+                                       rop.layer_run_ptr(con.srclayer));
             std::string name = Strutil::format ("%s_%d", parent->layername().c_str(), parent->id());
             rop.llvm_call_function (name.c_str(), args, 2);
             rop.builder().CreateBr (after_block);
@@ -3296,6 +3296,7 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 }
 
 
+
 llvm::Function*
 RuntimeOptimizer::build_llvm_instance (bool groupentry)
 {
@@ -3343,10 +3344,6 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                 }
             }
         }
-    } else {
-        // Not the group entry -- just mark our layer as run
-        if (group().nlayers() > 1)
-            builder().CreateStore (llvm_constant(1), layer_run_ptr(m_layer));
     }
 
     // Setup the symbols
@@ -3376,9 +3373,14 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;
+        // Skip anything other than params & oparams
+        if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam)
+            continue;
+        // Skip if it's never read and isn't connected
+        if (! s.everread() && ! s.connected_down() && ! s.connected())
+            continue;
         // Set initial value for params (may contain init ops)
-        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
-            llvm_assign_initial_value (s);
+        llvm_assign_initial_value (s);
     }
 
     // All the symbols are stack allocated now.
@@ -3477,14 +3479,15 @@ RuntimeOptimizer::build_llvm_group ()
     if (shadingsys().llvm_debug())
         llvm::errs() << "func after opt  = " << *func << "\n";
 
-#if 0
     // Debug code to dump the resulting bitcode to a file
-    {
+    if (shadingsys().llvm_debug() >= 2) {
         std::string err_info;
-        llvm::raw_fd_ostream out (inst()->layername().c_str(), err_info);
+        std::string name = Strutil::format ("%s_%d.bc",
+                                            inst()->layername().c_str(),
+                                            inst()->id());
+        llvm::raw_fd_ostream out (name.c_str(), err_info);
         llvm::WriteBitcodeToFile (llvm_module(), out);
     }
-#endif
 
     // Force the JIT to happen now, while we have the lock
     llvm::ExecutionEngine* ee = shadingsys().ExecutionEngine();
@@ -3597,9 +3600,8 @@ ShadingSystemImpl::SetupLLVM ()
         initialize_llvm_generator_table ();
     }
 
-
-    if (! m_llvm_module) {
-#if 1
+    if (! m_llvm_module
+        || llvm_debug() >= 3 /*high debug -> custom module*/) {
         // Load the LLVM bitcode and parse it into a Module
         const char *data = osl_llvm_compiled_ops_block;
         llvm::MemoryBuffer *buf =
@@ -3609,10 +3611,6 @@ ShadingSystemImpl::SetupLLVM ()
         if (err.length())
             std::cerr << "ParseBitcodeFile returned '" << err << "'\n";
         delete buf;
-#else
-        // Blank module -- not very good for anything
-        m_llvm_module = new llvm::Module ("oslmodule", *llvm_context());
-#endif
     }
 
     // Create the ExecutionEngine

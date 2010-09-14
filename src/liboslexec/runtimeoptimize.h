@@ -206,6 +206,8 @@ public:
 
     void add_dependency (SymDependency &dmap, int A, int B);
 
+    void mark_outgoing_connections ();
+
     /// Squeeze out unused symbols from an instance that has been
     /// optimized.
     void collapse_syms ();

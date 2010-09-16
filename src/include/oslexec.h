@@ -49,7 +49,7 @@ class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 class SingleShaderGlobal;
 class ShaderGlobals;
-class ClosureColor;
+struct ClosureColor;
 class ClosureParam;
 class OSLCompiler;
 
@@ -237,7 +237,7 @@ public:
     VaryingRef<TransformationPtr> object2common; /// Object->common xform
     VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
 
-    VaryingRef<ClosureColor *> Ci;     ///< Output colors
+    VaryingRef<ClosureColor *> Ci;     ///< Output closure
 
     VaryingRef<float> surfacearea;     ///< Total area of the object (not exposed)
     bool iscameraray;                  ///< True if computing for camera ray
@@ -266,7 +266,7 @@ struct SingleShaderGlobal {
     pvt::ShadingContext* context; ///< ShadingContext
     TransformationPtr object2common; /// Object->common xform
     TransformationPtr shader2common; /// Shader->common xform
-    ClosureColor* Ci;      ///< Output colors
+    ClosureColor *Ci;      ///< Output closure
     float surfacearea;     ///< Total area of the object (not exposed)
     int iscameraray;       ///< True if computing for camera ray
     int isshadowray;       ///< True if computing for shadow opacity

@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslops.h"
 #include "oslexec_pvt.h"
 
-
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif
@@ -43,11 +42,6 @@ namespace pvt {
 // The messages are stored in a ParamValueList in the ShadingContext.
 // For simple types, just slurp them up into the PVL.
 //
-// Closures are tricky because of the memory management and that PVL's
-// don't know anything about them. For those we allocate new closures
-// in the context's closure_msgs vector, and just store their indices in
-// the PVL.
-//
 // FIXME -- setmessage only stores message values, not derivs, so
 // getmessage only retrieves the values and has zero derivs.
 // We should come back and fix this later.
@@ -56,11 +50,6 @@ namespace pvt {
 // of closures, it will only store the first element.  Also something to
 // come back to, not an emergency at the moment.
 //
-// FIXME -- because we store closures by int index, there's an error
-// condition if a shader does a setmessage with a closure, then does a
-// getmessage of the same message name into int, or vice versa.  Instead
-// that should be a type mismatch and getmessage() should return 0.
-
 
 
 // void setmessage (string name, ANY value).
@@ -73,7 +62,6 @@ DECLOP (OP_setmessage)
 
     VaryingRef<ustring> name ((ustring *)Name.data(), Name.step());
     ParamValueList &messages (exec->context()->messages());
-    std::vector<ClosureColor> &closure_msgs (exec->context()->closure_msgs());
 
     // We are forcing messages to be varying here to avoid a bug
     // we still haven't identify. This was the old line:
@@ -85,7 +73,7 @@ DECLOP (OP_setmessage)
     bool varying = true;
     TypeDesc type = Val.typespec().simpletype();
     if (Val.typespec().is_closure ())
-        type = TypeDesc::TypeInt;     // Actually store closure indices only
+        type = TypeDesc::PTR;     // It is going to be a pointer
     size_t datasize = type.size();
 
     ustring lastname;       // Last message name that we matched
@@ -111,15 +99,7 @@ DECLOP (OP_setmessage)
         // Copy the data
         DASSERT (p != NULL);
         char *msgdata = (char *)p->data() + varying*datasize*i;
-        if (Val.typespec().is_closure()) {
-            // Add the closure data to the end of the closure messages
-            closure_msgs.push_back (**(ClosureColor **)Val.data(i));
-            // and store its index in the PVL
-            *(int *)msgdata = (int)closure_msgs.size() - 1;
-        } else {
-            // Non-closure types, just memcpy
-            memcpy (msgdata, Val.data(i), datasize);
-        }
+        memcpy (msgdata, Val.data(i), datasize);
         if (! varying)
             SHADE_LOOP_EXIT      // Non-uniform case can take early out
     SHADE_LOOP_END
@@ -151,11 +131,10 @@ DECLOP (OP_getmessage)
     VaryingRef<int> result ((int *)Result.data(), Result.step());
     VaryingRef<ustring> name ((ustring *)Name.data(), Name.step());
     ParamValueList &messages (exec->context()->messages());
-    std::vector<ClosureColor> &closure_msgs (exec->context()->closure_msgs());
 
     TypeDesc type = Val.typespec().simpletype();
     if (Val.typespec().is_closure ())
-        type = TypeDesc::TypeInt;     // Actually store closure indices only
+        type = TypeDesc::PTR;
     size_t datasize = type.size();
 
     ustring lastname;       // Last message name that we matched
@@ -181,18 +160,7 @@ DECLOP (OP_getmessage)
         if (p) {
             result[i] = 1;   // found
             char *msgdata = (char *)p->data() + varying*datasize*i;
-            if (Val.typespec().is_closure()) {
-                // Retrieve the closure index from the PVL
-                int index = *(int *)msgdata;
-                ClosureColor *valclose = *(ClosureColor **) Val.data(i);
-                // then copy the closure (or clear it, if out of range)
-                if (index < (int)closure_msgs.size())
-                    *valclose = closure_msgs[index];
-                else
-                    valclose->clear ();
-            } else {
-                memcpy (Val.data(i), msgdata, datasize);
-            }
+            memcpy (Val.data(i), msgdata, datasize);
         } else {
             result[i] = 0;   // not found
         }
@@ -223,7 +191,7 @@ osl_setmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void
     TypeDesc type (*(TypeDesc *)&type_);
     bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
-        type = TypeDesc::TypeInt;  // for closures, we store the index
+        type = TypeDesc::PTR;  // for closures, we store a pointer
 
     ParamValueList &messages (sg->context->messages());
     ParamValue *p = NULL;
@@ -238,16 +206,7 @@ osl_setmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void
         p->init (name, type, 1, NULL);
     }
     
-    if (is_closure) {
-        // Add the closure data to the end of the closure messages
-        std::vector<ClosureColor> &closure_msgs (sg->context->closure_msgs());
-        closure_msgs.push_back (*(ClosureColor *)val);
-        // and store its index in the PVL
-        *(int *)p->data() = (int)closure_msgs.size() - 1;
-    } else {
-        // Non-closure types, just memcpy
-        memcpy ((void *)p->data(), val, type.size());
-    }
+    memcpy ((void *)p->data(), val, type.size());
 }
 
 
@@ -260,7 +219,7 @@ osl_getmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void
     TypeDesc type (*(TypeDesc *)&type_);
     bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
-        type = TypeDesc::TypeInt;  // for closures, we store the index
+        type = TypeDesc::PTR;  // for closures, we store a pointer
 
     ParamValueList &messages (sg->context->messages());
     ParamValue *p = NULL;
@@ -270,18 +229,7 @@ osl_getmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void
 
     if (p) {
         // Message found
-        if (is_closure) {
-            int index = *(const int *)p->data();
-            ClosureColor *valclose = (ClosureColor *)val;
-            std::vector<ClosureColor> &closure_msgs (sg->context->closure_msgs());
-            if (index < (int)closure_msgs.size())
-                *valclose = closure_msgs[index];
-            else
-                valclose->clear ();
-        } else {
-            // Non-closure types, just memcpy
-            memcpy (val, p->data(), type.size());
-        }
+        memcpy (val, p->data(), type.size());
         return 1;
     }
 

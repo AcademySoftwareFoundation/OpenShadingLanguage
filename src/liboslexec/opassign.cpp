@@ -150,7 +150,7 @@ assign_closure (ShadingExecution *exec, int nargs, const int *args)
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     VaryingRef<ClosureColor *> src ((ClosureColor **)Src.data(), Src.step());
     SHADE_LOOP_BEGIN
-        *(result[i]) = *(src[i]);
+        result[i] = src[i];
     SHADE_LOOP_END
     // N.B. You can't take a derivative of a closure
 }
@@ -169,7 +169,7 @@ clear_closure (ShadingExecution *exec, int nargs, const int *args)
     // Loop over points, do the assignment.
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     SHADE_LOOP_BEGIN
-        result[i]->clear ();
+        result[i] = NULL;
     SHADE_LOOP_END
 
     // N.B. You can't take a derivative of a closure

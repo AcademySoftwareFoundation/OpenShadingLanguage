@@ -360,6 +360,9 @@ public:
     ///
     llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
 
+    const llvm::Type *llvm_type_closure_component ();
+    const llvm::Type *llvm_type_closure_component_ptr ();
+
     /// Return the SingleShaderGlobals pointer cast as a void*.
     ///
     llvm::Value *sg_void_ptr () {
@@ -585,6 +588,7 @@ private:
     const llvm::PointerType *m_llvm_type_matrix_ptr;
     const llvm::Type *m_llvm_type_sg;  // LLVM type of SingleShaderGlobal struct
     const llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
+    const llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
     const llvm::PointerType *m_llvm_type_prepare_closure_func;
     const llvm::PointerType *m_llvm_type_setup_closure_func;
     llvm::PassManager *m_llvm_passes;

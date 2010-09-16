@@ -129,6 +129,7 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
             my_sg.backfacing = sg.backfacing;
             run_func (&my_sg, &m_heap[groupdata_size * i]);
 
+            sg.Ci[i] = my_sg.Ci;
 //            if (use == ShadUseDisplacement) {
             // FIXME -- should only do this extra work for disp shaders,
             // but at the moment we only use ShadUseSurface, even for disp!
@@ -190,18 +191,11 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
     // Set up closure storage
     size_t closures_needed = m_npoints * sas.numclosures ();
     if (shadingsys().debug())
-        shadingsys().info ("  need closures %d vs %llu", closures_needed,
-                           (unsigned long long) m_closures.size());
-    if (closures_needed > m_closures.size()) {
-        if (shadingsys().debug())
-            shadingsys().info ("  ShadingContext %p growing closures to %llu",
-                               this, (unsigned long long)closures_needed);
-        m_closures.resize (closures_needed);
-    }
+        shadingsys().info ("  need closures %d", closures_needed);
 
     // Clear the message blackboard
     m_messages.clear ();
-    m_closure_msgs.clear ();
+    m_closure_pool.clear();
 
     return true;
 }
@@ -223,6 +217,7 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
     DASSERT (sgroup.llvm_compiled_version());
     DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
     ssg.context = this;
+    ssg.Ci = NULL;
     RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
     run_func (&ssg, &m_heap[0]);
 #endif /* USE_LLVM */
@@ -452,6 +447,7 @@ ShadingContext::find_regex (ustring r)
     // std::cerr << "Made new regex for " << r << "\n";
     return m_regex_map[r];
 }
+
 
 
 }; // namespace pvt

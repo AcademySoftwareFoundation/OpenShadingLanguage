@@ -226,16 +226,12 @@ typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
 /// checking.  Note that nothing that's compiled into llvm_ops.cpp ought
 /// to need a declaration here.
 static const char *llvm_helper_function_table[] = {
-    "osl_closure_allot", "XX",
-    "osl_closure_clear", "xC",
-    "osl_closure_clear_indexed", "xXi",
-    "osl_closure_assign", "xCC",
-    "osl_closure_assign_indexed", "xXiXi",
-    "osl_add_closure_closure", "xXCCC",
-    "osl_mul_closure_float", "xCCf",
-    "osl_mul_closure_color", "xCCc",
-    "osl_allocate_closure_component", "XCii",
-    "osl_closure_to_string", "sX",
+    // TODO: remove these
+    "osl_add_closure_closure", "CXCC",
+    "osl_mul_closure_float", "CXCf",
+    "osl_mul_closure_color", "CXCc",
+    "osl_allocate_closure_component", "CXii",
+    "osl_closure_to_string", "sXC",
     "osl_format", "ss*",
     "osl_printf", "xXs*",
     "osl_error", "xXs*",
@@ -390,6 +386,31 @@ const llvm::Type *
 RuntimeOptimizer::llvm_type_groupdata_ptr ()
 {
     return llvm::PointerType::get (llvm_type_groupdata(), 0);
+}
+
+
+
+const llvm::Type *
+RuntimeOptimizer::llvm_type_closure_component ()
+{
+    if (m_llvm_type_closure_component)
+        return m_llvm_type_closure_component;
+
+    std::vector<const llvm::Type*> comp_types;
+    comp_types.push_back (llvm_type_int());     // parent.type
+    comp_types.push_back (llvm_type_int());     // id
+    comp_types.push_back (llvm_type_int());     // size
+    comp_types.push_back (llvm_type_int());     // fake field for char mem[4]
+
+    return m_llvm_type_closure_component = llvm::StructType::get (llvm_context(), comp_types);
+}
+
+
+
+const llvm::Type *
+RuntimeOptimizer::llvm_type_closure_component_ptr ()
+{
+    return llvm::PointerType::get (llvm_type_closure_component(), 0);
 }
 
 
@@ -1128,7 +1149,7 @@ LLVMGEN (llvm_gen_printf)
                 if (sym.typespec().is_closure()) {
                     s += ourformat;
                     llvm::Value *v = rop.llvm_load_value (sym, 0, arrind, 0);
-                    v = rop.llvm_call_function ("osl_closure_to_string", v);
+                    v = rop.llvm_call_function ("osl_closure_to_string", rop.sg_void_ptr(), v);
                     call_args.push_back (v);
                     continue;
                 }
@@ -1238,12 +1259,12 @@ LLVMGEN (llvm_gen_add)
 
     if (Result.typespec().is_closure()) {
         ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
-        llvm::Value *valargs[4];
+        llvm::Value *valargs[3];
         valargs[0] = rop.sg_void_ptr();
-        valargs[1] = rop.llvm_load_value (Result);
-        valargs[2] = rop.llvm_load_value (A);
-        valargs[3] = rop.llvm_load_value (B);
-        rop.llvm_call_function ("osl_add_closure_closure", valargs, 4);
+        valargs[1] = rop.llvm_load_value (A);
+        valargs[2] = rop.llvm_load_value (B);
+        llvm::Value *res = rop.llvm_call_function ("osl_add_closure_closure", valargs, 3);
+        rop.llvm_store_value (res, Result, 0, NULL, 0);
         return true;
     }
 
@@ -1344,16 +1365,21 @@ LLVMGEN (llvm_gen_mul)
 
     // multiplication involving closures
     if (Result.typespec().is_closure()) {
-        if (A.typespec().is_closure() && B.typespec().is_float())
-            rop.llvm_call_function ("osl_mul_closure_float", Result, A, B);
-        else if (A.typespec().is_closure() && B.typespec().is_color())
-           rop.llvm_call_function ("osl_mul_closure_color", Result, A, B);
-        else if (A.typespec().is_float() && B.typespec().is_closure())
-            rop.llvm_call_function ("osl_mul_closure_float", Result, B, A);
-        else if (A.typespec().is_color() && B.typespec().is_closure())
-            rop.llvm_call_function ("osl_mul_closure_color", Result, B, A);
-        else
-            ASSERT (0 && "Unknown closure multiplication variety");
+        llvm::Value *valargs[3];
+        valargs[0] = rop.sg_void_ptr();
+        bool tfloat;
+        if (A.typespec().is_closure()) {
+            tfloat = B.typespec().is_float();
+            valargs[1] = rop.llvm_load_value (A);
+            valargs[2] = tfloat ? rop.llvm_load_value (B) : rop.llvm_void_ptr(B);
+        } else {
+            tfloat = A.typespec().is_float();
+            valargs[1] = rop.llvm_load_value (B);
+            valargs[2] = tfloat ? rop.llvm_load_value (A) : rop.llvm_void_ptr(A);
+        }
+        llvm::Value *res = tfloat ? rop.llvm_call_function ("osl_mul_closure_float", valargs, 3)
+                                  : rop.llvm_call_function ("osl_mul_closure_color", valargs, 3);
+        rop.llvm_store_value (res, Result, 0, NULL, 0);
         return true;
     }
 
@@ -1743,26 +1769,12 @@ llvm_assign_impl (RuntimeOptimizer &rop, Symbol &Result, Symbol &Src,
     llvm::Value *arrind = arrayindex >= 0 ? rop.llvm_constant (arrayindex) : NULL;
 
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
-        if (Result.typespec().is_array()) {
-            int ind = std::max (arrayindex, 0);
-            if (Src.typespec().is_closure()) {
-                llvm::Value *args[4];
-                args[0] = rop.llvm_load_value (Result, 0, arrind, 0);
-                args[1] = rop.llvm_constant (ind);
-                args[2] = rop.llvm_load_value (Src, 0, arrind, 0);
-                args[3] = rop.llvm_constant (ind);
-                rop.llvm_call_function ("osl_closure_assign_indexed", args, 4);
-            } else {
-                llvm::Value *args[2];
-                args[0] = rop.llvm_load_value (Result, 0, arrind, 0);
-                args[1] = rop.llvm_constant (ind);
-                rop.llvm_call_function ("osl_closure_clear_indexed", args, 2);
-            }
+        if (Src.typespec().is_closure()) {
+            llvm::Value *srcval = rop.llvm_load_value (Src, 0, arrind, 0);
+            rop.llvm_store_value (srcval, Result, 0, arrind, 0);
         } else {
-            if (Src.typespec().is_closure())
-                rop.llvm_call_function ("osl_closure_assign", Result, Src);
-            else
-                rop.llvm_call_function ("osl_closure_clear", Result);
+            llvm::Value *null = rop.llvm_constant_ptr(NULL, rop.llvm_type_void_ptr());
+            rop.llvm_store_value (null, Result, 0, arrind, 0);
         }
         return true;
     }
@@ -2752,9 +2764,8 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
     // care of it in the group entry point.
     if (sym.typespec().is_closure() &&
         sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam) {
+        llvm::Value *init_val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
         for (int a = 0; a < arraylen;  ++a) {
-            llvm::Value *init_val = llvm_call_function ("osl_closure_allot",
-                                                        sg_void_ptr());
             llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
             llvm_store_value (init_val, sym, 0, arrind, 0);
         }
@@ -2814,7 +2825,7 @@ RuntimeOptimizer::llvm_offset_ptr (llvm::Value *ptr, int offset,
 {
     llvm::Value *i = builder().CreatePtrToInt (ptr, llvm_type_addrint());
     i = builder().CreateAdd (i, llvm_constant ((size_t)offset));
-    ptr = builder().CreateIntToPtr (i, llvm_type_void_ptr(), "from offset");
+    ptr = builder().CreateIntToPtr (i, llvm_type_void_ptr());
     if (ptrtype)
         ptr = llvm_ptr_cast (ptr, ptrtype);
     return ptr;
@@ -2871,7 +2882,11 @@ LLVMGEN (llvm_gen_getmessage)
     args[0] = rop.sg_void_ptr();
     args[1] = rop.llvm_load_value (Name);
     args[2] = rop.llvm_constant (Data.typespec().simpletype());
-    args[3] = rop.llvm_void_ptr (Data);
+    if (Data.typespec().is_closure())
+        // We need a void ** here so the function can modify the closure
+        args[3] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
+    else
+        args[3] = rop.llvm_void_ptr (Data);
 
     llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 4);
     rop.llvm_store_value (r, Result);
@@ -3104,11 +3119,16 @@ LLVMGEN (llvm_gen_closure)
     // Call osl_allocate_closure_component(closure, id, size).  It returns
     // the memory for the closure parameter data.
     llvm::Value *render_ptr = rop.llvm_constant_ptr(rop.shadingsys().renderer(), rop.llvm_type_void_ptr());
-    llvm::Value *cl_void_ptr = rop.llvm_load_value (Result);
+    llvm::Value *sg_ptr = rop.sg_void_ptr();
     llvm::Value *id_int = rop.llvm_constant(clentry->id);
     llvm::Value *size_int = rop.llvm_constant(clentry->struct_size);
-    llvm::Value *alloc_args[3] = {cl_void_ptr, id_int, size_int};
-    llvm::Value *mem_void_ptr = rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 3);
+    llvm::Value *alloc_args[3] = {sg_ptr, id_int, size_int};
+    llvm::Value *comp_void_ptr = rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 3);
+    rop.llvm_store_value (comp_void_ptr, Result, 0, NULL, 0);
+    llvm::Value *comp_ptr = rop.llvm_ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
+    // Get the address of the primitive buffer, which is the 5th field
+    llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 3);
+    mem_void_ptr = rop.llvm_ptr_cast(mem_void_ptr, rop.llvm_type_void_ptr());
 
     // If the closure has a "prepare" method, call
     // prepare(renderer, id, memptr).  If there is no prepare method, just
@@ -3396,8 +3416,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                     (sym.symtype() == SymTypeParam ||
                      sym.symtype() == SymTypeOutputParam)) {
                     int arraylen = std::max (1, sym.typespec().arraylength());
+                    llvm::Value *val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
                     for (int a = 0; a < arraylen;  ++a) {
-                        llvm::Value *val = llvm_call_function ("osl_closure_allot", sg_void_ptr());
                         llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
                         llvm_store_value (val, sym, 0, arrind, 0);
                     }
@@ -3600,6 +3620,7 @@ RuntimeOptimizer::initialize_llvm_group ()
     // created on demand.
     m_llvm_type_sg = NULL;
     m_llvm_type_groupdata = NULL;
+    m_llvm_type_closure_component = NULL;
 
     // Set up aliases for types we use over and over
     m_llvm_type_float = llvm::Type::getFloatTy (*m_llvm_context);

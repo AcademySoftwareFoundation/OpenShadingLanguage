@@ -54,75 +54,91 @@ operator<< (std::ostream &out, const ClosurePrimitive &prim)
     return out;
 }
 
+/*
 void
-ClosureColor::add (const ClosureColor &A, ShadingSystemImpl *ss)
+ClosureColor::flatten (ClosureColor *closure, const Color3 &w, ShadingSystemImpl *ss)
 {
-    // Look at all of A's components, decide which can be merged with our
-    // own (just summing weights) and which need to be appended as new
-    // closure primitives.
-    int my_ncomponents = ncomponents();  // how many components I have now
-    int num_unmerged = 0;                // how many more I'll need
-    size_t new_bytes = 0;                // how much more mem I'll need
-    int *unmerged = ALLOCA (int, A.ncomponents());  // temp index list
-    for (int ac = 0;  ac < A.ncomponents();  ++ac) {
-        bool merged = false;
-        const Component &acomp (A.component (ac));
-        if (acomp.weight[0] == 0.0f && acomp.weight[1] == 0.0f &&
-                acomp.weight[2] == 0.0f)
-            continue;   // don't bother adding a 0-weighted component
-        const ClosureRegistry::ClosureEntry *closure = ss->find_closure(A.id(ac));
-        DASSERT(closure != NULL);
-        CompareClosureFunc compare = closure->compare;
-        const void *araw = A.raw_prim(ac);
-        for (int c = 0;  c < my_ncomponents;  ++c) {
-            if (id(c) == A.id(ac) && (compare ? compare(id(c), araw, raw_prim(c)) : !memcmp(araw, raw_prim(c), closure->struct_size))) {
-                m_components[c].weight += acomp.weight;
-                merged = true;
-                break;
-            }
-        }
+    ClosureComponent *comp;
 
-        if (! merged) {
-            // Not a duplicate that can be merged.  Remember this component
-            // index and how much memory it'll need.
-            unmerged[num_unmerged++] = ac;
-            new_bytes += closure->struct_size;
-        }
-    }
-
-    // If we've merged everything and don't need to append, we're done
-    if (! num_unmerged)
+    if (closure == NULL)
         return;
 
-    // Grow our memory
-    size_t oldmemsize = m_mem.size ();
-    m_mem.resize (oldmemsize + new_bytes);
+    switch (closure->type) {
+        case ClosureColor::CLOSURE_MUL:
+            flatten((ClosureColor *)((ClosureMul *)closure)->closure, ((ClosureMul *)closure)->weight * w, ss);
+            break;
+        case ClosureColor::CLOSURE_ADD:
+            flatten((ClosureColor *)((ClosureAdd *)closure)->closureA, w, ss);
+            flatten((ClosureColor *)((ClosureAdd *)closure)->closureB, w, ss);
+            break;
+        case ClosureColor::CLOSURE_COMPONENT:
+            comp = (ClosureComponent *)closure;
+            comp->weight *= w;
+            if (comp->weight[0] != 0.0f || comp->weight[1] != 0.0f || comp->weight[2] != 0.0f)
+            {
+                for (int i = 0; i < ncomponents(); ++i)
+                {
+                    ClosureComponent *existing = m_components[i];
+                    if (existing->id != comp->id) continue;
+                    const ClosureRegistry::ClosureEntry *closure = ss->find_closure(comp->id);
+                    DASSERT(closure != NULL);
+                    CompareClosureFunc compare = closure->compare;
+                    if (compare ? compare(comp->id, comp->mem, existing->mem) : !memcmp(comp->mem, existing->mem, closure->struct_size))
+                    {
+                        existing->weight += comp->weight;
+                        comp = NULL;
+                        break;
+                    }
+                }
+                if (comp)
+                    push_component(comp);
+            }
+            break;
+    }
+}
+*/
 
-    // Append the components of A that we couldn't merge.
-    for (int i = 0;  i < num_unmerged;  ++i) {
-        int c = unmerged[i];   // next unmerged component index within A
-        const Component &acomp (A.component (c));
-        const ClosureRegistry::ClosureEntry *closure = ss->find_closure(acomp.id);
-        DASSERT(closure != NULL);
-        size_t asize = closure->struct_size;
-        memcpy (&m_mem[oldmemsize], &A.m_mem[acomp.memoffset], asize);
-        m_components.push_back (acomp);
-        m_components.back().memoffset = oldmemsize;
-        oldmemsize += asize;
+void
+print_primitive (std::ostream &out, const ClosurePrimitive *cprim, const Color3 &weight)
+{
+    out << "(" << weight[0] << ", " << weight[1] << ", " << weight[2] << ") * ";
+    out << *cprim;
+}
+
+void
+print_closure (std::ostream &out, const ClosureColor *closure, const Color3 &w, bool &first)
+{
+    ClosureComponent *comp;
+    if (closure == NULL)
+        return;
+
+    switch (closure->type) {
+        case ClosureColor::CLOSURE_MUL:
+            print_closure(out, ((ClosureMul *)closure)->closure, ((ClosureMul *)closure)->weight * w, first);
+            break;
+        case ClosureColor::CLOSURE_ADD:
+            print_closure(out, ((ClosureAdd *)closure)->closureA, w, first);
+            print_closure(out, ((ClosureAdd *)closure)->closureB, w, first);
+            break;
+        case ClosureColor::CLOSURE_COMPONENT:
+            comp = (ClosureComponent *)closure;
+            if (comp->id < NBUILTIN_CLOSURES)
+            {
+                const ClosurePrimitive *cprim = (const ClosurePrimitive *)comp->mem;
+                if (!first)
+                    out << "\n\t+ ";
+                print_primitive (out, cprim, w);
+                first = false;
+            }
+            break;
     }
 }
 
 std::ostream &
 operator<< (std::ostream &out, const ClosureColor &closure)
 {
-    for (int c = 0;  c < closure.ncomponents(); c++) {
-        const Color3 &weight = closure.weight (c);
-        const ClosurePrimitive *cprim = closure.prim (c);
-        if (c)
-            out << "\n\t+ ";
-        out << "(" << weight[0] << ", " << weight[1] << ", " << weight[2] << ") * ";
-        out << *cprim;
-    }
+    bool first = true;
+    print_closure(out, &closure, Color3(1, 1, 1), first);
     return out;
 }
 

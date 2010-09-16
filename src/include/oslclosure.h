@@ -401,131 +401,43 @@ class ShadingSystemImpl;
 }
 
 
-/// Representation of an OSL 'closure color'.  It houses a linear
-/// combination of weights * components (the components are references
-/// to closure primitives and instance parameters).
-class ClosureColor {
-public:
-    ClosureColor () { }
-    ~ClosureColor () { }
+struct ClosureColor
+{
+    enum {
+        CLOSURE_COMPONENT,
+        CLOSURE_MUL,
+        CLOSURE_ADD
+    } type;
+};
 
-    void clear () {
-        m_components.clear ();
-        m_mem.clear ();
-    }
+struct ClosureComponent
+{
+    ClosureColor parent;
+    int    id;       ///< Id of the componente
+    int    size;     ///< Memory used by the primitive
+    char   mem[4];   ///< Memory for the primitive
+                     ///  4 is the minimum, allocation
+                     ///  will be scaled to requirements
+                     ///  of the primitive
+};
 
-    /// Clears this closures and adds a single component with unit weight. A new
-    /// ClosurePrimitive object must be placement new'd into the returned
-    /// memory location
-    ///
-    char* allocate_component (int id, size_t num_bytes) {
-        // FIXME: alignment ??
-        // Resize memory to fit size of the new component
-        m_mem.resize (num_bytes);
+struct ClosureMul
+{
+    ClosureColor parent;
+    Color3 weight;
+    const ClosureColor *closure;
+};
 
-        // Make a new component
-        m_components.clear();
-        m_components.push_back (Component (id, Color3 (1, 1, 1), 0));
-
-        // Return the block of memory for the caller to new the ClosurePrimitive into
-        return &m_mem[0];
-    }
-
-    /// *this += A
-    ///
-    void add (const ClosureColor &A, pvt::ShadingSystemImpl *ss);
-
-    /// *this = a+b
-    ///
-    void add (const ClosureColor &a, const ClosureColor &b, pvt::ShadingSystemImpl *ss) {
-        if (this != &a) *this = a;
-        add(b, ss);
-    }
-
-    /// *this *= f
-    ///
-    void mul (float f) {
-        if (f == 0.f) { clear(); return; }
-        for (size_t i = 0; i < m_components.size(); ++i) {
-            m_components[i].weight *= f;
-        }
-    }
-    void mul (const Color3 &w) {
-        if (w[0] == 0.f && w[1] == 0.f && w[2] == 0.f) { clear(); return; }
-        for (size_t i = 0; i < m_components.size(); ++i) {
-            m_components[i].weight *= w;
-        }
-    }
-    const ClosureColor & operator*= (float w) { mul(w); return *this; }
-    const ClosureColor & operator*= (const Color3 &w) { mul(w); return *this; }
-
-    /// Stream output (for debugging)
-    ///
-    friend std::ostream & operator<< (std::ostream &out, const ClosureColor &c);
-
-    /// Return the number of primitive components of this closure.
-    ///
-    int ncomponents () const { return (int) m_components.size(); }
-
-    /// Return the weight of the i-th primitive component of this closure.
-    ///
-    const Color3 & weight (int i) const { return component(i).weight; }
-
-    /// Return a pointer to the ClosurePrimitive of the i-th primitive
-    /// component of this closure.
-    const ClosurePrimitive * prim (int i) const {
-        return reinterpret_cast<const ClosurePrimitive*>(&m_mem[component(i).memoffset]);
-    }
-    /// For non ClosurePrimitive based components (defined by the user)
-    const void * raw_prim (int i) const {
-        return (void *)&m_mem[component(i).memoffset];
-    }
-
-    int id (int i) const {
-        return component(i).id;
-    }
-
-    /// Return whether the component is a builtin closure
-    bool is_builtin (int i) const { return component(i).id < NBUILTIN_CLOSURES; }
-
-    size_t get_memory_usage() const {
-      return sizeof(ClosureColor) + m_components.get_memory_usage() + m_mem.get_memory_usage();
-    }
-
-private:
-
-    /// Light-weight struct to hold a single component of the Closure.
-    ///
-    struct Component {
-        int        id;   ///< Id of the componente
-        Color3 weight;   ///< Weight of this component
-        int memoffset;   ///< Offset at which we can find a ClosurePrimitive*
-        Component () {}
-        Component (int id, const Color3 &weight, int memoffset) :
-            id(id), weight(weight), memoffset(memoffset) { }
-    };
-
-    /// Return the i-th component of this closure.
-    ///
-    const Component & component (int i) const { return m_components[i]; }
-
-    // NOTE(boulos): I chose 8 components based on an old benchmark we
-    // did (it found 4 components maximum after merging, 12 before)
-    // and then chose the m_mem to be 64 bytes per closure (again
-    // based on our internal structs). This isn't the maximum
-    // possible, but it's not an unreasonable amount to absorb with
-    // static allocation.
-    // NOTE(aconty): I changed the static size cause I believe the
-    // important thing is to keep 85% of the closures (mostly temporaries)
-    // in the static mem, and not so much to avoid allocations. Smaller
-    // closures improve cache performance, and since most temporaries
-    // hold only one component, I changed it to 4. But this is subject
-    // to change as we do more experiments.
-    SmallVec<Component, 4> m_components; ///< weight + location in memory
-    SmallVec<char, 256> m_mem; ///< memory used to store components
+struct ClosureAdd
+{
+    ClosureColor parent;
+    const ClosureColor *closureA;
+    const ClosureColor *closureB;
 };
 
 
+std::ostream &
+operator<< (std::ostream &out, const ClosureColor &closure);
 
 }; // namespace OSL
 

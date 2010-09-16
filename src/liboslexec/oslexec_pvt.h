@@ -778,7 +778,40 @@ private:
 class ShadingExecution;
 typedef std::vector<ShadingExecution> ExecutionLayers;
 
+template<int BlockSize>
+class SimplePool {
+public:
+    SimplePool() {
+        m_blocks.push_back(new char[BlockSize]);
+        m_block_offset = BlockSize;
+        m_current_block = 0;
+    }
 
+    ~SimplePool() {
+        for (size_t i =0; i < m_blocks.size(); ++i)
+            delete [] m_blocks[i];
+    }
+
+    char * alloc(size_t size) {
+        ASSERT(size < BlockSize);
+        if (size <= m_block_offset) {
+            m_block_offset -= size;
+        } else {
+            m_current_block++;
+            m_block_offset = BlockSize - size;
+            if (m_blocks.size() == m_current_block)
+                m_blocks.push_back(new char[BlockSize]);
+        }
+        return m_blocks[m_current_block] + m_block_offset;
+    }
+
+    void clear () { m_current_block = 0; m_block_offset = BlockSize; }
+
+private:
+    std::vector<char *> m_blocks;
+    size_t              m_current_block;
+    size_t              m_block_offset;
+};
 
 /// The full context for executing a shader group.  This contains
 /// ShadingExecution states for each shader
@@ -847,21 +880,25 @@ public:
         return addr;
     }
 
-    /// Allot 'n' closures in the closure area, and allot 'n' closure
-    /// pointers in the heap (pointed to the allotted closures).  Return
-    /// the starting offset into the heap of the pointers.
-    size_t closure_allot (size_t n) {
-        size_t curheap = heap_allot (n * sizeof (ClosureColor *));
-        ClosureColor **ptrs = (ClosureColor **) heapaddr (curheap);
-        for (size_t i = 0;  i < n;  ++i)
-            ptrs[i] = closure_ptr_allot ();
-        return curheap;
+    ClosureComponent * closure_component_allot(int id, size_t prim_size) {
+        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
+        ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed);
+        comp->parent.type = ClosureColor::CLOSURE_COMPONENT;
+        comp->id = id;
+        comp->size = prim_size;
+        return comp;
     }
 
-    /// Allot a closure (from the pre-allocated set of closures for this
-    /// context) and return its pointer.
-    ClosureColor * closure_ptr_allot () {
-        return &m_closures[m_closures_allotted++];
+    ClosureMul       * closure_mul_allot() {
+        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
+        mul->parent.type = ClosureColor::CLOSURE_MUL;
+        return mul;
+    }
+
+    ClosureAdd       * closure_add_allot() {
+        ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd));
+        add->parent.type = ClosureColor::CLOSURE_ADD;
+        return add;
     }
 
     /// Find the named symbol in the (already-executed!) stack of
@@ -890,10 +927,6 @@ public:
     ///
     ParamValueList & messages () { return m_messages; }
 
-    /// Return a reference so the closure message memory.
-    ///
-    std::vector<ClosureColor> & closure_msgs () { return m_closure_msgs; }
-
 private:
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
@@ -913,14 +946,12 @@ private:
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_heap_allotted;             ///< Heap memory allotted
-    std::vector<ClosureColor> m_closures; ///< Closure memory
     size_t m_closures_allotted;         ///< Closure memory allotted
     ExecutionLayers m_exec;             ///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
     int m_curuse;                       ///< Current use that we're running
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
     ParamValueList m_messages;          ///< Message blackboard
-    std::vector<ClosureColor> m_closure_msgs;  // Mem for closure messages
     int m_lazy_evals;                   ///< Running tab of lazy evals
     int m_binds;                        ///< Running tab of binds
     int m_rebinds;                      ///< Running tab of rebinds
@@ -930,6 +961,8 @@ private:
     Runflag *m_original_runflags;       ///< Runflags we were called with
     RunIndex *m_original_indices;       ///< Indices we were called with
     int m_original_nindices;            ///< Number of original indices
+
+    SimplePool<20 * 1024> m_closure_pool;
 
     friend class ShadingExecution;
 };

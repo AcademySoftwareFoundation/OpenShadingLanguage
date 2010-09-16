@@ -288,7 +288,7 @@ DECLOP (closure_binary_op)
     VaryingRef<BTYPE> b ((BTYPE *)B.data(), B.step());
     FUNCTION function (exec);
     SHADE_LOOP_BEGIN
-        function (result[i], a[i], b[i]);
+        function (&result[i], a[i], b[i]);
     SHADE_LOOP_END
 }
 
@@ -311,7 +311,7 @@ DECLOP (closure_unary_op)
     VaryingRef<ATYPE> a ((ATYPE *)A.data(), A.step());
     FUNCTION function (exec);
     SHADE_LOOP_BEGIN
-        function (result[i], a[i]);
+        function (&result[i], a[i]);
     SHADE_LOOP_END
 }
 
@@ -319,20 +319,23 @@ DECLOP (closure_unary_op)
 
 class AddClosure {
 public:
-    AddClosure (ShadingExecution *exec):m_shadingsys(exec->shadingsys()) { }
-    inline void operator() (ClosureColor *result, 
+    AddClosure (ShadingExecution *exec):m_context(exec->context()) { }
+    inline void operator() (ClosureColor **result, 
                             const ClosureColor *A, const ClosureColor *B) {
-        result->add (*A, *B, m_shadingsys);
+        ClosureAdd *add = m_context->closure_add_allot();
+        add->closureA = A;
+        add->closureB = B;
+        *result = &add->parent; // just a cast to parent type
     }
 private:
-    ShadingSystemImpl *m_shadingsys;
+    ShadingContext *m_context;
 };
 
 
 class SubClosure {
 public:
     SubClosure (ShadingExecution *) { }
-    inline void operator() (ClosureColor *result, 
+    inline void operator() (ClosureColor **result, 
                             const ClosureColor *A, const ClosureColor *B) {
         ASSERT (0 && "sub unimplemented for closures");
 //        result->sub (*A, *B);
@@ -342,53 +345,73 @@ public:
 
 class MulClosure {
 public:
-    MulClosure (ShadingExecution *) { }
-    inline void operator() (ClosureColor *result, 
+    MulClosure (ShadingExecution *exec):m_context(exec->context()) { }
+    inline void operator() (ClosureColor **result,
                             const ClosureColor *A, const Color3 &B) {
-        *result = *A;
-        *result *= B;
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = A;
+        mul->weight = B;
+        *result = &mul->parent;
     }
-    inline void operator() (ClosureColor *result, 
+    inline void operator() (ClosureColor **result,
                             const Color3 &A, const ClosureColor *B) {
-        *result = *B;
-        *result *= A;
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = B;
+        mul->weight = A;
+        *result = &mul->parent;
     }
-    inline void operator() (ClosureColor *result, 
+    inline void operator() (ClosureColor **result,
                             const ClosureColor *A, float B) {
-        *result = *A;
-        *result *= B;
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = A;
+        mul->weight.setValue(B, B, B);
+        *result = &mul->parent;
     }
-    inline void operator() (ClosureColor *result, 
+    inline void operator() (ClosureColor **result,
                             float A, const ClosureColor *B) {
-        *result = *B;
-        *result *= A;
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = B;
+        mul->weight.setValue(A, A, A);
+        *result = &mul->parent;
     }
+private:
+    ShadingContext *m_context;
 };
 
 
 class DivClosure {
 public:
-    DivClosure (ShadingExecution *) { }
-    inline void operator() (ClosureColor *result, 
+    DivClosure (ShadingExecution *exec):m_context(exec->context()) { }
+    inline void operator() (ClosureColor **result,
                             const ClosureColor *A, const Color3 &B) {
-        *result = *A;
-        *result *= Color3 (1.0/B[0], 1.0/B[1], 1.0/B[2]);
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = A;
+        mul->weight.setValue(1.0/B[0], 1.0/B[1], 1.0/B[2]);
+        *result = &mul->parent;
     }
-    inline void operator() (ClosureColor *result, 
+    inline void operator() (ClosureColor **result, 
                             const ClosureColor *A, float B) {
-        *result = *A;
-        *result *= ((Float)1.0) / B;
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = A;
+        mul->weight.setValue(1.0/B, 1.0/B, 1.0/B);
+        *result = &mul->parent;
     }
+private:
+    ShadingContext *m_context;
 };
 
 
 class NegClosure {
 public:
-    NegClosure (ShadingExecution *) { }
-    inline void operator() (ClosureColor *result, const ClosureColor *A) {
-        *result = *A;
-        *result *= -1.0;
+    NegClosure (ShadingExecution *exec):m_context(exec->context()) { }
+    inline void operator() (ClosureColor **result, const ClosureColor *A) {
+        ClosureMul *mul = m_context->closure_mul_allot();
+        mul->closure = A;
+        mul->weight.setValue(-1.0, -1.0, -1.0);
+        *result = &mul->parent;
     }
+private:
+    ShadingContext *m_context;
 };
 
 

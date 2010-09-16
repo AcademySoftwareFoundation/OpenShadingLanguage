@@ -295,8 +295,10 @@ ShadingExecution::bind (ShaderInstance *instance)
             m_context->m_paramstobind++;
             if (sym.typespec().is_closure()) {
                 // Special case -- closures store pointers in the heap
-                sym.dataoffset (m_context->closure_allot (m_npoints));
-                sym.data (m_context->heapaddr (sym.dataoffset()));
+                //sym.dataoffset (m_context->closure_allot (m_npoints));
+                size_t addr = m_context->heap_allot (sizeof (ClosureColor *) * m_npoints);
+                sym.data ((ClosureColor **)m_context->heapaddr (addr));
+                memset(sym.data(), 0, sizeof (ClosureColor *) * m_npoints); // NULL is a valid empty closure
                 sym.step (sizeof (ClosureColor *));
             } else if (sym.typespec().simpletype().basetype != TypeDesc::UNKNOWN) {
                 size_t addr = m_context->heap_allot (sym.derivsize() * m_npoints);
@@ -312,8 +314,10 @@ ShadingExecution::bind (ShaderInstance *instance)
             if (sym.typespec().is_closure()) {
                 // Special case -- closures store pointers in the heap, and
                 // they are always varying.
-                sym.dataoffset (m_context->closure_allot (m_npoints));
-                sym.data (m_context->heapaddr (sym.dataoffset()));
+                //sym.dataoffset (m_context->closure_allot (m_npoints));
+                size_t addr = m_context->heap_allot (sizeof (ClosureColor *) * m_npoints);
+                sym.data ((ClosureColor **)m_context->heapaddr (addr));
+                memset(sym.data(), 0, sizeof (ClosureColor *) * m_npoints); // NULL is a valid empty closure
                 sym.step (sizeof (ClosureColor *));
             } else {
                 m_context->heap_allot (sym);

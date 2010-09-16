@@ -268,10 +268,9 @@ main (int argc, const char *argv[])
     float surfacearea = 1;
     shaderglobals.surfacearea.init (&surfacearea, 0);
 
-    std::vector<ClosureColor> Ci (npoints);
     std::vector<ClosureColor *> Ci_ptr (npoints);
     for (int i = 0;  i < npoints;  ++i)
-        Ci_ptr[i] = &Ci[i];
+        Ci_ptr[i] = NULL;
     shaderglobals.Ci.init (&Ci_ptr[0], sizeof(Ci_ptr[0]));
 
     // Make a shader space that is translated one unit in x and rotated

@@ -101,26 +101,27 @@ DECLOP (OP_closure)
 
     VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
     SHADE_LOOP_BEGIN
-        char* mem = result[i]->allocate_component (clentry->id, clentry->struct_size);
+        ClosureComponent *comp = exec->context()->closure_component_allot(clentry->id, clentry->struct_size);
         if (clentry->prepare)
-            clentry->prepare(exec->renderer(), clentry->id, mem);
+            clentry->prepare(exec->renderer(), clentry->id, comp->mem);
         else
-            memset(mem, 0, clentry->struct_size);
+            memset(comp->mem, 0, clentry->struct_size);
         for (size_t carg = 0; carg < clentry->params.size(); ++carg)
         {
             const ClosureParam &p = clentry->params[carg];
             ASSERT(p.offset < clentry->struct_size);
-            write_closure_param(p.type, mem, p.offset, carg + 2, i, exec, nargs, args);
+            write_closure_param(p.type, comp->mem, p.offset, carg + 2, i, exec, nargs, args);
         }
         if (clentry->labels_offset >= 0)
         {
             int l;
             for (l = 0; l < nlabels && l < clentry->max_labels; ++l)
-                ((ustring *)(mem + clentry->labels_offset))[l] = labels[l][i];
-            ((ustring *)(mem + clentry->labels_offset))[l] = Labels::NONE;
+                ((ustring *)(comp->mem + clentry->labels_offset))[l] = labels[l][i];
+            ((ustring *)(comp->mem + clentry->labels_offset))[l] = Labels::NONE;
         }
         if (clentry->setup)
-            clentry->setup(exec->renderer(), clentry->id, mem);
+            clentry->setup(exec->renderer(), clentry->id, comp->mem);
+        result[i] = &comp->parent;
     SHADE_LOOP_END
 }
 
@@ -135,85 +136,54 @@ DECLOP (OP_closure)
 
 
 #if 1
-// Some wrapper functions we need to call from the LLVM-generated code.
 
-extern "C" void *
-osl_closure_allot (SingleShaderGlobal *sg)
-{
-    ShadingContext *ctx = (ShadingContext *)sg->context;
-    ClosureColor *r = ctx->closure_ptr_allot ();
-    DASSERT (r && "bad closure allot");
-    r->clear ();
-    return r;
-}
-
-
-extern "C" void
-osl_closure_clear (ClosureColor *r)
-{
-    r->clear ();
-}
-
-
-extern "C" void
-osl_closure_clear_indexed (ClosureColor **r, int i)
-{
-    r[i]->clear ();
-}
-
-
-extern "C" void
-osl_closure_assign (ClosureColor *r, ClosureColor *x)
-{
-    DASSERT (r);  DASSERT (x);
-    if (r != x)
-      *r = *x;
-}
-
-
-extern "C" void
-osl_closure_assign_indexed (ClosureColor **r, int ri,
-                            const ClosureColor **x, int xi)
-{
-    *(r[ri]) = *(x[xi]);
-}
-
-
-extern "C" void
-osl_add_closure_closure (SingleShaderGlobal *sg, ClosureColor *r,
+extern "C" const ClosureColor *
+osl_add_closure_closure (SingleShaderGlobal *sg,
                          const ClosureColor *a, const ClosureColor *b)
 {
-    r->add (*a, *b, &sg->context->shadingsys());
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+    ClosureAdd *add = sg->context->closure_add_allot();
+    add->closureA = a;
+    add->closureB = b;
+    return &add->parent;
 }
 
 
-extern "C" void
-osl_mul_closure_color (ClosureColor *r, ClosureColor *a, const Color3 *b)
+extern "C" const ClosureColor *
+osl_mul_closure_color (SingleShaderGlobal *sg, ClosureColor *a, const Color3 *b)
 {
-    if (r != a) *r = *a;
-    *r *= *b;
+    if (a == NULL) return NULL;
+    ClosureMul *mul = sg->context->closure_mul_allot();
+    mul->closure = a;
+    mul->weight = *b;
+    return &mul->parent;
 }
 
 
-extern "C" void
-osl_mul_closure_float (ClosureColor *r, ClosureColor *a, float b)
+extern "C" const ClosureColor *
+osl_mul_closure_float (SingleShaderGlobal *sg, ClosureColor *a, float b)
 {
-    if (r != a) *r = *a;
-    *r *= b;
+    if (a == NULL) return NULL;
+    ClosureMul *mul = sg->context->closure_mul_allot();
+    mul->closure = a;
+    mul->weight.setValue(b, b, b);
+    return &mul->parent;
 }
 
 
-extern "C" void *
-osl_allocate_closure_component (ClosureColor *r, int id, int size)
+extern "C" ClosureComponent *
+osl_allocate_closure_component (SingleShaderGlobal *sg, int id, int size)
 {
-    DASSERT (r);
-    void *mem = r->allocate_component (id, size);
-    return mem;
+    ClosureComponent *comp = sg->context->closure_component_allot(id, size);
+    return comp;
 }
 
 
 extern "C" const char *
-osl_closure_to_string (ClosureColor *c)
+osl_closure_to_string (SingleShaderGlobal *sg, ClosureColor *c)
 {
     // Special case for printing closures
     std::stringstream stream;

@@ -29,11 +29,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <cmath> // FIXME: used by timer.h - should be included there
 
 #include <boost/algorithm/string.hpp>
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
+#include "OpenImageIO/timer.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/filesystem.h"
 
@@ -501,13 +503,15 @@ ShadingSystemImpl::loadshader (const char *cname)
         error ("No .oso file could be found for shader \"%s\"", name.c_str());
         return NULL;
     }
+    Timer timer;
+    timer.start();
     bool ok = oso.parse (filename);
+    double loadtime = timer.stop();
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
     if (ok) {
         ++m_stat_shaders_loaded;
-        if (debug())
-            info ("Added %s to shader_masters", filename.c_str());
+        info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(loadtime, 2).c_str());
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }

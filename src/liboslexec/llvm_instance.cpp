@@ -325,21 +325,25 @@ RuntimeOptimizer::llvm_type_groupdata ()
 
     std::vector<const llvm::Type*> fields;
 
-    // First, add the array that tells if each layer has run
-    fields.push_back (llvm::ArrayType::get(llvm_type_int(), m_group.nlayers()));
-    size_t offset = m_group.nlayers() * sizeof(int);
+    // First, add the array that tells if each layer has run.  But only make
+    // slots for the layers that may be called/used.
+    int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
+    fields.push_back (llvm::ArrayType::get(llvm_type_bool(), sz));
+    size_t offset = sz * sizeof(bool);
 
     // For each layer in the group, add entries for all params that are
     // connected or interpolated, and output params.  Also mark those
     // symbols with their offset within the group struct.
-#ifdef DEBUG
-//    std::cerr << "Group param struct:\n";
-#endif
+    if (shadingsys().llvm_debug() >= 2)
+        std::cerr << "Group param struct:\n";
     m_param_order_map.clear ();
     int order = 1;
     for (int layer = 0;  layer < m_group.nlayers();  ++layer) {
         ShaderInstance *inst = m_group[layer];
-        BOOST_FOREACH (Symbol &sym, inst->symbols()) {
+        if (inst->unused())
+            continue;
+        for (int p = inst->firstparam();  p <= inst->lastparam();  ++p) {
+            Symbol &sym (*inst->symbol(p));
             if (sym.symtype() == SymTypeParam ||
                   sym.symtype() == SymTypeOutputParam) {
                 TypeSpec ts = sym.typespec();
@@ -355,11 +359,11 @@ RuntimeOptimizer::llvm_type_groupdata ()
                     sym.typespec().simpletype().basesize();
                 if (offset & (align-1))
                     offset += align - (offset & (align-1));
-#ifdef DEBUG
-//                std::cerr << "  " << inst->layername() << " " << sym.mangled()
-//                          << " " << ts.c_str() << ", field " << order 
-//                          << ", offset " << offset << "\n";
-#endif
+                if (shadingsys().llvm_debug() >= 2)
+                    std::cerr << "  " << inst->layername() 
+                              << " (" << inst->id() << ") " << sym.mangled()
+                              << " " << ts.c_str() << ", field " << order 
+                              << ", offset " << offset << "\n";
                 sym.dataoffset ((int)offset);
                 offset += n * int(sym.size());
 
@@ -442,6 +446,14 @@ RuntimeOptimizer::llvm_constant (size_t i)
 
 
 llvm::Value *
+RuntimeOptimizer::llvm_constant_bool (bool i)
+{
+    return llvm::ConstantInt::get (llvm_context(), llvm::APInt(1,i));
+}
+
+
+
+llvm::Value *
 RuntimeOptimizer::llvm_constant (ustring s)
 {
     // Create a const size_t with the ustring contents
@@ -450,6 +462,19 @@ RuntimeOptimizer::llvm_constant (ustring s)
                                llvm::APInt(bits,size_t(s.c_str()), true));
     // Then cast the int to a char*.
     return builder().CreateIntToPtr (str, llvm_type_string(), "ustring constant");
+}
+
+
+
+llvm::Value *
+RuntimeOptimizer::llvm_constant_ptr (void *p)
+{
+    // Create a const size_t with the address
+    size_t bits = sizeof(size_t)*8;
+    llvm::Value *str = llvm::ConstantInt::get (llvm_context(),
+                               llvm::APInt(bits,size_t(p), true));
+    // Then cast the size_t to a char*.
+    return builder().CreateIntToPtr (str, llvm_type_void_ptr());
 }
 
 
@@ -595,15 +620,13 @@ RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
     AllocationMap::iterator map_iter = named_values().find(mangled_name);
 
     if (map_iter == named_values().end()) {
-        // shadingsys().info ("Making a type with %d %ss for symbol '%s'\n",
-        //           total_size, sym.typespec().c_str(), mangled_name.c_str());
         const llvm::Type *alloctype = sym.typespec().is_array()
                                   ? llvm_type (sym.typespec().elementtype())
                                   : llvm_type (sym.typespec());
         int arraylen = std::max (1, sym.typespec().arraylength());
         int n = arraylen * (sym.has_derivs() ? 3 : 1);
         llvm::ConstantInt* numalloc = (llvm::ConstantInt*)llvm_constant(n);
-        llvm::AllocaInst* allocation = builder().CreateAlloca(alloctype, numalloc, sym.mangled());
+        llvm::AllocaInst* allocation = builder().CreateAlloca(alloctype, numalloc, mangled_name);
 
         // llvm::outs() << "Allocation = " << *allocation << "\n";
         named_values()[mangled_name] = allocation;
@@ -622,6 +645,12 @@ RuntimeOptimizer::llvm_get_pointer (const Symbol& sym, int deriv,
     if (!has_derivs && deriv != 0) {
         // Return NULL for request for pointer to derivs that don't exist
         return llvm_ptr_cast (llvm_void_ptr_null(),
+                              llvm::PointerType::get (llvm_type(sym.typespec()), 0));
+    }
+
+    if (sym.symtype() == SymTypeConst) {
+        // For constants, just return *OUR* pointer to the constant values.
+        return llvm_ptr_cast (llvm_constant_ptr (sym.data()),
                               llvm::PointerType::get (llvm_type(sym.typespec()), 0));
     }
 
@@ -662,6 +691,7 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
 
     if (sym.is_constant()) {
         // Shortcut for simple float & int constants
+        ASSERT (!arrayindex);
         if (sym.typespec().is_float()) {
             if (cast == TypeDesc::TypeInt)
                 return llvm_constant ((int)*(float *)sym.data());
@@ -674,6 +704,13 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
             else
                 return llvm_constant (*(int *)sym.data());
         }
+        if (sym.typespec().is_triple()) {
+            return llvm_constant (((float *)sym.data())[component]);
+        }
+        if (sym.typespec().is_string()) {
+            return llvm_constant (*(ustring *)sym.data());
+        }
+        ASSERT (0 && "unhandled constant type");
     }
 
     // Start with the initial pointer to the value's memory location
@@ -885,6 +922,53 @@ RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
 
 
 void
+RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
+                               int len, int align)
+{
+    // memset with i32 len
+    const llvm::Type* types[] = { llvm::Type::getInt32Ty(llvm_context()) };
+
+    // NOTE(boulos): This memset prototype is correct for
+    // LLVM-2.7, but will change in LLVM-2.8 (the ptr arguments
+    // must be specified as they become iPTRAny and isVolatile is
+    // added -- the latter necessitating a change to the
+    // CreateCall below)
+    llvm::Function* func = llvm::Intrinsic::getDeclaration(llvm_module(),
+                                          llvm::Intrinsic::memset, types, 1);
+
+    // NOTE(boulos): rop.llvm_constant(0) would return an i32
+    // version of 0, but we need the i8 version. If we make an
+    // ::llvm_constant(char val) though then we'll get ambiguity
+    // everywhere.
+    llvm::Value* fill_val = llvm::ConstantInt::get (llvm_context(),
+                                                    llvm::APInt(8, val));
+    builder().CreateCall4 (func, ptr, fill_val,
+                           llvm_constant(len), llvm_constant(align));
+}
+
+
+
+void
+RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
+                               int len, int align)
+{
+    // memcpy with i32 len
+    const llvm::Type* types[] = { llvm::Type::getInt32Ty(llvm_context()) };
+
+    // NOTE(boulos): This memcpy prototype is correct for
+    // LLVM-2.7, but will change in LLVM-2.8 (the ptr arguments
+    // must be specified as they become iPTRAny and isVolatile is
+    // added -- the latter necessitating a change to the
+    // CreateCall below)
+    llvm::Function* func = llvm::Intrinsic::getDeclaration(llvm_module(),
+                                          llvm::Intrinsic::memcpy, types, 1);
+    builder().CreateCall4 (func, dst, src, 
+                           llvm_constant(len), llvm_constant(align));
+}
+
+
+
+void
 RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
 {
     ustring s = ustring::format ("(%s %s) %s", inst()->shadername().c_str(),
@@ -923,9 +1007,13 @@ llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
         const Connection &con (rop.inst()->connection (c));
         // If the connection gives a value to this param
         if (con.dst.param == symindex) {
-            if (already_run &&
-                std::find (already_run->begin(), already_run->end(), con.srclayer) != already_run->end())
-                continue;  // already ran that one
+            if (already_run) {
+                if (std::find (already_run->begin(), already_run->end(), con.srclayer) != already_run->end())
+                    continue;  // already ran that one
+                else
+                    already_run->push_back (con.srclayer);  // mark it
+            }
+
             // If the earlier layer it comes from has not yet
             // been executed, do so now.
             // Make code that looks like:
@@ -933,21 +1021,20 @@ llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
             //       groupdata->run[parentlayer] = 1;
             //       parent_layer (sg, groupdata);
             //   }
+            llvm::Value *layerfield = rop.layer_run_ptr(rop.layer_remap(con.srclayer));
+            llvm::Value *trueval = rop.llvm_constant_bool(true);
             ShaderInstance *parent = rop.group()[con.srclayer];
-            llvm::Value *executed = rop.builder().CreateLoad (rop.layer_run_ptr(con.srclayer));
-            executed = rop.builder().CreateICmpEQ (executed, rop.llvm_constant(0));
+            llvm::Value *executed = rop.builder().CreateLoad (layerfield);
+            executed = rop.builder().CreateICmpNE (executed, trueval);
             llvm::BasicBlock *then_block = rop.llvm_new_basic_block ("");
             llvm::BasicBlock *after_block = rop.llvm_new_basic_block ("");
             rop.builder().CreateCondBr (executed, then_block, after_block);
             rop.builder().SetInsertPoint (then_block);
-            rop.builder().CreateStore (rop.llvm_constant(1),
-                                       rop.layer_run_ptr(con.srclayer));
+            rop.builder().CreateStore (trueval, layerfield);
             std::string name = Strutil::format ("%s_%d", parent->layername().c_str(), parent->id());
             rop.llvm_call_function (name.c_str(), args, 2);
             rop.builder().CreateBr (after_block);
             rop.builder().SetInsertPoint (after_block);
-            if (already_run)
-                already_run->push_back (con.srclayer);  // mark it
         }
     }
 }
@@ -956,6 +1043,9 @@ llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
 
 LLVMGEN (llvm_gen_useparam)
 {
+    ASSERT (! rop.inst()->unused() &&
+            "oops, thought this layer was unused, why do we call it?");
+
     // If we have multiple params needed on this statement, don't waste
     // time checking the same upstream layer more than once.
     std::vector<int> already_run;
@@ -3029,39 +3119,8 @@ LLVMGEN (llvm_gen_closure)
         llvm::Value *args[3] = {render_ptr, id_int, mem_void_ptr};
         rop.builder().CreateCall (funct_ptr, args, args+3);
     } else {
-        // memset with i32 len
-        const llvm::Type* memset_types[] = { llvm::Type::getInt32Ty(rop.llvm_context()) };
-
-        // NOTE(boulos): This memset prototype is correct for
-        // LLVM-2.7, but will change in LLVM-2.8 (the ptr arguments
-        // must be specified as they become iPTRAny and isVolatile is
-        // added -- the latter necessitating a change to the
-        // CreateCall below)
-        llvm::Function* memset_func = llvm::Intrinsic::getDeclaration(rop.llvm_module(), llvm::Intrinsic::memset, memset_types, 1);
-        // memzero is just memset with 0 (but i8 val)
-
-        // NOTE(boulos): rop.llvm_constant(0) would return an i32
-        // version of 0, but we need the i8 version. If we make an
-        // ::llvm_constant(char val) though then we'll get ambiguity
-        // everywhere.
-        llvm::Value* zero_val = llvm::ConstantInt::get (rop.llvm_context(), llvm::APInt(8, 0));
-        // TODO(boulos): Since the closure memory is always at least
-        // composed of structs of some sort we have 4 byte alignment
-        // (and could change the code to safely do say 16-byte). Stick
-        // with 4 for now.
-        llvm::Value* align_val = rop.llvm_constant(4);
-        rop.builder().CreateCall4 (memset_func, mem_void_ptr, zero_val, size_int, align_val);
+        rop.llvm_memset (mem_void_ptr, 0, clentry->struct_size, 4 /*align*/);
     }
-
-    // memcpy with i32 size
-    const llvm::Type* memcpy_types[] = { llvm::Type::getInt32Ty(rop.llvm_context()) };
-
-    // NOTE(boulos): As with memset above, this memcpy prototype is
-    // correct for LLVM-2.7, but will change in LLVM-2.8 (the ptr
-    // arguments must be specified as they become iPTRAny and
-    // isVolatile is added -- the latter necessitating a change to the
-    // CreateCall below)
-    llvm::Function* memcpy_func = llvm::Intrinsic::getDeclaration(rop.llvm_module(), llvm::Intrinsic::memcpy, memcpy_types, 1);
 
     // Here is where we fill the struct using the params
     for (int carg = 0; carg < (int)clentry->params.size(); ++carg)
@@ -3077,11 +3136,9 @@ LLVMGEN (llvm_gen_closure)
             if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == p.type)
             {
                 llvm::Value* dst = rop.llvm_offset_ptr (mem_void_ptr, p.offset);
-                llvm::Value* src = rop.llvm_ptr_cast(rop.getLLVMSymbolBase (sym), rop.llvm_type_void_ptr());
-                llvm::Value* bytes = rop.llvm_constant((int)p.type.size());
-                // As above, use 4 byte alignment for now.
-                llvm::Value* align = rop.llvm_constant(4);
-                rop.builder().CreateCall4 (memcpy_func, dst, src, bytes, align);
+                llvm::Value* src = rop.llvm_void_ptr (sym);
+                rop.llvm_memcpy (dst, src, (int)p.type.size(),
+                                 4 /* use 4 byte alignment for now */);
             }
         }
     }
@@ -3320,18 +3377,21 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // llvm_gen_debug_printf (std::string("enter layer ")+inst()->shadername());
 
     if (groupentry) {
-        if (group().nlayers() > 1) {
+        if (m_num_used_layers > 1) {
             // If this is the group entry point, clear all the "layer
             // executed" bits.  If it's not the group entry (but rather is
             // an upstream node), then set its bit!
-            for (int i = 0;  i < group().nlayers();  ++i)
-                builder().CreateStore (llvm_constant(0), layer_run_ptr(i));
+            int sz = (m_num_used_layers + 3) & (~3);  // round up to 32 bits
+            llvm_memset (llvm_void_ptr(layer_run_ptr(0)), 0, sz, 4 /*align*/);
         }
         // Group entries also need to allot space for ALL layers' params
         // that are closures (to avoid weird order of layer eval problems).
         for (int i = 0;  i < group().nlayers();  ++i) {
             ShaderInstance *gi = group()[i];
-            BOOST_FOREACH (Symbol &sym, gi->symbols()) {
+            if (gi->unused())
+                continue;
+            for (int p = gi->firstparam();  p <= gi->lastparam();  ++p) {
+                Symbol &sym (*gi->symbol(p));
                 if (sym.typespec().is_closure() &&
                     (sym.symtype() == SymTypeParam ||
                      sym.symtype() == SymTypeOutputParam)) {
@@ -3349,12 +3409,9 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     BOOST_FOREACH (Symbol &s, inst()->symbols()) {
-#if 0 // No need -- trust LLVM to eliminate these
-        // Skip scalar int or float constants -- we always inline them
-        if (s.is_constant() && !s.typespec().is_closure() &&
-            (s.typespec().is_float() || s.typespec().is_int()))
+        // Skip constants -- we always inline them
+        if (s.symtype() == SymTypeConst)
             continue;
-#endif
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;
@@ -3369,12 +3426,13 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     }
     // make a second pass for the parameters (which may make use of
     // locals and constants from the first pass)
-    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
-        // Skip structure placeholders
-        if (s.typespec().is_structure())
-            continue;
+    for (int p = inst()->firstparam();  p <= inst()->lastparam();  ++p) {
+        Symbol &s (*inst()->symbol(p));
         // Skip anything other than params & oparams
         if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam)
+            continue;
+        // Skip structure placeholders
+        if (s.typespec().is_structure())
             continue;
         // Skip if it's never read and isn't connected
         if (! s.everread() && ! s.connected_down() && ! s.connected())
@@ -3434,19 +3492,36 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
 void
 RuntimeOptimizer::build_llvm_group ()
 {
+    // Set up m_num_used_layers to be the number of layers that are
+    // actually used, and m_layer_remap[] to map original layer numbers
+    // to the shorter list of actually-called layers.
+    int nlayers = m_group.nlayers();
+    m_layer_remap.resize (nlayers);
+    m_num_used_layers = 0;
+    for (int layer = 0;  layer < m_group.nlayers();  ++layer) {
+        bool lastlayer = (layer == (nlayers-1));
+        if (! m_group[layer]->unused() || lastlayer)
+            m_layer_remap[layer] = m_num_used_layers++;
+        else
+            m_layer_remap[layer] = -1;
+    }
+
     Timer timer;
     initialize_llvm_group ();
 
     // Generate the LLVM IR for each layer
     //
-    int nlayers = m_group.nlayers();
     llvm::Function *func = NULL;
     std::vector<llvm::Function *> funcs (nlayers);
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         bool lastlayer = (layer == (nlayers-1));
-        func = build_llvm_instance (lastlayer);
-        funcs[layer] = func;
+        if (! inst()->unused() || lastlayer) {
+            func = build_llvm_instance (lastlayer);
+            funcs[layer] = func;
+        } else {
+            funcs[layer] = NULL;
+        }
     }
     m_stat_llvm_irgen_time = timer();  timer.reset();  timer.start();
 
@@ -3499,7 +3574,8 @@ RuntimeOptimizer::build_llvm_group ()
     // a huge amount of time since we won't re-optimize it again and again
     // if we keep adding new shader groups to the same Module.
     BOOST_FOREACH (llvm::Function *f, funcs)
-        f->deleteBody();
+        if (f)
+            f->deleteBody();
 //    m_llvm_module = NULL;
 
     m_stat_llvm_jit_time = timer();

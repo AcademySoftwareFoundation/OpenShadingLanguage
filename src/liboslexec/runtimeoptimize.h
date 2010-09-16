@@ -247,6 +247,8 @@ public:
     /// and store the llvm::Function* handle to it with the ShaderGroup.
     void build_llvm_group ();
 
+    int layer_remap (int origlayer) const { return m_layer_remap[origlayer]; }
+
 #if USE_LLVM
     /// Set up a bunch of static things we'll need for the whole group.
     ///
@@ -414,6 +416,10 @@ public:
     ///
     llvm::Value *llvm_constant (size_t i);
 
+    /// Return an llvm::Value holding the given bool constant.
+    /// Change the name so it doesn't get mixed up with int.
+    llvm::Value *llvm_constant_bool (bool b);
+
     /// Return a constant void pointer to the given address
     ///
     llvm::Value *llvm_constant_ptr (void *p, const llvm::PointerType *type)
@@ -421,12 +427,15 @@ public:
         return builder().CreateIntToPtr (llvm_constant (size_t (p)), type, "const pointer");
     }
 
-    /// Return an llvm::Value holding the given integer constant.
+    /// Return an llvm::Value holding the given string constant.
     ///
     llvm::Value *llvm_constant (ustring s);
     llvm::Value *llvm_constant (const char *s) {
         return llvm_constant(ustring(s));
     }
+    /// Return an llvm::Value holding the given pointer constant.
+    ///
+    llvm::Value *llvm_constant_ptr (void *p);
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.
@@ -474,6 +483,15 @@ public:
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
                                      const Symbol &B, const Symbol &C,
                                      bool deriv_ptrs=false);
+
+    /// Generate code for a memset.
+    ///
+    void llvm_memset (llvm::Value *ptr, int val, int len, int align=1);
+
+    /// Generate code for a memcpy.
+    ///
+    void llvm_memcpy (llvm::Value *dst, llvm::Value *src,
+                      int len, int align=1);
 
     /// Generate the appropriate llvm type definition for an OSL TypeSpec
     /// (this is the actual type, for example when we allocate it).
@@ -531,6 +549,8 @@ private:
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
     std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
+    std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
+    int m_num_used_layers;              ///< Number of layers actually used
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time
     double m_stat_total_llvm_time;        ///<   total time spent on LLVM

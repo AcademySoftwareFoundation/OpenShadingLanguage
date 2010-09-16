@@ -376,6 +376,10 @@ public:
     ///
     void make_symbol_room (size_t moresyms=1);
 
+    /// Does it appear that the layer is completely unused?
+    ///
+    bool unused () const { return run_lazily() && ! outgoing_connections(); }
+
 private:
     bool heap_size_calculated () const { return m_heap_size_calculated; }
     void calc_heap_size ();

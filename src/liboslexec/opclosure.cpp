@@ -141,8 +141,9 @@ extern "C" void *
 osl_closure_allot (SingleShaderGlobal *sg)
 {
     ShadingContext *ctx = (ShadingContext *)sg->context;
-    void *r = ctx->closure_ptr_allot ();
-    ASSERT (r && "bad closure allot");
+    ClosureColor *r = ctx->closure_ptr_allot ();
+    DASSERT (r && "bad closure allot");
+    r->clear ();
     return r;
 }
 

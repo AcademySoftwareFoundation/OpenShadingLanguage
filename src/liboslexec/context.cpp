@@ -199,10 +199,6 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
         m_closures.resize (closures_needed);
     }
 
-    // Zero out the closures
-    for (size_t i = 0;  i < closures_needed;  ++i)
-        m_closures[i].clear ();
-
     // Clear the message blackboard
     m_messages.clear ();
     m_closure_msgs.clear ();

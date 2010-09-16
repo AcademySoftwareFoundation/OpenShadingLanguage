@@ -248,7 +248,8 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname, OpImpl impl,
             }
         }
         // Adjust param init ranges
-        BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+        for (int p = inst()->firstparam();  p <= inst()->lastparam();  ++p) {
+            Symbol &s (*inst()->symbol(p));
             if (s.symtype() == SymTypeParam ||
                   s.symtype() == SymTypeOutputParam) {
                 if (s.initbegin() > opnum)
@@ -1643,7 +1644,6 @@ void
 RuntimeOptimizer::find_basic_blocks (bool do_llvm)
 {
     OpcodeVec &code (inst()->ops());
-    SymbolVec &symbols (inst()->symbols());
 
     // Start by setting all basic block IDs to 0
     m_bblockids.clear ();
@@ -1653,7 +1653,8 @@ RuntimeOptimizer::find_basic_blocks (bool do_llvm)
     std::vector<bool> block_begin (code.size(), false);
 
     // Init ops start basic blocks
-    BOOST_FOREACH (const Symbol &s, symbols) {
+    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
+        Symbol &s (*inst()->symbol(i));
         if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
                 s.has_init_ops())
             block_begin[s.initbegin()] = true;
@@ -2072,6 +2073,12 @@ RuntimeOptimizer::optimize_instance ()
     int reallydone = 0;   // Force one pass after we think we're done
     for (int pass = 0;  pass < 10;  ++pass) {
 
+        // Once we've made one pass (and therefore called
+        // mark_outgoing_connections), we may notice that the layer is
+        // unused, and therefore can stop doing work to optimize it.
+        if (pass != 0 && inst()->unused())
+            break;
+
         // Track basic blocks and conditional states
         find_conditionals ();
         find_basic_blocks ();
@@ -2234,7 +2241,6 @@ RuntimeOptimizer::optimize_instance ()
         // Recompute which of our params have downstream connections.
         mark_outgoing_connections ();
 
-#if 1
         // Elide unconnected parameters that are never read.
         for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
             Symbol &s (*inst()->symbol(i));
@@ -2247,23 +2253,9 @@ RuntimeOptimizer::optimize_instance ()
                 ++changed;
             }
         }
-#endif
 
         // FIXME -- we should re-evaluate whether writes_globals() is still
         // true for this layer.
-
-        // A layer that was allowed to run lazily originally, if it no
-        // longer (post-optimized) has any outgoing connections, we
-        // don't need it at all.
-        if (inst()->run_lazily() && ! inst()->outgoing_connections()) {
-            // Not needed.  Remove all its connections and ops.
-            inst()->connections().clear ();
-            for (int i = 0;  i < (int)inst()->ops().size()-1;  ++i)
-                turn_into_nop (inst()->ops()[i]);
-            BOOST_FOREACH (Symbol &s, inst()->symbols())
-                s.clear_rw ();
-            break;  // No need to optimize any more
-        }
 
         // If nothing changed, we're done optimizing.  But wait, it may be
         // that after re-tracking variable lifetimes, we can notice new
@@ -2276,19 +2268,33 @@ RuntimeOptimizer::optimize_instance ()
         }
     }
 
+    // A layer that was allowed to run lazily originally, if it no
+    // longer (post-optimized) has any outgoing connections, is no
+    // longer needed at all.
+    if (inst()->unused()) {
+        // Not needed.  Remove all its connections and ops.
+        inst()->connections().clear ();
+        for (int i = 0;  i < (int)inst()->ops().size()-1;  ++i)
+            turn_into_nop (inst()->ops()[i]);
+        BOOST_FOREACH (Symbol &s, inst()->symbols())
+            s.clear_rw ();
+    }
+
     // Erase this layer's incoming connections and init ops for params
     // it no longer uses
     erase_if (inst()->connections(), ConnectionDestNeverUsed(inst()));
 
     // Clear init ops of params that aren't used.
     // FIXME -- is this ineffective?  Should it be never READ?
-    BOOST_FOREACH (Symbol &s, inst()->symbols())
+    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
+        Symbol &s (*inst()->symbol(i));
         if (s.symtype() == SymTypeParam && ! s.everused() &&
                 s.initbegin() < s.initend()) {
             for (int i = s.initbegin();  i < s.initend();  ++i)
                 turn_into_nop (inst()->ops()[i]);
             s.set_initrange (0, 0);
         }
+    }
 
     // Now that we've optimized this layer, walk through the ops and
     // note which messages may have been sent, so subsequent layers will
@@ -2731,9 +2737,10 @@ RuntimeOptimizer::collapse_ops ()
     // Adjust 'main' code range and init op ranges
     inst()->m_maincodebegin = op_remap[inst()->m_maincodebegin];
     inst()->m_maincodeend = (int)new_ops.size();
-    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
-        if ((s.symtype() == SymTypeParam ||
-             s.symtype() == SymTypeOutputParam) && s.has_init_ops()) {
+    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
+        Symbol &s (*inst()->symbol(i));
+        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+                && s.has_init_ops()) {
             s.initbegin (op_remap[s.initbegin()]);
             if (s.initend() < (int)op_remap.size())
                 s.initend (op_remap[s.initend()]);
@@ -2778,7 +2785,8 @@ RuntimeOptimizer::optimize_group ()
 
     for (int layer = nlayers-2;  layer >= 0;  --layer) {
         set_inst (layer);
-        optimize_instance ();
+        if (! inst()->unused())
+            optimize_instance ();
     }
 
     for (int layer = nlayers-1;  layer >= 0;  --layer) {
@@ -2803,13 +2811,22 @@ RuntimeOptimizer::optimize_group ()
     // Post-opt cleanup: add useparam, coalesce temporaries, etc.
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
-        post_optimize_instance ();
+        if (! inst()->unused())
+            post_optimize_instance ();
     }
 
     // Get rid of nop instructions and unused symbols.
     size_t new_nsyms = 0, new_nops = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
+        if (inst()->unused()) {
+            // Clear the syms and ops, we'll never use this layer
+            SymbolVec nosyms;
+            std::swap (inst()->symbols(), nosyms);
+            OpcodeVec noops;
+            std::swap (inst()->ops(), noops);
+            continue;
+        }
         if (m_shadingsys.optimize() >= 1) {
             collapse_syms ();
             collapse_ops ();

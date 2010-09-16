@@ -704,7 +704,7 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
             else
                 return llvm_constant (*(int *)sym.data());
         }
-        if (sym.typespec().is_triple()) {
+        if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
             return llvm_constant (((float *)sym.data())[component]);
         }
         if (sym.typespec().is_string()) {

@@ -504,14 +504,12 @@ ShadingSystemImpl::loadshader (const char *cname)
         return NULL;
     }
     Timer timer;
-    timer.start();
     bool ok = oso.parse (filename);
-    double loadtime = timer.stop();
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
     if (ok) {
         ++m_stat_shaders_loaded;
-        info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(loadtime, 2).c_str());
+        info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(timer(), 2).c_str());
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }

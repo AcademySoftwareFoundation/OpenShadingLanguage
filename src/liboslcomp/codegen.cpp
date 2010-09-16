@@ -957,6 +957,10 @@ ASTbinary_expression::codegen (Symbol *dest)
     if (m_op == And || m_op == Or)
         return codegen_logic (dest);
 
+    // Special case for closure operations
+    if (typespec().is_closure())
+        return codegen_closure (dest);
+
     Symbol *lsym = left()->codegen ();
     Symbol *rsym = right()->codegen ();
     if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
@@ -1023,6 +1027,93 @@ ASTbinary_expression::codegen_logic (Symbol *dest)
     int donelabel = m_compiler->next_op_label ();
     m_compiler->pop_nesting (false);
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
+    return dest;
+}
+
+
+
+bool
+ASTbinary_expression::subtrees_involve_closure (Symbol *s)
+{
+    if (m_op == Mul || m_op == Div) {
+        // N.B. The typecheck always reorders c=k*c into c=c*k.
+        ASSERT (left()->typespec().is_closure() &&
+                !right()->typespec().is_closure());
+        // There are only a couple cases here.  Either this node is
+        //     closure_variable * scalar             (is the var s?)
+        // or  closure_binary_expression * scalar    (recurse)
+        // or  closure_function * scalar             (definitely not s)
+        ASTNode *l = left().get();
+        if (l->nodetype() == variable_ref_node)
+            return ((ASTvariable_ref *)l)->sym() == s;
+        else if (l->nodetype() == binary_expression_node)
+            return ((ASTbinary_expression *)l)->subtrees_involve_closure (s);
+        else
+            return false;
+    } else if (m_op == Add) {
+        // There are only a couple cases here.  Left and right can each
+        // either be a closure variable (test it), a binary expression
+        // (recurse), or a closure function (definitely false).
+        bool left_uses_result = false, right_uses_result = false;
+        ASTNode *l = left().get(), *r = right().get();
+        if (l->nodetype() == variable_ref_node)
+            left_uses_result |= ((ASTvariable_ref *)l)->sym() == s;
+        else if (l->nodetype() == binary_expression_node)
+            left_uses_result |= ((ASTbinary_expression *)l)->subtrees_involve_closure (s);
+        if (r->nodetype() == variable_ref_node)
+            right_uses_result |= ((ASTvariable_ref *)l)->sym() == s;
+        else if (r->nodetype() == binary_expression_node)
+            right_uses_result |= ((ASTbinary_expression *)r)->subtrees_involve_closure (s);
+        return left_uses_result | right_uses_result;
+    }
+    ASSERT (0 && "unhandled closure op case");  // can't get here
+}
+
+
+
+Symbol *
+ASTbinary_expression::codegen_closure (Symbol *dest)
+{
+    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
+        dest = m_compiler->make_temporary (typespec());
+
+    if (m_op == Mul || m_op == Div) {
+        // Special handling of r = closure * k   (or closure/k)
+        // Instead of generating "closure tmp1 ... ; mul r tmp1 k", 
+        // generate the more efficient "closure r ... ; mul r r k".
+        // N.B. The typecheck always reorders c=k*c into c=c*k.
+        Symbol *lsym = left()->codegen (dest);
+        Symbol *rsym = coerce (right()->codegen(), TypeDesc::TypeColor, true);
+        emitcode (opword(), dest, lsym, rsym);
+    } else if (m_op == Add) {
+        ASSERT (left()->typespec().is_closure() &&
+                right()->typespec().is_closure());
+        // Special handling of r = closure1 + closure2, which in reality
+        // is often r = k1*closure1 + k2*closure2, and thus would lead to
+        // code like this:
+        //      mul tmp1 k1 c1 ; mul tmp2 k2 c2 ; add r tmp1 tmp2
+        // And note that the add (and maybe the muls) implicitly have
+        // a clear and copy in them. Instead, generate this:
+        //      mul r k1 c1; mul tmp2 k2 c2; add r r tmp2
+        // This results in one fewer temp, fewer copies.  BUT... must be
+        // careful of situations like r = k1*c1 + k2*r, where we might
+        // overwrite r too soon.
+        Symbol *lsym;
+        if (! subtrees_involve_closure (dest)) {
+            // None of the subtrees involve the destination, so use it
+            lsym = left()->codegen (dest);
+        } else {
+            // The subtrees involve the destination, so be safe and let it
+            // generate a new destination.
+            lsym = left()->codegen ();
+        }
+        Symbol *rsym = right()->codegen ();
+        emitcode (opword(), dest, lsym, rsym);
+    } else {
+        // I don't think this can happen
+        ASSERT (0 && "unhandled closure op case");
+    }
+
     return dest;
 }
 

@@ -540,8 +540,12 @@ ASTbinary_expression::typecheck (TypeSpec expected)
         if (m_op == Mul) {
             if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
                 return m_typespec = l;
-            if (r.is_color_closure() && (l.is_color() || l.is_int_or_float()))
+            if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
+                // N.B. Reorder so that it's always r = closure * k,
+                // not r = k * closure.  See codegen for why this helps.
+                std::swap (m_children[0], m_children[1]);
                 return m_typespec = r;
+            }
         }
         // If we got this far, it's an op that's not allowed
         error ("Not allowed: '%s %s %s'",

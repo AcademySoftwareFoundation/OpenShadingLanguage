@@ -361,12 +361,12 @@ public:
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
         return std::pair<Symbol*,Symbol*> (i->symbol(i->firstparam()),
-                                           i->symbol(i->lastparam()+1));
+                                           i->symbol(i->lastparam()));
     }
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
         return std::pair<const Symbol*,const Symbol*> (i->symbol(i->firstparam()),
-                                                       i->symbol(i->lastparam()+1));
+                                                       i->symbol(i->lastparam()));
     }
 
     int Psym () const { return m_Psym; }

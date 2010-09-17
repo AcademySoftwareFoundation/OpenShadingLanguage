@@ -1565,7 +1565,7 @@ DECLFOLDER(constfold_assign)
 void
 RuntimeOptimizer::find_constant_params (ShaderGroup &group)
 {
-    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
+    for (int i = inst()->firstparam();  i < inst()->lastparam();  ++i) {
         Symbol *s (inst()->symbol(i));
         if (// it's a paramter that can't change with the geom
             s->symtype() == SymTypeParam && s->lockgeom() &&
@@ -2694,14 +2694,14 @@ RuntimeOptimizer::collapse_syms ()
     // Miscellaneous cleanup of other things that used symbol indices
     inst()->m_Psym = -1;
     inst()->m_Nsym = -1;
-    inst()->m_firstparam = std::numeric_limits<int>::max();
+    inst()->m_firstparam = -1;
     inst()->m_lastparam = -1;
     int i = 0;
     BOOST_FOREACH (Symbol &s, inst()->symbols()) {
         if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
-            if (inst()->m_firstparam > i)
+            if (inst()->m_firstparam < 0)
                 inst()->m_firstparam = i;
-            inst()->m_lastparam = i;
+            inst()->m_lastparam = i+1;
         }
         if (s.name() == Strings::P)
             inst()->m_Psym = i;

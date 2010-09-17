@@ -64,7 +64,7 @@ ShaderMaster::findsymbol (ustring name) const
 void
 ShaderMaster::resolve_syms ()
 {
-    m_firstparam = std::numeric_limits<int>::max();
+    m_firstparam = -1;
     m_lastparam = -1;
     int i = 0;
     BOOST_FOREACH (Symbol &s, m_symbols) {
@@ -84,9 +84,9 @@ ShaderMaster::resolve_syms ()
         }
 
         if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
-            if (m_firstparam > i)
+            if (m_firstparam < 0)
                 m_firstparam = i;
-            m_lastparam = i;
+            m_lastparam = i+1;
             if (s.dataoffset() >= 0) {
                 if (s.typespec().simpletype().basetype == TypeDesc::INT)
                     s.data (&(m_idefaults[s.dataoffset()]));

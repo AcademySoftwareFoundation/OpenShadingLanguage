@@ -459,6 +459,8 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
         oso (" %%derivs");
     }
 
+#if 0 // this is recomputed by the runtime optimizer, no need to bloat the .oso with these
+
     // %depends marks, for potential OUTPUTs, which symbols they depend
     // upon.  This is so that derivativeness, etc., may be
     // back-propagated as shader networks are linked together.
@@ -489,7 +491,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
             oso ("}");
         }
     }
-
+#endif
     oso ("\n");
 }
 

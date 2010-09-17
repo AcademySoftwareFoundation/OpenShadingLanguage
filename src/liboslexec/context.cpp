@@ -189,13 +189,10 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
         memset (&m_heap[0], 0, heap_size_needed);
 
     // Set up closure storage
-    size_t closures_needed = m_npoints * sas.numclosures ();
-    if (shadingsys().debug())
-        shadingsys().info ("  need closures %d", closures_needed);
+    m_closure_pool.clear();
 
     // Clear the message blackboard
     m_messages.clear ();
-    m_closure_pool.clear();
 
     return true;
 }

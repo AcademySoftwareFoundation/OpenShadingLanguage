@@ -302,10 +302,6 @@ public:
     Symbol *symbol (int index) { return index >= 0 ? &m_instsymbols[index] : NULL; }
     const Symbol *symbol (int index) const { return index >= 0 ? &m_instsymbols[index] : NULL; }
 
-    /// How many closures does this group use, not counting globals.
-    ///
-    size_t numclosures ();
-
     /// Estimate how much to round the required heap size up if npoints
     /// is odd, to account for getting the desired alignment for each
     /// symbol.
@@ -407,7 +403,6 @@ private:
     std::vector<ustring> m_sparams;     ///< string param values
     int m_heapsize;                     ///< Heap space needed per point
     int m_heapround;                    ///< Heap padding for odd npoints
-    int m_numclosures;                  ///< Number of non-global closures
     int m_id;                           ///< Unique ID for the instance
     bool m_heap_size_calculated;        ///< Has the heap size been computed?
     bool m_writes_globals;              ///< Do I have side effects?
@@ -1369,7 +1364,7 @@ class ShadingAttribState
 {
 public:
     ShadingAttribState () : m_heapsize (-1 /*uninitialized*/),
-                            m_heapround (-1), m_numclosures (-1),
+                            m_heapround (-1),
                             m_heap_size_calculated (false) { }
 
     ~ShadingAttribState () { }
@@ -1388,16 +1383,11 @@ public:
     ///
     size_t heapround ();
 
-    /// How many closures does this group use, not counting globals?
-    ///
-    size_t numclosures ();
-
     /// Called when the shaders of the attrib state change -- this
     /// invalidates the heap size computations.
     void changed_shaders () {
         m_heapsize = -1;
         m_heapround = -1;
-        m_numclosures = -1;
         m_heap_size_calculated = false;
     }
 
@@ -1408,7 +1398,6 @@ private:
     OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
     int m_heapsize;                  ///< Heap space needed per point
     int m_heapround;                 ///< Heap padding for odd npoints
-    int m_numclosures;               ///< Number of non-global closures
     bool m_heap_size_calculated;     ///< Has the heap size been computed?
 };
 

@@ -248,15 +248,11 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname, OpImpl impl,
             }
         }
         // Adjust param init ranges
-        for (int p = inst()->firstparam();  p <= inst()->lastparam();  ++p) {
-            Symbol &s (*inst()->symbol(p));
-            if (s.symtype() == SymTypeParam ||
-                  s.symtype() == SymTypeOutputParam) {
-                if (s.initbegin() > opnum)
-                    s.initbegin (s.initbegin()+1);
-                if (s.initend() > opnum)
-                    s.initend (s.initend()+1);
-            }
+        FOREACH_PARAM (Symbol &s, inst()) {
+            if (s.initbegin() > opnum)
+                s.initbegin (s.initbegin()+1);
+            if (s.initend() > opnum)
+                s.initend (s.initend()+1);
         }
     }
 }
@@ -1653,10 +1649,8 @@ RuntimeOptimizer::find_basic_blocks (bool do_llvm)
     std::vector<bool> block_begin (code.size(), false);
 
     // Init ops start basic blocks
-    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
-        Symbol &s (*inst()->symbol(i));
-        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
-                s.has_init_ops())
+    FOREACH_PARAM (const Symbol &s, inst()) {
+        if (s.has_init_ops())
             block_begin[s.initbegin()] = true;
     }
 
@@ -2038,8 +2032,8 @@ void
 RuntimeOptimizer::mark_outgoing_connections ()
 {
     inst()->outgoing_connections (false);
-    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i)
-        inst()->symbol(i)->connected_down (false);
+    FOREACH_PARAM (Symbol &s, inst())
+        s.connected_down (false);
     for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
         BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
             if (c.srclayer == m_layer) {
@@ -2063,6 +2057,15 @@ RuntimeOptimizer::optimize_instance ()
     if (m_shadingsys.optimize() >= 2) {
         find_constant_params (group());
     }
+
+#ifdef DEBUG
+    // Confirm that the symbols between [firstparam,lastparam] are all
+    // input or output params.
+    FOREACH_PARAM (const Symbol &s, inst()) {
+        ASSERT (s.symtype() == SymTypeParam ||
+                s.symtype() == SymTypeOutputParam);
+    }
+#endif
 
     // Try to fold constants.  We take several passes, until we get to
     // the point that not much is improving.  It rarely goes beyond 3-4
@@ -2242,10 +2245,8 @@ RuntimeOptimizer::optimize_instance ()
         mark_outgoing_connections ();
 
         // Elide unconnected parameters that are never read.
-        for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
-            Symbol &s (*inst()->symbol(i));
-            if ((s.symtype() == SymTypeOutputParam || s.symtype() == SymTypeParam)
-                && !s.connected_down() && ! s.everread()) {
+        FOREACH_PARAM (Symbol &s, inst()) {
+            if (!s.connected_down() && ! s.everread()) {
                 for (int i = s.initbegin();  i < s.initend();  ++i)
                     turn_into_nop (inst()->ops()[i]);
                 s.set_initrange ();
@@ -2286,8 +2287,7 @@ RuntimeOptimizer::optimize_instance ()
 
     // Clear init ops of params that aren't used.
     // FIXME -- is this ineffective?  Should it be never READ?
-    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
-        Symbol &s (*inst()->symbol(i));
+    FOREACH_PARAM (Symbol &s, inst()) {
         if (s.symtype() == SymTypeParam && ! s.everused() &&
                 s.initbegin() < s.initend()) {
             for (int i = s.initbegin();  i < s.initend();  ++i)
@@ -2643,8 +2643,8 @@ RuntimeOptimizer::collapse_syms ()
 
     // Mark our params that feed to later layers, so that unused params
     // that aren't needed downstream can be removed.
-    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i)
-        inst()->symbol(i)->connected_down (false);
+    FOREACH_PARAM (Symbol &s, inst())
+        s.connected_down (false);
     for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
         BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
             if (c.srclayer == m_layer)
@@ -2688,18 +2688,35 @@ RuntimeOptimizer::collapse_syms ()
                 c.src.param = symbol_remap[c.src.param];
     }
 
-    // Miscellaneous cleanup of other things that used symbol indices
-    if (inst()->m_Psym >= 0)
-        inst()->m_Psym = symbol_remap[inst()->m_Psym];
-    if (inst()->m_Nsym >= 0)
-        inst()->m_Nsym = symbol_remap[inst()->m_Nsym];
-    if (inst()->m_lastparam >= 0) {
-        inst()->m_firstparam = symbol_remap[inst()->m_firstparam];
-        inst()->m_lastparam = symbol_remap[inst()->m_lastparam];
-    }
-
     // Swap the new symbol list for the old.
     std::swap (inst()->m_instsymbols, new_symbols);
+
+    // Miscellaneous cleanup of other things that used symbol indices
+    inst()->m_Psym = -1;
+    inst()->m_Nsym = -1;
+    inst()->m_firstparam = std::numeric_limits<int>::max();
+    inst()->m_lastparam = -1;
+    int i = 0;
+    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
+            if (inst()->m_firstparam > i)
+                inst()->m_firstparam = i;
+            inst()->m_lastparam = i;
+        }
+        if (s.name() == Strings::P)
+            inst()->m_Psym = i;
+        else if (s.name() == Strings::N)
+            inst()->m_Nsym = i;
+        ++i;
+    }
+#ifdef DEBUG
+    // Confirm that the symbols between [firstparam,lastparam] are all
+    // input or output params.
+    FOREACH_PARAM (const Symbol &s, inst()) {
+        ASSERT (s.symtype() == SymTypeParam ||
+                s.symtype() == SymTypeOutputParam);
+    }
+#endif
 }
 
 
@@ -2737,10 +2754,8 @@ RuntimeOptimizer::collapse_ops ()
     // Adjust 'main' code range and init op ranges
     inst()->m_maincodebegin = op_remap[inst()->m_maincodebegin];
     inst()->m_maincodeend = (int)new_ops.size();
-    for (int i = inst()->firstparam();  i <= inst()->lastparam();  ++i) {
-        Symbol &s (*inst()->symbol(i));
-        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
-                && s.has_init_ops()) {
+    FOREACH_PARAM (Symbol &s, inst()) {
+        if (s.has_init_ops()) {
             s.initbegin (op_remap[s.initbegin()]);
             if (s.initend() < (int)op_remap.size())
                 s.initend (op_remap[s.initend()]);

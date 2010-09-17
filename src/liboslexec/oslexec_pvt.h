@@ -357,6 +357,18 @@ public:
     int firstparam () const { return m_firstparam; }
     int lastparam () const { return m_lastparam; }
 
+    /// Return a begin/end Symbol* pair for the set of param symbols
+    /// that is suitable to pass as a range for BOOST_FOREACH.
+    friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
+        return std::pair<Symbol*,Symbol*> (i->symbol(i->firstparam()),
+                                           i->symbol(i->lastparam()+1));
+    }
+
+    friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
+        return std::pair<const Symbol*,const Symbol*> (i->symbol(i->firstparam()),
+                                                       i->symbol(i->lastparam()+1));
+    }
+
     int Psym () const { return m_Psym; }
     int Nsym () const { return m_Nsym; }
 
@@ -371,6 +383,7 @@ public:
     std::string print ();  // Debugging
 
     SymbolVec &symbols () { return m_instsymbols; }
+    const SymbolVec &symbols () const { return m_instsymbols; }
 
     /// Make sure there's room for more symbols.
     ///
@@ -409,6 +422,15 @@ private:
     friend class ShadingSystemImpl;
     friend class RuntimeOptimizer;
 };
+
+
+
+/// Macro to loop over just the params & output params of an instance,
+/// with each iteration providing a Symbol& to symbolref.  Use like this:
+///        FOREACH_PARAM (Symbol &s, inst) { ... stuff with s... }
+///
+#define FOREACH_PARAM(symboldecl,inst) \
+    BOOST_FOREACH (symboldecl, param_range(inst))
 
 
 

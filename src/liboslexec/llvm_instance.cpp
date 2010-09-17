@@ -338,34 +338,30 @@ RuntimeOptimizer::llvm_type_groupdata ()
         ShaderInstance *inst = m_group[layer];
         if (inst->unused())
             continue;
-        for (int p = inst->firstparam();  p <= inst->lastparam();  ++p) {
-            Symbol &sym (*inst->symbol(p));
-            if (sym.symtype() == SymTypeParam ||
-                  sym.symtype() == SymTypeOutputParam) {
-                TypeSpec ts = sym.typespec();
-                if (ts.is_structure())  // skip the struct symbol itself
-                    continue;
-                int arraylen = std::max (1, sym.typespec().arraylength());
-                int n = arraylen * (sym.has_derivs() ? 3 : 1);
-                ts.make_array (n);
-                fields.push_back (llvm_type (ts));
+        FOREACH_PARAM (Symbol &sym, inst) {
+            TypeSpec ts = sym.typespec();
+            if (ts.is_structure())  // skip the struct symbol itself
+                continue;
+            int arraylen = std::max (1, sym.typespec().arraylength());
+            int n = arraylen * (sym.has_derivs() ? 3 : 1);
+            ts.make_array (n);
+            fields.push_back (llvm_type (ts));
 
-                // Alignment
-                size_t align = sym.typespec().is_closure() ? sizeof(void*) :
+            // Alignment
+            size_t align = sym.typespec().is_closure() ? sizeof(void*) :
                     sym.typespec().simpletype().basesize();
-                if (offset & (align-1))
-                    offset += align - (offset & (align-1));
-                if (shadingsys().llvm_debug() >= 2)
-                    std::cerr << "  " << inst->layername() 
-                              << " (" << inst->id() << ") " << sym.mangled()
-                              << " " << ts.c_str() << ", field " << order 
-                              << ", offset " << offset << "\n";
-                sym.dataoffset ((int)offset);
-                offset += n * int(sym.size());
+            if (offset & (align-1))
+                offset += align - (offset & (align-1));
+            if (shadingsys().llvm_debug() >= 2)
+                std::cerr << "  " << inst->layername() 
+                          << " (" << inst->id() << ") " << sym.mangled()
+                          << " " << ts.c_str() << ", field " << order 
+                          << ", offset " << offset << "\n";
+            sym.dataoffset ((int)offset);
+            offset += n * int(sym.size());
 
-                m_param_order_map[&sym] = order;
-                ++order;
-            }
+            m_param_order_map[&sym] = order;
+            ++order;
         }
     }
     m_group.llvm_groupdata_size (offset);
@@ -3410,11 +3406,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
             ShaderInstance *gi = group()[i];
             if (gi->unused())
                 continue;
-            for (int p = gi->firstparam();  p <= gi->lastparam();  ++p) {
-                Symbol &sym (*gi->symbol(p));
-                if (sym.typespec().is_closure() &&
-                    (sym.symtype() == SymTypeParam ||
-                     sym.symtype() == SymTypeOutputParam)) {
+            FOREACH_PARAM (Symbol &sym, gi) {
+               if (sym.typespec().is_closure()) {
                     int arraylen = std::max (1, sym.typespec().arraylength());
                     llvm::Value *val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
                     for (int a = 0; a < arraylen;  ++a) {
@@ -3446,11 +3439,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     }
     // make a second pass for the parameters (which may make use of
     // locals and constants from the first pass)
-    for (int p = inst()->firstparam();  p <= inst()->lastparam();  ++p) {
-        Symbol &s (*inst()->symbol(p));
-        // Skip anything other than params & oparams
-        if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam)
-            continue;
+    FOREACH_PARAM (Symbol &s, inst()) {
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;

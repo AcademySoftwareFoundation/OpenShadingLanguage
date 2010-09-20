@@ -1002,7 +1002,7 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
         m_closure_table.resize(id + 1);
     ClosureEntry &entry = m_closure_table[id];
     entry.id = id;
-    for (int i = 0; params[i].type != TypeDesc(); ++i)
+    for (int i = 0; params && params[i].type != TypeDesc(); ++i)
         entry.params.push_back(params[i]);
     entry.struct_size = size;
     entry.prepare = prepare;

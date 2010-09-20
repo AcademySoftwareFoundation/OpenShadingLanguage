@@ -1135,15 +1135,19 @@ OSLCompilerImpl::register_closure(const char *name, const ClosureParam *params, 
 {
     std::string poly = "C";
     std::list<std::string> polylist;
-    int i;
-    for (i = 0; params[i].type != TypeDesc() && !params[i].optional; ++i)
-        poly += code_from_type(TypeSpec(params[i].type));
-    polylist.push_front(takes_keywords ? poly + "." : poly);
-    for (; params[i].type != TypeDesc() && params[i].optional; ++i)
+    if (params)
     {
-        poly += code_from_type(TypeSpec(params[i].type));
+        int i;
+        for (i = 0; params[i].type != TypeDesc() && !params[i].optional; ++i)
+            poly += code_from_type(TypeSpec(params[i].type));
         polylist.push_front(takes_keywords ? poly + "." : poly);
-    }
+        for (; params[i].type != TypeDesc() && params[i].optional; ++i)
+        {
+            poly += code_from_type(TypeSpec(params[i].type));
+            polylist.push_front(takes_keywords ? poly + "." : poly);
+        }
+    } else
+        polylist.push_front(takes_keywords ? poly + "." : poly);
 
     ustring uname(name);
     Symbol *last = symtab().clash (uname);

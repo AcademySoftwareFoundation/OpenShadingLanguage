@@ -66,7 +66,9 @@ extern ClosureParam bsdf_westin_backscatter_params[];
 extern ClosureParam bsdf_westin_sheen_params[];
 extern ClosureParam closure_bssrdf_cubic_params[];
 extern ClosureParam closure_emission_params[];
+extern ClosureParam closure_debug_params[];
 extern ClosureParam closure_background_params[];
+extern ClosureParam closure_holdout_params[];
 extern ClosureParam closure_subsurface_params[];
 
 void bsdf_diffuse_prepare(RendererServices *, int id, void *data);
@@ -94,7 +96,9 @@ void bsdf_westin_backscatter_prepare(RendererServices *, int id, void *data);
 void bsdf_westin_sheen_prepare(RendererServices *, int id, void *data);
 void closure_bssrdf_cubic_prepare(RendererServices *, int id, void *data);
 void closure_emission_prepare(RendererServices *, int id, void *data);
+void closure_debug_prepare(RendererServices *, int id, void *data);
 void closure_background_prepare(RendererServices *, int id, void *data);
+void closure_holdout_prepare(RendererServices *, int id, void *data);
 void closure_subsurface_prepare(RendererServices *, int id, void *data);
 
 } // namespace pvt
@@ -157,8 +161,12 @@ BuiltinClosure builtin_closures[NBUILTIN_CLOSURES] = {
       pvt::closure_bssrdf_cubic_prepare },
     { CLOSURE_EMISSION_ID,                            "emission",     pvt::closure_emission_params,
       pvt::closure_emission_prepare },
+    { CLOSURE_DEBUG_ID,                               "debug",        pvt::closure_debug_params,
+      pvt::closure_debug_prepare },
     { CLOSURE_BACKGROUND_ID,                          "background",   pvt::closure_background_params,
       pvt::closure_background_prepare },
+    { CLOSURE_HOLDOUT_ID,                             "holdout",      pvt::closure_holdout_params,
+      pvt::closure_holdout_prepare },
     { CLOSURE_SUBSURFACE_ID,                          "subsurface",   pvt::closure_subsurface_params,
       pvt::closure_subsurface_prepare } };
 

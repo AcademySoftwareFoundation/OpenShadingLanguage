@@ -41,60 +41,42 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
-/// Generic background closure
+/// Debug closure
 ///
-/// We only have a background closure for the shaders
-/// to return a color in background shaders. No methods,
-/// only the weight is taking into account
-///
-class GenericBackgroundClosure : public BackgroundClosure {
-public:
-    GenericBackgroundClosure() { }
+/// This is going to be used for mask AOV's and similar
+/// purposes. A tag (string) is always associated with
+/// this closure, that "selects: the channel where the
+/// weight should be sent.
 
-    void setup() {};
+class DebugClosure : public ClosurePrimitive {
+public:
+    ustring m_tag;
+
+    DebugClosure () : ClosurePrimitive (Debug) { }
+
+    bool mergeable (const ClosurePrimitive *other) const {
+        const DebugClosure *comp = (const DebugClosure *)other;
+        return m_tag == comp->m_tag &&
+            ClosurePrimitive::mergeable(other);
+    }
 
     size_t memsize () const { return sizeof(*this); }
 
-    const char *name () const { return "background"; }
+    const char *name () const { return "debug"; }
 
     void print_on (std::ostream &out) const {
-        out << name() << " ()";
+        out << name() << " (\"" << m_tag.c_str() << "\")";
     }
 
 };
 
 
-/// Holdout closure
-///
-/// This will be used by the shader to mark the
-/// amount of holdout for the current shading
-/// point. No parameters, only the weight will be
-/// used
-///
-class HoldoutClosure : ClosurePrimitive {
-public:
-    HoldoutClosure () : ClosurePrimitive (Holdout) { }
 
-    void setup() {};
+ClosureParam closure_debug_params[] = {
+    CLOSURE_STRING_PARAM(DebugClosure, m_tag, false),
+    CLOSURE_FINISH_PARAM(DebugClosure) };
 
-    size_t memsize () const { return sizeof(*this); }
-
-    const char *name () const { return "holdout"; }
-
-    void print_on (std::ostream &out) const {
-        out << name() << " ()";
-    }
-};
-
-ClosureParam closure_background_params[] = {
-    CLOSURE_FINISH_PARAM(GenericBackgroundClosure) };
-
-CLOSURE_PREPARE(closure_background_prepare, GenericBackgroundClosure)
-
-ClosureParam closure_holdout_params[] = {
-    CLOSURE_FINISH_PARAM(HoldoutClosure) };
-
-CLOSURE_PREPARE(closure_holdout_prepare, HoldoutClosure)
+CLOSURE_PREPARE(closure_debug_prepare, DebugClosure)
 
 }; // namespace pvt
 }; // namespace OSL

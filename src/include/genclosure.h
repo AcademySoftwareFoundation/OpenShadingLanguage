@@ -55,6 +55,8 @@ struct ClosureParam {
     { TypeDesc::TypeColor, reckless_offsetof(st, fld), opt }
 #define CLOSURE_VECTOR_PARAM(st, fld, opt) \
     { TypeDesc::TypeVector, reckless_offsetof(st, fld), opt }
+#define CLOSURE_STRING_PARAM(st, fld, opt) \
+    { TypeDesc::TypeString, reckless_offsetof(st, fld), opt }
 
 #define CLOSURE_INT_ARRAY_PARAM(st, fld, n, opt) \
     { TypeDesc(TypeDesc::INT,   TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
@@ -64,6 +66,8 @@ struct ClosureParam {
     { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::COLOR,   n),reckless_offsetof(st, fld), opt }
 #define CLOSURE_FLOAT_ARRAY_PARAM(st,fld,n, opt) \
     { TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
+#define CLOSURE_STRING_ARRAY_PARAM(st,fld,n, opt) \
+    { TypeDesc(TypeDesc::STRING, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
 
 #define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), false }
 

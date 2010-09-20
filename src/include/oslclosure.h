@@ -68,7 +68,9 @@ enum {
     CLOSURE_BSDF_WESTIN_SHEEN_ID,
     CLOSURE_BSSRDF_CUBIC_ID,
     CLOSURE_EMISSION_ID,
+    CLOSURE_DEBUG_ID,
     CLOSURE_BACKGROUND_ID,
+    CLOSURE_HOLDOUT_ID,
     CLOSURE_SUBSURFACE_ID,
 
     NBUILTIN_CLOSURES };
@@ -115,6 +117,8 @@ public:
         Emissive,       ///< Light emission
         Background,     ///< Background emission
         Volume,         ///< Volume scattering
+        Holdout,        ///< Holdout from alpha
+        Debug,          ///< For debug and masks
     };
 
     // Describe a closure's sidedness

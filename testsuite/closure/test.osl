@@ -21,6 +21,16 @@ test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5,
     Ci += emission();
     printf ("  Ci = %s\n", Ci);
 
+    // add debug
+    printf ("adding debug:");
+    Ci += 0.25 * debug("MyAOV");
+    printf ("  Ci = %s\n", Ci);
+
+    // add holdout
+    printf ("adding holdout:");
+    Ci += 0.5 * holdout();
+    printf ("  Ci = %s\n", Ci);
+
     closure color xclosure = 0;
     xclosure = 0;
 }

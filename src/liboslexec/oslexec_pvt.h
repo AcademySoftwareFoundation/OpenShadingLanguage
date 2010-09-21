@@ -900,21 +900,33 @@ public:
     ClosureComponent * closure_component_allot(int id, size_t prim_size) {
         size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
         ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed);
-        comp->parent.type = ClosureColor::CLOSURE_COMPONENT;
+        comp->type = ClosureColor::COMPONENT;
         comp->id = id;
         comp->size = prim_size;
         return comp;
     }
 
-    ClosureMul       * closure_mul_allot() {
+    ClosureMul *closure_mul_allot (const Color3 &w, const ClosureColor *c) {
         ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
-        mul->parent.type = ClosureColor::CLOSURE_MUL;
+        mul->type = ClosureColor::MUL;
+        mul->weight = w;
+        mul->closure = c;
         return mul;
     }
 
-    ClosureAdd       * closure_add_allot() {
+    ClosureMul *closure_mul_allot (float w, const ClosureColor *c) {
+        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
+        mul->type = ClosureColor::MUL;
+        mul->weight.setValue (w,w,w);
+        mul->closure = c;
+        return mul;
+    }
+
+    ClosureAdd *closure_add_allot (const ClosureColor *a, const ClosureColor *b) {
         ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd));
-        add->parent.type = ClosureColor::CLOSURE_ADD;
+        add->type = ClosureColor::ADD;
+        add->closureA = a;
+        add->closureB = b;
         return add;
     }
 

@@ -405,43 +405,76 @@ class ShadingSystemImpl;
 }
 
 
-struct ClosureColor
-{
-    enum {
-        CLOSURE_COMPONENT,
-        CLOSURE_MUL,
-        CLOSURE_ADD
-    } type;
+
+/// ClosureColor is the base class for a lightweight tree representation
+/// of OSL closures for the sake of the executing OSL shader.
+///
+/// Remember that a closure color really just boils down to a flat list
+/// of weighted closure primitive components (such as diffuse,
+/// transparent, etc.).  But it's expensive to construct these
+/// dynamically as we execute the shader, so instead of maintaining a
+/// properly flattened list as we go, we just manipulate a very
+/// lightweight data structure that looks like a tree, where leaf nodes
+/// are a single primitive component, and internal nodes of the tree are
+/// are either 'add' (two closures) or 'mul' (of a closure with a
+/// weight) and just reference their operands by pointers.
+/// 
+/// We are extremely careful to make these classes resemble POD (plain
+/// old data) so they can be easily "placed" anywhere, including a memory
+/// pool.  So no virtual functions!
+///
+/// The base class ClosureColor just provides the type, and it's
+/// definitely one of the three kinds of subclasses: ClosureComponent,
+/// ClosureMul, ClosureAdd.
+struct ClosureColor {
+    enum ClosureType { COMPONENT, MUL, ADD };
+
+    ClosureType type;
 };
 
-struct ClosureComponent
+
+
+/// ClosureComponent is a subclass of ClosureColor that holds the ID and
+/// parameter data for a single primitive closure component (such as
+/// diffuse, translucent, etc.).  The declaration leaves 4 bytes for
+/// parameter data (mem), but it's expected that the structure be
+/// allocated with enough space to house all the parameter data for
+/// whatever type of custom primitive component it actually is.
+struct ClosureComponent : public ClosureColor
 {
-    ClosureColor parent;
     int    id;       ///< Id of the componente
     int    size;     ///< Memory used by the primitive
     char   mem[4];   ///< Memory for the primitive
                      ///  4 is the minimum, allocation
                      ///  will be scaled to requirements
                      ///  of the primitive
+
+    /// Handy method for getting the parameter memory as a void*.
+    ///
+    void *data () { return &mem; }
 };
 
-struct ClosureMul
+
+/// ClosureMul is a subclass of ClosureColor that provides a lightweight
+/// way to represent a closure multiplied by a scalar or color weight.
+struct ClosureMul : public ClosureColor
 {
-    ClosureColor parent;
     Color3 weight;
     const ClosureColor *closure;
 };
 
-struct ClosureAdd
+
+/// ClosureAdd is a subclass of ClosureColor that provides a lightweight
+/// way to represent a closure that is a sum of two other closures.
+struct ClosureAdd : public ClosureColor
 {
-    ClosureColor parent;
     const ClosureColor *closureA;
     const ClosureColor *closureB;
 };
 
 
-std::ostream &
-operator<< (std::ostream &out, const ClosureColor &closure);
+
+std::ostream &operator<< (std::ostream &out, const ClosureColor &closure);
 
 }; // namespace OSL
 

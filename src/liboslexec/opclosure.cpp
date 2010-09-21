@@ -121,7 +121,7 @@ DECLOP (OP_closure)
         }
         if (clentry->setup)
             clentry->setup(exec->renderer(), clentry->id, comp->mem);
-        result[i] = &comp->parent;
+        result[i] = comp;
     SHADE_LOOP_END
 }
 
@@ -145,40 +145,30 @@ osl_add_closure_closure (SingleShaderGlobal *sg,
         return b;
     else if (b == NULL)
         return a;
-    ClosureAdd *add = sg->context->closure_add_allot();
-    add->closureA = a;
-    add->closureB = b;
-    return &add->parent;
+    return sg->context->closure_add_allot (a, b);
 }
 
 
 extern "C" const ClosureColor *
-osl_mul_closure_color (SingleShaderGlobal *sg, ClosureColor *a, const Color3 *b)
+osl_mul_closure_color (SingleShaderGlobal *sg, ClosureColor *a, const Color3 *w)
 {
     if (a == NULL) return NULL;
-    ClosureMul *mul = sg->context->closure_mul_allot();
-    mul->closure = a;
-    mul->weight = *b;
-    return &mul->parent;
+    return sg->context->closure_mul_allot (*w, a);
 }
 
 
 extern "C" const ClosureColor *
-osl_mul_closure_float (SingleShaderGlobal *sg, ClosureColor *a, float b)
+osl_mul_closure_float (SingleShaderGlobal *sg, ClosureColor *a, float w)
 {
     if (a == NULL) return NULL;
-    ClosureMul *mul = sg->context->closure_mul_allot();
-    mul->closure = a;
-    mul->weight.setValue(b, b, b);
-    return &mul->parent;
+    return sg->context->closure_mul_allot (w, a);
 }
 
 
 extern "C" ClosureComponent *
 osl_allocate_closure_component (SingleShaderGlobal *sg, int id, int size)
 {
-    ClosureComponent *comp = sg->context->closure_component_allot(id, size);
-    return comp;
+    return sg->context->closure_component_allot(id, size);
 }
 
 

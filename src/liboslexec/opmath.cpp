@@ -322,10 +322,7 @@ public:
     AddClosure (ShadingExecution *exec):m_context(exec->context()) { }
     inline void operator() (ClosureColor **result, 
                             const ClosureColor *A, const ClosureColor *B) {
-        ClosureAdd *add = m_context->closure_add_allot();
-        add->closureA = A;
-        add->closureB = B;
-        *result = &add->parent; // just a cast to parent type
+        *result = m_context->closure_add_allot(A, B);
     }
 private:
     ShadingContext *m_context;
@@ -347,32 +344,20 @@ class MulClosure {
 public:
     MulClosure (ShadingExecution *exec):m_context(exec->context()) { }
     inline void operator() (ClosureColor **result,
-                            const ClosureColor *A, const Color3 &B) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = A;
-        mul->weight = B;
-        *result = &mul->parent;
+                            const ClosureColor *c, const Color3 &w) {
+        *result = m_context->closure_mul_allot (w, c);
     }
     inline void operator() (ClosureColor **result,
-                            const Color3 &A, const ClosureColor *B) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = B;
-        mul->weight = A;
-        *result = &mul->parent;
+                            const Color3 &w, const ClosureColor *c) {
+        *result = m_context->closure_mul_allot (w, c);
     }
     inline void operator() (ClosureColor **result,
-                            const ClosureColor *A, float B) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = A;
-        mul->weight.setValue(B, B, B);
-        *result = &mul->parent;
+                            const ClosureColor *c, float w) {
+        *result = m_context->closure_mul_allot (w, c);
     }
     inline void operator() (ClosureColor **result,
-                            float A, const ClosureColor *B) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = B;
-        mul->weight.setValue(A, A, A);
-        *result = &mul->parent;
+                            float w, const ClosureColor *c) {
+        *result = m_context->closure_mul_allot (w, c);
     }
 private:
     ShadingContext *m_context;
@@ -383,18 +368,12 @@ class DivClosure {
 public:
     DivClosure (ShadingExecution *exec):m_context(exec->context()) { }
     inline void operator() (ClosureColor **result,
-                            const ClosureColor *A, const Color3 &B) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = A;
-        mul->weight.setValue(1.0/B[0], 1.0/B[1], 1.0/B[2]);
-        *result = &mul->parent;
+                            const ClosureColor *c, const Color3 &w) {
+        *result = m_context->closure_mul_allot(Color3(1.0/w[0], 1.0/w[1], 1.0/w[2]), c);
     }
     inline void operator() (ClosureColor **result, 
-                            const ClosureColor *A, float B) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = A;
-        mul->weight.setValue(1.0/B, 1.0/B, 1.0/B);
-        *result = &mul->parent;
+                            const ClosureColor *c, float w) {
+        *result = m_context->closure_mul_allot(1.0f/w, c);
     }
 private:
     ShadingContext *m_context;
@@ -404,11 +383,8 @@ private:
 class NegClosure {
 public:
     NegClosure (ShadingExecution *exec):m_context(exec->context()) { }
-    inline void operator() (ClosureColor **result, const ClosureColor *A) {
-        ClosureMul *mul = m_context->closure_mul_allot();
-        mul->closure = A;
-        mul->weight.setValue(-1.0, -1.0, -1.0);
-        *result = &mul->parent;
+    inline void operator() (ClosureColor **result, const ClosureColor *c) {
+        *result = m_context->closure_mul_allot (-1.0f, c);
     }
 private:
     ShadingContext *m_context;

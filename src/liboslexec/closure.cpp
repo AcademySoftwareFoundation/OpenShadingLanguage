@@ -113,14 +113,14 @@ print_closure (std::ostream &out, const ClosureColor *closure, const Color3 &w, 
         return;
 
     switch (closure->type) {
-        case ClosureColor::CLOSURE_MUL:
+        case ClosureColor::MUL:
             print_closure(out, ((ClosureMul *)closure)->closure, ((ClosureMul *)closure)->weight * w, first);
             break;
-        case ClosureColor::CLOSURE_ADD:
+        case ClosureColor::ADD:
             print_closure(out, ((ClosureAdd *)closure)->closureA, w, first);
             print_closure(out, ((ClosureAdd *)closure)->closureB, w, first);
             break;
-        case ClosureColor::CLOSURE_COMPONENT:
+        case ClosureColor::COMPONENT:
             comp = (ClosureComponent *)closure;
             if (comp->id < NBUILTIN_CLOSURES)
             {

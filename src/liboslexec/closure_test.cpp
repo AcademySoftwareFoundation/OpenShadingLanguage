@@ -100,10 +100,7 @@ public:
 ClosureColor *create_component(ShadingContext *context, const Color3& w, float f) {
     ClosureComponent *comp = context->closure_component_allot(MY_ID, sizeof (MyClosure));
     new (comp->mem) MyClosure(f);
-    ClosureMul *mul = context->closure_mul_allot();
-    mul->closure = &comp->parent;
-    mul->weight = w;
-    return &mul->parent;
+    return context->closure_mul_allot(w, comp);
 }
 
 
@@ -127,12 +124,13 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
 #endif
     ClosureParam my_params[] = { CLOSURE_FINISH_PARAM(MyClosure) };
     shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare, -1, 0);
-   // Create a closure with one component
-    ClosureAdd *add = context->closure_add_allot();
-    add->closureA = create_component (context, Color3(.1, .1, .1), 0.33f);
+    ClosureColor *A = create_component (context, Color3(.1, .1, .1), 0.33f);
     // Add another component with different params.  It should now look
     // like two components, not combine with the others.
-    add->closureB = create_component (context, Color3(.4, .4, .4), 0.5f);
+    ClosureColor *B = create_component (context, Color3(.4, .4, .4), 0.5f);
+    // Create a closure with one component
+    ClosureAdd *add = context->closure_add_allot (A, B);
+    ASSERT (add);  // FIXME -- check this in a better way 
     /* We can't check this anymore
     c.flatten(&add->parent, shadingsys);
 

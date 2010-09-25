@@ -804,6 +804,10 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
     BOOST_FOREACH (Symbol *s, allsyms)
         s->clear_rw ();
 
+    static ustring op_for("for");
+    static ustring op_while("while");
+    static ustring op_dowhile("dowhile");
+
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
     BOOST_FOREACH (const Opcode &op, code) {
@@ -819,8 +823,9 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
 
         // If this is a loop op, we need to mark its control variable
         // (the only arg) as used for the duration of the loop!
-        if (op.opname() == "for" || op.opname() == "while" ||
-                op.opname() == "dowhile") {
+        if (op.opname() == op_for ||
+            op.opname() == op_while ||
+            op.opname() == op_dowhile) {
             ASSERT (op.nargs() == 1);  // loops should have just one arg
             SymbolPtr s = opargs[op.firstarg()];
             s->mark_rw (opnum+1, true, true);
@@ -830,6 +835,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
         ++opnum;
     }
 
+
     // Special case: temporaries referenced both inside AND outside a
     // loop need their lifetimes extended to cover the entire loop so
     // they aren't accidentally coalesced incorrectly.  The specific
@@ -837,8 +843,9 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
     // is passed an argument that is a temporary calculation.
     opnum = 0;
     BOOST_FOREACH (const Opcode &op, code) {
-        if (op.opname() == "for" || op.opname() == "while" ||
-                op.opname() == "dowhile") {
+        if (op.opname() == op_for ||
+            op.opname() == op_while ||
+            op.opname() == op_dowhile) {
             int loopend = op.farthest_jump() - 1;
             BOOST_FOREACH (Symbol *s, allsyms) {
                 if (s->symtype() == SymTypeTemp && 

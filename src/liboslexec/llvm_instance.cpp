@@ -28,7 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 #include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
+
+#include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/ustring.h>
 
 #include "llvm_headers.h"
 #include <llvm/Analysis/Verifier.h>
@@ -2173,7 +2176,7 @@ LLVMGEN (llvm_gen_compare_op)
     int num_components = std::max (A.typespec().aggregate(), B.typespec().aggregate());
     bool float_based = A.typespec().is_floatbased() || B.typespec().is_floatbased();
     TypeDesc cast (float_based ? TypeDesc::FLOAT : TypeDesc::UNKNOWN);
-                                   
+
     llvm::Value* final_result = 0;
     ustring opname = op.opname();
 
@@ -3179,8 +3182,13 @@ LLVMGEN (llvm_gen_closure)
 }
 
 
+#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
+typedef boost::unordered_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
+#else
+typedef hash_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
+#endif
 
-static std::map<ustring,OpLLVMGen> llvm_generator_table;
+static GeneratorTable llvm_generator_table;
 
 
 static void
@@ -3345,8 +3353,7 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
     for (int opnum = beginop;  opnum < endop;  ++opnum) {
         const Opcode& op = inst()->ops()[opnum];
 
-        std::map<ustring,OpLLVMGen>::const_iterator found;
-        found = llvm_generator_table.find (op.opname());
+        GeneratorTable::const_iterator found = llvm_generator_table.find (op.opname());
         if (found != llvm_generator_table.end()) {
             bool ok = (*found->second) (*this, opnum);
             if (! ok)

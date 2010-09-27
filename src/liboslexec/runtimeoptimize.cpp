@@ -33,7 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 
+#include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/ustring.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -1459,9 +1461,13 @@ DECLFOLDER(constfold_useparam)
 }
 
 
+#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
+typedef boost::unordered_map<ustring, OpFolder, ustringHash> FolderTable;
+#else
+typedef hash_map<ustring, OpFolder, ustringHash> FolderTable;
+#endif
 
-static std::map<ustring,OpFolder> folder_table;
-
+static FolderTable folder_table;
 
 void
 initialize_folder_table ()
@@ -2127,8 +2133,7 @@ RuntimeOptimizer::optimize_instance ()
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
             if (m_shadingsys.optimize() >= 2) {
-                std::map<ustring,OpFolder>::const_iterator found;
-                found = folder_table.find (op.opname());
+                FolderTable::const_iterator found = folder_table.find (op.opname());
                 if (found != folder_table.end())
                     changed += (*found->second) (*this, opnum);
             }

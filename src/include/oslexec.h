@@ -51,7 +51,6 @@ class SingleShaderGlobal;
 class ShaderGlobals;
 struct ClosureColor;
 class ClosureParam;
-class OSLCompiler;
 
 namespace pvt {
 class ShadingContext;
@@ -194,7 +193,6 @@ public:
                                   int labels_offset, int max_labels) = 0;
 
     static void register_builtin_closures(ShadingSystem *ss);
-    static void register_builtin_closures(OSLCompiler *cc);
 
 private:
     // Make delete private and unimplemented in order to prevent apps

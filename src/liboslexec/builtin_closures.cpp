@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "genclosure.h"
 #include "oslclosure.h"
 #include "oslexec.h"
-#include "oslcomp.h"
 #include "OpenImageIO/dassert.h"
 
 
@@ -203,18 +202,6 @@ void ShadingSystem::register_builtin_closures(ShadingSystem *ss)
         ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare,
                               reckless_offsetof(ClosurePrimitive, m_custom_labels),
                               ClosurePrimitive::MAXCUSTOM);
-    }
-}
-
-void ShadingSystem::register_builtin_closures(OSLCompiler *cc)
-{
-    for (int cid = 0; cid < NBUILTIN_CLOSURES; ++cid)
-    {
-        BuiltinClosure *clinfo = &builtin_closures[cid];
-        int j;
-        for (j = 0; clinfo->params[j].type != TypeDesc(); ++j);
-        ASSERT(clinfo->id == cid);
-        cc->register_closure (clinfo->name, clinfo->params, true);
     }
 }
 

@@ -1130,42 +1130,6 @@ OSLCompilerImpl::initialize_builtin_funcs ()
 
 
 
-void
-OSLCompilerImpl::register_closure(const char *name, const ClosureParam *params, bool takes_keywords)
-{
-    std::string poly = "C";
-    std::list<std::string> polylist;
-    if (params)
-    {
-        int i;
-        for (i = 0; params[i].type != TypeDesc() && !params[i].optional; ++i)
-            poly += code_from_type(TypeSpec(params[i].type));
-        polylist.push_front(takes_keywords ? poly + "." : poly);
-        for (; params[i].type != TypeDesc() && params[i].optional; ++i)
-        {
-            poly += code_from_type(TypeSpec(params[i].type));
-            polylist.push_front(takes_keywords ? poly + "." : poly);
-        }
-    } else
-        polylist.push_front(takes_keywords ? poly + "." : poly);
-
-    ustring uname(name);
-    Symbol *last = symtab().clash (uname);
-    ASSERT (last == NULL || last->symtype() == SymTypeFunction);
-    TypeSpec rettype = type_from_code (poly.c_str());
-
-    for (std::list<std::string>::iterator i = polylist.begin(); i != polylist.end(); ++i)
-    {
-        FunctionSymbol *f = new FunctionSymbol (uname, rettype);
-        f->nextpoly ((FunctionSymbol *)last);
-        f->argcodes (ustring(*i));
-        symtab().insert (f);
-        last = f;
-    }
-}
-
-
-
 TypeSpec
 OSLCompilerImpl::type_from_code (const char *code, int *advance)
 {

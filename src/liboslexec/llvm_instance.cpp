@@ -3108,7 +3108,10 @@ LLVMGEN (llvm_gen_closure)
     ustring closure_name = *((ustring *)Id.data());
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
-    ASSERT(clentry);
+    if (!clentry) {
+        rop.shadingsys().error ("Closure %s not found in the runtime", closure_name.c_str());
+        return false;
+    }
 
     // Parse the optional arguments
     Symbol *labels[ClosurePrimitive::MAXCUSTOM+1];
@@ -3142,8 +3145,7 @@ LLVMGEN (llvm_gen_closure)
     }
 
     // Here is where we fill the struct using the params
-    for (int carg = 0; carg < (int)clentry->params.size(); ++carg)
-    {
+    for (int carg = 0; carg < (int)clentry->params.size(); ++carg) {
         const ClosureParam &p = clentry->params[carg];
         ASSERT(p.offset < clentry->struct_size);
         if ((carg + 2) < nargs)
@@ -3158,6 +3160,8 @@ LLVMGEN (llvm_gen_closure)
                 llvm::Value* src = rop.llvm_void_ptr (sym);
                 rop.llvm_memcpy (dst, src, (int)p.type.size(),
                                  4 /* use 4 byte alignment for now */);
+            } else {
+                rop.shadingsys().error ("Protoype mismatch (wrong param type) for %s closure", closure_name.c_str());
             }
         }
     }

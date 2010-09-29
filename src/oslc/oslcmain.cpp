@@ -100,7 +100,6 @@ main (int argc, const char *argv[])
         }
         else {
             boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());
-            ShadingSystem::register_builtin_closures(compiler.get());
             bool ok = compiler->compile (argv[a], args);
             if (ok) {
                 if (!quiet)

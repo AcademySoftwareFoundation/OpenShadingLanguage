@@ -243,8 +243,13 @@ ASTfunction_declaration::add_meta (ASTNode *meta)
         const ASTvariable_declaration *metavar = dynamic_cast<const ASTvariable_declaration *>(meta);
         ASSERT (metavar);
         Symbol *metasym = metavar->sym();
-        if (metasym->name() == "builtin")
+        if (metasym->name() == "builtin") {
             m_is_builtin = true;
+            if (func()->typespec().is_closure()) // It is a builtin closure
+                // Force keyword arguments at the end
+                func()->argcodes(ustring(std::string(func()->argcodes().c_str()) + "."));
+
+        }
         else if (metasym->name() == "derivs")
             func()->takes_derivs (true);
         else if (metasym->name() == "printf_args")

@@ -266,8 +266,6 @@ public:
                                  SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 
                                  SymbolPtrVec &params);
 
-    virtual void register_closure(const char *name, const ClosureParam *params, bool takes_keywords);
-
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();

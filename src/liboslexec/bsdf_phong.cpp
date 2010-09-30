@@ -258,14 +258,16 @@ public:
 
 
 ClosureParam bsdf_phong_params[] = {
-    CLOSURE_VECTOR_PARAM(PhongClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM (PhongClosure, m_exponent, false),
+    CLOSURE_VECTOR_PARAM(PhongClosure, m_N),
+    CLOSURE_FLOAT_PARAM (PhongClosure, m_exponent),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(PhongClosure) };
 
 ClosureParam bsdf_phong_ramp_params[] = {
-    CLOSURE_VECTOR_PARAM     (PhongRampClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM      (PhongRampClosure, m_exponent, false),
-    CLOSURE_COLOR_ARRAY_PARAM(PhongRampClosure, m_colors, PhongRampClosure::MAXCOLORS, false),
+    CLOSURE_VECTOR_PARAM     (PhongRampClosure, m_N),
+    CLOSURE_FLOAT_PARAM      (PhongRampClosure, m_exponent),
+    CLOSURE_COLOR_ARRAY_PARAM(PhongRampClosure, m_colors, PhongRampClosure::MAXCOLORS),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM     (PhongRampClosure) };
 
 CLOSURE_PREPARE(bsdf_phong_prepare, PhongClosure)

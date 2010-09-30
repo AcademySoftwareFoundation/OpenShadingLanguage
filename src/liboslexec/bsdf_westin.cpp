@@ -217,13 +217,15 @@ public:
 
 
 ClosureParam bsdf_westin_backscatter_params[] = {
-    CLOSURE_VECTOR_PARAM(WestinBackscatterClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM (WestinBackscatterClosure, m_roughness, false),
+    CLOSURE_VECTOR_PARAM(WestinBackscatterClosure, m_N),
+    CLOSURE_FLOAT_PARAM (WestinBackscatterClosure, m_roughness),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(WestinBackscatterClosure) };
 
 ClosureParam bsdf_westin_sheen_params[] = {
-    CLOSURE_VECTOR_PARAM(WestinSheenClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM (WestinSheenClosure, m_edginess, false),
+    CLOSURE_VECTOR_PARAM(WestinSheenClosure, m_N),
+    CLOSURE_FLOAT_PARAM (WestinSheenClosure, m_edginess),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(WestinSheenClosure) };
 
 CLOSURE_PREPARE(bsdf_westin_backscatter_prepare, WestinBackscatterClosure)

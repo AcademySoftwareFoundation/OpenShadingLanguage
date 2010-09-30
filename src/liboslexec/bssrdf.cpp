@@ -94,7 +94,8 @@ public:
 
 
 ClosureParam closure_bssrdf_cubic_params[] = {
-    CLOSURE_COLOR_PARAM (BSSRDFCubicClosure, m_radius, false),
+    CLOSURE_COLOR_PARAM (BSSRDFCubicClosure, m_radius),
+    CLOSURE_STRING_KEYPARAM ("label"),
     CLOSURE_FINISH_PARAM(BSSRDFCubicClosure) };
 
 CLOSURE_PREPARE(closure_bssrdf_cubic_prepare, BSSRDFCubicClosure)

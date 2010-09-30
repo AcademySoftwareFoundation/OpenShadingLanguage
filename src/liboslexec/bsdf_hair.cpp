@@ -183,13 +183,15 @@ public:
 
 
 ClosureParam bsdf_hair_diffuse_params[] = {
-    CLOSURE_VECTOR_PARAM(HairDiffuseClosure, m_T, false),
-    CLOSURE_FINISH_PARAM(HairDiffuseClosure) };
+    CLOSURE_VECTOR_PARAM   (HairDiffuseClosure, m_T),
+    CLOSURE_STRING_KEYPARAM("label"),
+    CLOSURE_FINISH_PARAM   (HairDiffuseClosure) };
 
 ClosureParam bsdf_hair_specular_params[] = {
-    CLOSURE_VECTOR_PARAM(HairSpecularClosure, m_T, false),
-    CLOSURE_FLOAT_PARAM (HairSpecularClosure, m_offset, false),
-    CLOSURE_FLOAT_PARAM (HairSpecularClosure, m_exp, false),
+    CLOSURE_VECTOR_PARAM(HairSpecularClosure, m_T),
+    CLOSURE_FLOAT_PARAM (HairSpecularClosure, m_offset),
+    CLOSURE_FLOAT_PARAM (HairSpecularClosure, m_exp),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(HairSpecularClosure) };
 
 CLOSURE_PREPARE(bsdf_hair_diffuse_prepare, HairDiffuseClosure)

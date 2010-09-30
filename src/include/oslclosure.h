@@ -81,6 +81,9 @@ enum {
 /// This is the leftover of a class which used to hold all the labels
 /// Now just acts as a little namespace for the basic definitions
 ///
+/// NOTE: you still can assign these labels as keyword arguments to
+///       closures. But we have removed the old labels array in the
+///       primitives.
 class Labels {
 public:
 
@@ -129,26 +132,16 @@ public:
         Both  = 3
     };
 
-    // Maximum allowed custom labels
-    static const int MAXCUSTOM = 5;
-
     ClosurePrimitive (Category category) :
-        m_category (category) { m_custom_labels[0] = Labels::NONE; }
+        m_category (category) { }
 
     virtual ~ClosurePrimitive () { }
 
     virtual void setup() {};
 
-    /// Meant to be used by the opcode to set custom labels
-    ///
-    void set_custom_label (int i, ustring label) { m_custom_labels[i] = label; }
-
     /// Return the category of material this primitive represents.
     ///
     int category () const { return m_category; }
-    /// Get the custom labels (Labels::NONE terminated)
-    ///
-    const ustring *get_custom_labels()const { return m_custom_labels; }
 
     /// How many bytes of parameter storage will this primitive need?
     ///
@@ -221,17 +214,9 @@ public:
     /// to overload this (and call back to the parent as well) -- if they
     /// don't, component merges will happen inappropriately!
     virtual bool mergeable (const ClosurePrimitive *other) const {
-        for (int i = 0;  i < MAXCUSTOM;  ++i) {
-            if (m_custom_labels[i] != other->m_custom_labels[i])
-                return false;
-            if (m_custom_labels[i] == Labels::NONE)
-                break;
-        }
         return true;
     }
 
-    // Labels::NONE terminated custom label list
-    ustring  m_custom_labels[MAXCUSTOM + 1];
 private:
     Category m_category;
 };
@@ -442,8 +427,32 @@ struct ClosureColor {
 /// whatever type of custom primitive component it actually is.
 struct ClosureComponent : public ClosureColor
 {
+    struct Attr
+    {
+        ustring   key;
+        union {
+            int     integer;
+            float   flt;
+            float   triple[3];  // This will fake Color3 and Vec3 which C++ doesn't allow in unions
+            void   *str;        // And this fakes a ustring (not allowed in unions either)
+        }         value;
+
+        // This members are just to avoid having to typecast all the time
+        int           & integer()       { return value.integer; }
+        const int     & integer() const { return value.integer; }
+        float         & flt()           { return value.flt; }
+        const float   & flt()     const { return value.flt; }
+        Color3        & color()         { return *((Color3 *)(void *)&value); }
+        const Color3  & color()   const { return *((Color3 *)(void *)&value); }
+        Vec3          & vector()        { return *((Vec3 *)(void *)&value); }
+        const Vec3    & vector()  const { return *((Vec3 *)(void *)&value); }
+        ustring       & str()           { return *((ustring *)(void *)&value); }
+        const ustring & str()     const { return *((ustring *)(void *)&value); }
+    };
+
     int    id;       ///< Id of the componente
     int    size;     ///< Memory used by the primitive
+    int    nattrs;   ///< Number of keyword attributes
     char   mem[4];   ///< Memory for the primitive
                      ///  4 is the minimum, allocation
                      ///  will be scaled to requirements
@@ -452,6 +461,10 @@ struct ClosureComponent : public ClosureColor
     /// Handy method for getting the parameter memory as a void*.
     ///
     void *data () { return &mem; }
+    const void *data () const { return &mem; }
+    /// Attributes are always allocated at the end of the data block
+    Attr *attrs() { return (Attr *)((char *)data() + size); }
+    const Attr *attrs() const { return (Attr *)((char *)data() + size); }
 };
 
 
@@ -473,8 +486,12 @@ struct ClosureAdd : public ClosureColor
 };
 
 
+namespace pvt {
+class ShadingSystemImpl;
+}
 
-std::ostream &operator<< (std::ostream &out, const ClosureColor &closure);
+//std::ostream &operator<< (std::ostream &out, const ClosureColor &closure);
+void print_closure (std::ostream &out, const ClosureColor *closure, pvt::ShadingSystemImpl *ss);
 
 }; // namespace OSL
 

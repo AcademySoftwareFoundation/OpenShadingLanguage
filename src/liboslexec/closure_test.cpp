@@ -98,7 +98,7 @@ public:
 #if 1
 
 ClosureColor *create_component(ShadingContext *context, const Color3& w, float f) {
-    ClosureComponent *comp = context->closure_component_allot(MY_ID, sizeof (MyClosure));
+    ClosureComponent *comp = context->closure_component_allot(MY_ID, sizeof (MyClosure), 0);
     new (comp->mem) MyClosure(f);
     return context->closure_mul_allot(w, comp);
 }
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
     BOOST_CHECK_SMALL(0.0f, 0.001f);
 #endif
     ClosureParam my_params[] = { CLOSURE_FINISH_PARAM(MyClosure) };
-    shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare, -1, 0);
+    shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare);
     ClosureColor *A = create_component (context, Color3(.1, .1, .1), 0.33f);
     // Add another component with different params.  It should now look
     // like two components, not combine with the others.

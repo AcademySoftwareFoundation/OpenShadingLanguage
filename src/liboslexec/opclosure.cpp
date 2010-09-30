@@ -49,6 +49,45 @@ namespace pvt {
 
 
 
+static void
+parse_keyword_args(const ClosureRegistry::ClosureEntry *clentry, VaryingRef<ClosureComponent *> &comp,
+                   ShadingExecution *exec, const int *args, int nattrs)
+{
+
+    for (int attr_i = 0; attr_i < nattrs; ++attr_i) {
+        int argno = attr_i * 2;
+        Symbol &Key (exec->sym (args[argno]));
+        Symbol &Value (exec->sym (args[argno + 1]));
+
+        ASSERT(Key.typespec().is_string());
+        ASSERT(Key.is_constant());
+        ustring key;
+        SHADE_LOOP_BEGIN
+            key = * (ustring *) Key.data(i);
+            break;
+        SHADE_LOOP_END
+
+        TypeDesc td = Value.typespec().simpletype();
+        bool legal = false;
+        // Make sure there is some keyword arg that has the name and the type
+        for (int t = 0; t < clentry->nkeyword; ++t) {
+            const ClosureParam &param = clentry->params[clentry->nformal + t];
+            if (param.type == td && !strcmp(key.c_str(), param.key))
+                legal = true;
+        }
+        if (legal) {
+            SHADE_LOOP_BEGIN
+                ClosureComponent::Attr *attr = comp[i]->attrs() + attr_i;
+                attr->key = key;
+                char *value = (char *)Value.data() + i*Value.step();
+                memcpy(&attr->value, value, td.size());
+            SHADE_LOOP_END
+        }
+    }
+}
+
+
+
 DECLOP (OP_closure)
 {
     ASSERT (nargs >= 2); // at least the result and the ID
@@ -62,68 +101,32 @@ DECLOP (OP_closure)
     clentry = exec->shadingsys()->find_closure(closure_name[exec->beginpoint()]);
     ASSERT(clentry);
 
-    VaryingRef<ustring> labels[ClosurePrimitive::MAXCUSTOM+1];
-    int nlabels = 0;
-    int nformal_params = nargs;
-    for (int tok = 2; tok < (nargs - 1); tok ++) {
-        Symbol &Name (exec->sym (args[tok]));
-        if (Name.typespec().is_string()) {
-             nformal_params = std::min(nformal_params, tok);
-             ustring name = * (ustring *) Name.data();
-             Symbol &Val (exec->sym (args[tok + 1]));
-             if (Val.typespec().is_string()) {
-                 if (name == Strings::label) {
-                     if (nlabels == ClosurePrimitive::MAXCUSTOM)
-                         exec->error ("Too many labels to closure (%s:%d)",
-                                       exec->op().sourcefile().c_str(),
-                                       exec->op().sourceline());
-                     else {
-                         labels[nlabels].init((ustring*) Val.data(), Val.step());
-                         nlabels++;
-                         tok++;
-                     }
-                 } else {
-                     exec->error ("Unknown closure optional argument: \"%s\", <%s> (%s:%d)",
-                                     name.c_str(),
-                                     Val.typespec().c_str(),
-                                     exec->op().sourcefile().c_str(),
-                                     exec->op().sourceline());
-                 }
-            } else {
-                 exec->error ("Malformed keyword args to closure (%s:%d)",
-                              exec->op().sourcefile().c_str(),
-                              exec->op().sourceline());
-            }
-        }
-    }
-    // From now on, the keyword arguments don't exist
-    nargs = nformal_params;
+    ASSERT(nargs >= (2 + clentry->nformal));
+    int nattrs = (nargs - 2 - clentry->nformal) / 2;
 
-    VaryingRef<ClosureColor *> result ((ClosureColor **)Result.data(), Result.step());
+    VaryingRef<ClosureComponent *> result ((ClosureComponent **)Result.data(), Result.step());
     SHADE_LOOP_BEGIN
-        ClosureComponent *comp = exec->context()->closure_component_allot(clentry->id, clentry->struct_size);
+        ClosureComponent *comp = exec->context()->closure_component_allot(clentry->id, clentry->struct_size, nattrs);
         if (clentry->prepare)
             clentry->prepare(exec->renderer(), clentry->id, comp->mem);
         else
             memset(comp->mem, 0, clentry->struct_size);
-        for (size_t carg = 0; carg < clentry->params.size(); ++carg)
-        {
+        for (size_t carg = 0; carg < clentry->params.size(); ++carg) {
             const ClosureParam &p = clentry->params[carg];
+            if (p.key != NULL) break;
             ASSERT(p.offset < clentry->struct_size);
-            write_closure_param(p.type, comp->mem, p.offset, carg + 2, i, exec, nargs, args);
-        }
-        if (clentry->labels_offset >= 0)
-        {
-            int l;
-            for (l = 0; l < nlabels && l < clentry->max_labels; ++l)
-                ((ustring *)(comp->mem + clentry->labels_offset))[l] = labels[l][i];
-            ((ustring *)(comp->mem + clentry->labels_offset))[l] = Labels::NONE;
+            ASSERT(carg < (size_t)clentry->nformal);
+            write_closure_param(p.type, comp->mem, p.offset, carg + 2, i, exec, args);
         }
         if (clentry->setup)
             clentry->setup(exec->renderer(), clentry->id, comp->mem);
         result[i] = comp;
     SHADE_LOOP_END
+
+    if (nattrs && clentry->nkeyword)
+        parse_keyword_args(clentry, result, exec, args + clentry->nformal + 2, nattrs);
 }
+
 
 
 
@@ -166,10 +169,11 @@ osl_mul_closure_float (SingleShaderGlobal *sg, ClosureColor *a, float w)
 
 
 extern "C" ClosureComponent *
-osl_allocate_closure_component (SingleShaderGlobal *sg, int id, int size)
+osl_allocate_closure_component (SingleShaderGlobal *sg, int id, int size, int nattrs)
 {
-    return sg->context->closure_component_allot(id, size);
+    return sg->context->closure_component_allot(id, size, nattrs);
 }
+
 
 
 extern "C" const char *
@@ -177,7 +181,7 @@ osl_closure_to_string (SingleShaderGlobal *sg, ClosureColor *c)
 {
     // Special case for printing closures
     std::stringstream stream;
-    stream << *c;
+    print_closure(stream, c, &sg->context->shadingsys());
     return ustring(stream.str ()).c_str();
 }
 

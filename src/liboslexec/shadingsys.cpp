@@ -200,11 +200,9 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 
 void
 ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params, int size,
-                                    PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                                    int labels_offset, int max_labels)
+                                    PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
-    m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare,
-                                        labels_offset, max_labels);
+    m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare);
 }
 
 
@@ -995,21 +993,26 @@ ShadingSystemImpl::global_heap_offset (ustring name)
 
 
 void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params, int size,
-                                       PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                                       int labels_offset, int max_labels)
+                                       PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
     if (m_closure_table.size() <= (size_t)id)
         m_closure_table.resize(id + 1);
     ClosureEntry &entry = m_closure_table[id];
     entry.id = id;
-    for (int i = 0; params && params[i].type != TypeDesc(); ++i)
+    entry.name = name;
+    entry.nformal = 0;
+    entry.nkeyword = 0;
+    for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
         entry.params.push_back(params[i]);
+        if (params[i].key == NULL)
+            entry.nformal ++;
+        else
+            entry.nkeyword ++;
+    }
     entry.struct_size = size;
     entry.prepare = prepare;
     entry.setup = setup;
     entry.compare = compare;
-    entry.labels_offset = labels_offset;
-    entry.max_labels = max_labels;
     m_closure_name_to_id[ustring(name)] = id;
 }
 

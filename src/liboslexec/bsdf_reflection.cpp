@@ -170,8 +170,9 @@ public:
 
 
 ClosureParam bsdf_reflection_params[] = {
-    CLOSURE_VECTOR_PARAM(FresnelReflectionClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM (FresnelReflectionClosure, m_eta, true),
+    CLOSURE_VECTOR_PARAM(FresnelReflectionClosure, m_N),
+    CLOSURE_FLOAT_PARAM (FresnelReflectionClosure, m_eta),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(FresnelReflectionClosure) };
 
 CLOSURE_PREPARE(bsdf_reflection_prepare, FresnelReflectionClosure)

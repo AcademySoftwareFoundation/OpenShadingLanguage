@@ -942,7 +942,7 @@ ShadingExecution::format_symbol (const std::string &format,
     if (sym.typespec().is_closure()) {
         // Special case for printing closures
         std::stringstream stream;
-        stream << *(((const ClosureColor **)sym.data())[whichpoint]);
+        print_closure (stream, ((const ClosureColor **)sym.data())[whichpoint], shadingsys());
         return stream.str ();
     }
     TypeDesc type = sym.typespec().simpletype();

@@ -87,6 +87,7 @@ public:
 };
 
 ClosureParam closure_background_params[] = {
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(GenericBackgroundClosure) };
 
 CLOSURE_PREPARE(closure_background_prepare, GenericBackgroundClosure)

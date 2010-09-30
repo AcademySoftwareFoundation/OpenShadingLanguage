@@ -73,7 +73,8 @@ public:
 
 
 ClosureParam closure_debug_params[] = {
-    CLOSURE_STRING_PARAM(DebugClosure, m_tag, false),
+    CLOSURE_STRING_PARAM(DebugClosure, m_tag),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(DebugClosure) };
 
 CLOSURE_PREPARE(closure_debug_prepare, DebugClosure)

@@ -166,12 +166,14 @@ public:
 
 
 ClosureParam bsdf_diffuse_params[] = {
-    CLOSURE_VECTOR_PARAM(DiffuseClosure, m_N, false),
-    CLOSURE_FINISH_PARAM(DiffuseClosure) };
+    CLOSURE_VECTOR_PARAM   (DiffuseClosure, m_N),
+    CLOSURE_STRING_KEYPARAM("label"),
+    CLOSURE_FINISH_PARAM   (DiffuseClosure) };
 
 ClosureParam bsdf_translucent_params[] = {
-    CLOSURE_VECTOR_PARAM(TranslucentClosure, m_N, false),
-    CLOSURE_FINISH_PARAM(TranslucentClosure) };
+    CLOSURE_VECTOR_PARAM   (TranslucentClosure, m_N),
+    CLOSURE_STRING_KEYPARAM("label"),
+    CLOSURE_FINISH_PARAM   (TranslucentClosure) };
 
 CLOSURE_PREPARE(bsdf_diffuse_prepare, DiffuseClosure)
 CLOSURE_PREPARE(bsdf_translucent_prepare, TranslucentClosure)

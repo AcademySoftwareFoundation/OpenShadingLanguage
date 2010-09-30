@@ -497,6 +497,12 @@ public:
         // name, but we might want to have an internal id
         // for fast dispatching
         int                       id;
+        // The name again
+        ustring                   name;
+        // Number of formal arguments
+        int                       nformal;
+        // Number of keyword arguments
+        int                       nkeyword;
         // The parameters
         std::vector<ClosureParam> params;
         // the needed size for the structure
@@ -505,17 +511,10 @@ public:
         PrepareClosureFunc        prepare;
         SetupClosureFunc          setup;
         CompareClosureFunc        compare;
-        // In case this closure accepts labels, this tells
-        // us what is the offset of the ustring[MAXLABELS]
-        // field inside the target struct.
-        int                       labels_offset;
-        // And if it does handle labels, this is the limit
-        int                       max_labels;
     };
 
     void register_closure(const char *name, int id, const ClosureParam *params, int size,
-                          PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                          int labels_offset, int max_labels);
+                          PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
 
     const ClosureEntry *get_entry(ustring name)const;
     const ClosureEntry *get_entry(int id)const {
@@ -654,8 +653,7 @@ public:
     llvm::ExecutionEngine* ExecutionEngine () { return m_llvm_exec; }
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                                  int labels_offset, int max_labels);
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
     }
@@ -897,12 +895,14 @@ public:
         return addr;
     }
 
-    ClosureComponent * closure_component_allot(int id, size_t prim_size) {
-        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
+    ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs) {
+        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
+                                                 + sizeof(ClosureComponent::Attr) * nattrs;
         ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed);
         comp->type = ClosureColor::COMPONENT;
         comp->id = id;
         comp->size = prim_size;
+        comp->nattrs = nattrs;
         return comp;
     }
 
@@ -929,6 +929,7 @@ public:
         add->closureB = b;
         return add;
     }
+
 
     /// Find the named symbol in the (already-executed!) stack of
     /// ShadingExecution's of the given use, with priority given to

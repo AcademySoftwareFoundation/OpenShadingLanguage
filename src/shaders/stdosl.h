@@ -309,7 +309,7 @@ string concat (string a, string b, string c, string d, string e, string f) {
 closure color diffuse(normal N) BUILTIN;
 closure color translucent(normal N) BUILTIN;
 closure color reflection(normal N, float eta) BUILTIN;
-closure color reflection(normal N) BUILTIN;
+closure color reflection(normal N) { return reflection (N, 0.0); }
 closure color refraction(normal N, float eta) BUILTIN;
 closure color dielectric(normal N, float eta) BUILTIN;
 closure color transparent() BUILTIN;

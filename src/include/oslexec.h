@@ -189,8 +189,7 @@ public:
     virtual std::string getstats (int level=1) const = 0;
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare,
-                                  int labels_offset, int max_labels) = 0;
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
 
     static void register_builtin_closures(ShadingSystem *ss);
 

@@ -88,6 +88,7 @@ public:
 
 
 ClosureParam bsdf_transparent_params[] = {
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(TransparentClosure) };
 
 CLOSURE_PREPARE(bsdf_transparent_prepare, TransparentClosure)

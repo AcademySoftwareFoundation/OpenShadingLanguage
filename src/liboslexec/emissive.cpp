@@ -50,60 +50,22 @@ namespace pvt {
 ///
 class GenericEmissiveClosure : public EmissiveClosure {
 public:
-    // Two params, angles both
-    // first is the outer_angle where penumbra starts
-    float m_inner_angle; // must be between 0 and outer_angle
-    // and second the angle where light ends
-    float m_outer_angle;
     GenericEmissiveClosure() { }
 
-    void setup()
-    {
-        if (m_inner_angle <= 0.0f)
-            m_inner_angle = float(M_PI) * 0.5f;
-        if (m_outer_angle < m_inner_angle)
-            m_outer_angle = m_inner_angle;
-    }
-
-    bool mergeable (const ClosurePrimitive *other) const {
-        const GenericEmissiveClosure *comp = (const GenericEmissiveClosure *)other;
-        return m_inner_angle == comp->m_inner_angle &&
-            m_outer_angle == comp->m_outer_angle && 
-            EmissiveClosure::mergeable(other);
-    }
+    void setup() { }
 
     size_t memsize () const { return sizeof(*this); }
 
     const char *name () const { return "emission"; }
 
     void print_on (std::ostream &out) const {
-        out << name() << " (" << m_inner_angle << ", " << m_outer_angle << ")";
+        out << name() << "()";
     }
 
     Color3 eval (const Vec3 &Ng, const Vec3 &omega_out) const
     {
-        float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
-        float inner_angle = m_inner_angle < outer_angle ? m_inner_angle : outer_angle;
         float cosNO = fabsf(Ng.dot(omega_out));
-        float cosU  = cosf(inner_angle);
-        float cosA  = cosf(outer_angle);
-        float res;
-        // Normalization factor
-        float totalemit = ((1.0f - cosU*cosU) +
-                           // The second term of this sum is just an
-                           // approximation. The actual integral is of
-                           // the "smooth step" we are using later is
-                           // way more complicated. this will work as
-                           // long as the penumbra is not too big
-                           (cosU*cosU - cosA*cosA)*0.5f) * float(M_PI);
-        if (cosNO > cosU) // Total light
-            res = 1.0f / totalemit;
-        else if (cosNO > cosA) { // penumbra, apply smooth step
-            float x = 1.0f - (outer_angle - acosf(cosNO)) / (outer_angle - inner_angle);
-            //res = (1.0 - 2*x*x + x*x*x*x) / totalemit;
-            res = (1.0f - x*x*(3-2*x)) / totalemit;
-        }
-        else res = 0.0f; // out of cone
+        float res = cosNO > 0 ? 1.0f / float(M_PI) : 0.0f;
         return Color3(res, res, res);
     }
 
@@ -114,17 +76,13 @@ public:
         // We just sample the whole cone uniformly to the cosine
         Vec3 T, B;
         make_orthonormals(Ng, T, B);
-        float outer_angle = m_outer_angle < M_PI*0.5 ? m_outer_angle : M_PI*0.5;
-        if (outer_angle < 0.0f)
-            outer_angle = 0.0f;
-        float cosA  = cosf(outer_angle);
         float phi = 2 * (float) M_PI * randu;
-        float cosTheta = sqrtf(1.0f - (1.0f - cosA*cosA) * randv);
+        float cosTheta = sqrtf(1.0f - 1.0f * randv);
         float sinTheta = sqrtf(1.0f - cosTheta * cosTheta);
         omega_out = (cosf(phi) * sinTheta) * T +
                     (sinf(phi) * sinTheta) * B +
                                  cosTheta  * Ng;
-        pdf = 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
+        pdf = 1.0f / float(M_PI);
     }
 
     /// Return the probability distribution function in the direction omega_out,
@@ -133,23 +91,15 @@ public:
     float pdf (const Vec3 &Ng,
                const Vec3 &omega_out) const
     {
-        float outer_angle = m_outer_angle < float(M_PI*0.5) ? m_outer_angle : float(M_PI*0.5);
-        if (outer_angle < 0.0f)
-            outer_angle = 0.0f;
         float cosNO = Ng.dot(omega_out);
-        float cosA  = cosf(outer_angle);
-        if (cosNO < cosA)
-            return 0.0f;
-        else
-            return 1.0f / ((1.0f - cosA*cosA) * float(M_PI));
+        return cosNO > 0 ? 1.0f / float(M_PI) : 0.0f;
     }
 };
 
 
 
 ClosureParam closure_emission_params[] = {
-    CLOSURE_FLOAT_PARAM (GenericEmissiveClosure, m_inner_angle, true),
-    CLOSURE_FLOAT_PARAM (GenericEmissiveClosure, m_outer_angle, true),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(GenericEmissiveClosure) };
 
 CLOSURE_PREPARE(closure_emission_prepare, GenericEmissiveClosure)

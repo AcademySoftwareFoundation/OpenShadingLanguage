@@ -348,6 +348,10 @@ public:
     /// and return the new value.
     llvm::Value *llvm_int_to_float (llvm::Value *ival);
 
+    /// This will return an array(sometype) of the same size as the union
+    /// of the given types according to the C standard
+    const llvm::Type *llvm_type_union(const std::vector<const llvm::Type *> &types);
+
     /// Return the LLVM type handle for the SingleShaderGlobals struct.
     ///
     const llvm::Type *llvm_type_sg ();
@@ -362,6 +366,8 @@ public:
 
     const llvm::Type *llvm_type_closure_component ();
     const llvm::Type *llvm_type_closure_component_ptr ();
+    const llvm::Type *llvm_type_closure_component_attr ();
+    const llvm::Type *llvm_type_closure_component_attr_ptr ();
 
     /// Return the SingleShaderGlobals pointer cast as a void*.
     ///
@@ -589,6 +595,7 @@ private:
     const llvm::Type *m_llvm_type_sg;  // LLVM type of SingleShaderGlobal struct
     const llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
     const llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
+    const llvm::Type *m_llvm_type_closure_component_attr; // LLVM type for ClosureMeta::Attr
     const llvm::PointerType *m_llvm_type_prepare_closure_func;
     const llvm::PointerType *m_llvm_type_setup_closure_func;
     llvm::PassManager *m_llvm_passes;

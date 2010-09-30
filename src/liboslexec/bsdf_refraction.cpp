@@ -188,13 +188,15 @@ public:
 
 
 ClosureParam bsdf_refraction_params[] = {
-    CLOSURE_VECTOR_PARAM(RefractionClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM (RefractionClosure, m_eta, false),
+    CLOSURE_VECTOR_PARAM(RefractionClosure, m_N),
+    CLOSURE_FLOAT_PARAM (RefractionClosure, m_eta),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(RefractionClosure) };
 
 ClosureParam bsdf_dielectric_params[] = {
-    CLOSURE_VECTOR_PARAM(DielectricClosure, m_N, false),
-    CLOSURE_FLOAT_PARAM (DielectricClosure, m_eta, false),
+    CLOSURE_VECTOR_PARAM(DielectricClosure, m_N),
+    CLOSURE_FLOAT_PARAM (DielectricClosure, m_eta),
+    CLOSURE_STRING_KEYPARAM("label"),
     CLOSURE_FINISH_PARAM(DielectricClosure) };
 
 CLOSURE_PREPARE(bsdf_refraction_prepare, RefractionClosure)

@@ -199,9 +199,7 @@ void ShadingSystem::register_builtin_closures(ShadingSystem *ss)
         for (j = 0; clinfo->params[j].type != TypeDesc(); ++j);
         int size = clinfo->params[j].offset;
         ASSERT(clinfo->id == cid);
-        ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare,
-                              reckless_offsetof(ClosurePrimitive, m_custom_labels),
-                              ClosurePrimitive::MAXCUSTOM);
+        ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare);
     }
 }
 

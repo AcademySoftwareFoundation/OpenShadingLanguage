@@ -748,7 +748,7 @@ void fetch_value_array (T v[N], int argidx, int idx, ShadingExecution *exec, int
 }
 
 bool write_closure_param(const TypeDesc &typedesc, void *data, int offset, int argidx, int idx,
-                         ShadingExecution *exec, int nargs, const int *args);
+                         ShadingExecution *exec, const int *args);
 
 #define CLOSURE_PREPARE(name, classname)    \
 void name(RendererServices *, int id, void *data) \

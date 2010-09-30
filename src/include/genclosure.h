@@ -40,34 +40,46 @@ namespace OSL {
 
 
 struct ClosureParam {
-    TypeDesc type;
-    int      offset;
-    bool     optional;
+    TypeDesc    type;
+    int         offset;
+    const char *key;
 };
 
 #define reckless_offsetof(st, fld) (((char *)&(((st *)1)->fld)) - (char *)1)
 
-#define CLOSURE_INT_PARAM(st, fld, opt) \
-    { TypeDesc::TypeInt, reckless_offsetof(st, fld), opt }
-#define CLOSURE_FLOAT_PARAM(st, fld, opt) \
-    { TypeDesc::TypeFloat, reckless_offsetof(st, fld), opt }
-#define CLOSURE_COLOR_PARAM(st, fld, opt) \
-    { TypeDesc::TypeColor, reckless_offsetof(st, fld), opt }
-#define CLOSURE_VECTOR_PARAM(st, fld, opt) \
-    { TypeDesc::TypeVector, reckless_offsetof(st, fld), opt }
-#define CLOSURE_STRING_PARAM(st, fld, opt) \
-    { TypeDesc::TypeString, reckless_offsetof(st, fld), opt }
+#define CLOSURE_INT_PARAM(st, fld) \
+    { TypeDesc::TypeInt, reckless_offsetof(st, fld), NULL }
+#define CLOSURE_FLOAT_PARAM(st, fld) \
+    { TypeDesc::TypeFloat, reckless_offsetof(st, fld), NULL }
+#define CLOSURE_COLOR_PARAM(st, fld) \
+    { TypeDesc::TypeColor, reckless_offsetof(st, fld), NULL }
+#define CLOSURE_VECTOR_PARAM(st, fld) \
+    { TypeDesc::TypeVector, reckless_offsetof(st, fld), NULL }
+#define CLOSURE_STRING_PARAM(st, fld) \
+    { TypeDesc::TypeString, reckless_offsetof(st, fld), NULL }
 
-#define CLOSURE_INT_ARRAY_PARAM(st, fld, n, opt) \
-    { TypeDesc(TypeDesc::INT,   TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
-#define CLOSURE_VECTOR_ARRAY_PARAM(st,fld,n, opt) \
-    { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::VECTOR,  n),reckless_offsetof(st, fld), opt }
-#define CLOSURE_COLOR_ARRAY_PARAM(st,fld,n, opt) \
-    { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::COLOR,   n),reckless_offsetof(st, fld), opt }
-#define CLOSURE_FLOAT_ARRAY_PARAM(st,fld,n, opt) \
-    { TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
-#define CLOSURE_STRING_ARRAY_PARAM(st,fld,n, opt) \
-    { TypeDesc(TypeDesc::STRING, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), opt }
+#define CLOSURE_INT_ARRAY_PARAM(st, fld, n) \
+    { TypeDesc(TypeDesc::INT,   TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), NULL }
+#define CLOSURE_VECTOR_ARRAY_PARAM(st,fld,n) \
+    { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::VECTOR,  n),reckless_offsetof(st, fld), NULL }
+#define CLOSURE_COLOR_ARRAY_PARAM(st,fld,n) \
+    { TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3,   TypeDesc::COLOR,   n),reckless_offsetof(st, fld), NULL }
+#define CLOSURE_FLOAT_ARRAY_PARAM(st,fld,n) \
+    { TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), NULL }
+#define CLOSURE_STRING_ARRAY_PARAM(st,fld,n) \
+    { TypeDesc(TypeDesc::STRING, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), NULL }
+
+// NOTE: this keyword args have to be always at the end of the list
+#define CLOSURE_INT_KEYPARAM(key) \
+    { TypeDesc::TypeInt, 0, key }
+#define CLOSURE_FLOAT_KEYPARAM(key) \
+    { TypeDesc::TypeFloat, 0, key }
+#define CLOSURE_COLOR_KEYPARAM(key) \
+    { TypeDesc::TypeColor, 0, key }
+#define CLOSURE_VECTOR_KEYPARAM(key) \
+    { TypeDesc::TypeVector, 0, key }
+#define CLOSURE_STRING_KEYPARAM(key) \
+    { TypeDesc::TypeString, 0, key }
 
 #define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), false }
 

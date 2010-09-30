@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslconfig.h"
 #include "oslclosure.h"
+#include "genclosure.h"
 #include "oslexec_pvt.h"
 #include "oslops.h"
 
@@ -98,49 +99,6 @@ ClosureColor::flatten (ClosureColor *closure, const Color3 &w, ShadingSystemImpl
 }
 */
 
-void
-print_primitive (std::ostream &out, const ClosurePrimitive *cprim, const Color3 &weight)
-{
-    out << "(" << weight[0] << ", " << weight[1] << ", " << weight[2] << ") * ";
-    out << *cprim;
-}
-
-void
-print_closure (std::ostream &out, const ClosureColor *closure, const Color3 &w, bool &first)
-{
-    ClosureComponent *comp;
-    if (closure == NULL)
-        return;
-
-    switch (closure->type) {
-        case ClosureColor::MUL:
-            print_closure(out, ((ClosureMul *)closure)->closure, ((ClosureMul *)closure)->weight * w, first);
-            break;
-        case ClosureColor::ADD:
-            print_closure(out, ((ClosureAdd *)closure)->closureA, w, first);
-            print_closure(out, ((ClosureAdd *)closure)->closureB, w, first);
-            break;
-        case ClosureColor::COMPONENT:
-            comp = (ClosureComponent *)closure;
-            if (comp->id < NBUILTIN_CLOSURES)
-            {
-                const ClosurePrimitive *cprim = (const ClosurePrimitive *)comp->mem;
-                if (!first)
-                    out << "\n\t+ ";
-                print_primitive (out, cprim, w);
-                first = false;
-            }
-            break;
-    }
-}
-
-std::ostream &
-operator<< (std::ostream &out, const ClosureColor &closure)
-{
-    bool first = true;
-    print_closure(out, &closure, Color3(1, 1, 1), first);
-    return out;
-}
 
 
 
@@ -158,34 +116,128 @@ const ustring Labels::SINGULAR   = ustring("S");
 const ustring Labels::STRAIGHT   = ustring("s");
 const ustring Labels::STOP       = ustring("__stop__");
 
+
+
 namespace pvt {
 
+
+
+static void
+print_component_value(std::ostream &out, TypeDesc type, const void *data)
+{
+    if (type == TypeDesc::TypeInt)
+        out << *(int *)data;
+    else if (type == TypeDesc::TypeFloat)
+        out << *(float *)data;
+    else if (type == TypeDesc::TypeColor)
+        out << "(" << ((Color3 *)data)->x << ", " << ((Color3 *)data)->y << ", " << ((Color3 *)data)->z << ")";
+    else if (type == TypeDesc::TypeVector)
+        out << "(" << ((Vec3 *)data)->x << ", " << ((Vec3 *)data)->y << ", " << ((Vec3 *)data)->z << ")";
+    else if (type == TypeDesc::TypeString)
+        out << "\"" << ((ustring *)data)->c_str() << "\"";
+}
+
+
+
+static void
+print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemImpl *ss, const Color3 &weight)
+{
+    out << "(" << weight[0] << ", " << weight[1] << ", " << weight[2] << ") * ";
+    const ClosureRegistry::ClosureEntry *clentry = ss->find_closure(comp->id);
+    ASSERT(clentry);
+    out << clentry->name.c_str() << " (";
+    int i;
+    for (i = 0; i < clentry->nformal; ++i) {
+        if (i) out << ", ";
+        if (clentry->params[i].type.numelements() > 1) out << "[";
+        for (size_t j = 0; j < clentry->params[i].type.numelements(); ++j) {
+            if (j) out << ", ";
+            print_component_value(out, clentry->params[i].type.elementtype(),
+                                  (const char *)comp->data() + clentry->params[i].offset
+                                                             + clentry->params[i].type.elementsize() * j);
+        }
+        if (clentry->params[i].type.numelements() > 1) out << "]";
+    }
+    if (comp->nattrs) {
+        const ClosureComponent::Attr * attrs = comp->attrs();
+        for (int j = 0; j < comp->nattrs; ++j) {
+            if (i || j) out << ", ";
+            // find the type
+            TypeDesc td;
+            for (int p = 0; p < clentry->nkeyword; ++p)
+                if (!strcmp(clentry->params[clentry->nformal + p].key, attrs[j].key.c_str()))
+                    td = clentry->params[clentry->nformal + p].type;
+            if (td != TypeDesc()) {
+                out << "\"" << attrs[j].key.c_str() << "\", ";
+                print_component_value(out, td, &attrs[j].value);
+            }
+        }
+    }
+    out << ")";
+}
+
+
+
+static void
+print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss, const Color3 &w, bool &first)
+{
+    ClosureComponent *comp;
+    if (closure == NULL)
+        return;
+
+    switch (closure->type) {
+        case ClosureColor::MUL:
+            print_closure(out, ((ClosureMul *)closure)->closure, ss, ((ClosureMul *)closure)->weight * w, first);
+            break;
+        case ClosureColor::ADD:
+            print_closure(out, ((ClosureAdd *)closure)->closureA, ss, w, first);
+            print_closure(out, ((ClosureAdd *)closure)->closureB, ss, w, first);
+            break;
+        case ClosureColor::COMPONENT:
+            comp = (ClosureComponent *)closure;
+            if (!first)
+                out << "\n\t+ ";
+            print_component (out, comp, ss, w);
+            first = false;
+            break;
+    }
+}
+
+
+
 bool write_closure_param(const TypeDesc &typedesc, void *data, int offset, int argidx, int idx,
-                         ShadingExecution *exec, int nargs, const int *args)
+                         pvt::ShadingExecution *exec, const int *args)
 {
     char *p = (char *)data + offset;
     size_t size = typedesc.size();
-    if (argidx < nargs)
-    {
-        Symbol &sym = exec->sym (args[argidx]);
-        TypeDesc t = sym.typespec().simpletype();
-        // Treat both NORMAL and POINT as VECTOR for closure parameters
-        if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
-            t.vecsemantics = TypeDesc::VECTOR;
-        if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == typedesc)
-        {
-            char *source = (char *)sym.data() + sym.step() * idx;
-            memcpy(p, source, size);
-            return true;
-        }
-        else
-            return false;
-    }
-    else // The compiler had already checked that this arg was optional
+    Symbol &sym = exec->sym (args[argidx]);
+    TypeDesc t = sym.typespec().simpletype();
+    // Treat both NORMAL and POINT as VECTOR for closure parameters
+    if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
+        t.vecsemantics = TypeDesc::VECTOR;
+    if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == typedesc) {
+        char *source = (char *)sym.data() + sym.step() * idx;
+        memcpy(p, source, size);
         return true;
+    }
+    else
+        return false;
 }
 
+
+
 } // namespace pvt
+
+
+
+void
+print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss)
+{
+    bool first = true;
+    print_closure(out, closure, ss, Color3(1, 1, 1), first);
+}
+
+
 
 }; // namespace OSL
 #ifdef OSL_NAMESPACE

@@ -117,28 +117,28 @@ cmakesetup:
 
 # 'make cmake' does a basic build (after first setting it up)
 cmake: cmakesetup
-	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} )
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} )
 
 # 'make cmakeinstall' builds everthing and installs it in 'dist'
 cmakeinstall: cmake
-	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} install )
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install )
 
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
 
 # 'make test' does a full build and then runs all tests
 test: cmakeinstall
-	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} test )
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} test )
 
 # 'make package' builds everything and then makes an installable package 
 # (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
 package: cmakeinstall
-	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} package )
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package )
 
 # 'make package_source' makes an installable source package 
 # (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
 package_source: cmakeinstall
-	( cd ${build_dir} ; make ${MY_MAKE_FLAGS} package_source )
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package_source )
 
 #clean: testclean
 # 'make clean' clears out the build directory for this platform

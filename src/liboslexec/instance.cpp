@@ -51,8 +51,7 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
     : m_master(master), m_instsymbols(m_master->m_symbols),
       m_instops(m_master->m_ops), m_instargs(m_master->m_args),
-      m_layername(layername), m_heapsize(-1 /*uninitialized*/),
-      m_heapround(0), m_heap_size_calculated(false),
+      m_layername(layername),
       m_writes_globals(false), m_run_lazily(false),
       m_outgoing_connections(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
@@ -150,149 +149,6 @@ ShaderInstance::parameters (const ParamValueList &params)
 }
 
 
-
-void
-ShaderInstance::calc_heap_size ()
-{
-    // Because heap size may not be computed until mid-bind, we must
-    // protect against multiple threads computing it on an Instance
-    // simultaneously.
-    static spin_mutex heap_size_mutex;
-    spin_lock lock (heap_size_mutex);
-
-    if (m_heap_size_calculated)
-        return;   // Another thread did it before we got the lock
-
-#if 0
-    if (shadingsys().debug())
-        shadingsys().info ("calc_heapsize on %s", m_master->shadername().c_str());
-#endif
-    m_heapsize = 0;
-    m_heapround = 0;
-    m_writes_globals = false;
-    int totalsyms = 0;
-    int derivsyms = 0;
-    BOOST_FOREACH (/*const*/ Symbol &s, m_instsymbols) {
-        ++totalsyms;
-        if (s.has_derivs())
-            ++derivsyms;
-
-        // Skip if the symbol is a type that doesn't need heap space
-        if (s.symtype() == SymTypeConst /* || s.symtype() == SymTypeGlobal */)
-            continue;
-
-        if (s.symtype() == SymTypeGlobal)
-            m_writes_globals |= s.everwritten ();
-
-#if 0
-        // assume globals have derivs
-        if (s.symtype() == SymTypeGlobal) {
-            s.has_derivs (true);
-        }
-
-        // FIXME -- test code by assuming all locals, temps, and params
-        // carry derivs
-        if ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
-             s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
-                !s.typespec().is_closure() &&
-                s.typespec().elementtype().is_floatbased())
-            s.has_derivs (true);
-#endif
-
-        size_t size = s.size ();
-        if (s.has_derivs())
-            size *= 3;
-
-        int pad = (int) shadingsys().align_padding (size);
-        if (pad)
-            m_heapround += pad;
-        m_heapsize += size + pad;
-
-#if 0
-        if (shadingsys().debug())
-            shadingsys().info (" sym %s given %llu bytes on heap (including %llu padding)",
-                               s.mangled().c_str(),
-                               (unsigned long long)size,
-                               (unsigned long long)pad);
-#endif
-    }
-    if (shadingsys().debug()) {
-        shadingsys().info (" Heap needed %llu bytes",
-                           (unsigned long long)m_heapsize);
-        shadingsys().info (" Padding for alignment = %d", m_heapround);
-        shadingsys().info (" Writes globals: %d", m_writes_globals);
-    }
-    shadingsys().m_stat_total_syms += totalsyms;
-    shadingsys().m_stat_syms_with_derivs += derivsyms;
-
-    m_heap_size_calculated = true;
-}
-
-
-
-size_t
-ShaderInstance::heapsize ()
-{
-    if (! heap_size_calculated ())
-        calc_heap_size ();
-    return (size_t) m_heapsize;
-}
-
-
-
-size_t
-ShaderInstance::heapround ()
-{
-    if (! heap_size_calculated ())
-        calc_heap_size ();
-    return (size_t) m_heapround;
-}
-
-}; // namespace pvt
-
-
-void
-ShadingAttribState::calc_heap_size ()
-{
-    // Because heap size may not be computed until mid-bind, we must
-    // protect against multiple threads computing it on a
-    // ShadingAttribState simultaneously.
-    static spin_mutex heap_size_mutex;
-    spin_lock lock (heap_size_mutex);
-
-    if (m_heap_size_calculated)
-        return;   // Another thread did it before we got the lock
-
-    m_heapsize = 0;
-    m_heapround = 0;
-    for (int i = 0;  i < (int)OSL::pvt::ShadUseLast;  ++i) {
-        for (int lay = 0;  lay < m_shaders[i].nlayers();  ++lay) {
-            m_heapsize += m_shaders[i][lay]->heapsize ();
-            m_heapround += m_shaders[i][lay]->heapround ();
-        }
-    }
-    
-    m_heap_size_calculated = true;
-}
-
-
-
-size_t
-ShadingAttribState::heapsize ()
-{
-    if (! heap_size_calculated ())
-        calc_heap_size ();
-    return (size_t) m_heapsize;
-}
-
-
-size_t
-ShadingAttribState::heapround ()
-{
-    if (! heap_size_calculated ())
-        calc_heap_size ();
-    return (size_t) m_heapround;
-}
 
 void
 ShaderInstance::make_symbol_room (size_t moresyms)
@@ -439,9 +295,8 @@ ShaderGroup::~ShaderGroup ()
 }
 
 
-
+}; // namespace pvt
 }; // namespace OSL
-
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE
 #endif

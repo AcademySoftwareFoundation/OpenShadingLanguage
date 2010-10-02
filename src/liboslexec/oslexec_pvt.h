@@ -74,12 +74,6 @@ class ShadingExecution;
 class ShaderInstance;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 
-// If we define DEBUG_ADJUST_VARYING, we will get extra statistics on
-// the workings of ShadingExecution::adjust_varying.  These are
-// generally not worth the extra expense, only for debugging purposes.
-// #define DEBUG_ADJUST_VARYING
-
-
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
@@ -178,10 +172,6 @@ public:
     /// data pointers if they are constants or params (to the defaults).
     /// As a side effect, also set this->m_firstparam/m_lastparam.
     void resolve_syms ();
-
-    /// Run through the code, find an implementation for each op, do
-    /// other housekeeping related to the code.
-    void resolve_ops ();
 
     /// Find the named symbol, return its index in the symbol array, or
     /// -1 if not found.
@@ -284,11 +274,6 @@ public:
     /// 
     void parameters (const ParamValueList &params);
 
-    /// How much heap space this instance needs per point being shaded?
-    /// As a side effect, set the dataoffset for each symbol (as if there
-    /// was just one point being shaded).
-    size_t heapsize ();
-
     /// Find the named symbol, return its index in the symbol array, or
     /// -1 if not found.
     int findsymbol (ustring name) const;
@@ -390,9 +375,6 @@ public:
     bool unused () const { return run_lazily() && ! outgoing_connections(); }
 
 private:
-    bool heap_size_calculated () const { return m_heap_size_calculated; }
-    void calc_heap_size ();
-
     ShaderMaster::ref m_master;         ///< Reference to the master
     SymbolVec m_instsymbols;            ///< Symbols used by the instance
     OpcodeVec m_instops;                ///< Actual code instructions
@@ -401,10 +383,7 @@ private:
     std::vector<int> m_iparams;         ///< int param values
     std::vector<float> m_fparams;       ///< float param values
     std::vector<ustring> m_sparams;     ///< string param values
-    int m_heapsize;                     ///< Heap space needed per point
-    int m_heapround;                    ///< Heap padding for odd npoints
     int m_id;                           ///< Unique ID for the instance
-    bool m_heap_size_calculated;        ///< Has the heap size been computed?
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
@@ -615,27 +594,11 @@ public:
     ///
     TextureSystem *texturesys () const { return m_texturesys; }
 
-    /// Round up to an 8-byte boundary. 
-    /// FIXME -- do we want to round up to 16-byte boundaries for 
-    /// hardware SIMD reasons?
-    size_t align_padding (size_t x, size_t alignment = 8) {
-        size_t excess = (x & (alignment-1));
-        return excess ? (alignment - excess) : 0;
-    }
-
-    /// Round up to an 8-byte boundary. 
-    /// FIXME -- do we want to round up to 16-byte boundaries for 
-    /// hardware SIMD reasons?
-    size_t align (size_t x, size_t alignment = 8) {
-        return x + align_padding (x, alignment);
-    }
-
     bool allow_rebind () const { return m_rebind; }
 
     bool debug_nan () const { return m_debugnan; }
     bool lockgeom_default () const { return m_lockgeom_default; }
     int optimize () const { return m_optimize; }
-    int use_llvm () const { return m_use_llvm; }
     int llvm_debug () const { return m_llvm_debug; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
@@ -727,7 +690,6 @@ private:
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     int m_optimize;                       ///< Runtime optimization level
-    int m_use_llvm;                       ///< Use LLVM to compile
     int m_llvm_debug;                     ///< More LLVM debugging output
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
@@ -769,13 +731,6 @@ private:
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
     double m_stat_llvm_jit_time;          ///<     llvm JIT time
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
-#ifdef DEBUG_ADJUST_VARYING
-    atomic_ll m_adjust_calls;             ///< Calls to adjust_varying
-    atomic_ll m_keep_varying;             ///< Adjust_varying kept it varying
-    atomic_ll m_keep_uniform;             ///< Adjust_varying kept it uniform
-    atomic_ll m_make_varying;             ///< Adjust_varying made it varying
-    atomic_ll m_make_uniform;             ///< Adjust_varying made it uniform
-#endif
     ClosureRegistry m_closure_registry;
 
     // LLVM stuff
@@ -869,32 +824,6 @@ public:
     ///
     int npoints () const { return m_npoints; }
 
-    /// Return the address of a particular offset into the heap.
-    ///
-    void *heapaddr (size_t offset) { return &m_heap[offset]; }
-
-    /// Allot 'size' bytes in the heap for this context, return its starting
-    /// offset into the heap.
-    size_t heap_allot (size_t size) {
-        size_t cur = m_heap_allotted;
-        m_heap_allotted += shadingsys().align (size);
-        DASSERT (m_heap_allotted <= m_heap.size());
-        return cur;
-    }
-
-    /// Allot whatever 'sym' needs on the heap and set up its offsets
-    /// and adresses.  If 'varying' is true, set the symbol up to be
-    /// initially varying.  Return the address in the heap where the
-    /// memory for this symbol starts.
-    void * heap_allot (Symbol &sym, bool varying = false) {
-        size_t cur = heap_allot (sym.derivsize() * m_npoints);
-        sym.dataoffset (cur);
-        void *addr = heapaddr (cur);
-        sym.data (addr);
-        sym.step (varying ? sym.derivsize() : 0);
-        return addr;
-    }
-
     ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs) {
         size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
                                                  + sizeof(ClosureComponent::Attr) * nattrs;
@@ -975,56 +904,18 @@ private:
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<char> m_heap;           ///< Heap memory
-    size_t m_heap_allotted;             ///< Heap memory allotted
     size_t m_closures_allotted;         ///< Closure memory allotted
     ExecutionLayers m_exec;             ///< Execution layers for the group
     int m_npoints;                      ///< Number of points being shaded
     int m_curuse;                       ///< Current use that we're running
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
     ParamValueList m_messages;          ///< Message blackboard
-    int m_lazy_evals;                   ///< Running tab of lazy evals
-    int m_binds;                        ///< Running tab of binds
-    int m_rebinds;                      ///< Running tab of rebinds
-    int m_paramstobind;                 ///< Total params in bound shaders
-    int m_paramsbound;                  ///< Params we actually bound
-    int m_instructions_run;             ///< Number of instructions run
-    Runflag *m_original_runflags;       ///< Runflags we were called with
-    RunIndex *m_original_indices;       ///< Indices we were called with
-    int m_original_nindices;            ///< Number of original indices
 
     SimplePool<20 * 1024> m_closure_pool;
 
     friend class ShadingExecution;
 };
 
-
-
-// A word about runflags and the runflag stack: the head of the
-// stack contains a copy of the CURRENT run state.  This is so that
-// certain operations can affect the whole set of runstates by
-// simply iterating over the stack entries, without treating the
-// current run state as a special case.
-struct Runstate {
-    Runflag *runflags;  ///< Pointer to current runflags
-    int beginpoint;     ///< Index of first 'on' point
-    int endpoint;       ///< Index of one beyond last 'on' point
-//    bool allpointson;   ///< Are all points [0..npoints) on?
-    RunIndex *indices;  ///< Index list
-    int nindices;       ///< Length of index list
-
-    Runstate () : runflags(NULL), indices(NULL), nindices(0) { }
-    Runstate (Runflag *rf, int bp, int ep, /*bool all,*/ RunIndex *ind, int nind) {
-        init (rf, bp, ep, /*all,*/ ind, nind);
-    }
-    void init (Runflag *rf, int bp, int ep, /*bool all,*/ RunIndex *ind, int nind) {
-        runflags = rf;
-        beginpoint = bp;
-        endpoint = ep;
-//        allpointson = all;
-        indices = ind;
-        nindices = nind;
-    }
-};
 
 
 
@@ -1035,10 +926,6 @@ public:
     ShadingExecution ();
     ~ShadingExecution ();
 
-    /// Bind an arena to prepare to run the shader.
-    ///
-    void bind (ShaderInstance *instance);
-
     /// Initialize a ShadingExecution to know what context, use, and layer
     /// it's part of.
     void init (ShadingContext *context, ShaderUse use, int layer) {
@@ -1046,28 +933,6 @@ public:
         m_layer = layer;
         m_context = context;
     }
-
-    /// Prepare to execute by marking the exec as not yet bound or run.
-    ///
-    void prebind () {
-        m_bound = false;
-        m_executed = false;
-    }
-
-    /// Bind the value for a particular parameter.
-    ///
-    void bind_initialize_param (Symbol &sym, int symindex);
-
-    /// Execute the shader with the supplied runflags.  If rf==NULL, new
-    /// runflags will be set up to run all points. If beginop and endop
-    /// are >= 0 they denote an op range, but if they remain at the
-    /// defaults <0, the "main" code section will be run.
-    void run (Runflag *rf=NULL, int *ind=NULL, int nind=0,
-              int beginop = -1, int endop = -1);
-
-    /// Execute the shader with the current runflags, over the range of
-    /// ops denoted by [beginop, endop).
-    void run (int beginop, int endop);
 
     /// Get a reference to the symbol with the given index.
     /// Beware -- it had better be a valid index!
@@ -1083,114 +948,9 @@ public:
         return index >= 0 ? &m_symbols[index]: NULL;
     }
 
-    /// Return the current instruction pointer index.
-    ///
-    int ip () const { return m_ip; }
-
-    /// Set the instruction pointer index -- JUMP!
-    ///
-    void ip (int target) { DASSERT(target >= 0);  m_ip = target; }
-
-    /// Return a reference to the current op (pointed to by the instruction
-    /// pointer).
-    Opcode & op () const { return m_instance->ops()[m_ip]; }
-
-    /// Adjust whether sym is uniform or varying, depending on what is
-    /// about to be assigned to it.  In cases when sym is promoted from
-    /// uniform to varying, 'preserve_value' determines if the old value
-    /// should be preserved (and replicated to fill the new varying
-    /// space) even if all shading points are turned on; it defaults to
-    /// true (safe) but some shadeops may know that this isn't necessary
-    /// and save the work. (If only a subset of points are enabled,
-    /// e.g., in a conditional, the values will be preserved for 'off'
-    /// points even if preserve_value is false.)  The value must be
-    /// preserved if there's a chance that any symbols being written to
-    /// are also symbols being read from in the same op.
-    inline void adjust_varying (Symbol &sym, bool varying_assignment,
-                                bool preserve_value = true) {
-        varying_assignment |= diverged();
-#ifdef DEBUG_ADJUST_VARYING
-        ++m_adjust_calls;
-        if (sym.is_varying() == varying_assignment) {
-            if (varying_assignment)
-                ++m_keep_varying;
-            else
-                ++m_keep_uniform;
-        } else {
-            if (varying_assignment)
-                ++m_make_varying;
-            else
-                ++m_make_uniform;
-        }
-#endif
-        if (sym.is_varying() != varying_assignment) {
-            if (varying_assignment)
-                adjust_varying_makevarying (sym, preserve_value);
-            else {
-                if (sym.symtype() != SymTypeGlobal) { // DO NOT demote a global
-                    sym.step (0);
-                    if (sym.has_derivs()) {
-                        size_t deriv_step = sym.deriv_step();
-                        memset ((char *)sym.data()+deriv_step, 0, 2*deriv_step);
-                    }
-                }
-            }
-        }
-    }        
-
-    void adjust_varying_makevarying (Symbol &sym, bool preserve_value);
-    void adjust_varying_full (Symbol &sym, bool varying_assignment,
-                                 bool preserve_value = true);
-
-    /// Set the value of sym (and its derivs, if it has them) to zero
-    /// for all shading points that are turned on.
-    void zero (Symbol &sym);
-
-    /// Zero out the derivatives of sym for all shading points that are
-    /// turned on.
-    void zero_derivs (Symbol &sym);
-
     /// How many points are being shaded?
     ///
     int npoints () const { return m_npoints; }
-
-    /// Are all shading points currently turned on for execution?
-    ///
-//    bool all_points_on () const { return m_runstate.allpointson; }
-
-    /// Has the run state diverged since the shader started running,
-    /// that is, are any of the original points turned off?
-    bool diverged () const { return (m_conditional_level != 0); }
-
-    int beginpoint () const {
-#if USE_RUNFLAGS
-        return m_runstate.beginpoint;
-#else
-        return m_runstate.indices[0];  // works for indices and spans
-#endif
-    }
-
-    int endpoint () const {
-#if USE_RUNFLAGS
-        return m_runstate.endpoint;
-#elif USE_RUNINDICES
-        return m_runstate.indices[m_runstate.nindices-1] + 1;
-#elif USE_RUNSPANS
-        return m_runstate.indices[m_runstate.nindices-1];
-#endif
-    }
-
-    /// Set up a new run state, with the old one safely stored on the
-    /// stack.
-    void push_runstate (Runflag *runflags, int beginpoint, int endpoint,
-                        RunIndex *indices, int nindices);
-
-    /// Restore the runflags to the state it was in before push_runstate().
-    ///
-    void pop_runstate ();
-
-    void enter_conditional () { ++m_conditional_level; }
-    void exit_conditional () { --m_conditional_level; }
 
     bool debug () const { return m_debug; }
 
@@ -1263,10 +1023,6 @@ public:
     void info (const char *message, ...);
     void message (const char *message, ...);
 
-    /// Generic type mismatch error
-    ///
-    void error_arg_types ();
-
     /// Quick link to the global P symbol, or NULL if there is none.
     ///
     Symbol *Psym () { return symptr (m_instance->m_Psym); }
@@ -1302,37 +1058,7 @@ public:
     /// user-data attached
     bool renderer_has_userdata (ustring name, TypeDesc type, void *renderstate);
 
-    /// Has the layer been bound?
-    ///
-    bool bound () const { return m_bound; }
-
-    /// Has this layer already executed?
-    ///
-    bool executed () const { return m_executed; }
-
-    /// Run an earlier layer; called when a connected parameter is needed
-    /// and it's time to lazily execute the earlier layer.
-    void run_connected_layer (int layer);
-
-    /// Access to the internal run state.
-    ///
-    Runstate &runstate () { return m_runstate; }
-
 private:
-
-    /// Helper for bind_initialize_param(): establish a connection to an earlier
-    /// layer.
-    void bind_connection (const Connection &con);
-
-    /// Helper for run: check all the writable arguments of an op to see
-    /// if any NaN or Inf values have snuck in.
-    void check_nan (Opcode &op);
-
-    /// Check for NaN in a symbol.  Return true if there's a nan or inf.
-    /// If there is, put its value in 'badval'.  'badderiv' is true if
-    /// the badness was in the derivative, rather than the actual value
-    /// of the symbol.
-    bool check_nan (Symbol &sym, float &badval, bool &badderiv, int &point);
 
     ShaderUse m_use;              ///< Our shader use
     int m_layer;                  ///< Our layer number
@@ -1343,26 +1069,9 @@ private:
     RendererServices *m_renderer; ///< Ptr to renderer services
     int m_npoints;                ///< How many points are we running?
     int m_npoints_bound;          ///< How many points bound with addresses?
-    bool m_bound;                 ///< Have we been bound?
-    bool m_executed;              ///< Have we been executed?
     bool m_debug;                 ///< Debug mode
     SymbolVec m_symbols;          ///< Our own copy of the syms
     int m_last_instance_id;       ///< ID of last instance bound
-
-    typedef std::vector<Runstate> RunstateStack;
-
-    Runstate m_runstate;          ///< Current run state
-    RunstateStack m_runstate_stack; ///< Stack of run states
-    int m_conditional_level;      ///< Conditional nesting level
-    int m_ip;                     ///< Instruction pointer
-#ifdef DEBUG_ADJUST_VARYING
-    int m_adjust_calls;           ///< Calls to adjust_varying
-    int m_keep_varying;           ///< Adjust_varying kept it varying
-    int m_keep_uniform;           ///< Adjust_varying kept it uniform
-    int m_make_varying;           ///< Adjust_varying made it varying
-    int m_make_uniform;           ///< Adjust_varying made it uniform
-    friend class ShadingContext;
-#endif
 };
 
 
@@ -1376,9 +1085,7 @@ private:
 class ShadingAttribState
 {
 public:
-    ShadingAttribState () : m_heapsize (-1 /*uninitialized*/),
-                            m_heapround (-1),
-                            m_heap_size_calculated (false) { }
+    ShadingAttribState () { }
 
     ~ShadingAttribState () { }
 
@@ -1388,30 +1095,11 @@ public:
         return m_shaders[(int)use];
     }
 
-    /// How much heap space does this group use per point being shaded?
-    ///
-    size_t heapsize ();
-
-    /// How much heap space rounding might this group use?
-    ///
-    size_t heapround ();
-
-    /// Called when the shaders of the attrib state change -- this
-    /// invalidates the heap size computations.
-    void changed_shaders () {
-        m_heapsize = -1;
-        m_heapround = -1;
-        m_heap_size_calculated = false;
-    }
+    /// Called when the shaders of the attrib state change (invalidate LLVM ?)
+    void changed_shaders () { }
 
 private:
-    bool heap_size_calculated () const { return m_heap_size_calculated; }
-    void calc_heap_size ();
-
     OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
-    int m_heapsize;                  ///< Heap space needed per point
-    int m_heapround;                 ///< Heap padding for odd npoints
-    bool m_heap_size_calculated;     ///< Has the heap size been computed?
 };
 
 

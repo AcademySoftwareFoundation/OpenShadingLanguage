@@ -47,6 +47,17 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 
+// names of ops we'll be using frequently
+static ustring u_nop    ("nop"),
+               u_assign ("assign"),
+               u_add    ("add"),
+               u_sub    ("sub"),
+               u_if     ("if"),
+               u_setmessage ("setmessage"),
+               u_getmessage ("getmessage");
+
+
+
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -130,8 +141,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
 void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg)
 {
-    static ustring kassign("assign");
-    op.reset (kassign, OP_assign, 2);
+    op.reset (u_assign, 2);
     inst()->args()[op.firstarg()+1] = newarg;
     op.argwriteonly (0);
     op.argread (1, true);
@@ -176,8 +186,7 @@ RuntimeOptimizer::turn_into_assign_one (Opcode &op)
 void
 RuntimeOptimizer::turn_into_nop (Opcode &op)
 {
-    static ustring knop("nop");
-    op.reset (knop, OP_nop, 0);
+    op.reset (u_nop, 0);
 }
 
 
@@ -222,14 +231,12 @@ fully_writing_op (const Opcode &op)
 /// to the address where the 'main' shader begins, and may be modified
 /// if the new instruction is inserted before that point.
 void
-RuntimeOptimizer::insert_code (int opnum, ustring opname, OpImpl impl,
-                               const std::vector<int> &args_to_add)
+RuntimeOptimizer::insert_code (int opnum, ustring opname, const std::vector<int> &args_to_add)
 {
     OpcodeVec &code (inst()->ops());
     std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
     Opcode op (opname, method, opargs.size(), args_to_add.size());
-    op.implementation (impl);
     code.insert (code.begin()+opnum, op);
     opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
     if (opnum < inst()->m_maincodebegin)
@@ -269,7 +276,7 @@ RuntimeOptimizer::insert_useparam (size_t opnum,
 {
     OpcodeVec &code (inst()->ops());
     static ustring useparam("useparam");
-    insert_code (opnum, useparam, OP_useparam, params_to_use);
+    insert_code (opnum, useparam, params_to_use);
 
     // All ops are "read"
     code[opnum].argwrite (0, false);
@@ -1267,7 +1274,7 @@ DECLFOLDER(constfold_pow)
             *(const float *)Y.data() == 2.0f) {
         // Turn x^2 into x*x, even if x is not constant
         static ustring kmul("mul");
-        op.reset (kmul, OP_mul, 2);
+        op.reset (kmul, 2);
         rop.inst()->args()[op.firstarg()+2] = rop.inst()->args()[op.firstarg()+1];
         return 1;
     }
@@ -1433,8 +1440,7 @@ DECLFOLDER(constfold_gettextureinfo)
                 std::vector<int> args_to_add;
                 args_to_add.push_back (resultarg);
                 args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-                static ustring kassign("assign");
-                rop.insert_code (opnum, kassign, OP_assign, args_to_add);
+                rop.insert_code (opnum, u_assign, args_to_add);
                 Opcode &newop (rop.inst()->ops()[opnum]);
                 newop.argwriteonly (0);
                 newop.argread (1, true);
@@ -1695,7 +1701,7 @@ RuntimeOptimizer::find_basic_blocks (bool do_llvm)
 bool
 RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
 {
-    ASSERT (op.implementation() == OP_assign);
+    ASSERT (op.opname() == u_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
 
@@ -1831,7 +1837,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
 bool
 RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 {
-    ASSERT (op.implementation() == OP_assign);
+    ASSERT (op.opname() == u_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
 
@@ -1944,7 +1950,7 @@ RuntimeOptimizer::next_block_instruction (int opnum)
 {
     int end = (int)inst()->ops().size();
     for (int n = opnum+1; n < end && m_bblockids[n] == m_bblockids[opnum]; ++n)
-        if (inst()->ops()[n].implementation() != OP_nop)
+        if (inst()->ops()[n].opname() != u_nop)
             return n;   // Found it!
     return 0;   // End of ops or end of basic block
 }
@@ -1955,7 +1961,7 @@ int
 RuntimeOptimizer::peephole2 (int opnum)
 {
     Opcode &op (inst()->ops()[opnum]);
-    if (op.implementation() == OP_nop)
+    if (op.opname() == u_nop)
         return 0;   // Wasn't a real instruction to start with
 
     // Find the next instruction
@@ -1971,8 +1977,8 @@ RuntimeOptimizer::peephole2 (int opnum)
     // changed the code around.
 
     // Two assignments in a row to the same variable -- get rid of the first
-    if (op.implementation() == OP_assign &&
-          next.implementation() == OP_assign &&
+    if (op.opname() == u_assign &&
+          next.opname() == u_assign &&
           opargsym(op,0) == opargsym(next,0)) {
         // std::cerr << "double-assign " << opnum << " & " << op2num << ": " 
         //           << opargsym(op,0)->mangled() << "\n";
@@ -1983,8 +1989,8 @@ RuntimeOptimizer::peephole2 (int opnum)
     // Ping-pong assignments can eliminate the second one:
     //     assign a b
     //     assign b a    <-- turn into nop
-    if (op.implementation() == OP_assign &&
-          next.implementation() == OP_assign &&
+    if (op.opname() == u_assign &&
+          next.opname() == u_assign &&
           opargsym(op,0) == opargsym(next,1) &&
           opargsym(op,1) == opargsym(next,0)) {
         // std::cerr << "ping-pong assignment " << opnum << " of " 
@@ -2001,8 +2007,8 @@ RuntimeOptimizer::peephole2 (int opnum)
     //     assign a b
     //     assign c b
     // This may allow a to be eliminated if it's not used elsewhere
-    if (op.implementation() == OP_assign &&
-          next.implementation() == OP_assign &&
+    if (op.opname() == u_assign &&
+          next.opname() == u_assign &&
           opargsym(op,0) == opargsym(next,1) &&
           assignable (opargsym(next,0)->typespec(), opargsym(op,1)->typespec())) {
         turn_into_assign (next, inst()->arg(op.firstarg()+1));
@@ -2013,8 +2019,8 @@ RuntimeOptimizer::peephole2 (int opnum)
     //     add a a b
     //     sub a a b
     // (or vice versa)
-    if (((op.implementation() == OP_add && next.implementation() == OP_sub) ||
-         (op.implementation() == OP_sub && next.implementation() == OP_add)) &&
+    if (((op.opname() == u_add && next.opname() == u_sub) ||
+         (op.opname() == u_sub && next.opname() == u_add)) &&
           opargsym(op,0) == opargsym(next,0) &&
           opargsym(op,1) == opargsym(next,1) &&
           opargsym(op,2) == opargsym(next,2) &&
@@ -2145,11 +2151,11 @@ RuntimeOptimizer::optimize_instance ()
                     block_unalias (inst()->arg(op.firstarg()+i));
 
             // Get rid of an 'if' if it contains no statements to execute
-            if (m_shadingsys.optimize() >= 2 && op.implementation() == OP_if) {
+            if (m_shadingsys.optimize() >= 2 && op.opname() == u_if) {
                 int jump = op.farthest_jump ();
                 bool only_nops = true;
                 for (int i = opnum+1;  i < jump && only_nops;  ++i)
-                    only_nops &= (inst()->ops()[i].implementation() == OP_nop);
+                    only_nops &= (inst()->ops()[i].opname() == u_nop);
                 if (only_nops) {
                     turn_into_nop (op);
                     changed = 1;
@@ -2162,7 +2168,7 @@ RuntimeOptimizer::optimize_instance ()
             // N.B. This is a regular "if", not an "else if", because we
             // definitely want to catch any 'assign' statements that
             // were put in by the constant folding routines above.
-            if (m_shadingsys.optimize() >= 2 && op.implementation() == OP_assign/* &&
+            if (m_shadingsys.optimize() >= 2 && op.opname() == u_assign/* &&
                                                                                    inst()->argsymbol(op.firstarg()+1)->is_constant()*/) {
                 Symbol *R (inst()->argsymbol(op.firstarg()+0));
                 Symbol *A (inst()->argsymbol(op.firstarg()+1));
@@ -2306,7 +2312,7 @@ RuntimeOptimizer::optimize_instance ()
     // know.
     for (int opnum = 0;  opnum < (int)inst()->ops().size();  ++opnum) {
         Opcode &op (inst()->ops()[opnum]);
-        if (op.implementation() == OP_setmessage) {
+        if (op.opname() == u_setmessage) {
             Symbol &Name (*inst()->argsymbol(op.firstarg()+0));
             if (Name.is_constant())
                 m_messages_sent.push_back (*(ustring *)Name.data());
@@ -2739,7 +2745,7 @@ RuntimeOptimizer::collapse_ops ()
     // First, just count how many we need and set up the mapping
     BOOST_FOREACH (const Opcode &op, inst()->ops()) {
         op_remap.push_back (total_ops);
-        if (op.implementation() != OP_nop)
+        if (op.opname() != u_nop)
             ++total_ops;
     }
 
@@ -2747,7 +2753,7 @@ RuntimeOptimizer::collapse_ops ()
     // reset the jump addresses.
     new_ops.reserve (total_ops);
     BOOST_FOREACH (const Opcode &op, inst()->ops()) {
-        if (op.implementation() != OP_nop) {
+        if (op.opname() != u_nop) {
             new_ops.push_back (op);
             Opcode &newop (new_ops.back());
             for (int i = 0;  i < (int)Opcode::max_jumps;  ++i)
@@ -2860,26 +2866,23 @@ RuntimeOptimizer::optimize_group ()
         }
         new_nsyms += inst()->symbols().size();
         new_nops += inst()->ops().size();
-        inst()->m_heap_size_calculated = false;
     }
 
     m_stat_specialization_time = rop_timer();
 
 #if USE_LLVM
-    if (m_shadingsys.use_llvm()) {
-        Timer timer;
-        // Let's punt on multithreading LLVM for the time being,
-        // just make a big lock.
-        static mutex llvm_mutex;
-        lock_guard llvm_lock (llvm_mutex);
-        m_stat_opt_locking_time = timer();
+     Timer timer;
+     // Let's punt on multithreading LLVM for the time being,
+     // just make a big lock.
+     static mutex llvm_mutex;
+     lock_guard llvm_lock (llvm_mutex);
+     m_stat_opt_locking_time = timer();
 
-        m_shadingsys.SetupLLVM ();
-        m_stat_llvm_setup_time = timer() - m_stat_opt_locking_time;
-        build_llvm_group ();
+     m_shadingsys.SetupLLVM ();
+     m_stat_llvm_setup_time = timer() - m_stat_opt_locking_time;
+     build_llvm_group ();
 
-        m_stat_total_llvm_time = timer();
-    }
+     m_stat_total_llvm_time = timer();
 #endif
 
     m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",

@@ -517,7 +517,6 @@ ShadingSystemImpl::loadshader (const char *cname)
 
     if (r) {
         r->resolve_syms ();
-        r->resolve_ops ();
     }
 
     if (r && m_debug) {

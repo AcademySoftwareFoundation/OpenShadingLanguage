@@ -132,7 +132,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
       m_lockgeom_default (false), m_optimize (1),
-      m_use_llvm(1), m_llvm_debug(false),
+      m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_in_group (false),
       m_global_heap_total (0),
@@ -185,10 +185,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         m_texturesys->attribute ("autotile", 64);
     }
 
-    // Alternate way of turning on LLVM mode (temporary/experimental)
-    const char *llvm_env = getenv ("OSL_USE_LLVM");
-    if (llvm_env && *llvm_env)
-        m_use_llvm = atoi (llvm_env);
+    // Alternate way of turning on LLVM debug mode (temporary/experimental)
     const char *llvm_debug_env = getenv ("OSL_LLVM_DEBUG");
     if (llvm_debug_env && *llvm_debug_env)
         m_llvm_debug = atoi(llvm_debug_env);
@@ -282,10 +279,6 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_optimize = *(const int *)val;
         return true;
     }
-    if (name == "use_llvm" && type == TypeDesc::INT) {
-        m_use_llvm = *(const int *)val;
-        return true;
-    }
     if (name == "llvm_debug" && type == TypeDesc::INT) {
         m_llvm_debug = *(const int *)val;
         return true;
@@ -342,10 +335,6 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     }
     if (name == "optimize" && type == TypeDesc::INT) {
         *(int *)val = m_optimize;
-        return true;
-    }
-    if (name == "use_llvm" && type == TypeDesc::INT) {
-        *(int *)val = m_use_llvm;
         return true;
     }
     if (name == "llvm_debug" && type == TypeDesc::INT) {
@@ -526,17 +515,6 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
-
-#ifdef DEBUG_ADJUST_VARYING
-    out << Strutil::format ("  adjust_varying:  total %lld\n", 
-                            (long long)m_adjust_calls);
-    out << Strutil::format ("    keep unif %lld, keep varying %lld\n",
-                            (long long)m_keep_uniform,
-                            (long long)m_keep_varying);
-    out << Strutil::format ("    make unif %lld, make varying %lld\n",
-                            (long long)m_make_uniform,
-                            (long long)m_make_varying);
-#endif
 
     return out.str();
 }

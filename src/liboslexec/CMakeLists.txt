@@ -9,11 +9,9 @@ SET ( liboslexec_srcs
           vol_subsurface.cpp
           context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          oparray.cpp opassign.cpp opattribute.cpp
-          opcolor.cpp opcompare.cpp opcontrol.cpp opderivs.cpp opinteger.cpp
-          opmath.cpp opmathfunc.cpp opmatrix.cpp 
-          opmessage.cpp opmisc.cpp opnoise.cpp 
-          opspline.cpp opstring.cpp optexture.cpp opvector.cpp
+          opcolor.cpp  
+          opmessage.cpp opnoise.cpp 
+          opspline.cpp opstring.cpp
           oslexec.cpp osoreader.cpp
           rendservices.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp

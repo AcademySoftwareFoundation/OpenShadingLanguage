@@ -668,11 +668,6 @@ typedef Symbol * SymbolPtr;
 typedef std::vector<Symbol *> SymbolPtrVec;
 
 
-/// Function pointer to a shadeop implementation
-///
-typedef void (*OpImpl) (ShadingExecution *exec, int nargs, const int *args);
-
-
 
 /// Intermediate Represenatation opcode
 ///
@@ -680,7 +675,7 @@ class Opcode {
 public:
     Opcode (ustring op, ustring method, size_t firstarg=0, size_t nargs=0)
         : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
-          m_method(method), m_impl(NULL), 
+          m_method(method), 
           m_argread(~1), // Default - all args are read except the first
           m_argwrite(1), // Default - first arg only is written by the op
           m_argtakesderivs(0) // Default - doesn't take derivs
@@ -691,9 +686,8 @@ public:
         m_jump[3] = -1;
     }
 
-    void reset (ustring opname, OpImpl impl, size_t nargs) {
+    void reset (ustring opname, size_t nargs) {
         m_op = opname;
-        implementation (impl);
         m_nargs = (int) nargs;
         set_jump ();
     }
@@ -748,15 +742,6 @@ public:
         for (unsigned int i = 1;  i < max_jumps;  ++i)
             f = std::max (f, jump(i));
         return f;
-    }
-
-    void implementation (OpImpl impl) { m_impl = impl; }
-    OpImpl implementation () const { return m_impl; }
-
-    /// Execute the op!
-    ///
-    void operator() (ShadingExecution *exec, int nargs, const int *args) {
-        m_impl (exec, m_nargs, args);
     }
 
     /// Is the argument number 'arg' read by the op?
@@ -836,7 +821,6 @@ private:
     int m_jump[max_jumps];          ///< Jump addresses (-1 means none)
     ustring m_sourcefile;           ///< Source filename for this op
     int m_sourceline;               ///< Line of source code for this op
-    OpImpl m_impl;                  ///< Implementation of this op
     unsigned int m_argread;         ///< Bit field - which args are read
     unsigned int m_argwrite;        ///< Bit field - which args are written
     unsigned int m_argtakesderivs;  ///< Bit field - which args take derivs

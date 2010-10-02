@@ -50,11 +50,6 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
-
-DECLOP (triple_ctr);   // definition is elsewhere
-
-
-
 namespace {
 
 
@@ -118,22 +113,6 @@ xyz_to_rgb (float x, float y, float z)
                     0.055648f * x + -0.204043f * y +  1.057311f * z);
 }
 
-
-
-class Luminance {
-public:
-    Luminance (ShadingExecution *) { }
-    void operator() (float &result, const Color3 &c) {
-        result = 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
-    }
-    void operator() (Dual2<float> &result, const Dual2<Color3> &c) {
-        Dual2<float> c0 (c.val()[0], c.dx()[0], c.dy()[0]);
-        Dual2<float> c1 (c.val()[1], c.dx()[1], c.dy()[1]);
-        Dual2<float> c2 (c.val()[2], c.dx()[2], c.dy()[2]);
-        result = 0.2126f * c0 + 0.7152f * c1 + 0.0722f * c2;
-    }
-};
-
 };  // End anonymous namespace
 
 
@@ -154,104 +133,6 @@ ShadingSystemImpl::to_rgb (ustring fromspace, float a, float b, float c)
     error ("Unknown color space \"%s\"", fromspace.c_str());
     return Color3 (a, b, c);
 }
-
-
-
-/// Implementation of the constructor "color (string, float, float, float)".
-///
-DECLOP (color_ctr_transform)
-{
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &Space (exec->sym (args[1]));
-    Symbol &X (exec->sym (args[2]));
-    Symbol &Y (exec->sym (args[3]));
-    Symbol &Z (exec->sym (args[4]));
-    ShadingSystemImpl &shadingsys (*exec->shadingsys());
-
-    // Adjust the result's uniform/varying status
-    bool vary = (Space.is_varying() |
-                 X.is_varying() | Y.is_varying() | Z.is_varying() );
-    exec->adjust_varying (Result, vary, false /* can't alias */);
-
-    // FIXME -- clear derivs for now, make it right later.
-    if (Result.has_derivs ())
-        exec->zero_derivs (Result);
-
-    VaryingRef<Color3> result ((Color3 *)Result.data(), Result.step());
-    VaryingRef<ustring> space ((ustring *)Space.data(), Space.step());
-    VaryingRef<float> x ((float *)X.data(), X.step());
-    VaryingRef<float> y ((float *)Y.data(), Y.step());
-    VaryingRef<float> z ((float *)Z.data(), Z.step());
-
-    Matrix44 M;
-    if (result.is_uniform()) {
-        // Everything is uniform
-        *result = shadingsys.to_rgb (*space, *x, *y, *z);
-    } else if (! vary) {
-        // Result is varying, but everything else is uniform
-        Color3 r = shadingsys.to_rgb (*space, *x, *y, *z);
-        SHADE_LOOP_BEGIN
-            result[i] = r;
-        SHADE_LOOP_END
-    } else {
-        // Fully varying case
-        SHADE_LOOP_BEGIN
-            result[i] = shadingsys.to_rgb (space[i], x[i], y[i], z[i]);
-        SHADE_LOOP_END
-    }
-}
-
-
-
-DECLOP (OP_color)
-{
-    DASSERT (nargs == 4 || nargs == 5);
-    Symbol &Result (exec->sym (args[0]));
-    bool using_space = (nargs == 5);
-    Symbol &Space (exec->sym (args[1]));
-    Symbol &X (exec->sym (args[1+using_space]));
-    Symbol &Y (exec->sym (args[2+using_space]));
-    Symbol &Z (exec->sym (args[3+using_space]));
-    DASSERT (! Result.typespec().is_closure() && 
-            ! X.typespec().is_closure() && ! Y.typespec().is_closure() &&
-            ! Z.typespec().is_closure() && ! Space.typespec().is_closure());
-    
-    // We allow two flavors: color(float,float,float) and
-    // color(string,float,float,float)
-    if (Result.typespec().is_triple() && X.typespec().is_float() &&
-          Y.typespec().is_float() && Z.typespec().is_float() &&
-          (using_space == false || Space.typespec().is_string())) {
-        OpImpl impl = NULL;
-        if (using_space)
-            impl = color_ctr_transform;  // special case: colors different
-        else
-            impl = triple_ctr;
-        impl (exec, nargs, args);
-        // Use the specialized one for next time!  Never have to check the
-        // types or do the other sanity checks again.
-        // FIXME -- is this thread-safe?
-        exec->op().implementation (impl);
-    } else {
-        exec->error_arg_types ();
-        ASSERT (0 && "Function arg type can't be handled");
-    }
-}
-
-
-
-DECLOP (OP_luminance)
-{
-    DASSERT (nargs == 2);
-    Symbol &Result (exec->sym (args[0]));
-    Symbol &C (exec->sym (args[1]));
-    DASSERT (! Result.typespec().is_closure() && ! C.typespec().is_closure());
-    DASSERT (Result.typespec().is_float() && C.typespec().is_triple());
-
-    unary_op_guts<Float, Color3, Luminance> (Result, C, exec);
-}
-
-
-
 
 }; // namespace pvt
 }; // namespace OSL

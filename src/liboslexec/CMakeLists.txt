@@ -22,7 +22,14 @@ SET ( liboslexec_srcs
     )
 
 if (LLVM_FOUND)
-    SET ( liboslexec_srcs ${liboslexec_srcs} llvm_instance.cpp )
+  if (NOT LLVM_LIBRARY MATCHES "LLVM-2\\.7")
+    message (STATUS "Found newer version of LLVM, assuming 2.8")
+    ADD_DEFINITIONS(-DOSL_LLVM_28=1)
+  else()
+    message (STATUS "Found LLVM-2.7")
+  endif()
+
+  SET ( liboslexec_srcs ${liboslexec_srcs} llvm_instance.cpp )
 endif ()
 
 FILE ( GLOB compiler_headers "*.h" )
@@ -50,10 +57,25 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
         LIST (APPEND LLVM_COMPILE_FLAGS "-DOPENIMAGEIO_NAMESPACE=${OPENIMAGEIO_NAMESPACE}")
     endif ()
 
+    # First try looking in their build (clang++ first, then llvm-g++)
+    FIND_PROGRAM(LLVM_BC_GENERATOR NAMES "clang++" "llvm-g++" PATHS ${LLVM_DIRECTORY}/bin NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH)
+
+    if(NOT LLVM_BC_GENERATOR)
+      # Wasn't in their build, look anywhere
+      FIND_PROGRAM(LLVM_BC_GENERATOR NAMES clang++ llvm-g++)
+    endif()
+
+    if(NOT LLVM_BC_GENERATOR)
+      message (FATAL_ERROR "You must have a valid llvm bitcode generator (either llvm-g++ or clang++) somewhere.")
+    else()
+      message (STATUS "Using ${LLVM_BC_GENERATOR} to generate bitcode.")
+    endif()
+
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
-      COMMAND ${LLVM_DIRECTORY}/bin/llvm-g++ ${LLVM_COMPILE_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_SOURCE_DIR}/include -I${OPENIMAGEIOHOME}/include -I${ILMBASE_INCLUDE_AREA} -I${Boost_INCLUDE_DIRS} -S -emit-llvm -o ${llvm_asm} ${llvm_src}
+      COMMAND ${LLVM_BC_GENERATOR} ${LLVM_COMPILE_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_SOURCE_DIR}/include -I${OPENIMAGEIOHOME}/include -I${ILMBASE_INCLUDE_AREA} -I${Boost_INCLUDE_DIRS} -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
+
       COMMAND ${LLVM_DIRECTORY}/bin/llvm-as -f -o ${llvm_bc} ${llvm_asm}
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash ${llvm_bc} ${llvm_bc_cpp}
       MAIN_DEPENDENCY ${llvm_src}

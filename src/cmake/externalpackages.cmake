@@ -234,38 +234,38 @@ endif (USE_OPENGL)
 
 ###########################################################################
 # LLVM library setup
-if (USE_LLVM)
-    if (LLVM_CUSTOM)
-        message (STATUS "LLVM_DIRECTORY is ${LLVM_DIRECTORY}")
-        find_library ( LLVM_LIBRARY
-                       NAMES LLVM-${LLVM_VERSION}
-                       PATHS ${LLVM_DIRECTORY}/lib )
-        find_path ( LLVM_INCLUDES llvm/LLVMContext.h
-                    PATHS ${LLVM_DIRECTORY}/include
-                    )
-    else ()
-        find_library ( LLVM_LIBRARY
-                       NAMES LLVM-2.7
-                       PATHS /usr/local/lib )
-        find_path ( LLVM_INCLUDES llvm/LLVMContext.h
-                    PATHS /usr/local/include
-                    )
-    endif ()
-    if (LLVM_LIBRARY AND LLVM_INCLUDES)
-        set (LLVM_FOUND TRUE)
-        message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
-        message (STATUS "LLVM library = ${LLVM_LIBRARY}")
-        # ensure include directory is added (in case of non-standard locations
-        include_directories ("${LLVM_INCLUDES}")
-        add_definitions ("-DUSE_LLVM=1")
-    else ()
-        message (STATUS "LLVM not found")
-        add_definitions ("-DUSE_LLVM=0")
-    endif ()
-else (USE_LLVM)
-    message (STATUS "LLVM will not be used")
-    add_definitions ("-DUSE_LLVM=0")
-endif (USE_LLVM)
+if (LLVM_CUSTOM)
+  message (STATUS "LLVM_DIRECTORY is ${LLVM_DIRECTORY}")
+  find_library ( LLVM_LIBRARY
+    NAMES LLVM-${LLVM_VERSION}
+    PATHS ${LLVM_DIRECTORY}/lib )
+  find_path ( LLVM_INCLUDES llvm/LLVMContext.h
+    PATHS ${LLVM_DIRECTORY}/include
+    )
+else ()
+  find_library ( LLVM_LIBRARY
+    NAMES LLVM-2.7 LLVM-2.8 LLVM-2.8svn LLVM-2.9svn
+    PATHS /usr/local/lib /opt/local/lib )
+  find_path ( LLVM_INCLUDES llvm/LLVMContext.h
+    PATHS /usr/local/include /opt/local/include
+    )
+endif ()
+
+if (LLVM_LIBRARY AND LLVM_INCLUDES)
+  set (LLVM_FOUND TRUE)
+  message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
+  message (STATUS "LLVM library = ${LLVM_LIBRARY}")
+  # ensure include directory is added (in case of non-standard locations
+  if (NOT LLVM_DIRECTORY)
+    # Set it to ${LLVM_LIBRARY}/../ (above lib/ and bin/)
+    GET_FILENAME_COMPONENT (LLVM_LIB_DIR "${LLVM_LIBRARY}" PATH)
+    GET_FILENAME_COMPONENT (LLVM_DIRECTORY "${LLVM_LIB_DIR}/../" ABSOLUTE)
+  endif ()
+
+  include_directories ("${LLVM_INCLUDES}")
+else ()
+  message(FATAL_ERROR "LLVM not found.")
+endif ()
 
 # end LLVM library setup
 ###########################################################################

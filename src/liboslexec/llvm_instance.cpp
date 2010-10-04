@@ -1009,15 +1009,18 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
                                int len, int align)
 {
     // memset with i32 len
+#if OSL_LLVM_28
+    // and with an i8 pointer (dst) for LLVM-2.8
+    const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
+#else
     const llvm::Type* types[] = { llvm::Type::getInt32Ty(llvm_context()) };
+#endif
 
-    // NOTE(boulos): This memset prototype is correct for
-    // LLVM-2.7, but will change in LLVM-2.8 (the ptr arguments
-    // must be specified as they become iPTRAny and isVolatile is
-    // added -- the latter necessitating a change to the
-    // CreateCall below)
-    llvm::Function* func = llvm::Intrinsic::getDeclaration(llvm_module(),
-                                          llvm::Intrinsic::memset, types, 1);
+    llvm::Function* func = llvm::Intrinsic::getDeclaration(
+      llvm_module(),
+      llvm::Intrinsic::memset,
+      types,
+      sizeof(types)/sizeof(llvm::Type*));
 
     // NOTE(boulos): rop.llvm_constant(0) would return an i32
     // version of 0, but we need the i8 version. If we make an
@@ -1025,8 +1028,15 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
     // everywhere.
     llvm::Value* fill_val = llvm::ConstantInt::get (llvm_context(),
                                                     llvm::APInt(8, val));
+#if OSL_LLVM_28
+    // Non-volatile (allow optimizer to move it around as it wishes
+    // and even remove it if it can prove it's useless)
+    builder().CreateCall5 (func, ptr, fill_val,
+                           llvm_constant(len), llvm_constant(align), llvm_constant_bool(false));
+#else
     builder().CreateCall4 (func, ptr, fill_val,
                            llvm_constant(len), llvm_constant(align));
+#endif
 }
 
 
@@ -1035,18 +1045,25 @@ void
 RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
                                int len, int align)
 {
-    // memcpy with i32 len
+    // i32 len
+#if OSL_LLVM_28
+    // and with i8 pointers (dst and src) for LLVM-2.8
+  const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0), llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
+#else
     const llvm::Type* types[] = { llvm::Type::getInt32Ty(llvm_context()) };
+#endif
 
-    // NOTE(boulos): This memcpy prototype is correct for
-    // LLVM-2.7, but will change in LLVM-2.8 (the ptr arguments
-    // must be specified as they become iPTRAny and isVolatile is
-    // added -- the latter necessitating a change to the
-    // CreateCall below)
     llvm::Function* func = llvm::Intrinsic::getDeclaration(llvm_module(),
-                                          llvm::Intrinsic::memcpy, types, 1);
-    builder().CreateCall4 (func, dst, src, 
+                                                           llvm::Intrinsic::memcpy, types, sizeof(types) / sizeof(llvm::Type*));
+#if OSL_LLVM_28
+    // Non-volatile (allow optimizer to move it around as it wishes
+    // and even remove it if it can prove it's useless)
+    builder().CreateCall5 (func, dst, src,
+                           llvm_constant(len), llvm_constant(align), llvm_constant_bool(false));
+#else
+    builder().CreateCall4 (func, dst, src,
                            llvm_constant(len), llvm_constant(align));
+#endif
 }
 
 
@@ -3733,8 +3750,12 @@ ShadingSystemImpl::SetupLLVM ()
         || llvm_debug() >= 3 /*high debug -> custom module*/) {
         // Load the LLVM bitcode and parse it into a Module
         const char *data = osl_llvm_compiled_ops_block;
+#if OSL_LLVM_28
+        llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
+#else
         llvm::MemoryBuffer *buf =
             llvm::MemoryBuffer::getMemBuffer (data, data + osl_llvm_compiled_ops_size);
+#endif
         std::string err;
         m_llvm_module = llvm::ParseBitcodeFile (buf, *llvm_context(), &err);
         if (err.length())

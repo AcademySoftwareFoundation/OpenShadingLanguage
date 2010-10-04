@@ -210,8 +210,6 @@ ShadingSystemImpl::~ShadingSystemImpl ()
     // N.B. just let m_texsys go -- if we asked for one to be created,
     // we asked for a shared one.
 
-#if USE_LLVM
-
     delete m_llvm_exec;
     // NOTE(boulos): Deleting the execution engine should in theory
     // clean up the module. Calling delete on the module here results
@@ -228,7 +226,6 @@ ShadingSystemImpl::~ShadingSystemImpl ()
     // outstanding. I'll leave this as a fixme for now.
 
     //llvm::llvm_shutdown();
-#endif
 }
 
 

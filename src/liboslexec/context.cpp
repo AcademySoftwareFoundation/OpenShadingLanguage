@@ -66,7 +66,6 @@ ShadingContext::~ShadingContext ()
 void
 ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
 {
-#if USE_LLVM
     ShaderGroup &sgroup (attribs()->shadergroup (use));
 
     RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
@@ -141,7 +140,6 @@ ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
 //            }
         }
     }
-#endif /* USE_LLVM */
 }
 
 
@@ -196,7 +194,6 @@ void
 ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
                          SingleShaderGlobal &ssg)
 {
-#if USE_LLVM
     if (! prepare_execution (use, sas, 1))
         return;
 
@@ -208,7 +205,6 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
     ssg.Ci = NULL;
     RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
     run_func (&ssg, &m_heap[0]);
-#endif /* USE_LLVM */
 }
 
 

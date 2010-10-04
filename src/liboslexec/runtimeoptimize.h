@@ -56,21 +56,17 @@ public:
           m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
           m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
           m_stat_llvm_jit_time(0)
-#if USE_LLVM
         , m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
           m_llvm_passes(NULL), m_llvm_func_passes(NULL),
           m_llvm_func_passes_optimized(NULL)
-#endif
     {
     }
 
     ~RuntimeOptimizer () {
-#if USE_LLVM
         delete m_builder;
         delete m_llvm_passes;
         delete m_llvm_func_passes;
         delete m_llvm_func_passes_optimized;
-#endif
     }
 
     void optimize_group ();
@@ -248,7 +244,6 @@ public:
 
     int layer_remap (int origlayer) const { return m_layer_remap[origlayer]; }
 
-#if USE_LLVM
     /// Set up a bunch of static things we'll need for the whole group.
     ///
     void initialize_llvm_group ();
@@ -540,7 +535,6 @@ public:
     /// Do LLVM optimization on the partcular function func.  If
     /// interproc is true, also do full interprocedural optimization.
     void llvm_do_optimization (llvm::Function *func, bool interproc=false);
-#endif
 
 private:
     ShadingSystemImpl &m_shadingsys;
@@ -567,7 +561,6 @@ private:
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
     double m_stat_llvm_jit_time;          ///<     llvm JIT time
 
-#if USE_LLVM
     // LLVM stuff
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
@@ -600,7 +593,6 @@ private:
     llvm::PassManager *m_llvm_passes;
     llvm::FunctionPassManager *m_llvm_func_passes;
     llvm::FunctionPassManager *m_llvm_func_passes_optimized;
-#endif
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage

@@ -89,6 +89,7 @@ class FunctionSymbol : public Symbol {
 public:
     FunctionSymbol (ustring n, TypeSpec type, ASTNode *node=NULL)
         : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL),
+          m_return_location(NULL), m_complex_return(false),
           m_readwrite_special_case(false), m_texture_args(false),
           m_printf_args(false), m_takes_derivs(false)
     { }

@@ -36,7 +36,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <set>
 
-#include <boost/regex.hpp>
+#include <boost/regex_fwd.hpp>
+
+#include "OpenImageIO/hash.h"
+#include "OpenImageIO/ustring.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/paramlist.h"
 
@@ -890,7 +893,12 @@ private:
     size_t m_closures_allotted;         ///< Closure memory allotted
     ExecutionLayers m_exec;             ///< Execution layers for the group
     int m_curuse;                       ///< Current use that we're running
-    std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
+#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
+    typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
+#else
+    typedef hash_map<ustring, boost::regex*, ustringHash> RegexMap;
+#endif
+    RegexMap m_regex_map;  ///< Compiled regex's
     ParamValueList m_messages;          ///< Message blackboard
 
     SimplePool<20 * 1024> m_closure_pool;

@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 
 #include <boost/foreach.hpp>
+#include <boost/regex.hpp>
 
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
@@ -59,6 +60,9 @@ ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys)
 ShadingContext::~ShadingContext ()
 {
     m_shadingsys.m_stat_contexts -= 1;
+    for (RegexMap::iterator it = m_regex_map.begin(); it != m_regex_map.end(); ++it) {
+      delete it->second;
+    }
 }
 
 
@@ -159,15 +163,14 @@ ShadingContext::symbol_data (Symbol &sym, int gridpoint)
 const boost::regex &
 ShadingContext::find_regex (ustring r)
 {
-    std::map<ustring,boost::regex>::const_iterator found;
-    found = m_regex_map.find (r);
+    RegexMap::const_iterator found = m_regex_map.find (r);
     if (found != m_regex_map.end())
-        return found->second;
+        return *found->second;
     // otherwise, it wasn't found, add it
-    m_regex_map[r].assign (r.c_str());
+    m_regex_map[r] = new boost::regex(r.c_str());
     m_shadingsys.m_stat_regexes += 1;
     // std::cerr << "Made new regex for " << r << "\n";
-    return m_regex_map[r];
+    return *m_regex_map[r];
 }
 
 

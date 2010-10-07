@@ -244,7 +244,7 @@ if (LLVM_CUSTOM)
     )
 else ()
   find_library ( LLVM_LIBRARY
-    NAMES LLVM-2.7 LLVM-2.8 LLVM-2.8svn LLVM-2.9svn
+    NAMES LLVM-2.7 LLVM-2.8svn LLVM-2.8 LLVM-2.9svn
     PATHS /usr/local/lib /opt/local/lib )
   find_path ( LLVM_INCLUDES llvm/LLVMContext.h
     PATHS /usr/local/include /opt/local/include

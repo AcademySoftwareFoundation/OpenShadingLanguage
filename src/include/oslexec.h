@@ -49,7 +49,7 @@ class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 struct ShaderGlobals;
 struct ClosureColor;
-class ClosureParam;
+struct ClosureParam;
 
 namespace pvt {
 class ShadingContext;

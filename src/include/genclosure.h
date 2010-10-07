@@ -81,7 +81,7 @@ struct ClosureParam {
 #define CLOSURE_STRING_KEYPARAM(key) \
     { TypeDesc::TypeString, 0, key }
 
-#define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), false }
+#define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), NULL }
 
 }; // namespace OSL
 

@@ -93,7 +93,7 @@ texturesys ()
 
 bool
 RendererServices::texture (ustring filename, TextureOptions &options,
-                           SingleShaderGlobal *sg,
+                           ShaderGlobals *sg,
                            float s, float t, float dsdx, float dtdx,
                            float dsdy, float dtdy, float *result)
 {

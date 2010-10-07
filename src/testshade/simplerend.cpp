@@ -86,7 +86,7 @@ SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring obje
 }
 
 bool
-SimpleRenderer::get_userdata (pvt::Runflag *runflags, int npoints, bool derivatives, ustring name, TypeDesc type, void *renderstate, int renderstate_stepsize, void *val, int val_stepsize)
+SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type, void *renderstate, void *val)
 {
     return false;
 }

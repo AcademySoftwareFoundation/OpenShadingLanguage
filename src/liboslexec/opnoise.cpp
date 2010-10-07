@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "oslops.h"
 #include "noiseimpl.h"
-#include "OpenImageIO/varyingref.h"
 
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range

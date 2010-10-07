@@ -450,9 +450,9 @@ public:
 
     long long int executions () const { return m_executions; }
 
-    void start_running (int npoints=1) {
+    void start_running () {
 #ifdef DEBUG
-       m_executions += npoints;
+       m_executions++;
 #endif
     }
 
@@ -799,30 +799,15 @@ public:
     ///
     RendererServices *renderer () const { return m_renderer; }
 
-    /// Return a pointer to our shader globals structure.
-    ///
-    ShaderGlobals *globals () const { return m_globals; }
-
-    /// Execute the shaders for the given use (for example,
-    /// ShadUseSurface). If runflags are not supplied, they will be
-    /// auto-generated with all points turned on.
-    void execute (ShaderUse use, int n, ShadingAttribState &sas,
-                  ShaderGlobals &sg,
-                  Runflag *rf=NULL, int *ind=NULL, int nind=0);
-
     /// Execute the shaders for the given use (for example,
     /// ShadUseSurface). If runflags are not supplied, they will be
     /// auto-generated with all points turned on.
     void execute (ShaderUse use, ShadingAttribState &sas,
-                  SingleShaderGlobal &ssg);
+                  ShaderGlobals &ssg);
 
     /// Return the current shader use being executed.
     ///
     ShaderUse use () const { return (ShaderUse) m_curuse; }
-
-    /// Return the number of points being shaded.
-    ///
-    int npoints () const { return m_npoints; }
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs) {
         size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
@@ -889,8 +874,7 @@ public:
 private:
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
-    bool prepare_execution (ShaderUse use, ShadingAttribState &sas,
-                            int npoints);
+    bool prepare_execution (ShaderUse use, ShadingAttribState &sas);
 
     /// Execute the llvm-compiled shaders for the given use (for example,
     /// ShadUseSurface).  The context must already be bound.  If
@@ -902,11 +886,9 @@ private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
-    ShaderGlobals *m_globals;           ///< Ptr to shader globals
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_closures_allotted;         ///< Closure memory allotted
     ExecutionLayers m_exec;             ///< Execution layers for the group
-    int m_npoints;                      ///< Number of points being shaded
     int m_curuse;                       ///< Current use that we're running
     std::map<ustring,boost::regex> m_regex_map;  ///< Compiled regex's
     ParamValueList m_messages;          ///< Message blackboard
@@ -947,10 +929,6 @@ public:
         DASSERT (index < (int)m_symbols.size());
         return index >= 0 ? &m_symbols[index]: NULL;
     }
-
-    /// How many points are being shaded?
-    ///
-    int npoints () const { return m_npoints; }
 
     bool debug () const { return m_debug; }
 
@@ -1067,8 +1045,6 @@ private:
     ShaderMaster *m_master;       ///< Ptr to the instance's master
     ShadingSystemImpl *m_shadingsys; ///< Ptr to shading system
     RendererServices *m_renderer; ///< Ptr to renderer services
-    int m_npoints;                ///< How many points are we running?
-    int m_npoints_bound;          ///< How many points bound with addresses?
     bool m_debug;                 ///< Debug mode
     SymbolVec m_symbols;          ///< Our own copy of the syms
     int m_last_instance_id;       ///< ID of last instance bound

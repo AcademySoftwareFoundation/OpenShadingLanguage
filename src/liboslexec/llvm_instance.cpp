@@ -66,7 +66,7 @@ Schematically, we want to create code that resembles the following:
     };
 
     // Name of layer entry is $layer_ID
-    void $layer_0 (SingleShaderGlobal *sg, GroupData_1 *group)
+    void $layer_0 (ShaderGlobals *sg, GroupData_1 *group)
     {
         // Only run if not already done.  Then mark as run.
         if (group->layer_run[0])
@@ -83,7 +83,7 @@ Schematically, we want to create code that resembles the following:
         group->param_1_foo = *x;
     }
 
-    void $layer_0 (SingleShaderGlobal *sg, GroupData_1 *group)
+    void $layer_0 (ShaderGlobals *sg, GroupData_1 *group)
     {
         if (group->layer_run[0])
             return;
@@ -93,7 +93,7 @@ Schematically, we want to create code that resembles the following:
         *y = sg->u * group->$param_2_bar;
     }
 
-    void $group_1 (SingleShaderGlobal *sg, GroupData_1 *group)
+    void $group_1 (ShaderGlobals *sg, GroupData_1 *group)
     {
         group->layer_run[...] = 0;
         // Run just the unconditional layers
@@ -3432,7 +3432,7 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 llvm::Function*
 RuntimeOptimizer::build_llvm_instance (bool groupentry)
 {
-    // Make a layer function: void layer_func(ShaderGlobal*, GroupData*)
+    // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
     std::string unique_layer_name = Strutil::format ("%s_%d", inst()->layername().c_str(), inst()->id());
 

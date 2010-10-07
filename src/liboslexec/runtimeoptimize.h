@@ -346,15 +346,15 @@ public:
     /// of the given types according to the C standard
     const llvm::Type *llvm_type_union(const std::vector<const llvm::Type *> &types);
 
-    /// Return the LLVM type handle for the SingleShaderGlobals struct.
+    /// Return the LLVM type handle for the ShaderGlobals struct.
     ///
     const llvm::Type *llvm_type_sg ();
 
     /// Return the LLVM type handle for a pointer to a
-    /// SingleShaderGlobals struct.
+    /// ShaderGlobals struct.
     const llvm::Type *llvm_type_sg_ptr ();
 
-    /// Return the SingleShaderGlobals pointer.
+    /// Return the ShaderGlobals pointer.
     ///
     llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
 
@@ -363,7 +363,7 @@ public:
     const llvm::Type *llvm_type_closure_component_attr ();
     const llvm::Type *llvm_type_closure_component_attr_ptr ();
 
-    /// Return the SingleShaderGlobals pointer cast as a void*.
+    /// Return the ShaderGlobals pointer cast as a void*.
     ///
     llvm::Value *sg_void_ptr () {
         return llvm_void_ptr (m_llvm_shaderglobals_ptr);
@@ -393,7 +393,7 @@ public:
     /// data that holds all the shader params.
     const llvm::Type *llvm_type_groupdata_ptr ();
 
-    /// Return the SingleShaderGlobals pointer.
+    /// Return the ShaderGlobals pointer.
     ///
     llvm::Value *groupdata_ptr () const { return m_llvm_groupdata_ptr; }
 
@@ -584,7 +584,7 @@ private:
     const llvm::PointerType *m_llvm_type_float_ptr;
     const llvm::PointerType *m_llvm_type_triple_ptr;
     const llvm::PointerType *m_llvm_type_matrix_ptr;
-    const llvm::Type *m_llvm_type_sg;  // LLVM type of SingleShaderGlobal struct
+    const llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     const llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
     const llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
     const llvm::Type *m_llvm_type_closure_component_attr; // LLVM type for ClosureMeta::Attr

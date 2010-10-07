@@ -85,7 +85,7 @@ osl_format (const char* format_str, ...)
 
 
 extern "C" void
-osl_printf (SingleShaderGlobal *sg, const char* format_str, ...)
+osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
@@ -101,7 +101,7 @@ osl_printf (SingleShaderGlobal *sg, const char* format_str, ...)
 
 
 extern "C" void
-osl_error (SingleShaderGlobal *sg, const char* format_str, ...)
+osl_error (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
@@ -112,7 +112,7 @@ osl_error (SingleShaderGlobal *sg, const char* format_str, ...)
 
 
 extern "C" void
-osl_warning (SingleShaderGlobal *sg, const char* format_str, ...)
+osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);

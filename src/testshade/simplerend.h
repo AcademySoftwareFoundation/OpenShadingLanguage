@@ -64,9 +64,8 @@ public:
                                       int index, void *val );
     virtual bool get_attribute (void *renderstate, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
-    virtual bool get_userdata (pvt::Runflag *runflags, int npoints, bool derivatives, ustring name, TypeDesc type, 
-                               void *renderstate, int renderstate_stepsize, 
-                               void *val,         int val_stepsize);
+    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
+                               void *renderstate, void *val);
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
 private:
     typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;

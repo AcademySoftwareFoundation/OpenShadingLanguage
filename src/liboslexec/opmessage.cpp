@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USTR(cstr) (*((ustring *)&cstr))
 
 extern "C" void
-osl_setmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void *val)
+osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val)
 {
     const ustring &name (USTR(name_));
     // recreate TypeDesc -- we just crammed it into an int!
@@ -77,7 +77,7 @@ osl_setmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void
 
 
 extern "C" int
-osl_getmessage (SingleShaderGlobal *sg, const char *name_, long long type_, void *val)
+osl_getmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val)
 {
     const ustring &name (USTR(name_));
     // recreate TypeDesc -- we just crammed it into an int!

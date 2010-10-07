@@ -53,6 +53,7 @@ static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
+static std::vector<OpenImageIO::ImageBuf*>   outputimgs;
 static std::string dataformatname = "";
 static bool debug = false;
 static bool verbose = false;
@@ -221,57 +222,7 @@ main (int argc, const char *argv[])
 
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
-    const int npoints = xres*yres;
-    std::vector<Vec3> gP (npoints);
-    std::vector<Vec3> gdP_dx (npoints);
-    std::vector<Vec3> gdP_dy (npoints);
-    std::vector<Vec3> gI (npoints);
-    std::vector<Vec3> gdI_dx (npoints);
-    std::vector<Vec3> gdI_dy (npoints);
-    std::vector<Vec3> gN (npoints);
-    std::vector<float> gu (npoints);
-    std::vector<float> gv (npoints);
-    std::vector<Vec3> gdPdu (npoints);
-    std::vector<Vec3> gdPdv (npoints);
-    std::vector<Vec3> gPs (npoints);
-    std::vector<Vec3> gPs_dx (npoints);
-    std::vector<Vec3> gPs_dy (npoints);
-    std::vector<void *> rstates (npoints, (void *)0);
-    shaderglobals.P.init (&gP[0], sizeof(gP[0]));
-    shaderglobals.dPdx.init (&gdP_dx[0], sizeof(gdP_dx[0]));
-    shaderglobals.dPdy.init (&gdP_dy[0], sizeof(gdP_dy[0]));
-    shaderglobals.I.init (&gI[0], sizeof(gI[0]));
-    shaderglobals.dIdx.init (&gdI_dx[0], sizeof(gdI_dx[0]));
-    shaderglobals.dIdy.init (&gdI_dy[0], sizeof(gdI_dy[0]));
-    shaderglobals.N.init (&gN[0], sizeof(gN[0]));
-    shaderglobals.Ng.init (&gN[0], sizeof(gN[0]));  // Ng = N for now
-    shaderglobals.u.init (&gu[0], sizeof(gu[0]));
-    shaderglobals.v.init (&gv[0], sizeof(gv[0]));
-    shaderglobals.v.init (&gv[0], sizeof(gv[0]));
-    shaderglobals.dPdu.init (&gdPdu[0], sizeof(gdPdu[0]));
-    shaderglobals.dPdv.init (&gdPdv[0], sizeof(gdPdv[0]));
-    shaderglobals.Ps.init (&gPs[0], sizeof(gPs[0]));
-    shaderglobals.dPsdx.init (&gPs_dx[0], sizeof(gPs_dx[0]));
-    shaderglobals.dPsdy.init (&gPs_dy[0], sizeof(gPs_dy[0]));
-    shaderglobals.renderstate.init (&rstates[0], sizeof(rstates[0]));
-    shaderglobals.flipHandedness = false;
-    shaderglobals.isshadowray = false;
-    shaderglobals.iscameraray = false;
-    shaderglobals.isdiffuseray = false;
-    shaderglobals.isglossyray = false;
-    float time = 0.0f;
-    shaderglobals.time.init (&time, 0);
-    float dtime = 0.f;
-    shaderglobals.dtime.init (&dtime, 0);
-    std::vector<Vec3> gdPdtime (npoints);
-    shaderglobals.dPdtime.init (&gdPdtime[0], sizeof(gdPdtime[0]));
-    float surfacearea = 1;
-    shaderglobals.surfacearea.init (&surfacearea, 0);
-
-    std::vector<ClosureColor *> Ci_ptr (npoints);
-    for (int i = 0;  i < npoints;  ++i)
-        Ci_ptr[i] = NULL;
-    shaderglobals.Ci.init (&Ci_ptr[0], sizeof(Ci_ptr[0]));
+    memset(&shaderglobals, 0, sizeof(ShaderGlobals));
 
     // Make a shader space that is translated one unit in x and rotated
     // 45deg about the z axis.
@@ -280,7 +231,7 @@ main (int argc, const char *argv[])
     Mshad.rotate (OSL::Vec3 (0.0, 0.0, M_PI_4));
     // std::cout << "shader-to-common matrix: " << Mshad << "\n";
     OSL::TransformationPtr Mshadptr (&Mshad);
-    shaderglobals.shader2common.init ((OSL::TransformationPtr *)&Mshadptr, 0);
+    shaderglobals.shader2common = Mshadptr;
 
     // Make an object space that is translated one unit in y and rotated
     // 90deg about the z axis.
@@ -289,7 +240,7 @@ main (int argc, const char *argv[])
     Mobj.rotate (OSL::Vec3 (0.0, 0.0, M_PI_2));
     // std::cout << "object-to-common matrix: " << Mobj << "\n";
     OSL::TransformationPtr Mobjptr (&Mobj);
-    shaderglobals.object2common.init ((OSL::TransformationPtr *)&Mobjptr, 0);
+    shaderglobals.object2common = Mobjptr;
 
     // Make a 'myspace that is non-uniformly scaled
     OSL::Matrix44 Mmyspace;
@@ -297,82 +248,95 @@ main (int argc, const char *argv[])
     // std::cout << "myspace-to-common matrix: " << Mmyspace << "\n";
     rend.name_transform ("myspace", Mmyspace);
 
-    float dudx = 1.0f / xres, dudy = 0;
-    float dvdx = 0, dvdy = 1.0f / yres;
-    shaderglobals.dudx.init (&dudx, 0);
-    shaderglobals.dudy.init (&dudy, 0);
-    shaderglobals.dvdx.init (&dvdx, 0);
-    shaderglobals.dvdy.init (&dvdy, 0);
-
-    for (int j = 0;  j < yres;  ++j) {
-        for (int i = 0;  i < xres;  ++i) {
-            int n = j*xres + i;
-            gu[n] = (xres == 1) ? 0.5 : (float)i/(xres-1);
-            gv[n] = (yres == 1) ? 0.5 : (float)j/(yres-1);
-            gP[n] = Vec3 (gu[n], gv[n], 1.0f);
-            gdP_dx[n] = Vec3 (dudx, dudy, 0.0f);
-            gdP_dy[n] = Vec3 (dvdx, dvdy, 0.0f);
-            gN[n] = Vec3 (0, 0, 1);
-            gdPdu[n] = Vec3 (1.0f, 0.0f, 0.0f);
-            gdPdv[n] = Vec3 (0.0f, 1.0f, 0.0f);
-        }
-    }
-
-    ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
-    ShadingContext *ctx = ssi->get_context ();
+    shaderglobals.dudx = 1.0f / xres;
+    shaderglobals.dvdy = 1.0f / yres;
 
     double setuptime = timer ();
     double runtime = 0;
 
-    for (int iter = 0;  iter < iters;  ++iter) {
-        timer.reset ();
-        timer.start ();
-        // Request a shading context, bind it, execute the shaders.
-        // FIXME -- this will eventually be replaced with a public
-        // ShadingSystem call that encapsulates it.
-        ctx = ssi->get_context ();
-        ctx->execute (ShadUseSurface, npoints, *shaderstate, shaderglobals);
-        runtime += timer ();
-        if (iter < iters-1)
-            ssi->release_context (ctx);
-    }
-
-    std::cout << "\n";
-
     std::vector<float> pixel;
-    for (size_t i = 0;  i < outputfiles.size();  ++i) {
-        Symbol *sym = ctx->symbol (ShadUseSurface, ustring(outputvars[i]));
-        if (! sym) {
-            std::cerr << "Output " << outputvars[i] << " not found, skipping.\n";
-            continue;
-        }
-        std::cout << "Output " << outputvars[i] << " to " 
-                  << outputfiles[i]<< "\n";
-        TypeDesc t = sym->typespec().simpletype();
-        TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
-        TypeDesc outtypebase = tbase;
-        if (dataformatname == "uint8")
-            outtypebase = TypeDesc::UINT8;
-        else if (dataformatname == "half")
-            outtypebase = TypeDesc::HALF;
-        else if (dataformatname == "float")
-            outtypebase = TypeDesc::FLOAT;
-        int nchans = t.numelements() * t.aggregate;
-        pixel.resize (nchans);
-        OpenImageIO::ImageSpec spec (xres, yres, nchans, outtypebase);
-        OpenImageIO::ImageBuf img (outputfiles[i], spec);
-        img.zero ();
+
+    if (outputfiles.size() != 0)
+        std::cout << "\n";
+
+    // grab this once since we will be shading several points
+    ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
+    void* thread_info = ssi->create_thread_info();
+    for (int iter = 0;  iter < iters;  ++iter) {
         for (int y = 0, n = 0;  y < yres;  ++y) {
             for (int x = 0;  x < xres;  ++x, ++n) {
-                OpenImageIO::convert_types (tbase, ctx->symbol_data (*sym, n),
-                                            TypeDesc::FLOAT, &pixel[0], nchans);
-                img.setpixel (x, y, &pixel[0]);
+                shaderglobals.u = (xres == 1) ? 0.5f : (float) x / (xres - 1);
+                shaderglobals.v = (yres == 1) ? 0.5f : (float) y / (yres - 1);
+                shaderglobals.P = Vec3 (shaderglobals.u, shaderglobals.v, 1.0f);
+                shaderglobals.dPdx = Vec3 (shaderglobals.dudx, shaderglobals.dudy, 0.0f);
+                shaderglobals.dPdy = Vec3 (shaderglobals.dvdx, shaderglobals.dvdy, 0.0f);
+                shaderglobals.N    = Vec3 (0, 0, 1);
+                shaderglobals.Ng   = Vec3 (0, 0, 1);
+                shaderglobals.dPdu = Vec3 (1.0f, 0.0f, 0.0f);
+                shaderglobals.dPdv = Vec3 (0.0f, 1.0f, 0.0f);
+                shaderglobals.surfacearea = 1;
+
+                // Request a shading context, bind it, execute the shaders.
+                // FIXME -- this will eventually be replaced with a public
+                // ShadingSystem call that encapsulates it.
+                ShadingContext *ctx = ssi->get_context (thread_info);
+                timer.reset ();
+                timer.start ();
+                // run shader for this point
+                ctx->execute (ShadUseSurface, *shaderstate, shaderglobals);
+                runtime += timer ();
+
+                if (iter == (iters - 1)) {
+                   // extract any output vars into images (on last iteration only)
+                   for (size_t i = 0;  i < outputfiles.size();  ++i) {
+                       Symbol *sym = ctx->symbol (ShadUseSurface, ustring(outputvars[i]));
+                       if (! sym) {
+                           if (n == 0) {
+                              std::cout << "Output " << outputvars[i] << " not found, skipping.\n";
+                              outputimgs.push_back(0); // invalid image
+                           }
+                           continue;
+                       }
+                       if (n == 0)
+                           std::cout << "Output " << outputvars[i] << " to " << outputfiles[i]<< "\n";
+                       TypeDesc t = sym->typespec().simpletype();
+                       TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
+                       TypeDesc outtypebase = tbase;
+                       if (dataformatname == "uint8")
+                           outtypebase = TypeDesc::UINT8;
+                       else if (dataformatname == "half")
+                           outtypebase = TypeDesc::HALF;
+                       else if (dataformatname == "float")
+                           outtypebase = TypeDesc::FLOAT;
+                       int nchans = t.numelements() * t.aggregate;
+                       pixel.resize (nchans);
+                       if (n == 0) {
+                           OpenImageIO::ImageSpec spec (xres, yres, nchans, outtypebase);
+                           OpenImageIO::ImageBuf* img = new OpenImageIO::ImageBuf(outputfiles[i], spec);
+                           img->zero ();
+                           outputimgs.push_back(img);
+                       }
+                       OpenImageIO::convert_types (tbase, ctx->symbol_data (*sym, 0),
+                                                   TypeDesc::FLOAT, &pixel[0], nchans);
+                       outputimgs[i]->setpixel (x, y, &pixel[0]);
+                   }
+                }
+                ssi->release_context (ctx, thread_info);
             }
         }
-        img.save ();
     }
-    ssi->release_context (ctx);
+    ssi->destroy_thread_info(thread_info);
 
+    if (outputfiles.size() == 0)
+        std::cout << "\n";
+
+    // write any images to disk
+    for (size_t i = 0;  i < outputimgs.size();  ++i) {
+        if (outputimgs[i]) {
+           outputimgs[i]->save();
+            delete outputimgs[i];
+        }
+    }
     if (debug || stats) {
         std::cout << "\n";
         std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";

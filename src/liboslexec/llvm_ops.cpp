@@ -83,7 +83,7 @@ examples), as you are just coding in C++, but there are some rules:
 
 * If you need to access non-passed globals (P, N, etc.) or make renderer
   callbacks, just make the first argument to the function a void* that
-  you cast to a SingleShaderGlobal* and access the globals, shading
+  you cast to a ShaderGlobals* and access the globals, shading
   context (sg->context), opaque renderer state (sg->renderstate), etc.
 
 */
@@ -727,7 +727,7 @@ osl_div_m_ff (void *r, float a, float b)
 }
 
 bool
-osl_get_matrix (SingleShaderGlobal *sg, Matrix44 *r, const char *from)
+osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
 {
     ShadingContext *ctx = (ShadingContext *)sg->context;
     if (USTR(from) == Strings::common ||
@@ -748,7 +748,7 @@ osl_get_matrix (SingleShaderGlobal *sg, Matrix44 *r, const char *from)
 }
 
 bool
-osl_get_inverse_matrix (SingleShaderGlobal *sg, Matrix44 *r, const char *to)
+osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
 {
     ShadingContext *ctx = (ShadingContext *)sg->context;
     if (USTR(to) == Strings::common ||
@@ -776,7 +776,7 @@ extern "C" void
 osl_prepend_matrix_from (void *sg, void *r, const char *from)
 {
     Matrix44 m;
-    osl_get_matrix ((SingleShaderGlobal *)sg, &m, from);
+    osl_get_matrix ((ShaderGlobals *)sg, &m, from);
     MAT(r) = m * MAT(r);
 }
 
@@ -784,8 +784,8 @@ extern "C" void
 osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 {
     Matrix44 Mfrom, Mto;
-    bool ok = osl_get_matrix ((SingleShaderGlobal *)sg, &Mfrom, from);
-    ok &= osl_get_inverse_matrix ((SingleShaderGlobal *)sg, &Mto, to);
+    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &Mfrom, from);
+    ok &= osl_get_inverse_matrix ((ShaderGlobals *)sg, &Mto, to);
     MAT(r) = Mfrom * Mto;
 }
 
@@ -843,7 +843,7 @@ extern "C" void
 osl_prepend_point_from (void *sg, void *v, const char *from)
 {
     Matrix44 M;
-    osl_get_matrix ((SingleShaderGlobal *)sg, &M, from);
+    osl_get_matrix ((ShaderGlobals *)sg, &M, from);
     M.multVecMatrix (VEC(v), VEC(v));
 }
 
@@ -851,7 +851,7 @@ extern "C" void
 osl_prepend_vector_from (void *sg, void *v, const char *from)
 {
     Matrix44 M;
-    osl_get_matrix ((SingleShaderGlobal *)sg, &M, from);
+    osl_get_matrix ((ShaderGlobals *)sg, &M, from);
     M.multDirMatrix (VEC(v), VEC(v));
 }
 
@@ -859,7 +859,7 @@ extern "C" void
 osl_prepend_normal_from (void *sg, void *v, const char *from)
 {
     Matrix44 M;
-    osl_get_matrix ((SingleShaderGlobal *)sg, &M, from);
+    osl_get_matrix ((ShaderGlobals *)sg, &M, from);
     M = M.inverse().transpose();
     M.multDirMatrix (VEC(v), VEC(v));
 }
@@ -979,7 +979,7 @@ osl_normalize_dvdv (void *result, void *a)
 extern "C" void
 osl_prepend_color_from (void *sg, void *c_, const char *from)
 {
-    ShadingContext *ctx (((SingleShaderGlobal *)sg)->context);
+    ShadingContext *ctx (((ShaderGlobals *)sg)->context);
     Color3 &c (COL(c_));
     c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
 }
@@ -1037,7 +1037,7 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
                                int *results, int nresults, ustring pattern,
                                int fullmatch);
 
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return osl_regex_impl2 (sg->context, USTR(subject_),
                             (int *)results, nresults,
                             USTR(pattern), fullmatch);
@@ -1412,7 +1412,7 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,
              void *result, void *dresultdx, void *dresultdy)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
     TextureOptions *opt = (TextureOptions *)opt_;
     opt->nchannels = chans;
@@ -1439,7 +1439,7 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
              void *result, void *dresultdx, void *dresultdy,
              void *alpha, void *dalphadx, void *dalphady)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
     TextureOptions *opt = (TextureOptions *)opt_;
     opt->nchannels = chans + 1;
@@ -1481,7 +1481,7 @@ extern "C" int osl_get_textureinfo(void *sg_,    void *fin_,
     typedesc.arraylen  = arraylen;
     typedesc.aggregate = aggregate;
  
-    SingleShaderGlobal *sg   = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg   = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
 
     const ustring &filename  = USTR(fin_);
@@ -1501,7 +1501,7 @@ inline int osl_get_attribute(void *sg_,
                              const TypeDesc &attr_type,
                              void *attr_dest)
 {
-    SingleShaderGlobal *sg   = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg   = (ShaderGlobals *)sg_;
     const ustring &obj_name  = USTR(obj_name_);
     const ustring &attr_name = USTR(attr_name_);
 
@@ -1622,7 +1622,7 @@ extern "C" int osl_get_attribute_s(void *sg_,
 
 extern "C" float osl_surfacearea (void *sg_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
 
     return sg->surfacearea;
 }
@@ -1631,7 +1631,7 @@ extern "C" float osl_surfacearea (void *sg_)
 
 extern "C" int osl_isshadowray (void *sg_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
 
     return sg->isshadowray;
 }
@@ -1640,7 +1640,7 @@ extern "C" int osl_isshadowray (void *sg_)
 
 extern "C" int osl_iscameraray (void *sg_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
 
     return sg->iscameraray;
 }
@@ -1649,7 +1649,7 @@ extern "C" int osl_iscameraray (void *sg_)
 
 extern "C" int osl_isdiffuseray (void *sg_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
 
     return sg->isdiffuseray;
 }
@@ -1658,7 +1658,7 @@ extern "C" int osl_isdiffuseray (void *sg_)
 
 extern "C" int osl_isglossyray (void *sg_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
 
     return sg->isglossyray;
 }
@@ -1667,7 +1667,7 @@ extern "C" int osl_isglossyray (void *sg_)
 
 extern "C" int osl_backfacing (void *sg_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
 
     return sg->backfacing;
 }
@@ -1685,7 +1685,7 @@ inline Vec3 calculatenormal(void *P_, bool flipHandedness)
 
 extern "C" void osl_calculatenormal(void *out, void *sg_, void *P_)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Vec3 N = calculatenormal(P_, sg->flipHandedness);
     // Don't normalize N
     VEC(out) = N;
@@ -1741,15 +1741,9 @@ extern "C" int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int has_derivs, void *result)
 {
-    SingleShaderGlobal *sg = (SingleShaderGlobal *)sg_;
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
 
-    static Runflag runflags[1] = { RunflagOn };
-    return renderer->has_userdata (USTR(name), TYPEDESC(type), &sg->renderstate)
-             && renderer->get_userdata (runflags, 1, has_derivs, USTR(name),
-                                        TYPEDESC(type),
-                                        &sg->renderstate, 0, result, 0);
-    // FIXME -- these should be combined into a single lookup.  We only
-    // need the first now because in Arnold get_userdata asserts if called
-    // and the user data doesn't exist.
+    return renderer->get_userdata (has_derivs, USTR(name), TYPEDESC(type),
+                                   &sg->renderstate, result);
 }

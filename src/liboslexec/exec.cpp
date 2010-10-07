@@ -53,7 +53,6 @@ namespace pvt {   // OSL::pvt
 
 ShadingExecution::ShadingExecution ()
     : m_context(NULL), m_instance(NULL), m_master(NULL),
-      m_npoints_bound(0),
       m_last_instance_id(-1)
 {
 }
@@ -154,114 +153,6 @@ ShadingExecution::format_symbol (const std::string &format,
     }
     return s;
 }
-
-
-
-void
-ShadingExecution::get_matrix (Matrix44 &result, ustring from, int whichpoint)
-{
-    if (from == Strings::common || from == m_shadingsys->commonspace_synonym()) {
-        result.makeIdentity ();
-        return;
-    }
-    ShaderGlobals *globals = m_context->m_globals;
-    if (from == Strings::shader) {
-        m_renderer->get_matrix (result, globals->shader2common[whichpoint],
-                                globals->time[whichpoint]);
-        return;
-    }
-    if (from == Strings::object) {
-        m_renderer->get_matrix (result, globals->object2common[whichpoint],
-                                globals->time[whichpoint]);
-        return;
-    }
-    bool ok = m_renderer->get_matrix (result, from, globals->time[whichpoint]);
-    if (! ok) {
-        result.makeIdentity ();
-        error ("Could not get matrix '%s'", from.c_str());
-    }
-}
-
-
-
-bool 
-ShadingExecution::get_renderer_array_attribute(void *renderstate, bool derivatives, ustring object, 
-                                               TypeDesc type, ustring name, 
-                                               int index, void *val)
-{
-    return m_renderer->get_array_attribute(renderstate, derivatives, object, type, name, index, val);
-}
-
-
-
-bool 
-ShadingExecution::get_renderer_attribute(void *renderstate, bool derivatives, ustring object, 
-                                         TypeDesc type, ustring name, void *val)
-{
-    return m_renderer->get_attribute(renderstate, derivatives, object, type, name, val);
-}
-
-
-
-bool
-ShadingExecution::get_renderer_userdata(Runflag *runflags, int npoints, bool derivatives, 
-                                        ustring name, TypeDesc type, 
-                                        void *renderstate, int renderstate_stepsize, 
-                                        void *val, int val_stepsize)
-{
-   return m_renderer->get_userdata(runflags, npoints, derivatives, name, type, 
-                                   renderstate, renderstate_stepsize,
-                                   val, val_stepsize);
-}
-
-
-
-bool
-ShadingExecution::renderer_has_userdata(ustring name, TypeDesc type, void *renderstate)
-{
-    return m_renderer->has_userdata(name, type, renderstate);
-}
-
-
-
-void
-ShadingExecution::get_inverse_matrix (Matrix44 &result,
-                                      ustring to, int whichpoint)
-{
-    if (to == Strings::common || to == m_shadingsys->commonspace_synonym()) {
-        result.makeIdentity ();
-        return;
-    }
-    ShaderGlobals *globals = m_context->m_globals;
-    if (to == Strings::shader) {
-        m_renderer->get_inverse_matrix (result, globals->shader2common[whichpoint],
-                                        globals->time[whichpoint]);
-        return;
-    }
-    if (to == Strings::object) {
-        m_renderer->get_inverse_matrix (result, globals->object2common[whichpoint],
-                                        globals->time[whichpoint]);
-        return;
-    }
-    bool ok = m_renderer->get_inverse_matrix (result, to, globals->time[whichpoint]);
-    if (! ok) {
-        result.makeIdentity ();
-        error ("Could not get matrix '%s'", to.c_str());
-    }
-}
-
-
-
-void
-ShadingExecution::get_matrix (Matrix44 &result, ustring from,
-                              ustring to, int whichpoint)
-{
-    Matrix44 Mfrom, Mto;
-    get_matrix (Mfrom, from, whichpoint);
-    get_inverse_matrix (Mto, to, whichpoint);
-    result = Mfrom * Mto;
-}
-
 
 
 

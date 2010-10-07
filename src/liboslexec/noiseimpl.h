@@ -31,9 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "oslops.h"
 
-#include "OpenImageIO/varyingref.h"
-
-
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif

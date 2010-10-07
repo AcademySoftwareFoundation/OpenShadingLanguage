@@ -47,8 +47,7 @@ namespace OSL {
 class RendererServices;
 class ShadingAttribState;
 typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
-class SingleShaderGlobal;
-class ShaderGlobals;
+struct ShaderGlobals;
 struct ClosureColor;
 class ClosureParam;
 
@@ -201,76 +200,41 @@ private:
 
 
 
-/// ShaderGlobals holds references to data to be used for the "global"
-/// data for each point being shaded -- position, normal, uv
-/// coordinates, etc.
-class ShaderGlobals
-{
-public:
-    ShaderGlobals () 
-        : iscameraray(true), isshadowray(false), isdiffuseray(false),
-          isglossyray(false), flipHandedness(false), backfacing(false)
-    { }
-    ~ShaderGlobals () { }
-
-    VaryingRef<Vec3> P;                ///< Position
-    VaryingRef<Vec3> dPdx, dPdy;       ///< Partials
-    VaryingRef<Vec3> I;                ///< Incident ray
-    VaryingRef<Vec3> dIdx, dIdy;       ///< Partial derivatives for I
-    VaryingRef<Vec3> N;                ///< Shading normal
-    VaryingRef<Vec3> Ng;               ///< True geometric normal
-    VaryingRef<float> u, v;            ///< Surface parameters
-    VaryingRef<float> dudx, dudy;      ///< u differentials
-    VaryingRef<float> dvdx, dvdy;      ///< v differentials
-    VaryingRef<Vec3> dPdu, dPdv;       ///< Partial derivatives
-    VaryingRef<float> time;            ///< Time for each sample
-    VaryingRef<float> dtime;           ///< Time interval for each sample
-    VaryingRef<Vec3> dPdtime;          ///< Velocity
-    VaryingRef<Vec3> Ps;               ///< Point being lit
-    VaryingRef<Vec3> dPsdx, dPsdy;     ///< Derivs of Ps
-
-    VaryingRef<void *> renderstate;    ///< Renderer context for each sample
-
-    VaryingRef<TransformationPtr> object2common; /// Object->common xform
-    VaryingRef<TransformationPtr> shader2common; /// Shader->common xform
-
-    VaryingRef<ClosureColor *> Ci;     ///< Output closure
-
-    VaryingRef<float> surfacearea;     ///< Total area of the object (not exposed)
-    bool iscameraray;                  ///< True if computing for camera ray
-    bool isshadowray;                  ///< True if computing for shadow opacity
-    bool isdiffuseray;                 ///< True if computing for diffuse ray
-    bool isglossyray;                  ///< True if computing for glossy ray
-    bool flipHandedness;               ///< flips the result of calculatenormal()
-    bool backfacing;                   ///< True if we want to shade the back face
-};
-
-
-
-struct SingleShaderGlobal {
-    Vec3 P, dPdx, dPdy;    ///< Position
-    Vec3 I, dIdx, dIdy;    ///< Incident ray
-    Vec3 N;                ///< Shading normal
-    Vec3 Ng;               ///< True geometric normal
-    float u, dudx, dudy;   ///< Surface parameter u
-    float v, dvdx, dvdy;   ///< Surface parameter v
-    Vec3 dPdu, dPdv;       ///< Tangents on the surface
-    float time;            ///< Time for each sample
-    float dtime;           ///< Time interval for each sample
-    Vec3 dPdtime;          ///< Velocity
-    Vec3 Ps, dPsdx, dPsdy; ///< Point being lit
-    void* renderstate;     ///< Renderer state for each sample
-    pvt::ShadingContext* context; ///< ShadingContext
-    TransformationPtr object2common; /// Object->common xform
-    TransformationPtr shader2common; /// Shader->common xform
-    ClosureColor *Ci;      ///< Output closure
-    float surfacearea;     ///< Total area of the object (not exposed)
-    int iscameraray;       ///< True if computing for camera ray
-    int isshadowray;       ///< True if computing for shadow opacity
-    int isdiffuseray;      ///< True if computing for diffuse ray
-    int isglossyray;       ///< True if computing for glossy ray
-    int flipHandedness;    ///< flips the result of calculatenormal()
-    int backfacing;        ///< True if we want to shade the back face
+/// This struct represents the global variables accessible from a shader, note 
+/// that not all fields will be valid in all contexts.
+///
+/// All points, vectors and normals are given in "common" space.
+struct ShaderGlobals {
+    Vec3 P, dPdx, dPdy;              /**< Position */
+    Vec3 I, dIdx, dIdy;              /**< Incident ray */
+    Vec3 N;                          /**< Shading normal */
+    Vec3 Ng;                         /**< True geometric normal */
+    float u, dudx, dudy;             /**< Surface parameter u */
+    float v, dvdx, dvdy;             /**< Surface parameter v */
+    Vec3 dPdu, dPdv;                 /**< Tangents on the surface */
+    float time;                      /**< Time for each sample */
+    float dtime;                     /**< Time interval for each sample */
+    Vec3 dPdtime;                    /**< Velocity */
+    Vec3 Ps, dPsdx, dPsdy;           /**< Point being lit (valid only in light
+                                          attenuation shaders */
+    void* renderstate;               /**< Opaque pointer to renderer state (can
+                                          be used to retrieve renderer specific
+                                          details like userdata) */
+    pvt::ShadingContext* context;    /**< ShadingContext (this will be set by
+                                          OSL itself) */
+    TransformationPtr object2common; /**< Object->common xform */
+    TransformationPtr shader2common; /**< Shader->common xform */
+    ClosureColor *Ci;                /**< Output closure (should be initialized
+                                          to NULL) */
+    float surfacearea;               /**< Total area of the object (defined by
+                                          light shaders for energy normalization) */
+    int iscameraray;                 /**< True if computing for camera ray */
+    int isshadowray;                 /**< True if computing for shadow opacity */
+    int isdiffuseray;                /**< True if computing for diffuse ray */
+    int isglossyray;                 /**< True if computing for glossy ray */
+    int flipHandedness;              /**< flips the result of calculatenormal() */
+    int backfacing;                  /**< True if we want are shading the
+                                          backside of the surface */
 };
 
 
@@ -314,13 +278,11 @@ public:
                                       ustring name, int index, void *val ) = 0;
 
     /// Get the named user-data from the current object and write it into
-    /// 'val'.  This function provides and array of renderstates 'npoints'
-    /// in size, and a block of memory in which to store the user data (pointed
-    /// to by val).  Both arrays have a stride of 'stepsize'.
-    virtual bool get_userdata (OSL::pvt::Runflag *runflags, int npoints, bool derivatives, 
-                               ustring name, TypeDesc type, 
-                               void *renderstates,  int renderstates_stepsize,
-                               void *val, int val_stepsize ) = 0;
+    /// 'val'. If derivatives is true, the derivatives should be written into val
+    /// as well. Return false if no user-data with the given name and type was
+    /// found.
+    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
+                               void *renderstate, void *val) = 0;
 
     /// Does the current object have the named user-data associated with it?
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate) = 0;
@@ -344,7 +306,7 @@ public:
     /// Return true if the file is found and could be opened by an
     /// available ImageIO plugin, otherwise return false.
     virtual bool texture (ustring filename, TextureOptions &options,
-                          SingleShaderGlobal *sg,
+                          ShaderGlobals *sg,
                           float s, float t, float dsdx, float dtdx,
                           float dsdy, float dtdy, float *result);
 

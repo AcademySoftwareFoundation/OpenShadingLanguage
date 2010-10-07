@@ -49,7 +49,7 @@ namespace pvt {   // OSL::pvt
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys) 
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_attribs(NULL), m_globals(NULL)
+      m_attribs(NULL)
 {
     m_shadingsys.m_stat_contexts += 1;
 }
@@ -63,102 +63,19 @@ ShadingContext::~ShadingContext ()
 
 
 
-void
-ShadingContext::execute_llvm (ShaderUse use, Runflag *rf, int *ind, int nind)
-{
-    ShaderGroup &sgroup (attribs()->shadergroup (use));
-
-    RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
-    ASSERT (run_func); 
-
-    // Client supplied ShaderGlobals.  Pipe fit to SSG with lots of 
-    // extra copying.
-    ASSERT (globals());
-
-    // Ignore runflags for now
-    SingleShaderGlobal my_sg;
-    ShaderGlobals& sg = *(globals());
-    size_t groupdata_size = sgroup.llvm_groupdata_size();
-    DASSERT(groupdata_size * m_npoints <= m_heap.size());
-#if USE_RUNFLAGS
-    for (int i = 0; i < m_npoints; i++) {
-        if (rf[i]) {
-#elif USE_RUNINDICES
-    for (int ind_ = 0;  ind_ < nind;  ++ind_) { {
-        int i = ind[ind_];
-#elif USE_RUNSPANS
-    for (int nspans_ = nind/2; nspans_; --nspans_, ind += 2) {
-        for (int i = ind[0];  i < ind[1];  ++i) {
-#else
-            { int i=0; ASSERT(0 && "not runflags, indices, or spans!");
-#endif
-            static Vec3 vzero (0,0,0);
-            my_sg.P = sg.P[i];
-            my_sg.dPdx = sg.dPdx[i];
-            my_sg.dPdy = sg.dPdy[i];
-            my_sg.I = sg.I.is_null() ? vzero : sg.I[i];
-            my_sg.dIdx = sg.dIdx.is_null() ? vzero : sg.dIdx[i];
-            my_sg.dIdy = sg.dIdy.is_null() ? vzero : sg.dIdy[i];
-            my_sg.N = sg.N[i];
-            my_sg.Ng = sg.Ng[i];
-            my_sg.u = sg.u[i];
-            my_sg.v = sg.v[i];
-            my_sg.dudx = sg.dudx[i];
-            my_sg.dudy = sg.dudy[i];
-            my_sg.dvdx = sg.dvdx[i];
-            my_sg.dvdy = sg.dvdy[i];
-            my_sg.dPdu = sg.dPdu[i];
-            my_sg.dPdv = sg.dPdv[i];
-            my_sg.time = sg.time[i];
-            my_sg.dtime = sg.dtime.is_null() ? 0.0f : sg.dtime[i];
-            my_sg.dPdtime = sg.dtime.is_null() ? vzero : sg.dPdtime[i];
-            my_sg.Ps = sg.Ps.is_null() ? vzero : sg.Ps[i];
-            my_sg.dPsdx = sg.dPsdx.is_null() ? vzero : sg.dPsdx[i];
-            my_sg.dPsdy = sg.dPsdy.is_null() ? vzero : sg.dPsdy[i];
-            my_sg.renderstate = sg.renderstate[i];
-            my_sg.context = this;
-            my_sg.object2common = sg.object2common[i];
-            my_sg.shader2common = sg.shader2common[i];
-            my_sg.Ci = sg.Ci[i];
-            my_sg.surfacearea = sg.surfacearea.is_null() ? 1.0f : sg.surfacearea[i];
-            my_sg.iscameraray = sg.iscameraray;
-            my_sg.isshadowray = sg.isshadowray;
-            my_sg.isdiffuseray = sg.isdiffuseray;
-            my_sg.isglossyray = sg.isglossyray;
-            my_sg.flipHandedness = sg.flipHandedness;
-            my_sg.backfacing = sg.backfacing;
-            run_func (&my_sg, &m_heap[groupdata_size * i]);
-
-            sg.Ci[i] = my_sg.Ci;
-//            if (use == ShadUseDisplacement) {
-            // FIXME -- should only do this extra work for disp shaders,
-            // but at the moment we only use ShadUseSurface, even for disp!
-                sg.P[i] = my_sg.P;
-                sg.dPdx[i] = my_sg.dPdx;
-                sg.dPdy[i] = my_sg.dPdy;
-                sg.N[i] = my_sg.N;
-//            }
-        }
-    }
-}
-
-
-
 bool
-ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
-                                   int npoints)
+ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas)
 {
     DASSERT (use == ShadUseSurface);  // FIXME
 
     m_curuse = use;
     m_attribs = &sas;
-    m_npoints = npoints;
     m_closures_allotted = 0;
 
     // Optimize if we haven't already
     ShaderGroup &sgroup (sas.shadergroup (use));
     if (sgroup.nlayers()) {
-        sgroup.start_running (npoints);
+        sgroup.start_running ();
         if (! sgroup.optimized()) {
             shadingsys().optimize_group (sas, sgroup);
         }
@@ -168,7 +85,7 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
     }
 
     // Allocate enough space on the heap
-    size_t heap_size_needed = sgroup.llvm_groupdata_size() * m_npoints;
+    size_t heap_size_needed = sgroup.llvm_groupdata_size();
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
             shadingsys().info ("  ShadingContext %p growing heap to %llu",
@@ -192,12 +109,11 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas,
 
 void
 ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
-                         SingleShaderGlobal &ssg)
+                         ShaderGlobals &ssg)
 {
-    if (! prepare_execution (use, sas, 1))
+    if (! prepare_execution (use, sas))
         return;
 
-    m_globals = NULL;
     ShaderGroup &sgroup (m_attribs->shadergroup (use));
     DASSERT (sgroup.llvm_compiled_version());
     DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
@@ -205,83 +121,6 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
     ssg.Ci = NULL;
     RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
     run_func (&ssg, &m_heap[0]);
-}
-
-
-
-void
-ShadingContext::execute (ShaderUse use, int n, ShadingAttribState &sas,
-                         ShaderGlobals &sg,
-                         Runflag *rf, int *ind, int nind)
-{
-    // FIXME -- timers/stats
-    if (shadingsys().debug())
-        shadingsys().info ("execute context %p as %s for %d points", this, shaderusename(use), n);
-
-    if (! prepare_execution (use, sas, n))
-        return;
-
-    m_globals = &sg;
-
-   // Make space for new runflags
-#if USE_RUNFLAGS
-    Runflag *runflags = rf;
-    int *indices = NULL;
-    int nindices = 0;
-    if (rf) {
-        // Passed runflags -- done!
-    } else if (ind) {
-        runflags = ALLOCA (Runflag, m_npoints);
-        // Passed indices -- need to convert to runflags
-        memset (runflags, RunflagOff, m_npoints*sizeof(Runflag));
-        for (int i = 0;  i < nind;  ++i)
-            runflags[indices[i]] = RunflagOn;
-    } else {
-        runflags = ALLOCA (Runflag, m_npoints);
-        // If not passed runflags, make new ones
-        for (int i = 0;  i < m_npoints;  ++i)
-            runflags[i] = RunflagOn;
-    }
-#elif USE_RUNINDICES
-    Runflag *runflags = rf;
-    int *indices = ALLOCA (int, m_npoints);
-    int nindices = nind;
-    if (ind) {
-        memcpy (indices, ind, nind*sizeof(indices[0]));
-    } else if (rf) {
-        // Passed runflags -- convert those to indices
-        for (int i = 0;  i < m_npoints;  ++i)
-            if (rf[i])
-                indices[nindices++] = i;
-    } else {
-        // If not passed either, make new ones
-        nindices = m_npoints;
-        for (int i = 0;  i < nindices;  ++i)
-            indices[i] = i;
-    }
-#elif USE_RUNSPANS
-    Runflag *runflags = rf;
-    int *indices = NULL;
-    int nindices = nind;
-    if (ind) {
-        // NOTE: this assumes indices were passed in spans format
-        indices = ALLOCA (int, nind);
-        memcpy (indices, ind, nind*sizeof(indices[0]));
-    } else if (rf) {
-        // Passed runflags -- convert those to spans
-        indices = ALLOCA (int, m_npoints*2);
-        nindices = 0;
-        runflags_to_spans (rf, 0, m_npoints, indices, nindices);
-    } else {
-        // If not passed either, make new ones
-        indices = ALLOCA (int, 2);  // max space we could need
-        nindices = 2;
-        indices[0] = 0;
-        indices[1] = m_npoints;
-    }
-#endif
-
-    execute_llvm (use, runflags, indices, nindices);
 }
 
 

@@ -553,7 +553,7 @@ MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
 
 extern "C" float osl_smoothstep_ffff(float e0, float e1, float x) { return smoothstep(e0, e1, x); }
 
-extern "C" float osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void *x_)
+extern "C" void osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void *x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 (e1_);
@@ -562,7 +562,7 @@ extern "C" float osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void 
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" float osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float x_)
+extern "C" void osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -571,7 +571,7 @@ extern "C" float osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" float osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void* x_)
+extern "C" void osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void* x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -580,7 +580,7 @@ extern "C" float osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" float osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float x_)
+extern "C" void osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 (e1_);
@@ -589,7 +589,7 @@ extern "C" float osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" float osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void* x_)
+extern "C" void osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void* x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 (e1_);
@@ -598,7 +598,7 @@ extern "C" float osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" float osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, float x_)
+extern "C" void osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, float x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -607,7 +607,7 @@ extern "C" float osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, floa
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" float osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void* x_)
+extern "C" void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void* x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -1710,7 +1710,7 @@ extern "C" float osl_filterwidth_ff(void *x_)
     return filter_width(x.dx(), x.dy());
 }
 
-extern "C" float osl_filterwidth_vv(void *out, void *x_)
+extern "C" void osl_filterwidth_vv(void *out, void *x_)
 {
     Dual2<Vec3> x = DVEC(x_);
 

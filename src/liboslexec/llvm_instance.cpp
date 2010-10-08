@@ -3133,7 +3133,7 @@ llvm_gen_keyword_fill(RuntimeOptimizer &rop, Opcode &op, const ClosureRegistry::
                 legal = true;
         }
         if (!legal) {
-            rop.shadingsys().warning("Unsupported closure keyword arg %s for %s", key->c_str(), clname.c_str());
+            rop.shadingsys().warning("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
             continue;
         }
 

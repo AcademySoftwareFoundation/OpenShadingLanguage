@@ -617,22 +617,6 @@ extern "C" void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void
 }
 
 
-
-inline Dual2<float> min (const Dual2<float> &x, const Dual2<float> &y)
-{
-    return x.val() > y.val() ? y : x;
-}
-
-inline Dual2<float> max (const Dual2<float> &x, const Dual2<float> &y)
-{
-    return x.val() > y.val() ? x : y;
-}
-
-MAKE_BINARY_PERCOMPONENT_OP (min, std::min, min);
-MAKE_BINARY_PERCOMPONENT_OP (max, std::max, max);
-
-
-
 // point = M * point
 extern "C" void osl_transform_vmv(void *result, void* M_, void* v_)
 {
@@ -1618,62 +1602,6 @@ extern "C" int osl_get_attribute_s(void *sg_,
                               array_lookup, index, TypeDesc::TypeString, dest);   
 }
 
-
-
-extern "C" float osl_surfacearea (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-
-    return sg->surfacearea;
-}
-
-
-
-extern "C" int osl_isshadowray (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-
-    return sg->isshadowray;
-}
-
-
-
-extern "C" int osl_iscameraray (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-
-    return sg->iscameraray;
-}
-
-
-
-extern "C" int osl_isdiffuseray (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-
-    return sg->isdiffuseray;
-}
-
-
-
-extern "C" int osl_isglossyray (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-
-    return sg->isglossyray;
-}
-
-
-
-extern "C" int osl_backfacing (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-
-    return sg->backfacing;
-}
-
-
-
 inline Vec3 calculatenormal(void *P_, bool flipHandedness)
 {
     Dual2<Vec3> &tmpP (DVEC(P_));
@@ -1718,20 +1646,6 @@ extern "C" void osl_filterwidth_vv(void *out, void *x_)
     VEC(out).y = filter_width (x.dx().y, x.dy().y);   
     VEC(out).z = filter_width (x.dx().z, x.dy().z);   
 }
-
-
-
-extern "C" int osl_and_iii(int a, int b)
-{
-   return a && b;
-}
-
-extern "C" int osl_or_iii(int a, int b)
-{
-   return a || b;
-}
-
-
 
 /***********************************************************************
  * Utility routines

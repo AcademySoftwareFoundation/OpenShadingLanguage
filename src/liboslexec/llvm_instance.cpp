@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "llvm_headers.h"
 #include <llvm/Analysis/Verifier.h>
+#include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
@@ -117,6 +118,7 @@ namespace pvt {
 
 
 static ustring op_abs("abs");
+static ustring op_and("and");
 static ustring op_bitand("bitand");
 static ustring op_bitor("bitor");
 static ustring op_ceil("ceil");
@@ -140,6 +142,7 @@ static ustring op_min("min");
 static ustring op_neq("neq");
 static ustring op_nop("nop");
 static ustring op_normal("normal");
+static ustring op_or("or");
 static ustring op_point("point");
 static ustring op_printf("printf");
 static ustring op_round("round");
@@ -1132,7 +1135,9 @@ llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
             rop.builder().SetInsertPoint (then_block);
             rop.builder().CreateStore (trueval, layerfield);
             std::string name = Strutil::format ("%s_%d", parent->layername().c_str(), parent->id());
-            rop.llvm_call_function (name.c_str(), args, 2);
+            // Mark the call as a fast call
+            llvm::CallInst* call_inst = llvm::cast<llvm::CallInst>(rop.llvm_call_function (name.c_str(), args, 2));
+            call_inst->setCallingConv(llvm::CallingConv::Fast);
             rop.builder().CreateBr (after_block);
             rop.builder().SetInsertPoint (after_block);
         }
@@ -1743,6 +1748,47 @@ LLVMGEN (llvm_gen_clamp)
         rop.llvm_store_value (val, Result, 0, i);
         rop.llvm_store_value (valdx, Result, 1, i);
         rop.llvm_store_value (valdy, Result, 2, i);
+    }
+    return true;
+}
+
+// Implementation for min/max
+LLVMGEN (llvm_gen_minmax)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& x = *rop.opargsym (op, 1);
+    Symbol& y = *rop.opargsym (op, 2);
+
+    TypeDesc type = Result.typespec().simpletype();
+    bool is_float = Result.typespec().is_floatbased();
+    int num_components = type.aggregate;
+    for (int i = 0; i < num_components; i++) {
+        // First do the lower bound
+        llvm::Value *x_val = rop.llvm_load_value (x, 0, i, type);
+        llvm::Value *y_val = rop.llvm_load_value (y, 0, i, type);
+
+        llvm::Value* cond = NULL;
+        // NOTE(boulos): Using <= instead of < to match old behavior
+        // (only matters for derivs)
+        if (op.opname() == op_min) {
+          cond = (is_float) ? rop.builder().CreateFCmpULE(x_val, y_val) :
+            rop.builder().CreateICmpSLE(x_val, y_val);
+        } else {
+          cond = (is_float) ? rop.builder().CreateFCmpUGT(x_val, y_val) :
+            rop.builder().CreateICmpSGT(x_val, y_val);
+        }
+
+        llvm::Value* res_val = rop.builder().CreateSelect (cond, x_val, y_val);
+        rop.llvm_store_value (res_val, Result, 0, i);
+        if (Result.has_derivs()) {
+          llvm::Value* x_dx = rop.llvm_load_value (x, 1, i, type);
+          llvm::Value* x_dy = rop.llvm_load_value (x, 2, i, type);
+          llvm::Value* y_dx = rop.llvm_load_value (y, 1, i, type);
+          llvm::Value* y_dy = rop.llvm_load_value (y, 2, i, type);
+          rop.llvm_store_value (rop.builder().CreateSelect(cond, x_dx, y_dx), Result, 1, i);
+          rop.llvm_store_value (rop.builder().CreateSelect(cond, x_dy, y_dy), Result, 2, i);
+        }
     }
     return true;
 }
@@ -2468,6 +2514,41 @@ LLVMGEN (llvm_gen_sincos)
     return true;
 }
 
+LLVMGEN (llvm_gen_andor)
+{
+    Opcode& op (rop.inst()->ops()[opnum]);
+    Symbol& result = *rop.opargsym (op, 0);
+    Symbol& a = *rop.opargsym (op, 1);
+    Symbol& b = *rop.opargsym (op, 2);
+
+    llvm::Value* i1_res = NULL;
+    llvm::Value* a_val = rop.llvm_load_value (a, 0, 0, TypeDesc::TypeInt);
+    llvm::Value* b_val = rop.llvm_load_value (b, 0, 0, TypeDesc::TypeInt);
+    if (op.opname() == op_and) {
+        // From the old bitcode generated
+        // define i32 @osl_and_iii(i32 %a, i32 %b) nounwind readnone ssp {
+        //     %1 = icmp ne i32 %b, 0
+        //  %not. = icmp ne i32 %a, 0
+        //     %2 = and i1 %1, %not.
+        //     %3 = zext i1 %2 to i32
+        //   ret i32 %3
+        llvm::Value* b_ne_0 = rop.builder().CreateICmpNE (b_val, rop.llvm_constant(0));
+        llvm::Value* a_ne_0 = rop.builder().CreateICmpNE (a_val, rop.llvm_constant(0));
+        llvm::Value* both_ne_0 = rop.builder().CreateAnd (b_ne_0, a_ne_0);
+        i1_res = both_ne_0;
+    } else {
+        // Also from the bitcode
+        // %1 = or i32 %b, %a
+        // %2 = icmp ne i32 %1, 0
+        // %3 = zext i1 %2 to i32
+        llvm::Value* or_ab = rop.builder().CreateOr(a_val, b_val);
+        llvm::Value* or_ab_ne_0 = rop.builder().CreateICmpNE (or_ab, rop.llvm_constant(0));
+        i1_res = or_ab_ne_0;
+    }
+    llvm::Value* i32_res = rop.builder().CreateZExt(i1_res, rop.llvm_type_int());
+    rop.llvm_store_value(i32_res, result, 0, 0);
+    return true;
+}
 
 
 LLVMGEN (llvm_gen_if)
@@ -3002,10 +3083,10 @@ LLVMGEN (llvm_gen_get_simple_SG_field)
     DASSERT (op.nargs() == 1);
 
     Symbol& Result = *rop.opargsym (op, 0);
-
-    std::string name = std::string("osl_") + op.opname().string();
-
-    llvm::Value *r = rop.llvm_call_function (name.c_str(), rop.sg_void_ptr());
+    int sg_index = ShaderGlobalNameToIndex (op.opname());
+    ASSERT (sg_index >= 0);
+    llvm::Value *sg_field = rop.builder().CreateConstGEP2_32 (rop.sg_ptr(), 0, sg_index);
+    llvm::Value* r = rop.builder().CreateLoad(sg_field);
     rop.llvm_store_value (r, Result);
 
     return true;
@@ -3258,8 +3339,7 @@ initialize_llvm_generator_table ()
     INIT2 (abs, llvm_gen_generic);
     INIT2 (acos, llvm_gen_generic);
     INIT (add);
-    // OPT: create inlined LLVM for 'and'
-    INIT2 (and, llvm_gen_generic);
+    INIT2 (and, llvm_gen_andor);
     INIT2 (area, llvm_gen_generic);
     INIT (aref);
     INIT (arraylength);
@@ -3333,8 +3413,8 @@ initialize_llvm_generator_table ()
     INIT (matrix);
     INIT (mxcompassign);
     INIT (mxcompref);
-    INIT2 (min, llvm_gen_generic);
-    INIT2 (max, llvm_gen_generic);
+    INIT2 (min, llvm_gen_minmax);
+    INIT2 (max, llvm_gen_minmax);
     //stdosl.h   INIT (mix);
     INIT (mod);
     INIT (mul);
@@ -3344,8 +3424,7 @@ initialize_llvm_generator_table ()
     // INIT (nop);
     INIT2 (normal, llvm_gen_construct_triple);
     INIT2 (normalize, llvm_gen_generic);
-    // OPT: create inlined LLVM for 'or'
-    INIT2 (or, llvm_gen_generic);
+    INIT2 (or, llvm_gen_andor);
     INIT2 (pnoise, llvm_gen_pnoise);
     INIT2 (point, llvm_gen_construct_triple);
     INIT2 (pow, llvm_gen_generic);
@@ -3439,6 +3518,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     m_layer_func = llvm::cast<llvm::Function>(m_llvm_module->getOrInsertFunction(unique_layer_name,
                     llvm_type_void(), llvm_type_sg_ptr(),
                     llvm_type_groupdata_ptr(), NULL));
+    // Use fastcall for non-entry layer functions to encourage register calling
+    if (!groupentry) m_layer_func->setCallingConv(llvm::CallingConv::Fast);
     llvm::Function::arg_iterator arg_it = m_layer_func->arg_begin();
     // Get shader globals pointer
     m_llvm_shaderglobals_ptr = arg_it++;
@@ -3579,48 +3660,47 @@ RuntimeOptimizer::build_llvm_group ()
 
     // Generate the LLVM IR for each layer
     //
-    llvm::Function *func = NULL;
-    std::vector<llvm::Function *> funcs (nlayers);
-    for (int layer = 0;  layer < nlayers;  ++layer) {
+    llvm::Function** funcs = (llvm::Function**)alloca(m_num_used_layers * sizeof(llvm::Function*));
+    for (int layer = 0; layer < nlayers; ++layer) {
         set_inst (layer);
         bool lastlayer = (layer == (nlayers-1));
-        if (! inst()->unused() || lastlayer) {
-            func = build_llvm_instance (lastlayer);
-            funcs[layer] = func;
-        } else {
-            funcs[layer] = NULL;
-        }
+        int index = m_layer_remap[layer];
+        if (index != -1) funcs[index] = build_llvm_instance (lastlayer);
     }
+    llvm::Function* entry_func = funcs[m_num_used_layers-1];
     m_stat_llvm_irgen_time = timer();  timer.reset();  timer.start();
 
-    // Optimize the LLVM IR
-
+    // Optimize the LLVM IR unless it's just a ret void group (1 layer, 1 BB, 1 inst == retvoid)
+    bool skip_optimization = m_num_used_layers == 1 && entry_func->size() == 1 && entry_func->front().size() == 1;
+    if (!skip_optimization) {
 #if 0
-    // First do the simple function passes
-    m_llvm_func_passes->doInitialization();
-    for (llvm::Module::iterator i = llvm_module()->begin();
-         i != llvm_module()->end(); ++i) {
+      // First do the simple function passes
+      m_llvm_func_passes->doInitialization();
+      for (llvm::Module::iterator i = llvm_module()->begin();
+           i != llvm_module()->end(); ++i) {
         m_llvm_func_passes->run (*i);
-    }
-    m_llvm_func_passes->doFinalization();
+      }
+      m_llvm_func_passes->doFinalization();
 #endif
 
-    // Next do the module passes
-    m_llvm_passes->run (*llvm_module());
+      // Next do the module passes
+      m_llvm_passes->run (*llvm_module());
 
 #if 0
-    // Now do additional highly optimized function passes on just the
-    // new functions we added for the shader layers
-    m_llvm_func_passes_optimized->doInitialization();
-    BOOST_FOREACH (llvm::Function *f, funcs)
-        m_llvm_func_passes_optimized->run (*f);
-    m_llvm_func_passes_optimized->doFinalization();
+      // Now do additional highly optimized function passes on just the
+      // new functions we added for the shader layers
+      m_llvm_func_passes_optimized->doInitialization();
+      for (int i = 0; i < m_num_used_layers; ++i) {
+          m_llvm_func_passes_optimized->run (funcs[i]);
+      }
+      m_llvm_func_passes_optimized->doFinalization();
 #endif
+    }
 
     m_stat_llvm_opt_time = timer();  timer.reset();  timer.start();
 
     if (shadingsys().llvm_debug())
-        llvm::errs() << "func after opt  = " << *func << "\n";
+        llvm::errs() << "func after opt  = " << *entry_func << "\n";
 
     // Debug code to dump the resulting bitcode to a file
     if (shadingsys().llvm_debug() >= 2) {
@@ -3634,16 +3714,16 @@ RuntimeOptimizer::build_llvm_group ()
 
     // Force the JIT to happen now, while we have the lock
     llvm::ExecutionEngine* ee = shadingsys().ExecutionEngine();
-    RunLLVMGroupFunc f = (RunLLVMGroupFunc) ee->getPointerToFunction(func);
+    RunLLVMGroupFunc f = (RunLLVMGroupFunc) ee->getPointerToFunction(entry_func);
     m_group.llvm_compiled_version (f);
 
     // Remove the IR for the group layer functions, we've already JITed it
     // and will never need the IR again.  This saves memory, and also saves
     // a huge amount of time since we won't re-optimize it again and again
     // if we keep adding new shader groups to the same Module.
-    BOOST_FOREACH (llvm::Function *f, funcs)
-        if (f)
-            f->deleteBody();
+    for (int i = 0; i < m_num_used_layers; ++i) {
+        funcs[i]->deleteBody();
+    }
 //    m_llvm_module = NULL;
 
     m_stat_llvm_jit_time = timer();

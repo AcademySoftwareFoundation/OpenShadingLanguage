@@ -29,10 +29,10 @@ set (CMAKE_MODULE_PATH
 
 include (util_macros)
 include (platform)
+include (oiio)
 include (externalpackages)
 include (flexbison)
-include (oiio)
-include_directories (${OPENIMAGEIO_INCLUDES})
+include_directories (${OPENIMAGEIO_INCLUDES} ${TBB_INCLUDES})
 
 
 # We want CTest for testing

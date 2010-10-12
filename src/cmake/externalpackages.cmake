@@ -192,6 +192,7 @@ if (USE_TBB)
                ${TBB_HOME}/include/tbb${TBB_VERSION}
                ${THIRD_PARTY_TOOLS}/include/tbb${TBB_VERSION}
                ${PROJECT_SOURCE_DIR}/include
+               ${OPENIMAGEIOHOME}/include/OpenImageIO
               )
     if (TBB_INCLUDES OR TBB_LIBRARY)
         set (TBB_FOUND TRUE)

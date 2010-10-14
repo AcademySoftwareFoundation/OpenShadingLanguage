@@ -9,8 +9,8 @@ MY_CMAKE_FLAGS += \
 		  -DOPENEXR_CUSTOM=1 \
 		  -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf" \
                   -DLLVM_CUSTOM=1 \
-		  -DLLVM_VERSION=2.7 \
-		  -DLLVM_DIRECTORY=/shots/spi/home/lib/arnold/spinux1/llvm_2.7
+		  -DLLVM_VERSION=2.8 \
+		  -DLLVM_DIRECTORY=/shots/spi/home/lib/arnold/spinux1/llvm_2.8
 
 ifeq (${OSL_NAMESPACE},)
 OSL_NAMESPACE='OSL_Arnold'

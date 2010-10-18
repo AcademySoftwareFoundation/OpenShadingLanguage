@@ -3244,7 +3244,7 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.shadingsys().error ("Closure %s not found in the runtime", closure_name.c_str());
+        rop.shadingsys().error ("Closure '%s' not found in the runtime", closure_name.c_str());
         return false;
     }
 
@@ -3292,6 +3292,9 @@ LLVMGEN (llvm_gen_closure)
             llvm::Value* src = rop.llvm_void_ptr (sym);
             rop.llvm_memcpy (dst, src, (int)p.type.size(),
                              4 /* use 4 byte alignment for now */);
+        } else {
+            rop.shadingsys().error ("Incompatible formal argument %d to '%s' closure. Prototypes don't match renderer registry.",
+                                    carg + 1, closure_name.c_str());
         }
     }
 

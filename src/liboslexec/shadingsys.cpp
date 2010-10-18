@@ -199,6 +199,12 @@ void
 ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params, int size,
                                     PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
+    for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
+        if (params[i].key == NULL && params[i].type.size() != (size_t)params[i].field_size) {
+            error ("Parameter %d of '%s' closure is assigned to a field of incompatible size", i + 1, name);
+            return;
+        }
+    }
     m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare);
 }
 

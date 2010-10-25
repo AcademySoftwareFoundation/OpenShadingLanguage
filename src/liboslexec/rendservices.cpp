@@ -104,10 +104,16 @@ RendererServices::texture (ustring filename, TextureOptions &options,
 
     
 bool
-RendererServices::get_texture_info (ustring filename, ustring dataname,
+RendererServices::get_texture_info (ustring filename, int subimage,
+                                    ustring dataname,
                                     TypeDesc datatype, void *data)
 {
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
+    return texturesys()->get_texture_info (filename, subimage, dataname,
+                                           datatype, data);
+#else
     return texturesys()->get_texture_info (filename, dataname, datatype, data);
+#endif
 }
 
 

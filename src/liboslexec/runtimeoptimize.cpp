@@ -1411,8 +1411,15 @@ DECLFOLDER(constfold_gettextureinfo)
             ustring dataname = *(ustring *)Dataname.data();
             TypeDesc t = Data.typespec().simpletype();
             void *mydata = alloca (t.size ());
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
+            // FIXME(ptex) -- exclude folding of ptex, since these things
+            // can vary per face.
+            int result = rop.texturesys()->get_texture_info (filename, 0,
+                                                         dataname, t, mydata);
+#else
             int result = rop.texturesys()->get_texture_info (filename, dataname,
                                                              t, mydata);
+#endif
             // Now we turn
             //       gettextureinfo result filename dataname data
             // into this for success:

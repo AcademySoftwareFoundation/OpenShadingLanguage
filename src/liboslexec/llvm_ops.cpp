@@ -1471,7 +1471,8 @@ extern "C" int osl_get_textureinfo(void *sg_,    void *fin_,
     const ustring &filename  = USTR(fin_);
     const ustring &dataname  = USTR(dnam_);
 
-    return renderer->get_texture_info (filename, dataname, typedesc, data);
+    return renderer->get_texture_info (filename, 0 /*FIXME-ptex*/,
+                                       dataname, typedesc, data);
 }
 
 

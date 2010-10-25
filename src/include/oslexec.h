@@ -314,8 +314,9 @@ public:
     /// and the data has been put in *data.  Return false if the texture
     /// doesn't exist, doesn't have the requested data, if the data
     /// doesn't match the type requested. or some other failure.
-    virtual bool get_texture_info (ustring filename, ustring dataname,
-                                   TypeDesc datatype, void *data);
+    virtual bool get_texture_info (ustring filename, int subimage,
+                                   ustring dataname, TypeDesc datatype,
+                                   void *data);
 
 private:
     TextureSystem *m_texturesys;   // For default texture implementation

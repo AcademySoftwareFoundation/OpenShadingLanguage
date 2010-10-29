@@ -318,6 +318,44 @@ public:
                                    ustring dataname, TypeDesc datatype,
                                    void *data);
 
+    /// Get a handle to a query object. A query is a list of attribute names
+    /// given in the attr_names array, and their corresponding types given in
+    /// attr_types. The returned handle will be valid until RendererServices
+    /// is destroyed and can be used to perform queries with the pointcloud
+    /// method below.
+    ///
+    /// Be aware this is a function we never call during the render. It is
+    /// not used from the shader. LLVM gen code calls it once for each specific
+    /// pointcloud call it finds in the code. That provides a handle that is
+    /// used as a constant in the shader throughout the rest of the render. It
+    /// never changes since a pointcloud call has always the same type profile
+    /// for the returned data in that specific line of code.
+    ///
+    /// So the renderer can cache and optimize any possible things associated
+    /// with this call and link it to the handle. From that point, the shader
+    /// will always use it when calling pointcloud. Even if the renderer
+    /// doesn't optimize anything, we already save some arguments.
+    ///
+    ///   For more insight look at llvm_gen_pointcloud in llvm_instance.cpp
+    ///
+    virtual void *get_pointcloud_attr_query (ustring *attr_names,
+                                             TypeDesc *attr_types, int nattrs) = 0;
+
+    /// Lookup nearest points in a point cloud. It will search for points
+    /// around the given center within the specified radius. attr_outdata
+    /// is an array of pointers to arrays of elements of the appropiate type.
+    /// Its length has to be the same as the number of attributes passed
+    /// when the query object was created with get_pointcloud_attr_query, and
+    /// the type of the referenced data arrays has to match the types of the
+    /// query object too. Those arrays will be filled with the found points
+    /// up to max_points. So they have to be allocated with enough space.
+    ///
+    /// attr_query is a special handle created by get_pointcloud_attr_query
+    /// When we find a call to pointcloud in the shader we get one of those
+    /// handlers and then compile this call with it in attr_query as a constant
+    virtual int pointcloud (ustring filename, const OSL::Vec3 &center, float radius,
+                            int max_points, void *attr_query, void **attr_outdata) = 0;
+
 private:
     TextureSystem *m_texturesys;   // For default texture implementation
 };

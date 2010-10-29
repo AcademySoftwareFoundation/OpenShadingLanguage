@@ -9,7 +9,7 @@ SET ( liboslexec_srcs
           vol_subsurface.cpp
           context.cpp exec.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          opcolor.cpp  
+          opcolor.cpp opcloud.cpp
           opmessage.cpp opnoise.cpp 
           opspline.cpp opstring.cpp
           oslexec.cpp osoreader.cpp

@@ -263,6 +263,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_spline_dvfdv", "xXXXXi",
     "osl_setmessage", "xXsLX",
     "osl_getmessage", "iXsLX",
+    "osl_pointcloud", "iXsvfiXi*",
     NULL
 };
 
@@ -3315,6 +3316,87 @@ LLVMGEN (llvm_gen_closure)
 }
 
 
+
+LLVMGEN (llvm_gen_pointcloud)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    DASSERT (op.nargs() >= 5);
+    // Does the compiler check this? Can we turn it
+    // into a DASSERT?
+    ASSERT (((op.nargs() - 5) % 2) == 0);
+
+    Symbol& Result     = *rop.opargsym (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Center     = *rop.opargsym (op, 2);
+    Symbol& Radius     = *rop.opargsym (op, 3);
+    Symbol& Max_points = *rop.opargsym (op, 4);
+
+    DASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
+             Center.typespec().is_triple() && Radius.typespec().is_float() &&
+             Max_points.typespec().is_int());
+
+    std::vector<llvm::Value *> args;
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_load_value (Filename));
+    args.push_back (rop.llvm_void_ptr   (Center));
+    args.push_back (rop.llvm_load_value (Radius));
+    args.push_back (rop.llvm_load_value (Max_points));
+    // We will create a query later and it needs to be passed
+    // here, so make space for another argument and save the pos
+    int query_pos = args.size();
+    args.push_back (NULL); // attr_query place holder
+
+    // Noew parse the "string", value pairs that the caller uses
+    // to give us the output arrays where we have to put the attributes
+    // for the found points
+    std::vector<ustring>  attr_names;
+    std::vector<TypeDesc> attr_types;
+
+    int attr_arg_offset = 5; // where the ot attrs begin
+    int nattrs = (op.nargs() - 5) / 2;
+    // pass the number of attributes before the
+    // var arg list
+    args.push_back (rop.llvm_constant(nattrs));
+
+    for (int i = 0; i < nattrs; ++i)
+    {
+        Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
+        Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
+        // The names of the attribute has to be a string and a constant.
+        // We don't allow runtine generated attributes because the
+        // queries have to be pre-baked
+        ASSERT (Name.typespec().is_string());
+        ASSERT (Name.is_constant());
+        ustring *name = (ustring *)Name.data();
+        // We save this to generate the query object later, both name
+        // and type will never change during the render
+        attr_names.push_back (*name);
+        attr_types.push_back (Value.typespec().simpletype());
+        // And now pass the actual pointer to the data
+        args.push_back (rop.llvm_void_ptr (Value));
+    }
+
+    // Try to build a query and get the handle from the renderer
+    void *attr_query = rop.shadingsys().renderer()->get_pointcloud_attr_query (&attr_names[0], &attr_types[0], attr_names.size());
+    if (!attr_query)
+    {
+        rop.shadingsys().error ("Failed to create pointcloud query at (%s:%d)",
+                                 op.sourcefile().c_str(), op.sourceline());
+        return false;
+    }
+    // Every pointcloud call that appears in the code gets its own query object.
+    // Not a big waste, and it can be used until the end of the render. It is a
+    // constant handle that we put in the arguments for the renderer.
+    args[query_pos] = rop.llvm_constant_ptr(attr_query, rop.llvm_type_void_ptr());
+
+    llvm::Value *ret = rop.llvm_call_function ("osl_pointcloud", &args[0], args.size());
+    // Return the number of results
+    rop.llvm_store_value (ret, Result);
+    return true;
+}
+
+
 #ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
 typedef boost::unordered_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
 #else
@@ -3430,6 +3512,7 @@ initialize_llvm_generator_table ()
     INIT2 (or, llvm_gen_andor);
     INIT2 (pnoise, llvm_gen_pnoise);
     INIT2 (point, llvm_gen_construct_triple);
+    INIT  (pointcloud);
     INIT2 (pow, llvm_gen_generic);
     INIT (printf);
     INIT2 (psnoise, llvm_gen_pnoise);

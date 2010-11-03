@@ -102,6 +102,22 @@ RendererServices::texture (ustring filename, TextureOptions &options,
 }
 
 
+
+bool
+RendererServices::texture3d (ustring filename, TextureOptions &options,
+                             ShaderGlobals *sg, const Vec3 &P,
+                             const Vec3 &dPdx, const Vec3 &dPdy,
+                             const Vec3 &dPdz, float *result)
+{
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
+    return texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
+                                    result);
+#else
+    return false;
+#endif
+}
+
+
     
 bool
 RendererServices::get_texture_info (ustring filename, int subimage,

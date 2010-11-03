@@ -1455,6 +1455,91 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
 
 
 
+extern "C" int
+osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
+               void *dPdx_, void *dPdy_, void *dPdz_, int chans,
+               void *result, void *dresultdx, void *dresultdy, void *dresultdz)
+{
+    const Vec3 &P (*(Vec3 *)P_);
+    const Vec3 &dPdx (*(Vec3 *)dPdx_);
+    const Vec3 &dPdy (*(Vec3 *)dPdy_);
+    const Vec3 &dPdz (*(Vec3 *)dPdz_);
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices *renderer (sg->context->renderer());
+    TextureOptions *opt = (TextureOptions *)opt_;
+    opt->nchannels = chans;
+    float dresultds[3], dresultdt[3], dresultdr[3];
+    opt->dresultds = dresultdx ? dresultds : NULL;
+    opt->dresultdt = dresultdy ? dresultdt : NULL;
+    opt->dresultdr = dresultdz ? dresultdr : NULL;
+
+    bool ok = renderer->texture3d (USTR(name), *opt, sg, P,
+                                   dPdx, dPdy, dPdz, (float *)result);
+
+    // Correct our str texture space gradients into xyz-space gradients
+    if (dresultdx)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdx)[i] = dresultds[i] * dPdx[0] + dresultdt[i] * dPdx[1] + dresultdr[i] * dPdx[2];
+    if (dresultdy)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdy)[i] = dresultds[i] * dPdy[0] + dresultdt[i] * dPdy[1] + dresultdr[i] * dPdy[2];
+    if (dresultdz)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdz)[i] = dresultds[i] * dPdz[0] + dresultdt[i] * dPdz[1] + dresultdr[i] * dPdz[2];
+    return ok;
+}
+
+
+extern "C" int
+osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
+                     void *dPdx_, void *dPdy_, void *dPdz_, int chans,
+                     void *result, void *dresultdx,
+                     void *dresultdy, void *dresultdz,
+                     void *alpha, void *dalphadx,
+                     void *dalphady, void *dalphadz)
+{
+    const Vec3 &P (*(Vec3 *)P_);
+    const Vec3 &dPdx (*(Vec3 *)dPdx_);
+    const Vec3 &dPdy (*(Vec3 *)dPdy_);
+    const Vec3 &dPdz (*(Vec3 *)dPdz_);
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices *renderer (sg->context->renderer());
+    TextureOptions *opt = (TextureOptions *)opt_;
+    opt->nchannels = chans + 1;
+    float local_result[4], dresultds[4], dresultdt[4], dresultdr[4];
+    opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
+    opt->dresultdt = (dresultdy || dalphady) ? dresultdt : NULL;
+    opt->dresultdr = (dresultdz || dalphadz) ? dresultdr : NULL;
+
+    bool ok = renderer->texture3d (USTR(name), *opt, sg, P,
+                                   dPdx, dPdy, dPdz, (float *)result);
+
+    for (int i = 0;  i < chans;  ++i)
+        ((float *)result)[i] = local_result[i];
+    ((float *)alpha)[0] = local_result[chans];
+
+    // Correct our str texture space gradients into xyz-space gradients
+    if (dresultdx)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdx)[i] = dresultds[i] * dPdx[0] + dresultdt[i] * dPdx[1] + dresultdr[i] * dPdx[2];
+    if (dresultdy)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdy)[i] = dresultds[i] * dPdy[0] + dresultdt[i] * dPdy[1] + dresultdr[i] * dPdy[2];
+    if (dresultdz)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdz)[i] = dresultds[i] * dPdz[0] + dresultdt[i] * dPdz[1] + dresultdr[i] * dPdz[2];
+    if (dalphadx)
+        ((float *)dalphadx)[0] = dresultds[chans] * dPdx[0] + dresultdt[chans] * dPdx[1] + dresultdr[chans] * dPdx[2];
+    if (dalphady)
+        ((float *)dalphady)[0] = dresultds[chans] * dPdy[0] + dresultdt[chans] * dPdy[1] + dresultdr[chans] * dPdy[2];
+    if (dalphadz)
+        ((float *)dalphadz)[0] = dresultds[chans] * dPdz[0] + dresultdt[chans] * dPdz[1] + dresultdr[chans] * dPdz[2];
+
+    return ok;
+}
+
+
+
 extern "C" int osl_get_textureinfo(void *sg_,    void *fin_, 
                                    void *dnam_,  int type, 
                                    int arraylen, int aggregate, void *data)

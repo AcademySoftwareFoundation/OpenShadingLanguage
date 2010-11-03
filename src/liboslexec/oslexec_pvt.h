@@ -1096,8 +1096,10 @@ namespace Strings {
     extern ustring sidedness, front, back, both;
     extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
     extern ustring Ci;
-    extern ustring width, swidth, twidth, blur, sblur, tblur;
-    extern ustring wrap, swrap, twrap, black, clamp, periodic, mirror;
+    extern ustring width, swidth, twidth, rwidth;
+    extern ustring blur, sblur, tblur, rblur;
+    extern ustring wrap, swrap, twrap, rwrap;
+    extern ustring black, clamp, periodic, mirror;
     extern ustring firstchannel, fill, alpha;
 }; // namespace Strings
 

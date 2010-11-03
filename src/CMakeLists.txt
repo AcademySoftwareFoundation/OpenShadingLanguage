@@ -107,7 +107,8 @@ TESTSUITE ( arithmetic array array-derivs
             logic loop matrix message miscmath missing-shader noise pnoise
             oslc-err-paramdefault shortcircuit spline string 
             struct struct-err struct-layers struct-with-array ternary
-            texture-alpha texture-blur texture-firstchannel texture-simple
+            texture-alpha texture-blur texture-field3d
+            texture-firstchannel texture-simple
             texture-width texture-withderivs texture-wrap
             transform trig typecast vecctr vector )
 

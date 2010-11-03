@@ -303,12 +303,27 @@ public:
     /// pixels in screen space, adjacent samples in parameter space on a
     /// surface, etc.
     ///
-    /// Return true if the file is found and could be opened by an
-    /// available ImageIO plugin, otherwise return false.
+    /// Return true if the file is found and could be opened, otherwise
+    /// return false.
     virtual bool texture (ustring filename, TextureOptions &options,
                           ShaderGlobals *sg,
                           float s, float t, float dsdx, float dtdx,
                           float dsdy, float dtdy, float *result);
+
+    /// Filtered 3D texture lookup for a single point.
+    ///
+    /// P is the volumetric texture coordinate; dPd{x,y,z} are the
+    /// differentials of P in some canonical directions x, y, and z.
+    /// The choice of x,y,z are not important to the implementation; it
+    /// can be any imposed 3D coordinates, such as pixels in screen
+    /// space and depth along the ray, etc.
+    ///
+    /// Return true if the file is found and could be opened, otherwise
+    /// return false.
+    virtual bool texture3d (ustring filename, TextureOptions &options,
+                            ShaderGlobals *sg, const Vec3 &P,
+                            const Vec3 &dPdx, const Vec3 &dPdy,
+                            const Vec3 &dPdz, float *result);
 
     /// Get information about the given texture.  Return true if found
     /// and the data has been put in *data.  Return false if the texture

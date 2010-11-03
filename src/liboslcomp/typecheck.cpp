@@ -914,6 +914,10 @@ ASTfunction_call::typecheck_builtin_specialcase ()
                 argtakesderivs (2, true);
                 argtakesderivs (3, true);
             }
+        } else if (m_name == "texture3d") {
+            if (nargs == 2 || list_nth(args(),2)->typespec().is_string()) {
+                argtakesderivs (2, true);
+            }
         } else {
             ASSERT (0 && "Missed a takes_derivs case!");
         }
@@ -1070,6 +1074,8 @@ static const char * builtin_func_args [] = {
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
+    "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
+               "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "warning", "xs*", NULL,   // FIXME -- further checking
 
 //    "ambient", "C", "Cn", NULL,

@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 11 January, 2010 \\
-(with corrections, 8 February, 2010)
+(with corrections, 3 November, 2010)
 }}
 
 
@@ -3689,6 +3689,86 @@ variable specified.  This allows for RGBA lookups in a single call to
 
 \apiend
 
+\apiitem{\emph{type} \textbf{texture3d} (string filename, point p, \pl) \\
+\emph{type} \textbf{texture} (string filename, point p, vector dpdx,
+vector dpdy, vector dpdz, \pl)}
+\indexapi{texture3d()}
+
+Perform a 3D lookup of a volume texture, indexed by 3D coordinate
+$p$, antialiased over a region defined by the differentials
+\emph{dpdx, dpdy}, and \emph{dpdz} (which are computed
+automatically from $p$, if not supplied).  Whether the results
+are assigned to a \float or a \color (or type cast to one of those)
+determines whether the texture lookup is a single channel or three
+channels.
+
+The 3D lookup coordinate may be followed by optional token/value
+arguments that control the behavior of {\cf texture3d()}:
+
+\apiitem{"blur", <float>}
+\vspace{12pt}
+Additional blur when looking up the texture value (default: 0).  The
+blur amount is relative to the size of the texture (i.e., 0.1 blurs by a
+kernel that is 10\% of the full width, height, and depth of the texture).
+
+The blur may be specified separately in the $s$, $t$, and $r$ directions by
+using the \qkw{sblur}, \qkw{tblur}, and \qkw{rblur} parameters, respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"width", <float>}
+\vspace{12pt}
+Scale (multiply) the size of the filter as defined by the differentials
+(or implicitly by the differentials of $s$, $t$, and $r$).  The default is
+{\cf 1}, meaning that no special scaling is performed.  A width of
+{\cf 0} would effectively turn off texture filtering entirely.
+
+The width value may be specified separately in the $s$, $t$, and $r$
+directions by using the \qkw{swidth}, \qkw{twidth}, and \qkw{rwidth} parameters,
+respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"wrap", <string>}
+\vspace{12pt}
+
+Specifies how the texture \emph{wraps} coordinates outside the $[0,1]$
+range.  Supported wrap modes include: \qkw{black}, \qkw{periodic},
+\qkw{clamp}, \qkw{mirror}, and \qkw{default} (which is the default).  A
+value of \qkw{default} indicates that the renderer should use any wrap
+modes specified in the texture file itself (a non-\qkw{default} value
+overrides any wrap mode specified by the file).
+
+The wrap modes may be specified separately in the $s$, $t$, and $r$
+directions by using the \qkw{swrap}, \qkw{twrap}, and \qkw{rwrap}
+parameters, respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"firstchannel", <int>}
+\vspace{12pt}
+The first channel to look up from the texture map (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"fill", <float>}
+\vspace{12pt}
+The value to return for any channels that are not present in the texture
+file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"alpha", <floatvariable>}
+\vspace{12pt}
+The alpha channel (presumed to be the next channel following the
+channels returned by the {\cf texture3d()} call) will be stored in the
+variable specified.  This allows for RGBA lookups in a single call to
+{\cf texture3d()}.
+\apiend
+\vspace{-16pt}
+
+\apiend
+
 %FIXME
 %texture3d
 %spatialdbsave
@@ -3713,8 +3793,13 @@ parameters recognized are listed below:
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
 
-\qkw{resolution} & {\cf int[2]} & The resolution of the highest MIPmap
-level stored in the texture map. \\[0.75ex]
+\qkw{resolution} & {\cf int[2]} & The resolution ($x$ and $y$) of the
+highest MIPmap level stored in the texture map. \\[0.75ex]
+
+\qkw{resolution} & {\cf int[3]} & The resolution ($x$, $y$, and $z$) of
+the highest MIPmap level stored in the 3D texture map.  If it isn't a
+volumetric texture, the third component ($z$ resolution) will be
+1.\\[0.75ex]
 
 \qkw{channels} & \inttype & The number of channels in the texture
 map. \\[0.75ex]

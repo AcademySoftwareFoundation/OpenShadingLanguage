@@ -1460,6 +1460,7 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
                void *dPdx_, void *dPdy_, void *dPdz_, int chans,
                void *result, void *dresultdx, void *dresultdy, void *dresultdz)
 {
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     const Vec3 &P (*(Vec3 *)P_);
     const Vec3 &dPdx (*(Vec3 *)dPdx_);
     const Vec3 &dPdy (*(Vec3 *)dPdy_);
@@ -1487,6 +1488,9 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
         for (int i = 0;  i < chans;  ++i)
             ((float *)dresultdz)[i] = dresultds[i] * dPdz[0] + dresultdt[i] * dPdz[1] + dresultdr[i] * dPdz[2];
     return ok;
+#else
+    return 0;
+#endif
 }
 
 
@@ -1498,6 +1502,7 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
                      void *alpha, void *dalphadx,
                      void *dalphady, void *dalphadz)
 {
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     const Vec3 &P (*(Vec3 *)P_);
     const Vec3 &dPdx (*(Vec3 *)dPdx_);
     const Vec3 &dPdy (*(Vec3 *)dPdy_);
@@ -1536,6 +1541,9 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
         ((float *)dalphadz)[0] = dresultds[chans] * dPdz[0] + dresultdt[chans] * dPdz[1] + dresultdr[chans] * dPdz[2];
 
     return ok;
+#else
+    return 0;
+#endif
 }
 
 

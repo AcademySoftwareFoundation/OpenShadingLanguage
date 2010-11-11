@@ -97,8 +97,15 @@ RendererServices::texture (ustring filename, TextureOptions &options,
                            float s, float t, float dsdx, float dtdx,
                            float dsdy, float dtdy, float *result)
 {
-    return texturesys()->texture (filename, options, s, t,
-                                  dsdx, dtdx, dsdy, dtdy, result);
+    bool status =  texturesys()->texture (filename, options, s, t,
+                                          dsdx, dtdx, dsdy, dtdy, result);
+    if (!status)
+    {
+        std::string err = texturesys()->geterror();
+        if (err.size())
+            std::cerr << "[RendererServices::texture] " << err.c_str();
+    }
+    return status;
 }
 
 
@@ -110,8 +117,15 @@ RendererServices::texture3d (ustring filename, TextureOptions &options,
                              const Vec3 &dPdz, float *result)
 {
 #if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
-    return texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
-                                    result);
+    bool status = texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
+                                            result);
+    if (!status)
+    {
+        std::string err = texturesys()->geterror();
+        if (err.size())
+            std::cerr << "[RendererServices::texture3d] " << err.c_str();
+    }
+    return status;
 #else
     return false;
 #endif
@@ -125,11 +139,18 @@ RendererServices::get_texture_info (ustring filename, int subimage,
                                     TypeDesc datatype, void *data)
 {
 #if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
-    return texturesys()->get_texture_info (filename, subimage, dataname,
-                                           datatype, data);
+    bool status = texturesys()->get_texture_info (filename, subimage, dataname,
+                                                   datatype, data);
 #else
-    return texturesys()->get_texture_info (filename, dataname, datatype, data);
+    bool status = texturesys()->get_texture_info (filename, dataname, datatype, data);
 #endif
+    if (!status)
+    {
+        std::string err = texturesys()->geterror();
+        if (err.size())
+            std::cerr << "[RendererServices::get_texture_info] " << err.c_str();
+    }
+    return status;
 }
 
 

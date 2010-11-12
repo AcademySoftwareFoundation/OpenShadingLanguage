@@ -2913,7 +2913,7 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     Timer timer;
     lock_guard lock (group.m_mutex);
     if (group.optimized()) {
-        spin_lock (m_stat_mutex);
+        spin_lock stat_lock (m_stat_mutex);
         double t = timer();
         m_stat_optimization_time += t;
         m_stat_opt_locking_time += t;
@@ -2926,7 +2926,7 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
 
     attribstate.changed_shaders ();
     group.m_optimized = true;
-    spin_lock (m_stat_mutex);
+    spin_lock stat_lock (m_stat_mutex);
     m_stat_optimization_time += timer();
     m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
     m_stat_specialization_time += rop.m_stat_specialization_time;

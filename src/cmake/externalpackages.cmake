@@ -205,6 +205,8 @@ if (USE_TBB)
 else ()
     add_definitions ("-DUSE_TBB=0")
     message (STATUS "TBB will not be used")
+    set(TBB_INCLUDES "")
+    set(TBB_LIBRARY "")
 endif ()
 
 # end TBB setup

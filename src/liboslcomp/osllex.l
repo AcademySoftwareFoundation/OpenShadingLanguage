@@ -257,7 +257,7 @@ preprocess (const char *yytext)
 	int line = atoi (yytext+1);
         if (line > 0) {
             oslcompiler->lineno (line);
-	    char *f = strchr (yytext, '\"');
+	    const char *f = strchr (yytext, '\"');
 	    if (f) {
                 ++f;  // increment to past the quote
 	        int len = 0;  // count of chars within quotes

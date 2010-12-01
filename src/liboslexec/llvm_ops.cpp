@@ -1391,6 +1391,14 @@ osl_texture_set_fill (void *opt, float x)
     ((TextureOptions *)opt)->fill = x;
 }
 
+extern "C" void
+osl_texture_set_time (void *opt, float *x)
+{
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
+    ((TextureOptions *)opt)->time.init (x);
+#endif
+}
+
 extern "C" int
 osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,

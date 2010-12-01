@@ -2702,6 +2702,9 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
             rop.llvm_call_function ("osl_texture_set_firstchannel", opt, val);
         } else if (name == Strings::fill && valtype == TypeDesc::FLOAT) {
             rop.llvm_call_function ("osl_texture_set_fill", opt, val);
+        } else if (name == Strings::time && valtype == TypeDesc::FLOAT) {
+            rop.llvm_call_function ("osl_texture_set_time",
+                                    opt, rop.llvm_get_pointer(Val));
 
         } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);

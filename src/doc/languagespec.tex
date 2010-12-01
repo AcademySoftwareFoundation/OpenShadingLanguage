@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 11 January, 2010 \\
-(with corrections, 3 November, 2010)
+(with corrections, 30 November, 2010)
 }}
 
 
@@ -3702,6 +3702,11 @@ are assigned to a \float or a \color (or type cast to one of those)
 determines whether the texture lookup is a single channel or three
 channels.
 
+The {\cf p} coordinate (and {\cf dpdx}, {\cf dpdy}, and {\cf dpdz}
+derivatives, if supplied) are assumed to be in \commonspace and will be
+automatically transformed into volume local coordinates, if such a
+transormation is specified in the volume file itself.
+
 The 3D lookup coordinate may be followed by optional token/value
 arguments that control the behavior of {\cf texture3d()}:
 
@@ -3755,6 +3760,13 @@ The first channel to look up from the texture map (default: 0).
 \vspace{12pt}
 The value to return for any channels that are not present in the texture
 file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"time", <float>}
+\vspace{12pt}
+A time value to use if the volume texture specifies a time-varying
+local transformation (default: 0).
 \apiend
 \vspace{-16pt}
 

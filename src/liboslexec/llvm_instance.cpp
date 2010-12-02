@@ -3418,7 +3418,7 @@ LLVMGEN (llvm_gen_closure)
 
 
 
-LLVMGEN (llvm_gen_pointcloud)
+LLVMGEN (llvm_gen_pointcloud_search)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
@@ -3613,7 +3613,7 @@ initialize_llvm_generator_table ()
     INIT2 (or, llvm_gen_andor);
     INIT2 (pnoise, llvm_gen_pnoise);
     INIT2 (point, llvm_gen_construct_triple);
-    INIT  (pointcloud);
+    INIT  (pointcloud_search);
     INIT2 (pow, llvm_gen_generic);
     INIT (printf);
     INIT2 (psnoise, llvm_gen_pnoise);

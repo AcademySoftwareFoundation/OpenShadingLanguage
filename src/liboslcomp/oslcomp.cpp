@@ -611,7 +611,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         // them by the op.
         if (op->argtakesderivs_all()) {
             oso (" %%argderivs{");
-            bool any = false;;
+            int any = 0;
             for (int i = 0;  i < op->nargs();  ++i)
                 if (op->argtakesderivs(i)) {
                     if (any++)

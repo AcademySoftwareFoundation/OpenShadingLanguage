@@ -159,6 +159,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_instructions_run = 0;
     m_stat_total_syms = 0;
     m_stat_syms_with_derivs = 0;
+    m_stat_optimization_time = 0;
 
     init_global_heap_offsets ();
 

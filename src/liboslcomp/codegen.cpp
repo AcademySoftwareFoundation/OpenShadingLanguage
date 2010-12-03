@@ -450,37 +450,38 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
 {
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
-    ASTliteral *lit = dynamic_cast<ASTliteral *>(init);
+    bool islit = init->nodetype() == ASTNode::literal_node;
+    ASTliteral *lit = static_cast<ASTliteral *>(init);
     bool completed = true;  // have we output the full initialization?
     TypeSpec type = sym->typespec().elementtype();
     if (type.is_closure()) {
         // this clause avoid trouble and assertions if the following
         // is_int(), i_float(), etc, encounter a closure.
-        completed = (lit != NULL);
+        completed = islit;
     } else if (type.is_structure()) {
         // No initializers for struct
         completed = false;
     } else if (type.is_int()) {
-        if (lit && lit->typespec().is_int())
+        if (islit && lit->typespec().is_int())
             out += Strutil::format ("%d ", lit->intval());
         else {
             out += "0 ";  // FIXME?
             completed = false;
         }
     } else if (type.is_float()) {
-        if (lit && lit->typespec().is_int())
+        if (islit && lit->typespec().is_int())
             out += Strutil::format ("%d ", lit->intval());
-        else if (lit && lit->typespec().is_float())
+        else if (islit && lit->typespec().is_float())
             out += Strutil::format ("%.8g ", lit->floatval());
         else {
             out += "0 ";  // FIXME?
             completed = false;
         }
     } else if (type.is_triple()) {
-        if (lit && lit->typespec().is_int()) {
+        if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
             out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
-        } else if (lit && lit->typespec().is_float()) {
+        } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
             out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
         } else if (init && init->typespec() == type &&
@@ -510,9 +511,9 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
         }
     } else if (type.is_matrix()) {
         float f = 0;
-        if (lit && lit->typespec().is_int())
+        if (islit && lit->typespec().is_int())
             f = lit->intval();
-        else if (lit && lit->typespec().is_float())
+        else if (islit && lit->typespec().is_float())
             f = lit->floatval();
         else {
             f = 0;  // FIXME?
@@ -521,7 +522,7 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
         out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
                                 f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
     } else if (type.is_string()) {
-        if (lit && lit->typespec().is_string())
+        if (islit && lit->typespec().is_string())
             out += Strutil::format ("\"%s\" ", lit->strval());
         else {
             out += "\"\" ";  // FIXME?
@@ -1304,7 +1305,8 @@ ASTfunction_call::codegen (Symbol *dest)
             // components being passed as output params of the function --
             // these aren't really lvalues, so we need to restore their
             // values.  We save the indices we genearate code for here...
-            ASTindex *indexnode = dynamic_cast<ASTindex *> (a);
+            ASSERT(a->nodetype() == ASTNode::index_node);
+            ASTindex *indexnode = static_cast<ASTindex *> (a);
             thisarg = indexnode->codegen (NULL, index[i], index2[i], index3[i]);
             indexed_output_params = true;
         } else {
@@ -1415,8 +1417,8 @@ ASTfunction_call::codegen (Symbol *dest)
         a = args().get();
         for (int i = 0;  a;  a = a->nextptr(), ++i) {
             if (index[i]) {
-                ASTindex *indexnode = dynamic_cast<ASTindex *> (a);
-                ASSERT (indexnode);
+                ASSERT (a->nodetype() == ASTNode::index_node);
+                ASTindex *indexnode = static_cast<ASTindex *> (a);
                 indexnode->codegen_assign (argdest[i+argdest_return_offset],
                                            index[i], index2[i], index3[i]);
             }

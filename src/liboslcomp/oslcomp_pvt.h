@@ -322,7 +322,9 @@ private:
                                 std::vector<Symbol *> *wsyms);
 
     ASTshader_declaration *shader_decl () const {
-        return dynamic_cast<ASTshader_declaration *>(m_shader.get());
+        if (m_shader.get()->nodetype() != ASTNode::shader_declaration_node)
+            return NULL;
+        return static_cast<ASTshader_declaration *>(m_shader.get());
     }
     std::string retrieve_source (ustring filename, int line);
 

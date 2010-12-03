@@ -240,8 +240,8 @@ void
 ASTfunction_declaration::add_meta (ASTNode *meta)
 {
     for (  ;  meta;  meta = meta->nextptr()) {
-        const ASTvariable_declaration *metavar = dynamic_cast<const ASTvariable_declaration *>(meta);
-        ASSERT (metavar);
+        ASSERT (meta->nodetype() == ASTNode::variable_declaration_node);
+        const ASTvariable_declaration *metavar = static_cast<const ASTvariable_declaration *>(meta);
         Symbol *metasym = metavar->sym();
         if (metasym->name() == "builtin") {
             m_is_builtin = true;

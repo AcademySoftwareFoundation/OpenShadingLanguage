@@ -333,8 +333,8 @@ OSLCompilerImpl::default_output_filename ()
 void
 OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
 {
-    const ASTvariable_declaration *metavar = dynamic_cast<const ASTvariable_declaration *>(metanode);
-    ASSERT (metavar);
+    ASSERT (metanode->nodetype() == ASTNode::variable_declaration_node);
+    const ASTvariable_declaration *metavar = static_cast<const ASTvariable_declaration *>(metanode);
     Symbol *metasym = metavar->sym();
     ASSERT (metasym);
     TypeSpec ts = metasym->typespec();
@@ -386,15 +386,15 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
          type_c_str(sym->typespec()), sym->mangled().c_str());
 
     ASTvariable_declaration *v = NULL;
-    if (sym->node())
-        v = dynamic_cast<ASTvariable_declaration *>(sym->node());
+    if (sym->node() && sym->node()->nodetype() == ASTNode::variable_declaration_node)
+        v = static_cast<ASTvariable_declaration *>(sym->node());
 
     // Print default values
     bool isparam = (sym->symtype() == SymTypeParam ||
                     sym->symtype() == SymTypeOutputParam);
     if (sym->symtype() == SymTypeConst) {
         oso ("\t");
-        write_oso_const_value (dynamic_cast<const ConstantSymbol *>(sym));
+        write_oso_const_value (static_cast<const ConstantSymbol *>(sym));
         oso ("\t");
     } else if (v && isparam) {
         std::string out;

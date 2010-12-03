@@ -21,6 +21,13 @@ endif ()
 set ( CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
 
+## disable RTTI
+## NOTE(ckulla): LLVM builds without RTTI by default so beware
+##   if you find the need to turn this on, as OSL classes
+##   extending LLVM ones will cause linker errors (unless you
+##   rebuild LLVM with rtti enabled)
+set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 
 set (CMAKE_MODULE_PATH

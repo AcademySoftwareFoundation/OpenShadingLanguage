@@ -38,9 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OSL;
 
-
-#define BOOST_TEST_MAIN
-#include <boost/test/included/unit_test.hpp>
 #include <boost/random.hpp>
 
 #define MY_ID NBUILTIN_CLOSURES
@@ -113,15 +110,11 @@ static bool my_compare(int id, const void *dataA, const void *dataB)
    return primA->mergeable (primB);
 }
 
-BOOST_AUTO_TEST_CASE (closure_test_add)
+int main()
 {
     ShadingSystemImpl *shadingsys = new ShadingSystemImpl();
     ShadingContext *context = shadingsys->get_context();
-#if BOOST_VERSION >= 103900
-   // avoid warnings from boost headers
-    BOOST_CHECK_CLOSE(0.0f, 0.0f, 0.001f);
-    BOOST_CHECK_SMALL(0.0f, 0.001f);
-#endif
+
     ClosureParam my_params[] = { CLOSURE_FINISH_PARAM(MyClosure) };
     shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare);
     ClosureColor *A = create_component (context, Color3(.1, .1, .1), 0.33f);
@@ -134,8 +127,8 @@ BOOST_AUTO_TEST_CASE (closure_test_add)
     /* We can't check this anymore
     c.flatten(&add->parent, shadingsys);
 
-    BOOST_CHECK_EQUAL (c.ncomponents(), 2);
-    BOOST_CHECK_EQUAL (c.weight(1), Color3 (0.4, 0.4, 0.4));
+    ASSERT (c.ncomponents() == 2);
+    ASSERT (c.weight(1) == Color3 (0.4, 0.4, 0.4));
     */
     //std::cout << "c = " << c << "\n";
     delete shadingsys;

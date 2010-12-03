@@ -29,8 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "accum.h"
 #include "oslclosure.h"
 
-#define BOOST_TEST_MAIN
-#include <boost/test/included/unit_test.hpp>
 #include <boost/random.hpp>
 
 using namespace OSL;
@@ -116,7 +114,7 @@ void simulate(Accumulator &accum, const char **events, int testno)
     accum.end((void *)(long int)testno);
 }
 
-BOOST_AUTO_TEST_CASE (accum_test)
+int main()
 {
     // Some constants to avoid refering to AOV's by number
     const int beauty       = 0;
@@ -155,15 +153,15 @@ BOOST_AUTO_TEST_CASE (accum_test)
     // Create the automata and add the rules
     AccumAutomata automata;
 
-    BOOST_CHECK(automata.addRule("C[SG]*D*L",        beauty));
-    BOOST_CHECK(automata.addRule("C[SG]*D{2,3}L",    diffuse2_3));
-    BOOST_CHECK(automata.addRule("C[SG]*D*<L.'3'>",  light3));
-    BOOST_CHECK(automata.addRule("C[SG]*<.D'1'>D*L", object_1));
-    BOOST_CHECK(automata.addRule("C<.[SG]>+D*L",     specular));
-    BOOST_CHECK(automata.addRule("CD+L",             diffuse));
-    BOOST_CHECK(automata.addRule("CD+<Ts>L",         transpshadow));
-    BOOST_CHECK(automata.addRule("C<R[^D]>+D*L",     reflections));
-    BOOST_CHECK(automata.addRule("C([SG]*D){1,2}L",  nocaustic));
+    ASSERT(automata.addRule("C[SG]*D*L",        beauty));
+    ASSERT(automata.addRule("C[SG]*D{2,3}L",    diffuse2_3));
+    ASSERT(automata.addRule("C[SG]*D*<L.'3'>",  light3));
+    ASSERT(automata.addRule("C[SG]*<.D'1'>D*L", object_1));
+    ASSERT(automata.addRule("C<.[SG]>+D*L",     specular));
+    ASSERT(automata.addRule("CD+L",             diffuse));
+    ASSERT(automata.addRule("CD+<Ts>L",         transpshadow));
+    ASSERT(automata.addRule("C<R[^D]>+D*L",     reflections));
+    ASSERT(automata.addRule("C([SG]*D){1,2}L",  nocaustic));
 
     automata.compile();
 
@@ -180,15 +178,15 @@ BOOST_AUTO_TEST_CASE (accum_test)
 
     // And check. We unroll this loop for boost to give us a useful
     // error in case they fail
-    BOOST_CHECK(aovs[beauty      ].check());
-    BOOST_CHECK(aovs[diffuse2_3  ].check());
-    BOOST_CHECK(aovs[light3      ].check());
-    BOOST_CHECK(aovs[object_1    ].check());
-    BOOST_CHECK(aovs[specular    ].check());
-    BOOST_CHECK(aovs[diffuse     ].check());
-    BOOST_CHECK(aovs[transpshadow].check());
-    BOOST_CHECK(aovs[reflections ].check());
-    BOOST_CHECK(aovs[nocaustic   ].check());
+    ASSERT(aovs[beauty      ].check());
+    ASSERT(aovs[diffuse2_3  ].check());
+    ASSERT(aovs[light3      ].check());
+    ASSERT(aovs[object_1    ].check());
+    ASSERT(aovs[specular    ].check());
+    ASSERT(aovs[diffuse     ].check());
+    ASSERT(aovs[transpshadow].check());
+    ASSERT(aovs[reflections ].check());
+    ASSERT(aovs[nocaustic   ].check());
 
     std::cout << "Light expressions check OK" << std::endl;
 }

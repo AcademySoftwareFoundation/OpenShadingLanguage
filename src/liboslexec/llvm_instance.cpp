@@ -107,12 +107,6 @@ Schematically, we want to create code that resembles the following:
 extern int osl_llvm_compiled_ops_size;
 extern char osl_llvm_compiled_ops_block[];
 
-namespace llvm {
-// This seems necessary in order to avoid a "typeinfo not found for
-// JITMemoryManager" link error.  Is there a better solution?
-JITMemoryManager::~JITMemoryManager() {}
-};
-
 using namespace OSL;
 using namespace OSL::pvt;
 

@@ -237,8 +237,22 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname, const std::vector<int>
     std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
     Opcode op (opname, method, opargs.size(), args_to_add.size());
+    off_t oldcodesize = vectorbytes(code);
+    off_t oldargsize = vectorbytes(opargs);
     code.insert (code.begin()+opnum, op);
     opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
+    {
+        // Remember that they're already swapped
+        off_t opmem = vectorbytes(code) - oldcodesize;
+        off_t argmem = vectorbytes(opargs) - oldargsize;
+        // adjust memory stats
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_inst_ops += opmem;
+        ss.m_stat_mem_inst_args += argmem;
+        ss.m_stat_mem_inst += (opmem+argmem);
+        ss.m_stat_memory += (opmem+argmem);
+    }
     if (opnum < inst()->m_maincodebegin)
         ++inst()->m_maincodebegin;
     ++inst()->m_maincodeend;
@@ -2708,6 +2722,16 @@ RuntimeOptimizer::collapse_syms ()
 
     // Swap the new symbol list for the old.
     std::swap (inst()->m_instsymbols, new_symbols);
+    {
+        // adjust memory stats
+        // Remember that they're already swapped
+        off_t mem = vectorbytes(new_symbols) - vectorbytes(inst()->m_instsymbols);
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_inst_syms -= mem;
+        ss.m_stat_mem_inst -= mem;
+        ss.m_stat_memory -= mem;
+    }
 
     // Miscellaneous cleanup of other things that used symbol indices
     inst()->m_Psym = -1;
@@ -2784,6 +2808,20 @@ RuntimeOptimizer::collapse_ops ()
 
     // Swap the new code for the old.
     std::swap (inst()->m_instops, new_ops);
+    {
+        // adjust memory stats
+        // Remember that they're already swapped
+        off_t mem = vectorbytes(new_ops);
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_inst_ops -= mem;
+        ss.m_stat_mem_inst -= mem;
+        ss.m_stat_memory -= mem;
+        mem = vectorbytes(inst()->m_instops);
+        ss.m_stat_mem_inst_ops += mem;
+        ss.m_stat_mem_inst += mem;
+        ss.m_stat_memory += mem;
+    }
 }
 
 
@@ -2805,6 +2843,7 @@ RuntimeOptimizer::optimize_group ()
 
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
+        m_inst->copy_code_from_master ();
         if (m_shadingsys.debug() && m_shadingsys.optimize() >= 1) {
             std::cerr << "Before optimizing layer " << inst()->layername() 
                       << ", I get:\n" << inst()->print()
@@ -2858,6 +2897,18 @@ RuntimeOptimizer::optimize_group ()
             std::swap (inst()->symbols(), nosyms);
             OpcodeVec noops;
             std::swap (inst()->ops(), noops);
+            {
+                // adjust memory stats
+                // Remember that they're already swapped
+                off_t symmem = vectorbytes(nosyms);
+                off_t opmem = vectorbytes(noops);
+                ShadingSystemImpl &ss (shadingsys());
+                spin_lock lock (ss.m_stat_mutex);
+                ss.m_stat_mem_inst_syms -= symmem;
+                ss.m_stat_mem_inst_ops -= opmem;
+                ss.m_stat_mem_inst -= (symmem+opmem);
+                ss.m_stat_memory -= (symmem+opmem);
+            }
             continue;
         }
         if (m_shadingsys.optimize() >= 1) {

@@ -60,6 +60,7 @@ namespace llvm {
   class Linker;
   class Module;
   class PassManager;
+  class JITMemoryManager;
 }
 
 #ifdef OSL_NAMESPACE
@@ -73,7 +74,6 @@ namespace pvt {
 // forward definitions
 class ShadingSystemImpl;
 class ShadingContext;
-class ShadingExecution;
 class ShaderInstance;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 
@@ -86,6 +86,10 @@ typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 
 /// Like an int (of type T), but also internally keeps track of the 
 /// maximum value is has held, and the total "requested" deltas.
+/// You really shouldn't use an unsigned type for T, for two reasons:
+/// (1) Our implementation of '-=' will fail; and (2) you actually
+/// want to allow the counter to go negative, to detect if you have
+/// made a mistake in your bookkeeping by forgetting an allocation.
 template<typename T>
 class PeakCounter
 {
@@ -125,18 +129,21 @@ public:
     /// Add to current value, adjust peak and requested as necessary.
     ///
     const value_t operator+= (value_t sz) {
-        m_requested += sz;
         m_current += sz;
-        if (m_current > m_peak)
-            m_peak = m_current;
+        if (sz > 0) {
+            m_requested += sz;
+            if (m_current > m_peak)
+                m_peak = m_current;
+        }
         return m_current;
     }
-    /// Add to current value, adjust peak and requested as necessary.
+    /// Subtract from current value
     ///
     const value_t operator-= (value_t sz) {
-        m_current -= sz;
+        *this += (-sz);
         return m_current;
     }
+
     const value_t operator++ ()    { *this += 1;  return m_current; }
     const value_t operator++ (int) { *this += 1;  return m_current-1; }
     const value_t operator-- ()    { *this -= 1;  return m_current; }
@@ -148,9 +155,39 @@ public:
             << p.current() << " current";
         return out;
     }
+
+    std::string memstat () const {
+        return Strutil::memformat(requested()) + " requested, "
+             + Strutil::memformat(peak()) + " peak, "
+             + Strutil::memformat(current()) + " current";
+    }
+
 private:
     value_t m_current, m_requested, m_peak;
 };
+
+
+
+/// Template to count a vector's allocated size, in bytes.
+///
+template<class T>
+inline off_t vectorbytes (const std::vector<T> &v)
+{
+    return v.capacity() * sizeof(T);
+}
+
+
+/// Template to fully deallocate a stl container using the swap trick.
+///
+template<class T>
+inline void stlfree (T &v)
+{
+    T tmp;
+    std::swap (tmp, v);
+    // Now v is no allocated space, and tmp has v's old allocated space.
+    // When tmp leaves scope as we return, that space will be freed.
+}
+
 
 
 
@@ -162,7 +199,7 @@ class ShaderMaster : public RefCnt {
 public:
     typedef intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
-    ~ShaderMaster () { }
+    ~ShaderMaster ();
 
     std::string print ();  // Debugging
 
@@ -208,7 +245,6 @@ private:
 
     friend class OSOReaderToMaster;
     friend class ShaderInstance;
-    friend class ShadingExecution;
 };
 
 
@@ -298,9 +334,7 @@ public:
     /// Add a connection
     ///
     void add_connection (int srclayer, const ConnectedParam &srccon,
-                         const ConnectedParam &dstcon) {
-        m_connections.push_back (Connection (srclayer, srccon, dstcon));
-    }
+                         const ConnectedParam &dstcon);
 
     /// How many connections to earlier layers do we have?
     ///
@@ -377,6 +411,10 @@ public:
     ///
     bool unused () const { return run_lazily() && ! outgoing_connections(); }
 
+    /// Make our own version of the code and args from the master.
+    ///
+    void copy_code_from_master ();
+
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
     SymbolVec m_instsymbols;            ///< Symbols used by the instance
@@ -395,7 +433,6 @@ private:
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
     int m_Psym, m_Nsym;                 ///< Quick lookups of common syms
 
-    friend class ShadingExecution;
     friend class ShadingSystemImpl;
     friend class RuntimeOptimizer;
 };
@@ -666,6 +703,8 @@ private:
         return p;
     }
 
+    /// Set up LLVM -- make sure we have a Context, Module, ExecutionEngine,
+    /// retained JITMemoryManager, etc.
     void SetupLLVM ();
 
     RendererServices *m_renderer;         ///< Renderer services
@@ -732,7 +771,23 @@ private:
     double m_stat_llvm_setup_time;        ///<     llvm setup time
     double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
-    double m_stat_llvm_jit_time;          ///<     llvm JIT time
+    double m_stat_llvm_jit_time;          ///<     llvm JIT time 
+
+    PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory
+
+    PeakCounter<off_t> m_stat_mem_master; ///< Stat: master-related mem
+    PeakCounter<off_t> m_stat_mem_master_ops;
+    PeakCounter<off_t> m_stat_mem_master_args;
+    PeakCounter<off_t> m_stat_mem_master_syms;
+    PeakCounter<off_t> m_stat_mem_master_defaults;
+    PeakCounter<off_t> m_stat_mem_master_consts;
+    PeakCounter<off_t> m_stat_mem_inst;   ///< Stat: instance-related mem
+    PeakCounter<off_t> m_stat_mem_inst_ops;
+    PeakCounter<off_t> m_stat_mem_inst_args;
+    PeakCounter<off_t> m_stat_mem_inst_syms;
+    PeakCounter<off_t> m_stat_mem_inst_paramvals;
+    PeakCounter<off_t> m_stat_mem_inst_connections;
+
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
 
@@ -740,16 +795,15 @@ private:
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
     llvm::ExecutionEngine *m_llvm_exec;
+    llvm::JITMemoryManager *m_llvm_jitmm;
 
     friend class ShadingContext;
+    friend class ShaderMaster;
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
 };
 
 
-
-class ShadingExecution;
-typedef std::vector<ShadingExecution> ExecutionLayers;
 
 template<int BlockSize>
 class SimplePool {
@@ -786,8 +840,9 @@ private:
     size_t              m_block_offset;
 };
 
-/// The full context for executing a shader group.  This contains
-/// ShadingExecution states for each shader
+
+
+/// The full context for executing a shader group.
 ///
 class ShadingContext {
 public:
@@ -849,7 +904,7 @@ public:
 
 
     /// Find the named symbol in the (already-executed!) stack of
-    /// ShadingExecution's of the given use, with priority given to
+    /// shaders of the given use, with priority given to
     /// later laters over earlier layers (if they name the same symbol).
     /// Return NULL if no such symbol is found.
     Symbol * symbol (ShaderUse use, ustring name);
@@ -857,9 +912,6 @@ public:
     /// Return a pointer to where the symbol's data lives for the given
     /// grid point.
     void *symbol_data (Symbol &sym, int gridpoint);
-
-    /// Return a reference to the ExecutionLayers
-    ExecutionLayers &execlayer () { return m_exec; }
 
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we
@@ -891,7 +943,6 @@ private:
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_closures_allotted;         ///< Closure memory allotted
-    ExecutionLayers m_exec;             ///< Execution layers for the group
     int m_curuse;                       ///< Current use that we're running
 #ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
@@ -902,161 +953,8 @@ private:
     ParamValueList m_messages;          ///< Message blackboard
 
     SimplePool<20 * 1024> m_closure_pool;
-
-    friend class ShadingExecution;
 };
 
-
-
-
-/// The state and machinery necessary to execute a single shader (node).
-///
-class ShadingExecution {
-public:
-    ShadingExecution ();
-    ~ShadingExecution ();
-
-    /// Initialize a ShadingExecution to know what context, use, and layer
-    /// it's part of.
-    void init (ShadingContext *context, ShaderUse use, int layer) {
-        m_use = use;
-        m_layer = layer;
-        m_context = context;
-    }
-
-    /// Get a reference to the symbol with the given index.
-    /// Beware -- it had better be a valid index!
-    Symbol &sym (int index) {
-        DASSERT (index < (int)m_symbols.size() && index >= 0);
-        return m_symbols[index];
-    }
-
-    /// Get a pointer to the symbol with the given index, or NULL if
-    /// the index is < 0.
-    Symbol *symptr (int index) {
-        DASSERT (index < (int)m_symbols.size());
-        return index >= 0 ? &m_symbols[index]: NULL;
-    }
-
-    bool debug () const { return m_debug; }
-
-    /// Find the named symbol.  Return NULL if no such symbol is found.
-    ///
-    Symbol * symbol (ustring name) {
-        return symptr (m_instance->findsymbol (name));
-    }
-
-    /// Format the value of sym using the printf-like format (taking a
-    /// SINGLE value specifier), where 'whichpoint' gives the position
-    /// in the set of shading points that we're concerned about.
-    std::string format_symbol (const std::string &format, Symbol &sym,
-                               int whichpoint);
-
-    /// Turn the symbol into a string (for debugging).
-    ///
-    std::string printsymbolval (Symbol &sym);
-
-    /// Get a pointer to the ShadingContext for this execution.
-    ///
-    ShadingContext *context () const { return m_context; }
-
-    /// Get a pointer to the ShadingSystemImpl for this execution.
-    ///
-    ShadingSystemImpl *shadingsys () const { return m_shadingsys; }
-
-    /// Get a pointer to the RendererServices for this execution.
-    ///
-    RendererServices *renderer () const { return m_renderer; }
-
-    /// Get a pointer to the TextureSystem for this execution.
-    ///
-    TextureSystem *texturesys () const { return m_shadingsys->texturesys(); }
-
-    /// Get the 4x4 matrix that transforms points from the named 'from'
-    /// coordinate system to "common" space for the given shading point.
-    void get_matrix (Matrix44 &result, ustring from, int whichpoint=0);
-
-    /// Get the 4x4 matrix that transforms points from "common" space to
-    /// the named 'from' coordinate system for the given shading point.
-    void get_inverse_matrix (Matrix44 &result, ustring from, int whichpoint=0);
-
-    /// Get the 4x4 matrix that transforms points from the named "from"
-    /// coordinate system to the named 'to' coordinate system to at the
-    /// given shading point.
-    void get_matrix (Matrix44 &result, ustring from,
-                     ustring to, int whichpoint=0);
-
-    /// Return the ShaderUse of this execution.
-    ///
-    ShaderUse shaderuse () const { return m_use; }
-
-    /// Which layer are we in the shader group?
-    ///
-    int layer () const { return m_layer; }
-
-    /// Return the instance of this execution.
-    ///
-    ShaderInstance *instance () const { return m_instance; }
-
-    /// Return the name of the shader used by this instance.
-    ///
-    const std::string &shadername () const { return m_master->shadername(); }
-
-    /// Pass an error along to the ShadingSystem.
-    ///
-    void error (const char *message, ...);
-    void warning (const char *message, ...);
-    void info (const char *message, ...);
-    void message (const char *message, ...);
-
-    /// Quick link to the global P symbol, or NULL if there is none.
-    ///
-    Symbol *Psym () { return symptr (m_instance->m_Psym); }
-
-    /// Quick link to the global N symbol, or NULL if there is none.
-    ///
-    Symbol *Nsym () { return symptr (m_instance->m_Nsym); }
-
-    /// Get the named attribute from the renderer and if found then
-    /// write it into 'val'.  Otherwise, return false.  If no object is
-    /// specified (object == ustring()), then the renderer should search *first*
-    /// for the attribute on the currently shaded object, and next, if
-    /// unsuccessful, on the currently shaded "scene". 
-    bool get_renderer_attribute(void *renderstate, bool derivatives, ustring object,
-                                        TypeDesc type, ustring name, void *val);
-
-    /// Similar to get_renderer_attribute();  this method will return the 'index'
-    /// element of an attribute array.
-    bool get_renderer_array_attribute (void *renderstate, bool derivatives, ustring object,
-                                               TypeDesc type, ustring name,
-                                               int index, void *val);
-
-    /// Query the renderer for the named user-data on the current
-    /// geometry.  Thi s function accepts an array of renderstate
-    /// pointers and writes its value in the memory region pointed to by
-    /// 'val'.
-    bool get_renderer_userdata (Runflag *runflags, int npoints, bool derivatives, ustring name,
-                                TypeDesc type, void *renderstate, 
-                                int renderstate_stepsize, 
-                                void *val, int val_stepsize);
-
-    /// Determine whether the currently shaded object has the named
-    /// user-data attached
-    bool renderer_has_userdata (ustring name, TypeDesc type, void *renderstate);
-
-private:
-
-    ShaderUse m_use;              ///< Our shader use
-    int m_layer;                  ///< Our layer number
-    ShadingContext *m_context;    ///< Ptr to our shading context
-    ShaderInstance *m_instance;   ///< Ptr to the shader instance
-    ShaderMaster *m_master;       ///< Ptr to the instance's master
-    ShadingSystemImpl *m_shadingsys; ///< Ptr to shading system
-    RendererServices *m_renderer; ///< Ptr to renderer services
-    bool m_debug;                 ///< Debug mode
-    SymbolVec m_symbols;          ///< Our own copy of the syms
-    int m_last_instance_id;       ///< ID of last instance bound
-};
 
 
 

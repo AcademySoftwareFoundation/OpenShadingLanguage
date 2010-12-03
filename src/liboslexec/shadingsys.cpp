@@ -142,7 +142,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0),
       m_llvm_context (NULL),
       m_llvm_module (NULL),
-      m_llvm_exec (NULL)
+      m_llvm_exec (NULL),
+      m_llvm_jitmm (NULL)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
@@ -225,6 +226,9 @@ ShadingSystemImpl::~ShadingSystemImpl ()
     // delete m_llvm_module;
 
     delete m_llvm_context;
+
+    // Delete the retained JIT memory manager
+    delete m_llvm_jitmm;
 
     // FIXME(boulos): According to the docs, we should also call
     // llvm_shutdown once we're done. However, ~ShadingSystemImpl
@@ -519,6 +523,27 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
+
+    out << "  Memory total: " << m_stat_memory.memstat() << '\n';
+    out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';
+    out << "        Master ops:            " << m_stat_mem_master_ops.memstat() << '\n';
+    out << "        Master args:           " << m_stat_mem_master_args.memstat() << '\n';
+    out << "        Master syms:           " << m_stat_mem_master_syms.memstat() << '\n';
+    out << "        Master defaults:       " << m_stat_mem_master_defaults.memstat() << '\n';
+    out << "        Master consts:         " << m_stat_mem_master_consts.memstat() << '\n';
+    out << "    Instance memory: " << m_stat_mem_inst.memstat() << '\n';
+    out << "        Instance ops:          " << m_stat_mem_inst_ops.memstat() << '\n';
+    out << "        Instance args:         " << m_stat_mem_inst_args.memstat() << '\n';
+    out << "        Instance syms:         " << m_stat_mem_inst_syms.memstat() << '\n';
+    out << "        Instance param values: " << m_stat_mem_inst_paramvals.memstat() << '\n';
+    out << "        Instance connections:  " << m_stat_mem_inst_connections.memstat() << '\n';
+
+    if (m_llvm_jitmm) {
+        size_t jitmem = m_llvm_jitmm->GetDefaultCodeSlabSize() * m_llvm_jitmm->GetNumCodeSlabs()
+            + m_llvm_jitmm->GetDefaultDataSlabSize() * m_llvm_jitmm->GetNumDataSlabs()
+            + m_llvm_jitmm->GetDefaultStubSlabSize() * m_llvm_jitmm->GetNumStubSlabs();
+        out << "    LLVM JIT memory: " << Strutil::memformat(jitmem) << '\n';
+    }
 
     return out.str();
 }

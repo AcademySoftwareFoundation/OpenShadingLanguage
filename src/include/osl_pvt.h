@@ -46,7 +46,6 @@ namespace OSL {
 namespace pvt {
 
 class ASTNode;
-class ShadingExecution;
 class StructSpec;
 
 

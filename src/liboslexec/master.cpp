@@ -50,6 +50,33 @@ namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
+ShaderMaster::~ShaderMaster ()
+{
+    // Adjust statistics
+    size_t opmem = vectorbytes (m_ops);
+    size_t argmem = vectorbytes (m_args);
+    size_t symmem = vectorbytes (m_symbols);
+    size_t defaultmem = vectorbytes (m_idefaults) 
+        + vectorbytes (m_fdefaults) + vectorbytes (m_sdefaults);
+    size_t constmem = vectorbytes (m_iconsts)
+        + vectorbytes (m_fconsts) + vectorbytes (m_sconsts);
+    size_t totalmem = (opmem + argmem + symmem + defaultmem +
+                       constmem + sizeof(ShaderMaster));
+    {
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_master_ops -= opmem;
+        ss.m_stat_mem_master_args -= argmem;
+        ss.m_stat_mem_master_syms -= symmem;
+        ss.m_stat_mem_master_defaults -= defaultmem;
+        ss.m_stat_mem_master_consts -= constmem;
+        ss.m_stat_mem_master -= totalmem;
+        ss.m_stat_memory -= totalmem;
+    }
+}
+
+
+
 int
 ShaderMaster::findsymbol (ustring name) const
 {
@@ -107,6 +134,28 @@ ShaderMaster::resolve_syms ()
             }
         }
         ++i;
+    }
+
+    // Adjust statistics
+    size_t opmem = vectorbytes (m_ops);
+    size_t argmem = vectorbytes (m_args);
+    size_t symmem = vectorbytes (m_symbols);
+    size_t defaultmem = vectorbytes (m_idefaults) 
+        + vectorbytes (m_fdefaults) + vectorbytes (m_sdefaults);
+    size_t constmem = vectorbytes (m_iconsts)
+        + vectorbytes (m_fconsts) + vectorbytes (m_sconsts);
+    size_t totalmem = (opmem + argmem + symmem + defaultmem +
+                       constmem + sizeof(ShaderMaster));
+    {
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_master_ops += opmem;
+        ss.m_stat_mem_master_args += argmem;
+        ss.m_stat_mem_master_syms += symmem;
+        ss.m_stat_mem_master_defaults += defaultmem;
+        ss.m_stat_mem_master_consts += constmem;
+        ss.m_stat_mem_master += totalmem;
+        ss.m_stat_memory += totalmem;
     }
 }
 

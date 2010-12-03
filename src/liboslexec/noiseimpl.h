@@ -104,7 +104,7 @@ inthash (const unsigned int k[N]) {
 }
 
 struct CellNoise {
-    CellNoise (ShadingExecution *) { }
+    CellNoise () { }
 
     inline void operator() (float &result, float x) {
         unsigned int iv[1];
@@ -665,7 +665,7 @@ struct HashVectorPeriodic {
 };
 
 struct Noise {
-    Noise (ShadingExecution *) { }
+    Noise () { }
 
     inline void operator() (float &result, float x) const {
         HashScalar h;
@@ -779,7 +779,7 @@ struct Noise {
 };
 
 struct SNoise {
-    SNoise (ShadingExecution *) { }
+    SNoise () { }
 
     inline void operator() (float &result, float x) const {
         HashScalar h;
@@ -880,7 +880,7 @@ struct SNoise {
 
 
 struct PeriodicNoise {
-    PeriodicNoise (ShadingExecution *) { }
+    PeriodicNoise () { }
 
     inline void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
@@ -998,7 +998,7 @@ struct PeriodicNoise {
 };
 
 struct PeriodicSNoise {
-    PeriodicSNoise (ShadingExecution *) { }
+    PeriodicSNoise () { }
 
     inline void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);

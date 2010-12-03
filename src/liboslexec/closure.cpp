@@ -205,27 +205,6 @@ print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl
 
 
 
-bool write_closure_param(const TypeDesc &typedesc, void *data, int offset, int argidx, int idx,
-                         pvt::ShadingExecution *exec, const int *args)
-{
-    char *p = (char *)data + offset;
-    size_t size = typedesc.size();
-    Symbol &sym = exec->sym (args[argidx]);
-    TypeDesc t = sym.typespec().simpletype();
-    // Treat both NORMAL and POINT as VECTOR for closure parameters
-    if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
-        t.vecsemantics = TypeDesc::VECTOR;
-    if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == typedesc) {
-        char *source = (char *)sym.data() + sym.step() * idx;
-        memcpy(p, source, size);
-        return true;
-    }
-    else
-        return false;
-}
-
-
-
 } // namespace pvt
 
 

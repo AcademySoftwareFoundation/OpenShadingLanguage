@@ -49,8 +49,9 @@ namespace pvt {   // OSL::pvt
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 
-    : m_master(master), m_instsymbols(m_master->m_symbols),
-      m_instops(m_master->m_ops), m_instargs(m_master->m_args),
+    : m_master(master),
+      //DON'T COPY  m_instsymbols(m_master->m_symbols),
+      //DON'T COPY  m_instops(m_master->m_ops), m_instargs(m_master->m_args),
       m_layername(layername),
       m_writes_globals(false), m_run_lazily(false),
       m_outgoing_connections(false),
@@ -62,9 +63,38 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
     m_id = ++(*(atomic_int *)&next_id);
     shadingsys().m_stat_instances += 1;
 
+    // Copy just the part of the symbol table that includes the params.
+    // We'll copy the rest only when it's time to optimize.  If we copy
+    // now, it'll be too huge.
+    if (lastparam() > 0) {
+        m_instsymbols.insert (m_instsymbols.begin(), m_master->m_symbols.begin(),
+                              m_master->m_symbols.begin() + lastparam());
+        DASSERT (m_instsymbols.size() == (size_t)m_master->m_lastparam &&
+                 m_instsymbols.size() <= m_master->m_symbols.size());
+    }
+
     // Make it easy for quick lookups of common symbols
     m_Psym = findsymbol (Strings::P);
     m_Nsym = findsymbol (Strings::N);
+
+    // Adjust statistics
+    ShadingSystemImpl &ss (shadingsys());
+    off_t opmem = vectorbytes (m_instops);
+    off_t argmem = vectorbytes (m_instargs);
+    off_t symmem = vectorbytes (m_instsymbols);
+    off_t parammem = vectorbytes (m_iparams)
+        + vectorbytes (m_fparams) + vectorbytes (m_sparams);
+    off_t totalmem = (opmem + argmem + symmem + parammem +
+                      sizeof(ShaderInstance));
+    {
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_inst_ops += opmem;
+        ss.m_stat_mem_inst_args += argmem;
+        ss.m_stat_mem_inst_syms += symmem;
+        ss.m_stat_mem_inst_paramvals += parammem;
+        ss.m_stat_mem_inst += totalmem;
+        ss.m_stat_memory += totalmem;
+    }
 }
 
 
@@ -72,6 +102,26 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
 ShaderInstance::~ShaderInstance ()
 {
     shadingsys().m_stat_instances -= 1;
+
+    ShadingSystemImpl &ss (shadingsys());
+    off_t opmem = vectorbytes (m_instops);
+    off_t argmem = vectorbytes (m_instargs);
+    off_t symmem = vectorbytes (m_instsymbols);
+    off_t parammem = vectorbytes (m_iparams)
+        + vectorbytes (m_fparams) + vectorbytes (m_sparams);
+    off_t connectionmem = vectorbytes (m_connections);
+    off_t totalmem = (opmem + argmem + symmem + parammem + connectionmem +
+                       sizeof(ShaderInstance));
+    {
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_inst_ops -= opmem;
+        ss.m_stat_mem_inst_args -= argmem;
+        ss.m_stat_mem_inst_syms -= symmem;
+        ss.m_stat_mem_inst_paramvals -= parammem;
+        ss.m_stat_mem_inst_connections -= connectionmem;
+        ss.m_stat_mem_inst -= totalmem;
+        ss.m_stat_memory -= totalmem;
+    }
 }
 
 
@@ -82,6 +132,11 @@ ShaderInstance::findsymbol (ustring name) const
     for (size_t i = 0;  i < m_instsymbols.size();  ++i)
         if (m_instsymbols[i].name() == name)
             return (int)i;
+
+    // If we haven't yet copied the syms from the master, get it from there
+    if (m_instsymbols.empty())
+        return m_master->findsymbol (name);
+
     return -1;
 }
 
@@ -90,7 +145,7 @@ ShaderInstance::findsymbol (ustring name) const
 int
 ShaderInstance::findparam (ustring name) const
 {
-    for (int i = m_firstparam;  i <= m_lastparam;  ++i)
+    for (int i = m_firstparam;  i < m_lastparam;  ++i)
         if (m_instsymbols[i].name() == name)
             return i;
     return -1;
@@ -101,9 +156,21 @@ ShaderInstance::findparam (ustring name) const
 void
 ShaderInstance::parameters (const ParamValueList &params)
 {
+    // Seed the params with the master's defaults
     m_iparams = m_master->m_idefaults;
     m_fparams = m_master->m_fdefaults;
     m_sparams = m_master->m_sdefaults;
+    {
+        // Adjust the stats
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        size_t mem = (vectorbytes(m_iparams) + vectorbytes(m_fparams) +
+                      vectorbytes(m_sparams));
+        ss.m_stat_mem_inst_paramvals += mem;
+        ss.m_stat_mem_inst += mem;
+        ss.m_stat_memory += mem;
+    }
+
     BOOST_FOREACH (const ParamValue &p, params) {
         if (shadingsys().debug())
             shadingsys().info (" PARAMETER %s %s",
@@ -153,8 +220,77 @@ ShaderInstance::parameters (const ParamValueList &params)
 void
 ShaderInstance::make_symbol_room (size_t moresyms)
 {
-    if (m_instsymbols.capacity() < m_instsymbols.size()+moresyms)
-        m_instsymbols.reserve (m_instsymbols.size() + moresyms + 10);
+    size_t oldsize = m_instsymbols.capacity();
+    if (oldsize < m_instsymbols.size()+moresyms) {
+        // Allocate a bit more than we need, so that most times we don't
+        // need to reallocate.  But don't be wasteful by doubling or
+        // anything like that, since we only expect a few to be added.
+        const size_t extra_room = 10;
+        size_t newsize = m_instsymbols.size() + moresyms + extra_room;
+        m_instsymbols.reserve (newsize);
+
+        // adjust stats
+        spin_lock lock (shadingsys().m_stat_mutex);
+        size_t mem = (newsize-oldsize) * sizeof(Symbol);
+        shadingsys().m_stat_mem_inst_syms += mem;
+        shadingsys().m_stat_mem_inst += mem;
+        shadingsys().m_stat_memory += mem;
+    }
+}
+
+
+
+void
+ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
+                                const ConnectedParam &dstcon)
+{
+    off_t oldmem = vectorbytes(m_connections);
+    m_connections.push_back (Connection (srclayer, srccon, dstcon));
+
+    // adjust stats
+    off_t mem = vectorbytes(m_connections) - oldmem;
+    {
+        spin_lock lock (shadingsys().m_stat_mutex);
+        shadingsys().m_stat_mem_inst_connections += mem;
+        shadingsys().m_stat_mem_inst += mem;
+        shadingsys().m_stat_memory += mem;
+    }
+}
+
+
+
+void
+ShaderInstance::copy_code_from_master ()
+{
+    ASSERT (m_instops.empty() && m_instargs.empty());
+    // reserve with enough room for a few insertions
+    m_instops.reserve (master()->m_ops.size()+10);
+    m_instargs.reserve (master()->m_args.size()+10);
+    m_instops = master()->m_ops;
+    m_instargs = master()->m_args;
+    // We already have the symbols on [0,lastparam).  Now copy the rest.
+    off_t symmem = vectorbytes(m_instsymbols);
+    ASSERT (m_master->m_lastparam < 0 ||
+            m_instsymbols.size() == (size_t)m_master->m_lastparam);
+    ASSERT (m_instsymbols.size() <= m_master->m_symbols.size());
+    m_instsymbols.reserve (m_master->m_symbols.size());
+    for (size_t i = m_instsymbols.size(), e = m_master->m_symbols.size();
+         i < e;  ++i)
+        m_instsymbols.push_back (m_master->m_symbols[i]);
+    ASSERT (m_instsymbols.size() == m_master->m_symbols.size());
+
+    // adjust stats
+    off_t opmem = vectorbytes(m_instops);
+    off_t argmem = vectorbytes(m_instargs);
+    symmem = vectorbytes(m_instsymbols) - symmem;  // just the new mem
+    {
+        spin_lock lock (shadingsys().m_stat_mutex);
+        shadingsys().m_stat_mem_inst_ops += opmem;
+        shadingsys().m_stat_mem_inst_args += argmem;
+        shadingsys().m_stat_mem_inst_syms += symmem;
+        shadingsys().m_stat_mem_inst += opmem+argmem+symmem;
+        shadingsys().m_stat_memory += opmem+argmem+symmem;
+    }
 }
 
 

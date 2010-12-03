@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/PrettyStackTrace.h>
+#include <llvm/ExecutionEngine/JITMemoryManager.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -105,6 +106,12 @@ Schematically, we want to create code that resembles the following:
 
 extern int osl_llvm_compiled_ops_size;
 extern char osl_llvm_compiled_ops_block[];
+
+namespace llvm {
+// This seems necessary in order to avoid a "typeinfo not found for
+// JITMemoryManager" link error.  Is there a better solution?
+JITMemoryManager::~JITMemoryManager() {}
+};
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -3912,7 +3919,27 @@ RuntimeOptimizer::build_llvm_group ()
     for (int i = 0; i < m_num_used_layers; ++i) {
         funcs[i]->deleteBody();
     }
-//    m_llvm_module = NULL;
+
+#if 1
+    // Free the exec and module to reclaim all the memory.  This definitely
+    // saves memory, and has almost no effect on runtime.
+    delete shadingsys().m_llvm_exec;
+    // N.B. Destroying the EE should have destroyed the module as well.
+    shadingsys().m_llvm_exec = NULL;
+    shadingsys().m_llvm_module = NULL;
+#endif
+
+#if 0
+    // Enable this code to delete the whole context after processing the
+    // group.  We did this experiment to see how much memory was being
+    // held in the context.  Answer: nothing appreciable, not worth the
+    // extra work of constant creation and tear-down.
+    delete m_llvm_passes;  m_llvm_passes = NULL;
+    delete m_llvm_func_passes;  m_llvm_func_passes = NULL;
+    delete m_llvm_func_passes_optimized;  m_llvm_func_passes_optimized = NULL;
+    delete shadingsys().m_llvm_context;
+    shadingsys().m_llvm_context = NULL;
+#endif
 
     m_stat_llvm_jit_time = timer();
 }
@@ -4000,6 +4027,72 @@ RuntimeOptimizer::initialize_llvm_group ()
 
 
 
+/// OSL_Dummy_JITMemoryManager - Create a shell that passes on requests
+/// to a real JITMemoryManager underneath, but can be retained after the
+/// dummy is destroyed.  Also, we don't pass along any deallocations.
+class OSL_Dummy_JITMemoryManager : public llvm::JITMemoryManager {
+protected:
+    llvm::JITMemoryManager *mm;
+public:
+    OSL_Dummy_JITMemoryManager(llvm::JITMemoryManager *realmm) : mm(realmm) { }
+    virtual ~OSL_Dummy_JITMemoryManager() { }
+    virtual void setMemoryWritable() { mm->setMemoryWritable(); }
+    virtual void setMemoryExecutable() { mm->setMemoryExecutable(); }
+    virtual void setPoisonMemory(bool poison) { mm->setPoisonMemory(poison); }
+    virtual void AllocateGOT() { mm->AllocateGOT(); }
+    bool isManagingGOT() const { return mm->isManagingGOT(); }
+    virtual uint8_t *getGOTBase() const { return mm->getGOTBase(); }
+    virtual uint8_t *startFunctionBody(const llvm::Function *F,
+                                       uintptr_t &ActualSize) {
+        return mm->startFunctionBody (F, ActualSize);
+    }
+    virtual uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
+                                  unsigned Alignment) {
+        return mm->allocateStub (F, StubSize, Alignment);
+    }
+    virtual void endFunctionBody(const llvm::Function *F,
+                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) {
+        mm->endFunctionBody (F, FunctionStart, FunctionEnd);
+    }
+    virtual uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) {
+        return mm->allocateSpace (Size, Alignment);
+    }
+    virtual uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) {
+        return mm->allocateGlobal (Size, Alignment);
+    }
+    virtual void deallocateFunctionBody(void *Body) {
+        // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
+    }
+    virtual uint8_t* startExceptionTable(const llvm::Function* F,
+                                         uintptr_t &ActualSize) {
+        return mm->startExceptionTable (F, ActualSize);
+    }
+    virtual void endExceptionTable(const llvm::Function *F, uint8_t *TableStart,
+                                   uint8_t *TableEnd, uint8_t* FrameRegister) {
+        mm->endExceptionTable (F, TableStart, TableEnd, FrameRegister);
+    }
+    virtual void deallocateExceptionTable(void *ET) {
+        // DON'T DEALLOCATE mm->deallocateExceptionTable(ET);
+    }
+    virtual bool CheckInvariants(std::string &s) {
+        return mm->CheckInvariants(s);
+    }
+    virtual size_t GetDefaultCodeSlabSize() {
+        return mm->GetDefaultCodeSlabSize();
+    }
+    virtual size_t GetDefaultDataSlabSize() {
+        return mm->GetDefaultDataSlabSize();
+    }
+    virtual size_t GetDefaultStubSlabSize() {
+        return mm->GetDefaultStubSlabSize();
+    }
+    virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
+    virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
+    virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
+};
+
+
+
 void
 ShadingSystemImpl::SetupLLVM ()
 {
@@ -4014,8 +4107,10 @@ ShadingSystemImpl::SetupLLVM ()
         initialize_llvm_generator_table ();
     }
 
-    if (! m_llvm_module
-        || llvm_debug() >= 3 /*high debug -> custom module*/) {
+    if (! m_llvm_jitmm)
+        m_llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
+
+    if (! m_llvm_module) {
         // Load the LLVM bitcode and parse it into a Module
         const char *data = osl_llvm_compiled_ops_block;
 #if OSL_LLVM_28
@@ -4027,7 +4122,7 @@ ShadingSystemImpl::SetupLLVM ()
         std::string err;
         m_llvm_module = llvm::ParseBitcodeFile (buf, *llvm_context(), &err);
         if (err.length())
-            std::cerr << "ParseBitcodeFile returned '" << err << "'\n";
+            error ("ParseBitcodeFile returned '%s'\n", err.c_str());
         delete buf;
     }
 
@@ -4037,8 +4132,14 @@ ShadingSystemImpl::SetupLLVM ()
         m_llvm_exec->addModule (m_llvm_module);
     } else {
         std::string error_msg;
-        m_llvm_exec = llvm::ExecutionEngine::create (m_llvm_module, false,
-                                                     &error_msg);
+        llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_llvm_jitmm);
+        m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module,
+                                                        &error_msg, mm);
+        // Force it to JIT as soon as we ask it for the code pointer,
+        // don't take any chances that it might JIT lazily, since we
+        // will be stealing the JIT code memory from under its nose and
+        // destroying the Module & ExecutionEngine.
+        m_llvm_exec->DisableLazyCompilation ();
         if (! m_llvm_exec) {
             error ("Failed to create engine: %s\n", error_msg.c_str());
             DASSERT (0);

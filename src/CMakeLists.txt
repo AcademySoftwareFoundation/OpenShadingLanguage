@@ -18,7 +18,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 ## turn on more detailed warnings
-set ( CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
+set ( CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
 
 ## disable RTTI
@@ -27,6 +27,9 @@ set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
 ##   extending LLVM ones will cause linker errors (unless you
 ##   rebuild LLVM with rtti enabled)
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+# NOTE(boulos): Boost can only detect that you've disabled RTTI for
+# gcc >= 4.3. My poor mac doesn't have that.
+add_definitions("-DBOOST_NO_RTTI -DBOOST_NO_TYPEID")
 
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 

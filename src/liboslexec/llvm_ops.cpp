@@ -319,10 +319,6 @@ extern "C" void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 
 extern "C" void osl_sincos_vvv(void *x_, void *s_, void *c_)
 {
-    Vec3 &x      = VEC(x_);
-    Vec3 &sine   = VEC(s_);
-    Vec3 &cosine = VEC(c_);
-
     for (int i = 0; i < 3; i++)
         sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
 }

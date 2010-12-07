@@ -29,6 +29,11 @@ endif
 MY_MAKE_FLAGS ?=
 MY_CMAKE_FLAGS ?= -g3
 
+# Site-specific build instructions
+ifneq (${shell uname -n | grep imageworks},)
+include ${working_dir}/site/spi/Makefile-bits
+endif
+
 ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
 endif
@@ -67,11 +72,6 @@ endif
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
 
-
-# Site-specific build instructions
-ifneq (${shell uname -n | grep imageworks},)
-include ${working_dir}/site/spi/Makefile-bits
-endif
 
 # Set up variables holding the names of platform-dependent directories --
 # set these after evaluating site-specific instructions

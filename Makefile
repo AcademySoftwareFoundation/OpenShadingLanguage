@@ -30,7 +30,11 @@ MY_MAKE_FLAGS ?=
 MY_CMAKE_FLAGS ?= -g3
 
 # Site-specific build instructions
-ifneq (${shell uname -n | grep imageworks},)
+ifndef OSL_SITE
+    OSL_SITE := ${shell uname -n}
+endif
+$(info OSL_SITE = ${OSL_SITE})
+ifneq (${shell echo ${OSL_SITE} | grep imageworks},)
 include ${working_dir}/site/spi/Makefile-bits
 endif
 

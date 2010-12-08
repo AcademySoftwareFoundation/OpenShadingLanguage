@@ -1,11 +1,7 @@
 # SPI-specific settings
 
-ifeq (${OSL_NAMESPACE},)
-    OSL_NAMESPACE='OSL_Arnold'
-endif
-ifeq (${OPENIMAGEIO_NAMESPACE},)
-    OPENIMAGEIO_NAMESPACE='OpenImageIO_Arnold'
-endif
+OSL_NAMESPACE ?= 'OSL_Arnold'
+OPENIMAGEIO_NAMESPACE ?= 'OpenImageIO_Arnold'
 
 ifeq (${platform}, macosx)
     MY_CMAKE_FLAGS += \
@@ -22,8 +18,8 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
         -DOPENEXR_CUSTOM=1 \
         -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf" \
         -DLLVM_CUSTOM=1 \
-		  -DLLVM_VERSION=2.8 \
-		  -DLLVM_DIRECTORY=/shots/spi/home/lib/arnold/spinux1/llvm_2.8
+	-DLLVM_VERSION=2.8 \
+	-DLLVM_DIRECTORY=/shots/spi/home/lib/arnold/spinux1/llvm_2.8
 
 endif # SP_ARCH == spinux1_x86_64
 

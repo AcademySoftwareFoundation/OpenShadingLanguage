@@ -46,6 +46,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
 
+#ifdef OIIO_NAMESPACE
+using OIIO::ParamValue;
+#endif
+
 #define USTR(cstr) (*((ustring *)&cstr))
 
 extern "C" void

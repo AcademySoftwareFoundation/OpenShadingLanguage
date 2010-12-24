@@ -29,9 +29,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_AST_H
 #define OSL_AST_H
 
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/thread.h"
+#include "oslconfig.h"
+
 #include "OpenImageIO/refcnt.h"
+#ifdef OIIO_NAMESPACE
+using OIIO::RefCnt;
+#endif
+
 #include "oslcomp.h"
 #include "symtab.h"
 

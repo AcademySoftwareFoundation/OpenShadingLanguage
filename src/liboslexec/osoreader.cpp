@@ -31,15 +31,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include <cstdio>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
-
 #include "osoreader.h"
-
 
 #define yyFlexLexer osoFlexLexer
 #include "FlexLexer.h"
+
+#include "OpenImageIO/strutil.h"
+#include "OpenImageIO/dassert.h"
+#include "OpenImageIO/thread.h"
+#ifdef OIIO_NAMESPACE
+using OIIO::lock_guard;
+#endif
 
 
 #ifdef OSL_NAMESPACE

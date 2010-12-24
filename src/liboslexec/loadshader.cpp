@@ -31,6 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cmath> // FIXME: used by timer.h - should be included there
 
+#include "oslexec_pvt.h"
+#include "osoreader.h"
+
 #include <boost/algorithm/string.hpp>
 
 #include "OpenImageIO/strutil.h"
@@ -38,9 +41,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/timer.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/filesystem.h"
-
-#include "oslexec_pvt.h"
-#include "osoreader.h"
+#ifdef OIIO_NAMESPACE
+namespace Filesystem = OIIO::Filesystem;
+using OIIO::Timer;
+#endif
 
 
 

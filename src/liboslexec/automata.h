@@ -34,8 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <vector>
 
+#include "oslconfig.h"
+
 #include <OpenImageIO/hash.h>
-#include <OpenImageIO/ustring.h>
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {

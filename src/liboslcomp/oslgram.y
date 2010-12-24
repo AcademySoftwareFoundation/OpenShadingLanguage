@@ -52,6 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void yyerror (const char *err);
 #define yylex oslcompiler->lexer()->yylex
 
+using namespace OSL;
 using namespace OSL::pvt;
 
 

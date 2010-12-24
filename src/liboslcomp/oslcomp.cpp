@@ -38,15 +38,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cerrno>
 
-#include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
+#include "oslcomp_pvt.h"
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/sysutil.h"
 #include "OpenImageIO/dassert.h"
+#ifdef OIIO_NAMESPACE
+namespace Strutil = OIIO::Strutil;
+namespace Sysutil = OIIO::Sysutil;
+#endif
 
-#include "oslcomp_pvt.h"
-
+#include <boost/filesystem.hpp>
+#include <boost/foreach.hpp>
 
 #define yyFlexLexer oslFlexLexer
 #include "FlexLexer.h"

@@ -35,7 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
-#include <OpenImageIO/ustring.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -66,7 +65,10 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {   // OSL::pvt
 
-
+#ifdef OIIO_NAMESPACE
+using OIIO::spin_lock;
+using OIIO::Timer;
+#endif
 
 /// Wrapper that erases elements of c for which predicate p is true.
 /// (Unlike std::remove_if, it resizes the container so that it contains

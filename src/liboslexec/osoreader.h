@@ -29,11 +29,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_OSOREADER_H
 #define OSL_OSOREADER_H
 
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/typedesc.h"
-#include "OpenImageIO/thread.h"
-
 #include "osl_pvt.h"
+
+#include "OpenImageIO/thread.h"
+#ifdef OIIO_NAMESPACE
+using OIIO::mutex;
+#endif
+
 
 
 class osoFlexLexer;

@@ -46,6 +46,12 @@ namespace OSL {
 
 namespace pvt {   // OSL::pvt
 
+#ifdef OIIO_NAMESPACE
+using OIIO::spin_lock;
+using OIIO::ParamValue;
+using OIIO::ParamValueList;
+#endif
+
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
                                 const char *layername) 

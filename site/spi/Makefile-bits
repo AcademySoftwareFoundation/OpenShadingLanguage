@@ -35,4 +35,8 @@ else
                       -DOPENIMAGEIO_NAMESPACE:STRING=${OPENIMAGEIO_NAMESPACE}
 endif
 
+# N.B. -- once we're confident that we only build against OIIO >= 0.9.x,
+# specifically versions after we did the big namespace change, then we
+# can completely eliminate the 'OPENIMAGEIO_NAMESPACE' parts above.
+
 $(info MY_CMAKE_FLAGS: $(MY_CMAKE_FLAGS))

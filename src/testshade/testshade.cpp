@@ -46,6 +46,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
+#ifdef OIIO_NAMESPACE
+using OIIO::ArgParse;
+using OIIO::Timer;
+#endif
 
 
 
@@ -53,7 +57,7 @@ static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
-static std::vector<OpenImageIO::ImageBuf*>   outputimgs;
+static std::vector<OIIO::ImageBuf*>   outputimgs;
 static std::string dataformatname = "";
 static bool debug = false;
 static bool verbose = false;
@@ -311,12 +315,12 @@ main (int argc, const char *argv[])
                        int nchans = t.numelements() * t.aggregate;
                        pixel.resize (nchans);
                        if (n == 0) {
-                           OpenImageIO::ImageSpec spec (xres, yres, nchans, outtypebase);
-                           OpenImageIO::ImageBuf* img = new OpenImageIO::ImageBuf(outputfiles[i], spec);
+                           OIIO::ImageSpec spec (xres, yres, nchans, outtypebase);
+                           OIIO::ImageBuf* img = new OIIO::ImageBuf(outputfiles[i], spec);
                            img->zero ();
                            outputimgs.push_back(img);
                        }
-                       OpenImageIO::convert_types (tbase, ctx->symbol_data (*sym, 0),
+                       OIIO::convert_types (tbase, ctx->symbol_data (*sym, 0),
                                                    TypeDesc::FLOAT, &pixel[0], nchans);
                        outputimgs[i]->setpixel (x, y, &pixel[0]);
                    }

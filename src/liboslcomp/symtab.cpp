@@ -29,13 +29,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 
-#include <boost/foreach.hpp>
+#include "oslcomp_pvt.h"
+#include "ast.h"
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
+#ifdef OIIO_NAMESPACE
+namespace Strutil = OIIO::Strutil;
+#endif
 
-#include "oslcomp_pvt.h"
-#include "ast.h"
+#include <boost/foreach.hpp>
 
 
 #ifdef OSL_NAMESPACE

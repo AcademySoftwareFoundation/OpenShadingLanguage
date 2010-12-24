@@ -103,6 +103,10 @@ using namespace OSL::pvt;
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
 
+#ifdef OIIO_NAMESPACE
+OIIO_NAMESPACE_USING;
+#endif
+
 // Handy re-casting macros
 #define USTR(cstr) (*((ustring *)&cstr))
 #define MAT(m) (*(Matrix44 *)m)

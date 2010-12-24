@@ -46,6 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/errorhandler.h"
 #include "OpenImageIO/texture.h"
 #include "OpenImageIO/typedesc.h"
+#include "OpenImageIO/ustring.h"
+#ifdef OIIO_NAMESPACE
+namespace OIIO = OIIO_NAMESPACE;
+#else
+namespace OIIO = OpenImageIO;
+#endif
 
 
 #ifdef OSL_NAMESPACE
@@ -116,11 +122,18 @@ typedef Imath::Color3<Float>   Color3;
 /// doesn't literally have to be OIIO's... it just needs to have the
 /// same API as OIIO's TextureSystem class, it's a purely abstract class
 /// anyway.
-typedef OpenImageIO::TextureSystem TextureSystem;
-typedef OpenImageIO::TextureOptions TextureOptions;
+typedef OIIO::TextureSystem TextureSystem;
+typedef OIIO::TextureOptions TextureOptions;
 
+// And some other things we borrow from OIIO...
+typedef OIIO::ErrorHandler ErrorHandler;
 
-typedef OpenImageIO::ErrorHandler ErrorHandler;
+#ifdef OIIO_NAMESPACE
+using OIIO::TypeDesc;
+using OIIO::ustring;
+using OIIO::ustringHash;
+#endif
+
 
 
 

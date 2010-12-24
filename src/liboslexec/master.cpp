@@ -50,6 +50,11 @@ namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
+#ifdef OIIO_NAMESPACE
+using OIIO::spin_lock;
+#endif
+
+
 ShaderMaster::~ShaderMaster ()
 {
     // Adjust statistics

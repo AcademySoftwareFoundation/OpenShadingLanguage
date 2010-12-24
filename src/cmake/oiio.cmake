@@ -25,6 +25,9 @@ IF (OPENIMAGEIO_INCLUDES AND OPENIMAGEIO_LIBRARY )
     if (OPENIMAGEIO_NAMESPACE)
         add_definitions ("-DOPENIMAGEIO_NAMESPACE=${OPENIMAGEIO_NAMESPACE}")
     endif ()
+# N.B. -- once we're confident that we only build against OIIO >= 0.9.x,
+# specifically versions after we did the big namespace change, then we
+# can completely eliminate the 'OPENIMAGEIO_NAMESPACE' parts above.
 ELSE ()
     MESSAGE ( STATUS "OpenImageIO not found" )
 ENDIF ()

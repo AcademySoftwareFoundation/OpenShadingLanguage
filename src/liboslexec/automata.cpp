@@ -37,6 +37,10 @@ namespace OSL_NAMESPACE {
 #endif
 namespace OSL {
 
+#ifdef OIIO_NAMESPACE
+namespace Strutil = OIIO::Strutil;
+#endif
+
 
 ustring lambda("__lambda__");
 

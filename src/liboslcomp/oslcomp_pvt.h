@@ -34,8 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <map>
 
-#include "OpenImageIO/ustring.h"
-
+#include "oslconfig.h"
 #include "oslcomp.h"
 #include "ast.h"
 #include "symtab.h"

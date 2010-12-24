@@ -32,12 +32,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <unistd.h>
 
-#include "OpenImageIO/filesystem.h"
-
 #include "oslquery.h"
 #include "../liboslexec/osoreader.h"
 using namespace OSL;
 using namespace OSL::pvt;
+
+#include "OpenImageIO/filesystem.h"
+#ifdef OIIO_NAMESPACE
+namespace Filesystem = OIIO::Filesystem;
+#endif
 
 
 #ifdef OSL_NAMESPACE

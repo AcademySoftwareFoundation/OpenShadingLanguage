@@ -32,7 +32,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <list>
 #include <boost/foreach.hpp>
+
 #include "OpenImageIO/thread.h"
+#ifdef OIIO_NAMESPACE
+namespace OIIO = OIIO_NAMESPACE;
+using OIIO::mutex;
+using OIIO::lock_guard;
+#endif
 
 using namespace OSL;
 using namespace OSL::pvt;

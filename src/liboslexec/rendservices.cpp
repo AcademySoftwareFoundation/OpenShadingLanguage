@@ -30,16 +30,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include <boost/algorithm/string.hpp>
-
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
-
 #include "oslexec_pvt.h"
 using namespace OSL;
 using namespace OSL::pvt;
+
+#include "OpenImageIO/strutil.h"
+#include "OpenImageIO/dassert.h"
+#include "OpenImageIO/filesystem.h"
+#ifdef OIIO_NAMESPACE
+using OIIO::spin_lock;
+#endif
+
+#include <boost/algorithm/string.hpp>
 
 
 

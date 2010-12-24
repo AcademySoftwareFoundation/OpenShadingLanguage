@@ -30,13 +30,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
 #include "ast.h"
 
+#include "OpenImageIO/dassert.h"
+#include "OpenImageIO/strutil.h"
+#ifdef OIIO_NAMESPACE
+namespace Strutil = OIIO::Strutil;
+#endif
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {

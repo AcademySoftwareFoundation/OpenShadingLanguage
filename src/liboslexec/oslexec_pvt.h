@@ -70,6 +70,16 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
+#ifdef OIIO_NAMESPACE
+using OIIO::atomic_int;
+using OIIO::atomic_ll;
+using OIIO::RefCnt;
+using OIIO::ParamValueList;
+using OIIO::spin_mutex;
+using OIIO::thread_specific_ptr;
+using OIIO::ustringHash;
+namespace Strutil = OIIO::Strutil;
+#endif
 
 // forward definitions
 class ShadingSystemImpl;

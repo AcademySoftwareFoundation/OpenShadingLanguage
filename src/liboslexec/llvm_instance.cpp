@@ -29,9 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
 
-#include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
-#include <OpenImageIO/ustring.h>
 
 #include "llvm_headers.h"
 #include <llvm/Analysis/Verifier.h>
@@ -117,6 +115,10 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
+#ifdef OIIO_NAMESPACE
+using OIIO::spin_lock;
+using OIIO::Timer;
+#endif
 
 static ustring op_abs("abs");
 static ustring op_and("and");

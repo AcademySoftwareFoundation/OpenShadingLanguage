@@ -43,7 +43,7 @@ Sony Pictures Imageworks terms, above.
 #include <string>
 #include <vector>
 
-#include "OpenImageIO/typedesc.h"
+#include "oslconfig.h"
 #include "export.h"
 
 

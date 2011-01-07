@@ -5,7 +5,7 @@ SET ( liboslexec_srcs
           bsdf_cloth_fncs.cpp bsdf_cloth.cpp bsdf_cloth_specular.cpp
           bsdf_reflection.cpp bsdf_refraction.cpp bsdf_transparent.cpp bsdf_ward.cpp
           bssrdf.cpp bsdf_hair.cpp bsdf_fakefur.cpp
-          emissive.cpp background.cpp debug.cpp
+          emissive.cpp background.cpp debug.cpp dictionary.cpp
           vol_subsurface.cpp
           context.cpp instance.cpp 
           loadshader.cpp master.cpp 

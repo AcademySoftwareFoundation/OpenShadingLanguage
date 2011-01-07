@@ -50,7 +50,7 @@ namespace pvt {   // OSL::pvt
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys) 
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_attribs(NULL)
+      m_attribs(NULL), m_dictionary(NULL)
 {
     m_shadingsys.m_stat_contexts += 1;
 }
@@ -63,6 +63,7 @@ ShadingContext::~ShadingContext ()
     for (RegexMap::iterator it = m_regex_map.begin(); it != m_regex_map.end(); ++it) {
       delete it->second;
     }
+    free_dict_resources ();
 }
 
 

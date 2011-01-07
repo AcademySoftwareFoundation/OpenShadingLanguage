@@ -4586,6 +4586,69 @@ Returns {\cf 1} if the results of the shader are being used for a
 \apiend
 
 
+\section{Dictionary Lookups}
+\label{sec:stdlib:dictionaries}
+
+\apiitem{int {\ce dict_find} (string dictionary, string query) \\
+int {\ce dict_find} (int nodeID, string query)}
+\indexapi{dict_find()}
+    Find a node in the dictionary by a query.  The {\cf dictionary} is
+    either a string containing the actual dictionary text, or the name
+    of a file containing the dictionary.  (The system can easily
+    distinguish between them.)  XML dictionaries are currently
+    supported, and additional formats may be supported in the future.
+    The query is expressed in "XPath 1.0" syntax (or a reasonable subset
+    therof).
+
+    The return value is a \emph{Node ID}, an opaque integer identifier
+    that is the handle of a node within the dictionary data.  The value
+    0 is reserved to mean ``not found.''  If more than one node within
+    the dictionary matched the query, the node ID of the first match is
+    returned, and {\cf dict_next()} may be used to step to the next
+    matching node.
+
+    The version that takes a nodeID rather than a dictionary string
+    simply interprets the query as being relative to the node
+    specified by nodeID, as opposed to relative to the root of the
+    dictionary.
+
+    All expensive operations (such as reading the dictionary from a file
+    and the initial parsing of the dictionary) are performed only once,
+    and subsequent lookups merely copy data and are thus inexpensive.
+    The {\cf dictionary} string is, therefore, used as a hash into a
+    cached data structure holding the parsed dictionary database.
+    Implementations may also cache individual node lookups or type
+    conversions behind the scenes.
+\apiend
+
+\apiitem{int {\ce dict_next} (int nodeID)}
+\indexapi{dict_next()}
+    Return the node ID of the next node that matched the query that
+    returned nodeID, or 0 if nodeID was the last matching node for its
+    query..
+\apiend
+
+\apiitem{int {\ce dict_value} (int nodeID, string attribname, output
+  \emph{type} value)}
+\indexapi{dict_value()}
+
+    Retrieves the named attribute of the given dictionary node, or the
+    value of the node itself if {\cf attribname} is the empty string
+    {\cf ""}.  If the attribute is found, its value will be stored in
+    {\cf value} and 1 will be returned.  If the requested attribute is
+    not found on the node, or if the type of {\cf value} does not appear
+    to match that of the named node, {\cf value} will be unmodified and
+    0 will be returned.
+
+    Type conversions are straightforward: anything may be retrieved as a
+    string; to retrieve as an int or float, the value must parse as a
+    single integer or floating point value; to retrieve as a point,
+    vector, normal, color, or matrix (or any array), the value must
+    parse as the correct number of values, separated by spaces and/or
+    commas.
+\apiend
+
+
 \section{Miscellaneous}
 \label{sec:stdlib:misc}
 

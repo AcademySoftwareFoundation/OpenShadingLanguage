@@ -1,0 +1,30 @@
+shader test (string xml = "test.xml")
+{
+    for (int cp = dict_find (xml, "//camerapack"); cp;  cp = dict_next (cp)) {
+        int cam = dict_find (cp, "camera");
+        if (cam) {
+            string name = "error";
+            dict_value (cam, "name", name);
+            printf ("Found camera '%s':\n", name);
+            int twosides = 0;
+            dict_value (cp, "twoSidesOn", twosides);
+            printf ("    two sides?  %d\n", twosides);
+            int xform = dict_find (cam, "xform");
+            matrix m;
+            if (xform && dict_value (xform, "matrix", m))
+                printf ("    transform matrix = [ %1.3f ]\n", m);
+            else
+                printf ("    error, camera didn't have a matrix\n");
+
+            // May have multiple images
+            for (int img = dict_find (cp, "image"); img; img = dict_next(img)) {
+                string val;
+                if (dict_value (img, "channel", val))
+                    printf ("    channel: '%s'\n", val);
+            }
+        } else {
+            printf ("error, no camera found for a camerapack");
+        }
+    }
+    printf ("\n");
+}

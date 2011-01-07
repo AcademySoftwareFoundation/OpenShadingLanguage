@@ -86,6 +86,7 @@ class ShadingSystemImpl;
 class ShadingContext;
 class ShaderInstance;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
+class Dictionary;
 
 
 /// Signature of the function that LLVM generates to run the shader
@@ -936,6 +937,20 @@ public:
     ///
     ParamValueList & messages () { return m_messages; }
 
+    /// Look up a query from a dictionary (typically XML), staring the
+    /// search from the root of the dictionary, and returning ID of the
+    /// first matching node.
+    int dict_find (ustring dictionaryname, ustring query);
+    /// Look up a query from a dictionary (typically XML), staring the
+    /// search from the given nodeID within the dictionary, and
+    /// returning ID of the first matching node.
+    int dict_find (int nodeID, ustring query);
+    /// Return the next match of the same query that gave the nodeID.
+    int dict_next (int nodeID);
+    /// Look up an attribute of the given dictionary node.  If
+    /// attribname is "", return the value of the node itself.
+    int dict_value (int nodeID, ustring attribname, TypeDesc type, void *data);
+
 private:
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
@@ -947,6 +962,8 @@ private:
     /// points turned on.
     void execute_llvm (ShaderUse use, Runflag *rf=NULL,
                        int *ind=NULL, int nind=0);
+
+    void free_dict_resources ();
 
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
@@ -963,6 +980,8 @@ private:
     ParamValueList m_messages;          ///< Message blackboard
 
     SimplePool<20 * 1024> m_closure_pool;
+
+    Dictionary *m_dictionary;
 };
 
 

@@ -1749,6 +1749,39 @@ extern "C" void osl_filterwidth_vv(void *out, void *x_)
     VEC(out).z = filter_width (x.dx().z, x.dy().z);   
 }
 
+
+
+extern "C" int osl_dict_find_iis (void *sg_, int nodeID, void *query)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    return sg->context->dict_find (nodeID, USTR(query));
+}
+
+
+extern "C" int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    return sg->context->dict_find (USTR(dictionary), USTR(query));
+}
+
+
+extern "C" int osl_dict_next (void *sg_, int nodeID)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    return sg->context->dict_next (nodeID);
+}
+
+
+extern "C" int osl_dict_value (void *sg_, int nodeID, void *attribname,
+                               long long type, void *data)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    return sg->context->dict_value (nodeID, USTR(attribname), TYPEDESC(type), data);
+}
+
+
+
+
 /***********************************************************************
  * Utility routines
  */

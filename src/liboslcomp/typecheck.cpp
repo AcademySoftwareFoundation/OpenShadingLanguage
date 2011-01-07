@@ -851,7 +851,7 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (1);
             argwriteonly (2);
         } else if (m_name == "getattribute" || m_name == "getmessage" ||
-                   m_name == "gettextureinfo") {
+                   m_name == "gettextureinfo" || m_name == "dict_value") {
             // these all write to their last argument
             argwriteonly ((int)listlength(args()));
         } else if (func()->texture_args()) {
@@ -1045,6 +1045,9 @@ static const char * builtin_func_args [] = {
     "calculatenormal", "vp", "!deriv", NULL,
     "cellnoise", NOISE_ARGS, NULL,
     "concat", "sss", /*"ss.",*/ NULL,   // FIXME -- further checking
+    "dict_find", "iss", "iis", NULL,
+    "dict_next", "ii", NULL,
+    "dict_value", "iis?", NULL,
     "Dx", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,

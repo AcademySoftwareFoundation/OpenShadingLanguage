@@ -3501,6 +3501,81 @@ LLVMGEN (llvm_gen_pointcloud_search)
 }
 
 
+
+LLVMGEN (llvm_gen_dict_find)
+{
+    // OSL has two variants of this function:
+    //     dict_find (string dict, string query)
+    //     dict_find (int nodeID, string query)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() == 3);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Source = *rop.opargsym (op, 1);
+    Symbol& Query  = *rop.opargsym (op, 2);
+    DASSERT (Result.typespec().is_int() && Query.typespec().is_string() &&
+             (Source.typespec().is_int() || Source.typespec().is_string()));
+    bool sourceint = Source.typespec().is_int();  // is it an int?
+    llvm::Value *args[3];
+    args[0] = rop.sg_void_ptr();
+    args[1] = rop.llvm_load_value(Source);
+    args[2] = rop.llvm_load_value (Query);
+    const char *func = sourceint ? "osl_dict_find_iis" : "osl_dict_find_iss";
+    llvm::Value *ret = rop.llvm_call_function (func, &args[0], 3);
+    rop.llvm_store_value (ret, Result);
+    return true;
+}
+
+
+
+
+LLVMGEN (llvm_gen_dict_next)
+{
+    // dict_net is very straightforward -- just insert sg ptr as first arg
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() == 3);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& NodeID = *rop.opargsym (op, 1);
+    DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int());
+    llvm::Value *ret = rop.llvm_call_function ("osl_dict_next",
+                                               rop.sg_void_ptr(),
+                                               rop.llvm_load_value(NodeID));
+    rop.llvm_store_value (ret, Result);
+    return true;
+}
+
+
+
+
+LLVMGEN (llvm_gen_dict_value)
+{
+    // int dict_value (int nodeID, string attribname, output TYPE value)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() == 3);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& NodeID = *rop.opargsym (op, 1);
+    Symbol& Name   = *rop.opargsym (op, 2);
+    Symbol& Value  = *rop.opargsym (op, 3);
+    DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int() &&
+             Name.typespec().is_string());
+    llvm::Value *args[5];
+    // arg 0: shaderglobals ptr
+    args[0] = rop.sg_void_ptr();
+    // arg 1: nodeID
+    args[1] = rop.llvm_load_value(NodeID);
+    // arg 2: attribute name
+    args[2] = rop.llvm_load_value(Name);
+    // arg 3: encoded type of Value
+    args[3] = rop.llvm_constant(Value.typespec().simpletype());
+    // arg 4: pointer to Value
+    args[4] = rop.llvm_void_ptr (rop.llvm_get_pointer (Value));
+    llvm::Value *ret = rop.llvm_call_function ("osl_dict_value", &args[0], 5);
+    rop.llvm_store_value (ret, Result);
+    return true;
+}
+
+
+
+
 #ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
 typedef boost::unordered_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
 #else
@@ -3554,6 +3629,9 @@ initialize_llvm_generator_table ()
     INIT2 (cross, llvm_gen_generic);
     INIT2 (degrees, llvm_gen_generic);
     INIT2 (determinant, llvm_gen_generic);
+    INIT (dict_find);
+    INIT (dict_next);
+    INIT (dict_value);
     INIT2 (distance, llvm_gen_generic);
     INIT (div);
     INIT2 (dot, llvm_gen_generic);

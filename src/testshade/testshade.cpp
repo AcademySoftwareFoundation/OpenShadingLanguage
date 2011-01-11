@@ -75,6 +75,7 @@ static ustring sparamdata[1000];
 static int sparamindex = 0;
 static ErrorHandler errhandler;
 static int iters = 1;
+static std::string raytype = "camera";
 
 
 
@@ -168,6 +169,7 @@ getargs (int argc, const char *argv[])
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
+                "--raytype %s", &raytype, "Set the raytype",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
@@ -254,6 +256,8 @@ main (int argc, const char *argv[])
 
     shaderglobals.dudx = 1.0f / xres;
     shaderglobals.dvdy = 1.0f / yres;
+
+    shaderglobals.raytype = ((ShadingSystemImpl *)shadingsys)->raytype_bit (ustring(raytype));
 
     double setuptime = timer ();
     double runtime = 0;

@@ -385,6 +385,13 @@ closure color cloth(normal N, float s, float t, color diff_warp, color diff_weft
 
 
 // Renderer state
+int raytype (string typename) BUILTIN;
+// the individual 'isFOOray' functions are deprecated
+int iscameraray () { return raytype("camera"); }
+int isdiffuseray () { return raytype("diffuse"); }
+int isglossyray () { return raytype("glossy"); }
+int isshadowray () { return raytype("shadow"); }
+
 
 
 // Miscellaneous

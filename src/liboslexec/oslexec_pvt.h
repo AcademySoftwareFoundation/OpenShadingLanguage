@@ -679,6 +679,10 @@ public:
     ///
     Color3 to_rgb (ustring fromspace, float a, float b, float c);
 
+    /// For the proposed raytype name, return the bit pattern that
+    /// describes it, or 0 for an unrecognized name.
+    int raytype_bit (ustring name);
+
 private:
     void printstats () const;
     void init_global_heap_offsets ();
@@ -747,6 +751,7 @@ private:
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
+    std::vector<ustring> m_raytypes;      ///< Names of ray types
 
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group

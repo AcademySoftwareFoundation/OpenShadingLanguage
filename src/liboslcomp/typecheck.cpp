@@ -1059,10 +1059,6 @@ static const char * builtin_func_args [] = {
     "getattribute", "is?", "iss?", "isi?", "issi?", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", /*"iss?",*/ "!rw", NULL,  // FIXME -- further checking?
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
-    "iscameraray", "i", NULL,
-    "isdiffuseray", "i", NULL,
-    "isglossyray", "i", NULL,
-    "isshadowray", "i", NULL,
     "hash", NOISE_ARGS, NULL,
     "noise", NOISE_ARGS, NULL,
     "pnoise", PNOISE_ARGS, NULL,

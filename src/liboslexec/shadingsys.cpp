@@ -196,6 +196,16 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         m_llvm_debug = atoi(llvm_debug_env);
 
     register_builtin_closures(this);
+
+    // Initialize a default set of raytype names.  A particular renderer
+    // can override this, add custom names, or change the bits around,
+    // if this default ordering is not to its liking.
+    static const char *raytypes[] = {
+        /*1*/ "camera", /*2*/ "shadow", /*4*/ "reflection", /*8*/ "refraction",
+        /*16*/ "diffuse", /*32*/ "glossy"
+    };
+    const int nraytypes = sizeof(raytypes)/sizeof(raytypes[0]);
+    attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
 }
 
 
@@ -296,6 +306,14 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
+        return true;
+    }
+    if (name == "raytypes" && type.basetype == TypeDesc::STRING) {
+        ASSERT (type.numelements() <= 32 &&
+                "ShaderGlobals.raytype is an int, max of 32 raytypes");
+        m_raytypes.clear ();
+        for (size_t i = 0;  i < type.numelements();  ++i)
+            m_raytypes.push_back (ustring(((const char **)val)[i]));
         return true;
     }
     return false;
@@ -999,6 +1017,18 @@ ShadingSystemImpl::global_heap_offset (ustring name)
     std::map<ustring,int>::const_iterator f = m_global_heap_offsets.find (name);
     return f != m_global_heap_offsets.end() ? f->second : -1;
 }
+
+
+
+int
+ShadingSystemImpl::raytype_bit (ustring name)
+{
+    for (size_t i = 0, e = m_raytypes.size();  i < e;  ++i)
+        if (name == m_raytypes[i])
+            return (1 << i);
+    return 0;  // not found
+}
+
 
 
 

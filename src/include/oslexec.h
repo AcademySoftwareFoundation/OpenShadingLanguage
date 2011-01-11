@@ -228,10 +228,7 @@ struct ShaderGlobals {
                                           to NULL) */
     float surfacearea;               /**< Total area of the object (defined by
                                           light shaders for energy normalization) */
-    int iscameraray;                 /**< True if computing for camera ray */
-    int isshadowray;                 /**< True if computing for shadow opacity */
-    int isdiffuseray;                /**< True if computing for diffuse ray */
-    int isglossyray;                 /**< True if computing for glossy ray */
+    int raytype;                     /**< Bit field of ray type flags */
     int flipHandedness;              /**< flips the result of calculatenormal() */
     int backfacing;                  /**< True if we want are shading the
                                           backside of the surface */

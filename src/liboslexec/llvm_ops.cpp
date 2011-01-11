@@ -1781,6 +1781,23 @@ extern "C" int osl_dict_value (void *sg_, int nodeID, void *attribname,
 
 
 
+// Asked if the raytype is a name we can't know until mid-shader.
+extern "C" int osl_raytype_name (void *sg_, void *name)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    int bit = sg->context->shadingsys().raytype_bit (USTR(name));
+    return (sg->raytype & bit) != 0;
+}
+
+// Asked if the raytype includes a bit pattern.
+extern "C" int osl_raytype_bit (void *sg_, int bit)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    return (sg->raytype & bit) != 0;
+}
+
+
+
 
 /***********************************************************************
  * Utility routines

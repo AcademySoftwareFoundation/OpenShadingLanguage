@@ -308,6 +308,8 @@ RuntimeOptimizer::llvm_type_union(const std::vector<const llvm::Type *> &types)
 const llvm::Type *
 RuntimeOptimizer::llvm_type_sg ()
 {
+    // Create a type that defines the ShaderGlobals for LLVM IR.  This
+    // absolutely MUST exactly match the ShaderGlobals struct in oslexec.h.
     if (m_llvm_type_sg)
         return m_llvm_type_sg;
 
@@ -335,10 +337,7 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back(llvm_type_void_ptr()); // Ci
 
     sg_types.push_back (llvm_type_float());   // surfacearea
-    sg_types.push_back (llvm_type_int());     // iscameraray
-    sg_types.push_back (llvm_type_int());     // isshadowray
-    sg_types.push_back (llvm_type_int());     // isdiffuseray
-    sg_types.push_back (llvm_type_int());     // isglossyray
+    sg_types.push_back (llvm_type_int());     // raytype
     sg_types.push_back (llvm_type_int());     // flipHandedness
     sg_types.push_back (llvm_type_int());     // backfacing
 
@@ -489,6 +488,9 @@ RuntimeOptimizer::llvm_type_closure_component_attr_ptr ()
 static int
 ShaderGlobalNameToIndex (ustring name)
 {
+    // N.B. The order of names in this table MUST exactly match the
+    // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
+    // defined in llvm_type_sg().
     static ustring fields[] = {
         Strings::P, Strings::I, Strings::N, Strings::Ng,
         Strings::u, Strings::v, Strings::dPdu, Strings::dPdv,
@@ -496,9 +498,7 @@ ShaderGlobalNameToIndex (ustring name)
         ustring("renderstate"), ustring("shadingcontext"),
         ustring("object2common"), ustring("shader2common"),
         Strings::Ci,
-        ustring("surfacearea"),
-        ustring("iscameraray"), ustring("isshadowray"),
-        ustring("isdiffuseray"), ustring("isglossyray"),
+        ustring("surfacearea"), ustring("raytype"),
         ustring("flipHandedness"), ustring("backfacing")
     };
 
@@ -3527,7 +3527,6 @@ LLVMGEN (llvm_gen_dict_find)
 
 
 
-
 LLVMGEN (llvm_gen_dict_next)
 {
     // dict_net is very straightforward -- just insert sg ptr as first arg
@@ -3542,7 +3541,6 @@ LLVMGEN (llvm_gen_dict_next)
     rop.llvm_store_value (ret, Result);
     return true;
 }
-
 
 
 
@@ -3569,6 +3567,32 @@ LLVMGEN (llvm_gen_dict_value)
     // arg 4: pointer to Value
     args[4] = rop.llvm_void_ptr (rop.llvm_get_pointer (Value));
     llvm::Value *ret = rop.llvm_call_function ("osl_dict_value", &args[0], 5);
+    rop.llvm_store_value (ret, Result);
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_raytype)
+{
+    // int raytype (string name)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() == 2);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Name = *rop.opargsym (op, 1);
+    llvm::Value *args[2] = { rop.sg_void_ptr(), NULL };
+    const char *func = NULL;
+    if (Name.is_constant()) {
+        // We can statically determine the bit pattern
+        ustring name = ((ustring *)Name.data())[0];
+        args[1] = rop.llvm_constant (rop.shadingsys().raytype_bit (name));
+        func = "osl_raytype_bit";
+    } else {
+        // No way to know which name is being asked for
+        args[1] = rop.llvm_get_pointer (Name);
+        func = "osl_raytype_name";
+    }
+    llvm::Value *ret = rop.llvm_call_function (func, args, 2);
     rop.llvm_store_value (ret, Result);
     return true;
 }
@@ -3662,13 +3686,9 @@ initialize_llvm_generator_table ()
     //stdosl.h  INIT (hypot);
     INIT (if);
     INIT2 (inversesqrt, llvm_gen_generic);
-    INIT2 (iscameraray, llvm_gen_get_simple_SG_field);
-    INIT2 (isdiffuseray, llvm_gen_get_simple_SG_field);
     INIT2 (isfinite, llvm_gen_generic);
-    INIT2 (isglossyray, llvm_gen_get_simple_SG_field);
     INIT2 (isinf, llvm_gen_generic);
     INIT2 (isnan, llvm_gen_generic);
-    INIT2 (isshadowray, llvm_gen_get_simple_SG_field);
     INIT2 (le, llvm_gen_compare_op);
     INIT2 (length, llvm_gen_generic);
     INIT2 (log, llvm_gen_generic);
@@ -3699,6 +3719,7 @@ initialize_llvm_generator_table ()
     INIT (printf);
     INIT2 (psnoise, llvm_gen_pnoise);
     INIT2 (radians, llvm_gen_generic);
+    INIT (raytype);
     //stdosl.h INIT (reflect);
     //stdosl.h INIT (refract);
     INIT2 (regex_match, llvm_gen_regex);

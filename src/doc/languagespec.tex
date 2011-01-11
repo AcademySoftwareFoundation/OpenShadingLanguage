@@ -4556,33 +4556,17 @@ is not expected to be meaningful for non-light shaders.
 %reflection/refraction visible in a reflection/refraction, etc.
 %\apiend
 
-\apiitem{int {\ce iscameraray} ()}
-\indexapi{iscameraray()}
-Returns {\cf 1} if the results of the shader will be viewed directly by
-the camera (including straight-line transparency), {\cf 0} if it's a
-reflection or refraction.
-\apiend
+\apiitem{int {\ce raytype} (string name)}
+\indexapi{raytype()}
+Returns {\cf 1} if ray being shaded is of the given type, or {\cf 0} if
+the ray is not of that type or if the ray type name is not recognized by
+the renderer.
 
-\apiitem{int {\ce isshadowray} ()}
-\indexapi{isshadowray()}
-Returns {\cf 1} if the shader is executing for the sole purpose of
-determining the object's opacity (typically for a shadow), in which case
-it may be prudent for the shader to avoid computations that are only
-needed to determine the surface color or other outputs.  This function
-returns {\cf 0} (indicating that the surface should be computing surface
-color, opacity, and all its other outputs).
-\apiend
-
-\apiitem{int {\ce isdiffuseray} ()}
-\indexapi{isdiffuseray()}
-Returns {\cf 1} if the results of the shader are being used for a
-``diffuse'' indirect ray, otherwise {\cf 0}.
-\apiend
-
-\apiitem{int {\ce isglossyray} ()}
-\indexapi{isglossyray()}
-Returns {\cf 1} if the results of the shader are being used for a
-``glossy'' specular ray, otherwise {\cf 0}.
+The set of ray type names is customizeable for renderers supporting
+OSL, but is expected to include at a minimum \qkw{camera},
+\qkw{shadow}, \qkw{diffuse}, \qkw{glossy}, \qkw{reflection},
+\qkw{refraction}.  They are not necessarily mutually exclusive, with the
+exception that camera rays should be of class \qkw{camera} and no other.
 \apiend
 
 

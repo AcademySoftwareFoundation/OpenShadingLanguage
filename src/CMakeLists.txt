@@ -115,7 +115,7 @@ TESTSUITE ( arithmetic array array-derivs
             geomath gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers layers-lazy
             logic loop matrix message miscmath missing-shader noise pnoise
-            oslc-err-paramdefault shortcircuit spline string 
+            oslc-err-paramdefault raytype shortcircuit spline string 
             struct struct-err struct-layers struct-with-array ternary
             texture-alpha texture-blur texture-field3d
             texture-firstchannel texture-simple

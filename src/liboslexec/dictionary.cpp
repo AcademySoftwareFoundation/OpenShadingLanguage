@@ -321,6 +321,7 @@ Dictionary::dict_value (int nodeID, ustring attribname,
         if (type.basetype == TypeDesc::STRING) {
             ASSERT (n == 1 && "no string arrays in XML");
             ((ustring *)data)[0] = m_stringdata[offset];
+            return 1;
         }
         if (type.basetype == TypeDesc::INT) {
             for (int i = 0;  i < n;  ++i)

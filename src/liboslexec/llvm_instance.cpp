@@ -3349,7 +3349,8 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.shadingsys().error ("Closure '%s' not found in the runtime", closure_name.c_str());
+        rop.shadingsys().error ("Closure '%s' is not supported by the current renderer, called from (%s:%d)",
+                                closure_name.c_str(), op.sourcefile().c_str(), op.sourceline());
         return false;
     }
 

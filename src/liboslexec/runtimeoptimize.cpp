@@ -2857,6 +2857,10 @@ RuntimeOptimizer::optimize_group ()
     m_unknown_message_sent = false;
     m_messages_sent.clear ();
 
+    // If no closures were provided, register the builtin ones
+    if (m_shadingsys.m_closure_registry.empty())
+        m_shadingsys.register_builtin_closures();
+
     // Optimize each layer
     size_t old_nsyms = 0, old_nops = 0;
 

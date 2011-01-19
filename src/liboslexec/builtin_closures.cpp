@@ -190,7 +190,7 @@ static bool generic_closure_compare(int id, const void *dataA, const void *dataB
 
 
 
-void ShadingSystem::register_builtin_closures(ShadingSystem *ss)
+void ShadingSystem::register_builtin_closures()
 {
     for (int cid = 0; cid < NBUILTIN_CLOSURES; ++cid)
     {
@@ -199,7 +199,7 @@ void ShadingSystem::register_builtin_closures(ShadingSystem *ss)
         for (j = 0; clinfo->params[j].type != TypeDesc(); ++j);
         int size = clinfo->params[j].offset;
         ASSERT(clinfo->id == cid);
-        ss->register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare);
+        register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare);
     }
 }
 

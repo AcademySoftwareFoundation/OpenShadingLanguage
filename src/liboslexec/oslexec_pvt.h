@@ -543,14 +543,16 @@ public:
         CompareClosureFunc        compare;
     };
 
-    void register_closure(const char *name, int id, const ClosureParam *params, int size,
-                          PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+    void register_closure (const char *name, int id, const ClosureParam *params, int size,
+                           PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
 
-    const ClosureEntry *get_entry(ustring name)const;
-    const ClosureEntry *get_entry(int id)const {
+    const ClosureEntry *get_entry (ustring name) const;
+    const ClosureEntry *get_entry (int id) const {
         DASSERT((size_t)id < m_closure_table.size());
         return &m_closure_table[id];
     }
+
+    bool empty () const { return m_closure_table.empty(); }
 
 private:
 

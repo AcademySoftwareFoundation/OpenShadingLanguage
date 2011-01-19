@@ -39,8 +39,31 @@ glass
             float UImin = 0, float UImax = 1 ]],
     float eta = 1.5
         [[  string description = "Index of refraction",
-            float UImin = 1, float UIsoftmax = 2.5 ]]
+            float UImin = 1, float UIsoftmax = 2.5 ]],
+    int caustics = 0
+        [[  string description = "Enable indirect lighting through glass" ]],
+    int TIR = 0
+        [[  string description = "Enable Total Internal Reflection" ]]
   )
 {
-    Ci = Ks * Cs * dielectric (N, eta);
+    // If the current ray type is glossy or diffuse, that means we
+    // are computing indirect lighting. Letting that interact with
+    // glass produces caustics, which are normally hard to trace and
+    // noisy. So we only return closures if that's not the case or
+    // the "caustics" flag is on.
+    if (caustics || (!raytype("glossy") && !raytype("diffuse")))
+    {
+        // Take into account backfacing to invert eta accordingly
+        if (backfacing())
+        {
+            Ci = refraction(N, 1.0 / eta);
+            // If Total Internal Reflection is enabled, we also return a reflection
+            // closure, which might make rays bounce too much inside an object. That's
+            // why we make it optional.
+            if (TIR)
+               Ci += reflection(N, 1.0 / eta);
+        }
+        else
+            Ci = reflection(N, eta) + refraction(N, eta);
+    }
 }

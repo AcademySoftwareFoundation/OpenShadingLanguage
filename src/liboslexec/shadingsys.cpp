@@ -195,8 +195,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     if (llvm_debug_env && *llvm_debug_env)
         m_llvm_debug = atoi(llvm_debug_env);
 
-    register_builtin_closures(this);
-
     // Initialize a default set of raytype names.  A particular renderer
     // can override this, add custom names, or change the bits around,
     // if this default ordering is not to its liking.

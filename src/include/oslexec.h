@@ -190,7 +190,7 @@ public:
     virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
 
-    static void register_builtin_closures(ShadingSystem *ss);
+    void register_builtin_closures();
 
 private:
     // Make delete private and unimplemented in order to prevent apps

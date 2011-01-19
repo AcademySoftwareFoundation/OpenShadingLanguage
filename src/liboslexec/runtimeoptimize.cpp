@@ -2012,15 +2012,23 @@ RuntimeOptimizer::peephole2 (int opnum)
     // Ping-pong assignments can eliminate the second one:
     //     assign a b
     //     assign b a    <-- turn into nop
-    if (op.opname() == u_assign &&
-          next.opname() == u_assign &&
-          opargsym(op,0) == opargsym(next,1) &&
-          opargsym(op,1) == opargsym(next,0)) {
-        // std::cerr << "ping-pong assignment " << opnum << " of " 
-        //           << opargsym(op,0)->mangled() << " and "
-        //           << opargsym(op,1)->mangled() << "\n";
-        turn_into_nop (next);
-        return 1;
+    // But note that if a is an int and b is a float, this transformation
+    // is not safe because of the intentional truncation.
+    if (op.opname() == u_assign && next.opname() == u_assign) {
+        Symbol *a = opargsym(op,0);
+        Symbol *b = opargsym(op,1);
+        Symbol *c = opargsym(next,0);
+        Symbol *d = opargsym(next,1);
+        if (a == d && b == c) {
+            // Exclude the integer truncation case
+            if (! (a->typespec().is_int() && b->typespec().is_floatbased())) {
+                // std::cerr << "ping-pong assignment " << opnum << " of " 
+                //           << opargsym(op,0)->mangled() << " and "
+                //           << opargsym(op,1)->mangled() << "\n";
+                turn_into_nop (next);
+                return 1;
+            }
+        }
     }
 
     // Daisy chain assignments -> use common source
@@ -2029,13 +2037,22 @@ RuntimeOptimizer::peephole2 (int opnum)
     // turns into:
     //     assign a b
     //     assign c b
-    // This may allow a to be eliminated if it's not used elsewhere
-    if (op.opname() == u_assign &&
-          next.opname() == u_assign &&
-          opargsym(op,0) == opargsym(next,1) &&
-          assignable (opargsym(next,0)->typespec(), opargsym(op,1)->typespec())) {
-        turn_into_assign (next, inst()->arg(op.firstarg()+1));
-        return 1;
+    // This may allow a to be eliminated if it's not used elsewhere.
+    // But note that this doesn't work for float = int = float,
+    // which intentionally truncates before the assignment to c!
+    if (op.opname() == u_assign && next.opname() == u_assign) {
+        Symbol *a = opargsym(op,0);
+        Symbol *b = opargsym(op,1);
+        Symbol *c = opargsym(next,0);
+        Symbol *d = opargsym(next,1);
+        if (a == d && assignable (c->typespec(), b->typespec())) {
+            // Exclude the float=int=float case
+            if (! (a->typespec().is_int() && b->typespec().is_floatbased() &&
+                   c->typespec().is_floatbased())) {
+                turn_into_assign (next, inst()->arg(op.firstarg()+1));
+                return 1;
+            }
+        }
     }
 
     // Look for adjacent add and subtract of the same value:

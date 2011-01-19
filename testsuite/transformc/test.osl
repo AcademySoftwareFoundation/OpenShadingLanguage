@@ -1,0 +1,26 @@
+void test_ctransform (string space, color c)
+{
+    color cs = transformc (space, c);
+    printf ("rgb %0.3f = %s %0.3f\n", c, space, cs);
+    color crgb = transformc (space, "rgb", cs);
+    printf ("%s %0.3f = rgb %0.3f\n", space, cs, crgb);
+    printf ("    residual = %0.3f\n", abs(crgb - c));
+}
+
+
+
+surface test ()
+{
+    color c = color (0.5, 1, 0);
+    color uv = color (u, v, 0.5);
+    test_ctransform ("hsv", c);
+    test_ctransform ("hsv", uv);
+    test_ctransform ("hsl", c);
+    test_ctransform ("hsl", uv);
+    test_ctransform ("YIQ", c);
+    test_ctransform ("YIQ", uv);
+    test_ctransform ("xyz", c);
+    test_ctransform ("xyz", uv);
+    printf ("\n");
+}
+

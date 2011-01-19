@@ -120,7 +120,7 @@ TESTSUITE ( arithmetic array array-derivs
             texture-alpha texture-blur texture-field3d
             texture-firstchannel texture-simple
             texture-width texture-withderivs texture-wrap
-            transform trig typecast vecctr vector xml )
+            transform transformc trig typecast vecctr vector xml )
 
 
 

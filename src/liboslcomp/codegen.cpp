@@ -453,7 +453,7 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
 {
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
-    bool islit = init->nodetype() == ASTNode::literal_node;
+    bool islit = init && init->nodetype() == ASTNode::literal_node;
     ASTliteral *lit = static_cast<ASTliteral *>(init);
     bool completed = true;  // have we output the full initialization?
     TypeSpec type = sym->typespec().elementtype();

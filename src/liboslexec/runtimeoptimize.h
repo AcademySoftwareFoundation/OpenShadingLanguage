@@ -83,8 +83,12 @@ public:
     ///
     void set_inst (int layer);
 
+    /// Return a pointer to the currently-optimizing instance within the
+    /// group.
     ShaderInstance *inst () const { return m_inst; }
 
+    /// Return a reference to the shader group being optimized.
+    ///
     ShaderGroup &group () const { return m_group; }
 
     ShadingSystemImpl &shadingsys () const { return m_shadingsys; }
@@ -211,12 +215,13 @@ public:
     /// optimized.
     void collapse_ops ();
 
-    /// Let the optimizer know that this (known) message was set.
-    ///
+    /// Let the optimizer know that this (known, constant) message was
+    /// set by the current instance.
     void register_message (ustring name);
 
-    /// Let the optimizer know that an unknown message was set.
-    ///
+    /// Let the optimizer know that an unknown message (i.e., we
+    /// couldn't reduce the message name to a constant) was set by the
+    /// current instance.
     void register_unknown_message ();
 
     /// Is it possible that the message with the given name was set?

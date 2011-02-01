@@ -373,7 +373,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
     // connected or interpolated, and output params.  Also mark those
     // symbols with their offset within the group struct.
     if (shadingsys().llvm_debug() >= 2)
-        std::cerr << "Group param struct:\n";
+        std::cout << "Group param struct:\n";
     m_param_order_map.clear ();
     int order = 1;
     for (int layer = 0;  layer < m_group.nlayers();  ++layer) {
@@ -395,10 +395,10 @@ RuntimeOptimizer::llvm_type_groupdata ()
             if (offset & (align-1))
                 offset += align - (offset & (align-1));
             if (shadingsys().llvm_debug() >= 2)
-                std::cerr << "  " << inst->layername() 
+                std::cout << "  " << inst->layername() 
                           << " (" << inst->id() << ") " << sym.mangled()
                           << " " << ts.c_str() << ", field " << order 
-                          << ", offset " << offset << "\n";
+                          << ", offset " << offset << std::endl;
             sym.dataoffset ((int)offset);
             offset += n * int(sym.size());
 
@@ -411,8 +411,8 @@ RuntimeOptimizer::llvm_type_groupdata ()
     m_llvm_type_groupdata = llvm::StructType::get (llvm_context(), fields);
 
 #ifdef DEBUG
-//    llvm::errs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
-//    llvm::errs() << "  size = " << offset << "\n";
+//    llvm::outs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
+//    llvm::outs() << "  size = " << offset << "\n";
 #endif
 
     return m_llvm_type_groupdata;
@@ -3950,7 +3950,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     builder().CreateRetVoid();
 
     if (shadingsys().llvm_debug())
-        llvm::errs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
+        llvm::outs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
 
     delete m_builder;
     m_builder = NULL;
@@ -4022,7 +4022,7 @@ RuntimeOptimizer::build_llvm_group ()
     m_stat_llvm_opt_time = timer();  timer.reset();  timer.start();
 
     if (shadingsys().llvm_debug())
-        llvm::errs() << "func after opt  = " << *entry_func << "\n";
+        llvm::outs() << "func after opt  = " << *entry_func << "\n";
 
     // Debug code to dump the resulting bitcode to a file
     if (shadingsys().llvm_debug() >= 2) {

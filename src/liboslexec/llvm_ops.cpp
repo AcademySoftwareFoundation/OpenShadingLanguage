@@ -1734,15 +1734,15 @@ inline float filter_width(float dx, float dy)
     return sqrtf(dx*dx + dy*dy);
 }
 
-extern "C" float osl_filterwidth_ff(void *x_)
+extern "C" float osl_filterwidth_fdf(void *x_)
 {
-    Dual2<float> x = DFLOAT(x_);
+    Dual2<float> &x = DFLOAT(x_);
     return filter_width(x.dx(), x.dy());
 }
 
-extern "C" void osl_filterwidth_vv(void *out, void *x_)
+extern "C" void osl_filterwidth_vdv(void *out, void *x_)
 {
-    Dual2<Vec3> x = DVEC(x_);
+    Dual2<Vec3> &x = DVEC(x_);
 
     VEC(out).x = filter_width (x.dx().x, x.dy().x);   
     VEC(out).y = filter_width (x.dx().y, x.dy().y);   

@@ -646,9 +646,31 @@ RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
 
 
 void
+RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
+{
+    // FIXME - handle arrays
+    ASSERT (! sym.typespec().is_closure() && ! sym.typespec().is_array());
+    if (sym.typespec().is_int()) {
+        llvm::Value *zero = llvm_constant ((int)0);
+        llvm_store_value (zero, sym);
+    } else {
+        // Must be float-based
+        ASSERT (sym.typespec().is_floatbased());
+        int num_components = sym.typespec().simpletype().aggregate;
+        llvm::Value *zero = llvm_constant (0.0f);
+        for (int i = 0;  i < num_components;  ++i)
+            llvm_store_value (zero, sym, 0, NULL, i);
+        llvm_zero_derivs (sym);
+    }
+}
+
+
+
+void
 RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 {
     // FIXME - handle arrays
+    ASSERT (! sym.typespec().is_closure() && ! sym.typespec().is_array());
     if (sym.has_derivs() &&
             (sym.typespec().is_float() || sym.typespec().is_triple())) {
         int num_components = sym.typespec().simpletype().aggregate;
@@ -2257,14 +2279,15 @@ LLVMGEN (llvm_gen_matrix)
 
 
 // Derivs
-LLVMGEN (llvm_gen_Dx)
+LLVMGEN (llvm_gen_DxDy)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& Result (*rop.opargsym (op, 0));
     Symbol& Src (*rop.opargsym (op, 1));
+    int deriv = (op.opname() == "Dx") ? 1 : 2;
 
     for (int i = 0; i < Result.typespec().aggregate(); ++i) {
-        llvm::Value* src_val = rop.llvm_load_value (Src, 1 /*dx*/, i);
+        llvm::Value* src_val = rop.llvm_load_value (Src, deriv, i);
         rop.storeLLVMValue (src_val, Result, i, 0);
     }
 
@@ -2276,19 +2299,30 @@ LLVMGEN (llvm_gen_Dx)
 
 
 // Derivs
-LLVMGEN (llvm_gen_Dy)
+LLVMGEN (llvm_gen_filterwidth)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& Result (*rop.opargsym (op, 0));
     Symbol& Src (*rop.opargsym (op, 1));
 
-    for (int i = 0; i < Result.typespec().aggregate(); ++i) {
-        llvm::Value* src_val = rop.llvm_load_value (Src, 2 /*dy*/, i);
-        rop.storeLLVMValue (src_val, Result, i, 0);
+    ASSERT (Src.typespec().is_float() || Src.typespec().is_triple());
+    if (Src.has_derivs()) {
+        if (Src.typespec().is_float()) {
+            llvm::Value *r = rop.llvm_call_function ("osl_filterwidth_fdf",
+                                                     rop.llvm_void_ptr (Src));
+            rop.llvm_store_value (r, Result);
+        } else {
+            rop.llvm_call_function ("osl_filterwidth_vdv",
+                                    rop.llvm_void_ptr (Result),
+                                    rop.llvm_void_ptr (Src));
+        }
+        // Don't have 2nd order derivs
+        rop.llvm_zero_derivs (Result);
+    } else {
+        // No derivs to be had
+        rop.llvm_assign_zero (Src);
     }
 
-    // Don't have 2nd order derivs
-    rop.llvm_zero_derivs (Result);
     return true;
 }
 
@@ -3210,10 +3244,7 @@ LLVMGEN (llvm_gen_calculatenormal)
 
     DASSERT (Result.typespec().is_triple() && P.typespec().is_triple());
     if (! P.has_derivs()) {
-        llvm::Value *zero = rop.llvm_constant (0.0f);
-        for (int i = 0;  i < 3;  ++i)
-            rop.llvm_store_value (zero, Result, 0, NULL, i);
-        rop.llvm_zero_derivs (Result);
+        rop.llvm_assign_zero (Result);
         return true;
     }
     
@@ -3660,8 +3691,8 @@ initialize_llvm_generator_table ()
     INIT2 (distance, llvm_gen_generic);
     INIT (div);
     INIT2 (dot, llvm_gen_generic);
-    INIT (Dx);
-    INIT (Dy);
+    INIT2 (Dx, llvm_gen_DxDy);
+    INIT2 (Dy, llvm_gen_DxDy);
     INIT2 (dowhile, llvm_gen_loop_op);
     // INIT (end);
     INIT2 (endswith, llvm_gen_generic);
@@ -3673,7 +3704,7 @@ initialize_llvm_generator_table ()
     INIT2 (exp2, llvm_gen_generic);
     INIT2 (expm1, llvm_gen_generic);
     INIT2 (fabs, llvm_gen_generic);
-    INIT2 (filterwidth, llvm_gen_generic);
+    INIT (filterwidth);
     INIT2 (floor, llvm_gen_generic);
     INIT2 (fmod, llvm_gen_mod);
     INIT2 (for, llvm_gen_loop_op);

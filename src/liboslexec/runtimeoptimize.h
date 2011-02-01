@@ -444,6 +444,10 @@ public:
     /// representation of a TypeDesc.
     llvm::Value *llvm_constant (const TypeDesc &type);
 
+    /// Generate LLVM code to zero out the variable (including derivs)
+    ///
+    void llvm_assign_zero (const Symbol &sym);
+
     /// Generate LLVM code to zero out the derivatives of sym.
     ///
     void llvm_zero_derivs (const Symbol &sym);

@@ -534,7 +534,7 @@ extern "C" void osl_sign_vv (void *r, void *x_) {
 extern "C" float osl_step_fff (float edge, float x) {
     return x < edge ? 0.0f : 1.0f;
 }
-extern "C" float osl_step_vvv (void *result, void *edge, void *x) {
+extern "C" void osl_step_vvv (void *result, void *edge, void *x) {
     VEC(result).setValue (((float *)x)[0] < ((float *)edge)[0] ? 0.0f : 1.0f,
                           ((float *)x)[1] < ((float *)edge)[1] ? 0.0f : 1.0f,
                           ((float *)x)[2] < ((float *)edge)[2] ? 0.0f : 1.0f);

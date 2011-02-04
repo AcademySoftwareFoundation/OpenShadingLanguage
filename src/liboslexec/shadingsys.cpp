@@ -323,52 +323,36 @@ bool
 ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
                                  void *val)
 {
+#define ATTR_DECODE(_name,_ctype,_src)                                  \
+    if (name == _name && type == OIIO::BaseTypeFromC<_ctype>::value) {  \
+        *(_ctype *)(val) = (_ctype)(_src);                              \
+        return true;                                                    \
+    }
+
     lock_guard guard (m_mutex);  // Thread safety
-    if (name == "searchpath:shader" && type == TypeDesc::INT) {
+    if (name == "searchpath:shader" && type == TypeDesc::STRING) {
         *(const char **)val = m_searchpath.c_str();
         return true;
     }
-    if (name == "statistics:level" && type == TypeDesc::INT) {
-        *(int *)val = m_statslevel;
-        return true;
-    }
-    if (name == "debug" && type == TypeDesc::INT) {
-        *(int *)val = m_debug;
-        return true;
-    }
-    if (name == "lazylayers" && type == TypeDesc::INT) {
-        *(int *)val = m_lazylayers;
-        return true;
-    }
-    if (name == "lazyglobals" && type == TypeDesc::INT) {
-        *(int *)val = m_lazyglobals;
-        return true;
-    }
-    if (name == "clearmemory" && type == TypeDesc::INT) {
-        *(int *)val = m_clearmemory;
-        return true;
-    }
-    if (name == "rebind" && type == TypeDesc::INT) {
-        *(int *)val = m_rebind;
-        return true;
-    }
-    if (name == "debugnan" && type == TypeDesc::INT) {
-        *(int *)val = m_debugnan;
-        return true;
-    }
-    if (name == "lockgeom" && type == TypeDesc::INT) {
-        *(int *)val = m_lockgeom_default;
-        return true;
-    }
-    if (name == "optimize" && type == TypeDesc::INT) {
-        *(int *)val = m_optimize;
-        return true;
-    }
-    if (name == "llvm_debug" && type == TypeDesc::INT) {
-        *(int *)val = m_llvm_debug;
-        return true;
-    }
+    ATTR_DECODE ("statistics:level", int, m_statslevel);
+    ATTR_DECODE ("debug", int, m_debug);
+    ATTR_DECODE ("lazylayers", int, m_lazylayers);
+    ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
+    ATTR_DECODE ("clearmemory", int, m_clearmemory);
+    ATTR_DECODE ("rebind", int, m_rebind);
+    ATTR_DECODE ("debugnan", int, m_debugnan);
+    ATTR_DECODE ("lockgeom", int, m_lockgeom_default);
+    ATTR_DECODE ("optimize", int, m_optimize);
+    ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
+    ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
+    ATTR_DECODE ("stat:groups", int, m_stat_groups);
+    ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
+    ATTR_DECODE ("stat:memory_current", long long, m_stat_memory.current());
+    ATTR_DECODE ("stat:memory_peak", long long, m_stat_memory.peak());
+    ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
+    
     return false;
+#undef ATTR_DECODE
 }
 
 

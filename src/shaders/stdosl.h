@@ -392,7 +392,11 @@ matrix transpose (matrix m) BUILTIN;
 
 // Pattern generation
 
-float step (float edge, float x) { return (x>=edge) ? 1.0 : 0.0 ; }
+float step (float edge, float x) BUILTIN;
+color step (color edge, color x) BUILTIN;
+point step (point edge, point x) BUILTIN;
+vector step (vector edge, vector x) BUILTIN;
+normal step (normal edge, normal x) BUILTIN;
 float smoothstep (float edge0, float edge1, float x) BUILTIN;
 
 

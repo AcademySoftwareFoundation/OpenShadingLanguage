@@ -650,6 +650,32 @@ DECLFOLDER(constfold_div)
 
 
 
+DECLFOLDER(constfold_dot)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
+
+    // Dot with (0,0,0) -> 0
+    if ((A.is_constant() && is_zero(A)) || (B.is_constant() && is_zero(B))) {
+        rop.turn_into_assign_zero (op);
+        return 1;
+    }
+
+    // dot(const,const) -> const
+    if (A.is_constant() && B.is_constant()) {
+        DASSERT (A.typespec().is_triple() && B.typespec().is_triple());
+        float result = (*(Vec3 *)A.data()).dot (*(Vec3 *)B.data());
+        int cind = rop.add_constant (TypeDesc::TypeFloat, &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_neg)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -1252,6 +1278,52 @@ DECLFOLDER(constfold_sqrt)
 
 
 
+DECLFOLDER(constfold_floor)
+{
+    // Try to turn R=floor(x) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (X.is_constant() &&
+          (X.typespec().is_float() || X.typespec().is_triple())) {
+        const float *x = (const float *) X.data();
+        float result[3];
+        result[0] = floorf (x[0]);
+        if (X.typespec().is_triple()) {
+            result[1] = floorf (x[1]);
+            result[2] = floorf (x[2]);
+        }
+        int cind = rop.add_constant (X.typespec(), &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_ceil)
+{
+    // Try to turn R=ceil(x) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (X.is_constant() &&
+          (X.typespec().is_float() || X.typespec().is_triple())) {
+        const float *x = (const float *) X.data();
+        float result[3];
+        result[0] = ceilf (x[0]);
+        if (X.typespec().is_triple()) {
+            result[1] = ceilf (x[1]);
+            result[2] = ceilf (x[2]);
+        }
+        int cind = rop.add_constant (X.typespec(), &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_pow)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -1511,6 +1583,7 @@ initialize_folder_table ()
 
     INIT (add);    INIT (sub);
     INIT (mul);    INIT (div);
+    INIT (dot);
     INIT (neg);    INIT (abs);
     INIT (eq);     INIT (neq);
     INIT (le);     INIT (ge);
@@ -1528,6 +1601,8 @@ initialize_folder_table ()
     INIT (max);
     INIT (sqrt);
     INIT (pow);
+    INIT (floor);
+    INIT (ceil);
     INIT2 (color, constfold_triple);
     INIT2 (point, constfold_triple);
     INIT2 (normal, constfold_triple);
@@ -1739,6 +1814,14 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
         return true;
     }
 
+    // turn 'R_int = A_float_const' into an int const assignment
+    if (A->typespec().is_float() && R->typespec().is_int()) {
+        int result = (int) *(float *)A->data();
+        int cind = add_constant (R->typespec(), &result);
+        turn_into_assign (op, cind);
+        return true;
+    }
+
     // turn 'R_triple = A_int_const' into a float const assignment
     if (A->typespec().is_int() && R->typespec().is_triple()) {
         float f = *(int *)A->data();
@@ -1753,6 +1836,15 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
         float f = *(float *)A->data();
         Vec3 result (f, f, f);
         int cind = add_constant (R->typespec(), &result);
+        turn_into_assign (op, cind);
+        return true;
+    }
+
+    // Turn 'R_triple = A_other_triple_constant' into a triple const assign
+    if (A->typespec().is_triple() && R->typespec().is_triple() &&
+        A->typespec() != R->typespec()) {
+        Vec3 *f = (Vec3 *)A->data();
+        int cind = add_constant (R->typespec(), f);
         turn_into_assign (op, cind);
         return true;
     }

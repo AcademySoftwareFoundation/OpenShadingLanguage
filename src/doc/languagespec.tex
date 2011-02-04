@@ -3191,9 +3191,14 @@ scale
 \index{pattern generation functions}
 \index{functions!pattern generation}
 
-\apiitem{float {\ce step} (float edge, float x)}
+\apiitem{float {\ce step} (float edge, float x) \\
+\emph{type} {\ce step} (\emph{type} edge, \emph{type} x)}
 \indexapi{step()}
 Returns 0 if $x < {\mathit edge}$ and 1 if $x \ge {\mathit edge}$.
+
+The \emph{type} may be any of of \float, \color, \point, \vector, or
+\normal.  For \color and \point-like types, the computations are
+performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
 \apiitem{float {\ce smoothstep} (float edge0, float edge1, float x)}

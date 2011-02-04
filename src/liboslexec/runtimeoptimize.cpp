@@ -487,7 +487,12 @@ DECLFOLDER(constfold_add)
         }
     }
     if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_float() && B.typespec().is_float()) {
+        if (A.typespec().is_int() && B.typespec().is_int()) {
+            int result = *(int *)A.data() + *(int *)B.data();
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        } else if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() + *(float *)B.data();
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind);
@@ -518,7 +523,12 @@ DECLFOLDER(constfold_sub)
     }
     // R = A - B, if both are constants, =>  R = C
     if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_float() && B.typespec().is_float()) {
+        if (A.typespec().is_int() && B.typespec().is_int()) {
+            int result = *(int *)A.data() - *(int *)B.data();
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        } else if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = *(float *)A.data() - *(float *)B.data();
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind);
@@ -569,7 +579,12 @@ DECLFOLDER(constfold_mul)
         }
     }
     if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_float() && B.typespec().is_float()) {
+        if (A.typespec().is_int() && B.typespec().is_int()) {
+            int result = *(int *)A.data() * *(int *)B.data();
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        } else if (A.typespec().is_float() && B.typespec().is_float()) {
             float result = (*(float *)A.data()) * (*(float *)B.data());
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind);
@@ -943,9 +958,9 @@ DECLFOLDER(constfold_and)
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
     if (A.is_constant() && B.is_constant()) {
+        // Turn the 'and R A B' into 'assign R X' where X is 0 or 1.
         DASSERT (A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() && *(int *)B.data();
-        // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
                                      val ? &int_one : &int_zero);
@@ -1161,6 +1176,44 @@ DECLFOLDER(constfold_concat)
     int cind = rop.add_constant (TypeDesc::TypeString, &result);
     rop.turn_into_assign (op, cind);
     return 1;
+}
+
+
+
+DECLFOLDER(constfold_format)
+{
+    // Try to turn R=format(fmt,...) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Format (*rop.opargsym(op, 1));
+    ustring fmt = *(ustring *)Format.data();
+    std::vector<void *> argptrs;
+    for (int i = 2;  i < op.nargs();  ++i) {
+        Symbol &S (*rop.opargsym(op, i));
+        if (! S.is_constant())
+            return 0;  // something non-constant
+        argptrs.push_back (S.data());
+    }
+    // If we made it this far, all args were constants, and the
+    // arg data pointers are in argptrs[].
+
+    // It's actually a HUGE pain to make this work generally, because
+    // the Strutil::vformat we use in the runtime implementation wants a
+    // va_list, but we just have raw pointers at this point.  No matter,
+    // let's just make it work for several simple common cases.
+    if (op.nargs() == 3) {
+        // Just result=format(fmt, one_argument)
+        Symbol &Val (*rop.opargsym(op, 2));
+        if (Val.typespec().is_string()) {
+            // Single %s
+            ustring result = ustring::format (fmt.c_str(),
+                                              ((ustring *)Val.data())->c_str());
+            int cind = rop.add_constant (TypeDesc::TypeString, &result);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 
@@ -1596,6 +1649,7 @@ initialize_folder_table ()
     INIT (strlen);
     INIT (endswith);
     INIT (concat);
+    INIT (format);
     INIT (clamp);
     INIT (min);
     INIT (max);
@@ -2953,14 +3007,14 @@ RuntimeOptimizer::optimize_group ()
     if (m_shadingsys.m_closure_registry.empty())
         m_shadingsys.register_builtin_closures();
 
-    // Optimize each layer
+    // Optimize each layer, from first to last
     size_t old_nsyms = 0, old_nops = 0;
-
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         m_inst->copy_code_from_master ();
-        if (m_shadingsys.debug() && m_shadingsys.optimize() >= 1) {
-            std::cerr << "Before optimizing layer " << inst()->layername() 
+        if (m_shadingsys.debug() && m_shadingsys.optimize() >= 1 && layer==0) {
+            std::cout << "Before optimizing layer " << layer << " " 
+                      << inst()->layername() 
                       << ", I get:\n" << inst()->print()
                       << "\n--------------------------------\n\n";
         }
@@ -2970,6 +3024,9 @@ RuntimeOptimizer::optimize_group ()
         optimize_instance ();
     }
 
+    // Optimize each layer again, from last to first (because some
+    // optimizations are only apparent when the subsequent shaders have
+    // been simplified).
     for (int layer = nlayers-2;  layer >= 0;  --layer) {
         set_inst (layer);
         if (! inst()->unused())
@@ -3031,7 +3088,7 @@ RuntimeOptimizer::optimize_group ()
             collapse_ops ();
             if (m_shadingsys.debug()) {
                 track_variable_lifetimes ();
-                std::cerr << "After optimizing layer " << layer << " " 
+                std::cout << "After optimizing layer " << layer << " " 
                           << inst()->layername() << " (" << inst()->id()
                           << "): \n" << inst()->print() 
                           << "\n--------------------------------\n\n";

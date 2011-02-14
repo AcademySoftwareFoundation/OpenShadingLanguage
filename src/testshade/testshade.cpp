@@ -35,6 +35,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
+#if OPENIMAGEIO_VERSION >= 900 /* 0.9.0 */
+# include <OpenImageIO/imagebufalgo.h>
+#endif
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
@@ -321,7 +324,11 @@ main (int argc, const char *argv[])
                        if (n == 0) {
                            OIIO::ImageSpec spec (xres, yres, nchans, outtypebase);
                            OIIO::ImageBuf* img = new OIIO::ImageBuf(outputfiles[i], spec);
+#if OPENIMAGEIO_VERSION >= 900 /* 0.9.0 */
+                           OIIO::ImageBufAlgo::zero (*img);
+#else
                            img->zero ();
+#endif
                            outputimgs.push_back(img);
                        }
                        OIIO::convert_types (tbase, ctx->symbol_data (*sym, 0),

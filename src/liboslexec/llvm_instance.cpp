@@ -2949,11 +2949,15 @@ LLVMGEN (llvm_gen_pnoise)
 
 LLVMGEN (llvm_gen_getattribute)
 {
-    // getattribute() has four "flavors":
+    // getattribute() has eight "flavors":
     //   * getattribute (attribute_name, value)
+    //   * getattribute (attribute_name, value[])
     //   * getattribute (attribute_name, index, value)
+    //   * getattribute (attribute_name, index, value[])
     //   * getattribute (object, attribute_name, value)
+    //   * getattribute (object, attribute_name, value[])
     //   * getattribute (object, attribute_name, index, value)
+    //   * getattribute (object, attribute_name, index, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
 
     DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
@@ -3005,26 +3009,10 @@ LLVMGEN (llvm_gen_getattribute)
              !Attribute.typespec().is_closure() && !Index.typespec().is_closure()      && 
              !Destination.typespec().is_closure());
 
-    std::string name = std::string("osl_get_attribute_");
-
-    if (Destination.typespec().is_float())
-        name += "f";
-    else if (Destination.typespec().is_point())
-        name += "p";
-    else if (Destination.typespec().is_vector())
-        name += "v";
-    else if (Destination.typespec().is_normal())
-        name += "n";
-    else if (Destination.typespec().is_color())
-        name += "c";
-    else if (Destination.typespec().is_matrix())
-        name += "m";
-    else if (Destination.typespec().is_string())
-        name += "s";
-    else if (Destination.typespec().is_int())
-        name += "i";
-    else
-        ASSERT (0);
+    // We'll pass the destination's attribute type directly to the 
+    // RenderServices callback so that the renderer can perform any
+    // necessary conversions from its internal format to OSL's.
+    const TypeDesc* dest_type = &Destination.typespec().simpletype();
 
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
@@ -3034,9 +3022,10 @@ LLVMGEN (llvm_gen_getattribute)
     args.push_back (rop.llvm_load_value (Attribute));
     args.push_back (rop.llvm_constant ((int)array_lookup));
     args.push_back (rop.llvm_load_value (Index));
+    args.push_back (rop.llvm_constant_ptr ((void *) dest_type));
     args.push_back (rop.llvm_void_ptr (Destination));
 
-    llvm::Value *r = rop.llvm_call_function (name.c_str(), &args[0], args.size());
+    llvm::Value *r = rop.llvm_call_function ("osl_get_attribute", &args[0], args.size());
     rop.llvm_store_value (r, Result);
 
     return true;

@@ -1584,13 +1584,13 @@ extern "C" int osl_get_textureinfo(void *sg_,    void *fin_,
 
 
 
-inline int osl_get_attribute(void *sg_,
+extern "C" int osl_get_attribute(void *sg_,
                              int   dest_derivs,
                              void *obj_name_,
                              void *attr_name_,
                              int   array_lookup,
                              int   index,
-                             const TypeDesc &attr_type,
+                             const void *attr_type,
                              void *attr_dest)
 {
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
@@ -1601,7 +1601,7 @@ inline int osl_get_attribute(void *sg_,
         return sg->context->renderer()->get_array_attribute(sg->renderstate,  
                                                   dest_derivs,
                                                   obj_name,
-                                                  attr_type,
+                                                  *(TypeDesc *)attr_type,
                                                   attr_name,
                                                   index,
                                                   attr_dest);
@@ -1609,105 +1609,9 @@ inline int osl_get_attribute(void *sg_,
         return sg->context->renderer()->get_attribute(sg->renderstate,  
                                                   dest_derivs,
                                                   obj_name,
-                                                  attr_type,
+                                                  *(TypeDesc *)attr_type,
                                                   attr_name,
                                                   attr_dest);
-}
-
-extern "C" int osl_get_attribute_i(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeInt, dest);   
-}
-
-extern "C" int osl_get_attribute_f(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeFloat, dest);   
-}
-
-extern "C" int osl_get_attribute_v(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeVector, dest);   
-}
-
-extern "C" int osl_get_attribute_n(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeNormal, dest);   
-}
-
-extern "C" int osl_get_attribute_p(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypePoint, dest);   
-}
-
-extern "C" int osl_get_attribute_c(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeColor, dest);   
-}
-
-extern "C" int osl_get_attribute_m(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeMatrix, dest);   
-}
-
-extern "C" int osl_get_attribute_s(void *sg_,
-                                   int   dest_derivs,
-                                   void *obj_name_,
-                                   void *attr_name_,
-                                   int   array_lookup,
-                                   int   index,
-                                   void *dest)
-{
-    return osl_get_attribute (sg_, dest_derivs, obj_name_, attr_name_,
-                              array_lookup, index, TypeDesc::TypeString, dest);   
 }
 
 inline Vec3 calculatenormal(void *P_, bool flipHandedness)

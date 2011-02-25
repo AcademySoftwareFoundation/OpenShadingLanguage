@@ -648,32 +648,13 @@ RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
 void
 RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 {
-    ASSERT (! sym.typespec().is_closure());
-    TypeSpec elemtype = sym.typespec().elementtype();
-    if (elemtype.is_int()) {
-        int arraylen = sym.typespec().simpletype().numelements();
-        llvm::Value *arrayindex = NULL;
-        llvm::Value *zero = llvm_constant ((int)0);
-        for (int a = 0;  a < arraylen;  ++a) {
-            if (sym.typespec().is_array())
-                arrayindex = llvm_constant(a);
-            llvm_store_value (zero, sym, 0, arrayindex, 0);
-        }
-    } else {
-        // Must be float-based
-        ASSERT (elemtype.is_floatbased());
-        int arraylen = sym.typespec().simpletype().numelements();
-        llvm::Value *arrayindex = NULL;
-        int num_components = sym.typespec().simpletype().aggregate;
-        llvm::Value *zero = llvm_constant (0.0f);
-        for (int a = 0;  a < arraylen;  ++a) {
-            if (sym.typespec().is_array())
-                arrayindex = llvm_constant(a);
-            for (int i = 0;  i < num_components;  ++i)
-                llvm_store_value (zero, sym, 0, arrayindex, i);
-        }
-        llvm_zero_derivs (sym);
-    }
+    // Just memset the whole thing to zero, let LLVM sort it out.
+    // This even works for closures.
+    int len = sym.typespec().is_closure() ? sizeof(void *) : sym.derivsize();
+    // N.B. derivsize() includes derivs, if there are any
+    size_t align = sym.typespec().is_closure() ? sizeof(void*) :
+                         sym.typespec().simpletype().basesize();
+    llvm_memset (llvm_void_ptr(sym), 0, len, (int)align);
 }
 
 
@@ -681,21 +662,14 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 void
 RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 {
-    ASSERT (! sym.typespec().is_closure());
+    // Just memset the derivs to zero, let LLVM sort it out.
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
-        int arraylen = sym.typespec().simpletype().numelements();
-        llvm::Value *arrayindex = NULL;
-        int num_components = sym.typespec().simpletype().aggregate; 
-        llvm::Value *zero = llvm_constant (0.0f);
-        for (int a = 0;  a < arraylen;  ++a) {
-            if (sym.typespec().is_array())
-                arrayindex = llvm_constant(a);
-            for (int i = 0;  i < num_components;  ++i)
-                llvm_store_value (zero, sym, 1, arrayindex, i);  // clear dx
-            for (int i = 0;  i < num_components;  ++i)
-                llvm_store_value (zero, sym, 2, arrayindex, i);  // clear dy
-        }
+        int len = sym.typespec().is_closure() ? sizeof(void *) : sym.size();
+        size_t align = sym.typespec().is_closure() ? sizeof(void*) :
+                             sym.typespec().simpletype().basesize();
+        llvm_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
+                     0, 2*len /* size of both derivs */, (int)align);
     }
 }
 

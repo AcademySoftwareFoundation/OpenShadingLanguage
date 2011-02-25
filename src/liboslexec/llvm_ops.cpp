@@ -255,20 +255,6 @@ extern "C" void osl_##name##_dvdvv (void *r_, void *a_, void *b_)   \
 MAKE_UNARY_PERCOMPONENT_OP (sin, sinf, sin)
 MAKE_UNARY_PERCOMPONENT_OP (cos, cosf, cos)
 MAKE_UNARY_PERCOMPONENT_OP (tan, tanf, tan)
-
-
-inline float safe_asinf (float x) {
-    if (x >=  1.0f) return  M_PI/2;
-    if (x <= -1.0f) return -M_PI/2;
-    return std::asin (x);
-}
-
-inline float safe_acosf (float x) {
-    if (x >=  1.0f) return 0.0f;
-    if (x <= -1.0f) return M_PI;
-    return std::acos (x);
-}
-
 MAKE_UNARY_PERCOMPONENT_OP (asin, safe_asinf, asin)
 MAKE_UNARY_PERCOMPONENT_OP (acos, safe_acosf, acos)
 MAKE_UNARY_PERCOMPONENT_OP (atan, std::atan, atan)
@@ -1344,64 +1330,76 @@ extern "C" void
 osl_texture_clear (void *opt)
 {
     // Use "placement new" to clear the texture options
-    new (opt) TextureOptions;
+    new (opt) TextureOpt;
 }
 
 
 extern "C" void
 osl_texture_set_firstchannel (void *opt, int x)
 {
-    ((TextureOptions *)opt)->firstchannel = x;
+    ((TextureOpt *)opt)->firstchannel = x;
 }
 
 
 extern "C" void
 osl_texture_set_swrap (void *opt, const char *x)
 {
-    ((TextureOptions *)opt)->swrap = TextureOptions::decode_wrapmode(x);
+    ((TextureOpt *)opt)->swrap = TextureOpt::decode_wrapmode(x);
 }
 
 extern "C" void
 osl_texture_set_twrap (void *opt, const char *x)
 {
-    ((TextureOptions *)opt)->twrap = TextureOptions::decode_wrapmode(x);
+    ((TextureOpt *)opt)->twrap = TextureOpt::decode_wrapmode(x);
 }
 
 extern "C" void
-osl_texture_set_sblur (void *opt, float *x)
+osl_texture_set_sblur (void *opt, float x)
 {
-    ((TextureOptions *)opt)->sblur.init (x);
+    ((TextureOpt *)opt)->sblur = x;
 }
 
 extern "C" void
-osl_texture_set_tblur (void *opt, float *x)
+osl_texture_set_tblur (void *opt, float x)
 {
-    ((TextureOptions *)opt)->tblur.init (x);
+    ((TextureOpt *)opt)->tblur = x;
 }
 
 extern "C" void
-osl_texture_set_swidth (void *opt, float *x)
+osl_texture_set_rblur (void *opt, float x)
 {
-    ((TextureOptions *)opt)->swidth.init (x);
+    ((TextureOpt *)opt)->rblur = x;
 }
 
 extern "C" void
-osl_texture_set_twidth (void *opt, float *x)
+osl_texture_set_swidth (void *opt, float x)
 {
-    ((TextureOptions *)opt)->twidth.init (x);
+    ((TextureOpt *)opt)->swidth = x;
+}
+
+extern "C" void
+osl_texture_set_twidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->twidth = x;
+}
+
+extern "C" void
+osl_texture_set_rwidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->rwidth = x;
 }
 
 extern "C" void
 osl_texture_set_fill (void *opt, float x)
 {
-    ((TextureOptions *)opt)->fill = x;
+    ((TextureOpt *)opt)->fill = x;
 }
 
 extern "C" void
-osl_texture_set_time (void *opt, float *x)
+osl_texture_set_time (void *opt, float x)
 {
 #if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
-    ((TextureOptions *)opt)->time.init (x);
+    ((TextureOpt *)opt)->time = x;
 #endif
 }
 
@@ -1412,7 +1410,7 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
-    TextureOptions *opt = (TextureOptions *)opt_;
+    TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans;
     float dresultds[3], dresultdt[3];
     opt->dresultds = dresultdx ? dresultds : NULL;
@@ -1439,7 +1437,7 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
-    TextureOptions *opt = (TextureOptions *)opt_;
+    TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans + 1;
     float local_result[4], dresultds[4], dresultdt[4];
     opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
@@ -1481,7 +1479,7 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
     const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
-    TextureOptions *opt = (TextureOptions *)opt_;
+    TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans;
     float dresultds[3], dresultdt[3], dresultdr[3];
     opt->dresultds = dresultdx ? dresultds : NULL;
@@ -1523,7 +1521,7 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
     const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
-    TextureOptions *opt = (TextureOptions *)opt_;
+    TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans + 1;
     float local_result[4], dresultds[4], dresultdt[4], dresultdr[4];
     opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
@@ -1531,7 +1529,7 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
     opt->dresultdr = (dresultdz || dalphadz) ? dresultdr : NULL;
 
     bool ok = renderer->texture3d (USTR(name), *opt, sg, P,
-                                   dPdx, dPdy, dPdz, (float *)result);
+                                   dPdx, dPdy, dPdz, (float *)local_result);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -1553,6 +1551,73 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
         ((float *)dalphady)[0] = dresultds[chans] * dPdy[0] + dresultdt[chans] * dPdy[1] + dresultdr[chans] * dPdy[2];
     if (dalphadz)
         ((float *)dalphadz)[0] = dresultds[chans] * dPdz[0] + dresultdt[chans] * dPdz[1] + dresultdr[chans] * dPdz[2];
+
+    return ok;
+#else
+    return 0;
+#endif
+}
+
+
+
+extern "C" int
+osl_environment (void *sg_, const char *name, void *opt_, void *R_,
+                 void *dRdx_, void *dRdy_, int chans,
+                 void *result, void *dresultdx, void *dresultdy,
+                 void *alpha, void *dalphadx, void *dalphady)
+{
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
+    const Vec3 &R (*(Vec3 *)R_);
+    const Vec3 &dRdx (*(Vec3 *)dRdx_);
+    const Vec3 &dRdy (*(Vec3 *)dRdy_);
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices *renderer (sg->context->renderer());
+    TextureOpt *opt = (TextureOpt *)opt_;
+    opt->nchannels = chans;
+    float dresultds[4], dresultdt[4];
+    opt->dresultds = dresultdx ? dresultds : NULL;
+    opt->dresultdt = dresultdy ? dresultdt : NULL;
+    float local_result[4];
+
+    bool ok = renderer->environment (USTR(name), *opt, sg, R,
+                                     dRdx, dRdy, (float *)local_result);
+
+    for (int i = 0;  i < chans;  ++i)
+        ((float *)result)[i] = local_result[i];
+
+#if 0
+    // Correct our st texture space gradients into xy-space gradients
+    if (dresultdx)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdx)[i] = dresultds[i] * dsdx + dresultdt[i] * dtdx;
+    if (dresultdy)
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdy)[i] = dresultds[i] * dsdy + dresultdt[i] * dtdy;
+#else
+    for (int i = 0;  i < chans;  ++i) {
+        if (dresultdx)
+            ((float *)dresultdx)[i] = 0.0f;
+        if (dresultdy)
+            ((float *)dresultdy)[i] = 0.0f;
+    }
+    
+#endif
+
+    if (alpha) {
+#if 0
+        ((float *)alpha)[0] = local_result[chans];
+        if (dalphadx)
+            ((float *)dalphadx)[0] = dresultds[chans] * dPdx[0] + dresultdt[chans] * dPdx[1] + dresultdr[chans] * dPdx[2];
+        if (dalphady)
+            ((float *)dalphady)[0] = dresultds[chans] * dPdy[0] + dresultdt[chans] * dPdy[1] + dresultdr[chans] * dPdy[2];
+#else
+    for (int i = 0;  i < chans;  ++i) {
+        ((float *)alpha)[i] = 0.0f;
+        ((float *)dalphadx)[i] = 0.0f;
+        ((float *)dalphady)[i] = 0.0f;
+    }
+#endif
+    }
 
     return ok;
 #else

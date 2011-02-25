@@ -94,7 +94,7 @@ texturesys ()
 
 
 bool
-RendererServices::texture (ustring filename, TextureOptions &options,
+RendererServices::texture (ustring filename, TextureOpt &options,
                            ShaderGlobals *sg,
                            float s, float t, float dsdx, float dtdx,
                            float dsdy, float dtdy, float *result)
@@ -113,7 +113,7 @@ RendererServices::texture (ustring filename, TextureOptions &options,
 
 
 bool
-RendererServices::texture3d (ustring filename, TextureOptions &options,
+RendererServices::texture3d (ustring filename, TextureOpt &options,
                              ShaderGlobals *sg, const Vec3 &P,
                              const Vec3 &dPdx, const Vec3 &dPdy,
                              const Vec3 &dPdz, float *result)
@@ -126,6 +126,26 @@ RendererServices::texture3d (ustring filename, TextureOptions &options,
         std::string err = texturesys()->geterror();
         if (err.size())
             std::cerr << "[RendererServices::texture3d] " << err.c_str();
+    }
+    return status;
+#else
+    return false;
+#endif
+}
+
+
+    
+bool
+RendererServices::environment (ustring filename, TextureOpt &options,
+                               ShaderGlobals *sg, const Vec3 &R,
+                               const Vec3 &dRdx, const Vec3 &dRdy, float *result)
+{
+#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
+    bool status = texturesys()->environment (filename, options, R, dRdx, dRdy, result);
+    if (!status) {
+        std::string err = texturesys()->geterror();
+        if (err.size())
+            std::cerr << "[RendererServices::environment] " << err.c_str();
     }
     return status;
 #else

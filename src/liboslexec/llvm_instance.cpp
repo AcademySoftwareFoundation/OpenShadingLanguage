@@ -2658,8 +2658,8 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
                           llvm::Value* &dalphady)
 {
-    // Reserve space for the TextureOptions, with alignment
-    size_t tosize = (sizeof(TextureOptions)+sizeof(char*)-1) / sizeof(char*);
+    // Reserve space for the TextureOpt, with alignment
+    size_t tosize = (sizeof(TextureOpt)+sizeof(char*)-1) / sizeof(char*);
     llvm::Value* opt = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
                                                   rop.llvm_constant((int)tosize));
     opt = rop.llvm_void_ptr (opt);
@@ -2679,40 +2679,28 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
         
         llvm::Value *val = rop.llvm_load_value (Val);
         if (name == Strings::width && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_swidth",
-                                    opt, rop.llvm_get_pointer(Val));
-            rop.llvm_call_function ("osl_texture_set_twidth",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_swidth", opt, val);
+            rop.llvm_call_function ("osl_texture_set_twidth", opt, val);
             if (tex3d)
-                rop.llvm_call_function ("osl_texture_set_rwidth",
-                                        opt, rop.llvm_get_pointer(Val));
+                rop.llvm_call_function ("osl_texture_set_rwidth", opt, val);
         } else if (name == Strings::swidth && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_swidth",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_swidth", opt, val);
         } else if (name == Strings::twidth && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_twidth",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_twidth", opt, val);
         } else if (name == Strings::rwidth && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_rwidth",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_rwidth", opt, val);
 
         } else if (name == Strings::blur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_sblur",
-                                    opt, rop.llvm_get_pointer(Val));
-            rop.llvm_call_function ("osl_texture_set_tblur",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_sblur", opt, val);
+            rop.llvm_call_function ("osl_texture_set_tblur", opt, val);
             if (tex3d)
-                rop.llvm_call_function ("osl_texture_set_rblur",
-                                        opt, rop.llvm_get_pointer(Val));
+                rop.llvm_call_function ("osl_texture_set_rblur",opt, val);
         } else if (name == Strings::sblur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_sblur",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_sblur", opt, val);
         } else if (name == Strings::tblur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_tblur",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_tblur", opt, val);
         } else if (name == Strings::rblur && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_rblur",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_rblur", opt, val);
 
         } else if (name == Strings::wrap && valtype == TypeDesc::STRING) {
             rop.llvm_call_function ("osl_texture_set_swrap", opt, val);
@@ -2731,8 +2719,7 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
         } else if (name == Strings::fill && valtype == TypeDesc::FLOAT) {
             rop.llvm_call_function ("osl_texture_set_fill", opt, val);
         } else if (name == Strings::time && valtype == TypeDesc::FLOAT) {
-            rop.llvm_call_function ("osl_texture_set_time",
-                                    opt, rop.llvm_get_pointer(Val));
+            rop.llvm_call_function ("osl_texture_set_time", opt, val);
 
         } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);
@@ -2772,7 +2759,7 @@ LLVMGEN (llvm_gen_texture)
         DASSERT (rop.opargsym(op,7)->typespec().is_float());
     }
 
-    llvm::Value* opt;   // TextureOptions
+    llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, alpha, dalphadx, dalphady);
@@ -2830,7 +2817,7 @@ LLVMGEN (llvm_gen_texture3d)
         DASSERT (rop.opargsym(op,5)->typespec().is_triple());
     }
 
-    llvm::Value* opt;   // TextureOptions
+    llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     true /*3d*/, alpha, dalphadx, dalphady);
@@ -2865,14 +2852,67 @@ LLVMGEN (llvm_gen_texture3d)
     args.push_back (rop.llvm_void_ptr_null());  // no dresultdz for now
     if (alpha) {
         args.push_back (rop.llvm_void_ptr (alpha));
-        args.push_back (rop.llvm_void_ptr (dalphadx ? dalphadx : rop.llvm_void_ptr_null()));
-        args.push_back (rop.llvm_void_ptr (dalphady ? dalphady : rop.llvm_void_ptr_null()));
+        args.push_back (dalphadx ? rop.llvm_void_ptr (dalphadx) : rop.llvm_void_ptr_null());
+        args.push_back (dalphady ? rop.llvm_void_ptr (dalphady) : rop.llvm_void_ptr_null());
         args.push_back (rop.llvm_void_ptr_null());  // No dalphadz for now
-        rop.llvm_call_function ("osl_texture3d_alpha", &args[0], (int)args.size());
         rop.llvm_call_function ("osl_texture3d_alpha", &args[0], (int)args.size());
     } else {
         rop.llvm_call_function ("osl_texture3d", &args[0], (int)args.size());
     }
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_environment)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &Filename = *rop.opargsym (op, 1);
+    Symbol &R = *rop.opargsym (op, 2);
+
+    bool user_derivs = false;
+    int first_optional_arg = 3;
+    if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
+        user_derivs = true;
+        first_optional_arg = 5;
+        DASSERT (rop.opargsym(op,4)->typespec().is_triple());
+    }
+
+    llvm::Value* opt;   // TextureOpt
+    llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
+                                    false /*3d*/, alpha, dalphadx, dalphady);
+
+    // Now call the osl_environment function, passing the options and all the
+    // explicit args like texture coordinates.
+    std::vector<llvm::Value *> args;
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_load_value (Filename));
+    args.push_back (opt);
+    args.push_back (rop.llvm_void_ptr (R));
+    if (user_derivs) {
+        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 3)));
+        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 4)));
+    } else {
+        // Auto derivs of R
+        args.push_back (rop.llvm_void_ptr (R, 1));
+        args.push_back (rop.llvm_void_ptr (R, 2));
+    }
+    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_void_ptr (Result, 0));
+    args.push_back (rop.llvm_void_ptr (Result, 1));
+    args.push_back (rop.llvm_void_ptr (Result, 2));
+    if (alpha) {
+        args.push_back (rop.llvm_void_ptr (alpha));
+        args.push_back (dalphadx ? rop.llvm_void_ptr (dalphadx) : rop.llvm_void_ptr_null());
+        args.push_back (dalphady ? rop.llvm_void_ptr (dalphady) : rop.llvm_void_ptr_null());
+    } else {
+        args.push_back (rop.llvm_void_ptr_null());
+        args.push_back (rop.llvm_void_ptr_null());
+        args.push_back (rop.llvm_void_ptr_null());
+    }
+    rop.llvm_call_function ("osl_environment", &args[0], (int)args.size());
     return true;
 }
 
@@ -3676,6 +3716,7 @@ initialize_llvm_generator_table ()
     INIT2 (dowhile, llvm_gen_loop_op);
     // INIT (end);
     INIT2 (endswith, llvm_gen_generic);
+    INIT (environment);
     INIT2 (eq, llvm_gen_compare_op);
     INIT2 (erf, llvm_gen_generic);
     INIT2 (erfc, llvm_gen_generic);

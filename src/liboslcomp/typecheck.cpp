@@ -921,6 +921,10 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             if (nargs == 2 || list_nth(args(),2)->typespec().is_string()) {
                 argtakesderivs (2, true);
             }
+        } else if (m_name == "environment") {
+            if (nargs == 2 || list_nth(args(),2)->typespec().is_string()) {
+                argtakesderivs (2, true);
+            }
         } else {
             ASSERT (0 && "Missed a takes_derivs case!");
         }
@@ -1051,6 +1055,8 @@ static const char * builtin_func_args [] = {
     "Dx", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,
+    "environment", "fsv.", "fsvvv.","csv.", "csvvv.", 
+               "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,
     "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
     "filterwidth", "ff", "vp", "vv", NULL,

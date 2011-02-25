@@ -302,7 +302,7 @@ public:
     ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
-    virtual bool texture (ustring filename, TextureOptions &options,
+    virtual bool texture (ustring filename, TextureOpt &options,
                           ShaderGlobals *sg,
                           float s, float t, float dsdx, float dtdx,
                           float dsdy, float dtdy, float *result);
@@ -317,10 +317,21 @@ public:
     ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
-    virtual bool texture3d (ustring filename, TextureOptions &options,
+    virtual bool texture3d (ustring filename, TextureOpt &options,
                             ShaderGlobals *sg, const Vec3 &P,
                             const Vec3 &dPdx, const Vec3 &dPdy,
                             const Vec3 &dPdz, float *result);
+
+    /// Filtered environment lookup for a single point.
+    ///
+    /// R is the directional texture coordinate; dRd[xy] are the
+    /// differentials of R in canonical directions x, y.
+    ///
+    /// Return true if the file is found and could be opened, otherwise
+    /// return false.
+    virtual bool environment (ustring filename, TextureOpt &options,
+                              ShaderGlobals *sg, const Vec3 &R,
+                              const Vec3 &dRdx, const Vec3 &dRdy, float *result);
 
     /// Get information about the given texture.  Return true if found
     /// and the data has been put in *data.  Return false if the texture

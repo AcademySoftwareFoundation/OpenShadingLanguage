@@ -3695,8 +3695,8 @@ variable specified.  This allows for RGBA lookups in a single call to
 \apiend
 
 \apiitem{\emph{type} \textbf{texture3d} (string filename, point p, \pl) \\
-\emph{type} \textbf{texture} (string filename, point p, vector dpdx,
-vector dpdy, vector dpdz, \pl)}
+\emph{type} \textbf{texture3d} (string filename, point p, vector dpdx,
+vector dpdy, \\ \bigspc\bigspc vector dpdz, \pl)}
 \indexapi{texture3d()}
 
 Perform a 3D lookup of a volume texture, indexed by 3D coordinate
@@ -3786,12 +3786,76 @@ variable specified.  This allows for RGBA lookups in a single call to
 
 \apiend
 
+\apiitem{\emph{type} \textbf{environment} (string filename, vector R, \pl) \\
+\emph{type} \textbf{environment} (string filename, vector R, \\
+\bigspc\bigspc vector dRdx, vector dRdy, \pl)}
+\indexapi{environment()}
+
+Perform an environment map lookup of an image file, indexed by direction
+$R$, antialiased over a region defined by the differentials
+\emph{dRdx, dRdy} (which are computed
+automatically from $R$, if not supplied).  Whether the results
+are assigned to a \float or a \color (or type cast to one of those)
+determines whether the texture lookup is a single channel or three
+channels.
+
+The lookup direction (and optional derivatives) may be followed by optional token/value
+arguments that control the behavior of {\cf environment()}:
+
+\apiitem{"blur", <float>}
+\vspace{12pt}
+Additional blur when looking up the texture value (default: 0).  The
+blur amount is relative to the size of the texture (i.e., 0.1 blurs by a
+kernel that is 10\% of the full width and height of the texture).
+
+The blur may be specified separately in the $s$ and $t$ directions by
+using the \qkw{sblur} and \qkw{tblur} parameters, respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"width", <float>}
+\vspace{12pt}
+Scale (multiply) the size of the filter as defined by the differentials
+(or implicitly by the differentials of $s$ and $t$).  The default is
+{\cf 1}, meaning that no special scaling is performed.  A width of
+{\cf 0} would effectively turn off texture filtering entirely.
+
+The width value may be specified separately in the $s$ and $t$
+directions by using the \qkw{swidth} and \qkw{twidth} parameters,
+respectively.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"firstchannel", <int>}
+\vspace{12pt}
+The first channel to look up from the texture map (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"fill", <float>}
+\vspace{12pt}
+The value to return for any channels that are not present in the texture
+file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"alpha", <floatvariable>}
+\vspace{12pt}
+The alpha channel (presumed to be the next channel following the
+channels returned by the {\cf environment()} call) will be stored in the
+variable specified.  This allows for RGBA lookups in a single call to
+{\cf environment()}.
+\apiend
+\vspace{-16pt}
+
+\apiend
+
+
 %FIXME
-%texture3d
 %spatialdbsave
 %spatialdbquery
 
-
+\newpage
 \apiitem{int {\ce gettextureinfo} (string texturename, string paramname,\\
 \bigspc\bigspc output \emph{type} destination)}
 \indexapi{gettextureinfo()}
@@ -4421,7 +4485,6 @@ cutoff at the cone boundary.
 
 \begin{comment}
 FIXME
-environment
 shadow
 indirect
 occlusion

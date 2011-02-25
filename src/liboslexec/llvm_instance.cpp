@@ -648,18 +648,30 @@ RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
 void
 RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 {
-    // FIXME - handle arrays
-    ASSERT (! sym.typespec().is_closure() && ! sym.typespec().is_array());
-    if (sym.typespec().is_int()) {
+    ASSERT (! sym.typespec().is_closure());
+    TypeSpec elemtype = sym.typespec().elementtype();
+    if (elemtype.is_int()) {
+        int arraylen = sym.typespec().simpletype().numelements();
+        llvm::Value *arrayindex = NULL;
         llvm::Value *zero = llvm_constant ((int)0);
-        llvm_store_value (zero, sym);
+        for (int a = 0;  a < arraylen;  ++a) {
+            if (sym.typespec().is_array())
+                arrayindex = llvm_constant(a);
+            llvm_store_value (zero, sym, 0, arrayindex, 0);
+        }
     } else {
         // Must be float-based
-        ASSERT (sym.typespec().is_floatbased());
+        ASSERT (elemtype.is_floatbased());
+        int arraylen = sym.typespec().simpletype().numelements();
+        llvm::Value *arrayindex = NULL;
         int num_components = sym.typespec().simpletype().aggregate;
         llvm::Value *zero = llvm_constant (0.0f);
-        for (int i = 0;  i < num_components;  ++i)
-            llvm_store_value (zero, sym, 0, NULL, i);
+        for (int a = 0;  a < arraylen;  ++a) {
+            if (sym.typespec().is_array())
+                arrayindex = llvm_constant(a);
+            for (int i = 0;  i < num_components;  ++i)
+                llvm_store_value (zero, sym, 0, arrayindex, i);
+        }
         llvm_zero_derivs (sym);
     }
 }
@@ -669,16 +681,21 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 void
 RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 {
-    // FIXME - handle arrays
-    ASSERT (! sym.typespec().is_closure() && ! sym.typespec().is_array());
-    if (sym.has_derivs() &&
-            (sym.typespec().is_float() || sym.typespec().is_triple())) {
-        int num_components = sym.typespec().simpletype().aggregate;
+    ASSERT (! sym.typespec().is_closure());
+    TypeSpec elemtype = sym.typespec().elementtype();
+    if (sym.has_derivs() && elemtype.is_floatbased()) {
+        int arraylen = sym.typespec().simpletype().numelements();
+        llvm::Value *arrayindex = NULL;
+        int num_components = sym.typespec().simpletype().aggregate; 
         llvm::Value *zero = llvm_constant (0.0f);
-        for (int i = 0;  i < num_components;  ++i)
-            llvm_store_value (zero, sym, 1, NULL, i);  // clear dx
-        for (int i = 0;  i < num_components;  ++i)
-            llvm_store_value (zero, sym, 2, NULL, i);  // clear dy
+        for (int a = 0;  a < arraylen;  ++a) {
+            if (sym.typespec().is_array())
+                arrayindex = llvm_constant(a);
+            for (int i = 0;  i < num_components;  ++i)
+                llvm_store_value (zero, sym, 1, arrayindex, i);  // clear dx
+            for (int i = 0;  i < num_components;  ++i)
+                llvm_store_value (zero, sym, 2, arrayindex, i);  // clear dy
+        }
     }
 }
 

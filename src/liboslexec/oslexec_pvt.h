@@ -499,6 +499,14 @@ public:
         m_llvm_compiled_version = func;
     }
 
+    /// Is this shader group equivalent to ret void?
+    bool does_nothing() const {
+        return m_does_nothing;
+    }
+    void does_nothing(bool new_val) {
+        m_does_nothing = new_val;
+    }
+
     long long int executions () const { return m_executions; }
 
     void start_running () {
@@ -512,6 +520,7 @@ private:
     RunLLVMGroupFunc m_llvm_compiled_version;
     size_t m_llvm_groupdata_size;
     volatile int m_optimized;        ///< Is it already optimized?
+    bool m_does_nothing;             ///< Is the shading group just func() { return; }
     atomic_ll m_executions;          ///< Number of times the group executed
     mutex m_mutex;                   ///< Thread-safe optimization
     friend class ShadingSystemImpl;
@@ -958,10 +967,10 @@ public:
     /// attribname is "", return the value of the node itself.
     int dict_value (int nodeID, ustring attribname, TypeDesc type, void *data);
 
-private:
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
     bool prepare_execution (ShaderUse use, ShadingAttribState &sas);
+private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
     /// ShadUseSurface).  The context must already be bound.  If

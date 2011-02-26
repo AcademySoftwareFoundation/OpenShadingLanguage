@@ -405,7 +405,7 @@ ShaderInstance::print ()
 
 
 ShaderGroup::ShaderGroup ()
-    : m_llvm_compiled_version(NULL), m_optimized(0)
+  : m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
 {
     m_executions = 0;
 }
@@ -413,7 +413,7 @@ ShaderGroup::ShaderGroup ()
 
 
 ShaderGroup::ShaderGroup (const ShaderGroup &g)
-    : m_layers(g.m_layers), m_llvm_compiled_version(NULL), m_optimized(0)
+  : m_layers(g.m_layers), m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
 {
     m_executions = 0;
 }

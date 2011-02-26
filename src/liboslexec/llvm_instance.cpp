@@ -3836,7 +3836,7 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                    op.opname() == op_end) {
             // Skip this op, it does nothing...
         } else {
-            m_shadingsys.error ("LLVMOSL: Unsupported op %s\n", op.opname().c_str());
+            m_shadingsys.error ("LLVMOSL: Unsupported op %s in layer %s\n", op.opname().c_str(), inst()->layername().c_str());
             return false;
         }
 
@@ -4015,6 +4015,8 @@ RuntimeOptimizer::build_llvm_group ()
 
     // Optimize the LLVM IR unless it's just a ret void group (1 layer, 1 BB, 1 inst == retvoid)
     bool skip_optimization = m_num_used_layers == 1 && entry_func->size() == 1 && entry_func->front().size() == 1;
+    // Label the group as being retvoid or not.
+    m_group.does_nothing(skip_optimization);
     if (!skip_optimization) {
 #if 0
       // First do the simple function passes

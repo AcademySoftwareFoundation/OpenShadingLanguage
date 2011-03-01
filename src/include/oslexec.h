@@ -67,7 +67,7 @@ typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
 typedef bool (*CompareClosureFunc)(int id, const void *dataA, const void *dataB);
 
 
-class ShadingSystem
+class OSLEXECPUBLIC ShadingSystem
 {
 protected:
     /// ShadingSystem is an abstract class, its constructor is protected
@@ -238,7 +238,7 @@ struct ShaderGlobals {
 
 /// RendererServices defines an abstract interface through which a 
 /// renderer may provide callback to the ShadingSystem.
-class RendererServices {
+class OSLEXECPUBLIC RendererServices {
 public:
     RendererServices () { }
     virtual ~RendererServices () { }

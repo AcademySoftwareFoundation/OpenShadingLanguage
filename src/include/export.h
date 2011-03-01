@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSL_EXPORT_H
 
 /// \file
-/// DLLPUBLIC and DLLEXPORT macros that are necessary for proper symbol
+/// OSLPUBLIC and OSLEXPORT macros that are necessary for proper symbol
 /// export when doing multi-platform development.
 
 
@@ -51,19 +51,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// We solve this awful mess by defining these macros:
 ///
-/// DLLPUBLIC - normally, assumes that it's being seen by a client
+/// OSLPUBLIC - normally, assumes that it's being seen by a client
 ///             of the library, and therefore declare as 'imported'.
-///             But if DLL_EXPORT_PUBLIC is defined, change the declaration
+///             But if OSL_EXPORT_PUBLIC is defined, change the declaration
 ///             to 'exported' -- you want to define this macro when
 ///             compiling the module that actually defines the class.
-///
-/// DLLEXPORT - tag a symbol as exported from its DLL and therefore
-///             visible from any app that links against the DLL.  Do this
-///             only if you don't need to call the routine from within
-///             a different compilation module within the same DLL.  Or,
-///             if you just don't want to worry about the whole
-///             DLL_EXPORT_PUBLIC mess, and use this everywhere without
-///             fretting about the minor perf hit of not using 'import'.
 ///
 /// Note that on Linux, all symbols are exported so this just isn't a
 /// problem, so we define these macros to be nothing.
@@ -71,24 +63,43 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// It's a shame that we have to clutter all our header files with these
 /// stupid macros just because the Windows world is such a mess.
 ///
+/// There is a separate define for each library, because there inter-
+/// dependencies, and so what is exported for one may be imported for
+/// another.
 
-#ifndef DLLEXPORT
-#  if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN32))
-#    define DLLEXPORT __declspec(dllexport)
+#ifndef OSLCOMPPUBLIC
+#  if defined(_MSC_VER) && defined(_WIN32)
+#    if defined(oslcomp_EXPORTS)
+#      define OSLCOMPPUBLIC __declspec(dllexport)
+#    else
+#      define OSLCOMPPUBLIC __declspec(dllimport)
+#    endif
 #  else
-#    define DLLEXPORT
+#    define OSLCOMPPUBLIC
 #  endif
 #endif
 
-#ifndef DLLPUBLIC
-#  if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN32))
-#    ifdef OSL_EXPORTS
-#      define DLLPUBLIC __declspec(dllexport)
+#ifndef OSLEXECPUBLIC
+#  if defined(_MSC_VER) && defined(_WIN32)
+#    if defined(oslexec_EXPORTS)
+#      define OSLEXECPUBLIC __declspec(dllexport)
 #    else
-#      define DLLPUBLIC __declspec(dllimport)
+#      define OSLEXECPUBLIC __declspec(dllimport)
 #    endif
 #  else
-#    define DLLPUBLIC
+#    define OSLEXECPUBLIC
+#  endif
+#endif
+
+#ifndef OSLQUERYPUBLIC
+#  if defined(_MSC_VER) && defined(_WIN32)
+#    if defined(oslquery_EXPORTS)
+#      define OSLQUERYPUBLIC __declspec(dllexport)
+#    else
+#      define OSLQUERYPUBLIC __declspec(dllimport)
+#    endif
+#  else
+#    define OSLQUERYPUBLIC
 #  endif
 #endif
 

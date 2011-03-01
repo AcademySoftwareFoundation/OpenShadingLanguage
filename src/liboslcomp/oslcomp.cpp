@@ -205,6 +205,10 @@ OSLCompilerImpl::compile (const std::string &filename,
     cppcommand += "\" ";
 
     // std::cout << "cpp command:\n>" << cppcommand << "<\n";
+#ifdef _MSC_VER
+#define popen _popen
+#define pclose _pclose
+#endif
 
     FILE *cpppipe = popen (cppcommand.c_str(), "r");
 

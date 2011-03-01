@@ -26,7 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, even IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <cmath>
+#include <OpenImageIO/fmath.h>
+
 #include <OpenEXR/ImathMatrix.h>
 #include <OpenEXR/ImathFun.h>
 
@@ -298,7 +299,7 @@ public:
         //
         else
         {
-            uu = fmod((uv.x*m_thread_count_mult_u*1.5), 1.f);
+            uu = fmod((uv.x*m_thread_count_mult_u*1.5f), 1.f);
 
             col = whichtile(uu, 8);
             row = whichtile(vv, 12);

@@ -44,8 +44,6 @@ Sony Pictures Imageworks terms, above.
 #include <vector>
 
 #include "oslconfig.h"
-#include "export.h"
-
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -59,7 +57,7 @@ namespace pvt {
 
 
 
-class DLLPUBLIC OSLQuery {
+class OSLQUERYPUBLIC OSLQuery {
 public:
     /// Parameter holds all the information about a single shader parameter.
     ///

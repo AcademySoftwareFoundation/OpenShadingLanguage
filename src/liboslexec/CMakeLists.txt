@@ -81,7 +81,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
       COMMAND ${LLVM_BC_GENERATOR} ${LLVM_COMPILE_FLAGS}
       -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_SOURCE_DIR}/include
-      -I${OPENIMAGEIOHOME}/include -I${ILMBASE_INCLUDE_AREA}
+      -I${OPENIMAGEIO_INCLUDES} -I${ILMBASE_INCLUDE_AREA}
       -I${Boost_INCLUDE_DIRS} -I${TBB_INCLUDES} -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
 
       COMMAND ${LLVM_DIRECTORY}/bin/llvm-as -f -o ${llvm_bc} ${llvm_asm}

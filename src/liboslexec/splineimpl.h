@@ -29,6 +29,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SPLINEIMPL_H
 #define SPLINEIMPL_H
 
+// avoid naming conflict with MSVC macro
+#ifdef BTYPE
+#undef BTYPE
+#endif
+
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif

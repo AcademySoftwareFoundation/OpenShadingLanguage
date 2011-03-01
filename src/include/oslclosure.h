@@ -84,7 +84,7 @@ enum {
 /// NOTE: you still can assign these labels as keyword arguments to
 ///       closures. But we have removed the old labels array in the
 ///       primitives.
-class Labels {
+class OSLEXECPUBLIC Labels {
 public:
 
     static const ustring NONE;
@@ -109,7 +109,7 @@ public:
 /// Base class representation of a radiance color closure. These are created on
 /// the fly during rendering via placement new. Therefore derived classes should
 /// only use POD types as members.
-class ClosurePrimitive {
+class OSLEXECPUBLIC ClosurePrimitive {
 public:
     /// The categories of closure primitives we can have.  It's possible
     /// to customize/extend this list as long as there is coordination

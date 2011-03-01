@@ -48,7 +48,10 @@ namespace Filesystem = OIIO::Filesystem;
 using namespace OSL;
 using namespace OSL::pvt;
 
-
+// avoid naming conflict with MSVC macro
+#ifdef RGB
+#undef RGB
+#endif
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {

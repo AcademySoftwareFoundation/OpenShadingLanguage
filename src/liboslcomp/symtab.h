@@ -32,31 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <stack>
 
-#ifdef __GNUC__
-
-#if __GNUC__ >= 4 && (__GNUC_MINOR__ >=4)
-
-#include <tr1/unordered_set>
-#include <tr1/unordered_map>
-
-#else // __GNUC__ >= 4 && (__GNUC_MINOR__ >=4)
-
-# include <ext/hash_map>
-# include <ext/hash_set>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash_set;
-
-#endif // __GNUC__ >= 4 && (__GNUC_MINOR__ >=4)
-
-#else  // __GNUC__
-
-# include <hash_map>
-# include <hash_set>
-using std::hash_map;
-using std::hash_set;
-
-#endif // __GNUC__
-
+#include "OpenImageIO/hash.h"
 #include "OpenImageIO/typedesc.h"
 #include "OpenImageIO/ustring.h"
 
@@ -191,14 +167,10 @@ private:
 ///
 class SymbolTable {
 public:
-#ifndef __GNUC__
-    typedef hash_map<ustring, Symbol *,ustringHash> ScopeTable;
-#else
-#if __GNUC__ >= 4 && (__GNUC_MINOR__ >=4)
-    typedef std::tr1::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
+#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
+    typedef boost::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
 #else
     typedef hash_map<ustring, Symbol *,ustringHash> ScopeTable;
-#endif
 #endif
     typedef std::vector<ScopeTable> ScopeTableStack;
     typedef SymbolPtrVec::iterator iterator;

@@ -41,6 +41,9 @@ namespace OSL {
 namespace Strutil = OIIO::Strutil;
 #endif
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
 
 ustring lambda("__lambda__");
 
@@ -51,7 +54,7 @@ NdfAutomata::State::getTransitions(ustring symbol, IntSet &out_states)const
     if (s != m_symbol_trans.end())
         for (IntSet::const_iterator i = s->second.begin(); i != s->second.end(); ++i)
             out_states.insert(*i);
-    if (m_wildcard and m_wildcard->matches(symbol))
+    if (m_wildcard && m_wildcard->matches(symbol))
         out_states.insert(m_wildcard_trans);
 }
 

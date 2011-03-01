@@ -89,7 +89,7 @@ struct AovOutput
 /// This is the entity being linked from the automata. At any state, if
 /// it is final, you will find pointers to these objects. They already know
 /// what output to use and how. Multiple rules can point to the same AOV.
-class AccumRule
+class OSLEXECPUBLIC AccumRule
 {
     public:
         /// Create a rule for accumulating results to an AOV
@@ -129,7 +129,7 @@ class Rule;
 /// It consists of a basic DF automata from optautomata.h and a list
 /// of rules which are linked from the DFA final states. It is constant
 /// along the render process, doesn't keep any state.
-class AccumAutomata
+class OSLEXECPUBLIC AccumAutomata
 {
     public:
 
@@ -178,7 +178,7 @@ class AccumAutomata
 /// integrator functions during the light walk. Knows what state
 /// we are at and keeps record of the accumulated values (AovOutput)
 ///
-class Accumulator
+class OSLEXECPUBLIC Accumulator
 {
     public:
         Accumulator(const AccumAutomata *accauto);

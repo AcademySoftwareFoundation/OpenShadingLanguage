@@ -575,7 +575,7 @@ private:
 
 
 
-class ShadingSystemImpl : public ShadingSystem
+class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
 {
 public:
     ShadingSystemImpl (RendererServices *renderer=NULL,
@@ -871,7 +871,7 @@ private:
 
 /// The full context for executing a shader group.
 ///
-class ShadingContext {
+class OSLEXECPUBLIC ShadingContext {
 public:
     ShadingContext (ShadingSystemImpl &shadingsys);
     ~ShadingContext ();

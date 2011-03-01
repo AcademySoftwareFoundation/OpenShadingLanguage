@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSLCOMP_H
 #define OSLCOMP_H
 
+#include "oslconfig.h"
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -36,9 +37,7 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
-struct ClosureParam;
-
-class OSLCompiler {
+class OSLCOMPPUBLIC OSLCompiler {
 public:
     static OSLCompiler *create ();
 

@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// renderer that wanted things a different way.
 /////////////////////////////////////////////////////////////////////////
 
+// Symbol export defines
+#include "export.h"
 
 // All the things we need from Imath
 #include <OpenEXR/ImathVec.h>

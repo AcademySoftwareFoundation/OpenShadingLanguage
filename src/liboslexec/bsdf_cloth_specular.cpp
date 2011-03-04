@@ -100,7 +100,7 @@ private:
     Point2 semiminor[4], semimajor[4];
 
 public:
-    ClothSpecularClosure() : BSDFClosure(Labels::DIFFUSE) { }
+    ClothSpecularClosure() : BSDFClosure(Labels::GLOSSY) { }
 
     void setup()
     {

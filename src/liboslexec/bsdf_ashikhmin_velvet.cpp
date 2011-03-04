@@ -62,7 +62,7 @@ public:
 
     size_t memsize () const { return sizeof(*this); }
 
-    const char *name () const { return "ashikmin_velvet"; }
+    const char *name () const { return "ashikhmin_velvet"; }
 
     void print_on (std::ostream &out) const
     {

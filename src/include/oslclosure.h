@@ -247,7 +247,7 @@ public:
     /// Albedo function, returns the integral (or an approximation) of
     /// the reflected light in the given out direction. It is expected to
     /// be less than or equal to 1.0 and it is not guaranteed to be accurate.
-    /// It is meant to be used for sampling decissions. When two or more
+    /// It is meant to be used for sampling decisions. When two or more
     /// closures are present at the same time, their albedos will be used
     /// to compute a probability of one being chosen. So this value must reflect
     /// the "importance" of the closure when compared to others. And as a
@@ -278,8 +278,8 @@ public:
     /// randv on [0,1), return a sampled direction omega_in, the PDF value
     /// in that direction and the evaluation of the color.
     /// Unlike the other methods, this routine can be called even if the
-    /// get_cone routine returned false. This is to allow singular BRDFs to pick
-    /// directions from infinitely small cones.
+    /// if the scattering routine returned SINGULAR. This is to allow singular
+    /// BRDFs to pick directions from infinitely small cones.
     /// The caller is responsible for initializing the values of the output
     /// arguments with zeros so that early exits from this function are
     /// simplified. Returns the direction label (R or T).
@@ -450,7 +450,7 @@ struct ClosureComponent : public ClosureColor
         const ustring & str()     const { return *((ustring *)(void *)&value); }
     };
 
-    int    id;       ///< Id of the componente
+    int    id;       ///< Id of the component
     int    size;     ///< Memory used by the primitive
     int    nattrs;   ///< Number of keyword attributes
     char   mem[4];   ///< Memory for the primitive

@@ -1,7 +1,14 @@
 project (OSL)
-set (OSL_VERSION_MAJOR 0)
-set (OSL_VERSION_MINOR 1)
-set (OSL_VERSION_PATCH 0)
+
+# Release version of the library
+set (OSL_LIBRARY_VERSION_MAJOR 0)
+set (OSL_LIBRARY_VERSION_MINOR 5)
+set (OSL_LIBRARY_VERSION_PATCH 0)
+
+# Version of the OSO file format and instruction set
+set (OSO_FILE_VERSION_MAJOR 1)
+set (OSO_FILE_VERSION_MINOR 0)
+
 
 cmake_minimum_required (VERSION 2.6)
 set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
@@ -42,7 +49,11 @@ include (platform)
 include (oiio)
 include (externalpackages)
 include (flexbison)
-include_directories (${OPENIMAGEIO_INCLUDES} ${TBB_INCLUDES})
+include_directories (
+      ${CMAKE_SOURCE_DIR}/include
+      ${CMAKE_BINARY_DIR}/include
+      ${OPENIMAGEIO_INCLUDES} ${TBB_INCLUDES}
+  )
 
 
 # We want CTest for testing
@@ -126,15 +137,15 @@ TESTSUITE ( arithmetic array array-derivs
 
 #########################################################################
 # Packaging
-set (CPACK_PACKAGE_VERSION_MAJOR ${OSL_VERSION_MAJOR})
-set (CPACK_PACKAGE_VERSION_MINOR ${OSL_VERSION_MINOR})
-set (CPACK_PACKAGE_VERSION_PATCH ${OSL_VERSION_PATCH})
+set (CPACK_PACKAGE_VERSION_MAJOR ${OSL_LIBRARY_VERSION_MAJOR})
+set (CPACK_PACKAGE_VERSION_MINOR ${OSL_LIBRARY_VERSION_MINOR})
+set (CPACK_PACKAGE_VERSION_PATCH ${OSL_LIBRARY_VERSION_PATCH})
 # "Vendor" is only used in copyright notices, so we use the same thing that
 # the rest of the copyright notices say.
 set (CPACK_PACKAGE_VENDOR "Sony Pictures Imageworks")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenShadingLanguage is...")
 set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/doc/Description.txt")
-set (CPACK_PACKAGE_FILE_NAME OSL-${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}-${platform})
+set (CPACK_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERSION_MINOR}.${OSL_LIBRARY_VERSION_PATCH}-${platform})
 #set (CPACK_PACKAGE_INSTALL_DIRECTORY ${PROJECT_SOURCE_DIR}/..)
 exec_program ("cmake -E copy ${PROJECT_SOURCE_DIR}/../LICENSE ${CMAKE_BINARY_DIR}/License.txt")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/License.txt")
@@ -151,7 +162,7 @@ if (APPLE)
     set (CPACK_GENERATOR "TGZ;STGZ;PackageMaker")
     set (CPACK_SOURCE_GENERATOR "TGZ")
 endif ()
-set (CPACK_SOURCE_PACKAGE_FILE_NAME OSL-${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}-source)
+set (CPACK_SOURCE_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERSION_MINOR}.${OSL_LIBRARY_VERSION_PATCH}-source)
 #set (CPACK_SOURCE_STRIP_FILES ...FIXME...)
 set (CPACK_SOURCE_IGNORE_FILES ".*~")
 include (CPack)

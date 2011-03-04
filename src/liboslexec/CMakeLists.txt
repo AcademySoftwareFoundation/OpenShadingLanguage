@@ -80,7 +80,9 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
       COMMAND ${LLVM_BC_GENERATOR} ${LLVM_COMPILE_FLAGS}
-      -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_SOURCE_DIR}/include
+      -I${CMAKE_CURRENT_SOURCE_DIR}
+      -I${CMAKE_SOURCE_DIR}/include
+      -I${CMAKE_BINARY_DIR}/include
       -I${OPENIMAGEIO_INCLUDES} -I${ILMBASE_INCLUDE_AREA}
       -I${Boost_INCLUDE_DIRS} -I${TBB_INCLUDES} -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
 

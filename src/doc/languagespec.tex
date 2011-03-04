@@ -63,8 +63,8 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 11 January, 2010 \\
-(with corrections, 7 January, 2011)
+\date{{\large Date: 4 March, 2011 \\
+%(with corrections, 7 January, 2011)
 }}
 
 
@@ -3908,9 +3908,55 @@ system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
 type in the metadata or other header information of the texture file.
 %\hline
 \end{tabular}
+\apiend
 
+
+
+\newpage
+\apiitem{int {\ce pointcloud_search} (string ptcname, point pos, float radius,\\
+\bigspc\bigspc      int maxpoints, int sort,
+                       string attr, Type data[],\\
+\bigspc\bigspc         [ string attrN, Type dataN[], ... ] )}
+\indexapi{pointcloud_search}
+
+Search the named point cloud for points within {\cf radius} of {\cf pos},
+returning the values of any named attributes of those points in the the
+given {\cf data} arrays.  If {\cf sort} is nonzero, The ordering of the points
+found will be sorted by distance from {\cf pos}, from closest to farthest; if
+{\cf sort} is 0, the results are not guaranteed to be sorted (searching may
+be faster for some implementations when sorted results are not
+required).  The return value is the number of points returned, ranging
+from 0 (nothing found in the neighborhood) to the lesser of {\cf maxpoints}
+and the actual lengths of the arrays (the arrays will never be written
+beyond their actual length).
+
+These attribute names are reserved:
+
+\begin{tabular}{p{1.2in} p{0.5in} p{3.2in}}
+\qkw{position} & {\cf point} & The position of each point \\
+\qkw{distance} & {\cf float} & The distance between the point and {\cf pos} \\
+\qkw{index}    & {\cf int}   & The point's unique index within the cloud
+\end{tabular}
+
+Note that the named point cloud will be created, if it does not yet
+exist in memory, and that it will be initialized by reading a point
+cloud from disk, if there is one matching the name.
+
+\noindent Example:
+
+\begin{code}
+      float r = 3.0;
+      point pos[10];
+      color col[10];
+      int n = pointcloud_search ("particles.ptc", P, r, 10,
+                                 "position", pos, "color", col);
+      printf ("Found %d particles within radius %f of (%p)\n", r, P);
+      for (int i = 0;  i < n;  ++i)
+          printf ("  position (%f) -> color (%g)\n", pos[i], col[i]);
+\end{code}
 
 \apiend
+
 
 \newpage
 \section{Light and Shadows}
@@ -4502,7 +4548,8 @@ occlusion
 int {\ce getattribute} (string name, int arrayindex, output \emph{type}
 destination)\\
 int {\ce getattribute} (string object, string name, output \emph{type} destination) \\
-int {\ce getattribute} (string object, string name, int arrayindex, output \emph{type} destination)}
+int {\ce getattribute} (string object, string name, int arrayindex, \\
+\bigspc\spc\spc output \emph{type} destination)}
 \indexapi{getattribute()}
 Searches for the renderer attribute with the given \emph{name}.
 If an object is explicitly named, that is the only place that will be

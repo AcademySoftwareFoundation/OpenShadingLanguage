@@ -1354,6 +1354,12 @@ osl_texture_set_twrap (void *opt, const char *x)
 }
 
 extern "C" void
+osl_texture_set_rwrap (void *opt, const char *x)
+{
+    ((TextureOpt *)opt)->rwrap = TextureOpt::decode_wrapmode(x);
+}
+
+extern "C" void
 osl_texture_set_sblur (void *opt, float x)
 {
     ((TextureOpt *)opt)->sblur = x;

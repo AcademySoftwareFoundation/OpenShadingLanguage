@@ -10,3 +10,5 @@ build
 *.ilg
 *~
 \#*\#
+*.pyc
+testsuite/*/*.oso

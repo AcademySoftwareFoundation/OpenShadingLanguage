@@ -220,6 +220,8 @@ struct ShaderGlobals {
     void* renderstate;               /**< Opaque pointer to renderer state (can
                                           be used to retrieve renderer specific
                                           details like userdata) */
+    void* tracedata;                 /**< Opaque pointer to renderer state
+                                          resuling from a trace() call. */
     pvt::ShadingContext* context;    /**< ShadingContext (this will be set by
                                           OSL itself) */
     TransformationPtr object2common; /**< Object->common xform */
@@ -378,6 +380,29 @@ public:
     /// handlers and then compile this call with it in attr_query as a constant
     virtual int pointcloud (ustring filename, const OSL::Vec3 &center, float radius,
                             int max_points, void *attr_query, void **attr_outdata) = 0;
+
+    /// Options for the trace call.
+    struct TraceOpt {
+        float mindist;   ///< ignore hits closer than this
+        float maxdist;   ///< ignore hits farther than this
+        bool shade;      ///< whether to shade what is hit
+        TraceOpt () : mindist(0.0f), maxdist(1.0e30), shade(false) { }
+    };
+
+    /// Immediately trace a ray from P in the direction R.  Return true
+    /// if anything hit, otherwise false.
+    virtual bool trace (TraceOpt &options, ShaderGlobals *sg,
+                        const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
+                        const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
+                        const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy) {
+        return false;
+    }
+
+    /// Get the named message from the renderer and if found then
+    /// write it into 'val'.  Otherwise, return false.  This is only
+    /// called for "sourced" messages, not ordinary intra-group messages.
+    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name, 
+                             TypeDesc type, void *val) { return false; }
 
 private:
     TextureSystem *m_texturesys;   // For default texture implementation

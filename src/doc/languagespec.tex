@@ -4584,11 +4584,13 @@ but may not be a {\cf struct}.
 \apiend
 
 %\apiitem{int {\ce getmessage} (string source, string name, output \emph{type} destination)}
-\apiitem{int {\ce getmessage} (string name, output \emph{type} destination)}
+\apiitem{int {\ce getmessage} (string name, output \emph{type}
+  destination) \\
+int {\ce getmessage} (string source, string name, output \emph{type} destination)}
 \indexapi{getmessage()}
+\label{sec:getmessage}
+
 Retrieve a message from another shader attached to the same object.
-%Specifically, it will try retrieve the value associated with the given
-%\emph{name} from a specific \emph{source}.  If the source has a value
 If a message is found
 with the given name, and whose type matches that of \emph{destination},
 the value will be stored in \emph{destination} and {\cf getmessage()}
@@ -4596,61 +4598,66 @@ will return {\cf 1}.  If no message is found that matches both the name
 and type, \emph{destination} will be unchanged and {\cf getmessage()}
 will return {\cf 0}.
 
-\begin{comment}
-The \emph{source} designates from where the message should be retrieved,
-and may have any of the following values:
+The \emph{source}, if supplied, designates from where the message should
+be retrieved, and may have any of the following values:
 
 \vspace{-8pt}
 
-\apiitem{"surface", "displacement", "volume"}
-\vspace{10pt}
-Retrieve the message from the named shader type present on the object
-being shaded.
-\apiend
-\vspace{-20pt}
-\end{comment}
-
-%\begin{comment}
-%\apiitem{"light"}
+%\apiitem{"surface", "displacement", "volume"}
 %\vspace{10pt}
-%Valid only if {\cf getmessage()} is called from within an \illuminance
-%loop, retrieves the message from current light source being examined.
+%Retrieve the message from the named shader type present on the object
+%being shaded.
 %\apiend
 %\vspace{-20pt}
 %\end{comment}
 
-\begin{comment}
-\apiitem{"parent"}
-\vspace{10pt}
-Retrieve the message from the shader (potentially on another object)
-that spawned the ray that caused the current shader to be executed.
-\apiend
-\vspace{-20pt}
-
 \apiitem{"trace"}
 \vspace{10pt}
-Valid only if {\cf getmessage()} is called within a {\cf trace} loop,
-retrieves the message from the object hit by the ray.  Note also
-that {\cf getmessage("trace",...)} may be used to get information
-about the individual ray sample itself.
+Retrieves data about the object hit by the last {\cf trace} call made.
+Data recognized include:
+
+\begin{tabular}{p{0.8in} p{0.5in} p{3.3in}}
+\qkw{hit}     & {\cf int}   & Zero if the ray hit nothing, 1 if it hit. \\
+\qkw{hitdist} & {\cf float} & The distance to the hit. \\
+\emph{other} & & Retrieves the named global (\P, \N, etc.), shader
+                 parameter, or set message of the closest object hit
+                 (only if it was a shaded ray).
+\end{tabular}
+
+Note that which information may be retrieved depends on whether the
+ray was traced with the optional \qkw{shade} parameter indicating
+whether or not the shader ought to execute on the traced ray.  If
+\qkw{shade} was 0, you may retrieve ``globals'' (\P, \N, etc.), interpolated
+vertex variables, shader instance values, or graphics state
+attributes (object name, etc.).  But \qkw{shade} must be nonzero to
+correctly retrieve shader output variables or messages that are set
+by the shader (via setmessage()).
+
 \apiend
 \vspace{-20pt}
 
-\apiitem{"primitive"}
-\vspace{10pt}
-Retrieve the value by interpolating the named user variable attached
-to the geometric primitive that is being shaded (regardless of whether
-it is a parameter to the shader).
-\apiend
+%\apiitem{"parent"}
+%\vspace{10pt}
+%Retrieve the message from the shader (potentially on another object)
+%that spawned the ray that caused the current shader to be executed.
+%\apiend
+%\vspace{-20pt}
 
-First, {\cf getmessage()} will search the source's message list as set
-by {\cf setmessage()} when that shader ran.  If not found, then the
-source's shader parameters will be searched.  If multiple shaders of
-the same type are present, they will be searched starting with the
-last one executed, and moving backwards in execution order (in other
-words, later-executed shaders in the network effectively take precedence
-over parameteters or messages from earlier-executed shaders).
-\end{comment}
+%\apiitem{"primitive"}
+%\vspace{10pt}
+%Retrieve the value by interpolating the named user variable attached
+%to the geometric primitive that is being shaded (regardless of whether
+%it is a parameter to the shader).
+%\apiend
+
+%First, {\cf getmessage()} will search the source's message list as set
+%by {\cf setmessage()} when that shader ran.  If not found, then the
+%source's shader parameters will be searched.  If multiple shaders of
+%the same type are present, they will be searched starting with the
+%last one executed, and moving backwards in execution order (in other
+%words, later-executed shaders in the network effectively take precedence
+%over parameteters or messages from earlier-executed shaders).
+%\end{comment}
 
 \apiend
 
@@ -4745,6 +4752,42 @@ int {\ce dict_find} (int nodeID, string query)}
     vector, normal, color, or matrix (or any array), the value must
     parse as the correct number of values, separated by spaces and/or
     commas.
+\apiend
+
+
+\apiitem{int {\ce trace} (point pos, vector dir, ...)}
+%, float mindist, float maxdist, int shade)}
+\indexapi{trace}
+
+Trace a ray from pos in the direction dir.  The ray is traced
+immediately, and may incur significant expense compared to rays that
+might be traced incidentally to evaluating the Ci closure.  Also, beware
+that this can be easily abused in such a way as to introduce
+view-dependence into shaders.
+The return value is 0 if the ray missed all geometry, 1 if it hit
+anything within the distance range.
+
+Optional parameters include:
+
+\begin{tabular}{p{1.2in} p{0.5in} p{3.2in}}
+\qkw{mindist} & {\cf float} & Minimum hit distance (default: zero) \\
+\qkw{maxdist} & {\cf float} & Maximum hit distance (default: infinite) \\
+\qkw{shade}   & {\cf int}   & Whether objects hit will be shaded (default: 0)
+\end{tabular}
+
+Information about the closest object hit by the ray may be retrieved
+using {\cf getmessage("trace",...)} (see Section~\ref{sec:getmessage}).
+
+The main purpose of this function is to allow shaders to ``probe''
+nearby geometry, for example to apply a projected texture that can be
+blocked by geometry, apply more ``wear'' to exposed geometry, or make
+other ambient occlusion-like effects.
+
+%  Any messages set by setmessage() prior to calling trace may be
+%  retrieved by the shaders running on the object hit by the ray, via
+%  {\cf getmessage("parent",...)}.
+
+
 \apiend
 
 

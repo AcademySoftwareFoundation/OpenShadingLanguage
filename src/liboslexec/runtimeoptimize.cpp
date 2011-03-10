@@ -1518,7 +1518,10 @@ DECLFOLDER(constfold_setmessage)
 DECLFOLDER(constfold_getmessage)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+1));
+    int has_source = (op.nargs() == 4);
+    if (has_source)
+        return 0;    // Don't optimize away sourced getmessage
+    Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+1+(int)has_source));
     if (Name.is_constant()) {
         ASSERT (Name.typespec().is_string());
         if (! rop.message_possibly_set (*(ustring *)Name.data())) {

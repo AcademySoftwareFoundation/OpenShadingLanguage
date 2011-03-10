@@ -81,14 +81,23 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
 
 
 extern "C" int
-osl_getmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val)
+osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
+                long long type_, void *val)
 {
+    const ustring &source (USTR(source_));
     const ustring &name (USTR(name_));
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type (*(TypeDesc *)&type_);
     bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
         type = TypeDesc::PTR;  // for closures, we store a pointer
+
+    static ustring ktrace ("trace");
+    if (source == ktrace) {
+        // Source types where we need to ask the renderer
+        RendererServices *renderer = sg->context->renderer();
+        return renderer->getmessage (sg, source, name, type, val);
+    }
 
     ParamValueList &messages (sg->context->messages());
     ParamValue *p = NULL;

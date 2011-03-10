@@ -1655,6 +1655,55 @@ extern "C" int osl_get_textureinfo(void *sg_,    void *fin_,
 
 
 
+// Trace
+
+extern "C" void
+osl_trace_clear (void *opt)
+{
+    ((RendererServices::TraceOpt *)opt)->mindist = 0.0f;
+    ((RendererServices::TraceOpt *)opt)->maxdist = 1.0e30f;
+    ((RendererServices::TraceOpt *)opt)->shade = false;
+}
+
+extern "C" void
+osl_trace_set_mindist (void *opt, float x)
+{
+    ((RendererServices::TraceOpt *)opt)->mindist = x;
+}
+
+extern "C" void
+osl_trace_set_maxdist (void *opt, float x)
+{
+    ((RendererServices::TraceOpt *)opt)->maxdist = x;
+}
+
+extern "C" void
+osl_trace_set_shade (void *opt, int x)
+{
+    ((RendererServices::TraceOpt *)opt)->shade = x;
+}
+
+
+extern "C" int
+osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
+           void *Dir_, void *dDirdx_, void *dDirdy_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices *renderer (sg->context->renderer());
+    RendererServices::TraceOpt *opt = (RendererServices::TraceOpt *)opt_;
+    static const Vec3 Zero (0.0f, 0.0f, 0.0f);
+    const Vec3 *Pos = (Vec3 *)Pos_;
+    const Vec3 *dPosdx = dPosdx_ ? (Vec3 *)dPosdx_ : &Zero;
+    const Vec3 *dPosdy = dPosdy_ ? (Vec3 *)dPosdy_ : &Zero;
+    const Vec3 *Dir = (Vec3 *)Dir_;
+    const Vec3 *dDirdx = dDirdx_ ? (Vec3 *)dDirdx_ : &Zero;
+    const Vec3 *dDirdy = dDirdy_ ? (Vec3 *)dDirdy_ : &Zero;
+    return renderer->trace (*opt, sg, *Pos, *dPosdx, *dPosdy,
+                            *Dir, *dDirdx, *dDirdy);
+}
+
+
+
 extern "C" int osl_get_attribute(void *sg_,
                              int   dest_derivs,
                              void *obj_name_,
@@ -1792,5 +1841,5 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
     RendererServices *renderer (sg->context->renderer());
 
     return renderer->get_userdata (has_derivs, USTR(name), TYPEDESC(type),
-                                   &sg->renderstate, result);
+                                   sg->renderstate, result);
 }

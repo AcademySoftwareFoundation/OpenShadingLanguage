@@ -265,7 +265,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_spline_dvdfv", "xXXXXi",
     "osl_spline_dvfdv", "xXXXXi",
     "osl_setmessage", "xXsLX",
-    "osl_getmessage", "iXsLX",
+    "osl_getmessage", "iXssLX",
     "osl_pointcloud", "iXsvfiXi*",
     NULL
 };
@@ -331,6 +331,7 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back (triple_deriv);        // Ps
 
     sg_types.push_back(llvm_type_void_ptr()); // opaque render state*
+    sg_types.push_back(llvm_type_void_ptr()); // opaque trace data*
     sg_types.push_back(llvm_type_void_ptr()); // ShadingContext*
     sg_types.push_back(llvm_type_void_ptr()); // object2common
     sg_types.push_back(llvm_type_void_ptr()); // shader2common
@@ -495,7 +496,8 @@ ShaderGlobalNameToIndex (ustring name)
         Strings::P, Strings::I, Strings::N, Strings::Ng,
         Strings::u, Strings::v, Strings::dPdu, Strings::dPdv,
         Strings::time, Strings::dtime, Strings::dPdtime, Strings::Ps,
-        ustring("renderstate"), ustring("shadingcontext"),
+        ustring("renderstate"), ustring("tracedata"),
+        ustring("shadingcontext"),
         ustring("object2common"), ustring("shader2common"),
         Strings::Ci,
         ustring("surfacearea"), ustring("raytype"),
@@ -2918,6 +2920,80 @@ LLVMGEN (llvm_gen_environment)
 
 
 
+static llvm::Value *
+llvm_gen_trace_options (RuntimeOptimizer &rop, int opnum,
+                        int first_optional_arg)
+{
+    // Reserve space for the TraceOpt, with alignment
+    size_t tosize = (sizeof(RendererServices::TraceOpt)+sizeof(char*)-1) / sizeof(char*);
+    llvm::Value* opt = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
+                                                  rop.llvm_constant((int)tosize));
+    opt = rop.llvm_void_ptr (opt);
+    rop.llvm_call_function ("osl_trace_clear", opt);
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name (*rop.opargsym(op,a));
+        ASSERT (Name.typespec().is_string() &&
+                "optional trace token must be a string");
+        ASSERT (a+1 < op.nargs() && "malformed argument list for trace");
+        ustring name = *(ustring *)Name.data();
+
+        ++a;  // advance to next argument
+        Symbol &Val (*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+        
+        llvm::Value *val = rop.llvm_load_value (Val);
+        static ustring kmindist("mindist"), kmaxdist("maxdist");
+        static ustring kshade("shade");
+        if (name == kmindist && valtype == TypeDesc::FLOAT) {
+            rop.llvm_call_function ("osl_trace_set_mindist", opt, val);
+        } else if (name == kmaxdist && valtype == TypeDesc::FLOAT) {
+            rop.llvm_call_function ("osl_trace_set_maxdist", opt, val);
+        } else if (name == kshade && valtype == TypeDesc::INT) {
+            rop.llvm_call_function ("osl_trace_set_shade", opt, val);
+        } else {
+            rop.shadingsys().error ("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
+                                    name.c_str(), valtype.c_str(),
+                                    op.sourcefile().c_str(), op.sourceline());
+        }
+    }
+
+    return opt;
+}
+
+
+
+LLVMGEN (llvm_gen_trace)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &Pos = *rop.opargsym (op, 1);
+    Symbol &Dir = *rop.opargsym (op, 2);
+    int first_optional_arg = 3;
+
+    llvm::Value* opt;   // TraceOpt
+    opt = llvm_gen_trace_options (rop, opnum, first_optional_arg);
+
+    // Now call the osl_trace function, passing the options and all the
+    // explicit args like trace coordinates.
+    std::vector<llvm::Value *> args;
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (opt);
+    args.push_back (rop.llvm_void_ptr (Pos, 0));
+    args.push_back (rop.llvm_void_ptr (Pos, 1));
+    args.push_back (rop.llvm_void_ptr (Pos, 2));
+    args.push_back (rop.llvm_void_ptr (Dir, 0));
+    args.push_back (rop.llvm_void_ptr (Dir, 1));
+    args.push_back (rop.llvm_void_ptr (Dir, 2));
+    llvm::Value *r = rop.llvm_call_function ("osl_trace", &args[0],
+                                             (int)args.size());
+    rop.llvm_store_value (r, Result);
+    return true;
+}
+
+
+
 // pnoise and psnoise -- we can't use llvm_gen_generic because of the
 // special case that the periods should never pass derivatives.
 LLVMGEN (llvm_gen_pnoise)
@@ -3189,25 +3265,35 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
 LLVMGEN (llvm_gen_getmessage)
 {
+    // getmessage() has four "flavors":
+    //   * getmessage (attribute_name, value)
+    //   * getmessage (attribute_name, value[])
+    //   * getmessage (source, attribute_name, value)
+    //   * getmessage (source, attribute_name, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 3);
+    DASSERT (op.nargs() == 3 || op.nargs() == 4);
+    int has_source = (op.nargs() == 4);
     Symbol& Result = *rop.opargsym (op, 0);
-    Symbol& Name   = *rop.opargsym (op, 1);
-    Symbol& Data   = *rop.opargsym (op, 2);
+    Symbol& Source = *rop.opargsym (op, 1);
+    Symbol& Name   = *rop.opargsym (op, 1+has_source);
+    Symbol& Data   = *rop.opargsym (op, 2+has_source);
     DASSERT (Result.typespec().is_int() && Name.typespec().is_string());
+    DASSERT (has_source == 0 || Source.typespec().is_string());
 
-    llvm::Value *args[4];
+    llvm::Value *args[5];
     args[0] = rop.sg_void_ptr();
-    args[1] = rop.llvm_load_value (Name);
-    args[2] = rop.llvm_constant (Data.typespec().simpletype());
+    args[1] = has_source ? rop.llvm_load_value(Source) 
+                         : rop.llvm_constant(ustring());
+    args[2] = rop.llvm_load_value (Name);
+    args[3] = rop.llvm_constant (Data.typespec().simpletype());
     if (Data.typespec().is_closure())
         // We need a void ** here so the function can modify the closure
-        args[3] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
+        args[4] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
     else
-        args[3] = rop.llvm_void_ptr (Data);
+        args[4] = rop.llvm_void_ptr (Data);
 
-    llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 4);
+    llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 5);
     rop.llvm_store_value (r, Result);
     return true;
 }
@@ -3799,6 +3885,7 @@ initialize_llvm_generator_table ()
     INIT2 (tanh, llvm_gen_generic);
     INIT (texture);
     INIT (texture3d);
+    INIT (trace);
     INIT2 (transform,  llvm_gen_generic);
     INIT2 (transformn, llvm_gen_generic);
     INIT2 (transformv, llvm_gen_generic);

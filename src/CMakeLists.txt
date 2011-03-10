@@ -3,7 +3,7 @@ project (OSL)
 # Release version of the library
 set (OSL_LIBRARY_VERSION_MAJOR 0)
 set (OSL_LIBRARY_VERSION_MINOR 5)
-set (OSL_LIBRARY_VERSION_PATCH 0)
+set (OSL_LIBRARY_VERSION_PATCH 1)
 
 # Version of the OSO file format and instruction set
 set (OSO_FILE_VERSION_MAJOR 1)

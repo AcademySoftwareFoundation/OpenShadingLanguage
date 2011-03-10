@@ -925,6 +925,9 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             if (nargs == 2 || list_nth(args(),2)->typespec().is_string()) {
                 argtakesderivs (2, true);
             }
+        } else if (m_name == "trace") {
+            argtakesderivs (1, true);
+            argtakesderivs (2, true);
         } else {
             ASSERT (0 && "Missed a takes_derivs case!");
         }
@@ -1063,7 +1066,7 @@ static const char * builtin_func_args [] = {
     "format", "ss*", "!printf", NULL,
     "fprintf", "xs*", "!printf", NULL,
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
-    "getmessage", "is?", "is?[]", /*"iss?",*/ "!rw", NULL,  // FIXME -- further checking?
+    "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "hash", NOISE_ARGS, NULL,
     "noise", NOISE_ARGS, NULL,
@@ -1084,6 +1087,7 @@ static const char * builtin_func_args [] = {
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
     "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
+    "trace", "ipv.", "!deriv", NULL,
     "warning", "xs*", NULL,   // FIXME -- further checking
 
 //    "ambient", "C", "Cn", NULL,

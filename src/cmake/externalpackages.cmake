@@ -140,8 +140,13 @@ set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
     set (Boost_FOUND true)
 else ()
+    set (Boost_COMPONENTS filesystem regex system thread)
+    if (USE_BOOST_WAVE)
+        list (APPEND Boost_COMPONENTS wave)
+    endif ()
+
     find_package (Boost 1.34 REQUIRED 
-                  COMPONENTS filesystem regex system thread
+                  COMPONENTS ${Boost_COMPONENTS}
                  )
 endif ()
 

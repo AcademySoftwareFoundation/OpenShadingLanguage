@@ -255,7 +255,9 @@ preprocess (const char *yytext)
 	fprintf (stderr, "Unknown pragma '%s'\n", p);
         oslcompiler->incr_lineno();  // the pragma ends with an EOLN
     } else {  /* probably the line number and filename */
-	int line = atoi (yytext+1);
+        if (! strncmp (p, "line", 4))
+            p += 4;
+        int line = atoi (p);
         if (line > 0) {
             oslcompiler->lineno (line);
 	    const char *f = strchr (yytext, '\"');

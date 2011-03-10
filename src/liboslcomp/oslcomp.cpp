@@ -54,6 +54,11 @@ namespace Sysutil = OIIO::Sysutil;
 #define yyFlexLexer oslFlexLexer
 #include "FlexLexer.h"
 
+#ifdef USE_BOOST_WAVE
+#include <boost/wave.hpp>
+#include <boost/wave/cpplexer/cpp_lex_token.hpp>
+#include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
+#endif
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
@@ -132,6 +137,146 @@ OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
 }
 
 
+#ifdef USE_BOOST_WAVE
+
+static bool
+preprocess (const std::string &filename,
+            const std::string &stdinclude,
+            const std::vector<std::string> &defines,
+            const std::vector<std::string> &undefines,
+            const std::vector<std::string> &includepaths,
+            std::string &result)
+{
+    std::ostringstream ss;
+    boost::wave::util::file_position_type current_position;
+
+    try {
+        // Read file contents into string
+        std::ifstream instream (filename.c_str());
+
+        if (! instream.is_open()) {
+            std::cerr << "Could not open '" << filename.c_str() << "'\n";
+            return false;
+        }
+
+        instream.unsetf (std::ios::skipws);
+        std::string instring (std::istreambuf_iterator<char>(instream.rdbuf()),
+            std::istreambuf_iterator<char>());
+
+        typedef boost::wave::cpplexer::lex_token<> token_type;
+        typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
+        typedef boost::wave::context<std::string::iterator, lex_iterator_type> context_type;
+
+        // Setup wave context
+        context_type ctx (instring.begin(), instring.end(), filename.c_str());
+
+        for (size_t i = 0; i < defines.size(); ++i)
+            ctx.add_macro_definition (defines[i].c_str());
+
+        for (size_t i = 0; i < undefines.size(); ++i)
+            ctx.remove_macro_definition (undefines[i].c_str());
+
+        for (size_t i = 0; i < includepaths.size(); ++i) {
+            ctx.add_sysinclude_path (includepaths[i].c_str());
+            ctx.add_include_path (includepaths[i].c_str());
+        }
+
+        context_type::iterator_type first = ctx.begin();
+        context_type::iterator_type last = ctx.end();
+
+        // Add standard include
+        first.force_include (stdinclude.c_str(), true);
+
+        // Get result
+        while (first != last) {
+            current_position = (*first).get_position();
+            ss << (*first).get_value();
+            ++first;
+        }
+    } catch (boost::wave::cpp_exception const& e) {
+        // Processing error, ignore pedantic last line not terminated warning
+        if (e.get_errorcode() == boost::wave::preprocess_exception::last_line_not_terminated) {
+            ss << "\n";
+        }
+        else {
+            std::cerr << e.file_name()
+                << "(" << e.line_no() << "): " << e.description() << "\n";
+            return false;
+        }
+    } catch (std::exception const& e) {
+        // STL exception
+        std::cerr << current_position.get_file()
+            << "(" << current_position.get_line() << "): "
+            << "exception caught: " << e.what() << "\n";
+        return false;
+    } catch (...) {
+        // Other exception
+        std::cerr << current_position.get_file()
+            << "(" << current_position.get_line() << "): "
+            << "unexpected exception caught." << "\n";
+        return false;
+    }
+
+    result = ss.str();
+
+    return true;
+}
+
+#else
+
+static bool
+preprocess (const std::string &filename,
+            const std::string &stdinclude,
+            const std::string &options,
+            std::string &result)
+{
+#ifdef _MSC_VER
+#define popen _popen
+#define pclose _pclose
+#endif
+
+    std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
+
+    cppcommand += options;
+
+    if (! stdinclude.empty())
+        cppcommand += std::string("-include ") + stdinclude + " ";
+
+    cppcommand += "\"";
+    cppcommand += filename;
+    cppcommand += "\" ";
+
+    // std::cout << "cpp command:\n>" << cppcommand << "<\n";
+    FILE *cpppipe = popen (cppcommand.c_str(), "r");
+
+#ifdef __GNUC__
+    __gnu_cxx::stdio_filebuf<char> fb (cpppipe, std::ios::in);
+#else
+    std::filebuf fb (cpppipe);
+#endif
+
+    if (! cpppipe || ! fb.is_open()) {
+        // File didn't open
+        std::cerr << "Could not run '" << cppcommand.c_str() << "'\n";
+        return false;
+    } else {
+        std::istream in (&fb);
+
+        std::ostringstream ss;
+        ss << in.rdbuf();
+        result = ss.str();
+
+        fb.close ();
+    }
+
+    if (cpppipe)
+        pclose (cpppipe);
+
+    return true;
+}
+
+#endif
+
 
 bool
 OSLCompilerImpl::compile (const std::string &filename,
@@ -142,7 +287,15 @@ OSLCompilerImpl::compile (const std::string &filename,
         return false;
     }
 
-    std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
+    std::string stdinclude;
+
+#ifdef USE_BOOST_WAVE
+    std::vector<std::string> defines;
+    std::vector<std::string> undefines;
+    std::vector<std::string> includepaths;
+#else
+    std::string cppoptions;
+#endif
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
@@ -161,7 +314,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         if (boost::filesystem::exists (path)) {
             path = path / "stdosl.h";
             if (boost::filesystem::exists (path)) {
-                cppcommand += std::string("-include ") + path.string() + " ";
+                stdinclude = path.string();
                 found = true;
             }
         }
@@ -193,45 +346,37 @@ OSLCompilerImpl::compile (const std::string &filename,
             m_optimizelevel = 1;
         } else if (options[i] == "-O2") {
             m_optimizelevel = 2;
+#ifdef USE_BOOST_WAVE
+        } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
+            // options meant for the preprocessor
+            if(options[i].c_str()[1] == 'D')
+                defines.push_back(options[i].substr(2));
+            else if(options[i].c_str()[1] == 'U')
+                undefines.push_back(options[i].substr(2));
+            else if(options[i].c_str()[1] == 'I')
+                includepaths.push_back(options[i].substr(2));
+#else
         } else {
             // something meant for the cpp command
-            cppcommand += "\"";
-            cppcommand += options[i];
-            cppcommand += "\" ";
+            cppoptions += "\"";
+            cppoptions += options[i];
+            cppoptions += "\" ";
+#endif
         }
     }
-    cppcommand += "\"";
-    cppcommand += filename;
-    cppcommand += "\" ";
 
-    // std::cout << "cpp command:\n>" << cppcommand << "<\n";
-#ifdef _MSC_VER
-#define popen _popen
-#define pclose _pclose
-#endif
+    std::string preprocess_result;
 
-    FILE *cpppipe = popen (cppcommand.c_str(), "r");
-
-#ifdef __GNUC__
-    __gnu_cxx::stdio_filebuf<char> fb (cpppipe, std::ios::in);
+#ifdef USE_BOOST_WAVE
+    if (! preprocess(filename, stdinclude, defines, undefines, includepaths, preprocess_result)) {
 #else
-    std::filebuf fb (cpppipe);
+    if (! preprocess(filename, stdinclude, cppoptions, preprocess_result)) {
 #endif
-
-    if (! cpppipe || ! fb.is_open()) {
-        // File didn't open
-        std::cerr << "Could not run '" << cppcommand.c_str() << "'\n";
-
+        return false;
     } else if (preprocess_only) {
-        char buf[1024*32];
-        while (! feof (cpppipe)) {
-            if (! fgets (buf, sizeof(buf)-1, cpppipe))
-                break;
-            std::cout << buf;
-        }
-
+        std::cout << preprocess_result;
     } else {
-        std::istream in (&fb);
+        std::istringstream in (preprocess_result);
         oslcompiler = this;
 
         // Create a lexer, parse the file, delete the lexer
@@ -239,11 +384,6 @@ OSLCompilerImpl::compile (const std::string &filename,
         oslparse ();
         bool parseerr = error_encountered();
         delete m_lexer;
-
-        // All done with the input, close the files
-        fb.close ();
-        pclose (cpppipe);
-        cpppipe = NULL;
 
         if (! parseerr) {
             shader()->typecheck ();
@@ -274,9 +414,6 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         oslcompiler = NULL;
     }
-
-    if (cpppipe)
-        fclose (cpppipe);
 
     return ! error_encountered();
 }

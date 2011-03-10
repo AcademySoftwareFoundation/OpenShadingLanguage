@@ -39,6 +39,11 @@ set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
 add_definitions("-DBOOST_NO_RTTI -DBOOST_NO_TYPEID")
 
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
+if (WIN32)
+    set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
+else ()
+    set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
+endif ()
 
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/cmake/modules"

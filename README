@@ -65,14 +65,14 @@ find are different in OSL compared to other languages:
 
 * Surface and volume shaders do not loop over lights or shoot rays.
 
-  There are no "light loops" or explicitly traced rays in OSL surface
-  shaders.  Instead, surface shaders compute a radiance closure
-  describing how the surface scatters light, and a part of the renderer
-  called an "integrator" evaluates the closures for a particular set of
-  light sources and determines in which directions rays should be
-  traced.  Effects that would ordinarily require explicit ray tracing,
-  such as reflection and refraction, are simply part of the radiance
-  closure and look like any other BSDF.
+  There are no "light loops" or explicitly traced illumination rays in
+  OSL surface shaders.  Instead, surface shaders compute a radiance
+  closure describing how the surface scatters light, and a part of the
+  renderer called an "integrator" evaluates the closures for a
+  particular set of light sources and determines in which directions
+  rays should be traced.  Effects that would ordinarily require explicit
+  ray tracing, such as reflection and refraction, are simply part of the
+  radiance closure and look like any other BSDF.
 
   Advantages of this approach include that integration and sampling may
   be batched or re-ordered to increase ray coherence; a "ray budget" can
@@ -117,19 +117,10 @@ find are different in OSL compared to other languages:
   other nodes within the network.  These connections may be done
   dynamically at render time, and do not affect compilation of
   individual shader nodes.  Furthermore, the individual nodes are
-  evaluated lazily, only their outputs are "pulled" from the later nodes
-  that depend on them (shader writers may remain blissfully unaware of
-  these details, and write shaders as if everything is evaluated
-  normally).
-
-* No "uniform" and "varying" keywords in the language.
-
-  OSL shaders are evaluated in "SIMD" fashion, executing shaders on many
-  points at once, but there is no need to burden shader writers with
-  declaring which variables need to be uniform or varying.  In OSL, this
-  is done both automatically and dynamically, meaning that a variable
-  can switch back and forth between uniform and varying, on an
-  instruction-by-instruction basis, depending on what is assigned to it.
+  evaluated lazily, only when their outputs are "pulled" from the later
+  nodes that depend on them (shader writers may remain blissfully
+  unaware of these details, and write shaders as if everything is
+  evaluated normally).
 
 * Arbitrary derivatives without grids or extra shading points.
 
@@ -142,6 +133,17 @@ find are different in OSL compared to other languages:
   "automatic differentiation", computing partial differentials for the
   variables that lead to derivatives, without any intervention required
   by the shader writer.
+
+* OSL optimizes aggressively at render time
+
+  OSL uses the LLVM compiler framework to translate shader networks into
+  machine code on the fly (just in time, or "JIT"), and in the process
+  heavily optimizes shaders and networks with full knowledge of the
+  shader parameters and other runtime values that could not have been
+  known when the shaders were compiled from source code.  As a result,
+  we are seeing our OSL shading networks execute 25% faster than the
+  equivalent shaders hand-crafted in C!  (That's how our old shaders
+  worked in our renderer.)
 
 
 
@@ -168,7 +170,8 @@ The OSL open source distribution consists of the following components:
 
 * liboslexec, a library that implements the ShadingSystem class, which
   allows compiled shaders to be executed within an application.
-  Currently, it implements a SIMD-like interpreter of the OSL bytecodes.
+  Currently, it uses LLVM to JIT compile the shader bytecode to x86
+  instructions.
 
 * testshade, a program that lets you execute a shader (or connected
   shader network) on a rectangular array of points, and save any of its
@@ -198,29 +201,12 @@ for building the OSL source code.
 Current state of the project and road map
 -----------------------------------------
 
-This is not a final production-ready release.
-
-OK, here's the straight dope:
-
 At Sony Pictures Imageworks, OSL has been integrated into our renderer
 and pipeline, the Shading department has recoded nearly all the facility
-shaders in OSL and is approaching full functionality of the shader
-library, and multiple shows are now doing early look development with
-OSL.
-
-But we are NOT yet ready for full lighting and rendering production.  In
-addition to some missing (very minor) functionality in the language
-itself, OSL's shading performance is still much slower than our previous
-C-language shaders (we're aiming for approximate parity with our old
-shaders).  We are making rapid progress and hope to hit our performance
-targets in the next 3-4 weeks.  In fact, we HAVE to, since our own shows
-will need full performance as they get into full production within the
-next few months.
-
-We thought that even in this state, it was worth making the code
-available.  The performance shouldn't get in your way -- even if you
-start integrating OSL into your renderer right away, by the time you are
-ready to do serious production, we will be at full performance.
+shaders in OSL, and we have two major visual effects films in progress
+using OSL excludsively.  (Details to be announced later.)  Benchmarks
+are consistently showing OSL shaders outperforming the old C shaders
+that they replaced.
 
 What's missing?  Here are a number of things that we wish had been
 included in the first public release of the code but are not ready yet,
@@ -252,31 +238,14 @@ no longer be issues:
 * Our set of sample shaders is quite anemic.  We will eventually have a
   more extensive set of useful shaders.
 
-* The code that implements "light path expressions" is currently missing
-  from the OSL libraries.  We naively thought at first that this was a
-  renderer feature and implemented it on the wrong side of the boundary
-  between our renderer and OSL.  We will rectify that, moving the code
-  into the public OSL library so that other renderers can use the same
-  light expressions without needing to reimplement it.
-
-* Performance issues -- OSL shaders currently execute 2-10 times slower
-  than the equivalent shader written in optimized C (our goal is to
-  achieve parity with our old C shaders).  This is simply due to having
-  just started optimization; We're making rapid progress -- a month ago
-  we were 100-200x slower than C -- and there are multiple obvious
-  optimizations we are working on that we are confident will achieve our
-  performance goals within the next several weeks.
-
-That's the short term -- all these should be completed within the next
-few months (over the course of the first several months of 2010).
-
 In the longer term, there are a number of projects we hope to get to
 leading to a 2.x or 3.x cut of the language and library.  Among our
 long-term goals:
 
 * Currently "closure primitives" are implemented in C++ in the OSL
-  library, but we would like a future spec of the language to allow new
-  closure primitives to be implemented in OSL itself.
+  library or in the renderer, but we would like a future spec of the
+  language to allow new closure primitives to be implemented in OSL
+  itself.
 
 * Similarly, integrators are now implemented in the renderer, but we
   want a future OSL release to allow new integrators to be implemented
@@ -288,11 +257,6 @@ long-term goals:
   of OSL that can be expressed on such hardware).  This would, for
   example, allow you to view close approximations to your OSL shaders in
   realtime preview windows in a modeling system or lighting tool.
-
-* We would like to experiment with LLVM or other dynamic compilation
-  technologies to see if there is a significant benefit to translating
-  OSL shader networks all the way to native machine code, rather than
-  interpreting byte codes at runtime.
 
 We (the renderer development team at Sony Pictures Imageworks) probably
 can't do these all right away (in fact, probably can't do ALL of them in
@@ -306,6 +270,9 @@ Contacts
 --------
 
 OSL home page at SPI:    http://opensource.imageworks.com/?p=osl
+
+OSL GitHub page:
+     https://github.com/imageworks/OpenShadingLanguage
 
 OSL project page at Google Code: 
      http://code.google.com/p/openshadinglanguage
@@ -327,6 +294,7 @@ The main developers of OSL are (in order of joining the project):
     Chris Kulla
     Alejandro Conty
     Jay Reynolds
+    Solomon Boulos
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
@@ -350,4 +318,4 @@ source packages:
 OpenImageIO (c) Larry Gritz, et al.     http://www.openimageio.org
 Boost - various authors                 http://www.boost.org
 IlmBase (c) Industrial Light & Magic.   http://www.openexr.com
-Thread Building Blocks (c) Intel Corp.  http://www.threadingbuildingblocks.org
+LLVM Compiler Infrastructure            http://llvm.org

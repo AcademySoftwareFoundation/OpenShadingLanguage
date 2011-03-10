@@ -1425,6 +1425,20 @@ osl_texture_set_time (void *opt, float x)
 #endif
 }
 
+OSL_SHADEOP void
+osl_texture_set_interp_name (void *opt, const char *modename)
+{
+    if (modename == Strings::smartbicubic)
+        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpSmartBicubic;
+    else if (modename == Strings::linear)
+        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpBilinear;
+    else if (modename == Strings::cubic)
+        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpBicubic;
+    else if (modename == Strings::closest)
+        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpClosest;
+}
+
+
 OSL_SHADEOP int
 osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,

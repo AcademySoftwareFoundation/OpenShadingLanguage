@@ -134,7 +134,7 @@ TESTSUITE ( arithmetic array array-derivs
             oslc-err-paramdefault raytype shortcircuit spline string 
             struct struct-err struct-layers struct-with-array ternary
             texture-alpha texture-blur texture-field3d
-            texture-firstchannel texture-simple
+            texture-firstchannel texture-interp texture-simple
             texture-width texture-withderivs texture-wrap
             transform transformc trig typecast vecctr vector xml )
 

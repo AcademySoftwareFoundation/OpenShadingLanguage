@@ -1,0 +1,7 @@
+shader
+test (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    Cout = (color) texture (filename, u, v, "width", 8.0,
+                            "interp", u<0.5 ? "linear" : "cubic");
+}

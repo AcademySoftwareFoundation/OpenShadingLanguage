@@ -1052,6 +1052,7 @@ namespace Strings {
     extern ustring wrap, swrap, twrap, rwrap;
     extern ustring black, clamp, periodic, mirror;
     extern ustring firstchannel, fill, alpha;
+    extern ustring interp, closest, linear, cubic, smartbicubic;
 }; // namespace Strings
 
 

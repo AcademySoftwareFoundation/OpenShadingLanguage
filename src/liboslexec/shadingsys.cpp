@@ -122,6 +122,8 @@ ustring wrap ("wrap"), swrap ("swrap"), twrap ("twrap"), rwrap ("rwrap");
 ustring black ("black"), clamp ("clamp");
 ustring periodic ("periodic"), mirror ("mirror");
 ustring firstchannel ("firstchannel"), fill ("fill"), alpha ("alpha");
+ustring interp("interp"), closest("closest"), linear("linear");
+ustring cubic("cubic"), smartbicubic("smartbicubic");
 };
 
 

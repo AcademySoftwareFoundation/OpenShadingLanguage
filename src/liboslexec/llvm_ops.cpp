@@ -107,7 +107,6 @@ using namespace OSL::pvt;
 
 using OIIO::safe_asinf;
 using OIIO::safe_acosf;
-using OIIO::sincos;
 using OIIO::isinf;
 
 #ifdef _WIN32
@@ -282,7 +281,7 @@ MAKE_UNARY_PERCOMPONENT_OP (tanh, std::tanh, tanh)
 
 OSL_SHADEOP void osl_sincos_fff(float x, void *s_, void *c_)
 {
-    sincos(x, (float *)s_, (float *)c_);
+    OIIO::sincos(x, (float *)s_, (float *)c_);
 }
 
 OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
@@ -292,7 +291,7 @@ OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
     float        &cosine = *(float *)c_;
 
     float s_f, c_f;
-    sincos(x.val(), &s_f, &c_f);
+    OIIO::sincos(x.val(), &s_f, &c_f);
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
     cosine = c_f;
@@ -305,7 +304,7 @@ OSL_SHADEOP void osl_sincos_dffdf(void *x_, void *s_, void *c_)
     Dual2<float> &cosine = DFLOAT(c_);
 
     float s_f, c_f;
-    sincos(x.val(), &s_f, &c_f);
+    OIIO::sincos(x.val(), &s_f, &c_f);
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = s_f;
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
@@ -318,7 +317,7 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
     Dual2<float> &cosine = DFLOAT(c_);
 
     float s_f, c_f;
-    sincos(x.val(), &s_f, &c_f);
+    OIIO::sincos(x.val(), &s_f, &c_f);
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
@@ -327,7 +326,7 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 OSL_SHADEOP void osl_sincos_vvv(void *x_, void *s_, void *c_)
 {
     for (int i = 0; i < 3; i++)
-        sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
+        OIIO::sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
 }
 
 OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
@@ -338,7 +337,7 @@ OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
-        sincos(x.val()[i], &s_f, &c_f);
+        OIIO::sincos(x.val()[i], &s_f, &c_f);
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
         sine.val()[i] = s_f; sine.dx()[i] =  c_f * xdx; sine.dy()[i] =  c_f * xdy;
         cosine[i] = c_f;
@@ -353,7 +352,7 @@ OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
-        sincos(x.val()[i], &s_f, &c_f);
+        OIIO::sincos(x.val()[i], &s_f, &c_f);
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
         sine[i] = s_f;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
@@ -368,7 +367,7 @@ OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
-        sincos(x.val()[i], &s_f, &c_f);
+        OIIO::sincos(x.val()[i], &s_f, &c_f);
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
           sine.val()[i] = s_f;   sine.dx()[i] =  c_f * xdx;   sine.dy()[i] =  c_f * xdy;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;

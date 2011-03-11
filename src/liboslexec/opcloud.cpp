@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define USTR(cstr) (*((ustring *)&cstr))
 
-extern "C" int
+OSL_SHADEOP int
 osl_pointcloud (ShaderGlobals *sg, const char *_filename, void *_center, float radius,
                 int max_points, void *attr_query, int nattrs, ...)
 {

@@ -70,16 +70,18 @@ examples), as you are just coding in C++, but there are some rules:
   macros that will populate all the polymorphic and derivative cases
   for you.
 
-* Shadeop implementations must have 'extern "C"' declaration, that's the
-  only way they can be "seen" by LLVM, given the mangling that would
-  occur otherwise.  (This is why we use the _{args} suffixes to 
-  distinguish polymorphic and deiv/noderiv versions.)
+* Shadeop implementations must have 'extern "C"' declaration, through
+  the OSL_SHADEOP define, that's the only way they can be "seen" by
+  LLVM, given the mangling that would occur otherwise.  (This is why
+  we use the _{args} suffixes to  distinguish polymorphic and
+  deiv/noderiv versions.) On Windows, this defined also ensures the
+  symbols are exported for LLVM to find them.
 
 * You may use full C++, including standard library.  You may have calls
   to any other part of the OSL library software.  You may use Boost,
   Ilmbase (Vec3, Matrix44, etc.) or any other external routines.  You
-  may write templates or helper functions (which do NOT need to be
-  extern "C", since they don't need to be runtime-discoverable by LLVM.
+  may write templates or helper functions (which do NOT need to use
+  OSL_SHADEOP, since they don't need to be runtime-discoverable by LLVM.
 
 * If you need to access non-passed globals (P, N, etc.) or make renderer
   callbacks, just make the first argument to the function a void* that
@@ -103,8 +105,23 @@ using namespace OSL::pvt;
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
 
-#ifdef OIIO_NAMESPACE
-OIIO_NAMESPACE_USING;
+using OIIO::safe_asinf;
+using OIIO::safe_acosf;
+using OIIO::sincos;
+using OIIO::isinf;
+
+#ifdef _WIN32
+using OIIO::roundf;
+using OIIO::truncf;
+using OIIO::expm1f;
+using OIIO::erff;
+using OIIO::erfcf;
+using OIIO::log2f;
+using OIIO::logbf;
+using OIIO::exp2f;
+#else
+using OIIO::isnan;
+using OIIO::isfinite;
 #endif
 
 // Handy re-casting macros
@@ -118,7 +135,7 @@ OIIO_NAMESPACE_USING;
 #define TYPEDESC(x) (*(TypeDesc *)&x)
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_assert_nonnull (void *x, const char *msg)
 {
     if (!x && msg)
@@ -129,19 +146,19 @@ osl_assert_nonnull (void *x, const char *msg)
 
 
 #define MAKE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
-extern "C" float                                                    \
+OSL_SHADEOP float                                                   \
 osl_##name##_ff (float a)                                           \
 {                                                                   \
     return floatfunc(a);                                            \
 }                                                                   \
                                                                     \
-extern "C" void                                                     \
+OSL_SHADEOP void                                                    \
 osl_##name##_dfdf (void *r, void *a)                                \
 {                                                                   \
     DFLOAT(r) = dualfunc (DFLOAT(a));                               \
 }                                                                   \
                                                                     \
-extern "C" void                                                     \
+OSL_SHADEOP void                                                    \
 osl_##name##_vv (void *r_, void *a_)                                \
 {                                                                   \
     Vec3 &r (VEC(r_));                                              \
@@ -151,7 +168,7 @@ osl_##name##_vv (void *r_, void *a_)                                \
     r[2] = floatfunc (a[2]);                                        \
 }                                                                   \
                                                                     \
-extern "C" void                                                     \
+OSL_SHADEOP void                                                    \
 osl_##name##_dvdv (void *r_, void *a_)                              \
 {                                                                   \
     Dual2<Vec3> &r (DVEC(r_));                                      \
@@ -169,23 +186,23 @@ osl_##name##_dvdv (void *r_, void *a_)                              \
 
 
 #define MAKE_BINARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)        \
-extern "C" float osl_##name##_fff (float a, float b) {              \
+OSL_SHADEOP float osl_##name##_fff (float a, float b) {             \
     return floatfunc(a,b);                                          \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_dfdfdf (void *r, void *a, void *b) {   \
+OSL_SHADEOP void osl_##name##_dfdfdf (void *r, void *a, void *b) {  \
     DFLOAT(r) = dualfunc (DFLOAT(a),DFLOAT(b));                     \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_dffdf (void *r, float a, void *b) {    \
+OSL_SHADEOP void osl_##name##_dffdf (void *r, float a, void *b) {   \
     DFLOAT(r) = dualfunc (Dual2<float>(a),DFLOAT(b));               \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_dfdff (void *r, void *a, float b) {    \
+OSL_SHADEOP void osl_##name##_dfdff (void *r, void *a, float b) {   \
     DFLOAT(r) = dualfunc (DFLOAT(a),Dual2<float>(b));               \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_vvv (void *r_, void *a_, void *b_) {   \
+OSL_SHADEOP void osl_##name##_vvv (void *r_, void *a_, void *b_) {  \
     Vec3 &r (VEC(r_));                                              \
     Vec3 &a (VEC(a_));                                              \
     Vec3 &b (VEC(b_));                                              \
@@ -194,7 +211,7 @@ extern "C" void osl_##name##_vvv (void *r_, void *a_, void *b_) {   \
     r[2] = floatfunc (a[2], b[2]);                                  \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_dvdvdv (void *r_, void *a_, void *b_)  \
+OSL_SHADEOP void osl_##name##_dvdvdv (void *r_, void *a_, void *b_) \
 {                                                                   \
     Dual2<Vec3> &r (DVEC(r_));                                      \
     Dual2<Vec3> &a (DVEC(a_));                                      \
@@ -213,7 +230,7 @@ extern "C" void osl_##name##_dvdvdv (void *r_, void *a_, void *b_)  \
            Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_dvvdv (void *r_, void *a_, void *b_)   \
+OSL_SHADEOP void osl_##name##_dvvdv (void *r_, void *a_, void *b_)  \
 {                                                                   \
     Dual2<Vec3> &r (DVEC(r_));                                      \
     Dual2<Vec3> a (VEC(a_), Vec3(0,0,0), Vec3(0,0,0));              \
@@ -232,7 +249,7 @@ extern "C" void osl_##name##_dvvdv (void *r_, void *a_, void *b_)   \
            Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
 }                                                                   \
                                                                     \
-extern "C" void osl_##name##_dvdvv (void *r_, void *a_, void *b_)   \
+OSL_SHADEOP void osl_##name##_dvdvv (void *r_, void *a_, void *b_)  \
 {                                                                   \
     Dual2<Vec3> &r (DVEC(r_));                                      \
     Dual2<Vec3> &a (DVEC(a_));                                      \
@@ -263,12 +280,12 @@ MAKE_UNARY_PERCOMPONENT_OP (sinh, std::sinh, sinh)
 MAKE_UNARY_PERCOMPONENT_OP (cosh, std::cosh, cosh)
 MAKE_UNARY_PERCOMPONENT_OP (tanh, std::tanh, tanh)
 
-extern "C" void osl_sincos_fff(float x, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_fff(float x, void *s_, void *c_)
 {
     sincos(x, (float *)s_, (float *)c_);
 }
 
-extern "C" void osl_sincos_dfdff(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
 {
     Dual2<float> &x      = DFLOAT(x_);
     Dual2<float> &sine   = DFLOAT(s_);
@@ -281,7 +298,7 @@ extern "C" void osl_sincos_dfdff(void *x_, void *s_, void *c_)
     cosine = c_f;
 }
 
-extern "C" void osl_sincos_dffdf(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_dffdf(void *x_, void *s_, void *c_)
 {
     Dual2<float> &x      = DFLOAT(x_);
     float        &sine   = *(float *)s_;
@@ -294,7 +311,7 @@ extern "C" void osl_sincos_dffdf(void *x_, void *s_, void *c_)
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
 }
 
-extern "C" void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 {
     Dual2<float> &x      = DFLOAT(x_);
     Dual2<float> &sine   = DFLOAT(s_);
@@ -307,13 +324,13 @@ extern "C" void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
 }
 
-extern "C" void osl_sincos_vvv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_vvv(void *x_, void *s_, void *c_)
 {
     for (int i = 0; i < 3; i++)
         sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
 }
 
-extern "C" void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
 {
     Dual2<Vec3> &x      = DVEC(x_);
     Dual2<Vec3> &sine   = DVEC(s_);
@@ -328,7 +345,7 @@ extern "C" void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
     }
 }
 
-extern "C" void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
 {
     Dual2<Vec3> &x      = DVEC(x_);
     Vec3        &sine   = VEC(s_);
@@ -343,7 +360,7 @@ extern "C" void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
     }
 }
 
-extern "C" void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
 {
     Dual2<Vec3> &x      = DVEC(x_);
     Dual2<Vec3> &sine   = DVEC(s_);
@@ -408,7 +425,7 @@ MAKE_UNARY_PERCOMPONENT_OP (erf, erff, erf)
 MAKE_UNARY_PERCOMPONENT_OP (erfc, erfcf, erfc)
 
 // Mixed vec pow(vec,float)
-extern "C" void osl_pow_vvf (void *r_, void *a_, float b) {
+OSL_SHADEOP void osl_pow_vvf (void *r_, void *a_, float b) {
     Vec3 &r (VEC(r_));
     Vec3 &a (VEC(a_));
     r[0] = safe_pow (a[0], b);
@@ -416,7 +433,7 @@ extern "C" void osl_pow_vvf (void *r_, void *a_, float b) {
     r[2] = safe_pow (a[2], b);
 }
 
-extern "C" void osl_pow_dvdvdf (void *r_, void *a_, void *b_)
+OSL_SHADEOP void osl_pow_dvdvdf (void *r_, void *a_, void *b_)
 {
     Dual2<Vec3> &r (DVEC(r_));
     Dual2<Vec3> &a (DVEC(a_));
@@ -434,7 +451,7 @@ extern "C" void osl_pow_dvdvdf (void *r_, void *a_, void *b_)
            Vec3( ax.dy(),  ay.dy(),  az.dy() ));
 }
 
-extern "C" void osl_pow_dvvdf (void *r_, void *a_, void *b_)
+OSL_SHADEOP void osl_pow_dvvdf (void *r_, void *a_, void *b_)
 {
     Dual2<Vec3> &r (DVEC(r_));
     Vec3 &a (VEC(a_));
@@ -453,7 +470,7 @@ extern "C" void osl_pow_dvvdf (void *r_, void *a_, void *b_)
            Vec3( ax.dy(),  ay.dy(),  az.dy() ));
 }
 
-extern "C" void osl_pow_dvdvf (void *r_, void *a_, float b_)
+OSL_SHADEOP void osl_pow_dvdvf (void *r_, void *a_, float b_)
 {
     Dual2<Vec3> &r (DVEC(r_));
     Dual2<Vec3> &a (DVEC(a_));
@@ -490,50 +507,50 @@ inline float safe_inversesqrt (float f) {
 MAKE_UNARY_PERCOMPONENT_OP (sqrt, safe_sqrt, sqrt)
 MAKE_UNARY_PERCOMPONENT_OP (inversesqrt, safe_inversesqrt, inversesqrt)
 
-extern "C" float osl_floor_ff (float x) { return floorf(x); }
-extern "C" void osl_floor_vv (void *r, void *x_) {
+OSL_SHADEOP float osl_floor_ff (float x) { return floorf(x); }
+OSL_SHADEOP void osl_floor_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (floorf(x[0]), floorf(x[1]), floorf(x[2]));
 }
-extern "C" float osl_ceil_ff (float x) { return ceilf(x); }
-extern "C" void osl_ceil_vv (void *r, void *x_) {
+OSL_SHADEOP float osl_ceil_ff (float x) { return ceilf(x); }
+OSL_SHADEOP void osl_ceil_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (ceilf(x[0]), ceilf(x[1]), ceilf(x[2]));
 }
-extern "C" float osl_round_ff (float x) { return roundf(x); }
-extern "C" void osl_round_vv (void *r, void *x_) {
+OSL_SHADEOP float osl_round_ff (float x) { return roundf(x); }
+OSL_SHADEOP void osl_round_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (roundf(x[0]), roundf(x[1]), roundf(x[2]));
 }
-extern "C" float osl_trunc_ff (float x) { return truncf(x); }
-extern "C" void osl_trunc_vv (void *r, void *x_) {
+OSL_SHADEOP float osl_trunc_ff (float x) { return truncf(x); }
+OSL_SHADEOP void osl_trunc_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (truncf(x[0]), truncf(x[1]), truncf(x[2]));
 }
-extern "C" float osl_sign_ff (float x) {
+OSL_SHADEOP float osl_sign_ff (float x) {
     return x < 0.0f ? -1.0f : (x==0.0f ? 0.0f : 1.0f);
 }
-extern "C" void osl_sign_vv (void *r, void *x_) {
+OSL_SHADEOP void osl_sign_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (osl_sign_ff(x[0]), osl_sign_ff(x[1]), osl_sign_ff(x[2]));
 }
-extern "C" float osl_step_fff (float edge, float x) {
+OSL_SHADEOP float osl_step_fff (float edge, float x) {
     return x < edge ? 0.0f : 1.0f;
 }
-extern "C" void osl_step_vvv (void *result, void *edge, void *x) {
+OSL_SHADEOP void osl_step_vvv (void *result, void *edge, void *x) {
     VEC(result).setValue (((float *)x)[0] < ((float *)edge)[0] ? 0.0f : 1.0f,
                           ((float *)x)[1] < ((float *)edge)[1] ? 0.0f : 1.0f,
                           ((float *)x)[2] < ((float *)edge)[2] ? 0.0f : 1.0f);
 
 }
 
-extern "C" int osl_isnan_if (float f) { return std::isnan (f); }
-extern "C" int osl_isinf_if (float f) { return std::isinf (f); }
-extern "C" int osl_isfinite_if (float f) { return std::isfinite (f); }
+OSL_SHADEOP int osl_isnan_if (float f) { return isnan (f); }
+OSL_SHADEOP int osl_isinf_if (float f) { return isinf (f); }
+OSL_SHADEOP int osl_isfinite_if (float f) { return isfinite (f); }
 
 
-extern "C" int osl_abs_ii (int x) { return abs(x); }
-extern "C" int osl_fabs_ii (int x) { return abs(x); }
+OSL_SHADEOP int osl_abs_ii (int x) { return abs(x); }
+OSL_SHADEOP int osl_fabs_ii (int x) { return abs(x); }
 
 inline Dual2<float> fabsf (const Dual2<float> &x) {
     return x.val() >= 0 ? x : -x;
@@ -543,9 +560,9 @@ MAKE_UNARY_PERCOMPONENT_OP (abs, fabsf, fabsf);
 MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
 
 
-extern "C" float osl_smoothstep_ffff(float e0, float e1, float x) { return smoothstep(e0, e1, x); }
+OSL_SHADEOP float osl_smoothstep_ffff(float e0, float e1, float x) { return smoothstep(e0, e1, x); }
 
-extern "C" void osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void *x_)
+OSL_SHADEOP void osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void *x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 (e1_);
@@ -554,7 +571,7 @@ extern "C" void osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void *
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" void osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float x_)
+OSL_SHADEOP void osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -563,7 +580,7 @@ extern "C" void osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float 
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" void osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void* x_)
+OSL_SHADEOP void osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void* x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -572,7 +589,7 @@ extern "C" void osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void*
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" void osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float x_)
+OSL_SHADEOP void osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 (e1_);
@@ -581,7 +598,7 @@ extern "C" void osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float 
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" void osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void* x_)
+OSL_SHADEOP void osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void* x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 (e1_);
@@ -590,7 +607,7 @@ extern "C" void osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void*
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" void osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, float x_)
+OSL_SHADEOP void osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, float x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -599,7 +616,7 @@ extern "C" void osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, float
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-extern "C" void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void* x_)
+OSL_SHADEOP void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void* x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -610,14 +627,14 @@ extern "C" void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void
 
 
 // point = M * point
-extern "C" void osl_transform_vmv(void *result, void* M_, void* v_)
+OSL_SHADEOP void osl_transform_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
    M.multVecMatrix (v, VEC(result));
 }
 
-extern "C" void osl_transform_dvmdv(void *result, void* M_, void* v_)
+OSL_SHADEOP void osl_transform_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
@@ -625,14 +642,14 @@ extern "C" void osl_transform_dvmdv(void *result, void* M_, void* v_)
 }
 
 // vector = M * vector
-extern "C" void osl_transformv_vmv(void *result, void* M_, void* v_)
+OSL_SHADEOP void osl_transformv_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
    M.multDirMatrix (v, VEC(result));
 }
 
-extern "C" void osl_transformv_dvmdv(void *result, void* M_, void* v_)
+OSL_SHADEOP void osl_transformv_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
@@ -640,14 +657,14 @@ extern "C" void osl_transformv_dvmdv(void *result, void* M_, void* v_)
 }
 
 // normal = M * normal
-extern "C" void osl_transformn_vmv(void *result, void* M_, void* v_)
+OSL_SHADEOP void osl_transformn_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
    M.inverse().transpose().multDirMatrix (v, VEC(result));
 }
 
-extern "C" void osl_transformn_dvmdv(void *result, void* M_, void* v_)
+OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
@@ -658,44 +675,44 @@ extern "C" void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 
 // Matrix ops
 
-extern "C" void
+OSL_SHADEOP void
 osl_mul_mm (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_mul_mf (void *r, void *a, float b)
 {
     MAT(r) = MAT(a) * b;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_mul_m_ff (void *r, float a, float b)
 {
     float f = a * b;
     MAT(r) = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_div_mm (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b).inverse();
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_div_mf (void *r, void *a, float b)
 {
     MAT(r) = MAT(a) * (1.0f/b);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_div_fm (void *r, float a, void *b)
 {
     MAT(r) = a * MAT(b).inverse();
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_div_m_ff (void *r, float a, float b)
 {
     float f = (b == 0) ? 0.0f : (a / b);
@@ -748,7 +765,7 @@ osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
     return true;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_prepend_matrix_from (void *sg, void *r, const char *from)
 {
     Matrix44 m;
@@ -756,7 +773,7 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
     MAT(r) = m * MAT(r);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 {
     Matrix44 Mfrom, Mto;
@@ -765,7 +782,7 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
     MAT(r) = Mfrom * Mto;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_transpose_mm (void *r, void *m)
 {
     MAT(r) = MAT(m).transposed();
@@ -805,7 +822,7 @@ inline F det4x4(const Imath::Matrix44<F> &m)
          - d1 * det3x3( a2, a3, a4, b2, b3, b4, c2, c3, c4);
 }
 
-extern "C" float
+OSL_SHADEOP float
 osl_determinant_fm (void *m)
 {
     return det4x4 (MAT(m));
@@ -815,7 +832,7 @@ osl_determinant_fm (void *m)
 
 // Vector ops
 
-extern "C" void
+OSL_SHADEOP void
 osl_prepend_point_from (void *sg, void *v, const char *from)
 {
     Matrix44 M;
@@ -823,7 +840,7 @@ osl_prepend_point_from (void *sg, void *v, const char *from)
     M.multVecMatrix (VEC(v), VEC(v));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_prepend_vector_from (void *sg, void *v, const char *from)
 {
     Matrix44 M;
@@ -831,7 +848,7 @@ osl_prepend_vector_from (void *sg, void *v, const char *from)
     M.multDirMatrix (VEC(v), VEC(v));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_prepend_normal_from (void *sg, void *v, const char *from)
 {
     Matrix44 M;
@@ -841,26 +858,26 @@ osl_prepend_normal_from (void *sg, void *v, const char *from)
 }
 
 
-extern "C" float
+OSL_SHADEOP float
 osl_dot_fvv (void *a, void *b)
 {
     return VEC(a).dot (VEC(b));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_dot_dfdvdv (void *result, void *a, void *b)
 {
     DFLOAT(result) = dot (DVEC(a), DVEC(b));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_dot_dfdvv (void *result, void *a, void *b_)
 {
     Dual2<Vec3> b (VEC(b_));
     osl_dot_dfdvdv (result, a, &b);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_dot_dfvdv (void *result, void *a_, void *b)
 {
     Dual2<Vec3> a (VEC(a_));
@@ -868,26 +885,26 @@ osl_dot_dfvdv (void *result, void *a_, void *b)
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_cross_vvv (void *result, void *a, void *b)
 {
     VEC(result) = VEC(a).cross (VEC(b));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_cross_dvdvdv (void *result, void *a, void *b)
 {
     DVEC(result) = cross (DVEC(a), DVEC(b));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_cross_dvdvv (void *result, void *a, void *b_)
 {
     Dual2<Vec3> b (VEC(b_));
     osl_cross_dvdvdv (result, a, &b);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_cross_dvvdv (void *result, void *a_, void *b)
 {
     Dual2<Vec3> a (VEC(a_));
@@ -895,20 +912,20 @@ osl_cross_dvvdv (void *result, void *a_, void *b)
 }
 
 
-extern "C" float
+OSL_SHADEOP float
 osl_length_fv (void *a)
 {
     return VEC(a).length();
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_length_dfdv (void *result, void *a)
 {
     DFLOAT(result) = length(DVEC(a));
 }
 
 
-extern "C" float
+OSL_SHADEOP float
 osl_distance_fvv (void *a_, void *b_)
 {
     const Vec3 &a (VEC(a_));
@@ -919,32 +936,32 @@ osl_distance_fvv (void *a_, void *b_)
     return sqrtf (x*x + y*y + z*z);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_distance_dfdvdv (void *result, void *a, void *b)
 {
     DFLOAT(result) = distance (DVEC(a), DVEC(b));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_distance_dfdvv (void *result, void *a, void *b)
 {
     DFLOAT(result) = distance (DVEC(a), VEC(b));
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_distance_dfvdv (void *result, void *a, void *b)
 {
     DFLOAT(result) = distance (VEC(a), DVEC(b));
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_normalize_vv (void *result, void *a)
 {
     VEC(result) = VEC(a).normalized();
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_normalize_dvdv (void *result, void *a)
 {
     DVEC(result) = normalize(DVEC(a));
@@ -952,7 +969,7 @@ osl_normalize_dvdv (void *result, void *a)
 
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_prepend_color_from (void *sg, void *c_, const char *from)
 {
     ShadingContext *ctx (((ShaderGlobals *)sg)->context);
@@ -966,25 +983,25 @@ osl_prepend_color_from (void *sg, void *c_, const char *from)
 // String ops
 
 // Only define 2-arg version of concat, sort it out upstream
-extern "C" const char *
+OSL_SHADEOP const char *
 osl_concat_sss (const char *s, const char *t)
 {
     return ustring::format("%s%s", s, t).c_str();
 }
 
-extern "C" int
+OSL_SHADEOP int
 osl_strlen_is (const char *s)
 {
     return (int) USTR(s).length();
 }
 
-extern "C" int
+OSL_SHADEOP int
 osl_startswith_iss (const char *s, const char *substr)
 {
     return strncmp (s, substr, USTR(substr).length()) == 0;
 }
 
-extern "C" int
+OSL_SHADEOP int
 osl_endswith_iss (const char *s, const char *substr)
 {
     size_t len = USTR(substr).length();
@@ -994,7 +1011,7 @@ osl_endswith_iss (const char *s, const char *substr)
         return strncmp (s+USTR(s).length()-len, substr, len) == 0;
 }
 
-extern "C" const char *
+OSL_SHADEOP const char *
 osl_substr_ssii (const char *s, int start, int length)
 {
     int slen = (int) USTR(s).length();
@@ -1005,7 +1022,7 @@ osl_substr_ssii (const char *s, int start, int length)
     return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
 }
 
-extern "C" int
+OSL_SHADEOP int
 osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
                 const char *pattern, int fullmatch)
 {
@@ -1029,28 +1046,28 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
  */
 
 #define NOISE_IMPL(opname,implname)                                     \
-extern "C" float osl_ ##opname## _ff (float x) {                        \
+OSL_SHADEOP float osl_ ##opname## _ff (float x) {                       \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, x);                                                        \
     return r;                                                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _fff (float x, float y) {              \
+OSL_SHADEOP float osl_ ##opname## _fff (float x, float y) {             \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, x, y);                                                     \
     return r;                                                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _fv (void *x) {                        \
+OSL_SHADEOP float osl_ ##opname## _fv (void *x) {                       \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, VEC(x));                                                   \
     return r;                                                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _fvf (void *x, float y) {              \
+OSL_SHADEOP float osl_ ##opname## _fvf (void *x, float y) {             \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, VEC(x), y);                                                \
@@ -1058,22 +1075,22 @@ extern "C" float osl_ ##opname## _fvf (void *x, float y) {              \
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" void osl_ ##opname## _vf (void *r, float x) {                \
+OSL_SHADEOP void osl_ ##opname## _vf (void *r, float x) {               \
     implname impl(NULL);                                                \
     impl (VEC(r), x);                                                   \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _vff (void *r, float x, float y) {      \
+OSL_SHADEOP void osl_ ##opname## _vff (void *r, float x, float y) {     \
     implname impl(NULL);                                                \
     impl (VEC(r), x, y);                                                \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _vv (void *r, void *x) {                \
+OSL_SHADEOP void osl_ ##opname## _vv (void *r, void *x) {                \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x));                                              \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _vvf (void *r, void *x, float y) {      \
+OSL_SHADEOP void osl_ ##opname## _vvf (void *r, void *x, float y) {     \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x), y);                                           \
 }
@@ -1083,83 +1100,83 @@ extern "C" void osl_ ##opname## _vvf (void *r, void *x, float y) {      \
 
 
 #define NOISE_IMPL_DERIV(opname,implname)                               \
-extern "C" void osl_ ##opname## _dfdf (void *r, void *x) {              \
+OSL_SHADEOP void osl_ ##opname## _dfdf (void *r, void *x) {             \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x));                                        \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdfdf (void *r, void *x, void *y) {   \
+OSL_SHADEOP void osl_ ##opname## _dfdfdf (void *r, void *x, void *y) {  \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), DFLOAT(y));                             \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdff (void *r, void *x, float y) {    \
+OSL_SHADEOP void osl_ ##opname## _dfdff (void *r, void *x, float y) {   \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), Dual2<float>(y));                       \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dffdf (void *r, float x, void *y) {    \
+OSL_SHADEOP void osl_ ##opname## _dffdf (void *r, float x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<float>(x), DFLOAT(y));                       \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdv (void *r, void *x) {              \
+OSL_SHADEOP void osl_ ##opname## _dfdv (void *r, void *x) {             \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x));                                          \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdvdf (void *r, void *x, void *y) {   \
+OSL_SHADEOP void osl_ ##opname## _dfdvdf (void *r, void *x, void *y) {  \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), DFLOAT(y));                               \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdvf (void *r, void *x, float y) {    \
+OSL_SHADEOP void osl_ ##opname## _dfdvf (void *r, void *x, float y) {   \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), Dual2<float>(y));                         \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfvdf (void *r, void *x, void *y) {    \
+OSL_SHADEOP void osl_ ##opname## _dfvdf (void *r, void *x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                   \
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" void osl_ ##opname## _dvdf (void *r, void *x) {              \
+OSL_SHADEOP void osl_ ##opname## _dvdf (void *r, void *x) {             \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x));                                          \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdfdf (void *r, void *x, void *y) {   \
+OSL_SHADEOP void osl_ ##opname## _dvdfdf (void *r, void *x, void *y) {  \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), DFLOAT(y));                               \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdff (void *r, void *x, float y) {    \
+OSL_SHADEOP void osl_ ##opname## _dvdff (void *r, void *x, float y) {   \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), Dual2<float>(y));                         \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvfdf (void *r, float x, void *y) {    \
+OSL_SHADEOP void osl_ ##opname## _dvfdf (void *r, float x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<float>(x), DFLOAT(y));                         \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdv (void *r, void *x) {              \
+OSL_SHADEOP void osl_ ##opname## _dvdv (void *r, void *x) {             \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x));                                            \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdvdf (void *r, void *x, void *y) {   \
+OSL_SHADEOP void osl_ ##opname## _dvdvdf (void *r, void *x, void *y) {  \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), DFLOAT(y));                                 \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdvf (void *r, void *x, float y) {    \
+OSL_SHADEOP void osl_ ##opname## _dvdvf (void *r, void *x, float y) {   \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), Dual2<float>(y));                           \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvvdf (void *r, void *x, void *y) {    \
+OSL_SHADEOP void osl_ ##opname## _dvvdf (void *r, void *x, void *y) {   \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                     \
 }
@@ -1177,28 +1194,28 @@ NOISE_IMPL_DERIV (snoise, SNoise)
 
 
 #define PNOISE_IMPL(opname,implname)                                    \
-    extern "C" float osl_ ##opname## _fff (float x, float px) {         \
+    OSL_SHADEOP float osl_ ##opname## _fff (float x, float px) {        \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, x, px);                                                    \
     return r;                                                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _fffff (float x, float y, float px, float py) { \
+OSL_SHADEOP float osl_ ##opname## _fffff (float x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, x, y, px, py);                                             \
     return r;                                                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _fvv (void *x, void *px) {             \
+OSL_SHADEOP float osl_ ##opname## _fvv (void *x, void *px) {            \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, VEC(x), VEC(px));                                          \
     return r;                                                           \
 }                                                                       \
                                                                         \
-extern "C" float osl_ ##opname## _fvfvf (void *x, float y, void *px, float py) { \
+OSL_SHADEOP float osl_ ##opname## _fvfvf (void *x, float y, void *px, float py) { \
     implname impl(NULL);                                                \
     float r;                                                            \
     impl (r, VEC(x), y, VEC(px), py);                                   \
@@ -1206,22 +1223,22 @@ extern "C" float osl_ ##opname## _fvfvf (void *x, float y, void *px, float py) {
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" void osl_ ##opname## _vff (void *r, float x, float px) {    \
+OSL_SHADEOP void osl_ ##opname## _vff (void *r, float x, float px) {    \
     implname impl(NULL);                                                \
     impl (VEC(r), x, px);                                               \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _vffff (void *r, float x, float y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _vffff (void *r, float x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (VEC(r), x, y, px, py);                                        \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _vvv (void *r, void *x, void *px) {    \
+OSL_SHADEOP void osl_ ##opname## _vvv (void *r, void *x, void *px) {    \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x), VEC(px));                                     \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _vvfvf (void *r, void *x, float y, void *px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _vvfvf (void *r, void *x, float y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (VEC(r), VEC(x), y, VEC(px), py);                              \
 }
@@ -1231,83 +1248,83 @@ extern "C" void osl_ ##opname## _vvfvf (void *r, void *x, float y, void *px, flo
 
 
 #define PNOISE_IMPL_DERIV(opname,implname)                              \
-extern "C" void osl_ ##opname## _dfdff (void *r, void *x, float px) {  \
+OSL_SHADEOP void osl_ ##opname## _dfdff (void *r, void *x, float px) {  \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), px);                                    \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdfdfff (void *r, void *x, void *y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dfdfdfff (void *r, void *x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), DFLOAT(y), px, py);                     \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdffff (void *r, void *x, float y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dfdffff (void *r, void *x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DFLOAT(x), Dual2<float>(y), px, py);               \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dffdfff (void *r, float x, void *y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dffdfff (void *r, float x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<float>(x), DFLOAT(y), px, py);               \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdvv (void *r, void *x, void *px) {  \
+OSL_SHADEOP void osl_ ##opname## _dfdvv (void *r, void *x, void *px) {  \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), VEC(px));                                 \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdvdfvf (void *r, void *x, void *y, void *px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dfdvdfvf (void *r, void *x, void *y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), DFLOAT(y), VEC(px), py);                  \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfdvfvf (void *r, void *x, float y, void *px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dfdvfvf (void *r, void *x, float y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), DVEC(x), Dual2<float>(y), VEC(px), py);            \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dfvdfvf (void *r, void *x, void *y, void *px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dfvdfvf (void *r, void *x, void *y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DFLOAT(r), Dual2<Vec3>(VEC(x)), DFLOAT(y), VEC(px), py);      \
 }                                                                       \
                                                                         \
                                                                         \
-extern "C" void osl_ ##opname## _dvdff (void *r, void *x, float px) {  \
+OSL_SHADEOP void osl_ ##opname## _dvdff (void *r, void *x, float px) {  \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), px);                                      \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdfdfff (void *r, void *x, void *y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dvdfdfff (void *r, void *x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), DFLOAT(y), px, py);                       \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdffff (void *r, void *x, float y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dvdffff (void *r, void *x, float y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DFLOAT(x), Dual2<float>(y), px, py);                 \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvfdfff (void *r, float x, void *y, float px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dvfdfff (void *r, float x, void *y, float px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<float>(x), DFLOAT(y), px, py);                 \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdvv (void *r, void *x, void *px) {  \
+OSL_SHADEOP void osl_ ##opname## _dvdvv (void *r, void *x, void *px) {  \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), VEC(px));                                   \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdvdfvf (void *r, void *x, void *y, void *px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dvdvdfvf (void *r, void *x, void *y, void *px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), DFLOAT(y), VEC(px), py);                    \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvdvfvf (void *r, void *x, float y, float *px, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dvdvfvf (void *r, void *x, float y, float *px, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), DVEC(x), Dual2<float>(y), VEC(px), py);              \
 }                                                                       \
                                                                         \
-extern "C" void osl_ ##opname## _dvvdfvf (void *r, void *x, void *px, void *y, float py) { \
+OSL_SHADEOP void osl_ ##opname## _dvvdfvf (void *r, void *x, void *px, void *y, float py) { \
     implname impl(NULL);                                                \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y), VEC(px), py);        \
 }
@@ -1326,7 +1343,7 @@ PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
  * texture routines
  */
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_clear (void *opt)
 {
     // Use "placement new" to clear the texture options
@@ -1334,74 +1351,74 @@ osl_texture_clear (void *opt)
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_firstchannel (void *opt, int x)
 {
     ((TextureOpt *)opt)->firstchannel = x;
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_swrap (void *opt, const char *x)
 {
     ((TextureOpt *)opt)->swrap = TextureOpt::decode_wrapmode(x);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_twrap (void *opt, const char *x)
 {
     ((TextureOpt *)opt)->twrap = TextureOpt::decode_wrapmode(x);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_rwrap (void *opt, const char *x)
 {
     ((TextureOpt *)opt)->rwrap = TextureOpt::decode_wrapmode(x);
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_sblur (void *opt, float x)
 {
     ((TextureOpt *)opt)->sblur = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_tblur (void *opt, float x)
 {
     ((TextureOpt *)opt)->tblur = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_rblur (void *opt, float x)
 {
     ((TextureOpt *)opt)->rblur = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_swidth (void *opt, float x)
 {
     ((TextureOpt *)opt)->swidth = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_twidth (void *opt, float x)
 {
     ((TextureOpt *)opt)->twidth = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_rwidth (void *opt, float x)
 {
     ((TextureOpt *)opt)->rwidth = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_fill (void *opt, float x)
 {
     ((TextureOpt *)opt)->fill = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_texture_set_time (void *opt, float x)
 {
 #if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
@@ -1409,7 +1426,7 @@ osl_texture_set_time (void *opt, float x)
 #endif
 }
 
-extern "C" int
+OSL_SHADEOP int
 osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,
              void *result, void *dresultdx, void *dresultdy)
@@ -1435,7 +1452,7 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
     return ok;
 }
 
-extern "C" int
+OSL_SHADEOP int
 osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,
              void *result, void *dresultdx, void *dresultdy,
@@ -1473,7 +1490,7 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
 
 
 
-extern "C" int
+OSL_SHADEOP int
 osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
                void *dPdx_, void *dPdy_, void *dPdz_, int chans,
                void *result, void *dresultdx, void *dresultdy, void *dresultdz)
@@ -1512,7 +1529,7 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
 }
 
 
-extern "C" int
+OSL_SHADEOP int
 osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
                      void *dPdx_, void *dPdy_, void *dPdz_, int chans,
                      void *result, void *dresultdx,
@@ -1566,7 +1583,7 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
 
 
 
-extern "C" int
+OSL_SHADEOP int
 osl_environment (void *sg_, const char *name, void *opt_, void *R_,
                  void *dRdx_, void *dRdy_, int chans,
                  void *result, void *dresultdx, void *dresultdy,
@@ -1633,7 +1650,7 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
 
 
 
-extern "C" int osl_get_textureinfo(void *sg_,    void *fin_, 
+OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_, 
                                    void *dnam_,  int type, 
                                    int arraylen, int aggregate, void *data)
 {
@@ -1657,7 +1674,7 @@ extern "C" int osl_get_textureinfo(void *sg_,    void *fin_,
 
 // Trace
 
-extern "C" void
+OSL_SHADEOP void
 osl_trace_clear (void *opt)
 {
     ((RendererServices::TraceOpt *)opt)->mindist = 0.0f;
@@ -1665,26 +1682,26 @@ osl_trace_clear (void *opt)
     ((RendererServices::TraceOpt *)opt)->shade = false;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_trace_set_mindist (void *opt, float x)
 {
     ((RendererServices::TraceOpt *)opt)->mindist = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_trace_set_maxdist (void *opt, float x)
 {
     ((RendererServices::TraceOpt *)opt)->maxdist = x;
 }
 
-extern "C" void
+OSL_SHADEOP void
 osl_trace_set_shade (void *opt, int x)
 {
     ((RendererServices::TraceOpt *)opt)->shade = x;
 }
 
 
-extern "C" int
+OSL_SHADEOP int
 osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
            void *Dir_, void *dDirdx_, void *dDirdy_)
 {
@@ -1704,7 +1721,7 @@ osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
 
 
 
-extern "C" int osl_get_attribute(void *sg_,
+OSL_SHADEOP int osl_get_attribute(void *sg_,
                              int   dest_derivs,
                              void *obj_name_,
                              void *attr_name_,
@@ -1743,7 +1760,7 @@ inline Vec3 calculatenormal(void *P_, bool flipHandedness)
         return tmpP.dx().cross( tmpP.dy());
 }
 
-extern "C" void osl_calculatenormal(void *out, void *sg_, void *P_)
+OSL_SHADEOP void osl_calculatenormal(void *out, void *sg_, void *P_)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Vec3 N = calculatenormal(P_, sg->flipHandedness);
@@ -1751,7 +1768,7 @@ extern "C" void osl_calculatenormal(void *out, void *sg_, void *P_)
     VEC(out) = N;
 }
 
-extern "C" float osl_area_fv(void *P_)
+OSL_SHADEOP float osl_area_fv(void *P_)
 {
     Vec3 N = calculatenormal(P_, false);
     return N.length();
@@ -1764,13 +1781,13 @@ inline float filter_width(float dx, float dy)
     return sqrtf(dx*dx + dy*dy);
 }
 
-extern "C" float osl_filterwidth_fdf(void *x_)
+OSL_SHADEOP float osl_filterwidth_fdf(void *x_)
 {
     Dual2<float> &x = DFLOAT(x_);
     return filter_width(x.dx(), x.dy());
 }
 
-extern "C" void osl_filterwidth_vdv(void *out, void *x_)
+OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
 {
     Dual2<Vec3> &x = DVEC(x_);
 
@@ -1781,28 +1798,28 @@ extern "C" void osl_filterwidth_vdv(void *out, void *x_)
 
 
 
-extern "C" int osl_dict_find_iis (void *sg_, int nodeID, void *query)
+OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_; 
     return sg->context->dict_find (nodeID, USTR(query));
 }
 
 
-extern "C" int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
+OSL_SHADEOP int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_; 
     return sg->context->dict_find (USTR(dictionary), USTR(query));
 }
 
 
-extern "C" int osl_dict_next (void *sg_, int nodeID)
+OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_; 
     return sg->context->dict_next (nodeID);
 }
 
 
-extern "C" int osl_dict_value (void *sg_, int nodeID, void *attribname,
+OSL_SHADEOP int osl_dict_value (void *sg_, int nodeID, void *attribname,
                                long long type, void *data)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_; 
@@ -1812,7 +1829,7 @@ extern "C" int osl_dict_value (void *sg_, int nodeID, void *attribname,
 
 
 // Asked if the raytype is a name we can't know until mid-shader.
-extern "C" int osl_raytype_name (void *sg_, void *name)
+OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_; 
     int bit = sg->context->shadingsys().raytype_bit (USTR(name));
@@ -1820,7 +1837,7 @@ extern "C" int osl_raytype_name (void *sg_, void *name)
 }
 
 // Asked if the raytype includes a bit pattern.
-extern "C" int osl_raytype_bit (void *sg_, int bit)
+OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_; 
     return (sg->raytype & bit) != 0;
@@ -1833,7 +1850,7 @@ extern "C" int osl_raytype_bit (void *sg_, int bit)
  * Utility routines
  */
 
-extern "C" int
+OSL_SHADEOP int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int has_derivs, void *result)
 {

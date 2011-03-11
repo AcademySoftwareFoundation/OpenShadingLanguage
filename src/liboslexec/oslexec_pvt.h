@@ -94,6 +94,14 @@ class Dictionary;
 typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*); 
 
 
+// Prefix for OSL shade up declarations, so LLVM can find them
+#ifdef _MSC_VER
+#define OSL_SHADEOP extern "C" __declspec(dllexport)
+#else
+#define OSL_SHADEOP extern "C"
+#endif
+
+
 
 /// Like an int (of type T), but also internally keeps track of the 
 /// maximum value is has held, and the total "requested" deltas.

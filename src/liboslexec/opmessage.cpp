@@ -52,7 +52,7 @@ using OIIO::ParamValue;
 
 #define USTR(cstr) (*((ustring *)&cstr))
 
-extern "C" void
+OSL_SHADEOP void
 osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val)
 {
     const ustring &name (USTR(name_));
@@ -80,7 +80,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
 
 
 
-extern "C" int
+OSL_SHADEOP int
 osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
                 long long type_, void *val)
 {

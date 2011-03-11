@@ -228,7 +228,21 @@ typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
     "osl_" #name "_dvvdfvf",  "xvvXvf",         \
     "osl_" #name "_dvdvdfvf", "xvvXvf"
 
+#define UNARY_OP_IMPL(name)                     \
+    "osl_" #name "_ff",   "ff",                 \
+    "osl_" #name "_dfdf", "xXX",                \
+    "osl_" #name "_vv",   "xXX",                \
+    "osl_" #name "_dvdv", "xXX"
 
+#define BINARY_OP_IMPL(name)                    \
+    "osl_" #name "_fff",    "fff",              \
+    "osl_" #name "_dfdfdf", "xXXX",             \
+    "osl_" #name "_dffdf",  "xXfX",             \
+    "osl_" #name "_dfdff",  "xXXf",             \
+    "osl_" #name "_vvv",    "xXXX",             \
+    "osl_" #name "_dvdvdv", "xXXX",             \
+    "osl_" #name "_dvvdv",  "xXXX",             \
+    "osl_" #name "_dvdvv",  "xXXX"
 
 /// Table of all functions that we may call from the LLVM-compiled code.
 /// Alternating name and argument list, much like we use in oslc's type
@@ -267,6 +281,169 @@ static const char *llvm_helper_function_table[] = {
     "osl_setmessage", "xXsLX",
     "osl_getmessage", "iXssLX",
     "osl_pointcloud", "iXsvfiXi*",
+
+#ifdef OSL_LLVM_NO_BITCODE
+    "osl_assert_nonnull", "xXs",
+
+    UNARY_OP_IMPL(sin),
+    UNARY_OP_IMPL(cos),
+    UNARY_OP_IMPL(tan),
+
+    UNARY_OP_IMPL(asin),
+    UNARY_OP_IMPL(acos),
+    UNARY_OP_IMPL(atan),
+    BINARY_OP_IMPL(atan2),
+    UNARY_OP_IMPL(sinh),
+    UNARY_OP_IMPL(cosh),
+    UNARY_OP_IMPL(tanh),
+
+    "osl_sincos_fff", "xfXX",
+    "osl_sincos_dfdff", "xXXX",
+    "osl_sincos_dffdf", "xXXX",
+    "osl_sincos_dfdfdf", "xXXX",
+    "osl_sincos_vvv", "xXXX",
+    "osl_sincos_dvdvv", "xXXX",
+    "osl_sincos_dvvdv", "xXXX",
+    "osl_sincos_dvdvdv", "xXXX",
+
+    UNARY_OP_IMPL(log),
+    UNARY_OP_IMPL(log2),
+    UNARY_OP_IMPL(log10),
+    UNARY_OP_IMPL(logb),
+    UNARY_OP_IMPL(exp),
+    UNARY_OP_IMPL(exp2),
+    UNARY_OP_IMPL(expm1),
+    BINARY_OP_IMPL(pow),
+    UNARY_OP_IMPL(erf),
+    UNARY_OP_IMPL(erfc),
+
+    "osl_pow_vvf", "xXXf",
+    "osl_pow_dvdvdf", "xXXX",
+    "osl_pow_dvvdf", "xXXX",
+    "osl_pow_dvdvf", "xXXX",
+
+    UNARY_OP_IMPL(sqrt),
+    UNARY_OP_IMPL(inversesqrt),
+
+    "osl_floor_ff", "ff",
+    "osl_floor_vv", "xXX",
+    "osl_ceil_ff", "ff",
+    "osl_ceil_vv", "xXX",
+    "osl_round_ff", "ff",
+    "osl_round_vv", "xXX",
+    "osl_trunc_ff", "ff",
+    "osl_trunc_vv", "xXX",
+    "osl_sign_ff", "ff",
+    "osl_sign_vv", "XX",
+    "osl_step_fff", "fff",
+    "osl_step_vvv", "xXXX",
+
+    "osl_isnan_if", "if",
+    "osl_isinf_if", "if",
+    "osl_isfinite_if", "if",
+    "osl_abs_ii", "ii",
+    "osl_fabs_ii", "ii",
+
+    UNARY_OP_IMPL(abs),
+    UNARY_OP_IMPL(fabs),
+
+    "osl_smoothstep_ffff", "ffff",
+    "osl_smoothstep_dfffdf", "xXffX",
+    "osl_smoothstep_dffdff", "xXfXf",
+    "osl_smoothstep_dffdfdf", "xXfXX",
+    "osl_smoothstep_dfdfff", "xXXff",
+    "osl_smoothstep_dfdffdf", "xXXfX",
+    "osl_smoothstep_dfdfdff", "xXXXf",
+    "osl_smoothstep_dfdfdfdf", "xXXXX",
+
+    "osl_transform_vmv", "xXXX",
+    "osl_transform_dvmdv", "xXXX",
+    "osl_transformv_vmv", "xXXX",
+    "osl_transformv_dvmdv", "xXXX",
+    "osl_transformn_vmv", "xXXX",
+    "osl_transformn_dvmdv", "xXXX",
+
+    "osl_mul_mm", "xXXX",
+    "osl_mul_mf", "xXXf",
+    "osl_mul_m_ff", "xXff",
+    "osl_div_mm", "xXXX",
+    "osl_div_mf", "xXXf",
+    "osl_div_fm", "xXfX",
+    "osl_div_m_ff", "xXff",
+    "osl_prepend_matrix_from", "xXXs",
+    "osl_get_from_to_matrix", "xXXss",
+    "osl_transpose_mm", "xXX",
+    "osl_determinant_fm", "fX",
+
+    "osl_prepend_point_from", "xXXs",
+    "osl_prepend_vector_from", "xXXs",
+    "osl_prepend_normal_from", "xXXs",
+
+    "osl_dot_fvv", "fXX",
+    "osl_dot_dfdvdv", "xXXX",
+    "osl_dot_dfdvv", "xXXX",
+    "osl_dot_dfvdv", "xXXX",
+    "osl_cross_vvv", "xXXX",
+    "osl_cross_dvdvdv", "xXXX",
+    "osl_cross_dvdvv", "xXXX",
+    "osl_cross_dvvdv", "xXXX",
+    "osl_length_fv", "fX",
+    "osl_length_dfdv", "xXX",
+    "osl_distance_fvv", "fXX",
+    "osl_distance_dfdvdv", "xXXX",
+    "osl_distance_dfdvv", "xXXX",
+    "osl_distance_dfvdv", "xXXX",
+    "osl_normalize_vv", "xXX",
+    "osl_normalize_dvdv", "xXX",
+    "osl_prepend_color_from", "xXXs",
+
+    "osl_concat_sss", "sss",
+    "osl_strlen_is", "is",
+    "osl_startswith_iss", "iss",
+    "osl_endswith_iss", "iss",
+    "osl_substr_ssii", "ssii",
+    "osl_regex_impl", "iXsXisi",
+
+    "osl_texture_clear", "xX",
+    "osl_texture_set_firstchannel", "xXi",
+    "osl_texture_set_swrap", "xXs",
+    "osl_texture_set_twrap", "xXs",
+    "osl_texture_set_rwrap", "xXs",
+    "osl_texture_set_sblur", "xXf",
+    "osl_texture_set_tblur", "xXf",
+    "osl_texture_set_rblur", "xXf",
+    "osl_texture_set_swidth", "xXf",
+    "osl_texture_set_twidth", "xXf",
+    "osl_texture_set_rwidth", "xXf",
+    "osl_texture_set_fill", "xXf",
+    "osl_texture_set_time", "xXf",
+    "osl_texture", "iXsXffffffiXXX",
+    "osl_texture_alpha", "iXsXffffffiXXXXXX",
+    "osl_texture3d", "iXsXXXXXiXXXX",
+    "osl_texture3d_alpha", "iXsXXXXXiXXXXXXXX",
+    "osl_environment", "iXsXXXXiXXXXXX",
+    "osl_get_textureinfo", "iXXXiiiX",
+
+    "osl_trace_clear", "xX",
+    "osl_trace_set_mindist", "xXf",
+    "osl_trace_set_maxdist", "xXf",
+    "osl_trace_set_shade", "xXi",
+    "osl_trace", "iXXXXXXXX",
+
+    "osl_get_attribute", "iXiXXiiXX",
+    "osl_calculatenormal", "xXXX",
+    "osl_area_fv", "fX",
+    "osl_filterwidth_fdf", "fX",
+    "osl_filterwidth_vdv", "xXX",
+    "osl_dict_find_iis", "iXiX",
+    "osl_dict_find_iss", "iXXX",
+    "osl_dict_next", "iXi",
+    "osl_dict_value", "iXiXLX",
+    "osl_raytype_name", "iXX",
+    "osl_raytype_bit", "iXi",
+    "osl_bind_interpolated_param", "iXXLiX",
+#endif // OSL_LLVM_NO_BITCODE
+
     NULL
 };
 
@@ -4348,6 +4525,9 @@ ShadingSystemImpl::SetupLLVM ()
         m_llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
 
     if (! m_llvm_module) {
+#ifdef OSL_LLVM_NO_BITCODE
+        m_llvm_module = new llvm::Module("llvm_ops", *llvm_context());
+#else
         // Load the LLVM bitcode and parse it into a Module
         const char *data = osl_llvm_compiled_ops_block;
 #if OSL_LLVM_28
@@ -4361,6 +4541,7 @@ ShadingSystemImpl::SetupLLVM ()
         if (err.length())
             error ("ParseBitcodeFile returned '%s'\n", err.c_str());
         delete buf;
+#endif
     }
 
     // Create the ExecutionEngine

@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 // Heavy lifting of OSL regex operations.
-extern "C" int
+OSL_SHADEOP int
 osl_regex_impl2 (OSL::pvt::ShadingContext *ctx, ustring subject_,
                  int *results, int nresults, ustring pattern,
                  int fullmatch)
@@ -74,7 +74,7 @@ osl_regex_impl2 (OSL::pvt::ShadingContext *ctx, ustring subject_,
     }
 }
 
-extern "C" const char *
+OSL_SHADEOP const char *
 osl_format (const char* format_str, ...)
 {
     va_list args;
@@ -85,7 +85,7 @@ osl_format (const char* format_str, ...)
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
@@ -101,7 +101,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_error (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
@@ -112,7 +112,7 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
 }
 
 
-extern "C" void
+OSL_SHADEOP void
 osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;

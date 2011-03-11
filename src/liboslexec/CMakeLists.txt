@@ -36,6 +36,7 @@ FILE ( GLOB compiler_headers "*.h" )
 
 FLEX_BISON ( osolex.l osogram.y oso liboslexec_srcs compiler_headers )
 
+SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 
 MACRO ( LLVM_COMPILE llvm_src srclist )
     GET_FILENAME_COMPONENT ( llvmsrc_we ${llvm_src} NAME_WE )
@@ -49,7 +50,6 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     SET ( ${srclist} ${${srclist}} ${llvm_bc_cpp} )
     EXEC_PROGRAM ( ${LLVM_DIRECTORY}/bin/llvm-config ARGS --cxxflags OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
     set (LLVM_COMPILE_FLAGS "${LLVM_COMPILE_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -O3 --combine")
-    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
     if (OSL_NAMESPACE)
         LIST (APPEND LLVM_COMPILE_FLAGS "-DOSL_NAMESPACE=${OSL_NAMESPACE}")
     endif ()
@@ -94,7 +94,15 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
 ENDMACRO ( )
 
 if (LLVM_FOUND)
-    LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+    if (NOT MSVC)
+        LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+    else ()
+        # With MSVC, we don't compile llvm_ops.cpp to LLVM bitcode, due to
+        # clang being unable to compile MSVC C++ header files at this time.
+        # Instead it is part of the regular build process.
+        ADD_DEFINITIONS(-DOSL_LLVM_NO_BITCODE)
+        SET(liboslexec_srcs ${liboslexec_srcs} llvm_ops.cpp)
+    endif ()
 endif ()
 
 ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )

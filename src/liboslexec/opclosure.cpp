@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if 1
 
-extern "C" const ClosureColor *
+OSL_SHADEOP const ClosureColor *
 osl_add_closure_closure (ShaderGlobals *sg,
                          const ClosureColor *a, const ClosureColor *b)
 {
@@ -44,7 +44,7 @@ osl_add_closure_closure (ShaderGlobals *sg,
 }
 
 
-extern "C" const ClosureColor *
+OSL_SHADEOP const ClosureColor *
 osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
 {
     if (a == NULL) return NULL;
@@ -52,7 +52,7 @@ osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
 }
 
 
-extern "C" const ClosureColor *
+OSL_SHADEOP const ClosureColor *
 osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 {
     if (a == NULL) return NULL;
@@ -60,7 +60,7 @@ osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 }
 
 
-extern "C" ClosureComponent *
+OSL_SHADEOP ClosureComponent *
 osl_allocate_closure_component (ShaderGlobals *sg, int id, int size, int nattrs)
 {
     return sg->context->closure_component_allot(id, size, nattrs);
@@ -68,7 +68,7 @@ osl_allocate_closure_component (ShaderGlobals *sg, int id, int size, int nattrs)
 
 
 
-extern "C" const char *
+OSL_SHADEOP const char *
 osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)
 {
     // Special case for printing closures

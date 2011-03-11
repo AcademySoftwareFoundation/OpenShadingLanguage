@@ -106,7 +106,7 @@ public:
     /// Retrieve a parameter, either by index or by name.  Return NULL if the
     /// index is out of range, or if the named parameter is not found.
     const Parameter *getparam (size_t i) const {
-        if (i < 0 || i >= nparams())
+        if (i >= nparams())
             return NULL;
         return &(m_params[i]);
     }

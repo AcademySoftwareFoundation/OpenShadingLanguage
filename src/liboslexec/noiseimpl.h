@@ -224,18 +224,8 @@ Vec3 lerp(float t, Vec3 a, Vec3 b) {
     return (1.0f - t) * a + t * b;
 }
 
-Dual2<float> lerp(const Dual2<float> &t, float a, float b) {
-    return (1.0f - t) * a + t * b;
-}
-
 Dual2<float> lerp(const Dual2<float> &t, const Dual2<float> &a, const Dual2<float> &b) {
     return (1.0f - t) * a + t * b;
-}
-
-Dual2<Vec3> lerp(const Dual2<float> &t, const Vec3 &a, const Vec3 &b) {
-    return Dual2<Vec3>((1.0f - t.val()) * a + t.val() * b,
-                       (b - a) * t.dx(),
-                       (b - a) * t.dy());
 }
 
 Dual2<Vec3> lerp(const Dual2<float> &t, const Dual2<Vec3> &a, const Dual2<Vec3> &b) {

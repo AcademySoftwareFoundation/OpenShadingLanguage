@@ -194,7 +194,7 @@ lpexp::NRepeat::genAuto(NdfAutomata &automata)const
     // lambda transitions
     if (!last && i < m_max)
         first = last = automata.newState();
-    for (i = i; i < m_max; ++i) {
+    for (; i < m_max; ++i) {
         FirstLast fl = m_child->genAuto(automata);
         last->addTransition(lambda, fl.first);
         // Since this repetitions are optional, put a bypass with lambda

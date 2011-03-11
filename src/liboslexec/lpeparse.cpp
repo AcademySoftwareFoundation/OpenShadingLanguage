@@ -254,7 +254,7 @@ Parser::parseGroup()
     }
     next();
     m_ingroup = false;
-    for (basicpos = basicpos; basicpos < 2; ++basicpos)
+    for (; basicpos < 2; ++basicpos)
         basics[basicpos] = new lpexp::Wildexp(m_minus_stop);
     return buildStop(basics[0], basics[1], custom);
 }

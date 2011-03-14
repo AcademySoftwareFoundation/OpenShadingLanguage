@@ -1,2 +1,13 @@
-This file will eventually give the highlights and for each release.
+Release 0.5.2 - Mar 14, 2011
+----------------------------
+
+* Windows: use boost::wave instead of external cpp; various other Windows
+  compilation fixes.
+* texture & environment now take an optional "interp" parameter that
+  overrides the interpolation/filtering method (valid arguments:
+  "smartcubic", "cubic", "linear", "closest").
+* Bug fixes to getmessage() and its handling of derivatives, which includes
+  a slight RendererServices API change.
+
+
 

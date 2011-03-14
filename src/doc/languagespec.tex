@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 4 March, 2011 \\
+\date{{\large Date: 14 March, 2011 \\
 %(with corrections, 7 January, 2011)
 }}
 
@@ -4626,6 +4626,7 @@ Data recognized include:
 \begin{tabular}{p{0.8in} p{0.5in} p{3.3in}}
 \qkw{hit}     & {\cf int}   & Zero if the ray hit nothing, 1 if it hit. \\
 \qkw{hitdist} & {\cf float} & The distance to the hit. \\
+\qkw{geom:name} & {\cf string} & The name of the object hit. \\
 \emph{other} & & Retrieves the named global (\P, \N, etc.), shader
                  parameter, or set message of the closest object hit
                  (only if it was a shaded ray).
@@ -4638,7 +4639,7 @@ whether or not the shader ought to execute on the traced ray.  If
 vertex variables, shader instance values, or graphics state
 attributes (object name, etc.).  But \qkw{shade} must be nonzero to
 correctly retrieve shader output variables or messages that are set
-by the shader (via setmessage()).
+by the shader (via {\cf setmessage()}).
 
 \apiend
 \vspace{-20pt}

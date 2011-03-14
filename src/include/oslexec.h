@@ -402,7 +402,9 @@ public:
     /// write it into 'val'.  Otherwise, return false.  This is only
     /// called for "sourced" messages, not ordinary intra-group messages.
     virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name, 
-                             TypeDesc type, void *val) { return false; }
+                             TypeDesc type, void *val, bool derivatives) {
+        return false;
+    }
 
 private:
     TextureSystem *m_texturesys;   // For default texture implementation

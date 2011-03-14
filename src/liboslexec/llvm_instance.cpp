@@ -279,7 +279,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_spline_dvdfv", "xXXXXi",
     "osl_spline_dvfdv", "xXXXXi",
     "osl_setmessage", "xXsLX",
-    "osl_getmessage", "iXssLX",
+    "osl_getmessage", "iXssLXi",
     "osl_pointcloud", "iXsvfiXi*",
 
 #ifdef OSL_LLVM_NO_BITCODE
@@ -3461,7 +3461,7 @@ LLVMGEN (llvm_gen_getmessage)
     DASSERT (Result.typespec().is_int() && Name.typespec().is_string());
     DASSERT (has_source == 0 || Source.typespec().is_string());
 
-    llvm::Value *args[5];
+    llvm::Value *args[6];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source) 
                          : rop.llvm_constant(ustring());
@@ -3472,8 +3472,9 @@ LLVMGEN (llvm_gen_getmessage)
         args[4] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
     else
         args[4] = rop.llvm_void_ptr (Data);
+    args[5] = rop.llvm_constant ((int)Data.has_derivs());
 
-    llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 5);
+    llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 6);
     rop.llvm_store_value (r, Result);
     return true;
 }

@@ -82,7 +82,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
 
 OSL_SHADEOP int
 osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
-                long long type_, void *val)
+                long long type_, void *val, int derivs)
 {
     const ustring &source (USTR(source_));
     const ustring &name (USTR(name_));
@@ -96,7 +96,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
     if (source == ktrace) {
         // Source types where we need to ask the renderer
         RendererServices *renderer = sg->context->renderer();
-        return renderer->getmessage (sg, source, name, type, val);
+        return renderer->getmessage (sg, source, name, type, val, derivs);
     }
 
     ParamValueList &messages (sg->context->messages());
@@ -107,7 +107,10 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
 
     if (p) {
         // Message found
-        memcpy (val, p->data(), type.size());
+        size_t size = type.size();
+        memcpy (val, p->data(), size);
+        if (derivs)
+            memset (((char *)val)+size, 0, 2*size);
         return 1;
     }
 

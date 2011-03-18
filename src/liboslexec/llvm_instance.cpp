@@ -151,6 +151,7 @@ static ustring op_printf("printf");
 static ustring op_round("round");
 static ustring op_shl("shl");
 static ustring op_shr("shr");
+static ustring op_sign("sign");
 static ustring op_step("step");
 static ustring op_trunc("trunc");
 static ustring op_vector("vector");
@@ -2649,7 +2650,8 @@ LLVMGEN (llvm_gen_generic)
     if (any_deriv_args)
         if (op.opname() == op_floor || op.opname() == op_ceil ||
             op.opname() == op_round || op.opname() == op_step ||
-            op.opname() == op_trunc || op.opname() == op_cellnoise)
+            op.opname() == op_trunc || op.opname() == op_cellnoise ||
+            op.opname() == op_sign)
             any_deriv_args = false;
 
     std::string name = std::string("osl_") + op.opname().string() + "_";

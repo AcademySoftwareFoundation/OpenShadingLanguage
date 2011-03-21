@@ -131,7 +131,7 @@ public:
     /// Construct a TypeSpec representing a closure (pass closure=true)
     /// of a simple type.
     TypeSpec (TypeDesc simple, bool closure)
-        : m_simple(simple), m_structure(0), m_closure(closure)
+        : m_simple(closure ? TypeDesc::PTR : simple), m_structure(0), m_closure(closure)
     { }
 
     /// Construct a TypeSpec describing a struct or array of structs,
@@ -358,7 +358,7 @@ public:
     /// Is it a color closure?
     ///
     bool is_color_closure () const {
-        return is_closure() && (m_simple == TypeDesc::TypeColor);
+        return is_closure();
     }
 
     /// Types are equivalent if they are identical, or if both are

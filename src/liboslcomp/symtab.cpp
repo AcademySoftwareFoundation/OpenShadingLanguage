@@ -54,8 +54,8 @@ TypeSpec::string () const
 {
     std::string str;
     if (is_closure())
-        str += "closure ";
-    if (is_structure())
+        str += "closure color";
+    else if (is_structure())
         str += Strutil::format ("struct %d", structure());
     else {
         // Substitute some special names

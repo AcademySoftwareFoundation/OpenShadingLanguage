@@ -19,4 +19,9 @@ shader a (float Kd = 0.5,
     setmessage ("array", array);
     printf ("a: set message 'array' to { %g %g %g %g }\n",
             array[0], array[1], array[2], array[3]);
+
+    // Should produce an error when executing backwards (or forward)
+    int c;
+    if (getmessage("wrong_direction_test", c) != 0)
+       error("unexpected result from getmessage - fetched value %d", c);
 }

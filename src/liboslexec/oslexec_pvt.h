@@ -668,6 +668,7 @@ public:
 
     bool debug_nan () const { return m_debugnan; }
     bool lockgeom_default () const { return m_lockgeom_default; }
+    bool strict_messages() const { return m_strict_messages; }
     int optimize () const { return m_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
 
@@ -765,6 +766,7 @@ private:
     bool m_rebind;                        ///< Allow rebinding?
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_lockgeom_default;              ///< Default value of lockgeom
+    bool m_strict_messages;               ///< Strict checking of message passing usage?
     int m_optimize;                       ///< Runtime optimization level
     int m_llvm_debug;                     ///< More LLVM debugging output
     std::string m_searchpath;             ///< Shader search path
@@ -875,6 +877,55 @@ private:
     size_t              m_block_offset;
 };
 
+/// Represents a single message for use by getmessage and setmessage opcodes
+///
+struct Message {
+    Message(ustring name, const TypeDesc& type, int layeridx, ustring sourcefile, int sourceline, Message* next) :
+       name(name), data(NULL), type(type), layeridx(layeridx), sourcefile(sourcefile), sourceline(sourceline), next(next) {}
+
+    /// Some messages don't have data because getmessage() was called before setmessage
+    /// (which is flagged as an error to avoid ambiguities caused by execution order)
+    ///
+    bool has_data() const { return data != NULL; }
+
+    ustring name;           ///< name of this message
+    char* data;             ///< actual data of the message (will never change once the message is created)
+    TypeDesc type;          ///< what kind of data is stored here? FIXME: should be TypeSpec
+    int layeridx;           ///< layer index where this was message was created
+    ustring sourcefile;     ///< source code file that contains the call that created this message
+    int sourceline;         ///< source code line that contains the call that created this message
+    Message* next;          ///< linked list of messages (managed by MessageList below)
+};
+
+/// Represents the list of messages set by a given shader using setmessage and getmessage
+///
+struct MessageList {
+     MessageList() : list_head(NULL), message_data() {}
+
+     void clear() {
+         list_head = NULL;
+         message_data.clear();
+     }
+
+    const Message* find(ustring name) const {
+        for (const Message* m = list_head; m != NULL; m = m->next)
+            if (m->name == name)
+                return m; // name matches
+        return NULL; // not found
+    }
+
+    void add(ustring name, void* data, const TypeDesc& type, int layeridx, ustring sourcefile, int sourceline) {
+        list_head = new (message_data.alloc(sizeof(Message))) Message(name, type, layeridx, sourcefile, sourceline, list_head);
+        if (data) {
+            list_head->data = message_data.alloc(type.size());
+            memcpy(list_head->data, data, type.size());
+        }
+    }
+
+private:
+    Message*         list_head;
+    SimplePool<1024> message_data;
+};
 
 
 /// The full context for executing a shader group.
@@ -957,9 +1008,9 @@ public:
     ///
     ShadingAttribState *attribs () { return m_attribs; }
 
-    /// Return a reference to the ParamValueList containing messages.
+    /// Return a reference to the MessageList containing messages.
     ///
-    ParamValueList & messages () { return m_messages; }
+    MessageList & messages () { return m_messages; }
 
     /// Look up a query from a dictionary (typically XML), staring the
     /// search from the root of the dictionary, and returning ID of the
@@ -1000,8 +1051,8 @@ private:
 #else
     typedef hash_map<ustring, boost::regex*, ustringHash> RegexMap;
 #endif
-    RegexMap m_regex_map;  ///< Compiled regex's
-    ParamValueList m_messages;          ///< Message blackboard
+    RegexMap m_regex_map;               ///< Compiled regex's
+    MessageList m_messages;             ///< Message blackboard
 
     SimplePool<20 * 1024> m_closure_pool;
 

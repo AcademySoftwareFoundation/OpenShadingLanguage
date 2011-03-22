@@ -1,7 +1,10 @@
 shader b (float f_in = 41,
           color c_in = 42
-    )
+          )
 {
+    // setup a message that a will try to read -> this should give us an error
+    setmessage("wrong_direction_test", 3);
+
     printf ("b: f_in = %g, c_in = %g\n", f_in, c_in);
 
     color foo = 0;
@@ -26,4 +29,22 @@ shader b (float f_in = 41,
     result = getmessage ("array", array);
     printf ("b: retrieved message 'array' to { %g %g %g %g }\n",
             array[0], array[1], array[2], array[3]);
+
+    // try out a few more error conditions:
+    int c = 0;
+    getmessage("already_queried", c);
+    setmessage("already_queried", 3);     // try to set a message the shader thinks does not exist 
+ 
+    setmessage("message_on_same_layer", 3);
+    getmessage("message_on_same_layer", c);  // try to pass a message within a single layer
+
+    setmessage("set_twice", 3);
+    setmessage("set_twice", 4);           // should fail
+
+    setmessage("set_closure_get_int", diffuse(N));
+    getmessage("set_closure_get_int", c);          // should be a type mismatch error (source was a closure)
+
+    closure color diff = 0;
+    setmessage("get_int_set_closure", 3);
+    getmessage("get_int_set_closure", diff);       // should be a type mismatch error (destination was a closure)
 }

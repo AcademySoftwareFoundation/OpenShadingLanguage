@@ -279,8 +279,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_spline_dvdfdv", "xXXXXi",
     "osl_spline_dvdfv", "xXXXXi",
     "osl_spline_dvfdv", "xXXXXi",
-    "osl_setmessage", "xXsLX",
-    "osl_getmessage", "iXssLXi",
+    "osl_setmessage", "xXsLXisi",
+    "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud", "iXsvfiXi*",
 
 #ifdef OSL_LLVM_NO_BITCODE
@@ -1133,7 +1133,7 @@ RuntimeOptimizer::llvm_call_function (const char *name,
     ASSERT (func);
 #if 0
     llvm::outs() << "llvm_call_function " << *func << "\n";
-    llvm::outs() << "\nargs:\n";
+    llvm::outs() << nargs << " args:\n";
     for (int i = 0;  i < nargs;  ++i)
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
@@ -3463,20 +3463,28 @@ LLVMGEN (llvm_gen_getmessage)
     DASSERT (Result.typespec().is_int() && Name.typespec().is_string());
     DASSERT (has_source == 0 || Source.typespec().is_string());
 
-    llvm::Value *args[6];
+    llvm::Value *args[9];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source) 
                          : rop.llvm_constant(ustring());
     args[2] = rop.llvm_load_value (Name);
-    args[3] = rop.llvm_constant (Data.typespec().simpletype());
-    if (Data.typespec().is_closure())
+
+    if (Data.typespec().is_closure()) {
+        // FIXME: secret handshake for closures ...
+        args[3] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN));
         // We need a void ** here so the function can modify the closure
         args[4] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
-    else
+    } else {
+        args[3] = rop.llvm_constant (Data.typespec().simpletype());
         args[4] = rop.llvm_void_ptr (Data);
+    }
     args[5] = rop.llvm_constant ((int)Data.has_derivs());
 
-    llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 6);
+    args[6] = rop.llvm_constant(rop.inst()->id());
+    args[7] = rop.llvm_constant(op.sourcefile());
+    args[8] = rop.llvm_constant(op.sourceline());
+
+    llvm::Value *r = rop.llvm_call_function ("osl_getmessage", args, 9);
     rop.llvm_store_value (r, Result);
     return true;
 }
@@ -3492,13 +3500,24 @@ LLVMGEN (llvm_gen_setmessage)
     Symbol& Data   = *rop.opargsym (op, 1);
     DASSERT (Name.typespec().is_string());
 
-    llvm::Value *args[4];
+    llvm::Value *args[7];
     args[0] = rop.sg_void_ptr();
     args[1] = rop.llvm_load_value (Name);
-    args[2] = rop.llvm_constant (Data.typespec().simpletype());
-    args[3] = rop.llvm_void_ptr (Data);
+    if (Data.typespec().is_closure()) {
+        // FIXME: secret handshake for closures ...
+        args[2] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN));
+        // We need a void ** here so the function can modify the closure
+        args[3] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
+    } else {
+        args[2] = rop.llvm_constant (Data.typespec().simpletype());
+        args[3] = rop.llvm_void_ptr (Data);
+    }
 
-    rop.llvm_call_function ("osl_setmessage", args, 4);
+    args[4] = rop.llvm_constant(rop.inst()->id());
+    args[5] = rop.llvm_constant(op.sourcefile());
+    args[6] = rop.llvm_constant(op.sourceline());
+
+    rop.llvm_call_function ("osl_setmessage", args, 7);
     return true;
 }
 

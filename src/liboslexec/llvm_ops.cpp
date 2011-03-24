@@ -1649,8 +1649,10 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
 #else
     for (int i = 0;  i < chans;  ++i) {
         ((float *)alpha)[i] = 0.0f;
-        ((float *)dalphadx)[i] = 0.0f;
-        ((float *)dalphady)[i] = 0.0f;
+        if (dalphadx)
+            ((float *)dalphadx)[i] = 0.0f;
+        if (dalphady)
+            ((float *)dalphady)[i] = 0.0f;
     }
 #endif
     }

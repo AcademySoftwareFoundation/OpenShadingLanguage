@@ -668,6 +668,7 @@ public:
 
     bool debug_nan () const { return m_debugnan; }
     bool lockgeom_default () const { return m_lockgeom_default; }
+    bool strict_messages() const { return m_strict_messages; }
     int optimize () const { return m_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
 
@@ -765,6 +766,7 @@ private:
     bool m_rebind;                        ///< Allow rebinding?
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_lockgeom_default;              ///< Default value of lockgeom
+    bool m_strict_messages;               ///< Strict checking of message passing usage?
     int m_optimize;                       ///< Runtime optimization level
     int m_llvm_debug;                     ///< More LLVM debugging output
     std::string m_searchpath;             ///< Shader search path

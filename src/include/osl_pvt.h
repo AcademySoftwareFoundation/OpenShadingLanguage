@@ -673,16 +673,9 @@ typedef std::vector<Symbol *> SymbolPtrVec;
 class Opcode {
 public:
     Opcode (ustring op, ustring method, size_t firstarg=0, size_t nargs=0)
-        : m_op(op), m_firstarg((int)firstarg), m_nargs((int)nargs),
-          m_method(method), 
-          m_argread(~1), // Default - all args are read except the first
-          m_argwrite(1), // Default - first arg only is written by the op
-          m_argtakesderivs(0) // Default - doesn't take derivs
+        : m_firstarg((int)firstarg), m_method(method)
     {
-        m_jump[0] = -1;
-        m_jump[1] = -1;
-        m_jump[2] = -1;
-        m_jump[3] = -1;
+        reset (op, nargs);   // does most of the heavy lifting
     }
 
     void reset (ustring opname, size_t nargs) {

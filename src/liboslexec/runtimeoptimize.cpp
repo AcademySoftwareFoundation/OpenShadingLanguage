@@ -153,6 +153,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg)
     // for this op.  Unfortunately, mark_rw takes the op number, we just
     // have the pointer, so we subtract to get it.
     int opnum = &op - &(inst()->ops()[0]);
+    DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     Symbol *arg = opargsym (op, 1);
     arg->mark_rw (opnum, true, false);
 }
@@ -318,9 +319,9 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     if (opname != u_useparam) {
         // Mark the args as being used for this op (assume that the
         // first is written, the others are read).  Enforce that with an
-        // ASSERT to be sure we only use insert_code for the couple of
+        // DASSERT to be sure we only use insert_code for the couple of
         // instructions that we think it is used for.
-        ASSERT (opname == u_assign);
+        DASSERT (opname == u_assign);
         for (size_t a = 0;  a < args_to_add.size();  ++a)
             inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
     }

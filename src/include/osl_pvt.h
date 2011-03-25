@@ -689,6 +689,9 @@ public:
         m_op = opname;
         m_nargs = (int) nargs;
         set_jump ();
+        m_argread = ~1; // Default - all args are read except the first
+        m_argwrite = 1; // Default - first arg only is written by the op
+        m_argtakesderivs = 0; // Default - doesn't take derivs
     }
 
     ustring opname () const { return m_op; }

@@ -315,13 +315,15 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         }
     }
 
-    // Mark the args as being used for this op -- we make the assumption
-    // that the first is written, the others are read.  Enforce that
-    // with an ASSERT to be sure we only use insert_code for the couple
-    // of instructions that we think it is used for.
-    ASSERT (opname == u_useparam || opname == u_assign);
-    for (size_t a = 0;  a < args_to_add.size();  ++a)
-        inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
+    if (opname != u_useparam) {
+        // Mark the args as being used for this op (assume that the
+        // first is written, the others are read).  Enforce that with an
+        // ASSERT to be sure we only use insert_code for the couple of
+        // instructions that we think it is used for.
+        ASSERT (opname == u_assign);
+        for (size_t a = 0;  a < args_to_add.size();  ++a)
+            inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
+    }
 }
 
 

@@ -178,7 +178,9 @@ public:
 
     void make_symbol_room (int howmany=1);
 
-    void insert_code (int opnum, ustring opname, const std::vector<int> &args_to_add);
+    void insert_code (int opnum, ustring opname,
+                      const std::vector<int> &args_to_add,
+                      bool recompute_rw_ranges=false);
 
     void insert_useparam (size_t opnum, std::vector<int> &params_to_use);
 

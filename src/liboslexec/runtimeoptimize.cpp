@@ -52,6 +52,7 @@ static ustring u_nop    ("nop"),
                u_add    ("add"),
                u_sub    ("sub"),
                u_if     ("if"),
+               u_useparam ("useparam"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
 
@@ -148,6 +149,13 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg)
     op.argwriteonly (0);
     op.argread (1, true);
     op.argwrite (1, false);
+    // Need to make sure the symbol we're assigning is marked as read
+    // for this op.  Unfortunately, mark_rw takes the op number, we just
+    // have the pointer, so we subtract to get it.
+    int opnum = &op - &(inst()->ops()[0]);
+    DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
+    Symbol *arg = opargsym (op, 1);
+    arg->mark_rw (opnum, true, false);
 }
 
 
@@ -232,8 +240,12 @@ fully_writing_op (const Opcode &op)
 /// allsyms contains pointers to all symbols.  mainstart is a reference
 /// to the address where the 'main' shader begins, and may be modified
 /// if the new instruction is inserted before that point.
+/// If recompute_rw_ranges is true, also adjust all symbols' read/write
+/// ranges to take the new instruction into consideration.
 void
-RuntimeOptimizer::insert_code (int opnum, ustring opname, const std::vector<int> &args_to_add)
+RuntimeOptimizer::insert_code (int opnum, ustring opname,
+                               const std::vector<int> &args_to_add,
+                               bool recompute_rw_ranges)
 {
     OpcodeVec &code (inst()->ops());
     std::vector<int> &opargs (inst()->args());
@@ -280,6 +292,39 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname, const std::vector<int>
                 s.initend (s.initend()+1);
         }
     }
+
+    // Inserting the instruction may change the read/write ranges of
+    // symbols.  Not adjusting this can throw off other optimizations.
+    if (recompute_rw_ranges) {
+        BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+            if (s.everread()) {
+                int first = s.firstread(), last = s.lastread();
+                if (first > opnum)
+                    ++first;
+                if (last >= opnum)
+                    ++last;
+                s.set_read (first, last);
+            }
+            if (s.everwritten()) {
+                int first = s.firstwrite(), last = s.lastwrite();
+                if (first > opnum)
+                    ++first;
+                if (last >= opnum)
+                    ++last;
+                s.set_write (first, last);
+            }
+        }
+    }
+
+    if (opname != u_useparam) {
+        // Mark the args as being used for this op (assume that the
+        // first is written, the others are read).  Enforce that with an
+        // DASSERT to be sure we only use insert_code for the couple of
+        // instructions that we think it is used for.
+        DASSERT (opname == u_assign);
+        for (size_t a = 0;  a < args_to_add.size();  ++a)
+            inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
+    }
 }
 
 
@@ -291,8 +336,7 @@ RuntimeOptimizer::insert_useparam (size_t opnum,
                                    std::vector<int> &params_to_use)
 {
     OpcodeVec &code (inst()->ops());
-    static ustring useparam("useparam");
-    insert_code (opnum, useparam, params_to_use);
+    insert_code (opnum, u_useparam, params_to_use);
 
     // All ops are "read"
     code[opnum].argwrite (0, false);
@@ -345,7 +389,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
     // Loop over all ops...
     for (int opnum = 0;  opnum < (int)code.size();  ++opnum) {
         Opcode &op (code[opnum]);  // handy ref to the op
-        if (op.opname() == "useparam")
+        if (op.opname() == u_useparam)
             continue;  // skip useparam ops themselves, if we hit one
         bool in_main_code = (opnum >= inst()->m_maincodebegin);
         std::vector<int> params;   // list of params referenced by this op
@@ -1591,7 +1635,7 @@ DECLFOLDER(constfold_gettextureinfo)
                 std::vector<int> args_to_add;
                 args_to_add.push_back (resultarg);
                 args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-                rop.insert_code (opnum, u_assign, args_to_add);
+                rop.insert_code (opnum, u_assign, args_to_add, true);
                 Opcode &newop (rop.inst()->ops()[opnum]);
                 newop.argwriteonly (0);
                 newop.argread (1, true);

@@ -15,7 +15,6 @@ b: retrieved message 'foo' with wrong type, result = 0, foo = 0
 b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 b: retrieved message 'array' to { 42 43 44 45 }
 ERROR: message "already_queried" was queried before being set (queried here: b.osl:35) setting it now (b.osl:36) would lead to inconsistent results
-ERROR: message "message_on_same_layer" was set here b.osl:38 and is being queried here b.osl:39 - using a local variable would be more efficient
 ERROR: message "set_twice" already exists (created here: b.osl:41) cannot set again from b.osl:42
 ERROR: type mismatch for message "set_closure_get_int" (created as closure color here: b.osl:44) cannot fetch as int from b.osl:45
 ERROR: type mismatch for message "get_int_set_closure" (created as int here: b.osl:48) cannot fetch as closure color from b.osl:49

@@ -156,19 +156,6 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
                     sourceline);
                 return 0;
             }
-            if (m->layeridx == layeridx) {
-                // found message - but it is being transfered within a single node ...  a local variable would be much more efficient
-                if (sg->context->shadingsys().strict_messages())
-                    sg->context->shadingsys().error(
-                        "message \"%s\" was set here %s:%d and is being queried here %s:%d"
-                        " - using a local variable would be more efficient",
-                        name.c_str(),
-                        m->sourcefile.c_str(),
-                        m->sourceline,
-                        sourcefile.c_str(),
-                        sourceline);
-                // fall through to allow get to succeed
-            }
             // Message found!
             size_t size = type.size();
             memcpy (val, m->data, size);

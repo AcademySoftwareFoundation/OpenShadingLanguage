@@ -460,7 +460,7 @@ closure color emission() BUILTIN;
 closure color debug(string tag) BUILTIN;
 closure color background() BUILTIN;
 closure color holdout() BUILTIN;
-closure color subsurface(float eta, float g, float mfp, float albedo) BUILTIN;
+closure color subsurface(float eta, float g, color mfp, color albedo) BUILTIN;
 
 closure color cloth(normal N, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
                     float area_scaled, vector dPdu, color diff_warp_col, color diff_weft_col,

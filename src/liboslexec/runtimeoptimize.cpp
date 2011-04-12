@@ -1643,6 +1643,11 @@ DECLFOLDER(constfold_gettextureinfo)
                 return 1;
             } else {
                 rop.turn_into_assign_zero (op);
+                // If the get_texture_info failed, bubble error messages
+                // from the texture system back up to the renderer.
+                std::string err = rop.texturesys()->geterror();
+                if (! err.empty())
+                    rop.shadingsys().error ("%s", err.c_str());
                 return 1;
             }
         }

@@ -1,3 +1,19 @@
+Release 0.5.3 - Apr 19, 2011
+----------------------------
+* Fix missing derivatives for sign() function.
+* Fix closure color type size (crashes).
+* Fix bug with environment() when passed "alpha" pointers with derivatives.
+* Improve error messages for getmessage/setmessage to catch the most
+  common sources of non-deterministic behavior.
+* Bug fix when constant-folding gettextureinfo().
+* Fix mismatched prototype for subsurface() closure.
+* Texture errors encountered in shader constant folding are now properly
+  reported to the renderer.
+* Allow functions to have array parameters of unspecified length.
+* Fix subtle bug related to lifetime analysis of variables in loops (led
+  to incorrect optimizations).
+
+
 Release 0.5.2 - Mar 14, 2011
 ----------------------------
 

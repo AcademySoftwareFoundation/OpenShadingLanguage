@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
+#include "../liboslcomp/oslcomp_pvt.h"
 
 
 
@@ -96,10 +97,13 @@ ShaderMaster::findsymbol (ustring name) const
 void
 ShaderMaster::resolve_syms ()
 {
+    SymbolPtrVec allsymptrs;
+    allsymptrs.reserve (m_symbols.size());
     m_firstparam = -1;
     m_lastparam = -1;
     int i = 0;
     BOOST_FOREACH (Symbol &s, m_symbols) {
+        allsymptrs.push_back (&s);
         // Fix up the size of the symbol's data (for one point, not 
         // counting derivatives).
         if (s.typespec().is_closure()) {
@@ -140,6 +144,13 @@ ShaderMaster::resolve_syms ()
         }
         ++i;
     }
+
+    // Re-track variable lifetimes
+    SymbolPtrVec oparg_ptrs;
+    oparg_ptrs.reserve (m_args.size());
+    BOOST_FOREACH (int a, m_args)
+        oparg_ptrs.push_back (symbol (a));
+    OSLCompilerImpl::track_variable_lifetimes (m_ops, oparg_ptrs, allsymptrs);
 
     // Adjust statistics
     size_t opmem = vectorbytes (m_ops);

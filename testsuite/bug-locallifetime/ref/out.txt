@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+Ran 2 iterations
+

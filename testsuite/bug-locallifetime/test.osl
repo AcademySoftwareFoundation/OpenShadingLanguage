@@ -1,0 +1,28 @@
+// This is a regression test for a bug wherein the lifetime of the
+// 'done' variable was miscomputed, and as a result optimized away --
+// erroneously believing that the 'done=1' could be elided because it
+// was not subsequently read, but of course it survives to the next
+// iteration of the loop.
+//
+// With the bug, this runs 4 iterations.  When fixed, it runs two
+// iterations.
+
+shader test ()
+{
+    int done = 0;
+    int iters = 0;
+                
+    for (int i = 0; i < 4 && done < 1; i++) {
+        int success = (i == 0);
+        if (! success)
+            done = 1;
+        
+//        printf("iter %d %d\n", i, done);
+        
+        iters += 1;
+    }
+
+    printf ("Ran %d iterations\n", iters);
+    
+}
+

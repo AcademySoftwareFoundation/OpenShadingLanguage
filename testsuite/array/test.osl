@@ -1,3 +1,11 @@
+void test_unspecified_length (string s[])
+{
+    printf ("Verify compile of functions with array parameters of unspecified length:\n");
+    printf ("\tlength of s is %d\n", arraylength(s));
+}
+
+
+
 shader
 test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
 {
@@ -40,4 +48,6 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
     printf ("After carray[2] = color(u,v,4)...\n");
     carray[2] = color (u, v, 4);
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
+
+    test_unspecified_length (sarray);
 }

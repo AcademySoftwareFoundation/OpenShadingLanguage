@@ -274,6 +274,10 @@ metadatum
                 {
                     TypeDesc simple = lextype ($1);
                     simple.arraylen = $3;
+                    if (simple.arraylen < 1)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Invalid array length for %s", $2);
                     TypeSpec t (simple, false);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
@@ -397,6 +401,10 @@ typed_field
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
+                    if (t.arraylength() < 1)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Invalid array length for %s", $1);
                     oslcompiler->symtab().add_struct_field (t, ustring($1));
                     $$ = 0;
                 }
@@ -428,6 +436,10 @@ def_expression
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
+                    if (t.arraylength() < 1)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Invalid array length for %s", $1);
                     $$ = new ASTvariable_declaration (oslcompiler, t, 
                                  ustring($1), $3, false, false, false,
                                  true /* initializer list */);
@@ -526,7 +538,15 @@ simple_typename
         ;
 
 arrayspec
-        : '[' INT_LITERAL ']'           { $$ = $2; }
+        : '[' INT_LITERAL ']'
+                {
+                    if ($2 < 1)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Invalid array length (%d)", $2);
+                    $$ = $2;
+                }
+        | '[' ']'                       { $$ = -1; }
         ;
 
 /* typespec operates by merely setting the current_typespec */

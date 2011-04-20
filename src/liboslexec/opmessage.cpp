@@ -169,3 +169,39 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
         messages.add(name, NULL, type, layeridx, sourcefile, sourceline);
     return 0;
 }
+
+
+
+#if 0
+OSL_SHADEOP int
+osl_get_attribute (ShaderGlobals *sg,
+                   int   dest_derivs,
+                   const char *obj_name_,
+                   const char *attr_name_,
+                   int   array_lookup,
+                   int   index,
+                   const void *attr_type,
+                   void *attr_dest)
+{
+    const ustring &obj_name  = USTR(obj_name_);
+    const ustring &attr_name = USTR(attr_name_);
+    bool ok;
+    if (array_lookup)
+        ok = sg->context->renderer()->get_array_attribute (sg->renderstate,
+                                                           dest_derivs,
+                                                           obj_name,
+                                                           *(TypeDesc *)attr_type,
+                                                           attr_name,
+                                                           index,
+                                                           attr_dest);
+    else
+        ok = sg->context->renderer()->get_attribute (sg->renderstate,
+                                                     dest_derivs,
+                                                     obj_name,
+                                                     *(TypeDesc *)attr_type,
+                                                     attr_name,
+                                                     attr_dest);
+    return ok;
+}
+#endif
+

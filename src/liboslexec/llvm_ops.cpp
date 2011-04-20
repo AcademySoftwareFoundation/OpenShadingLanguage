@@ -1721,6 +1721,7 @@ osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
 
 
 
+#if 1
 OSL_SHADEOP int osl_get_attribute(void *sg_,
                              int   dest_derivs,
                              void *obj_name_,
@@ -1734,6 +1735,13 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
     const ustring &obj_name  = USTR(obj_name_);
     const ustring &attr_name = USTR(attr_name_);
 
+#if 1
+    return sg->context->osl_get_attribute (sg->renderstate, dest_derivs,
+                                           obj_name, attr_name,
+                                           array_lookup, index,
+                                           *(const TypeDesc *)attr_type,
+                                           attr_dest);
+#else
     if (array_lookup)
         return sg->context->renderer()->get_array_attribute(sg->renderstate,  
                                                   dest_derivs,
@@ -1749,7 +1757,10 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
                                                   *(TypeDesc *)attr_type,
                                                   attr_name,
                                                   attr_dest);
+#endif
 }
+#endif
+
 
 inline Vec3 calculatenormal(void *P_, bool flipHandedness)
 {

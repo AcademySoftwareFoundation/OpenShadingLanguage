@@ -811,6 +811,9 @@ private:
     double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
     double m_stat_llvm_jit_time;          ///<     llvm JIT time 
+    double m_stat_getattribute_time;      ///< Stat: time spend in getattribute
+    double m_stat_getattribute_fail_time;      ///< Stat: time spend in getattribute
+    atomic_ll m_stat_getattribute_calls;  ///< Stat: Number of getattribute
 
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory
 
@@ -1031,6 +1034,12 @@ public:
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
     bool prepare_execution (ShaderUse use, ShadingAttribState &sas);
+
+    bool osl_get_attribute (void *renderstate, int dest_derivs,
+                            ustring obj_name, ustring attr_name,
+                            int array_lookup, int index,
+                            TypeDesc attr_type, void *attr_dest);
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,

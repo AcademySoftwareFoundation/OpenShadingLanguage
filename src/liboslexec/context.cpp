@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/timer.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -46,6 +47,8 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 
 namespace pvt {   // OSL::pvt
+
+using OIIO::Timer;
 
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys) 
@@ -174,6 +177,33 @@ ShadingContext::find_regex (ustring r)
     return *m_regex_map[r];
 }
 
+
+
+bool
+ShadingContext::osl_get_attribute (void *renderstate, int dest_derivs,
+                                   ustring obj_name, ustring attr_name,
+                                   int array_lookup, int index,
+                                   TypeDesc attr_type, void *attr_dest)
+{
+    Timer timer;
+    bool ok;
+    if (array_lookup)
+        ok = renderer()->get_array_attribute (renderstate, dest_derivs,
+                                              obj_name, attr_type,
+                                              attr_name, index, attr_dest);
+    else
+        ok = renderer()->get_attribute (renderstate, dest_derivs,
+                                        obj_name, attr_type,
+                                        attr_name, attr_dest);
+//    timer(); timer();
+    double time = timer();
+    shadingsys().m_stat_getattribute_time += time;
+    if (!ok)
+        shadingsys().m_stat_getattribute_fail_time += time;
+    shadingsys().m_stat_getattribute_calls += 1;
+//    std::cout << "! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << ' ' << ok << "\n";
+    return ok;
+}
 
 
 }; // namespace pvt

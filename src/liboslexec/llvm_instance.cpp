@@ -509,8 +509,9 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back (llvm_type_triple());  // dPdtime
     sg_types.push_back (triple_deriv);        // Ps
 
-    sg_types.push_back(llvm_type_void_ptr()); // opaque render state*
-    sg_types.push_back(llvm_type_void_ptr()); // opaque trace data*
+    sg_types.push_back(llvm_type_void_ptr()); // opaque renderstate*
+    sg_types.push_back(llvm_type_void_ptr()); // opaque tracedata*
+    sg_types.push_back(llvm_type_void_ptr()); // opaque objdata*
     sg_types.push_back(llvm_type_void_ptr()); // ShadingContext*
     sg_types.push_back(llvm_type_void_ptr()); // object2common
     sg_types.push_back(llvm_type_void_ptr()); // shader2common
@@ -675,7 +676,7 @@ ShaderGlobalNameToIndex (ustring name)
         Strings::P, Strings::I, Strings::N, Strings::Ng,
         Strings::u, Strings::v, Strings::dPdu, Strings::dPdv,
         Strings::time, Strings::dtime, Strings::dPdtime, Strings::Ps,
-        ustring("renderstate"), ustring("tracedata"),
+        ustring("renderstate"), ustring("tracedata"), ustring("objdata"),
         ustring("shadingcontext"),
         ustring("object2common"), ustring("shader2common"),
         Strings::Ci,

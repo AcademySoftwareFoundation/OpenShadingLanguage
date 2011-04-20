@@ -171,6 +171,9 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_total_syms = 0;
     m_stat_syms_with_derivs = 0;
     m_stat_optimization_time = 0;
+    m_stat_getattribute_time = 0;
+    m_stat_getattribute_fail_time = 0;
+    m_stat_getattribute_calls = 0;
 
     init_global_heap_offsets ();
 
@@ -543,7 +546,12 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
-
+    if (m_stat_getattribute_calls) {
+        out << "  getattribute calls: " << m_stat_getattribute_calls << " ("
+            << Strutil::timeintervalformat (m_stat_getattribute_time, 2) << ")\n";
+        out << "     (fail time "
+            << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
+    }
     out << "  Memory total: " << m_stat_memory.memstat() << '\n';
     out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';
     out << "        Master ops:            " << m_stat_mem_master_ops.memstat() << '\n';

@@ -35,6 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/timer.h>
+#include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
 #include "oslops.h"
@@ -47,10 +49,12 @@ namespace OSL {
 
 namespace pvt {   // OSL::pvt
 
+using OIIO::Timer;
+
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys) 
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_attribs(NULL), m_dictionary(NULL)
+      m_attribs(NULL), m_dictionary(NULL), m_next_failed_attrib(0)
 {
     m_shadingsys.m_stat_contexts += 1;
 }
@@ -174,6 +178,68 @@ ShadingContext::find_regex (ustring r)
     return *m_regex_map[r];
 }
 
+
+
+bool
+ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
+                                   int dest_derivs,
+                                   ustring obj_name, ustring attr_name,
+                                   int array_lookup, int index,
+                                   TypeDesc attr_type, void *attr_dest)
+{
+#if 0
+    // Change the #if's below if you want to 
+    Timer timer;
+#endif
+    bool ok;
+
+    for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
+        if ((obj_name || m_failed_attribs[i].objdata == objdata) &&
+            m_failed_attribs[i].attr_name == attr_name &&
+            m_failed_attribs[i].obj_name == obj_name &&
+            m_failed_attribs[i].attr_type == attr_type &&
+            m_failed_attribs[i].array_lookup == array_lookup &&
+            m_failed_attribs[i].index == index &&
+            m_failed_attribs[i].objdata) {
+#if 0
+            double time = timer();
+            shadingsys().m_stat_getattribute_time += time;
+            shadingsys().m_stat_getattribute_fail_time += time;
+            shadingsys().m_stat_getattribute_calls += 1;
+#endif
+            return false;
+        }
+    }
+
+    if (array_lookup)
+        ok = renderer()->get_array_attribute (renderstate, dest_derivs,
+                                              obj_name, attr_type,
+                                              attr_name, index, attr_dest);
+    else
+        ok = renderer()->get_attribute (renderstate, dest_derivs,
+                                        obj_name, attr_type,
+                                        attr_name, attr_dest);
+    if (!ok) {
+        int i = m_next_failed_attrib;
+        m_failed_attribs[i].objdata = objdata;
+        m_failed_attribs[i].obj_name = obj_name;
+        m_failed_attribs[i].attr_name = attr_name;
+        m_failed_attribs[i].attr_type = attr_type;
+        m_failed_attribs[i].array_lookup = array_lookup;
+        m_failed_attribs[i].index = index;
+        m_next_failed_attrib = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
+    }
+
+#if 0
+    double time = timer();
+    shadingsys().m_stat_getattribute_time += time;
+    if (!ok)
+        shadingsys().m_stat_getattribute_fail_time += time;
+    shadingsys().m_stat_getattribute_calls += 1;
+#endif
+//    std::cout << "getattribute! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << " ok=" << ok << ", objdata was " << objdata << "\n";
+    return ok;
+}
 
 
 }; // namespace pvt

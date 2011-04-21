@@ -257,6 +257,15 @@ public:
     void struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
                             Symbol * &field1, Symbol * &field2);
 
+    /// Given symbol names sym1 and sym2, both the same kind of struct
+    /// described by structspec, and the index of the structure field
+    /// we're interested in, find the symbols that represent that field
+    /// in the each sym[12] and place them in field1 and field2,
+    /// respectively.
+    void struct_field_pair (const StructSpec *structspec, int fieldnum,
+                            ustring sym1, ustring sym2,
+                            Symbol * &field1, Symbol * &field2);
+
     static void track_variable_lifetimes (const OpcodeVec &ircode,
                                           const SymbolPtrVec &opargs,
                                           const SymbolPtrVec &allsyms);

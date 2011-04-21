@@ -318,15 +318,27 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (type.is_structure ()) {
         ASSERT (! m_ismetadata);
         // Add the fields as individual declarations
-        StructSpec *structspec (type.structspec());
-        for (int i = 0;  i < (int)structspec->numfields();  ++i) {
-            const StructSpec::FieldSpec &field (structspec->field(i));
-            ustring fieldname = ustring::format ("%s.%s",
-                                                 m_sym->name().c_str(),
-                                                 field.name.c_str());
-            Symbol *sym = new Symbol (fieldname, field.type, symtype, this);
-            sym->fieldid (i);
-            oslcompiler->symtab().insert (sym);
+        add_struct_fields (type.structspec(), m_sym->name(), symtype);
+    }
+}
+
+
+
+void
+ASTvariable_declaration::add_struct_fields (StructSpec *structspec,
+                                            ustring basename, SymType symtype)
+{
+    for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+        const StructSpec::FieldSpec &field (structspec->field(i));
+        ustring fieldname = ustring::format ("%s.%s",
+                                             basename.c_str(),
+                                             field.name.c_str());
+        Symbol *sym = new Symbol (fieldname, field.type, symtype, this);
+        sym->fieldid (i);
+        oslcompiler->symtab().insert (sym);
+        if (field.type.is_structure()) {
+            // nested structures -- recurse!
+            add_struct_fields (field.type.structspec(), fieldname, symtype);
         }
     }
 }
@@ -429,36 +441,75 @@ ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
     : ASTNode (structselect_node, comp, 0, expr), m_field(field),
       m_structid(-1), m_fieldid(-1), m_mangledsym(NULL)
 {
-    // Make sure it's a struct
-    ASSERT (lvalue()->nodetype() == variable_ref_node);
-    ASTvariable_ref *var = (ASTvariable_ref *) lvalue().get();
-    if (! var->typespec().is_structure()) {
-        error ("%s is not a struct", var->name().c_str());
-        return;
-    }
-
-    // Make sure the named field exists in this struct type
-    m_structid = var->typespec().structure();
-    StructSpec *structspec (var->typespec().structspec());
-    for (int i = 0;  i < (int)structspec->numfields();  ++i) {
-        if (structspec->field(i).name == field) {
-            m_fieldid = i;
-            break;
+    if (lvalue()->nodetype() == variable_ref_node) {
+        // struct.member
+        ASTvariable_ref *thestruct = (ASTvariable_ref *) lvalue().get();
+        if (! thestruct->typespec().is_structure()) {
+            error ("%s is not a struct", thestruct->name().c_str());
+            return;
         }
-    }
-    if (m_fieldid < 0) {
-        error ("'%s' (struct type '%s') does not have a member '%s'",
-               var->name().c_str(), structspec->name().c_str(),
-               field.c_str());
-        return;
-    }
 
-    // Construct the mangled symbol name and a pointer to the mangled
-    // field, so we don't have to do it over and over again.
-    const StructSpec::FieldSpec &fieldrec (structspec->field(m_fieldid));
-    m_mangledfield = ustring::format ("%s.%s", var->name().c_str(),
-                                      fieldrec.name.c_str());
-    m_mangledsym = comp->symtab().find (m_mangledfield);
+        // Make sure the named field exists in this struct type
+        m_structid = thestruct->typespec().structure();
+        StructSpec *structspec (thestruct->typespec().structspec());
+        for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+            if (structspec->field(i).name == field) {
+                m_fieldid = i;
+                break;
+            }
+        }
+        if (m_fieldid < 0) {
+            error ("'%s' (struct type '%s') does not have a member '%s'",
+                   thestruct->name().c_str(), structspec->name().c_str(),
+                   field.c_str());
+            return;
+        }
+
+        // Construct the mangled symbol name and a pointer to the mangled
+        // field, so we don't have to do it over and over again.
+        const StructSpec::FieldSpec &fieldrec (structspec->field(m_fieldid));
+        m_mangledfield = ustring::format ("%s.%s", thestruct->name().c_str(),
+                                          fieldrec.name.c_str());
+        m_mangledsym = comp->symtab().find (m_mangledfield);
+        m_typespec = fieldrec.type;
+    }
+    else if (lvalue()->nodetype() == index_node) {
+        // arrayofstructs[i].member
+        ASSERT (0 && "Malformed ASTstructselect");
+    }
+    else if (lvalue()->nodetype() == structselect_node) {
+        // struct1.struct2.member  -- struct with a struct inside
+        ASTstructselect *thestruct = (ASTstructselect *) lvalue().get();
+        if (! thestruct->typespec().is_structure()) {
+            error ("not a struct (%s)", thestruct->typespec().c_str());
+            return;
+        }
+
+        // Make sure the named field exists in this struct type
+        m_structid = thestruct->typespec().structure();
+        StructSpec *structspec (thestruct->typespec().structspec());
+        for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+            if (structspec->field(i).name == field) {
+                m_fieldid = i;
+                break;
+            }
+        }
+        if (m_fieldid < 0) {
+            error ("struct type '%s' does not have a member '%s'",
+                   structspec->name().c_str(), field.c_str());
+            return;
+        }
+
+        // Construct the mangled symbol name and a pointer to the mangled
+        // field, so we don't have to do it over and over again.
+        const StructSpec::FieldSpec &fieldrec (structspec->field(m_fieldid));
+        m_mangledfield = ustring::format ("%s.%s", thestruct->mangledfield().c_str(),
+                                          fieldrec.name.c_str());
+        m_mangledsym = comp->symtab().find (m_mangledfield);
+    }
+    else {
+        ASSERT (0 && "Malformed ASTstructselect");
+    }
 }
 
 
@@ -466,7 +517,7 @@ ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
 const char *
 ASTstructselect::childname (size_t i) const
 {
-    static const char *name[] = { "variable" };
+    static const char *name[] = { "structure" };
     return name[i];
 }
 

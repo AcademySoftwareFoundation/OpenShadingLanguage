@@ -203,10 +203,6 @@ public:
     ///
     static int new_struct (StructSpec *n);
 
-    /// Return a pointer to the last structure added to the end of the
-    /// structure list.
-    static StructSpec *last_struct () { return struct_list().back().get(); }
-
     /// Return a reference to the structure list.
     ///
     static std::vector<shared_ptr<StructSpec> > & struct_list ();

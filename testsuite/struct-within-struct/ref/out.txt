@@ -1,0 +1,12 @@
+Compiled test.osl -> test.oso
+test struct within struct
+
+test struct-with-struct field assignment:
+  ok
+test passing the outer struct to a function:
+ b == { 2.71828, { 3.14159, [1 2 3 4 5], [0 1 2] } }
+test passing the inner struct to a function:
+ b.a == { 3.14159, [1 2 3 4 5], [0 1 2] }
+test sub-structure assignment:
+ after b.a=aparam, b.a= == { 1, [10 11 12 13 14], [3 4 5] }
+

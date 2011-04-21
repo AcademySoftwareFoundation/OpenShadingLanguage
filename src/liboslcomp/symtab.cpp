@@ -182,10 +182,20 @@ SymbolTable::new_struct (ustring name)
 
 
 
+StructSpec *
+SymbolTable::current_struct ()
+{
+    return TypeSpec::struct_list().back().get();
+}
+
+
+
 void
 SymbolTable::add_struct_field (const TypeSpec &type, ustring name)
 {
-    TypeSpec::last_struct()->add_field (type, name);
+    StructSpec *s = current_struct();
+    ASSERT (s && "add_struct_field couldn't find a current struct");
+    s->add_field (type, name);
 }
 
 

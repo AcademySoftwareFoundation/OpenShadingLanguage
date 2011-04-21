@@ -213,6 +213,8 @@ public:
 
     void add_struct_field (const TypeSpec &type, ustring name);
 
+    StructSpec *current_struct ();
+
     /// Return the current scope ID
     ///
     int scopeid () const {

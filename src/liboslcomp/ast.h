@@ -435,6 +435,11 @@ private:
     bool param_one_default_literal (const Symbol *sym, ASTNode *init,
                                     std::string &out);
 
+    // Add individual symbols for each field of a structure, using the
+    // given basename.
+    void add_struct_fields (StructSpec *structspec, ustring basename,
+                            SymType symtype);
+
     ustring m_name;     ///< Name of the symbol (unmangled)
     Symbol *m_sym;      ///< Ptr to the symbol this declares
     bool m_isparam;     ///< Is this a parameter?
@@ -544,6 +549,9 @@ public:
 
     ref lvalue () const { return child (0); }
     ustring field () const { return m_field; }
+    ustring mangledfield () const { return m_mangledfield; }
+    Symbol *mangledsym () const { return m_mangledsym; }
+
 private:
     ustring m_field;         ///< Name of the field
     int m_structid;          ///< index of the structure
@@ -664,6 +672,9 @@ public:
 
     ref var () const { return child (0); }
     ref expr () const { return child (1); }
+private:
+    void codegen_assign_struct (StructSpec *structspec,
+                                ustring dstsym, ustring srcsym);
 };
 
 
@@ -857,6 +868,18 @@ private:
                 m_argtakesderivs &= ~(1 << arg);
         }
     }
+
+    void codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index,
+                      SymbolPtrVec &index1, SymbolPtrVec &index2,
+                      int argnum, ASTNode *arg,
+                      ASTNode *form, const TypeSpec &formaltype,
+                      bool writearg,
+                      bool &indexed_output_params);
+
+    /// Call compiler->struct_field_pair for each field in the struct.
+    ///
+    void struct_pair_all_fields (StructSpec *structspec,
+                                 ustring formal, ustring actual);
 
     ustring m_name;                 ///< Name of the function being called
     Symbol *m_sym;                  ///< Symbol of the function

@@ -412,36 +412,57 @@ ASTassign_expression::codegen (Symbol *dest)
     }
     dest = index ? NULL : var()->codegen();
     Symbol *operand = expr()->codegen (dest);
+    ASSERT (operand != NULL);
 
     if (typespec().is_structure()) {
         // Assignment of struct copies each element individually
         StructSpec *structspec = typespec().structspec ();
-        for (int i = 0;  i < (int)structspec->numfields();  ++i) {
-            Symbol *dfield, *ofield;
-            m_compiler->struct_field_pair (dest, operand, i, dfield, ofield);
-            if (dfield->typespec().is_array()) {
-                // field is an array
-                TypeSpec elemtype = dfield->typespec().elementtype();
-                Symbol *tmp = m_compiler->make_temporary (elemtype);
-                for (int e = 0;  e < dfield->typespec().arraylength();  ++e) {
-                    Symbol *index = m_compiler->make_constant (e);
-                    emitcode ("aref", tmp, ofield, index);
-                    emitcode ("aassign", dfield, index, tmp);
-                }
-            } else {
-                // field is a scalar
-                emitcode ("assign", dfield, ofield);
-            }
-        }
+        codegen_assign_struct (structspec, ustring(dest->mangled()),
+                               ustring(operand->mangled()));
         return dest;
     }
-
 
     if (index)
         index->codegen_assign (operand);
     else if (operand != dest)
         emitcode ("assign", dest, operand);
     return dest;
+}
+
+
+
+void
+ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
+                                             ustring dstsym, ustring srcsym)
+{
+    for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+        const TypeSpec &fieldtype (structspec->field(i).type);
+        if (fieldtype.is_structure()) {
+            // struct within struct -- recurse
+            ustring fieldname (structspec->field(i).name);
+            codegen_assign_struct (fieldtype.structspec(),
+                                   ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str()),
+                                   ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str()));
+            continue;
+        }
+
+        Symbol *dfield, *ofield;
+        m_compiler->struct_field_pair (structspec, i, dstsym, srcsym,
+                                       dfield, ofield);
+        if (dfield->typespec().is_array()) {
+            // field is an array
+            TypeSpec elemtype = dfield->typespec().elementtype();
+            Symbol *tmp = m_compiler->make_temporary (elemtype);
+            for (int e = 0;  e < dfield->typespec().arraylength();  ++e) {
+                Symbol *index = m_compiler->make_constant (e);
+                emitcode ("aref", tmp, ofield, index);
+                emitcode ("aassign", dfield, index, tmp);
+            }
+        } else {
+            // field is a scalar
+            emitcode ("assign", dfield, ofield);
+        }
+    }
 }
 
 
@@ -1292,9 +1313,7 @@ ASTfunction_call::codegen (Symbol *dest)
     // Generate code for all the individual arguments.  Remember the
     // individual indices for arguments that are array elements or
     // vector/color/matrix components.
-    size_t nargs = listlength (args());
-    std::vector<Symbol *> argdest;
-    std::vector<Symbol *> index (nargs, 0), index2(nargs, 0), index3(nargs, 0);
+    SymbolPtrVec argdest, index, index2, index3;
     bool indexed_output_params = false;
     int argdest_return_offset = 0;
     ASTNode *a = args().get();
@@ -1302,38 +1321,11 @@ ASTfunction_call::codegen (Symbol *dest)
     int returnarg = !typespec().is_void();
     ASTNode *form = is_user_function() ? user_function()->formals().get() : NULL;
     for (int i = 0;  a;  a = a->nextptr(), ++i) {
-        Symbol *thisarg = NULL;
-        if (a->nodetype() == index_node && argwrite(i+returnarg)) {
-            // Special case for individual array elements or vec/col/matrix
-            // components being passed as output params of the function --
-            // these aren't really lvalues, so we need to restore their
-            // values.  We save the indices we genearate code for here...
-            ASSERT(a->nodetype() == ASTNode::index_node);
-            ASTindex *indexnode = static_cast<ASTindex *> (a);
-            thisarg = indexnode->codegen (NULL, index[i], index2[i], index3[i]);
-            indexed_output_params = true;
-        } else {
-            thisarg = a->codegen ();
-        }
-        // Handle type coercion of the argument
-        if (i < (int)polyargs.size() &&
-                polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN) &&
-                polyargs[i].simpletype() != TypeDesc(TypeDesc::UNKNOWN, -1)) {
-            Symbol *origarg = thisarg;
-            thisarg = coerce (thisarg, polyargs[i]);
-            // Error to type-coerce an output -- where would the result go?
-            if (thisarg != origarg && form &&
-                    ! equivalent (origarg->typespec(), form->typespec()) &&
-                    form->nodetype() == variable_declaration_node &&
-                    ((ASTvariable_declaration *)form)->is_output()) {
-                error ("Cannot pass '%s %s' as argument %d to %s\n\t"
-                       "because it is an output parameter that must be a %s",
-                       origarg->typespec().c_str(), origarg->name().c_str(),
-                       i+1, user_function()->func()->name().c_str(),
-                       form->typespec().c_str());
-            }
-        }
-        argdest.push_back (thisarg);
+        TypeSpec formaltype = (i < (int)polyargs.size()) ? polyargs[i]
+            : TypeSpec(TypeDesc::UNKNOWN);
+        bool writearg = argwrite(i+returnarg);
+            codegen_arg (argdest, index, index2, index3, i, a, form, formaltype,
+                         writearg, indexed_output_params);
         if (form)
             form = form->nextptr();
     }
@@ -1348,19 +1340,23 @@ ASTfunction_call::codegen (Symbol *dest)
         ASTNode *a = args().get();
         for (int i = 0;  a;  a = a->nextptr(), form = form->nextptr(), ++i) {
             ASTvariable_declaration *f = (ASTvariable_declaration *) form;
-            f->sym()->alias (argdest[i]);
-
+            const TypeSpec &ftype (f->sym()->typespec());
             // If the formal parameter is a struct, we also need to alias
             // each of the fields
-            const TypeSpec &ftype (f->sym()->typespec());
             if (ftype.is_structure()) {
-                StructSpec *structspec (ftype.structspec());
-                for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
-                    Symbol *fsym, *asym;
-                    m_compiler->struct_field_pair (f->sym(), argdest[i], fi,
-                                                   fsym, asym);
-                    fsym->alias (asym);
+                if (a->nodetype() == variable_ref_node) {
+                    struct_pair_all_fields (ftype.structspec(),
+                                            ustring(f->sym()->mangled()),
+                                            ustring(argdest[i]->mangled()));
+                } else if (a->nodetype() == structselect_node) {
+                    struct_pair_all_fields (ftype.structspec(),
+                                            ustring(f->sym()->mangled()),
+                                            ((ASTstructselect *)a)->mangledfield());
+                } else {
+                    ASSERT (0 && "unhandled structure designation");
                 }
+            } else {
+                f->sym()->alias (argdest[i]);
             }
         }
 
@@ -1429,6 +1425,85 @@ ASTfunction_call::codegen (Symbol *dest)
     }
 
     return dest;
+}
+
+
+
+/// Generate code for one argument to the function, appending its value
+/// symbol to argdest and any indexing arguments to index, index2,
+/// index3.  If the argument a struct, recurse.
+void
+ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
+                               SymbolPtrVec &index2, SymbolPtrVec &index3,
+                               int argnum, ASTNode *arg,
+                               ASTNode *form, const TypeSpec &formaltype,
+                               bool writearg,
+                               bool &indexed_output_params)
+{
+    Symbol *thisarg = NULL;
+    Symbol *ind1 = NULL, *ind2 = NULL, *ind3 = NULL; // array/component indices
+
+    bool is_struct = arg->typespec().is_structure();
+    if (is_struct) {
+        // Structure arguments
+        thisarg = arg->codegen ();
+    } else if (arg && arg->nodetype() == index_node && writearg) {
+        // Special case for individual array elements or vec/col/matrix
+        // components being passed as output params of the function --
+        // these aren't really lvalues, so we need to restore their
+        // values.  We save the indices we genearate code for here...
+        ASSERT (arg->nodetype() == ASTNode::index_node);
+        ASTindex *indexnode = static_cast<ASTindex *> (arg);
+        thisarg = indexnode->codegen (NULL, ind1, ind2, ind3);
+        indexed_output_params = true;
+    } else {
+        // Anything else
+        thisarg = arg->codegen ();
+    }
+    // Handle type coercion of the argument
+    if (!is_struct && formaltype.simpletype() != TypeDesc(TypeDesc::UNKNOWN) &&
+          formaltype.simpletype() != TypeDesc(TypeDesc::UNKNOWN, -1)) {
+        Symbol *origarg = thisarg;
+        thisarg = coerce (thisarg, formaltype);
+        // Error to type-coerce an output -- where would the result go?
+        if (thisarg != origarg && form &&
+            ! equivalent (origarg->typespec(), form->typespec()) &&
+            form->nodetype() == variable_declaration_node &&
+            ((ASTvariable_declaration *)form)->is_output()) {
+            error ("Cannot pass '%s %s' as argument %d to %s\n\t"
+                   "because it is an output parameter that must be a %s",
+                   origarg->typespec().c_str(), origarg->name().c_str(),
+                   argnum+1, user_function()->func()->name().c_str(),
+                   form->typespec().c_str());
+        }
+    }
+    argdest.push_back (thisarg);
+    index1.push_back (ind1);
+    index2.push_back (ind2);
+    index3.push_back (ind3);
+}
+
+
+
+void
+ASTfunction_call::struct_pair_all_fields (StructSpec *structspec,
+                                          ustring formal, ustring actual)
+{
+    for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
+        const StructSpec::FieldSpec &field (structspec->field(fi));
+        const TypeSpec &type (field.type);
+        if (type.is_structure()) {
+            // struct within struct -- recurse!
+            struct_pair_all_fields (type.structspec(),
+                                    ustring::format ("%s.%s", formal.c_str(), field.name.c_str()),
+                                    ustring::format ("%s.%s", actual.c_str(), field.name.c_str()));
+        } else {
+            Symbol *fsym, *asym;
+            m_compiler->struct_field_pair (structspec, fi, formal, actual,
+                                           fsym, asym);
+            fsym->alias (asym);
+        }
+    }
 }
 
 

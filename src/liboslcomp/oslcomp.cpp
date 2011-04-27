@@ -867,6 +867,7 @@ OSLCompilerImpl::type_c_str (const TypeSpec &type) const
 
 
 
+
 void
 OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
                                     Symbol * &field1, Symbol * &field2)
@@ -883,6 +884,25 @@ OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
     ustring name1 = ustring::format ("%s.%s", sym1->mangled().c_str(),
                                      field.name.c_str());
     ustring name2 = ustring::format ("%s.%s", sym2->mangled().c_str(),
+                                     field.name.c_str());
+    // Retrieve the symbols
+    field1 = symtab().find_exact (name1);
+    field2 = symtab().find_exact (name2);
+    ASSERT (field1 && field2);
+}
+
+
+
+void
+OSLCompilerImpl::struct_field_pair (const StructSpec *structspec, int fieldnum,
+                                    ustring sym1, ustring sym2,
+                                    Symbol * &field1, Symbol * &field2)
+{
+    // Find the FieldSpec for the field we are interested in
+    const StructSpec::FieldSpec &field (structspec->field(fieldnum));
+    ustring name1 = ustring::format ("%s.%s", sym1.c_str(),
+                                     field.name.c_str());
+    ustring name2 = ustring::format ("%s.%s", sym2.c_str(),
                                      field.name.c_str());
     // Retrieve the symbols
     field1 = symtab().find_exact (name1);

@@ -1,0 +1,99 @@
+//
+// Test structs containing other structs
+//
+
+
+
+// struct declaration in global scope
+struct Astruct {
+    float f;
+    int i[5];
+    point p;
+};
+
+
+struct Bstruct {
+    float x;
+    Astruct a;
+};
+
+
+
+void test_output_param (output float fout)
+{
+    fout = 310.5;
+}
+
+
+float func_with_struct_param (Astruct ap)
+{
+    return ap.f * 2;
+}
+
+
+
+void func_with_struct_output_param (output Astruct ap)
+{
+    ap.i[1] *= 14;
+}
+
+
+
+void printA (string name, Astruct a)
+{
+    printf ("%s == { %g, [%i], [%g] }\n", name,
+            a.f, a.i, a.p);
+}
+
+
+
+void printB (string name, Bstruct b)
+{
+    printf ("%s == { %g, { %g, [%i], [%g] } }\n", name,
+            b.x, b.a.f, b.a.i, b.a.p);
+}
+
+
+
+shader
+test (
+    Astruct aparam = { 1.0, {10,11,12,13,14}, point(3,4,5) }
+)
+{
+    printf ("test struct within struct\n\n");
+
+    // Make sure it came in ok as a param
+//    printA ("aparam", aparam);
+
+    // Make some structs
+    Astruct a;
+    Bstruct b;
+
+    b.x = M_E;
+
+    // Field assignment and access
+    printf ("test struct-with-struct field assignment:\n");
+    b.a.f = M_PI;
+    if (b.a.f == M_PI)
+        printf ("  ok\n");
+    else
+        printf ("  fail\n");
+    b.a.i[0] = 1;
+    b.a.i[1] = 2;
+    b.a.i[2] = 3;
+    b.a.i[3] = 4;
+    b.a.i[4] = 5;
+    b.a.p = point (0, 1, 2);
+
+    printf ("test passing the outer struct to a function:\n");
+    printB (" b", b); // also tests param passing a struct containing a struct
+
+    printf ("test passing the inner struct to a function:\n");
+    printA (" b.a", b.a);
+    
+
+    // Structure assignment
+    printf ("test sub-structure assignment:\n");
+    b.a = aparam;
+    printA (" after b.a=aparam, b.a=", b.a);
+}

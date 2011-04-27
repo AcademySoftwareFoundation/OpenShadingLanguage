@@ -3871,7 +3871,7 @@ LLVMGEN (llvm_gen_dict_next)
 {
     // dict_net is very straightforward -- just insert sg ptr as first arg
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 3);
+    DASSERT (op.nargs() == 2);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& NodeID = *rop.opargsym (op, 1);
     DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int());
@@ -3888,7 +3888,7 @@ LLVMGEN (llvm_gen_dict_value)
 {
     // int dict_value (int nodeID, string attribname, output TYPE value)
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 3);
+    DASSERT (op.nargs() == 4);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& NodeID = *rop.opargsym (op, 1);
     Symbol& Name   = *rop.opargsym (op, 2);

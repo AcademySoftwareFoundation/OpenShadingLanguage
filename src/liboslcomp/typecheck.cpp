@@ -318,8 +318,9 @@ TypeSpec
 ASTstructselect::typecheck (TypeSpec expected)
 {
     // The ctr already figured out if this was a valid structure selection
-    if (m_fieldid < 0 || m_mangledsym == NULL)
+    if (m_fieldid < 0 || m_mangledsym == NULL) {
         return TypeSpec();
+    }
 
     typecheck_children ();
     StructSpec *structspec (TypeSpec::structspec (m_structid));

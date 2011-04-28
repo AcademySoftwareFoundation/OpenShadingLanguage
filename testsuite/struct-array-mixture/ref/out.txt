@@ -1,0 +1,23 @@
+Compiled test.osl -> test.oso
+Using a D directly in main:
+d.c.bs[0].a.i = 0
+d.c.bs[1].a.i = 1
+d.c.bs[2].a.i = 2
+d.c.bs[3].a.i = 3
+d.c.bs[4].a.i = 4
+
+passing a ref to a D:
+d.c.bs[0].a.i = 0
+d.c.bs[1].a.i = 2
+d.c.bs[2].a.i = 4
+d.c.bs[3].a.i = 6
+d.c.bs[4].a.i = 8
+
+passing a ref to a C:
+c.bs[0].a.i = 0
+c.bs[1].a.i = 3
+c.bs[2].a.i = 6
+c.bs[3].a.i = 9
+c.bs[4].a.i = 12
+
+

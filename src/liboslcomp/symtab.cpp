@@ -55,22 +55,14 @@ TypeSpec::string () const
     std::string str;
     if (is_closure())
         str += "closure color";
-    else if (is_structure())
+    else if (structure() > 0) {
         str += Strutil::format ("struct %d", structure());
-    else {
-        // Substitute some special names
-        if (m_simple == TypeDesc::TypeColor)
-            str += "color";
-        else if (m_simple == TypeDesc::TypePoint)
-            str += "point";
-        else if (m_simple == TypeDesc::TypeVector)
-            str += "vector";
-        else if (m_simple == TypeDesc::TypeNormal)
-            str += "normal";
-        else if (m_simple == TypeDesc::TypeMatrix)
-            str += "matrix";
-        else
-            str += simpletype().c_str();
+        if (arraylength() > 0)
+            str += Strutil::format ("[%d]", arraylength());
+        else if (arraylength() < 0)
+            str += "[]";
+    } else {
+        str += simpletype().c_str();
     }
     return str;
 }

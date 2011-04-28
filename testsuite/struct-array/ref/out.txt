@@ -1,0 +1,8 @@
+Compiled test.osl -> test.oso
+test arrays of struct
+
+float f; f = a[2].f;  ==> 15
+float g = a[2].f;  ==> 15
+test struct containing array of struct:
+b.a[1].f == 3.14159
+

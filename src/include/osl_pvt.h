@@ -149,6 +149,11 @@ public:
     /// is not responsible for freeing the characters.
     const char *c_str () const;
 
+    /// Stream output
+    friend std::ostream& operator<< (std::ostream& o, const TypeSpec& t) {
+        return (o << t.string());
+    }
+
     /// Assignment of a simple TypeDesc to a full TypeSpec.
     ///
     const TypeSpec & operator= (const TypeDesc simple) {
@@ -180,6 +185,10 @@ public:
     /// it's an array of structs.  N.B. You can find out which struct
     /// with structure().
     bool is_structure () const { return m_structure > 0 && !is_array(); }
+
+    /// Is this typespec an array of structures?
+    ///
+    bool is_structure_array () const { return m_structure > 0 && is_array(); }
 
     /// Return the structure ID of this typespec, or 0 if it's not a
     /// struct.

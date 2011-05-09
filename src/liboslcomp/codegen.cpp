@@ -409,8 +409,13 @@ ASTassign_expression::codegen (Symbol *dest)
     if (var()->nodetype() == index_node) {
         // Assigning to an individual component or array element
         index = (ASTindex *) var().get();
+        dest = NULL;
+    } else if (var()->nodetype() == structselect_node) {
+        dest = var()->codegen();
+    } else {
+        dest = var()->codegen();
     }
-    dest = index ? NULL : var()->codegen();
+
     Symbol *operand = expr()->codegen (dest);
     ASSERT (operand != NULL);
 
@@ -419,6 +424,12 @@ ASTassign_expression::codegen (Symbol *dest)
         StructSpec *structspec = typespec().structspec ();
         codegen_assign_struct (structspec, ustring(dest->mangled()),
                                ustring(operand->mangled()));
+        return dest;
+    }
+
+    if (var()->nodetype() == structselect_node) {
+        ASTstructselect *ss = (ASTstructselect *) var().get();
+        ss->codegen_assign (dest, operand);
         return dest;
     }
 
@@ -796,6 +807,12 @@ ASTindex::codegen (Symbol *dest, Symbol * &ind,
             Symbol *tmp = m_compiler->make_temporary (lv->typespec().elementtype());
             emitcode ("aref", tmp, lv, ind);
             emitcode ("compref", dest, tmp, ind2);
+        } else if (lv->typespec().is_structure()) {
+            // arrayofstruct[a] -- this is tricky, we have no way to
+            // directly address a struct, so we bite the bullet and copy
+            // the whole struct.
+            // FIXME -- not completed
+            ASSERT(0);
         } else {
             // regulararray[a]
             emitcode ("aref", dest, lv, ind);
@@ -866,7 +883,73 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
 Symbol *
 ASTstructselect::codegen (Symbol *dest)
 {
-    return m_mangledsym;
+    // Must account for array indices farther up the chain.
+    Symbol *indexsym = codegen_index ();
+
+    if (indexsym) {
+        Symbol *tmp = m_compiler->make_temporary (typespec());
+        emitcode ("aref", tmp, m_fieldsym, indexsym);
+        return tmp;
+    } else {
+        return m_fieldsym;
+    }
+}
+
+
+
+void
+ASTstructselect::codegen_assign (Symbol *dest, Symbol *src)
+{
+    ASSERT (src);
+    src = coerce (src, typespec());
+
+    // Must account for array indices farther up the chain.
+    Symbol *indexsym = codegen_index ();
+
+    if (indexsym)
+        emitcode ("aassign", m_fieldsym, indexsym, src);
+    else
+        emitcode ("assign", dest, src);
+}
+
+
+
+// A struct select needs to decypher whether there is an array index
+// necessary in the chain of events.  The only kind of assignment that
+// makes sense is a series of struct field selections, array indexings,
+// or (last) a direct variable reference (for the top level struct).
+// This function generates code for the index and returns the resulting
+// symbol, or returns NULL if no dereference is necessary.
+Symbol *
+ASTstructselect::codegen_index ()
+{
+    // Must account for array indices farther up the chain.  
+    ASTNode *node = this;
+    Symbol *indexsym = NULL;
+    while (node) {
+        if (node->nodetype() == variable_ref_node) {
+            // Hit final variable ref -- done
+            break;
+        }
+        else if (node->nodetype() == structselect_node) {
+            // Hit another struct select -- recurse up
+            node = ((ASTstructselect *)node)->lvalue().get();
+        }
+        else if (node->nodetype() == index_node) {
+            // Hit an array index node -- find the index and recurse
+            ASTindex *arrayref = (ASTindex *)node;
+            indexsym = arrayref->index()->codegen();
+            // FIXME -- to allow multiple levels of array indexing,
+            // this should "append", i.e. multiply, the old index
+            // with the new one.
+            node = arrayref->lvalue().get();
+        }
+        else {
+            ASSERT (0);
+        }
+    }
+
+    return indexsym;
 }
 
 
@@ -1351,7 +1434,7 @@ ASTfunction_call::codegen (Symbol *dest)
                 } else if (a->nodetype() == structselect_node) {
                     struct_pair_all_fields (ftype.structspec(),
                                             ustring(f->sym()->mangled()),
-                                            ((ASTstructselect *)a)->mangledfield());
+                                            ustring(((ASTstructselect *)a)->fieldsym()->mangled()));
                 } else {
                     ASSERT (0 && "unhandled structure designation");
                 }

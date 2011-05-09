@@ -1,0 +1,39 @@
+//
+// Test structs containing other structs
+//
+
+
+
+struct Astruct {
+    float f;
+    point p;
+};
+
+
+struct Bstruct {
+    Astruct a[5];
+};
+
+
+shader
+test (
+//    Astruct aparam = { 1.0, point(1,2,3) }
+)
+{
+    printf ("test arrays of struct\n\n");
+
+    Astruct a[5];
+    a[2].f = 15;
+
+    float f;
+    f = a[2].f;
+    printf ("float f; f = a[2].f;  ==> %g\n", f);
+
+    float g = a[2].f;
+    printf ("float g = a[2].f;  ==> %g\n", g);
+
+    printf ("test struct containing array of struct:\n");
+    Bstruct b;
+    b.a[1].f = M_PI;
+    printf ("b.a[1].f == %g\n", b.a[1].f);
+}

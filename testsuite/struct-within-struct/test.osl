@@ -18,6 +18,12 @@ struct Bstruct {
 };
 
 
+struct Cstruct {
+    float x;
+    Astruct aarray[5];   // array of structs within a struct
+};
+
+
 
 void test_output_param (output float fout)
 {
@@ -62,9 +68,6 @@ test (
 {
     printf ("test struct within struct\n\n");
 
-    // Make sure it came in ok as a param
-//    printA ("aparam", aparam);
-
     // Make some structs
     Astruct a;
     Bstruct b;
@@ -91,7 +94,6 @@ test (
     printf ("test passing the inner struct to a function:\n");
     printA (" b.a", b.a);
     
-
     // Structure assignment
     printf ("test sub-structure assignment:\n");
     b.a = aparam;

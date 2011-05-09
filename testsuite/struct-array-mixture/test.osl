@@ -1,0 +1,73 @@
+struct A { int i; };
+struct B { A a; };
+struct C { B bs[5]; };
+struct D { C c; };
+
+        
+//float foo (structA result) {
+//    printf ("x is %g\n", result.x);
+//    return result.x;
+//}
+
+void Atest (A a, int multiplier)
+{
+    printf ("passing a ref to a A:\n");
+    a.i = multiplier;
+    printf ("a.i = %d\n", a.i);
+    printf ("\n");
+}
+
+
+
+void Btest (B b, int multiplier)
+{
+    printf ("passing a ref to a B:\n");
+    b.a.i = multiplier;
+    printf ("b.a.i = %d\n", b.a.i);
+    printf ("\n");
+}
+
+
+
+void Ctest (C c, int multiplier)
+{
+    printf ("passing a ref to a C:\n");
+    for (int i = 0;  i < 5;  ++i)
+        c.bs[i].a.i = i*multiplier;
+    for (int i = 0;  i < 5;  ++i)
+        printf ("c.bs[%d].a.i = %d\n", i, c.bs[i].a.i);
+    printf ("\n");
+}
+
+
+
+void Dtest (D d, int multiplier)
+{
+    printf ("passing a ref to a D:\n");
+    for (int i = 0;  i < 5;  ++i)
+        d.c.bs[i].a.i = i*multiplier;
+    for (int i = 0;  i < 5;  ++i)
+        printf ("d.c.bs[%d].a.i = %d\n", i, d.c.bs[i].a.i);
+    printf ("\n");
+}
+
+
+
+shader test ()
+{
+    D d;
+
+    printf ("Using a D directly in main:\n");
+    for (int i = 0;  i < 5;  ++i)
+        d.c.bs[i].a.i = i*1;
+    for (int i = 0;  i < 5;  ++i)
+        printf ("d.c.bs[%d].a.i = %d\n", i, d.c.bs[i].a.i);
+    printf ("\n");
+
+    Dtest (d, 2);
+    Ctest (d.c, 3);
+
+// FIXME -- needs work!  these still don't work properly
+//    Btest (d.c.b[1], 4);
+//    Atest (d.c.b[2].a, 5);
+}

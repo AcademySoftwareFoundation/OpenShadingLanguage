@@ -438,7 +438,7 @@ private:
     // Add individual symbols for each field of a structure, using the
     // given basename.
     void add_struct_fields (StructSpec *structspec, ustring basename,
-                            SymType symtype);
+                            SymType symtype, int arraylen);
 
     ustring m_name;     ///< Name of the symbol (unmangled)
     Symbol *m_sym;      ///< Ptr to the symbol this declares
@@ -504,16 +504,10 @@ public:
 class ASTindex : public ASTNode
 {
 public:
-    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
-        : ASTNode (index_node, comp, 0, expr, index)
-    { }
-    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2)
-        : ASTNode (index_node, comp, 0, expr, index, index2)
-    { }
+    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index);
+    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2);
     ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
-              ASTNode *index2, ASTNode *index3)
-        : ASTNode (index_node, comp, 0, expr, index, index2, index3)
-    { }
+              ASTNode *index2, ASTNode *index3);
     const char *nodetypename () const { return "index"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
@@ -547,17 +541,26 @@ public:
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
 
+    /// Special code generation of assignment of src to this structure
+    /// field.
+    void codegen_assign (Symbol *dest, Symbol *src);
+
     ref lvalue () const { return child (0); }
     ustring field () const { return m_field; }
-    ustring mangledfield () const { return m_mangledfield; }
-    Symbol *mangledsym () const { return m_mangledsym; }
+    ustring fieldname () const { return m_fieldname; }
+    Symbol *fieldsym () const { return m_fieldsym; }
 
 private:
+    Symbol *find_fieldsym (int &structid, int &fieldid);
+    static void find_structsym (ASTNode *structnode, ustring &structname,
+                                 TypeSpec &structtype);
+    Symbol *codegen_index ();
+
     ustring m_field;         ///< Name of the field
     int m_structid;          ///< index of the structure
     int m_fieldid;           ///< index of the field within the structure
-    ustring m_mangledfield;  ///< Mangled name of the field variable
-    Symbol *m_mangledsym;    ///< Symbol of the field variable
+    ustring m_fieldname;     ///< Name of the field variable
+    Symbol *m_fieldsym;      ///< Symbol of the field variable
 };
 
 

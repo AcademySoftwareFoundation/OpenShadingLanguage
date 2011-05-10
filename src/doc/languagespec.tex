@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 14 March, 2011 \\
+\date{{\large Date: 10 May, 2011 \\
 %(with corrections, 7 January, 2011)
 }}
 
@@ -4716,7 +4716,9 @@ int {\ce dict_find} (int nodeID, string query)}
 
     The return value is a \emph{Node ID}, an opaque integer identifier
     that is the handle of a node within the dictionary data.  The value
-    0 is reserved to mean ``not found.''  If more than one node within
+    0 is reserved to mean ``query not found'' and the value -1 indicates
+    that the dictionary was not a valid syntax (or, if a file, could not
+    be read).  If more than one node within
     the dictionary matched the query, the node ID of the first match is
     returned, and {\cf dict_next()} may be used to step to the next
     matching node.

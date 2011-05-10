@@ -18,12 +18,6 @@ struct Bstruct {
 };
 
 
-struct Cstruct {
-    float x;
-    Astruct aarray[5];   // array of structs within a struct
-};
-
-
 
 void test_output_param (output float fout)
 {

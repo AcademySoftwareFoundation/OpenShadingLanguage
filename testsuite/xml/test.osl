@@ -27,4 +27,8 @@ shader test (string xml = "test.xml")
         }
     }
     printf ("\n");
+
+    printf ("testing dictionary error: dict_find(\"noexist.xml\",\"foo\") = %d\n",
+            dict_find ("noexist.xml", "foo"));
+    printf ("\n\n");
 }

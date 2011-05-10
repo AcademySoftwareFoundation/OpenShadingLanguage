@@ -9,15 +9,8 @@ Found camera 'right_cam':
     channel: 'color'
     channel: 'bump'
 
-Found camera 'main_cam':
-    two sides?  1
-    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 10.000 1.000 ]
-    channel: 'color'
-Found camera 'right_cam':
-    two sides?  0
-    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
-    channel: 'color'
-    channel: 'bump'
+testing dictionary error: dict_find("noexist.xml","foo") = -1
+
 
 Found camera 'main_cam':
     two sides?  1
@@ -29,6 +22,9 @@ Found camera 'right_cam':
     channel: 'color'
     channel: 'bump'
 
+testing dictionary error: dict_find("noexist.xml","foo") = -1
+
+
 Found camera 'main_cam':
     two sides?  1
     transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 10.000 1.000 ]
@@ -38,5 +34,21 @@ Found camera 'right_cam':
     transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
     channel: 'color'
     channel: 'bump'
+
+testing dictionary error: dict_find("noexist.xml","foo") = -1
+
+
+Found camera 'main_cam':
+    two sides?  1
+    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 10.000 1.000 ]
+    channel: 'color'
+Found camera 'right_cam':
+    two sides?  0
+    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
+    channel: 'color'
+    channel: 'bump'
+
+testing dictionary error: dict_find("noexist.xml","foo") = -1
+
 
 

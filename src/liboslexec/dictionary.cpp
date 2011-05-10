@@ -186,13 +186,14 @@ Dictionary::get_document_index (ustring dictionaryname)
             m_shadingsys.error ("XML parsed with errors: %s, at offset %d",
                                 parse_result.description(),
                                 parse_result.offset);
-            return 0;
+            m_document_map[dictionaryname] = -1;
+            return -1;
         }
     } else {
         dindex = dm->second;
     }
 
-    DASSERT (dindex >= 0 && dindex < (int)m_documents.size());
+    DASSERT (dindex < (int)m_documents.size());
     return dindex;
 }
 
@@ -202,6 +203,8 @@ int
 Dictionary::dict_find (ustring dictionaryname, ustring query)
 {
     int dindex = get_document_index (dictionaryname);
+    if (dindex < 0)
+        return dindex;
     ASSERT (dindex >= 0 && dindex < (int)m_documents.size());
 
     Query q (dindex, 0, query);

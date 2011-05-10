@@ -22,13 +22,6 @@ SET ( liboslexec_srcs
     )
 
 if (LLVM_FOUND)
-  if (NOT LLVM_LIBRARY MATCHES "LLVM-2\\.7")
-    message (STATUS "Found newer version of LLVM, assuming 2.8")
-    ADD_DEFINITIONS(-DOSL_LLVM_28=1)
-  else()
-    message (STATUS "Found LLVM-2.7")
-  endif()
-
   SET ( liboslexec_srcs ${liboslexec_srcs} llvm_instance.cpp )
 endif ()
 

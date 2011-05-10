@@ -1209,12 +1209,8 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
                                int len, int align)
 {
     // memset with i32 len
-#if OSL_LLVM_28
     // and with an i8 pointer (dst) for LLVM-2.8
     const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
-#else
-    const llvm::Type* types[] = { llvm::Type::getInt32Ty(llvm_context()) };
-#endif
 
     llvm::Function* func = llvm::Intrinsic::getDeclaration(
       llvm_module(),
@@ -1228,15 +1224,10 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
     // everywhere.
     llvm::Value* fill_val = llvm::ConstantInt::get (llvm_context(),
                                                     llvm::APInt(8, val));
-#if OSL_LLVM_28
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
     builder().CreateCall5 (func, ptr, fill_val,
                            llvm_constant(len), llvm_constant(align), llvm_constant_bool(false));
-#else
-    builder().CreateCall4 (func, ptr, fill_val,
-                           llvm_constant(len), llvm_constant(align));
-#endif
 }
 
 
@@ -1246,24 +1237,15 @@ RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
                                int len, int align)
 {
     // i32 len
-#if OSL_LLVM_28
     // and with i8 pointers (dst and src) for LLVM-2.8
-  const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0), llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
-#else
-    const llvm::Type* types[] = { llvm::Type::getInt32Ty(llvm_context()) };
-#endif
+    const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0), llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
 
     llvm::Function* func = llvm::Intrinsic::getDeclaration(llvm_module(),
                                                            llvm::Intrinsic::memcpy, types, sizeof(types) / sizeof(llvm::Type*));
-#if OSL_LLVM_28
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
     builder().CreateCall5 (func, dst, src,
                            llvm_constant(len), llvm_constant(align), llvm_constant_bool(false));
-#else
-    builder().CreateCall4 (func, dst, src,
-                           llvm_constant(len), llvm_constant(align));
-#endif
 }
 
 
@@ -4555,12 +4537,7 @@ ShadingSystemImpl::SetupLLVM ()
 #else
         // Load the LLVM bitcode and parse it into a Module
         const char *data = osl_llvm_compiled_ops_block;
-#if OSL_LLVM_28
         llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
-#else
-        llvm::MemoryBuffer *buf =
-            llvm::MemoryBuffer::getMemBuffer (data, data + osl_llvm_compiled_ops_size);
-#endif
         std::string err;
         m_llvm_module = llvm::ParseBitcodeFile (buf, *llvm_context(), &err);
         if (err.length())

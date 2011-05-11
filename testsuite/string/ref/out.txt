@@ -4,8 +4,140 @@ test string operations:
 Testing abutting string literals: "foobarbaz"
 
 formtted string: 'P = 0 0 1'
+
+concat("foo", "bar", "baz") = "foobarbaz"
+
+strlen("") = 0
+strlen("abc") = 3
+
+substr("abcdefg", 0) = "abcdefg"
+substr("abcdefg", 3) = "defg"
+substr("abcdefg", -2) = "fg"
+substr("abcdefg", 3, 2) = "de"
+substr("abcdefg", 0, 20) = "abcdefg"
+substr("abcdefg", 0, -4) = ""
+
+startswith ("abcdef", "abc") = 1
+startswith ("abcdef", "def") = 0
+startswith ("abcdef", "abcdefghi") = 0
+startswith ("abcdef", "") = 1
+startswith ("", "abc") = 0
+startswith ("", "") = 1
+endswith ("abcdef", "abc") = 0
+endswith ("abcdef", "def") = 1
+endswith ("abcdef", "abcdefghi") = 0
+endswith ("abcdef", "ghiabcdef") = 0
+endswith ("abcdef", "") = 1
+endswith ("", "abc") = 0
+endswith ("", "") = 1
+
+regex_match ("foo", "f") = 0
+regex_match ("foo", "f[Oo]{2}") = 1
+regex_match ("foo", ".*o") = 1
+regex_match ("foobar.baz", "bark") = 0
+regex_match ("foobar.baz", "bar") = 1
+regex_match ("foobar.baz", "[oO]{2}") = 1
+regex_match ("foobar.baz", "(f[Oo]{2}).*(.az)") = 1
+    results[0] = 0
+    results[1] = 10
+    results[2] = 0
+    results[3] = 3
+    results[4] = 7
+    results[5] = 10
+test string operations:
+
+Testing abutting string literals: "foobarbaz"
+
 formtted string: 'P = 1 0 1'
+
+concat("foo", "bar", "baz") = "foobarbaz"
+
+strlen("") = 0
+strlen("abc") = 3
+
+substr("abcdefg", 0) = "abcdefg"
+substr("abcdefg", 3) = "defg"
+substr("abcdefg", -2) = "fg"
+substr("abcdefg", 3, 2) = "de"
+substr("abcdefg", 0, 20) = "abcdefg"
+substr("abcdefg", 0, -4) = ""
+
+startswith ("abcdef", "abc") = 1
+startswith ("abcdef", "def") = 0
+startswith ("abcdef", "abcdefghi") = 0
+startswith ("abcdef", "") = 1
+startswith ("", "abc") = 0
+startswith ("", "") = 1
+endswith ("abcdef", "abc") = 0
+endswith ("abcdef", "def") = 1
+endswith ("abcdef", "abcdefghi") = 0
+endswith ("abcdef", "ghiabcdef") = 0
+endswith ("abcdef", "") = 1
+endswith ("", "abc") = 0
+endswith ("", "") = 1
+
+regex_match ("foo", "f") = 0
+regex_match ("foo", "f[Oo]{2}") = 1
+regex_match ("foo", ".*o") = 1
+regex_match ("foobar.baz", "bark") = 0
+regex_match ("foobar.baz", "bar") = 1
+regex_match ("foobar.baz", "[oO]{2}") = 1
+regex_match ("foobar.baz", "(f[Oo]{2}).*(.az)") = 1
+    results[0] = 0
+    results[1] = 10
+    results[2] = 0
+    results[3] = 3
+    results[4] = 7
+    results[5] = 10
+test string operations:
+
+Testing abutting string literals: "foobarbaz"
+
 formtted string: 'P = 0 1 1'
+
+concat("foo", "bar", "baz") = "foobarbaz"
+
+strlen("") = 0
+strlen("abc") = 3
+
+substr("abcdefg", 0) = "abcdefg"
+substr("abcdefg", 3) = "defg"
+substr("abcdefg", -2) = "fg"
+substr("abcdefg", 3, 2) = "de"
+substr("abcdefg", 0, 20) = "abcdefg"
+substr("abcdefg", 0, -4) = ""
+
+startswith ("abcdef", "abc") = 1
+startswith ("abcdef", "def") = 0
+startswith ("abcdef", "abcdefghi") = 0
+startswith ("abcdef", "") = 1
+startswith ("", "abc") = 0
+startswith ("", "") = 1
+endswith ("abcdef", "abc") = 0
+endswith ("abcdef", "def") = 1
+endswith ("abcdef", "abcdefghi") = 0
+endswith ("abcdef", "ghiabcdef") = 0
+endswith ("abcdef", "") = 1
+endswith ("", "abc") = 0
+endswith ("", "") = 1
+
+regex_match ("foo", "f") = 0
+regex_match ("foo", "f[Oo]{2}") = 1
+regex_match ("foo", ".*o") = 1
+regex_match ("foobar.baz", "bark") = 0
+regex_match ("foobar.baz", "bar") = 1
+regex_match ("foobar.baz", "[oO]{2}") = 1
+regex_match ("foobar.baz", "(f[Oo]{2}).*(.az)") = 1
+    results[0] = 0
+    results[1] = 10
+    results[2] = 0
+    results[3] = 3
+    results[4] = 7
+    results[5] = 10
+test string operations:
+
+Testing abutting string literals: "foobarbaz"
+
 formtted string: 'P = 1 1 1'
 
 concat("foo", "bar", "baz") = "foobarbaz"

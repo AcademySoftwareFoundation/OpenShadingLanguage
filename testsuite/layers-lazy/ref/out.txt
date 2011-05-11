@@ -7,11 +7,17 @@ Connect blayer.out to clayer.unused
 Running layer C
 Running layer A
 a: f_out = 0.5, c_out = 0.25 0 0
-a: f_out = 0.5, c_out = 0.25 1 0
-a: f_out = 0.5, c_out = 0.25 0 1
-a: f_out = 0.5, c_out = 0.25 1 1
 c: f_in = 0.5, c_in = 0.25 0 0
+Running layer C
+Running layer A
+a: f_out = 0.5, c_out = 0.25 1 0
 c: f_in = 0.5, c_in = 0.25 1 0
+Running layer C
+Running layer A
+a: f_out = 0.5, c_out = 0.25 0 1
 c: f_in = 0.5, c_in = 0.25 0 1
+Running layer C
+Running layer A
+a: f_out = 0.5, c_out = 0.25 1 1
 c: f_in = 0.5, c_in = 0.25 1 1
 

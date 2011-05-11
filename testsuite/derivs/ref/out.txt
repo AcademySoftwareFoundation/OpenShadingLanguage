@@ -2,279 +2,429 @@ Compiled test.osl -> test.oso
 Test derivatives
 
 u = 0, Dx(u) = 0.5, Dy(u) = 0
-u = 1, Dx(u) = 0.5, Dy(u) = 0
-u = 0, Dx(u) = 0.5, Dy(u) = 0
-u = 1, Dx(u) = 0.5, Dy(u) = 0
 v = 0, Dx(v) = 0, Dy(v) = 0.5
-v = 0, Dx(v) = 0, Dy(v) = 0.5
-v = 1, Dx(v) = 0, Dy(v) = 0.5
-v = 1, Dx(v) = 0, Dy(v) = 0.5
 P = 0 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
-P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
-P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
-P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
 
 Assign: a = u; a = 0, Dx(a) = 0.5, Dy(a) = 0
-Assign: a = u; a = 1, Dx(a) = 0.5, Dy(a) = 0
-Assign: a = u; a = 0, Dx(a) = 0.5, Dy(a) = 0
-Assign: a = u; a = 1, Dx(a) = 0.5, Dy(a) = 0
 
 Add: a = u+v; a = 0, Dx(a) = 0.5, Dy(a) = 0.5
-Add: a = u+v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
-Add: a = u+v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
-Add: a = u+v; a = 2, Dx(a) = 0.5, Dy(a) = 0.5
 Add constant: a = u+0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
-Add constant: a = u+0.5; a = 1.5, Dx(a) = 0.5, Dy(a) = 0
-Add constant: a = u+0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
-Add constant: a = u+0.5; a = 1.5, Dx(a) = 0.5, Dy(a) = 0
 
 Sub: a = u-v; a = 0, Dx(a) = 0.5, Dy(a) = -0.5
-Sub: a = u-v; a = 1, Dx(a) = 0.5, Dy(a) = -0.5
-Sub: a = u-v; a = -1, Dx(a) = 0.5, Dy(a) = -0.5
-Sub: a = u-v; a = 0, Dx(a) = 0.5, Dy(a) = -0.5
 Sub constant: a = u-0.5; a = -0.5, Dx(a) = 0.5, Dy(a) = 0
-Sub constant: a = u-0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
-Sub constant: a = u-0.5; a = -0.5, Dx(a) = 0.5, Dy(a) = 0
-Sub constant: a = u-0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
 
 Negate: a = -u; a = -0, Dx(a) = -0.5, Dy(a) = -0
-Negate: a = -u; a = -1, Dx(a) = -0.5, Dy(a) = -0
-Negate: a = -u; a = -0, Dx(a) = -0.5, Dy(a) = -0
-Negate: a = -u; a = -1, Dx(a) = -0.5, Dy(a) = -0
 
 Mul: a = u*v; a = 0, Dx(a) = 0, Dy(a) = 0
-Mul: a = u*v; a = 0, Dx(a) = 0, Dy(a) = 0.5
-Mul: a = u*v; a = 0, Dx(a) = 0.5, Dy(a) = 0
-Mul: a = u*v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
 
 Div: a = u/(v+1); a = 0, Dx(a) = 0.5, Dy(a) = 0
-Div: a = u/(v+1); a = 1, Dx(a) = 0.5, Dy(a) = -0.5
-Div: a = u/(v+1); a = 0, Dx(a) = 0.25, Dy(a) = 0
-Div: a = u/(v+1); a = 0.5, Dx(a) = 0.25, Dy(a) = -0.125
 
 cos: a = cos(u); a = 1, Dx(a) = -0, Dy(a) = -0
-cos: a = cos(u); a = 0.540302, Dx(a) = -0.420735, Dy(a) = -0
-cos: a = cos(u); a = 1, Dx(a) = -0, Dy(a) = -0
-cos: a = cos(u); a = 0.540302, Dx(a) = -0.420735, Dy(a) = -0
 
 sin: a = sin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
-sin: a = sin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
 
 tan: a = tan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-tan: a = tan(u); a = 1.55741, Dx(a) = 1.71276, Dy(a) = 0
-tan: a = tan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-tan: a = tan(u); a = 1.55741, Dx(a) = 1.71276, Dy(a) = 0
 
 cosh: a = cosh(u); a = 1, Dx(a) = 0, Dy(a) = 0
-cosh: a = cosh(u); a = 1.54308, Dx(a) = 0.587601, Dy(a) = 0
-cosh: a = cosh(u); a = 1, Dx(a) = 0, Dy(a) = 0
-cosh: a = cosh(u); a = 1.54308, Dx(a) = 0.587601, Dy(a) = 0
 
 sinh: a = sinh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-sinh: a = sinh(u); a = 1.1752, Dx(a) = 0.77154, Dy(a) = 0
-sinh: a = sinh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-sinh: a = sinh(u); a = 1.1752, Dx(a) = 0.77154, Dy(a) = 0
 
 tanh: a = tanh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-tanh: a = tanh(u); a = 0.761594, Dx(a) = 0.209987, Dy(a) = 0
-tanh: a = tanh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-tanh: a = tanh(u); a = 0.761594, Dx(a) = 0.209987, Dy(a) = 0
 
 acos: a = acos(u); a = 1.5708, Dx(a) = -0.5, Dy(a) = -0
-acos: a = acos(u); a = 0, Dx(a) = 0, Dy(a) = 0
-acos: a = acos(u); a = 1.5708, Dx(a) = -0.5, Dy(a) = -0
-acos: a = acos(u); a = 0, Dx(a) = 0, Dy(a) = 0
 
 asin: a = asin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-asin: a = asin(u); a = 1.5708, Dx(a) = 0, Dy(a) = 0
-asin: a = asin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-asin: a = asin(u); a = 1.5708, Dx(a) = 0, Dy(a) = 0
 
 atan: a = atan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
-atan: a = atan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
 
 atan2: a = atan2(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0
-atan2: a = atan2(u,v) at (1,0); a = 1.5708, Dx(a) = 0, Dy(a) = 0.5
-atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = -0.5, Dy(a) = 0
-atan2: a = atan2(u,v) at (1,1); a = 0.785398, Dx(a) = -0.25, Dy(a) = 0.25
 
 degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
-degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
-degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
-degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
 
 radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
-radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
-radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
-radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
 
 log: a = log(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-log: a = log(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
 
 log2: a = log2(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log2: a = log2(u); a = 0, Dx(a) = 0.721348, Dy(a) = 0
-log2: a = log2(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log2: a = log2(u); a = 0, Dx(a) = 0.721348, Dy(a) = 0
 
 log10: a = log10(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log10: a = log10(u); a = 0, Dx(a) = 0.217147, Dy(a) = 0
-log10: a = log10(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
-log10: a = log10(u); a = 0, Dx(a) = 0.217147, Dy(a) = 0
 
 exp: a = exp(u); a = 1, Dx(a) = 0.5, Dy(a) = 0
-exp: a = exp(u); a = 2.71828, Dx(a) = 1.35914, Dy(a) = 0
-exp: a = exp(u); a = 1, Dx(a) = 0.5, Dy(a) = 0
-exp: a = exp(u); a = 2.71828, Dx(a) = 1.35914, Dy(a) = 0
 
 exp2: a = exp2(u); a = 1, Dx(a) = 0.346574, Dy(a) = 0
-exp2: a = exp2(u); a = 2, Dx(a) = 0.693147, Dy(a) = 0
-exp2: a = exp2(u); a = 1, Dx(a) = 0.346574, Dy(a) = 0
-exp2: a = exp2(u); a = 2, Dx(a) = 0.693147, Dy(a) = 0
 
 expm1: a = expm1(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-expm1: a = expm1(u); a = 1.71828, Dx(a) = 1.35914, Dy(a) = 0
-expm1: a = expm1(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
-expm1: a = expm1(u); a = 1.71828, Dx(a) = 1.35914, Dy(a) = 0
 
 erf: a = erf(u); a = 0, Dx(a) = 0.56419, Dy(a) = 0
-erf: a = erf(u); a = 0.842701, Dx(a) = 0.207554, Dy(a) = 0
-erf: a = erf(u); a = 0, Dx(a) = 0.56419, Dy(a) = 0
-erf: a = erf(u); a = 0.842701, Dx(a) = 0.207554, Dy(a) = 0
 
 erfc: a = erfc(u); a = 1, Dx(a) = -0.56419, Dy(a) = -0
-erfc: a = erfc(u); a = 0.157299, Dx(a) = -0.207554, Dy(a) = -0
-erfc: a = erfc(u); a = 1, Dx(a) = -0.56419, Dy(a) = -0
-erfc: a = erfc(u); a = 0.157299, Dx(a) = -0.207554, Dy(a) = -0
 
 sqrt: a = sqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
-sqrt: a = sqrt(u); a = 1, Dx(a) = 0.25, Dy(a) = 0
-sqrt: a = sqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
-sqrt: a = sqrt(u); a = 1, Dx(a) = 0.25, Dy(a) = 0
 
 inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
-inversesqrt: a = inversesqrt(u); a = 1, Dx(a) = -0.25, Dy(a) = -0
-inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
-inversesqrt: a = inversesqrt(u); a = 1, Dx(a) = -0.25, Dy(a) = -0
 
 pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
-pow: a = pow(u, 3); a = 1, Dx(a) = 1.5, Dy(a) = 0
-pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
-pow: a = pow(u, 3); a = 1, Dx(a) = 1.5, Dy(a) = 0
 
 pow: a = pow(u, v) at (0,0); a = 1, Dx(a) = 0, Dy(a) = 0
-pow: a = pow(u, v) at (1,0); a = 1, Dx(a) = 0, Dy(a) = 0
-pow: a = pow(u, v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
-pow: a = pow(u, v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
 
 log: a = log(u,10); a = -1.47783e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
-log: a = log(u,10); a = -1.47783e+38, Dx(a) = 0, Dy(a) = 0
-log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
 
 log: a = log(u,v) at (0,0); a = 1, Dx(a) = -0, Dy(a) = -0
-log: a = log(u,v) at (1,0); a = -0, Dx(a) = -1.46937e-39, Dy(a) = -0
-log: a = log(u,v) at (0,1); a = -0, Dx(a) = 0, Dy(a) = 0
-log: a = log(u,v) at (1,1); a = 0, Dx(a) = 0, Dy(a) = 0
 
 clamp: a = clamp(sin(u),u,v) is clamp(0,0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
-clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
-clamp: a = clamp(sin(u),u,v) is clamp(0,0,1); a = 0, Dx(a) = 0.5, Dy(a) = 0
-clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
 
 min: a = min(u,v) at (0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
-min: a = min(u,v) at (1,0); a = 0, Dx(a) = 0, Dy(a) = 0.5
-min: a = min(u,v) at (0,1); a = 0, Dx(a) = 0.5, Dy(a) = 0
-min: a = min(u,v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
 
 max: a = max(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0.5
-max: a = max(u,v) at (1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
-max: a = max(u,v) at (0,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
-max: a = max(u,v) at (1,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
 
 mix: a = mix(u,v,sin(u)) at (0,0); a = 0, Dx(a) = 0.5, Dy(a) = 0
-mix: a = mix(u,v,sin(u)) at (1,0); a = 0.158529, Dx(a) = -0.190887, Dy(a) = 0.420735
-mix: a = mix(u,v,sin(u)) at (0,1); a = 0, Dx(a) = 1, Dy(a) = 0
-mix: a = mix(u,v,sin(u)) at (1,1); a = 1, Dx(a) = 0.0792645, Dy(a) = 0.420735
 
 hypot: a = hypot(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0
-hypot: a = hypot(u,v) at (1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
-hypot: a = hypot(u,v) at (0,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
-hypot: a = hypot(u,v) at (1,1); a = 1.41421, Dx(a) = 0.353553, Dy(a) = 0.353553
 
 hypot: a = hypot(u,v,3) at (0,0); a = 3, Dx(a) = 0, Dy(a) = 0
-hypot: a = hypot(u,v,3) at (1,0); a = 3.16228, Dx(a) = 0.158114, Dy(a) = 0
-hypot: a = hypot(u,v,3) at (0,1); a = 3.16228, Dx(a) = 0, Dy(a) = 0.158114
-hypot: a = hypot(u,v,3) at (1,1); a = 3.31662, Dx(a) = 0.150756, Dy(a) = 0.150756
 
 smoothstep: a = smoothstep(v,3,u) = (smoothstep(0,3,0)); a = 0, Dx(a) = 0, Dy(a) = -0
-smoothstep: a = smoothstep(v,3,u) = (smoothstep(0,3,1)); a = 0.259259, Dx(a) = 0.222222, Dy(a) = -0.148148
-smoothstep: a = smoothstep(v,3,u) = (smoothstep(1,3,0)); a = 0, Dx(a) = 0, Dy(a) = 0
-smoothstep: a = smoothstep(v,3,u) = (smoothstep(1,3,1)); a = 0, Dx(a) = 0, Dy(a) = -0
 
 comp ref: P = 0 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
-comp ref: P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
-comp ref: P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
-comp ref: P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
   P[0] = 0, Dx(P[0]) = 0.5, Dy(P[0]) = 0
-  P[0] = 1, Dx(P[0]) = 0.5, Dy(P[0]) = 0
-  P[0] = 0, Dx(P[0]) = 0.5, Dy(P[0]) = 0
-  P[0] = 1, Dx(P[0]) = 0.5, Dy(P[0]) = 0
   P[1] = 0, Dx(P[1]) = 0, Dy(P[1]) = 0.5
-  P[1] = 0, Dx(P[1]) = 0, Dy(P[1]) = 0.5
-  P[1] = 1, Dx(P[1]) = 0, Dy(P[1]) = 0.5
-  P[1] = 1, Dx(P[1]) = 0, Dy(P[1]) = 0.5
 
 dot product: d = dot(0 -0 0, 0 0 0) = 0  Dx(d) = 0  Dy(d) = 0
-dot product: d = dot(1 -1 1, 1 1 1) = 1  Dx(d) = 1  Dy(d) = 1
-dot product: d = dot(1 -1 1, 1 1 1) = 1  Dx(d) = 1  Dy(d) = 1
-dot product: d = dot(2 -2 2, 2 2 2) = 4  Dx(d) = 2  Dy(d) = 2
 
 cross product: c = cross(0 -0 0, 0 0 0) = -0 0 0  Dx(c) = -0 0 0  Dy(c) = -0 0 0
-cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -2 0 2  Dy(c) = -2 0 2
-cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -2 0 2  Dy(c) = -2 0 2
-cross product: c = cross(2 -2 2, 2 2 2) = -8 0 8  Dx(c) = -4 0 4  Dy(c) = -4 0 4
 
 comp assign: C[0]=u, C[1]=v: now C = 0 0 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
-comp assign: C[0]=u, C[1]=v: now C = 1 0 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
-comp assign: C[0]=u, C[1]=v: now C = 0 1 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
-comp assign: C[0]=u, C[1]=v: now C = 1 1 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
 
 normalize: n = normalize(0 0 0) = 0 0 0  Dx(n) = 0 0 0  Dy(n) = 0 0 0
-normalize: n = normalize(1 1 1) = 0.57735 0.57735 0.57735  Dx(n) = 2.98023e-08 2.98023e-08 2.98023e-08  Dy(n) = 0.19245 -0.3849 0.19245
-normalize: n = normalize(1 -1 1) = 0.57735 -0.57735 0.57735  Dx(n) = 0.19245 0.3849 0.19245  Dy(n) = 2.98023e-08 -2.98023e-08 2.98023e-08
-normalize: n = normalize(2 0 2) = 0.707107 0 0.707107  Dx(n) = 1.49012e-08 0.176777 1.49012e-08  Dy(n) = 1.49012e-08 -0.176777 1.49012e-08
 
 length: l = length(0 0 0) = 0  Dx(l) = 0  Dy(l) = 0
-length: l = length(1 1 1) = 1.73205  Dx(l) = 0.866025  Dy(l) = 0.288675
-length: l = length(1 -1 1) = 1.73205  Dx(l) = 0.288675  Dy(l) = 0.866025
-length: l = length(2 0 2) = 2.82843  Dx(l) = 0.707107  Dy(l) = 0.707107
 
 distance: d = distance(0 -0 0, 0 0 0) = 0  Dx(d) = 0  Dy(d) = 0
-distance: d = distance(1 -1 1, 1 1 1) = 2  Dx(d) = 1  Dy(d) = 1
-distance: d = distance(1 -1 1, 1 1 1) = 2  Dx(d) = 1  Dy(d) = 1
-distance: d = distance(2 -2 2, 2 2 2) = 4  Dx(d) = 1  Dy(d) = 1
 
 Triple construction:
   color(u,v,0) = 0 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0
-  color(u,v,0) = 1 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0
-  color(u,v,0) = 0 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
-  color(u,v,0) = 1 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
   point (0,0,0) = 0 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0
-  point (1,0,0) = 1 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0
-  point (0,1,0) = 0 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
-  point (1,1,0) = 1 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
   point ("shader",0,0,0) = 1 0 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
-  point ("shader",1,0,0) = 1.70711 0.707107 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
-  point ("shader",0,1,0) = 0.292893 0.707107 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
-  point ("shader",1,1,0) = 1 1.41421 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
   vector ("shader",0,0,0) = 0 0 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
+Test derivatives
+
+u = 1, Dx(u) = 0.5, Dy(u) = 0
+v = 0, Dx(v) = 0, Dy(v) = 0.5
+P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
+
+Assign: a = u; a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+Add: a = u+v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
+Add constant: a = u+0.5; a = 1.5, Dx(a) = 0.5, Dy(a) = 0
+
+Sub: a = u-v; a = 1, Dx(a) = 0.5, Dy(a) = -0.5
+Sub constant: a = u-0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
+
+Negate: a = -u; a = -1, Dx(a) = -0.5, Dy(a) = -0
+
+Mul: a = u*v; a = 0, Dx(a) = 0, Dy(a) = 0.5
+
+Div: a = u/(v+1); a = 1, Dx(a) = 0.5, Dy(a) = -0.5
+
+cos: a = cos(u); a = 0.540302, Dx(a) = -0.420735, Dy(a) = -0
+
+sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
+
+tan: a = tan(u); a = 1.55741, Dx(a) = 1.71276, Dy(a) = 0
+
+cosh: a = cosh(u); a = 1.54308, Dx(a) = 0.587601, Dy(a) = 0
+
+sinh: a = sinh(u); a = 1.1752, Dx(a) = 0.77154, Dy(a) = 0
+
+tanh: a = tanh(u); a = 0.761594, Dx(a) = 0.209987, Dy(a) = 0
+
+acos: a = acos(u); a = 0, Dx(a) = 0, Dy(a) = 0
+
+asin: a = asin(u); a = 1.5708, Dx(a) = 0, Dy(a) = 0
+
+atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
+
+atan2: a = atan2(u,v) at (1,0); a = 1.5708, Dx(a) = 0, Dy(a) = 0.5
+
+degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
+
+radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
+
+log: a = log(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+log2: a = log2(u); a = 0, Dx(a) = 0.721348, Dy(a) = 0
+
+log10: a = log10(u); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+
+exp: a = exp(u); a = 2.71828, Dx(a) = 1.35914, Dy(a) = 0
+
+exp2: a = exp2(u); a = 2, Dx(a) = 0.693147, Dy(a) = 0
+
+expm1: a = expm1(u); a = 1.71828, Dx(a) = 1.35914, Dy(a) = 0
+
+erf: a = erf(u); a = 0.842701, Dx(a) = 0.207554, Dy(a) = 0
+
+erfc: a = erfc(u); a = 0.157299, Dx(a) = -0.207554, Dy(a) = -0
+
+sqrt: a = sqrt(u); a = 1, Dx(a) = 0.25, Dy(a) = 0
+
+inversesqrt: a = inversesqrt(u); a = 1, Dx(a) = -0.25, Dy(a) = -0
+
+pow: a = pow(u, 3); a = 1, Dx(a) = 1.5, Dy(a) = 0
+
+pow: a = pow(u, v) at (1,0); a = 1, Dx(a) = 0, Dy(a) = 0
+
+log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+
+log: a = log(u,v) at (1,0); a = -0, Dx(a) = -1.46937e-39, Dy(a) = -0
+
+clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+min: a = min(u,v) at (1,0); a = 0, Dx(a) = 0, Dy(a) = 0.5
+
+max: a = max(u,v) at (1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+mix: a = mix(u,v,sin(u)) at (1,0); a = 0.158529, Dx(a) = -0.190887, Dy(a) = 0.420735
+
+hypot: a = hypot(u,v) at (1,0); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+hypot: a = hypot(u,v,3) at (1,0); a = 3.16228, Dx(a) = 0.158114, Dy(a) = 0
+
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(0,3,1)); a = 0.259259, Dx(a) = 0.222222, Dy(a) = -0.148148
+
+comp ref: P = 1 0 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
+  P[0] = 1, Dx(P[0]) = 0.5, Dy(P[0]) = 0
+  P[1] = 0, Dx(P[1]) = 0, Dy(P[1]) = 0.5
+
+dot product: d = dot(1 -1 1, 1 1 1) = 1  Dx(d) = 1  Dy(d) = 1
+
+cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -2 0 2  Dy(c) = -2 0 2
+
+comp assign: C[0]=u, C[1]=v: now C = 1 0 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
+
+normalize: n = normalize(1 1 1) = 0.57735 0.57735 0.57735  Dx(n) = 2.98023e-08 2.98023e-08 2.98023e-08  Dy(n) = 0.19245 -0.3849 0.19245
+
+length: l = length(1 1 1) = 1.73205  Dx(l) = 0.866025  Dy(l) = 0.288675
+
+distance: d = distance(1 -1 1, 1 1 1) = 2  Dx(d) = 1  Dy(d) = 1
+
+Triple construction:
+  color(u,v,0) = 1 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0
+  point (1,0,0) = 1 0 0, Dx = 0.5 0 0, Dy = 0 0.5 0
+  point ("shader",1,0,0) = 1.70711 0.707107 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
   vector ("shader",1,0,0) = 0.707107 0.707107 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
+Test derivatives
+
+u = 0, Dx(u) = 0.5, Dy(u) = 0
+v = 1, Dx(v) = 0, Dy(v) = 0.5
+P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
+
+Assign: a = u; a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+Add: a = u+v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
+Add constant: a = u+0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
+
+Sub: a = u-v; a = -1, Dx(a) = 0.5, Dy(a) = -0.5
+Sub constant: a = u-0.5; a = -0.5, Dx(a) = 0.5, Dy(a) = 0
+
+Negate: a = -u; a = -0, Dx(a) = -0.5, Dy(a) = -0
+
+Mul: a = u*v; a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+Div: a = u/(v+1); a = 0, Dx(a) = 0.25, Dy(a) = 0
+
+cos: a = cos(u); a = 1, Dx(a) = -0, Dy(a) = -0
+
+sin: a = sin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+tan: a = tan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+cosh: a = cosh(u); a = 1, Dx(a) = 0, Dy(a) = 0
+
+sinh: a = sinh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+tanh: a = tanh(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+acos: a = acos(u); a = 1.5708, Dx(a) = -0.5, Dy(a) = -0
+
+asin: a = asin(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+atan: a = atan(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = -0.5, Dy(a) = 0
+
+degrees: a = degrees(u); a = 0, Dx(a) = 28.6479, Dy(a) = 0
+
+radians: a = radians(u); a = 0, Dx(a) = 0.00872665, Dy(a) = 0
+
+log: a = log(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+
+log2: a = log2(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+
+log10: a = log10(u); a = -3.40282e+38, Dx(a) = 0, Dy(a) = 0
+
+exp: a = exp(u); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+exp2: a = exp2(u); a = 1, Dx(a) = 0.346574, Dy(a) = 0
+
+expm1: a = expm1(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+erf: a = erf(u); a = 0, Dx(a) = 0.56419, Dy(a) = 0
+
+erfc: a = erfc(u); a = 1, Dx(a) = -0.56419, Dy(a) = -0
+
+sqrt: a = sqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
+
+inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
+
+pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
+
+pow: a = pow(u, v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
+
+log: a = log(u,10); a = -1.47783e+38, Dx(a) = 0, Dy(a) = 0
+
+log: a = log(u,v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
+
+clamp: a = clamp(sin(u),u,v) is clamp(0,0,1); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+min: a = min(u,v) at (0,1); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+max: a = max(u,v) at (0,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
+
+mix: a = mix(u,v,sin(u)) at (0,1); a = 0, Dx(a) = 1, Dy(a) = 0
+
+hypot: a = hypot(u,v) at (0,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
+
+hypot: a = hypot(u,v,3) at (0,1); a = 3.16228, Dx(a) = 0, Dy(a) = 0.158114
+
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(1,3,0)); a = 0, Dx(a) = 0, Dy(a) = 0
+
+comp ref: P = 0 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
+  P[0] = 0, Dx(P[0]) = 0.5, Dy(P[0]) = 0
+  P[1] = 1, Dx(P[1]) = 0, Dy(P[1]) = 0.5
+
+dot product: d = dot(1 -1 1, 1 1 1) = 1  Dx(d) = 1  Dy(d) = 1
+
+cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -2 0 2  Dy(c) = -2 0 2
+
+comp assign: C[0]=u, C[1]=v: now C = 0 1 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
+
+normalize: n = normalize(1 -1 1) = 0.57735 -0.57735 0.57735  Dx(n) = 0.19245 0.3849 0.19245  Dy(n) = 2.98023e-08 -2.98023e-08 2.98023e-08
+
+length: l = length(1 -1 1) = 1.73205  Dx(l) = 0.288675  Dy(l) = 0.866025
+
+distance: d = distance(1 -1 1, 1 1 1) = 2  Dx(d) = 1  Dy(d) = 1
+
+Triple construction:
+  color(u,v,0) = 0 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
+  point (0,1,0) = 0 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
+  point ("shader",0,1,0) = 0.292893 0.707107 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
   vector ("shader",0,1,0) = -0.707107 0.707107 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
+Test derivatives
+
+u = 1, Dx(u) = 0.5, Dy(u) = 0
+v = 1, Dx(v) = 0, Dy(v) = 0.5
+P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
+
+Assign: a = u; a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+Add: a = u+v; a = 2, Dx(a) = 0.5, Dy(a) = 0.5
+Add constant: a = u+0.5; a = 1.5, Dx(a) = 0.5, Dy(a) = 0
+
+Sub: a = u-v; a = 0, Dx(a) = 0.5, Dy(a) = -0.5
+Sub constant: a = u-0.5; a = 0.5, Dx(a) = 0.5, Dy(a) = 0
+
+Negate: a = -u; a = -1, Dx(a) = -0.5, Dy(a) = -0
+
+Mul: a = u*v; a = 1, Dx(a) = 0.5, Dy(a) = 0.5
+
+Div: a = u/(v+1); a = 0.5, Dx(a) = 0.25, Dy(a) = -0.125
+
+cos: a = cos(u); a = 0.540302, Dx(a) = -0.420735, Dy(a) = -0
+
+sin: a = sin(u); a = 0.841471, Dx(a) = 0.270151, Dy(a) = 0
+
+tan: a = tan(u); a = 1.55741, Dx(a) = 1.71276, Dy(a) = 0
+
+cosh: a = cosh(u); a = 1.54308, Dx(a) = 0.587601, Dy(a) = 0
+
+sinh: a = sinh(u); a = 1.1752, Dx(a) = 0.77154, Dy(a) = 0
+
+tanh: a = tanh(u); a = 0.761594, Dx(a) = 0.209987, Dy(a) = 0
+
+acos: a = acos(u); a = 0, Dx(a) = 0, Dy(a) = 0
+
+asin: a = asin(u); a = 1.5708, Dx(a) = 0, Dy(a) = 0
+
+atan: a = atan(u); a = 0.785398, Dx(a) = 0.25, Dy(a) = 0
+
+atan2: a = atan2(u,v) at (1,1); a = 0.785398, Dx(a) = -0.25, Dy(a) = 0.25
+
+degrees: a = degrees(u); a = 57.2958, Dx(a) = 28.6479, Dy(a) = 0
+
+radians: a = radians(u); a = 0.0174533, Dx(a) = 0.00872665, Dy(a) = 0
+
+log: a = log(u); a = 0, Dx(a) = 0.5, Dy(a) = 0
+
+log2: a = log2(u); a = 0, Dx(a) = 0.721348, Dy(a) = 0
+
+log10: a = log10(u); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+
+exp: a = exp(u); a = 2.71828, Dx(a) = 1.35914, Dy(a) = 0
+
+exp2: a = exp2(u); a = 2, Dx(a) = 0.693147, Dy(a) = 0
+
+expm1: a = expm1(u); a = 1.71828, Dx(a) = 1.35914, Dy(a) = 0
+
+erf: a = erf(u); a = 0.842701, Dx(a) = 0.207554, Dy(a) = 0
+
+erfc: a = erfc(u); a = 0.157299, Dx(a) = -0.207554, Dy(a) = -0
+
+sqrt: a = sqrt(u); a = 1, Dx(a) = 0.25, Dy(a) = 0
+
+inversesqrt: a = inversesqrt(u); a = 1, Dx(a) = -0.25, Dy(a) = -0
+
+pow: a = pow(u, 3); a = 1, Dx(a) = 1.5, Dy(a) = 0
+
+pow: a = pow(u, v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+log: a = log(u,10); a = 0, Dx(a) = 0.217147, Dy(a) = 0
+
+log: a = log(u,v) at (1,1); a = 0, Dx(a) = 0, Dy(a) = 0
+
+clamp: a = clamp(sin(u),u,v) is clamp(0.841471,1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+min: a = min(u,v) at (1,1); a = 1, Dx(a) = 0.5, Dy(a) = 0
+
+max: a = max(u,v) at (1,1); a = 1, Dx(a) = 0, Dy(a) = 0.5
+
+mix: a = mix(u,v,sin(u)) at (1,1); a = 1, Dx(a) = 0.0792645, Dy(a) = 0.420735
+
+hypot: a = hypot(u,v) at (1,1); a = 1.41421, Dx(a) = 0.353553, Dy(a) = 0.353553
+
+hypot: a = hypot(u,v,3) at (1,1); a = 3.31662, Dx(a) = 0.150756, Dy(a) = 0.150756
+
+smoothstep: a = smoothstep(v,3,u) = (smoothstep(1,3,1)); a = 0, Dx(a) = 0, Dy(a) = -0
+
+comp ref: P = 1 1 1, Dx(P) = 0.5 0 0, Dy(P) = 0 0.5 0
+  P[0] = 1, Dx(P[0]) = 0.5, Dy(P[0]) = 0
+  P[1] = 1, Dx(P[1]) = 0, Dy(P[1]) = 0.5
+
+dot product: d = dot(2 -2 2, 2 2 2) = 4  Dx(d) = 2  Dy(d) = 2
+
+cross product: c = cross(2 -2 2, 2 2 2) = -8 0 8  Dx(c) = -4 0 4  Dy(c) = -4 0 4
+
+comp assign: C[0]=u, C[1]=v: now C = 1 1 0, Dx(C) = 0.5 0 0, Dy(C) = 0 0.5 0
+
+normalize: n = normalize(2 0 2) = 0.707107 0 0.707107  Dx(n) = 1.49012e-08 0.176777 1.49012e-08  Dy(n) = 1.49012e-08 -0.176777 1.49012e-08
+
+length: l = length(2 0 2) = 2.82843  Dx(l) = 0.707107  Dy(l) = 0.707107
+
+distance: d = distance(2 -2 2, 2 2 2) = 4  Dx(d) = 1  Dy(d) = 1
+
+Triple construction:
+  color(u,v,0) = 1 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
+  point (1,1,0) = 1 1 0, Dx = 0.5 0 0, Dy = 0 0.5 0
+  point ("shader",1,1,0) = 1 1.41421 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
   vector ("shader",1,1,0) = 0 1.41421 0, Dx = 0.353553 0.353553 0, Dy = -0.353553 0.353553 0
 

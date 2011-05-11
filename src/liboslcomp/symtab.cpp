@@ -53,8 +53,13 @@ std::string
 TypeSpec::string () const
 {
     std::string str;
-    if (is_closure())
+    if (is_closure() || is_closure_array()) {
         str += "closure color";
+        if (arraylength() > 0)
+            str += Strutil::format ("[%d]", arraylength());
+        else if (arraylength() < 0)
+            str += "[]";
+    }
     else if (structure() > 0) {
         str += Strutil::format ("struct %d", structure());
         if (arraylength() > 0)

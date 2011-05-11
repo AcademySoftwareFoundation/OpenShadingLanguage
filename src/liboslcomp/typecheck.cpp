@@ -1250,9 +1250,9 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
 {
     std::string out;
     TypeDesc elem = type.elementtype().simpletype();
-    if (type.is_structure()) {
+    if (type.is_structure() || type.is_structure_array()) {
         out = Strutil::format ("S%d", type.structure());
-    } else if (type.is_closure()) {
+    } else if (type.is_closure() || type.is_closure_array()) {
         out = 'C';
     } else {
         if (elem == TypeDesc::TypeInt)

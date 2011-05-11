@@ -179,7 +179,11 @@ public:
 
     /// Is this typespec a closure?  (N.B. if so, you can find out what
     /// kind of closure it is with simpletype()).
-    bool is_closure () const { return m_closure; }
+    bool is_closure () const { return m_closure && !is_array(); }
+
+    /// Is this typespec an array of closures?
+    ///
+    bool is_closure_array () const { return m_closure && is_array(); }
 
     /// Is this typespec a single structure?  Caveat: Returns false if
     /// it's an array of structs.  N.B. You can find out which struct

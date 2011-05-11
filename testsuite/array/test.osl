@@ -50,4 +50,24 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
 
     test_unspecified_length (sarray);
+
+    {
+        printf ("\nTest array of closures:\n");
+        closure color C[3];
+        C[0] = diffuse (N);
+        C[1] = 0.5 * reflection (N);
+        C[2] = 0.25 * refraction (N, 1.5);
+        for (int i = 0;  i < 3;  ++i) {
+            printf ("C[%d] = %s\n", i, C[i]);
+        }
+
+        // Test passing an array of closures to a function
+        void print_closure_array (closure color C[]) {
+            for (int i = 0;  i < 3;  ++i) {
+                printf ("pca  C[%d] = %s\n", i, C[i]);
+            }
+        }
+        print_closure_array (C);
+    }
+    printf ("\n\n");
 }

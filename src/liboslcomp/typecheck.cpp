@@ -147,7 +147,8 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
         }
         // Special case: ok to assign a literal 0 to a closure to
         // initialize it.
-        if (type.is_closure() && ! init->typespec().is_closure() &&
+        if ((type.is_closure() || type.is_closure_array()) &&
+              ! init->typespec().is_closure() &&
               init->typespec().is_int_or_float() &&
               init->nodetype() == literal_node &&
             ((ASTliteral *)init.get())->floatval() == 0.0f) {

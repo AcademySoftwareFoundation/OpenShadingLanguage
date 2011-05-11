@@ -1,7 +1,10 @@
+#include "../common/shaders/pretty.h"
+
+
 void matrix_fromto (string from, string to)
 {
-    printf ("  matrix (\"%s\", \"%s\") = (%g)\n", from, to, matrix (from, to));
-    printf ("  matrix (\"%s\", \"%s\") = (%g)\n", to, from, matrix (to, from));
+    printf ("  matrix (\"%s\", \"%s\") = (%.5g)\n", from, to, pretty(matrix (from, to)));
+    printf ("  matrix (\"%s\", \"%s\") = (%.5g)\n", to, from, pretty(matrix (to, from)));
 }
 
 
@@ -15,16 +18,16 @@ test ()
             e = 0.5, f = 0.6, g = 0.7, h = 0.8,
             i = 0.9, j = 1.0, k = 1.1, l = 1.2,
             m = 1.3, n = 1.4, o = 1.5, p = 1.6;
-        printf ("  matrix (%g) = %g\n", a, matrix(a));
-        printf ("  matrix (%g, %g, %g, %g,  %g, %g, %g, %g,  %g, %g, %g, %g,  %g, %g, %g, %g) \n\t= %g\n",
+        printf ("  matrix (%.5g) = %.5g\n", a, matrix(a));
+        printf ("  matrix (%.5g, %.5g, %.5g, %.5g,  %.5g, %.5g, %.5g, %.5g,  %.5g, %.5g, %.5g, %.5g,  %.5g, %.5g, %.5g, %.5g) \n\t= %.5g\n",
                 a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, 
                 matrix (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p));
 
         printf (" varying:\n");
         a = u;
         b = v;
-        printf ("  matrix (%g) = %g\n", a, matrix(a));
-        printf ("  matrix (%g, %g, %g, %g,  %g, %g, %g, %g,  %g, %g, %g, %g,  %g, %g, %g, %g) \n\t= %g\n",
+        printf ("  matrix (%.5g) = %.5g\n", a, matrix(a));
+        printf ("  matrix (%.5g, %.5g, %.5g, %.5g,  %.5g, %.5g, %.5g, %.5g,  %.5g, %.5g, %.5g, %.5g,  %.5g, %.5g, %.5g, %.5g) \n\t= %.5g\n",
                 a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, 
                 matrix (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p));
     }
@@ -33,16 +36,16 @@ test ()
     { 
         float a = 1, b = 1, c = 0;
         printf ("\ntesting with spaces:\n");
-        printf ("  matrix (\"shader\", %g) = %g\n",
-                a, matrix("shader",a));
-        printf ("  matrix (\"shader\", %g, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) \n\t= %g\n",
-                a, matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
+        printf ("  matrix (\"shader\", %.5g) = %.5g\n",
+                a, pretty(matrix("shader",a)));
+        printf ("  matrix (\"shader\", %.5g, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) \n\t= %.5g\n",
+                a, pretty(matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)));
         a = u;
         printf (" varying:\n");
-        printf ("  matrix (\"shader\", %g) = %g\n",
-                a, matrix("shader",a));
-        printf ("  matrix (\"shader\", %g, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) \n\t= %g\n",
-                a, matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
+        printf ("  matrix (\"shader\", %.5g) = %.5g\n",
+                a, pretty(matrix("shader",a)));
+        printf ("  matrix (\"shader\", %.5g, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) \n\t= %.5g\n",
+                a, pretty(matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)));
     }
 
     // Test "from-to" matrix construction
@@ -56,13 +59,13 @@ test ()
     {
         matrix M = matrix ("shader", 1);
         printf ("\n\nTesting matrix component access:\n");
-        printf ("  M = %g\n", M);
-        printf ("  M[1][0..3] = %g %g %g %g\n", M[1][0], M[1][1], M[1][2], M[1][3]);
+        printf ("  M = %.5g\n", M);
+        printf ("  M[1][0..3] = %.5g %.5g %.5g %.5g\n", M[1][0], M[1][1], M[1][2], M[1][3]);
         M[1][3] = 5;
-        printf ("  after M[1][3] = 5, M = %g\n", M);
+        printf ("  after M[1][3] = 5, M = %.5g\n", pretty(M));
         printf (" varying:\n");
         M[1][2] = 6+u;
-        printf ("  after M[1][2] = %g, M = %g\n", 6+u, M);
+        printf ("  after M[1][2] = %.5g, M = %.5g\n", 6+u, pretty(M));
     }
 
     {
@@ -70,20 +73,20 @@ test ()
         matrix Ident = 1;
         matrix M = matrix ("shader", 1);
         printf ("\n\nTesting matrix math:\n");
-        printf ("  M = [%g]\n", M);
-        printf ("  -M = [%g]\n", -M);
-        printf ("  2*M = [%g]\n", 2*M);
-        printf ("  M*2 = [%g]\n", M*2);
-        printf ("  M/2 = [%g]\n", M/2);
-        printf ("  M*Ident = [%g]\n", M*Ident);
-        printf ("  Ident*M = [%g]\n", Ident*M);
-        printf ("  M*M = [%g]\n", M*M);
-        printf ("  M/M = [%g]\n", M/M);
-        printf ("  M/Ident = [%g]\n", M/Ident);
-        printf ("  Ident/M = [%g]\n", Ident/M);
-        printf ("  1/M = [%g]\n", 1/M);
-        printf ("  transpose(M) = %g\n", transpose(M));
-        printf ("  determinant(M) = %g\n", determinant(M));
+        printf ("  M = [%.5g]\n", pretty(M));
+        printf ("  -M = [%.5g]\n", pretty(-M));
+        printf ("  2*M = [%.5g]\n", pretty(2*M));
+        printf ("  M*2 = [%.5g]\n", pretty(M*2));
+        printf ("  M/2 = [%.5g]\n", pretty(M/2));
+        printf ("  M*Ident = [%.5g]\n", pretty(M*Ident));
+        printf ("  Ident*M = [%.5g]\n", pretty(Ident*M));
+        printf ("  M*M = [%.5g]\n", pretty(M*M));
+        printf ("  M/M = [%.5g]\n", pretty(M/M));
+        printf ("  M/Ident = [%.5g]\n", pretty(M/Ident));
+        printf ("  Ident/M = [%.5g]\n", pretty(Ident/M));
+        printf ("  1/M = [%.5g]\n", pretty(1/M));
+        printf ("  transpose(M) = %.5g\n", pretty(transpose(M)));
+        printf ("  determinant(M) = %.5g\n", pretty(determinant(M)));
         printf ("  (M==M) ? %d\n", M == M);
         printf ("  (M!=M) ? %d\n", M != M);
         printf ("  (M==Ident) ? %d\n", M == Ident);

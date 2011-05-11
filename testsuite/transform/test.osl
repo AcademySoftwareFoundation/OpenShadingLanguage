@@ -1,19 +1,22 @@
+#include "../common/shaders/pretty.h"
+
+
 void all_transforms (point p, string to, int derivs)
 {
     printf ("\ntransform to '%s':\n", to);
     if (derivs)
-        printf ("  p = %g, Dx(p) = %g, Dy(p) = %g\n", p, Dx(p), Dy(p));
+        printf ("  p = %g, Dx(p) = %g, Dy(p) = %.5g\n", p, Dx(p), Dy(p));
     point px = transform (to, (point)p);
-    printf (" transform(\"%s\", point(%g)) = %g\n", to, p, px);
+    printf (" transform(\"%s\", point(%g)) = %.5g\n", to, p, px);
     if (derivs)
         printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
                 to, p, Dx(px), Dy(px));
     vector vx = transform (to, (vector)p);
-    printf (" transform(\"%s\", vector(%g)) = %g\n", to, p, vx);
+    printf (" transform(\"%s\", vector(%g)) = %.5g\n", to, p, vx);
     if (derivs)
         printf ("  derivs of transform(\"%s\", vector(%g)): Dx = %g, Dy = %g\n",
                 to, p, Dx(vx), Dy(vx));
-    printf (" transform(\"%s\", normal(%g)) = %g\n", to,
+    printf (" transform(\"%s\", normal(%g)) = %.5g\n", to,
             p, transform(to, (normal)p));
 }
 
@@ -22,12 +25,12 @@ void all_transforms (point p, string to, int derivs)
 void all_transforms (point p, string from, string to)
 {
     printf ("\ntransform '%s' to '%s':\n", from, to);
-    printf (" transform(\"%s\", \"%s\", point(%g)) = %g\n", from, to,
-            p, transform(from, to, (point)p));
-    printf (" transform(\"%s\", \"%s\", vector(%g)) = %g\n", from, to,
-            p, transform(from, to, (vector)p));
-    printf (" transform(\"%s\", \"%s\", normal(%g)) = %g\n", from, to,
-            p, transform(from, to, (normal)p));
+    printf (" transform(\"%s\", \"%s\", point(%g)) = %.5g\n", from, to,
+            p, pretty(transform(from, to, (point)p)));
+    printf (" transform(\"%s\", \"%s\", vector(%g)) = %.5g\n", from, to,
+            p, pretty(transform(from, to, (vector)p)));
+    printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
+            p, pretty(transform(from, to, (normal)p)));
 }
 
 

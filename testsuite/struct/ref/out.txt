@@ -24,7 +24,79 @@ Pass whole struct as function argument:
 
 Varying:
 after a.p=P, a == { 310.5, 42, [0 0 1], foobar }
+test struct
+a == { 3.14159, 42, [0 1 2], foobar }
+
+struct param:  aparam == { 1, 0, [3 4 5], foo! }
+
+after c=a, c == { 3.14159, 42, [0 1 2], foobar }
+
+after Astruct d=a, d == { 3.14159, 42, [0 1 2], foobar }
+
+components of fields: a.p = 0 1 2, a.p[1] = 1
+
+Pass structure element to functions:
+ sqrt(a.f=3.14159) = 1.77245
+ after 'a.f = sqrt(a.f)', a.f = 1.77245
+ after 'a.p[2] = sqrt(a.p[2])', a.p[2] = 1.41421
+ after writing via a function output arg, a.f = 310.5
+ after writing via a function output arg, a.p = 310.5 1 1.41421
+
+Pass whole struct as function argument:
+  func_with_struct_param(aa) = 621
+  after func_with_struct_output_param(aa), aa.i = 588
+
+
+Varying:
 after a.p=P, a == { 310.5, 42, [1 0 1], foobar }
+test struct
+a == { 3.14159, 42, [0 1 2], foobar }
+
+struct param:  aparam == { 1, 0, [3 4 5], foo! }
+
+after c=a, c == { 3.14159, 42, [0 1 2], foobar }
+
+after Astruct d=a, d == { 3.14159, 42, [0 1 2], foobar }
+
+components of fields: a.p = 0 1 2, a.p[1] = 1
+
+Pass structure element to functions:
+ sqrt(a.f=3.14159) = 1.77245
+ after 'a.f = sqrt(a.f)', a.f = 1.77245
+ after 'a.p[2] = sqrt(a.p[2])', a.p[2] = 1.41421
+ after writing via a function output arg, a.f = 310.5
+ after writing via a function output arg, a.p = 310.5 1 1.41421
+
+Pass whole struct as function argument:
+  func_with_struct_param(aa) = 621
+  after func_with_struct_output_param(aa), aa.i = 588
+
+
+Varying:
 after a.p=P, a == { 310.5, 42, [0 1 1], foobar }
+test struct
+a == { 3.14159, 42, [0 1 2], foobar }
+
+struct param:  aparam == { 1, 0, [3 4 5], foo! }
+
+after c=a, c == { 3.14159, 42, [0 1 2], foobar }
+
+after Astruct d=a, d == { 3.14159, 42, [0 1 2], foobar }
+
+components of fields: a.p = 0 1 2, a.p[1] = 1
+
+Pass structure element to functions:
+ sqrt(a.f=3.14159) = 1.77245
+ after 'a.f = sqrt(a.f)', a.f = 1.77245
+ after 'a.p[2] = sqrt(a.p[2])', a.p[2] = 1.41421
+ after writing via a function output arg, a.f = 310.5
+ after writing via a function output arg, a.p = 310.5 1 1.41421
+
+Pass whole struct as function argument:
+  func_with_struct_param(aa) = 621
+  after func_with_struct_output_param(aa), aa.i = 588
+
+
+Varying:
 after a.p=P, a == { 310.5, 42, [1 1 1], foobar }
 

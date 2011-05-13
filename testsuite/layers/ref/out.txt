@@ -4,4 +4,10 @@ Connect alayer.f_out to blayer.f_in
 Connect alayer.c_out to blayer.c_in
 a: f_out = 0.5, c_out = 0.25 1 1
 b: f_in = 0.5, c_in = 0.25 1 1
+a: f_out = 0.5, c_out = 0.25 1 1
+b: f_in = 0.5, c_in = 0.25 1 1
+a: f_out = 0.5, c_out = 0.25 1 1
+b: f_in = 0.5, c_in = 0.25 1 1
+a: f_out = 0.5, c_out = 0.25 1 1
+b: f_in = 0.5, c_in = 0.25 1 1
 

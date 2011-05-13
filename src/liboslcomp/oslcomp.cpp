@@ -592,8 +592,9 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
         if (hints++ == 0)
             oso ("\t");
         ASTvariable_declaration *vd = (ASTvariable_declaration *) sym->node();
-        oso (" %%mystruct{%s} %%mystructfield{%d}",
-             vd->sym()->mangled().c_str(), sym->fieldid());
+        if (vd)
+            oso (" %%mystruct{%s} %%mystructfield{%d}",
+                 vd->sym()->mangled().c_str(), sym->fieldid());
     }
 
     // %derivs hint marks symbols that need to carry derivatives

@@ -435,11 +435,6 @@ private:
     bool param_one_default_literal (const Symbol *sym, ASTNode *init,
                                     std::string &out);
 
-    // Add individual symbols for each field of a structure, using the
-    // given basename.
-    void add_struct_fields (StructSpec *structspec, ustring basename,
-                            SymType symtype, int arraylen);
-
     ustring m_name;     ///< Name of the symbol (unmangled)
     Symbol *m_sym;      ///< Ptr to the symbol this declares
     bool m_isparam;     ///< Is this a parameter?
@@ -522,6 +517,12 @@ public:
     ///
     void codegen_assign (Symbol *src, Symbol *ind = NULL,
                          Symbol *ind2 = NULL, Symbol *ind3 = NULL);
+
+    /// Copy one element of the struct array named by srcname into the
+    /// struct destname.
+    void codegen_copy_struct_array_element (StructSpec *structspec,
+                                            ustring destname, ustring srcname,
+                                            Symbol *index);
 
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }
@@ -676,8 +677,14 @@ public:
     ref var () const { return child (0); }
     ref expr () const { return child (1); }
 private:
+    /// Assign the struct variable named by srcsym to the struct
+    /// variable named by dstsym by assigning each field individually.
+    /// In the case of dstsym naming an array of structs, arrayindex
+    /// should be a symbol holding the index of the individual array
+    /// element that should be copied into.
     void codegen_assign_struct (StructSpec *structspec,
-                                ustring dstsym, ustring srcsym);
+                                ustring dstsym, ustring srcsym,
+                                Symbol *arrayindex=NULL);
 };
 
 
@@ -882,7 +889,8 @@ private:
     /// Call compiler->struct_field_pair for each field in the struct.
     ///
     void struct_pair_all_fields (StructSpec *structspec,
-                                 ustring formal, ustring actual);
+                                 ustring formal, ustring actual,
+                                 Symbol *arrayindex = NULL);
 
     ustring m_name;                 ///< Name of the function being called
     Symbol *m_sym;                  ///< Symbol of the function

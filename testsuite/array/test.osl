@@ -52,6 +52,15 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
     test_unspecified_length (sarray);
 
     {
+        // Test message passing an array
+        int imess[3];
+        setmessage ("i", iarray);
+        getmessage ("i", imess);
+        printf ("Test message passing an array: imess = [%d %d %d]\n",
+                imess[0], imess[1], imess[2]);
+    }
+
+    {
         printf ("\nTest array of closures:\n");
         closure color C[3];
         C[0] = diffuse (N);
@@ -68,6 +77,13 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
             }
         }
         print_closure_array (C);
+
+        // Test message passing an array of closures
+        closure color Cmess[3];
+        setmessage ("C", C);
+        getmessage ("C", Cmess);
+        printf ("Testing message passing of array of closures:\n");
+        print_closure_array (Cmess);
     }
     printf ("\n\n");
 }

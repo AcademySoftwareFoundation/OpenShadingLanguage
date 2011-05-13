@@ -140,7 +140,50 @@ OSLCompilerImpl::make_temporary (const TypeSpec &type)
     ustring name = ustring::format ("$tmp%d", ++m_next_temp);
     Symbol *s = new Symbol (name, type, SymTypeTemp);
     symtab().insert (s);
+
+    // A struct really makes several subvariables
+    if (type.is_structure() || type.is_structure_array()) {
+        // Add the fields as individual declarations
+        add_struct_fields (type.structspec(), name,
+                           SymTypeTemp, type.arraylength());
+    }
+
     return s;
+}
+
+
+
+void
+OSLCompilerImpl::add_struct_fields (StructSpec *structspec,
+                                    ustring basename, SymType symtype,
+                                    int arraylen, ASTNode *node)
+{
+    // arraylen is the length of the array of the surrounding data type
+    for (int i = 0;  i < (int)structspec->numfields();  ++i) {
+        const StructSpec::FieldSpec &field (structspec->field(i));
+        ustring fieldname = ustring::format ("%s.%s", basename.c_str(),
+                                             field.name.c_str());
+        TypeSpec type = field.type;
+        int arr = type.arraylength();
+        if (arr && arraylen) {
+            error (node ? node->sourcefile() : ustring(),
+                   node ? node->sourceline() : 1,
+                   "Nested structs with >1 levels of arrays are not allowed: %s",
+                   structspec->name().c_str());
+        }
+        if (arraylen || arr) {
+            // Translate an outer array into an inner array
+            arr = std::max(1,arraylen) * std::max(1,arr);
+            type.make_array (arr);
+        }
+        Symbol *sym = new Symbol (fieldname, type, symtype, node);
+        sym->fieldid (i);
+        oslcompiler->symtab().insert (sym);
+        if (field.type.is_structure() || field.type.is_structure_array()) {
+            // nested structures -- recurse!
+            add_struct_fields (type.structspec(), fieldname, symtype, arr, node);
+        }
+    }
 }
 
 
@@ -409,7 +452,10 @@ ASTassign_expression::codegen (Symbol *dest)
     if (var()->nodetype() == index_node) {
         // Assigning to an individual component or array element
         index = (ASTindex *) var().get();
-        dest = NULL;
+        if (typespec().is_structure())
+            dest = var()->codegen();  // for structs, we'll need this
+        else
+            dest = NULL;
     } else if (var()->nodetype() == structselect_node) {
         dest = var()->codegen();
     } else {
@@ -421,9 +467,23 @@ ASTassign_expression::codegen (Symbol *dest)
 
     if (typespec().is_structure()) {
         // Assignment of struct copies each element individually
-        StructSpec *structspec = typespec().structspec ();
-        codegen_assign_struct (structspec, ustring(dest->mangled()),
-                               ustring(operand->mangled()));
+        if (operand != dest) {
+            StructSpec *structspec = typespec().structspec ();
+            Symbol *arrayindex = index ? index->index()->codegen() : NULL;
+            if (arrayindex) {
+                // Special case -- assignment to a element of an array of
+                // structs.  Beware the temp that may have been created above,
+                // instead refer back to the original.
+                Symbol *v = index->lvalue()->codegen();
+                codegen_assign_struct (structspec, ustring(v->mangled()),
+                                       ustring(operand->mangled()), arrayindex);
+            } else {
+                // Assignment of one scalar struct to another scalar struct
+                ASSERT (dest);
+                codegen_assign_struct (structspec, ustring(dest->mangled()),
+                                       ustring(operand->mangled()));
+            }
+        }
         return dest;
     }
 
@@ -444,7 +504,8 @@ ASTassign_expression::codegen (Symbol *dest)
 
 void
 ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
-                                             ustring dstsym, ustring srcsym)
+                                             ustring dstsym, ustring srcsym,
+                                             Symbol *arrayindex)
 {
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         const TypeSpec &fieldtype (structspec->field(i).type);
@@ -453,14 +514,19 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             ustring fieldname (structspec->field(i).name);
             codegen_assign_struct (fieldtype.structspec(),
                                    ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str()),
-                                   ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str()));
+                                   ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str()),
+                                   arrayindex);
             continue;
         }
 
         Symbol *dfield, *ofield;
         m_compiler->struct_field_pair (structspec, i, dstsym, srcsym,
                                        dfield, ofield);
-        if (dfield->typespec().is_array()) {
+        if (arrayindex) {
+            // field is a scalar, but we're assigning to one element of
+            // an array of structs.
+            emitcode ("aassign", dfield, arrayindex, ofield);
+        } else if (dfield->typespec().is_array()) {
             // field is an array
             TypeSpec elemtype = dfield->typespec().elementtype();
             Symbol *tmp = m_compiler->make_temporary (elemtype);
@@ -470,7 +536,7 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
                 emitcode ("aassign", dfield, index, tmp);
             }
         } else {
-            // field is a scalar
+            // field is a scalar, struct is a scalar
             emitcode ("assign", dfield, ofield);
         }
     }
@@ -807,12 +873,14 @@ ASTindex::codegen (Symbol *dest, Symbol * &ind,
             Symbol *tmp = m_compiler->make_temporary (lv->typespec().elementtype());
             emitcode ("aref", tmp, lv, ind);
             emitcode ("compref", dest, tmp, ind2);
-        } else if (lv->typespec().is_structure()) {
+        } else if (lv->typespec().is_structure_array()) {
             // arrayofstruct[a] -- this is tricky, we have no way to
-            // directly address a struct, so we bite the bullet and copy
-            // the whole struct.
-            // FIXME -- not completed
-            ASSERT(0);
+            // directly address a struct (or a single array element, for
+            // that matter), so we bite the bullet and copy the whole
+            // struct element by element.
+            codegen_copy_struct_array_element (lv->typespec().structspec(),
+                                               ustring(dest->mangled()),
+                                               ustring(lv->mangled()), ind);
         } else {
             // regulararray[a]
             emitcode ("aref", dest, lv, ind);
@@ -825,6 +893,33 @@ ASTindex::codegen (Symbol *dest, Symbol * &ind,
         ASSERT (0);
     }
     return dest;
+}
+
+
+
+void
+ASTindex::codegen_copy_struct_array_element (StructSpec *structspec,
+                                             ustring destname, ustring srcname,
+                                             Symbol *index)
+{
+    for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
+        const StructSpec::FieldSpec &field (structspec->field(fi));
+        const TypeSpec &type (field.type);
+        if (type.is_structure()) {
+            // struct within struct -- recurse!
+            const char *fieldname = field.name.c_str();
+            codegen_copy_struct_array_element (type.structspec(),
+                     ustring::format ("%s.%s", srcname.c_str(), fieldname),
+                     ustring::format ("%s.%s", destname.c_str(), fieldname),
+                     index);
+        } else {
+            ASSERT (! type.is_array());
+            Symbol *dfield, *sfield;
+            m_compiler->struct_field_pair (structspec, fi, destname, srcname,
+                                           dfield, sfield);
+            emitcode ("aref", dfield, sfield, index);
+        }
+    }
 }
 
 
@@ -1407,8 +1502,8 @@ ASTfunction_call::codegen (Symbol *dest)
         TypeSpec formaltype = (i < (int)polyargs.size()) ? polyargs[i]
             : TypeSpec(TypeDesc::UNKNOWN);
         bool writearg = argwrite(i+returnarg);
-            codegen_arg (argdest, index, index2, index3, i, a, form, formaltype,
-                         writearg, indexed_output_params);
+        codegen_arg (argdest, index, index2, index3, i, a, form, formaltype,
+                     writearg, indexed_output_params);
         if (form)
             form = form->nextptr();
     }
@@ -1428,13 +1523,28 @@ ASTfunction_call::codegen (Symbol *dest)
             // each of the fields
             if (ftype.is_structure()) {
                 if (a->nodetype() == variable_ref_node) {
+                    // Passed a variable that is a struct ; make the struct
+                    // fields of the formal param alias to the struct fields
+                    // of the actual param.
                     struct_pair_all_fields (ftype.structspec(),
                                             ustring(f->sym()->mangled()),
                                             ustring(argdest[i]->mangled()));
                 } else if (a->nodetype() == structselect_node) {
+                    // Passed a field of a struct, which is itself a struct.
+                    // This is very similar to the variable_ref_node case.
                     struct_pair_all_fields (ftype.structspec(),
                                             ustring(f->sym()->mangled()),
                                             ustring(((ASTstructselect *)a)->fieldsym()->mangled()));
+                } else if (a->nodetype() == index_node) {
+                    // Passed one struct in an array of structs.  That throws
+                    // us for a spin.  Not much to do but *copy* the struct
+                    // elements.
+                    ASTindex *ind = (ASTindex *)a;
+                    Symbol *arrayindex = ind->index()->codegen();
+                    struct_pair_all_fields (ftype.structspec(),
+                                            ustring(f->sym()->mangled()),
+                                            ustring(argdest[i]->mangled()),
+                                            arrayindex);
                 } else {
                     ASSERT (0 && "unhandled structure designation");
                 }
@@ -1535,7 +1645,6 @@ ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
         // components being passed as output params of the function --
         // these aren't really lvalues, so we need to restore their
         // values.  We save the indices we genearate code for here...
-        ASSERT (arg->nodetype() == ASTNode::index_node);
         ASTindex *indexnode = static_cast<ASTindex *> (arg);
         thisarg = indexnode->codegen (NULL, ind1, ind2, ind3);
         indexed_output_params = true;
@@ -1570,7 +1679,8 @@ ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
 
 void
 ASTfunction_call::struct_pair_all_fields (StructSpec *structspec,
-                                          ustring formal, ustring actual)
+                                          ustring formal, ustring actual,
+                                          Symbol *arrayindex)
 {
     for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
         const StructSpec::FieldSpec &field (structspec->field(fi));
@@ -1579,7 +1689,8 @@ ASTfunction_call::struct_pair_all_fields (StructSpec *structspec,
             // struct within struct -- recurse!
             struct_pair_all_fields (type.structspec(),
                                     ustring::format ("%s.%s", formal.c_str(), field.name.c_str()),
-                                    ustring::format ("%s.%s", actual.c_str(), field.name.c_str()));
+                                    ustring::format ("%s.%s", actual.c_str(), field.name.c_str()),
+                                    arrayindex);
         } else {
             Symbol *fsym, *asym;
             m_compiler->struct_field_pair (structspec, fi, formal, actual,

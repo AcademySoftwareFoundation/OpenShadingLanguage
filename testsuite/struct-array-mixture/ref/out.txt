@@ -20,4 +20,14 @@ c.bs[2].a.i = 6
 c.bs[3].a.i = 9
 c.bs[4].a.i = 12
 
+passing a ref to a B[]:
+bs[0].a.i = 0
+bs[1].a.i = 4
+bs[2].a.i = 8
+bs[3].a.i = 12
+bs[4].a.i = 16
+
+passing a ref to a B:
+b.a.i = 4
+
 

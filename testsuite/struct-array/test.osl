@@ -1,5 +1,5 @@
 //
-// Test structs containing other structs
+// Test arrays of structs
 //
 
 
@@ -16,14 +16,13 @@ struct Bstruct {
 
 
 shader
-test (
-//    Astruct aparam = { 1.0, point(1,2,3) }
-)
+test ()
 {
     printf ("test arrays of struct\n\n");
 
     Astruct a[5];
     a[2].f = 15;
+    a[2].p = 1;
 
     float f;
     f = a[2].f;
@@ -36,4 +35,10 @@ test (
     Bstruct b;
     b.a[1].f = M_PI;
     printf ("b.a[1].f == %g\n", b.a[1].f);
+
+    printf ("test struct assignment to and from one array element:\n");
+    Astruct c = a[2];
+    printf ("after c=a[2], c = { %g, %g }\n", c.f, c.p);
+    a[3] = c;
+    printf ("after a[3]=c, a[3] = { %g, %g }\n", a[3].f, a[3].p);
 }

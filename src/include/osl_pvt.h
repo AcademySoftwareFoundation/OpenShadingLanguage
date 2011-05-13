@@ -185,6 +185,10 @@ public:
     ///
     bool is_closure_array () const { return m_closure && is_array(); }
 
+    /// Is this typespec based on closures (either a scalar or array of
+    /// closures)?
+    bool is_closure_based () const { return m_closure; }
+
     /// Is this typespec a single structure?  Caveat: Returns false if
     /// it's an array of structs.  N.B. You can find out which struct
     /// with structure().

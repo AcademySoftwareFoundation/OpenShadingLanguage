@@ -4,11 +4,6 @@ struct C { B bs[5]; };
 struct D { C c; };
 
         
-//float foo (structA result) {
-//    printf ("x is %g\n", result.x);
-//    return result.x;
-//}
-
 void Atest (A a, int multiplier)
 {
     printf ("passing a ref to a A:\n");
@@ -24,6 +19,17 @@ void Btest (B b, int multiplier)
     printf ("passing a ref to a B:\n");
     b.a.i = multiplier;
     printf ("b.a.i = %d\n", b.a.i);
+    printf ("\n");
+}
+
+
+void Barraytest (B bs[], int multiplier)
+{
+    printf ("passing a ref to a B[]:\n");
+    for (int i = 0;  i < 5;  ++i)
+        bs[i].a.i = i*multiplier;
+    for (int i = 0;  i < 5;  ++i)
+        printf ("bs[%d].a.i = %d\n", i, bs[i].a.i);
     printf ("\n");
 }
 
@@ -66,8 +72,9 @@ shader test ()
 
     Dtest (d, 2);
     Ctest (d.c, 3);
+    Barraytest (d.c.bs, 4);
+    Btest (d.c.bs[1], 4);
 
 // FIXME -- needs work!  these still don't work properly
-//    Btest (d.c.b[1], 4);
-//    Atest (d.c.b[2].a, 5);
+//    Atest (d.c.bs[2].a, 5);
 }

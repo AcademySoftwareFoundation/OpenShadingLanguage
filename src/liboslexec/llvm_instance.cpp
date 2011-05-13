@@ -569,7 +569,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
             fields.push_back (llvm_type (ts));
 
             // Alignment
-            size_t align = sym.typespec().is_closure() ? sizeof(void*) :
+            size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
                     sym.typespec().simpletype().basesize();
             if (offset & (align-1))
                 offset += align - (offset & (align-1));
@@ -761,7 +761,7 @@ RuntimeOptimizer::llvm_constant (const TypeDesc &type)
 const llvm::Type *
 RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
 {
-    if (typespec.is_closure())
+    if (typespec.is_closure_based())
         return llvm_type_void_ptr();
     TypeDesc t = typespec.simpletype().elementtype();
     const llvm::Type *lt = NULL;
@@ -793,7 +793,7 @@ RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
 const llvm::Type *
 RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
 {
-    if (typespec.is_closure())
+    if (typespec.is_closure_based())
         return llvm_type_void_ptr();
     TypeDesc t = typespec.simpletype().elementtype();
     const llvm::Type *lt = NULL;
@@ -830,9 +830,9 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 {
     // Just memset the whole thing to zero, let LLVM sort it out.
     // This even works for closures.
-    int len = sym.typespec().is_closure() ? sizeof(void *) : sym.derivsize();
+    int len = sym.typespec().is_closure_based() ? sizeof(void *) : sym.derivsize();
     // N.B. derivsize() includes derivs, if there are any
-    size_t align = sym.typespec().is_closure() ? sizeof(void*) :
+    size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
                          sym.typespec().simpletype().basesize();
     llvm_memset (llvm_void_ptr(sym), 0, len, (int)align);
 }
@@ -845,8 +845,8 @@ RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
     // Just memset the derivs to zero, let LLVM sort it out.
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
-        int len = sym.typespec().is_closure() ? sizeof(void *) : sym.size();
-        size_t align = sym.typespec().is_closure() ? sizeof(void*) :
+        int len = sym.typespec().is_closure_based() ? sizeof(void *) : sym.size();
+        size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
                              sym.typespec().simpletype().basesize();
         llvm_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
                      0, 2*len /* size of both derivs */, (int)align);
@@ -972,7 +972,7 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
         return llvm_constant (0.0f);
     }
 
-    if (sym.is_constant()) {
+    if (sym.is_constant() && !sym.typespec().is_array()) {
         // Shortcut for simple float & int constants
         ASSERT (!arrayindex);
         if (sym.typespec().is_float()) {
@@ -1003,13 +1003,13 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
 
     // If it's multi-component (triple or matrix), step to the right field
     TypeDesc t = sym.typespec().simpletype();
-    if (! sym.typespec().is_closure() && t.aggregate > 1)
+    if (! sym.typespec().is_closure_based() && t.aggregate > 1)
         result = builder().CreateConstGEP2_32 (result, 0, component);
 
     // Now grab the value
     result = builder().CreateLoad (result);
 
-    if (sym.typespec().is_closure())
+    if (sym.typespec().is_closure_based())
         return result;
 
     // Handle int<->float type casting
@@ -1074,7 +1074,7 @@ RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
 
     // If it's multi-component (triple or matrix), step to the right field
     TypeDesc t = sym.typespec().simpletype();
-    if (! sym.typespec().is_closure() && t.aggregate > 1)
+    if (! sym.typespec().is_closure_based() && t.aggregate > 1)
         result = builder().CreateConstGEP2_32 (result, 0, component);
 
     // Finally, store the value.
@@ -1409,7 +1409,7 @@ LLVMGEN (llvm_gen_printf)
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.llvm_constant(a) : NULL;
-                if (sym.typespec().is_closure()) {
+                if (sym.typespec().is_closure_based()) {
                     s += ourformat;
                     llvm::Value *v = rop.llvm_load_value (sym, 0, arrind, 0);
                     v = rop.llvm_call_function ("osl_closure_to_string", rop.sg_void_ptr(), v);
@@ -1520,6 +1520,7 @@ LLVMGEN (llvm_gen_add)
     Symbol& A = *rop.opargsym (op, 1);
     Symbol& B = *rop.opargsym (op, 2);
 
+    ASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
     if (Result.typespec().is_closure()) {
         ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
         llvm::Value *valargs[3];
@@ -1579,7 +1580,7 @@ LLVMGEN (llvm_gen_sub)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
-    ASSERT (! Result.typespec().is_closure() &&
+    ASSERT (! Result.typespec().is_closure_based() &&
             "subtraction of closures not supported");
 
     // The following should handle f-f, v-v, v-f, f-v, i-i
@@ -1623,7 +1624,7 @@ LLVMGEN (llvm_gen_mul)
     Symbol& B = *rop.opargsym (op, 2);
 
     TypeDesc type = Result.typespec().simpletype();
-    bool is_float = !Result.typespec().is_closure() && Result.typespec().is_floatbased();
+    bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
     // multiplication involving closures
@@ -1724,7 +1725,7 @@ LLVMGEN (llvm_gen_div)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
-    ASSERT (! Result.typespec().is_closure());
+    ASSERT (! Result.typespec().is_closure_based());
 
     // division involving matrices
     if (Result.typespec().is_matrix()) {
@@ -3276,9 +3277,11 @@ LLVMGEN (llvm_gen_getattribute)
     TypeDesc attribute_type = Destination.typespec().simpletype();
     bool     dest_derivs    = Destination.has_derivs();
 
-    DASSERT (!Result.typespec().is_closure()    && !ObjectName.typespec().is_closure() && 
-             !Attribute.typespec().is_closure() && !Index.typespec().is_closure()      && 
-             !Destination.typespec().is_closure());
+    DASSERT (!Result.typespec().is_closure_based() &&
+             !ObjectName.typespec().is_closure_based() && 
+             !Attribute.typespec().is_closure_based() &&
+             !Index.typespec().is_closure_based() && 
+             !Destination.typespec().is_closure_based());
 
     // We'll pass the destination's attribute type directly to the 
     // RenderServices callback so that the renderer can perform any
@@ -3311,9 +3314,9 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
     // our layer when the earlier layer is run, as part of its code.  So
     // we just don't need to initialize it here at all.
     if (sym.valuesource() == Symbol::ConnectedVal &&
-          !sym.typespec().is_closure())
+          !sym.typespec().is_closure_based())
         return;
-    if (sym.typespec().is_closure() && sym.symtype() == SymTypeGlobal)
+    if (sym.typespec().is_closure_based() && sym.symtype() == SymTypeGlobal)
         return;
 
     int arraylen = std::max (1, sym.typespec().arraylength());
@@ -3321,7 +3324,7 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
     // Closures need to get their storage before anything can be
     // assigned to them.  Unless they are params, in which case we took
     // care of it in the group entry point.
-    if (sym.typespec().is_closure() &&
+    if (sym.typespec().is_closure_based() &&
         sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam) {
         llvm::Value *init_val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
         for (int a = 0; a < arraylen;  ++a) {
@@ -3338,7 +3341,7 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
         int num_components = sym.typespec().simpletype().aggregate;
         for (int a = 0, c = 0; a < arraylen;  ++a) {
             llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
-            if (sym.typespec().is_closure())
+            if (sym.typespec().is_closure_based())
                 continue;
             for (int i = 0; i < num_components; ++i, ++c) {
                 // Fill in the constant val
@@ -3403,8 +3406,10 @@ LLVMGEN (llvm_gen_gettextureinfo)
     Symbol& Dataname = *rop.opargsym (op, 2);
     Symbol& Data     = *rop.opargsym (op, 3);
 
-    DASSERT (!Result.typespec().is_closure() && Filename.typespec().is_string() && 
-             Dataname.typespec().is_string() && !Data.typespec().is_closure()   && 
+    DASSERT (!Result.typespec().is_closure_based() &&
+             Filename.typespec().is_string() && 
+             Dataname.typespec().is_string() &&
+             !Data.typespec().is_closure_based() && 
              Result.typespec().is_int());
 
     std::vector<llvm::Value *> args;
@@ -3451,9 +3456,10 @@ LLVMGEN (llvm_gen_getmessage)
                          : rop.llvm_constant(ustring());
     args[2] = rop.llvm_load_value (Name);
 
-    if (Data.typespec().is_closure()) {
+    if (Data.typespec().is_closure_based()) {
         // FIXME: secret handshake for closures ...
-        args[3] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN));
+        args[3] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN,
+                                              Data.typespec().arraylength()));
         // We need a void ** here so the function can modify the closure
         args[4] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
     } else {
@@ -3485,9 +3491,10 @@ LLVMGEN (llvm_gen_setmessage)
     llvm::Value *args[7];
     args[0] = rop.sg_void_ptr();
     args[1] = rop.llvm_load_value (Name);
-    if (Data.typespec().is_closure()) {
+    if (Data.typespec().is_closure_based()) {
         // FIXME: secret handshake for closures ...
-        args[2] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN));
+        args[2] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN,
+                                              Data.typespec().arraylength()));
         // We need a void ** here so the function can modify the closure
         args[3] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
     } else {
@@ -3564,9 +3571,11 @@ LLVMGEN (llvm_gen_spline)
     Symbol& Knots    = has_knot_count ? *rop.opargsym (op, 4) :
                                         *rop.opargsym (op, 3);
 
-    DASSERT (!Result.typespec().is_closure() && Spline.typespec().is_string()  && 
-             Value.typespec().is_float()     && !Knots.typespec().is_closure() &&
-             Knots.typespec().is_array()     &&  
+    DASSERT (!Result.typespec().is_closure_based() &&
+             Spline.typespec().is_string()  && 
+             Value.typespec().is_float() &&
+             !Knots.typespec().is_closure_based() &&
+             Knots.typespec().is_array() &&  
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
     std::string name = "osl_spline_";
@@ -3714,7 +3723,7 @@ LLVMGEN (llvm_gen_closure)
         TypeDesc t = sym.typespec().simpletype();
         if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
             t.vecsemantics = TypeDesc::VECTOR;
-        if (!sym.typespec().is_closure() && !sym.typespec().is_structure() && t == p.type) {
+        if (!sym.typespec().is_closure_based() && !sym.typespec().is_structure() && t == p.type) {
             llvm::Value* dst = rop.llvm_offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = rop.llvm_void_ptr (sym);
             rop.llvm_memcpy (dst, src, (int)p.type.size(),
@@ -4161,7 +4170,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
             if (gi->unused())
                 continue;
             FOREACH_PARAM (Symbol &sym, gi) {
-               if (sym.typespec().is_closure()) {
+               if (sym.typespec().is_closure_based()) {
                     int arraylen = std::max (1, sym.typespec().arraylength());
                     llvm::Value *val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
                     for (int a = 0; a < arraylen;  ++a) {
@@ -4188,7 +4197,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
             getOrAllocateLLVMSymbol (s);
         // Set initial value for constants, and closures
         if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
-            (s.is_constant() || s.typespec().is_closure()))
+            (s.is_constant() || s.typespec().is_closure_based()))
             llvm_assign_initial_value (s);
     }
     // make a second pass for the parameters (which may make use of

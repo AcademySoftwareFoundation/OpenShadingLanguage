@@ -1787,8 +1787,12 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
             s->symtype() == SymTypeParam && s->lockgeom() &&
             // and it's NOT a default val that needs to run init ops
             !(s->valuesource() == Symbol::DefaultVal && s->has_init_ops()) &&
+
+            !s->typespec().is_array() &&
+
+
             // and it not a structure or closure variable...
-            !s->typespec().is_structure() && !s->typespec().is_closure())
+            !s->typespec().is_structure() && !s->typespec().is_closure_based())
         {
             // We can turn it into a constant if there's no connection,
             // OR if the connection is itself a constant
@@ -1909,7 +1913,7 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
 
-    if (! A->is_constant() || R->typespec().is_closure())
+    if (! A->is_constant() || R->typespec().is_closure_based())
         return false;   // we don't handle those cases
 
     // turn 'R_float = A_int_const' into a float const assignment
@@ -2717,7 +2721,7 @@ RuntimeOptimizer::track_variable_dependencies ()
         // Exclude N, since its derivs are unreliable anyway, so no point
         // making it cause the whole disp shader to need derivs.
         if (s.symtype() == SymTypeGlobal && s.everwritten() &&
-              !s.typespec().is_closure() && s.mangled() != Strings::N)
+              !s.typespec().is_closure_based() && s.mangled() != Strings::N)
             s.has_derivs(true);
         if (s.has_derivs())
             add_dependency (symdeps, DerivSym, snum);
@@ -2727,7 +2731,7 @@ RuntimeOptimizer::track_variable_dependencies ()
     // Mark all symbols needing derivatives as such
     BOOST_FOREACH (int d, symdeps[DerivSym]) {
         Symbol *s = inst()->symbol(d);
-        if (! s->typespec().is_closure() && 
+        if (! s->typespec().is_closure_based() && 
                 s->typespec().elementtype().is_floatbased())
             s->has_derivs (true);
     }
@@ -3095,7 +3099,7 @@ RuntimeOptimizer::optimize_group ()
         BOOST_FOREACH (Connection &c, inst()->m_connections) {
             if (inst()->symbol(c.dst.param)->has_derivs()) {
                 Symbol *source = m_group[c.srclayer]->symbol(c.src.param);
-                if (! source->typespec().is_closure() &&
+                if (! source->typespec().is_closure_based() &&
                     source->typespec().elementtype().is_floatbased()) {
                     source->has_derivs (true);
                     any = true;

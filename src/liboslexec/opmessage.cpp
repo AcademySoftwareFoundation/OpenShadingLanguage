@@ -59,9 +59,9 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
     const ustring &sourcefile (USTR(sourcefile_));
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type (*(TypeDesc *)&type_);
-    bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
+    bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
-        type = TypeDesc::PTR;  // for closures, we store a pointer
+        type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
     MessageList &messages (sg->context->messages());
     const Message* m = messages.find(name);
@@ -106,9 +106,9 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
 
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type (*(TypeDesc *)&type_);
-    bool is_closure = (type == TypeDesc::UNKNOWN); // secret code for closure
+    bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
-        type = TypeDesc::PTR;  // for closures, we store a pointer
+        type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
     static ustring ktrace ("trace");
     if (source == ktrace) {

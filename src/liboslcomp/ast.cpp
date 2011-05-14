@@ -324,38 +324,8 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (type.is_structure() || type.is_structure_array()) {
         ASSERT (! m_ismetadata);
         // Add the fields as individual declarations
-        add_struct_fields (type.structspec(), m_sym->name(), symtype,
-                           type.arraylength());
-    }
-}
-
-
-
-void
-ASTvariable_declaration::add_struct_fields (StructSpec *structspec,
-                                            ustring basename, SymType symtype,
-                                            int arraylen)
-{
-    // arraylen is the length of the array of the surrounding data type
-    for (int i = 0;  i < (int)structspec->numfields();  ++i) {
-        const StructSpec::FieldSpec &field (structspec->field(i));
-        ustring fieldname = ustring::format ("%s.%s",
-                                             basename.c_str(),
-                                             field.name.c_str());
-        TypeSpec type = field.type;
-        int arr = type.arraylength();
-        if (arraylen || arr) {
-            // Translate an outer array into an inner array
-            arr = std::max(1,arraylen) * std::max(1,arr);
-            type.make_array (arr);
-        }
-        Symbol *sym = new Symbol (fieldname, type, symtype, this);
-        sym->fieldid (i);
-        oslcompiler->symtab().insert (sym);
-        if (field.type.is_structure() || field.type.is_structure_array()) {
-            // nested structures -- recurse!
-            add_struct_fields (type.structspec(), fieldname, symtype, arr);
-        }
+        m_compiler->add_struct_fields (type.structspec(), m_sym->name(),
+                                       symtype, type.arraylength(), this);
     }
 }
 

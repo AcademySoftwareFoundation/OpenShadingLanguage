@@ -215,6 +215,11 @@ public:
     ///
     Symbol *make_constant (TypeDesc type, float x, float y, float z);
 
+    // Make and add individual symbols for each field of a structure,
+    // using the given basename.
+    void add_struct_fields (StructSpec *structspec, ustring basename,
+                            SymType symtype, int arraylen, ASTNode *node=NULL);
+
     std::string output_filename () const { return m_output_filename; }
 
     /// Push the designated function on the stack, to keep track of

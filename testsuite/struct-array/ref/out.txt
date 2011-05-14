@@ -5,4 +5,7 @@ float f; f = a[2].f;  ==> 15
 float g = a[2].f;  ==> 15
 test struct containing array of struct:
 b.a[1].f == 3.14159
+test struct assignment to and from one array element:
+after c=a[2], c = { 15, 1 1 1 }
+after a[3]=c, a[3] = { 15, 1 1 1 }
 

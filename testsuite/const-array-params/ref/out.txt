@@ -1,0 +1,11 @@
+Compiled test.osl -> test.oso
+static array reference (const index):
+  i[0] = 10, s[0] = foo0
+  i[1] = 11, s[1] = bar1
+  i[2] = 12, s[2] = baz2
+
+dynamic array reference (variable index in a loop):
+  i[0] = 10, s[0] = foo0
+  i[1] = 11, s[1] = bar1
+  i[2] = 12, s[2] = baz2
+

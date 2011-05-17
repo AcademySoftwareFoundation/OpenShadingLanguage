@@ -290,6 +290,14 @@ public:
                                   llvm::Value *arrayindex, int component,
                                   TypeDesc cast=TypeDesc::UNKNOWN);
 
+    /// Just like llvm_load_value, but when both the symbol and the
+    /// array index are known to be constants.  This can even handle
+    /// pulling constant-indexed elements out of constant arrays.  Use
+    /// arrayindex==-1 to indicate that it's not an array dereference.
+    llvm::Value *llvm_load_constant_value (const Symbol& sym,
+                                           int arrayindex, int component,
+                                           TypeDesc cast=TypeDesc::UNKNOWN);
+
     /// llvm_load_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
     llvm::Value *llvm_load_component_value (const Symbol& sym, int deriv,

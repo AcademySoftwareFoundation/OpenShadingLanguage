@@ -928,17 +928,19 @@ RuntimeOptimizer::llvm_get_pointer (const Symbol& sym, int deriv,
     if (!has_derivs && deriv != 0) {
         // Return NULL for request for pointer to derivs that don't exist
         return llvm_ptr_cast (llvm_void_ptr_null(),
-                              llvm::PointerType::get (llvm_type(sym.typespec()), 0));
+                              llvm::PointerType::get (llvm_type(sym.typespec().elementtype()), 0));
     }
 
+    llvm::Value *result = NULL;
     if (sym.symtype() == SymTypeConst) {
-        // For constants, just return *OUR* pointer to the constant values.
-        return llvm_ptr_cast (llvm_constant_ptr (sym.data()),
-                              llvm::PointerType::get (llvm_type(sym.typespec()), 0));
-    }
+        // For constants, start with *OUR* pointer to the constant values.
+        result = llvm_ptr_cast (llvm_constant_ptr (sym.data()),
+                                llvm::PointerType::get (llvm_type(sym.typespec().elementtype()), 0));
 
-    // Start with the initial pointer to the variable's memory location
-    llvm::Value* result = getLLVMSymbolBase (sym);
+    } else {
+        // Start with the initial pointer to the variable's memory location
+        result = getLLVMSymbolBase (sym);
+    }
     if (!result)
         return NULL;  // Error
 
@@ -972,9 +974,11 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
         return llvm_constant (0.0f);
     }
 
-    if (sym.is_constant() && !sym.typespec().is_array()) {
-        // Shortcut for simple float & int constants
-        ASSERT (!arrayindex);
+    // arrayindex should be non-NULL if and only if sym is an array
+    ASSERT (sym.typespec().is_array() == (arrayindex != NULL));
+
+    if (sym.is_constant() && !sym.typespec().is_array() && !arrayindex) {
+        // Shortcut for simple constants
         if (sym.typespec().is_float()) {
             if (cast == TypeDesc::TypeInt)
                 return llvm_constant ((int)*(float *)sym.data());
@@ -1019,6 +1023,50 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
         result = llvm_int_to_float (result);
 
     return result;
+}
+
+
+
+llvm::Value *
+RuntimeOptimizer::llvm_load_constant_value (const Symbol& sym, 
+                                            int arrayindex, int component,
+                                            TypeDesc cast)
+{
+    ASSERT (sym.is_constant() &&
+            "Called llvm_load_constant_value for a non-constant symbol");
+
+    // set array indexing to zero for non-arrays
+    if (! sym.typespec().is_array())
+        arrayindex = 0;
+    ASSERT (arrayindex >= 0 &&
+            "Called llvm_load_constant_value with negative array index");
+
+    if (sym.typespec().is_float()) {
+        const float *val = (const float *)sym.data();
+        if (cast == TypeDesc::TypeInt)
+            return llvm_constant ((int)val[arrayindex]);
+        else
+            return llvm_constant (val[arrayindex]);
+    }
+    if (sym.typespec().is_int()) {
+        const int *val = (const int *)sym.data();
+        if (cast == TypeDesc::TypeFloat)
+            return llvm_constant ((float)val[arrayindex]);
+        else
+            return llvm_constant (val[arrayindex]);
+    }
+    if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
+        const float *val = (const float *)sym.data();
+        int ncomps = (int) sym.typespec().aggregate();
+        return llvm_constant (val[ncomps*arrayindex + component]);
+    }
+    if (sym.typespec().is_string()) {
+        const ustring *val = (const ustring *)sym.data();
+        return llvm_constant (val[arrayindex]);
+    }
+
+    ASSERT (0 && "unhandled constant type");
+    return NULL;
 }
 
 
@@ -2073,8 +2121,8 @@ llvm_assign_impl (RuntimeOptimizer &rop, Symbol &Result, Symbol &Src,
 
     llvm::Value *arrind = arrayindex >= 0 ? rop.llvm_constant (arrayindex) : NULL;
 
-    if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
-        if (Src.typespec().is_closure()) {
+    if (Result.typespec().is_closure_based() || Src.typespec().is_closure_based()) {
+        if (Src.typespec().is_closure_based()) {
             llvm::Value *srcval = rop.llvm_load_value (Src, 0, arrind, 0);
             rop.llvm_store_value (srcval, Result, 0, arrind, 0);
         } else {
@@ -2102,7 +2150,9 @@ llvm_assign_impl (RuntimeOptimizer &rop, Symbol &Result, Symbol &Src,
     TypeDesc basetype = TypeDesc::BASETYPE(rt.basetype);
     int num_components = rt.aggregate;
     for (int i = 0; i < num_components; ++i) {
-        llvm::Value* src_val = rop.llvm_load_value (Src, 0, arrind, i, basetype);
+        llvm::Value* src_val = Src.is_constant()
+            ? rop.llvm_load_constant_value (Src, arrayindex, i, basetype)
+            : rop.llvm_load_value (Src, 0, arrind, i, basetype);
         if (!src_val)
             return false;
         rop.llvm_store_value (src_val, Result, 0, arrind, i);
@@ -4185,8 +4235,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     BOOST_FOREACH (Symbol &s, inst()->symbols()) {
-        // Skip constants -- we always inline them
-        if (s.symtype() == SymTypeConst)
+        // Skip non-array constants -- we always inline them
+        if (s.symtype() == SymTypeConst && !s.typespec().is_array())
             continue;
         // Skip structure placeholders
         if (s.typespec().is_structure())

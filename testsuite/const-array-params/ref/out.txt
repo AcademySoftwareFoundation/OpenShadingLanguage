@@ -1,0 +1,7 @@
+Compiled test.osl -> test.oso
+i[1] = 11, s[1] = bar1
+i[2] = 12, s[2] = baz2
+i[0] = 10, s[0] = foo0
+i[1] = 11, s[1] = bar1
+i[2] = 12, s[2] = baz2
+

@@ -1787,10 +1787,6 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
             s->symtype() == SymTypeParam && s->lockgeom() &&
             // and it's NOT a default val that needs to run init ops
             !(s->valuesource() == Symbol::DefaultVal && s->has_init_ops()) &&
-
-            !s->typespec().is_array() &&
-
-
             // and it not a structure or closure variable...
             !s->typespec().is_structure() && !s->typespec().is_closure_based())
         {

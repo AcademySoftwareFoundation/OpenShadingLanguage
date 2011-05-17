@@ -1,12 +1,13 @@
 shader test (int i[3] = { 10, 11, 12 },
              string s[3] = { "foo0", "bar1", "baz2" })
 {
-    printf ("i[1] = %d, s[1] = %s\n", i[1], s[1]);
-    printf ("i[2] = %d, s[2] = %s\n", i[2], s[2]);
+    printf ("static array reference (const index):\n");
+    printf ("  i[0] = %d, s[0] = %s\n", i[0], s[0]);
+    printf ("  i[1] = %d, s[1] = %s\n", i[1], s[1]);
+    printf ("  i[2] = %d, s[2] = %s\n", i[2], s[2]);
 
-#if 1
+    printf ("\ndynamic array reference (variable index in a loop):\n");
     for (int j = 0;  j < 3;  ++j) {
-        printf ("i[%d] = %d, s[%d] = %s\n", j, i[j], j, s[j]);
+        printf ("  i[%d] = %d, s[%d] = %s\n", j, i[j], j, s[j]);
     }
-#endif
 }

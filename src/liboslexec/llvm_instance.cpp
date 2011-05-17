@@ -974,6 +974,9 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
         return llvm_constant (0.0f);
     }
 
+    // arrayindex should be non-NULL if and only if sym is an array
+    ASSERT (sym.typespec().is_array() == (arrayindex != NULL));
+
     if (sym.is_constant() && !sym.typespec().is_array() && !arrayindex) {
         // Shortcut for simple constants
         if (sym.typespec().is_float()) {

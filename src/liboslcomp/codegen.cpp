@@ -909,8 +909,8 @@ ASTindex::codegen_copy_struct_array_element (StructSpec *structspec,
             // struct within struct -- recurse!
             const char *fieldname = field.name.c_str();
             codegen_copy_struct_array_element (type.structspec(),
-                     ustring::format ("%s.%s", srcname.c_str(), fieldname),
                      ustring::format ("%s.%s", destname.c_str(), fieldname),
+                     ustring::format ("%s.%s", srcname.c_str(), fieldname),
                      index);
         } else {
             ASSERT (! type.is_array());

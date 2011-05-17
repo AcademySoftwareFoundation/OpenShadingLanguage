@@ -98,8 +98,8 @@ SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
 }
 
 void *
-SimpleRenderer::get_pointcloud_attr_query (ustring *attr_names,
-                                           TypeDesc *attr_types, int nattrs)
+SimpleRenderer::get_pointcloud_attr_query (ustring *attr_names, TypeDesc *attr_types,
+                                           bool derivatives, int nattrs)
 {
 #if 0
     // Example code of how to cache some useful query info to

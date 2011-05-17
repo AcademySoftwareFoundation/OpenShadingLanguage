@@ -3843,9 +3843,11 @@ LLVMGEN (llvm_gen_pointcloud_search)
     // pass the number of attributes before the
     // var arg list
     args.push_back (rop.llvm_constant(nattrs));
+    bool do_derivs = false;
+    ustring u_distance("distance");
+    Symbol *distance_symbol = NULL;
 
-    for (int i = 0; i < nattrs; ++i)
-    {
+    for (int i = 0; i < nattrs; ++i) {
         Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
         Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
         // The names of the attribute has to be a string and a constant.
@@ -3854,6 +3856,19 @@ LLVMGEN (llvm_gen_pointcloud_search)
         ASSERT (Name.typespec().is_string());
         ASSERT (Name.is_constant());
         ustring *name = (ustring *)Name.data();
+        if (*name == u_distance) {
+            if (distance_symbol) { // distance already found
+               // We only have to care about mixing derivs/noderivs, but let's just
+               // ban duplicated arguments for distance
+               rop.shadingsys().error ("Passign \"distance\" twice to pointcloud not allowed (%s:%d)",
+                                       op.sourcefile().c_str(), op.sourceline());
+               return false;
+            }
+            do_derivs = Value.has_derivs();
+            distance_symbol = &Value;
+        } else {
+            rop.llvm_zero_derivs(Value);
+        }
         // We save this to generate the query object later, both name
         // and type will never change during the render
         attr_names.push_back (*name);
@@ -3862,10 +3877,14 @@ LLVMGEN (llvm_gen_pointcloud_search)
         args.push_back (rop.llvm_void_ptr (Value));
     }
 
+    if (do_derivs && !Center.has_derivs())
+        rop.llvm_zero_derivs(*distance_symbol);
+    do_derivs = do_derivs && Center.has_derivs();
+
     // Try to build a query and get the handle from the renderer
-    void *attr_query = rop.shadingsys().renderer()->get_pointcloud_attr_query (&attr_names[0], &attr_types[0], attr_names.size());
-    if (!attr_query)
-    {
+    void *attr_query = rop.shadingsys().renderer()->get_pointcloud_attr_query (&attr_names[0], &attr_types[0],
+                                                                               do_derivs, attr_names.size());
+    if (!attr_query) {
         rop.shadingsys().error ("Failed to create pointcloud query at (%s:%d)",
                                  op.sourcefile().c_str(), op.sourceline());
         return false;

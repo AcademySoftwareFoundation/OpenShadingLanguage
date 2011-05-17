@@ -363,8 +363,8 @@ public:
     ///
     ///   For more insight look at llvm_gen_pointcloud in llvm_instance.cpp
     ///
-    virtual void *get_pointcloud_attr_query (ustring *attr_names,
-                                             TypeDesc *attr_types, int nattrs) = 0;
+    virtual void *get_pointcloud_attr_query (ustring *attr_names, TypeDesc *attr_types,
+                                             bool derivatives, int nattrs) = 0;
 
     /// Lookup nearest points in a point cloud. It will search for points
     /// around the given center within the specified radius. attr_outdata

@@ -67,8 +67,8 @@ public:
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
                                void *renderstate, void *val);
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
-    virtual void *get_pointcloud_attr_query (ustring *attr_names,
-                                             TypeDesc *attr_types, int nattrs);
+    virtual void *get_pointcloud_attr_query (ustring *attr_names, TypeDesc *attr_types,
+                                             bool derivatives, int nattrs);
     virtual int  pointcloud (ustring filename, const OSL::Vec3 &center, float radius,
                              int max_points, void *attr_query, void **attr_outdata);
 

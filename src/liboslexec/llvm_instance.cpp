@@ -1444,7 +1444,8 @@ LLVMGEN (llvm_gen_printf)
                 ++format;
             ++format; // Also eat the format char
             if (arg >= op.nargs()) {
-                rop.shadingsys().error ("Mismatch between format string and arguments");
+                rop.shadingsys().error ("Mismatch between format string and arguments (%s:%d)",
+                                        op.sourcefile().c_str(), op.sourceline());
                 return false;
             }
 

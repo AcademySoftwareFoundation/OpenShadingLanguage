@@ -519,13 +519,36 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             continue;
         }
 
+        if (fieldtype.is_structure_array() && !arrayindex) {
+            // struct array within struct -- loop over idices and recurse
+            ASSERT (! arrayindex && "two levels of arrays not allowed");
+            ustring fieldname (structspec->field(i).name);
+            ustring dstfield = ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str());
+            ustring srcfield = ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str());
+            for (int i = 0;  i < fieldtype.arraylength();  ++i) {
+                codegen_assign_struct (fieldtype.structspec(),
+                                       dstfield, srcfield,
+                                       m_compiler->make_constant(i));
+            }
+            continue;
+        }
+
         Symbol *dfield, *ofield;
         m_compiler->struct_field_pair (structspec, i, dstsym, srcsym,
                                        dfield, ofield);
         if (arrayindex) {
             // field is a scalar, but we're assigning to one element of
             // an array of structs.
-            emitcode ("aassign", dfield, arrayindex, ofield);
+            if (ofield->typespec().is_array()) {
+                // Both are arrays
+                TypeSpec elemtype = dfield->typespec().elementtype();
+                Symbol *tmp = m_compiler->make_temporary (elemtype);
+                emitcode ("aref", tmp, ofield, arrayindex);
+                emitcode ("aassign", dfield, arrayindex, tmp);
+            } else {
+                // Only the destination is an array
+                emitcode ("aassign", dfield, arrayindex, ofield);
+            }
         } else if (dfield->typespec().is_array()) {
             // field is an array
             TypeSpec elemtype = dfield->typespec().elementtype();

@@ -1203,11 +1203,9 @@ ASTbinary_expression::codegen (Symbol *dest)
 Symbol *
 ASTbinary_expression::codegen_logic (Symbol *dest)
 {
-    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
-        dest = m_compiler->make_temporary (typespec());
-    Symbol *lsym = left()->codegen_int (dest);
+    dest = left()->codegen_int (NULL, true);
 
-    int ifop = emitcode ("if", lsym);
+    int ifop = emitcode ("if", dest);
     // "if" is unusual in that it doesn't write its first argument
     oslcompiler->lastop().argread (0, true);
     oslcompiler->lastop().argwrite (0, false);
@@ -1215,16 +1213,15 @@ ASTbinary_expression::codegen_logic (Symbol *dest)
     m_compiler->push_nesting (false);
 
     if (m_op == And) {
-        Symbol *rsym = right()->codegen_int ();
-        // Fixme -- make sure it's an int
-        emitcode ("and", dest, lsym, rsym);
+        Symbol *rsym = right()->codegen_int (dest, true);
+        if (rsym != dest)
+            emitcode ("assign", dest, rsym);
         falselabel = m_compiler->next_op_label ();
-        emitcode ("assign", dest, m_compiler->make_constant((int)0));
     } else { /* Or */
-        emitcode ("assign", dest, m_compiler->make_constant((int)1));
         falselabel = m_compiler->next_op_label ();
-        Symbol *rsym = right()->codegen_int ();
-        emitcode ("or", dest, rsym, rsym);
+        Symbol *rsym = right()->codegen_int (dest, true);
+        if (rsym != dest)
+            emitcode ("assign", dest, rsym);
     }
 
     int donelabel = m_compiler->next_op_label ();

@@ -316,6 +316,18 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         }
     }
 
+    // Adjust the basic block IDs and which instructions are inside
+    // conditionals.
+    if (m_bblockids.size()) {
+        ASSERT (m_bblockids.size() == code.size()-1);
+        m_bblockids.insert (m_bblockids.begin()+opnum, 1, m_bblockids[opnum]);
+    }
+    if (m_in_conditional.size()) {
+        ASSERT (m_in_conditional.size() == code.size()-1);
+        m_in_conditional.insert (m_in_conditional.begin()+opnum, 1,
+                                 m_in_conditional[opnum]);
+    }
+
     if (opname != u_useparam) {
         // Mark the args as being used for this op (assume that the
         // first is written, the others are read).  Enforce that with an
@@ -422,8 +434,6 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
         // op whose arguments are the list of params we are about to use.
         if (params.size()) {
             insert_useparam (opnum, params);
-            m_in_conditional.insert (m_in_conditional.begin()+opnum,
-                                     m_in_conditional[opnum]);
             // Skip the op we just added
             ++opnum;
         }
@@ -2875,6 +2885,9 @@ RuntimeOptimizer::post_optimize_instance ()
     BOOST_FOREACH (Symbol &s, inst()->symbols())
         allsymptrs.push_back (&s);
 
+    m_bblockids.clear ();       // Keep insert_code from getting confused
+    m_in_conditional.clear ();
+
     add_useparam (allsymptrs);
 
     if (m_shadingsys.optimize() >= 1)
@@ -3039,6 +3052,10 @@ RuntimeOptimizer::collapse_ops ()
         ss.m_stat_mem_inst += mem;
         ss.m_stat_memory += mem;
     }
+
+    // These are no longer valid
+    m_bblockids.clear ();
+    m_in_conditional.clear ();
 }
 
 

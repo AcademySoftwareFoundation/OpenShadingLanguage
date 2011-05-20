@@ -930,6 +930,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
         } else if (m_name == "trace") {
             argtakesderivs (1, true);
             argtakesderivs (2, true);
+        } else if (m_name == "pointcloud_search") {
+            argtakesderivs (2, true);
         } else {
             ASSERT (0 && "Missed a takes_derivs case!");
         }
@@ -1073,7 +1075,7 @@ static const char * builtin_func_args [] = {
     "hash", NOISE_ARGS, NULL,
     "noise", NOISE_ARGS, NULL,
     "pnoise", PNOISE_ARGS, NULL,
-    "pointcloud_search", "ispfi.", NULL,
+    "pointcloud_search", "ispfi.", "!deriv", NULL,
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,

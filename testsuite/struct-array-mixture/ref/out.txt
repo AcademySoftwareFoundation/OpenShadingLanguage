@@ -8,10 +8,10 @@ d.c.bs[4].a.i = 4
 
 passing a ref to a D:
 d.c.bs[0].a.i = 0
-d.c.bs[1].a.i = 2
-d.c.bs[2].a.i = 4
-d.c.bs[3].a.i = 6
-d.c.bs[4].a.i = 8
+d.c.bs[1].a.i = 1
+d.c.bs[2].a.i = 2
+d.c.bs[3].a.i = 3
+d.c.bs[4].a.i = 4
 
 passing a ref to a C:
 c.bs[0].a.i = 0
@@ -29,5 +29,13 @@ bs[4].a.i = 16
 
 passing a ref to a B:
 b.a.i = 4
+
+Testing assignment of the whole nested structure:
+passing a ref to a D:
+d.c.bs[0].a.i = 0
+d.c.bs[1].a.i = 1
+d.c.bs[2].a.i = 2
+d.c.bs[3].a.i = 3
+d.c.bs[4].a.i = 4
 
 

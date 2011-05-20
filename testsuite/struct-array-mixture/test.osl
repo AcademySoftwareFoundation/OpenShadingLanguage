@@ -70,11 +70,17 @@ shader test ()
         printf ("d.c.bs[%d].a.i = %d\n", i, d.c.bs[i].a.i);
     printf ("\n");
 
-    Dtest (d, 2);
+    Dtest (d, 1);
     Ctest (d.c, 3);
     Barraytest (d.c.bs, 4);
     Btest (d.c.bs[1], 4);
 
 // FIXME -- needs work!  these still don't work properly
 //    Atest (d.c.bs[2].a, 5);
+
+    // Test assignment of the whole thing
+    printf ("Testing assignment of the whole nested structure:\n");
+    D d2;
+    d2 = d;
+    Dtest (d2, 1);
 }

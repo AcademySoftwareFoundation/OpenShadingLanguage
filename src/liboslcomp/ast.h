@@ -867,7 +867,9 @@ private:
         argread (arg, false);
         argwrite (arg, true);
     }
-
+    /// Declare optional arguments as outputs (write only) by this op.
+    ///
+    void mark_optional_output (int firstopt, const char **tags);
     /// Declare that argument number 'arg' takes derivatives.
     ///
     void argtakesderivs (int arg, bool val) {

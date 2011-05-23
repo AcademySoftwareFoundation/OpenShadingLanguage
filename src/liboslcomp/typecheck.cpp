@@ -825,8 +825,53 @@ ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
 
 
 void
+ASTfunction_call::mark_optional_output (int firstopt, const char **tags)
+{
+   bool mark_all = *tags && **tags == '*';
+   std::vector<ASTNode::ref> argvec;
+   list_to_vec (args(), argvec);
+
+   // Find the beginning of the optional arguments
+   int nargs = (int) listlength(args());
+   while (firstopt < nargs &&
+          ! argvec[firstopt]->typespec().is_string())
+       ++firstopt;
+
+   // Loop through the optional args, look for any tag
+   for (int a = firstopt;  a < (int)argvec.size()-1;  a += 2) {
+       ASTNode *s = argvec[a].get();
+       bool isoutput = false;
+       // compare against output tags
+       if (s->typespec().is_string() && s->nodetype() == ASTNode::literal_node) {
+           for (const char **tag = tags; *tag && !isoutput; ++tag)
+               isoutput = isoutput || mark_all || (! strcmp (((ASTliteral *)s)->strval(), *tag));
+       }
+       if (isoutput) {
+           // writes to the next arg!
+           if (a+2 < 32)
+               argwriteonly (a+2);   // mark writeable
+           else {
+               // We can only designate the first 32 args
+               // writeable.  So swap it with earlier optional args.
+               std::swap (argvec[firstopt],   argvec[a]);
+               std::swap (argvec[firstopt+1], argvec[a+1]);
+               argwriteonly (firstopt+1);
+               firstopt += 2;  // advance in case another is needed
+           }
+       }
+   }
+
+   m_children[0] = vec_to_list (argvec);
+}
+
+
+
+void
 ASTfunction_call::typecheck_builtin_specialcase ()
 {
+    const char *tex_out_args[] = {"alpha", NULL};
+    const char *pointcloud_out_args[] = {"*", NULL};
+
     if (m_name == "transform") {
         // Special case for transform: under the covers, it selects
         // vector or normal special versions depending on its use.
@@ -856,41 +901,10 @@ ASTfunction_call::typecheck_builtin_specialcase ()
                    m_name == "gettextureinfo" || m_name == "dict_value") {
             // these all write to their last argument
             argwriteonly ((int)listlength(args()));
+        } else if (m_name == "pointcloud_search") {
+            mark_optional_output(5, pointcloud_out_args);
         } else if (func()->texture_args()) {
-            // texture-like function, look out for "alpha"
-
-            std::vector<ASTNode::ref> argvec;
-            list_to_vec (args(), argvec);
-
-            // Find the beginning of the optional arguments -- it will be
-            // the first string argument AFTER the filename.
-            int nargs = (int) listlength(args());
-            int firstopt = 2;
-            while (firstopt < nargs &&
-                   ! argvec[firstopt]->typespec().is_string())
-                ++firstopt;
-
-            // Loop through the optional args, look for "alpha"
-            for (int a = firstopt;  a < (int)argvec.size()-1;  a += 2) {
-                ASTNode *s = argvec[a].get();
-                if (s->typespec().is_string() &&
-                    s->nodetype() == ASTNode::literal_node &&
-                    ! strcmp (((ASTliteral *)s)->strval(), "alpha")) {
-                    // 'alpha' writes to the next arg!
-                    if (a+2 < 32)
-                        argwriteonly (a+2);   // mark writeable
-                    else {
-                        // We can only designate the first 32 args
-                        // writeable.  So swap it with earlier optional args.
-                        std::swap (argvec[firstopt],   argvec[a]);
-                        std::swap (argvec[firstopt+1], argvec[a+1]);
-                        argwriteonly (firstopt+1);
-                        firstopt += 2;  // advance in case another is needed
-                    }
-                }
-            }
-
-            m_children[0] = vec_to_list (argvec);
+            mark_optional_output(2, tex_out_args);
         }
     }
 
@@ -929,8 +943,6 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             }
         } else if (m_name == "trace") {
             argtakesderivs (1, true);
-            argtakesderivs (2, true);
-        } else if (m_name == "pointcloud_search") {
             argtakesderivs (2, true);
         } else {
             ASSERT (0 && "Missed a takes_derivs case!");
@@ -1075,7 +1087,7 @@ static const char * builtin_func_args [] = {
     "hash", NOISE_ARGS, NULL,
     "noise", NOISE_ARGS, NULL,
     "pnoise", PNOISE_ARGS, NULL,
-    "pointcloud_search", "ispfi.", "!deriv", NULL,
+    "pointcloud_search", "ispfi.", "!rw", NULL,
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,

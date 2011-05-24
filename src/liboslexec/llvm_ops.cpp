@@ -1609,7 +1609,7 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
     TextureOpt *opt = (TextureOpt *)opt_;
-    opt->nchannels = chans;
+    opt->nchannels = chans + (alpha ? 1 : 0);
     float dresultds[4], dresultdt[4];
     opt->dresultds = dresultdx ? dresultds : NULL;
     opt->dresultdt = dresultdy ? dresultdt : NULL;
@@ -1621,40 +1621,25 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
 
-#if 0
-    // Correct our st texture space gradients into xy-space gradients
+    // For now, just zero out the result derivatives.  If somebody needs
+    // derivatives of environment lookups, we'll fix it.  The reason
+    // that this is a pain is that OIIO's environment call (unwisely?)
+    // returns the st gradients, but we want the xy gradients, which is
+    // tricky because we (this function you're reading) don't know which
+    // projection is used to generate st from R.  Ugh.  Sweep under the
+    // rug for a day when somebody is really asking for it.
     if (dresultdx)
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultds[i] * dsdx + dresultdt[i] * dtdx;
+        ((float *)dresultdx)[0] = 0.0f;
     if (dresultdy)
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultds[i] * dsdy + dresultdt[i] * dtdy;
-#else
-    for (int i = 0;  i < chans;  ++i) {
-        if (dresultdx)
-            ((float *)dresultdx)[i] = 0.0f;
-        if (dresultdy)
-            ((float *)dresultdy)[i] = 0.0f;
-    }
-    
-#endif
+        ((float *)dresultdy)[0] = 0.0f;
 
     if (alpha) {
-#if 0
         ((float *)alpha)[0] = local_result[chans];
+        // Zero out the alpha derivatives, for the same reason as above.
         if (dalphadx)
-            ((float *)dalphadx)[0] = dresultds[chans] * dPdx[0] + dresultdt[chans] * dPdx[1] + dresultdr[chans] * dPdx[2];
+            ((float *)dalphadx)[0] = 0.0f;
         if (dalphady)
-            ((float *)dalphady)[0] = dresultds[chans] * dPdy[0] + dresultdt[chans] * dPdy[1] + dresultdr[chans] * dPdy[2];
-#else
-    for (int i = 0;  i < chans;  ++i) {
-        ((float *)alpha)[i] = 0.0f;
-        if (dalphadx)
-            ((float *)dalphadx)[i] = 0.0f;
-        if (dalphady)
-            ((float *)dalphady)[i] = 0.0f;
-    }
-#endif
+            ((float *)dalphady)[0] = 0.0f;
     }
 
     return ok;

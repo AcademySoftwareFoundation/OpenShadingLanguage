@@ -1719,45 +1719,37 @@ LLVMGEN (llvm_gen_mul)
     // The following should handle f*f, v*v, v*f, f*v, i*i
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {
-        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
         if (!a || !b)
             return false;
         llvm::Value *r = is_float ? rop.builder().CreateFMul(a, b)
                                   : rop.builder().CreateMul(a, b);
-        rop.storeLLVMValue (r, Result, i, 0);
-    }
+        rop.llvm_store_value (r, Result, 0, i);
 
-    if (Result.has_derivs()) {
-        ASSERT (is_float);
-        if (A.has_derivs() || B.has_derivs()) {
+        if (Result.has_derivs() && (A.has_derivs() || B.has_derivs())) {
             // Multiplication of duals: (a*b, a*b.dx + a.dx*b, a*b.dy + a.dy*b)
-            for (int i = 0; i < num_components; i++) {
-                llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-                llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
-                llvm::Value *ax = rop.loadLLVMValue (A, i, 1, type);
-                llvm::Value *bx = rop.loadLLVMValue (B, i, 1, type);
-                llvm::Value *abx = rop.builder().CreateFMul(a, bx);
-                llvm::Value *axb = rop.builder().CreateFMul(ax, b);
-                llvm::Value *r = rop.builder().CreateFAdd(abx, axb);
-                rop.storeLLVMValue (r, Result, i, 1);
-            }
-
-            for (int i = 0; i < num_components; i++) {
-                llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-                llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
-                llvm::Value *ay = rop.loadLLVMValue (A, i, 2, type);
-                llvm::Value *by = rop.loadLLVMValue (B, i, 2, type);
-                llvm::Value *aby = rop.builder().CreateFMul(a, by);
-                llvm::Value *ayb = rop.builder().CreateFMul(ay, b);
-                llvm::Value *r = rop.builder().CreateFAdd(aby, ayb);
-                rop.storeLLVMValue (r, Result, i, 2);
-            }
-        } else {
-            // Result has derivs, operands do not
-            rop.llvm_zero_derivs (Result);
+            ASSERT (is_float);
+            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
+            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
+            llvm::Value *abx = rop.builder().CreateFMul(a, bx);
+            llvm::Value *axb = rop.builder().CreateFMul(ax, b);
+            llvm::Value *rx = rop.builder().CreateFAdd(abx, axb);
+            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type);
+            llvm::Value *by = rop.llvm_load_value (B, 2, i, type);
+            llvm::Value *aby = rop.builder().CreateFMul(a, by);
+            llvm::Value *ayb = rop.builder().CreateFMul(ay, b);
+            llvm::Value *ry = rop.builder().CreateFAdd(aby, ayb);
+            rop.llvm_store_value (rx, Result, 1, i);
+            rop.llvm_store_value (ry, Result, 2, i);
         }
     }
+
+    if (Result.has_derivs() &&  ! (A.has_derivs() || B.has_derivs())) {
+        // Result has derivs, operands do not
+        rop.llvm_zero_derivs (Result);
+    }
+        
     return true;
 }
 
@@ -1798,51 +1790,44 @@ LLVMGEN (llvm_gen_div)
 
     // The following should handle f/f, v/v, v/f, f/v, i/i
     // That's all that should be allowed by oslc.
+    bool deriv = (Result.has_derivs() && (A.has_derivs() || B.has_derivs()));
     for (int i = 0; i < num_components; i++) {
-        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
         if (!a || !b)
             return false;
-        llvm::Value *r = llvm_make_safe_div (rop, type, a, b);
-        rop.storeLLVMValue (r, Result, i, 0);
-    }
+        llvm::Value *a_div_b = llvm_make_safe_div (rop, type, a, b);
+        llvm::Value *rx = NULL, *ry = NULL;
 
-    if (Result.has_derivs()) {
-        ASSERT (is_float);
-        if (A.has_derivs() || B.has_derivs()) {
+        if (deriv) {
             // Division of duals: (a/b, 1/b*(ax-a/b*bx), 1/b*(ay-a/b*by))
-            for (int i = 0; i < num_components; i++) {
-                llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-                llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
-                llvm::Value *binv = llvm_make_safe_div (rop, type,
-                                                   rop.llvm_constant(1.0f), b);
-                llvm::Value *ax = rop.loadLLVMValue (A, i, 1, type);
-                llvm::Value *bx = rop.loadLLVMValue (B, i, 1, type);
-                llvm::Value *a_div_b = rop.builder().CreateFMul (a, binv);
-                llvm::Value *a_div_b_mul_bx = rop.builder().CreateFMul (a_div_b, bx);
-                llvm::Value *ax_minus_a_div_b_mul_bx = rop.builder().CreateFSub (ax, a_div_b_mul_bx);
-                llvm::Value *r = rop.builder().CreateFMul (binv, ax_minus_a_div_b_mul_bx);
-                rop.storeLLVMValue (r, Result, i, 1);
-            }
+            ASSERT (is_float);
+            llvm::Value *binv = llvm_make_safe_div (rop, type,
+                                                    rop.llvm_constant(1.0f), b);
+            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
+            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
+            llvm::Value *a_div_b_mul_bx = rop.builder().CreateFMul (a_div_b, bx);
+            llvm::Value *ax_minus_a_div_b_mul_bx = rop.builder().CreateFSub (ax, a_div_b_mul_bx);
+            rx = rop.builder().CreateFMul (binv, ax_minus_a_div_b_mul_bx);
+            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type);
+            llvm::Value *by = rop.llvm_load_value (B, 2, i, type);
+            llvm::Value *a_div_b_mul_by = rop.builder().CreateFMul (a_div_b, by);
+            llvm::Value *ay_minus_a_div_b_mul_by = rop.builder().CreateFSub (ay, a_div_b_mul_by);
+            ry = rop.builder().CreateFMul (binv, ay_minus_a_div_b_mul_by);
+        }
 
-            for (int i = 0; i < num_components; i++) {
-                llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-                llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
-                llvm::Value *binv = llvm_make_safe_div (rop, type,
-                                                   rop.llvm_constant(1.0f), b);
-                llvm::Value *ay = rop.loadLLVMValue (A, i, 2, type);
-                llvm::Value *by = rop.loadLLVMValue (B, i, 2, type);
-                llvm::Value *a_div_b = rop.builder().CreateFMul (a, binv);
-                llvm::Value *a_div_b_mul_by = rop.builder().CreateFMul (a_div_b, by);
-                llvm::Value *ay_minus_a_div_b_mul_by = rop.builder().CreateFSub (ay, a_div_b_mul_by);
-                llvm::Value *r = rop.builder().CreateFMul (binv, ay_minus_a_div_b_mul_by);
-                rop.storeLLVMValue (r, Result, i, 2);
-            }
-        } else {
-            // Result has derivs, operands do not
-            rop.llvm_zero_derivs (Result);
+        rop.llvm_store_value (a_div_b, Result, 0, i);
+        if (deriv) {
+            rop.llvm_store_value (rx, Result, 1, i);
+            rop.llvm_store_value (ry, Result, 2, i);
         }
     }
+
+    if (Result.has_derivs() &&  ! (A.has_derivs() || B.has_derivs())) {
+        // Result has derivs, operands do not
+        rop.llvm_zero_derivs (Result);
+    }
+
     return true;
 }
 

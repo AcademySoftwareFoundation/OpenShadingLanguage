@@ -1,0 +1,8 @@
+Compiled test.osl -> test.oso
+mul:
+  x  = 0.25, dx=1 dy=0
+  gx = 0.25, dx=1 dy=0
+div:
+  y  = 1, dx=0 dy=0
+  gy = 1, dx=0 dy=0
+

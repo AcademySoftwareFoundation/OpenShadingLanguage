@@ -888,13 +888,7 @@ ASTfunction_call::typecheck_builtin_specialcase ()
     }
 
     if (func()->readwrite_special_case()) {
-        if (m_name == "fresnel") {
-            // This function has some output args
-            argwriteonly (3);
-            argwriteonly (4);
-            argwriteonly (5);
-            argwriteonly (6);
-        } else if (m_name == "sincos") {
+        if (m_name == "sincos") {
             argwriteonly (1);
             argwriteonly (2);
         } else if (m_name == "getattribute" || m_name == "getmessage" ||
@@ -1070,7 +1064,7 @@ static const char * builtin_func_args [] = {
     "concat", "sss", /*"ss.",*/ NULL,   // FIXME -- further checking
     "dict_find", "iss", "iis", NULL,
     "dict_next", "ii", NULL,
-    "dict_value", "iis?", NULL,
+    "dict_value", "iis?", "!rw", NULL,
     "Dx", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,

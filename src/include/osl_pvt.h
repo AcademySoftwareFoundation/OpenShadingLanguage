@@ -298,6 +298,12 @@ public:
         return m_simple == TypeDesc::TypeString && !is_closure();
     }
 
+    /// Is it a string or an array of strings?
+    ///
+    bool is_string_based () const {
+        return m_simple.basetype == TypeDesc::STRING;
+    }
+
     /// Is it a void?
     ///
     bool is_void () const {

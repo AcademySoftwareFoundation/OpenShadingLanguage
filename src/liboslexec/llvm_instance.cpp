@@ -898,14 +898,16 @@ RuntimeOptimizer::getLLVMSymbolBase (const Symbol &sym)
 llvm::Value *
 RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
 {
+    DASSERT ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
+              sym.symtype() == SymTypeConst)
+             && "getOrAllocateLLVMSymbol should only be for local, tmp, const");
     Symbol* dealiased = sym.dealias();
     std::string mangled_name = dealiased->mangled();
     AllocationMap::iterator map_iter = named_values().find(mangled_name);
 
     if (map_iter == named_values().end()) {
-        const llvm::Type *alloctype = sym.typespec().is_array()
-                                  ? llvm_type (sym.typespec().elementtype())
-                                  : llvm_type (sym.typespec());
+        TypeSpec elemtype = sym.typespec().elementtype();
+        const llvm::Type *alloctype = llvm_type (elemtype);
         int arraylen = std::max (1, sym.typespec().arraylength());
         int n = arraylen * (sym.has_derivs() ? 3 : 1);
         llvm::ConstantInt* numalloc = (llvm::ConstantInt*)llvm_constant(n);
@@ -3362,11 +3364,16 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
     // care of it in the group entry point.
     if (sym.typespec().is_closure_based() &&
         sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam) {
-        llvm::Value *init_val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
-        for (int a = 0; a < arraylen;  ++a) {
-            llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
-            llvm_store_value (init_val, sym, 0, arrind, 0);
-        }
+        llvm_assign_zero (sym);
+    }
+
+    if (sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam &&
+        sym.symtype() != SymTypeConst && sym.typespec().is_string_based()) {
+        // Strings are pointers.  Can't take any chance on leaving local/tmp
+        // syms uninitialized.
+        DASSERT (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp);
+        llvm_assign_zero (sym);
+        return;  // we're done, the parts below are just for params
     }
 
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
@@ -4250,9 +4257,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
                 s.symtype() == SymTypeConst)
             getOrAllocateLLVMSymbol (s);
-        // Set initial value for constants, and closures
+        // Set initial value for constants, closures, and strings that are
+        // not parameters.
         if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
-            (s.is_constant() || s.typespec().is_closure_based()))
+            (s.is_constant() || s.typespec().is_closure_based() ||
+             s.typespec().is_string_based()))
             llvm_assign_initial_value (s);
     }
     // make a second pass for the parameters (which may make use of

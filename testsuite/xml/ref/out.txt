@@ -5,7 +5,7 @@ Found camera 'main_cam':
     channel: 'color'
 Found camera 'right_cam':
     two sides?  0
-    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
+    transform matrix = [ 3.142 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.500 0.000 0.000 1.000 ]
     channel: 'color'
     channel: 'bump'
 
@@ -18,7 +18,7 @@ Found camera 'main_cam':
     channel: 'color'
 Found camera 'right_cam':
     two sides?  0
-    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
+    transform matrix = [ 3.142 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.500 0.000 0.000 1.000 ]
     channel: 'color'
     channel: 'bump'
 
@@ -31,7 +31,7 @@ Found camera 'main_cam':
     channel: 'color'
 Found camera 'right_cam':
     two sides?  0
-    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
+    transform matrix = [ 3.142 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.500 0.000 0.000 1.000 ]
     channel: 'color'
     channel: 'bump'
 
@@ -44,7 +44,7 @@ Found camera 'main_cam':
     channel: 'color'
 Found camera 'right_cam':
     two sides?  0
-    transform matrix = [ 1.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.000 0.000 0.000 1.000 ]
+    transform matrix = [ 3.142 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 1.000 0.000 -20.500 0.000 0.000 1.000 ]
     channel: 'color'
     channel: 'bump'
 

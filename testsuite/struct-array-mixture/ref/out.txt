@@ -38,4 +38,7 @@ d.c.bs[2].a.i = 2
 d.c.bs[3].a.i = 3
 d.c.bs[4].a.i = 4
 
+Testing writing to the innermost struct through function call:
+  before: d.c.bs[0].a.i = 0
+  after:  d.c.bs[0].a.i = 42
 

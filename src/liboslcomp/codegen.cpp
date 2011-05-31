@@ -1705,7 +1705,7 @@ ASTfunction_call::struct_pair_all_fields (StructSpec *structspec,
     for (int fi = 0;  fi < (int)structspec->numfields();  ++fi) {
         const StructSpec::FieldSpec &field (structspec->field(fi));
         const TypeSpec &type (field.type);
-        if (type.is_structure()) {
+        if (type.is_structure() || type.is_structure_array()) {
             // struct within struct -- recurse!
             struct_pair_all_fields (type.structspec(),
                                     ustring::format ("%s.%s", formal.c_str(), field.name.c_str()),

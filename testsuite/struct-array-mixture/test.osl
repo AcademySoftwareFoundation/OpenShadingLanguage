@@ -59,6 +59,13 @@ void Dtest (D d, int multiplier)
 
 
 
+void test_writing (output D d)
+{
+    d.c.bs[0].a.i = 42;
+}
+
+
+
 shader test ()
 {
     D d;
@@ -83,4 +90,10 @@ shader test ()
     D d2;
     d2 = d;
     Dtest (d2, 1);
+
+    printf ("Testing writing to the innermost struct through function call:\n");
+    d.c.bs[0].a.i = 0;
+    printf ("  before: d.c.bs[0].a.i = %d\n", d.c.bs[0].a.i);
+    test_writing (d);
+    printf ("  after:  d.c.bs[0].a.i = %d\n", d.c.bs[0].a.i);
 }

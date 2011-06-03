@@ -20,7 +20,7 @@ void Aprint (A a)
 
 
 
-void Btest (B b, int multiplier)
+void Bwrite (B b, int multiplier)
 {
     printf ("passing a ref to a B:\n");
     b.a.i = multiplier;
@@ -36,7 +36,7 @@ void Bprint (B b)
 
 
 
-void Barraytest (B bs[], int multiplier)
+void Barraywrite (B bs[], int multiplier)
 {
     printf ("passing a ref to a B[]:\n");
     for (int i = 0;  i < 5;  ++i)
@@ -54,7 +54,7 @@ void Barrayprint (B bs[])
 
 
 
-void Ctest (C c, int multiplier)
+void Cwrite (C c, int multiplier)
 {
     printf ("passing a ref to a C:\n");
     for (int i = 0;  i < 5;  ++i)
@@ -72,7 +72,7 @@ void Cprint (C c)
 
 
 
-void Dtest (D d, int multiplier)
+void Dwrite (D d, int multiplier)
 {
     printf ("passing a ref to a D:\n");
     for (int i = 0;  i < 5;  ++i)
@@ -108,23 +108,24 @@ shader test ()
         printf ("d.c.bs[%d].a.i = %d\n", i, d.c.bs[i].a.i);
     printf ("\n");
 
-    Dtest (d, 1);
+    Dwrite (d, 1);
     Dprint (d);
-    Ctest (d.c, 3);
+    Cwrite (d.c, 3);
     Cprint (d.c);
-    Barraytest (d.c.bs, 4);
+    Barraywrite (d.c.bs, 4);
     Barrayprint (d.c.bs);
-    Btest (d.c.bs[1], 4);
+    Bwrite (d.c.bs[1], 4);
     Bprint (d.c.bs[1]);
 
 // FIXME -- needs work!  these still don't work properly
-//    Atest (d.c.bs[2].a, 5);
+//    Awrite (d.c.bs[2].a, 5);
+//    Aprint (d.c.bs[2].a);
 
     // Test assignment of the whole thing
     printf ("Testing assignment of the whole nested structure:\n");
     D d2;
     d2 = d;
-    Dtest (d2, 1);
+    Dwrite (d2, 1);
     Dprint (d2);
 
     printf ("Testing writing to the innermost struct through function call:\n");

@@ -2270,9 +2270,9 @@ LLVMGEN (llvm_gen_mxcompref)
 
     llvm::Value *val = NULL; 
     if (Row.is_constant() && Col.is_constant()) {
-        int comp = 4 * ((int*)Row.data())[0] + ((int*)Col.data())[0];
-        if (comp < 0 || comp >= 16)
-            comp = 0;
+        int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
+        int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
+        int comp = 4 * r + c;
         val = rop.llvm_load_value (M, 0, comp);
     } else {
         llvm::Value *comp = rop.builder().CreateMul (row, rop.llvm_constant(4));
@@ -2311,7 +2311,9 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);
 
     if (Row.is_constant() && Col.is_constant()) {
-        int comp = 4 * ((int*)Row.data())[0] + ((int*)Col.data())[0];
+        int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
+        int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
+        int comp = 4 * r + c;
         rop.llvm_store_value (val, Result, 0, comp);
     } else {
         llvm::Value *comp = rop.builder().CreateMul (row, rop.llvm_constant(4));

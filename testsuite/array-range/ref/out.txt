@@ -1,0 +1,20 @@
+Compiled test.osl -> test.oso
+constant index:
+ reading:
+  array[1] = 1
+ERROR: Index [10] out of range [0..4]: test.osl:8
+  array[10] = 4
+ writing:
+ERROR: Index [10] out of range [0..4]: test.osl:10
+variable index:
+ reading:
+  array[0] = 0
+  array[1] = 1
+  array[2] = 2
+  array[3] = 3
+  array[4] = 42
+ERROR: Index [5] out of range [0..4]: test.osl:15
+  array[5] = 42
+ writing:
+ERROR: Index [5] out of range [0..4]: test.osl:19
+

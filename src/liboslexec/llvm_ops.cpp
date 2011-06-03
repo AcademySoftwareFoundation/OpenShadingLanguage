@@ -1860,3 +1860,22 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
     return renderer->get_userdata (has_derivs, USTR(name), TYPEDESC(type),
                                    sg->renderstate, result);
 }
+
+
+
+OSL_SHADEOP int
+osl_range_check (int indexvalue, int length,
+                 void *sg, const void *sourcefile, int sourceline)
+{
+    if (indexvalue < 0 || indexvalue >= length) {
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        ctx->shadingsys().error ("Index [%d] out of range [0..%d]: %s:%d",
+                                 indexvalue, length-1,
+                                 USTR(sourcefile).c_str(), sourceline);
+        if (indexvalue >= length)
+            indexvalue = length-1;
+        else
+            indexvalue = 0;
+    }
+    return indexvalue;
+}

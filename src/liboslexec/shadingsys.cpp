@@ -139,7 +139,9 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_statslevel (0), m_debug (false), m_lazylayers (true),
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
-      m_lockgeom_default (false), m_strict_messages(true), m_optimize (1),
+      m_lockgeom_default (false), m_strict_messages(true),
+      m_range_checking(true),
+      m_optimize (1),
       m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_in_group (false),
@@ -311,6 +313,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_strict_messages = *(const int *)val;
         return true;
     }
+    if (name == "range_checking" && type == TypeDesc::INT) {
+        m_range_checking = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -354,6 +360,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("optimize", int, m_optimize);
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
+    ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);

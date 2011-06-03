@@ -1094,10 +1094,9 @@ RuntimeOptimizer::llvm_load_component_value (const Symbol& sym, int deriv,
 
     TypeDesc t = sym.typespec().simpletype();
     ASSERT (t.aggregate != TypeDesc::SCALAR);
-    std::vector<llvm::Value *> indexes;
-    indexes.push_back(llvm_constant(0));
-    indexes.push_back(component);
-    result = builder().CreateGEP (result, indexes.begin(), indexes.end(), "compaccess");  // Find the component
+    // cast the Vec* to a float*
+    result = llvm_ptr_cast (result, llvm_type_float_ptr());
+    result = builder().CreateGEP (result, component);  // get the component
 
     // Now grab the value
     return builder().CreateLoad (result);
@@ -1153,9 +1152,9 @@ RuntimeOptimizer::llvm_store_component_value (llvm::Value* new_val,
 
     TypeDesc t = sym.typespec().simpletype();
     ASSERT (t.aggregate != TypeDesc::SCALAR);
-    // Find the component
-    llvm::Value *indexes[2] = { llvm_constant(0), component };
-    result = builder().CreateGEP (result, indexes, indexes+2, "compaccess");
+    // cast the Vec* to a float*
+    result = llvm_ptr_cast (result, llvm_type_float_ptr());
+    result = builder().CreateGEP (result, component);  // get the component
 
     // Finally, store the value.
     builder().CreateStore (new_val, result);
@@ -2186,13 +2185,23 @@ LLVMGEN (llvm_gen_compref)
     Symbol& Val = *rop.opargsym (op, 1);
     Symbol& Index = *rop.opargsym (op, 2);
 
+    llvm::Value *c = rop.llvm_load_value(Index);
+    if (rop.shadingsys().range_checking()) {
+        llvm::Value *args[5] = { c, rop.llvm_constant(3),
+                                 rop.sg_void_ptr(),
+                                 rop.llvm_constant(op.sourcefile()),
+                                 rop.llvm_constant(op.sourceline()) };
+        c = rop.llvm_call_function ("osl_range_check", args, 5);
+        ASSERT (c);
+    }
+
     for (int d = 0;  d < 3;  ++d) {  // deriv
-        llvm::Value *val = NULL; 
-        // FIXME -- should we test for out-of-range component?
+        llvm::Value *val = NULL;
         if (Index.is_constant()) {
-            val = rop.llvm_load_value (Val, d, *((int*)Index.data()));
+            int i = *(int*)Index.data();
+            i = Imath::clamp (i, 0, 2);
+            val = rop.llvm_load_value (Val, d, i);
         } else {
-            llvm::Value *c = rop.llvm_load_value(Index, d);
             val = rop.llvm_load_component_value (Val, d, c);
         }
         rop.llvm_store_value (val, Result, d);
@@ -2212,13 +2221,22 @@ LLVMGEN (llvm_gen_compassign)
     Symbol& Index = *rop.opargsym (op, 1);
     Symbol& Val = *rop.opargsym (op, 2);
 
+    llvm::Value *c = rop.llvm_load_value(Index);
+    if (rop.shadingsys().range_checking()) {
+        llvm::Value *args[5] = { c, rop.llvm_constant(3),
+                                 rop.sg_void_ptr(),
+                                 rop.llvm_constant(op.sourcefile()),
+                                 rop.llvm_constant(op.sourceline()) };
+        c = rop.llvm_call_function ("osl_range_check", args, 5);
+    }
+
     for (int d = 0;  d < 3;  ++d) {  // deriv
         llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat);
-        // FIXME -- should we test for out-of-range component?
         if (Index.is_constant()) {
-            rop.llvm_store_value (val, Result, d, *((int*)Index.data()));
+            int i = *(int*)Index.data();
+            i = Imath::clamp (i, 0, 2);
+            rop.llvm_store_value (val, Result, d, i);
         } else {
-            llvm::Value *c = rop.llvm_load_value(Index, d);
             rop.llvm_store_component_value (val, Result, d, c);
         }
         if (! Result.has_derivs())  // skip the derivs if we don't need them
@@ -2238,14 +2256,25 @@ LLVMGEN (llvm_gen_mxcompref)
     Symbol& Row = *rop.opargsym (op, 2);
     Symbol& Col = *rop.opargsym (op, 3);
 
+    llvm::Value *row = rop.llvm_load_value (Row);
+    llvm::Value *col = rop.llvm_load_value (Col);
+    if (rop.shadingsys().range_checking()) {
+        llvm::Value *args[5] = { row, rop.llvm_constant(4),
+                                 rop.sg_void_ptr(),
+                                 rop.llvm_constant(op.sourcefile()),
+                                 rop.llvm_constant(op.sourceline()) };
+        row = rop.llvm_call_function ("osl_range_check", args, 5);
+        args[0] = col;
+        col = rop.llvm_call_function ("osl_range_check", args, 5);
+    }
+
     llvm::Value *val = NULL; 
-    // FIXME -- should we test for out-of-range component?
     if (Row.is_constant() && Col.is_constant()) {
         int comp = 4 * ((int*)Row.data())[0] + ((int*)Col.data())[0];
+        if (comp < 0 || comp >= 16)
+            comp = 0;
         val = rop.llvm_load_value (M, 0, comp);
     } else {
-        llvm::Value *row = rop.llvm_load_value (Row);
-        llvm::Value *col = rop.llvm_load_value (Col);
         llvm::Value *comp = rop.builder().CreateMul (row, rop.llvm_constant(4));
         comp = rop.builder().CreateAdd (comp, col);
         val = rop.llvm_load_component_value (M, 0, comp);
@@ -2267,15 +2296,24 @@ LLVMGEN (llvm_gen_mxcompassign)
     Symbol& Col = *rop.opargsym (op, 2);
     Symbol& Val = *rop.opargsym (op, 3);
 
+    llvm::Value *row = rop.llvm_load_value (Row);
+    llvm::Value *col = rop.llvm_load_value (Col);
+    if (rop.shadingsys().range_checking()) {
+        llvm::Value *args[5] = { row, rop.llvm_constant(4),
+                                 rop.sg_void_ptr(),
+                                 rop.llvm_constant(op.sourcefile()),
+                                 rop.llvm_constant(op.sourceline()) };
+        row = rop.llvm_call_function ("osl_range_check", args, 5);
+        args[0] = col;
+        col = rop.llvm_call_function ("osl_range_check", args, 5);
+    }
+
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);
 
-    // FIXME -- should we test for out-of-range component?
     if (Row.is_constant() && Col.is_constant()) {
         int comp = 4 * ((int*)Row.data())[0] + ((int*)Col.data())[0];
         rop.llvm_store_value (val, Result, 0, comp);
     } else {
-        llvm::Value *row = rop.llvm_load_value(Row);
-        llvm::Value *col = rop.llvm_load_value(Col);
         llvm::Value *comp = rop.builder().CreateMul (row, rop.llvm_constant(4));
         comp = rop.builder().CreateAdd (comp, col);
         rop.llvm_store_component_value (val, Result, 0, comp);
@@ -2312,8 +2350,14 @@ LLVMGEN (llvm_gen_aref)
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
         return false;
-    // FIXME -- do range detection here for constant indices
-    // Or should we always do range detection for safety?
+    if (rop.shadingsys().range_checking()) {
+        llvm::Value *args[5] = { index,
+                                 rop.llvm_constant(Src.typespec().arraylength()),
+                                 rop.sg_void_ptr(),
+                                 rop.llvm_constant(op.sourcefile()),
+                                 rop.llvm_constant(op.sourceline()) };
+        index = rop.llvm_call_function ("osl_range_check", args, 5);
+    }
 
     int num_components = Src.typespec().simpletype().aggregate;
     for (int d = 0;  d <= 2;  ++d) {
@@ -2342,8 +2386,14 @@ LLVMGEN (llvm_gen_aassign)
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
         return false;
-    // FIXME -- do range detection here for constant indices
-    // Or should we always do range detection for safety?
+    if (rop.shadingsys().range_checking()) {
+        llvm::Value *args[5] = { index,
+                                 rop.llvm_constant(Result.typespec().arraylength()),
+                                 rop.sg_void_ptr(),
+                                 rop.llvm_constant(op.sourcefile()),
+                                 rop.llvm_constant(op.sourceline()) };
+        index = rop.llvm_call_function ("osl_range_check", args, 5);
+    }
 
     int num_components = Result.typespec().simpletype().aggregate;
     for (int d = 0;  d <= 2;  ++d) {

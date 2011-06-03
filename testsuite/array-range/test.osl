@@ -1,0 +1,21 @@
+shader test ()
+{
+    int array[5] = { 0, 1, 2, 3, 4 };
+
+    printf ("constant index:\n");
+    printf (" reading:\n");
+    printf ("  array[1] = %d\n", array[1]);
+    printf ("  array[10] = %d\n", array[10]);
+    printf (" writing:\n");
+    array[10] = 42;
+
+    printf ("variable index:\n");
+    printf (" reading:\n");
+    for (int i = 0;  i < 6;  ++i) {
+        printf ("  array[%d] = %d\n", i, array[i]);
+    }
+    printf (" writing:\n");
+    for (int i = 0;  i < 6;  ++i) {
+        array[i] = 84;
+    }
+}

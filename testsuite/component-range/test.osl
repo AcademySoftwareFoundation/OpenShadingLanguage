@@ -1,0 +1,21 @@
+shader test ()
+{
+    vector V = vector(0,1,2);
+
+    printf ("constant index:\n");
+    printf (" reading:\n");
+    printf ("  V[1] = %g\n", V[1]);
+    printf ("  V[10] = %g\n", V[10]);
+    printf (" writing:\n");
+    V[10] = 42;
+
+    printf ("variable index:\n");
+    printf (" reading:\n");
+    for (int i = 0;  i < 4;  ++i) {
+        printf ("  V[%d] = %g\n", i, V[i]);
+    }
+    printf (" writing:\n");
+    for (int i = 0;  i < 4;  ++i) {
+        V[i] = 84;
+    }
+}

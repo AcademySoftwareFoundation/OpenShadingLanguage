@@ -4,30 +4,49 @@ struct C { B bs[5]; };
 struct D { C c; };
 
         
-void Atest (A a, int multiplier)
+void Awrite (A a, int multiplier)
 {
     printf ("passing a ref to a A:\n");
     a.i = multiplier;
+}
+
+
+
+void Aprint (A a)
+{
     printf ("a.i = %d\n", a.i);
     printf ("\n");
 }
 
 
 
-void Btest (B b, int multiplier)
+void Bwrite (B b, int multiplier)
 {
     printf ("passing a ref to a B:\n");
     b.a.i = multiplier;
+}
+
+
+
+void Bprint (B b)
+{
     printf ("b.a.i = %d\n", b.a.i);
     printf ("\n");
 }
 
 
-void Barraytest (B bs[], int multiplier)
+
+void Barraywrite (B bs[], int multiplier)
 {
     printf ("passing a ref to a B[]:\n");
     for (int i = 0;  i < 5;  ++i)
         bs[i].a.i = i*multiplier;
+}
+
+
+
+void Barrayprint (B bs[])
+{
     for (int i = 0;  i < 5;  ++i)
         printf ("bs[%d].a.i = %d\n", i, bs[i].a.i);
     printf ("\n");
@@ -35,11 +54,17 @@ void Barraytest (B bs[], int multiplier)
 
 
 
-void Ctest (C c, int multiplier)
+void Cwrite (C c, int multiplier)
 {
     printf ("passing a ref to a C:\n");
     for (int i = 0;  i < 5;  ++i)
         c.bs[i].a.i = i*multiplier;
+}
+
+
+
+void Cprint (C c)
+{
     for (int i = 0;  i < 5;  ++i)
         printf ("c.bs[%d].a.i = %d\n", i, c.bs[i].a.i);
     printf ("\n");
@@ -47,11 +72,17 @@ void Ctest (C c, int multiplier)
 
 
 
-void Dtest (D d, int multiplier)
+void Dwrite (D d, int multiplier)
 {
     printf ("passing a ref to a D:\n");
     for (int i = 0;  i < 5;  ++i)
         d.c.bs[i].a.i = i*multiplier;
+}
+
+
+
+void Dprint (D d)
+{
     for (int i = 0;  i < 5;  ++i)
         printf ("d.c.bs[%d].a.i = %d\n", i, d.c.bs[i].a.i);
     printf ("\n");
@@ -77,19 +108,25 @@ shader test ()
         printf ("d.c.bs[%d].a.i = %d\n", i, d.c.bs[i].a.i);
     printf ("\n");
 
-    Dtest (d, 1);
-    Ctest (d.c, 3);
-    Barraytest (d.c.bs, 4);
-    Btest (d.c.bs[1], 4);
+    Dwrite (d, 1);
+    Dprint (d);
+    Cwrite (d.c, 3);
+    Cprint (d.c);
+    Barraywrite (d.c.bs, 4);
+    Barrayprint (d.c.bs);
+    Bwrite (d.c.bs[1], 4);
+    Bprint (d.c.bs[1]);
 
 // FIXME -- needs work!  these still don't work properly
-//    Atest (d.c.bs[2].a, 5);
+//    Awrite (d.c.bs[2].a, 5);
+//    Aprint (d.c.bs[2].a);
 
     // Test assignment of the whole thing
     printf ("Testing assignment of the whole nested structure:\n");
     D d2;
     d2 = d;
-    Dtest (d2, 1);
+    Dwrite (d2, 1);
+    Dprint (d2);
 
     printf ("Testing writing to the innermost struct through function call:\n");
     d.c.bs[0].a.i = 0;

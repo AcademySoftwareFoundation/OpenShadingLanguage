@@ -30,22 +30,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 
 #define USTR(cstr) (*((ustring *)&cstr))
+#define TYPEDESC(x) (*(TypeDesc *)&x)
 
 OSL_SHADEOP int
-osl_pointcloud (ShaderGlobals *sg, const char *_filename, void *_center, float radius,
-                int max_points, void *attr_query, int nattrs, ...)
+osl_pointcloud_search (ShaderGlobals *sg, const char *_filename, void *_center, float radius,
+                       int max_points, void *out_indices, void *out_distances, int derivs_offset)
 {
     const ustring &filename (USTR(_filename));
     Vec3 *center = (Vec3 *)_center;
 
-    // Convert the list of arguments to a void * array to call
-    // render services
-    void **attr_outdata = (void **)alloca (sizeof(void *) * nattrs);
-    va_list args;
-    va_start (args, nattrs);
-    for (int i = 0; i < nattrs; ++i)
-        attr_outdata[i] = va_arg (args, void*);
-    va_end (args);
+    return sg->context->renderer()->pointcloud_search (filename, *center, radius, max_points, (size_t *)out_indices,
+                                                       (float *)out_distances, derivs_offset);
+}
 
-    return sg->context->renderer()->pointcloud (filename, *center, radius, max_points, attr_query, attr_outdata);
+OSL_SHADEOP int
+osl_pointcloud_get (ShaderGlobals *sg, const char *_filename, void *indices, int count,
+                    const char *_attr_name, long long _attr_type, void *out_data)
+{
+    const ustring &filename  (USTR(_filename));
+    const ustring &attr_name (USTR(_attr_name));
+    TypeDesc      &attr_type (TYPEDESC(_attr_type));
+
+    return sg->context->renderer()->pointcloud_get (filename, (size_t *)indices, count, attr_name, attr_type, out_data);
 }

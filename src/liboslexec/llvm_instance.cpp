@@ -281,7 +281,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_spline_dvfdv", "xXXXXi",
     "osl_setmessage", "xXsLXisi",
     "osl_getmessage", "iXssLXiisi",
-    "osl_pointcloud", "iXsvfiXi*",
+    "osl_pointcloud_search", "iXsXfiXXi",
+    "osl_pointcloud_get", "iXsXisLX",
 
 #ifdef OSL_LLVM_NO_BITCODE
     "osl_assert_nonnull", "xXs",
@@ -3866,82 +3867,117 @@ LLVMGEN (llvm_gen_pointcloud_search)
              Center.typespec().is_triple() && Radius.typespec().is_float() &&
              Max_points.typespec().is_int());
 
-    std::vector<llvm::Value *> args;
-    args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_load_value (Filename));
-    args.push_back (rop.llvm_void_ptr   (Center));
-    args.push_back (rop.llvm_load_value (Radius));
-    args.push_back (rop.llvm_load_value (Max_points));
-    // We will create a query later and it needs to be passed
-    // here, so make space for another argument and save the pos
-    int query_pos = args.size();
-    args.push_back (NULL); // attr_query place holder
 
-    // Noew parse the "string", value pairs that the caller uses
-    // to give us the output arrays where we have to put the attributes
-    // for the found points
-    std::vector<ustring>  attr_names;
-    std::vector<TypeDesc> attr_types;
+    int attr_arg_offset = 5; // where the opt attrs begin
+    int nattrs = (op.nargs() - attr_arg_offset) / 2;
 
-    int attr_arg_offset = 5; // where the ot attrs begin
-    int nattrs = (op.nargs() - 5) / 2;
-    // pass the number of attributes before the
-    // var arg list
-    args.push_back (rop.llvm_constant(nattrs));
-    bool do_derivs = false;
-    ustring u_distance("distance");
-    Symbol *distance_symbol = NULL;
-
+    static ustring u_distance("distance");
+    static ustring u_index("index");
+    llvm::Value *filename = rop.llvm_load_value (Filename);
+    llvm::Value *max_points = rop.llvm_load_value (Max_points);
+    llvm::Value *indices = NULL;
+    llvm::Value *distances = NULL;
+    llvm::Value *derivs_offset = NULL;
+    size_t capacity = 0x7FFFFFFF; // Lets put a 32 bit limit
+    // This loop does two things. 1) Look for the special attribute
+    // "distance" and grab the pointer. 2) Compute the minimmum size
+    // of the provided output arrays to check against max_points
     for (int i = 0; i < nattrs; ++i) {
         Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
         Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
-        // The names of the attribute has to be a string and a constant.
-        // We don't allow runtine generated attributes because the
-        // queries have to be pre-baked
+
         ASSERT (Name.typespec().is_string());
-        ASSERT (Name.is_constant());
-        ustring *name = (ustring *)Name.data();
-        if (*name == u_distance) {
-            if (distance_symbol) { // distance already found
-               // We only have to care about mixing derivs/noderivs, but let's just
-               // ban duplicated arguments for distance
-               rop.shadingsys().error ("Passing \"distance\" twice to pointcloud not allowed (%s:%d)",
-                                       op.sourcefile().c_str(), op.sourceline());
-               return false;
-            }
-            do_derivs = Value.has_derivs();
-            distance_symbol = &Value;
-        } else {
-            rop.llvm_zero_derivs(Value);
+        TypeDesc simpletype = Value.typespec().simpletype();
+        // Leaving this code commented out for the future. We can't
+        // support index retrieval now because OSL does not have a
+        // 64 bit integer type and we would have to convert it.
+        /*
+        if (Name.is_constant() && *((ustring *)Name.data()) == u_index &&
+            simpletype.elementtype() == TypeDesc::INT) {
+            indices = rop.llvm_void_ptr (Value);
         }
-        // We save this to generate the query object later, both name
-        // and type will never change during the render
-        attr_names.push_back (*name);
-        attr_types.push_back (Value.typespec().simpletype());
-        // And now pass the actual pointer to the data
+        */
+        if (Name.is_constant() && *((ustring *)Name.data()) == u_distance &&
+            simpletype.elementtype() == TypeDesc::FLOAT) {
+            distances = rop.llvm_void_ptr (Value);
+            if (Value.has_derivs()) {
+                if (Center.has_derivs())
+                    // deriv offset is the size of the array
+                    derivs_offset = rop.llvm_constant((int)simpletype.numelements());
+                else
+                    rop.llvm_zero_derivs(Value);
+            }
+        }
+        // minimum capacity of the output arrays
+        capacity = simpletype.numelements() < capacity ?  simpletype.numelements() : capacity;
+    }
+
+    // Compare capacity to the requested number of points. The available
+    // space on the arrays is a constant, the requested number of
+    // points is not, so runtime check.
+    llvm::Value *sizeok = rop.builder().CreateICmpSGE (rop.llvm_constant(capacity), max_points);
+
+    llvm::BasicBlock* sizeok_block = rop.llvm_new_basic_block ("then");
+    llvm::BasicBlock* badsize_block = rop.llvm_new_basic_block ("else");
+    llvm::BasicBlock* after_block = rop.llvm_new_basic_block ("");
+    rop.builder().CreateCondBr (sizeok, sizeok_block, badsize_block);
+
+    // non-error code
+    rop.builder().SetInsertPoint (sizeok_block);
+
+    // Uncomment the if if we ever support indices in the output
+    // if (!indices)
+    indices = rop.llvm_ptr_cast (rop.builder().CreateAlloca(rop.llvm_type_longlong(), max_points),
+                                 rop.llvm_type_void_ptr());
+
+    std::vector<llvm::Value *> args;
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (filename);
+    args.push_back (rop.llvm_void_ptr   (Center));
+    args.push_back (rop.llvm_load_value (Radius));
+    args.push_back (max_points);
+    args.push_back (indices);
+    args.push_back (distances     ? distances     : rop.llvm_constant_ptr(NULL));
+    args.push_back (derivs_offset ? derivs_offset : rop.llvm_constant(0));
+
+    llvm::Value *count = rop.llvm_call_function ("osl_pointcloud_search", &args[0], args.size());
+    rop.llvm_store_value (count, Result);
+
+    // Search is ready (stored in indices), now retrieve the attribute data
+    for (int i = 0; i < nattrs; ++i) {
+        Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
+        Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
+
+        // Special attributes to ignore
+        if (Name.is_constant() && (*((ustring *)Name.data()) == u_index || *((ustring *)Name.data()) == u_distance))
+            continue;
+
+        args.clear();
+        args.push_back (rop.sg_void_ptr());
+        args.push_back (filename);
+        args.push_back (indices);
+        args.push_back (count);
+        args.push_back (rop.llvm_load_value (Name));
+        args.push_back (rop.llvm_constant(Value.typespec().simpletype()));
         args.push_back (rop.llvm_void_ptr (Value));
+        rop.llvm_call_function ("osl_pointcloud_get", &args[0], args.size());
     }
 
-    if (do_derivs && !Center.has_derivs())
-        rop.llvm_zero_derivs(*distance_symbol);
-    do_derivs = do_derivs && Center.has_derivs();
+    // error code
+    rop.builder().CreateBr (after_block);
+    rop.builder().SetInsertPoint (badsize_block);
 
-    // Try to build a query and get the handle from the renderer
-    void *attr_query = rop.shadingsys().renderer()->get_pointcloud_attr_query (&attr_names[0], &attr_types[0],
-                                                                               do_derivs, attr_names.size());
-    if (!attr_query) {
-        rop.shadingsys().error ("Failed to create pointcloud query at (%s:%d)",
-                                 op.sourcefile().c_str(), op.sourceline());
-        return false;
-    }
-    // Every pointcloud call that appears in the code gets its own query object.
-    // Not a big waste, and it can be used until the end of the render. It is a
-    // constant handle that we put in the arguments for the renderer.
-    args[query_pos] = rop.llvm_constant_ptr(attr_query, rop.llvm_type_void_ptr());
+    args.clear();
+    static ustring errorfmt("Too small arrays for pointcloud lookup at (%s:%d)");
 
-    llvm::Value *ret = rop.llvm_call_function ("osl_pointcloud", &args[0], args.size());
-    // Return the number of results
-    rop.llvm_store_value (ret, Result);
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_constant_ptr((void *)errorfmt.c_str()));
+    args.push_back (rop.llvm_constant_ptr((void *)op.sourcefile().c_str()));
+    args.push_back (rop.llvm_constant(op.sourceline()));
+    rop.llvm_call_function ("osl_error", &args[0], args.size());
+
+    rop.builder().CreateBr (after_block);
+    rop.builder().SetInsertPoint (after_block);
     return true;
 }
 

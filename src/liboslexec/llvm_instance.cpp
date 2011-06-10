@@ -3919,7 +3919,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
             extra_attrs++;
         }
         // minimum capacity of the output arrays
-        capacity = simpletype.numelements() < capacity ?  simpletype.numelements() : capacity;
+        capacity = std::min (simpletype.numelements(), capacity);
     }
 
     args[8] = rop.llvm_constant (extra_attrs);
@@ -3945,7 +3945,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
     rop.builder().SetInsertPoint (badsize_block);
 
     args.clear();
-    static ustring errorfmt("Too small arrays for pointcloud lookup at (%s:%d)");
+    static ustring errorfmt("Arrays too small for pointcloud lookup at (%s:%d)");
 
     args.push_back (rop.sg_void_ptr());
     args.push_back (rop.llvm_constant_ptr ((void *)errorfmt.c_str()));
@@ -3975,9 +3975,9 @@ LLVMGEN (llvm_gen_pointcloud_get)
 
     llvm::Value *count = rop.llvm_load_value (Count);
 
+    int capacity = std::min ((int)Data.typespec().simpletype().numelements(), (int)Indices.typespec().simpletype().numelements());
     // Check available space
-    llvm::Value *sizeok = rop.builder().CreateICmpSGE (rop.llvm_constant((int)Data.typespec().simpletype().numelements()),
-                                                       count);
+    llvm::Value *sizeok = rop.builder().CreateICmpSGE (rop.llvm_constant(capacity), count);
 
     llvm::BasicBlock* sizeok_block = rop.llvm_new_basic_block ("then");
     llvm::BasicBlock* badsize_block = rop.llvm_new_basic_block ("else");
@@ -4006,7 +4006,7 @@ LLVMGEN (llvm_gen_pointcloud_get)
     rop.builder().SetInsertPoint (badsize_block);
 
     args.clear();
-    static ustring errorfmt("Too small array for pointcloud attribute get at (%s:%d)");
+    static ustring errorfmt("Arrays too small for pointcloud attribute get at (%s:%d)");
 
     args.push_back (rop.sg_void_ptr());
     args.push_back (rop.llvm_constant_ptr ((void *)errorfmt.c_str()));

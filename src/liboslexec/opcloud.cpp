@@ -32,27 +32,31 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USTR(cstr) (*((ustring *)&cstr))
 #define TYPEDESC(x) (*(TypeDesc *)&x)
 
+inline int
+osl_pointcloud_get64 (ShaderGlobals *sg, const char *filename, size_t *indices, int count,
+                      const char *attr_name, long long attr_type, void *out_data)
+{
+    return sg->context->renderer()->pointcloud_get (USTR(filename), indices, count, USTR(attr_name),
+                                                    TYPEDESC(attr_type), out_data);
+}
+
 OSL_SHADEOP int
-osl_pointcloud_search (ShaderGlobals *sg, const char *_filename, void *_center, float radius,
+osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
                        int max_points, void *out_indices, void *out_distances, int derivs_offset,
                        int nattrs, ...)
 {
-    const ustring &filename (USTR (_filename));
-    Vec3 *center = (Vec3 *)_center;
     size_t *indices = (size_t *)alloca (sizeof(size_t) * max_points);
 
-    int count = sg->context->renderer()->pointcloud_search (filename, *center, radius, max_points, indices,
-                                                            (float *)out_distances, derivs_offset);
+    int count = sg->context->renderer()->pointcloud_search (USTR(filename), *((Vec3*) center), radius, max_points,
+                                                            indices, (float *)out_distances, derivs_offset);
     va_list args;
     va_start (args, nattrs);
     for (int i = 0; i < nattrs; i += 3)
     {
-        void      *an       = va_arg (args, void*);
-        long long  at       = va_arg (args, long long);
-        void      *out_data = va_arg (args, void*);
-        const ustring &attr_name (USTR (an));
-        TypeDesc      &attr_type (TYPEDESC (at));
-        sg->context->renderer()->pointcloud_get (filename, indices, count, attr_name, attr_type, out_data);
+        const char *an       = va_arg (args, const char*);
+        long long   at       = va_arg (args, long long);
+        void       *out_data = va_arg (args, void*);
+        osl_pointcloud_get64 (sg, filename, indices, count, an, at, out_data);
     }
     va_end (args);
 
@@ -63,17 +67,14 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *_filename, void *_center, 
 }
 
 OSL_SHADEOP int
-osl_pointcloud_get (ShaderGlobals *sg, const char *_filename, void *in_indices, int count,
-                    const char *_attr_name, long long _attr_type, void *out_data)
+osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, int count,
+                    const char *attr_name, long long attr_type, void *out_data)
 {
-    const ustring &filename  (USTR (_filename));
-    const ustring &attr_name (USTR (_attr_name));
-    TypeDesc      &attr_type (TYPEDESC (_attr_type));
     size_t *indices = (size_t *)alloca (sizeof(size_t) * count);
 
-   for(int i = 0; i < count; ++i)
-      indices[i] = ((int *)in_indices)[i];
+    for(int i = 0; i < count; ++i)
+        indices[i] = ((int *)in_indices)[i];
 
-    return sg->context->renderer()->pointcloud_get (filename, (size_t *)indices, count, attr_name, attr_type, out_data);
+    return osl_pointcloud_get64 (sg, filename, indices, count, attr_name, attr_type, out_data);
 }
 

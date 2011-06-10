@@ -1082,6 +1082,7 @@ static const char * builtin_func_args [] = {
     "noise", NOISE_ARGS, NULL,
     "pnoise", PNOISE_ARGS, NULL,
     "pointcloud_search", "ispfi.", "!rw", NULL,
+    "pointcloud_get", "isi[]is?[]", NULL,
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,

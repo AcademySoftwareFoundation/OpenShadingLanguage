@@ -1879,3 +1879,18 @@ osl_range_check (int indexvalue, int length,
     }
     return indexvalue;
 }
+
+OSL_SHADEOP void
+osl_int32from64 (void *dst, void *src, int count)
+{
+   for(int i = 0; i < count; ++i)
+      ((int *)dst)[i] = ((size_t *)src)[i];
+}
+
+OSL_SHADEOP void
+osl_int64from32 (void *dst, void *src, int count)
+{
+   for(int i = 0; i < count; ++i)
+      ((size_t *)dst)[i] = ((int *)src)[i];
+}
+

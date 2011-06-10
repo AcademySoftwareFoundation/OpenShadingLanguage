@@ -283,6 +283,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud_search", "iXsXfiXXi",
     "osl_pointcloud_get", "iXsXisLX",
+    "osl_int32from64", "xXXi",
+    "osl_int64from32", "xXXi",
 
 #ifdef OSL_LLVM_NO_BITCODE
     "osl_assert_nonnull", "xXs",
@@ -3876,27 +3878,23 @@ LLVMGEN (llvm_gen_pointcloud_search)
     llvm::Value *filename = rop.llvm_load_value (Filename);
     llvm::Value *max_points = rop.llvm_load_value (Max_points);
     llvm::Value *indices = NULL;
+    llvm::Value *out_indices = NULL; // 32 bit indices for the shader
     llvm::Value *distances = NULL;
     llvm::Value *derivs_offset = NULL;
     size_t capacity = 0x7FFFFFFF; // Lets put a 32 bit limit
-    // This loop does two things. 1) Look for the special attribute
-    // "distance" and grab the pointer. 2) Compute the minimmum size
-    // of the provided output arrays to check against max_points
+    // This loop does two things. 1) Look for the special attributes
+    // "distance", "index" and grab the pointer. 2) Compute the minimmum
+    // size of the provided output arrays to check against max_points
     for (int i = 0; i < nattrs; ++i) {
         Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
         Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
 
         ASSERT (Name.typespec().is_string());
         TypeDesc simpletype = Value.typespec().simpletype();
-        // Leaving this code commented out for the future. We can't
-        // support index retrieval now because OSL does not have a
-        // 64 bit integer type and we would have to convert it.
-        /*
         if (Name.is_constant() && *((ustring *)Name.data()) == u_index &&
             simpletype.elementtype() == TypeDesc::INT) {
-            indices = rop.llvm_void_ptr (Value);
+            out_indices = rop.llvm_void_ptr (Value);
         }
-        */
         if (Name.is_constant() && *((ustring *)Name.data()) == u_distance &&
             simpletype.elementtype() == TypeDesc::FLOAT) {
             distances = rop.llvm_void_ptr (Value);
@@ -3925,8 +3923,6 @@ LLVMGEN (llvm_gen_pointcloud_search)
     // non-error code
     rop.builder().SetInsertPoint (sizeok_block);
 
-    // Uncomment the if if we ever support indices in the output
-    // if (!indices)
     indices = rop.llvm_ptr_cast (rop.builder().CreateAlloca(rop.llvm_type_longlong(), max_points),
                                  rop.llvm_type_void_ptr());
 
@@ -3963,12 +3959,91 @@ LLVMGEN (llvm_gen_pointcloud_search)
         rop.llvm_call_function ("osl_pointcloud_get", &args[0], args.size());
     }
 
+    if (out_indices) // convert indices to 32 bit
+    {
+        args.clear();
+        args.push_back(out_indices);
+        args.push_back(indices);
+        args.push_back(count);
+        rop.llvm_call_function ("osl_int32from64", &args[0], args.size());
+    }
+
     // error code
     rop.builder().CreateBr (after_block);
     rop.builder().SetInsertPoint (badsize_block);
 
     args.clear();
     static ustring errorfmt("Too small arrays for pointcloud lookup at (%s:%d)");
+
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_constant_ptr((void *)errorfmt.c_str()));
+    args.push_back (rop.llvm_constant_ptr((void *)op.sourcefile().c_str()));
+    args.push_back (rop.llvm_constant(op.sourceline()));
+    rop.llvm_call_function ("osl_error", &args[0], args.size());
+
+    rop.builder().CreateBr (after_block);
+    rop.builder().SetInsertPoint (after_block);
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_pointcloud_get)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    DASSERT (op.nargs() >= 6);
+
+    Symbol& Result     = *rop.opargsym (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Indices    = *rop.opargsym (op, 2);
+    Symbol& Count      = *rop.opargsym (op, 3);
+    Symbol& Attr_name  = *rop.opargsym (op, 4);
+    Symbol& Data       = *rop.opargsym (op, 5);
+
+    llvm::Value *in_indices = rop.llvm_void_ptr (Indices);
+    llvm::Value *count = rop.llvm_load_value (Count);
+
+    // Check available space
+    llvm::Value *sizeok = rop.builder().CreateICmpSGE (rop.llvm_constant((int)Data.typespec().simpletype().numelements()),
+                                                       count);
+
+    llvm::BasicBlock* sizeok_block = rop.llvm_new_basic_block ("then");
+    llvm::BasicBlock* badsize_block = rop.llvm_new_basic_block ("else");
+    llvm::BasicBlock* after_block = rop.llvm_new_basic_block ("");
+    rop.builder().CreateCondBr (sizeok, sizeok_block, badsize_block);
+
+    // non-error code
+    rop.builder().SetInsertPoint (sizeok_block);
+
+    llvm::Value *indices = rop.llvm_ptr_cast (rop.builder().CreateAlloca(rop.llvm_type_longlong(), count),
+                                              rop.llvm_type_void_ptr());
+
+    // Convert 32bit indices to 64bit
+    std::vector<llvm::Value *> args;
+    args.push_back(indices);
+    args.push_back(in_indices);
+    args.push_back(count);
+    rop.llvm_call_function ("osl_int64from32", &args[0], args.size());
+
+
+    args.clear();
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_load_value (Filename));
+    args.push_back (indices);
+    args.push_back (count);
+    args.push_back (rop.llvm_load_value (Attr_name));
+    args.push_back (rop.llvm_constant(Data.typespec().simpletype()));
+    args.push_back (rop.llvm_void_ptr (Data));
+    llvm::Value *found = rop.llvm_call_function ("osl_pointcloud_get", &args[0], args.size());
+    rop.llvm_store_value (found, Result);
+
+    // error code
+    rop.builder().CreateBr (after_block);
+    rop.builder().SetInsertPoint (badsize_block);
+
+    args.clear();
+    static ustring errorfmt("Too small array for pointcloud attribute get at (%s:%d)");
 
     args.push_back (rop.sg_void_ptr());
     args.push_back (rop.llvm_constant_ptr((void *)errorfmt.c_str()));
@@ -4197,6 +4272,7 @@ initialize_llvm_generator_table ()
     INIT2 (pnoise, llvm_gen_pnoise);
     INIT2 (point, llvm_gen_construct_triple);
     INIT  (pointcloud_search);
+    INIT  (pointcloud_get);
     INIT2 (pow, llvm_gen_generic);
     INIT (printf);
     INIT2 (psnoise, llvm_gen_pnoise);

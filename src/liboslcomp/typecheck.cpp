@@ -895,6 +895,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
                    m_name == "gettextureinfo" || m_name == "dict_value") {
             // these all write to their last argument
             argwriteonly ((int)listlength(args()));
+        } else if (m_name == "pointcloud_get") {
+            argwriteonly (5);
         } else if (m_name == "pointcloud_search") {
             mark_optional_output(5, pointcloud_out_args);
         } else if (func()->texture_args()) {
@@ -1082,6 +1084,7 @@ static const char * builtin_func_args [] = {
     "noise", NOISE_ARGS, NULL,
     "pnoise", PNOISE_ARGS, NULL,
     "pointcloud_search", "ispfi.", "!rw", NULL,
+    "pointcloud_get", "isi[]is?[]", "!rw", NULL,
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,

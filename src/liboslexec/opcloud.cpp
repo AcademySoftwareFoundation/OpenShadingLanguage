@@ -34,22 +34,46 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_SHADEOP int
 osl_pointcloud_search (ShaderGlobals *sg, const char *_filename, void *_center, float radius,
-                       int max_points, void *out_indices, void *out_distances, int derivs_offset)
+                       int max_points, void *out_indices, void *out_distances, int derivs_offset,
+                       int nattrs, ...)
 {
-    const ustring &filename (USTR(_filename));
+    const ustring &filename (USTR (_filename));
     Vec3 *center = (Vec3 *)_center;
+    size_t *indices = (size_t *)alloca (sizeof(size_t) * max_points);
 
-    return sg->context->renderer()->pointcloud_search (filename, *center, radius, max_points, (size_t *)out_indices,
-                                                       (float *)out_distances, derivs_offset);
+    int count = sg->context->renderer()->pointcloud_search (filename, *center, radius, max_points, indices,
+                                                            (float *)out_distances, derivs_offset);
+    va_list args;
+    va_start (args, nattrs);
+    for (int i = 0; i < nattrs; i += 3)
+    {
+        void      *an       = va_arg (args, void*);
+        long long  at       = va_arg (args, long long);
+        void      *out_data = va_arg (args, void*);
+        const ustring &attr_name (USTR (an));
+        TypeDesc      &attr_type (TYPEDESC (at));
+        sg->context->renderer()->pointcloud_get (filename, indices, count, attr_name, attr_type, out_data);
+    }
+    va_end (args);
+
+    if (out_indices)
+        for(int i = 0; i < count; ++i)
+            ((int *)out_indices)[i] = indices[i];
+    return count;
 }
 
 OSL_SHADEOP int
-osl_pointcloud_get (ShaderGlobals *sg, const char *_filename, void *indices, int count,
+osl_pointcloud_get (ShaderGlobals *sg, const char *_filename, void *in_indices, int count,
                     const char *_attr_name, long long _attr_type, void *out_data)
 {
-    const ustring &filename  (USTR(_filename));
-    const ustring &attr_name (USTR(_attr_name));
-    TypeDesc      &attr_type (TYPEDESC(_attr_type));
+    const ustring &filename  (USTR (_filename));
+    const ustring &attr_name (USTR (_attr_name));
+    TypeDesc      &attr_type (TYPEDESC (_attr_type));
+    size_t *indices = (size_t *)alloca (sizeof(size_t) * count);
+
+   for(int i = 0; i < count; ++i)
+      indices[i] = ((int *)in_indices)[i];
 
     return sg->context->renderer()->pointcloud_get (filename, (size_t *)indices, count, attr_name, attr_type, out_data);
 }
+

@@ -3912,8 +3912,10 @@ LLVMGEN (llvm_gen_pointcloud_search)
         } else {
             // It is a regular attribute, push it to the arg list
             args.push_back (rop.llvm_load_value (Name));
-            args.push_back (rop.llvm_constant (Value.typespec().simpletype()));
+            args.push_back (rop.llvm_constant (simpletype));
             args.push_back (rop.llvm_void_ptr (Value));
+            if (Value.has_derivs())
+                rop.llvm_zero_derivs (Value);
             extra_attrs++;
         }
         // minimum capacity of the output arrays
@@ -3998,6 +4000,8 @@ LLVMGEN (llvm_gen_pointcloud_get)
     args.push_back (rop.llvm_void_ptr (Data));
     llvm::Value *found = rop.llvm_call_function ("osl_pointcloud_get", &args[0], args.size());
     rop.llvm_store_value (found, Result);
+    if (Data.has_derivs())
+        rop.llvm_zero_derivs (Data);
 
     // error code
     rop.builder().CreateBr (after_block);

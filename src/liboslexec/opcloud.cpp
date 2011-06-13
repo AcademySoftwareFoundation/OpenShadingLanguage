@@ -43,8 +43,8 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
                                                             indices, (float *)out_distances, derivs_offset);
     va_list args;
     va_start (args, nattrs);
-    for (int i = 0; i < nattrs; i += 3)
-    {
+    for (int i = 0; i < nattrs; i++)
+    {  
         ustring  attr_name = USTR (va_arg (args, const char *));
         TypeDesc attr_type = TYPEDESC (va_arg (args, long long));
         void     *out_data = va_arg (args, void*);

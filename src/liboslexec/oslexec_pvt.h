@@ -1035,7 +1035,7 @@ public:
     /// the function should be executed, otherwise false.
     bool prepare_execution (ShaderUse use, ShadingAttribState &sas);
 
-    bool osl_get_attribute (void *renderstate, int dest_derivs,
+    bool osl_get_attribute (void *renderstate, void *objdata, int dest_derivs,
                             ustring obj_name, ustring attr_name,
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
@@ -1068,6 +1068,22 @@ private:
     SimplePool<20 * 1024> m_closure_pool;
 
     Dictionary *m_dictionary;
+
+    // Struct for holding a record of getattributes we've tried and
+    // failed, to speed up subsequent getattributes calls.
+    struct GetAttribQuery {
+        void *objdata;
+        ustring obj_name, attr_name;
+        int array_lookup, index;
+        GetAttribQuery () : objdata(NULL) { }
+        GetAttribQuery (void *objdata, ustring obj_name, ustring attr_name,
+                        int array_lookup, int index)
+            : objdata(objdata), obj_name(obj_name), attr_name(attr_name),
+              array_lookup(array_lookup), index(index) { }
+    };
+    static const int FAILED_ATTRIBS = 16;
+    GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
+    int m_next_failed_attrib;
 };
 
 

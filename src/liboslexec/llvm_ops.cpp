@@ -1736,14 +1736,15 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
     const ustring &attr_name = USTR(attr_name_);
 
 #if 1
-    return sg->context->osl_get_attribute (sg->renderstate, dest_derivs,
-                                           obj_name, attr_name,
+    return sg->context->osl_get_attribute (sg->renderstate, sg->objdata,
+                                           dest_derivs, obj_name, attr_name,
                                            array_lookup, index,
                                            *(const TypeDesc *)attr_type,
                                            attr_dest);
 #else
     if (array_lookup)
         return sg->context->renderer()->get_array_attribute(sg->renderstate,  
+                                                  sg->objdata,
                                                   dest_derivs,
                                                   obj_name,
                                                   *(TypeDesc *)attr_type,
@@ -1752,6 +1753,7 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
                                                   attr_dest);
     else
         return sg->context->renderer()->get_attribute(sg->renderstate,  
+                                                  sg->objdata,
                                                   dest_derivs,
                                                   obj_name,
                                                   *(TypeDesc *)attr_type,

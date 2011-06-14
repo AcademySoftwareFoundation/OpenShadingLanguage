@@ -222,6 +222,7 @@ struct ShaderGlobals {
                                           details like userdata) */
     void* tracedata;                 /**< Opaque pointer to renderer state
                                           resuling from a trace() call. */
+    void* objdata;                   /**< Opaque pointer to object data */
     pvt::ShadingContext* context;    /**< ShadingContext (this will be set by
                                           OSL itself) */
     TransformationPtr object2common; /**< Object->common xform */

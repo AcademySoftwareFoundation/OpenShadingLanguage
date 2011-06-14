@@ -1076,7 +1076,7 @@ private:
         ustring obj_name, attr_name;
         TypeDesc attr_type;
         int array_lookup, index;
-        GetAttribQuery () : objdata(NULL) { }
+        GetAttribQuery () : objdata(NULL), array_lookup(0), index(0) { }
     };
     static const int FAILED_ATTRIBS = 16;
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];

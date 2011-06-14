@@ -67,6 +67,7 @@ static bool debug = false;
 static bool verbose = false;
 static bool stats = false;
 static bool O0 = false, O1 = true, O2 = false;
+static bool pixelcenters = false;
 static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
@@ -178,6 +179,7 @@ getargs (int argc, const char *argv[])
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
+                "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
@@ -277,8 +279,13 @@ test_shade (int argc, const char *argv[])
     for (int iter = 0;  iter < iters;  ++iter) {
         for (int y = 0, n = 0;  y < yres;  ++y) {
             for (int x = 0;  x < xres;  ++x, ++n) {
-                shaderglobals.u = (xres == 1) ? 0.5f : (float) x / (xres - 1);
-                shaderglobals.v = (yres == 1) ? 0.5f : (float) y / (yres - 1);
+                if (pixelcenters) {
+                    shaderglobals.u = (float)(x+0.5f) / xres;
+                    shaderglobals.v = (float)(y+0.5f) / yres;
+                } else {
+                    shaderglobals.u = (xres == 1) ? 0.5f : (float) x / (xres - 1);
+                    shaderglobals.v = (yres == 1) ? 0.5f : (float) y / (yres - 1);
+                }
                 shaderglobals.P = Vec3 (shaderglobals.u, shaderglobals.v, 1.0f);
                 shaderglobals.dPdx = Vec3 (shaderglobals.dudx, shaderglobals.dudy, 0.0f);
                 shaderglobals.dPdy = Vec3 (shaderglobals.dvdx, shaderglobals.dvdy, 0.0f);

@@ -1074,12 +1074,9 @@ private:
     struct GetAttribQuery {
         void *objdata;
         ustring obj_name, attr_name;
+        TypeDesc attr_type;
         int array_lookup, index;
         GetAttribQuery () : objdata(NULL) { }
-        GetAttribQuery (void *objdata, ustring obj_name, ustring attr_name,
-                        int array_lookup, int index)
-            : objdata(objdata), obj_name(obj_name), attr_name(attr_name),
-              array_lookup(array_lookup), index(index) { }
     };
     static const int FAILED_ATTRIBS = 16;
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];

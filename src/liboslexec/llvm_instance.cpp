@@ -3928,7 +3928,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
     // Compare capacity to the requested number of points. The available
     // space on the arrays is a constant, the requested number of
     // points is not, so runtime check.
-    llvm::Value *sizeok = rop.builder().CreateICmpSGE (rop.llvm_constant(capacity), args[4]); // max_points
+    llvm::Value *sizeok = rop.builder().CreateICmpSGE (rop.llvm_constant((int)capacity), args[4]); // max_points
 
     llvm::BasicBlock* sizeok_block = rop.llvm_new_basic_block ("then");
     llvm::BasicBlock* badsize_block = rop.llvm_new_basic_block ("else");

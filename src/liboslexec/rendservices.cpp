@@ -104,8 +104,11 @@ RendererServices::texture (ustring filename, TextureOpt &options,
     if (!status)
     {
         std::string err = texturesys()->geterror();
-        if (err.size())
+        if (err.size()) {
             std::cerr << "[RendererServices::texture] " << err.c_str();
+            if (err[err.size()-1] != '\n')
+                std::cerr << "\n";
+        }
     }
     return status;
 }
@@ -124,8 +127,11 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
     if (!status)
     {
         std::string err = texturesys()->geterror();
-        if (err.size())
+        if (err.size()) {
             std::cerr << "[RendererServices::texture3d] " << err.c_str();
+            if (err[err.size()-1] != '\n')
+                std::cerr << "\n";
+        }
     }
     return status;
 #else
@@ -144,8 +150,11 @@ RendererServices::environment (ustring filename, TextureOpt &options,
     bool status = texturesys()->environment (filename, options, R, dRdx, dRdy, result);
     if (!status) {
         std::string err = texturesys()->geterror();
-        if (err.size())
+        if (err.size()) {
             std::cerr << "[RendererServices::environment] " << err.c_str();
+            if (err[err.size()-1] != '\n')
+                std::cerr << "\n";
+        }
     }
     return status;
 #else
@@ -166,11 +175,13 @@ RendererServices::get_texture_info (ustring filename, int subimage,
 #else
     bool status = texturesys()->get_texture_info (filename, dataname, datatype, data);
 #endif
-    if (!status)
-    {
+    if (!status) {
         std::string err = texturesys()->geterror();
-        if (err.size())
+        if (err.size()) {
             std::cerr << "[RendererServices::get_texture_info] " << err.c_str();
+            if (err[err.size()-1] != '\n')
+                std::cerr << "\n";
+        }
     }
     return status;
 }

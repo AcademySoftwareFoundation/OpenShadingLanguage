@@ -3,6 +3,7 @@
 shader
 test (string filename = "../common/textures/grid.tx")
 {
+    printf ("Executing...\n");
     int r;
 
     int resolution[2];
@@ -36,4 +37,30 @@ test (string filename = "../common/textures/grid.tx")
     string badfile = "badfile";
     r = gettextureinfo (badfile, "textureformat", data);
     printf ("%s data: %s (%d)\n", badfile, data, r);
+
+    // Make a query of a bad file inside a conditional -- the idea is that
+    // we should NOT see an error message if the statement is not executed.
+    if (u > 2) {
+        string data = "not found";
+        string badfile = "badfile2";
+        r = gettextureinfo (badfile, "textureformat", data);
+        printf ("%s data: %s (%d)\n", badfile, data, r);
+    }
+
+    // Test existence of a valid file
+    {
+        int e;
+        r = gettextureinfo (filename, "exists", e);
+        printf ("%s exists? %d (return %d)\n", filename, e, r);
+    }
+
+    // Test existence of a monexistant file
+    {
+        int e;
+        string badfile = "badfile3";
+        r = gettextureinfo (badfile, "exists", e);
+        printf ("%s exists? %d (return %d)\n", badfile, e, r);
+    }
+
+
 }

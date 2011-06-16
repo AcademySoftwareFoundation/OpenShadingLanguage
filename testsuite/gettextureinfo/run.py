@@ -11,7 +11,7 @@ if len(sys.argv) > 2 :
 
 # A command to run
 command = path + "oslc/oslc test.osl > out.txt"
-command = command + "; " + path + "testshade/testshade -g 2 2 test >> out.txt"
+command = command + "; " + path + "testshade/testshade -g 2 2 -O2 test >& out.txt"
 
 # Outputs to check against references
 outputs = [ "out.txt" ]

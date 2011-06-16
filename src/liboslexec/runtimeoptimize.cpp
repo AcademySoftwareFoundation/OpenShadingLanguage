@@ -1620,64 +1620,70 @@ DECLFOLDER(constfold_gettextureinfo)
     ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() && 
             Dataname.typespec().is_string());
 
-    if (Filename.is_constant()) {
+    if (Filename.is_constant() && Dataname.is_constant() &&
+          ! Data.typespec().is_array()) {
         ustring filename = *(ustring *)Filename.data();
-
-        if (Dataname.is_constant()) {
-            ustring dataname = *(ustring *)Dataname.data();
-            TypeDesc t = Data.typespec().simpletype();
-            void *mydata = alloca (t.size ());
+        ustring dataname = *(ustring *)Dataname.data();
+        TypeDesc t = Data.typespec().simpletype();
+        void *mydata = alloca (t.size ());
 #if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
-            // FIXME(ptex) -- exclude folding of ptex, since these things
-            // can vary per face.
-            int result = rop.texturesys()->get_texture_info (filename, 0,
+        // FIXME(ptex) -- exclude folding of ptex, since these things
+        // can vary per face.
+        int result = rop.texturesys()->get_texture_info (filename, 0,
                                                          dataname, t, mydata);
 #else
-            int result = rop.texturesys()->get_texture_info (filename, dataname,
-                                                             t, mydata);
+        int result = rop.texturesys()->get_texture_info (filename, dataname,
+                                                         t, mydata);
 #endif
-            // Now we turn
-            //       gettextureinfo result filename dataname data
-            // into this for success:
-            //       assign result 1
-            //       assign data [retrieved values]
-            // or, if it failed:
-            //       assign result 0
-            if (result) {
-                int resultarg = rop.inst()->args()[op.firstarg()+0];
-                int dataarg = rop.inst()->args()[op.firstarg()+3];
-                // If not an array, turn the getattribute into an assignment
-                // to data.  (Punt on arrays -- just let the gettextureinfo
-                // happen as before.)
-                if (! t.arraylen) {
-                    // Make data the first argument
-                    rop.inst()->args()[op.firstarg()+0] = dataarg;
-                    // Now turn it into an assignment
-                    int cind = rop.add_constant (Data.typespec(), mydata);
-                    rop.turn_into_assign (op, cind);
-                }
-
-                // Now insert a new instruction that assigns 1 to the
-                // original return result of gettextureinfo.
-                int one = 1;
-                std::vector<int> args_to_add;
-                args_to_add.push_back (resultarg);
-                args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-                rop.insert_code (opnum, u_assign, args_to_add, true);
-                Opcode &newop (rop.inst()->ops()[opnum]);
-                newop.argwriteonly (0);
-                newop.argread (1, true);
-                newop.argwrite (1, false);
-                return 1;
-            } else {
-                rop.turn_into_assign_zero (op);
-                // If the get_texture_info failed, bubble error messages
-                // from the texture system back up to the renderer.
-                std::string err = rop.texturesys()->geterror();
-                if (! err.empty())
-                    rop.shadingsys().error ("%s", err.c_str());
-                return 1;
+        // Now we turn
+        //       gettextureinfo result filename dataname data
+        // into this for success:
+        //       assign result 1
+        //       assign data [retrieved values]
+        // or, if it failed:
+        //       assign result 0
+        if (result) {
+            int resultarg = rop.inst()->args()[op.firstarg()+0];
+            int dataarg = rop.inst()->args()[op.firstarg()+3];
+            // If not an array, turn the getattribute into an assignment
+            // to data.  (Punt on arrays -- just let the gettextureinfo
+            // happen as before.)
+            if (! t.arraylen) {
+                // Make data the first argument
+                rop.inst()->args()[op.firstarg()+0] = dataarg;
+                // Now turn it into an assignment
+                int cind = rop.add_constant (Data.typespec(), mydata);
+                rop.turn_into_assign (op, cind);
             }
+
+            // Now insert a new instruction that assigns 1 to the
+            // original return result of gettextureinfo.
+            int one = 1;
+            std::vector<int> args_to_add;
+            args_to_add.push_back (resultarg);
+            args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
+            rop.insert_code (opnum, u_assign, args_to_add, true);
+            Opcode &newop (rop.inst()->ops()[opnum]);
+            newop.argwriteonly (0);
+            newop.argread (1, true);
+            newop.argwrite (1, false);
+            return 1;
+        } else {
+#if 1
+            // Return without constant folding gettextureinfo -- because
+            // we WANT the shader to fail and issue error messages at
+            // the appropriate time.
+            (void) rop.texturesys()->geterror (); // eat the error
+            return 0;
+#else
+            rop.turn_into_assign_zero (op);
+            // If the get_texture_info failed, bubble error messages
+            // from the texture system back up to the renderer.
+            std::string err = rop.texturesys()->geterror();
+            if (! err.empty())
+                rop.shadingsys().error ("%s", err.c_str());
+            return 1;
+#endif
         }
     }
     return 0;

@@ -216,7 +216,7 @@ typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
     "osl_" #name "_dfdffff",  "xXXfff",         \
     "osl_" #name "_dffdfff",  "xXfXff",         \
     "osl_" #name "_dfdfdfff", "xXXXff",         \
-    "osl_" #name "_dfdvdv",   "xXvv",           \
+    "osl_" #name "_dfdvv",    "xXXv",           \
     "osl_" #name "_dfdvfvf",  "xXvfvf",         \
     "osl_" #name "_dfvdfvf",  "xXvXvf",         \
     "osl_" #name "_dfdvdfvf", "xXvXvf",         \

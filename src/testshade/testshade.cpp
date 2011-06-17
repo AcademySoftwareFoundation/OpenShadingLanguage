@@ -260,8 +260,13 @@ test_shade (int argc, const char *argv[])
     // std::cout << "myspace-to-common matrix: " << Mmyspace << "\n";
     rend.name_transform ("myspace", Mmyspace);
 
-    shaderglobals.dudx = 1.0f / xres;
-    shaderglobals.dvdy = 1.0f / yres;
+    if (pixelcenters) {
+        shaderglobals.dudx = 1.0f / xres;
+        shaderglobals.dvdy = 1.0f / yres;
+    } else {
+        shaderglobals.dudx = 1.0f / std::max (1, xres-1);
+        shaderglobals.dvdy = 1.0f / std::max (1, yres-1);
+    }
 
     shaderglobals.raytype = ((ShadingSystemImpl *)shadingsys)->raytype_bit (ustring(raytype));
 

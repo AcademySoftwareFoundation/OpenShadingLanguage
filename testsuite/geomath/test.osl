@@ -1,3 +1,6 @@
+#include "../common/shaders/pretty.h"
+
+
 shader
 test ()
 {
@@ -26,7 +29,8 @@ test ()
         float Kr, Kt;
         vector fR, fT;
         fresnel(vI, vN, eta, Kr, Kt, fR, fT);
-        printf ("   frensel:  Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt, fR, fT); 
+        printf ("   frensel:  Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt,
+                pretty(fR), pretty(fT)); 
        
         // test regular refraction
         printf (" testing regular refraction:\n");
@@ -48,7 +52,8 @@ test ()
               n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
               n1/n2, sin2/sin1);
         fresnel(vI, vN, eta, Kr, Kt, fR, fT);
-        printf ("   fresnel:  Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt, fR, fT); 
+        printf ("   fresnel:  Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt,
+                pretty(fR), pretty(fT)); 
         cos_incid_angle = dot(vI,vN);
         cos_refr_angle  = dot(fT, -vN);
         sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
@@ -94,7 +99,8 @@ test ()
         float Kr, Kt;
         vector fR, fT;
         fresnel(vI, vN, eta, Kr, Kt, fT, fT);
-        printf ("   fresnel() -> Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt, fR, fT); 
+        printf ("   fresnel() -> Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt,
+                pretty(fR), pretty(fT)); 
         cos_incid_angle = dot(vI,vN);
         cos_refr_angle  = dot(fT, -vN);
         sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);

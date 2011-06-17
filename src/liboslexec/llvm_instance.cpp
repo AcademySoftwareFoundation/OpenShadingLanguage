@@ -28,6 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 #include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
+#ifdef __linux__
+# include <dlfcn.h>
+#endif
 
 #include <OpenImageIO/timer.h>
 
@@ -216,7 +219,7 @@ typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
     "osl_" #name "_dfdffff",  "xXXfff",         \
     "osl_" #name "_dffdfff",  "xXfXff",         \
     "osl_" #name "_dfdfdfff", "xXXXff",         \
-    "osl_" #name "_dfdvdv",   "xXvv",           \
+    "osl_" #name "_dfdvv",    "xXXv",           \
     "osl_" #name "_dfdvfvf",  "xXvfvf",         \
     "osl_" #name "_dfvdfvf",  "xXvXvf",         \
     "osl_" #name "_dfdvdfvf", "xXvXvf",         \
@@ -4769,6 +4772,19 @@ ShadingSystemImpl::SetupLLVM ()
             return;
         }
     }
+
+#ifdef __linux__
+    // On Linux, if an app loads a plugin (DSO/DLL) using dlopen without
+    // passing RTLD_GLOBAL as the mode, and that plugin accesses OSL (by
+    // linking against liboslexec), it turns out that LLVM can fail in
+    // finding symbols when it does its dlsym to resolve functions in
+    // the app called by the IR.  Since we can't control the app
+    // (Houdini and Maya, I'm talking to you!), we compensate by asking
+    // to dlopen it here, the "right" way, and then later on, LLVM will
+    // be able to find the symbols.  I haven't can't seem to reproduce
+    // this issue on OS X, so for now we only do this on Linux.
+    dlopen ("liboslexec.so", RTLD_LAZY | RTLD_GLOBAL);
+#endif
 }
 
 

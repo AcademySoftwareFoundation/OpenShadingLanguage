@@ -467,6 +467,11 @@ public:
     ///
     void llvm_zero_derivs (const Symbol &sym);
 
+    /// Generate LLVM code to zero out the derivatives of an array
+    /// only for the first count elements of it.
+    ///
+    void llvm_zero_derivs (const Symbol &sym, llvm::Value *count);
+
     /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
     /// If ptrtype is NULL, just return a void*.
     llvm::Value *llvm_offset_ptr (llvm::Value *ptr, int offset,
@@ -509,6 +514,10 @@ public:
     /// Generate code for a memset.
     ///
     void llvm_memset (llvm::Value *ptr, int val, int len, int align=1);
+
+    /// Generate code for variable size memset
+    ///
+    void llvm_memset (llvm::Value *ptr, int val, llvm::Value *len, int align=1);
 
     /// Generate code for a memcpy.
     ///

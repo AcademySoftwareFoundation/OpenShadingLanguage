@@ -844,14 +844,33 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 void
 RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 {
+    if (sym.typespec().is_closure_based())
+        return; // Closures don't have derivs
     // Just memset the derivs to zero, let LLVM sort it out.
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
-        int len = sym.typespec().is_closure_based() ? sizeof(void *) : sym.size();
-        size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
-                             sym.typespec().simpletype().basesize();
+        int len = sym.size();
+        size_t align = sym.typespec().simpletype().basesize();
         llvm_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
                      0, 2*len /* size of both derivs */, (int)align);
+    }
+}
+
+
+
+void
+RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
+{
+    if (sym.typespec().is_closure_based())
+        return; // Closures don't have derivs
+    // Same thing as the above version but with just the first count derivs
+    TypeSpec elemtype = sym.typespec().elementtype();
+    if (sym.has_derivs() && elemtype.is_floatbased()) {
+        size_t esize = sym.typespec().simpletype().elementsize();
+        size_t align = sym.typespec().simpletype().basesize();
+        count = builder().CreateMul(count, llvm_constant((int)esize));
+        llvm_memset (llvm_void_ptr(sym,1), 0, count, (int)align); // X derivs
+        llvm_memset (llvm_void_ptr(sym,2), 0, count, (int)align); // Y derivs
     }
 }
 
@@ -1259,6 +1278,15 @@ void
 RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
                                int len, int align)
 {
+    llvm_memset(ptr, val, llvm_constant(len), align);
+}
+
+
+
+void
+RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
+                               llvm::Value *len, int align)
+{
     // memset with i32 len
     // and with an i8 pointer (dst) for LLVM-2.8
     const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
@@ -1277,8 +1305,8 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
                                                     llvm::APInt(8, val));
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
-    builder().CreateCall5 (func, ptr, fill_val,
-                           llvm_constant(len), llvm_constant(align), llvm_constant_bool(false));
+    builder().CreateCall5 (func, ptr, fill_val, len, llvm_constant(align),
+                           llvm_constant_bool(false));
 }
 
 
@@ -3869,6 +3897,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
              Max_points.typespec().is_int());
 
 
+    std::vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
     int attr_arg_offset = 5; // where the opt attrs begin
     int nattrs = (op.nargs() - attr_arg_offset) / 2;
 
@@ -3908,7 +3937,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
                     // deriv offset is the size of the array
                     args[7] = rop.llvm_constant ((int)simpletype.numelements());
                 else
-                    rop.llvm_zero_derivs (Value);
+                    clear_derivs_of.push_back(&Value);
             }
         } else {
             // It is a regular attribute, push it to the arg list
@@ -3916,7 +3945,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
             args.push_back (rop.llvm_constant (simpletype));
             args.push_back (rop.llvm_void_ptr (Value));
             if (Value.has_derivs())
-                rop.llvm_zero_derivs (Value);
+                clear_derivs_of.push_back(&Value);
             extra_attrs++;
         }
         // minimum capacity of the output arrays
@@ -3939,6 +3968,10 @@ LLVMGEN (llvm_gen_pointcloud_search)
     rop.builder().SetInsertPoint (sizeok_block);
 
     llvm::Value *count = rop.llvm_call_function ("osl_pointcloud_search", &args[0], args.size());
+    // Clear derivs if necessary
+    for (size_t i = 0; i < clear_derivs_of.size(); ++i)
+        rop.llvm_zero_derivs (*clear_derivs_of[i], count);
+    // Store result
     rop.llvm_store_value (count, Result);
 
     // error code
@@ -4002,7 +4035,7 @@ LLVMGEN (llvm_gen_pointcloud_get)
     llvm::Value *found = rop.llvm_call_function ("osl_pointcloud_get", &args[0], args.size());
     rop.llvm_store_value (found, Result);
     if (Data.has_derivs())
-        rop.llvm_zero_derivs (Data);
+        rop.llvm_zero_derivs (Data, count);
 
     // error code
     rop.builder().CreateBr (after_block);

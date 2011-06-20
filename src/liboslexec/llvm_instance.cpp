@@ -844,12 +844,13 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 void
 RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 {
+    if (sym.typespec().is_closure_based())
+        return; // Closures don't have derivs
     // Just memset the derivs to zero, let LLVM sort it out.
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
-        int len = sym.typespec().is_closure_based() ? sizeof(void *) : sym.size();
-        size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
-                             sym.typespec().simpletype().basesize();
+        int len = sym.size();
+        size_t align = sym.typespec().simpletype().basesize();
         llvm_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
                      0, 2*len /* size of both derivs */, (int)align);
     }
@@ -860,12 +861,13 @@ RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 void
 RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
 {
+    if (sym.typespec().is_closure_based())
+        return; // Closures don't have derivs
     // Same thing as the above version but with just the first count derivs
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
-        size_t esize = sym.typespec().is_closure_based() ? sizeof(void *) : sym.typespec().simpletype().elementsize();
-        size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
-                             sym.typespec().simpletype().basesize();
+        size_t esize = sym.typespec().simpletype().elementsize();
+        size_t align = sym.typespec().simpletype().basesize();
         count = builder().CreateMul(count, llvm_constant((int)esize));
         llvm_memset (llvm_void_ptr(sym,1), 0, count, (int)align); // X derivs
         llvm_memset (llvm_void_ptr(sym,2), 0, count, (int)align); // Y derivs

@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 #include <cmath>
+#include <dlfcn.h>
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
@@ -195,8 +196,8 @@ getargs (int argc, const char *argv[])
 
 
 
-int
-main (int argc, const char *argv[])
+extern "C" int
+test_shade (int argc, const char *argv[])
 {
     // Create a new shading system.
     Timer timer;

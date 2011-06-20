@@ -42,6 +42,29 @@ typedef int (*EntryPoint)(int argc, const char *argv[]);
 int
 main (int argc, const char *argv[])
 {
+#ifdef __linux__
+    // On Linux, if an app loads a plugin (DSO/DLL) using dlopen without
+    // passing RTLD_GLOBAL as the mode, and that plugin accesses OSL (by
+    // linking against liboslexec), it turns out that LLVM can fail in
+    // finding symbols when it does its dlsym to resolve functions in
+    // the app called by the IR.  Since we can't control the app
+    // (Houdini and Maya, I'm talking to you!), we compensate by asking
+    // to dlopen it here, the "right" way, and then later on, LLVM will
+    // be able to find the symbols.  I haven't can't seem to reproduce
+    // this issue on OS X, so for now we only do this on Linux.
+    //
+    // This would not be necessary if we didn't specifically disallow
+    // RTLD_GLOBAL in the Plugin::open call below, but we are purposely
+    // disallowing global symbol visibility in order to test this
+    // solution.
+    //
+    // Note also that in the real world, you'd need to be really sure
+    // that the file you dlopen'ed is the name "our" .so file -- beware
+    // renaming.
+    dlopen ("liboslexec.so", RTLD_LAZY | RTLD_GLOBAL);
+#endif
+
+
     std::string pluginname = std::string("libtestshade.") 
                              + Plugin::plugin_extension();
 #if OPENIMAGEIO_VERSION >= 1000 /* 0.10.0 */

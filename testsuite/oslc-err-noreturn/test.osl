@@ -1,0 +1,14 @@
+float f (point p)
+{
+    // Error: no 'return' statement when needed
+    area(p);
+}
+
+
+
+shader
+test ()
+{
+    float x = f(P);
+}
+

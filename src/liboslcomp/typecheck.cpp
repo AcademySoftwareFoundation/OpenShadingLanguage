@@ -91,7 +91,6 @@ ASTfunction_declaration::typecheck (TypeSpec expected)
     oslcompiler->push_function (func ());
     typecheck_children (expected);
     oslcompiler->pop_function ();
-
     if (m_typespec == TypeSpec())
         m_typespec = expected;
     return m_typespec;
@@ -449,6 +448,7 @@ ASTreturn_statement::typecheck (TypeSpec expected)
                        type_c_str(myfunc->typespec()),
                        myfunc->name().c_str());
         }
+        myfunc->encountered_return ();
         // If the function has other statements AFTER 'return', or if
         // the return statement is in a conditional, we'll need to
         // handle it specially when generating code.
@@ -982,8 +982,16 @@ ASTfunction_call::typecheck (TypeSpec expected)
     }
 
     if (match) {
-        if (! is_user_function ())
+        if (is_user_function()) {
+            if (func()->number_of_returns() == 0 &&
+                ! func()->typespec().is_void()) {
+                error ("non-void function \"%s\" had no 'return' statement.",
+                       func()->name().c_str());
+            }
+        } else {
+            // built-in
             typecheck_builtin_specialcase ();
+        }
         return m_typespec;
     }
 

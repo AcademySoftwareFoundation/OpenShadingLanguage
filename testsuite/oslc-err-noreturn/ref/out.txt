@@ -1,0 +1,2 @@
+test.osl:12: error: non-void function "f" had no 'return' statement.
+FAILED test.osl

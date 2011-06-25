@@ -377,7 +377,7 @@ struct_declaration
 
 field_declarations
         : field_declaration
-        | field_declarations field_declaration  { $$ = concat ($1, $2) }
+        | field_declarations field_declaration  { $$ = concat ($1, $2); }
         ;
 
 field_declaration
@@ -421,7 +421,7 @@ variable_declaration
 
 def_expressions
         : def_expression
-        | def_expressions ',' def_expression    { $$ = concat ($1, $3) }
+        | def_expressions ',' def_expression    { $$ = concat ($1, $3); }
         ;
 
 def_expression
@@ -486,7 +486,7 @@ init_expression_list
         : init_expression
         | init_expression_list ',' init_expression
                 {
-                    $$ = concat ($1, $3)
+                    $$ = concat ($1, $3);
                 }
         ;
 
@@ -672,7 +672,7 @@ for_init_statement
 
 expression_list
         : expression
-        | expression_list ',' expression        { $$ = concat ($1, $3) }
+        | expression_list ',' expression        { $$ = concat ($1, $3); }
         ;
 
 expression_opt
@@ -881,7 +881,7 @@ function_args_opt
 
 function_args
         : expression
-        | function_args ',' expression          { $$ = concat ($1, $3) }
+        | function_args ',' expression          { $$ = concat ($1, $3); }
         ;
 
 assign_expression

@@ -187,7 +187,7 @@ getargs (int argc, const char *argv[])
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
-        std::cerr << ap.error_message() << std::endl;
+        std::cerr << ap.geterror() << std::endl;
         ap.usage ();
         exit (EXIT_FAILURE);
     }

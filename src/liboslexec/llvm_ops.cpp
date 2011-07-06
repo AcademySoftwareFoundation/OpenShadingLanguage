@@ -1781,7 +1781,7 @@ OSL_SHADEOP void osl_calculatenormal(void *out, void *sg_, void *P_)
     VEC(out) = N;
 }
 
-OSL_SHADEOP float osl_area_fv(void *P_)
+OSL_SHADEOP float osl_area(void *P_)
 {
     Vec3 N = calculatenormal(P_, false);
     return N.length();

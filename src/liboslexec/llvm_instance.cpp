@@ -434,7 +434,7 @@ static const char *llvm_helper_function_table[] = {
 
     "osl_get_attribute", "iXiXXiiXX",
     "osl_calculatenormal", "xXXX",
-    "osl_area_fv", "fX",
+    "osl_area", "fX",
     "osl_filterwidth_fdf", "fX",
     "osl_filterwidth_vdv", "xXX",
     "osl_dict_find_iis", "iXiX",
@@ -3682,6 +3682,30 @@ LLVMGEN (llvm_gen_calculatenormal)
 
 
 
+LLVMGEN (llvm_gen_area)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    DASSERT (op.nargs() == 2);
+
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& P      = *rop.opargsym (op, 1);
+
+    DASSERT (Result.typespec().is_float() && P.typespec().is_triple());
+    if (! P.has_derivs()) {
+        rop.llvm_assign_zero (Result);
+        return true;
+    }
+    
+    llvm::Value *r = rop.llvm_call_function ("osl_area", rop.llvm_void_ptr (P));
+    rop.llvm_store_value (r, Result);
+    if (Result.has_derivs())
+        rop.llvm_zero_derivs (Result);
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_spline)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -4183,7 +4207,7 @@ initialize_llvm_generator_table ()
     INIT2 (acos, llvm_gen_generic);
     INIT (add);
     INIT2 (and, llvm_gen_andor);
-    INIT2 (area, llvm_gen_generic);
+    INIT2 (area, llvm_gen_area);
     INIT (aref);
     INIT (arraylength);
     INIT2 (asin, llvm_gen_generic);

@@ -3,6 +3,11 @@ test string operations:
 
 Testing abutting string literals: "foobarbaz"
 
+foo\nbar
+blah 'foo\nbar
+'
+blah2 'foo\\'
+
 formtted string: 'P = 0 0 1'
 
 concat("foo", "bar", "baz") = "foobarbaz"
@@ -47,6 +52,11 @@ regex_match ("foobar.baz", "(f[Oo]{2}).*(.az)") = 1
 test string operations:
 
 Testing abutting string literals: "foobarbaz"
+
+foo\nbar
+blah 'foo\nbar
+'
+blah2 'foo\\'
 
 formtted string: 'P = 1 0 1'
 
@@ -93,6 +103,11 @@ test string operations:
 
 Testing abutting string literals: "foobarbaz"
 
+foo\nbar
+blah 'foo\nbar
+'
+blah2 'foo\\'
+
 formtted string: 'P = 0 1 1'
 
 concat("foo", "bar", "baz") = "foobarbaz"
@@ -137,6 +152,11 @@ regex_match ("foobar.baz", "(f[Oo]{2}).*(.az)") = 1
 test string operations:
 
 Testing abutting string literals: "foobarbaz"
+
+foo\nbar
+blah 'foo\nbar
+'
+blah2 'foo\\'
 
 formtted string: 'P = 1 1 1'
 

@@ -1512,16 +1512,6 @@ LLVMGEN (llvm_gen_printf)
                 }
             }
             ++arg;
-        } else if (*format == '\\') {
-            // Escape sequence
-            ++format;  // skip the backslash
-            switch (*format) {
-            case 'n' : s += '\n';     break;
-            case 'r' : s += '\r';     break;
-            case 't' : s += '\t';     break;
-            default:   s += *format;  break;  // Catches '\\' also!
-            }
-            ++format;
         } else {
             // Everything else -- just copy the character and advance
             s += *format++;

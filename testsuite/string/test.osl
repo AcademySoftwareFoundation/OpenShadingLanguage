@@ -67,6 +67,12 @@ test ()
     printf ("Testing abutting string literals: \"%s\"\n",
             "foo" "bar" "baz");
 
+    // Test escape sequences
+    printf ("\n");
+    printf ("foo\\nbar\n");  // should print:  foo\bar
+    printf ("blah '%s'\n", "foo\\nbar\n");  // should print: blah 'foo\bar
+                                            //                    '
+
     // Test format
     printf ("\n");
     string s = format ("P = %g", P);

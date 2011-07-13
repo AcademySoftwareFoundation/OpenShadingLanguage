@@ -124,10 +124,12 @@ static ustring op_abs("abs");
 static ustring op_and("and");
 static ustring op_bitand("bitand");
 static ustring op_bitor("bitor");
+static ustring op_break("break");
 static ustring op_ceil("ceil");
 static ustring op_cellnoise("cellnoise");
 static ustring op_color("color");
 static ustring op_compl("compl");
+static ustring op_continue("continue");
 static ustring op_dowhile("dowhile");
 static ustring op_end("end");
 static ustring op_eq("eq");
@@ -2894,6 +2896,8 @@ LLVMGEN (llvm_gen_loop_op)
     llvm::BasicBlock* body_block = rop.llvm_new_basic_block ("body");
     llvm::BasicBlock* step_block = rop.llvm_new_basic_block ("step");
     llvm::BasicBlock* after_block = rop.llvm_new_basic_block ("");
+    // Save the step and after block pointers for possible break/continue
+    rop.llvm_push_loop (step_block, after_block);
 
     // Initialization (will be empty except for "for" loops)
     rop.build_llvm_code (opnum+1, op.jump(0));
@@ -2919,10 +2923,25 @@ LLVMGEN (llvm_gen_loop_op)
 
     // Continue on with the previous flow
     rop.builder().SetInsertPoint (after_block);
+    rop.llvm_pop_loop ();
 
     return true;
 }
 
+
+
+LLVMGEN (llvm_gen_loopmod_op)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    if (op.opname() == op_break) {
+        rop.builder().CreateBr (rop.llvm_loop_after_block());
+    } else {  // continue
+        rop.builder().CreateBr (rop.llvm_loop_step_block());
+    }
+    llvm::BasicBlock* next_block = rop.llvm_new_basic_block ("");
+    rop.builder().SetInsertPoint (next_block);
+    return true;
+}
 
 
 
@@ -4207,6 +4226,7 @@ initialize_llvm_generator_table ()
     INIT2 (backfacing, llvm_gen_get_simple_SG_field);
     INIT2 (bitand, llvm_gen_bitwise_binary_op);
     INIT2 (bitor, llvm_gen_bitwise_binary_op);
+    INIT2 (break, llvm_gen_loopmod_op);
     INIT (calculatenormal);
     INIT2 (ceil, llvm_gen_generic);
     INIT2 (cellnoise, llvm_gen_generic);
@@ -4217,6 +4237,7 @@ initialize_llvm_generator_table ()
     INIT2 (compl, llvm_gen_unary_op);
     INIT (compref);
     INIT2 (concat, llvm_gen_generic);
+    INIT2 (continue, llvm_gen_loopmod_op);
     INIT2 (cos, llvm_gen_generic);
     INIT2 (cosh, llvm_gen_generic);
     INIT2 (cross, llvm_gen_generic);

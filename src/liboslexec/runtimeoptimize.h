@@ -128,6 +128,8 @@ public:
 
     void find_conditionals ();
 
+    void find_loops ();
+
     void find_basic_blocks (bool do_llvm = false);
 
     bool coerce_assigned_constant (Opcode &op);
@@ -556,6 +558,33 @@ public:
         return llvm::BasicBlock::Create (llvm_context(), name, m_layer_func);
     }
 
+    /// Save the basic block pointers when entering a loop.
+    ///
+    void llvm_push_loop (llvm::BasicBlock *step, llvm::BasicBlock *after) {
+        m_loop_step_block.push_back (step);
+        m_loop_after_block.push_back (after);
+    }
+
+    /// Pop basic block pointers when exiting a loop.
+    ///
+    void llvm_pop_loop () {
+        ASSERT (! m_loop_step_block.empty() && ! m_loop_after_block.empty());
+        m_loop_step_block.pop_back ();
+        m_loop_after_block.pop_back ();
+    }
+
+    /// Return the basic block of the current loop's 'step' instructions.
+    llvm::BasicBlock *llvm_loop_step_block () const {
+        ASSERT (! m_loop_step_block.empty());
+        return m_loop_step_block.back();
+    }
+
+    /// Return the basic block of the current loop's exit point.
+    llvm::BasicBlock *llvm_loop_after_block () const {
+        ASSERT (! m_loop_after_block.empty());
+        return m_loop_after_block.back();
+    }
+
     llvm::Function *layer_func () const { return m_layer_func; }
 
     void llvm_setup_optimization_passes ();
@@ -578,7 +607,8 @@ private:
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
-    std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
+    std::vector<bool> m_in_conditional; ///< Whether each op is in a con
+    std::vector<int> m_loophead;        ///< Op num of the loop head of each op
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     int m_num_used_layers;              ///< Number of layers actually used
     double m_stat_opt_locking_time;       ///<   locking time
@@ -598,6 +628,8 @@ private:
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
     llvm::Function *m_layer_func;     ///< Current layer func we're building
+    std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
+    std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
     const llvm::Type *m_llvm_type_float;
     const llvm::Type *m_llvm_type_int;
     const llvm::Type *m_llvm_type_addrint;

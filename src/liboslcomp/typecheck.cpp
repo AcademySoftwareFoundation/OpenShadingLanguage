@@ -375,6 +375,16 @@ ASTloop_statement::typecheck (TypeSpec expected)
 
 
 TypeSpec
+ASTloopmod_statement::typecheck (TypeSpec expected)
+{
+    if (oslcompiler->nesting_level(true/*loops*/) < 1)
+        error ("Cannot '%s' here -- not inside a loop.", opname());
+    return m_typespec = TypeDesc (TypeDesc::NONE);
+}
+
+
+
+TypeSpec
 ASTassign_expression::typecheck (TypeSpec expected)
 {
     TypeSpec vt = var()->typecheck ();

@@ -102,6 +102,35 @@ using namespace OSL::pvt;
 
 #define yylval osolval
 
+// Turn escape sequences into real characters.
+static std::string
+unescape_chars (const std::string &unescaped)
+{
+    std::string s = unescaped;
+    for (size_t i = 0, len = s.length();  i < len;  ++i) {
+        if (s[i] == '\\') {
+            char c = s[i+1];
+            if (c == 'n' || c == 't' || c == 'v' || c == 'b' || 
+                c == 'r' || c == 'f' || c == 'a' || c == '\\' || c == '\"') {
+                s.erase (i, 1);
+                --len;
+                switch (c) {
+                case 'n' : s[i] = '\n'; break;
+                case 't' : s[i] = '\t'; break;
+                case 'v' : s[i] = '\v'; break;
+                case 'b' : s[i] = '\b'; break;
+                case 'r' : s[i] = '\r'; break;
+                case 'f' : s[i] = '\f'; break;
+                case 'a' : s[i] = '\a'; break;
+                // default case: the deletion is enough (backslash and quote)
+                }
+            }
+        }
+    }
+    return s;
+}
+
+
 %}
 
 /* Declare modes */
@@ -192,7 +221,8 @@ using namespace OSL::pvt;
 
 {STR}                   {
                             // grab the material between the quotes
-                            ustring s (YYText(), 1, strlen(YYText())-2);
+                            std::string escaped (YYText(), 1, strlen(YYText())-2);
+                            ustring s (unescape_chars(escaped));
                             yylval.s = s.c_str();
                             // std::cerr << "lex string '" << yylval.s << "'\n";
                             return STRING_LITERAL;

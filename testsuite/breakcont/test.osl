@@ -1,0 +1,35 @@
+shader test ()
+{
+    printf ("Testing break: (should never let i get beyond 3)\n");
+    for (int i = 0;  i < 10; ++i) {
+        if (i > 3)
+            break;
+        printf ("  i = %d\n", i);
+    }
+
+
+    printf ("\nTesting continue:\n");
+    for (int i = 0;  i < 10;  ++i) {
+        printf ("  i = %d\n", i);
+        if (i > 3)
+            continue;
+        printf ("  should only print this if i <= 3.\n");
+    }
+
+
+    printf ("\nTesting nested break/continue:\n");
+    for (int j = 0;  j < 10;  ++j) {
+        printf ("start of outer, j=%d\n", j);
+        for (int i = 0;  i < 10; ++i) {
+            if (i == 1)
+                continue;
+            printf ("  i = %d\n", i);
+            if (i > 3)
+                break;
+        }
+        if (j > 2)
+            break;
+    }
+
+}
+

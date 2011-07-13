@@ -1,0 +1,45 @@
+Compiled test.osl -> test.oso
+Testing break: (should never let i get beyond 3)
+  i = 0
+  i = 1
+  i = 2
+  i = 3
+
+Testing continue:
+  i = 0
+  should only print this if i <= 3.
+  i = 1
+  should only print this if i <= 3.
+  i = 2
+  should only print this if i <= 3.
+  i = 3
+  should only print this if i <= 3.
+  i = 4
+  i = 5
+  i = 6
+  i = 7
+  i = 8
+  i = 9
+
+Testing nested break/continue:
+start of outer, j=0
+  i = 0
+  i = 2
+  i = 3
+  i = 4
+start of outer, j=1
+  i = 0
+  i = 2
+  i = 3
+  i = 4
+start of outer, j=2
+  i = 0
+  i = 2
+  i = 3
+  i = 4
+start of outer, j=3
+  i = 0
+  i = 2
+  i = 3
+  i = 4
+

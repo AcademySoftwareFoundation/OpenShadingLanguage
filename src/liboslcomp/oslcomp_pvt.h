@@ -251,6 +251,12 @@ public:
     /// 'isloop' if it's a loop.
     void pop_nesting (bool isloop=false);
 
+    /// Return the current nesting level (JUST for loops, if loops=true).
+    ///
+    int nesting_level (bool loops=false) const {
+        return loops ? m_loop_nesting : m_total_nesting;
+    }
+
     /// Return the c_str giving a human-readable name of a type, fully
     /// accounting for exotic types like structs, etc.
     const char *type_c_str (const TypeSpec &type) const;

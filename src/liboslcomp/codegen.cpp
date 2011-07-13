@@ -1144,6 +1144,15 @@ ASTloop_statement::codegen (Symbol *)
 
 
 Symbol *
+ASTloopmod_statement::codegen (Symbol *)
+{
+    emitcode (opname());
+    return NULL;
+}
+
+
+
+Symbol *
 ASTunary_expression::codegen (Symbol *dest)
 {
     // Code generation for unary expressions (-x, !x, etc.)

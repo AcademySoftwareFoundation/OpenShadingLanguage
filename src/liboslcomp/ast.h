@@ -627,7 +627,8 @@ public:
     const char *nodetypename () const { return "loopmod_statement"; }
     const char *childname (size_t i) const;
     const char *opname () const;
-    TypeSpec typecheck (TypeSpec expected) { return ASTNode::typecheck(expected); /* FIXME */ }
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
 };
 
 

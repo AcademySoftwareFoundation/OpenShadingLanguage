@@ -459,11 +459,6 @@ ASTreturn_statement::typecheck (TypeSpec expected)
                        myfunc->name().c_str());
         }
         myfunc->encountered_return ();
-        // If the function has other statements AFTER 'return', or if
-        // the return statement is in a conditional, we'll need to
-        // handle it specially when generating code.
-        myfunc->complex_return (this->nextptr() != NULL ||
-                                myfunc->nesting_level() > 0);
     } else {
         // We're not part of any user function, so this 'return' must 
         // be from the main shader body.  That's fine (it's equivalent

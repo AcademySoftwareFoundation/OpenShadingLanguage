@@ -2933,6 +2933,7 @@ LLVMGEN (llvm_gen_loop_op)
 LLVMGEN (llvm_gen_loopmod_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() == 0);
     if (op.opname() == op_break) {
         rop.builder().CreateBr (rop.llvm_loop_after_block());
     } else {  // continue
@@ -4187,6 +4188,39 @@ LLVMGEN (llvm_gen_raytype)
 
 
 
+LLVMGEN (llvm_gen_functioncall)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 1);
+
+    llvm::BasicBlock* after_block = rop.llvm_new_basic_block ("");
+    rop.llvm_push_function (after_block);
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (opnum+1, op.jump(0));
+    rop.builder().CreateBr (after_block);
+
+    // Continue on with the previous flow
+    rop.builder().SetInsertPoint (after_block);
+    rop.llvm_pop_function ();
+
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_return)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 0);
+    rop.builder().CreateBr (rop.llvm_return_block());
+    llvm::BasicBlock* next_block = rop.llvm_new_basic_block ("");
+    rop.builder().SetInsertPoint (next_block);
+    return true;
+}
+
+
+
 
 #ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
 typedef boost::unordered_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
@@ -4268,6 +4302,7 @@ initialize_llvm_generator_table ()
     INIT2 (fmod, llvm_gen_mod);
     INIT2 (for, llvm_gen_loop_op);
     INIT2 (format, llvm_gen_printf);
+    INIT (functioncall);
     //stdosl.h INIT (fresnel);
     INIT2 (ge, llvm_gen_compare_op);
     INIT (getattribute);
@@ -4316,6 +4351,7 @@ initialize_llvm_generator_table ()
     //stdosl.h INIT (refract);
     INIT2 (regex_match, llvm_gen_regex);
     INIT2 (regex_search, llvm_gen_regex);
+    INIT (return);
     INIT2 (round, llvm_gen_generic);
     INIT (setmessage);
     INIT2 (shl, llvm_gen_bitwise_binary_op);

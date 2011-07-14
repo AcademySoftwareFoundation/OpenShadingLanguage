@@ -585,6 +585,26 @@ public:
         return m_loop_after_block.back();
     }
 
+    /// Save the return block pointer when entering a function.
+    ///
+    void llvm_push_function (llvm::BasicBlock *after) {
+        m_return_block.push_back (after);
+    }
+
+    /// Pop basic return destination when exiting a function.
+    ///
+    void llvm_pop_function () {
+        ASSERT (! m_return_block.empty());
+        m_return_block.pop_back ();
+    }
+
+    /// Return the basic block of the current loop's 'step' instructions.
+    ///
+    llvm::BasicBlock *llvm_return_block () const {
+        ASSERT (! m_return_block.empty());
+        return m_return_block.back();
+    }
+
     llvm::Function *layer_func () const { return m_layer_func; }
 
     void llvm_setup_optimization_passes ();
@@ -629,6 +649,7 @@ private:
     llvm::Function *m_layer_func;     ///< Current layer func we're building
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
+    std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     const llvm::Type *m_llvm_type_float;
     const llvm::Type *m_llvm_type_int;
     const llvm::Type *m_llvm_type_addrint;

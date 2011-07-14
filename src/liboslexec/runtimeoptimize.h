@@ -607,8 +607,7 @@ private:
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
-    std::vector<bool> m_in_conditional; ///< Whether each op is in a con
-    std::vector<int> m_loophead;        ///< Op num of the loop head of each op
+    std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     int m_num_used_layers;              ///< Number of layers actually used
     double m_stat_opt_locking_time;       ///<   locking time

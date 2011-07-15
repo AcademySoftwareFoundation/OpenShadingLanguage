@@ -1,0 +1,49 @@
+float myfunc (float x)
+{
+    float y = x*x;
+    if (y < 0.25)
+        return y;
+    printf ("Only should get here if y >= 0.25:  y == %g\n", y);
+    return y+100;
+}
+
+
+float func_with_loop (float x)
+{
+    float y = 1;
+    for (int i = 0;  i < 10;  ++i) {
+        y += M_PI;
+        if (i == 5)
+            return i;
+    }
+    return y;
+}
+
+
+float nest (float x)
+{
+    float y = x;
+    y = func_with_loop (y);
+    if (y == 5)
+        return y+1;
+    y = 100;
+    return y;
+}
+
+
+
+shader test ()
+{
+    printf ("Testing myfunc(%g):\n", u);
+    float z = myfunc (u);
+    printf ("result was %g\n", z);
+
+    printf ("\nTesting return from the middle of a loop:\n");
+    printf ("func_with_loop(u) = %g\n", func_with_loop(u));
+
+    printf ("\nTesting nested functions:\n");
+    printf ("test(u) = %g\n", nest(u));
+
+    printf ("\n\n");
+}
+

@@ -125,10 +125,11 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic array array-derivs array-range
-            blendmath bug-locallifetime cellnoise closure color comparison
+            blendmath breakcont bug-locallifetime
+            cellnoise closure color comparison
             component-range const-array-params
             derivs derivs-muldiv-clobber error-dupes exponential
-            function-simple function-outputelem
+            function-earlyreturn function-simple function-outputelem
             geomath gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers layers-lazy
             logic loop matrix message miscmath missing-shader noise pnoise

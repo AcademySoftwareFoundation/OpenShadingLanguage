@@ -65,7 +65,7 @@ class FunctionSymbol : public Symbol {
 public:
     FunctionSymbol (ustring n, TypeSpec type, ASTNode *node=NULL)
         : Symbol(n, type, SymTypeFunction, node), m_nextpoly(NULL),
-          m_return_location(NULL), m_complex_return(false),
+          m_return_location(NULL),
           m_number_of_returns(0),
           m_readwrite_special_case(false), m_texture_args(false),
           m_printf_args(false), m_takes_derivs(false)
@@ -78,9 +78,6 @@ public:
 
     Symbol *return_location () const { return m_return_location; }
     void return_location (Symbol *r) { m_return_location = r; }
-
-    bool complex_return () const { return m_complex_return; }
-    void complex_return (bool complex) { m_complex_return = complex; }
 
     void encountered_return () { ++m_number_of_returns; }
     int number_of_returns () const { return m_number_of_returns; }
@@ -118,7 +115,6 @@ private:
     FunctionSymbol *m_nextpoly;      ///< Next polymorphic version
     // Below, temporary storage used during code generation
     Symbol *m_return_location;       ///< Store return value location
-    bool m_complex_return;           ///< Return is not last statement unconditionally executed
     int m_number_of_returns;         ///< How many returns?
     int m_function_loop_nesting;     ///< Loop nesting level within the func
     int m_function_total_nesting;    ///< Total nesting level within the func

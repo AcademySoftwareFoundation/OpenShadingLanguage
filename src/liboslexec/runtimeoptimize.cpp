@@ -52,6 +52,7 @@ static ustring u_nop    ("nop"),
                u_add    ("add"),
                u_sub    ("sub"),
                u_if     ("if"),
+               u_return ("return"),
                u_useparam ("useparam"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
@@ -1044,16 +1045,23 @@ DECLFOLDER(constfold_if)
         }
         int changed = 0;
         if (result > 0) {
-            for (int i = op.jump(0);  i < op.jump(1);  ++i, ++changed)
-                rop.turn_into_nop (rop.inst()->ops()[i]);
+            for (int i = op.jump(0), e = op.jump(1);  i < e;  ++i) {
+                if (rop.inst()->ops()[i].opname() != u_nop) {
+                    rop.turn_into_nop (rop.inst()->ops()[i]);
+                    ++changed;
+                }
+            }
             rop.turn_into_nop (op);
-            return changed+1;
+            ++changed;
         } else if (result == 0) {
-            for (int i = opnum+1;  i < op.jump(0);  ++i, ++changed)
-                rop.turn_into_nop (rop.inst()->ops()[i]);
-            rop.turn_into_nop (op);
-            return changed+1;
+            for (int i = opnum, e = op.jump(0);  i < e;  ++i) {
+                if (rop.inst()->ops()[i].opname() != u_nop) {
+                    rop.turn_into_nop (rop.inst()->ops()[i]);
+                    ++changed;
+                }
+            }
         }
+        return changed;
     }
     return 0;
 }
@@ -1692,6 +1700,44 @@ DECLFOLDER(constfold_gettextureinfo)
 
 
 
+DECLFOLDER(constfold_functioncall)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    // Make a "functioncall" block disappear if the only non-nop statements
+    // inside it is 'return'.
+    bool has_return = false;
+    bool has_anything_else = false;
+    for (int i = opnum+1, e = op.jump(0);  i < e;  ++i) {
+        Opcode &op (rop.inst()->ops()[i]);
+        if (op.opname() == u_return)
+            has_return = true;
+        else if (op.opname() != u_nop)
+            has_anything_else = true;
+    }
+    int changed = 0;
+    if (! has_anything_else) {
+        // Possibly due to optimizations, there's nothing in the
+        // function body but the return.  So just eliminate the whole
+        // block of ops.
+        for (int i = opnum, e = op.jump(0);  i < e;  ++i) {
+            if (rop.inst()->ops()[i].opname() != u_nop) {
+                rop.turn_into_nop (rop.inst()->ops()[i]);
+                ++changed;
+            }
+        }
+    } else if (! has_return) {
+        // The function is just a straight-up execution, no return
+        // statement, so kill the "function" op.
+        rop.turn_into_nop (op);
+        ++changed;
+    }
+    
+    return changed;
+}
+
+
+
+
 DECLFOLDER(constfold_useparam)
 {
     // Just eliminate useparam (from shaders compiled with old oslc)
@@ -1754,6 +1800,7 @@ initialize_folder_table ()
     INIT (setmessage);
     INIT (getmessage);
     INIT (gettextureinfo);
+    INIT (functioncall);
     INIT (useparam);
 //    INIT (assign);  N.B. do not include here -- we want this run AFTER
 //                    all other constant folding is done, since many of

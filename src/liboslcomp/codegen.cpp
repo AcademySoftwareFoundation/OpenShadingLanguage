@@ -420,11 +420,10 @@ ASTreturn_statement::codegen (Symbol *dest)
             if (dest != myfunc->return_location ())
                 emitcode ("assign", myfunc->return_location(), dest);
         }
-        // Functions that return from their middles are special -- to make
-        // them work, we actually wrap them in "dowhile" loops so that we
-        // can "break" to exit them early.
-        if (myfunc->complex_return ())
-            emitcode ("break");
+        // Unless this was the unconditional last statement of the
+        // function, emit a "return" op.
+        if (this->nextptr() != NULL || myfunc->nesting_level() > 0)
+            emitcode ("return");
     } else {
         // Must be return from the main shader body -- exit from the shader
         emitcode ("exit");
@@ -1586,31 +1585,20 @@ ASTfunction_call::codegen (Symbol *dest)
         // last statement in the function, or inside a conditional)
         // require special care, since we don't have a general "jump"
         // instruction.  Instead, we wrap the function call inside a
-        // do-while loop and "break".
-        int loop_op = -1;
-        int startlabel = m_compiler->next_op_label ();
-        if (func()->complex_return ())
-            loop_op = emitcode ("dowhile");
+        // "functioncall" op that marks the range.
+        int loop_op = emitcode ("functioncall",
+                                m_compiler->make_constant(m_name));
 
         // Generate the code for the function body
         oslcompiler->push_function (func ());
         codegen_list (user_function()->statements());
         oslcompiler->pop_function ();
 
-        if (func()->complex_return ()) {
-            // Second half of the "do-while-break" technique for functions
-            // that do not have simple return patterns.  Now we need to
-            // retroactively add the loop arguments and jump targets to
-            // the loop instruction.
-            Symbol *condvar = m_compiler->make_constant (0);
-            size_t argstart = m_compiler->add_op_args (1, &condvar);
-            m_compiler->ircode(loop_op).set_args (argstart, 1);
-            m_compiler->ircode(loop_op).argread (0, true);    // read
-            m_compiler->ircode(loop_op).argwrite (0, false);  // not written
-            int endlabel = m_compiler->next_op_label ();
-            m_compiler->ircode(loop_op).set_jump (startlabel, startlabel,
-                                                  endlabel, endlabel);
-        }
+        // Go back and mark the "functioncall" with the right jump address
+        m_compiler->ircode(loop_op).argread (0, true);    // read
+        m_compiler->ircode(loop_op).argwrite (0, false);  // not written
+        int endlabel = m_compiler->next_op_label ();
+        m_compiler->ircode(loop_op).set_jump (endlabel);
 
     } else {
         bool isclosure = func() && func()->typespec().is_closure();

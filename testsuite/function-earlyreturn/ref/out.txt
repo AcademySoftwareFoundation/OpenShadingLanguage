@@ -1,0 +1,44 @@
+Compiled test.osl -> test.oso
+Testing myfunc(0):
+result was 0
+
+Testing return from the middle of a loop:
+func_with_loop(u) = 5
+
+Testing nested functions:
+test(u) = 6
+
+
+Testing myfunc(1):
+Only should get here if y >= 0.25:  y == 1
+result was 101
+
+Testing return from the middle of a loop:
+func_with_loop(u) = 5
+
+Testing nested functions:
+test(u) = 6
+
+
+Testing myfunc(0):
+result was 0
+
+Testing return from the middle of a loop:
+func_with_loop(u) = 5
+
+Testing nested functions:
+test(u) = 6
+
+
+Testing myfunc(1):
+Only should get here if y >= 0.25:  y == 1
+result was 101
+
+Testing return from the middle of a loop:
+func_with_loop(u) = 5
+
+Testing nested functions:
+test(u) = 6
+
+
+

@@ -59,7 +59,6 @@ static ustring u_nop    ("nop"),
 
 
 
-
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {
 #endif
@@ -1535,24 +1534,122 @@ DECLFOLDER(constfold_triple)
 
 DECLFOLDER(constfold_matrix)
 {
-    // Try to turn R=matrix(from,to) into R=1 if it's an identity transform
+    // Try to turn R=matrix(from,to) into R=const if it's an identity
+    // transform or if the result is a non-time-varying matrix.
     Opcode &op (rop.inst()->ops()[opnum]);
     if (op.nargs() == 3) {
         Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
         Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
-        if (From.is_constant() && From.typespec().is_string() &&
-            To.is_constant() && To.typespec().is_string()) {
-            ustring from = *(ustring *)From.data();
-            ustring to = *(ustring *)To.data();
-            ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
-            if (from == to || (from == Strings::common && to == commonsyn) ||
-                              (from == commonsyn && to == Strings::common)) {
-                static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-                int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
-                rop.turn_into_assign (op, cind);
-                return 1;
-            }
+        if (! (From.is_constant() && From.typespec().is_string() &&
+               To.is_constant() && To.typespec().is_string()))
+            return 0;
+        // OK, From and To are constant strings.
+        ustring from = *(ustring *)From.data();
+        ustring to = *(ustring *)To.data();
+        ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
+        if (from == to || (from == Strings::common && to == commonsyn) ||
+            (from == commonsyn && to == Strings::common)) {
+            static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+            int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
+            rop.turn_into_assign (op, cind);
+            return 1;
         }
+        // Shader and object spaces will vary from execution to execution,
+        // so we can't optimize those away.
+        if (from == Strings::shader || from == Strings::object ||
+            to == Strings::shader || to == Strings::object)
+            return 0;
+        // But whatever spaces are left *may* be optimizable if they are
+        // not time-varying.
+        RendererServices *rs = rop.shadingsys().renderer();
+        Matrix44 Mfrom, Mto;
+        bool ok = true;
+        if (from == Strings::common || from == commonsyn)
+            Mfrom.makeIdentity ();
+        else
+            ok &= rs->get_matrix (Mfrom, from);
+        if (to == Strings::common || to == commonsyn)
+            Mfrom.makeIdentity ();
+        else
+            ok &= rs->get_inverse_matrix (Mto, to);
+        if (ok) {
+            // The from-to matrix is known and not time-varying, so just
+            // turn it into a constant rather than calling getmatrix at
+            // execution time.
+            Matrix44 Mresult = Mfrom * Mto;
+            int cind = rop.add_constant (TypeDesc::TypeMatrix, &Mresult);
+            rop.turn_into_assign (op, cind);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_getmatrix)
+{
+    // Try to turn R=getmatrix(from,to,M) into R=1,M=const if it's an
+    // identity transform or if the result is a non-time-varying matrix.
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
+    if (! (From.is_constant() && To.is_constant()))
+        return 0;
+    // OK, From and To are constant strings.
+    ustring from = *(ustring *)From.data();
+    ustring to = *(ustring *)To.data();
+    ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
+    if (from == to || (from == Strings::common && to == commonsyn) ||
+        (from == commonsyn && to == Strings::common)) {
+        static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+        int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    // Shader and object spaces will vary from execution to execution,
+    // so we can't optimize those away.
+    if (from == Strings::shader || from == Strings::object ||
+        to == Strings::shader || to == Strings::object)
+        return 0;
+    // But whatever spaces are left *may* be optimizable if they are
+    // not time-varying.
+    RendererServices *rs = rop.shadingsys().renderer();
+    Matrix44 Mfrom, Mto;
+    bool ok = true;
+    if (from == Strings::common || from == commonsyn)
+        Mfrom.makeIdentity ();
+    else
+        ok &= rs->get_matrix (Mfrom, from);
+    if (to == Strings::common || to == commonsyn)
+        Mto.makeIdentity ();
+    else
+        ok &= rs->get_inverse_matrix (Mto, to);
+    if (ok) {
+        // The from-to matrix is known and not time-varying, so just
+        // turn it into a constant rather than calling getmatrix at
+        // execution time.
+        int resultarg = rop.inst()->args()[op.firstarg()+0];
+        int dataarg = rop.inst()->args()[op.firstarg()+3];
+        // Make data the first argument
+        rop.inst()->args()[op.firstarg()+0] = dataarg;
+        // Now turn it into an assignment
+        Matrix44 Mresult = Mfrom * Mto;
+        int cind = rop.add_constant (TypeDesc::TypeMatrix, &Mresult);
+        rop.turn_into_assign (op, cind);
+        
+        // Now insert a new instruction that assigns 1 to the
+        // original return result of getmatrix.
+        int one = 1;
+        std::vector<int> args_to_add;
+        args_to_add.push_back (resultarg);
+        args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
+        rop.insert_code (opnum, u_assign, args_to_add, true);
+        Opcode &newop (rop.inst()->ops()[opnum]);
+        newop.argwriteonly (0);
+        newop.argread (1, true);
+        newop.argwrite (1, false);
+        return 1;
     }
     return 0;
 }
@@ -1794,6 +1891,7 @@ initialize_folder_table ()
     INIT2 (normal, constfold_triple);
     INIT2 (vector, constfold_triple);
     INIT (matrix);
+    INIT (getmatrix);
     INIT2 (transform, constfold_transform);
     INIT2 (transformv, constfold_transform);
     INIT2 (transformn, constfold_transform);

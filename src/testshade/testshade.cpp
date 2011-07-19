@@ -487,12 +487,8 @@ test_shade (int argc, const char *argv[])
 
     // Now we should have a valid shading state, to get a reference to it.
     ShadingAttribStateRef shaderstate = shadingsys->state ();
-
     if (outputfiles.size() != 0)
         std::cout << "\n";
-
-    // Set up the image outputs requested on the command line
-    setup_output_images (shadingsys, shaderstate);
 
     // Set up the named transformations, including shader and object.
     // For this test application, we just do this statically; in a real
@@ -500,6 +496,9 @@ test_shade (int argc, const char *argv[])
     // be static, but shader and object spaces may be different for each
     // object.
     setup_transformations (rend, Mshad, Mobj);
+
+    // Set up the image outputs requested on the command line
+    setup_output_images (shadingsys, shaderstate);
 
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;

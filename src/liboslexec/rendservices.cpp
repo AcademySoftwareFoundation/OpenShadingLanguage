@@ -65,9 +65,31 @@ RendererServices::get_inverse_matrix (Matrix44 &result,
 
 
 bool
+RendererServices::get_inverse_matrix (Matrix44 &result, TransformationPtr xform)
+{
+    bool ok = get_matrix (result, xform);
+    if (ok)
+        result.invert ();
+    return ok;
+}
+
+
+
+bool
 RendererServices::get_inverse_matrix (Matrix44 &result, ustring to, float time)
 {
     bool ok = get_matrix (result, to, time);
+    if (ok)
+        result.invert ();
+    return ok;
+}
+
+
+
+bool
+RendererServices::get_inverse_matrix (Matrix44 &result, ustring to)
+{
+    bool ok = get_matrix (result, to);
     if (ok)
         result.invert ();
     return ok;

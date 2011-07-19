@@ -735,8 +735,10 @@ osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
         ctx->renderer()->get_matrix (*r, sg->object2common, sg->time);
         return true;
     }
-    return ctx->renderer()->get_matrix (*r, USTR(from), sg->time);
-    // FIXME -- error report if it fails?
+    bool ok = ctx->renderer()->get_matrix (*r, USTR(from), sg->time);
+    if (! ok)
+        r->makeIdentity();
+    return ok;
 }
 
 bool
@@ -746,7 +748,7 @@ osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
     if (USTR(to) == Strings::common ||
             USTR(to) == ctx->shadingsys().commonspace_synonym()) {
         r->makeIdentity ();
-        return true;;
+        return true;
     }
     if (USTR(to) == Strings::shader) {
         ctx->renderer()->get_inverse_matrix (*r, sg->shader2common, sg->time);
@@ -757,28 +759,30 @@ osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
         return true;
     }
     bool ok = ctx->renderer()->get_inverse_matrix (*r, USTR(to), sg->time);
-    if (! ok) {
+    if (! ok)
         r->makeIdentity ();
-        //FIXME  error ("Could not get matrix '%s'", to.c_str());
-    }
-    return true;
+    return ok;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP int
 osl_prepend_matrix_from (void *sg, void *r, const char *from)
 {
     Matrix44 m;
-    osl_get_matrix ((ShaderGlobals *)sg, &m, from);
-    MAT(r) = m * MAT(r);
+    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
+    if (ok)
+        MAT(r) = m * MAT(r);
+    return ok;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP int
 osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 {
     Matrix44 Mfrom, Mto;
     bool ok = osl_get_matrix ((ShaderGlobals *)sg, &Mfrom, from);
     ok &= osl_get_inverse_matrix ((ShaderGlobals *)sg, &Mto, to);
-    MAT(r) = Mfrom * Mto;
+    if (ok)
+        MAT(r) = Mfrom * Mto;
+    return ok;
 }
 
 OSL_SHADEOP void

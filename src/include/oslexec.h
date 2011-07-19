@@ -247,20 +247,62 @@ public:
     virtual ~RendererServices () { }
 
     /// Get the 4x4 matrix that transforms by the specified
-    /// transformation at the given time.
+    /// transformation at the given time.  Return true if ok, false
+    /// on error.
     virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
                              float time) = 0;
 
     /// Get the 4x4 matrix that transforms by the specified
-    /// transformation at the given time.  The default implementation is
-    /// to use get_matrix and invert it, but a particular renderer may
-    /// have a better technique and overload the implementation.
+    /// transformation at the given time.  Return true if ok, false on
+    /// error.  The default implementation is to use get_matrix and
+    /// invert it, but a particular renderer may have a better technique
+    /// and overload the implementation.
     virtual bool get_inverse_matrix (Matrix44 &result, TransformationPtr xform,
                                      float time);
 
+    /// Get the 4x4 matrix that transforms by the specified
+    /// transformation.  Return true if ok, false on error.  Since no
+    /// time value is given, also return false if the transformation may
+    /// be time-varying.
+    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform) = 0;
+
+    /// Get the 4x4 matrix that transforms by the specified
+    /// transformation.  Return true if ok, false on error.  Since no
+    /// time value is given, also return false if the transformation may
+    /// be time-varying.  The default implementation is to use
+    /// get_matrix and invert it, but a particular renderer may have a
+    /// better technique and overload the implementation.
+    virtual bool get_inverse_matrix (Matrix44 &result, TransformationPtr xform);
+
     /// Get the 4x4 matrix that transforms points from the named
     /// 'from' coordinate system to "common" space at the given time.
+    /// Returns true if ok, false if the named matrix is not known.
     virtual bool get_matrix (Matrix44 &result, ustring from, float time) = 0;
+
+    /// Get the 4x4 matrix that transforms points from "common" space to
+    /// the named 'to' coordinate system to at the given time.  The
+    /// default implementation is to use get_matrix and invert it, but a
+    /// particular renderer may have a better technique and overload the
+    /// implementation.
+    virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
+
+    /// Get the 4x4 matrix that transforms 'from' to "common" space.
+    /// Since there is no time value passed, return false if the
+    /// transformation may be time-varying (as well as if it's not found
+    /// at all).
+    virtual bool get_matrix (Matrix44 &result, ustring from) = 0;
+
+    /// Get the 4x4 matrix that transforms points from "common" space to
+    /// the named 'to' coordinate system.  Since there is no time value
+    /// passed, return false if the transformation may be time-varying
+    /// (as well as if it's not found at all).  The default
+    /// implementation is to use get_matrix and invert it, but a
+    /// particular renderer may have a better technique and overload the
+    /// implementation.
+    virtual bool get_inverse_matrix (Matrix44 &result, ustring to);
+
+    /// Get the 4x4 matrix that transforms points from the named
+    /// 'from' coordinate system to "common" space at the given time.
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is
@@ -286,13 +328,6 @@ public:
 
     /// Does the current object have the named user-data associated with it?
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate) = 0;
-
-    /// Get the 4x4 matrix that transforms points from "common" space to
-    /// the named 'to' coordinate system to at the given time.  The
-    /// default implementation is to use get_matrix and invert it, but a
-    /// particular renderer may have a better technique and overload the
-    /// implementation.
-    virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
 
     /// Filtered 2D texture lookup for a single point.
     ///

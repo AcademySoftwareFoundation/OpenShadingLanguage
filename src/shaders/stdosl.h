@@ -519,7 +519,10 @@ int iscameraray () { return raytype("camera"); }
 int isdiffuseray () { return raytype("diffuse"); }
 int isglossyray () { return raytype("glossy"); }
 int isshadowray () { return raytype("shadow"); }
-
+int getmatrix (string fromspace, string tospace, output matrix M) BUILTIN;
+int getmatrix (string fromspace, output matrix M) {
+    return getmatrix (fromspace, "current", M);
+}
 
 
 // Miscellaneous

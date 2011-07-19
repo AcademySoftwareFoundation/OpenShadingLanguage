@@ -374,8 +374,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_div_mf", "xXXf",
     "osl_div_fm", "xXfX",
     "osl_div_m_ff", "xXff",
-    "osl_prepend_matrix_from", "xXXs",
-    "osl_get_from_to_matrix", "xXXss",
+    "osl_prepend_matrix_from", "iXXs",
+    "osl_get_from_to_matrix", "iXXss",
     "osl_transpose_mm", "xXX",
     "osl_determinant_fm", "fX",
 
@@ -2544,6 +2544,30 @@ LLVMGEN (llvm_gen_matrix)
 
 
 
+/// int getmatrix (fromspace, tospace, M)
+LLVMGEN (llvm_gen_getmatrix)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    ASSERT (nargs == 4);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& From = *rop.opargsym (op, 1);
+    Symbol& To = *rop.opargsym (op, 2);
+    Symbol& M = *rop.opargsym (op, 3);
+
+    llvm::Value *args[4];
+    args[0] = rop.sg_void_ptr();  // shader globals
+    args[1] = rop.llvm_void_ptr(M);  // matrix result
+    args[2] = rop.llvm_load_value(From);
+    args[3] = rop.llvm_load_value(To);
+    llvm::Value *result = rop.llvm_call_function ("osl_get_from_to_matrix", args, 4);
+    rop.llvm_store_value (result, Result);
+    rop.llvm_zero_derivs (M);
+    return true;
+}
+
+
+
 // Derivs
 LLVMGEN (llvm_gen_DxDy)
 {
@@ -4306,6 +4330,7 @@ initialize_llvm_generator_table ()
     //stdosl.h INIT (fresnel);
     INIT2 (ge, llvm_gen_compare_op);
     INIT (getattribute);
+    INIT (getmatrix);
     INIT (getmessage);
     INIT (gettextureinfo);
     INIT2 (gt, llvm_gen_compare_op);

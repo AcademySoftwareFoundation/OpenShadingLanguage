@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 10 May, 2011 \\
-%(with corrections, 7 January, 2011)
+(with corrections, 20 July, 2011)
 }}
 
 
@@ -361,6 +361,8 @@ other open source packages:
 \item Thread Building Blocks (TBB), \copyright\ 2005--2008 Intel Corporation.\\
 {\cf http://www.threadingbuildingblocks.org/}
 \item Boost \copyright\ various authors.  {\cf http://www.boost.org}
+\item LLVM \copyright\ 2003-2010 University of Illinois at
+  Urbana-Champaign. {\cf http://llvm.org}
 \end{itemize}
 
 These other packages are all distributed under licenses that allow them
@@ -368,24 +370,23 @@ to be used by and distributed with \product.
 
 \bigskip
 
-\section*{Annotations}
-
-\begin{annotate}
-When you see text in this style, it's an annotation.  These annotations
-will not be in the final draft of this document.  They are notes to the
-readers of early drafts, sometimes questions, sometimes guideposts
-to uncertain areas, sometimes explanations of what is to come but that
-has not yet been fully fleshed out.
-
-\begin{comment}
-Short annotations will sometimes spring up anywhere, but there's also a
-full chapter of discussion of design choices
-(Chapter~\ref{chap:discussion}).  Opinionated readers should pay
-particular attention to this chapter, as these big decisions will be the
-hardest to change later.
-\end{comment}
-
-\end{annotate}
+% \section*{Annotations}
+%
+% \begin{annotate}
+% When you see text in this style, it's an annotation.  These annotations
+% will not be in the final draft of this document.  They are notes to the
+% readers of early drafts, sometimes questions, sometimes guideposts
+% to uncertain areas, sometimes explanations of what is to come but that
+% has not yet been fully fleshed out.
+% 
+% \begin{comment}
+% Short annotations will sometimes spring up anywhere, but there's also a
+% full chapter of discussion of design choices
+% (Chapter~\ref{chap:discussion}).  Opinionated readers should pay
+% particular attention to this chapter, as these big decisions will be the
+% hardest to change later.
+%\end{comment}
+% \end{annotate}
 
 
 \chapter{The Big Picture}
@@ -3156,16 +3157,31 @@ components.  In other words, {\cf matrix(1)} is the identity matrix, and
 matrix {\ce matrix} (string fromspace, float f)}
 \indexapi{matrix()}
 Constructs a \matrix relative to the named space, multiplying it by the
-{\cf space}-to-{\cf common} transformation matrix.  
+{\cf space}-to-{\cf common} transformation matrix.  If the coordinate
+system name is unknown, it will be assumed to be the identity matrix.
 
 Note that {\cf matrix (space, 1)} returns the 
-\emph{space}-to-{\cf common} transformation matrix.
+\emph{space}-to-{\cf common} transformation matrix. If the coordinate
+system name is unknown, it will be assumed to be the identity matrix.
 \apiend
 
 \apiitem{matrix {\ce matrix} (string fromspace, string tospace)}
 \indexapi{matrix()}
 Constructs a \matrix that can be used to transform coordinates from
-\emph{fromspace} to \emph{tospace}.
+\emph{fromspace} to \emph{tospace}.  If either of the coordinate
+system names are unknown, they will be assumed to be the identity matrix.
+\apiend
+
+\apiitem{int {\ce getmatrix} (string fromspace, string tospace, output
+  matrix M)}
+\indexapi{getmatrix()}
+
+Sets \emph{M} to the \matrix that transforms coordinates from
+\emph{fromspace} to \emph{tospace}.  Return 1 upon success, or 0 if
+either of the coordinate system names are unknown (in which case
+\emph{M} will not be modified).  This is very similar to the
+{\cf matrix(from,to)} constructor, except that {\cf getmatrix} allows
+the shader to gracefully handle unknown coordinate system names.
 \apiend
 
 \apiitem{float {\ce determinant} (matrix M)}

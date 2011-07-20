@@ -57,6 +57,9 @@ public:
                              float time);
     virtual bool get_matrix (Matrix44 &result, ustring from, float time);
 
+    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform);
+    virtual bool get_matrix (Matrix44 &result, ustring from);
+
     void name_transform (const char *name, const Transformation &xform);
 
     virtual bool get_array_attribute (void *renderstate, bool derivatives, 

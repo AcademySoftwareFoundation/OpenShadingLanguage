@@ -3,8 +3,19 @@
 
 void matrix_fromto (string from, string to)
 {
-    printf ("  matrix (\"%s\", \"%s\") = (%.5g)\n", from, to, pretty(matrix (from, to)));
-    printf ("  matrix (\"%s\", \"%s\") = (%.5g)\n", to, from, pretty(matrix (to, from)));
+    matrix M, Mg;
+    int ok;
+    M = matrix (from, to);
+    printf ("  matrix (\"%s\", \"%s\") = (%.5g)\n", from, to, pretty(M));
+    ok = getmatrix (from, to, Mg);
+    if (!ok || M != Mg)
+        printf ("  Hey, matrix ctr didn't match getmatrix!\n");
+
+    M = matrix (to, from);
+    printf ("  matrix (\"%s\", \"%s\") = (%.5g)\n", to, from, pretty(M));
+    ok = getmatrix (to, from, Mg);
+    if (!ok || M != Mg)
+        printf ("  Hey, matrix ctr didn't match getmatrix!\n");
 }
 
 
@@ -48,12 +59,22 @@ test ()
                 a, pretty(matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)));
     }
 
-    // Test "from-to" matrix construction
+    // Test "from-to" matrix construction and getmatrix calls
     {
         printf ("\nTesting matrix from-to construction:\n");
         matrix_fromto ("common", "shader");
         matrix_fromto ("common", "object");
         matrix_fromto ("shader", "object");
+    }
+
+    // Test getmatrix with an unknown space
+    {
+        printf ("\nTesting getmatrix for unknown space name:\n");
+        matrix M;
+        if (getmatrix ("foobar", "common", M))
+            printf ("  found???\n");
+        else
+            printf ("  'foobar' matrix not found, as expected\n");
     }
 
     {

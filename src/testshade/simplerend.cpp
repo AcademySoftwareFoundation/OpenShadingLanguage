@@ -63,6 +63,34 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from, float time)
 }
 
 
+
+bool
+SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform)
+{
+    // SimpleRenderer doesn't understand motion blur and transformations
+    // are just simple 4x4 matrices.
+    result = *(OSL::Matrix44 *)xform;
+    return true;
+}
+
+
+
+bool
+SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
+{
+    // SimpleRenderer doesn't understand motion blur, so we never fail
+    // on account of time-varying transformations.
+    TransformMap::const_iterator found = m_named_xforms.find (from);
+    if (found != m_named_xforms.end()) {
+        result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+
 void
 SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
 {

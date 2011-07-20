@@ -24,6 +24,9 @@ Testing matrix from-to construction:
   matrix ("shader", "object") = (0.70711 -0.70711 0 0 0.70711 0.70711 0 0 0 0 1 0 -1 -1 0 1)
   matrix ("object", "shader") = (0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 0 1.4142 0 1)
 
+Testing getmatrix for unknown space name:
+  'foobar' matrix not found, as expected
+
 
 Testing matrix component access:
   M = 0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 1 0 0 1
@@ -76,6 +79,9 @@ Testing matrix from-to construction:
   matrix ("object", "common") = (0 1 0 0 -1 0 0 0 0 0 1 0 0 1 0 1)
   matrix ("shader", "object") = (0.70711 -0.70711 0 0 0.70711 0.70711 0 0 0 0 1 0 -1 -1 0 1)
   matrix ("object", "shader") = (0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 0 1.4142 0 1)
+
+Testing getmatrix for unknown space name:
+  'foobar' matrix not found, as expected
 
 
 Testing matrix component access:
@@ -130,6 +136,9 @@ Testing matrix from-to construction:
   matrix ("shader", "object") = (0.70711 -0.70711 0 0 0.70711 0.70711 0 0 0 0 1 0 -1 -1 0 1)
   matrix ("object", "shader") = (0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 0 1.4142 0 1)
 
+Testing getmatrix for unknown space name:
+  'foobar' matrix not found, as expected
+
 
 Testing matrix component access:
   M = 0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 1 0 0 1
@@ -182,6 +191,9 @@ Testing matrix from-to construction:
   matrix ("object", "common") = (0 1 0 0 -1 0 0 0 0 0 1 0 0 1 0 1)
   matrix ("shader", "object") = (0.70711 -0.70711 0 0 0.70711 0.70711 0 0 0 0 1 0 -1 -1 0 1)
   matrix ("object", "shader") = (0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 0 1.4142 0 1)
+
+Testing getmatrix for unknown space name:
+  'foobar' matrix not found, as expected
 
 
 Testing matrix component access:

@@ -63,13 +63,6 @@ namespace llvm {
   class JITMemoryManager;
 }
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
-namespace pvt {
-
 #ifdef OIIO_NAMESPACE
 using OIIO::atomic_int;
 using OIIO::atomic_ll;
@@ -81,9 +74,28 @@ using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
 #endif
 
+
+#ifdef OSL_NAMESPACE
+namespace OSL_NAMESPACE {
+#endif
+
+namespace OSL {
+
+
+struct PerThreadInfo
+{
+    std::stack<ShadingContext *> context_pool;
+    
+    ShadingContext *pop_context ();  ///< Get the pool top and then pop
+    ~PerThreadInfo ();
+};
+
+
+
+namespace pvt {
+
 // forward definitions
 class ShadingSystemImpl;
-class ShadingContext;
 class ShaderInstance;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
@@ -634,17 +646,19 @@ public:
 
     ShaderMaster::ref loadshader (const char *name);
 
-    void* create_thread_info();
+    virtual PerThreadInfo * create_thread_info();
 
-    void destroy_thread_info(void* thread_info);
+    virtual void destroy_thread_info (PerThreadInfo *threadinfo);
 
-    /// Get a ShadingContext that we can use.
-    ///
-    ShadingContext *get_context (void* thread_info = NULL);
+    virtual ShadingContext *get_context (PerThreadInfo *threadinfo = NULL);
 
-    /// Return a ShadingContext to the pool.
-    ///
-    void release_context (ShadingContext *sc, void* thread_info = NULL);
+    virtual void release_context (ShadingContext *ctx);
+
+    virtual bool execute (ShadingContext &ctx, ShadingAttribState &sas,
+                          ShaderGlobals &ssg, bool run=true);
+
+    virtual const void* get_symbol (ShadingContext &ctx, ustring name,
+                                    TypeDesc &type);
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 
@@ -700,9 +714,7 @@ public:
     ///
     Color3 to_rgb (ustring fromspace, float a, float b, float c);
 
-    /// For the proposed raytype name, return the bit pattern that
-    /// describes it, or 0 for an unrecognized name.
-    int raytype_bit (ustring name);
+    virtual int raytype_bit (ustring name);
 
 private:
     void printstats () const;
@@ -720,13 +732,6 @@ private:
     /// The return value will not be valid() if there is an error.
     ConnectedParam decode_connected_param (const char *connectionname,
                                const char *layername, ShaderInstance *inst);
-
-    struct PerThreadInfo {
-        std::stack<ShadingContext *> context_pool;
-
-        ShadingContext *pop_context ();  ///< Get the pool top and then pop
-        ~PerThreadInfo ();
-    };
 
     /// Get the per-thread info, create it if necessary.
     ///
@@ -839,7 +844,7 @@ private:
     llvm::ExecutionEngine *m_llvm_exec;
     llvm::JITMemoryManager *m_llvm_jitmm;
 
-    friend class ShadingContext;
+    friend class OSL::ShadingContext;
     friend class ShaderMaster;
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
@@ -933,11 +938,15 @@ private:
 };
 
 
+}; // namespace pvt
+
+
+
 /// The full context for executing a shader group.
 ///
 class OSLEXECPUBLIC ShadingContext {
 public:
-    ShadingContext (ShadingSystemImpl &shadingsys);
+    ShadingContext (ShadingSystemImpl &shadingsys, PerThreadInfo *threadinfo);
     ~ShadingContext ();
 
     /// Return a reference to the shading system for this context.
@@ -949,10 +958,12 @@ public:
     RendererServices *renderer () const { return m_renderer; }
 
     /// Execute the shaders for the given use (for example,
-    /// ShadUseSurface). If runflags are not supplied, they will be
-    /// auto-generated with all points turned on.
-    void execute (ShaderUse use, ShadingAttribState &sas,
-                  ShaderGlobals &ssg);
+    /// ShadUseSurface).  If 'run' is false, do all the usual
+    /// preparation, but don't actually run the shader.  Return true if
+    /// the shader executed, false if it did not (including if the
+    /// shader itself was empty).
+    bool execute (ShaderUse use, ShadingAttribState &sas,
+                  ShaderGlobals &ssg, bool run=true);
 
     /// Return the current shader use being executed.
     ///
@@ -1040,6 +1051,8 @@ public:
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
 
+    PerThreadInfo *thread_info () { return m_threadinfo; }
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
@@ -1053,6 +1066,7 @@ private:
 
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
+    PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_closures_allotted;         ///< Closure memory allotted
@@ -1082,11 +1096,6 @@ private:
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
     int m_next_failed_attrib;
 };
-
-
-
-
-}; // namespace pvt
 
 
 

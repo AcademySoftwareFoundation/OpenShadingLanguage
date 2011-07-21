@@ -31,11 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "oslconfig.h"
-// osl_pvt.h is required for 'Runflags' definition
-#include "osl_pvt.h"
 
-#include "OpenImageIO/refcnt.h"             // just to get shared_ptr from boost ?!
-#include "OpenImageIO/ustring.h"
+#include <OpenImageIO/refcnt.h>     // just to get shared_ptr from boost ?!
+#include <OpenImageIO/ustring.h>
 
 
 #ifdef OSL_NAMESPACE
@@ -50,10 +48,9 @@ typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
 struct ShaderGlobals;
 struct ClosureColor;
 struct ClosureParam;
-
-namespace pvt {
+struct PerThreadInfo;
 class ShadingContext;
-};
+
 
 
 /// Opaque pointer to whatever the renderer uses to represent a
@@ -183,6 +180,50 @@ public:
     /// specified.
     virtual void clear_state () = 0;
 
+    /// Optional: create the per-thread data needed for shader
+    /// execution.  Doing this and passing it to get_context speeds is a
+    /// bit faster than get_context having to do a thread-specific
+    /// lookup on its own, but if you do it, it's important for the app
+    /// to use one and only one PerThreadInfo per renderer thread, and
+    /// destroy it with destroy_thread_info when the thread terminates.
+    virtual PerThreadInfo * create_thread_info() = 0;
+
+    /// Destroy a PerThreadInfo that was allocated by
+    /// create_thread_info().
+    virtual void destroy_thread_info (PerThreadInfo *threadinfo) = 0;
+
+    /// Get a ShadingContext that we can use.  The context is specific
+    /// to the renderer thread.  The 'threadinfo' parameter should be a
+    /// thread-specific pointer created by create_thread_info, or NULL,
+    /// in which case the ShadingSystem will do the thread-specific
+    /// lookup automatically (and at some additional cost).  The context
+    /// can be used to shade many points; a typical usage is to allocate
+    /// just one context per thread and use it for the whole run.
+    virtual ShadingContext *get_context (PerThreadInfo *threadinfo=NULL) = 0;
+
+    /// Return a ShadingContext to the pool.
+    ///
+    virtual void release_context (ShadingContext *ctx) = 0;
+
+    /// Execute the shader bound to context ctx, with the given
+    /// ShadingAttribState (that specifies the shader group to run) and
+    /// ShaderGlobals (specific information for this shade point).  If
+    /// 'run' is false, do all the usual preparation, but don't actually
+    /// run the shader.  Return true if the shader executed (or could
+    /// have executed, if 'run' had been true), false the shader turned
+    /// out to be empty.
+    virtual bool execute (ShadingContext &ctx, ShadingAttribState &sas,
+                          ShaderGlobals &ssg, bool run=true) = 0;
+
+    /// Get a raw pointer to a named symbol (such as you'd need to pull
+    /// out the value of an output parameter).  ctx is the shading
+    /// context (presumably already run), name is the name of the
+    /// symbol.  If found, get_symbol will return the pointer to the
+    /// symbol's data, and type will get the symbol's type.  If the
+    /// symbol is not found, get_symbol will return NULL.
+    virtual const void* get_symbol (ShadingContext &ctx, ustring name,
+                                    TypeDesc &type) = 0;
+
     /// Return the statistics output as a huge string.
     ///
     virtual std::string getstats (int level=1) const = 0;
@@ -191,6 +232,11 @@ public:
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
 
     void register_builtin_closures();
+
+    /// For the proposed raytype name, return the bit pattern that
+    /// describes it, or 0 for an unrecognized name.  (This retrieves
+    /// data passed in via attribute("raytypes")).
+    virtual int raytype_bit (ustring name) = 0;
 
 private:
     // Make delete private and unimplemented in order to prevent apps
@@ -223,7 +269,7 @@ struct ShaderGlobals {
     void* tracedata;                 /**< Opaque pointer to renderer state
                                           resuling from a trace() call. */
     void* objdata;                   /**< Opaque pointer to object data */
-    pvt::ShadingContext* context;    /**< ShadingContext (this will be set by
+    ShadingContext* context;         /**< ShadingContext (this will be set by
                                           OSL itself) */
     TransformationPtr object2common; /**< Object->common xform */
     TransformationPtr shader2common; /**< Shader->common xform */

@@ -396,6 +396,9 @@ Dictionary::dict_value (int nodeID, ustring attribname,
 }
 
 
+}; // namespace pvt
+
+
 
 int
 ShadingContext::dict_find (ustring dictionaryname, ustring query)
@@ -448,7 +451,6 @@ ShadingContext::free_dict_resources ()
 
 
 
-}; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE

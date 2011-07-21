@@ -102,6 +102,25 @@ ShadingSystem::~ShadingSystem ()
 
 
 
+ShadingContext *
+PerThreadInfo::pop_context ()
+{
+    ShadingContext *sc = context_pool.top ();
+    context_pool.pop ();
+    return sc;
+}
+
+
+
+PerThreadInfo::~PerThreadInfo ()
+{
+    while (! context_pool.empty())
+        delete pop_context ();
+}
+
+
+
+
 namespace Strings {
 
 // Define static ustring symbols for very fast comparison
@@ -821,29 +840,30 @@ ShadingSystemImpl::clear_state ()
 
 
 
-void*
+PerThreadInfo *
 ShadingSystemImpl::create_thread_info()
 {
-    return (void*) new PerThreadInfo();
+    return new PerThreadInfo();
 }
 
 
 
 
 void
-ShadingSystemImpl::destroy_thread_info(void* thread_info)
+ShadingSystemImpl::destroy_thread_info (PerThreadInfo *threadinfo)
 {
-    delete ((PerThreadInfo*) thread_info);
+    delete threadinfo;
 }
 
 
 
 ShadingContext *
-ShadingSystemImpl::get_context (void* thread_info)
+ShadingSystemImpl::get_context (PerThreadInfo *threadinfo)
 {
-    PerThreadInfo *threadinfo = thread_info == NULL ? get_perthread_info () : (PerThreadInfo*) thread_info;
+    if (! threadinfo)
+        threadinfo = get_perthread_info ();
     if (threadinfo->context_pool.empty()) {
-        return new ShadingContext (*this);
+        return new ShadingContext (*this, threadinfo);
     } else {
         return threadinfo->pop_context ();
     }
@@ -852,28 +872,33 @@ ShadingSystemImpl::get_context (void* thread_info)
 
 
 void
-ShadingSystemImpl::release_context (ShadingContext *sc, void* thread_info)
+ShadingSystemImpl::release_context (ShadingContext *ctx)
 {
-    PerThreadInfo *threadinfo = thread_info == NULL ? get_perthread_info () : (PerThreadInfo*) thread_info;
-    threadinfo->context_pool.push (sc);
+    ctx->thread_info()->context_pool.push (ctx);
 }
 
 
 
-ShadingContext *
-ShadingSystemImpl::PerThreadInfo::pop_context ()
+bool
+ShadingSystemImpl::execute (ShadingContext &ctx, ShadingAttribState &sas,
+                            ShaderGlobals &ssg, bool run)
 {
-    ShadingContext *sc = context_pool.top ();
-    context_pool.pop ();
-    return sc;
+    return ctx.execute (ShadUseSurface, sas, ssg, run);
 }
 
 
 
-ShadingSystemImpl::PerThreadInfo::~PerThreadInfo ()
+const void *
+ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring name,
+                               TypeDesc &type)
 {
-    while (! context_pool.empty())
-        delete pop_context ();
+    Symbol *sym = ctx.symbol (ShadUseSurface, name);
+    if (sym) {
+        type = sym->typespec().simpletype();
+        return ctx.symbol_data (*sym, 0);
+    } else {
+        return NULL;
+    }
 }
 
 

@@ -1,3 +1,45 @@
+Release 0.5.4 - Jul 21, 2011
+----------------------------
+* Several fixes related to arrays of structs, and structs containing
+  other structs.
+* Fixed arrays of closures.
+* Removed support for old LLVM 2.7, nobody seemed to be using it any more.
+* Changed the definition of dict_find() to return -1 for an invalid
+  dictionary, to distinguish it from 0 meaning that the query failed but
+  the dictionary itself was valid.
+* Make array parameters safe to convert to constants during runtime
+  optimization.
+* Support derivatives in pointcloud searches.
+* Fixed several runtime optimizer bugs.
+* Fixed a bug where environment() calls with an optional "alpha" parameter
+  that has derivatives was overwriting memory.
+* Fixed code generation bug for a*=b and a/=b.
+* Automatically initialize all local string variables to NULL, to avoid
+  bad pointers for uninitialized strings.
+* Bug fix: dict_value() wasn't properly marking its argument as writable.
+* Automatic range checking of array and component access.
+* Fix uninitialized derivatives for pointcloud().
+* Speed up getattribute() calls by caching information about failed
+  getattribute queries in the ShadingContext.
+* Fix to constant folding of gettextureinfo: a failed lookup should not
+  fold, because we want the error to occur in shader execution, not during
+  optimization.
+* Refactor, clean up, and comment testshade.
+* oslc now gives an error on non-void functions that fail to return a value.
+* Fixed implementation of area() that could generate an assertion.
+* Fix escape sequences in string literals: we were handling it correctly
+  for printf-like format strings, but not other string literals.
+* break and continue now work properly (just like in C/C++).
+* You can now return from anywhere in a user function (multiple times if
+  you want), just like C/C++, and are no longer restricted to the only
+  return statement being the last statement of the function.
+* New include file for shaders: patterns.h.  Now, it only includes a handy
+  'wireframe()' function, but will expand for other useful things.
+* New function: int getmatrix(from,to,M) is like the matrix(from,to)
+  constructor, but returns a success value so a shader can tell if the
+  named coordinate systems failed to be found by the renderer.
+
+
 Release 0.5.3 - Apr 19, 2011
 ----------------------------
 * Fix missing derivatives for sign() function.

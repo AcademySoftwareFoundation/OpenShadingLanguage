@@ -780,8 +780,7 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
     Matrix44 Mfrom, Mto;
     bool ok = osl_get_matrix ((ShaderGlobals *)sg, &Mfrom, from);
     ok &= osl_get_inverse_matrix ((ShaderGlobals *)sg, &Mto, to);
-    if (ok)
-        MAT(r) = Mfrom * Mto;
+    MAT(r) = Mfrom * Mto;
     return ok;
 }
 

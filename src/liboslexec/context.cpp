@@ -47,16 +47,17 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
-namespace pvt {   // OSL::pvt
 
 using OIIO::Timer;
 
 
-ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys) 
+ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
+                                PerThreadInfo *threadinfo) 
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
       m_attribs(NULL), m_dictionary(NULL), m_next_failed_attrib(0)
 {
     m_shadingsys.m_stat_contexts += 1;
+    m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
 }
 
 
@@ -73,7 +74,8 @@ ShadingContext::~ShadingContext ()
 
 
 bool
-ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas)
+ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
+                         ShaderGlobals &ssg, bool run)
 {
     DASSERT (use == ShadUseSurface);  // FIXME
 
@@ -88,6 +90,8 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas)
         if (! sgroup.optimized()) {
             shadingsys().optimize_group (sas, sgroup);
         }
+        if (sgroup.does_nothing())
+            return false;
     } else {
        // empty shader - nothing to do!
        return false; 
@@ -111,25 +115,15 @@ ShadingContext::prepare_execution (ShaderUse use, ShadingAttribState &sas)
     // Clear the message blackboard
     m_messages.clear ();
 
+    if (run) {
+        ssg.context = this;
+        ssg.Ci = NULL;
+        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
+        DASSERT (run_func);
+        DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
+        run_func (&ssg, &m_heap[0]);
+    }
     return true;
-}
-
-
-
-void
-ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
-                         ShaderGlobals &ssg)
-{
-    if (! prepare_execution (use, sas))
-        return;
-
-    ShaderGroup &sgroup (m_attribs->shadergroup (use));
-    DASSERT (sgroup.llvm_compiled_version());
-    DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
-    ssg.context = this;
-    ssg.Ci = NULL;
-    RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
-    run_func (&ssg, &m_heap[0]);
 }
 
 
@@ -242,7 +236,6 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
 }
 
 
-}; // namespace pvt
 }; // namespace OSL
 #ifdef OSL_NAMESPACE
 }; // end namespace OSL_NAMESPACE

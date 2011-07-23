@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Heavy lifting of OSL regex operations.
 OSL_SHADEOP int
-osl_regex_impl2 (OSL::pvt::ShadingContext *ctx, ustring subject_,
+osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject_,
                  int *results, int nresults, ustring pattern,
                  int fullmatch)
 {

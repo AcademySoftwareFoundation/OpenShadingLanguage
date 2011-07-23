@@ -1028,7 +1028,7 @@ OSL_SHADEOP int
 osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
                 const char *pattern, int fullmatch)
 {
-    extern int osl_regex_impl2 (OSL::pvt::ShadingContext *ctx, ustring subject,
+    extern int osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject,
                                int *results, int nresults, ustring pattern,
                                int fullmatch);
 

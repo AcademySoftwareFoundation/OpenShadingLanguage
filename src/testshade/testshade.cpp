@@ -44,11 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 
 #include "oslexec.h"
-#include "../liboslexec/oslexec_pvt.h"
-#include "oslclosure.h"
 #include "simplerend.h"
 using namespace OSL;
-using namespace OSL::pvt;
 
 #ifdef OIIO_NAMESPACE
 using OIIO::ArgParse;
@@ -255,7 +252,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     sg.object2common = OSL::TransformationPtr (&Mobj);
 
     // Just make it look like all shades are the result of 'raytype' rays.
-    sg.raytype = ((ShadingSystemImpl *)shadingsys)->raytype_bit (ustring(raytype));
+    sg.raytype = shadingsys->raytype_bit (ustring(raytype));
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set
@@ -301,9 +298,13 @@ static void
 setup_output_images (ShadingSystem *shadingsys,
                      ShadingAttribStateRef &shaderstate)
 {
-    ShadingSystemImpl *ss = (ShadingSystemImpl *)shadingsys;
-    ShadingContext *ctx = ss->get_context ();  // needed for ctx->symbol()
-    ctx->prepare_execution (ShadUseSurface, *shaderstate);
+    ShadingContext *ctx = shadingsys->get_context ();
+    // Because we can only call get_symbol on something that has been
+    // set up to shade (or executed), we call execute() but tell it not
+    // to actually run the shader.
+    ShaderGlobals sg;
+    setup_shaderglobals (sg, shadingsys, 0, 0);
+    shadingsys->execute (*ctx, *shaderstate, sg, false);
 
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
@@ -312,16 +313,18 @@ setup_output_images (ShadingSystem *shadingsys,
         // Start with a NULL ImageBuf pointer
         outputimgs.push_back (NULL);
 
-        // Retrieve a record of the symbol
-        Symbol *sym = ctx->symbol (ShadUseSurface, outputvarnames[i]);
-        if (! sym) {
-            std::cout << "Output " << outputvars[i] << " not found, skipping.\n";
-            continue;
+        // Ask for a pointer to the symbol's data, as computed by this
+        // shader.
+        TypeDesc t;
+        const void *data = shadingsys->get_symbol (*ctx, outputvarnames[i], t);
+        if (!data) {
+            std::cout << "Output " << outputvars[i] 
+                      << " not found, skipping.\n";
+            continue;  // Skip if symbol isn't found
         }
-        std::cout << "Output " << outputvars[i] << " to " << outputfiles[i]<< "\n";
-        
-        // Find out the type of the symbol
-        TypeDesc t = sym->typespec().simpletype();
+        std::cout << "Output " << outputvars[i] << " to "
+                  << outputfiles[i] << "\n";
+
         // And the "base" type, i.e. the type of each element or channel
         TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
 
@@ -352,7 +355,7 @@ setup_output_images (ShadingSystem *shadingsys,
 #endif
     }
 
-    ss->release_context (ctx);  // don't need this anymore for now
+    shadingsys->release_context (ctx);  // don't need this anymore for now
 }
 
 
@@ -367,7 +370,7 @@ setup_output_images (ShadingSystem *shadingsys,
 // and integrate the lights using that BSDF to determine the radiance
 // in the direction of the camera for that pixel.
 static void
-save_outputs (int x, int y, ShadingContext *ctx)
+save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 {
     // For each output requested on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
@@ -375,28 +378,23 @@ save_outputs (int x, int y, ShadingContext *ctx)
         if (! outputimgs[i])
             continue;
 
-        // Ask for a Symbol pointer for the named symbol.
-        Symbol *sym = ctx->symbol (ShadUseSurface, outputvarnames[i]);
-        if (! sym)
-            continue;
-
-        // Ask for a raw pointer to the symbol's data, as computed by
-        // this shader.
-        const void * symboldata = ctx->symbol_data (*sym, 0);
-
-        // Find out the type of the symbol
-        TypeDesc t = sym->typespec().simpletype();
+        // Ask for a pointer to the symbol's data, as computed by this
+        // shader.
+        TypeDesc t;
+        const void *data = shadingsys->get_symbol (*ctx, outputvarnames[i], t);
+        if (!data)
+            continue;  // Skip if symbol isn't found
 
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
             // directly in the output buffer.
-            outputimgs[i]->setpixel (x, y, (const float *)symboldata);
+            outputimgs[i]->setpixel (x, y, (const float *)data);
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
             int nchans = outputimgs[i]->nchannels();
             float *pixel = (float *) alloca (nchans * sizeof(float));
-            OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), symboldata,
+            OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), data,
                                  TypeDesc::FLOAT, pixel, nchans);
             outputimgs[i]->setpixel (x, y, &pixel[0]);
         }
@@ -507,12 +505,6 @@ test_shade (int argc, const char *argv[])
 
     std::vector<float> pixel;
 
-    // grab this once since we will be shading several points.
-    // FIXME: eventually, there will be no reason to reach into the guts
-    // of the (supposedly private) ShadingSystemImpl.  Sorry, will fix
-    // soon.
-    ShadingSystemImpl *ssi = (ShadingSystemImpl *)shadingsys;
-
     // Optional: high-performance apps may request this thread-specific
     // pointer in order to save a bit of time on each shade.  Just like
     // the name implies, a multithreaded renderer would need to do this
@@ -523,7 +515,7 @@ test_shade (int argc, const char *argv[])
     // the thread_info; in such a case, the ShadingSystem will do the
     // necessary calls to find the thread-specific pointer itself, but
     // this will degrade performance just a bit.
-    void* thread_info = ssi->create_thread_info();
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
 
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
@@ -551,25 +543,22 @@ test_shade (int argc, const char *argv[])
 
                 // Request a shading context so that we can execute
                 // the shader for this point.
-                //
-                // FIXME -- this will eventually be replaced with a public
-                // ShadingSystem call that encapsulates it.
-                ShadingContext *ctx = ssi->get_context (thread_info);
+                ShadingContext *ctx = shadingsys->get_context (thread_info);
 
                 // Actually run the shader for this point
-                ctx->execute (ShadUseSurface, *shaderstate, shaderglobals);
+                shadingsys->execute (*ctx, *shaderstate, shaderglobals);
 
                 // Save all the designated outputs.  But only do so if we
                 // are on the last iteration requested, so that if we are
                 // doing a bunch of iterations for time trials, we only
                 // including the output pixel copying once in the timing.
                 if (iter == (iters - 1)) {
-                    save_outputs (x, y, ctx);
+                    save_outputs (shadingsys, ctx, x, y);
                 }
 
                 // We're done shading this point, so release the
                 // context.
-                ssi->release_context (ctx, thread_info);
+                shadingsys->release_context (ctx);
             }
         }
     }
@@ -578,7 +567,7 @@ test_shade (int argc, const char *argv[])
     // pointer we saved.  A simple app could skip this; but if the app
     // asks for it (as we have in this example), then it should also
     // destroy it when done with it.
-    ssi->destroy_thread_info(thread_info);
+    shadingsys->destroy_thread_info(thread_info);
 
     if (outputfiles.size() == 0)
         std::cout << "\n";
@@ -596,8 +585,8 @@ test_shade (int argc, const char *argv[])
     if (debug || stats) {
         double runtime = timer();
         std::cout << "\n";
-        std::cout << "Setup: " << Strutil::timeintervalformat (setuptime,2) << "\n";
-        std::cout << "Run  : " << Strutil::timeintervalformat (runtime,2) << "\n";
+        std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
+        std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
     }

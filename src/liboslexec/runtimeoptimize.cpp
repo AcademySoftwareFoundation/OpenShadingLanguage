@@ -1569,7 +1569,7 @@ DECLFOLDER(constfold_matrix)
         else
             ok &= rs->get_matrix (Mfrom, from);
         if (to == Strings::common || to == commonsyn)
-            Mfrom.makeIdentity ();
+            Mto.makeIdentity ();
         else
             ok &= rs->get_inverse_matrix (Mto, to);
         if (ok) {

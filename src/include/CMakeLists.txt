@@ -1,5 +1,5 @@
 set (public_headers accum.h export.h genclosure.h optautomata.h oslclosure.h
-                    oslcomp.h oslconfig.h oslexec.h oslquery.h  )
+                    oslcomp.h oslconfig.h oslexec.h oslquery.h smallvec.h )
 message (STATUS "Create oslversion.h from oslversion.h.in")
 configure_file (oslversion.h.in ${CMAKE_BINARY_DIR}/include/oslversion.h @ONLY)
 list (APPEND public_headers ${CMAKE_BINARY_DIR}/include/oslversion.h)

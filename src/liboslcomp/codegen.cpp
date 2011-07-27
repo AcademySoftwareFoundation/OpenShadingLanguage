@@ -475,12 +475,14 @@ ASTassign_expression::codegen (Symbol *dest)
                 // instead refer back to the original.
                 Symbol *v = index->lvalue()->codegen();
                 codegen_assign_struct (structspec, ustring(v->mangled()),
-                                       ustring(operand->mangled()), arrayindex);
+                                       ustring(operand->mangled()), arrayindex,
+                                       false, -1 /* means we don't know */);
             } else {
                 // Assignment of one scalar struct to another scalar struct
                 ASSERT (dest);
                 codegen_assign_struct (structspec, ustring(dest->mangled()),
-                                       ustring(operand->mangled()));
+                                       ustring(operand->mangled()), NULL,
+                                       true, 0);
             }
         }
         return dest;
@@ -504,7 +506,8 @@ ASTassign_expression::codegen (Symbol *dest)
 void
 ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
                                              ustring dstsym, ustring srcsym,
-                                             Symbol *arrayindex)
+                                             Symbol *arrayindex,
+                                             bool copywholearrays, int intindex)
 {
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         const TypeSpec &fieldtype (structspec->field(i).type);
@@ -514,12 +517,12 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             codegen_assign_struct (fieldtype.structspec(),
                                    ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str()),
                                    ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str()),
-                                   arrayindex);
+                                   arrayindex, copywholearrays, intindex);
             continue;
         }
 
         if (fieldtype.is_structure_array() && !arrayindex) {
-            // struct array within struct -- loop over idices and recurse
+            // struct array within struct -- loop over indices and recurse
             ASSERT (! arrayindex && "two levels of arrays not allowed");
             ustring fieldname (structspec->field(i).name);
             ustring dstfield = ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str());
@@ -527,7 +530,8 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             for (int i = 0;  i < fieldtype.arraylength();  ++i) {
                 codegen_assign_struct (fieldtype.structspec(),
                                        dstfield, srcfield,
-                                       m_compiler->make_constant(i));
+                                       m_compiler->make_constant(i),
+                                       copywholearrays, i);
             }
             continue;
         }
@@ -541,15 +545,27 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             if (ofield->typespec().is_array()) {
                 // Both are arrays
                 TypeSpec elemtype = dfield->typespec().elementtype();
-                Symbol *tmp = m_compiler->make_temporary (elemtype);
-                emitcode ("aref", tmp, ofield, arrayindex);
-                emitcode ("aassign", dfield, arrayindex, tmp);
+                if (copywholearrays && intindex >= 0) {
+                    // Copying whole arrays -- instead of element by
+                    // element, do an arraycopy when we're on element 0,
+                    // and "skip" the other elements.
+                    if (intindex == 0)
+                        emitcode ("arraycopy", dfield, ofield);
+                } else {
+                    // Copying a partial array
+                    Symbol *tmp = m_compiler->make_temporary (elemtype);
+                    emitcode ("aref", tmp, ofield, arrayindex);
+                    emitcode ("aassign", dfield, arrayindex, tmp);
+                }
             } else {
                 // Only the destination is an array
                 emitcode ("aassign", dfield, arrayindex, ofield);
             }
         } else if (dfield->typespec().is_array()) {
             // field is an array
+#if 1
+            emitcode ("arraycopy", dfield, ofield);
+#else
             TypeSpec elemtype = dfield->typespec().elementtype();
             Symbol *tmp = m_compiler->make_temporary (elemtype);
             for (int e = 0;  e < dfield->typespec().arraylength();  ++e) {
@@ -557,6 +573,7 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
                 emitcode ("aref", tmp, ofield, index);
                 emitcode ("aassign", dfield, index, tmp);
             }
+#endif
         } else {
             // field is a scalar, struct is a scalar
             emitcode ("assign", dfield, ofield);

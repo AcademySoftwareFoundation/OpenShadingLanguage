@@ -2128,6 +2128,9 @@ llvm_assign_impl (RuntimeOptimizer &rop, Symbol &Result, Symbol &Src,
     ASSERT (! Result.typespec().is_structure());
     ASSERT (! Src.typespec().is_structure());
 
+    const TypeSpec &result_t (Result.typespec());
+    const TypeSpec &src_t (Src.typespec());
+
     llvm::Value *arrind = arrayindex >= 0 ? rop.llvm_constant (arrayindex) : NULL;
 
     if (Result.typespec().is_closure_based() || Src.typespec().is_closure_based()) {
@@ -2150,6 +2153,25 @@ llvm_assign_impl (RuntimeOptimizer &rop, Symbol &Result, Symbol &Src,
             for (int j = 0;  j < 4;  ++j)
                 rop.llvm_store_value (i==j ? src : zero, Result, 0, arrind, i*4+j);
         rop.llvm_zero_derivs (Result);  // matrices don't have derivs currently
+        return true;
+    }
+
+    // Copying of entire arrays
+    if (result_t.is_array() && src_t.is_array() && arrayindex == -1) {
+        ASSERT (assignable(result_t.elementtype(), src_t.elementtype()) &&
+                result_t.arraylength() == src_t.arraylength());
+        llvm::Value *resultptr = rop.llvm_void_ptr (Result);
+        llvm::Value *srcptr = rop.llvm_void_ptr (Src);
+        int len = Result.size();
+        int align = result_t.is_closure_based() ? (int)sizeof(void*) :
+                                       (int)result_t.simpletype().basesize();
+        if (Result.has_derivs() && Src.has_derivs()) {
+            rop.llvm_memcpy (resultptr, srcptr, 3*len, align);
+        } else {
+            rop.llvm_memcpy (resultptr, srcptr, len, align);
+            if (Result.has_derivs())
+                rop.llvm_zero_derivs (Result);
+        }
         return true;
     }
 
@@ -2199,6 +2221,18 @@ LLVMGEN (llvm_gen_assign)
 
 
 
+// Entire array copying
+LLVMGEN (llvm_gen_arraycopy)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result (*rop.opargsym (op, 0));
+    Symbol& Src (*rop.opargsym (op, 1));
+
+    return llvm_assign_impl (rop, Result, Src);
+}
+
+
+
 // Vector component reference
 LLVMGEN (llvm_gen_compref)
 {
@@ -2209,12 +2243,15 @@ LLVMGEN (llvm_gen_compref)
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
-        llvm::Value *args[5] = { c, rop.llvm_constant(3),
-                                 rop.sg_void_ptr(),
-                                 rop.llvm_constant(op.sourcefile()),
-                                 rop.llvm_constant(op.sourceline()) };
-        c = rop.llvm_call_function ("osl_range_check", args, 5);
-        ASSERT (c);
+        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+               *(int *)Index.data() < 3)) {
+            llvm::Value *args[5] = { c, rop.llvm_constant(3),
+                                     rop.sg_void_ptr(),
+                                     rop.llvm_constant(op.sourcefile()),
+                                     rop.llvm_constant(op.sourceline()) };
+            c = rop.llvm_call_function ("osl_range_check", args, 5);
+            ASSERT (c);
+        }
     }
 
     for (int d = 0;  d < 3;  ++d) {  // deriv
@@ -2245,11 +2282,14 @@ LLVMGEN (llvm_gen_compassign)
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
-        llvm::Value *args[5] = { c, rop.llvm_constant(3),
-                                 rop.sg_void_ptr(),
-                                 rop.llvm_constant(op.sourcefile()),
-                                 rop.llvm_constant(op.sourceline()) };
-        c = rop.llvm_call_function ("osl_range_check", args, 5);
+        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+               *(int *)Index.data() < 3)) {
+            llvm::Value *args[5] = { c, rop.llvm_constant(3),
+                                     rop.sg_void_ptr(),
+                                     rop.llvm_constant(op.sourcefile()),
+                                     rop.llvm_constant(op.sourceline()) };
+            c = rop.llvm_call_function ("osl_range_check", args, 5);
+        }
     }
 
     for (int d = 0;  d < 3;  ++d) {  // deriv
@@ -2375,12 +2415,15 @@ LLVMGEN (llvm_gen_aref)
     if (! index)
         return false;
     if (rop.shadingsys().range_checking()) {
-        llvm::Value *args[5] = { index,
-                                 rop.llvm_constant(Src.typespec().arraylength()),
-                                 rop.sg_void_ptr(),
-                                 rop.llvm_constant(op.sourcefile()),
-                                 rop.llvm_constant(op.sourceline()) };
-        index = rop.llvm_call_function ("osl_range_check", args, 5);
+        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+               *(int *)Index.data() < Src.typespec().arraylength())) {
+            llvm::Value *args[5] = { index,
+                                     rop.llvm_constant(Src.typespec().arraylength()),
+                                     rop.sg_void_ptr(),
+                                     rop.llvm_constant(op.sourcefile()),
+                                     rop.llvm_constant(op.sourceline()) };
+            index = rop.llvm_call_function ("osl_range_check", args, 5);
+        }
     }
 
     int num_components = Src.typespec().simpletype().aggregate;
@@ -2411,12 +2454,15 @@ LLVMGEN (llvm_gen_aassign)
     if (! index)
         return false;
     if (rop.shadingsys().range_checking()) {
-        llvm::Value *args[5] = { index,
-                                 rop.llvm_constant(Result.typespec().arraylength()),
-                                 rop.sg_void_ptr(),
-                                 rop.llvm_constant(op.sourcefile()),
-                                 rop.llvm_constant(op.sourceline()) };
-        index = rop.llvm_call_function ("osl_range_check", args, 5);
+        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+               *(int *)Index.data() < Result.typespec().arraylength())) {
+            llvm::Value *args[5] = { index,
+                                     rop.llvm_constant(Result.typespec().arraylength()),
+                                     rop.sg_void_ptr(),
+                                     rop.llvm_constant(op.sourcefile()),
+                                     rop.llvm_constant(op.sourceline()) };
+            index = rop.llvm_call_function ("osl_range_check", args, 5);
+        }
     }
 
     int num_components = Result.typespec().simpletype().aggregate;
@@ -4276,6 +4322,7 @@ initialize_llvm_generator_table ()
     INIT2 (and, llvm_gen_andor);
     INIT2 (area, llvm_gen_area);
     INIT (aref);
+    INIT (arraycopy);
     INIT (arraylength);
     INIT2 (asin, llvm_gen_generic);
     INIT (assign);

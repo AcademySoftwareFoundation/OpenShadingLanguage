@@ -29,8 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "accum.h"
 #include "oslclosure.h"
 
-#include <boost/random.hpp>
-
 using namespace OSL;
 
 #define END_AOV 65535

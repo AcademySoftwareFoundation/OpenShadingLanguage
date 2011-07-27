@@ -38,8 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OSL;
 
-#include <boost/random.hpp>
-
 #define MY_ID NBUILTIN_CLOSURES
 
 namespace {

@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 #include <OpenImageIO/ustring.h>
 #include "oslconfig.h"
-#include "smallvec.h"
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {

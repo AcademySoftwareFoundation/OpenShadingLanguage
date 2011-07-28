@@ -41,6 +41,8 @@ Sony Pictures Imageworks terms, above.
 #include <string>
 #include <cstring>
 
+#include <OpenImageIO/strutil.h>
+
 #include "oslquery.h"
 using namespace OSL;
 
@@ -123,33 +125,6 @@ print_default_float_vals (const OSLQuery::Parameter *p, bool verbose)
 
 
 
-static std::string
-elaborate_escape_chars (const std::string &unescaped)
-{
-    std::string s = unescaped;
-    for (size_t i = 0;  i < s.length();  ++i) {
-        char c = s[i];
-        if (c == '\n' || c == '\t' || c == '\v' || c == '\b' || 
-            c == '\r' || c == '\f' || c == '\a' || c == '\\' || c == '\"') {
-            s[i] = '\\';
-            ++i;
-            switch (c) {
-            case '\n' : c = 'n'; break;
-            case '\t' : c = 't'; break;
-            case '\v' : c = 'v'; break;
-            case '\b' : c = 'b'; break;
-            case '\r' : c = 'r'; break;
-            case '\f' : c = 'f'; break;
-            case '\a' : c = 'a'; break;
-            }
-            s.insert (i, &c, 1);
-        }
-    }
-    return s;
-}
-
-
-
 static void
 print_metadata (const OSLQuery::Parameter &m)
 {
@@ -158,7 +133,7 @@ print_metadata (const OSLQuery::Parameter &m)
     for (unsigned int d = 0;  d < m.fdefault.size();  ++d)
         std::cout << " " << m.fdefault[d];
     for (unsigned int d = 0;  d < m.sdefault.size();  ++d)
-        std::cout << " \"" << elaborate_escape_chars(m.sdefault[d]) << "\"";
+        std::cout << " \"" << OIIO::Strutil::escape_chars(m.sdefault[d]) << "\"";
     std::cout << std::endl;
 }
 

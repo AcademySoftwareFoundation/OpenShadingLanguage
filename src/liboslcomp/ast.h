@@ -682,10 +682,15 @@ private:
     /// variable named by dstsym by assigning each field individually.
     /// In the case of dstsym naming an array of structs, arrayindex
     /// should be a symbol holding the index of the individual array
-    /// element that should be copied into.
+    /// element that should be copied into.  If 'copywholearrays' is
+    /// true, we are (perhaps recursively) copying entire arrays, of
+    /// or within the struct, and intindex is the element number if we
+    /// know it -- these two items let us take some interesting shortcuts
+    /// with whole arrays (copyarray versus assigning elements).
     void codegen_assign_struct (StructSpec *structspec,
                                 ustring dstsym, ustring srcsym,
-                                Symbol *arrayindex=NULL);
+                                Symbol *arrayindex,
+                                bool copywholearrays, int intindex);
 };
 
 

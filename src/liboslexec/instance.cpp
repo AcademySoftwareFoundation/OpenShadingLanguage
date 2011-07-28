@@ -397,6 +397,11 @@ ShaderInstance::print ()
             out << " %derivs(" << op.argtakesderivs_all() << ") ";
         if (allconst)
             out << "  CONST";
+        std::string filename = op.sourcefile().string();
+        size_t slash = filename.find_last_of ("/");
+        if (slash != std::string::npos)
+            filename.erase (0, slash+1);
+        out << "  (" << filename << ":" << op.sourceline() << ")";
         out << "\n";
     }
     return out.str ();

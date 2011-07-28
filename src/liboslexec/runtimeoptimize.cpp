@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include <boost/foreach.hpp>
+#include <boost/regex.hpp>
 
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
@@ -1123,6 +1124,25 @@ DECLFOLDER(constfold_aref)
 
 
 
+DECLFOLDER(constfold_arraylength)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
+    ASSERT (R.typespec().is_int() && A.typespec().is_array());
+
+    // Try to turn R=arraylength(A) into R=C if the array length is known
+    int len = A.typespec().arraylength();
+    if (len > 0) {
+        int cind = rop.add_constant (TypeSpec(TypeDesc::INT), &len);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_compassign)
 {
     // Component assignment
@@ -1292,6 +1312,28 @@ DECLFOLDER(constfold_format)
         }
     }
 
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_regex_search)
+{
+    // Try to turn R=regex_search(subj,reg) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Subj (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &Reg (*rop.inst()->argsymbol(op.firstarg()+2));
+    if (op.nargs() == 3 // only the 2-arg version without search results
+          && Subj.is_constant() && Reg.is_constant()) {
+        DASSERT (Subj.typespec().is_string() && Reg.typespec().is_string());
+        const ustring &s (*(ustring *)Subj.data());
+        const ustring &r (*(ustring *)Reg.data());
+        boost::regex reg (r.string());
+        int result = boost::regex_search (s.string(), reg);
+        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
+        rop.turn_into_assign (op, cind);
+        return 1;
+    }
     return 0;
 }
 
@@ -1875,10 +1917,12 @@ initialize_folder_table ()
     INIT (compassign);
     INIT (compref);
     INIT (aref);
+    INIT (arraylength);
     INIT (strlen);
     INIT (endswith);
     INIT (concat);
     INIT (format);
+    INIT (regex_search);
     INIT (clamp);
     INIT (min);
     INIT (max);
@@ -3250,7 +3294,7 @@ RuntimeOptimizer::optimize_group ()
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         m_inst->copy_code_from_master ();
-        if (m_shadingsys.debug() && m_shadingsys.optimize() >= 1 && layer==0) {
+        if (m_shadingsys.debug() && m_shadingsys.optimize() >= 1) {
             std::cout << "Before optimizing layer " << layer << " " 
                       << inst()->layername() 
                       << ", I get:\n" << inst()->print()

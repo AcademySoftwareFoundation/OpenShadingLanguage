@@ -4604,13 +4604,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
                 llvm_run_connected_layer (*this, *srcsym, con.src.param, NULL);
-                if (srcsym->typespec().is_array()) {
-                    for (int i = 0;  i < srcsym->typespec().arraylength();  ++i)
-                        llvm_assign_impl (*this, *dstsym, *srcsym, i);
-                } else {
-                    // Not an array case
-                    llvm_assign_impl (*this, *dstsym, *srcsym);
-                }
+                llvm_assign_impl (*this, *dstsym, *srcsym);
             }
         }
     }

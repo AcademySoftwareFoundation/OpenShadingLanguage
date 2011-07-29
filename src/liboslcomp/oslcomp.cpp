@@ -312,6 +312,14 @@ OSLCompilerImpl::compile (const std::string &filename,
         path = path / "shaders";
         bool found = false;
         if (boost::filesystem::exists (path)) {
+#ifdef USE_BOOST_WAVE
+            includepaths.push_back(path.string());
+#else
+            // pass along to cpp
+            cppoptions += "\"-I";
+            cppoptions += path.string();
+            cppoptions += "\" ";
+#endif
             path = path / "stdosl.h";
             if (boost::filesystem::exists (path)) {
                 stdinclude = path.string();

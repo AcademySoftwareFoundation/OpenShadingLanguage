@@ -26,8 +26,8 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef PATTERNS_H
-#define PATTERNS_H
+#ifndef OSLUTIL_H
+#define OSLUTIL_H
 
 // Return wireframe opacity factor [0, 1] given a geometry type in
 // ("triangles", "polygons" or "patches"), and a line_width in raster
@@ -85,4 +85,4 @@ float wireframe(string edge_type, float line_width) { return wireframe(edge_type
 float wireframe(string edge_type) { return wireframe(edge_type, 1.0, 1); }
 float wireframe() { return wireframe("polygons", 1.0, 1); }
 
-#endif /* PATTERNS_H */
+#endif /* OSLUTIL_H */

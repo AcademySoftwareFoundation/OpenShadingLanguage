@@ -2522,7 +2522,7 @@ void
 RuntimeOptimizer::optimize_instance ()
 {
     // Make a list of the indices of all constants.
-    for (int i = 0;  i < (int)inst()->symbols().size();  ++i)
+    for (int i = 0, e = (int)inst()->symbols().size();  i < e;  ++i)
         if (inst()->symbol(i)->symtype() == SymTypeConst)
             m_all_consts.push_back (i);
 
@@ -2568,8 +2568,14 @@ RuntimeOptimizer::optimize_instance ()
 
         int changed = 0;
         int lastblock = -1;
-        for (int opnum = 0;  opnum < (int)inst()->ops().size();  ++opnum) {
+        size_t num_ops = inst()->ops().size();
+        for (int opnum = 0;  opnum < (int)num_ops;  ++opnum) {
+            // Before getting a reference to this op, be sure that a space
+            // is reserved at the end in case a folding routine inserts an
+            // op.  That ensures that the reference won't be invalid.
+            inst()->ops().reserve (num_ops+1);
             Opcode &op (inst()->ops()[opnum]);
+
             // Find the farthest this instruction jumps to (-1 for ops
             // that don't jump) so we can mark conditional regions.
             int jumpend = op.farthest_jump();
@@ -2584,12 +2590,12 @@ RuntimeOptimizer::optimize_instance ()
 
             // De-alias the readable args to the op and figure out if
             // there are any constants involved.
-            for (int i = 0;  i < op.nargs();  ++i) {
-                if (op.argwrite(i))
-                    continue;    // Don't de-alias args that are written
-                int argindex = op.firstarg() + i;
-                int argsymindex = dealias_symbol (inst()->arg(argindex));
-                inst()->args()[argindex] = argsymindex;
+            for (int i = 0, e = op.nargs();  i < e;  ++i) {
+                if (! op.argwrite(i)) { // Don't de-alias args that are written
+                    int argindex = op.firstarg() + i;
+                    int argsymindex = dealias_symbol (inst()->arg(argindex));
+                    inst()->args()[argindex] = argsymindex;
+                }
             }
 
             // Make sure there's room for at least one more symbol, so that
@@ -2601,13 +2607,16 @@ RuntimeOptimizer::optimize_instance ()
             // constant-fold, dispatch to the appropriate routine.
             if (m_shadingsys.optimize() >= 2) {
                 FolderTable::const_iterator found = folder_table.find (op.opname());
-                if (found != folder_table.end())
+                if (found != folder_table.end()) {
                     changed += (*found->second) (*this, opnum);
+                    // Re-check num_ops in case the folder inserted something
+                    num_ops = inst()->ops().size();
+                }
             }
 
             // Clear local block aliases for any args that were written
             // by this op
-            for (int i = 0;  i < op.nargs();  ++i)
+            for (int i = 0, e = op.nargs();  i < e;  ++i)
                 if (op.argwrite(i))
                     block_unalias (inst()->arg(op.firstarg()+i));
 
@@ -2719,7 +2728,7 @@ RuntimeOptimizer::optimize_instance ()
         // Elide unconnected parameters that are never read.
         FOREACH_PARAM (Symbol &s, inst()) {
             if (!s.connected_down() && ! s.everread()) {
-                for (int i = s.initbegin();  i < s.initend();  ++i)
+                for (int i = s.initbegin(), e = s.initend();  i < e;  ++i)
                     turn_into_nop (inst()->ops()[i]);
                 s.set_initrange ();
                 s.clear_rw ();
@@ -2747,7 +2756,7 @@ RuntimeOptimizer::optimize_instance ()
     if (inst()->unused()) {
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
-        for (int i = 0;  i < (int)inst()->ops().size()-1;  ++i)
+        for (int i = 0, e = (int)inst()->ops().size()-1;  i < e;  ++i)
             turn_into_nop (inst()->ops()[i]);
         BOOST_FOREACH (Symbol &s, inst()->symbols())
             s.clear_rw ();
@@ -2771,7 +2780,7 @@ RuntimeOptimizer::optimize_instance ()
     // Now that we've optimized this layer, walk through the ops and
     // note which messages may have been sent, so subsequent layers will
     // know.
-    for (int opnum = 0;  opnum < (int)inst()->ops().size();  ++opnum) {
+    for (int opnum = 0, e = (int)inst()->ops().size();  opnum < e;   ++opnum) {
         Opcode &op (inst()->ops()[opnum]);
         if (op.opname() == u_setmessage) {
             Symbol &Name (*inst()->argsymbol(op.firstarg()+0));

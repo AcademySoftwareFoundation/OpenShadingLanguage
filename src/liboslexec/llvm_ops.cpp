@@ -1363,19 +1363,37 @@ osl_texture_set_firstchannel (void *opt, int x)
 OSL_SHADEOP void
 osl_texture_set_swrap (void *opt, const char *x)
 {
-    ((TextureOpt *)opt)->swrap = TextureOpt::decode_wrapmode(x);
+    ((TextureOpt *)opt)->swrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
 osl_texture_set_twrap (void *opt, const char *x)
 {
-    ((TextureOpt *)opt)->twrap = TextureOpt::decode_wrapmode(x);
+    ((TextureOpt *)opt)->twrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
 osl_texture_set_rwrap (void *opt, const char *x)
 {
-    ((TextureOpt *)opt)->rwrap = TextureOpt::decode_wrapmode(x);
+    ((TextureOpt *)opt)->rwrap = TextureOpt::decode_wrapmode(USTR(x));
+}
+
+OSL_SHADEOP void
+osl_texture_set_swrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_twrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_rwrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->rwrap = (TextureOpt::Wrap)mode;
 }
 
 OSL_SHADEOP void
@@ -1431,14 +1449,16 @@ osl_texture_set_time (void *opt, float x)
 OSL_SHADEOP void
 osl_texture_set_interp_name (void *opt, const char *modename)
 {
-    if (modename == Strings::smartbicubic)
-        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpSmartBicubic;
-    else if (modename == Strings::linear)
-        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpBilinear;
-    else if (modename == Strings::cubic)
-        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpBicubic;
-    else if (modename == Strings::closest)
-        ((TextureOpt *)opt)->interpmode = TextureOpt::InterpClosest;
+    int mode = tex_interp_to_code (USTR(modename));
+    if (mode >= 0)
+        ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
+}
+
+
+OSL_SHADEOP void
+osl_texture_set_interp_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }
 
 

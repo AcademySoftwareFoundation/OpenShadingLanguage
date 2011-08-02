@@ -1136,8 +1136,25 @@ namespace Strings {
     extern ustring wrap, swrap, twrap, rwrap;
     extern ustring black, clamp, periodic, mirror;
     extern ustring firstchannel, fill, alpha;
-    extern ustring interp, closest, linear, cubic, smartbicubic;
+    extern ustring interp, closest, linear, cubic, smartcubic;
 }; // namespace Strings
+
+
+
+inline int
+tex_interp_to_code (ustring modename)
+{
+    int mode = -1;
+    if (modename == Strings::smartcubic)
+        mode = TextureOpt::InterpSmartBicubic;
+    else if (modename == Strings::linear)
+        mode = TextureOpt::InterpBilinear;
+    else if (modename == Strings::cubic)
+        mode = TextureOpt::InterpBicubic;
+    else if (modename == Strings::closest)
+        mode = TextureOpt::InterpClosest;
+    return mode;
+}
 
 
 }; // namespace OSL

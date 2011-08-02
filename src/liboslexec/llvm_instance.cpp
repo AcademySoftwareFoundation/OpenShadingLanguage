@@ -3041,7 +3041,21 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
         Symbol &Val (*rop.opargsym(op,a));
         TypeDesc valtype = Val.typespec().simpletype ();
         
+        if (! name)    // skip empty string param name
+            continue;
         llvm::Value *val = rop.llvm_load_value (Val);
+
+        // If certain float-expecting options were passed an int, do the
+        // conversion automatically.
+        if (valtype == TypeDesc::INT &&
+            (name == Strings::width || name == Strings::swidth ||
+             name == Strings::twidth || name == Strings::rwidth ||
+             name == Strings::blur || name == Strings::sblur ||
+             name == Strings::tblur || name == Strings::rblur)) {
+            val = rop.llvm_int_to_float (val);
+            valtype = TypeDesc::FLOAT;
+        }
+
         if (name == Strings::width && valtype == TypeDesc::FLOAT) {
             rop.llvm_call_function ("osl_texture_set_swidth", opt, val);
             rop.llvm_call_function ("osl_texture_set_twidth", opt, val);
@@ -3067,16 +3081,40 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
             rop.llvm_call_function ("osl_texture_set_rblur", opt, val);
 
         } else if (name == Strings::wrap && valtype == TypeDesc::STRING) {
-            rop.llvm_call_function ("osl_texture_set_swrap", opt, val);
-            rop.llvm_call_function ("osl_texture_set_twrap", opt, val);
-            if (tex3d)
-                rop.llvm_call_function ("osl_texture_set_rwrap", opt, val);
+            if (Val.is_constant()) {
+                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
+                val = rop.llvm_constant (mode);
+                rop.llvm_call_function ("osl_texture_set_swrap_code", opt, val);
+                rop.llvm_call_function ("osl_texture_set_twrap_code", opt, val);
+                if (tex3d)
+                    rop.llvm_call_function ("osl_texture_set_rwrap_code", opt, val);
+            } else {
+                rop.llvm_call_function ("osl_texture_set_swrap", opt, val);
+                rop.llvm_call_function ("osl_texture_set_twrap", opt, val);
+                if (tex3d)
+                    rop.llvm_call_function ("osl_texture_set_rwrap", opt, val);
+            }
         } else if (name == Strings::swrap && valtype == TypeDesc::STRING) {
-            rop.llvm_call_function ("osl_texture_set_swrap", opt, val);
+            if (Val.is_constant()) {
+                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
+                val = rop.llvm_constant (mode);
+                rop.llvm_call_function ("osl_texture_set_swrap_code", opt, val);
+            } else 
+                rop.llvm_call_function ("osl_texture_set_swrap", opt, val);
         } else if (name == Strings::twrap && valtype == TypeDesc::STRING) {
-            rop.llvm_call_function ("osl_texture_set_twrap", opt, val);
+            if (Val.is_constant()) {
+                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
+                val = rop.llvm_constant (mode);
+                rop.llvm_call_function ("osl_texture_set_twrap_code", opt, val);
+            } else
+                rop.llvm_call_function ("osl_texture_set_twrap", opt, val);
         } else if (name == Strings::rwrap && valtype == TypeDesc::STRING) {
-            rop.llvm_call_function ("osl_texture_set_rwrap", opt, val);
+            if (Val.is_constant()) {
+                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
+                val = rop.llvm_constant (mode);
+                rop.llvm_call_function ("osl_texture_set_rwrap_code", opt, val);
+            } else
+                rop.llvm_call_function ("osl_texture_set_rwrap", opt, val);
 
         } else if (name == Strings::firstchannel && valtype == TypeDesc::INT) {
             rop.llvm_call_function ("osl_texture_set_firstchannel", opt, val);
@@ -3086,7 +3124,16 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
             rop.llvm_call_function ("osl_texture_set_time", opt, val);
 
         } else if (name == Strings::interp && valtype == TypeDesc::STRING) {
-            rop.llvm_call_function ("osl_texture_set_interp_name", opt, val);
+            // Try to decode the interp name string into an integer mode,
+            // so it doesn't have to happen at runtime.
+            int mode = -1;
+            if (Val.is_constant())
+                mode = tex_interp_to_code (*(ustring *)Val.data());
+            if (mode >= 0)
+                rop.llvm_call_function ("osl_texture_set_interp_code", opt,
+                                        rop.llvm_constant(mode));
+            else
+                rop.llvm_call_function ("osl_texture_set_interp_name", opt, val);
 
         } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);

@@ -1838,6 +1838,106 @@ DECLFOLDER(constfold_gettextureinfo)
 
 
 
+// texture -- we can eliminate a lot of superfluous setting of optional
+// parameters to their default values.
+DECLFOLDER(constfold_texture)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    // Symbol &Result = *rop.opargsym (op, 0);
+    // Symbol &Filename = *rop.opargsym (op, 1);
+    // Symbol &S = *rop.opargsym (op, 2);
+    // Symbol &T = *rop.opargsym (op, 3);
+
+    bool user_derivs = false;
+    int first_optional_arg = 4;
+    if (op.nargs() > 4 && rop.opargsym(op,4)->typespec().is_float()) {
+        user_derivs = true;
+        first_optional_arg = 8;
+        DASSERT (rop.opargsym(op,5)->typespec().is_float());
+        DASSERT (rop.opargsym(op,6)->typespec().is_float());
+        DASSERT (rop.opargsym(op,7)->typespec().is_float());
+    }
+
+    TextureOpt opt;  // So we can check the defaults
+    bool swidth_set = false, twidth_set = false, rwidth_set = false;
+    bool sblur_set = false, tblur_set = false, rblur_set = false;
+    bool swrap_set = false, twrap_set = false, rwrap_set = false;
+    bool firstchannel_set = false, fill_set = false, interp_set = false;
+    bool any_elided = false;
+    for (int i = first_optional_arg;  i < op.nargs()-1;  i += 2) {
+        Symbol &Name = *rop.opargsym (op, i);
+        Symbol &Value = *rop.opargsym (op, i+1);
+        DASSERT (name.typespec().is_string());
+        if (Name.is_constant()) {
+            ustring name = *(ustring *)Name.data();
+            bool elide = false;
+            void *value = Value.is_constant() ? Value.data() : NULL;
+            TypeDesc valuetype = Value.typespec().simpletype();
+
+// Keep from repeating the same tedious code for {s,t,r, }{width,blur,wrap}
+#define CHECK(field,ctype,osltype)                              \
+            if (name == Strings::field && ! field##_set) {      \
+                if (value && osltype == TypeDesc::FLOAT &&      \
+                    valuetype == TypeDesc::INT &&               \
+                    *(int *)value == opt.field)                 \
+                    elide = true;                               \
+                else if (value && valuetype == osltype &&       \
+                      *(ctype *)value == opt.field)             \
+                    elide = true;                               \
+                else                                            \
+                    field##_set = true;                         \
+            }
+#define CHECK_str(field,ctype,osltype)                                  \
+            CHECK (s##field,ctype,osltype)                              \
+            else CHECK (t##field,ctype,osltype)                         \
+            else CHECK (r##field,ctype,osltype)                         \
+            else if (name == Strings::field && !s##field##_set &&       \
+                     ! t##field##_set && ! r##field##_set &&            \
+                     valuetype == osltype) {                            \
+                ctype *v = (ctype *)value;                              \
+                if (v && *v == opt.s##field && *v == opt.t##field       \
+                    && *v == opt.r##field)                              \
+                    elide = true;                                       \
+                else {                                                  \
+                    s##field##_set = true;                              \
+                    t##field##_set = true;                              \
+                    r##field##_set = true;                              \
+                }                                                       \
+            }
+            
+            CHECK_str (width, float, TypeDesc::FLOAT)
+            else CHECK_str (blur, float, TypeDesc::FLOAT)
+            else CHECK_str (wrap, ustring, TypeDesc::STRING)
+            else CHECK (firstchannel, int, TypeDesc::INT)
+            else CHECK (fill, float, TypeDesc::FLOAT)
+#undef CHECK_STR
+#undef CHECK
+
+            // Cases that don't fit the pattern
+            else if (name == Strings::interp && !interp_set) {
+                if (value && valuetype == TypeDesc::STRING &&
+                    tex_interp_to_code(*(ustring *)value) == opt.interpmode)
+                    elide = true;
+                else
+                    interp_set = true;
+            }
+
+            if (elide) {
+                // Just turn the param name into empty string and it will
+                // be skipped.
+                ustring empty;
+                int cind = rop.add_constant (TypeDesc::TypeString, &empty);
+                rop.inst()->args()[op.firstarg()+i] = cind;
+                rop.inst()->args()[op.firstarg()+i+1] = cind;
+                any_elided = true;
+            }
+        }
+    }
+    return any_elided;
+}
+
+
+
 
 DECLFOLDER(constfold_functioncall)
 {
@@ -1944,6 +2044,7 @@ initialize_folder_table ()
     INIT (gettextureinfo);
     INIT (functioncall);
     INIT (useparam);
+    INIT (texture);
 //    INIT (assign);  N.B. do not include here -- we want this run AFTER
 //                    all other constant folding is done, since many of
 //                    them turn other statements into assignments.

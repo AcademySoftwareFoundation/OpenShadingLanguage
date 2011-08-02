@@ -55,8 +55,8 @@ public:
           m_stat_opt_locking_time(0), m_stat_specialization_time(0),
           m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
           m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
-          m_stat_llvm_jit_time(0)
-        , m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
+          m_stat_llvm_jit_time(0),
+          m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
           m_llvm_passes(NULL), m_llvm_func_passes(NULL),
           m_llvm_func_passes_optimized(NULL)
     {

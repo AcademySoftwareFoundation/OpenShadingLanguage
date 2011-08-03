@@ -1867,7 +1867,7 @@ DECLFOLDER(constfold_texture)
     for (int i = first_optional_arg;  i < op.nargs()-1;  i += 2) {
         Symbol &Name = *rop.opargsym (op, i);
         Symbol &Value = *rop.opargsym (op, i+1);
-        DASSERT (name.typespec().is_string());
+        DASSERT (Name.typespec().is_string());
         if (Name.is_constant()) {
             ustring name = *(ustring *)Name.data();
             bool elide = false;

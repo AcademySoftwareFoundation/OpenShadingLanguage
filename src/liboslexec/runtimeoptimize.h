@@ -497,6 +497,20 @@ public:
 
     void llvm_gen_debug_printf (const std::string &message);
 
+    /// Generate code to call the given layer.  If 'unconditional' is
+    /// true, call it without even testing if the layer has already been
+    /// called.
+    void llvm_call_layer (int layer, bool unconditional = false);
+
+    /// Execute the upstream connection (if any, and if not yet run) that
+    /// establishes the value of symbol sym, which has index 'symindex'
+    /// within the current layer rop.inst().  If already_run is not NULL,
+    /// it points to a vector of layer indices that are known to have been 
+    /// run -- those can be skipped without dynamically checking their
+    /// execution status.
+    void llvm_run_connected_layers (Symbol &sym, int symindex,
+                                    std::vector<int> *already_run = NULL);
+
     /// Generate code for a call to the named function with the given
     /// arg list as symbols -- float & ints will be passed by value,
     /// triples and matrices will be passed by address.  If deriv_ptrs

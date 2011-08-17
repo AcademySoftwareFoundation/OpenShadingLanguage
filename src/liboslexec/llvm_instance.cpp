@@ -1348,26 +1348,60 @@ RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
 
 
 
-/// Execute the upstream connection (if any, and if not yet run) that
-/// establishes the value of symbol sym, which has index 'symindex'
-/// within the current layer rop.inst().  If already_run is not NULL,
-/// it points to a vector of layer indices that are known to have been 
-/// run -- those can be skipped without dynamically checking their
-/// execution status.
-static void
-llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
-                          std::vector<int> *already_run = NULL)
+void
+RuntimeOptimizer::llvm_call_layer (int layer, bool unconditional)
+{
+    // Make code that looks like:
+    //     if (! groupdata->run[parentlayer]) {
+    //         groupdata->run[parentlayer] = 1;
+    //         parent_layer (sg, groupdata);
+    //     }
+    // if it's a conditional call, or
+    //     groupdata->run[parentlayer] = 1;
+    //     parent_layer (sg, groupdata);
+    // if it's run unconditionally.
+
+    llvm::Value *args[2];
+    args[0] = sg_ptr ();
+    args[1] = groupdata_ptr ();
+
+    ShaderInstance *parent = group()[layer];
+    llvm::Value *trueval = llvm_constant_bool(true);
+    llvm::Value *layerfield = layer_run_ptr(layer_remap(layer));
+    llvm::BasicBlock *then_block = NULL, *after_block = NULL;
+    if (! unconditional) {
+        llvm::Value *executed = builder().CreateLoad (layerfield);
+        executed = builder().CreateICmpNE (executed, trueval);
+        then_block = llvm_new_basic_block ("");
+        after_block = llvm_new_basic_block ("");
+        builder().CreateCondBr (executed, then_block, after_block);
+        builder().SetInsertPoint (then_block);
+    }
+
+    builder().CreateStore (trueval, layerfield);
+    std::string name = Strutil::format ("%s_%d", parent->layername().c_str(),
+                                        parent->id());
+    // Mark the call as a fast call
+    llvm::CallInst* call_inst = llvm::cast<llvm::CallInst>(llvm_call_function (name.c_str(), args, 2));
+    call_inst->setCallingConv (llvm::CallingConv::Fast);
+
+    if (! unconditional) {
+        builder().CreateBr (after_block);
+        builder().SetInsertPoint (after_block);
+    }
+}
+
+
+
+void
+RuntimeOptimizer::llvm_run_connected_layers (Symbol &sym, int symindex,
+                                             std::vector<int> *already_run)
 {
     if (sym.valuesource() != Symbol::ConnectedVal)
         return;  // Nothing to do
 
-    // Prep the args that will be used for all earlier-layer invocations
-    llvm::Value *args[2];
-    args[0] = rop.sg_ptr ();
-    args[1] = rop.groupdata_ptr ();
-
-    for (int c = 0;  c < rop.inst()->nconnections();  ++c) {
-        const Connection &con (rop.inst()->connection (c));
+    for (int c = 0;  c < inst()->nconnections();  ++c) {
+        const Connection &con (inst()->connection (c));
         // If the connection gives a value to this param
         if (con.dst.param == symindex) {
             if (already_run) {
@@ -1377,29 +1411,9 @@ llvm_run_connected_layer (RuntimeOptimizer &rop, Symbol &sym, int symindex,
                     already_run->push_back (con.srclayer);  // mark it
             }
 
-            // If the earlier layer it comes from has not yet
-            // been executed, do so now.
-            // Make code that looks like:
-            //   if (! groupdata->run[parentlayer]) {
-            //       groupdata->run[parentlayer] = 1;
-            //       parent_layer (sg, groupdata);
-            //   }
-            llvm::Value *layerfield = rop.layer_run_ptr(rop.layer_remap(con.srclayer));
-            llvm::Value *trueval = rop.llvm_constant_bool(true);
-            ShaderInstance *parent = rop.group()[con.srclayer];
-            llvm::Value *executed = rop.builder().CreateLoad (layerfield);
-            executed = rop.builder().CreateICmpNE (executed, trueval);
-            llvm::BasicBlock *then_block = rop.llvm_new_basic_block ("");
-            llvm::BasicBlock *after_block = rop.llvm_new_basic_block ("");
-            rop.builder().CreateCondBr (executed, then_block, after_block);
-            rop.builder().SetInsertPoint (then_block);
-            rop.builder().CreateStore (trueval, layerfield);
-            std::string name = Strutil::format ("%s_%d", parent->layername().c_str(), parent->id());
-            // Mark the call as a fast call
-            llvm::CallInst* call_inst = llvm::cast<llvm::CallInst>(rop.llvm_call_function (name.c_str(), args, 2));
-            call_inst->setCallingConv(llvm::CallingConv::Fast);
-            rop.builder().CreateBr (after_block);
-            rop.builder().SetInsertPoint (after_block);
+            // If the earlier layer it comes from has not yet been
+            // executed, do so now.
+            llvm_call_layer (con.srclayer);
         }
     }
 }
@@ -1419,7 +1433,7 @@ LLVMGEN (llvm_gen_useparam)
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol& sym = *rop.opargsym (op, i);
         int symindex = rop.inst()->arg (op.firstarg()+i);
-        llvm_run_connected_layer (rop, sym, symindex, &already_run);
+        rop.llvm_run_connected_layers (sym, symindex, &already_run);
     }
     return true;
 }
@@ -4594,6 +4608,9 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                     }
                 }
             }
+            // Unconditionally execute earlier layers that are not lazy
+            if (! gi->run_lazily() && i < group().nlayers()-1)
+                llvm_call_layer (i, true /* unconditionally run */);
         }
     }
 
@@ -4650,7 +4667,9 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                         "no support for individual element/channel connection");
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
-                llvm_run_connected_layer (*this, *srcsym, con.src.param, NULL);
+                llvm_run_connected_layers (*srcsym, con.src.param, NULL);
+                // FIXME -- I'm not sure I understand this.  Isn't this
+                // unnecessary if we wrote to the parameter ourself?
                 llvm_assign_impl (*this, *dstsym, *srcsym);
             }
         }

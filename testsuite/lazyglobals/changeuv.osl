@@ -1,0 +1,6 @@
+shader changeuv ()
+{
+    printf ("old uv = %g %g\n", u, v);
+    u *= 2;
+    v *= 2;
+}

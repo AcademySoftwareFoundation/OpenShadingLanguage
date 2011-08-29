@@ -1,0 +1,4 @@
+shader printuv ()
+{
+    printf ("u,v = %g, %g\n", u, v);
+}

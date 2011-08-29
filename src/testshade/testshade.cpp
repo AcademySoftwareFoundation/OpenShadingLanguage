@@ -517,6 +517,12 @@ test_shade (int argc, const char *argv[])
     // this will degrade performance just a bit.
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
 
+    // Request a shading context so that we can execute the shader.
+    // We could get_context/release_constext for each shading point,
+    // but to save overhead, it's more efficient to reuse a context
+    // within a thread.
+    ShadingContext *ctx = shadingsys->get_context (thread_info);
+
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
     // to accurately time for a single iteration
@@ -541,10 +547,6 @@ test_shade (int argc, const char *argv[])
                 // setup is done in the following function call:
                 setup_shaderglobals (shaderglobals, shadingsys, x, y);
 
-                // Request a shading context so that we can execute
-                // the shader for this point.
-                ShadingContext *ctx = shadingsys->get_context (thread_info);
-
                 // Actually run the shader for this point
                 shadingsys->execute (*ctx, *shaderstate, shaderglobals);
 
@@ -555,13 +557,12 @@ test_shade (int argc, const char *argv[])
                 if (iter == (iters - 1)) {
                     save_outputs (shadingsys, ctx, x, y);
                 }
-
-                // We're done shading this point, so release the
-                // context.
-                shadingsys->release_context (ctx);
             }
         }
     }
+
+    // We're done shading with this context.
+    shadingsys->release_context (ctx);
 
     // Now that we're done rendering, release the thread=specific
     // pointer we saved.  A simple app could skip this; but if the app

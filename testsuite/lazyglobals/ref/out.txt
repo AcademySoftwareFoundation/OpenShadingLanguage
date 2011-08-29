@@ -1,0 +1,11 @@
+Compiled changeuv.osl -> changeuv.oso
+Compiled printuv.osl -> printuv.oso
+old uv = 0 0
+u,v = 0, 0
+old uv = 1 0
+u,v = 2, 0
+old uv = 0 1
+u,v = 0, 2
+old uv = 1 1
+u,v = 2, 2
+

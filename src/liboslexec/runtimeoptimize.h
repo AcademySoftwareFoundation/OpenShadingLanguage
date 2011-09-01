@@ -50,13 +50,16 @@ namespace pvt {   // OSL::pvt
 class RuntimeOptimizer {
 public:
     RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group)
-        : m_shadingsys(shadingsys), m_group(group),
+        : m_shadingsys(shadingsys),
+          m_thread(shadingsys.get_perthread_info()),
+          m_group(group),
           m_inst(NULL), m_next_newconst(0),
           m_stat_opt_locking_time(0), m_stat_specialization_time(0),
           m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
           m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
           m_stat_llvm_jit_time(0),
-          m_llvm_context(NULL), m_llvm_module(NULL), m_builder(NULL),
+          m_llvm_context(NULL), m_llvm_module(NULL),
+          m_llvm_exec(NULL), m_builder(NULL),
           m_llvm_passes(NULL), m_llvm_func_passes(NULL),
           m_llvm_func_passes_optimized(NULL)
     {
@@ -629,6 +632,7 @@ public:
 
 private:
     ShadingSystemImpl &m_shadingsys;
+    PerThreadInfo *m_thread;
     ShaderGroup &m_group;             ///< Group we're optimizing
     int m_layer;                      ///< Layer we're optimizing
     ShaderInstance *m_inst;           ///< Instance we're optimizing
@@ -655,6 +659,7 @@ private:
     // LLVM stuff
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
+    llvm::ExecutionEngine *m_llvm_exec;
     AllocationMap m_named_values;
     std::map<const Symbol*,int> m_param_order_map;
     llvm::IRBuilder<> *m_builder;

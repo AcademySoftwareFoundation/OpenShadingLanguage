@@ -102,6 +102,25 @@ ShadingSystem::~ShadingSystem ()
 
 
 
+PerThreadInfo::PerThreadInfo ()
+    : llvm_context(NULL), llvm_jitmm(NULL)
+{
+}
+
+
+
+PerThreadInfo::~PerThreadInfo ()
+{
+    delete llvm_context;
+    // N.B. Do NOT delete the jitmm -- another thread may need the code!
+    // Don't worry, we shashed a pointer in the shadingsys.
+
+    while (! context_pool.empty())
+        delete pop_context ();
+}
+
+
+
 ShadingContext *
 PerThreadInfo::pop_context ()
 {
@@ -110,13 +129,6 @@ PerThreadInfo::pop_context ()
     return sc;
 }
 
-
-
-PerThreadInfo::~PerThreadInfo ()
-{
-    while (! context_pool.empty())
-        delete pop_context ();
-}
 
 
 
@@ -168,11 +180,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
-      m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0),
-      m_llvm_context (NULL),
-      m_llvm_module (NULL),
-      m_llvm_exec (NULL),
-      m_llvm_jitmm (NULL)
+      m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
@@ -257,18 +265,6 @@ ShadingSystemImpl::~ShadingSystemImpl ()
     printstats ();
     // N.B. just let m_texsys go -- if we asked for one to be created,
     // we asked for a shared one.
-
-    delete m_llvm_exec;
-    // NOTE(boulos): Deleting the execution engine should in theory
-    // clean up the module. Calling delete on the module here results
-    // in a crash (suggesting theory meets practice).
-
-    // delete m_llvm_module;
-
-    delete m_llvm_context;
-
-    // Delete the retained JIT memory manager
-    delete m_llvm_jitmm;
 
     // FIXME(boulos): According to the docs, we should also call
     // llvm_shutdown once we're done. However, ~ShadingSystemImpl
@@ -585,12 +581,15 @@ ShadingSystemImpl::getstats (int level) const
     out << "        Instance param values: " << m_stat_mem_inst_paramvals.memstat() << '\n';
     out << "        Instance connections:  " << m_stat_mem_inst_connections.memstat() << '\n';
 
-    if (m_llvm_jitmm) {
-        size_t jitmem = m_llvm_jitmm->GetDefaultCodeSlabSize() * m_llvm_jitmm->GetNumCodeSlabs()
-            + m_llvm_jitmm->GetDefaultDataSlabSize() * m_llvm_jitmm->GetNumDataSlabs()
-            + m_llvm_jitmm->GetDefaultStubSlabSize() * m_llvm_jitmm->GetNumStubSlabs();
-        out << "    LLVM JIT memory: " << Strutil::memformat(jitmem) << '\n';
+    size_t jitmem = 0;
+    for (size_t i = 0;  i < m_llvm_jitmm_hold.size();  ++i) {
+        llvm::JITMemoryManager *mm = m_llvm_jitmm_hold[i].get();
+        if (mm)
+            jitmem += mm->GetDefaultCodeSlabSize() * mm->GetNumCodeSlabs()
+                    + mm->GetDefaultDataSlabSize() * mm->GetNumDataSlabs()
+                    + mm->GetDefaultStubSlabSize() * mm->GetNumStubSlabs();
     }
+    out << "    LLVM JIT memory: " << Strutil::memformat(jitmem) << '\n';
 
     return out.str();
 }

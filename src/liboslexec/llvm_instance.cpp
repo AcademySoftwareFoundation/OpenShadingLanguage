@@ -4761,7 +4761,7 @@ void
 RuntimeOptimizer::build_llvm_group ()
 {
     // At this point, we already hold the lock for this group, by virtue
-    // of ShadingSystemImpl::optimize_gropu.
+    // of ShadingSystemImpl::optimize_group.
     Timer timer;
     m_shadingsys.SetupLLVM ();
 
@@ -4770,6 +4770,7 @@ RuntimeOptimizer::build_llvm_group ()
 
     if (! m_thread->llvm_jitmm) {
         m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
+        spin_lock lock (m_shadingsys.m_llvm_mutex);  // lock m_llvm_jitmm_hold
         m_shadingsys.m_llvm_jitmm_hold.push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
     }
 

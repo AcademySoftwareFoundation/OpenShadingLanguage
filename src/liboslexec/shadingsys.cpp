@@ -113,7 +113,7 @@ PerThreadInfo::~PerThreadInfo ()
 {
     delete llvm_context;
     // N.B. Do NOT delete the jitmm -- another thread may need the code!
-    // Don't worry, we shashed a pointer in the shadingsys.
+    // Don't worry, we stashed a pointer in the shadingsys.
 
     while (! context_pool.empty())
         delete pop_context ();

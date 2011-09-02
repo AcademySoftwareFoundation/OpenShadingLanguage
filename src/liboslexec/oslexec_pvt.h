@@ -84,10 +84,13 @@ namespace OSL {
 
 struct PerThreadInfo
 {
-    std::stack<ShadingContext *> context_pool;
-    
-    ShadingContext *pop_context ();  ///< Get the pool top and then pop
+    PerThreadInfo ();
     ~PerThreadInfo ();
+    ShadingContext *pop_context ();  ///< Get the pool top and then pop
+
+    std::stack<ShadingContext *> context_pool;
+    llvm::LLVMContext *llvm_context;
+    llvm::JITMemoryManager *llvm_jitmm;
 };
 
 
@@ -698,9 +701,6 @@ public:
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
-    llvm::LLVMContext *llvm_context () { return m_llvm_context; }
-    llvm::ExecutionEngine* ExecutionEngine () { return m_llvm_exec; }
-
     virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
@@ -839,10 +839,10 @@ private:
     ClosureRegistry m_closure_registry;
 
     // LLVM stuff
-    llvm::LLVMContext *m_llvm_context;
-    llvm::Module *m_llvm_module;
-    llvm::ExecutionEngine *m_llvm_exec;
-    llvm::JITMemoryManager *m_llvm_jitmm;
+    spin_mutex m_llvm_mutex;
+    atomic_int m_llvm_initialized;
+    // Can't throw away jitmm's until we're totally done
+    std::vector<shared_ptr<llvm::JITMemoryManager> > m_llvm_jitmm_hold;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;

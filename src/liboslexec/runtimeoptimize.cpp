@@ -3493,19 +3493,9 @@ RuntimeOptimizer::optimize_group ()
     m_stat_specialization_time = rop_timer();
 
     Timer timer;
-    // Let's punt on multithreading LLVM for the time being,
-    // just make a big lock.
-    static mutex llvm_mutex;
-    lock_guard llvm_lock (llvm_mutex);
-    m_stat_opt_locking_time = timer();
-
-    m_shadingsys.SetupLLVM ();
-    m_stat_llvm_setup_time = timer() - m_stat_opt_locking_time;
     build_llvm_group ();
-
     m_stat_total_llvm_time = timer();
-
-
+    
     m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
           new_nsyms, old_nsyms,
           100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),

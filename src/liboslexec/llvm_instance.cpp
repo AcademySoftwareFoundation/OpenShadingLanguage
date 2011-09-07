@@ -4527,6 +4527,28 @@ initialize_llvm_generator_table ()
 
 
 
+void
+RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
+{
+    for (int i = 0;  i < op.nargs();  ++i) {
+        Symbol &sym (*opargsym (op, i));
+        TypeDesc t = sym.typespec().simpletype();
+        if (t.basetype != TypeDesc::FLOAT)
+            continue;  // just check float-based types
+        int ncomps = t.numelements() * t.aggregate;
+        llvm::Value *args[] = { llvm_constant(ncomps),
+                                llvm_void_ptr(sym),
+                                llvm_constant((int)sym.has_derivs()),
+                                sg_void_ptr(), 
+                                llvm_constant(op.sourcefile()),
+                                llvm_constant(op.sourceline()),
+                                llvm_constant(sym.name()) };
+        llvm_call_function ("osl_naninf_check", args, 7);
+    }
+}
+
+
+
 bool
 RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
@@ -4541,6 +4563,10 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             bool ok = (*found->second) (*this, opnum);
             if (! ok)
                 return false;
+            if (m_shadingsys.debug_nan() /* debug NaN/Inf */
+                && op.farthest_jump() < 0 /* Jumping ops don't need it */) {
+                llvm_generate_debugnan (op);
+            }
         } else if (op.opname() == op_nop ||
                    op.opname() == op_end) {
             // Skip this op, it does nothing...

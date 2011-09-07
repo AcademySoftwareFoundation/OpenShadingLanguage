@@ -127,7 +127,7 @@ endmacro ()
 TESTSUITE ( arithmetic array array-derivs array-range
             blendmath breakcont bug-locallifetime
             cellnoise closure color comparison
-            component-range const-array-params
+            component-range const-array-params debugnan
             derivs derivs-muldiv-clobber error-dupes exponential
             function-earlyreturn function-simple function-outputelem
             geomath gettextureinfo hyperb

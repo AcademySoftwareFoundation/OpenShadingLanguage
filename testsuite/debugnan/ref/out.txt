@@ -1,0 +1,2 @@
+ERROR: Detected nan value in Cout at test.osl:5
+

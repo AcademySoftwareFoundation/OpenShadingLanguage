@@ -4532,6 +4532,8 @@ RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
 {
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol &sym (*opargsym (op, i));
+        if (! op.argwrite(i))
+            continue;
         TypeDesc t = sym.typespec().simpletype();
         if (t.basetype != TypeDesc::FLOAT)
             continue;  // just check float-based types

@@ -4661,6 +4661,18 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
             (s.is_constant() || s.typespec().is_closure_based() ||
              s.typespec().is_string_based()))
             llvm_assign_initial_value (s);
+        // If debugnan is turned on, globals check that their values are ok
+        if (s.symtype() == SymTypeGlobal && m_shadingsys.debug_nan()) {
+            TypeDesc t = s.typespec().simpletype();
+            if (t.basetype == TypeDesc::FLOAT) { // just check float-based types
+                int ncomps = t.numelements() * t.aggregate;
+                llvm::Value *args[] = { llvm_constant(ncomps), llvm_void_ptr(s),
+                     llvm_constant((int)s.has_derivs()), sg_void_ptr(), 
+                     llvm_constant(ustring(inst()->shadername())),
+                     llvm_constant(0), llvm_constant(s.name()) };
+                llvm_call_function ("osl_naninf_check", args, 7);
+            }
+        }
     }
     // make a second pass for the parameters (which may make use of
     // locals and constants from the first pass)

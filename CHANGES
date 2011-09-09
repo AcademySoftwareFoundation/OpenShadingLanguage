@@ -1,3 +1,26 @@
+Release 0.6.0 - Sept 9, 2011
+----------------------------
+* ShadeExec API overhaul -- an app using it no longer needs
+  ShadingSystemImpl internal knowledge.
+* Looks for release versions of LLVM-2.9 (allows using a Macports LLVM 
+  installation).
+* Optimizations: runtime constant folding of arraylength and regex_search,
+  new instruction 'arraycopy' will copy an entire array at once.
+* Renamed patterns.h to oslutil.h.
+* Do not generate unnecessary code when optional texture parameters are set
+  to their default values.
+* Restore long-lost ability for layers to run unconditionally (not lazily)
+  if they were marked as "non-lazy" (for example, if they write to globals.
+* Thread-parallel runtime optimization and LLVM JIT of different shader
+  groups.
+* Make the "debugnan" attribute work again -- when turned on, code will
+  be inserted avert every op to be sure that no NaN or Inf values are
+  generated, and also verify that shader inputs (globals) don't have NaN
+  or Inf values passed in by the renderer.  A similar facility existed a
+  long time ago, but we lost that functionality when we switched from
+  the interpreter to LLVM.
+
+
 Release 0.5.4 - Jul 21, 2011
 ----------------------------
 * Several fixes related to arrays of structs, and structs containing

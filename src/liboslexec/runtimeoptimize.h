@@ -622,6 +622,9 @@ public:
         return m_return_block.back();
     }
 
+    /// Check for inf/nan in all written-to arguments of the op
+    void llvm_generate_debugnan (const Opcode &op);
+
     llvm::Function *layer_func () const { return m_layer_func; }
 
     void llvm_setup_optimization_passes ();

@@ -4527,6 +4527,30 @@ initialize_llvm_generator_table ()
 
 
 
+void
+RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
+{
+    for (int i = 0;  i < op.nargs();  ++i) {
+        Symbol &sym (*opargsym (op, i));
+        if (! op.argwrite(i))
+            continue;
+        TypeDesc t = sym.typespec().simpletype();
+        if (t.basetype != TypeDesc::FLOAT)
+            continue;  // just check float-based types
+        int ncomps = t.numelements() * t.aggregate;
+        llvm::Value *args[] = { llvm_constant(ncomps),
+                                llvm_void_ptr(sym),
+                                llvm_constant((int)sym.has_derivs()),
+                                sg_void_ptr(), 
+                                llvm_constant(op.sourcefile()),
+                                llvm_constant(op.sourceline()),
+                                llvm_constant(sym.name()) };
+        llvm_call_function ("osl_naninf_check", args, 7);
+    }
+}
+
+
+
 bool
 RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
@@ -4541,6 +4565,10 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             bool ok = (*found->second) (*this, opnum);
             if (! ok)
                 return false;
+            if (m_shadingsys.debug_nan() /* debug NaN/Inf */
+                && op.farthest_jump() < 0 /* Jumping ops don't need it */) {
+                llvm_generate_debugnan (op);
+            }
         } else if (op.opname() == op_nop ||
                    op.opname() == op_end) {
             // Skip this op, it does nothing...
@@ -4633,6 +4661,18 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
             (s.is_constant() || s.typespec().is_closure_based() ||
              s.typespec().is_string_based()))
             llvm_assign_initial_value (s);
+        // If debugnan is turned on, globals check that their values are ok
+        if (s.symtype() == SymTypeGlobal && m_shadingsys.debug_nan()) {
+            TypeDesc t = s.typespec().simpletype();
+            if (t.basetype == TypeDesc::FLOAT) { // just check float-based types
+                int ncomps = t.numelements() * t.aggregate;
+                llvm::Value *args[] = { llvm_constant(ncomps), llvm_void_ptr(s),
+                     llvm_constant((int)s.has_derivs()), sg_void_ptr(), 
+                     llvm_constant(ustring(inst()->shadername())),
+                     llvm_constant(0), llvm_constant(s.name()) };
+                llvm_call_function ("osl_naninf_check", args, 7);
+            }
+        }
     }
     // make a second pass for the parameters (which may make use of
     // locals and constants from the first pass)

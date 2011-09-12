@@ -85,17 +85,12 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
 
     // Adjust statistics
     ShadingSystemImpl &ss (shadingsys());
-    off_t opmem = vectorbytes (m_instops);
-    off_t argmem = vectorbytes (m_instargs);
     off_t symmem = vectorbytes (m_instsymbols);
     off_t parammem = vectorbytes (m_iparams)
         + vectorbytes (m_fparams) + vectorbytes (m_sparams);
-    off_t totalmem = (opmem + argmem + symmem + parammem +
-                      sizeof(ShaderInstance));
+    off_t totalmem = (symmem + parammem + sizeof(ShaderInstance));
     {
         spin_lock lock (ss.m_stat_mutex);
-        ss.m_stat_mem_inst_ops += opmem;
-        ss.m_stat_mem_inst_args += argmem;
         ss.m_stat_mem_inst_syms += symmem;
         ss.m_stat_mem_inst_paramvals += parammem;
         ss.m_stat_mem_inst += totalmem;
@@ -109,19 +104,16 @@ ShaderInstance::~ShaderInstance ()
 {
     shadingsys().m_stat_instances -= 1;
 
+    ASSERT (m_instops.size() == 0 && m_instargs.size() == 0);
     ShadingSystemImpl &ss (shadingsys());
-    off_t opmem = vectorbytes (m_instops);
-    off_t argmem = vectorbytes (m_instargs);
     off_t symmem = vectorbytes (m_instsymbols);
     off_t parammem = vectorbytes (m_iparams)
         + vectorbytes (m_fparams) + vectorbytes (m_sparams);
     off_t connectionmem = vectorbytes (m_connections);
-    off_t totalmem = (opmem + argmem + symmem + parammem + connectionmem +
+    off_t totalmem = (symmem + parammem + connectionmem +
                        sizeof(ShaderInstance));
     {
         spin_lock lock (ss.m_stat_mutex);
-        ss.m_stat_mem_inst_ops -= opmem;
-        ss.m_stat_mem_inst_args -= argmem;
         ss.m_stat_mem_inst_syms -= symmem;
         ss.m_stat_mem_inst_paramvals -= parammem;
         ss.m_stat_mem_inst_connections -= connectionmem;
@@ -286,16 +278,12 @@ ShaderInstance::copy_code_from_master ()
     ASSERT (m_instsymbols.size() == m_master->m_symbols.size());
 
     // adjust stats
-    off_t opmem = vectorbytes(m_instops);
-    off_t argmem = vectorbytes(m_instargs);
     symmem = vectorbytes(m_instsymbols) - symmem;  // just the new mem
     {
         spin_lock lock (shadingsys().m_stat_mutex);
-        shadingsys().m_stat_mem_inst_ops += opmem;
-        shadingsys().m_stat_mem_inst_args += argmem;
         shadingsys().m_stat_mem_inst_syms += symmem;
-        shadingsys().m_stat_mem_inst += opmem+argmem+symmem;
-        shadingsys().m_stat_memory += opmem+argmem+symmem;
+        shadingsys().m_stat_mem_inst += symmem;
+        shadingsys().m_stat_memory += symmem;
     }
 }
 

@@ -797,15 +797,11 @@ private:
     PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
     int m_stat_groups;                    ///< Stat: shading groups
     int m_stat_groupinstances;            ///< Stat: total inst in all groups
+    atomic_int m_stat_groups_compiled;    ///< Stat: groups compiled
     atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
     atomic_ll m_layers_executed_uncond;   ///< Stat: Unconditional execs
     atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs
     atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
-    atomic_ll m_stat_binds;               ///< Stat: Number of binds;
-    atomic_ll m_stat_rebinds;             ///< Stat: Number of rebinds;
-    atomic_ll m_stat_paramstobind;        ///< Stat: All params in bound shaders
-    atomic_ll m_stat_paramsbound;         ///< Stat: Number of params bound
-    atomic_ll m_stat_instructions_run;    ///< Stat: total instructions run
     atomic_int m_stat_total_syms;         ///< Stat: total syms in all insts
     atomic_int m_stat_syms_with_derivs;   ///< Stat: syms with derivatives
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
@@ -829,8 +825,6 @@ private:
     PeakCounter<off_t> m_stat_mem_master_defaults;
     PeakCounter<off_t> m_stat_mem_master_consts;
     PeakCounter<off_t> m_stat_mem_inst;   ///< Stat: instance-related mem
-    PeakCounter<off_t> m_stat_mem_inst_ops;
-    PeakCounter<off_t> m_stat_mem_inst_args;
     PeakCounter<off_t> m_stat_mem_inst_syms;
     PeakCounter<off_t> m_stat_mem_inst_paramvals;
     PeakCounter<off_t> m_stat_mem_inst_connections;

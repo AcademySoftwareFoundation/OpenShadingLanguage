@@ -186,15 +186,11 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_shaders_requested = 0;
     m_stat_groups = 0;
     m_stat_groupinstances = 0;
+    m_stat_groups_compiled = 0;
     m_stat_regexes = 0;
     m_layers_executed_uncond = 0;
     m_layers_executed_lazy = 0;
     m_layers_executed_never = 0;
-    m_stat_binds = 0;
-    m_stat_rebinds = 0;
-    m_stat_paramstobind = 0;
-    m_stat_paramsbound = 0;
-    m_stat_instructions_run = 0;
     m_stat_total_syms = 0;
     m_stat_syms_with_derivs = 0;
     m_stat_optimization_time = 0;
@@ -381,6 +377,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
+    ATTR_DECODE ("stat:groups_compiled", int, m_stat_groups_compiled);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
     ATTR_DECODE ("stat:memory_current", long long, m_stat_memory.current());
     ATTR_DECODE ("stat:memory_peak", long long, m_stat_memory.peak());
@@ -508,12 +505,12 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Loaded:    " << m_stat_shaders_loaded << "\n";
     out << "    Masters:   " << m_stat_shaders_loaded << "\n";
     out << "    Instances: " << m_stat_instances << "\n";
-    out << "  Shading contexts: " << m_stat_contexts << "\n";
     out << "  Shading groups:   " << m_stat_groups << "\n";
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
     float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);
     out << "    Avg instances per group: " 
         << Strutil::format ("%.1f", iperg) << "\n";
+    out << "  Shading contexts: " << m_stat_contexts << "\n";
 
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
                           m_layers_executed_never;
@@ -529,20 +526,10 @@ ShadingSystemImpl::getstats (int level) const
                             (long long)m_layers_executed_never,
                             (100.0*m_layers_executed_never) * inv_totalexec);
 
-    out << Strutil::format ("  Binds:  %lld\n",
-                            (long long)m_stat_binds);
-    out << Strutil::format ("  Rebinds:  %lld / %lld  (%.1f%%)\n",
-                            (long long)m_stat_rebinds, totalexec,
-                            (100.0*m_stat_rebinds) * inv_totalexec);
-    out << Strutil::format ("  Params bound:  %lld / %lld  (%.1f%%)\n",
-                            (long long)m_stat_paramsbound,
-                            (long long)m_stat_paramstobind,
-                            (100.0*m_stat_paramsbound)/std::max((int)m_stat_paramstobind, 1));
-    out << Strutil::format ("  Total instructions run:  %lld\n",
-                            (long long)m_stat_instructions_run);
     out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
                             (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
+    out << "  Shading groups compiled: " << m_stat_groups_compiled << "\n";
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "
@@ -575,8 +562,6 @@ ShadingSystemImpl::getstats (int level) const
     out << "        Master defaults:       " << m_stat_mem_master_defaults.memstat() << '\n';
     out << "        Master consts:         " << m_stat_mem_master_consts.memstat() << '\n';
     out << "    Instance memory: " << m_stat_mem_inst.memstat() << '\n';
-    out << "        Instance ops:          " << m_stat_mem_inst_ops.memstat() << '\n';
-    out << "        Instance args:         " << m_stat_mem_inst_args.memstat() << '\n';
     out << "        Instance syms:         " << m_stat_mem_inst_syms.memstat() << '\n';
     out << "        Instance param values: " << m_stat_mem_inst_paramvals.memstat() << '\n';
     out << "        Instance connections:  " << m_stat_mem_inst_connections.memstat() << '\n';

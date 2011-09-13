@@ -252,22 +252,8 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
     Opcode op (opname, method, opargs.size(), args_to_add.size());
-    off_t oldcodesize = vectorbytes(code);
-    off_t oldargsize = vectorbytes(opargs);
     code.insert (code.begin()+opnum, op);
     opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
-    {
-        // Remember that they're already swapped
-        off_t opmem = vectorbytes(code) - oldcodesize;
-        off_t argmem = vectorbytes(opargs) - oldargsize;
-        // adjust memory stats
-        ShadingSystemImpl &ss (shadingsys());
-        spin_lock lock (ss.m_stat_mutex);
-        ss.m_stat_mem_inst_ops += opmem;
-        ss.m_stat_mem_inst_args += argmem;
-        ss.m_stat_mem_inst += (opmem+argmem);
-        ss.m_stat_memory += (opmem+argmem);
-    }
     if (opnum < inst()->m_maincodebegin)
         ++inst()->m_maincodebegin;
     ++inst()->m_maincodeend;
@@ -3361,20 +3347,6 @@ RuntimeOptimizer::collapse_ops ()
 
     // Swap the new code for the old.
     std::swap (inst()->m_instops, new_ops);
-    {
-        // adjust memory stats
-        // Remember that they're already swapped
-        off_t mem = vectorbytes(new_ops);
-        ShadingSystemImpl &ss (shadingsys());
-        spin_lock lock (ss.m_stat_mutex);
-        ss.m_stat_mem_inst_ops -= mem;
-        ss.m_stat_mem_inst -= mem;
-        ss.m_stat_memory -= mem;
-        mem = vectorbytes(inst()->m_instops);
-        ss.m_stat_mem_inst_ops += mem;
-        ss.m_stat_mem_inst += mem;
-        ss.m_stat_memory += mem;
-    }
 
     // These are no longer valid
     m_bblockids.clear ();
@@ -3455,26 +3427,8 @@ RuntimeOptimizer::optimize_group ()
     size_t new_nsyms = 0, new_nops = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
-        if (inst()->unused()) {
-            // Clear the syms and ops, we'll never use this layer
-            SymbolVec nosyms;
-            std::swap (inst()->symbols(), nosyms);
-            OpcodeVec noops;
-            std::swap (inst()->ops(), noops);
-            {
-                // adjust memory stats
-                // Remember that they're already swapped
-                off_t symmem = vectorbytes(nosyms);
-                off_t opmem = vectorbytes(noops);
-                ShadingSystemImpl &ss (shadingsys());
-                spin_lock lock (ss.m_stat_mutex);
-                ss.m_stat_mem_inst_syms -= symmem;
-                ss.m_stat_mem_inst_ops -= opmem;
-                ss.m_stat_mem_inst -= (symmem+opmem);
-                ss.m_stat_memory -= (symmem+opmem);
-            }
-            continue;
-        }
+        if (inst()->unused())
+            continue;  // no need to print or gather stats for unused layers
         if (m_shadingsys.optimize() >= 1) {
             collapse_syms ();
             collapse_ops ();
@@ -3495,7 +3449,36 @@ RuntimeOptimizer::optimize_group ()
     Timer timer;
     build_llvm_group ();
     m_stat_total_llvm_time = timer();
-    
+
+    // Once we're generated the IR, we really don't need the ops and args,
+    // and we only need the syms that include the params.
+    off_t symmem = 0;
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        set_inst (layer);
+        // We no longer needs ops and args -- create empty vectors and
+        // swap with the ones in the instance.
+        OpcodeVec noops;
+        std::swap (inst()->ops(), noops);
+        std::vector<int> noargs;
+        std::swap (inst()->args(), noargs);
+
+        if (inst()->unused()) {
+            // If we'll never use the layer, we don't need the syms at all
+            SymbolVec nosyms;
+            std::swap (inst()->symbols(), nosyms);
+            symmem += vectorbytes(nosyms);
+        }
+
+    }
+    {
+        // adjust memory stats
+        ShadingSystemImpl &ss (shadingsys());
+        spin_lock lock (ss.m_stat_mutex);
+        ss.m_stat_mem_inst_syms -= symmem;
+        ss.m_stat_mem_inst -= symmem;
+        ss.m_stat_memory -= symmem;
+    }
+
     m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
           new_nsyms, old_nsyms,
           100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
@@ -3540,6 +3523,7 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     m_stat_llvm_irgen_time += rop.m_stat_llvm_irgen_time;
     m_stat_llvm_opt_time += rop.m_stat_llvm_opt_time;
     m_stat_llvm_jit_time += rop.m_stat_llvm_jit_time;
+    m_stat_groups_compiled += 1;
 }
 
 

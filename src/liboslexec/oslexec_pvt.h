@@ -665,10 +665,6 @@ public:
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 
-    /// Return the precomputed heap offset of the named global, or -1 if
-    /// it's not precomputed.
-    int global_heap_offset (ustring name);
-
     /// Is the shading system in debug mode?
     ///
     bool debug () const { return m_debug; }
@@ -718,7 +714,6 @@ public:
 
 private:
     void printstats () const;
-    void init_global_heap_offsets ();
 
     /// Find the index of the named layer in the current shader group.
     /// If found, return the index >= 0 and put a pointer to the instance
@@ -785,8 +780,6 @@ private:
     ShaderUse m_group_use;                ///< Use of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values
     ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
-    std::map<ustring,int> m_global_heap_offsets; ///< Heap offsets of globals
-    size_t m_global_heap_total;           ///< Heap size for globals
     mutable mutex m_mutex;                ///< Thread safety
     mutable thread_specific_ptr<PerThreadInfo> m_perthread_info;
 

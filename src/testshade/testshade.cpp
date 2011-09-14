@@ -283,6 +283,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     // Derivatives with respect to x,y
     sg.dPdx = Vec3 (sg.dudx, sg.dudy, 0.0f);
     sg.dPdy = Vec3 (sg.dvdx, sg.dvdy, 0.0f);
+    sg.dPdz = Vec3 (0.0f, 0.0f, 0.0f);  // just use 0 for volume tangent
     // Tangents of P with respect to surface u,v
     sg.dPdu = Vec3 (1.0f, 0.0f, 0.0f);
     sg.dPdv = Vec3 (0.0f, 1.0f, 0.0f);

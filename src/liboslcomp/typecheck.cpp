@@ -927,7 +927,7 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             // FIXME -- come back to this
         } else if (m_name == "calculatenormal") {
             argtakesderivs (1, true);
-        } else if (m_name == "Dx" || m_name == "Dy") {
+        } else if (m_name == "Dx" || m_name == "Dy" || m_name == "Dz") {
             argtakesderivs (1, true);
         } else if (m_name == "texture") {
             if (nargs == 3 || list_nth(args(),3)->typespec().is_string()) {
@@ -1082,6 +1082,7 @@ static const char * builtin_func_args [] = {
     "dict_value", "iis?", "!rw", NULL,
     "Dx", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
+    "Dz", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,
     "environment", "fsv.", "fsvvv.","csv.", "csvvv.", 
                "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,

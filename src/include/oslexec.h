@@ -252,6 +252,7 @@ private:
 /// All points, vectors and normals are given in "common" space.
 struct ShaderGlobals {
     Vec3 P, dPdx, dPdy;              /**< Position */
+    Vec3 dPdz;                       /**< z zeriv for volume shading */
     Vec3 I, dIdx, dIdy;              /**< Incident ray */
     Vec3 N;                          /**< Shading normal */
     Vec3 Ng;                         /**< True geometric normal */

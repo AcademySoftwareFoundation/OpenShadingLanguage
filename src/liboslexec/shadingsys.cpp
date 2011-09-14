@@ -176,7 +176,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_in_group (false),
-      m_global_heap_total (0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
@@ -197,8 +196,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
     m_stat_getattribute_calls = 0;
-
-    init_global_heap_offsets ();
 
     // If client didn't supply an error handler, just use the default
     // one that echoes to the terminal.
@@ -979,59 +976,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         c.param = -1;  // mark as invalid
     }
     return c;
-}
-
-
-
-void
-ShadingSystemImpl::init_global_heap_offsets ()
-{
-    lock_guard lock (m_mutex);
-    if (m_global_heap_total > 0)
-        return;   // Already initialized
-
-    // FIXME -- these are all wrong (but luckily unused).  They don't 
-    // properly consider npoints, let alone derivs or alignment.  Ugh.
-    // Leave here for right now, anticipate future deletion or fixing.
-    const int triple_size = sizeof (Vec3);
-    m_global_heap_offsets[ustring("P")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("I")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("N")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("Ng")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("dPdu")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("dPdv")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("dPdtime")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-    m_global_heap_offsets[ustring("Ps")] = m_global_heap_total;
-    m_global_heap_total += triple_size;
-
-    m_global_heap_offsets[ustring("u")] = m_global_heap_total;
-    m_global_heap_total += sizeof (float);
-    m_global_heap_offsets[ustring("v")] = m_global_heap_total;
-    m_global_heap_total += sizeof (float);
-    m_global_heap_offsets[ustring("time")] = m_global_heap_total;
-    m_global_heap_total += sizeof (float);
-    m_global_heap_offsets[ustring("dtime")] = m_global_heap_total;
-    m_global_heap_total += sizeof (float);
-}
-
-
-
-int
-ShadingSystemImpl::global_heap_offset (ustring name)
-{
-    // FIXME -- these are all wrong.  I don't know what I was thinking
-    // when I wrote this.  But luckily, it also doesn't seem to be used
-    // now.
-    ASSERT (0);
-    std::map<ustring,int>::const_iterator f = m_global_heap_offsets.find (name);
-    return f != m_global_heap_offsets.end() ? f->second : -1;
 }
 
 

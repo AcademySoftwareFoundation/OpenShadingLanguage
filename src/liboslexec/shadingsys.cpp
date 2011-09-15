@@ -185,7 +185,10 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_shaders_requested = 0;
     m_stat_groups = 0;
     m_stat_groupinstances = 0;
+    m_stat_instances_compiled = 0;
     m_stat_groups_compiled = 0;
+    m_stat_empty_instances = 0;
+    m_stat_empty_groups = 0;
     m_stat_regexes = 0;
     m_layers_executed_uncond = 0;
     m_layers_executed_lazy = 0;
@@ -374,7 +377,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
+    ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);
     ATTR_DECODE ("stat:groups_compiled", int, m_stat_groups_compiled);
+    ATTR_DECODE ("stat:empty_instances", int, m_stat_empty_instances);
+    ATTR_DECODE ("stat:empty_groups", int, m_stat_empty_groups);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
     ATTR_DECODE ("stat:memory_current", long long, m_stat_memory.current());
     ATTR_DECODE ("stat:memory_peak", long long, m_stat_memory.peak());
@@ -526,7 +532,14 @@ ShadingSystemImpl::getstats (int level) const
     out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
                             (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
-    out << "  Shading groups compiled: " << m_stat_groups_compiled << "\n";
+    out << "  Compiled " << m_stat_groups_compiled << " groups, "
+        << m_stat_instances_compiled << " instances\n";
+    out << "  After optimization, " << m_stat_empty_instances 
+        << " empty instances ("
+        << (int)(100.0f*m_stat_empty_instances/m_stat_instances_compiled)
+        << "%)\n";
+    out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
+        << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "

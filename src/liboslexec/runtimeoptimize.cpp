@@ -1686,15 +1686,30 @@ DECLFOLDER(constfold_getmatrix)
 
 DECLFOLDER(constfold_transform)
 {
-    // Try to turn R=transform(M,P) into R=P if it's an identity transform
+    // Try to turn identity transforms into assignments
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &M (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &P (*rop.inst()->argsymbol(op.firstarg()+2));
     if (op.nargs() == 3 && M.typespec().is_matrix() &&
           M.is_constant() && is_one(M)) {
-        ASSERT (P.typespec().is_triple());
         rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2));
         return 1;
+    }
+    if (op.nargs() == 4) {
+        Symbol &T (*rop.inst()->argsymbol(op.firstarg()+2));
+        if (M.is_constant() && T.is_constant()) {
+            DASSERT (M.typespec().is_string() && T.typespec().is_string());
+            ustring from = *(ustring *)M.data();
+            ustring to = *(ustring *)T.data();
+            ustring syn = rop.shadingsys().commonspace_synonym();
+            if (from == syn)
+                from = Strings::common;
+            if (to == syn)
+                to = Strings::common;
+            if (from == to) {
+                rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+3));
+                return 1;
+            }
+        }
     }
     return 0;
 }

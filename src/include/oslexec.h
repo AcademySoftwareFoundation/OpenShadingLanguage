@@ -348,8 +348,35 @@ public:
     /// implementation.
     virtual bool get_inverse_matrix (Matrix44 &result, ustring to);
 
-    /// Get the 4x4 matrix that transforms points from the named
-    /// 'from' coordinate system to "common" space at the given time.
+    /// Transform points Pin[0..npoints-1] in named coordinate system
+    /// 'from' into 'to' coordinates, storing the result in Pout[] using
+    /// the specified vector semantic (POINT, VECTOR, NORMAL).  The
+    /// function returns true if the renderer correctly transformed the
+    /// points, false if it failed (for example, because it did not know
+    /// the name of one of the coordinate systems).  A renderer is free
+    /// to not implement this, in which case the default implementation
+    /// is simply to make appropriate calls to get_matrix and
+    /// get_inverse_matrix.  The existance of this method is to allow
+    /// some renderers to provide transformations that cannot be
+    /// expressed by a 4x4 matrix.
+    ///
+    /// If npoints == 0, the function should just return true if a 
+    /// known nonlinear transformation is available to transform points
+    /// between the two spaces, otherwise false.  (For this calling
+    /// pattern, sg, Pin, Pout, and time will not be used and may be 0.
+    /// As a special case, if from and to are both empty strings, it
+    /// returns true if *any* nonlinear transformations are supported,
+    /// otherwise false.
+    ///
+    /// Note to RendererServices implementations: just return 'false'
+    /// if there isn't a special nonlinear transformation between the
+    /// two spaces.
+    virtual bool transform_points (ShaderGlobals *sg,
+                                   ustring from, ustring to, float time,
+                                   const Vec3 *Pin, Vec3 *Pout, int npoints,
+                                   TypeDesc::VECSEMANTICS vectype)
+        { return false; }
+
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is

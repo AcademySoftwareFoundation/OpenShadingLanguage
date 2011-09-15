@@ -784,6 +784,79 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
     return ok;
 }
 
+
+
+OSL_SHADEOP int
+osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
+                      void *Pout, int Pout_derivs,
+                      void *from, void *to, int vectype)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    Matrix44 M;
+    bool ok;
+    if (USTR(from) == Strings::common)
+        ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
+    else if (USTR(to) == Strings::common)
+        ok = osl_get_matrix (sg, &M, (const char *)from);
+    else
+        ok = osl_get_from_to_matrix (sg, &M, (const char *)from, (const char *)to);
+    if (ok) {
+        if (vectype == TypeDesc::POINT)
+            osl_transform_vmv(Pout, &M, Pin);
+        else if (vectype == TypeDesc::VECTOR)
+            osl_transformv_vmv(Pout, &M, Pin);
+        else if (vectype == TypeDesc::NORMAL)
+            osl_transformn_vmv(Pout, &M, Pin);
+        else ASSERT(0);
+        if (Pout_derivs) {
+            if (Pin_derivs) {
+                osl_transformv_vmv((Vec3 *)Pout+1, &M, (Vec3 *)Pin+1);
+                osl_transformv_vmv((Vec3 *)Pout+2, &M, (Vec3 *)Pin+2);
+            } else {
+                ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
+                ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
+            }
+        }
+    }
+    return ok;
+}
+
+
+
+OSL_SHADEOP int
+osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
+                                void *Pout, int Pout_derivs,
+                                void *from, void *to,
+                                int vectype)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    RendererServices *rend = ctx->renderer();
+    if (rend->transform_points (sg, USTR(from), USTR(to), sg->time,
+                                (const Vec3 *)Pin, (Vec3 *)Pout, 1,
+                                (TypeDesc::VECSEMANTICS)vectype)) {
+        // Renderer had a direct way to transform the points between the
+        // two spaces.
+        if (Pout_derivs) {
+            if (Pin_derivs) {
+                rend->transform_points (sg, USTR(from), USTR(to), sg->time,
+                                        (const Vec3 *)Pin+1,
+                                        (Vec3 *)Pout+1, 2, TypeDesc::VECTOR);
+            } else {
+                ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
+                ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
+            }
+        }
+        return true;
+    }
+
+    // Renderer couldn't or wouldn't transform directly
+    return osl_transform_triple (sg, Pin, Pin_derivs, Pout, Pout_derivs,
+                                 from, to, vectype);
+}
+
+
+
 OSL_SHADEOP void
 osl_transpose_mm (void *r, void *m)
 {
@@ -833,32 +906,6 @@ osl_determinant_fm (void *m)
 
 
 // Vector ops
-
-OSL_SHADEOP void
-osl_prepend_point_from (void *sg, void *v, const char *from)
-{
-    Matrix44 M;
-    osl_get_matrix ((ShaderGlobals *)sg, &M, from);
-    M.multVecMatrix (VEC(v), VEC(v));
-}
-
-OSL_SHADEOP void
-osl_prepend_vector_from (void *sg, void *v, const char *from)
-{
-    Matrix44 M;
-    osl_get_matrix ((ShaderGlobals *)sg, &M, from);
-    M.multDirMatrix (VEC(v), VEC(v));
-}
-
-OSL_SHADEOP void
-osl_prepend_normal_from (void *sg, void *v, const char *from)
-{
-    Matrix44 M;
-    osl_get_matrix ((ShaderGlobals *)sg, &M, from);
-    M = M.inverse().transpose();
-    M.multDirMatrix (VEC(v), VEC(v));
-}
-
 
 OSL_SHADEOP float
 osl_dot_fvv (void *a, void *b)

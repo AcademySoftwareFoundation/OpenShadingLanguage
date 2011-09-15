@@ -195,7 +195,6 @@ void fresnel (vector I, normal N, float eta,
         Kt = 0.0;
         T = vector (0,0,0);
     }
-#undef sqr
 }
 
 void fresnel (vector I, normal N, float eta,
@@ -209,41 +208,13 @@ point rotate (point q, float angle, point a, point b) BUILTIN;
 
 normal transform (matrix Mto, normal p) BUILTIN;
 vector transform (matrix Mto, vector p) BUILTIN;
-point transform (matrix Mto, point p) BUILTIN;
-
-// Implementation of transform-with-named-space in terms of matrices:
-
-point transform (string tospace, point x)
-{
-    return transform (matrix ("common", tospace), x);
-}
-
-point transform (string fromspace, string tospace, point x)
-{
-    return transform (matrix (fromspace, tospace), x);
-}
-
-
-vector transform (string tospace, vector x)
-{
-    return transform (matrix ("common", tospace), x);
-}
-
-vector transform (string fromspace, string tospace, vector x)
-{
-    return transform (matrix (fromspace, tospace), x);
-}
-
-
-normal transform (string tospace, normal x)
-{
-    return transform (matrix ("common", tospace), x);
-}
-
-normal transform (string fromspace, string tospace, normal x)
-{
-    return transform (matrix (fromspace, tospace), x);
-}
+point  transform (matrix Mto, point p) BUILTIN;
+normal transform (string from, string to, normal p) BUILTIN;
+vector transform (string from, string to, vector p) BUILTIN;
+point  transform (string from, string to, point p) BUILTIN;
+normal transform (string to, normal p) { return transform("common",to,p); }
+vector transform (string to, vector p) { return transform("common",to,p); }
+point  transform (string to, point p)  { return transform("common",to,p); }
 
 float transformu (string tounits, float x) BUILTIN;
 float transformu (string fromunits, string tounits, float x) BUILTIN;

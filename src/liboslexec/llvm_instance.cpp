@@ -499,6 +499,7 @@ RuntimeOptimizer::llvm_type_sg ()
     const llvm::Type *triple_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, 3));
     std::vector<const llvm::Type*> sg_types;
     sg_types.push_back (triple_deriv);        // P, dPdx, dPdy
+    sg_types.push_back (llvm_type_triple());  // dPdz
     sg_types.push_back (triple_deriv);        // I, dIdx, dIdy
     sg_types.push_back (llvm_type_triple());  // N
     sg_types.push_back (llvm_type_triple());  // Ng
@@ -675,7 +676,7 @@ ShaderGlobalNameToIndex (ustring name)
     // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
     // defined in llvm_type_sg().
     static ustring fields[] = {
-        Strings::P, Strings::I, Strings::N, Strings::Ng,
+        Strings::P, ustring("_dPdz"), Strings::I, Strings::N, Strings::Ng,
         Strings::u, Strings::v, Strings::dPdu, Strings::dPdv,
         Strings::time, Strings::dtime, Strings::dPdtime, Strings::Ps,
         ustring("renderstate"), ustring("tracedata"), ustring("objdata"),
@@ -2648,7 +2649,32 @@ LLVMGEN (llvm_gen_DxDy)
 
 
 
-// Derivs
+// Dz
+LLVMGEN (llvm_gen_Dz)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result (*rop.opargsym (op, 0));
+    Symbol& Src (*rop.opargsym (op, 1));
+
+    if (&Src == rop.inst()->symbol(rop.inst()->Psym())) {
+        // dPdz -- the only Dz we know how to take
+        int deriv = 3;
+        for (int i = 0; i < Result.typespec().aggregate(); ++i) {
+            llvm::Value* src_val = rop.llvm_load_value (Src, deriv, i);
+            rop.storeLLVMValue (src_val, Result, i, 0);
+        }
+        // Don't have 2nd order derivs
+        rop.llvm_zero_derivs (Result);
+    } else {
+        // Punt, everything else for now returns 0 for Dz
+        // FIXME?
+        rop.llvm_assign_zero (Result);
+    }
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_filterwidth)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -3265,13 +3291,18 @@ LLVMGEN (llvm_gen_texture3d)
         // Auto derivs of P
         args.push_back (rop.llvm_void_ptr (P, 1));
         args.push_back (rop.llvm_void_ptr (P, 2));
-        // zero for dPdz, for now
-        llvm::Value *fzero = rop.llvm_constant (0.0f);
-        llvm::Value *vzero = rop.builder().CreateAlloca (rop.llvm_type_triple(),
+        // dPdz is correct for input P, zero for all else
+        if (&P == rop.inst()->symbol(rop.inst()->Psym())) {
+            args.push_back (rop.llvm_void_ptr (P, 3));
+        } else {
+            // zero for dPdz, for now
+            llvm::Value *fzero = rop.llvm_constant (0.0f);
+            llvm::Value *vzero = rop.builder().CreateAlloca (rop.llvm_type_triple(),
                                                      rop.llvm_constant((int)1));
-        for (int i = 0;  i < 3;  ++i)
-            rop.builder().CreateStore (fzero, rop.builder().CreateConstGEP2_32 (vzero, 0, i));
-        args.push_back (rop.llvm_void_ptr(vzero));
+            for (int i = 0;  i < 3;  ++i)
+                rop.builder().CreateStore (fzero, rop.builder().CreateConstGEP2_32 (vzero, 0, i));
+            args.push_back (rop.llvm_void_ptr(vzero));
+        }
     }
     args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 0)));
@@ -4417,6 +4448,7 @@ initialize_llvm_generator_table ()
     INIT2 (dot, llvm_gen_generic);
     INIT2 (Dx, llvm_gen_DxDy);
     INIT2 (Dy, llvm_gen_DxDy);
+    INIT2 (Dz, llvm_gen_Dz);
     INIT2 (dowhile, llvm_gen_loop_op);
     // INIT (end);
     INIT2 (endswith, llvm_gen_generic);

@@ -3386,16 +3386,21 @@ $v$.  Results are undefined if the knots do not specifiy a monotonic
 \index{functions!derivatives and area}
 \index{derivatives}
 
-\apiitem{float {\ce Dx} (float a), {\ce Dy} (float a) \\
-vector {\ce Dx} (point a), {\ce Dy} (point a) \\
-vector {\ce Dx} (vector a), {\ce Dy} (vector a)\\
-color {\ce Dx} (color a), {\ce Dy} (color a)}
+\apiitem{float {\ce Dx} (float a), {\ce Dy} (float a), {\ce Dz} (float a) \\
+vector {\ce Dx} (point a), {\ce Dy} (point a), {\ce Dz} (point a) \\
+vector {\ce Dx} (vector a), {\ce Dy} (vector a), {\ce Dz} (vector a)\\
+color {\ce Dx} (color a), {\ce Dy} (color a), {\ce Dz} (color a)}
 \indexapi{Dx()} \indexapi{Dy()}
 Compute an approximation to the partial derivatives of $a$ with respect to
 each of two principal directions, $\partial a / \partial x$ and
 $\partial a / \partial y$.  Depending on the renderer
 implementation, those directions may be aligned to the image plane,
 on the surface of the object, or something else.
+
+The {\cf Dz()} function is only meaningful for volumetric shading, and
+is expected to return {\cf 0} in other contexts.  It is also possible
+that particular OSL implementations may only return ``correct'' {\cf Dz}
+values for particular inputs (such as \P).
 \apiend
 
 \apiitem{float {\ce filterwidth} (float x) \\

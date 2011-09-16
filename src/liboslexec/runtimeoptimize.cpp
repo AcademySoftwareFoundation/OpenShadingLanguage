@@ -3524,6 +3524,7 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     m_stat_llvm_opt_time += rop.m_stat_llvm_opt_time;
     m_stat_llvm_jit_time += rop.m_stat_llvm_jit_time;
     m_stat_groups_compiled += 1;
+    m_stat_instances_compiled += group.nlayers();
 }
 
 

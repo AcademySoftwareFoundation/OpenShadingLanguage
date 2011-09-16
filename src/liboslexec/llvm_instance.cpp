@@ -4892,6 +4892,7 @@ RuntimeOptimizer::build_llvm_group ()
         else
             m_layer_remap[layer] = -1;
     }
+    m_shadingsys.m_stat_empty_instances += m_group.nlayers()-m_num_used_layers;
 
     initialize_llvm_group ();
 
@@ -4911,7 +4912,9 @@ RuntimeOptimizer::build_llvm_group ()
     bool skip_optimization = m_num_used_layers == 1 && entry_func->size() == 1 && entry_func->front().size() == 1;
     // Label the group as being retvoid or not.
     m_group.does_nothing(skip_optimization);
-    if (!skip_optimization) {
+    if (skip_optimization) {
+        m_shadingsys.m_stat_empty_groups += 1;
+    } else {
 #if 0
       // First do the simple function passes
       m_llvm_func_passes->doInitialization();

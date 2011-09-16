@@ -790,7 +790,10 @@ private:
     PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
     int m_stat_groups;                    ///< Stat: shading groups
     int m_stat_groupinstances;            ///< Stat: total inst in all groups
+    atomic_int m_stat_instances_compiled; ///< Stat: instances compiled
     atomic_int m_stat_groups_compiled;    ///< Stat: groups compiled
+    atomic_int m_stat_empty_instances;    ///< Stat: shaders empty after opt
+    atomic_int m_stat_empty_groups;       ///< Stat: groups empty after opt
     atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
     atomic_ll m_layers_executed_uncond;   ///< Stat: Unconditional execs
     atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs

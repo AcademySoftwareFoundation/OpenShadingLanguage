@@ -14,7 +14,7 @@ Release 0.6.0 - Sept 9, 2011
 * Thread-parallel runtime optimization and LLVM JIT of different shader
   groups.
 * Make the "debugnan" attribute work again -- when turned on, code will
-  be inserted avert every op to be sure that no NaN or Inf values are
+  be inserted after every op to be sure that no NaN or Inf values are
   generated, and also verify that shader inputs (globals) don't have NaN
   or Inf values passed in by the renderer.  A similar facility existed a
   long time ago, but we lost that functionality when we switched from

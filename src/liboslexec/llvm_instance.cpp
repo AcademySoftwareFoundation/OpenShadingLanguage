@@ -4865,7 +4865,13 @@ RuntimeOptimizer::build_llvm_group ()
     ASSERT (! m_llvm_exec);
     err.clear ();
     llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
-    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm);
+    {
+        // createJIT was very occasionally failing, I can't imagine why
+        // unless there's something not thread-safe about it.  So lock
+        // on creation just in case.
+        spin_lock llvm_lock (m_shadingsys.m_llvm_mutex);
+        m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm);
+    }
     if (! m_llvm_exec) {
         m_shadingsys.error ("Failed to create engine: %s\n", err.c_str());
         DASSERT (0);

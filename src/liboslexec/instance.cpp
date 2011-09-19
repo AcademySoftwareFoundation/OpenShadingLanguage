@@ -303,7 +303,9 @@ print_vals (const Symbol &s)
             out << (j ? " " : "") << ((int *)s.data())[j];
     } else if (t.basetype == TypeDesc::STRING) {
         for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << "\"" << ((ustring *)s.data())[j] << "\"";
+            out << (j ? " " : "") << "\"" 
+                << Strutil::escape_chars(((ustring *)s.data())[j].string())
+                << "\"";
     }
     return out.str();
 }
@@ -360,7 +362,7 @@ ShaderInstance::print ()
     out << "\n";
     out << "  string consts:\n    ";
     for (size_t i = 0;  i < m_sconsts.size();  ++i)
-        out << "\"" << m_sconsts[i] << "\" ";
+        out << "\"" << Strutil::escape_chars(m_sconsts[i]) << "\" ";
     out << "\n";
 #endif
     out << "  code:\n";

@@ -736,8 +736,12 @@ osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
         return true;
     }
     bool ok = ctx->renderer()->get_matrix (*r, USTR(from), sg->time);
-    if (! ok)
+    if (! ok) {
         r->makeIdentity();
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        if (ctx->shadingsys().unknown_coordsys_error())
+            ctx->shadingsys().error ("Unknown transformation \"%s\"", from);
+    }
     return ok;
 }
 
@@ -759,8 +763,12 @@ osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
         return true;
     }
     bool ok = ctx->renderer()->get_inverse_matrix (*r, USTR(to), sg->time);
-    if (! ok)
+    if (! ok) {
         r->makeIdentity ();
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        if (ctx->shadingsys().unknown_coordsys_error())
+            ctx->shadingsys().error ("Unknown transformation \"%s\"", to);
+    }
     return ok;
 }
 
@@ -771,6 +779,11 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
     bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
     if (ok)
         MAT(r) = m * MAT(r);
+    else {
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        if (ctx->shadingsys().unknown_coordsys_error())
+            ctx->shadingsys().error ("Unknown transformation \"%s\"", from);
+    }
     return ok;
 }
 
@@ -799,7 +812,8 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     else if (USTR(to) == Strings::common)
         ok = osl_get_matrix (sg, &M, (const char *)from);
     else
-        ok = osl_get_from_to_matrix (sg, &M, (const char *)from, (const char *)to);
+        ok = osl_get_from_to_matrix (sg, &M, (const char *)from,
+                                     (const char *)to);
     if (ok) {
         if (vectype == TypeDesc::POINT)
             osl_transform_vmv(Pout, &M, Pin);
@@ -817,6 +831,8 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
                 ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
             }
         }
+    } else {
+        *(Vec3 *)Pout = *(Vec3 *)Pin;
     }
     return ok;
 }

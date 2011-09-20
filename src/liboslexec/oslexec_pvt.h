@@ -808,8 +808,8 @@ private:
     double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
     double m_stat_llvm_jit_time;          ///<     llvm JIT time 
-    double m_stat_getattribute_time;      ///< Stat: time spend in getattribute
-    double m_stat_getattribute_fail_time;      ///< Stat: time spend in getattribute
+    double m_stat_getattribute_time;      ///< Stat: time spent in getattribute
+    double m_stat_getattribute_fail_time; ///< Stat: time spent in getattribute
     atomic_ll m_stat_getattribute_calls;  ///< Stat: Number of getattribute
 
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory

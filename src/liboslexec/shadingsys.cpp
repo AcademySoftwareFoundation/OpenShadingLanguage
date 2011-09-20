@@ -382,9 +382,41 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:empty_instances", int, m_stat_empty_instances);
     ATTR_DECODE ("stat:empty_groups", int, m_stat_empty_groups);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
+    ATTR_DECODE ("stat:regexes", int, m_stat_regexes);
+    ATTR_DECODE ("stat:total_syms", int, m_stat_total_syms);
+    ATTR_DECODE ("stat:syms_with_derivs", int, m_stat_syms_with_derivs);
+
+    ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
+    ATTR_DECODE ("stat:opt_locking_time", float, m_stat_optimization_time);
+    ATTR_DECODE ("stat:specialization_time", float, m_stat_specialization_time);
+    ATTR_DECODE ("stat:total_llvm_time", float, m_stat_total_llvm_time);
+    ATTR_DECODE ("stat:llvm_setup_time", float, m_stat_llvm_setup_time);
+    ATTR_DECODE ("stat:llvm_irgen_time", float, m_stat_llvm_irgen_time);
+    ATTR_DECODE ("stat:llvm_opt_time", float, m_stat_llvm_opt_time);
+    ATTR_DECODE ("stat:llvm_jit_time", float, m_stat_llvm_jit_time);
     ATTR_DECODE ("stat:memory_current", long long, m_stat_memory.current());
     ATTR_DECODE ("stat:memory_peak", long long, m_stat_memory.peak());
-    ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
+    ATTR_DECODE ("stat:mem_master_current", long long, m_stat_mem_master.current());
+    ATTR_DECODE ("stat:mem_master_peak", long long, m_stat_mem_master.peak());
+
+    ATTR_DECODE ("stat:mem_master_ops_current", long long, m_stat_mem_master_ops.current());
+    ATTR_DECODE ("stat:mem_master_ops_peak", long long, m_stat_mem_master_ops.peak());
+    ATTR_DECODE ("stat:mem_master_args_current", long long, m_stat_mem_master_args.current());
+    ATTR_DECODE ("stat:mem_master_args_peak", long long, m_stat_mem_master_args.peak());
+    ATTR_DECODE ("stat:mem_master_syms_current", long long, m_stat_mem_master_syms.current());
+    ATTR_DECODE ("stat:mem_master_syms_peak", long long, m_stat_mem_master_syms.peak());
+    ATTR_DECODE ("stat:mem_master_defaults_current", long long, m_stat_mem_master_defaults.current());
+    ATTR_DECODE ("stat:mem_master_defaults_peak", long long, m_stat_mem_master_defaults.peak());
+    ATTR_DECODE ("stat:mem_master_consts_current", long long, m_stat_mem_master_consts.current());
+    ATTR_DECODE ("stat:mem_master_consts_peak", long long, m_stat_mem_master_consts.peak());
+    ATTR_DECODE ("stat:mem_inst_current", long long, m_stat_mem_inst.current());
+    ATTR_DECODE ("stat:mem_inst_peak", long long, m_stat_mem_inst.peak());
+    ATTR_DECODE ("stat:mem_inst_syms_current", long long, m_stat_mem_inst_syms.current());
+    ATTR_DECODE ("stat:mem_inst_syms_peak", long long, m_stat_mem_inst_syms.peak());
+    ATTR_DECODE ("stat:mem_inst_paramvals_current", long long, m_stat_mem_inst_paramvals.current());
+    ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
+    ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
+    ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
     
     return false;
 #undef ATTR_DECODE

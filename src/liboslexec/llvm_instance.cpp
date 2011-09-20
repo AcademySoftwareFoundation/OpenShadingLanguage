@@ -4835,7 +4835,6 @@ RuntimeOptimizer::build_llvm_group ()
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     Timer timer;
-    m_shadingsys.SetupLLVM ();
 
     if (! m_thread->llvm_context)
         m_thread->llvm_context = new llvm::LLVMContext();
@@ -4865,16 +4864,10 @@ RuntimeOptimizer::build_llvm_group ()
     ASSERT (! m_llvm_exec);
     err.clear ();
     llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
-    {
-        // createJIT was very occasionally failing, I can't imagine why
-        // unless there's something not thread-safe about it.  So lock
-        // on creation just in case.
-        spin_lock llvm_lock (m_shadingsys.m_llvm_mutex);
-        m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm);
-    }
+    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm);
     if (! m_llvm_exec) {
         m_shadingsys.error ("Failed to create engine: %s\n", err.c_str());
-        DASSERT (0);
+        ASSERT (0);
         return;
     }
     // Force it to JIT as soon as we ask it for the code pointer,
@@ -5070,15 +5063,11 @@ ShadingSystemImpl::SetupLLVM ()
 {
     // Some global LLVM initialization for the first thread that
     // gets here.
-    spin_lock llvm_lock (m_llvm_mutex);
-    if (! m_llvm_initialized) {
-        info ("Setting up LLVM");
-        llvm::DisablePrettyStackTrace = true;
-        llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
-        llvm::InitializeNativeTarget();
-        initialize_llvm_generator_table ();
-        m_llvm_initialized = true;
-    }
+    info ("Setting up LLVM");
+    llvm::DisablePrettyStackTrace = true;
+    llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
+    llvm::InitializeNativeTarget();
+    initialize_llvm_generator_table ();
 }
 
 

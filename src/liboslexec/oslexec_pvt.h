@@ -598,7 +598,7 @@ private:
 
 
 
-class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
+class ShadingSystemImpl : public ShadingSystem
 {
 public:
     ShadingSystemImpl (RendererServices *renderer=NULL,
@@ -830,7 +830,6 @@ private:
 
     // LLVM stuff
     spin_mutex m_llvm_mutex;
-    atomic_int m_llvm_initialized;
     // Can't throw away jitmm's until we're totally done
     std::vector<shared_ptr<llvm::JITMemoryManager> > m_llvm_jitmm_hold;
 

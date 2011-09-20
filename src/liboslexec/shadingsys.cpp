@@ -237,6 +237,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     };
     const int nraytypes = sizeof(raytypes)/sizeof(raytypes[0]);
     attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
+
+    SetupLLVM ();
 }
 
 

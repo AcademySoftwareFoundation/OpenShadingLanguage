@@ -1,9 +1,24 @@
+Release 0.6.1 - Sept 20, 2011
+-----------------------------
+* Be more aggressive in freeing shader instance memory that's no longer
+  needed after optimization and LLVM JIT.  This greatly reduces
+  OSL-related memory consumption for scenes with large numbers of very
+  complicated shading networks.
+* Add Dz() which is helpful for apps that use OSL to shade volumes.  At
+  present, we only correctly compute Dz(P), all other Dz() queries
+  return 0.
+* Additional statistics on how many instances and groups compile, and
+  how many are empty after all optimizations are performed.
+* Make sure all the relevant statistics can be queried via
+  ShadingSystem::getattribute.
+
+
 Release 0.6.0 - Sept 9, 2011
 ----------------------------
 * ShadeExec API overhaul -- an app using it no longer needs
   ShadingSystemImpl internal knowledge.
-* Looks for release versions of LLVM-2.9 (allows using a Macports LLVM 
-  installation).
+* Thread-parallel runtime optimization and LLVM JIT of different shader
+  groups.
 * Optimizations: runtime constant folding of arraylength and regex_search,
   new instruction 'arraycopy' will copy an entire array at once.
 * Renamed patterns.h to oslutil.h.
@@ -11,14 +26,14 @@ Release 0.6.0 - Sept 9, 2011
   to their default values.
 * Restore long-lost ability for layers to run unconditionally (not lazily)
   if they were marked as "non-lazy" (for example, if they write to globals.
-* Thread-parallel runtime optimization and LLVM JIT of different shader
-  groups.
 * Make the "debugnan" attribute work again -- when turned on, code will
   be inserted avert every op to be sure that no NaN or Inf values are
   generated, and also verify that shader inputs (globals) don't have NaN
   or Inf values passed in by the renderer.  A similar facility existed a
   long time ago, but we lost that functionality when we switched from
   the interpreter to LLVM.
+* Looks for release versions of LLVM-2.9 (allows using a Macports LLVM 
+  installation).
 
 
 Release 0.5.4 - Jul 21, 2011

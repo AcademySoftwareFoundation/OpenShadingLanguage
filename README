@@ -201,27 +201,22 @@ for building the OSL source code.
 Current state of the project and road map
 -----------------------------------------
 
-At Sony Pictures Imageworks, OSL has been integrated into our renderer
-and pipeline, the Shading department has recoded nearly all the facility
-shaders in OSL, and we have two major visual effects films in progress
-using OSL excludsively.  (Details to be announced later.)  Benchmarks
-are consistently showing OSL shaders outperforming the old C shaders
-that they replaced.
+At Sony Pictures Imageworks, we are exclusively using OSL in our
+proprietary renderer, "Arnold."  Multiple major visual effects films as
+well as feature animation are in production now.  Our shader-writing
+team works entirely in OSL, all productions use OSL, and we've even
+removed all the code from the renderer that allows people to write the
+old-style "C" shaders.  At the time we removed the old shader facility,
+the OSL shaders were consistently outperforming their equivalent old
+compiled C shaders in the old system.
 
 What's missing?  Here are a number of things that we wish had been
 included in the first public release of the code but are not ready yet,
-we promise that we are working on them and within a few weeks they will
-no longer be issues:
+we promise that we are working on them:
 
 * More documentation, in particular the "Integration Guide" that
   documents all the public APIs of the OSL libraries that you use when
   integrating into a renderer.
-
-* Currently an application executing shaders with liboslexec needs to
-  access a few data structures and APIs that ought to be hidden.  Expect
-  a minor overhaul of the public ShadingSystem APIs so that invoking
-  shaders from an application is easier, cleaner, and needs less access
-  to the internal details of the library.
 
 * The 'testshade' program runs shaders on an unwrapped flat rectangular
   array of points, and does not have any good way to test whether lights
@@ -274,13 +269,20 @@ OSL home page at SPI:    http://opensource.imageworks.com/?p=osl
 OSL GitHub page:
      https://github.com/imageworks/OpenShadingLanguage
 
-OSL project page at Google Code: 
-     http://code.google.com/p/openshadinglanguage
-
 Read or subscribe to the OSL development mail list:  
      http://groups.google.com/group/osl-dev
 
 Email the lead architect:  lg AT imageworks DOT com
+
+Most recent PDF of the OSL language specification:
+    https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
+
+Sony Pictures Imageworks main open source page:  
+     http://opensource.imageworks.com
+
+If you want to contribute code back to the project, you'll need to
+sign a Contributor License Agreement, here:
+     http://opensource.imageworks.com/cla/
 
 
 

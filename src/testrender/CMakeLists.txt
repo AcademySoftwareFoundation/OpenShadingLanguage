@@ -1,0 +1,5 @@
+SET ( testrender_srcs testrender.cpp simplerend.cpp )
+ADD_EXECUTABLE ( testrender ${testrender_srcs} )
+LINK_ILMBASE ( testrender )
+TARGET_LINK_LIBRARIES ( testrender oslexec oslcomp oslquery ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+INSTALL ( TARGETS testrender RUNTIME DESTINATION bin )

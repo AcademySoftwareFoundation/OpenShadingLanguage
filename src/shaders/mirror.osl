@@ -1,0 +1,5 @@
+surface
+mirror()
+{
+	Ci = reflection(N);
+}

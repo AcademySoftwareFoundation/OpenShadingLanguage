@@ -1,0 +1,54 @@
+float fBm()
+{
+	int oct = 5;
+	float freq = 0.1;
+	float lacunarity = 5.0;
+	float gain = 0.5;
+	float sum = 0.0, amp = 1.0;
+	point p = P*freq;
+
+	int i;
+	for(i = 0; i < oct; i += 1) {
+		sum += amp * snoise(p);
+		p *= lacunarity;
+		amp *= gain;
+	}
+
+	return sum;
+}
+
+surface
+cornell_wall()
+{
+	color Cs;
+
+	if(backfacing()) {
+		Ng = -Ng;
+		N = -N;
+	}
+
+	if(N[0] > 0.5) {
+		// left
+		Ci = color(0.75, 0.25, 0.25)*diffuse(N);
+	}
+	else if(N[0] < -0.5) {
+		// right
+		Ci = color(0.25, 0.25, 0.75)*diffuse(N);
+	}
+	else if(N[1] > 0.5) {
+		// bottom
+		Ci = max(color(0.25, 0.75, 0.25)*fBm(), color(0.2, 0.2, 0.2))*diffuse(N);
+	}
+	else if(N[2] < -0.5) {
+		// back
+		Ci = color(0.0, 0.0, 0.0)*diffuse(N);
+	}
+	else if(N[2] > 0.5) {
+		// front
+		float t = smoothstep(0.5, 0.6, noise(P*0.1));
+		Ci = color(0.75, 0.75, 0.75)*((1.0-t)*diffuse(N) + t*reflection(N));
+	}
+	else {
+		Ci = color(0.75, 0.75, 0.75)*diffuse(N);
+	}
+}

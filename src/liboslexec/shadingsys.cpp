@@ -190,11 +190,10 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_empty_instances = 0;
     m_stat_empty_groups = 0;
     m_stat_regexes = 0;
-    m_layers_executed_uncond = 0;
-    m_layers_executed_lazy = 0;
-    m_layers_executed_never = 0;
-    m_stat_total_syms = 0;
-    m_stat_syms_with_derivs = 0;
+    m_stat_preopt_syms = 0;
+    m_stat_postopt_syms = 0;
+    m_stat_preopt_ops = 0;
+    m_stat_postopt_ops = 0;
     m_stat_optimization_time = 0;
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
@@ -385,9 +384,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:empty_groups", int, m_stat_empty_groups);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
     ATTR_DECODE ("stat:regexes", int, m_stat_regexes);
-    ATTR_DECODE ("stat:total_syms", int, m_stat_total_syms);
-    ATTR_DECODE ("stat:syms_with_derivs", int, m_stat_syms_with_derivs);
-
+    ATTR_DECODE ("stat:preopt_syms", int, m_stat_preopt_syms);
+    ATTR_DECODE ("stat:postopt_syms", int, m_stat_postopt_syms);
+    ATTR_DECODE ("stat:preopt_ops", int, m_stat_preopt_ops);
+    ATTR_DECODE ("stat:postopt_ops", int, m_stat_postopt_ops);
     ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
     ATTR_DECODE ("stat:opt_locking_time", float, m_stat_opt_locking_time);
     ATTR_DECODE ("stat:specialization_time", float, m_stat_specialization_time);
@@ -549,6 +549,7 @@ ShadingSystemImpl::getstats (int level) const
         << Strutil::format ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
 
+#if 0
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
                           m_layers_executed_never;
     out << Strutil::format ("  Total layers run: %10lld\n", totalexec);
@@ -565,7 +566,9 @@ ShadingSystemImpl::getstats (int level) const
 
     out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
-                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
+                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1)); 
+#endif
+
     out << "  Compiled " << m_stat_groups_compiled << " groups, "
         << m_stat_instances_compiled << " instances\n";
     out << "  After optimization, " << m_stat_empty_instances 
@@ -574,6 +577,14 @@ ShadingSystemImpl::getstats (int level) const
         << "%)\n";
     out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
         << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
+    out << Strutil::format ("  Optimized %llu ops to %llu (%.1f%%)\n",
+                            (long long)m_stat_preopt_ops,
+                            (long long)m_stat_postopt_ops,
+                            100.0*(double(m_stat_postopt_ops)/double(m_stat_preopt_ops)-1.0));
+    out << Strutil::format ("  Optimized %llu symbols to %llu (%.1f%%)\n",
+                            (long long)m_stat_preopt_syms,
+                            (long long)m_stat_postopt_syms,
+                            100.0*(double(m_stat_postopt_syms)/double(m_stat_preopt_syms)-1.0));
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "

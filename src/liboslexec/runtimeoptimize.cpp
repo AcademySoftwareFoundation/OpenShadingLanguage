@@ -3477,6 +3477,10 @@ RuntimeOptimizer::optimize_group ()
         ss.m_stat_mem_inst_syms -= symmem;
         ss.m_stat_mem_inst -= symmem;
         ss.m_stat_memory -= symmem;
+        ss.m_stat_preopt_syms += old_nsyms;
+        ss.m_stat_preopt_ops += old_nops;
+        ss.m_stat_postopt_syms += new_nsyms;
+        ss.m_stat_postopt_ops += new_nops;
     }
 
     m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",

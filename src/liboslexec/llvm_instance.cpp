@@ -4973,7 +4973,7 @@ RuntimeOptimizer::build_llvm_group ()
     // N.B. Destroying the EE should have destroyed the module as well.
     m_llvm_module = NULL;
 
-    m_stat_llvm_jit_time += timer();
+    m_stat_llvm_jit_time += timer.lap();
 }
 
 

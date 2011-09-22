@@ -795,11 +795,10 @@ private:
     atomic_int m_stat_empty_instances;    ///< Stat: shaders empty after opt
     atomic_int m_stat_empty_groups;       ///< Stat: groups empty after opt
     atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
-    atomic_ll m_layers_executed_uncond;   ///< Stat: Unconditional execs
-    atomic_ll m_layers_executed_lazy;     ///< Stat: On-demand execs
-    atomic_ll m_layers_executed_never;    ///< Stat: Layers never executed
-    atomic_int m_stat_total_syms;         ///< Stat: total syms in all insts
-    atomic_int m_stat_syms_with_derivs;   ///< Stat: syms with derivatives
+    atomic_int m_stat_preopt_syms;        ///< Stat: pre-optimization symbols
+    atomic_int m_stat_postopt_syms;       ///< Stat: post-optimization symbols
+    atomic_int m_stat_preopt_ops;         ///< Stat: pre-optimization ops
+    atomic_int m_stat_postopt_ops;        ///< Stat: post-optimization ops
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   runtime specialization time

@@ -188,6 +188,7 @@ public:
     void sourceline (int line) { m_sourceline = line; }
 
     void error (const char *format, ...);
+    void warning (const char *format, ...);
 
     bool is_lvalue () const { return m_is_lvalue; }
 

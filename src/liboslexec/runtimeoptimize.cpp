@@ -92,6 +92,7 @@ RuntimeOptimizer::set_inst (int newlayer)
     m_all_consts.clear ();
     m_symbol_aliases.clear ();
     m_block_aliases.clear ();
+    m_param_aliases.clear ();
 }
 
 
@@ -2108,45 +2109,73 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
 {
     for (int i = inst()->firstparam();  i < inst()->lastparam();  ++i) {
         Symbol *s (inst()->symbol(i));
-        if (// it's a paramter that can't change with the geom
-            s->symtype() == SymTypeParam && s->lockgeom() &&
-            // and it's NOT a default val that needs to run init ops
-            !(s->valuesource() == Symbol::DefaultVal && s->has_init_ops()) &&
-            // and it not a structure or closure variable...
-            !s->typespec().is_structure() && !s->typespec().is_closure_based())
-        {
-            // We can turn it into a constant if there's no connection,
-            // OR if the connection is itself a constant
+        if (s->symtype() != SymTypeParam)
+            continue;  // Skip non-params
+                       // FIXME - clever things we can do for OutputParams?
+        if (! s->lockgeom())
+            continue;  // Don't mess with params that can change with the geom
+        if (s->typespec().is_structure() || s->typespec().is_closure_based())
+            continue;  // We don't mess with struct placeholders or closures
 
-            if (s->valuesource() == Symbol::ConnectedVal) {
-                // It's connected to an earlier layer.  But see if the
-                // output var of the upstream shader is effectively constant.
-                BOOST_FOREACH (Connection &c, inst()->connections()) {
-                    if (c.dst.param == i) {
-                        Symbol *srcsym = group[c.srclayer]->symbol(c.src.param);
-                        if (!srcsym->everused() &&
-                            (srcsym->valuesource() == Symbol::DefaultVal ||
-                             srcsym->valuesource() == Symbol::InstanceVal) &&
-                            !srcsym->has_init_ops()) {
-                                make_symbol_room (1);
-                                s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
-                                int cind = add_constant (s->typespec(), srcsym->data());
-                                // Alias this symbol to the new const
-                                global_alias (i, cind);
-                                make_param_use_instanceval (s);
-                                replace_param_value (s, srcsym->data());
-                                break;
-                        }
+        if (s->valuesource() == Symbol::InstanceVal ||
+            (s->valuesource() == Symbol::DefaultVal && !s->has_init_ops())) {
+            // Instance value or a plain default value (no init ops) --
+            // turn it into a constant
+            make_symbol_room (1);
+            s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
+            int cind = add_constant (s->typespec(), s->data());
+            global_alias (i, cind); // Alias this symbol to the new const
+        } else if (s->valuesource() == Symbol::DefaultVal && s->has_init_ops()) {
+            // Default val comes from init ops -- special cases?  Yes,
+            // if it's a simple assignment from a global whose value is
+            // not reassigned later, we can just alias it, and if we're
+            // lucky that may eliminate all uses of the parameter.
+            if (s->initbegin() == s->initend()-1) {  // just one op
+                Opcode &op (inst()->ops()[s->initbegin()]);
+                if (op.opname() == u_assign) {
+                    // The default value has init ops, but they consist of
+                    // just a single assignment op...
+                    Symbol *src = inst()->argsymbol(op.firstarg()+1);
+                    // Is it assigning a global, or a parameter that's
+                    // got a default or instance value and isn't on the geom,
+                    // and its value is never changed and the types match?
+                    if ((src->symtype() == SymTypeGlobal ||
+                         src->symtype() == SymTypeConst ||
+                         (src->symtype() == SymTypeParam && src->lockgeom() &&
+                          (src->valuesource() == Symbol::DefaultVal ||
+                           src->valuesource() == Symbol::InstanceVal)))
+                        && !src->everwritten()
+                        && equivalent(src->typespec(), s->typespec())) {
+                        // Great, so let's remember the alias.  We can't
+                        // call global_alias() here, because we're still in
+                        // init ops, that'll screw us up.  So we just record
+                        // it in m_param_aliases and then we'll establish
+                        // the global aliases when we hit the main code.
+                        m_param_aliases[i] = inst()->arg(op.firstarg()+1);
                     }
                 }
-            } else {
-                // Not a connected value -- make a new const using the
-                // param's instance values
-                make_symbol_room (1);
-                s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
-                int cind = add_constant (s->typespec(), s->data());
-                // Alias this symbol to the new const
-                global_alias (i, cind);
+            }
+        } else if (s->valuesource() == Symbol::ConnectedVal) {
+            // It's connected to an earlier layer.  If the output var of
+            // the upstream shader is effectively constant, then so is
+            // this variable.
+            BOOST_FOREACH (Connection &c, inst()->connections()) {
+                if (c.dst.param == i) {
+                    Symbol *srcsym = group[c.srclayer]->symbol(c.src.param);
+                    if (!srcsym->everused() &&
+                        (srcsym->valuesource() == Symbol::DefaultVal ||
+                         srcsym->valuesource() == Symbol::InstanceVal) &&
+                        !srcsym->has_init_ops()) {
+                        make_symbol_room (1);
+                        s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
+                        int cind = add_constant (s->typespec(), srcsym->data());
+                        // Alias this symbol to the new const
+                        global_alias (i, cind);
+                        make_param_use_instanceval (s);
+                        replace_param_value (s, srcsym->data());
+                        break;
+                    }
+                }
             }
         }
     }
@@ -2442,7 +2471,7 @@ RuntimeOptimizer::useless_op_elision (Opcode &op)
 
 
 int
-RuntimeOptimizer::dealias_symbol (int symindex)
+RuntimeOptimizer::dealias_symbol (int symindex, int opnum)
 {
     do {
         int i = block_alias (symindex);
@@ -2457,6 +2486,14 @@ RuntimeOptimizer::dealias_symbol (int symindex)
             // permanent alias for the sym
             symindex = found->second;
             continue;
+        }
+        if (opnum >= inst()->maincodebegin()) {
+            // Only check parameter aliases for main code
+            found = m_param_aliases.find (symindex);
+            if (found != m_param_aliases.end()) {
+                symindex = found->second;
+                continue;
+            }
         }
     } while (0);
     return symindex;
@@ -2681,8 +2718,12 @@ RuntimeOptimizer::optimize_instance ()
             // Find the farthest this instruction jumps to (-1 for ops
             // that don't jump) so we can mark conditional regions.
             int jumpend = op.farthest_jump();
-            for (int i = (int)opnum+1;  i < jumpend;  ++i)
+            for (int i = (int)opnum+1;  i < jumpend;  ++i) {
+                // I think this is unneeded, because of the earlier call
+                // to find_conditionals.
+                ASSERT (m_in_conditional[i] == true);
                 m_in_conditional[i] = true;
+            }
 
             // If we've just moved to a new basic block, clear the aliases
             if (lastblock != m_bblockids[opnum]) {
@@ -2690,12 +2731,16 @@ RuntimeOptimizer::optimize_instance ()
                 lastblock = m_bblockids[opnum];
             }
 
+            // Nothing below here to do for no-ops, take early out.
+            if (op.opname() == u_nop)
+                continue;
+
             // De-alias the readable args to the op and figure out if
             // there are any constants involved.
             for (int i = 0, e = op.nargs();  i < e;  ++i) {
                 if (! op.argwrite(i)) { // Don't de-alias args that are written
                     int argindex = op.firstarg() + i;
-                    int argsymindex = dealias_symbol (inst()->arg(argindex));
+                    int argsymindex = dealias_symbol (inst()->arg(argindex), opnum);
                     inst()->args()[argindex] = argsymindex;
                 }
             }
@@ -2740,8 +2785,7 @@ RuntimeOptimizer::optimize_instance ()
             // N.B. This is a regular "if", not an "else if", because we
             // definitely want to catch any 'assign' statements that
             // were put in by the constant folding routines above.
-            if (m_shadingsys.optimize() >= 2 && op.opname() == u_assign/* &&
-                                                                                   inst()->argsymbol(op.firstarg()+1)->is_constant()*/) {
+            if (m_shadingsys.optimize() >= 2 && op.opname() == u_assign) {
                 Symbol *R (inst()->argsymbol(op.firstarg()+0));
                 Symbol *A (inst()->argsymbol(op.firstarg()+1));
                 bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||

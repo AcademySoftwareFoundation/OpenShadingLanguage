@@ -142,7 +142,7 @@ public:
     /// Return the index of the symbol ultimately de-aliases to (it may be
     /// itself, if it doesn't alias to anything else).  Local block aliases
     /// are considered higher precedent than global aliases.
-    int dealias_symbol (int symindex);
+    int dealias_symbol (int symindex, int opnum=-1);
 
     /// Return the index of the symbol that 'symindex' aliases to, locally,
     /// or -1 if it has no block-local alias.
@@ -645,6 +645,7 @@ private:
     int m_next_newconst;              ///< Unique ID for next new const we add
     std::map<int,int> m_symbol_aliases; ///< Global symbol aliases
     std::vector<int> m_block_aliases;   ///< Local block aliases
+    std::map<int,int> m_param_aliases;  ///< Params aliasing to params/globals
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op

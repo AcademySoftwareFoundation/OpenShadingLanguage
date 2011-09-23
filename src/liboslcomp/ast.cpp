@@ -30,6 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 
+#include <boost/filesystem.hpp>
+
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
 #include "ast.h"
@@ -124,6 +126,18 @@ ASTNode::error (const char *format, ...)
     std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
     va_end (ap);
     m_compiler->error (sourcefile(), sourceline(), "%s", errmsg.c_str());
+}
+
+
+
+void
+ASTNode::warning (const char *format, ...)
+{
+    va_list ap;
+    va_start (ap, format);
+    std::string errmsg = format ? Strutil::vformat (format, ap) : "unknown warning";
+    va_end (ap);
+    m_compiler->warning (sourcefile(), sourceline(), "%s", errmsg.c_str());
 }
 
 
@@ -307,8 +321,18 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
     if (f) {
-        error ("\"%s\" already declared in this scope", name.c_str());
-        // FIXME -- print the file and line of the other definition
+        std::string e = Strutil::format ("\"%s\" already declared in this scope", name.c_str());
+        if (f->node()) {
+            boost::filesystem::path p(f->node()->sourcefile().string());
+            e += Strutil::format ("\n\t\tprevious declaration was at %s:%d",
+                                  p.filename().c_str(), f->node()->sourceline());
+        }
+        if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
+            // special case: only a warning for param to mask global function
+            warning ("%s", e.c_str());
+        } else {
+            error ("%s", e.c_str());
+        }
     }
     if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
         error ("\"%s\" : sorry, can't start with three underscores",

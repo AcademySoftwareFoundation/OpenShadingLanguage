@@ -171,7 +171,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
       m_lockgeom_default (false), m_strict_messages(true),
-      m_range_checking(true),
+      m_range_checking(true), m_unknown_coordsys_error(true),
       m_optimize (1),
       m_llvm_debug(false),
       m_commonspace_synonym("world"),
@@ -333,6 +333,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_range_checking = *(const int *)val;
         return true;
     }
+    if (name == "unknown_coordsys_error" && type == TypeDesc::INT) {
+        m_unknown_coordsys_error = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -377,6 +381,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
+    ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
     ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);

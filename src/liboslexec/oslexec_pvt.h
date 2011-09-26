@@ -683,6 +683,7 @@ public:
     bool lockgeom_default () const { return m_lockgeom_default; }
     bool strict_messages() const { return m_strict_messages; }
     bool range_checking() const { return m_range_checking; }
+    bool unknown_coordsys_error() const { return m_unknown_coordsys_error; }
     int optimize () const { return m_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
 
@@ -769,6 +770,7 @@ private:
     bool m_lockgeom_default;              ///< Default value of lockgeom
     bool m_strict_messages;               ///< Strict checking of message passing usage?
     bool m_range_checking;                ///< Range check arrays & components?
+    bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     int m_optimize;                       ///< Runtime optimization level
     int m_llvm_debug;                     ///< More LLVM debugging output
     std::string m_searchpath;             ///< Shader search path

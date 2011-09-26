@@ -174,6 +174,10 @@ static ustring op_xor("xor");
 ///
 typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
 
+// Forward decl
+LLVMGEN (llvm_gen_generic);
+
+
 
 #define NOISE_IMPL(name)                        \
     "osl_" #name "_ff",  "ff",                  \
@@ -378,10 +382,6 @@ static const char *llvm_helper_function_table[] = {
     "osl_get_from_to_matrix", "iXXss",
     "osl_transpose_mm", "xXX",
     "osl_determinant_fm", "fX",
-
-    "osl_prepend_point_from", "xXXs",
-    "osl_prepend_vector_from", "xXXs",
-    "osl_prepend_normal_from", "xXXs",
 
     "osl_dot_fvv", "fXX",
     "osl_dot_dfdvdv", "xXXX",
@@ -2495,7 +2495,52 @@ LLVMGEN (llvm_gen_aassign)
 
 
 
-// Construct triple (point, vector, normal, color)
+// Construct color, optionally with a color transformation from a named
+// color space.
+LLVMGEN (llvm_gen_construct_color)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    bool using_space = (op.nargs() == 5);
+    Symbol& Space = *rop.opargsym (op, 1);
+    Symbol& X = *rop.opargsym (op, 1+using_space);
+    Symbol& Y = *rop.opargsym (op, 2+using_space);
+    Symbol& Z = *rop.opargsym (op, 3+using_space);
+    ASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
+            Y.typespec().is_float() && Z.typespec().is_float() &&
+            (using_space == false || Space.typespec().is_string()));
+
+    // First, copy the floats into the vector
+    int dmax = Result.has_derivs() ? 3 : 1;
+    for (int d = 0;  d < dmax;  ++d) {  // loop over derivs
+        for (int c = 0;  c < 3;  ++c) {  // loop over components
+            const Symbol& comp = *rop.opargsym (op, c+1+using_space);
+            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat);
+            rop.llvm_store_value (val, Result, d, NULL, c);
+        }
+    }
+
+    // Do the color space conversion in-place, if called for
+    if (using_space) {
+        llvm::Value *args[3];
+        args[0] = rop.sg_void_ptr ();  // shader globals
+        args[1] = rop.llvm_void_ptr (Result, 0);  // color
+        args[2] = rop.llvm_load_value (Space); // from
+        rop.llvm_call_function ("osl_prepend_color_from", args, 3);
+        // FIXME(deriv): Punt on derivs for color ctrs with space names.
+        // We should try to do this right, but we never had it right for
+        // the interpreter, to it's probably not an emergency.
+        if (Result.has_derivs())
+            rop.llvm_zero_derivs (Result);
+    }
+
+    return true;
+}
+
+
+
+// Construct spatial triple (point, vector, normal), optionally with a
+// transformation from a named coordinate system.
 LLVMGEN (llvm_gen_construct_triple)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -2509,42 +2554,47 @@ LLVMGEN (llvm_gen_construct_triple)
             Y.typespec().is_float() && Z.typespec().is_float() &&
             (using_space == false || Space.typespec().is_string()));
 
-    for (int d = 0;  d < 3;  ++d) {  // loop over derivs
-        // First, copy the floats into the vector
+    // First, copy the floats into the vector
+    int dmax = Result.has_derivs() ? 3 : 1;
+    for (int d = 0;  d < dmax;  ++d) {  // loop over derivs
         for (int c = 0;  c < 3;  ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym (op, c+1+using_space);
             llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat);
             rop.llvm_store_value (val, Result, d, NULL, c);
         }
-        // Do the transformation in-place, if called for
-        if (using_space) {
-            llvm::Value *args[3];
-            args[0] = rop.sg_void_ptr ();  // shader globals
-            args[1] = rop.llvm_void_ptr (Result, d);  // vector
-            args[2] = rop.llvm_load_value (Space); // from
-            if (op.opname() == op_color) {
-                if (d == 0)
-                    rop.llvm_call_function ("osl_prepend_color_from", args, 3);
-            } else if (op.opname() == op_vector || d > 0) {
-                // NB. treat derivs of points and normals as vecs
-                rop.llvm_call_function ("osl_prepend_vector_from", args, 3);
-            }
-            else if (op.opname() == op_point)
-                rop.llvm_call_function ("osl_prepend_point_from", args, 3);
-            else if (op.opname() == op_normal)
-                rop.llvm_call_function ("osl_prepend_normal_from", args, 3);
-            else
-                ASSERT(0 && "unsupported color ctr with color space name");
-        }
-        if (! Result.has_derivs())
-            break;    // don't bother if Result doesn't have derivs
     }
 
-    // FIXME: Punt on derivs for color ctrs with space names.  We should 
-    // try to do this right, but we never had it right for the interpreter,
-    // to it's probably not an emergency.
-    if (using_space && op.opname() == op_color && Result.has_derivs())
-        rop.llvm_zero_derivs (Result);
+    // Do the transformation in-place, if called for
+    if (using_space) {
+        ustring from, to;  // N.B. initialize to empty strings
+        if (Space.is_constant()) {
+            from = *(ustring *)Space.data();
+            if (from == Strings::common ||
+                from == rop.shadingsys().commonspace_synonym())
+                return true;  // no transformation necessary
+        }
+        TypeDesc::VECSEMANTICS vectype = TypeDesc::POINT;
+        if (op.opname() == "vector")
+            vectype = TypeDesc::VECTOR;
+        else if (op.opname() == "normal")
+            vectype = TypeDesc::NORMAL;
+        llvm::Value *args[8] = { rop.sg_void_ptr(),
+            rop.llvm_void_ptr(Result), rop.llvm_constant(Result.has_derivs()),
+            rop.llvm_void_ptr(Result), rop.llvm_constant(Result.has_derivs()),
+            rop.llvm_load_value(Space), rop.llvm_constant(Strings::common),
+            rop.llvm_constant((int)vectype) };
+        RendererServices *rend (rop.shadingsys().renderer());
+        if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+            // renderer potentially knows about a nonlinear transformation.
+            // Note that for the case of non-constant strings, passing empty
+            // from & to will make transform_points just tell us if ANY 
+            // nonlinear transformations potentially are supported.
+            rop.llvm_call_function ("osl_transform_triple_nonlinear", args, 8);
+        } else {
+            // definitely not a nonlinear transformation
+            rop.llvm_call_function ("osl_transform_triple", args, 8);
+        }
+    }
 
     return true;
 }
@@ -2624,6 +2674,68 @@ LLVMGEN (llvm_gen_getmatrix)
     llvm::Value *result = rop.llvm_call_function ("osl_get_from_to_matrix", args, 4);
     rop.llvm_store_value (result, Result);
     rop.llvm_zero_derivs (M);
+    return true;
+}
+
+
+
+// transform{,v,n} (string tospace, triple p)
+// transform{,v,n} (string fromspace, string tospace, triple p)
+// transform{,v,n} (matrix, triple p)
+LLVMGEN (llvm_gen_transform)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    Symbol *Result = rop.opargsym (op, 0);
+    Symbol *From = (nargs == 3) ? NULL : rop.opargsym (op, 1);
+    Symbol *To = rop.opargsym (op, (nargs == 3) ? 1 : 2);
+    Symbol *P = rop.opargsym (op, (nargs == 3) ? 2 : 3);
+
+    if (To->typespec().is_matrix()) {
+        // llvm_ops has the matrix version already implemented
+        llvm_gen_generic (rop, opnum);
+        return true;
+    }
+
+    // Named space versions from here on out.
+    ustring from, to;  // N.B.: initialize to empty strings
+    if ((From == NULL || From->is_constant()) && To->is_constant()) {
+        // We can know all the space names at this time
+        from = From ? *((ustring *)From->data()) : Strings::common;
+        to = *((ustring *)To->data());
+        ustring syn = rop.shadingsys().commonspace_synonym();
+        if (from == syn)
+            from = Strings::common;
+        if (to == syn)
+            to = Strings::common;
+        if (from == to) {
+            // An identity transformation, just copy
+            if (Result != P) // don't bother in-place copy
+                llvm_assign_impl (rop, *Result, *P);
+            return true;
+        }
+    }
+    TypeDesc::VECSEMANTICS vectype = TypeDesc::POINT;
+    if (op.opname() == "transformv")
+        vectype = TypeDesc::VECTOR;
+    else if (op.opname() == "transformn")
+        vectype = TypeDesc::NORMAL;
+    llvm::Value *args[8] = { rop.sg_void_ptr(),
+        rop.llvm_void_ptr(*P), rop.llvm_constant(P->has_derivs()),
+        rop.llvm_void_ptr(*Result), rop.llvm_constant(Result->has_derivs()),
+        rop.llvm_load_value(*From), rop.llvm_load_value(*To),
+        rop.llvm_constant((int)vectype) };
+    RendererServices *rend (rop.shadingsys().renderer());
+    if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+        // renderer potentially knows about a nonlinear transformation.
+        // Note that for the case of non-constant strings, passing empty
+        // from & to will make transform_points just tell us if ANY 
+        // nonlinear transformations potentially are supported.
+        rop.llvm_call_function ("osl_transform_triple_nonlinear", args, 8);
+    } else {
+        // definitely not a nonlinear transformation
+        rop.llvm_call_function ("osl_transform_triple", args, 8);
+    }
     return true;
 }
 
@@ -3670,7 +3782,7 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
         args.push_back (llvm_constant (sym.name()));
         args.push_back (llvm_constant (sym.typespec().simpletype()));
         args.push_back (llvm_constant ((int) sym.has_derivs()));
-        args.push_back (llvm_void_ptr (llvm_get_pointer (sym)));
+        args.push_back (llvm_void_ptr (sym));
         llvm_call_function ("osl_bind_interpolated_param",
                             &args[0], args.size());                            
     }
@@ -3758,7 +3870,7 @@ LLVMGEN (llvm_gen_getmessage)
         args[3] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN,
                                               Data.typespec().arraylength()));
         // We need a void ** here so the function can modify the closure
-        args[4] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
+        args[4] = rop.llvm_void_ptr(Data);
     } else {
         args[3] = rop.llvm_constant (Data.typespec().simpletype());
         args[4] = rop.llvm_void_ptr (Data);
@@ -3793,7 +3905,7 @@ LLVMGEN (llvm_gen_setmessage)
         args[2] = rop.llvm_constant (TypeDesc(TypeDesc::UNKNOWN,
                                               Data.typespec().arraylength()));
         // We need a void ** here so the function can modify the closure
-        args[3] = rop.llvm_ptr_cast(rop.llvm_get_pointer(Data), rop.llvm_type_void_ptr());
+        args[3] = rop.llvm_void_ptr(Data);
     } else {
         args[2] = rop.llvm_constant (Data.typespec().simpletype());
         args[3] = rop.llvm_void_ptr (Data);
@@ -4316,7 +4428,7 @@ LLVMGEN (llvm_gen_dict_value)
     // arg 3: encoded type of Value
     args[3] = rop.llvm_constant(Value.typespec().simpletype());
     // arg 4: pointer to Value
-    args[4] = rop.llvm_void_ptr (rop.llvm_get_pointer (Value));
+    args[4] = rop.llvm_void_ptr (Value);
     llvm::Value *ret = rop.llvm_call_function ("osl_dict_value", &args[0], 5);
     rop.llvm_store_value (ret, Result);
     return true;
@@ -4429,7 +4541,7 @@ initialize_llvm_generator_table ()
     INIT2 (cellnoise, llvm_gen_generic);
     INIT (clamp);
     INIT (closure);
-    INIT2 (color, llvm_gen_construct_triple);
+    INIT2 (color, llvm_gen_construct_color);
     INIT (compassign);
     INIT2 (compl, llvm_gen_unary_op);
     INIT (compref);
@@ -4540,9 +4652,9 @@ initialize_llvm_generator_table ()
     INIT (texture);
     INIT (texture3d);
     INIT (trace);
-    INIT2 (transform,  llvm_gen_generic);
-    INIT2 (transformn, llvm_gen_generic);
-    INIT2 (transformv, llvm_gen_generic);
+    INIT2 (transform,  llvm_gen_transform);
+    INIT2 (transformn, llvm_gen_transform);
+    INIT2 (transformv, llvm_gen_transform);
     INIT2 (transpose, llvm_gen_generic);
     INIT2 (trunc, llvm_gen_generic);
     INIT (useparam);

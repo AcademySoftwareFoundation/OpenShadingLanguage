@@ -57,15 +57,16 @@ namespace Spline {
 // if 'is_dual' == false, then OUTTYPE == INTYPE
 
 // This functor will extract a T or a Dual2<T> type from a VaryingRef array
-template <class OUTTYPE, class INTYPE, bool is_dual> struct extractValueFromArray
+template <class OUTTYPE, class INTYPE, bool is_dual>
+struct extractValueFromArray
 {
-    OUTTYPE operator()(INTYPE *value, int array_length, int idx);
+    OUTTYPE operator()(const INTYPE *value, int array_length, int idx);
 };
 
 template <class OUTTYPE, class INTYPE>
 struct extractValueFromArray<OUTTYPE, INTYPE, true> 
 {
-    OUTTYPE operator()(INTYPE *value, int array_length, int idx)
+    OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
     {
         return OUTTYPE( value[idx + 0*array_length], 
                         value[idx + 1*array_length],
@@ -76,7 +77,7 @@ struct extractValueFromArray<OUTTYPE, INTYPE, true>
 template <class OUTTYPE, class INTYPE>
 struct extractValueFromArray<OUTTYPE, INTYPE, false> 
 {
-    OUTTYPE operator()(INTYPE *value, int array_length, int idx)
+    OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
     {
         return OUTTYPE( value[idx] );
     }
@@ -113,14 +114,14 @@ struct SplineBasis {
 
 const SplineBasis *getSplineBasis(const ustring &basis_name);
 
-template <class ATYPE, class BTYPE, class CTYPE, class DTYPE, bool knot_derivs >
+template <class RTYPE, class XTYPE, class CTYPE, class KTYPE, bool knot_derivs >
 void spline_evaluate(const SplineBasis *spline, 
-                     ATYPE &result, 
-                     BTYPE &xval, 
-                     DTYPE *knots,
+                     RTYPE &result, 
+                     XTYPE &xval, 
+                     const KTYPE *knots,
                      int knot_count)
 {
-    BTYPE x = Clamp(xval, BTYPE(0.0f), BTYPE(1.0f));
+    XTYPE x = Clamp(xval, XTYPE(0.0), XTYPE(1.0));
     int nsegs = ((knot_count - 4) / spline->basis_step) + 1;
     x = x*(float)nsegs;
     float seg_x = removeDerivatives(x);
@@ -134,7 +135,7 @@ void spline_evaluate(const SplineBasis *spline,
 
     // create a functor so we can cleanly(!) extract
     // the knot elements
-    extractValueFromArray<CTYPE, DTYPE, knot_derivs> myExtract;
+    extractValueFromArray<CTYPE, KTYPE, knot_derivs> myExtract;
     CTYPE P[4];
     for (int k = 0; k < 4; k++) {
         P[k] = myExtract(knots, len, s + k);
@@ -148,7 +149,7 @@ void spline_evaluate(const SplineBasis *spline,
                 spline->basis[k][3] * P[3];
     }
 
-    ATYPE tresult;
+    RTYPE tresult;
     // The following is what we want, but this gives me template errors
     // which I'm too lazy to decipher:
     //    tresult = ((tk[0]*x + tk[1])*x + tk[2])*x + tk[3];
@@ -156,6 +157,52 @@ void spline_evaluate(const SplineBasis *spline,
     tresult = (tresult * x + tk[2]);
     tresult = (tresult * x + tk[3]);
     assignment(result, tresult);
+}
+
+
+
+// Spline functor for use with the inverse function
+template <class RTYPE, class XTYPE>
+struct SplineFunctor {
+    SplineFunctor (const SplineBasis *spline, const float *knots,
+                   int knot_count)
+        : spline(spline), knots(knots), knot_count(knot_count) { }
+
+    RTYPE operator() (XTYPE x) {
+        RTYPE v;
+        spline_evaluate<RTYPE,XTYPE,float,float,false> (spline, v, x, knots, knot_count);
+        return v;
+    }
+private:
+    const SplineBasis *spline;
+    const float *knots;
+    int knot_count;
+};
+
+
+
+// Evaluate the inverse of a spline, i.e., solve for the x for which
+// spline_evaluate(x) == y.
+template <class YTYPE>
+void spline_inverse (const SplineBasis *spline,
+                     YTYPE &x, YTYPE y, const float *knots, int knot_count)
+{
+    SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count);
+    // Because of the nature of spline interpolation, monotonic knots
+    // can still lead to a non-monotonic curve.  To deal with this,
+    // search separately on each spline segment and hope for the best.
+    int nsegs = (knot_count - 4) / spline->basis_step + 1;
+    float nseginv = 1.0f / nsegs;
+    YTYPE r0 = 0.0;
+    x = 0;
+    for (int s = 0;  s < nsegs;  ++s) {  // Search each interval
+        YTYPE r1 = nseginv * (s+1);
+        bool brack;
+        x = OIIO::invert (S, y, r0, r1, 32, YTYPE(1.0e-6), &brack);
+        if (brack)
+            return;
+        r0 = r1;  // Start of next interval is end of this one
+    }
 }
 
 

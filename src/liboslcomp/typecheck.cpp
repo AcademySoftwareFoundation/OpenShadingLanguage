@@ -1030,11 +1030,6 @@ ASTfunction_call::typecheck (TypeSpec expected)
 
 
 
-// FIXME -- should the type constructors be here?
-// FIXME -- spline, inversespline -- hard case!
-// FIXME -- regex, substr
-// FIXME -- light and shadow
-
 // Key:
 //    x - void (only used for first char to indicate void return type)
 //    i - int
@@ -1109,6 +1104,7 @@ static const char * builtin_func_args [] = {
     "sincos", "xfff", "xccc", "xppp", "xvvv", "xnnn", "!rw", NULL,
     "snoise", NOISE_ARGS, NULL,
     "spline", "fsff[]", "csfc[]", "psfp[]", "vsfv[]", "nsfn[]", "fsfif[]", "csfic[]", "psfip[]", "vsfiv[]", "nsfin[]", NULL,
+    "splineinverse", "fsff[]", "fsfif[]", NULL,
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,

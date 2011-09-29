@@ -1,3 +1,18 @@
+Release 0.6.2 - Sept 29, 2011
+-----------------------------
+* Statistics overhaul -- added optimization stats, eliminated unused ones.
+* Allow a shader parameter to mask a global built-in function with
+  only a warning, and improve scope conflict errors by pointing out the
+  file and line of the previous definition.
+* Altered the RendererServices API to add transform_points() method, which
+  allows renderers to support nonlinear transformations (i.e., those that
+  are not expressible as a 4x4 matrix).
+* Issue a renderer error when unknown coordinate system names are used
+  (can be turned of by setting the new ShadingSystem attribute 
+  "unknown_coordsys_error" to false).
+* New OSL built-in function: splineinverse().
+
+
 Release 0.6.1 - Sept 20, 2011
 -----------------------------
 * Be more aggressive in freeing shader instance memory that's no longer

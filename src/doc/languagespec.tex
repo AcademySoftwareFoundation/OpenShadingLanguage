@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 10 May, 2011 \\
-(with corrections, 9 September, 2011)
+(with corrections, 29 September, 2011)
 }}
 
 
@@ -2742,7 +2742,6 @@ Convert degrees to radians or radians to degrees.
 Computes the cosine, sine, or tangent of $x$ (measured in radians).
 \apiend
 
-\NEW
 \apiitem{void {\ce sincos} (\emph {type} x, output \emph{type} sinval, output
 \emph{type} cosval)}
 \indexapi{sincos()}
@@ -3366,27 +3365,29 @@ ignore the first and last data value, interpolating piecewise-linearly
 between $y_1$ and $y_{n-2}$.
 \apiend
 
+\NEW
 \apiitem{float {\ce splineinverse} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
 float {\ce splineinverse} (string basis, float v, float y[]) \\
 float {\ce splineinverse} (string basis, float v, int nknots, float y[])}
 \indexapi{splineinverse()}
 
-Computes the \emph{inverse} of the {\cf spline()} function --- i.e., returns
-the value $x$ for which {\cf spline (basis, x, y...)} would return value
+Computes the \emph{inverse} of the {\cf spline()} function, i.e., returns
+the value $x$ for which \\
+   \spc {\cf spline (basis, x, y...)}\\ 
+would return value
 $v$.  Results are undefined if the knots do not specifiy a monotonic
 (only increasing or only decreasing) set of values.
 
 Note that the combination of {\cf spline} and {\cf splineinverse} makes
 it possible to compute a full spline-with-nonuniform-abscissae:
 \begin{smallcode}
-    \emph{type} spline (string basis, float x, int nknots, float abscissa[], \emph{type} value[]) {
-        float v = splineinverse (basis, x, nknots, abscissa);
-        return spline (basis, v, nknots, value);
-    }
+    float v = splineinverse (basis, x, nknots, abscissa);
+    result = spline (basis, v, nknots, value);
 \end{smallcode}
 \apiend
 
 
+\newpage
 \section{Derivatives and area operators}
 \label{sec:stdlib:derivs}
 \index{derivative functions}
@@ -3404,6 +3405,7 @@ $\partial a / \partial y$.  Depending on the renderer
 implementation, those directions may be aligned to the image plane,
 on the surface of the object, or something else.
 
+\NEW
 The {\cf Dz()} function is only meaningful for volumetric shading, and
 is expected to return {\cf 0} in other contexts.  It is also possible
 that particular OSL implementations may only return ``correct'' {\cf Dz}

@@ -293,6 +293,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud_search", "iXsXfiXXii*",
     "osl_pointcloud_get", "iXsXisLX",
+    "osl_blackbody_vf", "xXXf",
+    "osl_wavelength_color_vf", "xXXf",
 
 #ifdef OSL_LLVM_NO_BITCODE
     "osl_assert_nonnull", "xXs",
@@ -4466,6 +4468,31 @@ LLVMGEN (llvm_gen_raytype)
 
 
 
+// color blackbody (float temperatureK)
+// color wavelength_color (float wavelength_nm)  // same function signature
+LLVMGEN (llvm_gen_blackbody)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 2);
+    Symbol &Result (*rop.opargsym (op, 0));
+    Symbol &Temperature (*rop.opargsym (op, 1));
+    ASSERT (Result.typespec().is_triple() && Temperature.typespec().is_float());
+
+    llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
+                             rop.llvm_load_value(Temperature) };
+    rop.llvm_call_function (Strutil::format("osl_%s_vf",op.opname().c_str()).c_str(), args, 3);
+
+    // Punt, zero out derivs.
+    // FIXME -- only of some day, someone truly needs blackbody() to
+    // correctly return derivs with spatially-varying temperature.
+    if (Result.has_derivs())
+        rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_functioncall)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -4539,6 +4566,7 @@ initialize_llvm_generator_table ()
     INIT2 (backfacing, llvm_gen_get_simple_SG_field);
     INIT2 (bitand, llvm_gen_bitwise_binary_op);
     INIT2 (bitor, llvm_gen_bitwise_binary_op);
+    INIT (blackbody);
     INIT2 (break, llvm_gen_loopmod_op);
     INIT (calculatenormal);
     INIT2 (ceil, llvm_gen_generic);
@@ -4665,6 +4693,7 @@ initialize_llvm_generator_table ()
     INIT (useparam);
     INIT2 (vector, llvm_gen_construct_triple);
     INIT2 (warning, llvm_gen_printf);
+    INIT2 (wavelength_color, llvm_gen_blackbody);
     INIT2 (while, llvm_gen_loop_op);
     INIT2 (xor, llvm_gen_bitwise_binary_op);
 

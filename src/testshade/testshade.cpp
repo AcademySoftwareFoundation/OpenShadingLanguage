@@ -159,8 +159,8 @@ getargs (int argc, const char *argv[])
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
-                "-od %s", &dataformatname, "Set the output data format to one of:\n"
-                        "\t\t\t\tuint8, half, float",
+                "-od %s", &dataformatname, "Set the output data format to one of: "
+                        "uint8, half, float",
                 "--layer %s", &layername, "Set next layer name",
                 "--fparam %L %L",
                         &fparams, &fparams,

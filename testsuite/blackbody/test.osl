@@ -1,0 +1,10 @@
+shader test (output color Cout = 0)
+{
+    float T = 10000.0*u;    // map u range from 0K to 10,000K
+    Cout = blackbody (T) / 10000.0;  // scale so we can see it
+
+    if (v > 0.5) {
+        // bottom half: just show color temperature with constant luminance
+        Cout *= 0.7/luminance(Cout);
+    }
+}

@@ -83,6 +83,7 @@ typedef float Float;
 /// classes have most of the obvious constructors and overloaded
 /// operators one would expect from a C++ vector/matrix/color class.
 typedef Imath::Vec3<Float>     Vec3;
+typedef Imath::Matrix33<Float> Matrix33;
 typedef Imath::Matrix44<Float> Matrix44;
 typedef Imath::Color3<Float>   Color3;
 

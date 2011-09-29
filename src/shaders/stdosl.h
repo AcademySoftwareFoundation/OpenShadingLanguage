@@ -225,7 +225,8 @@ float transformu (string fromunits, string tounits, float x) BUILTIN;
 float luminance (color c) {
     return dot ((vector)c, vector(0.2126, 0.7152, 0.0722));
 }
-
+color blackbody (float temperatureK) BUILTIN;
+color wavelength_color (float wavelength_nm) BUILTIN;
 
 
 color transformc (string to, color x)

@@ -50,7 +50,7 @@ public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
 
-    SimpleRenderer () { }
+    SimpleRenderer ();
     ~SimpleRenderer () { }
 
     virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
@@ -59,6 +59,7 @@ public:
 
     virtual bool get_matrix (Matrix44 &result, TransformationPtr xform);
     virtual bool get_matrix (Matrix44 &result, ustring from);
+    virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
 
     void name_transform (const char *name, const Transformation &xform);
 
@@ -79,10 +80,19 @@ public:
                                 ustring attr_name, TypeDesc attr_type,
                                 void *out_data);
 
+    // Super simple camera and display parameters.  Many options not
+    // available, no motion blur, etc.
+    void camera_params (const Matrix44 &world_to_camera, ustring projection,
+                        float hfov, float hither, float yon,
+                        int xres, int yres);
+                        
 private:
     typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;
     TransformMap m_named_xforms;
-
+    Matrix44 m_world_to_camera;
+    ustring m_projection;
+    float m_fov, m_hither, m_yon;
+    int m_xres, m_yres;
 };
 
 

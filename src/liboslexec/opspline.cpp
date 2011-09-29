@@ -43,6 +43,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 
+#include <OpenImageIO/fmath.h>
+
 #include "oslexec_pvt.h"
 #include "oslops.h"
 #include "dual_vec.h"
@@ -180,4 +182,39 @@ OSL_SHADEOP void  osl_spline_dvdfdv(void *out, const char *spline_, void *x,
    Spline::spline_evaluate<Dual2<Vec3>, Dual2<float>, Dual2<Vec3>, Vec3, true>
       (spline, DVEC(out), DFLOAT(x), knots, knot_count);
 }
+
+
+
+OSL_SHADEOP void osl_splineinverse_fff(void *out, const char *spline_, void *x, 
+                                       float *knots, int knot_count)
+{
+    // Version with no derivs
+    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+    Spline::spline_inverse<float> (spline, *(float *)out, *(float *)x, knots, knot_count);
+}
+
+OSL_SHADEOP void osl_splineinverse_dfdff(void *out, const char *spline_, void *x, 
+                                         float *knots, int knot_count)
+{
+    // x has derivs, so return derivs as well
+    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+    Spline::spline_inverse<Dual2<float> > (spline, DFLOAT(out), DFLOAT(x), knots, knot_count);
+}
+
+OSL_SHADEOP void osl_splineinverse_dfdfdf(void *out, const char *spline_, void *x, 
+                                          float *knots, int knot_count)
+{
+    // Ignore knot derivatives
+    osl_splineinverse_dfdff (out, spline_, x, knots, knot_count);
+}
+
+OSL_SHADEOP void osl_splineinverse_dffdf(void *out, const char *spline_, void *x, 
+                                         float *knots, int knot_count)
+{
+    // Ignore knot derivs
+    float outtmp = 0;
+    osl_splineinverse_fff (&outtmp, spline_, x, knots, knot_count);
+    DFLOAT(out) = outtmp;
+}
+
 

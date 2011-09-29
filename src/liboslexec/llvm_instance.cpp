@@ -285,6 +285,10 @@ static const char *llvm_helper_function_table[] = {
     "osl_spline_dvdfdv", "xXXXXi",
     "osl_spline_dvdfv", "xXXXXi",
     "osl_spline_dvfdv", "xXXXXi",
+    "osl_splineinverse_fff", "xXXXXi",
+    "osl_splineinverse_dfdfdf", "xXXXXi",
+    "osl_splineinverse_dfdff", "xXXXXi",
+    "osl_splineinverse_dffdf", "xXXXXi",
     "osl_setmessage", "xXsLXisi",
     "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud_search", "iXsXfiXXii*",
@@ -4011,7 +4015,7 @@ LLVMGEN (llvm_gen_spline)
              Knots.typespec().is_array() &&  
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
-    std::string name = "osl_spline_";
+    std::string name = Strutil::format("osl_%s_", op.opname().c_str());
     std::vector<llvm::Value *> args;
     // only use derivatives for result if:
     //   result has derivs and (value || knots) have derivs
@@ -4640,6 +4644,7 @@ initialize_llvm_generator_table ()
     INIT2 (smoothstep, llvm_gen_generic);
     INIT2 (snoise, llvm_gen_generic);
     INIT (spline);
+    INIT2 (splineinverse, llvm_gen_spline);
     INIT2 (sqrt, llvm_gen_generic);
     INIT2 (startswith, llvm_gen_generic);
     INIT2 (step, llvm_gen_generic);

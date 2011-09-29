@@ -1,0 +1,50 @@
+Compiled test.osl -> test.oso
+u = 0.166667  (derivs 0.333333 0)
+splineinverse("linear", 0.166667) = 0.583333  (derivs 0.416667 0)
+spline("linear",0.583333) = 0.166667   (derivs 0.333333 0)
+  spline("linear",0) = 0
+  spline("linear",1) = 1
+
+splineinverse("catmull-rom", 0.166667) = 0.636126  (derivs 0.485242 0)
+spline("catmull-rom",0.636126) = 0.166667   (derivs 0.333333 0)
+  spline("catmull-rom",0) = 0
+  spline("catmull-rom",1) = 1
+
+splineinverse("bspline", 0.166667) = 0.569314  (derivs 0.462879 0)
+spline("bspline",0.569314) = 0.166667   (derivs 0.333333 0)
+  spline("bspline",0) = 0.00833333
+  spline("bspline",1) = 0.883333
+
+u = 0.5  (derivs 0.333333 0)
+splineinverse("linear", 0.5) = 0.821429  (derivs 0.119048 0)
+spline("linear",0.821429) = 0.5   (derivs 0.333333 0)
+  spline("linear",0) = 0
+  spline("linear",1) = 1
+
+splineinverse("catmull-rom", 0.5) = 0.826469  (derivs 0.103961 0)
+spline("catmull-rom",0.826469) = 0.5   (derivs 0.333333 0)
+  spline("catmull-rom",0) = 0
+  spline("catmull-rom",1) = 1
+
+splineinverse("bspline", 0.5) = 0.808612  (derivs 0.155984 0)
+spline("bspline",0.808612) = 0.5   (derivs 0.333333 0)
+  spline("bspline",0) = 0.00833333
+  spline("bspline",1) = 0.883333
+
+u = 0.833333  (derivs 0.333333 0)
+splineinverse("linear", 0.833333) = 0.940476  (derivs 0.119048 0)
+spline("linear",0.940476) = 0.833333   (derivs 0.333333 0)
+  spline("linear",0) = 0
+  spline("linear",1) = 1
+
+splineinverse("catmull-rom", 0.833333) = 0.927532  (derivs 0.111185 0)
+spline("catmull-rom",0.927532) = 0.833333   (derivs 0.333333 0)
+  spline("catmull-rom",0) = 0
+  spline("catmull-rom",1) = 1
+
+splineinverse("bspline", 0.833333) = 0.968067  (derivs 0.193972 0)
+spline("bspline",0.968067) = 0.833333   (derivs 0.333333 0)
+  spline("bspline",0) = 0.00833333
+  spline("bspline",1) = 0.883333
+
+

@@ -57,13 +57,13 @@ schlick_fresnel(float cosNO, float R0) {
 float computeG_Smith(const Vec3 &N, Vec3 &H, const Vec3 &omega_out, float cosNI, float cosNO)
 {
     float cosNH = N.dot(H);
-    float cosHO = fabs(omega_out.dot(H));
+    float cosHO = fabsf(omega_out.dot(H));
 
     float cosNHdivHO = cosNH/cosHO;
     cosNHdivHO = std::max(cosNHdivHO, 0.00001f);
 
-    float fac1 = 2.f * fabs(cosNHdivHO * cosNO);
-    float fac2 = 2.f * fabs(cosNHdivHO * cosNI);
+    float fac1 = 2.f * fabsf(cosNHdivHO * cosNO);
+    float fac2 = 2.f * fabsf(cosNHdivHO * cosNI);
 
     return std::min(1.f, std::min(fac1, fac2));
 }
@@ -240,7 +240,7 @@ bool ray_circle(Point2 p1, Point2 p2, Point2 sc, float r, float *mu1, float *mu2
     //   intersecting it at one point (we don't care about this case)
     // if it's greater than zero the line intersects at two points.
     bb4ac = b * b - 4 * a * c;
-    if (fabs(a) < EPSILON || bb4ac <= 0.f) {
+    if (fabsf(a) < EPSILON || bb4ac <= 0.f) {
         *mu1 = 0;
         *mu2 = 0;
         return false;
@@ -519,7 +519,7 @@ float compute_AC(Point2 *rect, bool OUTSIDE)
     // Note: there aren't really 5 intersections, here.  This case of 4 intersections is just set to 5.
     //
     if(i == 5){
-        area = seg_area(theta[0]) + fabs(t_area(P0, P1, P2));
+        area = seg_area(theta[0]) + fabsf(t_area(P0, P1, P2));
         return area;
     }
 

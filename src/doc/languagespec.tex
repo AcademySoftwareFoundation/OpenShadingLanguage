@@ -3366,18 +3366,25 @@ ignore the first and last data value, interpolating piecewise-linearly
 between $y_1$ and $y_{n-2}$.
 \apiend
 
-\begin{comment}
-\apiitem{float {\ce inversespline} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
-float {\ce inversespline} (string basis, float v, float y[]) \\
-float {\ce inversespline} (string basis, float v, int nknots, float y[])}
-\indexapi{inversespline()}
+\apiitem{float {\ce splineinverse} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
+float {\ce splineinverse} (string basis, float v, float y[]) \\
+float {\ce splineinverse} (string basis, float v, int nknots, float y[])}
+\indexapi{splineinverse()}
 
 Computes the \emph{inverse} of the {\cf spline()} function --- i.e., returns
 the value $x$ for which {\cf spline (basis, x, y...)} would return value
 $v$.  Results are undefined if the knots do not specifiy a monotonic
-(only increasing or only decreasing) spline.
+(only increasing or only decreasing) set of values.
+
+Note that the combination of {\cf spline} and {\cf splineinverse} makes
+it possible to compute a full spline-with-nonuniform-abscissae:
+\begin{smallcode}
+    \emph{type} spline (string basis, float x, int nknots, float abscissa[], \emph{type} value[]) {
+        float v = splineinverse (basis, x, nknots, abscissa);
+        return spline (basis, v, nknots, value);
+    }
+\end{smallcode}
 \apiend
-\end{comment}
 
 
 \section{Derivatives and area operators}

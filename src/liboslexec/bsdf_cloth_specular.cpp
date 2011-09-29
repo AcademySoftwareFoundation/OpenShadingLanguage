@@ -241,7 +241,7 @@ public:
 
                 // ellipse segment area
                 // apply per-thread type fresnel here
-                float AE = (fabs(det)*AC)/AR[m_thread_pattern[i]] * F[m_thread_pattern[i]];
+                float AE = (fabsf(det)*AC)/AR[m_thread_pattern[i]] * F[m_thread_pattern[i]];
 
                 //  grab the current single thread ellipse segment area in AE_st
                 //  - to be used in LERP with AE_f (for when feature scale is under Nyquist limit (hopefully))

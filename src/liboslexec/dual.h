@@ -241,6 +241,41 @@ inline Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
                      bvalinv * ( - aval_bval * b.dy()));
 }
 
+
+
+
+template<class T>
+inline bool operator< (const Dual2<T> &a, const Dual2<T> &b) {
+    return a.val() < b.val();
+}
+
+template<class T>
+inline bool operator< (const Dual2<T> &a, const T &b) {
+    return a.val() < b;
+}
+
+template<class T>
+inline bool operator> (const Dual2<T> &a, const Dual2<T> &b) {
+    return a.val() > b.val();
+}
+
+template<class T>
+inline bool operator> (const Dual2<T> &a, const T &b) {
+    return a.val() > b;
+}
+
+template<class T>
+inline bool operator<= (const Dual2<T> &a, const Dual2<T> &b) {
+    return a.val() <= b.val();
+}
+
+template<class T>
+inline bool operator>= (const Dual2<T> &a, const Dual2<T> &b) {
+    return a.val() >= b.val();
+}
+
+
+
 // f(x) = cos(x), f'(x) = -sin(x)
 template<class T>
 inline Dual2<T> cos (const Dual2<T> &a)
@@ -672,6 +707,15 @@ inline Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
    else 
       return y;
 }
+
+
+template<class T>
+inline Dual2<T> fabs (const Dual2<T> &x)
+{
+    return x.val() >= T(0) ? x : -x;
+}
+
+
 
 template<class T>
 inline Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &maxv)

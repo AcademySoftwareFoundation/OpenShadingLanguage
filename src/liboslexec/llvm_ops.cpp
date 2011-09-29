@@ -807,6 +807,7 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Matrix44 M;
     bool ok;
+    Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
     if (USTR(from) == Strings::common)
         ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
     else if (USTR(to) == Strings::common)
@@ -815,24 +816,33 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
         ok = osl_get_from_to_matrix (sg, &M, (const char *)from,
                                      (const char *)to);
     if (ok) {
-        if (vectype == TypeDesc::POINT)
-            osl_transform_vmv(Pout, &M, Pin);
-        else if (vectype == TypeDesc::VECTOR)
-            osl_transformv_vmv(Pout, &M, Pin);
-        else if (vectype == TypeDesc::NORMAL)
-            osl_transformn_vmv(Pout, &M, Pin);
-        else ASSERT(0);
-        if (Pout_derivs) {
-            if (Pin_derivs) {
-                osl_transformv_vmv((Vec3 *)Pout+1, &M, (Vec3 *)Pin+1);
-                osl_transformv_vmv((Vec3 *)Pout+2, &M, (Vec3 *)Pin+2);
-            } else {
-                ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
-                ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
-            }
+        if (vectype == TypeDesc::POINT) {
+            if (Pin_derivs)
+                osl_transform_dvmdv(Pout, &M, Pin);
+            else
+                osl_transform_vmv(Pout, &M, Pin);
+        } else if (vectype == TypeDesc::VECTOR) {
+            if (Pin_derivs)
+                osl_transformv_dvmdv(Pout, &M, Pin);
+            else
+                osl_transformv_vmv(Pout, &M, Pin);
+        } else if (vectype == TypeDesc::NORMAL) {
+            if (Pin_derivs)
+                osl_transformn_dvmdv(Pout, &M, Pin);
+            else
+                osl_transformn_vmv(Pout, &M, Pin);
         }
+        else ASSERT(0);
     } else {
         *(Vec3 *)Pout = *(Vec3 *)Pin;
+        if (Pin_derivs) {
+            ((Vec3 *)Pout)[1] = ((Vec3 *)Pin)[1];
+            ((Vec3 *)Pout)[2] = ((Vec3 *)Pin)[2];
+        }
+    }
+    if (Pout_derivs && !Pin_derivs) {
+        ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
+        ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
     }
     return ok;
 }

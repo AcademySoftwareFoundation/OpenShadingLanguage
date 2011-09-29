@@ -38,6 +38,32 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 
 
+SimpleRenderer::SimpleRenderer ()
+{
+    Matrix44 M;  M.makeIdentity();
+    camera_params (M, ustring("perspective"), 90.0f,
+                   0.1f, 1000.0f, 256, 256);
+}
+
+
+
+void
+SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
+                               ustring projection, float hfov,
+                               float hither, float yon,
+                               int xres, int yres)
+{
+    m_world_to_camera = world_to_camera;
+    m_projection = projection;
+    m_fov = hfov;
+    m_hither = hither;
+    m_yon = yon;
+    m_xres = xres;
+    m_yres = yres;
+}
+
+
+
 bool
 SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
                             float time)
@@ -83,6 +109,63 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
     TransformMap::const_iterator found = m_named_xforms.find (from);
     if (found != m_named_xforms.end()) {
         result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+
+bool
+SimpleRenderer::get_inverse_matrix (Matrix44 &result, ustring to, float time)
+{
+    static ustring u_camera("camera"), u_screen("screen");
+    static ustring u_NDC("NDC"), u_raster("raster");
+    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+        Matrix44 M = m_world_to_camera;
+        if (to == u_screen || to == u_NDC || to == u_raster) {
+            float depthrange = (double)m_yon-(double)m_hither;
+            static ustring u_perspective("perspective");
+            if (m_projection == u_perspective) {
+                float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
+                Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
+                                           0, 1/tanhalffov, 0, 0,
+                                           0, 0, m_yon/depthrange, 1,
+                                           0, 0, -m_yon*m_hither/depthrange, 0);
+                M = M * camera_to_screen;
+            } else {
+                Matrix44 camera_to_screen (1, 0, 0, 0,
+                                           0, 1, 0, 0,
+                                           0, 0, 1/depthrange, 0,
+                                           0, 0, -m_hither/depthrange, 1);
+                M = M * camera_to_screen;
+            }
+            if (to == u_NDC || to == u_raster) {
+                float screenleft = -1.0, screenwidth = 2.0;
+                float screenbottom = -1.0, screenheight = 2.0;
+                Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
+                                        0, 1/screenheight, 0, 0,
+                                        0, 0, 1, 0,
+                                        -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
+                M = M * screen_to_ndc;
+                if (to == u_raster) {
+                    Matrix44 ndc_to_raster (m_xres, 0, 0, 0,
+                                            0, m_yres, 0, 0,
+                                            0, 0, 1, 0,
+                                            0, 0, 0, 1);
+                    M = M * ndc_to_raster;
+                }
+            }
+        }
+        result = M;
+        return true;
+    }
+
+    TransformMap::const_iterator found = m_named_xforms.find (to);
+    if (found != m_named_xforms.end()) {
+        result = *(found->second);
+        result.invert();
         return true;
     } else {
         return false;

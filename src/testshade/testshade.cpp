@@ -216,6 +216,10 @@ static void
 setup_transformations (SimpleRenderer &rend, OSL::Matrix44 &Mshad,
                        OSL::Matrix44 &Mobj)
 {
+    Matrix44 M (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+    rend.camera_params (M, ustring("perspective"), 90.0f,
+                        0.1f, 1000.0f, xres, yres);
+
     // Make a "shader" space that is translated one unit in x and rotated
     // 45deg about the z axis.
     Mshad.makeIdentity ();

@@ -37,11 +37,16 @@ namespace OSL_NAMESPACE {
 
 namespace OSL {
 
+static ustring u_camera("camera"), u_screen("screen");
+static ustring u_NDC("NDC"), u_raster("raster");
+static ustring u_perspective("perspective");
+
+
 
 SimpleRenderer::SimpleRenderer ()
 {
     Matrix44 M;  M.makeIdentity();
-    camera_params (M, ustring("perspective"), 90.0f,
+    camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
 }
 
@@ -120,8 +125,6 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
 bool
 SimpleRenderer::get_inverse_matrix (Matrix44 &result, ustring to, float time)
 {
-    static ustring u_camera("camera"), u_screen("screen");
-    static ustring u_NDC("NDC"), u_raster("raster");
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
         Matrix44 M = m_world_to_camera;
         if (to == u_screen || to == u_NDC || to == u_raster) {

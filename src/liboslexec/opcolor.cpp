@@ -272,15 +272,36 @@ constrain_rgb (Color3 &rgb)
 
 
 
-inline void
+// Rescale rgb so its largest component is 1.0, and return the original
+// largest component.
+inline float
 norm_rgb (Color3 &rgb)
 {
     float greatest = std::max(rgb[0], std::max(rgb[1], rgb[2]));
-    if (greatest > 0)
+    if (greatest > 1.0e-12f)
         rgb *= 1.0f/greatest;
+    return greatest;
 }
 
 
+
+inline void clamp_zero (Color3 &c)
+{
+    if (c[0] < 0.0f)
+        c[0] = 0.0f;
+    if (c[1] < 0.0f)
+        c[1] = 0.0f;
+    if (c[2] < 0.0f)
+        c[2] = 0.0f;
+}
+
+
+
+inline Color3
+colpow (const Color3 &c, float p)
+{
+    return Color3 (powf(c[0],p), powf(c[1],p), powf(c[2],p));
+}
 
 
 };  // End anonymous namespace
@@ -320,6 +341,29 @@ static colorSystem colorSystems[] = {
 
 
 
+// In order to speed up the blackbody computation, we have a table
+// storing the precomputed BB values for a range of temperatures.  Less
+// than BB_DRAPER always returns 0.  Greater than BB_MAX_TABLE_RANGE
+// does the full computation, we think it'll be rare to inquire higher
+// temperatures.
+//
+// Since the bb function is so nonlinear, we actually space the table
+// entries nonlinearly, with the relationship between the table index i
+// and the temperature T as follows:
+//   i = ((T-Draper)/spacing)^(1/xpower)
+//   T = pow(i, xpower) * spacing + Draper
+// And furthermore, we store in the table the true value raised ^(1/5).
+// I tuned this a bit, and with the current values we can have all 
+// blackbody results accurate to within 0.1% with a table size of 317
+// (about 5 KB of data).
+#define BB_DRAPER 800.0f /* really 798K, below this visible BB is negligible */
+#define BB_MAX_TABLE_RANGE 12000.0f /* max temp for which we use the table */
+#define BB_TABLE_XPOWER 1.5f
+#define BB_TABLE_YPOWER 5.0f
+#define BB_TABLE_SPACING 2.0f
+
+
+
 bool
 ShadingSystemImpl::set_colorspace (ustring colorspace)
 {
@@ -351,11 +395,28 @@ ShadingSystemImpl::set_colorspace (ustring colorspace)
                                   r[1], g[1], b[1],
                                   r[2], g[2], b[2]);
             m_RGB2XYZ = m_XYZ2RGB.inverse();
+            m_luminance_scale = Color3 (m_RGB2XYZ[0][1], m_RGB2XYZ[1][1], m_RGB2XYZ[2][1]);
+
+            // Precompute a table of blackbody values
+            m_blackbody_table.clear ();
+            float lastT = 0;
+            for (int i = 0;  lastT <= BB_MAX_TABLE_RANGE;  ++i) {
+                float T = powf (float(i), BB_TABLE_XPOWER) * BB_TABLE_SPACING + BB_DRAPER;
+                lastT = T;
+                bb_spectrum spec (T);
+                Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
+                clamp_zero (rgb);
+                rgb = colpow (rgb, 1.0f/BB_TABLE_YPOWER);
+                m_blackbody_table.push_back (rgb);
+                // std::cout << "Table[" << i << "; T=" << T << "] = " << rgb << "\n";
+            }
+            // std::cout << "Made " << m_blackbody_table.size() << " table entries for blackbody\n";
 
 #if 0
-            // Sanity check
+            // Sanity checks
             std::cout << "m_XYZ2RGB = " << m_XYZ2RGB << "\n";
             std::cout << "m_RGB2XYZ = " << m_RGB2XYZ << "\n";
+            std::cout << "m_luminance_scale = " << m_luminance_scale << "\n";
 #endif
             return true;
         }
@@ -386,12 +447,31 @@ ShadingSystemImpl::to_rgb (ustring fromspace, float a, float b, float c)
 
 
 
+Color3
+ShadingSystemImpl::blackbody_rgb (float T)
+{
+    if (T < BB_DRAPER)
+        return Color3(0.0f,0.0f,0.0f);  
+    if (T < BB_MAX_TABLE_RANGE) {
+        float t = powf ((T - BB_DRAPER) / BB_TABLE_SPACING, 1.0f/BB_TABLE_XPOWER);
+        int ti = (int)t;
+        t -= ti;
+        Color3 rgb = lerp (m_blackbody_table[ti], m_blackbody_table[ti+1], t);
+        return colpow(rgb, BB_TABLE_YPOWER);
+    }
+    // Otherwise, compute for real
+    bb_spectrum spec (T);
+    Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
+    clamp_zero (rgb);
+    return rgb;
+}
+
+
+
 OSL_SHADEOP void osl_blackbody_vf (void *sg, void *out, float temp)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-    bb_spectrum spec (temp);
-    Color3 rgb = ctx->shadingsys().XYZ_to_RGB (spectrum_to_XYZ (spec));
-    *(Color3 *)out = rgb;
+    *(Color3 *)out = ctx->shadingsys().blackbody_rgb (temp);
 }
 
 
@@ -403,15 +483,26 @@ OSL_SHADEOP void osl_wavelength_color_vf (void *sg, void *out, float lambda)
 //    constrain_rgb (rgb);
     rgb *= 1.0/2.52;    // Empirical scale from lg to make all comps <= 1
 //    norm_rgb (rgb);
-#if 1
-    if (rgb[0] < 0.0f)
-        rgb[0] = 0.0f;
-    if (rgb[1] < 0.0f)
-        rgb[1] = 0.0f;
-    if (rgb[2] < 0.0f)
-        rgb[2] = 0.0f;
-#endif
+    clamp_zero (rgb);
     *(Color3 *)out = rgb;
+}
+
+
+
+OSL_SHADEOP void osl_luminance_fv (void *sg, void *out, void *c)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+    ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
+}
+
+
+
+OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+    ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
+    ((float *)out)[1] = ctx->shadingsys().luminance (((const Color3 *)c)[1]);
+    ((float *)out)[2] = ctx->shadingsys().luminance (((const Color3 *)c)[2]);
 }
 
 

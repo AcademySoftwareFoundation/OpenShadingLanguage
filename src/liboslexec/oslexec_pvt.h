@@ -718,9 +718,15 @@ public:
     Color3 RGB_to_XYZ (const Color3 &RGB) { return RGB * m_RGB2XYZ; }
     Color3 RGB_to_XYZ (float R, float G, float B) { return Color3(R,G,B) * m_RGB2XYZ; }
 
-    bool set_colorspace (ustring colorspace);
+    /// Return the luminance of an RGB color in the current color space.
+    float luminance (const Color3 &RGB) { return RGB.dot(m_luminance_scale); }
 
-    
+    /// Return the RGB in the current color space for blackbody radiation
+    /// at temperature T (in Kelvin).
+    Color3 blackbody_rgb (float T /*Kelvin*/);
+
+    /// Set the current color space.
+    bool set_colorspace (ustring colorspace);
 
     virtual int raytype_bit (ustring name);
 
@@ -795,6 +801,8 @@ private:
     Color3 m_White;                       ///< White point (xyY)
     Matrix33 m_XYZ2RGB;                   ///< XYZ to RGB conversion matrix
     Matrix33 m_RGB2XYZ;                   ///< RGB to XYZ conversion matrix
+    Color3 m_luminance_scale;             ///< Scaling for RGB->luma
+    std::vector<Color3> m_blackbody_table; ///< Precomputed blackbody table
 
     // State
     bool m_in_group;                      ///< Are we specifying a group?

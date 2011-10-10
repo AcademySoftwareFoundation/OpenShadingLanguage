@@ -295,6 +295,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_pointcloud_get", "iXsXisLX",
     "osl_blackbody_vf", "xXXf",
     "osl_wavelength_color_vf", "xXXf",
+    "osl_luminance_fv", "xXXX",
+    "osl_luminance_dfdv", "xXXX",
 
 #ifdef OSL_LLVM_NO_BITCODE
     "osl_assert_nonnull", "xXs",
@@ -4493,6 +4495,29 @@ LLVMGEN (llvm_gen_blackbody)
 
 
 
+// float luminance (color c)
+LLVMGEN (llvm_gen_luminance)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 2);
+    Symbol &Result (*rop.opargsym (op, 0));
+    Symbol &C (*rop.opargsym (op, 1));
+    ASSERT (Result.typespec().is_float() && C.typespec().is_triple());
+
+    bool deriv = C.has_derivs() && Result.has_derivs();
+    llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
+                             rop.llvm_void_ptr(C) };
+    rop.llvm_call_function (deriv ? "osl_luminance_dvdf" : "osl_luminance_fv",
+                            args, 3);
+
+    if (Result.has_derivs() && !C.has_derivs())
+        rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_functioncall)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -4631,7 +4656,7 @@ initialize_llvm_generator_table ()
     INIT2 (log2, llvm_gen_generic);
     INIT2 (logb, llvm_gen_generic);
     INIT2 (lt, llvm_gen_compare_op);
-    //stdosl.h   INIT (luminance);
+    INIT (luminance);
     INIT (matrix);
     INIT (mxcompassign);
     INIT (mxcompref);

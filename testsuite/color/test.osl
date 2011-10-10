@@ -49,8 +49,8 @@ test (color cparam = color (.1, .7, .2),
         printf ("  color (\"YIQ\", %g, %g, %g) = %g\n",
                 Y, I, Q, color("YIQ", Y,I,Q));
         float x = 0.25, y = 0.5, z = 0.25;
-        printf ("  color (\"xyz\", %g, %g, %g) = %g\n",
-                x, y, z, color("xyz",x,y,z));
+        printf ("  color (\"XYZ\", %g, %g, %g) = %g\n",
+                x, y, z, color("XYZ",x,y,z));
     }
 
     printf ("\n");

@@ -139,7 +139,8 @@ namespace Strings {
 ustring camera ("camera"), common ("common");
 ustring object ("object"), shader ("shader");
 ustring rgb ("rgb"), RGB ("RGB");
-ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ"), xyz ("xyz");
+ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ");
+ustring XYZ ("XYZ"), xyz ("xyz"), xyY("xyY");
 ustring null ("null"), default_("default");
 ustring label ("label");
 ustring sidedness ("sidedness"), front ("front"), back ("back"), both ("both");
@@ -175,6 +176,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_optimize (1),
       m_llvm_debug(false),
       m_commonspace_synonym("world"),
+      m_colorspace("Rec709"),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
@@ -236,6 +238,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     };
     const int nraytypes = sizeof(raytypes)/sizeof(raytypes[0]);
     attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
+
+    attribute ("colorspace", TypeDesc::STRING, &m_colorspace);
 
     SetupLLVM ();
 }
@@ -340,6 +344,14 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
     }
+    if (name == "colorspace" && type == TypeDesc::STRING) {
+        ustring c = ustring (*(const char **)val);
+        if (set_colorspace (m_colorspace))
+            m_colorspace = c;
+        else
+            error ("Unknown color space \"%s\"", c.c_str());
+        return true;
+    }
     if (name == "raytypes" && type.basetype == TypeDesc::STRING) {
         ASSERT (type.numelements() <= 32 &&
                 "ShaderGlobals.raytype is an int, max of 32 raytypes");
@@ -362,12 +374,14 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
         *(_ctype *)(val) = (_ctype)(_src);                              \
         return true;                                                    \
     }
+#define ATTR_DECODE_STRING(_name,_src)                                  \
+    if (name == _name && type == TypeDesc::STRING) {                    \
+        *(const char **)(val) = _src.c_str();                           \
+        return true;                                                    \
+    }
 
     lock_guard guard (m_mutex);  // Thread safety
-    if (name == "searchpath:shader" && type == TypeDesc::STRING) {
-        *(const char **)val = m_searchpath.c_str();
-        return true;
-    }
+    ATTR_DECODE_STRING ("searchpath:shader", m_searchpath);
     ATTR_DECODE ("statistics:level", int, m_statslevel);
     ATTR_DECODE ("debug", int, m_debug);
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
@@ -381,6 +395,8 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
+    ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
     ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);
@@ -427,6 +443,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     
     return false;
 #undef ATTR_DECODE
+#undef ATTR_DECODE_STRING
 }
 
 

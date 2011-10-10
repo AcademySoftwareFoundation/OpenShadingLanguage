@@ -1551,7 +1551,7 @@ your shader.   \\
 \hline 
 {\cf "YIQ"} & the color space used for the NTSC television standard. \\
 \hline 
-{\cf "xyz"} & CIE \emph{XYZ} coordinates. \\
+{\cf "XYZ"} & CIE \emph{XYZ} coordinates. \\
 \hline 
 {\cf "xyY"} & CIE \emph{xyY} coordinates. \\
 \hline 
@@ -3116,6 +3116,23 @@ named color space.  In other words,
 \indexapi{luminance()}
 Returns the linear luminance of the color \emph{rgb}, which is
 implemented per the ITU-R standard as $0.2126 R + 0.7152 G + 0.0722 B$.
+\apiend
+
+\NEW
+\apiitem{color {\ce blackbody} (float temperatureK)}
+\indexapi{blackbody()}
+
+The {\cf blackbody()} function returns the blackbody emission (the
+incandescent glow of warm bodies) expected from a material of the given
+temperature in Kelvin, in units of $W/m^2$.  These are the appropriate
+units to multiply by {\cf emission()} to have a physically-correct
+result.
+\apiend
+
+\apiitem{color {\ce wavelength_color} (float wavelength_nm)}
+\indexapi{wavelength_color()}
+Returns an RGB color corresponding as closely as possible to the
+perceived color of a pure spectral color of the given wavelength (in nm).
 \apiend
 
 \apiitem{color {\ce transformc} (string fromspace, string tospace, color Cfrom)\\

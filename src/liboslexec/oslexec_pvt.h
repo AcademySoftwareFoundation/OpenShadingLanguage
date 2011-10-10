@@ -711,6 +711,17 @@ public:
     ///
     Color3 to_rgb (ustring fromspace, float a, float b, float c);
 
+    /// Convert an XYZ color to RGB in our preferred color space.
+    Color3 XYZ_to_RGB (const Color3 &XYZ) { return XYZ * m_XYZ2RGB; }
+    Color3 XYZ_to_RGB (float X, float Y, float Z) { return Color3(X,Y,Z) * m_XYZ2RGB; }
+    /// Convert an RGB color in our preferred color space to XYZ.
+    Color3 RGB_to_XYZ (const Color3 &RGB) { return RGB * m_RGB2XYZ; }
+    Color3 RGB_to_XYZ (float R, float G, float B) { return Color3(R,G,B) * m_RGB2XYZ; }
+
+    bool set_colorspace (ustring colorspace);
+
+    
+
     virtual int raytype_bit (ustring name);
 
 private:
@@ -777,7 +788,15 @@ private:
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
+    ustring m_colorspace;                 ///< What RGB colors mean
 
+    // Derived/cached calculations from options:
+    Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
+    Color3 m_White;                       ///< White point (xyY)
+    Matrix33 m_XYZ2RGB;                   ///< XYZ to RGB conversion matrix
+    Matrix33 m_RGB2XYZ;                   ///< RGB to XYZ conversion matrix
+
+    // State
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values
@@ -1115,7 +1134,7 @@ private:
 
 namespace Strings {
     extern ustring camera, common, object, shader;
-    extern ustring rgb, RGB, hsv, hsl, YIQ, xyz;
+    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
     extern ustring null, default_;
     extern ustring label;
     extern ustring sidedness, front, back, both;

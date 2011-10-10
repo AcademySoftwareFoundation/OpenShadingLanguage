@@ -125,7 +125,7 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic array array-derivs array-range
-            blendmath breakcont bug-locallifetime
+            blackbody blendmath breakcont bug-locallifetime
             cellnoise closure color comparison
             component-range const-array-params debugnan
             derivs derivs-muldiv-clobber error-dupes exponential
@@ -141,7 +141,8 @@ TESTSUITE ( arithmetic array array-derivs array-range
             texture-alpha texture-blur texture-field3d
             texture-firstchannel texture-interp texture-simple
             texture-width texture-withderivs texture-wrap
-            transform transformc trig typecast vecctr vector xml )
+            transform transformc trig typecast vecctr vector
+            wavelength_color xml )
 
 
 

@@ -1,0 +1,5 @@
+shader test (output color Cout = 0)
+{
+    float lambda = 1000*u;
+    Cout = wavelength_color (lambda);
+}

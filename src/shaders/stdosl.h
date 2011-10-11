@@ -204,7 +204,6 @@ void fresnel (vector I, normal N, float eta,
     fresnel(I, N, eta, Kr, Kt, R, T);
 }
 
-point rotate (point q, float angle, point a, point b) BUILTIN;
 
 normal transform (matrix Mto, normal p) BUILTIN;
 vector transform (matrix Mto, vector p) BUILTIN;
@@ -218,6 +217,30 @@ point  transform (string to, point p)  { return transform("common",to,p); }
 
 float transformu (string tounits, float x) BUILTIN;
 float transformu (string fromunits, string tounits, float x) BUILTIN;
+
+point rotate (point p, float angle, point a, point b)
+{
+    vector axis = normalize (b - a);
+    float cosang, sinang;
+    sincos (angle, sinang, cosang);
+    float cosang1 = 1.0 - cosang;
+    float x = axis[0], y = axis[1], z = axis[2];
+    matrix M = matrix (x * x + (1.0 - x * x) * cosang,
+                       x * y * cosang1 + z * sinang,
+                       x * z * cosang1 - y * sinang,
+                       0.0,
+                       x * y * cosang1 - z * sinang,
+                       y * y + (1.0 - y * y) * cosang,
+                       y * z * cosang1 + x * sinang,
+                       0.0,
+                       x * z * cosang1 + y * sinang,
+                       y * z * cosang1 - x * sinang,
+                       z * z + (1.0 - z * z) * cosang,
+                       0.0,
+                       0.0, 0.0, 0.0, 1.0);
+    return transform (M, p-a) + a;
+}
+
 
 
 // Color functions

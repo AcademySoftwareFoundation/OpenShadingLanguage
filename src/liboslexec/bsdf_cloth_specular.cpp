@@ -32,7 +32,6 @@ OF THIS SOFTWARE, even IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathFun.h>
 
 #include "genclosure.h"
-#include "oslops.h"
 #include "oslexec_pvt.h"
 
 #include "bsdf_cloth_fncs.h"

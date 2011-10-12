@@ -36,11 +36,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstdarg>
 
-#include "oslops.h"
 #include "oslexec_pvt.h"
 
 #include <boost/regex.hpp>
-#include <OpenEXR/ImathFun.h>
 
 
 // Heavy lifting of OSL regex operations.

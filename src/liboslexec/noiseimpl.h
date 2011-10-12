@@ -28,8 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <limits>
 
+#include "dual.h"
 #include "oslexec_pvt.h"
-#include "oslops.h"
 
 #ifdef OSL_NAMESPACE
 namespace OSL_NAMESPACE {

@@ -38,10 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 
 #include "oslexec_pvt.h"
-#include "oslops.h"
 #include "runtimeoptimize.h"
 #include "../liboslcomp/oslcomp_pvt.h"
-
+#include "dual.h"
 #include "llvm_headers.h"
 using namespace OSL;
 using namespace OSL::pvt;

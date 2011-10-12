@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 
 #include "oslexec_pvt.h"
-#include "oslops.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -351,7 +350,11 @@ public:
         return llvm_store_value (new_val, sym, deriv, component);
     }
 
+    /// Given the OSL symbol, return the llvm::Value* corresponding to the
+    /// start of that symbol (first element, first component, and just the
+    /// plain value if it has derivatives).
     llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
+
     llvm::Value *getLLVMSymbolBase (const Symbol &sym);
 
     /// Generate the LLVM IR code to convert fval from a float to
@@ -362,9 +365,28 @@ public:
     /// and return the new value.
     llvm::Value *llvm_int_to_float (llvm::Value *ival);
 
+    /// Generate IR code for simple a/b, but considering OSL's semantics
+    /// that x/0 = 0, not inf.
+    llvm::Value *llvm_make_safe_div (TypeDesc type,
+                                     llvm::Value *a, llvm::Value *b);
+
+    /// Generate IR code for simple a mod b, but considering OSL's
+    /// semantics that x mod 0 = 0, not inf.
+    llvm::Value *llvm_make_safe_mod (TypeDesc type,
+                                     llvm::Value *a, llvm::Value *b);
+
+    /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
+    /// designates a particular array index to assign.
+    bool llvm_assign_impl (Symbol &Result, Symbol &Src, int arrayindex = -1);
+
+
     /// This will return an array(sometype) of the same size as the union
     /// of the given types according to the C standard
     const llvm::Type *llvm_type_union(const std::vector<const llvm::Type *> &types);
+
+    /// Convert the name of a global (and its derivative index) into the
+    /// field number of the ShaderGlobals struct.
+    int ShaderGlobalNameToIndex (ustring name);
 
     /// Return the LLVM type handle for the ShaderGlobals struct.
     ///

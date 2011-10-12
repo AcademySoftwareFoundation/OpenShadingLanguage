@@ -46,7 +46,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/fmath.h>
 
 #include "oslexec_pvt.h"
-#include "oslops.h"
 #include "dual_vec.h"
 #include "splineimpl.h"
 

@@ -37,7 +37,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslclosure.h"
 #include "genclosure.h"
 #include "oslexec_pvt.h"
-#include "oslops.h"
 
 
 

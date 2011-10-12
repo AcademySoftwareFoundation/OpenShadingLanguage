@@ -27,8 +27,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#include <OpenImageIO/fmath.h>
+#include <ostream>
 
+#include <OpenImageIO/fmath.h>
+#include "dual.h"
 #include "bsdf_cloth_fncs.h"
 
 #ifdef OSL_NAMESPACE

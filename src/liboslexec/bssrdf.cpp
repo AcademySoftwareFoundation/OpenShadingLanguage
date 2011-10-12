@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "genclosure.h"
-#include "oslops.h"
 #include "oslexec_pvt.h"
 
 #ifdef OSL_NAMESPACE

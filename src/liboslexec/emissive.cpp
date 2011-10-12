@@ -28,11 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include "oslexec_pvt.h"
 #include "genclosure.h"
-#include "oslops.h"
 #include "oslclosure.h"
 
-#include <cmath>
 
 
 #ifdef OSL_NAMESPACE

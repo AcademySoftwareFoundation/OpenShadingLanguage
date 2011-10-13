@@ -450,7 +450,7 @@ Color3
 ShadingSystemImpl::blackbody_rgb (float T)
 {
     if (T < BB_DRAPER)
-        return Color3(0.0f,0.0f,0.0f);  
+        return Color3(1.0e-6f,0.0f,0.0f);  // very very dim red
     if (T < BB_MAX_TABLE_RANGE) {
         float t = powf ((T - BB_DRAPER) / BB_TABLE_SPACING, 1.0f/BB_TABLE_XPOWER);
         int ti = (int)t;

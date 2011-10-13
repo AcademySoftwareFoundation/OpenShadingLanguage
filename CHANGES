@@ -1,3 +1,17 @@
+Release 1.0.0 - Oct 12, 2011
+----------------------------
+* Modified testshade (and the underlying SimpleRender class) to handle
+  several standard named coordinate systems such as "camera", "screen",
+  "NDC", "raster."
+* blackbody() and wavelength_color().
+* New ShadingSystem configuration attribute: "colorspace" lets you explain
+  to OSL what RGB really means (e.g., "Rec709", "sRGB", "NTSC", etc.).
+  The luminance(), blackbody(), wavelength_color, and conversion to/from
+  XYZ now takes this into account correctly.
+* rotate()  (always in spec, never implemented)
+
+
+
 Release 0.6.2 - Sept 29, 2011
 -----------------------------
 * Statistics overhaul -- added optimization stats, eliminated unused ones.

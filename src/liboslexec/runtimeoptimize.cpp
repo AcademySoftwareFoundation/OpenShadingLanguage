@@ -2780,10 +2780,6 @@ RuntimeOptimizer::optimize_instance ()
             }
 
             // Now we handle assignments.
-            //
-            // N.B. This is a regular "if", not an "else if", because we
-            // definitely want to catch any 'assign' statements that
-            // were put in by the constant folding routines above.
             if (m_shadingsys.optimize() >= 2 && op.opname() == u_assign) {
                 Symbol *R (inst()->argsymbol(op.firstarg()+0));
                 Symbol *A (inst()->argsymbol(op.firstarg()+1));

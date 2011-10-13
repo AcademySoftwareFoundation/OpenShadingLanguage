@@ -123,7 +123,11 @@ static int
 add_shader (int argc, const char *argv[])
 {
     shadingsys->attribute ("debug", (int)debug);
-    shadingsys->attribute ("optimize", O2 ? 2 : (O0 ? 0 : 1));
+    const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
+    if (opt_env)
+        shadingsys->attribute ("optimize", atoi(opt_env));
+    else
+        shadingsys->attribute ("optimize", O2 ? 2 : (O0 ? 0 : 1));
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debugnan", debugnan);
 

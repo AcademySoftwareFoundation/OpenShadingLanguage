@@ -3064,8 +3064,11 @@ RuntimeOptimizer::track_variable_dependencies ()
             if (op.argtakesderivs_all()) {
                 for (int a = 0;  a < op.nargs();  ++a)
                     if (op.argtakesderivs(a)) {
-                        // Careful -- not all globals can take derivs
                         Symbol &s (*opargsym (op, a));
+                        // Constants can't take derivs
+                        if (s.symtype() == SymTypeConst)
+                            continue;
+                        // Careful -- not all globals can take derivs
                         if (s.symtype() == SymTypeGlobal &&
                             ! (s.mangled() == Strings::P ||
                                s.mangled() == Strings::I ||

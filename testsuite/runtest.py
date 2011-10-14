@@ -50,7 +50,7 @@ def runtest (command, outputs, cleanfiles="", failureok=0,
                               + " " + out + " " + testfile)
             else :
                 # anything else, mainly text files
-                cmpcommand = "diff " + out + " " + testfile
+                cmpcommand = "diff " + out + " " + testfile + " > /dev/null"
 
             # print "cmpcommand = " + cmpcommand
             cmpresult = os.system (cmpcommand)

@@ -2780,10 +2780,6 @@ RuntimeOptimizer::optimize_instance ()
             }
 
             // Now we handle assignments.
-            //
-            // N.B. This is a regular "if", not an "else if", because we
-            // definitely want to catch any 'assign' statements that
-            // were put in by the constant folding routines above.
             if (m_shadingsys.optimize() >= 2 && op.opname() == u_assign) {
                 Symbol *R (inst()->argsymbol(op.firstarg()+0));
                 Symbol *A (inst()->argsymbol(op.firstarg()+1));
@@ -3068,8 +3064,11 @@ RuntimeOptimizer::track_variable_dependencies ()
             if (op.argtakesderivs_all()) {
                 for (int a = 0;  a < op.nargs();  ++a)
                     if (op.argtakesderivs(a)) {
-                        // Careful -- not all globals can take derivs
                         Symbol &s (*opargsym (op, a));
+                        // Constants can't take derivs
+                        if (s.symtype() == SymTypeConst)
+                            continue;
+                        // Careful -- not all globals can take derivs
                         if (s.symtype() == SymTypeGlobal &&
                             ! (s.mangled() == Strings::P ||
                                s.mangled() == Strings::I ||

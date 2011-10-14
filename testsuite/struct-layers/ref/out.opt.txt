@@ -4,12 +4,12 @@ Connect alayer.st_out.s to blayer.x.s
 Connect alayer.st_out.t to blayer.x.t
 Connect alayer.st_out to blayer.y
 Connect alayer.r to blayer.r
+b: x = 42, 1
+b: y = 42, 1
 a: st_in = 0, 1
 a: st_out = 42, 1
 a: r = 0.8 0.7 0.6, (0.6, 0.5, 0.4) * microfacet_ggx ((0, 0, 1), 0.5, 20)
 	+ (0.4, 0.5, 0.6) * phong ((0, 0, 1), 42)
-b: x = 42, 1
-b: y = 42, 1
 b: r = 0.8 0.7 0.6, (0.6, 0.5, 0.4) * microfacet_ggx ((0, 0, 1), 0.5, 20)
 	+ (0.4, 0.5, 0.6) * phong ((0, 0, 1), 42)
 

@@ -1,7 +1,10 @@
 shader b (float f_in = 41,
-          color c_in = 42
+          color c_in = 42,
+          float dummy = 0  // just to force a connection when opt is on
           )
 {
+    printf ("dummy = %g, force connection with optimization\n", dummy);
+
     // setup a message that a will try to read -> this should give us an error
     setmessage("wrong_direction_test", 3);
 

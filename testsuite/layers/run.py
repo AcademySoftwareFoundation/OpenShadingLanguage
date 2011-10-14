@@ -12,7 +12,7 @@ if len(sys.argv) > 2 :
 # A command to run
 command = path + "oslc/oslc a.osl > out.txt"
 command = command + "; " + path + "oslc/oslc b.osl >> out.txt"
-command = command + "; " + path + "testshade/testshade -g 2 2 -layer alayer a --layer blayer b --connect alayer f_out blayer f_in --connect alayer c_out blayer c_in >> out.txt"
+command = command + "; " + path + "testshade/testshade -layer alayer a --layer blayer b --connect alayer f_out blayer f_in --connect alayer c_out blayer c_in >> out.txt"
 
 # Outputs to check against references
 outputs = [ "out.txt" ]

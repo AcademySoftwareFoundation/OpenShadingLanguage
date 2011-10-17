@@ -2771,11 +2771,13 @@ RuntimeOptimizer::optimize_instance ()
                 // turn this op into an assignment.
                 changed += constfold_assign (*this, opnum);
 
-                if (A->is_constant() &&
-                        equivalent(R->typespec(), A->typespec())) {
+                if ((A->is_constant() || A->lastwrite() < opnum) &&
+                    equivalent(R->typespec(), A->typespec())) {
+                    // Safe to alias R to A for this block, if A is a
+                    // constant or if it's never written to again.
                     block_alias (inst()->arg(op.firstarg()),
                                      inst()->arg(op.firstarg()+1));
-//                  std::cerr << opnum << " aliasing " << R->mangled() " to "
+//                  std::cerr << opnum << " aliasing " << R->mangled() << " to "
 //                        << inst()->argsymbol(op.firstarg()+1)->mangled() << "\n";
                 }
 

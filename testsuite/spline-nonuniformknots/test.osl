@@ -1,0 +1,12 @@
+shader test (
+    output color Cout = 0
+    )
+{
+    float knots[5]     = { .2, .2, .5, 0.8, 0.8 };
+    color colors[5]    = { color (1,0,0), color (1,0,0), 
+                           color (0,1,0), color (0,0,1),
+                           color (0,0,1) };
+
+    float pos = splineinverse("linear", u, knots); 
+    Cout = spline ("linear", pos, colors);
+}

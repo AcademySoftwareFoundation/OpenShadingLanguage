@@ -187,6 +187,29 @@ template <class YTYPE>
 void spline_inverse (const SplineBasis *spline,
                      YTYPE &x, YTYPE y, const float *knots, int knot_count)
 {
+    // account for out-of-range inputs, just clamp to the values we have
+    bool increasing = knots[1] < knots[knot_count-2];
+    if (increasing) {
+        if (y < knots[1]) {
+            x = YTYPE(0);
+            return;
+        }
+        if (y > knots[knot_count-2]) {
+            x = YTYPE(1);
+            return;
+        }
+    } else {
+        if (y > knots[1]) {
+            x = YTYPE(0);
+            return;
+        }
+        if (y < knots[knot_count-2]) {
+            x = YTYPE(1);
+            return;
+        }
+    }
+
+
     SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count);
     // Because of the nature of spline interpolation, monotonic knots
     // can still lead to a non-monotonic curve.  To deal with this,

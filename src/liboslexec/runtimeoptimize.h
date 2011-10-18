@@ -175,6 +175,35 @@ public:
         m_symbol_aliases[symindex] = alias;
     }
 
+    /// Is the given symbol stale?  A "stale" symbol is one that, within
+    /// the current basic block, has been assigned in a simple manner
+    /// (by a single op with no other side effects), but not yet used.
+    /// The point is that if they are simply assigned again before being
+    /// used, that first assignment can be turned into a no-op.
+    bool sym_is_stale (int sym) {
+        return m_stale_syms.find(sym) != m_stale_syms.end();
+    }
+
+    /// Clear the stale symbol list -- we do this when entering a new
+    /// basic block.
+    void clear_stale_syms ();
+
+    /// Take a symbol out of the stale list -- we do this when a symbol
+    /// is used in any way.
+    void use_stale_sym (int sym);
+
+    /// Is the op a "simple" assignment (arg 0 completely overwritten,
+    /// no side effects or funny business)?
+    bool is_simple_assign (Opcode &op);
+
+    /// Called when symbol sym is "simply" assigned at the given op.  An
+    /// assignment is considered simple if it completely overwrites the
+    /// symbol in a single op and has no side effects.  When this
+    /// happens, we mark the symbol as "stale", meaning it's got a value
+    /// that hasn't been read yet.  If it's wholy assigned again before
+    /// it's read, we can go back and remove the earlier assignment.
+    void simple_sym_assign (int sym, int op);
+
     /// Replace R's instance value with new data.
     ///
     void replace_param_value (Symbol *R, const void *newdata);
@@ -677,6 +706,7 @@ private:
     std::map<int,int> m_symbol_aliases; ///< Global symbol aliases
     std::vector<int> m_block_aliases;   ///< Local block aliases
     std::map<int,int> m_param_aliases;  ///< Params aliasing to params/globals
+    std::map<int,int> m_stale_syms;     ///< Stale symbols for this block
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op

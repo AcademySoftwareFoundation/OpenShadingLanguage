@@ -123,7 +123,7 @@ struct OpDescriptor {
                             //     no side effects
     OpDescriptor () { }
     OpDescriptor (const char *n, OpLLVMGen ll, OpFolder f=NULL,
-                  bool simple=true)
+                  bool simple=false)
         : name(n), llvmgen(ll), folder(f), simple_assign(simple)
     {}
 };

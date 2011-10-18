@@ -51,6 +51,8 @@ static ustring u_nop    ("nop"),
                u_assign ("assign"),
                u_add    ("add"),
                u_sub    ("sub"),
+               u_mul    ("mul"),
+               u_div    ("div"),
                u_if     ("if"),
                u_return ("return"),
                u_useparam ("useparam"),
@@ -149,7 +151,7 @@ void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
     int opnum = &op - &(inst()->ops()[0]);
-    if (debug() > 1)
+    if (debug() > 1 && op.opname() != u_nop)
         std::cout << "turned op " << opnum
                   << " from " << op.opname() << " to "
                   << opargsym(op,0)->name() << " = " << opargsym(op,1)->name()
@@ -211,39 +213,6 @@ RuntimeOptimizer::turn_into_nop (Opcode &op, const char *why)
                   << (why ? " : " : "") << (why ? why : "") << "\n";
     op.reset (u_nop, 0);
 }
-
-
-
-/// Return true if the op is guaranteed to completely overwrite all of its
-/// writable arguments and doesn't need their prior vaues at all.  If the
-/// op uses the prior values of any writeable arguments, or in any way 
-/// preserves their original values, return false.
-/// Example: ADD -> true, since 'add r a b' completely replaces the old
-/// value of r and doesn't care what it was before (other than
-/// coincidentally, if a or b is also r).
-/// Example: COMPASSIGN -> false, since 'compassign r i x' only changes
-/// one component of r.
-#if 0
-static bool
-fully_writing_op (const Opcode &op)
-{
-    // Just do a table comparison, since there are so few ops that don't
-    // have this property.
-    static OpImpl exceptions[] = {
-        // array and component routines only partially override their result
-        OP_aassign, OP_compassign, 
-        // the "get" routines don't touch their data arg if the named
-        // item isn't found
-        OP_getattribute, OP_getmessage, OP_gettextureinfo,
-        // Anything else?
-        NULL
-    };
-    for (int i = 0; exceptions[i];  ++i)
-        if (op.implementation() == exceptions[i])
-            return false;
-    return true;
-}
-#endif
 
 
 
@@ -402,6 +371,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
         Opcode &op (code[opnum]);  // handy ref to the op
         if (op.opname() == u_useparam)
             continue;  // skip useparam ops themselves, if we hit one
+        bool simple_assign = is_simple_assign(op);
         bool in_main_code = (opnum >= inst()->m_maincodebegin);
         std::vector<int> params;   // list of params referenced by this op
         // For each argument...
@@ -420,7 +390,10 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
             if (op.argread(a) || (op.argwrite(a) && !inside_init)) {
                 // Don't add it more than once
                 if (std::find (params.begin(), params.end(), opargs[argind]) == params.end()) {
-                    params.push_back (opargs[argind]);
+                    // If this arg is the one being written to by a
+                    // "simple" assignment, it doesn't need a useparam here.
+                    if (! (simple_assign && a == 0))
+                        params.push_back (opargs[argind]);
                     // mark as already initialized unconditionally, if we do
                     if (! m_in_conditional[opnum] &&
                             op.method() == OSLCompilerImpl::main_method_name())
@@ -2274,6 +2247,58 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
 
 
 void
+RuntimeOptimizer::clear_stale_syms ()
+{
+    m_stale_syms.clear ();
+}
+
+
+
+void
+RuntimeOptimizer::use_stale_sym (int sym)
+{
+    std::map<int,int>::iterator i = m_stale_syms.find(sym);
+    if (i != m_stale_syms.end())
+        m_stale_syms.erase (i);
+}
+
+
+
+bool
+RuntimeOptimizer::is_simple_assign (Opcode &op)
+{
+    // Simple only if arg0 is the only write, and is write only.
+    if (op.argwrite_bits() != 1 || op.argread(0))
+        return false;
+    const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
+    if (!opd || !opd->simple_assign)
+        return false;   // reject all other known non-simple assignments
+    // Make sure the result isn't also read
+    int result = oparg(op,0);
+    for (int i = 1, e = op.nargs();  i < e;  ++i)
+        if (oparg(op,i) == result)
+            return false;
+    return true;
+}
+
+
+
+void
+RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
+{
+    if (m_shadingsys.optimize() >= 2) {
+        std::map<int,int>::iterator i = m_stale_syms.find(sym);
+        if (i != m_stale_syms.end()) {
+            turn_into_nop (inst()->ops()[i->second],
+                           Strutil::format("remove stale value assignment, reassigned on op %d", opnum).c_str());
+        }
+    }
+    m_stale_syms[sym] = opnum;
+}
+
+
+
+void
 RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata)
 {
     ASSERT (R->symtype() == SymTypeParam || R->symtype() == SymTypeOutputParam);
@@ -2446,7 +2471,8 @@ RuntimeOptimizer::dealias_symbol (int symindex, int opnum)
             symindex = found->second;
             continue;
         }
-        if (opnum >= inst()->maincodebegin()) {
+        if (inst()->symbol(symindex)->symtype() == SymTypeParam &&
+            opnum >= inst()->maincodebegin()) {
             // Only check parameter aliases for main code
             found = m_param_aliases.find (symindex);
             if (found != m_param_aliases.end()) {
@@ -2517,21 +2543,6 @@ RuntimeOptimizer::peephole2 (int opnum)
     // think "nobody will write code that does that", but (a) they do;
     // and (b) it can end up like that after other optimizations have
     // changed the code around.
-
-    // Two assignments in a row to the same variable -- get rid of the
-    // first, but only if the second isn't an identity transform.  In
-    // other words, we want to change "a=b; a=c" into "a=c", but NOT
-    // change "a=b; a=a" (which will have its second instruction
-    // eliminated in other optimizations later).
-    if (op.opname() == u_assign &&
-          next.opname() == u_assign &&
-          opargsym(op,0) == opargsym(next,0) &&
-          opargsym(next,1) != opargsym(next,0)) {
-        // std::cerr << "double-assign " << opnum << " & " << op2num << ": " 
-        //           << opargsym(op,0)->mangled() << "\n";
-        turn_into_nop (op, "adjacent assignments");
-        return 1;
-    }
 
     // Ping-pong assignments can eliminate the second one:
     //     assign a b
@@ -2693,6 +2704,7 @@ RuntimeOptimizer::optimize_instance ()
             // Things to do if we've just moved to a new basic block
             if (lastblock != m_bblockids[opnum]) {
                 clear_block_aliases ();
+                clear_stale_syms ();
                 lastblock = m_bblockids[opnum];
             }
 
@@ -2708,7 +2720,14 @@ RuntimeOptimizer::optimize_instance ()
                     int argsymindex = dealias_symbol (inst()->arg(argindex), opnum);
                     inst()->args()[argindex] = argsymindex;
                 }
+                if (op.argread(i))
+                    use_stale_sym (oparg(op,i));
             }
+
+            // If it's a simple assignment and the lvalue is "stale", go
+            // back and eliminate its last assignment.
+            if (is_simple_assign(op))
+                simple_sym_assign (oparg (op, 0), opnum);
 
             // Make sure there's room for at least one more symbol, so that
             // we can add a const if we need to, without worrying about the

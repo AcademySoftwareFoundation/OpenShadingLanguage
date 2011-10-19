@@ -235,7 +235,15 @@ preprocess (const std::string &filename,
 #define pclose _pclose
 #endif
 
+#ifdef __APPLE__
+    // Default /usr/bin/cpp on Apple is very bare bones, doesn't seem to
+    // support all the preprocessor directives (like # and ##), but the
+    // explicit gcc 4.2 one does.  Watch out for needed changes to this
+    // with future OS X releases.
+    std::string cppcommand = "/usr/bin/cpp-4.2 -xc -nostdinc ";
+#else
     std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
+#endif
 
     cppcommand += options;
 

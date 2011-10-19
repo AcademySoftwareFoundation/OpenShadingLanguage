@@ -2558,10 +2558,15 @@ RuntimeOptimizer::peephole2 (int opnum)
     // and (b) it can end up like that after other optimizations have
     // changed the code around.
 
-    // Two assignments in a row to the same variable -- get rid of the first
+    // Two assignments in a row to the same variable -- get rid of the
+    // first, but only if the second isn't an identity transform.  In
+    // other words, we want to change "a=b; a=c" into "a=c", but NOT
+    // change "a=b; a=a" (which will have its second instruction
+    // eliminated in other optimizations later).
     if (op.opname() == u_assign &&
           next.opname() == u_assign &&
-          opargsym(op,0) == opargsym(next,0)) {
+          opargsym(op,0) == opargsym(next,0) &&
+          opargsym(next,1) != opargsym(next,0)) {
         // std::cerr << "double-assign " << opnum << " & " << op2num << ": " 
         //           << opargsym(op,0)->mangled() << "\n";
         turn_into_nop (op);

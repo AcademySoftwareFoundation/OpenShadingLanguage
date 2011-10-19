@@ -368,6 +368,8 @@ ShaderInstance::print ()
     out << "  code:\n";
     for (size_t i = 0;  i < m_instops.size();  ++i) {
         const Opcode &op (m_instops[i]);
+        if (i == (size_t)maincodebegin())
+            out << "(main)\n";
         out << "    " << i << ": " << op.opname();
         bool allconst = true;
         for (int a = 0;  a < op.nargs();  ++a) {

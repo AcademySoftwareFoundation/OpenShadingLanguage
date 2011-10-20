@@ -62,6 +62,7 @@ static std::vector<ustring> outputvarnames;
 static std::vector<OIIO::ImageBuf*> outputimgs;
 static std::string dataformatname = "";
 static bool debug = false;
+static bool debug2 = false;
 static bool verbose = false;
 static bool stats = false;
 static bool O0 = false, O1 = true, O2 = false;
@@ -122,7 +123,7 @@ inject_params ()
 static int
 add_shader (int argc, const char *argv[])
 {
-    shadingsys->attribute ("debug", (int)debug);
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
     if (opt_env)
         shadingsys->attribute ("optimize", atoi(opt_env));
@@ -159,6 +160,7 @@ getargs (int argc, const char *argv[])
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
                 "--debug", &debug, "Lots of debugging info",
+                "--debug2", &debug2, "Even more debugging info",
                 "--stats", &stats, "Print run statistics",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,

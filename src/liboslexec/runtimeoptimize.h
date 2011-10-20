@@ -97,6 +97,9 @@ public:
 
     TextureSystem *texturesys () const { return shadingsys().texturesys(); }
 
+    /// Are we in debugging mode?
+    int debug() const { return shadingsys().debug(); }
+
     /// Search the instance for a constant whose type and value match
     /// type and data[...].  Return -1 if no matching const is found.
     int find_constant (const TypeSpec &type, const void *data);
@@ -110,21 +113,21 @@ public:
     /// Turn the op into a simple assignment of the new symbol index to the
     /// previous first argument of the op.  That is, changes "OP arg0 arg1..."
     /// into "assign arg0 newarg".
-    void turn_into_assign (Opcode &op, int newarg);
+    void turn_into_assign (Opcode &op, int newarg, const char *why=NULL);
 
     /// Turn the op into a simple assignment of zero to the previous
     /// first argument of the op.  That is, changes "OP arg0 arg1 ..."
     /// into "assign arg0 zero".
-    void turn_into_assign_zero (Opcode &op);
+    void turn_into_assign_zero (Opcode &op, const char *why=NULL);
 
     /// Turn the op into a simple assignment of one to the previous
     /// first argument of the op.  That is, changes "OP arg0 arg1 ..."
     /// into "assign arg0 one".
-    void turn_into_assign_one (Opcode &op);
+    void turn_into_assign_one (Opcode &op, const char *why=NULL);
 
     /// Turn the op into a no-op.
     ///
-    void turn_into_nop (Opcode &op);
+    void turn_into_nop (Opcode &op, const char *why=NULL);
 
     void find_constant_params (ShaderGroup &group);
 
@@ -242,6 +245,12 @@ public:
     /// Search for pairs of ops to perform peephole optimization on.
     /// 
     int peephole2 (int opnum);
+
+    /// Helper: return the symbol index of the symbol that is the argnum-th
+    /// argument to the given op.
+    int oparg (const Opcode &op, int argnum) {
+        return inst()->arg (op.firstarg()+argnum);
+    }
 
     /// Helper: return the ptr to the symbol that is the argnum-th
     /// argument to the given op.

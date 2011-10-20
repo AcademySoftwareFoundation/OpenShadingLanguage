@@ -665,9 +665,9 @@ public:
 
     void operator delete (void *todel) { ::delete ((char *)todel); }
 
-    /// Is the shading system in debug mode?
+    /// Is the shading system in debug mode, and if so, how verbose?
     ///
-    bool debug () const { return m_debug; }
+    int debug () const { return m_debug; }
 
     /// Return a pointer to the renderer services object.
     ///
@@ -778,7 +778,7 @@ private:
 
     // Options
     int m_statslevel;                     ///< Statistics level
-    bool m_debug;                         ///< Debugging output
+    int m_debug;                          ///< Debugging output
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?

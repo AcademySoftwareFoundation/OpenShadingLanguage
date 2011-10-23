@@ -102,11 +102,34 @@ class ShadingSystemImpl;
 class ShaderInstance;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
+class RuntimeOptimizer;
 
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*); 
+
+/// Signature of a constant-folding method
+typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
+
+/// Signature of an LLVM-IR-generating method
+typedef bool (*OpLLVMGen) (RuntimeOptimizer &rop, int opnum);
+
+struct OpDescriptor {
+    ustring name;           // name of op
+    OpLLVMGen llvmgen;      // llvm-generating routine
+    OpFolder folder;        // constant-folding routine (or NULL)
+    bool simple_assign;     // wholy overwites arg0, no other writes,
+                            //     no side effects
+    OpDescriptor () { }
+    OpDescriptor (const char *n, OpLLVMGen ll, OpFolder f=NULL,
+                  bool simple=true)
+        : name(n), llvmgen(ll), folder(f), simple_assign(simple)
+    {}
+};
+
+
+
 
 
 // Prefix for OSL shade up declarations, so LLVM can find them
@@ -730,6 +753,22 @@ public:
 
     virtual int raytype_bit (ustring name);
 
+#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
+    typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
+#else
+    typedef hash_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
+#endif
+
+    /// Look up OpDescriptor for the named op, return NULL for unknown op.
+    ///
+    const OpDescriptor *op_descriptor (ustring opname) {
+        OpDescriptorMap::const_iterator i = m_op_descriptor.find (opname);
+        if (i != m_op_descriptor.end())
+            return &(i->second);
+        else
+            return NULL;
+    }
+
 private:
     void printstats () const;
 
@@ -761,6 +800,8 @@ private:
     /// retained JITMemoryManager, etc.
     void SetupLLVM ();
 
+    void setup_op_descriptors ();
+
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system
 
@@ -775,6 +816,8 @@ private:
     ConstantPool<int> m_int_pool;
     ConstantPool<Float> m_float_pool;
     ConstantPool<ustring> m_string_pool;
+
+    OpDescriptorMap m_op_descriptor;
 
     // Options
     int m_statslevel;                     ///< Statistics level

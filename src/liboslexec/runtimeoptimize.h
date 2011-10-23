@@ -742,10 +742,6 @@ private:
 ///
 #define FOLDARGSDECL     RuntimeOptimizer &rop, int opnum
 
-/// Function pointer to a constant-folding routine
-///
-typedef int (*OpFolder) (FOLDARGSDECL);
-
 /// Macro that defines the full declaration of a shadeop constant-folder.
 /// 
 #define DECLFOLDER(name)  int name (FOLDARGSDECL)

@@ -56,7 +56,10 @@ static ustring u_nop    ("nop"),
                u_useparam ("useparam"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
-
+// abs acos and area aref arraylength asin atan atan2 backfacing bitand
+// bitor blackbody calculatenormal ceil cellnoise clamp closure?
+// color compl compref concat cos cosh cross degrees determinant
+// distance dot Dx Dy Dz endswith eq erf erfc
 
 
 #ifdef OSL_NAMESPACE
@@ -513,6 +516,13 @@ is_one (const Symbol &A)
         (Atype.is_int() && *(const int *)A.data() == 1) ||
         (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
         (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
+}
+
+
+
+DECLFOLDER(constfold_none)
+{
+    return 0;
 }
 
 
@@ -2006,75 +2016,6 @@ DECLFOLDER(constfold_useparam)
 }
 
 
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
-typedef boost::unordered_map<ustring, OpFolder, ustringHash> FolderTable;
-#else
-typedef hash_map<ustring, OpFolder, ustringHash> FolderTable;
-#endif
-
-static FolderTable folder_table;
-
-void
-initialize_folder_table ()
-{
-    static spin_mutex folder_table_mutex;
-    static bool folder_table_initialized = false;
-    spin_lock lock (folder_table_mutex);
-    if (folder_table_initialized)
-        return;   // already initialized
-#define INIT2(name,folder) folder_table[ustring(#name)] = folder
-#define INIT(name) folder_table[ustring(#name)] = constfold_##name;
-
-    INIT (add);    INIT (sub);
-    INIT (mul);    INIT (div);
-    INIT (dot);
-    INIT (neg);    INIT (abs);
-    INIT (eq);     INIT (neq);
-    INIT (le);     INIT (ge);
-    INIT (lt);     INIT (gt);
-    INIT (or);     INIT (and);
-    INIT (if);
-    INIT (compassign);
-    INIT (compref);
-    INIT (aref);
-    INIT (arraylength);
-    INIT (strlen);
-    INIT (endswith);
-    INIT (concat);
-    INIT (format);
-    INIT (regex_search);
-    INIT (clamp);
-    INIT (min);
-    INIT (max);
-    INIT (sqrt);
-    INIT (pow);
-    INIT (floor);
-    INIT (ceil);
-    INIT2 (color, constfold_triple);
-    INIT2 (point, constfold_triple);
-    INIT2 (normal, constfold_triple);
-    INIT2 (vector, constfold_triple);
-    INIT (matrix);
-    INIT (getmatrix);
-    INIT2 (transform, constfold_transform);
-    INIT2 (transformv, constfold_transform);
-    INIT2 (transformn, constfold_transform);
-    INIT (setmessage);
-    INIT (getmessage);
-    INIT (gettextureinfo);
-    INIT (functioncall);
-    INIT (useparam);
-    INIT (texture);
-//    INIT (assign);  N.B. do not include here -- we want this run AFTER
-//                    all other constant folding is done, since many of
-//                    them turn other statements into assignments.
-#undef INIT
-#undef INIT2
-
-    folder_table_initialized = true;
-}
-
-
 
 DECLFOLDER(constfold_assign)
 {
@@ -2777,9 +2718,9 @@ RuntimeOptimizer::optimize_instance ()
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
             if (m_shadingsys.optimize() >= 2) {
-                FolderTable::const_iterator found = folder_table.find (op.opname());
-                if (found != folder_table.end()) {
-                    changed += (*found->second) (*this, opnum);
+                const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
+                if (opd && opd->folder) {
+                    changed += (*opd->folder) (*this, opnum);
                     // Re-check num_ops in case the folder inserted something
                     num_ops = inst()->ops().size();
                 }
@@ -3443,7 +3384,6 @@ void
 RuntimeOptimizer::optimize_group ()
 {
     Timer rop_timer;
-    initialize_folder_table ();
 
     int nlayers = (int) m_group.nlayers ();
 

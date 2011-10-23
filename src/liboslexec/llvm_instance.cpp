@@ -169,10 +169,6 @@ static ustring op_xor("xor");
 /// 
 #define LLVMGEN(name)  bool name (LLVMGEN_ARGS)
 
-/// Function pointer to an LLVM IR-generating routine
-///
-typedef bool (*OpLLVMGen) (LLVMGEN_ARGS);
-
 // Forward decl
 LLVMGEN (llvm_gen_generic);
 
@@ -3702,184 +3698,6 @@ LLVMGEN (llvm_gen_return)
 
 
 
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
-typedef boost::unordered_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
-#else
-typedef hash_map<ustring, OpLLVMGen, ustringHash> GeneratorTable;
-#endif
-
-
-
-static GeneratorTable llvm_generator_table;
-
-
-
-static void
-initialize_llvm_generator_table ()
-{
-    static spin_mutex table_mutex;
-    static bool table_initialized = false;
-    spin_lock lock (table_mutex);
-    if (table_initialized)
-        return;   // already initialized
-#define INIT2(name,func) llvm_generator_table[ustring(#name)] = func
-#define INIT(name) llvm_generator_table[ustring(#name)] = llvm_gen_##name;
-
-    INIT (aassign);
-    INIT2 (abs, llvm_gen_generic);
-    INIT2 (acos, llvm_gen_generic);
-    INIT (add);
-    INIT2 (and, llvm_gen_andor);
-    INIT2 (area, llvm_gen_area);
-    INIT (aref);
-    INIT (arraycopy);
-    INIT (arraylength);
-    INIT2 (asin, llvm_gen_generic);
-    INIT (assign);
-    INIT2 (atan, llvm_gen_generic);
-    INIT2 (atan2, llvm_gen_generic);
-    INIT2 (backfacing, llvm_gen_get_simple_SG_field);
-    INIT2 (bitand, llvm_gen_bitwise_binary_op);
-    INIT2 (bitor, llvm_gen_bitwise_binary_op);
-    INIT (blackbody);
-    INIT2 (break, llvm_gen_loopmod_op);
-    INIT (calculatenormal);
-    INIT2 (ceil, llvm_gen_generic);
-    INIT2 (cellnoise, llvm_gen_generic);
-    INIT (clamp);
-    INIT (closure);
-    INIT2 (color, llvm_gen_construct_color);
-    INIT (compassign);
-    INIT2 (compl, llvm_gen_unary_op);
-    INIT (compref);
-    INIT2 (concat, llvm_gen_generic);
-    INIT2 (continue, llvm_gen_loopmod_op);
-    INIT2 (cos, llvm_gen_generic);
-    INIT2 (cosh, llvm_gen_generic);
-    INIT2 (cross, llvm_gen_generic);
-    INIT2 (degrees, llvm_gen_generic);
-    INIT2 (determinant, llvm_gen_generic);
-    INIT (dict_find);
-    INIT (dict_next);
-    INIT (dict_value);
-    INIT2 (distance, llvm_gen_generic);
-    INIT (div);
-    INIT2 (dot, llvm_gen_generic);
-    INIT2 (Dx, llvm_gen_DxDy);
-    INIT2 (Dy, llvm_gen_DxDy);
-    INIT2 (Dz, llvm_gen_Dz);
-    INIT2 (dowhile, llvm_gen_loop_op);
-    // INIT (end);
-    INIT2 (endswith, llvm_gen_generic);
-    INIT (environment);
-    INIT2 (eq, llvm_gen_compare_op);
-    INIT2 (erf, llvm_gen_generic);
-    INIT2 (erfc, llvm_gen_generic);
-    INIT2 (error, llvm_gen_printf);
-    INIT2 (exp, llvm_gen_generic);
-    INIT2 (exp2, llvm_gen_generic);
-    INIT2 (expm1, llvm_gen_generic);
-    INIT2 (fabs, llvm_gen_generic);
-    INIT (filterwidth);
-    INIT2 (floor, llvm_gen_generic);
-    INIT2 (fmod, llvm_gen_mod);
-    INIT2 (for, llvm_gen_loop_op);
-    INIT2 (format, llvm_gen_printf);
-    INIT (functioncall);
-    //stdosl.h INIT (fresnel);
-    INIT2 (ge, llvm_gen_compare_op);
-    INIT (getattribute);
-    INIT (getmatrix);
-    INIT (getmessage);
-    INIT (gettextureinfo);
-    INIT2 (gt, llvm_gen_compare_op);
-    //stdosl.h  INIT (hypot);
-    INIT (if);
-    INIT2 (inversesqrt, llvm_gen_generic);
-    INIT2 (isfinite, llvm_gen_generic);
-    INIT2 (isinf, llvm_gen_generic);
-    INIT2 (isnan, llvm_gen_generic);
-    INIT2 (le, llvm_gen_compare_op);
-    INIT2 (length, llvm_gen_generic);
-    INIT2 (log, llvm_gen_generic);
-    INIT2 (log10, llvm_gen_generic);
-    INIT2 (log2, llvm_gen_generic);
-    INIT2 (logb, llvm_gen_generic);
-    INIT2 (lt, llvm_gen_compare_op);
-    INIT (luminance);
-    INIT (matrix);
-    INIT (mxcompassign);
-    INIT (mxcompref);
-    INIT2 (min, llvm_gen_minmax);
-    INIT2 (max, llvm_gen_minmax);
-    //stdosl.h   INIT (mix);
-    INIT (mod);
-    INIT (mul);
-    INIT (neg);
-    INIT2 (neq, llvm_gen_compare_op);
-    INIT2 (noise, llvm_gen_generic);
-    // INIT (nop);
-    INIT2 (normal, llvm_gen_construct_triple);
-    INIT2 (normalize, llvm_gen_generic);
-    INIT2 (or, llvm_gen_andor);
-    INIT2 (pnoise, llvm_gen_pnoise);
-    INIT2 (point, llvm_gen_construct_triple);
-    INIT  (pointcloud_search);
-    INIT  (pointcloud_get);
-    INIT2 (pow, llvm_gen_generic);
-    INIT (printf);
-    INIT2 (psnoise, llvm_gen_pnoise);
-    INIT2 (radians, llvm_gen_generic);
-    INIT (raytype);
-    //stdosl.h INIT (reflect);
-    //stdosl.h INIT (refract);
-    INIT2 (regex_match, llvm_gen_regex);
-    INIT2 (regex_search, llvm_gen_regex);
-    INIT (return);
-    INIT2 (round, llvm_gen_generic);
-    INIT (setmessage);
-    INIT2 (shl, llvm_gen_bitwise_binary_op);
-    INIT2 (shr, llvm_gen_bitwise_binary_op);
-    INIT2 (sign, llvm_gen_generic);
-    INIT2 (sin, llvm_gen_generic);
-    INIT (sincos);
-    INIT2 (sinh, llvm_gen_generic);
-    INIT2 (smoothstep, llvm_gen_generic);
-    INIT2 (snoise, llvm_gen_generic);
-    INIT (spline);
-    INIT2 (splineinverse, llvm_gen_spline);
-    INIT2 (sqrt, llvm_gen_generic);
-    INIT2 (startswith, llvm_gen_generic);
-    INIT2 (step, llvm_gen_generic);
-    INIT2 (strlen, llvm_gen_generic);
-    INIT (sub);
-    INIT2 (substr, llvm_gen_generic);
-    INIT2 (surfacearea, llvm_gen_get_simple_SG_field);
-    INIT2 (tan, llvm_gen_generic);
-    INIT2 (tanh, llvm_gen_generic);
-    INIT (texture);
-    INIT (texture3d);
-    INIT (trace);
-    INIT2 (transform,  llvm_gen_transform);
-    INIT2 (transformn, llvm_gen_transform);
-    INIT2 (transformv, llvm_gen_transform);
-    INIT2 (transpose, llvm_gen_generic);
-    INIT2 (trunc, llvm_gen_generic);
-    INIT (useparam);
-    INIT2 (vector, llvm_gen_construct_triple);
-    INIT2 (warning, llvm_gen_printf);
-    INIT2 (wavelength_color, llvm_gen_blackbody);
-    INIT2 (while, llvm_gen_loop_op);
-    INIT2 (xor, llvm_gen_bitwise_binary_op);
-
-#undef INIT
-#undef INIT2
-
-    table_initialized = true;
-}
-
-
-
 void
 RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
 {
@@ -3912,10 +3730,9 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 
     for (int opnum = beginop;  opnum < endop;  ++opnum) {
         const Opcode& op = inst()->ops()[opnum];
-
-        GeneratorTable::const_iterator found = llvm_generator_table.find (op.opname());
-        if (found != llvm_generator_table.end()) {
-            bool ok = (*found->second) (*this, opnum);
+        const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
+        if (opd && opd->llvmgen) {
+            bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
             if (m_shadingsys.debug_nan() /* debug NaN/Inf */
@@ -4388,7 +4205,6 @@ ShadingSystemImpl::SetupLLVM ()
     llvm::DisablePrettyStackTrace = true;
     llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
     llvm::InitializeNativeTarget();
-    initialize_llvm_generator_table ();
 }
 
 

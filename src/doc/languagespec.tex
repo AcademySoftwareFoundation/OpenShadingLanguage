@@ -64,7 +64,7 @@ Editor: Larry Gritz \\
  \bigskip \\
 }
 \date{{\large Date: 12 Oct, 2011 \\
-%(with corrections, 29 September, 2011)
+(with corrections, 23 Oct, 2011)
 }}
 
 
@@ -4011,6 +4011,29 @@ cloud from disk, if there is one matching the name.
 
 \apiend
 
+\apiitem{int {\ce pointcloud_get} (string ptcname, int indices[], \\
+\bigspc\bigspc  int count, string attr, \emph{type} data[])}
+\indexapi{pointcloud_get}
+
+Given a point cloud and a list of points {\cf indices[0..count-1]},
+store the attribute named by {\cf attr} for each point, respectively, in
+{\cf data[0..count-1]}.  Return 1 if successful, 0 for failure, which 
+could include the attribute not matching the type of {\cf data}, invalid
+indices, or an unknown point cloud file.
+
+This can be used in conjunction with {\cf pointcloud_search()}, as
+in the following example:
+
+\begin{code}
+      float r = 3.0;
+      int indices[10];
+      int n = pointcloud_search ("particles.ptc", P, r, 10,
+                                 "index", indices);
+      float temp[10];
+      int ok = pointcloud_get ("particles.ptc", indices, n,
+                               "temperature", temp);
+\end{code}
+\apiend
 
 \newpage
 \section{Light and Shadows}
@@ -4788,7 +4811,7 @@ int {\ce dict_find} (int nodeID, string query)}
 \indexapi{dict_next()}
     Return the node ID of the next node that matched the query that
     returned nodeID, or 0 if nodeID was the last matching node for its
-    query..
+    query.
 \apiend
 
 \apiitem{int {\ce dict_value} (int nodeID, string attribname, output

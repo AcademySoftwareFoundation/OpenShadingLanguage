@@ -51,17 +51,11 @@ static ustring u_nop    ("nop"),
                u_assign ("assign"),
                u_add    ("add"),
                u_sub    ("sub"),
-               u_mul    ("mul"),
-               u_div    ("div"),
                u_if     ("if"),
                u_return ("return"),
                u_useparam ("useparam"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
-// abs acos and area aref arraylength asin atan atan2 backfacing bitand
-// bitor blackbody calculatenormal ceil cellnoise clamp closure?
-// color compl compref concat cos cosh cross degrees determinant
-// distance dot Dx Dy Dz endswith eq erf erfc
 
 
 #ifdef OSL_NAMESPACE

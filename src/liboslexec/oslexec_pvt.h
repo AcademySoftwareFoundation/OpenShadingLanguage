@@ -118,7 +118,7 @@ typedef bool (*OpLLVMGen) (RuntimeOptimizer &rop, int opnum);
 struct OpDescriptor {
     ustring name;           // name of op
     OpLLVMGen llvmgen;      // llvm-generating routine
-    OpFolder folder;        // constant-folding routine (or NULL)
+    OpFolder folder;        // constant-folding routine
     bool simple_assign;     // wholy overwites arg0, no other writes,
                             //     no side effects
     OpDescriptor () { }

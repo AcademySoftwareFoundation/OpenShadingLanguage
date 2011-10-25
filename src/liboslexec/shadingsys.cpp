@@ -350,8 +350,8 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (or,          andor,               or);
     OP (pnoise,      pnoise,              none);
     OP (point,       construct_triple,    triple);
-    OP (pointcloud_search, generic,       none);
-    OP (pointcloud_get, generic,          none);
+    OP (pointcloud_search, pointcloud_search, none);
+    OP (pointcloud_get, pointcloud_get,   none);
     OP (pow,         generic,             pow);
     OP (printf,      printf,              none);
     OP (psnoise,     pnoise,              none);

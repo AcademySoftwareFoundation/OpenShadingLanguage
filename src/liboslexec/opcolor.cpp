@@ -102,7 +102,7 @@ YIQ_to_rgb (float Y, float I, float Q)
 }
 
 
-
+#if 0
 inline Color3
 XYZ_to_xyY (const Color3 &XYZ)
 {
@@ -112,7 +112,7 @@ XYZ_to_xyY (const Color3 &XYZ)
     // N.B. http://brucelindbloom.com/ suggests returning xy of the
     // reference white in the X+Y+Z==0 case.
 }
-
+#endif
 
 
 inline Color3
@@ -244,7 +244,7 @@ spectrum_to_XYZ (const SPECTRUM &spec_intens)
 }
 
 
-
+#if 0
 // If the requested RGB shade contains a negative weight for one of the
 // primaries, it lies outside the colour gamut accessible from the given
 // triple of primaries.  Desaturate it by adding white, equal quantities
@@ -281,7 +281,7 @@ norm_rgb (Color3 &rgb)
         rgb *= 1.0f/greatest;
     return greatest;
 }
-
+#endif
 
 
 inline void clamp_zero (Color3 &c)

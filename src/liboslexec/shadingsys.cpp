@@ -172,6 +172,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
+      m_greedyjit(false),
       m_optimize (1),
       m_llvm_debug(false),
       m_commonspace_synonym("world"),
@@ -199,6 +200,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
     m_stat_getattribute_calls = 0;
+    m_groups_to_compile_count = 0;
+    m_threads_currently_compiling = 0;
 
     // If client didn't supply an error handler, just use the default
     // one that echoes to the terminal.
@@ -494,6 +497,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_unknown_coordsys_error = *(const int *)val;
         return true;
     }
+    if (name == "greedyjit" && type == TypeDesc::INT) {
+        m_greedyjit = *(const int *)val;
+        return true;
+    }
     if (name == "commonspace" && type == TypeDesc::STRING) {
         m_commonspace_synonym = ustring (*(const char **)val);
         return true;
@@ -549,6 +556,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_DECODE ("greedyjit", int, m_greedyjit);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
@@ -1039,8 +1047,14 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
 
 
 ShadingAttribStateRef
-ShadingSystemImpl::state () const
+ShadingSystemImpl::state ()
 {
+    {
+        // Record the state for later greedy JITing
+        spin_lock lock (m_groups_to_compile_mutex);
+        m_groups_to_compile.push_back (m_curattrib);
+        ++m_groups_to_compile_count;
+    }
     return m_curattrib;
 }
 

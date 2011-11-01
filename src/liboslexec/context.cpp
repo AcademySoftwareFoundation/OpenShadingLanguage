@@ -82,6 +82,11 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
     m_attribs = &sas;
     m_closures_allotted = 0;
 
+    if (shadingsys().m_groups_to_compile_count) {
+        // If we are greedily JITing, optimize/JIT everything now
+        shadingsys().optimize_all_groups ();
+    }
+
     // Optimize if we haven't already
     ShaderGroup &sgroup (sas.shadergroup (use));
     if (sgroup.nlayers()) {

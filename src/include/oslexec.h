@@ -174,7 +174,7 @@ public:
 
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.
-    virtual ShadingAttribStateRef state () const = 0;
+    virtual ShadingAttribStateRef state () = 0;
 
     /// Clear the current shading attribute state, i.e., no shaders
     /// specified.
@@ -237,6 +237,11 @@ public:
     /// describes it, or 0 for an unrecognized name.  (This retrieves
     /// data passed in via attribute("raytypes")).
     virtual int raytype_bit (ustring name) = 0;
+
+    /// If option "greedyjit" was set, this call will trigger all
+    /// shader groups that have not yet been compiled to do so with the
+    /// specified number of threads (0 means use all available HW cores).
+    virtual void optimize_all_groups (int nthreads=0) = 0;
 
 private:
     // Make delete private and unimplemented in order to prevent apps

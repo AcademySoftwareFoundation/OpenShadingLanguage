@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
@@ -3570,6 +3571,60 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     m_stat_instances_compiled += group.nlayers();
 }
 
+
+
+static void optimize_all_groups_wrapper (ShadingSystemImpl *ss)
+{
+    ss->optimize_all_groups (1);
+}
+
+
+
+void
+ShadingSystemImpl::optimize_all_groups (int nthreads)
+{
+    if (! m_greedyjit) {
+        // No greedy JIT, just free any groups we've recorded
+        spin_lock lock (m_groups_to_compile_mutex);
+        m_groups_to_compile.clear ();
+        m_groups_to_compile_count = 0;
+        return;
+    }
+
+    // Spawn a bunch of threads to do this in parallel -- just call this
+    // routine again (with threads=1) for each thread.
+    if (nthreads < 1)  // threads <= 0 means use all hardware available
+        nthreads = std::min ((int)boost::thread::hardware_concurrency(),
+                             (int)m_groups_to_compile_count);
+    if (nthreads > 1) {
+        if (m_threads_currently_compiling)
+            return;   // never mind, somebody else spawned the JIT threads
+        boost::thread_group threads;
+        m_threads_currently_compiling += nthreads;
+        for (int t = 0;  t < nthreads;  ++t)
+            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this));
+        threads.join_all ();
+        m_threads_currently_compiling -= nthreads;
+        return;
+    }
+
+    // And here's the single thread case
+    while (m_groups_to_compile_count) {
+        ShadingAttribStateRef sas;
+        {
+            spin_lock lock (m_groups_to_compile_mutex);
+            if (m_groups_to_compile.size() == 0)
+                return;  // Nothing left to compile
+            sas = m_groups_to_compile.back ();
+            m_groups_to_compile.pop_back ();
+        }
+        --m_groups_to_compile_count;
+        if (! sas.unique()) {   // don't compile if nobody recorded it but us
+            ShaderGroup &sgroup (sas->shadergroup (ShadUseSurface));
+                optimize_group (*sas, sgroup);
+        }
+    }
+}
 
 
 }; // namespace pvt

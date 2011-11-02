@@ -69,6 +69,7 @@ using OIIO::atomic_ll;
 using OIIO::RefCnt;
 using OIIO::ParamValueList;
 using OIIO::spin_mutex;
+using OIIO::spin_lock;
 using OIIO::thread_specific_ptr;
 using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
@@ -640,7 +641,7 @@ public:
     virtual bool ShaderGroupEnd (void);
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
-    virtual ShadingAttribStateRef state () const;
+    virtual ShadingAttribStateRef state ();
     virtual void clear_state ();
 
 //    virtual void RunShaders (ShadingAttribStateRef &attribstate,
@@ -753,6 +754,8 @@ public:
 
     virtual int raytype_bit (ustring name);
 
+    virtual void optimize_all_groups (int nthreads=0);
+
 #ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
     typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 #else
@@ -831,6 +834,7 @@ private:
     bool m_strict_messages;               ///< Strict checking of message passing usage?
     bool m_range_checking;                ///< Range check arrays & components?
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
+    bool m_greedyjit;                     ///< JIT as much as we can?
     int m_optimize;                       ///< Runtime optimization level
     int m_llvm_debug;                     ///< More LLVM debugging output
     std::string m_searchpath;             ///< Shader search path
@@ -898,6 +902,10 @@ private:
 
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
+    std::vector<ShadingAttribStateRef> m_groups_to_compile;
+    atomic_int m_groups_to_compile_count;
+    atomic_int m_threads_currently_compiling;
+    spin_mutex m_groups_to_compile_mutex;
 
     // LLVM stuff
     spin_mutex m_llvm_mutex;

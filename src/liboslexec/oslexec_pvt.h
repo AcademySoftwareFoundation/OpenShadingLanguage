@@ -562,7 +562,11 @@ public:
 #endif
     }
 
+    void name (ustring name) { m_name = name; }
+    ustring name () const { return m_name; }
+
 private:
+    ustring m_name;
     std::vector<ShaderInstanceRef> m_layers;
     RunLLVMGroupFunc m_llvm_compiled_version;
     size_t m_llvm_groupdata_size;
@@ -637,7 +641,7 @@ public:
     virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
                          const char *layername=NULL);
-    virtual bool ShaderGroupBegin (void);
+    virtual bool ShaderGroupBegin (const char *groupname=NULL);
     virtual bool ShaderGroupEnd (void);
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
@@ -837,6 +841,8 @@ private:
     bool m_greedyjit;                     ///< JIT as much as we can?
     int m_optimize;                       ///< Runtime optimization level
     int m_llvm_debug;                     ///< More LLVM debugging output
+    ustring m_debug_groupname;            ///< Name of sole group to debug
+    ustring m_only_groupname;             ///< Name of sole group to compile
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
@@ -854,6 +860,7 @@ private:
     // State
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group
+    ustring m_group_name;                 ///< Name of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values
     ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
     mutable mutex m_mutex;                ///< Thread safety

@@ -161,7 +161,7 @@ public:
 
     /// Signal the start of a new shader group.
     ///
-    virtual bool ShaderGroupBegin (void) = 0;
+    virtual bool ShaderGroupBegin (const char *groupname=NULL) = 0;
 
     /// Signal the end of a new shader group.
     ///

@@ -439,70 +439,40 @@ bool
 ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
                               const void *val)
 {
+#define ATTR_SET(_name,_ctype,_dst)                                     \
+    if (name == _name && type == OIIO::BaseTypeFromC<_ctype>::value) {  \
+        _dst = *(_ctype *)(val);                                        \
+        return true;                                                    \
+    }
+#define ATTR_SET_STRING(_name,_dst)                                     \
+    if (name == _name && type == TypeDesc::STRING) {                    \
+        _dst = ustring (*(const char **)val);                           \
+        return true;                                                    \
+    }
+
     lock_guard guard (m_mutex);  // Thread safety
+    ATTR_SET ("statistics:level", int, m_statslevel);
+    ATTR_SET ("debug", int, m_debug);
+    ATTR_SET ("lazylayers", int, m_lazylayers);
+    ATTR_SET ("lazyglobals", int, m_lazyglobals);
+    ATTR_SET ("clearmemory", int, m_clearmemory);
+    ATTR_SET ("rebind", int, m_rebind);
+    ATTR_SET ("debugnan", int, m_debugnan);
+    ATTR_SET ("lockgeom", int, m_lockgeom_default);
+    ATTR_SET ("optimize", int, m_optimize);
+    ATTR_SET ("llvm_debug", int, m_llvm_debug);
+    ATTR_SET ("strict_messages", int, m_strict_messages);
+    ATTR_SET ("range_checking", int, m_range_checking);
+    ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
+    ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
+    ATTR_SET_STRING ("only_groupname", m_only_groupname);
+
+    // cases for special handling
     if (name == "searchpath:shader" && type == TypeDesc::STRING) {
         m_searchpath = std::string (*(const char **)val);
         Filesystem::searchpath_split (m_searchpath, m_searchpath_dirs);
-        return true;
-    }
-    if (name == "statistics:level" && type == TypeDesc::INT) {
-        m_statslevel = *(const int *)val;
-        return true;
-    }
-    if (name == "debug" && type == TypeDesc::INT) {
-        m_debug = *(const int *)val;
-        return true;
-    }
-    if (name == "lazylayers" && type == TypeDesc::INT) {
-        m_lazylayers = *(const int *)val;
-        return true;
-    }
-    if (name == "lazyglobals" && type == TypeDesc::INT) {
-        m_lazyglobals = *(const int *)val;
-        return true;
-    }
-    if (name == "clearmemory" && type == TypeDesc::INT) {
-        m_clearmemory = *(const int *)val;
-        return true;
-    }
-    if (name == "rebind" && type == TypeDesc::INT) {
-        m_rebind = *(const int *)val;
-        return true;
-    }
-    if (name == "debugnan" && type == TypeDesc::INT) {
-        m_debugnan = *(const int *)val;
-        return true;
-    }
-    if (name == "lockgeom" && type == TypeDesc::INT) {
-        m_lockgeom_default = *(const int *)val;
-        return true;
-    }
-    if (name == "optimize" && type == TypeDesc::INT) {
-        m_optimize = *(const int *)val;
-        return true;
-    }
-    if (name == "llvm_debug" && type == TypeDesc::INT) {
-        m_llvm_debug = *(const int *)val;
-        return true;
-    }
-    if (name == "strict_messages" && type == TypeDesc::INT) {
-        m_strict_messages = *(const int *)val;
-        return true;
-    }
-    if (name == "range_checking" && type == TypeDesc::INT) {
-        m_range_checking = *(const int *)val;
-        return true;
-    }
-    if (name == "unknown_coordsys_error" && type == TypeDesc::INT) {
-        m_unknown_coordsys_error = *(const int *)val;
-        return true;
-    }
-    if (name == "greedyjit" && type == TypeDesc::INT) {
-        m_greedyjit = *(const int *)val;
-        return true;
-    }
-    if (name == "commonspace" && type == TypeDesc::STRING) {
-        m_commonspace_synonym = ustring (*(const char **)val);
         return true;
     }
     if (name == "colorspace" && type == TypeDesc::STRING) {
@@ -522,6 +492,8 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         return true;
     }
     return false;
+#undef ATTR_SET
+#undef ATTR_SET_STRING
 }
 
 
@@ -559,6 +531,8 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
+    ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
+    ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
     ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);
@@ -844,7 +818,7 @@ ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
 
 
 bool
-ShadingSystemImpl::ShaderGroupBegin (void)
+ShadingSystemImpl::ShaderGroupBegin (const char *groupname)
 {
     if (m_in_group) {
         error ("Nested ShaderGroupBegin() calls");
@@ -852,6 +826,7 @@ ShadingSystemImpl::ShaderGroupBegin (void)
     }
     m_in_group = true;
     m_group_use = ShadUseUnknown;
+    m_group_name = ustring (groupname);
     return true;
 }
 
@@ -868,6 +843,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     // Mark the layers that can be run lazily
     if (m_group_use != ShadUseUnknown) {
         ShaderGroup &sgroup (m_curattrib->shadergroup (m_group_use));
+        sgroup.name (m_group_name);
         size_t nlayers = sgroup.nlayers ();
         for (size_t layer = 0;  layer < nlayers;  ++layer) {
             ShaderInstance *inst = sgroup[layer];
@@ -900,6 +876,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
 
     m_in_group = false;
     m_group_use = ShadUseUnknown;
+    m_group_name.clear ();
     return true;
 }
 

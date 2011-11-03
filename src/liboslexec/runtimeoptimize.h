@@ -98,7 +98,11 @@ public:
     TextureSystem *texturesys () const { return shadingsys().texturesys(); }
 
     /// Are we in debugging mode?
-    int debug() const { return shadingsys().debug(); }
+    int debug() const {
+        return shadingsys().debug() &&
+            (!shadingsys().m_debug_groupname ||
+             shadingsys().m_debug_groupname == m_group.name());
+    }
 
     /// Search the instance for a constant whose type and value match
     /// type and data[...].  Return -1 if no matching const is found.

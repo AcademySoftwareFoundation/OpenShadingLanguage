@@ -4092,8 +4092,15 @@ RuntimeOptimizer::build_llvm_group ()
     m_stat_llvm_opt_time += timer.lap();
 
     // Force the JIT to happen now
-    RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
-    m_group.llvm_compiled_version (f);
+    {
+        // Lock this! -- there seems to be at least one bug in LLVM 2.9
+        // where the JIT isn't really thread-safe.
+        // FIXME -- check if this is still necessary for LLVM 3.0
+        static mutex jit_mutex;
+        lock_guard lock (jit_mutex);
+        RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
+        m_group.llvm_compiled_version (f);
+    }
 
     // Remove the IR for the group layer functions, we've already JITed it
     // and will never need the IR again.  This saves memory, and also saves
@@ -4199,12 +4206,18 @@ RuntimeOptimizer::initialize_llvm_group ()
 void
 ShadingSystemImpl::SetupLLVM ()
 {
+    static mutex setup_mutex;
+    static bool done = false;
+    lock_guard lock (setup_mutex);
+    if (done)
+        return;
     // Some global LLVM initialization for the first thread that
     // gets here.
     info ("Setting up LLVM");
     llvm::DisablePrettyStackTrace = true;
     llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
     llvm::InitializeNativeTarget();
+    done = true;
 }
 
 

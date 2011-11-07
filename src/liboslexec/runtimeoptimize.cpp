@@ -2391,6 +2391,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
 bool
 RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 {
+    return false;
     ASSERT (op.opname() == u_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));

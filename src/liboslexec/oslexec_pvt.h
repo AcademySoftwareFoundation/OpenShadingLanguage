@@ -1086,9 +1086,8 @@ public:
     /// Return NULL if no such symbol is found.
     Symbol * symbol (ShaderUse use, ustring name);
 
-    /// Return a pointer to where the symbol's data lives for the given
-    /// grid point.
-    void *symbol_data (Symbol &sym, int gridpoint);
+    /// Return a pointer to where the symbol's data lives.
+    void *symbol_data (Symbol &sym);
 
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we

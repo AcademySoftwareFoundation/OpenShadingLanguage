@@ -1101,7 +1101,7 @@ ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring name,
     Symbol *sym = ctx.symbol (ShadUseSurface, name);
     if (sym) {
         type = sym->typespec().simpletype();
-        return ctx.symbol_data (*sym, 0);
+        return ctx.symbol_data (*sym);
     } else {
         return NULL;
     }

@@ -4092,6 +4092,11 @@ RuntimeOptimizer::build_llvm_group ()
 
     // Force the JIT to happen now
     {
+        // Lock this! -- there seems to be at least one bug in LLVM 2.9
+        // where the JIT isn't really thread-safe.
+        // FIXME -- check if this is still necessary for LLVM 3.0
+        static mutex jit_mutex;
+        lock_guard lock (jit_mutex);
         RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
         m_group.llvm_compiled_version (f);
     }

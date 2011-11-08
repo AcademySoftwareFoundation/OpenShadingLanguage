@@ -3908,13 +3908,12 @@ class OSL_Dummy_JITMemoryManager : public llvm::JITMemoryManager {
 protected:
     llvm::JITMemoryManager *mm;
 public:
-    OSL_Dummy_JITMemoryManager(llvm::JITMemoryManager *realmm) : mm(realmm) { }
+    OSL_Dummy_JITMemoryManager(llvm::JITMemoryManager *realmm) : mm(realmm) { HasGOT = realmm->isManagingGOT(); }
     virtual ~OSL_Dummy_JITMemoryManager() { }
     virtual void setMemoryWritable() { mm->setMemoryWritable(); }
     virtual void setMemoryExecutable() { mm->setMemoryExecutable(); }
     virtual void setPoisonMemory(bool poison) { mm->setPoisonMemory(poison); }
-    virtual void AllocateGOT() { mm->AllocateGOT(); }
-    bool isManagingGOT() const { return mm->isManagingGOT(); }
+    virtual void AllocateGOT() { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
     virtual uint8_t *getGOTBase() const { return mm->getGOTBase(); }
     virtual uint8_t *startFunctionBody(const llvm::Function *F,
                                        uintptr_t &ActualSize) {
@@ -4002,7 +4001,7 @@ RuntimeOptimizer::build_llvm_group ()
     ASSERT (! m_llvm_exec);
     err.clear ();
     llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
-    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm);
+    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm, llvm::CodeGenOpt::Default, /*AllocateGVsWithCode*/ false);
     if (! m_llvm_exec) {
         m_shadingsys.error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
@@ -4093,11 +4092,6 @@ RuntimeOptimizer::build_llvm_group ()
 
     // Force the JIT to happen now
     {
-        // Lock this! -- there seems to be at least one bug in LLVM 2.9
-        // where the JIT isn't really thread-safe.
-        // FIXME -- check if this is still necessary for LLVM 3.0
-        static mutex jit_mutex;
-        lock_guard lock (jit_mutex);
         RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
         m_group.llvm_compiled_version (f);
     }

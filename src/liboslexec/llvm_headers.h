@@ -44,9 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/StandardPasses.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetData.h>
-#include <llvm/Target/TargetSelect.h>
 
 #endif /* OSL_LLVM_HEADERS_H */

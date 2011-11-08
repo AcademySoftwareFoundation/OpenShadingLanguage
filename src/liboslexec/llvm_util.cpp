@@ -42,8 +42,8 @@ namespace OSL {
 namespace pvt {
 
 
-const llvm::Type *
-RuntimeOptimizer::llvm_type_union(const std::vector<const llvm::Type *> &types)
+llvm::Type *
+RuntimeOptimizer::llvm_type_union(const std::vector<llvm::Type *> &types)
 {
     llvm::TargetData target(llvm_module());
     size_t max_size = 0;
@@ -57,20 +57,33 @@ RuntimeOptimizer::llvm_type_union(const std::vector<const llvm::Type *> &types)
     size_t padding = (max_size % max_align) ? max_align - (max_size % max_align) : 0;
     size_t union_size = max_size + padding;
 
-    const llvm::Type * base_type = NULL;
+    llvm::Type * base_type = NULL;
     // to ensure the alignment when included in a struct use
     // an appropiate type for the array
     if (max_align == sizeof(void*))
         base_type = llvm_type_void_ptr();
     else if (max_align == 4)
-        base_type = llvm::Type::getInt32Ty (llvm_context());
+        base_type = (llvm::Type *) llvm::Type::getInt32Ty (llvm_context());
     else if (max_align == 2)
-        base_type = llvm::Type::getInt16Ty (llvm_context());
+        base_type = (llvm::Type *) llvm::Type::getInt16Ty (llvm_context());
     else
-        base_type = llvm::Type::getInt8Ty (llvm_context());
+        base_type = (llvm::Type *) llvm::Type::getInt8Ty (llvm_context());
 
     size_t array_len = union_size / target.getTypeStoreSize(base_type);
-    return llvm::ArrayType::get (base_type, array_len);
+    return (llvm::Type *) llvm::ArrayType::get (base_type, array_len);
+}
+
+
+
+llvm::Type *
+RuntimeOptimizer::llvm_type_struct (const std::vector<llvm::Type *> &types)
+{
+#if OSL_LLVM_VERSION <= 29
+    return (llvm::Type *) llvm::StructType::get(llvm_context(),
+                            *(std::vector<const llvm::Type*>*)&types);
+#else
+    return llvm::StructType::get(llvm_context(), types);
+#endif
 }
 
 
@@ -143,13 +156,13 @@ RuntimeOptimizer::llvm_constant (const TypeDesc &type)
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
 {
     if (typespec.is_closure_based())
         return llvm_type_void_ptr();
     TypeDesc t = typespec.simpletype().elementtype();
-    const llvm::Type *lt = NULL;
+    llvm::Type *lt = NULL;
     if (t == TypeDesc::FLOAT)
         lt = llvm_type_float();
     else if (t == TypeDesc::INT)
@@ -175,13 +188,13 @@ RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
 {
     if (typespec.is_closure_based())
         return llvm_type_void_ptr();
     TypeDesc t = typespec.simpletype().elementtype();
-    const llvm::Type *lt = NULL;
+    llvm::Type *lt = NULL;
     if (t == TypeDesc::FLOAT)
         lt = llvm_type_float();
     else if (t == TypeDesc::INT)
@@ -334,7 +347,7 @@ RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
 
     if (map_iter == named_values().end()) {
         TypeSpec elemtype = sym.typespec().elementtype();
-        const llvm::Type *alloctype = llvm_type (elemtype);
+        llvm::Type *alloctype = llvm_type (elemtype);
         int arraylen = std::max (1, sym.typespec().arraylength());
         int n = arraylen * (sym.has_derivs() ? 3 : 1);
         llvm::ConstantInt* numalloc = (llvm::ConstantInt*)llvm_constant(n);
@@ -600,12 +613,9 @@ RuntimeOptimizer::layer_run_ptr (int layer)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (const char *name,
+RuntimeOptimizer::llvm_call_function (llvm::Value *func,
                                       llvm::Value **args, int nargs)
 {
-    llvm::Function *func = llvm_module()->getFunction (name);
-    if (! func)
-        std::cerr << "Couldn't find function " << name << "\n";
     ASSERT (func);
 #if 0
     llvm::outs() << "llvm_call_function " << *func << "\n";
@@ -614,9 +624,25 @@ RuntimeOptimizer::llvm_call_function (const char *name,
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
+#if OSL_LLVM_VERSION <= 29
     llvm::Value *r = builder().CreateCall (func, args, args+nargs);
+#else
+    llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args, nargs));
+#endif
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
+}
+
+
+
+llvm::Value *
+RuntimeOptimizer::llvm_call_function (const char *name,
+                                      llvm::Value **args, int nargs)
+{
+    llvm::Function *func = llvm_module()->getFunction (name);
+    if (! func)
+        std::cerr << "Couldn't find function " << name << "\n";
+    return llvm_call_function (func, args, nargs);
 }
 
 
@@ -695,13 +721,21 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
 {
     // memset with i32 len
     // and with an i8 pointer (dst) for LLVM-2.8
-    const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
+    llvm::Type* types[] = {
+        (llvm::Type *) llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0),
+        (llvm::Type *) llvm::Type::getInt32Ty(llvm_context())
+    };
 
-    llvm::Function* func = llvm::Intrinsic::getDeclaration(
-      llvm_module(),
-      llvm::Intrinsic::memset,
-      types,
-      sizeof(types)/sizeof(llvm::Type*));
+#if OSL_LLVM_VERSION <= 29
+    llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
+        llvm::Intrinsic::memset,
+        (const llvm::Type**) types,
+        sizeof(types)/sizeof(llvm::Type*));
+#else
+    llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
+        llvm::Intrinsic::memset,
+        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
+#endif
 
     // NOTE(boulos): llvm_constant(0) would return an i32
     // version of 0, but we need the i8 version. If we make an
@@ -723,10 +757,23 @@ RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
 {
     // i32 len
     // and with i8 pointers (dst and src) for LLVM-2.8
-    const llvm::Type* types[] = { llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0), llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0)  , llvm::Type::getInt32Ty(llvm_context()) };
+    llvm::Type* types[] = {
+        (llvm::Type *) llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0),
+        (llvm::Type *) llvm::PointerType::get(llvm::Type::getInt8Ty(llvm_context()), 0),
+        (llvm::Type *) llvm::Type::getInt32Ty(llvm_context())
+    };
 
-    llvm::Function* func = llvm::Intrinsic::getDeclaration(llvm_module(),
-                                                           llvm::Intrinsic::memcpy, types, sizeof(types) / sizeof(llvm::Type*));
+#if OSL_LLVM_VERSION <= 29
+    llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
+        llvm::Intrinsic::memcpy,
+        (const llvm::Type**) types,
+        sizeof(types) / sizeof(llvm::Type*));
+#else
+    llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
+        llvm::Intrinsic::memcpy,
+        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
+#endif
+
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
     builder().CreateCall5 (func, dst, src,

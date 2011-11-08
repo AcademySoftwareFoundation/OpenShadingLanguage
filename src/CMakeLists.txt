@@ -134,7 +134,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             component-range const-array-params debugnan
             derivs derivs-muldiv-clobber error-dupes exponential
             function-earlyreturn function-simple function-outputelem
-            geomath gettextureinfo hyperb
+            geomath getsymbol-nonheap gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers layers-lazy
             logic loop matrix message miscmath missing-shader noise pnoise
             oslc-err-noreturn oslc-err-paramdefault

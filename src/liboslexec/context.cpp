@@ -150,15 +150,23 @@ ShadingContext::symbol (ShaderUse use, ustring name)
 
 
 void *
-ShadingContext::symbol_data (Symbol &sym, int gridpoint)
+ShadingContext::symbol_data (Symbol &sym)
 {
     ShaderGroup &sgroup (attribs()->shadergroup ((ShaderUse)m_curuse));
-    if (sgroup.llvm_compiled_version()) {
-        size_t offset = sgroup.llvm_groupdata_size() * gridpoint;
-        offset += sym.dataoffset();
-        return &m_heap[offset];
+    if (! sgroup.llvm_compiled_version())
+        return NULL;   // can't retrieve symbol if we didn't JIT and runit
+
+    if (sym.dataoffset() >= 0)  // lives on the heap
+        return &m_heap[sym.dataoffset()];
+
+    // doesn't live on the heap
+    if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) &&
+        (sym.valuesource() == Symbol::DefaultVal || sym.valuesource() == Symbol::InstanceVal)) {
+        ASSERT (sym.data());
+        return sym.data() ? sym.data() : NULL;
     }
-    return NULL;
+
+    return NULL;  // not something we can retrieve
 }
 
 

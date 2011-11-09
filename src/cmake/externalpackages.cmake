@@ -247,20 +247,19 @@ if (LLVM_CUSTOM)
   find_library ( LLVM_LIBRARY
     NAMES LLVM-${LLVM_VERSION} LLVM-${LLVM_VERSION}svn
     PATHS ${LLVM_DIRECTORY}/lib )
-  find_path ( LLVM_INCLUDES llvm/LLVMContext.h
-    PATHS ${LLVM_DIRECTORY}/include
-    )
+  set ( LLVM_INCLUDES ${LLVM_DIRECTORY}/include )
 else ()
   find_library ( LLVM_LIBRARY
-    NAMES LLVM-2.7 LLVM-2.8svn LLVM-2.8 LLVM-2.9svn LLVM-2.9
-    PATHS /usr/local/lib /opt/local/lib )
+    NAMES LLVM-2.8 LLVM-2.9svn LLVM-2.9 LLVM-3.0
+    PATHS ${LLVM_DIRECTORY}/lib /usr/local/lib /opt/local/lib )
   find_path ( LLVM_INCLUDES llvm/LLVMContext.h
-    PATHS /usr/local/include /opt/local/include
+    PATHS ${LLVM_DIRECTORY}/include /usr/local/include /opt/local/include
     )
 endif ()
 
 if (LLVM_LIBRARY AND LLVM_INCLUDES)
   set (LLVM_FOUND TRUE)
+  message (STATUS "LLVM version = ${LLVM_VERSION}")
   message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
   message (STATUS "LLVM library = ${LLVM_LIBRARY}")
   # ensure include directory is added (in case of non-standard locations
@@ -270,7 +269,11 @@ if (LLVM_LIBRARY AND LLVM_INCLUDES)
     GET_FILENAME_COMPONENT (LLVM_DIRECTORY "${LLVM_LIB_DIR}/../" ABSOLUTE)
   endif ()
 
-  include_directories ("${LLVM_INCLUDES}")
+  include_directories (BEFORE "${LLVM_INCLUDES}")
+  string (REGEX REPLACE "\\." "" OSL_LLVM_VERSION ${LLVM_VERSION})
+  message (STATUS "LLVM directory = ${LLVM_DIRECTORY}")
+  message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
+  add_definitions ("-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION}")
 else ()
   message(FATAL_ERROR "LLVM not found.")
 endif ()

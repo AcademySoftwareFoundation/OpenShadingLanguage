@@ -427,9 +427,13 @@ public:
     bool llvm_assign_impl (Symbol &Result, Symbol &Src, int arrayindex = -1);
 
 
-    /// This will return an array(sometype) of the same size as the union
-    /// of the given types according to the C standard
-    const llvm::Type *llvm_type_union(const std::vector<const llvm::Type *> &types);
+    /// This will return a llvm::Type that is the same as a C union of
+    /// the given types[].
+    llvm::Type *llvm_type_union(const std::vector<llvm::Type *> &types);
+
+    /// This will return a llvm::Type that is the same as a C struct
+    /// comprised fields of the given types[], in order.
+    llvm::Type *llvm_type_struct(const std::vector<llvm::Type *> &types);
 
     /// Convert the name of a global (and its derivative index) into the
     /// field number of the ShaderGlobals struct.
@@ -437,20 +441,20 @@ public:
 
     /// Return the LLVM type handle for the ShaderGlobals struct.
     ///
-    const llvm::Type *llvm_type_sg ();
+    llvm::Type *llvm_type_sg ();
 
     /// Return the LLVM type handle for a pointer to a
     /// ShaderGlobals struct.
-    const llvm::Type *llvm_type_sg_ptr ();
+    llvm::Type *llvm_type_sg_ptr ();
 
     /// Return the ShaderGlobals pointer.
     ///
     llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
 
-    const llvm::Type *llvm_type_closure_component ();
-    const llvm::Type *llvm_type_closure_component_ptr ();
-    const llvm::Type *llvm_type_closure_component_attr ();
-    const llvm::Type *llvm_type_closure_component_attr_ptr ();
+    llvm::Type *llvm_type_closure_component ();
+    llvm::Type *llvm_type_closure_component_ptr ();
+    llvm::Type *llvm_type_closure_component_attr ();
+    llvm::Type *llvm_type_closure_component_attr_ptr ();
 
     /// Return the ShaderGlobals pointer cast as a void*.
     ///
@@ -458,7 +462,7 @@ public:
         return llvm_void_ptr (m_llvm_shaderglobals_ptr);
     }
 
-    llvm::Value *llvm_ptr_cast (llvm::Value* val, const llvm::Type *type) {
+    llvm::Value *llvm_ptr_cast (llvm::Value* val, llvm::Type *type) {
         return builder().CreatePointerCast(val,type);
     }
 
@@ -476,11 +480,11 @@ public:
 
     /// Return the LLVM type handle for a structure of the common group
     /// data that holds all the shader params.
-    const llvm::Type *llvm_type_groupdata ();
+    llvm::Type *llvm_type_groupdata ();
 
     /// Return the LLVM type handle for a pointer to the common group
     /// data that holds all the shader params.
-    const llvm::Type *llvm_type_groupdata_ptr ();
+    llvm::Type *llvm_type_groupdata_ptr ();
 
     /// Return the ShaderGlobals pointer.
     ///
@@ -514,7 +518,7 @@ public:
 
     /// Return a constant void pointer to the given address
     ///
-    llvm::Value *llvm_constant_ptr (void *p, const llvm::PointerType *type)
+    llvm::Value *llvm_constant_ptr (void *p, llvm::PointerType *type)
     {
         return builder().CreateIntToPtr (llvm_constant (size_t (p)), type, "const pointer");
     }
@@ -549,8 +553,13 @@ public:
     /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
     /// If ptrtype is NULL, just return a void*.
     llvm::Value *llvm_offset_ptr (llvm::Value *ptr, int offset,
-                                  const llvm::Type *ptrtype=NULL);
+                                  llvm::Type *ptrtype=NULL);
 
+    /// Generate code for a call to the function pointer, with the given
+    /// arg list.  Return an llvm::Value* corresponding to the return
+    /// value of the function, if any.
+    llvm::Value *llvm_call_function (llvm::Value *func,
+                                     llvm::Value **args, int nargs);
     /// Generate code for a call to the named function with the given arg
     /// list.  Return an llvm::Value* corresponding to the return value of
     /// the function, if any.
@@ -614,29 +623,29 @@ public:
 
     /// Generate the appropriate llvm type definition for an OSL TypeSpec
     /// (this is the actual type, for example when we allocate it).
-    const llvm::Type *llvm_type (const TypeSpec &typespec);
+    llvm::Type *llvm_type (const TypeSpec &typespec);
 
     /// Generate the parameter-passing llvm type definition for an OSL
     /// TypeSpec.
-    const llvm::Type *llvm_pass_type (const TypeSpec &typespec);
+    llvm::Type *llvm_pass_type (const TypeSpec &typespec);
 
-    const llvm::Type *llvm_type_float() { return m_llvm_type_float; }
-    const llvm::Type *llvm_type_triple() { return m_llvm_type_triple; }
-    const llvm::Type *llvm_type_matrix() { return m_llvm_type_matrix; }
-    const llvm::Type *llvm_type_int() { return m_llvm_type_int; }
-    const llvm::Type *llvm_type_addrint() { return m_llvm_type_addrint; }
-    const llvm::Type *llvm_type_bool() { return m_llvm_type_bool; }
-    const llvm::Type *llvm_type_longlong() { return m_llvm_type_longlong; }
-    const llvm::Type *llvm_type_void() { return m_llvm_type_void; }
-    const llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
-    const llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
-    const llvm::PointerType *llvm_type_int_ptr() { return m_llvm_type_int_ptr; }
-    const llvm::PointerType *llvm_type_void_ptr() { return m_llvm_type_char_ptr; }
-    const llvm::PointerType *llvm_type_string() { return m_llvm_type_char_ptr; }
-    const llvm::PointerType *llvm_type_ustring_ptr() { return m_llvm_type_ustring_ptr; }
-    const llvm::PointerType *llvm_type_float_ptr() { return m_llvm_type_float_ptr; }
-    const llvm::PointerType *llvm_type_triple_ptr() { return m_llvm_type_triple_ptr; }
-    const llvm::PointerType *llvm_type_matrix_ptr() { return m_llvm_type_matrix_ptr; }
+    llvm::Type *llvm_type_float() { return m_llvm_type_float; }
+    llvm::Type *llvm_type_triple() { return m_llvm_type_triple; }
+    llvm::Type *llvm_type_matrix() { return m_llvm_type_matrix; }
+    llvm::Type *llvm_type_int() { return m_llvm_type_int; }
+    llvm::Type *llvm_type_addrint() { return m_llvm_type_addrint; }
+    llvm::Type *llvm_type_bool() { return m_llvm_type_bool; }
+    llvm::Type *llvm_type_longlong() { return m_llvm_type_longlong; }
+    llvm::Type *llvm_type_void() { return m_llvm_type_void; }
+    llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
+    llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
+    llvm::PointerType *llvm_type_int_ptr() { return m_llvm_type_int_ptr; }
+    llvm::PointerType *llvm_type_void_ptr() { return m_llvm_type_char_ptr; }
+    llvm::PointerType *llvm_type_string() { return m_llvm_type_char_ptr; }
+    llvm::PointerType *llvm_type_ustring_ptr() { return m_llvm_type_ustring_ptr; }
+    llvm::PointerType *llvm_type_float_ptr() { return m_llvm_type_float_ptr; }
+    llvm::PointerType *llvm_type_triple_ptr() { return m_llvm_type_triple_ptr; }
+    llvm::PointerType *llvm_type_matrix_ptr() { return m_llvm_type_matrix_ptr; }
 
     /// Shorthand to create a new LLVM basic block and return its handle.
     ///
@@ -744,26 +753,26 @@ private:
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
-    const llvm::Type *m_llvm_type_float;
-    const llvm::Type *m_llvm_type_int;
-    const llvm::Type *m_llvm_type_addrint;
-    const llvm::Type *m_llvm_type_bool;
-    const llvm::Type *m_llvm_type_longlong;
-    const llvm::Type *m_llvm_type_void;
-    const llvm::Type *m_llvm_type_triple;
-    const llvm::Type *m_llvm_type_matrix;
-    const llvm::PointerType *m_llvm_type_ustring_ptr;
-    const llvm::PointerType *m_llvm_type_char_ptr;
-    const llvm::PointerType *m_llvm_type_int_ptr;
-    const llvm::PointerType *m_llvm_type_float_ptr;
-    const llvm::PointerType *m_llvm_type_triple_ptr;
-    const llvm::PointerType *m_llvm_type_matrix_ptr;
-    const llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
-    const llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
-    const llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
-    const llvm::Type *m_llvm_type_closure_component_attr; // LLVM type for ClosureMeta::Attr
-    const llvm::PointerType *m_llvm_type_prepare_closure_func;
-    const llvm::PointerType *m_llvm_type_setup_closure_func;
+    llvm::Type *m_llvm_type_float;
+    llvm::Type *m_llvm_type_int;
+    llvm::Type *m_llvm_type_addrint;
+    llvm::Type *m_llvm_type_bool;
+    llvm::Type *m_llvm_type_longlong;
+    llvm::Type *m_llvm_type_void;
+    llvm::Type *m_llvm_type_triple;
+    llvm::Type *m_llvm_type_matrix;
+    llvm::PointerType *m_llvm_type_ustring_ptr;
+    llvm::PointerType *m_llvm_type_char_ptr;
+    llvm::PointerType *m_llvm_type_int_ptr;
+    llvm::PointerType *m_llvm_type_float_ptr;
+    llvm::PointerType *m_llvm_type_triple_ptr;
+    llvm::PointerType *m_llvm_type_matrix_ptr;
+    llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
+    llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
+    llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
+    llvm::Type *m_llvm_type_closure_component_attr; // LLVM type for ClosureMeta::Attr
+    llvm::PointerType *m_llvm_type_prepare_closure_func;
+    llvm::PointerType *m_llvm_type_setup_closure_func;
     llvm::PassManager *m_llvm_passes;
     llvm::FunctionPassManager *m_llvm_func_passes;
     llvm::FunctionPassManager *m_llvm_func_passes_optimized;

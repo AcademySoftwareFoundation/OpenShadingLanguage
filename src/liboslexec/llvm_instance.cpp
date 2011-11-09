@@ -32,14 +32,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 
 #include "llvm_headers.h"
+
+// More LLVM headers that we only need for setup and calling the JIT and
+// optimizer
 #include <llvm/Analysis/Verifier.h>
+#include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/PrettyStackTrace.h>
-#include <llvm/ExecutionEngine/JITMemoryManager.h>
+#if OSL_LLVM_VERSION <= 29
+# include <llvm/Support/StandardPasses.h>
+# include <llvm/Target/TargetSelect.h>
+#else
+# include <llvm/Support/TargetSelect.h>
+#endif
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
@@ -456,7 +463,7 @@ static const char *llvm_helper_function_table[] = {
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_sg ()
 {
     // Create a type that defines the ShaderGlobals for LLVM IR.  This
@@ -465,9 +472,9 @@ RuntimeOptimizer::llvm_type_sg ()
         return m_llvm_type_sg;
 
     // Derivs look like arrays of 3 values
-    const llvm::Type *float_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, 3));
-    const llvm::Type *triple_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, 3));
-    std::vector<const llvm::Type*> sg_types;
+    llvm::Type *float_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, 3));
+    llvm::Type *triple_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, 3));
+    std::vector<llvm::Type*> sg_types;
     sg_types.push_back (triple_deriv);        // P, dPdx, dPdy
     sg_types.push_back (llvm_type_triple());  // dPdz
     sg_types.push_back (triple_deriv);        // I, dIdx, dIdy
@@ -495,32 +502,32 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back (llvm_type_int());     // flipHandedness
     sg_types.push_back (llvm_type_int());     // backfacing
 
-    return m_llvm_type_sg = llvm::StructType::get (llvm_context(), sg_types);
+    return m_llvm_type_sg = llvm_type_struct (sg_types);
 }
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_sg_ptr ()
 {
-    return llvm::PointerType::get (llvm_type_sg(), 0);
+    return (llvm::Type *) llvm::PointerType::get (llvm_type_sg(), 0);
 }
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_groupdata ()
 {
     // If already computed, return it
     if (m_llvm_type_groupdata)
         return m_llvm_type_groupdata;
 
-    std::vector<const llvm::Type*> fields;
+    std::vector<llvm::Type*> fields;
 
     // First, add the array that tells if each layer has run.  But only make
     // slots for the layers that may be called/used.
     int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
-    fields.push_back (llvm::ArrayType::get(llvm_type_bool(), sz));
+    fields.push_back ((llvm::Type *)llvm::ArrayType::get(llvm_type_bool(), sz));
     size_t offset = sz * sizeof(bool);
 
     // For each layer in the group, add entries for all params that are
@@ -562,7 +569,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
     }
     m_group.llvm_groupdata_size (offset);
 
-    m_llvm_type_groupdata = llvm::StructType::get (llvm_context(), fields);
+    m_llvm_type_groupdata = llvm_type_struct (fields);
 
 #ifdef DEBUG
 //    llvm::outs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
@@ -574,7 +581,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_groupdata_ptr ()
 {
     return llvm::PointerType::get (llvm_type_groupdata(), 0);
@@ -582,41 +589,41 @@ RuntimeOptimizer::llvm_type_groupdata_ptr ()
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_closure_component ()
 {
     if (m_llvm_type_closure_component)
         return m_llvm_type_closure_component;
 
-    std::vector<const llvm::Type*> comp_types;
+    std::vector<llvm::Type*> comp_types;
     comp_types.push_back (llvm_type_int());     // parent.type
     comp_types.push_back (llvm_type_int());     // id
     comp_types.push_back (llvm_type_int());     // size
     comp_types.push_back (llvm_type_int());     // nattrs
     comp_types.push_back (llvm_type_int());     // fake field for char mem[4]
 
-    return m_llvm_type_closure_component = llvm::StructType::get (llvm_context(), comp_types);
+    return m_llvm_type_closure_component = llvm_type_struct (comp_types);
 }
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_closure_component_ptr ()
 {
-    return llvm::PointerType::get (llvm_type_closure_component(), 0);
+    return (llvm::Type *) llvm::PointerType::get (llvm_type_closure_component(), 0);
 }
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_closure_component_attr ()
 {
     if (m_llvm_type_closure_component_attr)
         return m_llvm_type_closure_component_attr;
 
-    std::vector<const llvm::Type*> attr_types;
+    std::vector<llvm::Type*> attr_types;
     attr_types.push_back (llvm_type_string());  // key
 
-    std::vector<const llvm::Type*> union_types;
+    std::vector<llvm::Type*> union_types;
     union_types.push_back (llvm_type_int());
     union_types.push_back (llvm_type_float());
     union_types.push_back (llvm_type_triple());
@@ -624,15 +631,15 @@ RuntimeOptimizer::llvm_type_closure_component_attr ()
 
     attr_types.push_back (llvm_type_union (union_types)); // value union
 
-    return m_llvm_type_closure_component_attr = llvm::StructType::get (llvm_context(), attr_types);
+    return m_llvm_type_closure_component_attr = llvm_type_struct (attr_types);
 }
 
 
 
-const llvm::Type *
+llvm::Type *
 RuntimeOptimizer::llvm_type_closure_component_attr_ptr ()
 {
-    return llvm::PointerType::get (llvm_type_closure_component_attr(), 0);
+    return (llvm::Type *) llvm::PointerType::get (llvm_type_closure_component_attr(), 0);
 }
 
 
@@ -645,11 +652,7 @@ RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
     llvm::Value *args[3] = { sg_void_ptr(), llvm_constant("%s\n"),
                              llvm_constant(s) };
     llvm::Function *func = llvm_module()->getFunction ("osl_printf");
-    builder().CreateCall (func, args, args+3);
-    // N.B. Above we need to do the "getFunction/CreateCall" by hand,
-    // rather than call our own RuntimeOptimizer::llvm_call_function, in
-    // order to avoid infinite recursion that would result if somebody
-    // uncomments the debugging printfs in llvm_call_function itself.
+    llvm_call_function (func, args, 3);
 }
 
 
@@ -2946,7 +2949,7 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
 
 llvm::Value *
 RuntimeOptimizer::llvm_offset_ptr (llvm::Value *ptr, int offset,
-                                   const llvm::Type *ptrtype)
+                                   llvm::Type *ptrtype)
 {
     llvm::Value *i = builder().CreatePtrToInt (ptr, llvm_type_addrint());
     i = builder().CreateAdd (i, llvm_constant ((size_t)offset));
@@ -3296,7 +3299,7 @@ LLVMGEN (llvm_gen_closure)
         // Call clentry->prepare(renderservices *, int id, void *mem)
         llvm::Value *funct_ptr = rop.llvm_constant_ptr((void *)clentry->prepare, rop.llvm_type_prepare_closure_func());
         llvm::Value *args[3] = {render_ptr, id_int, mem_void_ptr};
-        rop.builder().CreateCall (funct_ptr, args, args+3);
+        rop.llvm_call_function (funct_ptr, args, 3);
     } else {
         rop.llvm_memset (mem_void_ptr, 0, clentry->struct_size, 4 /*align*/);
     }
@@ -3327,7 +3330,7 @@ LLVMGEN (llvm_gen_closure)
         // Call clentry->setup(renderservices *, int id, void *mem)
         llvm::Value *funct_ptr = rop.llvm_constant_ptr((void *)clentry->setup, rop.llvm_type_setup_closure_func());
         llvm::Value *args[3] = {render_ptr, id_int, mem_void_ptr};
-        rop.builder().CreateCall (funct_ptr, args, args+3);
+        rop.llvm_call_function (funct_ptr, args, 3);
     }
 
     llvm::Value *attrs_void_ptr = rop.llvm_offset_ptr (mem_void_ptr, clentry->struct_size);
@@ -4142,30 +4145,29 @@ RuntimeOptimizer::initialize_llvm_group ()
     m_llvm_type_closure_component_attr = NULL;
 
     // Set up aliases for types we use over and over
-    m_llvm_type_float = llvm::Type::getFloatTy (*m_llvm_context);
-    m_llvm_type_int = llvm::Type::getInt32Ty (*m_llvm_context);
+    m_llvm_type_float = (llvm::Type *) llvm::Type::getFloatTy (*m_llvm_context);
+    m_llvm_type_int = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
     if (sizeof(char *) == 4)
-        m_llvm_type_addrint = llvm::Type::getInt32Ty (*m_llvm_context);
+        m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
     else
-        m_llvm_type_addrint = llvm::Type::getInt64Ty (*m_llvm_context);
-    m_llvm_type_int_ptr = llvm::Type::getInt32PtrTy (*m_llvm_context);
-    m_llvm_type_bool = llvm::Type::getInt1Ty (*m_llvm_context);
-    m_llvm_type_longlong = llvm::Type::getInt64Ty (*m_llvm_context);
-    m_llvm_type_void = llvm::Type::getVoidTy (*m_llvm_context);
-    m_llvm_type_char_ptr = llvm::Type::getInt8PtrTy (*m_llvm_context);
-    m_llvm_type_int_ptr = llvm::Type::getInt32PtrTy (*m_llvm_context);
-    m_llvm_type_float_ptr = llvm::Type::getFloatPtrTy (*m_llvm_context);
-    m_llvm_type_ustring_ptr = llvm::PointerType::get (m_llvm_type_char_ptr, 0);
+        m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
+    m_llvm_type_int_ptr = (llvm::PointerType *) llvm::Type::getInt32PtrTy (*m_llvm_context);
+    m_llvm_type_bool = (llvm::Type *) llvm::Type::getInt1Ty (*m_llvm_context);
+    m_llvm_type_longlong = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
+    m_llvm_type_void = (llvm::Type *) llvm::Type::getVoidTy (*m_llvm_context);
+    m_llvm_type_char_ptr = (llvm::PointerType *) llvm::Type::getInt8PtrTy (*m_llvm_context);
+    m_llvm_type_float_ptr = (llvm::PointerType *) llvm::Type::getFloatPtrTy (*m_llvm_context);
+    m_llvm_type_ustring_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_char_ptr, 0);
 
     // A triple is a struct composed of 3 floats
-    std::vector<const llvm::Type*> triplefields(3, m_llvm_type_float);
-    m_llvm_type_triple = llvm::StructType::get(llvm_context(), triplefields);
-    m_llvm_type_triple_ptr = llvm::PointerType::get (m_llvm_type_triple, 0);
+    std::vector<llvm::Type*> triplefields(3, m_llvm_type_float);
+    m_llvm_type_triple = llvm_type_struct (triplefields);
+    m_llvm_type_triple_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_triple, 0);
 
     // A matrix is a struct composed 16 floats
-    std::vector<const llvm::Type*> matrixfields(16, m_llvm_type_float);
-    m_llvm_type_matrix = llvm::StructType::get(llvm_context(), matrixfields);
-    m_llvm_type_matrix_ptr = llvm::PointerType::get (m_llvm_type_matrix, 0);
+    std::vector<llvm::Type*> matrixfields(16, m_llvm_type_float);
+    m_llvm_type_matrix = llvm_type_struct (matrixfields);
+    m_llvm_type_matrix_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_matrix, 0);
 
     for (int i = 0;  llvm_helper_function_table[i];  i += 2) {
         const char *funcname = llvm_helper_function_table[i];
@@ -4174,7 +4176,7 @@ RuntimeOptimizer::initialize_llvm_group ()
         int advance;
         TypeSpec rettype = OSLCompilerImpl::type_from_code (types, &advance);
         types += advance;
-        std::vector<const llvm::Type*> params;
+        std::vector<llvm::Type*> params;
         while (*types) {
             TypeSpec t = OSLCompilerImpl::type_from_code (types, &advance);
             if (t.simpletype().basetype == TypeDesc::UNKNOWN) {
@@ -4187,16 +4189,26 @@ RuntimeOptimizer::initialize_llvm_group ()
             }
             types += advance;
         }
+#if OSL_LLVM_VERSION <= 29
+        char *pp = (char *)&params;
+        llvm::FunctionType *func = llvm::FunctionType::get (llvm_type(rettype), *(std::vector<const llvm::Type*>*)pp, varargs);
+#else
         llvm::FunctionType *func = llvm::FunctionType::get (llvm_type(rettype), params, varargs);
+#endif
         m_llvm_module->getOrInsertFunction (funcname, func);
     }
 
     // Needed for closure setup
-    std::vector<const llvm::Type*> params(3);
+    std::vector<llvm::Type*> params(3);
     params[0] = m_llvm_type_char_ptr;
     params[1] = m_llvm_type_int;
     params[2] = m_llvm_type_char_ptr;
+#if OSL_LLVM_VERSION <= 29
+    char *pp = (char *)&params;
+    m_llvm_type_prepare_closure_func = (llvm::PointerType *)llvm::PointerType::getUnqual (llvm::FunctionType::get (m_llvm_type_void, *(std::vector<const llvm::Type*>*)pp, false));
+#else
     m_llvm_type_prepare_closure_func = llvm::PointerType::getUnqual (llvm::FunctionType::get (m_llvm_type_void, params, false));
+#endif
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
 }
 

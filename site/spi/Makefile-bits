@@ -7,26 +7,37 @@ ifeq (${platform}, macosx)
     MY_CMAKE_FLAGS += \
         -DBUILD_WITH_INSTALL_RPATH=1 \
         -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
+    ifeq (${COMPILER}, clang)
+	MY_CMAKE_FLAGS += \
+	    -DCMAKE_C_COMPILER=clang \
+	    -DCMAKE_CXX_COMPILER=clang++
+    endif
 endif
 
-ifeq (${COMPILER}, clang)
-    MY_CMAKE_FLAGS += \
-         -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_2.9/bin/clang \
-         -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_2.9/bin/clang++
-endif
 
 
 ifeq ($(SP_ARCH), spinux1_x86_64)
     platform=spinux1
     # put any gcc-4.4/spinux1 specific stuff here
+    ifeq (${LLVM_VERSION},)
+	LLVM_VERSION := 2.9
+    endif
+    ifeq (${LLVM_DIRECTORY},)
+	LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_${LLVM_VERSION}
+    endif
     MY_CMAKE_FLAGS += \
         -DILMBASE_CUSTOM=1 \
         -DILMBASE_CUSTOM_LIBRARIES="SpiImath SpiHalf SpiIlmThread SpiIex" \
         -DOPENEXR_CUSTOM=1 \
         -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf" \
         -DLLVM_CUSTOM=1 \
-	     -DLLVM_VERSION=2.9 \
-	     -DLLVM_DIRECTORY=/shots/spi/home/lib/arnold/spinux1/llvm_2.9
+        -DLLVM_VERSION=${LLVM_VERSION} \
+        -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
+    ifeq (${COMPILER}, clang)
+	MY_CMAKE_FLAGS += \
+	    -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
+	    -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+    endif
 
 endif # SP_ARCH == spinux1_x86_64
 

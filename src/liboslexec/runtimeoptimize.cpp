@@ -53,6 +53,8 @@ static ustring u_nop    ("nop"),
                u_add    ("add"),
                u_sub    ("sub"),
                u_if     ("if"),
+               u_break ("break"),
+               u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
                u_setmessage ("setmessage"),
@@ -2155,17 +2157,23 @@ RuntimeOptimizer::find_basic_blocks (bool do_llvm)
     block_begin[inst()->m_maincodebegin] = true;
 
     for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
+        Opcode &op (code[opnum]);
         // Anyplace that's the target of a jump instruction starts a basic block
         for (int j = 0;  j < (int)Opcode::max_jumps;  ++j) {
-            if (code[opnum].jump(j) >= 0)
-                block_begin[code[opnum].jump(j)] = true;
+            if (op.jump(j) >= 0)
+                block_begin[op.jump(j)] = true;
             else
                 break;
         }
         // The first instruction in a conditional or loop (which is not
         // itself a jump target) also begins a basic block.  If the op has
         // any jump targets at all, it must be a conditional or loop.
-        if (code[opnum].jump(0) >= 0)
+        if (op.jump(0) >= 0)
+            block_begin[opnum+1] = true;
+        // 'break', 'continue', and 'return' also cause the next
+        // statement to begin a new basic block.
+        if (op.opname() == u_break || op.opname() == u_continue ||
+                op.opname() == u_return)
             block_begin[opnum+1] = true;
     }
 

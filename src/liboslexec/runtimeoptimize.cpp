@@ -53,6 +53,8 @@ static ustring u_nop    ("nop"),
                u_add    ("add"),
                u_sub    ("sub"),
                u_if     ("if"),
+               u_break ("break"),
+               u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
                u_setmessage ("setmessage"),
@@ -88,10 +90,30 @@ RuntimeOptimizer::set_inst (int newlayer)
     m_layer = newlayer;
     m_inst = m_group[m_layer];
     ASSERT (m_inst != NULL);
+    set_debug ();
     m_all_consts.clear ();
     m_symbol_aliases.clear ();
     m_block_aliases.clear ();
     m_param_aliases.clear ();
+}
+
+
+
+void
+RuntimeOptimizer::set_debug ()
+{
+    // start with the shading system's idea of debugging level
+    m_debug = shadingsys().debug();
+
+    // if user said to only debug one group, turn off debug if not it
+    if (shadingsys().m_debug_groupname &&
+        shadingsys().m_debug_groupname != m_group.name())
+        m_debug = 0;
+    // if user said to only debug one layer, turn off debug if not it
+    if (inst() && shadingsys().m_debug_layername &&
+        shadingsys().m_debug_layername != inst()->layername()) {
+        m_debug = 0;
+    }
 }
 
 
@@ -146,7 +168,7 @@ void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
     int opnum = &op - &(inst()->ops()[0]);
-    if (debug() > 1 && op.opname() != u_nop)
+    if (debug() > 1)
         std::cout << "turned op " << opnum
                   << " from " << op.opname() << " to "
                   << opargsym(op,0)->name() << " = " << opargsym(op,1)->name()
@@ -199,14 +221,37 @@ RuntimeOptimizer::turn_into_assign_one (Opcode &op, const char *why)
 
 
 // Turn the op into a no-op
-void
+int
 RuntimeOptimizer::turn_into_nop (Opcode &op, const char *why)
 {
-    if (debug() > 1)
-        std::cout << "turned op " << (&op - &(inst()->ops()[0]))
-                  << " from " << op.opname() << " to nop"
+    if (op.opname() != u_nop) {
+        if (debug())
+            std::cout << "turned op " << (&op - &(inst()->ops()[0]))
+                      << " from " << op.opname() << " to nop"
+                      << (why ? " : " : "") << (why ? why : "") << "\n";
+        op.reset (u_nop, 0);
+        return 1;
+    }
+    return 0;
+}
+
+
+
+int
+RuntimeOptimizer::turn_into_nop (int begin, int end, const char *why)
+{
+    int changed = 0;
+    for (int i = begin;  i != end;  ++i) {
+        Opcode &op (inst()->ops()[i]);
+        if (op.opname() != u_nop) {
+            op.reset (u_nop, 0);
+            ++changed;
+        }
+    }
+    if (debug() > 1 && changed)
+        std::cout << "turned ops " << begin << "-" << (end-1) << " into nop"
                   << (why ? " : " : "") << (why ? why : "") << "\n";
-    op.reset (u_nop, 0);
+    return changed;
 }
 
 
@@ -1026,21 +1071,10 @@ DECLFOLDER(constfold_if)
         }
         int changed = 0;
         if (result > 0) {
-            for (int i = op.jump(0), e = op.jump(1);  i < e;  ++i) {
-                if (rop.inst()->ops()[i].opname() != u_nop) {
-                    rop.turn_into_nop (rop.inst()->ops()[i], "elide 'else'");
-                    ++changed;
-                }
-            }
-            rop.turn_into_nop (op, "elide 'else'");
-            ++changed;
+            changed += rop.turn_into_nop (op.jump(0), op.jump(1), "elide 'else'");
+            changed += rop.turn_into_nop (op, "elide 'else'");
         } else if (result == 0) {
-            for (int i = opnum, e = op.jump(0);  i < e;  ++i) {
-                if (rop.inst()->ops()[i].opname() != u_nop) {
-                    rop.turn_into_nop (rop.inst()->ops()[i], "elide 'if'");
-                    ++changed;
-                }
-            }
+            changed += rop.turn_into_nop (opnum, op.jump(0), "elide 'if'");
         }
         return changed;
     }
@@ -2155,17 +2189,23 @@ RuntimeOptimizer::find_basic_blocks (bool do_llvm)
     block_begin[inst()->m_maincodebegin] = true;
 
     for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
+        Opcode &op (code[opnum]);
         // Anyplace that's the target of a jump instruction starts a basic block
         for (int j = 0;  j < (int)Opcode::max_jumps;  ++j) {
-            if (code[opnum].jump(j) >= 0)
-                block_begin[code[opnum].jump(j)] = true;
+            if (op.jump(j) >= 0)
+                block_begin[op.jump(j)] = true;
             else
                 break;
         }
         // The first instruction in a conditional or loop (which is not
         // itself a jump target) also begins a basic block.  If the op has
         // any jump targets at all, it must be a conditional or loop.
-        if (code[opnum].jump(0) >= 0)
+        if (op.jump(0) >= 0)
+            block_begin[opnum+1] = true;
+        // 'break', 'continue', and 'return' also cause the next
+        // statement to begin a new basic block.
+        if (op.opname() == u_break || op.opname() == u_continue ||
+                op.opname() == u_return)
             block_begin[opnum+1] = true;
     }
 
@@ -2284,8 +2324,9 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
     if (m_shadingsys.optimize() >= 2) {
         std::map<int,int>::iterator i = m_stale_syms.find(sym);
         if (i != m_stale_syms.end()) {
-            turn_into_nop (inst()->ops()[i->second],
-                           Strutil::format("remove stale value assignment, reassigned on op %d", opnum).c_str());
+            Opcode &uselessop (inst()->ops()[i->second]);
+            turn_into_nop (uselessop,
+                           Strutil::format("remove stale value assignment to %s, reassigned on op %d", opargsym(uselessop,0)->name().c_str(), opnum).c_str());
         }
     }
     m_stale_syms[sym] = opnum;
@@ -2367,8 +2408,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
 
     // Get rid of any init ops
     if (R->has_init_ops()) {
-        for (int i = R->initbegin();  i < R->initend();  ++i)
-            turn_into_nop (inst()->ops()[i], "init ops not needed");
+        turn_into_nop (R->initbegin(), R->initend(), "init ops not needed");
         R->initbegin (0);
         R->initend (0);
     }
@@ -2852,12 +2892,10 @@ RuntimeOptimizer::optimize_instance ()
         // Elide unconnected parameters that are never read.
         FOREACH_PARAM (Symbol &s, inst()) {
             if (!s.connected_down() && ! s.everread()) {
-                for (int i = s.initbegin(), e = s.initend();  i < e;  ++i)
-                    turn_into_nop (inst()->ops()[i],
-                                   "remove init ops of unread param");
+                changed += turn_into_nop (s.initbegin(), s.initend(),
+                                          "remove init ops of unread param");
                 s.set_initrange ();
                 s.clear_rw ();
-                ++changed;
             }
         }
 
@@ -2881,9 +2919,8 @@ RuntimeOptimizer::optimize_instance ()
     if (inst()->unused()) {
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
-        for (int i = 0, e = (int)inst()->ops().size()-1;  i < e;  ++i)
-            turn_into_nop (inst()->ops()[i],
-                           "eliminate layer with no outward connections");
+        turn_into_nop (0, (int)inst()->ops().size()-1,
+                       "eliminate layer with no outward connections");
         BOOST_FOREACH (Symbol &s, inst()->symbols())
             s.clear_rw ();
     }
@@ -2896,9 +2933,8 @@ RuntimeOptimizer::optimize_instance ()
     FOREACH_PARAM (Symbol &s, inst()) {
         if (s.symtype() == SymTypeParam && ! s.everused() &&
                 s.initbegin() < s.initend()) {
-            for (int i = s.initbegin();  i < s.initend();  ++i)
-                turn_into_nop (inst()->ops()[i],
-                               "remove init ops of unused param");
+            turn_into_nop (s.initbegin(), s.initend(),
+                           "remove init ops of unused param");
             s.set_initrange (0, 0);
         }
     }

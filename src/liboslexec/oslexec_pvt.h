@@ -842,6 +842,7 @@ private:
     int m_optimize;                       ///< Runtime optimization level
     int m_llvm_debug;                     ///< More LLVM debugging output
     ustring m_debug_groupname;            ///< Name of sole group to debug
+    ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_only_groupname;             ///< Name of sole group to compile
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs

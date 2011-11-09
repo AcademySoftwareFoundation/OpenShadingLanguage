@@ -52,7 +52,8 @@ public:
         : m_shadingsys(shadingsys),
           m_thread(shadingsys.get_perthread_info()),
           m_group(group),
-          m_inst(NULL), m_next_newconst(0),
+          m_inst(NULL),
+          m_next_newconst(0),
           m_stat_opt_locking_time(0), m_stat_specialization_time(0),
           m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
           m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
@@ -62,6 +63,7 @@ public:
           m_llvm_passes(NULL), m_llvm_func_passes(NULL),
           m_llvm_func_passes_optimized(NULL)
     {
+        set_debug ();
     }
 
     ~RuntimeOptimizer () {
@@ -85,6 +87,9 @@ public:
     ///
     void set_inst (int layer);
 
+    /// Re-check what debugging level we ought to be at.
+    void set_debug ();
+
     /// Return a pointer to the currently-optimizing instance within the
     /// group.
     ShaderInstance *inst () const { return m_inst; }
@@ -98,11 +103,7 @@ public:
     TextureSystem *texturesys () const { return shadingsys().texturesys(); }
 
     /// Are we in debugging mode?
-    int debug() const {
-        return shadingsys().debug() &&
-            (!shadingsys().m_debug_groupname ||
-             shadingsys().m_debug_groupname == m_group.name());
-    }
+    int debug() const { return m_debug; }
 
     /// Search the instance for a constant whose type and value match
     /// type and data[...].  Return -1 if no matching const is found.
@@ -129,9 +130,13 @@ public:
     /// into "assign arg0 one".
     void turn_into_assign_one (Opcode &op, const char *why=NULL);
 
-    /// Turn the op into a no-op.
-    ///
-    void turn_into_nop (Opcode &op, const char *why=NULL);
+    /// Turn the op into a no-op.  Return 1 if it changed, 0 if it was
+    /// already a nop.
+    int turn_into_nop (Opcode &op, const char *why=NULL);
+
+    /// Turn the whole range [begin,end) into no-ops.  Return the number
+    /// of instructions that were altered.
+    int turn_into_nop (int begin, int end, const char *why=NULL);
 
     void find_constant_params (ShaderGroup &group);
 
@@ -703,6 +708,7 @@ private:
     ShaderGroup &m_group;             ///< Group we're optimizing
     int m_layer;                      ///< Layer we're optimizing
     ShaderInstance *m_inst;           ///< Instance we're optimizing
+    int m_debug;                      ///< Current debug level
 
     // All below is just for the one inst we're optimizing:
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst

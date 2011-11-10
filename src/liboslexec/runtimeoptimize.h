@@ -745,10 +745,6 @@ public:
 
     void llvm_setup_optimization_passes ();
 
-    /// Do LLVM optimization on the partcular function func.  If
-    /// interproc is true, also do full interprocedural optimization.
-    void llvm_do_optimization (llvm::Function *func, bool interproc=false);
-
 private:
     ShadingSystemImpl &m_shadingsys;
     PerThreadInfo *m_thread;
@@ -821,7 +817,6 @@ private:
     llvm::PointerType *m_llvm_type_setup_closure_func;
     llvm::PassManager *m_llvm_passes;
     llvm::FunctionPassManager *m_llvm_func_passes;
-    llvm::FunctionPassManager *m_llvm_func_passes_optimized;
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage

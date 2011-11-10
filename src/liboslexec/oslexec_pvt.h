@@ -713,6 +713,7 @@ public:
     bool range_checking() const { return m_range_checking; }
     bool unknown_coordsys_error() const { return m_unknown_coordsys_error; }
     int optimize () const { return m_optimize; }
+    int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
@@ -828,7 +829,6 @@ private:
 
     // Options
     int m_statslevel;                     ///< Statistics level
-    int m_debug;                          ///< Debugging output
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?
@@ -848,6 +848,8 @@ private:
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
+    int m_llvm_optimize;                  ///< OSL optimization strategy
+    int m_debug;                          ///< Debugging output
     int m_llvm_debug;                     ///< More LLVM debugging output
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug

@@ -16,7 +16,7 @@ SET ( liboslexec_srcs
           rendservices.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp builtin_closures.cpp
-          llvm_instance.cpp llvm_util.cpp
+          llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
           ../liboslcomp/ast.cpp ../liboslcomp/codegen.cpp
           ../liboslcomp/oslcomp.cpp ../liboslcomp/symtab.cpp
           ../liboslcomp/typecheck.cpp

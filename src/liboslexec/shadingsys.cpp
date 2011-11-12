@@ -41,6 +41,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/filesystem.h"
+#if OIIO_VERSION >= 1100
+# include "OpenImageIO/optparser.h"
+#endif
 #ifdef OIIO_NAMESPACE
 namespace Filesystem = OIIO::Filesystem;
 #endif
@@ -242,6 +245,11 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
 
     attribute ("colorspace", TypeDesc::STRING, &m_colorspace);
+
+    // Allow environment variable to override default options
+    const char *options = getenv ("OSL_OPTIONS");
+    if (options)
+        ShadingSystem::attribute ("options", options);
 
     setup_op_descriptors ();
     SetupLLVM ();
@@ -449,6 +457,12 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         _dst = ustring (*(const char **)val);                           \
         return true;                                                    \
     }
+
+#if OIIO_VERSION >= 1100 /* 0.11 and higher only */
+    if (name == "options" && type == TypeDesc::STRING) {
+        return OIIO::optparser (*(ShadingSystem *)this, *(const char **)val);
+    }
+#endif
 
     lock_guard guard (m_mutex);  // Thread safety
     ATTR_SET ("statistics:level", int, m_statslevel);

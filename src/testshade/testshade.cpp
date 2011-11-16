@@ -65,7 +65,7 @@ static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool stats = false;
-static bool O0 = false, O1 = true, O2 = false;
+static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
 static int xres = 1, yres = 1;
@@ -127,8 +127,8 @@ add_shader (int argc, const char *argv[])
     const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
     if (opt_env)
         shadingsys->attribute ("optimize", atoi(opt_env));
-    else
-        shadingsys->attribute ("optimize", O2 ? 2 : (O0 ? 0 : 1));
+    else if (O0 || O1 || O2)
+        shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debugnan", debugnan);
 

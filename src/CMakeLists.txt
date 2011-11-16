@@ -118,7 +118,7 @@ add_subdirectory (doc)
 macro ( TESTSUITE )
     foreach (_testname ${ARGN})
         # Run the test unoptimized
-        add_test ( ${_testname} env OPENIMAGEIOHOME=${OPENIMAGEIOHOME} python ${PROJECT_SOURCE_DIR}/../testsuite/${_testname}/run.py ${PROJECT_SOURCE_DIR}/../testsuite/${_testname} ${CMAKE_BINARY_DIR} )
+        add_test ( ${_testname} env OPENIMAGEIOHOME=${OPENIMAGEIOHOME} TESTSHADE_OPT=0 python ${PROJECT_SOURCE_DIR}/../testsuite/${_testname}/run.py ${PROJECT_SOURCE_DIR}/../testsuite/${_testname} ${CMAKE_BINARY_DIR} )
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
         add_test ( ${_testname}.opt env OPENIMAGEIOHOME=${OPENIMAGEIOHOME} TESTSHADE_OPT=2 python ${PROJECT_SOURCE_DIR}/../testsuite/${_testname}/run.py ${PROJECT_SOURCE_DIR}/../testsuite/${_testname} ${CMAKE_BINARY_DIR} )

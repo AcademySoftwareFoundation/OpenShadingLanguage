@@ -176,7 +176,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
       m_greedyjit(false),
-      m_optimize (1),
+      m_optimize (2),
+      m_opt_constant_param(true), m_opt_constant_fold(true),
+      m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
+      m_opt_peephole(true), m_opt_coalesce_temps(true),
+      m_opt_assign(true),
+      m_optimize_nondebug(false),
       m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
@@ -474,6 +479,14 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("debugnan", int, m_debugnan);
     ATTR_SET ("lockgeom", int, m_lockgeom_default);
     ATTR_SET ("optimize", int, m_optimize);
+    ATTR_SET ("opt_constant_param", int, m_opt_constant_param);
+    ATTR_SET ("opt_constant_fold", int, m_opt_constant_fold);
+    ATTR_SET ("opt_stale_assign", int, m_opt_stale_assign);
+    ATTR_SET ("opt_elide_useless_ops", int, m_opt_elide_useless_ops);
+    ATTR_SET ("opt_peephole", int, m_opt_peephole);
+    ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
+    ATTR_SET ("opt_assign", int, m_opt_assign);
+    ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
@@ -539,6 +552,14 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("debugnan", int, m_debugnan);
     ATTR_DECODE ("lockgeom", int, m_lockgeom_default);
     ATTR_DECODE ("optimize", int, m_optimize);
+    ATTR_DECODE ("opt_constant_param", int, m_opt_constant_param);
+    ATTR_DECODE ("opt_constant_fold", int, m_opt_constant_fold);
+    ATTR_DECODE ("opt_stale_assign", int, m_opt_stale_assign);
+    ATTR_DECODE ("opt_elide_useless_ops", int, m_opt_elide_useless_ops);
+    ATTR_DECODE ("opt_peephole", int, m_opt_peephole);
+    ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
+    ATTR_DECODE ("opt_assign", int, m_opt_assign);
+    ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);

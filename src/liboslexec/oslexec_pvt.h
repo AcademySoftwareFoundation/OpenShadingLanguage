@@ -840,6 +840,14 @@ private:
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     bool m_greedyjit;                     ///< JIT as much as we can?
     int m_optimize;                       ///< Runtime optimization level
+    bool m_opt_constant_param;            ///< Turn instance params into const?
+    bool m_opt_constant_fold;             ///< Allow constant folding?
+    bool m_opt_stale_assign;              ///< Optimize stale assignments?
+    bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
+    bool m_opt_peephole;                  ///< Do some peephole optimizations?
+    bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
+    bool m_opt_assign;                    ///< Do various assign optimizations?
+    bool m_optimize_nondebug;             ///< Fully optimize non-debug!
     int m_llvm_debug;                     ///< More LLVM debugging output
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug

@@ -84,6 +84,46 @@ void erase_if (Container &c, const Predicate &p)
 
 
 
+RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
+                                    ShaderGroup &group)
+    : m_shadingsys(shadingsys),
+      m_thread(shadingsys.get_perthread_info()),
+      m_group(group),
+      m_inst(NULL),
+      m_debug(shadingsys.debug()),
+      m_optimize(shadingsys.optimize()),
+      m_opt_constant_param(shadingsys.m_opt_constant_param),
+      m_opt_constant_fold(shadingsys.m_opt_constant_fold),
+      m_opt_stale_assign(shadingsys.m_opt_stale_assign),
+      m_opt_elide_useless_ops(shadingsys.m_opt_elide_useless_ops),
+      m_opt_peephole(shadingsys.m_opt_peephole),
+      m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
+      m_opt_assign(shadingsys.m_opt_assign),
+      m_next_newconst(0),
+      m_stat_opt_locking_time(0), m_stat_specialization_time(0),
+      m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
+      m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
+      m_stat_llvm_jit_time(0),
+      m_llvm_context(NULL), m_llvm_module(NULL),
+      m_llvm_exec(NULL), m_builder(NULL),
+      m_llvm_passes(NULL), m_llvm_func_passes(NULL),
+      m_llvm_func_passes_optimized(NULL)
+{
+    set_debug ();
+}
+
+
+
+RuntimeOptimizer::~RuntimeOptimizer ()
+{
+    delete m_builder;
+    delete m_llvm_passes;
+    delete m_llvm_func_passes;
+    delete m_llvm_func_passes_optimized;
+}
+
+
+
 void
 RuntimeOptimizer::set_inst (int newlayer)
 {
@@ -105,10 +145,24 @@ RuntimeOptimizer::set_debug ()
     // start with the shading system's idea of debugging level
     m_debug = shadingsys().debug();
 
-    // if user said to only debug one group, turn off debug if not it
     if (shadingsys().m_debug_groupname &&
-        shadingsys().m_debug_groupname != m_group.name())
+        shadingsys().m_debug_groupname != m_group.name()) {
         m_debug = 0;
+        if (shadingsys().m_optimize_nondebug) {
+            // Debugging trick: if user said to only debug one group, turn
+            // on full optimization for all others!  This prevents
+            // everything from running 10x slower just because you want to
+            // debug one shader.
+            m_optimize = 3;
+            m_opt_constant_param = true;
+            m_opt_constant_fold = true;
+            m_opt_stale_assign = true;
+            m_opt_elide_useless_ops = true;
+            m_opt_peephole = true;
+            m_opt_coalesce_temps = true;
+            m_opt_assign = true;
+        }
+    }
     // if user said to only debug one layer, turn off debug if not it
     if (inst() && shadingsys().m_debug_layername &&
         shadingsys().m_debug_layername != inst()->layername()) {
@@ -2321,7 +2375,7 @@ RuntimeOptimizer::is_simple_assign (Opcode &op)
 void
 RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 {
-    if (m_shadingsys.optimize() >= 2) {
+    if (optimize() >= 2 && m_opt_stale_assign) {
         std::map<int,int>::iterator i = m_stale_syms.find(sym);
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
@@ -2678,7 +2732,7 @@ RuntimeOptimizer::optimize_instance ()
             m_all_consts.push_back (i);
 
     // Turn all geom-locked parameters into constants.
-    if (m_shadingsys.optimize() >= 2) {
+    if (optimize() >= 2 && m_opt_constant_param) {
         find_constant_params (group());
     }
 
@@ -2772,7 +2826,7 @@ RuntimeOptimizer::optimize_instance ()
 
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
-            if (m_shadingsys.optimize() >= 2) {
+            if (optimize() >= 2 && m_opt_constant_fold) {
                 const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
                 if (opd && opd->folder) {
                     changed += (*opd->folder) (*this, opnum);
@@ -2788,7 +2842,8 @@ RuntimeOptimizer::optimize_instance ()
                     block_unalias (inst()->arg(op.firstarg()+i));
 
             // Get rid of an 'if' if it contains no statements to execute
-            if (m_shadingsys.optimize() >= 2 && op.opname() == u_if) {
+            if (optimize() >= 2 && op.opname() == u_if &&
+                    m_opt_constant_fold) {
                 int jump = op.farthest_jump ();
                 bool only_nops = true;
                 for (int i = opnum+1;  i < jump && only_nops;  ++i)
@@ -2801,7 +2856,8 @@ RuntimeOptimizer::optimize_instance ()
             }
 
             // Now we handle assignments.
-            if (m_shadingsys.optimize() >= 2 && op.opname() == u_assign) {
+            if (optimize() >= 2 && op.opname() == u_assign &&
+                    m_opt_assign) {
                 Symbol *R (inst()->argsymbol(op.firstarg()+0));
                 Symbol *A (inst()->argsymbol(op.firstarg()+1));
                 bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||
@@ -2870,11 +2926,11 @@ RuntimeOptimizer::optimize_instance ()
                 }
             }
 
-            if (m_shadingsys.optimize() >= 2)
+            if (optimize() >= 2 && m_opt_elide_useless_ops)
                 changed += useless_op_elision (op);
 
             // Peephole optimization involving pair of instructions
-            if (m_shadingsys.optimize() >= 2)
+            if (optimize() >= 2 && m_opt_peephole)
                 changed += peephole2 (opnum);
 
         }
@@ -3277,7 +3333,7 @@ RuntimeOptimizer::post_optimize_instance ()
 
     add_useparam (allsymptrs);
 
-    if (m_shadingsys.optimize() >= 1)
+    if (optimize() >= 1 && m_opt_coalesce_temps)
         coalesce_temporaries ();
 }
 
@@ -3436,12 +3492,6 @@ RuntimeOptimizer::collapse_ops ()
 void
 RuntimeOptimizer::optimize_group ()
 {
-    if (shadingsys().m_only_groupname &&
-        shadingsys().m_only_groupname != m_group.name()) {
-        m_group.does_nothing (true);
-        return;
-    }
-
     Timer rop_timer;
     if (debug())
         m_shadingsys.info ("About to optimize shader group %s:",
@@ -3461,7 +3511,7 @@ RuntimeOptimizer::optimize_group ()
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         m_inst->copy_code_from_master ();
-        if (debug() && m_shadingsys.optimize() >= 1) {
+        if (debug() && optimize() >= 1) {
             std::cout << "Before optimizing layer " << layer << " " 
                       << inst()->layername() 
                       << ", I get:\n" << inst()->print()
@@ -3514,7 +3564,7 @@ RuntimeOptimizer::optimize_group ()
         set_inst (layer);
         if (inst()->unused())
             continue;  // no need to print or gather stats for unused layers
-        if (m_shadingsys.optimize() >= 1) {
+        if (optimize() >= 1) {
             collapse_syms ();
             collapse_ops ();
             if (debug()) {
@@ -3599,12 +3649,30 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
     Timer timer;
     lock_guard lock (group.m_mutex);
     if (group.optimized()) {
+        // The group was somehow optimized by another thread between the
+        // time we checked group.optimized() and now that we have the lock.
+        // Nothing to do but record how long we waited for the lock.
         spin_lock stat_lock (m_stat_mutex);
         double t = timer();
         m_stat_optimization_time += t;
         m_stat_opt_locking_time += t;
         return;
     }
+
+    if (m_only_groupname && m_only_groupname != group.name()) {
+        // For debugging purposes, we are requested to compile only one
+        // shader group, and this is not it.  Mark it as does_nothing,
+        // and also as optimized so nobody locks on it again, and record
+        // how long we waited for the lock.
+        group.does_nothing (true);
+        group.m_optimized = true;
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+
     double locking_time = timer();
 
     RuntimeOptimizer rop (*this, group);

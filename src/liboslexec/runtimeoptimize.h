@@ -48,30 +48,9 @@ namespace pvt {   // OSL::pvt
 /// Container for state that needs to be passed around
 class RuntimeOptimizer {
 public:
-    RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group)
-        : m_shadingsys(shadingsys),
-          m_thread(shadingsys.get_perthread_info()),
-          m_group(group),
-          m_inst(NULL),
-          m_next_newconst(0),
-          m_stat_opt_locking_time(0), m_stat_specialization_time(0),
-          m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
-          m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
-          m_stat_llvm_jit_time(0),
-          m_llvm_context(NULL), m_llvm_module(NULL),
-          m_llvm_exec(NULL), m_builder(NULL),
-          m_llvm_passes(NULL), m_llvm_func_passes(NULL),
-          m_llvm_func_passes_optimized(NULL)
-    {
-        set_debug ();
-    }
+    RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group);
 
-    ~RuntimeOptimizer () {
-        delete m_builder;
-        delete m_llvm_passes;
-        delete m_llvm_func_passes;
-        delete m_llvm_func_passes_optimized;
-    }
+    ~RuntimeOptimizer ();
 
     void optimize_group ();
 
@@ -104,6 +83,9 @@ public:
 
     /// Are we in debugging mode?
     int debug() const { return m_debug; }
+
+    /// What's our current optimization level?
+    int optimize() const { return m_optimize; }
 
     /// Search the instance for a constant whose type and value match
     /// type and data[...].  Return -1 if no matching const is found.
@@ -718,6 +700,14 @@ private:
     int m_layer;                      ///< Layer we're optimizing
     ShaderInstance *m_inst;           ///< Instance we're optimizing
     int m_debug;                      ///< Current debug level
+    int m_optimize;                   ///< Current optimization level
+    bool m_opt_constant_param;            ///< Turn instance params into const?
+    bool m_opt_constant_fold;             ///< Allow constant folding?
+    bool m_opt_stale_assign;              ///< Optimize stale assignments?
+    bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
+    bool m_opt_peephole;                  ///< Do some peephole optimizations?
+    bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
+    bool m_opt_assign;                    ///< Do various assign optimizations?
 
     // All below is just for the one inst we're optimizing:
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst

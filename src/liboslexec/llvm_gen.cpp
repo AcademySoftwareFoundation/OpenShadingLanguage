@@ -2645,7 +2645,6 @@ LLVMGEN (llvm_gen_closure)
     llvm::Value *nattrs_int = rop.llvm_constant(nattrs);
     llvm::Value *alloc_args[4] = {sg_ptr, id_int, size_int, nattrs_int};
     llvm::Value *comp_void_ptr = rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 4);
-    rop.llvm_store_value (comp_void_ptr, Result, 0, NULL, 0);
     llvm::Value *comp_ptr = rop.llvm_ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
     // Get the address of the primitive buffer, which is the 5th field
     llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 4);
@@ -2672,7 +2671,7 @@ LLVMGEN (llvm_gen_closure)
         TypeDesc t = sym.typespec().simpletype();
         if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
             t.vecsemantics = TypeDesc::VECTOR;
-        if (!sym.typespec().is_closure_based() && !sym.typespec().is_structure() && t == p.type) {
+        if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure() && t == p.type) {
             llvm::Value* dst = rop.llvm_offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = rop.llvm_void_ptr (sym);
             rop.llvm_memcpy (dst, src, (int)p.type.size(),
@@ -2695,6 +2694,9 @@ LLVMGEN (llvm_gen_closure)
     llvm::Value *attrs_void_ptr = rop.llvm_offset_ptr (mem_void_ptr, clentry->struct_size);
     llvm::Value *attrs_ptr = rop.llvm_ptr_cast(attrs_void_ptr, rop.llvm_type_closure_component_attr_ptr());
     llvm_gen_keyword_fill(rop, op, clentry, closure_name, attrs_ptr, clentry->nformal + 2);
+
+    // Store result at the end, otherwise Ci = modifier(Ci) won't work
+    rop.llvm_store_value (comp_void_ptr, Result, 0, NULL, 0);
 
     return true;
 }

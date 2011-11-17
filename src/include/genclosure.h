@@ -60,6 +60,8 @@ struct ClosureParam {
     { TypeDesc::TypeVector, reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
 #define CLOSURE_STRING_PARAM(st, fld) \
     { TypeDesc::TypeString, reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
+#define CLOSURE_CLOSURE_PARAM(st, fld) \
+    { TypeDesc::PTR, reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
 
 #define CLOSURE_INT_ARRAY_PARAM(st, fld, n) \
     { TypeDesc(TypeDesc::INT,   TypeDesc::SCALAR, TypeDesc::NOXFORM, n),reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }

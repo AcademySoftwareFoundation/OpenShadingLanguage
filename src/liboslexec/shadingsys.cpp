@@ -159,6 +159,12 @@ ustring periodic ("periodic"), mirror ("mirror");
 ustring firstchannel ("firstchannel"), fill ("fill"), alpha ("alpha");
 ustring interp("interp"), closest("closest"), linear("linear");
 ustring cubic("cubic"), smartcubic("smartcubic");
+ustring perlin("perlin"), uperlin("uperlin");
+ustring noise("noise"), snoise("snoise");
+ustring cell("cell"), cellnoise("cellnoise"), pcellnoise("pcellnoise");
+ustring pnoise("pnoise"), psnoise("psnoise");
+ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
+ustring gabor("gabor");
 };
 
 
@@ -360,17 +366,17 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (mul,         mul,                 mul,           true);
     OP (neg,         neg,                 neg,           true);
     OP (neq,         compare_op,          neq,           true);
-    OP (noise,       generic,             none,          true);
+    OP (noise,       noise,               none,          true);
     OP (normal,      construct_triple,    triple,        true);
     OP (normalize,   generic,             none,          true);
     OP (or,          andor,               or,            true);
-    OP (pnoise,      pnoise,              none,          true);
+    OP (pnoise,      noise,               none,          true);
     OP (point,       construct_triple,    triple,        true);
     OP (pointcloud_search, pointcloud_search, none,      false);
     OP (pointcloud_get, pointcloud_get,   none,          false);
     OP (pow,         generic,             pow,           true);
     OP (printf,      printf,              none,          false);
-    OP (psnoise,     pnoise,              none,          true);
+    OP (psnoise,     noise,               none,          true);
     OP (radians,     generic,             none,          true);
     OP (raytype,     raytype,             none,          true);
     OP (regex_match, regex,               none,          false);
@@ -385,7 +391,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (sincos,      sincos,              none,          false);
     OP (sinh,        generic,             none,          true);
     OP (smoothstep,  generic,             none,          true);
-    OP (snoise,      generic,             none,          true);
+    OP (snoise,      noise,               none,          true);
     OP (spline,      spline,              none,          true);
     OP (splineinverse, spline,            none,          true);
     OP (sqrt,        generic,             sqrt,          true);

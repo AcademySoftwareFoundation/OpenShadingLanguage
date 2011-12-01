@@ -1,10 +1,3 @@
 Compiled test.osl -> test.oso
 
-Output Cout_f1 to test_f1.tif
-Output Cout_f2 to test_f2.tif
-Output Cout_f3 to test_f3.tif
-Output Cout_f4 to test_f4.tif
-Output Cout_c1 to test_c1.tif
-Output Cout_c2 to test_c2.tif
-Output Cout_c3 to test_c3.tif
-Output Cout_c4 to test_c4.tif
+Output Cout to out.tif

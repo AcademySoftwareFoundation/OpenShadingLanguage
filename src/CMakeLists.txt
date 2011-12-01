@@ -136,7 +136,9 @@ TESTSUITE ( arithmetic array array-derivs array-range
             function-earlyreturn function-simple function-outputelem
             geomath getsymbol-nonheap gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers layers-lazy
-            logic loop matrix message miscmath missing-shader noise pnoise
+            logic loop matrix message miscmath missing-shader
+            noise noise-cell noise-perlin noise-uperlin
+            pnoise pnoise-cell pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
             raytype shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture

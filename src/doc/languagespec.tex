@@ -63,8 +63,8 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 12 Oct, 2011 \\
-(with corrections, 23 Oct, 2011)
+\date{{\large Date: 5 Dec, 2011 \\
+%(with corrections, 5 Dec, 2011)
 }}
 
 
@@ -3249,37 +3249,99 @@ with a smooth transition.
 %
 %Noise functions (sometimes called ``Perlin noise'')
 
-\apiitem{\emph{type} {\ce noise} (float u) \\
-\emph{type} {\ce noise} (float u, float v) \\
-\emph{type} {\ce noise} (point p) \\
-\emph{type} {\ce noise} (point p, float t)}
+\apiitem{\emph{type} {\ce noise} (string noisetype, float u, ...) \\
+\emph{type} {\ce noise} (string noisetype, float u, float v, ...) \\
+\emph{type} {\ce noise} (string noisetype, point p, ...) \\
+\emph{type} {\ce noise} (string noisetype, point p, float t, ...)
+}
 \indexapi{noise()}
 
 Returns a continuous, pseudo-random (but repeatable) scalar field
 defined on a domain of dimension 1 (\float), 2 (2 \float's), 3 (\point),
-or 4 (\point and \float).
+or 4 (\point and \float), with a return value of either 1D (\float) or 3D
+(\color, \point, \vector, or \normal).
 
-The range of \noise is $[0,1]$, its large-scale average is 0.5, it is 
-fairly isotropic and nonperiodic (or at least has an extremely large
-period), and mostly band-limited to frequences between 0.5 and 1.0.
-This makes it ideal to use as a basis function for pattern generation.
+The {\cf noisename} specifies which of a variety of possible noise
+functions will be used.  
 
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ \noise
-function.
+\apiitem{"perlin", "snoise"}
+\vspace{12pt}
+
+A signed Perlin-like gradient noise with an output range of $[-1,1]$,
+approximate average value of $0$, and is exactly $0$ at integer lattice
+points.  This is equivalent to the {\cf snoise()} function.
+
+\apiend
+\vspace{-16pt}
+
+\apiitem{"uperlin", "noise"}
+\vspace{12pt}
+An unsigned Perlin-like gradient noise with an output range of $(0,1)$,
+approximate average value of $0.5$, and is exactly $0.5$ at integer
+lattice points.  This is equivalent to the {\cf noise()} function (the
+one that doesn't take a name string).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"cell"}
+\vspace{12pt}
+A discrete function that is constant on $[i,i+1)$ for all integers $i$
+(i.e., {\cf cellnoise(x) == cellnoise(floor(x))}), but has a different
+and uncorrelated value at every integer.  The range is $[0,1]$, its
+large-scale average is 0.5, and its values are evenly distributed over
+$[0,1]$.
 \apiend
 
-\apiitem{\emph{type} {\ce snoise} (float u) \\
+%\vspace{-16pt}
+
+Note that some of the noise varieties have an output range of $[-1,1]$
+but others have range $[0,1]$; some may automatically antialias their
+output (based on the derivatives of the lookup coordinates) and others
+may not, and various other properties may differ.  The user should be
+aware of which noise varieties are useful in various circumstances.
+
+A particular renderer's implementation of OSL may supply additional
+noise varieties not described here.
+
+The {\cf noise()} functions take optional arguments after their
+coordinates, passed as token/value pairs (similarly to optional texture
+arguments).  Generally, such arguments are specific to the type of
+noise, and are ignored for noise types that don't understand them.
+\apiend
+
+
+
+\apiitem{\emph{type} {\ce pnoise} (string noisetype, float u, float uperiod) \\
+\emph{type} {\ce pnoise} (string noisetype, float u, float v, float uperiod, float vperiod) \\
+\emph{type} {\ce pnoise} (string noisetype, point p, point pperiod) \\
+\emph{type} {\ce pnoise} (string noisetype, point p, float t, point pperiod, float tperiod)
+}
+\indexapi{pnoise()}
+
+Periodic version of {\cf noise}, in which the domain wraps with the given
+period(s).  Generally, only integer-valued periods are supported.
+\apiend
+
+
+
+
+\apiitem{\emph{type} {\ce noise} (float u) \\
+\emph{type} {\ce noise} (float u, float v) \\
+\emph{type} {\ce noise} (point p) \\
+\emph{type} {\ce noise} (point p, float t)
+\smallskip \\
+\emph{type} {\ce snoise} (float u) \\
 \emph{type} {\ce snoise} (float u, float v) \\
 \emph{type} {\ce snoise} (point p) \\
 \emph{type} {\ce snoise} (point p, float t)}
 \indexapi{snoise()}
-The \snoise function (\emph{signed} noise) is just like
-\noise, but scaled so that its range is $[-1,1]$ and its large-scale
-average is 0.
+\indexapi{noise()}
+
+The old {\cf noise(...coords...)} function is equivalent to
+{\cf noise("uperlin",...coords...)} and {\cf snoise(...coords...)}
+is equivalent to {\cf noise("perlin",...coords...)}.
 \apiend
+
 
 \apiitem{\emph{type} {\ce pnoise} (float u, float uperiod) \\
 \emph{type} {\ce pnoise} (float u, float v, float uperiod, float vperiod) \\
@@ -3292,14 +3354,10 @@ average is 0.
 \emph{type} {\ce psnoise} (point p, float t, point pperiod, float tperiod)}
 \indexapi{pnoise()}
 \indexapi{psnoise()}
-The \pnoise function is just like \noise, but is periodic with the given
-period.  In other words, {\cf pnoise(x,period) == pnoise(x+period,period)}.
-Periods are only meaningful if they are positive integers, so actually
-the period is rounded down to the nearest integer, and clamped to a
-minimum of 1.
 
-The \psnoise function a signed version of \pnoise, i.e., identical to
-\pnoise but having a range of $[-1,1]$ and average value of 0.
+The old {\cf pnoise(...coords...)} function is equivalent to
+{\cf pnoise("uperlin",...coords...)} and {\cf psnoise(...coords...)}
+is equivalent to {\cf pnoise("perlin",...coords...)}.
 \apiend
 
 \apiitem{\emph{type} {\ce cellnoise} (float u) \\
@@ -3307,21 +3365,8 @@ The \psnoise function a signed version of \pnoise, i.e., identical to
 \emph{type} {\ce cellnoise} (point p) \\
 \emph{type} {\ce cellnoise} (point p, float t)}
 \indexapi{cellnoise()}
-Returns a discrete pseudo-random (but repeatable) scalar field
-defined on a domain of dimension 1 (\float), 2 (2 \float's), 3 (\point),
-or 4 (\point and \float).  
-
-The \cellnoise function is constant on $[i,i+1)$ for all
-integers $i$, in other words, {\cf cellnoise(x) == cellnoise(floor(x))},
-but has a different and uncorrelated value at every integer.  The range
-is $[0,1]$, its large-scale average is 0.5, and its values are evenly
-distributed over $[0,1]$.
-
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ \cellnoise
-function.
+The old {\cf cellnoise(...coords...)} function is equivalent to
+{\cf noise("cell",...coords...)}.
 \apiend
 
 \apiitem{\emph{type} {\ce hash} (float u) \\

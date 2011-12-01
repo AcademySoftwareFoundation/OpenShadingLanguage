@@ -1220,6 +1220,9 @@ namespace Strings {
     extern ustring black, clamp, periodic, mirror;
     extern ustring firstchannel, fill, alpha;
     extern ustring interp, closest, linear, cubic, smartcubic;
+    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern ustring cell, cellnoise, pcellnoise;
+    extern ustring genericnoise, genericpnoise, gabor;
 }; // namespace Strings
 
 

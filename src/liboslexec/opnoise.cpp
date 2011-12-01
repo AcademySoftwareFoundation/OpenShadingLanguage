@@ -85,6 +85,7 @@ void test_perlin(int d) {
 #define VEC(v) (*(Vec3 *)v)
 #define DFLOAT(x) (*(Dual2<Float> *)x)
 #define DVEC(x) (*(Dual2<Vec3> *)x)
+#define USTR(cstr) (*((ustring *)&cstr))
 
 
 #define NOISE_IMPL(opname,implname)                                     \
@@ -226,8 +227,52 @@ OSL_SHADEOP void osl_ ##opname## _dvvdf (void *r, void *x, void *y) {   \
 
 
 
-NOISE_IMPL (cellnoise, CellNoise)
+#define NOISE_IMPL_DERIV_OPT(opname,implname)                           \
+OSL_SHADEOP void osl_ ##opname## _dfdf (void *name, void *r, void *x, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DFLOAT(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                   \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dfdfdf (void *name, void *r, void *x, void *y, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DFLOAT(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                        \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dfdv (void *name, void *r, void *x, void *sg, void *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DVEC(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                     \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dfdvdf (void *name, void *r, void *x, void *y, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DVEC(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                          \
+}                                                                       \
+                                                                        \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdf (void *name, void *r, void *x, void *sg, void *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DFLOAT(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                     \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdfdf (void *name, void *r, void *x, void *y, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DFLOAT(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                                     \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdv (void *name, void *r, void *x, void *sg, void *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DVEC(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                       \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdvdf (void *name, void *r, void *x, void *y, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DVEC(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                            \
+}
 
+
+
+
+NOISE_IMPL (cellnoise, CellNoise)
 NOISE_IMPL (noise, Noise)
 NOISE_IMPL_DERIV (noise, Noise)
 NOISE_IMPL (snoise, SNoise)
@@ -372,9 +417,229 @@ OSL_SHADEOP void osl_ ##opname## _dvvdfvf (void *r, void *x, void *px, void *y, 
 }
 
 
+
+
+#define PNOISE_IMPL_DERIV_OPT(opname,implname)                          \
+OSL_SHADEOP void osl_ ##opname## _dfdff (void *name, void *r, void *x, float px, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DFLOAT(x), px, (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dfdfdfff (void *name, void *r, void *x, void *y, float px, float py, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DFLOAT(x), DFLOAT(y), px, py, (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dfdvv (void *name, void *r, void *x, void *px, void *sg, void *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DVEC(x), VEC(px), (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dfdvdfvf (void *name, void *r, void *x, void *y, void *px, float py, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DFLOAT(r), DVEC(x), DFLOAT(y), VEC(px), py, (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdff (void *name, void *r, void *x, float px, void *sg, void *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DFLOAT(x), px, (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdfdfff (void *name, void *r, void *x, void *y, float px, float py, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DFLOAT(x), DFLOAT(y), px, py, (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdvv (void *name, void *r, void *x, void *px, void *sg, void *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DVEC(x), VEC(px), (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_ ##opname## _dvdvdfvf (void *name, void *r, void *x, void *y, void *px, float py, void *sg, void *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), DVEC(r), DVEC(x), DFLOAT(y), VEC(px), py, (ShaderGlobals *)sg, (NoiseParams *)opt); \
+}
+
+
+
+
+PNOISE_IMPL (pcellnoise, PeriodicCellNoise)
 PNOISE_IMPL (pnoise, PeriodicNoise)
 PNOISE_IMPL_DERIV (pnoise, PeriodicNoise)
 PNOISE_IMPL (psnoise, PeriodicSNoise)
 PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
+
+
+
+struct GenericNoise {
+    GenericNoise () { }
+
+    // Template on R, S, and T to be either float or Vec3
+
+    template<class R, class S>
+    inline void operator() (ustring name, R &result, const S &s, const 
+                            ShaderGlobals *sg, const NoiseParams *opt) const { 
+        if (name == Strings::uperlin || name == Strings::noise) {
+            Noise noise;
+            noise(result, s);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            SNoise snoise;
+            snoise(result, s);
+        } else if (name == Strings::cell) {
+            CellNoise cellnoise;
+            cellnoise(result, s);
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+   }
+
+    template<class R, class S, class T>
+    inline void operator() (ustring name, R &result, const S &s, const T &t,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        if (name == Strings::uperlin || name == Strings::noise) {
+            Noise noise;
+            noise(result, s, t);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            SNoise snoise;
+            snoise(result, s, t);
+        } else if (name == Strings::cell) {
+            CellNoise cellnoise;
+            cellnoise(result, s, t);
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+    }
+
+    // dual versions
+
+    template<class R, class S>
+    inline void operator() (ustring name, Dual2<R> &result, const Dual2<S> &s,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        if (name == Strings::uperlin || name == Strings::noise) {
+            Noise noise;
+            noise(result, s);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            SNoise snoise;
+            snoise(result, s);
+        } else if (name == Strings::cell) {
+            CellNoise cellnoise;
+            cellnoise(result.val(), s.val());
+            result.clear_d();
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+    }
+
+    template<class R, class S, class T>
+    inline void operator() (ustring name, Dual2<R> &result,
+                            const Dual2<S> &s, const Dual2<T> &t,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        if (name == Strings::uperlin || name == Strings::noise) {
+            Noise noise;
+            noise(result, s, t);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            SNoise snoise;
+            snoise(result, s, t);
+        } else if (name == Strings::cell) {
+            CellNoise cellnoise;
+            cellnoise(result.val(), s.val(), t.val());
+            result.clear_d();
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+    }
+};
+
+
+NOISE_IMPL_DERIV_OPT (genericnoise, GenericNoise)
+
+
+struct GenericPNoise {
+    GenericPNoise () { }
+
+    // Template on R, S, and T to be either float or Vec3
+
+    template<class R, class S>
+    inline void operator() (ustring name, R &result, const S &s,
+                            const S &sp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const { 
+        if (name == Strings::uperlin || name == Strings::noise) {
+            PeriodicNoise noise;
+            noise(result, s, sp);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            PeriodicSNoise snoise;
+            snoise(result, s, sp);
+        } else if (name == Strings::cell) {
+            PeriodicCellNoise cellnoise;
+            cellnoise(result, s, sp);
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+   }
+
+    template<class R, class S, class T>
+    inline void operator() (ustring name, R &result, const S &s, const T &t,
+                            const S &sp, const T &tp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        if (name == Strings::uperlin || name == Strings::noise) {
+            PeriodicNoise noise;
+            noise(result, s, t, sp, tp);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            PeriodicSNoise snoise;
+            snoise(result, s, t, sp, tp);
+        } else if (name == Strings::cell) {
+            PeriodicCellNoise cellnoise;
+            cellnoise(result, s, t, sp, tp);
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+    }
+
+    // dual versions
+
+    template<class R, class S>
+    inline void operator() (ustring name, Dual2<R> &result, const Dual2<S> &s,
+                            const S &sp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        if (name == Strings::uperlin || name == Strings::noise) {
+            PeriodicNoise noise;
+            noise(result, s, sp);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            PeriodicSNoise snoise;
+            snoise(result, s, sp);
+        } else if (name == Strings::cell) {
+            PeriodicCellNoise cellnoise;
+            cellnoise(result.val(), s.val(), sp);
+            result.clear_d();
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+    }
+
+    template<class R, class S, class T>
+    inline void operator() (ustring name, Dual2<R> &result,
+                            const Dual2<S> &s, const Dual2<T> &t,
+                            const S &sp, const T &tp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        if (name == Strings::uperlin || name == Strings::noise) {
+            PeriodicNoise noise;
+            noise(result, s, t, sp, tp);
+        } else if (name == Strings::perlin || name == Strings::snoise) {
+            PeriodicSNoise snoise;
+            snoise(result, s, t, sp, tp);
+        } else if (name == Strings::cell) {
+            PeriodicCellNoise cellnoise;
+            cellnoise(result.val(), s.val(), t.val(), sp, tp);
+            result.clear_d();
+        } else {
+            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+        }
+    }
+};
+
+
+PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
+
 
 #endif

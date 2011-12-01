@@ -10,15 +10,16 @@ if len(sys.argv) > 2 :
     path = sys.argv[2] + "/"
 
 # A command to run
-command = path + "oslc/oslc test.osl > out.txt"
+command = path + "oslc/oslc ../common/shaders/testnoise.osl > out.txt"
 command = command + "; " + path + "testshade/testshade -g 512 512 -od uint8 "
-command = command + "-o Cout out.tif test >> out.txt"
+command = command + "-o Cout out.tif "
+command = command + "-sparam noisename cell -fparam offset 0 -fparam scale 1 testnoise >> out.txt"
 
 # Outputs to check against references
 outputs = [ "out.txt", "out.tif" ]
 
 # Files that need to be cleaned up, IN ADDITION to outputs
-cleanfiles = [ ]
+cleanfiles = [ "testnoise.oso" ]
 
 
 # boilerplate

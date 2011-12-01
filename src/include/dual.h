@@ -93,6 +93,10 @@ public:
     void set_dx  (const T &dx)  { m_dx  = dx;  }
     void set_dy  (const T &dy)  { m_dy  = dy;  }
 
+    /// Clear the derivatives; leave the value alone.
+    ///
+    void clear_d () { m_dx = T(0);  m_dy = T(0); }
+
     /// Return the special dual number (i == 0 is the dx imaginary
     /// number, i == 1 is the dy imaginary number).
     static Dual2<T> d (int i) {

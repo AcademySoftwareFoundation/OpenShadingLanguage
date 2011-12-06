@@ -35,6 +35,8 @@
 #define M_PI_2     1.5707963267948966        /* pi/2 */
 #define M_PI_4     0.7853981633974483        /* pi/4 */
 #define M_2_PI     0.6366197723675813        /* 2/pi */
+#define M_2PI      6.2831853071795865        /* 2*pi */
+#define M_4PI     12.566370614359173         /* 4*pi */
 #define M_2_SQRTPI 1.1283791670955126        /* 2/sqrt(pi) */
 #define M_E        2.7182818284590452        /* e (Euler's number) */
 #define M_LN2      0.6931471805599453        /* ln(2) */

@@ -3017,7 +3017,7 @@ LLVMGEN (llvm_gen_luminance)
     bool deriv = C.has_derivs() && Result.has_derivs();
     llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                              rop.llvm_void_ptr(C) };
-    rop.llvm_call_function (deriv ? "osl_luminance_dvdf" : "osl_luminance_fv",
+    rop.llvm_call_function (deriv ? "osl_luminance_dfdv" : "osl_luminance_fv",
                             args, 3);
 
     if (Result.has_derivs() && !C.has_derivs())

@@ -41,6 +41,10 @@ test ()
         float fi = 16.0;
         float fj = 7.0;
         printf ("  fmod (%g, %g) = %g\n", fi, fj, fmod(fi, fj));
+        printf ("  mod (%g, %g) = %g\n", fi, fj, mod(fi, fj));
+        fi = -16.0;
+        printf ("  fmod (%g, %g) = %g\n", fi, fj, fmod(fi, fj));
+        printf ("  mod (%g, %g) = %g\n", fi, fj, mod(fi, fj));
     }
 
     { 
@@ -66,6 +70,7 @@ test ()
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
+        printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
 
     printf (" varying:\n");
@@ -81,6 +86,7 @@ test ()
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
+        printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
 
     {
@@ -95,5 +101,6 @@ test ()
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
+        printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
 }

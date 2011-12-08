@@ -2845,11 +2845,24 @@ either direction; and {\cf trunc} returns the integer part of $x$
 (equivalent to {\cf floor} if $x>0$ and {\cf ceil} if $x<0$).
 \apiend
 
-\apiitem{\emph{type} {\ce mod} (\emph{type} a, \emph{type} b) \\
-\emph{type} {\ce fmod} (\emph{type} a, \emph{type} b)}
-\indexapi{mod()}
+\apiitem{\emph{type} {\ce fmod} (\emph{type} a, \emph{type} b) \\
+\emph{type} {\ce mod} (\emph{type} a, \emph{type} b)}
 \indexapi{fmod()}
-Computes $a - b*\mbox{floor}(a/b)$.  The two functions are synonyms.
+\indexapi{mod()}
+
+The {\cf fmod()} function returns the floating-point remainder of $a/b$,
+i.e., is the floating-point equivalent of the integer {\cf \%} operator.
+It is nearly identical to the C or C++ {\cf fmod} function, except that
+in OSL, {\cf fmod(a,0)} returns {\cf 0}, rather than {\cf NaN}.  Note
+that if $a < 0$, the return value will be negative.
+
+The {\cf mod()} function returns $a - b*\mbox{floor}(a/b)$, which will
+always be a positive number or zero.  
+As an example, {\cf fmod(-0.25,1.0) = -0.25}, but {\cf mod(-0.25,1.0) =
+  0.75}.  For positive {\cf a} they return the same value.
+
+For both functions, the \emph{type} may be any of {\cf float}, \point,
+\vector, \normal, or \color.
 \apiend
 
 \apiitem{\emph{type} {\ce min} (\emph{type} a, \emph{type} b) \\

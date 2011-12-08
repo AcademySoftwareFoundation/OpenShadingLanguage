@@ -588,7 +588,7 @@ LLVMGEN (llvm_gen_div)
 
 
 
-LLVMGEN (llvm_gen_mod)
+LLVMGEN (llvm_gen_modulus)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& Result = *rop.opargsym (op, 0);

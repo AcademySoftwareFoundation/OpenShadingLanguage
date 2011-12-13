@@ -298,7 +298,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (break,       loopmod_op,          none,          false);
     OP (calculatenormal, calculatenormal, none,          true);
     OP (ceil,        generic,             ceil,          true);
-    OP (cellnoise,   generic,             none,          true);
+    OP (cellnoise,   noise,               none,          true);
     OP (clamp,       clamp,               clamp,         true);
     OP (closure,     closure,             none,          true);
     OP (color,       construct_color,     triple,        true);

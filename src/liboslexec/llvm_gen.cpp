@@ -2266,7 +2266,7 @@ LLVMGEN (llvm_gen_noise)
                name == Strings::pnoise) {
         name = periodic ? Strings::pnoise : Strings::noise;
         // derivs = false;
-    } else if (name == Strings::cell) {
+    } else if (name == Strings::cell || name == Strings::cellnoise) {
         name = periodic ? Strings::pcellnoise : Strings::cellnoise;
         derivs = false;  // cell noise derivs are always zero
     } else if (name == Strings::gabor) {

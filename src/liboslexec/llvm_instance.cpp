@@ -159,6 +159,16 @@ static ustring op_nop("nop");
     "osl_" #name "_dvvdf",  "xvvX",             \
     "osl_" #name "_dvdvdf", "xvvX"
 
+#define GENERIC_NOISE_DERIV_IMPL(name)          \
+    "osl_" #name "_dfdf",   "xsXXXX",           \
+    "osl_" #name "_dfdfdf", "xsXXXXX",          \
+    "osl_" #name "_dfdv",   "xsXXXX",           \
+    "osl_" #name "_dfdvdf", "xsXXXXX",          \
+    "osl_" #name "_dvdf",   "xsXXXX",           \
+    "osl_" #name "_dvdfdf", "xsXXXXX",          \
+    "osl_" #name "_dvdv",   "xsXXXX",           \
+    "osl_" #name "_dvdvdf", "xsXXXXX"
+
 #define PNOISE_IMPL(name)                       \
     "osl_" #name "_fff",   "fff",               \
     "osl_" #name "_fffff", "fffff",             \
@@ -186,6 +196,16 @@ static ustring op_nop("nop");
     "osl_" #name "_dvdvfvf",  "xvvfvf",         \
     "osl_" #name "_dvvdfvf",  "xvvXvf",         \
     "osl_" #name "_dvdvdfvf", "xvvXvf"
+
+#define GENERIC_PNOISE_DERIV_IMPL(name)         \
+    "osl_" #name "_dfdff",    "xsXXfXX",        \
+    "osl_" #name "_dfdfdfff", "xsXXXffXX",      \
+    "osl_" #name "_dfdvv",    "xsXXvXX",        \
+    "osl_" #name "_dfdvdfvf", "xsXvXvfXX",      \
+    "osl_" #name "_dvdff",    "xsvXfXX",        \
+    "osl_" #name "_dvdfdfff", "xsvXXffXX",      \
+    "osl_" #name "_dvdvv",    "xsvvvXX",        \
+    "osl_" #name "_dvdvdfvf", "xsvvXvfXX"
 
 #define UNARY_OP_IMPL(name)                     \
     "osl_" #name "_ff",   "ff",                 \
@@ -224,10 +244,13 @@ static const char *llvm_helper_function_table[] = {
     NOISE_DERIV_IMPL(noise),
     NOISE_IMPL(snoise),
     NOISE_DERIV_IMPL(snoise),
+    GENERIC_NOISE_DERIV_IMPL(genericnoise),
+    PNOISE_IMPL(pcellnoise),
     PNOISE_IMPL(pnoise),
     PNOISE_DERIV_IMPL(pnoise),
     PNOISE_IMPL(psnoise),
     PNOISE_DERIV_IMPL(psnoise),
+    GENERIC_PNOISE_DERIV_IMPL(genericpnoise),
 #endif
     "osl_spline_fff", "xXXXXi",
     "osl_spline_dfdfdf", "xXXXXi",

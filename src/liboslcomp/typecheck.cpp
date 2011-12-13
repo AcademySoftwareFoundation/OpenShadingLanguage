@@ -1061,6 +1061,12 @@ ASTfunction_call::typecheck (TypeSpec expected)
 #define PNOISE_ARGS "fff", "fffff", "fpp", "fpfpf", \
                     "cff", "cffff", "cpp", "cpfpf", \
                     "vff", "vffff", "vpp", "vpfpf"
+#define GNOISE_ARGS "fsf.", "fsff.", "fsp.", "fspf.", \
+                    "csf.", "csff.", "csp.", "cspf.", \
+                    "vsf.", "vsff.", "vsp.", "vspf."
+#define PGNOISE_ARGS "fsff.", "fsffff.", "fspp.", "fspfpf.", \
+                     "csff.", "csffff.", "cspp.", "cspfpf.", \
+                     "vsff.", "vsffff.", "vspp.", "vspfpf."
 
 static const char * builtin_func_args [] = {
 
@@ -1090,8 +1096,8 @@ static const char * builtin_func_args [] = {
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "hash", NOISE_ARGS, NULL,
-    "noise", NOISE_ARGS, NULL,
-    "pnoise", PNOISE_ARGS, NULL,
+    "noise", GNOISE_ARGS, NOISE_ARGS, NULL,
+    "pnoise", PGNOISE_ARGS, PNOISE_ARGS, NULL,
     "pointcloud_search", "ispfi.", "!rw", NULL,
     "pointcloud_get", "isi[]is?[]", "!rw", NULL,
     "printf", "xs*", "!printf", NULL,

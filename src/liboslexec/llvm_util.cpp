@@ -335,6 +335,20 @@ RuntimeOptimizer::getLLVMSymbolBase (const Symbol &sym)
 
 
 
+llvm::AllocaInst *
+RuntimeOptimizer::llvm_alloca (const TypeSpec &type, bool derivs,
+                               const std::string &name)
+{
+    TypeSpec elemtype = type.elementtype();
+    llvm::Type *alloctype = llvm_type (elemtype);
+    int arraylen = std::max (1, type.arraylength());
+    int n = arraylen * (derivs ? 3 : 1);
+    llvm::ConstantInt* numalloc = (llvm::ConstantInt*)llvm_constant(n);
+    return builder().CreateAlloca(alloctype, numalloc, name);
+}
+
+
+
 llvm::Value *
 RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
 {
@@ -346,14 +360,8 @@ RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
     AllocationMap::iterator map_iter = named_values().find(mangled_name);
 
     if (map_iter == named_values().end()) {
-        TypeSpec elemtype = sym.typespec().elementtype();
-        llvm::Type *alloctype = llvm_type (elemtype);
-        int arraylen = std::max (1, sym.typespec().arraylength());
-        int n = arraylen * (sym.has_derivs() ? 3 : 1);
-        llvm::ConstantInt* numalloc = (llvm::ConstantInt*)llvm_constant(n);
-        llvm::AllocaInst* allocation = builder().CreateAlloca(alloctype, numalloc, mangled_name);
-
-        // llvm::outs() << "Allocation = " << *allocation << "\n";
+        llvm::AllocaInst* allocation =
+            llvm_alloca (sym.typespec(), sym.has_derivs(), mangled_name);
         named_values()[mangled_name] = allocation;
         return allocation;
     }
@@ -442,26 +450,46 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
         ASSERT (0 && "unhandled constant type");
     }
 
-    // Start with the initial pointer to the value's memory location
-    llvm::Value* result = llvm_get_pointer (sym, deriv, arrayindex);
-    if (!result)
+    return llvm_load_value (llvm_get_pointer (sym), sym.typespec(),
+                            deriv, arrayindex, component, cast);
+}
+
+
+
+llvm::Value *
+RuntimeOptimizer::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
+                                   int deriv, llvm::Value *arrayindex,
+                                   int component, TypeDesc cast)
+{
+    if (!ptr)
         return NULL;  // Error
 
+    // If it's an array or we're dealing with derivatives, step to the
+    // right element.
+    TypeDesc t = type.simpletype();
+    if (t.arraylen || deriv) {
+        int d = deriv * std::max(1,t.arraylen);
+        if (arrayindex)
+            arrayindex = builder().CreateAdd (arrayindex, llvm_constant(d));
+        else
+            arrayindex = llvm_constant(d);
+        ptr = builder().CreateGEP (ptr, arrayindex);
+    }
+
     // If it's multi-component (triple or matrix), step to the right field
-    TypeDesc t = sym.typespec().simpletype();
-    if (! sym.typespec().is_closure_based() && t.aggregate > 1)
-        result = builder().CreateConstGEP2_32 (result, 0, component);
+    if (! type.is_closure_based() && t.aggregate > 1)
+        ptr = builder().CreateConstGEP2_32 (ptr, 0, component);
 
     // Now grab the value
-    result = builder().CreateLoad (result);
+    llvm::Value *result = builder().CreateLoad (ptr);
 
-    if (sym.typespec().is_closure_based())
+    if (type.is_closure_based())
         return result;
 
     // Handle int<->float type casting
-    if (sym.typespec().is_floatbased() && cast == TypeDesc::TypeInt)
+    if (type.is_floatbased() && cast == TypeDesc::TypeInt)
         result = llvm_float_to_int (result);
-    else if (sym.typespec().is_int() && cast == TypeDesc::TypeFloat)
+    else if (type.is_int() && cast == TypeDesc::TypeFloat)
         result = llvm_int_to_float (result);
 
     return result;
@@ -544,6 +572,40 @@ RuntimeOptimizer::llvm_load_component_value (const Symbol& sym, int deriv,
 
 
 
+llvm::Value *
+RuntimeOptimizer::llvm_load_arg (const Symbol& sym, bool derivs)
+{
+    ASSERT (sym.typespec().is_floatbased());
+    if (sym.typespec().is_int() ||
+        (sym.typespec().is_float() && !derivs)) {
+        // Scalar case
+        return llvm_load_value (sym);
+    }
+
+    if (derivs && !sym.has_derivs()) {
+        // Manufacture-derivs case
+        const TypeSpec &t = sym.typespec();
+        // Copy the non-deriv values component by component
+        llvm::Value *tmpptr = llvm_alloca (t, true);
+        for (int c = 0;  c < t.aggregate();  ++c) {
+            llvm::Value *v = llvm_load_value (sym, 0, c);
+            llvm_store_value (v, tmpptr, t, 0, NULL, c);
+        }
+        // Zero out the deriv values
+        llvm::Value *zero = llvm_constant (0.0f);
+        for (int c = 0;  c < t.aggregate();  ++c)
+            llvm_store_value (zero, tmpptr, t, 1, NULL, c);
+        for (int c = 0;  c < t.aggregate();  ++c)
+            llvm_store_value (zero, tmpptr, t, 2, NULL, c);
+        return llvm_void_ptr (tmpptr);
+    }
+
+    // Regular pointer case
+    return llvm_void_ptr (sym);
+}
+
+
+
 bool
 RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
                                     int deriv, llvm::Value* arrayindex,
@@ -555,19 +617,39 @@ RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
         return true;
     }
 
-    // Let llvm_get_pointer do most of the heavy lifting to get us a
-    // pointer to where our data lives.
-    llvm::Value *result = llvm_get_pointer (sym, deriv, arrayindex);
-    if (!result)
+    return llvm_store_value (new_val, llvm_get_pointer (sym), sym.typespec(),
+                             deriv, arrayindex, component);
+}
+
+
+
+bool
+RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
+                                    const TypeSpec &type,
+                                    int deriv, llvm::Value* arrayindex,
+                                    int component)
+{
+    if (!dst_ptr)
         return false;  // Error
 
+    // If it's an array or we're dealing with derivatives, step to the
+    // right element.
+    TypeDesc t = type.simpletype();
+    if (t.arraylen || deriv) {
+        int d = deriv * std::max(1,t.arraylen);
+        if (arrayindex)
+            arrayindex = builder().CreateAdd (arrayindex, llvm_constant(d));
+        else
+            arrayindex = llvm_constant(d);
+        dst_ptr = builder().CreateGEP (dst_ptr, arrayindex);
+    }
+
     // If it's multi-component (triple or matrix), step to the right field
-    TypeDesc t = sym.typespec().simpletype();
-    if (! sym.typespec().is_closure_based() && t.aggregate > 1)
-        result = builder().CreateConstGEP2_32 (result, 0, component);
+    if (! type.is_closure_based() && t.aggregate > 1)
+        dst_ptr = builder().CreateConstGEP2_32 (dst_ptr, 0, component);
 
     // Finally, store the value.
-    builder().CreateStore (new_val, result);
+    builder().CreateStore (new_val, dst_ptr);
     return true;
 }
 

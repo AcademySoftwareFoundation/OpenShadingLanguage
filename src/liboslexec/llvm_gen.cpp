@@ -82,7 +82,6 @@ static ustring op_warning("warning");
 static ustring op_xor("xor");
 
 
-
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
 #define LLVMGEN_ARGS     RuntimeOptimizer &rop, int opnum
@@ -1576,7 +1575,7 @@ LLVMGEN (llvm_gen_generic)
     if (any_deriv_args)
         if (op.opname() == op_floor || op.opname() == op_ceil ||
             op.opname() == op_round || op.opname() == op_step ||
-            op.opname() == op_trunc || op.opname() == op_cellnoise ||
+            op.opname() == op_trunc || 
             op.opname() == op_sign)
             any_deriv_args = false;
 
@@ -2172,61 +2171,175 @@ LLVMGEN (llvm_gen_trace)
 
 
 
-// pnoise and psnoise -- we can't use llvm_gen_generic because of the
-// special case that the periods should never pass derivatives.
-LLVMGEN (llvm_gen_pnoise)
+static std::string
+arg_typecode (Symbol *sym, bool derivs)
+{
+    const TypeSpec &t (sym->typespec());
+    if (t.is_int())
+        return "i";
+    else if (t.is_matrix())
+        return "m";
+    else if (t.is_string())
+        return "s";
+
+    std::string name;
+    if (derivs)
+        name = "d";
+    if (t.is_float())
+        name += "f";
+    else if (t.is_triple())
+        name += "v";
+    else ASSERT (0);
+    return name;
+}
+
+
+
+// T noise (string name, float s, ...);
+// T noise (string name, float s, float t, ...);
+// T noise (string name, point P, ...);
+// T noise (string name, point P, float t, ...);
+// T pnoise (string name, float s, float sper, ...);
+// T pnoise (string name, float s, float t, float sper, float tper, ...);
+// T pnoise (string name, point P, point Pper, ...);
+// T pnoise (string name, point P, float t, point Pper, float tper, ...);
+LLVMGEN (llvm_gen_noise)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
+    bool periodic = (op.opname() == Strings::pnoise);
 
-    // N.B. we don't use the derivatives of periods.  There are as many
-    // period arguments as position arguments, and argument 0 is the
-    // result.  So f=pnoise(f,f) => firstperiod = 2; f=pnoise(v,f,v,f)
-    // => firstperiod = 3.
-    int firstperiod = (op.nargs() - 1) / 2 + 1;
-
-    Symbol& Result  = *rop.opargsym (op, 0);
-    bool any_deriv_args = false;
-    for (int i = 0;  i < op.nargs();  ++i) {
-        Symbol *s (rop.opargsym (op, i));
-        any_deriv_args |= (i > 0 && i < firstperiod &&
-                           s->has_derivs() && !s->typespec().is_matrix());
-    }
-
-    std::string name = std::string("osl_") + op.opname().string() + "_";
-    std::vector<llvm::Value *> valargs;
-    valargs.resize (op.nargs());
-    for (int i = 0;  i < op.nargs();  ++i) {
-        Symbol *s (rop.opargsym (op, i));
-        bool use_derivs = any_deriv_args && i < firstperiod && Result.has_derivs() && s->has_derivs() && !s->typespec().is_matrix();
-        if (use_derivs)
-            name += "d";
-        if (s->typespec().is_float())
-            name += "f";
-        else if (s->typespec().is_triple())
-            name += "v";
-        else ASSERT (0);
-
-
-        if (s->typespec().simpletype().aggregate > 1 || use_derivs)
-            valargs[i] = rop.llvm_void_ptr (*s);
-        else
-            valargs[i] = rop.llvm_load_value (*s);
-    }
-
-    if (! Result.has_derivs() || ! any_deriv_args) {
-        // Don't compute derivs -- either not needed or not provided in args
-        if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
-            llvm::Value *r = rop.llvm_call_function (name.c_str(), &valargs[1], op.nargs()-1);
-            rop.llvm_store_value (r, Result);
-        } else {
-            rop.llvm_call_function (name.c_str(), &valargs[0], op.nargs());
-        }
-        rop.llvm_zero_derivs (Result);
+    int arg = 0;   // Next arg to read
+    Symbol &Result = *rop.opargsym (op, arg++);
+    int outdim = Result.typespec().is_triple() ? 3 : 1;
+    Symbol *Name = rop.opargsym (op, arg++);
+    ustring name;
+    if (Name->typespec().is_string()) {
+        name = Name->is_constant() ? *(ustring *)Name->data() : ustring();
     } else {
-        // Cases with derivs
-        ASSERT (Result.has_derivs() && any_deriv_args);
-        rop.llvm_call_function (name.c_str(), &valargs[0], op.nargs());
+        // Not a string, must be the old-style noise/pnoise
+        --arg;  // forget that arg
+        Name = NULL;
+        name = op.opname();
     }
+
+    Symbol *S = rop.opargsym (op, arg++), *T = NULL;
+    Symbol *Sper = NULL, *Tper = NULL;
+    int indim = S->typespec().is_triple() ? 3 : 1;
+    bool derivs = S->has_derivs();
+
+    if (periodic) {
+        if (op.nargs() > (arg+1) &&
+                (rop.opargsym(op,arg+1)->typespec().is_float() ||
+                 rop.opargsym(op,arg+1)->typespec().is_triple())) {
+            // 2D or 4D
+            ++indim;
+            T = rop.opargsym (op, arg++); 
+            derivs |= T->has_derivs();
+        }
+        Sper = rop.opargsym (op, arg++);
+        if (indim == 2 || indim == 4)
+            Tper = rop.opargsym (op, arg++);
+    } else {
+        // non-periodic case
+        if (op.nargs() > arg && rop.opargsym(op,arg)->typespec().is_float()) {
+            // either 2D or 4D, so needs a second index
+            ++indim;
+            T = rop.opargsym (op, arg++);
+            derivs |= T->has_derivs();
+        }
+    }
+    derivs &= Result.has_derivs();  // ignore derivs if result doesn't need
+
+    bool pass_name = false, pass_sg = false, pass_options = false;
+    if (! name) {
+        // name is not a constant
+        name = periodic ? Strings::genericpnoise : Strings::genericnoise;
+        pass_name = true;
+        pass_sg = true;
+        pass_options = true;
+        derivs = true;   // always take derivs if we don't know noise type
+    } else if (name == Strings::perlin || name == Strings::snoise ||
+               name == Strings::psnoise) {
+        name = periodic ? Strings::psnoise : Strings::snoise;
+        // derivs = false;
+    } else if (name == Strings::uperlin || name == Strings::noise ||
+               name == Strings::pnoise) {
+        name = periodic ? Strings::pnoise : Strings::noise;
+        // derivs = false;
+    } else if (name == Strings::cell) {
+        name = periodic ? Strings::pcellnoise : Strings::cellnoise;
+        derivs = false;  // cell noise derivs are always zero
+    } else if (name == Strings::gabor) {
+        // already named
+        pass_sg = true;
+        pass_options = true;
+    } else {
+        rop.shadingsys().error ("Noise type \"%s\" is unknown, called from (%s:%d)",
+                                name.c_str(), op.sourcefile().c_str(), op.sourceline());
+        return false;
+    }
+
+    std::string funcname = "osl_" + name.string() + "_" + arg_typecode(&Result,derivs);
+    std::vector<llvm::Value *> args;
+    if (pass_name)
+        args.push_back (rop.llvm_load_value(*Name));
+    llvm::Value *tmpresult = NULL;
+    // triple return, or float return with derivs, passes result pointer
+    if (outdim == 3 || derivs) {
+        if (derivs && !Result.has_derivs()) {
+            tmpresult = rop.llvm_load_arg (Result, true);
+            args.push_back (tmpresult);
+        }
+        else
+            args.push_back (rop.llvm_void_ptr (Result));
+    }
+    funcname += arg_typecode(S, derivs);
+    args.push_back (rop.llvm_load_arg (*S, derivs));
+    if (T) {
+        funcname += arg_typecode(T, derivs);
+        args.push_back (rop.llvm_load_arg (*T, derivs));
+    }
+
+    if (periodic) {
+        funcname += arg_typecode (Sper, false /* no derivs */);
+        args.push_back (rop.llvm_load_arg (*Sper, false));
+        if (Tper) {
+            funcname += arg_typecode (Tper, false /* no derivs */);
+            args.push_back (rop.llvm_load_arg (*Tper, false));
+        }
+    }
+
+    if (pass_sg)
+        args.push_back (rop.sg_void_ptr());
+    if (pass_options)
+        args.push_back (rop.llvm_void_ptr_null());
+
+#if 0
+    llvm::outs() << "About to push " << funcname << "\n";
+    for (size_t i = 0;  i < args.size();  ++i)
+        llvm::outs() << "    " << *args[i] << "\n";
+#endif
+
+    llvm::Value *r = rop.llvm_call_function (funcname.c_str(),
+                                             &args[0], (int)args.size());
+    if (outdim == 1 && !derivs) {
+        // Just plain float (no derivs) returns its value
+        rop.llvm_store_value (r, Result);
+    } else if (derivs && !Result.has_derivs()) {
+        // Function needed to take derivs, but our result doesn't have them.
+        // We created a temp, now we need to copy to the real result.
+        tmpresult = rop.llvm_ptr_cast (tmpresult, Result.typespec());
+        for (int c = 0;  c < Result.typespec().aggregate();  ++c) {
+            llvm::Value *v = rop.llvm_load_value (tmpresult, Result.typespec(),
+                                                  0, NULL, c);
+            rop.llvm_store_value (v, Result, 0, c);
+        }
+    } // N.B. other cases already stored their result in the right place
+
+    // Clear derivs if result has them but we couldn't compute them
+    if (Result.has_derivs() && !derivs)
+        rop.llvm_zero_derivs (Result);
+
     return true;
 }
 

@@ -323,6 +323,20 @@ public:
                                   llvm::Value *arrayindex, int component,
                                   TypeDesc cast=TypeDesc::UNKNOWN);
 
+
+    /// Given an llvm::Value* of a pointer (and the type of the data
+    /// that it points to), Return the llvm::Value* corresponding to the
+    /// given element value, with derivative (0=value, 1=dx, 2=dy),
+    /// array index (NULL if it's not an array), and component (x=0 or
+    /// scalar, y=1, z=2).  If deriv >0 and the symbol doesn't have
+    /// derivatives, return 0 for the derivative.  If the component >0
+    /// and it's a scalar, return the scalar -- this allows automatic
+    /// casting to triples.  Finally, auto-cast int<->float if requested
+    /// (no conversion is performed if cast is the default of UNKNOWN).
+    llvm::Value *llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
+                              int deriv, llvm::Value *arrayindex,
+                              int component, TypeDesc cast=TypeDesc::UNKNOWN);
+
     /// Just like llvm_load_value, but when both the symbol and the
     /// array index are known to be constants.  This can even handle
     /// pulling constant-indexed elements out of constant arrays.  Use
@@ -351,6 +365,18 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast);
     }
 
+    /// Return an llvm::Value* that is either a scalar and derivs is
+    /// false, or a pointer to sym's values (if sym is an aggreate or
+    /// derivs == true).  Furthermore, if deriv == true and sym doesn't
+    /// have derivs, coerce it into a variable with zero derivs.
+    llvm::Value *llvm_load_arg (const Symbol& sym, bool derivs);
+
+    /// Just like llvm_load_arg(sym,deriv), except use use sym's derivs
+    /// as-is, no coercion.
+    llvm::Value *llvm_load_arg (const Symbol& sym) {
+        return llvm_load_arg (sym, sym.has_derivs());
+    }
+
     /// Store new_val into the given symbol, given the derivative
     /// (0=value, 1=dx, 2=dy), array index (NULL if it's not an array),
     /// and component (x=0 or scalar, y=1, z=2).  If deriv>0 and the
@@ -359,6 +385,16 @@ public:
     /// upon failure.
     bool llvm_store_value (llvm::Value *new_val, const Symbol& sym, int deriv,
                            llvm::Value *arrayindex, int component);
+
+    /// Store new_val into the memory pointed to by dst_ptr, given the
+    /// derivative (0=value, 1=dx, 2=dy), array index (NULL if it's not
+    /// an array), and component (x=0 or scalar, y=1, z=2).  If deriv>0
+    /// and the symbol doesn't have a deriv, it's a nop.  If the
+    /// component >0 and it's a scalar, set the scalar.  Returns true if
+    /// ok, false upon failure.
+    bool llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
+                           const TypeSpec &type, int deriv,
+                           llvm::Value* arrayindex, int component);
 
     /// Non-array version of llvm_store_value, with default deriv &
     /// component.
@@ -378,6 +414,12 @@ public:
                          int component=0, int deriv=0) {
         return llvm_store_value (new_val, sym, deriv, component);
     }
+
+    /// Generate an alloca instruction to allocate space for the given
+    /// type, with derivs if derivs==true, and return the AllocaInst of
+    /// its pointer.
+    llvm::AllocaInst *llvm_alloca (const TypeSpec &type, bool derivs,
+                                   const std::string &name="");
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
     /// start of that symbol (first element, first component, and just the
@@ -446,6 +488,10 @@ public:
 
     llvm::Value *llvm_ptr_cast (llvm::Value* val, llvm::Type *type) {
         return builder().CreatePointerCast(val,type);
+    }
+
+    llvm::Value *llvm_ptr_cast (llvm::Value* val, const TypeSpec &type) {
+        return llvm_ptr_cast (val, llvm::PointerType::get (llvm_type(type), 0));
     }
 
     llvm::Value *llvm_void_ptr (llvm::Value* val) {

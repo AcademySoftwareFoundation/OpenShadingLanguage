@@ -37,6 +37,17 @@ namespace OSL_NAMESPACE {
 namespace OSL {
 namespace pvt {
 
+
+struct NoiseParams {
+    int dummy;
+};
+typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
+                                 int indim, const float *in,
+                                 const float *period, NoiseParams *params);
+typedef void (*NoiseImplFunc)(float *out, const float *in,
+                              const float *period, NoiseParams *params);
+
+
 namespace {
 
 /// return the greatest integer <= x
@@ -106,20 +117,20 @@ inthash (const unsigned int k[N]) {
 struct CellNoise {
     CellNoise () { }
 
-    inline void operator() (float &result, float x) {
+    inline void operator() (float &result, float x) const {
         unsigned int iv[1];
         iv[0] = quick_floor (x);
         hash1<1> (result, iv);
     }
 
-    inline void operator() (float &result, float x, float y) {
+    inline void operator() (float &result, float x, float y) const {
         unsigned int iv[2];
         iv[0] = quick_floor (x);
         iv[1] = quick_floor (y);
         hash1<2> (result, iv);
     }
 
-    inline void operator() (float &result, const Vec3 &p) {
+    inline void operator() (float &result, const Vec3 &p) const {
         unsigned int iv[3];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -127,7 +138,7 @@ struct CellNoise {
         hash1<3> (result, iv);
     }
 
-    inline void operator() (float &result, const Vec3 &p, float t) {
+    inline void operator() (float &result, const Vec3 &p, float t) const {
         unsigned int iv[4];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -136,20 +147,20 @@ struct CellNoise {
         hash1<4> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, float x) {
+    inline void operator() (Vec3 &result, float x) const {
         unsigned int iv[2];
         iv[0] = quick_floor (x);
         hash3<2> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, float x, float y) {
+    inline void operator() (Vec3 &result, float x, float y) const {
         unsigned int iv[3];
         iv[0] = quick_floor (x);
         iv[1] = quick_floor (y);
         hash3<3> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p) {
+    inline void operator() (Vec3 &result, const Vec3 &p) const {
         unsigned int iv[4];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -157,7 +168,7 @@ struct CellNoise {
         hash3<4> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) {
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         unsigned int iv[5];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -168,17 +179,115 @@ struct CellNoise {
 
 private:
     template <int N>
-    inline void hash1 (float &result, const unsigned int k[N]) {
+    inline void hash1 (float &result, const unsigned int k[N]) const {
         result = bits_to_01(inthash<N>(k));
     }
 
     template <int N>
-    inline void hash3 (Vec3 &result, unsigned int k[N]) {
+    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
         k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
         k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
         k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
     }
 };
+
+
+
+struct PeriodicCellNoise {
+    PeriodicCellNoise () { }
+
+    inline void operator() (float &result, float x, float px) const {
+        unsigned int iv[1];
+        iv[0] = quick_floor (wrap (x, px));
+        hash1<1> (result, iv);
+    }
+
+    inline void operator() (float &result, float x, float y,
+                            float px, float py) const {
+        unsigned int iv[2];
+        iv[0] = quick_floor (wrap (x, px));
+        iv[1] = quick_floor (wrap (y, py));
+        hash1<2> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p,
+                            const Vec3 &pp) const {
+        unsigned int iv[3];
+        iv[0] = quick_floor (wrap (p.x, pp.x));
+        iv[1] = quick_floor (wrap (p.y, pp.y));
+        iv[2] = quick_floor (wrap (p.z, pp.z));
+        hash1<3> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+        unsigned int iv[4];
+        iv[0] = quick_floor (wrap (p.x, pp.x));
+        iv[1] = quick_floor (wrap (p.y, pp.y));
+        iv[2] = quick_floor (wrap (p.z, pp.z));
+        iv[3] = quick_floor (wrap (t, tt));
+        hash1<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float px) const {
+        unsigned int iv[2];
+        iv[0] = quick_floor (wrap (x, px));
+        hash3<2> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y,
+                            float px, float py) const {
+        unsigned int iv[3];
+        iv[0] = quick_floor (wrap (x, px));
+        iv[1] = quick_floor (wrap (y, py));
+        hash3<3> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        unsigned int iv[4];
+        iv[0] = quick_floor (wrap (p.x, pp.x));
+        iv[1] = quick_floor (wrap (p.y, pp.y));
+        iv[2] = quick_floor (wrap (p.z, pp.z));
+        hash3<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+        unsigned int iv[5];
+        iv[0] = quick_floor (wrap (p.x, pp.x));
+        iv[1] = quick_floor (wrap (p.y, pp.y));
+        iv[2] = quick_floor (wrap (p.z, pp.z));
+        iv[3] = quick_floor (wrap (t, tt));
+        hash3<5> (result, iv);
+    }
+
+private:
+    template <int N>
+    inline void hash1 (float &result, const unsigned int k[N]) const {
+        result = bits_to_01(inthash<N>(k));
+    }
+
+    template <int N>
+    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
+        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
+        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
+        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
+    }
+
+    inline float wrap (float s, float period) const {
+        period = floorf (period);
+        if (period < 1.0f)
+            period = 1.0f;
+        return s - period * floorf (s / period);
+    }
+
+    inline Vec3 wrap (const Vec3 &s, const Vec3 &period) {
+        return Vec3 (wrap (s[0], period[0]),
+                     wrap (s[1], period[1]),
+                     wrap (s[2], period[2]));
+    }
+};
+
 
 // helper functions for perlin noise 
 

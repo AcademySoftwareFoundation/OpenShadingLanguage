@@ -599,9 +599,19 @@ public:
     }
     llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
                                      llvm::Value *arg1) {
-        llvm::Value *args[2];
-        args[0] = arg0;  args[1] = arg1;
+        llvm::Value *args[2] = { arg0, arg1 };
         return llvm_call_function (name, args, 2);
+    }
+    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
+                                     llvm::Value *arg1, llvm::Value *arg2) {
+        llvm::Value *args[3] = { arg0, arg1, arg2 };
+        return llvm_call_function (name, args, 3);
+    }
+    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
+                                     llvm::Value *arg1, llvm::Value *arg2,
+                                     llvm::Value *arg3) {
+        llvm::Value *args[4] = { arg0, arg1, arg2, arg3 };
+        return llvm_call_function (name, args, 4);
     }
 
     void llvm_gen_debug_printf (const std::string &message);

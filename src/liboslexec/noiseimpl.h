@@ -38,9 +38,6 @@ namespace OSL {
 namespace pvt {
 
 
-struct NoiseParams {
-    int dummy;
-};
 typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
                                  int indim, const float *in,
                                  const float *period, NoiseParams *params);
@@ -1199,6 +1196,30 @@ struct PeriodicSNoise {
 };
 
 } // anonymous namespace
+
+
+
+Dual2<float> gabor (const Dual2<Vec3> &P, const NoiseParams *opt);
+Dual2<float> gabor (const Dual2<float> &x, const Dual2<float> &y,
+                    const NoiseParams *opt);
+Dual2<float> gabor (const Dual2<float> &x, const NoiseParams *opt);
+Dual2<Vec3> gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt);
+Dual2<Vec3> gabor3 (const Dual2<float> &x, const Dual2<float> &y,
+                    const NoiseParams *opt);
+Dual2<Vec3> gabor3 (const Dual2<float> &x, const NoiseParams *opt);
+Dual2<float> pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod,
+                     const NoiseParams *opt);
+Dual2<float> pgabor (const Dual2<float> &x, const Dual2<float> &y,
+                     float xperiod, float yperiod, const NoiseParams *opt);
+Dual2<float> pgabor (const Dual2<float> &x, float xperiod,
+                     const NoiseParams *opt);
+
+Dual2<Vec3> pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod,
+                     const NoiseParams *opt);
+Dual2<Vec3> pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
+                     float xperiod, float yperiod, const NoiseParams *opt);
+Dual2<Vec3> pgabor3 (const Dual2<float> &x, float xperiod,
+                     const NoiseParams *opt);
 
 
 

@@ -141,6 +141,7 @@ namespace Strings {
 // Define static ustring symbols for very fast comparison
 ustring camera ("camera"), common ("common");
 ustring object ("object"), shader ("shader");
+ustring screen ("screen"), NDC ("NDC");
 ustring rgb ("rgb"), RGB ("RGB");
 ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ");
 ustring XYZ ("XYZ"), xyz ("xyz"), xyY("xyY");
@@ -164,7 +165,9 @@ ustring noise("noise"), snoise("snoise");
 ustring cell("cell"), cellnoise("cellnoise"), pcellnoise("pcellnoise");
 ustring pnoise("pnoise"), psnoise("psnoise");
 ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
-ustring gabor("gabor");
+ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
+ustring anisotropic("anisotropic"), direction("direction");
+ustring do_filter("do_filter");
 };
 
 

@@ -1468,6 +1468,40 @@ OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_,
 
 
 
+// Noise helper functions
+OSL_SHADEOP void
+osl_noiseparams_clear (void *opt)
+{
+    // Use "placement new" to clear the noise options
+    new (opt) NoiseParams;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_anisotropic (void *opt, int a)
+{
+    ((NoiseParams *)opt)->anisotropic = a;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_do_filter (void *opt, int a)
+{
+    ((NoiseParams *)opt)->do_filter = a;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_direction (void *opt, void *dir)
+{
+    ((NoiseParams *)opt)->direction = VEC(dir);
+}
+
+
+
 // Trace
 
 OSL_SHADEOP void

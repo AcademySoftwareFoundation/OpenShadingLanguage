@@ -935,6 +935,7 @@ public:
     const char *strval () const { return m_s.c_str(); }
     int intval () const { return m_i; }
     float floatval () const { return m_typespec.is_int() ? (float)m_i : m_f; }
+    ustring ustrval () const { return m_s; }
 
     void negate () { m_i = -m_i;  m_f = -m_f; }
 

@@ -30,6 +30,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "noiseimpl.h"
+#include "dual_vec.h"
+#include "Imathx.h"
+
+#include <OpenImageIO/fmath.h>
+
+using namespace OSL;
 
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range
@@ -472,46 +478,137 @@ PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
 
 
 
+struct GaborNoise {
+    GaborNoise () { }
+
+    // Gabor always uses derivatives, so dual versions only
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<float> &x,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = gabor (x, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<float> &x, const Dual2<float> &y,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = gabor (x, y, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<Vec3> &p,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = gabor (p, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<Vec3> &p, const Dual2<float> &t,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        // FIXME -- This is very broken, we are ignoring 4D!
+        result = gabor (p, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<float> &x,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = gabor3 (x, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<float> &x, const Dual2<float> &y,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = gabor3 (x, y, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<Vec3> &p,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = gabor3 (p, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<Vec3> &p, const Dual2<float> &t,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        // FIXME -- This is very broken, we are ignoring 4D!
+        result = gabor3 (p, opt);
+    }
+};
+
+
+
+struct GaborPNoise {
+    GaborPNoise () { }
+
+    // Gabor always uses derivatives, so dual versions only
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<float> &x, float px,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = pgabor (x, px, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<float> &x, const Dual2<float> &y,
+                            float px, float py,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = pgabor (x, y, px, py, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<Vec3> &p, const Vec3 &pp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = pgabor (p, pp, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<float> &result,
+                            const Dual2<Vec3> &p, const Dual2<float> &t,
+                            const Vec3 &pp, float tp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        // FIXME -- This is very broken, we are ignoring 4D!
+        result = pgabor (p, pp, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<float> &x, float px,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = pgabor (x, px, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<float> &x, const Dual2<float> &y,
+                            float px, float py,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = pgabor (x, y, px, py, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<Vec3> &p, const Vec3 &pp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        result = pgabor (p, pp, opt);
+    }
+
+    inline void operator() (ustring noisename, Dual2<Vec3> &result,
+                            const Dual2<Vec3> &p, const Dual2<float> &t,
+                            const Vec3 &pp, float tp,
+                            ShaderGlobals *sg, const NoiseParams *opt) const {
+        // FIXME -- This is very broken, we are ignoring 4D!
+        result = pgabor (p, pp, opt);
+    }
+};
+
+
+
+NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
+PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
+
+
+
 struct GenericNoise {
     GenericNoise () { }
 
     // Template on R, S, and T to be either float or Vec3
 
-    template<class R, class S>
-    inline void operator() (ustring name, R &result, const S &s, const 
-                            ShaderGlobals *sg, const NoiseParams *opt) const { 
-        if (name == Strings::uperlin || name == Strings::noise) {
-            Noise noise;
-            noise(result, s);
-        } else if (name == Strings::perlin || name == Strings::snoise) {
-            SNoise snoise;
-            snoise(result, s);
-        } else if (name == Strings::cell) {
-            CellNoise cellnoise;
-            cellnoise(result, s);
-        } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
-        }
-   }
-
-    template<class R, class S, class T>
-    inline void operator() (ustring name, R &result, const S &s, const T &t,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
-        if (name == Strings::uperlin || name == Strings::noise) {
-            Noise noise;
-            noise(result, s, t);
-        } else if (name == Strings::perlin || name == Strings::snoise) {
-            SNoise snoise;
-            snoise(result, s, t);
-        } else if (name == Strings::cell) {
-            CellNoise cellnoise;
-            cellnoise(result, s, t);
-        } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
-        }
-    }
-
-    // dual versions
+    // dual versions -- this is always called with derivs
 
     template<class R, class S>
     inline void operator() (ustring name, Dual2<R> &result, const Dual2<S> &s,
@@ -526,6 +623,9 @@ struct GenericNoise {
             CellNoise cellnoise;
             cellnoise(result.val(), s.val());
             result.clear_d();
+        } else if (name == Strings::gabor) {
+            GaborNoise gnoise;
+            gnoise (name, result, s, sg, opt);
         } else {
             ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -545,6 +645,9 @@ struct GenericNoise {
             CellNoise cellnoise;
             cellnoise(result.val(), s.val(), t.val());
             result.clear_d();
+        } else if (name == Strings::gabor) {
+            GaborNoise gnoise;
+            gnoise (name, result, s, t, sg, opt);
         } else {
             ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -560,43 +663,7 @@ struct GenericPNoise {
 
     // Template on R, S, and T to be either float or Vec3
 
-    template<class R, class S>
-    inline void operator() (ustring name, R &result, const S &s,
-                            const S &sp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const { 
-        if (name == Strings::uperlin || name == Strings::noise) {
-            PeriodicNoise noise;
-            noise(result, s, sp);
-        } else if (name == Strings::perlin || name == Strings::snoise) {
-            PeriodicSNoise snoise;
-            snoise(result, s, sp);
-        } else if (name == Strings::cell) {
-            PeriodicCellNoise cellnoise;
-            cellnoise(result, s, sp);
-        } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
-        }
-   }
-
-    template<class R, class S, class T>
-    inline void operator() (ustring name, R &result, const S &s, const T &t,
-                            const S &sp, const T &tp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
-        if (name == Strings::uperlin || name == Strings::noise) {
-            PeriodicNoise noise;
-            noise(result, s, t, sp, tp);
-        } else if (name == Strings::perlin || name == Strings::snoise) {
-            PeriodicSNoise snoise;
-            snoise(result, s, t, sp, tp);
-        } else if (name == Strings::cell) {
-            PeriodicCellNoise cellnoise;
-            cellnoise(result, s, t, sp, tp);
-        } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
-        }
-    }
-
-    // dual versions
+    // dual versions -- this is always called with derivs
 
     template<class R, class S>
     inline void operator() (ustring name, Dual2<R> &result, const Dual2<S> &s,
@@ -612,6 +679,9 @@ struct GenericPNoise {
             PeriodicCellNoise cellnoise;
             cellnoise(result.val(), s.val(), sp);
             result.clear_d();
+        } else if (name == Strings::gabor) {
+            GaborPNoise gnoise;
+            gnoise (name, result, s, sp, sg, opt);
         } else {
             ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -632,6 +702,9 @@ struct GenericPNoise {
             PeriodicCellNoise cellnoise;
             cellnoise(result.val(), s.val(), t.val(), sp, tp);
             result.clear_d();
+        } else if (name == Strings::gabor) {
+            GaborPNoise gnoise;
+            gnoise (name, result, s, t, sp, tp, sg, opt);
         } else {
             ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
         }

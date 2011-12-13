@@ -245,6 +245,7 @@ static const char *llvm_helper_function_table[] = {
     NOISE_DERIV_IMPL(noise),
     NOISE_IMPL(snoise),
     NOISE_DERIV_IMPL(snoise),
+    GENERIC_NOISE_DERIV_IMPL(gabornoise),
     GENERIC_NOISE_DERIV_IMPL(genericnoise),
     PNOISE_IMPL(pcellnoise),
     PNOISE_DERIV_IMPL(pcellnoise),
@@ -252,8 +253,15 @@ static const char *llvm_helper_function_table[] = {
     PNOISE_DERIV_IMPL(pnoise),
     PNOISE_IMPL(psnoise),
     PNOISE_DERIV_IMPL(psnoise),
+    GENERIC_PNOISE_DERIV_IMPL(gaborpnoise),
     GENERIC_PNOISE_DERIV_IMPL(genericpnoise),
+    "osl_noiseparams_clear", "xX",
+    "osl_noiseparams_set_anisotropic", "xXi",
+    "osl_noiseparams_set_do_filter", "xXi",
+    "osl_noiseparams_set_direction", "xXv",
+    "osl_noiseparams_set_period", "xXffff",
 #endif
+
     "osl_spline_fff", "xXXXXi",
     "osl_spline_dfdfdf", "xXXXXi",
     "osl_spline_dfdff", "xXXXXi",

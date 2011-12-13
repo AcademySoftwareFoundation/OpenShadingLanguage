@@ -7,7 +7,7 @@ SET ( liboslexec_srcs
           bssrdf.cpp bsdf_hair.cpp bsdf_fakefur.cpp
           emissive.cpp background.cpp debug.cpp dictionary.cpp
           vol_subsurface.cpp
-          context.cpp instance.cpp 
+          context.cpp gabornoise.cpp instance.cpp 
           loadshader.cpp master.cpp 
           opcolor.cpp opcloud.cpp
           opmessage.cpp opnoise.cpp 

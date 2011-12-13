@@ -56,14 +56,14 @@ Language Specification
 %\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2011 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2012 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 5 Dec, 2011 \\
+\date{{\large Date: 16 Jan, 2012 \\
 %(with corrections, 5 Dec, 2011)
 }}
 
@@ -3305,6 +3305,42 @@ large-scale average is 0.5, and its values are evenly distributed over
 $[0,1]$.
 \apiend
 
+\apiitem{"gabor"}
+\vspace{12pt}
+\NEW A band-limited, filtered, sparse convolution noise based on the
+Gabor impulse function (see Lagae et al., SIGGRAPH 2012).  Our Gabor
+noise is designed to have somewhat similar frequency content and range
+as Perlin noise (range $[-1,1]$, approximately large-scale average of
+$0$).  It is significantly more expensive than Perlin noise, but its
+advantage is that it correctly filters automatically based on the input
+derivatives.  Gabor noise allows several optional parameters to the
+{\cf noise()} call:
+
+\apiitem{"anisotropic", <int> \\
+"direction", <vector>}
+\vspace{12pt}
+If {\cf anisotropic} is 0 (the default), Gabor noise
+will be isotropic.  If {\cf anisotripic} is 1, the Gabor noise will
+be anisotropic with the 3D frequency given by the {\cf direction} 
+vector (which defaults to {\cf (1,0,0)}).  If {\cf anisotropic} is
+2, a hybrid mode will be used which is anisotropic along the
+{\cf direction} vector, but radially isotropic perpendicular to that
+vector.  The {\cf direction} vector is not used if {\cf anisotropic}
+is 0.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"do_filter", <int>}
+\vspace{12pt}
+If {\cf do_filter} is 0, no filtering/antialiasing will
+be performed.  The default is 1 (yes, do filtering).  There is probably
+no good reason to ever turn off the filtering, it is primarily to test
+that the filtering is working properly.
+\apiend
+\vspace{-16pt}
+
+\apiend
+
 %\vspace{-16pt}
 
 Note that some of the noise varieties have an output range of $[-1,1]$
@@ -3320,6 +3356,7 @@ The {\cf noise()} functions take optional arguments after their
 coordinates, passed as token/value pairs (similarly to optional texture
 arguments).  Generally, such arguments are specific to the type of
 noise, and are ignored for noise types that don't understand them.
+
 \apiend
 
 

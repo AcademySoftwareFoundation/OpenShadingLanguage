@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include <OpenImageIO/fmath.h>
+
 #include "llvm_headers.h"
 
 #include "oslexec_pvt.h"
@@ -1783,7 +1785,7 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
                           llvm::Value* &dalphady)
 {
     // Reserve space for the TextureOpt, with alignment
-    size_t tosize = (sizeof(TextureOpt)+sizeof(char*)-1) / sizeof(char*);
+    size_t tosize = OIIO::round_to_multiple ((int)sizeof(TextureOpt), (int)sizeof(char*));
     llvm::Value* opt = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
                                                   rop.llvm_constant((int)tosize));
     opt = rop.llvm_void_ptr (opt);
@@ -2195,6 +2197,53 @@ arg_typecode (Symbol *sym, bool derivs)
 
 
 
+static llvm::Value *
+llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
+                        int first_optional_arg)
+{
+    // Reserve space for the NoiseParams, with alignment
+    size_t optsize = OIIO::round_to_multiple ((int)sizeof(NoiseParams), (int)sizeof(char*));
+    llvm::Value* opt = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
+                                              rop.llvm_constant((int)optsize));
+    opt = rop.llvm_void_ptr (opt);
+    rop.llvm_call_function ("osl_noiseparams_clear", opt);
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name (*rop.opargsym(op,a));
+        ASSERT (Name.typespec().is_string() &&
+                "optional noise token must be a string");
+        ASSERT (a+1 < op.nargs() && "malformed argument list for noise");
+        ustring name = *(ustring *)Name.data();
+
+        ++a;  // advance to next argument
+        Symbol &Val (*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+        
+        if (! name)    // skip empty string param name
+            continue;
+
+        if (name == Strings::anisotropic && Val.typespec().is_int()) {
+            rop.llvm_call_function ("osl_noiseparams_set_anisotropic", opt,
+                                    rop.llvm_load_value (Val));
+        } else if (name == Strings::do_filter && Val.typespec().is_int()) {
+            rop.llvm_call_function ("osl_noiseparams_set_do_filter", opt,
+                                    rop.llvm_load_value (Val));
+        } else if (name == Strings::direction && Val.typespec().is_triple()) {
+            rop.llvm_call_function ("osl_noiseparams_set_direction", opt,
+                                    rop.llvm_void_ptr (Val));
+        } else {
+            rop.shadingsys().error ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
+                                    op.opname().c_str(),
+                                    name.c_str(), valtype.c_str(),
+                                    op.sourcefile().c_str(), op.sourceline());
+        }
+    }
+    return opt;
+}
+
+
+
 // T noise (string name, float s, ...);
 // T noise (string name, float s, float t, ...);
 // T noise (string name, point P, ...);
@@ -2271,12 +2320,20 @@ LLVMGEN (llvm_gen_noise)
         derivs = false;  // cell noise derivs are always zero
     } else if (name == Strings::gabor) {
         // already named
+        pass_name = true;
         pass_sg = true;
         pass_options = true;
+        derivs = true;
+        name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
         rop.shadingsys().error ("Noise type \"%s\" is unknown, called from (%s:%d)",
                                 name.c_str(), op.sourcefile().c_str(), op.sourceline());
         return false;
+    }
+
+    llvm::Value *opt = NULL;
+    if (pass_options) {
+        opt = llvm_gen_noise_options (rop, opnum, arg);
     }
 
     std::string funcname = "osl_" + name.string() + "_" + arg_typecode(&Result,derivs);
@@ -2312,7 +2369,7 @@ LLVMGEN (llvm_gen_noise)
     if (pass_sg)
         args.push_back (rop.sg_void_ptr());
     if (pass_options)
-        args.push_back (rop.llvm_void_ptr_null());
+        args.push_back (opt);
 
 #if 0
     llvm::outs() << "About to push " << funcname << "\n";

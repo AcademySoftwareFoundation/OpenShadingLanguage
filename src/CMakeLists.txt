@@ -165,7 +165,9 @@ TESTSUITE ( arithmetic array array-derivs array-range
             geomath getsymbol-nonheap gettextureinfo hyperb
             ieee_fp if incdec initops intbits layers layers-lazy
             logic loop matrix message miscmath missing-shader
-            noise noise-cell noise-perlin noise-uperlin
+            noise noise-cell
+            noise-gabor noise-gabor2d-filter noise-gabor3d-filter
+            noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
             raytype shortcircuit spline splineinverse string 

@@ -334,7 +334,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (fabs,        generic,             none,          true);
     OP (filterwidth, filterwidth,         none,          true);
     OP (floor,       generic,             floor,          true);
-    OP (fmod,        mod,                 none,          true);
+    OP (fmod,        modulus,             none,          true);
     OP (for,         loop_op,             none,          false);
     OP (format,      printf,              format,        true);
     OP (functioncall, functioncall,       functioncall,  false);
@@ -362,7 +362,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (mxcompassign, mxcompassign,       none,          false);
     OP (mxcompref,   mxcompref,           none,          true);
     OP (min,         minmax,              min,           true);
-    OP (mod,         mod,                 none,          true);
+    OP (mod,         modulus,             none,          true);
     OP (mul,         mul,                 mul,           true);
     OP (neg,         neg,                 neg,           true);
     OP (neq,         compare_op,          neq,           true);

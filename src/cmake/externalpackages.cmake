@@ -242,40 +242,36 @@ endif (USE_OPENGL)
 
 ###########################################################################
 # LLVM library setup
-if (LLVM_CUSTOM)
-  message (STATUS "LLVM_DIRECTORY is ${LLVM_DIRECTORY}")
-  find_library ( LLVM_LIBRARY
-    NAMES LLVM-${LLVM_VERSION} LLVM-${LLVM_VERSION}svn
-    PATHS ${LLVM_DIRECTORY}/lib )
-  set ( LLVM_INCLUDES ${LLVM_DIRECTORY}/include )
-else ()
-  find_library ( LLVM_LIBRARY
-    NAMES LLVM-2.8 LLVM-2.9svn LLVM-2.9 LLVM-3.0
-    PATHS ${LLVM_DIRECTORY}/lib /usr/local/lib /opt/local/lib )
-  find_path ( LLVM_INCLUDES llvm/LLVMContext.h
-    PATHS ${LLVM_DIRECTORY}/include /usr/local/include /opt/local/include
-    )
-endif ()
 
-if (LLVM_LIBRARY AND LLVM_INCLUDES)
-  set (LLVM_FOUND TRUE)
-  message (STATUS "LLVM version = ${LLVM_VERSION}")
-  message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
-  message (STATUS "LLVM library = ${LLVM_LIBRARY}")
+execute_process (COMMAND llvm-config --version
+                 OUTPUT_VARIABLE LLVM_VERSION
+	         OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process (COMMAND llvm-config --prefix
+                 OUTPUT_VARIABLE LLVM_DIRECTORY
+	         OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process (COMMAND llvm-config --libdir
+                 OUTPUT_VARIABLE LLVM_LIB_DIR
+  	         OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process (COMMAND llvm-config --includedir
+                 OUTPUT_VARIABLE LLVM_INCLUDES
+  	         OUTPUT_STRIP_TRAILING_WHITESPACE)
+find_library ( LLVM_LIBRARY
+               NAMES LLVM-${LLVM_VERSION}
+               PATHS ${LLVM_LIB_DIR})
+message (STATUS "LLVM version  = ${LLVM_VERSION}")
+message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
+message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
+message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
+message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
+
+if (LLVM_LIBRARY AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
   # ensure include directory is added (in case of non-standard locations
-  if (NOT LLVM_DIRECTORY)
-    # Set it to ${LLVM_LIBRARY}/../ (above lib/ and bin/)
-    GET_FILENAME_COMPONENT (LLVM_LIB_DIR "${LLVM_LIBRARY}" PATH)
-    GET_FILENAME_COMPONENT (LLVM_DIRECTORY "${LLVM_LIB_DIR}/../" ABSOLUTE)
-  endif ()
-
   include_directories (BEFORE "${LLVM_INCLUDES}")
   string (REGEX REPLACE "\\." "" OSL_LLVM_VERSION ${LLVM_VERSION})
-  message (STATUS "LLVM directory = ${LLVM_DIRECTORY}")
   message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
   add_definitions ("-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION}")
 else ()
-  message(FATAL_ERROR "LLVM not found.")
+  message (FATAL_ERROR "LLVM not found.")
 endif ()
 
 # end LLVM library setup

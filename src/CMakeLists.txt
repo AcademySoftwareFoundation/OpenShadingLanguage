@@ -19,9 +19,23 @@ if (${PROJECT_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     message (FATAL_ERROR "Not allowed to run in-source build!")
 endif ()
 
-
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
+endif ()
+
+# Figure out which compiler we're using
+if (CMAKE_COMPILER_IS_GNUCC)
+    execute_process (COMMAND ${CMAKE_C_COMPILER} -dumpversion
+                     OUTPUT_VARIABLE GCC_VERSION
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+    message (STATUS "Using gcc ${GCC_VERSION} as the compiler")
+endif ()
+if (NOT CMAKE_COMPILER_IS_CLANG)
+    string (REGEX MATCH clang CMAKE_COMPILER_IS_CLANG ${CMAKE_CXX_COMPILER})
+    if (CMAKE_COMPILER_IS_CLANG)
+        set (CMAKE_COMPILER_IS_CLANG 1)
+        message (STATUS "Using clang as the compiler")
+    endif ()
 endif ()
 
 ## turn on more detailed warnings
@@ -34,9 +48,23 @@ set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
 ##   extending LLVM ones will cause linker errors (unless you
 ##   rebuild LLVM with rtti enabled)
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
-# NOTE(boulos): Boost can only detect that you've disabled RTTI for
-# gcc >= 4.3. My poor mac doesn't have that.
-add_definitions("-DBOOST_NO_RTTI -DBOOST_NO_TYPEID")
+
+# For gcc < 4.3, Boost needs some extra help detecting that we've
+# disabled RTTI.
+if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
+    add_definitions ("-DBOOST_NO_RTTI")
+    add_definitions ("-DBOOST_NO_TYPEID")
+endif ()
+
+# Turn off a few pesky clang warnings that we shouldn't allow to be errors.
+# Mostly these are warnings it generates in boost headers.  I'd love to
+# turn off the warnings just for external code, not project code, but I
+# don't think there's a way to do this.
+if (CMAKE_COMPILER_IS_CLANG)
+    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-parentheses-equality")
+    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-char-subscripts")
+    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
+endif ()
 
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 if (WIN32)

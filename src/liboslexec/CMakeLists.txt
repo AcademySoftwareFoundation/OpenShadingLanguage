@@ -83,23 +83,20 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 ENDMACRO ( )
 
-if (LLVM_FOUND)
-    if (NOT MSVC)
-        LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
-    else ()
-        # With MSVC, we don't compile llvm_ops.cpp to LLVM bitcode, due to
-        # clang being unable to compile MSVC C++ header files at this time.
-        # Instead it is part of the regular build process.
-        ADD_DEFINITIONS(-DOSL_LLVM_NO_BITCODE)
-        SET(liboslexec_srcs ${liboslexec_srcs} llvm_ops.cpp)
-    endif ()
+if (NOT MSVC)
+    LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+else ()
+    # With MSVC, we don't compile llvm_ops.cpp to LLVM bitcode, due to
+    # clang being unable to compile MSVC C++ header files at this time.
+    # Instead it is part of the regular build process.
+    ADD_DEFINITIONS (-DOSL_LLVM_NO_BITCODE)
+    SET (liboslexec_srcs ${liboslexec_srcs} llvm_ops.cpp)
 endif ()
 
 ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
-TARGET_LINK_LIBRARIES ( oslexec oslcomp ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
-if (LLVM_FOUND)
-    TARGET_LINK_LIBRARIES ( oslexec ${LLVM_LIBRARY} )
-endif()
+TARGET_LINK_LIBRARIES ( oslexec oslcomp ${OPENIMAGEIO_LIBRARY}
+                        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+                        ${LLVM_LIBRARY} )
 LINK_ILMBASE ( oslexec )
 
 INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib )

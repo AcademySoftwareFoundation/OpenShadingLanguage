@@ -283,6 +283,9 @@ ASTNode::coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat)
     if (equivalent (sym->typespec(), type))
         return sym;   // No coercion necessary
 
+    if (type.is_closure())
+        return sym;   // No coercion necessary
+
     if (acceptfloat && sym->typespec().is_float())
         return sym;
 

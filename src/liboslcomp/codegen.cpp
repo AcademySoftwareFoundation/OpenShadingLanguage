@@ -383,6 +383,8 @@ ASTshader_declaration::codegen (Symbol *dest)
             if (v->param_default_literals (v->sym(), out))
                 continue;
 
+            m_compiler->codegen_method (v->name());
+
             if (v->sym()->typespec().is_structure()) {
                 // Special case for structs: call codegen_struct_initializers,
                 // which will generate init ops for the fields that need them.
@@ -393,7 +395,6 @@ ASTshader_declaration::codegen (Symbol *dest)
                 continue;
             }
 
-            m_compiler->codegen_method (v->name());
             v->sym()->initbegin (m_compiler->next_op_label ());
             v->codegen ();
             v->sym()->initend (m_compiler->next_op_label ());

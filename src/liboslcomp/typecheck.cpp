@@ -945,6 +945,22 @@ ASTfunction_call::typecheck_builtin_specialcase ()
         } else if (m_name == "trace") {
             argtakesderivs (1, true);
             argtakesderivs (2, true);
+        } else if (m_name == "noise" || m_name == "pnoise") {
+            ASTNode *arg = args().get();  // first argument
+            if (arg->typespec().is_string()) {
+                // The kind of noise that names the type of noise
+                ASTliteral *lit = (arg->nodetype() == ASTNode::literal_node)
+                                   ? (ASTliteral *)arg : NULL;
+                if (!lit || (lit->ustrval() == "gabor")) {
+                    // unspecified (not a string literal), or known to be
+                    // gabor -- take derivs of positional arguments
+                    arg = arg->nextptr();  // advance to position
+                    for (int n = 2; arg && ! arg->typespec().is_string(); ++n) {
+                        argtakesderivs (n, true);
+                        arg = arg->nextptr();
+                    }
+                }
+            }
         } else {
             ASSERT (0 && "Missed a takes_derivs case!");
         }
@@ -1096,8 +1112,8 @@ static const char * builtin_func_args [] = {
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "hash", NOISE_ARGS, NULL,
-    "noise", GNOISE_ARGS, NOISE_ARGS, NULL,
-    "pnoise", PGNOISE_ARGS, PNOISE_ARGS, NULL,
+    "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,
+    "pnoise", PGNOISE_ARGS, PNOISE_ARGS, "!deriv", NULL,
     "pointcloud_search", "ispfi.", "!rw", NULL,
     "pointcloud_get", "isi[]is?[]", "!rw", NULL,
     "printf", "xs*", "!printf", NULL,
@@ -1118,13 +1134,6 @@ static const char * builtin_func_args [] = {
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
     "warning", "xs*", NULL,   // FIXME -- further checking
-
-//    "ambient", "C", "Cn", NULL,
-//    "cooktorrance", "Cf", NULL,
-////    "reflection", "C", "Cf.", "Cs.", "Csf.", "Cv.", "Cvf.", "Csv.", "Csvf.", NULL,
-////    "refraction", "Cf", "Cff", "Csf", "Csff", 
-////                  "Cvf", "Cvff", "Csvf", "Csvff", NULL,
-//    "specular", "Cnf", NULL,
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

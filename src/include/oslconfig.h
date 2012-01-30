@@ -55,6 +55,9 @@ namespace OIIO = OIIO_NAMESPACE;
 namespace OIIO = OpenImageIO;
 #endif
 
+// Extensions to Imath
+#include "matrix22.h"
+
 #include "oslversion.h"
 
 #ifdef OSL_NAMESPACE
@@ -77,15 +80,18 @@ typedef float Float;
 /// from the IlmBase package from: http://www.openexr.com
 ///
 /// It's permissible to override these types with the vector, matrix,
-/// and color classes of your choice, provided that (a) your Vec3 and
-/// Color3 have the same data layout as a simple Float[3]; (b) your
-/// Matrix44 has the same data layout as Float[4][4]; and (c) your
+/// and color classes of your choice, provided that (a) your vectors
+/// have the same data layout as a simple Float[n]; (b) your
+/// matrices have the same data layout as Float[n][n]; and (c) your
 /// classes have most of the obvious constructors and overloaded
 /// operators one would expect from a C++ vector/matrix/color class.
 typedef Imath::Vec3<Float>     Vec3;
 typedef Imath::Matrix33<Float> Matrix33;
 typedef Imath::Matrix44<Float> Matrix44;
 typedef Imath::Color3<Float>   Color3;
+typedef Imath::Vec2<Float>     Vec2;
+
+typedef Imathx::Matrix22<Float> Matrix22;
 
 /// Assume that we are dealing with OpenImageIO's texture system.  It
 /// doesn't literally have to be OIIO's... it just needs to have the

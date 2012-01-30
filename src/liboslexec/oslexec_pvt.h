@@ -1207,7 +1207,7 @@ private:
 
 
 namespace Strings {
-    extern ustring camera, common, object, shader;
+    extern ustring camera, common, object, shader, screen, NDC;
     extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
     extern ustring null, default_;
     extern ustring label;
@@ -1222,7 +1222,8 @@ namespace Strings {
     extern ustring interp, closest, linear, cubic, smartcubic;
     extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern ustring cell, cellnoise, pcellnoise;
-    extern ustring genericnoise, genericpnoise, gabor;
+    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern ustring anisotropic, direction, do_filter;
 }; // namespace Strings
 
 
@@ -1242,6 +1243,19 @@ tex_interp_to_code (ustring modename)
     return mode;
 }
 
+
+
+// Layout of structure we use to pass noise parameters
+struct NoiseParams {
+    int anisotropic;
+    int do_filter;
+    Vec3 direction;
+
+    NoiseParams ()
+        : anisotropic(0), do_filter(true), direction(1.0f,0.0f,0.0f)
+    {
+    }
+};
 
 
 }; // namespace OSL

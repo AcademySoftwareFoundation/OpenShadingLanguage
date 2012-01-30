@@ -1,0 +1,7 @@
+surface
+test (string noisename = "gabor", float freq = 5, output color Cout = 0)
+{
+    point p = P*freq * (1.0+10*v*v) * (1.0+10*u*u);
+    float n = noise(noisename, p[0], p[1]);
+    Cout = n * 0.5 + 0.5;
+}

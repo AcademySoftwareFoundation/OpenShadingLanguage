@@ -146,6 +146,24 @@ inline Dual2<T> operator+ (const T &a, const Dual2<T> &b)
 }
 
 
+template<class T>
+inline Dual2<T>& operator+= (Dual2<T> &a, const Dual2<T> &b)
+{
+    a.val() += b.val();
+    a.dx()  += b.dx();
+    a.dy()  += b.dy();
+    return a;
+}
+
+
+template<class T>
+inline Dual2<T>& operator+= (Dual2<T> &a, const T &b)
+{
+    a.val() += b;
+    return a;
+}
+
+
 /// Subtraction of duals.
 ///
 template<class T>
@@ -166,6 +184,24 @@ template<class T>
 inline Dual2<T> operator- (const T &a, const Dual2<T> &b)
 {
     return Dual2<T> (a-b.val(), -b.dx(), -b.dy());
+}
+
+
+template<class T>
+inline Dual2<T>& operator-= (Dual2<T> &a, const Dual2<T> &b)
+{
+    a.val() -= b.val();
+    a.dx()  -= b.dx();
+    a.dy()  -= b.dy();
+    return a;
+}
+
+
+template<class T>
+inline Dual2<T>& operator-= (Dual2<T> &a, const T &b)
+{
+    a.val() -= b.val();
+    return a;
 }
 
 

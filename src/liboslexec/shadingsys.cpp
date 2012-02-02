@@ -179,7 +179,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       TextureSystem *texturesystem,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
-      m_statslevel (0), m_debug (false), m_lazylayers (true),
+      m_statslevel (0), m_lazylayers (true),
       m_lazyglobals (false),
       m_clearmemory (false), m_rebind (false), m_debugnan (false),
       m_lockgeom_default (false), m_strict_messages(true),
@@ -191,7 +191,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_peephole(true), m_opt_coalesce_temps(true),
       m_opt_assign(true),
       m_optimize_nondebug(false),
-      m_llvm_debug(false),
+      m_llvm_optimize(0),
+      m_debug(false), m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
       m_in_group (false),
@@ -496,6 +497,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_SET ("opt_assign", int, m_opt_assign);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
+    ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
@@ -553,7 +555,6 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     lock_guard guard (m_mutex);  // Thread safety
     ATTR_DECODE_STRING ("searchpath:shader", m_searchpath);
     ATTR_DECODE ("statistics:level", int, m_statslevel);
-    ATTR_DECODE ("debug", int, m_debug);
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
@@ -569,6 +570,8 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
+    ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
+    ATTR_DECODE ("debug", int, m_debug);
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);

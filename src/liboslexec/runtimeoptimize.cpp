@@ -42,7 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "runtimeoptimize.h"
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "dual.h"
-#include "llvm_headers.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -106,8 +105,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_stat_llvm_jit_time(0),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_llvm_exec(NULL), m_builder(NULL),
-      m_llvm_passes(NULL), m_llvm_func_passes(NULL),
-      m_llvm_func_passes_optimized(NULL)
+      m_llvm_passes(NULL), m_llvm_func_passes(NULL)
 {
     set_debug ();
 }
@@ -119,7 +117,6 @@ RuntimeOptimizer::~RuntimeOptimizer ()
     delete m_builder;
     delete m_llvm_passes;
     delete m_llvm_func_passes;
-    delete m_llvm_func_passes_optimized;
 }
 
 

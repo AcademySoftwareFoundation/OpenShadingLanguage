@@ -1024,7 +1024,7 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
         return false;
     }
     if (dstinstindex <= srcinstindex) {
-        error ("ConnectShaders: destination layer must follow source layer\n");
+        error ("ConnectShaders: destination layer must follow source layer (tried to connect %s.%s -> %s.%s)\n", srclayer, srcparam, dstlayer, dstparam);
         return false;
     }
 

@@ -818,7 +818,7 @@ ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
         code += advance;
         if (check_arglist (m_name.c_str(), args(), code, coerce)) {
             // Return types also must match if not coercible
-            if (coerce || expected == TypeSpec() || expected == returntype) {
+            if (expected == TypeSpec() || expected == returntype) {
                 m_sym = poly;
                 return returntype;
             }

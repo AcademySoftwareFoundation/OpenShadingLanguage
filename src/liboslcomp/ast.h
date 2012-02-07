@@ -835,6 +835,10 @@ private:
     /// Typecheck all polymorphic versions, return UNKNOWN if no match was
     /// found, or a real type if there was a match.  Also, upon matching,
     /// re-jigger m_sym to point to the specific polymorphic match.
+    /// Allow arguments to be coerced (e.g., substituting a vector where
+    /// a point was expected, or a float where a color was expected) only
+    /// if coerce is true; allow return value to be coerced only if
+    /// expected is TypeSpec() (i.e., unknown).
     TypeSpec typecheck_all_poly (TypeSpec expected, bool coerce);
 
     /// Handle all the special cases for built-ins.  This includes

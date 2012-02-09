@@ -2436,9 +2436,8 @@ private:
 void
 RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
 {
-    // Mark its source as the default value, and not connected
+    // Mark its source as the instance value, not connected
     R->valuesource (Symbol::InstanceVal);
-    R->connected (false);
     // If it isn't a connection or computed, it doesn't need derivs.
     R->has_derivs (false);
 

@@ -457,7 +457,8 @@ public:
 
     /// This will return a llvm::Type that is the same as a C struct
     /// comprised fields of the given types[], in order.
-    llvm::Type *llvm_type_struct(const std::vector<llvm::Type *> &types);
+    llvm::Type *llvm_type_struct(const std::vector<llvm::Type *> &types,
+                                 const std::string &name="");
 
     /// Convert the name of a global (and its derivative index) into the
     /// field number of the ShaderGlobals struct.

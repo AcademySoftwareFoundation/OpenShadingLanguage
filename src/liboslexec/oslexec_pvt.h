@@ -844,6 +844,7 @@ private:
     bool m_opt_constant_fold;             ///< Allow constant folding?
     bool m_opt_stale_assign;              ///< Optimize stale assignments?
     bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
+    bool m_opt_elide_unconnected_outputs; ///< Elide unconnected outputs?
     bool m_opt_peephole;                  ///< Do some peephole optimizations?
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
@@ -1226,6 +1227,7 @@ namespace Strings {
     extern ustring cell, cellnoise, pcellnoise;
     extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
     extern ustring anisotropic, direction, do_filter;
+    extern ustring op_dowhile, op_for, op_while;
 }; // namespace Strings
 
 

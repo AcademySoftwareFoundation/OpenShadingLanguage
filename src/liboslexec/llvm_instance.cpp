@@ -887,6 +887,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Mark all the basic blocks, including allocating llvm::BasicBlock
     // records for each.
     find_basic_blocks (true);
+    find_conditionals ();
+    m_layers_already_run.clear ();
 
     build_llvm_code (inst()->maincodebegin(), inst()->maincodeend());
 
@@ -902,7 +904,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                         "no support for individual element/channel connection");
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
-                llvm_run_connected_layers (*srcsym, con.src.param, NULL);
+                llvm_run_connected_layers (*srcsym, con.src.param);
                 // FIXME -- I'm not sure I understand this.  Isn't this
                 // unnecessary if we wrote to the parameter ourself?
                 llvm_assign_impl (*dstsym, *srcsym);

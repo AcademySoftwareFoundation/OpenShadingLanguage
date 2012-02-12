@@ -95,6 +95,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_constant_fold(shadingsys.m_opt_constant_fold),
       m_opt_stale_assign(shadingsys.m_opt_stale_assign),
       m_opt_elide_useless_ops(shadingsys.m_opt_elide_useless_ops),
+      m_opt_elide_unconnected_outputs(shadingsys.m_opt_elide_unconnected_outputs),
       m_opt_peephole(shadingsys.m_opt_peephole),
       m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
       m_opt_assign(shadingsys.m_opt_assign),
@@ -155,6 +156,7 @@ RuntimeOptimizer::set_debug ()
             m_opt_constant_fold = true;
             m_opt_stale_assign = true;
             m_opt_elide_useless_ops = true;
+            m_opt_elide_unconnected_outputs = true;
             m_opt_peephole = true;
             m_opt_coalesce_temps = true;
             m_opt_assign = true;
@@ -276,7 +278,7 @@ int
 RuntimeOptimizer::turn_into_nop (Opcode &op, const char *why)
 {
     if (op.opname() != u_nop) {
-        if (debug())
+        if (debug() > 1)
             std::cout << "turned op " << (&op - &(inst()->ops()[0]))
                       << " from " << op.opname() << " to nop"
                       << (why ? " : " : "") << (why ? why : "") << "\n";
@@ -385,6 +387,11 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         ASSERT (m_in_conditional.size() == code.size()-1);
         m_in_conditional.insert (m_in_conditional.begin()+opnum, 1,
                                  m_in_conditional[opnum]);
+    }
+    if (m_in_loop.size()) {
+        ASSERT (m_in_loop.size() == code.size()-1);
+        m_in_loop.insert (m_in_loop.begin()+opnum, 1,
+                          m_in_loop[opnum]);
     }
 
     if (opname != u_useparam) {
@@ -2204,10 +2211,19 @@ RuntimeOptimizer::find_conditionals ()
 
     m_in_conditional.clear ();
     m_in_conditional.resize (code.size(), false);
+    m_in_loop.clear ();
+    m_in_loop.resize (code.size(), false);
     for (int i = 0;  i < (int)code.size();  ++i) {
-        if (code[i].jump(0) >= 0)
+        if (code[i].jump(0) >= 0) {
             std::fill (m_in_conditional.begin()+i,
                        m_in_conditional.begin()+code[i].farthest_jump(), true);
+            if (code[i].opname() == Strings::op_dowhile ||
+                  code[i].opname() == Strings::op_for ||
+                  code[i].opname() == Strings::op_while) {
+                std::fill (m_in_loop.begin()+i,
+                           m_in_loop.begin()+code[i].farthest_jump(), true);
+            }
+        }
     }
 }
 
@@ -2468,26 +2484,29 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
 
 
 
-/// Check for assignment of output params that are written only once in
-/// the whole shader -- on this statement -- and assigned a constant, and
-/// the assignment is unconditional.  In that case, just alias it to the
-/// constant from here on out.
-///
-/// Furthermore, if nobody READS the output param prior to this
-/// assignment, let's just change its initial value to the constant and
-/// get rid of the assignment altogether!
+/// Check for conditions under which assignments to output parameters
+/// can be removed.
 ///
 /// Return true if the assignment is removed entirely.
 bool
 RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 {
-    return false;
     ASSERT (op.opname() == u_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
 
+    if (R->symtype() != SymTypeOutputParam)
+        return false;    // This logic is only about output params
+
+    /// Check for assignment of output params that are written only once
+    /// in the whole shader -- on this statement -- and assigned a
+    /// constant, and the assignment is unconditional.  In that case,
+    /// just alias it to the constant from here on out.
+    ///
+    /// Furthermore, if nobody READS the output param prior to this
+    /// assignment, let's just change its initial value to the constant
+    /// and get rid of the assignment altogether!
     if (A->is_constant() && R->typespec() == A->typespec() &&
-            R->symtype() == SymTypeOutputParam &&
             R->firstwrite() == opnum && R->lastwrite() == opnum &&
             !m_in_conditional[opnum]) {
         // It's assigned only once, and unconditionally assigned a
@@ -2500,10 +2519,20 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         if (R->firstread() > opnum) {
             make_param_use_instanceval (R);
             replace_param_value (R, A->data());
-            turn_into_nop (op, "oparam never subsequently read");
+            turn_into_nop (op, "oparam never subsequently read, turn into constant");
             return true;
         }
     }
+
+    // If the output param will neither be read later in the shader nor
+    // connected to a downstream layer, then we don't really need this
+    // assignment at all.
+    if (R->lastread() < opnum && !m_in_loop[opnum] &&
+            !R->connected_down() && m_opt_elide_unconnected_outputs) {
+        turn_into_nop (op, "oparam never subsequently read or connected");
+        return true;
+    }
+
     return false;
 }
 
@@ -2741,6 +2770,9 @@ RuntimeOptimizer::optimize_instance ()
     }
 #endif
 
+    // Recompute which of our params have downstream connections.
+    mark_outgoing_connections ();
+
     // Try to fold constants.  We take several passes, until we get to
     // the point that not much is improving.  It rarely goes beyond 3-4
     // passes, but we have a hard cutoff at 10 just to be sure we don't
@@ -2776,16 +2808,6 @@ RuntimeOptimizer::optimize_instance ()
             // op.  That ensures that the reference won't be invalid.
             inst()->ops().reserve (num_ops+1);
             Opcode &op (inst()->ops()[opnum]);
-
-            // Find the farthest this instruction jumps to (-1 for ops
-            // that don't jump) so we can mark conditional regions.
-            int jumpend = op.farthest_jump();
-            for (int i = (int)opnum+1;  i < jumpend;  ++i) {
-                // I think this is unneeded, because of the earlier call
-                // to find_conditionals.
-                ASSERT (m_in_conditional[i] == true);
-                m_in_conditional[i] = true;
-            }
 
             // Things to do if we've just moved to a new basic block
             if (lastblock != m_bblockids[opnum]) {
@@ -2915,7 +2937,8 @@ RuntimeOptimizer::optimize_instance ()
                     // Just an assignment to itself -- turn into NOP!
                     turn_into_nop (op, "self-assignment");
                     ++changed;
-                } else if (R_local_or_tmp && R->lastread() < opnum) {
+                } else if (R_local_or_tmp && R->lastread() < opnum
+                           && ! m_in_loop[opnum]) {
                     // Don't bother assigning if we never read it again
                     turn_into_nop (op, "symbol never read again");
                     ++changed;
@@ -3326,6 +3349,7 @@ RuntimeOptimizer::post_optimize_instance ()
 
     m_bblockids.clear ();       // Keep insert_code from getting confused
     m_in_conditional.clear ();
+    m_in_loop.clear ();
 
     add_useparam (allsymptrs);
 
@@ -3481,6 +3505,7 @@ RuntimeOptimizer::collapse_ops ()
     // These are no longer valid
     m_bblockids.clear ();
     m_in_conditional.clear ();
+    m_in_loop.clear ();
 }
 
 
@@ -3508,10 +3533,12 @@ RuntimeOptimizer::optimize_group ()
         set_inst (layer);
         m_inst->copy_code_from_master ();
         if (debug() && optimize() >= 1) {
+            std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 
                       << inst()->layername() 
                       << ", I get:\n" << inst()->print()
                       << "\n--------------------------------\n\n";
+            std::cout.flush ();
         }
 
         old_nsyms += inst()->symbols().size();
@@ -3569,6 +3596,7 @@ RuntimeOptimizer::optimize_group ()
                           << inst()->layername() << " (" << inst()->id()
                           << "): \n" << inst()->print() 
                           << "\n--------------------------------\n\n";
+                std::cout.flush ();
             }
         }
         new_nsyms += inst()->symbols().size();

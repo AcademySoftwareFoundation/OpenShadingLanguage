@@ -131,6 +131,10 @@ add_shader (int argc, const char *argv[])
         shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debugnan", debugnan);
+    // Must be sure we do not optimize away assignments to unconnected
+    // output params -- our use of shadingsys->get_symbol() depends on
+    // this for how testshade can dump any output to an image file.
+    shadingsys->attribute ("opt_elide_unconnected_outputs", 0);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();

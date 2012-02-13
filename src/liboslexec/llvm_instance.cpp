@@ -486,7 +486,7 @@ RuntimeOptimizer::llvm_type_sg ()
     sg_types.push_back (llvm_type_int());     // flipHandedness
     sg_types.push_back (llvm_type_int());     // backfacing
 
-    return m_llvm_type_sg = llvm_type_struct (sg_types);
+    return m_llvm_type_sg = llvm_type_struct (sg_types, "ShaderGlobals");
 }
 
 
@@ -553,7 +553,9 @@ RuntimeOptimizer::llvm_type_groupdata ()
     }
     m_group.llvm_groupdata_size (offset);
 
-    m_llvm_type_groupdata = llvm_type_struct (fields);
+    std::string groupdataname = Strutil::format("Groupdata_%llu",
+                                                (long long unsigned int)group().name().hash());
+    m_llvm_type_groupdata = llvm_type_struct (fields, groupdataname);
 
 #ifdef DEBUG
 //    llvm::outs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
@@ -586,7 +588,7 @@ RuntimeOptimizer::llvm_type_closure_component ()
     comp_types.push_back (llvm_type_int());     // nattrs
     comp_types.push_back (llvm_type_int());     // fake field for char mem[4]
 
-    return m_llvm_type_closure_component = llvm_type_struct (comp_types);
+    return m_llvm_type_closure_component = llvm_type_struct (comp_types, "ClosureComponent");
 }
 
 
@@ -615,7 +617,7 @@ RuntimeOptimizer::llvm_type_closure_component_attr ()
 
     attr_types.push_back (llvm_type_union (union_types)); // value union
 
-    return m_llvm_type_closure_component_attr = llvm_type_struct (attr_types);
+    return m_llvm_type_closure_component_attr = llvm_type_struct (attr_types, "ClosureComponentAttr");
 }
 
 
@@ -885,6 +887,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Mark all the basic blocks, including allocating llvm::BasicBlock
     // records for each.
     find_basic_blocks (true);
+    find_conditionals ();
+    m_layers_already_run.clear ();
 
     build_llvm_code (inst()->maincodebegin(), inst()->maincodeend());
 
@@ -900,7 +904,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                         "no support for individual element/channel connection");
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
-                llvm_run_connected_layers (*srcsym, con.src.param, NULL);
+                llvm_run_connected_layers (*srcsym, con.src.param);
                 // FIXME -- I'm not sure I understand this.  Isn't this
                 // unnecessary if we wrote to the parameter ourself?
                 llvm_assign_impl (*dstsym, *srcsym);
@@ -1080,8 +1084,10 @@ RuntimeOptimizer::build_llvm_group ()
 
     m_stat_llvm_opt_time += timer.lap();
 
-    if (shadingsys().llvm_debug())
+    if (shadingsys().llvm_debug()) {
         llvm::outs() << "func after opt  = " << *entry_func << "\n";
+        llvm::outs().flush();
+    }
 
     // Debug code to dump the resulting bitcode to a file
     if (shadingsys().llvm_debug() >= 2) {
@@ -1163,12 +1169,12 @@ RuntimeOptimizer::initialize_llvm_group ()
 
     // A triple is a struct composed of 3 floats
     std::vector<llvm::Type*> triplefields(3, m_llvm_type_float);
-    m_llvm_type_triple = llvm_type_struct (triplefields);
+    m_llvm_type_triple = llvm_type_struct (triplefields, "Vec3");
     m_llvm_type_triple_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_triple, 0);
 
     // A matrix is a struct composed 16 floats
     std::vector<llvm::Type*> matrixfields(16, m_llvm_type_float);
-    m_llvm_type_matrix = llvm_type_struct (matrixfields);
+    m_llvm_type_matrix = llvm_type_struct (matrixfields, "Matrix4");
     m_llvm_type_matrix_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_matrix, 0);
 
     for (int i = 0;  llvm_helper_function_table[i];  i += 2) {

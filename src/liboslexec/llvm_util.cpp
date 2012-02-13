@@ -76,13 +76,14 @@ RuntimeOptimizer::llvm_type_union(const std::vector<llvm::Type *> &types)
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_struct (const std::vector<llvm::Type *> &types)
+RuntimeOptimizer::llvm_type_struct (const std::vector<llvm::Type *> &types,
+                                    const std::string &name)
 {
 #if OSL_LLVM_VERSION <= 29
     return (llvm::Type *) llvm::StructType::get(llvm_context(),
                             *(std::vector<const llvm::Type*>*)&types);
 #else
-    return llvm::StructType::get(llvm_context(), types);
+    return llvm::StructType::create(llvm_context(), types, name);
 #endif
 }
 

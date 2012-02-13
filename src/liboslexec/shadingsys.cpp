@@ -168,6 +168,8 @@ ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
 ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
 ustring anisotropic("anisotropic"), direction("direction");
 ustring do_filter("do_filter");
+ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
+
 };
 
 
@@ -188,6 +190,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_optimize (2),
       m_opt_constant_param(true), m_opt_constant_fold(true),
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
+      m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
       m_opt_assign(true),
       m_optimize_nondebug(false),
@@ -493,6 +496,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_constant_fold", int, m_opt_constant_fold);
     ATTR_SET ("opt_stale_assign", int, m_opt_stale_assign);
     ATTR_SET ("opt_elide_useless_ops", int, m_opt_elide_useless_ops);
+    ATTR_SET ("opt_elide_unconnected_outputs", int, m_opt_elide_unconnected_outputs);
     ATTR_SET ("opt_peephole", int, m_opt_peephole);
     ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_SET ("opt_assign", int, m_opt_assign);
@@ -566,6 +570,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_constant_fold", int, m_opt_constant_fold);
     ATTR_DECODE ("opt_stale_assign", int, m_opt_stale_assign);
     ATTR_DECODE ("opt_elide_useless_ops", int, m_opt_elide_useless_ops);
+    ATTR_DECODE ("opt_elide_unconnected_outputs", int, m_opt_elide_unconnected_outputs);
     ATTR_DECODE ("opt_peephole", int, m_opt_peephole);
     ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_DECODE ("opt_assign", int, m_opt_assign);

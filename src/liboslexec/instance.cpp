@@ -338,6 +338,8 @@ ShaderInstance::print ()
                 out << " down-connected";
             if (!s.connected() && !s.connected_down())
                 out << " unconnected";
+            if (s.symtype() == SymTypeParam && ! s.lockgeom())
+                out << " lockgeom=0";
         }
         out << "\n";
         if (s.symtype() == SymTypeConst || 

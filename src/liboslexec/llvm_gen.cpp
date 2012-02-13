@@ -157,20 +157,36 @@ RuntimeOptimizer::llvm_call_layer (int layer, bool unconditional)
 
 void
 RuntimeOptimizer::llvm_run_connected_layers (Symbol &sym, int symindex,
-                                             std::vector<int> *already_run)
+                                             int opnum,
+                                             std::set<int> *already_run)
 {
     if (sym.valuesource() != Symbol::ConnectedVal)
         return;  // Nothing to do
+
+    bool inmain = (opnum >= inst()->maincodebegin() &&
+                   opnum < inst()->maincodeend());
 
     for (int c = 0;  c < inst()->nconnections();  ++c) {
         const Connection &con (inst()->connection (c));
         // If the connection gives a value to this param
         if (con.dst.param == symindex) {
             if (already_run) {
-                if (std::find (already_run->begin(), already_run->end(), con.srclayer) != already_run->end())
-                    continue;  // already ran that one
+                if (already_run->count (con.srclayer))
+                    continue;  // already ran that one on this op
                 else
-                    already_run->push_back (con.srclayer);  // mark it
+                    already_run->insert (con.srclayer);  // mark it
+            }
+
+            if (m_layers_already_run.count (con.srclayer)) {
+                if (debug() > 1)
+                    std::cout << "At op " << opnum << ", skip running layer "
+                              << con.srclayer << ", it already ran" << std::endl;
+                continue;  // already unconditionally ran the layer
+            }
+
+            if (inmain && ! m_in_conditional[opnum]) {
+                // Unconditionally running -- mark so we don't do it again
+                m_layers_already_run.insert (con.srclayer);
             }
 
             // If the earlier layer it comes from has not yet been
@@ -189,13 +205,13 @@ LLVMGEN (llvm_gen_useparam)
 
     // If we have multiple params needed on this statement, don't waste
     // time checking the same upstream layer more than once.
-    std::vector<int> already_run;
+    std::set<int> already_run;
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol& sym = *rop.opargsym (op, i);
         int symindex = rop.inst()->arg (op.firstarg()+i);
-        rop.llvm_run_connected_layers (sym, symindex, &already_run);
+        rop.llvm_run_connected_layers (sym, symindex, opnum, &already_run);
     }
     return true;
 }

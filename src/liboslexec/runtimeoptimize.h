@@ -457,7 +457,8 @@ public:
 
     /// This will return a llvm::Type that is the same as a C struct
     /// comprised fields of the given types[], in order.
-    llvm::Type *llvm_type_struct(const std::vector<llvm::Type *> &types);
+    llvm::Type *llvm_type_struct(const std::vector<llvm::Type *> &types,
+                                 const std::string &name="");
 
     /// Convert the name of a global (and its derivative index) into the
     /// field number of the ShaderGlobals struct.
@@ -627,8 +628,8 @@ public:
     /// it points to a vector of layer indices that are known to have been 
     /// run -- those can be skipped without dynamically checking their
     /// execution status.
-    void llvm_run_connected_layers (Symbol &sym, int symindex,
-                                    std::vector<int> *already_run = NULL);
+    void llvm_run_connected_layers (Symbol &sym, int symindex, int opnum = -1,
+                                    std::set<int> *already_run = NULL);
 
     /// Generate code for a call to the named function with the given
     /// arg list as symbols -- float & ints will be passed by value,
@@ -757,6 +758,7 @@ private:
     bool m_opt_constant_fold;             ///< Allow constant folding?
     bool m_opt_stale_assign;              ///< Optimize stale assignments?
     bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
+    bool m_opt_elide_unconnected_outputs; ///< Optimize unconnected outputs?
     bool m_opt_peephole;                  ///< Do some peephole optimizations?
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
@@ -772,7 +774,9 @@ private:
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
     std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
+    std::vector<bool> m_in_loop;        ///< Whether each op is in a loop
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
+    std::set<int> m_layers_already_run; ///< List of layers run
     int m_num_used_layers;              ///< Number of layers actually used
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time

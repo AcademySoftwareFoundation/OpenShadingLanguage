@@ -195,13 +195,17 @@ public:
     /// it's read, we can go back and remove the earlier assignment.
     void simple_sym_assign (int sym, int op);
 
+    /// Return true if assignments to A on this op have no effect because
+    /// they will not be subsequently used.
+    bool unread_after (const Symbol *A, int opnum);
+
     /// Replace R's instance value with new data.
     ///
     void replace_param_value (Symbol *R, const void *newdata);
 
     bool outparam_assign_elision (int opnum, Opcode &op);
 
-    bool useless_op_elision (Opcode &op);
+    bool useless_op_elision (Opcode &op, int opnum);
 
     void make_symbol_room (int howmany=1);
 

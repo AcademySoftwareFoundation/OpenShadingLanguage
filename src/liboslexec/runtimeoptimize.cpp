@@ -2401,6 +2401,29 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 
 
 
+bool
+RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
+{
+    // Try to figure out if this symbol is completely unused after this
+    // op (and thus, any values written to it now will never be needed).
+
+    // Globals may be read by later layers
+    if (A->symtype() == SymTypeGlobal)
+        return false;
+
+    // Output params may be read afterwards if connected to a downstream
+    // layer or if "elide_unconnected_outputs" is turned off.
+    if (A->symtype() == SymTypeOutputParam && 
+        (A->connected_down() || ! m_opt_elide_unconnected_outputs))
+        return false;
+
+    // For all else, check if it's either never read at all in this
+    // layer or it's only read earlier and we're not part of a loop
+    return !A->everread() || (A->lastread() < opnum && !m_in_loop[opnum]);
+}
+
+
+
 void
 RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata)
 {
@@ -2527,8 +2550,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // If the output param will neither be read later in the shader nor
     // connected to a downstream layer, then we don't really need this
     // assignment at all.
-    if (R->lastread() < opnum && !m_in_loop[opnum] &&
-            !R->connected_down() && m_opt_elide_unconnected_outputs) {
+    if (unread_after(R,opnum)) {
         turn_into_nop (op, "oparam never subsequently read or connected");
         return true;
     }
@@ -2544,23 +2566,21 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 /// written args at all, since they tend to have side effects (e.g.,
 /// printf, setmessage).
 bool
-RuntimeOptimizer::useless_op_elision (Opcode &op)
+RuntimeOptimizer::useless_op_elision (Opcode &op, int opnum)
 {
     if (op.nargs()) {
-        bool noeffect = true;
         bool writes_something = false;
         for (int a = 0;  a < op.nargs();  ++a) {
             if (op.argwrite(a)) {
                 writes_something = true;
-                Symbol *A (inst()->argsymbol(op.firstarg()+a));
-                bool local_or_tmp = (A->symtype() == SymTypeLocal ||
-                                     A->symtype() == SymTypeTemp);
-                if (A->everread() || ! local_or_tmp)
-                    noeffect = false;
+                Symbol *A = opargsym (op, a);
+                if (! unread_after(A,opnum))
+                    return false;
             }
         }
-        if (writes_something && noeffect) {
-            turn_into_nop (op);
+        // If we get this far, nothing written had any effect
+        if (writes_something) {
+            turn_into_nop (op, "eliminated op whose writes will never be read");
             return true;
         }
     }
@@ -2946,7 +2966,7 @@ RuntimeOptimizer::optimize_instance ()
             }
 
             if (optimize() >= 2 && m_opt_elide_useless_ops)
-                changed += useless_op_elision (op);
+                changed += useless_op_elision (op, opnum);
 
             // Peephole optimization involving pair of instructions
             if (optimize() >= 2 && m_opt_peephole)

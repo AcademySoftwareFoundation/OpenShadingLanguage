@@ -168,7 +168,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin
-            pnoise pnoise-cell pnoise-perlin pnoise-uperlin
+            pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
             raytype shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture

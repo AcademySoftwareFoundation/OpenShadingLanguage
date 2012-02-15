@@ -1226,7 +1226,7 @@ namespace Strings {
     extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern ustring cell, cellnoise, pcellnoise;
     extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern ustring anisotropic, direction, do_filter;
+    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
     extern ustring op_dowhile, op_for, op_while;
 }; // namespace Strings
 
@@ -1254,9 +1254,12 @@ struct NoiseParams {
     int anisotropic;
     int do_filter;
     Vec3 direction;
+    float bandwidth;
+    float impulses;
 
     NoiseParams ()
-        : anisotropic(0), do_filter(true), direction(1.0f,0.0f,0.0f)
+        : anisotropic(0), do_filter(true), direction(1.0f,0.0f,0.0f),
+          bandwidth(1.0f), impulses(16.0f)
     {
     }
 };

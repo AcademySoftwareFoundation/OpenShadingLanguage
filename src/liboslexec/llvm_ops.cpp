@@ -1502,6 +1502,22 @@ osl_noiseparams_set_direction (void *opt, void *dir)
 
 
 
+OSL_SHADEOP void
+osl_noiseparams_set_bandwidth (void *opt, float b)
+{
+    ((NoiseParams *)opt)->bandwidth = b;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_impulses (void *opt, float i)
+{
+    ((NoiseParams *)opt)->impulses = i;
+}
+
+
+
 // Trace
 
 OSL_SHADEOP void

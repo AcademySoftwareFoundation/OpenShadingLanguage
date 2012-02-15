@@ -260,7 +260,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_noiseparams_set_anisotropic", "xXi",
     "osl_noiseparams_set_do_filter", "xXi",
     "osl_noiseparams_set_direction", "xXv",
-    "osl_noiseparams_set_period", "xXffff",
+    "osl_noiseparams_set_bandwidth", "xXf",
+    "osl_noiseparams_set_impulses", "xXf",
 #endif
 
     "osl_spline_fff", "xXXXXi",

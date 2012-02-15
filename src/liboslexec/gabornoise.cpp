@@ -44,13 +44,7 @@ namespace pvt {
 
 
 static const float Gabor_Frequency = 2.0;
-static const float Gabor_Bandwidth = 1.0;
-static const int Gabor_Kernel_Impulses = 32;
 static const float Gabor_Impulse_Weight = 1;
-
-static const float TWO_to_GB = powf (2.0f, Gabor_Bandwidth);
-static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
-static const float Gabor_a = Gabor_Frequency * ((TWO_to_GB - 1.0) / (TWO_to_GB + 1.0)) * SQRT_PI_OVER_LN2;
 
 // The Gabor kernel in theory has infinite support (its envelope is
 // a Gaussian).  To restrict the distance at which we must sum the
@@ -58,15 +52,6 @@ static const float Gabor_a = Gabor_Frequency * ((TWO_to_GB - 1.0) / (TWO_to_GB +
 // above the truncation threshold, as a portion of the Gaussian's
 // peak value.
 static const float Gabor_Truncate = 0.02f;
-
-// Calculate the maximum radius from which we consider the kernel
-// impulse centers -- derived from the threshold and bandwidth.
-static const float Gabor_radius = sqrtf(-logf(Gabor_Truncate) / M_PI) / Gabor_a;
-static const float Gabor_radius2 = Gabor_radius * Gabor_radius;
-static const float Gabor_radius3 = Gabor_radius * Gabor_radius * Gabor_radius;
-
-// Lambda is the impulse density.
-static const float Gabor_lambda = Gabor_Kernel_Impulses / (1.33333 * M_PI * Gabor_radius * Gabor_radius * Gabor_radius);
 
 
 
@@ -113,16 +98,34 @@ struct GaborParams {
     Vec3 N;
     Matrix22 filter;
     Matrix33 local;
+    float bandwidth;
     bool periodic;
     Vec3 period;
+    float lambda;
+    float sqrt_lambda_inv;
+    float radius, radius2, radius3, radius_inv;
 
     GaborParams (const NoiseParams &opt) :
         omega(opt.direction),  // anisotropy orientation
         anisotropic(opt.anisotropic),
         do_filter(opt.do_filter),
-        a(Gabor_a), weight(Gabor_Impulse_Weight),
+        weight(Gabor_Impulse_Weight),
+        bandwidth(Imath::clamp(opt.bandwidth,0.01f,100.0f)),
         periodic(false)
     {
+        float TWO_to_bandwidth = powf (2.0f, bandwidth);
+        static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
+        a = Gabor_Frequency * ((TWO_to_bandwidth - 1.0) / (TWO_to_bandwidth + 1.0)) * SQRT_PI_OVER_LN2;
+        // Calculate the maximum radius from which we consider the kernel
+        // impulse centers -- derived from the threshold and bandwidth.
+        radius = sqrtf(-logf(Gabor_Truncate) / float(M_PI)) / a;
+        radius2 = radius * radius;
+        radius3 = radius2 * radius;
+        radius_inv = 1.0f / radius;
+        // Lambda is the impulse density.
+        float impulses = Imath::clamp (opt.impulses, 1.0f, 32.0f);
+        lambda = impulses / (float(1.33333 * M_PI) * radius3);
+        sqrt_lambda_inv = 1.0f / sqrtf(lambda);
     }
 };
 
@@ -252,16 +255,16 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
             int seed = 0)
 {
     fast_rng rng (gp.periodic ? Vec3(wrap(c_i,gp.period)) : c_i, seed);
-    int n_impulses = rng.poisson (Gabor_lambda * Gabor_radius3);
+    int n_impulses = rng.poisson (gp.lambda * gp.radius3);
     Dual2<float> sum = 0;
 
     for (int i = 0; i < n_impulses; i++) {
         Vec3 x_i_c (rng(), rng(), rng());
-        Dual2<Vec3> x_k_i = Gabor_radius * (x_c_i - x_i_c);        
+        Dual2<Vec3> x_k_i = gp.radius * (x_c_i - x_i_c);        
         float phi_i;
         Vec3 omega_i;
         gabor_sample (gp, c_i, rng, omega_i, phi_i);
-        if (x_k_i.val().length2() < Gabor_radius2) {
+        if (x_k_i.val().length2() < gp.radius2) {
             if (! gp.do_filter) {
                 sum += gabor_kernel (gp.weight, omega_i, phi_i, gp.a, x_k_i);  // 3D
             } else {
@@ -349,7 +352,7 @@ gabor_grid (GaborParams &gp, const Dual2<Vec3> &x_g, int seed=0)
             }
         }
     }
-    return sum * (1.0f / sqrtf (Gabor_lambda));
+    return sum * gp.sqrt_lambda_inv;
 }
 
 
@@ -357,7 +360,7 @@ gabor_grid (GaborParams &gp, const Dual2<Vec3> &x_g, int seed=0)
 inline Dual2<float>
 gabor_evaluate (GaborParams &gp, const Dual2<Vec3> &x, int seed=0)
 {
-    Dual2<Vec3> x_g = x * (1.0f/Gabor_radius);
+    Dual2<Vec3> x_g = x * gp.radius_inv;
     return gabor_grid (gp, x_g, seed);
 }
 

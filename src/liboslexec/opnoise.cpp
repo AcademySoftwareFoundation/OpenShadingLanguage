@@ -571,20 +571,20 @@ struct GaborPNoise {
     inline void operator() (ustring noisename, Dual2<Vec3> &result,
                             const Dual2<float> &x, float px,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
-        result = pgabor (x, px, opt);
+        result = pgabor3 (x, px, opt);
     }
 
     inline void operator() (ustring noisename, Dual2<Vec3> &result,
                             const Dual2<float> &x, const Dual2<float> &y,
                             float px, float py,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
-        result = pgabor (x, y, px, py, opt);
+        result = pgabor3 (x, y, px, py, opt);
     }
 
     inline void operator() (ustring noisename, Dual2<Vec3> &result,
                             const Dual2<Vec3> &p, const Vec3 &pp,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
-        result = pgabor (p, pp, opt);
+        result = pgabor3 (p, pp, opt);
     }
 
     inline void operator() (ustring noisename, Dual2<Vec3> &result,
@@ -592,7 +592,7 @@ struct GaborPNoise {
                             const Vec3 &pp, float tp,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
         // FIXME -- This is very broken, we are ignoring 4D!
-        result = pgabor (p, pp, opt);
+        result = pgabor3 (p, pp, opt);
     }
 };
 

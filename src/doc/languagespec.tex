@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 30 Jan, 2012 \\
+\date{{\large Date: 15 Feb, 2012 \\
 %(with corrections, 5 Dec, 2011)
 }}
 
@@ -3327,6 +3327,29 @@ vector (which defaults to {\cf (1,0,0)}).  If {\cf anisotropic} is
 {\cf direction} vector, but radially isotropic perpendicular to that
 vector.  The {\cf direction} vector is not used if {\cf anisotropic}
 is 0.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"do_filter", <int>}
+\vspace{12pt}
+If {\cf do_filter} is 0, no filtering/antialiasing will
+be performed.  The default is 1 (yes, do filtering).  There is probably
+no good reason to ever turn off the filtering, it is primarily to test
+that the filtering is working properly.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"bandwidth", <float>}
+\vspace{12pt}
+Controls the bandwidth for Gabor noise.
+The default is 1.0.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"impulses", <float>}
+\vspace{12pt}
+Controls the number of impulses per cell for Gabor noise.
+The default is 16.
 \apiend
 \vspace{-16pt}
 

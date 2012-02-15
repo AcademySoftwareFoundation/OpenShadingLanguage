@@ -167,7 +167,7 @@ ustring pnoise("pnoise"), psnoise("psnoise");
 ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
 ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
 ustring anisotropic("anisotropic"), direction("direction");
-ustring do_filter("do_filter");
+ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
 
 };

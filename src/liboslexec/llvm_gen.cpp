@@ -2248,6 +2248,16 @@ llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
         } else if (name == Strings::direction && Val.typespec().is_triple()) {
             rop.llvm_call_function ("osl_noiseparams_set_direction", opt,
                                     rop.llvm_void_ptr (Val));
+        } else if (name == Strings::bandwidth && 
+                   (Val.typespec().is_float() || Val.typespec().is_int())) {
+            rop.llvm_call_function ("osl_noiseparams_set_bandwidth", opt,
+                                    rop.llvm_load_value (Val, 0, NULL, 0,
+                                                         TypeDesc::TypeFloat));
+        } else if (name == Strings::impulses && 
+                   (Val.typespec().is_float() || Val.typespec().is_int())) {
+            rop.llvm_call_function ("osl_noiseparams_set_impulses", opt,
+                                    rop.llvm_load_value (Val, 0, NULL, 0,
+                                                         TypeDesc::TypeFloat));
         } else {
             rop.shadingsys().error ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
                                     op.opname().c_str(),

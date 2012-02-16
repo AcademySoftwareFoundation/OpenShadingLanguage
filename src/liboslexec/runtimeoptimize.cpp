@@ -2411,9 +2411,9 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
     if (A->symtype() == SymTypeGlobal)
         return false;
 
-    // Output params may be read afterwards if connected to a downstream
+    // Params may be read afterwards if connected to a downstream
     // layer or if "elide_unconnected_outputs" is turned off.
-    if (A->symtype() == SymTypeOutputParam && 
+    if ((A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) &&
         (A->connected_down() || ! m_opt_elide_unconnected_outputs))
         return false;
 

@@ -113,6 +113,85 @@ StructSpec::mangled () const
 
 
 
+const char *
+Symbol::valuesourcename () const
+{
+    switch (valuesource()) {
+    case DefaultVal   : return "default";
+    case InstanceVal  : return "instance";
+    case GeomVal      : return "geom";
+    case ConnectedVal : return "connected";
+    }
+    ASSERT(0 && "unknown valuesource");
+    return NULL;
+}
+
+
+
+std::ostream &
+Symbol::print_vals (std::ostream &out) const
+{
+    if (! data())
+        return out;
+    TypeDesc t = typespec().simpletype();
+    int n = t.aggregate * t.numelements();
+    if (t.basetype == TypeDesc::FLOAT) {
+        for (int j = 0;  j < n;  ++j)
+            out << (j ? " " : "") << ((float *)data())[j];
+    } else if (t.basetype == TypeDesc::INT) {
+        for (int j = 0;  j < n;  ++j)
+            out << (j ? " " : "") << ((int *)data())[j];
+    } else if (t.basetype == TypeDesc::STRING) {
+        for (int j = 0;  j < n;  ++j)
+            out << (j ? " " : "") << "\"" 
+                << Strutil::escape_chars(((ustring *)data())[j].string())
+                << "\"";
+    }
+    return out;
+}
+
+
+
+std::ostream &
+Symbol::print (std::ostream &out) const
+{
+    out << Symbol::symtype_shortname(symtype())
+        << " " << typespec().string() << " " << name();
+    if (everused())
+        out << " (used " << firstuse() << ' ' << lastuse() 
+            << " read " << firstread() << ' ' << lastread() 
+            << " write " << firstwrite() << ' ' << lastwrite();
+    else
+        out << " (unused";
+    out << (has_derivs() ? " derivs" : "") << ")";
+    if (symtype() == SymTypeParam || symtype() == SymTypeOutputParam) {
+        if (has_init_ops())
+            out << " init [" << initbegin() << ',' << initend() << ")";
+        if (connected())
+            out << " connected";
+        if (connected_down())
+            out << " down-connected";
+        if (!connected() && !connected_down())
+            out << " unconnected";
+        if (symtype() == SymTypeParam && ! lockgeom())
+            out << " lockgeom=0";
+    }
+    out << "\n";
+    if (symtype() == SymTypeConst || 
+        ((symtype() == SymTypeParam || symtype() == SymTypeOutputParam) &&
+         valuesource() == Symbol::DefaultVal && !has_init_ops())) {
+        if (symtype() == SymTypeConst)
+            out << "\tconst: ";
+        else
+            out << "\tdefault: ";
+        print_vals(out);
+        out << "\n";
+    }
+    return out;
+}
+
+
+
 Symbol *
 SymbolTable::find (ustring name, Symbol *last) const
 {

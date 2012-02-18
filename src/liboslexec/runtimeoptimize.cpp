@@ -2190,7 +2190,7 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
                         int cind = add_constant (s->typespec(), srcsym->data());
                         // Alias this symbol to the new const
                         global_alias (i, cind);
-                        make_param_use_instanceval (s);
+                        make_param_use_instanceval (s, "- upstream layer sets it to a constant");
                         replace_param_value (s, srcsym->data());
                         break;
                     }
@@ -2473,8 +2473,13 @@ private:
 /// no longer need; turn it into a a plain old instance-value
 /// parameter.
 void
-RuntimeOptimizer::make_param_use_instanceval (Symbol *R)
+RuntimeOptimizer::make_param_use_instanceval (Symbol *R, const char *why)
 {
+    if (debug() > 1)
+        std::cout << "Turning " << R->valuesourcename() << ' ' 
+                  << R->name() << " into an instance value "
+                  << (why ? why : "") << "\n";
+
     // Mark its source as the instance value, not connected
     R->valuesource (Symbol::InstanceVal);
     // If it isn't a connection or computed, it doesn't need derivs.
@@ -2540,9 +2545,9 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // If it's also never read before this assignment, just replace its
         // default value entirely and get rid of the assignment.
         if (R->firstread() > opnum) {
-            make_param_use_instanceval (R);
+            make_param_use_instanceval (R, "- written once, with a constant, before any reads");
             replace_param_value (R, A->data());
-            turn_into_nop (op, "oparam never subsequently read, turn into constant");
+            turn_into_nop (op, Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str());
             return true;
         }
     }
@@ -2551,7 +2556,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // connected to a downstream layer, then we don't really need this
     // assignment at all.
     if (unread_after(R,opnum)) {
-        turn_into_nop (op, "oparam never subsequently read or connected");
+        turn_into_nop (op, Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str());
         return true;
     }
 
@@ -3015,7 +3020,7 @@ RuntimeOptimizer::optimize_instance ()
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
         turn_into_nop (0, (int)inst()->ops().size()-1,
-                       "eliminate layer with no outward connections");
+                       Strutil::format("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str());
         BOOST_FOREACH (Symbol &s, inst()->symbols())
             s.clear_rw ();
     }

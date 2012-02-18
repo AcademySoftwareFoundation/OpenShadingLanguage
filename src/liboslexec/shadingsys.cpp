@@ -1039,7 +1039,6 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     ConnectedParam srccon = decode_connected_param(srcparam, srclayer, srcinst);
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
     if (! (srccon.valid() && dstcon.valid())) {
-        
         return false;
     }
 
@@ -1066,6 +1065,7 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
     dstinst->symbol(dstcon.param)->valuesource (Symbol::ConnectedVal);
+    srcinst->symbol(srccon.param)->connected_down (true);
     srcinst->outgoing_connections (true);
 
     if (debug())

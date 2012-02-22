@@ -69,6 +69,10 @@ public:
     /// Re-check what debugging level we ought to be at.
     void set_debug ();
 
+    /// Return the layer number of the currently-optimizing instance
+    /// within the group.
+    int layer () const { return m_layer; }
+
     /// Return a pointer to the currently-optimizing instance within the
     /// group.
     ShaderInstance *inst () const { return m_inst; }
@@ -130,7 +134,7 @@ public:
 
     bool coerce_assigned_constant (Opcode &op);
 
-    void make_param_use_instanceval (Symbol *R);
+    void make_param_use_instanceval (Symbol *R, const char *why=NULL);
 
     /// Return the index of the symbol ultimately de-aliases to (it may be
     /// itself, if it doesn't alias to anything else).  Local block aliases

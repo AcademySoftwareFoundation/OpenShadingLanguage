@@ -593,6 +593,7 @@ public:
 
     ValueSource valuesource () const { return (ValueSource) m_valuesource; }
     void valuesource (ValueSource v) { m_valuesource = v; }
+    const char *valuesourcename () const;
 
     int fieldid () const { return m_fieldid; }
     void fieldid (int id) { m_fieldid = id; }
@@ -653,6 +654,10 @@ public:
     void lockgeom (bool lock) { m_lockgeom = lock; }
 
     bool is_constant () const { return symtype() == SymTypeConst; }
+
+    /// Stream output
+    std::ostream& print (std::ostream& out) const;
+    std::ostream& print_vals (std::ostream& out) const;
 
 protected:
     void *m_data;               ///< Pointer to the data

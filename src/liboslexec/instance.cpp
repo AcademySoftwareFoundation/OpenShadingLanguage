@@ -289,29 +289,6 @@ ShaderInstance::copy_code_from_master ()
 
 
 
-inline std::string
-print_vals (const Symbol &s)
-{
-    std::stringstream out;
-    TypeDesc t = s.typespec().simpletype();
-    int n = t.aggregate * t.numelements();
-    if (t.basetype == TypeDesc::FLOAT) {
-        for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << ((float *)s.data())[j];
-    } else if (t.basetype == TypeDesc::INT) {
-        for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << ((int *)s.data())[j];
-    } else if (t.basetype == TypeDesc::STRING) {
-        for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << "\"" 
-                << Strutil::escape_chars(((ustring *)s.data())[j].string())
-                << "\"";
-    }
-    return out.str();
-}
-
-
-
 std::string
 ShaderInstance::print ()
 {
@@ -320,38 +297,7 @@ ShaderInstance::print ()
     out << "  symbols:\n";
     for (size_t i = 0;  i < m_instsymbols.size();  ++i) {
         const Symbol &s (*symbol(i));
-        out << "    " << i << ": " << Symbol::symtype_shortname(s.symtype())
-            << " " << s.typespec().string() << " " << s.name();
-        if (s.everused())
-            out << " (used " << s.firstuse() << ' ' << s.lastuse() 
-                << " read " << s.firstread() << ' ' << s.lastread() 
-                << " write " << s.firstwrite() << ' ' << s.lastwrite();
-        else
-            out << " (unused";
-        out << (s.has_derivs() ? " derivs" : "") << ")";
-        if (s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) {
-            if (s.has_init_ops())
-                out << " init [" << s.initbegin() << ',' << s.initend() << ")";
-            if (s.connected())
-                out << " connected";
-            if (s.connected_down())
-                out << " down-connected";
-            if (!s.connected() && !s.connected_down())
-                out << " unconnected";
-            if (s.symtype() == SymTypeParam && ! s.lockgeom())
-                out << " lockgeom=0";
-        }
-        out << "\n";
-        if (s.symtype() == SymTypeConst || 
-            ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam) &&
-             s.valuesource() == Symbol::DefaultVal && !s.has_init_ops())) {
-            if (s.symtype() == SymTypeConst)
-                out << "\tconst: ";
-            else
-                out << "\tdefault: ";
-            out << print_vals (s);
-            out << "\n";
-        }
+        s.print (out);
     }
 #if 0
     out << "  int consts:\n    ";
@@ -377,8 +323,11 @@ ShaderInstance::print ()
         for (int a = 0;  a < op.nargs();  ++a) {
             const Symbol *s (argsymbol(op.firstarg()+a));
             out << " " << s->name();
-            if (s->symtype() == SymTypeConst)
-                out << " (" << print_vals(*s) << ")";
+            if (s->symtype() == SymTypeConst) {
+                out << " (";
+                s->print_vals(out);
+                out << ")";
+            }
             if (op.argread(a))
                 allconst &= s->is_constant();
         }

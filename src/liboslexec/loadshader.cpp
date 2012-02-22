@@ -341,6 +341,12 @@ OSOReaderToMaster::hint (const char *hintstring)
         }
         return;
     }
+    if (extract_prefix (h, "%mystructfield{")) {
+        ASSERT (m_master->m_symbols.size() && "mystructfield hint but no sym");
+        Symbol &sym (m_master->m_symbols.back());
+        sym.fieldid (atoi(h.c_str()+15));
+        return;
+    }
     if (extract_prefix (h, "%read{")) {
         ASSERT (m_master->m_symbols.size() && "read hint but no sym");
         Symbol &sym (m_master->m_symbols.back());

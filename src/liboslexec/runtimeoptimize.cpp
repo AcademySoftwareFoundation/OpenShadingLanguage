@@ -2393,7 +2393,7 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
             turn_into_nop (uselessop,
-                           Strutil::format("remove stale value assignment to %s, reassigned on op %d", opargsym(uselessop,0)->name().c_str(), opnum).c_str());
+                           debug() > 1 ? Strutil::format("remove stale value assignment to %s, reassigned on op %d", opargsym(uselessop,0)->name().c_str(), opnum).c_str() : "");
         }
     }
     m_stale_syms[sym] = opnum;
@@ -2547,7 +2547,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         if (R->firstread() > opnum) {
             make_param_use_instanceval (R, "- written once, with a constant, before any reads");
             replace_param_value (R, A->data());
-            turn_into_nop (op, Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str());
+            turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
             return true;
         }
     }
@@ -2556,7 +2556,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // connected to a downstream layer, then we don't really need this
     // assignment at all.
     if (unread_after(R,opnum)) {
-        turn_into_nop (op, Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str());
+        turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
         return true;
     }
 
@@ -3020,7 +3020,7 @@ RuntimeOptimizer::optimize_instance ()
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
         turn_into_nop (0, (int)inst()->ops().size()-1,
-                       Strutil::format("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str());
+                       debug() > 1 ? Strutil::format("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str() : "");
         BOOST_FOREACH (Symbol &s, inst()->symbols())
             s.clear_rw ();
     }

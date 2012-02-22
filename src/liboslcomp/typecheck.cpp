@@ -341,8 +341,6 @@ ASTconditional_statement::typecheck (TypeSpec expected)
     oslcompiler->pop_nesting (false);
 
     TypeSpec c = cond()->typespec();
-    if (c.is_closure())
-        error ("Cannot use a closure as an 'if' condition");
     if (c.is_structure())
         error ("Cannot use a struct as an 'if' condition");
     if (c.is_array())

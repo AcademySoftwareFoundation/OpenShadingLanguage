@@ -25,4 +25,28 @@ test ()
     } else {
         printf ("u greater or equal than v: %g >= %g\n", u, v);
     }
+
+    float fnonzero = M_PI;
+    float fzero = 0.0;
+    if (fnonzero)
+        printf ("if (float=%g):  Should print this\n", fnonzero);
+    if (fzero)
+        printf ("if (float=%g):  Should NOT NOT NOT print this!\n", fzero);
+
+    color cnonzero = M_PI;
+    color czero = 0.0;
+    if (cnonzero)
+        printf ("if (color=%g):  Should print this\n", cnonzero);
+    if (czero)
+        printf ("if (color=%g):  Should NOT NOT NOT print this!\n", czero);
+
+
+    closure color ccnonzero = emission();
+    closure color cczero = 0;
+    if (ccnonzero)
+        printf ("if (closure color=%s):  Should print this\n", ccnonzero);
+    if (cczero)
+        printf ("if (closure color=%s):  Should NOT NOT NOT print this!\n", cczero);
+
+    printf ("\n");
 }

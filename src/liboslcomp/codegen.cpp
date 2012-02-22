@@ -356,7 +356,9 @@ ASTNode::codegen_int (Symbol *, bool boolify, bool invert)
         // implied comparison to zero.
         Symbol *tempvar = m_compiler->make_temporary (TypeDesc::TypeInt);
         Symbol *zerovar = NULL;
-        if (type.is_string())
+        if (type.is_closure())
+            zerovar = m_compiler->make_constant ((int)0);
+        else if (type.is_string())
             zerovar = m_compiler->make_constant (ustring(""));
         else if (type.is_int())
             zerovar = m_compiler->make_constant ((int)0);

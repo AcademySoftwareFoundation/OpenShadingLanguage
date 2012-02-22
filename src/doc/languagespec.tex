@@ -2449,6 +2449,9 @@ braces.  For example,
   ``false'' if zero.
 \item Any string expression, which is considered ``true'' if it is a
   nonempty string, ``false'' if it is the empty string (\qkw{}).
+\item A \closure, which is considered ``true'' if it's empty (not
+  assigned, or initialized with {\cf =0}), and ``false'' if anything
+  else has been assigned to it.
 \item A logical combination of expressions using the operators {\cf !}
   (not), {\cf \&\&} (logical ``and''), or {\cf ||} (logical ``or'').
   Note that {\cf \&\&} and {\cf ||} \emph{short circuit} as in C,

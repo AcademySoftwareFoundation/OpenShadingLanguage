@@ -1451,6 +1451,19 @@ LLVMGEN (llvm_gen_compare_op)
     Symbol &B (*rop.opargsym (op, 2));
     ASSERT (Result.typespec().is_int() && ! Result.has_derivs());
 
+    if (A.typespec().is_closure()) {
+        ASSERT (B.typespec().is_int() &&
+                "Only closure==0 and closure!=0 allowed");
+        llvm::Value *a = rop.llvm_load_value (A);
+        llvm::Value *b = rop.llvm_void_ptr_null ();
+        llvm::Value *r = (op.opname()==op_eq) ? rop.builder().CreateICmpEQ(a,b)
+                                              : rop.builder().CreateICmpNE(a,b);
+        // Convert the single bit bool into an int
+        r = rop.builder().CreateZExt (r, rop.llvm_type_int());
+        rop.llvm_store_value (r, Result);
+        return true;
+    }
+
     int num_components = std::max (A.typespec().aggregate(), B.typespec().aggregate());
     bool float_based = A.typespec().is_floatbased() || B.typespec().is_floatbased();
     TypeDesc cast (float_based ? TypeDesc::FLOAT : TypeDesc::UNKNOWN);

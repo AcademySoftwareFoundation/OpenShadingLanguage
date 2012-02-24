@@ -555,6 +555,11 @@ ASTbinary_expression::typecheck (TypeSpec expected)
                 return m_typespec = r;
             }
         }
+        if (m_op == And || m_op == Or) {
+            // Logical ops work can work on closures (since they test
+            // for nonemptiness, but always return int.
+            return m_typespec = TypeDesc::TypeInt;
+        }
         // If we got this far, it's an op that's not allowed
         error ("Not allowed: '%s %s %s'",
                type_c_str(l), opname(), type_c_str(r));

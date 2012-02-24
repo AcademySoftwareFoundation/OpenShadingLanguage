@@ -47,6 +47,10 @@ test ()
         printf ("if (closure color=%s):  Should print this\n", ccnonzero);
     if (cczero)
         printf ("if (closure color=%s):  Should NOT NOT NOT print this!\n", cczero);
+    if (! cczero)
+        printf ("if (! closure color=%s):  Should print this\n", cczero);
+    if (!ccnonzero)
+        printf ("if (! closure color=%s):  Should NOT NOT NOT print this!\n", ccnonzero);
 
     printf ("\n");
 }

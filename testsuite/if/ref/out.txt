@@ -7,6 +7,7 @@ u greater or equal than v: 0 >= 0
 if (float=3.14159):  Should print this
 if (color=3.14159 3.14159 3.14159):  Should print this
 if (closure color=(1, 1, 1) * emission ()):  Should print this
+if (! closure color=):  Should print this
 
 1-clause uniform if 7:  Should print this
 2-clause uniform if 7:  true - Should print this
@@ -16,6 +17,7 @@ u greater or equal than v: 1 >= 0
 if (float=3.14159):  Should print this
 if (color=3.14159 3.14159 3.14159):  Should print this
 if (closure color=(1, 1, 1) * emission ()):  Should print this
+if (! closure color=):  Should print this
 
 1-clause uniform if 7:  Should print this
 2-clause uniform if 7:  true - Should print this
@@ -25,6 +27,7 @@ u less than v: 0 < 1
 if (float=3.14159):  Should print this
 if (color=3.14159 3.14159 3.14159):  Should print this
 if (closure color=(1, 1, 1) * emission ()):  Should print this
+if (! closure color=):  Should print this
 
 1-clause uniform if 7:  Should print this
 2-clause uniform if 7:  true - Should print this
@@ -34,5 +37,6 @@ u greater or equal than v: 1 >= 1
 if (float=3.14159):  Should print this
 if (color=3.14159 3.14159 3.14159):  Should print this
 if (closure color=(1, 1, 1) * emission ()):  Should print this
+if (! closure color=):  Should print this
 
 

@@ -637,9 +637,9 @@ public:
     int lastwrite () const  { return m_lastwrite; }
     int firstuse () const   { return std::min (firstread(), firstwrite()); }
     int lastuse () const    { return std::max (lastread(), lastwrite()); }
-    bool everused () const  { return lastuse() >= 0; }
     bool everread () const  { return lastread() >= 0; }
     bool everwritten () const { return lastwrite() >= 0; }
+    bool everused () const  { return everread() || everwritten(); }
     void set_read (int first, int last) {
         m_firstread = first;  m_lastread = last;
     }

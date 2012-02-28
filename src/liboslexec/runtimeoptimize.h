@@ -244,6 +244,8 @@ public:
 
     void mark_outgoing_connections ();
 
+    int remove_unused_params ();
+
     /// Squeeze out unused symbols from an instance that has been
     /// optimized.
     void collapse_syms ();
@@ -753,6 +755,10 @@ public:
     llvm::Function *layer_func () const { return m_layer_func; }
 
     void llvm_setup_optimization_passes ();
+
+    bool opt_elide_unconnected_outputs () const {
+        return m_opt_elide_unconnected_outputs;
+    }
 
 private:
     ShadingSystemImpl &m_shadingsys;

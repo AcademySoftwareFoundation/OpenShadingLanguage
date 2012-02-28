@@ -2640,14 +2640,35 @@ RuntimeOptimizer::make_symbol_room (int howmany)
 
 
 
-// Predicate to test if the connection's destination is never used
-struct ConnectionDestNeverUsed
+// Predicate to test if a symbol (specified by symbol index, symbol
+// pointer, or by the inbound Connection record) is never used within
+// the shader or passed along.  Subtlety: you can't base the test for
+// params on sym->everused(), since of course it may be used within its
+// own init ops, but then never subsequently used, and thus be a prime
+// candidate for culling.  Instead, for params we test whether it was
+// used at any point AFTER its init ops.
+class SymNeverUsed
 {
-    ConnectionDestNeverUsed (const ShaderInstance *inst) : m_inst(inst) { }
-    bool operator() (const Connection &c) {
-        return ! m_inst->symbol(c.dst.param)->everused();
+public:
+    SymNeverUsed (const RuntimeOptimizer &rop, const ShaderInstance *inst)
+        : m_rop(rop), m_inst(inst)
+    { }
+    bool operator() (const Symbol &sym) const {
+        if (sym.symtype() == SymTypeParam)
+            return (sym.lastuse() < sym.initend()) && !sym.connected_down();
+        if (sym.symtype() == SymTypeOutputParam)
+            return m_rop.opt_elide_unconnected_outputs() &&
+                   (sym.lastuse() < sym.initend()) && !sym.connected_down();
+        return ! sym.everused();  // all other symbol types
+    }
+    bool operator() (int symid) const {
+        return (*this)(*m_inst->symbol(symid));
+    }
+    bool operator() (const Connection &c) const {
+        return (*this)(c.dst.param);
     }
 private:
+    const RuntimeOptimizer &m_rop;
     const ShaderInstance *m_inst;
 };
 
@@ -2769,6 +2790,38 @@ RuntimeOptimizer::mark_outgoing_connections ()
                 inst()->outgoing_connections (true);
             }
     }
+}
+
+
+
+/// Check all params and output params to find any that are neither used
+/// in the shader (aside from their own init ops, which shouldn't count)
+/// nor connected to downstream layers, and for those, remove their init
+/// ops and connections.
+/// Precondition: mark_outgoing_connections should be up to date.
+int
+RuntimeOptimizer::remove_unused_params ()
+{
+    int alterations = 0;
+    SymNeverUsed param_never_used (*this, inst());  // handy predicate
+
+    // Get rid of unused params' init ops and clear their read/write ranges
+    FOREACH_PARAM (Symbol &s, inst()) {
+        if (param_never_used(s) && s.has_init_ops()) {
+            turn_into_nop (s.initbegin(), s.initend(),
+                           "remove init ops of unused param");
+            s.set_initrange (0, 0);
+            s.clear_rw();   // mark as totally unused
+            ++alterations;
+            if (debug() > 1)
+                std::cout << "Realized that param " << s.name() << " is not needed\n";
+        }
+    }
+
+    // Get rid of the Connections themselves
+    erase_if (inst()->connections(), param_never_used);
+
+    return alterations;
 }
 
 
@@ -2979,9 +3032,6 @@ RuntimeOptimizer::optimize_instance ()
 
         }
 
-        totalchanged += changed;
-        // info ("Pass %d, changed %d\n", pass, changed);
-
         // Now that we've rewritten the code, we need to re-track the
         // variable lifetimes.
         track_variable_lifetimes ();
@@ -2990,14 +3040,7 @@ RuntimeOptimizer::optimize_instance ()
         mark_outgoing_connections ();
 
         // Elide unconnected parameters that are never read.
-        FOREACH_PARAM (Symbol &s, inst()) {
-            if (!s.connected_down() && ! s.everread()) {
-                changed += turn_into_nop (s.initbegin(), s.initend(),
-                                          "remove init ops of unread param");
-                s.set_initrange ();
-                s.clear_rw ();
-            }
-        }
+        changed += remove_unused_params ();
 
         // FIXME -- we should re-evaluate whether writes_globals() is still
         // true for this layer.
@@ -3005,6 +3048,7 @@ RuntimeOptimizer::optimize_instance ()
         // If nothing changed, we're done optimizing.  But wait, it may be
         // that after re-tracking variable lifetimes, we can notice new
         // optimizations!  So force another pass, then we're really done.
+        totalchanged += changed;
         if (changed < 1) {
             if (++reallydone > 3)
                 break;
@@ -3023,20 +3067,6 @@ RuntimeOptimizer::optimize_instance ()
                        debug() > 1 ? Strutil::format("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str() : "");
         BOOST_FOREACH (Symbol &s, inst()->symbols())
             s.clear_rw ();
-    }
-
-    // Erase this layer's incoming connections and init ops for params
-    // it no longer uses
-    erase_if (inst()->connections(), ConnectionDestNeverUsed(inst()));
-
-    // Clear init ops of params that aren't used.
-    FOREACH_PARAM (Symbol &s, inst()) {
-        if (s.symtype() == SymTypeParam && ! s.everused() &&
-                s.initbegin() < s.initend()) {
-            turn_into_nop (s.initbegin(), s.initend(),
-                           "remove init ops of unused param");
-            s.set_initrange (0, 0);
-        }
     }
 
     // Now that we've optimized this layer, walk through the ops and
@@ -3404,22 +3434,19 @@ RuntimeOptimizer::collapse_syms ()
     SymbolVec new_symbols;          // buffer for new symbol table
     std::vector<int> symbol_remap;  // mapping of old sym index to new
     int total_syms = 0;             // number of new symbols we'll need
+    SymNeverUsed never_used (*this, inst());  // handy predicate
 
     // First, just count how many we need and set up the mapping
     BOOST_FOREACH (const Symbol &s, inst()->symbols()) {
         symbol_remap.push_back (total_syms);
-        if (s.everused() ||
-            (s.symtype() == SymTypeParam && s.connected_down()) ||
-              s.symtype() == SymTypeOutputParam)
+        if (! never_used (s))
             ++total_syms;
     }
 
     // Now make a new table of the right (new) size, and copy the used syms
     new_symbols.reserve (total_syms);
     BOOST_FOREACH (const Symbol &s, inst()->symbols()) {
-        if (s.everused() ||
-            (s.symtype() == SymTypeParam && s.connected_down()) ||
-              s.symtype() == SymTypeOutputParam)
+        if (! never_used (s))
             new_symbols.push_back (s);
     }
 

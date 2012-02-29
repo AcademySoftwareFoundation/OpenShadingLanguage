@@ -870,6 +870,40 @@ Matrix22<T>::scale (const Imath::Vec2<S> &s)
     return *this;
 }
 
+
+//--------------------------------
+// Implementation of stream output
+//--------------------------------
+
+template <class T>
+std::ostream &
+operator << (std::ostream &s, const Matrix22<T> &m)
+{
+    std::ios_base::fmtflags oldFlags = s.flags();
+    int width;
+
+    if (s.flags() & std::ios_base::fixed)
+    {
+        s.setf (std::ios_base::showpoint);
+        width = s.precision() + 5;
+    }
+    else
+    {
+        s.setf (std::ios_base::scientific);
+        s.setf (std::ios_base::showpoint);
+        width = s.precision() + 8;
+    }
+
+    s << "(" << std::setw (width) << m[0][0] <<
+         " " << std::setw (width) << m[0][1] << "\n" <<
+
+         " " << std::setw (width) << m[1][0] <<
+         " " << std::setw (width) << m[1][1] << ")\n";
+
+    s.flags (oldFlags);
+    return s;
+}
+
 } // namespace Imathx
 
 #endif /* ifndef(MATRIX22_H) */

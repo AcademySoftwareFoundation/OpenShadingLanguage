@@ -1079,6 +1079,7 @@ RuntimeOptimizer::build_llvm_group ()
     m_group.does_nothing(skip_optimization);
     if (skip_optimization) {
         m_shadingsys.m_stat_empty_groups += 1;
+        m_shadingsys.m_stat_empty_instances += 1;  // the one layer is empty
     } else {
         m_llvm_passes->run (*llvm_module());
     }

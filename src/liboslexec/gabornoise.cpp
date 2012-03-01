@@ -98,6 +98,7 @@ struct GaborParams {
     Vec3 N;
     Matrix22 filter;
     Matrix33 local;
+    float det_filter;
     float bandwidth;
     bool periodic;
     Vec3 period;
@@ -266,6 +267,11 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
         gabor_sample (gp, c_i, rng, omega_i, phi_i);
         if (x_k_i.val().length2() < gp.radius2) {
             if (! gp.do_filter) {
+                // N.B. if determinant(gp.filter) is too small, we will
+                // run into numerical problems.  But the filtering isn't
+                // needed in that case anyway, so just don't filter.
+                // This seems to only come up when the filter region is
+                // tiny.
                 sum += gabor_kernel (gp.weight, omega_i, phi_i, gp.a, x_k_i);  // 3D
             } else {
                 // Transform the impulse's anisotropy into tangent space
@@ -292,7 +298,13 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
                 Dual2<Vec3> xkit;
                 multMatrix (gp.local, x_k_i, xkit);
                 Dual2<Vec2> x_k_i_t = make_Vec2 (comp(xkit,0), comp(xkit,1));
-                sum += gabor_kernel (w_i_t_s_f, omega_i_t_s_f, phi_i_t_s_f, a_i_t_s_f, x_k_i_t); // 2D
+                Dual2<float> gk = gabor_kernel (w_i_t_s_f, omega_i_t_s_f, phi_i_t_s_f, a_i_t_s_f, x_k_i_t); // 2D
+                if (! std::isfinite(gk.val())) {
+                    // Numeric failure of the filtered version.  Fall
+                    // back on the unfiltered.
+                    gk = gabor_kernel (gp.weight, omega_i, phi_i, gp.a, x_k_i);  // 3D
+                }
+                sum += gk;
             }
         }
     }
@@ -393,8 +405,12 @@ gabor_setup_filter (const Dual2<Vec3> &P, GaborParams &gp)
     // Make texture-space normal, tangent, bitangent
     Vec3 n, t, b;
     n = P.dx().cross (P.dy());  // normal to P
-    if (n.dot(n) == 0.0f)
-        gp.do_filter = false;   // No way to do filter if we have no derivs
+    if (n.dot(n) < 1.0e-6f) {  /* length of deriv < 1/1000 */
+        // No way to do filter if we have no derivs, and no reason to
+        // do it if it's too small to have any effect.
+        gp.do_filter = false;
+        return;   // we won't need anything else if filtering is off
+    }
     make_orthonormals (n, t, b);
 
     // Rotations from tangent<->texture space
@@ -411,7 +427,13 @@ gabor_setup_filter (const Dual2<Vec3> &P, GaborParams &gp)
 
     gp.N = n;
     gp.filter = Sigma_f_tan;
+    gp.det_filter = determinant(Sigma_f_tan);
     gp.local  = Mtex_to_tan;
+    if (gp.det_filter < 1.0e-18f) {
+        gp.do_filter = false;
+        // Turn off filtering when tiny values will lead to numerical
+        // errors later if we filter.  Yes, it's kind of arbitrary.
+    }
 }
 
 

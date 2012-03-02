@@ -327,7 +327,7 @@ make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
     if (fabsf(v[0]) < 0.9f)
 	a.setValue (0.0f, v[2], -v[1]);   // v X (1,0,0)
     else
-        a.setValue (v[2], 0.0f, v[0]);    // v X (0,1,0)
+        a.setValue (-v[2], 0.0f, v[0]);   // v X (0,1,0)
     a.normalize ();
     b = v.cross (a);
 //    b.normalize ();  // note: not necessary since v is unit length

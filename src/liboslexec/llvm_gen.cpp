@@ -2153,13 +2153,15 @@ llvm_gen_trace_options (RuntimeOptimizer &rop, int opnum,
         
         llvm::Value *val = rop.llvm_load_value (Val);
         static ustring kmindist("mindist"), kmaxdist("maxdist");
-        static ustring kshade("shade");
+        static ustring kshade("shade"), ktraceset("traceset");
         if (name == kmindist && valtype == TypeDesc::FLOAT) {
             rop.llvm_call_function ("osl_trace_set_mindist", opt, val);
         } else if (name == kmaxdist && valtype == TypeDesc::FLOAT) {
             rop.llvm_call_function ("osl_trace_set_maxdist", opt, val);
         } else if (name == kshade && valtype == TypeDesc::INT) {
             rop.llvm_call_function ("osl_trace_set_shade", opt, val);
+        } else if (name == ktraceset && valtype == TypeDesc::STRING) {
+            rop.llvm_call_function ("osl_trace_set_traceset", opt, val);
         } else {
             rop.shadingsys().error ("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
                                     name.c_str(), valtype.c_str(),

@@ -1523,9 +1523,7 @@ osl_noiseparams_set_impulses (void *opt, float i)
 OSL_SHADEOP void
 osl_trace_clear (void *opt)
 {
-    ((RendererServices::TraceOpt *)opt)->mindist = 0.0f;
-    ((RendererServices::TraceOpt *)opt)->maxdist = 1.0e30f;
-    ((RendererServices::TraceOpt *)opt)->shade = false;
+    new ((RendererServices::TraceOpt *)opt) RendererServices::TraceOpt;
 }
 
 OSL_SHADEOP void
@@ -1544,6 +1542,13 @@ OSL_SHADEOP void
 osl_trace_set_shade (void *opt, int x)
 {
     ((RendererServices::TraceOpt *)opt)->shade = x;
+}
+
+
+OSL_SHADEOP void
+osl_trace_set_traceset (void *opt, const char *x)
+{
+    ((RendererServices::TraceOpt *)opt)->traceset = USTR(x);
 }
 
 

@@ -481,9 +481,10 @@ public:
 
     /// Options for the trace call.
     struct TraceOpt {
-        float mindist;   ///< ignore hits closer than this
-        float maxdist;   ///< ignore hits farther than this
-        bool shade;      ///< whether to shade what is hit
+        float mindist;    ///< ignore hits closer than this
+        float maxdist;    ///< ignore hits farther than this
+        bool shade;       ///< whether to shade what is hit
+        ustring traceset; ///< named trace set
         TraceOpt () : mindist(0.0f), maxdist(1.0e30), shade(false) { }
     };
 

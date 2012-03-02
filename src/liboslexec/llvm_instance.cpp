@@ -427,6 +427,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_trace_set_mindist", "xXf",
     "osl_trace_set_maxdist", "xXf",
     "osl_trace_set_shade", "xXi",
+    "osl_trace_set_traceset", "xXs",
     "osl_trace", "iXXXXXXXX",
 
     "osl_get_attribute", "iXiXXiiXX",

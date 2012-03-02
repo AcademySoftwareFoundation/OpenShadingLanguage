@@ -762,7 +762,7 @@ The following are \emph{keywords} that have special meaning in
 
 break closure color continue do else emit float for if illuminance
 illuminate int matrix normal output point public return string struct
-trace vector void while
+vector void while
 
 }
 \end{quote}
@@ -2530,17 +2530,6 @@ arguments to a function that modifies an argument's value.
 
 Function definitions are described in detail in Section~\ref{sec:functions}.
 
-
-\begin{comment}
-\section{Lighting}
-\label{sec:syntax:lighting}
-
-    emit/illuminate
-
-    lights/illuminance
-
-trace, the hard way
-\end{comment}
 
 
 \section{Global variables}
@@ -4479,7 +4468,7 @@ implemented as follows:
 
 \begin{code}
     vector R = reflect (I, N);
-    return trace (R);
+    return raytrace (R);
 \end{code}
 
 \begin{comment}
@@ -4548,7 +4537,7 @@ implemented as follows:
     float Kr, Kt;
     vector R, T;
     fresnel (I, N, eta, Kr, Kt, R, T);
-    return Kt * trace (T);
+    return Kt * raytrace (T);
 \end{code}
 
 \begin{comment}
@@ -4617,7 +4606,7 @@ implemented as follows:
     float Kr, Kt;
     vector R, T;
     fresnel (I, N, eta, Kr, Kt, R, T);
-    return Kr * trace (R) + Kt * trace (T);
+    return Kr * raytrace (R) + Kt * raytrace (T);
 \end{code}
 
 \apiend
@@ -4647,7 +4636,7 @@ fact that the shader cannot examine the numeric values of the
 implemented as follows:
 
 \begin{code}
-    return trace (I);
+    return raytrace (I);
 \end{code}
 
 \apiend
@@ -4975,11 +4964,15 @@ Optional parameters include:
 \begin{tabular}{p{1.2in} p{0.5in} p{3.2in}}
 \qkw{mindist} & {\cf float} & Minimum hit distance (default: zero) \\
 \qkw{maxdist} & {\cf float} & Maximum hit distance (default: infinite) \\
-\qkw{shade}   & {\cf int}   & Whether objects hit will be shaded (default: 0)
+\qkw{shade}   & {\cf int}   & Whether objects hit will be shaded
+                              (default: 0) \\
+\qkw{traceset} & {\cf string} & An optional named set of objects to
+                                ray trace (if preceded by a `{\cf -}'
+                                character, it means to exclude that set).
 \end{tabular}
 
 Information about the closest object hit by the ray may be retrieved
-using {\cf getmessage("trace",...)} (see Section~\ref{sec:getmessage}).
+using \\ {\cf getmessage("trace",...)} (see Section~\ref{sec:getmessage}).
 
 The main purpose of this function is to allow shaders to ``probe''
 nearby geometry, for example to apply a projected texture that can be

@@ -2498,7 +2498,7 @@ LLVMGEN (llvm_gen_getattribute)
     Symbol& Attribute   = *rop.opargsym (op, attrib_slot);
     Symbol& Destination = *rop.opargsym (op, dest_slot);
 
-    TypeDesc attribute_type = Destination.typespec().simpletype();
+    //TypeDesc attribute_type = Destination.typespec().simpletype(); // FIXME: unused?
     bool     dest_derivs    = Destination.has_derivs();
 
     DASSERT (!Result.typespec().is_closure_based() &&

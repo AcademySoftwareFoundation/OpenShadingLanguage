@@ -35,6 +35,12 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
 	    -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
 	    -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     endif
+    ifeq (${COMPILER}, gcc463)
+    MY_CMAKE_FLAGS += \
+         -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.6.3-test/bin/gcc \
+         -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.6.3-test/bin/g++
+    endif
+    
 
 endif # SP_ARCH == spinux1_x86_64
 

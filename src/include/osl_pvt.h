@@ -695,7 +695,7 @@ typedef std::vector<Symbol *> SymbolPtrVec;
 class Opcode {
 public:
     Opcode (ustring op, ustring method, size_t firstarg=0, size_t nargs=0)
-        : m_firstarg((int)firstarg), m_method(method)
+        : m_firstarg((int)firstarg), m_method(method), m_sourceline(0)
     {
         reset (op, nargs);   // does most of the heavy lifting
     }

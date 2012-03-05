@@ -351,7 +351,7 @@ SymbolTable::print ()
             const FunctionSymbol *f = (const FunctionSymbol *) s;
             const char *args = f->argcodes().c_str();
             int advance = 0;
-            TypeSpec rettype = m_comp.type_from_code (args, &advance);
+            //TypeSpec rettype = m_comp.type_from_code (args, &advance); // FIXME: unused?
             args += advance;
             std::cout << " function (" << m_comp.typelist_from_code(args) << ") ";
         }

@@ -1938,10 +1938,10 @@ DECLFOLDER(constfold_texture)
     // Symbol &S = *rop.opargsym (op, 2);
     // Symbol &T = *rop.opargsym (op, 3);
 
-    bool user_derivs = false;
+    //bool user_derivs = false; // FIXME: unused?
     int first_optional_arg = 4;
     if (op.nargs() > 4 && rop.opargsym(op,4)->typespec().is_float()) {
-        user_derivs = true;
+        //user_derivs = true;
         first_optional_arg = 8;
         DASSERT (rop.opargsym(op,5)->typespec().is_float());
         DASSERT (rop.opargsym(op,6)->typespec().is_float());
@@ -3613,14 +3613,14 @@ RuntimeOptimizer::optimize_group ()
 
         // For our parameters that require derivatives, mark their
         // upstream connections as also needing derivatives.
-        bool any = false;
+        //bool any = false; // FIXME: unused?
         BOOST_FOREACH (Connection &c, inst()->m_connections) {
             if (inst()->symbol(c.dst.param)->has_derivs()) {
                 Symbol *source = m_group[c.srclayer]->symbol(c.src.param);
                 if (! source->typespec().is_closure_based() &&
                     source->typespec().elementtype().is_floatbased()) {
                     source->has_derivs (true);
-                    any = true;
+                    //any = true;
                 }
             }
         }

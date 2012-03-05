@@ -441,12 +441,16 @@ struct ClosureComponent : public ClosureColor
         const int     & integer() const { return value.integer; }
         float         & flt()           { return value.flt; }
         const float   & flt()     const { return value.flt; }
-        Color3        & color()         { return *((Color3 *)(void *)&value); }
-        const Color3  & color()   const { return *((Color3 *)(void *)&value); }
-        Vec3          & vector()        { return *((Vec3 *)(void *)&value); }
-        const Vec3    & vector()  const { return *((Vec3 *)(void *)&value); }
-        ustring       & str()           { return *((ustring *)(void *)&value); }
-        const ustring & str()     const { return *((ustring *)(void *)&value); }
+        Color3        & color()         { return *(Color3*)       raw_data(); }
+        const Color3  & color()   const { return *(const Color3*) raw_data(); }
+        Vec3          & vector()        { return *(Vec3*)         raw_data(); }
+        const Vec3    & vector()  const { return *(const Vec3*)   raw_data(); }
+        ustring       & str()           { return *(ustring*)      raw_data(); }
+        const ustring & str()     const { return *(const ustring*)raw_data(); }
+
+    private:
+        char*       raw_data()       { return reinterpret_cast<char*>(&value); }
+        const char* raw_data() const { return reinterpret_cast<const char*>(&value); }
     };
 
     int    id;       ///< Id of the component

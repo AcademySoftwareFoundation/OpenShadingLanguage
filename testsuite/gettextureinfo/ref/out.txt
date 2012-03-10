@@ -1,3 +1,4 @@
+Compiled test.osl -> test.oso
 Executing...
 ../common/textures/grid.tx resolution: 1024 1024 (1)
 ../common/textures/grid.tx channels: 4 (1)

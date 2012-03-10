@@ -9,6 +9,7 @@ Found camera 'right_cam':
     channel: 'color'
     channel: 'bump'
 
+ERROR: XML parsed with errors: File was not found, at offset 0
 testing dictionary error: dict_find("noexist.xml","foo") = -1
 
 

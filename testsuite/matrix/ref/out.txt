@@ -25,6 +25,7 @@ Testing matrix from-to construction:
   matrix ("object", "shader") = (0.70711 0.70711 0 0 -0.70711 0.70711 0 0 0 0 1 0 0 1.4142 0 1)
 
 Testing getmatrix for unknown space name:
+ERROR: Unknown transformation "foobar"
   'foobar' matrix not found, as expected
 
 

@@ -131,6 +131,7 @@ add_subdirectory (oslc)
 add_subdirectory (shaders)
 add_subdirectory (oslinfo)
 add_subdirectory (testshade)
+add_subdirectory (testrender)
 
 add_subdirectory (include)
 add_subdirectory (doc)

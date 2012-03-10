@@ -88,7 +88,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             if extension == ".tif" or extension == ".exr" :
                 # images -- use idiff
                 cmpcommand = (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "idiff")
-                              + " -fail " + str(failthresh)
+                              + " -fail 0" 
                               + " -failpercent " + str(failpercent)
                               + " -hardfail " + str(failthresh)
                               + " -warn " + str(2*failthresh)
@@ -101,7 +101,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
                     diff_cmd = "diff "
                 cmpcommand = (diff_cmd + out + " " + testfile)
 
-            # print "cmpcommand = " + cmpcommand
+            print "cmpcommand = " + cmpcommand
             cmpresult = os.system (cmpcommand)
             if cmpresult == 0 :
                 print ("PASS: " + out + " matches " + testfile)
@@ -144,8 +144,8 @@ outputs = [ "out.txt" ]    # default
 
 command = ""
 failureok = 0
-failthresh = 0
-failpercent = 0
+failthresh = 0.004
+failpercent = 0.02
 
 
 #print ("srcdir = " + srcdir)

@@ -89,9 +89,6 @@ include_directories (
   )
 
 
-# We want CTest for testing
-include (CTest)
-
 include_directories ("include")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -143,13 +140,46 @@ add_subdirectory (doc)
 #########################################################################
 # Testing
 
+# We want CTest for testing
+include (CTest)
+
+# Make a copy of the testsuite into the build area
+if (DEFINED CMAKE_VERSION AND NOT CMAKE_VERSION VERSION_LESS 2.8)
+    file (COPY ${PROJECT_SOURCE_DIR}/../testsuite
+          DESTINATION ${CMAKE_BINARY_DIR})
+endif()
+
 macro ( TESTSUITE )
-    foreach (_testname ${ARGN})
+    parse_arguments (_ats "LABEL" "" ${ARGN})
+    # If there was a FOUNDVAR param specified and that variable name is
+    # not defined, mark the test as broken.
+    if (_ats_FOUNDVAR AND NOT ${_ats_FOUNDVAR})
+        set (_ats_LABEL "broken")
+    endif ()
+    # Add the tests if all is well.
+    foreach (_testname ${_ats_DEFAULT_ARGS})
+        set (_testdir "${CMAKE_BINARY_DIR}/testsuite/${_testname}")
+        if (_ats_LABEL MATCHES "broken")
+            set (_testname "${_testname}-broken")
+        endif ()
+        set (_runtest python ${CMAKE_BINARY_DIR}/testsuite/runtest.py
+                             ${_testdir} ${_extra_test_args})
+        if (MSVC_IDE)
+            set (_runtest ${_runtest} --devenv-config $<CONFIGURATION>
+                                      --solution-path "${CMAKE_BINARY_DIR}" )
+        endif ()
+
+        message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
+
         # Run the test unoptimized
-        add_test ( ${_testname} env OPENIMAGEIOHOME=${OPENIMAGEIOHOME} TESTSHADE_OPT=0 python ${PROJECT_SOURCE_DIR}/../testsuite/${_testname}/run.py ${PROJECT_SOURCE_DIR}/../testsuite/${_testname} ${CMAKE_BINARY_DIR} )
+        set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
+        add_test ( NAME ${_testname}
+                   COMMAND env ${_env} ${_runtest} )
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
-        add_test ( ${_testname}.opt env OPENIMAGEIOHOME=${OPENIMAGEIOHOME} TESTSHADE_OPT=2 python ${PROJECT_SOURCE_DIR}/../testsuite/${_testname}/run.py ${PROJECT_SOURCE_DIR}/../testsuite/${_testname} ${CMAKE_BINARY_DIR} )
+        set (_env TESTSHADE_OPT=2 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
+        add_test ( NAME ${_testname}.opt
+                   COMMAND env ${_env} ${_runtest} )
     endforeach ()
 endmacro ()
 

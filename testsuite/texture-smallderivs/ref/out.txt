@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+
+Output Cout to out.tif

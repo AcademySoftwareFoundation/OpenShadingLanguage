@@ -1,0 +1,13 @@
+// This test combines a small blur, with derivatives rigged to cross
+// over the threshold where internal to OIIO it recognizes them as
+// essentially zero and sets up some special cases to handle it.
+
+shader
+test (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    float uwidth = u * 2e-8;
+    float vwidth = v * 2e-8;
+    Cout = (color) texture (filename, u, v, uwidth, 0, 0, vwidth, "blur", 0.01);
+}
+

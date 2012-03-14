@@ -575,16 +575,22 @@ ASTbinary_expression::typecheck (TypeSpec expected)
         // combination of int/float and other numeric types, but do not
         // work with strings.  Add/Sub don't work with matrices, but
         // Mul/Div do.
-        // FIXME -- currently, equivalent types combine to make the
-        // left type.  But maybe we should be more careful, for example
-        // point-point -> vector, etc.
         if (l.is_string() || r.is_string())
             break;   // Dispense with strings trivially
         if ((m_op == Sub || m_op == Add) && (l.is_matrix() || r.is_matrix()))
             break;   // Matrices don't combine for + and -
-        if (equivalent (l, r) ||
-                (l.is_numeric() && r.is_int_or_float()) ||
-                (l.is_int_or_float() && r.is_numeric()))
+        if (equivalent (l, r)) {
+            // handle a few couple special cases
+            if (m_op == Sub && l.is_point() && r.is_point())  // p-p == v
+                return m_typespec = TypeDesc::TypeVector;
+            if ((m_op == Add || m_op == Sub) &&
+                (l.is_point() || r.is_point()))  // p +/- v, v +/- p == p
+                return m_typespec = TypeDesc::TypePoint;
+            // everything else: the first operand is also the return type
+            return m_typespec = l;
+        }
+        if ((l.is_numeric() && r.is_int_or_float()) ||
+            (l.is_int_or_float() && r.is_numeric()))
             return m_typespec = higherprecision (l.simpletype(), r.simpletype());
         break;
 

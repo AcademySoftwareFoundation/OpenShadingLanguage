@@ -44,7 +44,7 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{1.0}
+\def\versionnumber{1.1}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
@@ -63,8 +63,8 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 15 Feb, 2012 \\
-(with corrections, 22 Feb, 2012)
+\date{{\large Date: 14 Mar, 2012 \\
+%(with corrections, 22 Feb, 2012)
 }}
 
 
@@ -3125,7 +3125,6 @@ Returns the linear luminance of the color \emph{rgb}, which is
 implemented per the ITU-R standard as $0.2126 R + 0.7152 G + 0.0722 B$.
 \apiend
 
-\NEW
 \apiitem{color {\ce blackbody} (float temperatureK)}
 \indexapi{blackbody()}
 
@@ -3494,7 +3493,6 @@ ignore the first and last data value, interpolating piecewise-linearly
 between $y_1$ and $y_{n-2}$.
 \apiend
 
-\NEW
 \apiitem{float {\ce splineinverse} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
 float {\ce splineinverse} (string basis, float v, float y[]) \\
 float {\ce splineinverse} (string basis, float v, int nknots, float y[])}
@@ -3534,7 +3532,6 @@ $\partial a / \partial y$.  Depending on the renderer
 implementation, those directions may be aligned to the image plane,
 on the surface of the object, or something else.
 
-\NEW
 The {\cf Dz()} function is only meaningful for volumetric shading, and
 is expected to return {\cf 0} in other contexts.  It is also possible
 that particular OSL implementations may only return ``correct'' {\cf Dz}

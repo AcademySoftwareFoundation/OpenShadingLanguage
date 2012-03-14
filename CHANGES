@@ -1,3 +1,69 @@
+Release 1.1.0 - Mar 14, 2011 (compared to 1.0.0)
+------------------------------------------------
+Language, standard libary, and compiler changes:
+* Allow closures as parameters to closures.
+* New constants: M_2PI, M_4PI
+* Generic noise: noise("noisetype",coords,...)
+* Gabor noise (anisotropic, automatically antialiased) via noise("gabor").
+* Fix mod/fmod discrepancy: fmod() now matches C, mod() always returns a
+  positive result like in RSL.
+* Allow "if (closure): and "if (!closure)" to test if a closure is empty
+  or not.
+* New optional parameter to trace(): "traceset" allows you to specify a
+  named geometry set for tracing.
+
+ShadingSystem API changes and new options:
+* New "greedyjit" option will optimize & JIT all shader groups up front,
+  concurrently, without locking.
+* Add a way to name shader groups.
+* attribute("options",...) lets you set a bunch of options at once.
+* Options to enable/disable individual optimizations (mostly useful for
+  debugging)
+
+Optimization improvements:
+* Allow block alias tracking on non-constants when it's safe.
+* Track "stale" values to eliminate pointless assignments.
+* Eliminate redundant "useparam" ops.
+* Assignments to output parameters that are not connected to any
+  downstream layers are now eliminated.
+* More aggressive elision of ops that only write to symbols that won't
+  be subsequently used.
+* More careful identification and removal of parameters (input and output)
+  that are both unused in the shader and not connected downstream.
+
+Bug fixes and minor improvements:
+* Minor blackbody fixes.
+* Bug fix: don't mark constants as having their derivatives taken.
+* Clamp splineinverse() for out-of-knot-range x input.
+* Bug fix: the optimization of "a=b; a=c" was incorrect if c was an
+  alias for a (it incorrectly eliminated the first assignment).
+* Bug fix: work around LLVM thread safety issues during JIT.
+* Bug fix: symbol_data() wasn't returning the right address for non-heap
+  parameters.
+* Bug fix: optimization errors related to break, continue, and return not
+  properly marking the next instruction as a new basic block.
+* Bug fix: luminance() with derivatives didn't work.
+* Bug fix: in code generation of structure initializers.
+* Improved error messages from ConnectShaders.
+* Bug fix: type checking bug could case non-exactly-matching polymorphic 
+  functions to coerce a return value even when that was not intended.
+* Type checking improvements: Make sure point-point is a vector
+  expression, and point+vector & point-vector are point expressions.
+
+Build & test system improvements and developer goodies:
+* testsuite overhauls:
+    - run each test both optimized and not
+    - generate all tests in build, not directly in ./testsuite
+    - greatly simplify the run.py scripts
+* Much more detailed debugging logs of the optimization process.
+* Upgrade to clang/llvm 3.0.
+* Lots of infrastructure to make debugging the optimizer easier.
+  Including new options debug_groupname, debug_layername, only_groupname.
+* Improved the build system's LLVM-finding logic.
+* Fix warnings from gcc 4.6.
+
+
+
 Release 1.0.0 - Oct 12, 2011
 ----------------------------
 * Modified testshade (and the underlying SimpleRender class) to handle

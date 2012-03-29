@@ -33,13 +33,14 @@ inline TypeDesc TYPEDESC(long long x) { return (*(const TypeDesc *)&x); }
 
 OSL_SHADEOP int
 osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
-                       int max_points, void *out_indices, void *out_distances, int derivs_offset,
+                       int max_points, int sort, void *out_indices, void *out_distances, int derivs_offset,
                        int nattrs, ...)
 {
     size_t *indices = (size_t *)alloca (sizeof(size_t) * max_points);
 
-    int count = sg->context->renderer()->pointcloud_search (USTR(filename), *((Vec3 *)center), radius, max_points,
-                                                            indices, (float *)out_distances, derivs_offset);
+    int count = sg->context->renderer()->pointcloud_search (sg, USTR(filename),
+                               *((Vec3 *)center), radius, max_points, sort,
+                               indices, (float *)out_distances, derivs_offset);
     va_list args;
     va_start (args, nattrs);
     for (int i = 0; i < nattrs; i++)

@@ -278,7 +278,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_splineinverse_dffdf", "xXXXXi",
     "osl_setmessage", "xXsLXisi",
     "osl_getmessage", "iXssLXiisi",
-    "osl_pointcloud_search", "iXsXfiXXii*",
+    "osl_pointcloud_search", "iXsXfiiXXii*",
     "osl_pointcloud_get", "iXsXisLX",
     "osl_blackbody_vf", "xXXf",
     "osl_wavelength_color_vf", "xXXf",

@@ -83,6 +83,10 @@ static ustring op_vector("vector");
 static ustring op_warning("warning");
 static ustring op_xor("xor");
 
+static ustring u_distance ("distance");
+static ustring u_index ("index");
+
+
 
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
@@ -2918,10 +2922,6 @@ LLVMGEN (llvm_gen_pointcloud_search)
     Opcode &op (rop.inst()->ops()[opnum]);
 
     DASSERT (op.nargs() >= 5);
-    // Does the compiler check this? Can we turn it
-    // into a DASSERT?
-    ASSERT (((op.nargs() - 5) % 2) == 0);
-
     Symbol& Result     = *rop.opargsym (op, 0);
     Symbol& Filename   = *rop.opargsym (op, 1);
     Symbol& Center     = *rop.opargsym (op, 2);
@@ -2932,13 +2932,14 @@ LLVMGEN (llvm_gen_pointcloud_search)
              Center.typespec().is_triple() && Radius.typespec().is_float() &&
              Max_points.typespec().is_int());
 
-
     std::vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
     int attr_arg_offset = 5; // where the opt attrs begin
+    Symbol *Sort = NULL;
+    if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
+        Sort = rop.opargsym(op,5);
+        ++attr_arg_offset;
+    }
     int nattrs = (op.nargs() - attr_arg_offset) / 2;
-
-    static ustring u_distance ("distance");
-    static ustring u_index ("index");
 
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());                // 0 sg
@@ -2946,10 +2947,12 @@ LLVMGEN (llvm_gen_pointcloud_search)
     args.push_back (rop.llvm_void_ptr   (Center));     // 2 center
     args.push_back (rop.llvm_load_value (Radius));     // 3 radius
     args.push_back (rop.llvm_load_value (Max_points)); // 4 max_points
-    args.push_back (rop.llvm_constant_ptr (NULL));      // 5 indices
-    args.push_back (rop.llvm_constant_ptr (NULL));      // 6 distances
-    args.push_back (rop.llvm_constant (0));             // 7 derivs_offset
-    args.push_back (NULL);                             // 8 nattrs
+    args.push_back (Sort ? rop.llvm_load_value(*Sort)  // 5 sort
+                         : rop.llvm_constant(0));
+    args.push_back (rop.llvm_constant_ptr (NULL));      // 6 indices
+    args.push_back (rop.llvm_constant_ptr (NULL));      // 7 distances
+    args.push_back (rop.llvm_constant (0));             // 8 derivs_offset
+    args.push_back (NULL);                              // 9 nattrs
     size_t capacity = 0x7FFFFFFF; // Lets put a 32 bit limit
     int extra_attrs = 0; // Extra query attrs to search
     // This loop does three things. 1) Look for the special attributes
@@ -2964,14 +2967,14 @@ LLVMGEN (llvm_gen_pointcloud_search)
         TypeDesc simpletype = Value.typespec().simpletype();
         if (Name.is_constant() && *((ustring *)Name.data()) == u_index &&
             simpletype.elementtype() == TypeDesc::INT) {
-            args[5] = rop.llvm_void_ptr (Value);
+            args[6] = rop.llvm_void_ptr (Value);
         } else if (Name.is_constant() && *((ustring *)Name.data()) == u_distance &&
                    simpletype.elementtype() == TypeDesc::FLOAT) {
-            args[6] = rop.llvm_void_ptr (Value);
+            args[7] = rop.llvm_void_ptr (Value);
             if (Value.has_derivs()) {
                 if (Center.has_derivs())
                     // deriv offset is the size of the array
-                    args[7] = rop.llvm_constant ((int)simpletype.numelements());
+                    args[8] = rop.llvm_constant ((int)simpletype.numelements());
                 else
                     clear_derivs_of.push_back(&Value);
             }
@@ -2988,7 +2991,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
         capacity = std::min (simpletype.numelements(), capacity);
     }
 
-    args[8] = rop.llvm_constant (extra_attrs);
+    args[9] = rop.llvm_constant (extra_attrs);
 
     // Compare capacity to the requested number of points. The available
     // space on the arrays is a constant, the requested number of

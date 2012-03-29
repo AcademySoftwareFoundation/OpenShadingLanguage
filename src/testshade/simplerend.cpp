@@ -212,8 +212,10 @@ SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
 }
 
 int
-SimpleRenderer::pointcloud_search (ustring filename, const OSL::Vec3 &center,
-                                   float radius, int max_points, size_t *out_indices,
+SimpleRenderer::pointcloud_search (ShaderGlobals *sg,
+                                   ustring filename, const OSL::Vec3 &center,
+                                   float radius, int max_points, bool sort,
+                                   size_t *out_indices,
                                    float *out_distances, int derivs_offset)
 {
     return 0;

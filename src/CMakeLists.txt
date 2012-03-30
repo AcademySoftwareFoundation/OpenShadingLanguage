@@ -122,6 +122,12 @@ if (MSVC)
 endif (MSVC)
 
 
+# We want CTest for testing
+# N.B. This needs to be added before any of the subdirectories, or
+# their add_test commands will not register.
+include (CTest)
+
+
 # Tell CMake to process the sub-directories
 add_subdirectory (liboslcomp)
 add_subdirectory (liboslquery)
@@ -139,9 +145,6 @@ add_subdirectory (doc)
 
 #########################################################################
 # Testing
-
-# We want CTest for testing
-include (CTest)
 
 # Make a copy of the testsuite into the build area
 if (DEFINED CMAKE_VERSION AND NOT CMAKE_VERSION VERSION_LESS 2.8)

@@ -1062,6 +1062,7 @@ RuntimeOptimizer::build_llvm_group ()
     initialize_llvm_group ();
 
     // Generate the LLVM IR for each layer.  Skip unused layers.
+    m_llvm_local_mem = 0;
     llvm::Function** funcs = (llvm::Function**)alloca(m_num_used_layers * sizeof(llvm::Function*));
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst (layer);
@@ -1072,6 +1073,12 @@ RuntimeOptimizer::build_llvm_group ()
     }
     llvm::Function* entry_func = funcs[m_num_used_layers-1];
     m_stat_llvm_irgen_time += timer.lap();
+
+    if (m_shadingsys.m_max_local_mem_KB &&
+        m_llvm_local_mem/1024 > m_shadingsys.m_max_local_mem_KB) {
+        m_shadingsys.error ("Shader group \"%s\" needs too much local storage: %d KB",
+                            m_group.name().c_str(), m_llvm_local_mem/1024);
+    }
 
     // Optimize the LLVM IR unless it's just a ret void group (1 layer,
     // 1 BB, 1 inst == retvoid)

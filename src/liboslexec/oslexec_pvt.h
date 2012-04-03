@@ -860,6 +860,7 @@ private:
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
     ustring m_colorspace;                 ///< What RGB colors mean
+    int m_max_local_mem_KB;               ///< Local storage can a shader use
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
@@ -905,7 +906,7 @@ private:
     double m_stat_getattribute_time;      ///< Stat: time spent in getattribute
     double m_stat_getattribute_fail_time; ///< Stat: time spent in getattribute
     atomic_ll m_stat_getattribute_calls;  ///< Stat: Number of getattribute
-
+    int m_stat_max_llvm_local_mem;        ///< Stat: max LLVM local mem
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory
 
     PeakCounter<off_t> m_stat_mem_master; ///< Stat: master-related mem

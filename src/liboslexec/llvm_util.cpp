@@ -344,6 +344,8 @@ RuntimeOptimizer::llvm_alloca (const TypeSpec &type, bool derivs,
     llvm::Type *alloctype = llvm_type (elemtype);
     int arraylen = std::max (1, type.arraylength());
     int n = arraylen * (derivs ? 3 : 1);
+    size_t size = type.is_closure() ? sizeof(void *)*arraylen : type.simpletype().size();
+    m_llvm_local_mem += size * (derivs ? 3 : 1);
     llvm::ConstantInt* numalloc = (llvm::ConstantInt*)llvm_constant(n);
     return builder().CreateAlloca(alloctype, numalloc, name);
 }

@@ -198,11 +198,13 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_debug(false), m_llvm_debug(false),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
+      m_max_local_mem_KB(1024),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
-      m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0)
+      m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0),
+      m_stat_max_llvm_local_mem(0)
 {
     m_stat_shaders_loaded = 0;
     m_stat_shaders_requested = 0;
@@ -507,6 +509,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -587,6 +590,8 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
     ATTR_DECODE_STRING ("debug_layername", m_debug_layername);
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
+    ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
+
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
     ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);
@@ -815,6 +820,8 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
+    out << "  Largest generated function local memory size: "
+        << m_stat_max_llvm_local_mem/1024 << " KB\n";
     if (m_stat_getattribute_calls) {
         out << "  getattribute calls: " << m_stat_getattribute_calls << " ("
             << Strutil::timeintervalformat (m_stat_getattribute_time, 2) << ")\n";

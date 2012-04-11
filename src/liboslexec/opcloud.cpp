@@ -36,7 +36,17 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
                        int max_points, int sort, void *out_indices, void *out_distances, int derivs_offset,
                        int nattrs, ...)
 {
-    size_t *indices = (size_t *)alloca (sizeof(size_t) * max_points);
+    // RS::pointcloud_search takes size_t index array (because of the
+    // presumed use of Partio underneath), but OSL only has int, so we
+    // have to allocate and copy out.  But, on architectures where int
+    // and size_t are the same, we can take a shortcut and let
+    // pointcloud_search fill in the array in place (assuming it's
+    // passed in the first place).
+    size_t *indices;
+    if (sizeof(int) == sizeof(size_t) && out_indices)
+        indices = (size_t *)out_indices;
+    else
+        indices = (size_t *)alloca (sizeof(size_t) * max_points);
 
     int count = sg->context->renderer()->pointcloud_search (sg, USTR(filename),
                                *((Vec3 *)center), radius, max_points, sort,
@@ -52,9 +62,13 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
     }
     va_end (args);
 
-    if (out_indices)
+    // Only copy out if we need to
+    if (out_indices  &&  sizeof(int) != sizeof(size_t))
         for(int i = 0; i < count; ++i)
             ((int *)out_indices)[i] = indices[i];
+
+    sg->context->shadingsys().pointcloud_stats (1, 0, count);
+
     return count;
 }
 
@@ -67,7 +81,10 @@ osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, i
     for(int i = 0; i < count; ++i)
         indices[i] = ((int *)in_indices)[i];
 
+    sg->context->shadingsys().pointcloud_stats (0, 1, 0);
+
     return sg->context->renderer()->pointcloud_get (USTR(filename), (size_t *)indices, count, USTR(attr_name),
                                                     TYPEDESC(attr_type), out_data);
+
 }
 

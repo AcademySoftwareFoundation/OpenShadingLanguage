@@ -85,6 +85,8 @@ public:
 
     TextureSystem *texturesys () const { return shadingsys().texturesys(); }
 
+    RendererServices *renderer () const { return shadingsys().renderer(); }
+
     /// Are we in debugging mode?
     int debug() const { return m_debug; }
 
@@ -97,8 +99,7 @@ public:
 
     /// Search for a constant whose type and value match type and data[...],
     /// returning its index if one exists, or else creating a new constant
-    /// and returning its index.  If copy is true, allocate new space and
-    /// copy the data if no matching constant was found.
+    /// and returning its index.
     int add_constant (const TypeSpec &type, const void *data);
 
     /// Turn the op into a simple assignment of the new symbol index to the

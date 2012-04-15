@@ -1,0 +1,20 @@
+surface
+ward
+    [[ string description = "Ward specular material" ]]
+(
+    float Ks = 1
+        [[  string description = "Specular scaling",
+            float UImin = 0, float UIsoftmax = 1 ]],
+    float ax = 0.1
+        [[  string description = "X roughness (lower is sharper)",
+            float UImin = 0, float UIsoftmax = 1 ]],
+    float ay = 0.1
+        [[  string description = "Y roughness (lower is sharper)",
+            float UImin = 0, float UIsoftmax = 1 ]],
+    color Cs = 1
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]]
+  )
+{
+    Ci = Ks * Cs * ward (N, normalize(dPdu), ax, ay);
+}

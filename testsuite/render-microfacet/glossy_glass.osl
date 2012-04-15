@@ -1,0 +1,14 @@
+shader glossy_glass (float Kr = 1, color Cs = 1, float roughness = 0.01)
+{
+    float eta = 1.5;
+    if (backfacing())
+    {
+        Ci  = (Kr * Cs) * microfacet_beckmann_refraction(N, roughness, 1.0 / eta);
+        Ci += (Kr * Cs) * microfacet_beckmann(N, roughness, 1.0 / eta);
+    }
+    else
+    {
+        Ci  = (Kr * Cs) * microfacet_beckmann_refraction(N, roughness, eta);
+        Ci += (Kr * Cs) * microfacet_beckmann(N, roughness, eta);        
+    }
+}

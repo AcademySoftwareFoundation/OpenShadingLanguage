@@ -72,6 +72,12 @@ using OIIO::spin_lock;
 using OIIO::Timer;
 #endif
 
+
+// Maximum number of new constant symbols that a constant-folding function
+// is able to add.
+static const int max_new_consts_per_fold = 10;
+
+
 /// Wrapper that erases elements of c for which predicate p is true.
 /// (Unlike std::remove_if, it resizes the container so that it contains
 /// ONLY elements for which the predicate is true.)
@@ -2027,6 +2033,153 @@ DECLFOLDER(constfold_texture)
 
 
 
+DECLFOLDER(constfold_pointcloud_search)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() >= 5);
+    int result_sym     = rop.oparg (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Center     = *rop.opargsym (op, 2);
+    Symbol& Radius     = *rop.opargsym (op, 3);
+    Symbol& Max_points = *rop.opargsym (op, 4);
+    DASSERT (Filename.typespec().is_string() &&
+             Center.typespec().is_triple() && Radius.typespec().is_float() &&
+             Max_points.typespec().is_int());
+
+    // Can't constant fold unless all the required input args are constant
+    if (! (Filename.is_constant() && Center.is_constant() &&
+           Radius.is_constant() && Max_points.is_constant()))
+        return 0;
+
+    // Handle the optional 'sort' flag, and don't bother constant folding
+    // if sorted results may be required.
+    int attr_arg_offset = 5; // where the opt attrs begin
+    if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
+        // Sorting requested
+        Symbol *Sort = rop.opargsym(op,5);
+        if (! Sort->is_constant() || *(int *)Sort->data())
+            return 0;  // forget it if sorted data might be requested
+        ++attr_arg_offset;
+    }
+    int nattrs = (op.nargs() - attr_arg_offset) / 2;
+
+    // First pass through the optional arguments: gather the query names,
+    // types, and destinations.  If any of the query names are not known
+    // constants, we can't optimize this call so just return.
+    std::vector<ustring> names;
+    std::vector<int> value_args;
+    std::vector<TypeDesc> value_types;
+    for (int i = 0, num_queries = 0; i < nattrs; ++i) {
+        Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
+        Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
+        ASSERT (Name.typespec().is_string());
+        if (!Name.is_constant())
+            return 0;  // unknown optional argument, punt
+        if (++num_queries > max_new_consts_per_fold)
+            return 0;
+        names.push_back (*(ustring *)Name.data());
+        value_args.push_back (rop.oparg (op, attr_arg_offset + i*2 + 1));
+        value_types.push_back (Value.typespec().simpletype());
+    }
+
+    // We're doing a fixed query, so instead of running at every shade,
+    // perform the search now.
+    const int maxconst = 256;  // Max number of points to consider a constant
+    size_t indices[maxconst+1]; // Make room for one more!
+    float distances[maxconst+1];
+    int maxpoints = std::min (maxconst+1, *(int *)Max_points.data());
+    ustring filename = *(ustring *)Filename.data();
+    int count = 0;
+    if (! filename.empty()) {
+        count = rop.renderer()->pointcloud_search (NULL, filename,
+                             *(Vec3 *)Center.data(), *(float *)Radius.data(),
+                             maxpoints, false, indices, distances, 0);
+        rop.shadingsys().pointcloud_stats (1, 0, count);
+    }
+
+    // If it returns few enough results (256 points or less), just fold
+    // those results into constant arrays.  If more than that, let the
+    // query happen at runtime to avoid tying up a bunch of memory.
+    if (count > maxconst)
+        return 0;
+
+    // If the query returned no matching points, just turn the whole
+    // pointcloud_search call into an assignment of 0 to the 'result'.
+    if (count < 1) {
+        rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &count),
+                              "Folded constant pointcloud_search lookup");
+        return 1;
+    }
+
+    // From here on out, we are able to fold the query (it returned
+    // results, but not too many).  Start by removing the original
+    // pointcloud_search call itself from the shader code.
+    rop.turn_into_nop (op, "Folded constant pointcloud_search lookup");
+
+    // Now, for each optional individual query, do a pointcloud_get NOW
+    // to retrieve it, create a constant array for the shader to hold
+    // those results, and add to the shader an array copy to move it
+    // from the constant into the place the shader wanted the query
+    // results to go.  (This assignment can be further optimized later
+    // on as well, depending on how it's used.)  If any of the individual
+    // queries fail now, we will return a failed result in the end.
+    std::vector<char> tmp;  // temporary data
+    for (int i = 0; i < nattrs; ++i) {
+        // We had stashed names, data types, and destinations earlier.
+        // Retrieve them now to build a query.
+        if (! names[i])
+            continue;
+        void *const_data = NULL;
+        TypeDesc const_valtype = value_types[i];
+        const_valtype.arraylen = count;
+        tmp.clear ();
+        tmp.resize (const_valtype.size(), 0);
+        const_data = &tmp[0];
+        if (names[i] == "index") {
+            // "index" is a special case -- it's retrieving the hit point
+            // indices, not data on those hit points.
+            // 
+            // Because the presumed Partio underneath passes indices as
+            // size_t, but OSL only allows int parameters, we need to
+            // copy.  But just cast if size_t and int are the same size.
+            if (sizeof(size_t) == sizeof(int)) {
+                const_data = indices;
+            } else {
+                int *int_indices = (int *)const_data;
+                for (int i = 0;  i < count;  ++i)
+                    int_indices[i] = (int) indices[i];
+            }
+        } else {
+            // Named queries.
+            bool ok = rop.renderer()->pointcloud_get (filename, indices, count,
+                                          names[i], const_valtype, const_data);
+            rop.shadingsys().pointcloud_stats (0, 1, 0);
+            if (! ok) {
+                count = 0;  // Make it look like an error in the end
+                break;
+            }
+        }
+        // Now make a constant array for those results we just retrieved...
+        int const_array_sym = rop.add_constant (const_valtype, const_data);
+        // ... and add an instruction to copy the constant into the
+        // original destination for the query.
+        std::vector<int> args_to_add;
+        args_to_add.push_back (value_args[i]);
+        args_to_add.push_back (const_array_sym);
+        rop.insert_code (opnum, u_assign, args_to_add, true);
+    }
+
+    // Query results all copied.  The only thing left to do is to assign
+    // status (query result count) to the original "result".
+    std::vector<int> args_to_add;
+    args_to_add.push_back (result_sym);
+    args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
+    rop.insert_code (opnum, u_assign, args_to_add, true);
+    
+    return 1;
+}
+
+
 
 DECLFOLDER(constfold_functioncall)
 {
@@ -2914,10 +3067,10 @@ RuntimeOptimizer::optimize_instance ()
             if (is_simple_assign(op))
                 simple_sym_assign (oparg (op, 0), opnum);
 
-            // Make sure there's room for at least one more symbol, so that
-            // we can add a const if we need to, without worrying about the
-            // addresses of symbols changing when we add a new one below.
-            make_symbol_room (1);
+            // Make sure there's room for several more symbols, so that we
+            // can add a few consts if we need to, without worrying about
+            // the addresses of symbols changing when we add a new one below.
+            make_symbol_room (max_new_consts_per_fold);
 
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.

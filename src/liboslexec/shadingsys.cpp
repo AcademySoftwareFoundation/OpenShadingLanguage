@@ -223,6 +223,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
     m_stat_getattribute_calls = 0;
+    m_stat_pointcloud_searches = 0;
+    m_stat_pointcloud_searches_total_results = 0;
+    m_stat_pointcloud_max_results = 0;
+    m_stat_pointcloud_failures = 0;
+    m_stat_pointcloud_gets = 0;
+
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
 
@@ -381,7 +387,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (or,          andor,               or,            true);
     OP (pnoise,      noise,               none,          true);
     OP (point,       construct_triple,    triple,        true);
-    OP (pointcloud_search, pointcloud_search, none,      false);
+    OP (pointcloud_search, pointcloud_search, pointcloud_search, false);
     OP (pointcloud_get, pointcloud_get,   none,          false);
     OP (pow,         generic,             pow,           true);
     OP (printf,      printf,              none,          false);
@@ -612,11 +618,16 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:llvm_irgen_time", float, m_stat_llvm_irgen_time);
     ATTR_DECODE ("stat:llvm_opt_time", float, m_stat_llvm_opt_time);
     ATTR_DECODE ("stat:llvm_jit_time", float, m_stat_llvm_jit_time);
+    ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
+    ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
+    ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
+    ATTR_DECODE ("stat:pointcloud_searches_total_results", long long, m_stat_pointcloud_searches_total_results);
+    ATTR_DECODE ("stat:pointcloud_max_results", int, m_stat_pointcloud_max_results);
+    ATTR_DECODE ("stat:pointcloud_failures", int, m_stat_pointcloud_failures);
     ATTR_DECODE ("stat:memory_current", long long, m_stat_memory.current());
     ATTR_DECODE ("stat:memory_peak", long long, m_stat_memory.peak());
     ATTR_DECODE ("stat:mem_master_current", long long, m_stat_mem_master.current());
     ATTR_DECODE ("stat:mem_master_peak", long long, m_stat_mem_master.peak());
-
     ATTR_DECODE ("stat:mem_master_ops_current", long long, m_stat_mem_master_ops.current());
     ATTR_DECODE ("stat:mem_master_ops_peak", long long, m_stat_mem_master_ops.peak());
     ATTR_DECODE ("stat:mem_master_args_current", long long, m_stat_mem_master_args.current());
@@ -743,6 +754,21 @@ ShadingSystemImpl::message (const std::string &msg)
 
 
 
+void
+ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
+{
+    spin_lock lock (m_stat_mutex);
+    m_stat_pointcloud_searches += search;
+    m_stat_pointcloud_gets += get;
+    m_stat_pointcloud_searches_total_results += results;
+    if (search && ! results)
+        ++m_stat_pointcloud_failures;
+    m_stat_pointcloud_max_results = std::max (m_stat_pointcloud_max_results,
+                                              results);
+}
+
+
+
 std::string
 ShadingSystemImpl::getstats (int level) const
 {
@@ -827,6 +853,14 @@ ShadingSystemImpl::getstats (int level) const
             << Strutil::timeintervalformat (m_stat_getattribute_time, 2) << ")\n";
         out << "     (fail time "
             << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
+    }
+    if (m_stat_pointcloud_searches) {
+        out << "  pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
+        out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
+        out << "      average query results: " 
+            << Strutil::format ("%.1f", (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches) << "\n";
+        out << "      failures: " << m_stat_pointcloud_failures << "\n";
+        out << "  pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
     }
     out << "  Memory total: " << m_stat_memory.memstat() << '\n';
     out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';

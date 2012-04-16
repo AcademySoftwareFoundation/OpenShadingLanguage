@@ -960,13 +960,15 @@ RuntimeOptimizer::llvm_assign_impl (Symbol &Result, Symbol &Src,
         return true;
     }
 
-    // Copying of entire arrays
+    // Copying of entire arrays.  It's ok if the array lengths don't match,
+    // it will only copy up to the length of the smaller one.  The compiler
+    // will ensure they are the same size, except for certain cases where
+    // the size difference is intended (by the optimizer).
     if (result_t.is_array() && src_t.is_array() && arrayindex == -1) {
-        ASSERT (assignable(result_t.elementtype(), src_t.elementtype()) &&
-                result_t.arraylength() == src_t.arraylength());
+        ASSERT (assignable(result_t.elementtype(), src_t.elementtype()));
         llvm::Value *resultptr = llvm_void_ptr (Result);
         llvm::Value *srcptr = llvm_void_ptr (Src);
-        int len = Result.size();
+        int len = std::min (Result.size(), Src.size());
         int align = result_t.is_closure_based() ? (int)sizeof(void*) :
                                        (int)result_t.simpletype().basesize();
         if (Result.has_derivs() && Src.has_derivs()) {

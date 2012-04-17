@@ -34,11 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/foreach.hpp>
 
 #include "OpenImageIO/thread.h"
-#ifdef OIIO_NAMESPACE
-namespace OIIO = OIIO_NAMESPACE;
-using OIIO::mutex;
-using OIIO::lock_guard;
-#endif
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -73,7 +68,7 @@ public:
     /// Allocate space enough for n T's, and return a pointer to the
     /// start of that space.
     T * alloc (size_t n) {
-        lock_guard lock (m_mutex);
+        OIIO::lock_guard lock (m_mutex);
         // Check each block in the block list to see if it has enough space
         BOOST_FOREACH (block_t &block, m_block_list) {
             size_t s = block.size();
@@ -99,7 +94,7 @@ private:
     std::list<block_t> m_block_list;  ///< List of memory blocks
     size_t m_quanta;   ///< How big each memory block is (in T's, not bytes)
     size_t m_total;    ///< Total memory allocated (bytes!)
-    mutex m_mutex;     ///< Thread-safe lock
+    OIIO::mutex m_mutex;  ///< Thread-safe lock
 };
 
 

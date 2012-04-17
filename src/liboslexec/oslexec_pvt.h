@@ -63,17 +63,17 @@ namespace llvm {
   class JITMemoryManager;
 }
 
-#ifdef OIIO_NAMESPACE
 using OIIO::atomic_int;
 using OIIO::atomic_ll;
 using OIIO::RefCnt;
 using OIIO::ParamValueList;
+using OIIO::mutex;
+using OIIO::lock_guard;
 using OIIO::spin_mutex;
 using OIIO::spin_lock;
 using OIIO::thread_specific_ptr;
 using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
-#endif
 
 
 #ifdef OSL_NAMESPACE

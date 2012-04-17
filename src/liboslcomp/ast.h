@@ -29,13 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_AST_H
 #define OSL_AST_H
 
-#include "oslconfig.h"
-
 #include "OpenImageIO/refcnt.h"
-#ifdef OIIO_NAMESPACE
-using OIIO::RefCnt;
-#endif
 
+#include "oslconfig.h"
 #include "oslcomp.h"
 #include "symtab.h"
 
@@ -58,7 +54,7 @@ class TypeSpec;
 
 /// Base node for an abstract syntax tree for the OSL parser.
 ///
-class ASTNode : public RefCnt {
+class ASTNode : public OIIO::RefCnt {
 public:
     typedef intrusive_ptr<ASTNode> ref;  ///< Ref-counted pointer to an ASTNode
 

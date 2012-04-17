@@ -112,17 +112,11 @@ Schematically, we want to create code that resembles the following:
 extern int osl_llvm_compiled_ops_size;
 extern char osl_llvm_compiled_ops_block[];
 
-using namespace OSL;
 using namespace OSL::pvt;
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
-
-#ifdef OIIO_NAMESPACE
-using OIIO::spin_lock;
-using OIIO::Timer;
-#endif
 
 static ustring op_end("end");
 static ustring op_nop("nop");
@@ -997,14 +991,14 @@ RuntimeOptimizer::build_llvm_group ()
 {
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
-    Timer timer;
+    OIIO::Timer timer;
 
     if (! m_thread->llvm_context)
         m_thread->llvm_context = new llvm::LLVMContext();
 
     if (! m_thread->llvm_jitmm) {
         m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
-        spin_lock lock (m_shadingsys.m_llvm_mutex);  // lock m_llvm_jitmm_hold
+        OIIO::spin_lock lock (m_shadingsys.m_llvm_mutex);  // lock m_llvm_jitmm_hold
         m_shadingsys.m_llvm_jitmm_hold.push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
     }
 
@@ -1145,7 +1139,7 @@ RuntimeOptimizer::initialize_llvm_group ()
 {
     // I don't think we actually need to lock here (lg)
     // static spin_mutex mutex;
-    // spin_lock lock (mutex);
+    // OIIO::spin_lock lock (mutex);
 
     m_llvm_context = m_thread->llvm_context;
     ASSERT (m_llvm_context && m_llvm_module);

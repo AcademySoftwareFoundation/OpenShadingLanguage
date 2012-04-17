@@ -38,9 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/strutil.h"
-#ifdef OIIO_NAMESPACE
 namespace Strutil = OIIO::Strutil;
-#endif
 
 OSL_NAMESPACE_ENTER
 

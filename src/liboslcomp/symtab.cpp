@@ -34,9 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
-#ifdef OIIO_NAMESPACE
 namespace Strutil = OIIO::Strutil;
-#endif
 
 #include <boost/foreach.hpp>
 

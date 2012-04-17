@@ -45,7 +45,7 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-namespace pugi = OIIO_NAMESPACE::pugi;
+namespace pugi = OIIO::pugi;
 
 
 

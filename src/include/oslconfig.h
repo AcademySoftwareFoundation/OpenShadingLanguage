@@ -45,14 +45,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 
 // All the things we need from OpenImageIO
+#include <OpenImageIO/version.h>
 #include <OpenImageIO/errorhandler.h>
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
-#ifdef OIIO_NAMESPACE
+#if (OIIO_VERSION < 10100)
 namespace OIIO = OIIO_NAMESPACE;
-#else
-namespace OIIO = OpenImageIO;
 #endif
 
 // Extensions to Imath
@@ -97,17 +96,14 @@ typedef Imathx::Matrix22<Float> Matrix22;
 /// doesn't literally have to be OIIO's... it just needs to have the
 /// same API as OIIO's TextureSystem class, it's a purely abstract class
 /// anyway.
-typedef OIIO::TextureSystem TextureSystem;
-typedef OIIO::TextureOpt TextureOpt;
+using OIIO::TextureSystem;
+using OIIO::TextureOpt;
 
 // And some other things we borrow from OIIO...
-typedef OIIO::ErrorHandler ErrorHandler;
-
-#ifdef OIIO_NAMESPACE
+using OIIO::ErrorHandler;
 using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
-#endif
 
 
 

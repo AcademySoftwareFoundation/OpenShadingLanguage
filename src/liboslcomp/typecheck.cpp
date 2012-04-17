@@ -41,11 +41,8 @@ namespace Strutil = OIIO::Strutil;
 #include <boost/foreach.hpp>
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
@@ -1351,8 +1348,5 @@ OSLCompilerImpl::typespecs_from_codes (const char *code,
 
 
 }; // namespace pvt
-}; // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

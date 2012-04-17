@@ -32,12 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslconfig.h"
 #include "dual.h"
 
-
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 
 /// Templated trick to be able to derive what type we use to represent
@@ -374,13 +369,6 @@ distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 
 
 
-
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* OSL_DUAL_VEC_H */

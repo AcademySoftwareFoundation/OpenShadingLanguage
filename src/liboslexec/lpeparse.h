@@ -26,17 +26,14 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef REGPARSE_H
-#define REGPARSE_H
+#ifndef LEPARSE_H
+#define LEPARSE_H
 
 #include "lpexp.h"
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 
 
 using lpexp::LPexp;
@@ -149,11 +146,6 @@ class Parser
 };
 
 
-}; // namespace OSL
+OSL_NAMESPACE_EXIT
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
-#endif // REGPARSE_H
+#endif // LEPARSE_H

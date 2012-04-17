@@ -57,17 +57,11 @@ using namespace OSL::pvt;
 
 
 // Forward declaration
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {
 TypeDesc lextype (int lex);
 };
-};
-#ifdef OSL_NAMESPACE
-};
-#endif
+OSL_NAMESPACE_EXIT
 
 static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 

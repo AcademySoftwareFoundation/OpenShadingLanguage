@@ -59,13 +59,7 @@ namespace OIIO = OIIO_NAMESPACE;
 
 #include "oslversion.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-/// @namespace OSL
-/// @brief Main namespace enclosing most OSL functionality.
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 
 /// By default, we operate with single precision float.  Change this
@@ -119,12 +113,6 @@ using OIIO::ustringHash;
 // Temporary measure to identify the branch with LLVM support.  Sorry.
 #define LLVM_SUPPORT   1
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* OSLCONFIG_H */

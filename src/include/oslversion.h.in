@@ -68,5 +68,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSO_FILE_VERSION_MINOR @OSO_FILE_VERSION_MINOR@
 
 
+#ifdef OSL_NAMESPACE
+// Macros to use in each file to enter and exit the right name spaces.
+#define OSL_NAMESPACE_ENTER namespace OSL_NAMESPACE { namespace OSL {
+#define OSL_NAMESPACE_EXIT }; }; using namespace OSL_NAMESPACE;
+#else
+#define OSL_NAMESPACE_ENTER namespace OSL {
+#define OSL_NAMESPACE_EXIT };
+#endif
+
 
 #endif /* OSLVERSION_H */

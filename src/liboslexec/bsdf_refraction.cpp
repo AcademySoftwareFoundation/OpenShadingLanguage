@@ -31,11 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "genclosure.h"
 #include "oslexec_pvt.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 class RefractionClosure : public BSDFClosure {
@@ -202,7 +199,4 @@ CLOSURE_PREPARE(bsdf_refraction_prepare, RefractionClosure)
 CLOSURE_PREPARE(bsdf_dielectric_prepare, DielectricClosure)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

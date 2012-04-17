@@ -38,11 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/hash.h>
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 
 // General container for all symbol sets
 
@@ -351,11 +348,6 @@ class StateSetRecord {
 /// one. It is equivalente in the sense that they  both recognize the same language
 void ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata);
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
+OSL_NAMESPACE_EXIT
 
 #endif // AUTOMATA_H

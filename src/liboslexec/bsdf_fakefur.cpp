@@ -35,11 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // http://www.danbgoldman.com/misc/fakefur/fakefur.pdf
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 
@@ -516,7 +513,4 @@ CLOSURE_PREPARE(bsdf_fakefur_specular_prepare, FakefurSpecularClosure)
 CLOSURE_PREPARE(bsdf_fakefur_skin_prepare,     FakefurSkinClosure)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

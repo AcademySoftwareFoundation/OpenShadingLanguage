@@ -32,11 +32,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 
 const float EPSILON  = 1.0e-4;
 
@@ -93,10 +90,4 @@ inline float atan2_zero_to_pi(float y, float x);
 //float compute_AC(Point2 highlight, Point2 *rect3, bool OUTSIDE);
 float compute_AC(Point2 *rect3, bool OUTSIDE);
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT

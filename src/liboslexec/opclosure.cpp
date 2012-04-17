@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "genclosure.h"
 
-#if 1
 
 OSL_SHADEOP const ClosureColor *
 osl_add_closure_closure (ShaderGlobals *sg,
@@ -76,4 +75,3 @@ osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)
     return ustring(stream.str ()).c_str();
 }
 
-#endif

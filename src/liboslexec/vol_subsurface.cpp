@@ -31,11 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "genclosure.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {
 
 // Computes scattering properties based on Jensen's reparameterization
@@ -130,7 +126,4 @@ ClosureParam closure_subsurface_params[] = {
 CLOSURE_PREPARE(closure_subsurface_prepare, SubsurfaceClosure)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

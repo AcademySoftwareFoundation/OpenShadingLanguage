@@ -38,17 +38,10 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 #include "OpenImageIO/filesystem.h"
-#ifdef OIIO_NAMESPACE
 namespace Filesystem = OIIO::Filesystem;
-#endif
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
-
+OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
@@ -302,8 +295,4 @@ OSLQuery::open (const std::string &shadername,
 }
 
 
-};   // end namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

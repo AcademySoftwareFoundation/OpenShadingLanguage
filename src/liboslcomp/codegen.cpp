@@ -43,11 +43,7 @@ namespace Strutil = OIIO::Strutil;
 #endif
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
@@ -1759,8 +1755,5 @@ ASTliteral::codegen (Symbol *dest)
 
 
 }; // namespace pvt
-}; // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

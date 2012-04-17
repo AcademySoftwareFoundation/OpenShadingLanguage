@@ -60,17 +60,12 @@ static ustring u_nop    ("nop"),
                u_getmessage ("getmessage");
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {   // OSL::pvt
 
-#ifdef OIIO_NAMESPACE
 using OIIO::spin_lock;
 using OIIO::Timer;
-#endif
 
 
 // Maximum number of new constant symbols that a constant-folding function
@@ -3978,8 +3973,4 @@ ShadingSystemImpl::optimize_all_groups (int nthreads)
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

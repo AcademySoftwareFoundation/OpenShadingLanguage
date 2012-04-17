@@ -36,9 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
-#if OPENIMAGEIO_VERSION >= 900 /* 0.9.0 */
-# include <OpenImageIO/imagebufalgo.h>
-#endif
+#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
@@ -46,11 +44,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec.h"
 #include "simplerend.h"
 using namespace OSL;
-
-#ifdef OIIO_NAMESPACE
-using OIIO::ArgParse;
-using OIIO::Timer;
-#endif
 
 
 
@@ -158,7 +151,7 @@ static void
 getargs (int argc, const char *argv[])
 {
     static bool help = false;
-    ArgParse ap;
+    OIIO::ArgParse ap;
     ap.options ("Usage:  testshade [options] shader...",
                 "%*", add_shader, "",
                 "--help", &help, "Print help message",
@@ -366,11 +359,7 @@ setup_output_images (ShadingSystem *shadingsys,
         // symbol's output, and initially clear it to all black pixels.
         OIIO::ImageSpec spec (xres, yres, nchans, outtypebase);
         outputimgs[i] = new OIIO::ImageBuf(outputfiles[i], spec);
-#if OPENIMAGEIO_VERSION >= 900 /* 0.9.0 */
         OIIO::ImageBufAlgo::zero (*outputimgs[i]);
-#else
-        outputimgs[i]->zero ();
-#endif
     }
 
     shadingsys->release_context (ctx);  // don't need this anymore for now
@@ -425,7 +414,7 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 extern "C" int
 test_shade (int argc, const char *argv[])
 {
-    Timer timer;
+    OIIO::Timer timer;
 
     // Create a new shading system.  We pass it the RendererServices
     // object that services callbacks from the shading system, NULL for

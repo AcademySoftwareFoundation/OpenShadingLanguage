@@ -42,17 +42,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../liboslcomp/oslcomp_pvt.h"
 
 
-
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
-
-#ifdef OIIO_NAMESPACE
-using OIIO::spin_lock;
-#endif
 
 
 ShaderMaster::~ShaderMaster ()
@@ -69,7 +61,7 @@ ShaderMaster::~ShaderMaster ()
                        constmem + sizeof(ShaderMaster));
     {
         ShadingSystemImpl &ss (shadingsys());
-        spin_lock lock (ss.m_stat_mutex);
+        OIIO::spin_lock lock (ss.m_stat_mutex);
         ss.m_stat_mem_master_ops -= opmem;
         ss.m_stat_mem_master_args -= argmem;
         ss.m_stat_mem_master_syms -= symmem;
@@ -163,7 +155,7 @@ ShaderMaster::resolve_syms ()
                        constmem + sizeof(ShaderMaster));
     {
         ShadingSystemImpl &ss (shadingsys());
-        spin_lock lock (ss.m_stat_mutex);
+        OIIO::spin_lock lock (ss.m_stat_mutex);
         ss.m_stat_mem_master_ops += opmem;
         ss.m_stat_mem_master_args += argmem;
         ss.m_stat_mem_master_syms += symmem;
@@ -230,7 +222,4 @@ ShaderMaster::print ()
 }
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

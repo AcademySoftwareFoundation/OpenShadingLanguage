@@ -60,11 +60,7 @@ namespace Sysutil = OIIO::Sysutil;
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
 #endif
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 
 OSLCompiler *
@@ -1390,8 +1386,6 @@ OSLCompilerImpl::insert_useparam (size_t opnum, SymbolPtrVec &params)
 
 
 }; // namespace pvt
-}; // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT
+

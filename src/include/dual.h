@@ -29,11 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef DUAL_H
 #define DUAL_H
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+#include "oslversion.h"
+OSL_NAMESPACE_ENTER
 
 
 /// Dual numbers are used to represent values and their derivatives.
@@ -788,12 +785,7 @@ inline Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<
    return  (T(3) - T(2)*t)*t*t;
 }
 
-}; // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* DUAL_H */

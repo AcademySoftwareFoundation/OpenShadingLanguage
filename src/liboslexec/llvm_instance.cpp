@@ -115,11 +115,8 @@ extern char osl_llvm_compiled_ops_block[];
 using namespace OSL;
 using namespace OSL::pvt;
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 #ifdef OIIO_NAMESPACE
@@ -1322,8 +1319,4 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
 
 
 }; // namespace pvt
-}; // namespace osl
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

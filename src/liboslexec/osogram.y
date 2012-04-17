@@ -57,17 +57,11 @@ static TypeSpec current_typespec;
 static std::string current_shader_name;
 
 // Forward declaration
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {
 TypeDesc lextype (int lex);
 };
-};
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT
 
 %}
 

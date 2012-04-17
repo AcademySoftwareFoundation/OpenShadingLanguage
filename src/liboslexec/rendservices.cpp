@@ -37,19 +37,12 @@ using namespace OSL::pvt;
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/filesystem.h"
-#ifdef OIIO_NAMESPACE
-using OIIO::spin_lock;
-#endif
 
 #include <boost/algorithm/string.hpp>
 
 
+OSL_NAMESPACE_ENTER
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
 
 
 bool
@@ -103,7 +96,7 @@ texturesys ()
 {
     static TextureSystem *ts = NULL;
     static spin_mutex mutex;
-    spin_lock lock (mutex);
+    OIIO::spin_lock lock (mutex);
     if (! ts) {
         ts = TextureSystem::create (true /* shared */);
         // Make some good guesses about default options
@@ -209,8 +202,4 @@ RendererServices::get_texture_info (ustring filename, int subimage,
 }
 
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

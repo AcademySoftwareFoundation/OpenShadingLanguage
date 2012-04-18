@@ -40,14 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
-
-
-using OIIO::Timer;
 
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
@@ -195,7 +189,7 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
 {
 #if 0
     // Change the #if's below if you want to 
-    Timer timer;
+    OIIO::Timer timer;
 #endif
     bool ok;
 
@@ -248,7 +242,4 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
 }
 
 
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

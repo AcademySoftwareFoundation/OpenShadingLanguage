@@ -33,10 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
+
 namespace pvt {
 
 /// Debug closure
@@ -78,7 +76,4 @@ ClosureParam closure_debug_params[] = {
 CLOSURE_PREPARE(closure_debug_prepare, DebugClosure)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

@@ -39,11 +39,8 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 
@@ -100,11 +97,6 @@ private:
 
 
 }; // namespace OSL::pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
+OSL_NAMESPACE_EXIT
 
 #endif /* CONSTANTPOOL_H */

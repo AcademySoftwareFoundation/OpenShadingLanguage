@@ -29,10 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "lpexp.h"
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
+
 
 
 
@@ -218,7 +216,5 @@ lpexp::Rule::genAuto(NdfAutomata &automata)const
     automata.getInitial()->addTransition(lambda, fl.first);
 }
 
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+
+OSL_NAMESPACE_EXIT

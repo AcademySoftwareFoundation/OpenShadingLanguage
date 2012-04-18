@@ -39,21 +39,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
-#ifdef OIIO_NAMESPACE
-using OIIO::lock_guard;
-#endif
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
+
 namespace pvt {   // OSL::pvt
 
 
 osoFlexLexer * OSOReader::osolexer = NULL;
 OSOReader * OSOReader::osoreader = NULL;
-mutex OSOReader::m_osoread_mutex;
+OIIO::mutex OSOReader::m_osoread_mutex;
 
 
 
@@ -62,7 +57,7 @@ OSOReader::parse (const std::string &filename)
 {
     // The lexer/parser isn't thread-safe, so make sure Only one thread
     // can actually be reading a .oso file at a time.
-    lock_guard guard (m_osoread_mutex);
+    OIIO::lock_guard guard (m_osoread_mutex);
 
     std::fstream input (filename.c_str(), std::ios::in);
     if (! input.is_open()) {
@@ -89,8 +84,4 @@ OSOReader::parse (const std::string &filename)
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

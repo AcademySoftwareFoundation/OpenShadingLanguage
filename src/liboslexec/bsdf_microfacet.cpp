@@ -31,11 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "genclosure.h"
 #include "oslexec_pvt.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 // TODO: refactor these two classes so they share everything by the microfacet
@@ -526,7 +523,4 @@ CLOSURE_PREPARE(bsdf_microfacet_beckmann_prepare,            MicrofacetBeckmannC
 CLOSURE_PREPARE(bsdf_microfacet_beckmann_refraction_prepare, MicrofacetBeckmannClosure<1>)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

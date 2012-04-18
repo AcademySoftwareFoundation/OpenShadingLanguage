@@ -36,11 +36,8 @@ using namespace OSL::pvt;
 #include "llvm_headers.h"
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
@@ -858,10 +855,5 @@ private:
 
 
 
-
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

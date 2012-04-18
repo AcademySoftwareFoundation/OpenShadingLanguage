@@ -47,11 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matrix22.h"
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {   // "extended" Imath
+OSL_NAMESPACE_ENTER
 
 
 /// 3x3 matrix transforming a 3-vector.  This is curiously not supplied
@@ -98,14 +94,6 @@ T determinant (const Imathx::Matrix22<T> &m)
 }
 
 
-
-
-} // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* ifndef(IMATHX_H) */

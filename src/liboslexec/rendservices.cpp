@@ -37,19 +37,12 @@ using namespace OSL::pvt;
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/filesystem.h"
-#ifdef OIIO_NAMESPACE
-using OIIO::spin_lock;
-#endif
 
 #include <boost/algorithm/string.hpp>
 
 
+OSL_NAMESPACE_ENTER
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
 
 
 bool
@@ -103,7 +96,7 @@ texturesys ()
 {
     static TextureSystem *ts = NULL;
     static spin_mutex mutex;
-    spin_lock lock (mutex);
+    OIIO::spin_lock lock (mutex);
     if (! ts) {
         ts = TextureSystem::create (true /* shared */);
         // Make some good guesses about default options
@@ -143,7 +136,6 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
                              const Vec3 &dPdx, const Vec3 &dPdy,
                              const Vec3 &dPdz, float *result)
 {
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     bool status = texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
                                             result);
     if (!status)
@@ -156,9 +148,6 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
         }
     }
     return status;
-#else
-    return false;
-#endif
 }
 
 
@@ -168,7 +157,6 @@ RendererServices::environment (ustring filename, TextureOpt &options,
                                ShaderGlobals *sg, const Vec3 &R,
                                const Vec3 &dRdx, const Vec3 &dRdy, float *result)
 {
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     bool status = texturesys()->environment (filename, options, R, dRdx, dRdy, result);
     if (!status) {
         std::string err = texturesys()->geterror();
@@ -179,9 +167,6 @@ RendererServices::environment (ustring filename, TextureOpt &options,
         }
     }
     return status;
-#else
-    return false;
-#endif
 }
 
 
@@ -191,12 +176,8 @@ RendererServices::get_texture_info (ustring filename, int subimage,
                                     ustring dataname,
                                     TypeDesc datatype, void *data)
 {
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     bool status = texturesys()->get_texture_info (filename, subimage, dataname,
                                                    datatype, data);
-#else
-    bool status = texturesys()->get_texture_info (filename, dataname, datatype, data);
-#endif
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {
@@ -209,8 +190,4 @@ RendererServices::get_texture_info (ustring filename, int subimage,
 }
 
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

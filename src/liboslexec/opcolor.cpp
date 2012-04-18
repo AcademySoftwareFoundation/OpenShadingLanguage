@@ -42,10 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "dual.h"
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {
 
 namespace {
@@ -507,7 +504,4 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
 
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

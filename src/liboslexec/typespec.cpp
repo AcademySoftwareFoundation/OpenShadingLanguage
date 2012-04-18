@@ -38,12 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
 
@@ -128,8 +123,4 @@ equivalent (const TypeSpec &a, const TypeSpec &b)
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

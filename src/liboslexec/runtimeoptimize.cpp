@@ -60,17 +60,12 @@ static ustring u_nop    ("nop"),
                u_getmessage ("getmessage");
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {   // OSL::pvt
 
-#ifdef OIIO_NAMESPACE
 using OIIO::spin_lock;
 using OIIO::Timer;
-#endif
 
 
 // Maximum number of new constant symbols that a constant-folding function
@@ -1869,15 +1864,10 @@ DECLFOLDER(constfold_gettextureinfo)
         ustring dataname = *(ustring *)Dataname.data();
         TypeDesc t = Data.typespec().simpletype();
         void *mydata = alloca (t.size ());
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
         // FIXME(ptex) -- exclude folding of ptex, since these things
         // can vary per face.
         int result = rop.texturesys()->get_texture_info (filename, 0,
                                                          dataname, t, mydata);
-#else
-        int result = rop.texturesys()->get_texture_info (filename, dataname,
-                                                         t, mydata);
-#endif
         // Now we turn
         //       gettextureinfo result filename dataname data
         // into this for success:
@@ -3978,8 +3968,4 @@ ShadingSystemImpl::optimize_all_groups (int nthreads)
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

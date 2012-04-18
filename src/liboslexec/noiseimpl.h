@@ -31,10 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "dual.h"
 #include "oslexec_pvt.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
+
 namespace pvt {
 
 
@@ -1224,7 +1222,5 @@ Dual2<Vec3> pgabor3 (const Dual2<float> &x, float xperiod,
 
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+
+OSL_NAMESPACE_EXIT

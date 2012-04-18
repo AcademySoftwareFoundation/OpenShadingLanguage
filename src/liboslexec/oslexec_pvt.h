@@ -76,11 +76,8 @@ using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 
 
 struct PerThreadInfo
@@ -1274,11 +1271,6 @@ struct NoiseParams {
 };
 
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
+OSL_NAMESPACE_EXIT
 
 #endif /* OSLEXEC_PVT_H */

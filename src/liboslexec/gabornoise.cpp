@@ -35,11 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/fmath.h>
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 
@@ -601,11 +598,4 @@ pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
-
+OSL_NAMESPACE_EXIT

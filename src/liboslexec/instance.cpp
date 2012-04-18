@@ -38,19 +38,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 
 namespace pvt {   // OSL::pvt
 
-#ifdef OIIO_NAMESPACE
 using OIIO::spin_lock;
 using OIIO::ParamValue;
 using OIIO::ParamValueList;
-#endif
+
 
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
@@ -386,7 +382,4 @@ ShaderGroup::~ShaderGroup ()
 
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

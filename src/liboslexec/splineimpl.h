@@ -34,10 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef BTYPE
 #endif
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
@@ -232,9 +229,6 @@ void spline_inverse (const SplineBasis *spline,
 
 }; // namespace Spline
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT
 
 #endif // SPLINEIMPL_H

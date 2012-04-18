@@ -45,11 +45,7 @@ Sony Pictures Imageworks terms, above.
 
 #include "oslconfig.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 namespace pvt {
     class OSOReaderQuery;   // Just so OSLQuery can friend OSLReaderQuery
@@ -139,12 +135,6 @@ private:
 };
 
 
-}; /* end namespace OSL */
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* OSLQUERY_H */

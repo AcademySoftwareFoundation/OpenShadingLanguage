@@ -44,9 +44,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #if OIIO_VERSION >= 1100
 # include "OpenImageIO/optparser.h"
 #endif
-#ifdef OIIO_NAMESPACE
-namespace Filesystem = OIIO::Filesystem;
-#endif
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -56,11 +53,8 @@ using namespace OSL::pvt;
 #undef RGB
 #endif
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 
 
 ShadingSystem *
@@ -524,7 +518,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     // cases for special handling
     if (name == "searchpath:shader" && type == TypeDesc::STRING) {
         m_searchpath = std::string (*(const char **)val);
-        Filesystem::searchpath_split (m_searchpath, m_searchpath_dirs);
+        OIIO::Filesystem::searchpath_split (m_searchpath, m_searchpath_dirs);
         return true;
     }
     if (name == "colorspace" && type == TypeDesc::STRING) {
@@ -1353,8 +1347,4 @@ const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)con
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

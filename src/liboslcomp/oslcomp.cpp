@@ -43,10 +43,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/sysutil.h"
 #include "OpenImageIO/dassert.h"
-#ifdef OIIO_NAMESPACE
-namespace Strutil = OIIO::Strutil;
-namespace Sysutil = OIIO::Sysutil;
-#endif
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -60,11 +56,7 @@ namespace Sysutil = OIIO::Sysutil;
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
 #endif
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 
 OSLCompiler *
@@ -112,7 +104,7 @@ OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
 {
     va_list ap;
     va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
+    std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "syntax error";
     if (filename.c_str())
         fprintf (stderr, "%s:%d: error: %s\n", 
                  filename.c_str(), line, errmsg.c_str());
@@ -130,7 +122,7 @@ OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
 {
     va_list ap;
     va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "";
+    std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "";
     fprintf (stderr, "%s:%d: warning: %s\n", 
              filename.c_str(), line, errmsg.c_str());
     va_end (ap);
@@ -307,7 +299,7 @@ OSLCompilerImpl::compile (const std::string &filename,
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
-    std::string program = Sysutil::this_program_path ();
+    std::string program = OIIO::Sysutil::this_program_path ();
     if (program.size()) {
         boost::filesystem::path path (program);  // our program
 #if BOOST_VERSION >= 103600
@@ -1390,8 +1382,6 @@ OSLCompilerImpl::insert_useparam (size_t opnum, SymbolPtrVec &params)
 
 
 }; // namespace pvt
-}; // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT
+

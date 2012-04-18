@@ -41,13 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
-#if OSL_LLVM_VERSION <= 29
-# include <llvm/Support/StandardPasses.h>
-# include <llvm/Target/TargetSelect.h>
-#else
-# include <llvm/Support/TargetSelect.h>
-# include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#endif
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
@@ -112,20 +107,11 @@ Schematically, we want to create code that resembles the following:
 extern int osl_llvm_compiled_ops_size;
 extern char osl_llvm_compiled_ops_block[];
 
-using namespace OSL;
 using namespace OSL::pvt;
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
-
-#ifdef OIIO_NAMESPACE
-using OIIO::spin_lock;
-using OIIO::Timer;
-#endif
 
 static ustring op_end("end");
 static ustring op_nop("nop");
@@ -1000,14 +986,14 @@ RuntimeOptimizer::build_llvm_group ()
 {
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
-    Timer timer;
+    OIIO::Timer timer;
 
     if (! m_thread->llvm_context)
         m_thread->llvm_context = new llvm::LLVMContext();
 
     if (! m_thread->llvm_jitmm) {
         m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
-        spin_lock lock (m_shadingsys.m_llvm_mutex);  // lock m_llvm_jitmm_hold
+        OIIO::spin_lock lock (m_shadingsys.m_llvm_mutex);  // lock m_llvm_jitmm_hold
         m_shadingsys.m_llvm_jitmm_hold.push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
     }
 
@@ -1110,17 +1096,8 @@ RuntimeOptimizer::build_llvm_group ()
     }
 
     // Force the JIT to happen now
-    {
-#if OSL_LLVM_VERSION <= 29
-        // Lock this! -- there seems to be at least one bug in LLVM 2.9
-        // where the JIT isn't really thread-safe.
-        // Doesn't seem to be necessary for LLVM 3.0.
-        static mutex jit_mutex;
-        lock_guard lock (jit_mutex);
-#endif
-        RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
-        m_group.llvm_compiled_version (f);
-    }
+    RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
+    m_group.llvm_compiled_version (f);
 
     // Remove the IR for the group layer functions, we've already JITed it
     // and will never need the IR again.  This saves memory, and also saves
@@ -1148,7 +1125,7 @@ RuntimeOptimizer::initialize_llvm_group ()
 {
     // I don't think we actually need to lock here (lg)
     // static spin_mutex mutex;
-    // spin_lock lock (mutex);
+    // OIIO::spin_lock lock (mutex);
 
     m_llvm_context = m_thread->llvm_context;
     ASSERT (m_llvm_context && m_llvm_module);
@@ -1207,12 +1184,7 @@ RuntimeOptimizer::initialize_llvm_group ()
             }
             types += advance;
         }
-#if OSL_LLVM_VERSION <= 29
-        char *pp = (char *)&params;
-        llvm::FunctionType *func = llvm::FunctionType::get (llvm_type(rettype), *(std::vector<const llvm::Type*>*)pp, varargs);
-#else
         llvm::FunctionType *func = llvm::FunctionType::get (llvm_type(rettype), params, varargs);
-#endif
         m_llvm_module->getOrInsertFunction (funcname, func);
     }
 
@@ -1221,12 +1193,7 @@ RuntimeOptimizer::initialize_llvm_group ()
     params[0] = m_llvm_type_char_ptr;
     params[1] = m_llvm_type_int;
     params[2] = m_llvm_type_char_ptr;
-#if OSL_LLVM_VERSION <= 29
-    char *pp = (char *)&params;
-    m_llvm_type_prepare_closure_func = (llvm::PointerType *)llvm::PointerType::getUnqual (llvm::FunctionType::get (m_llvm_type_void, *(std::vector<const llvm::Type*>*)pp, false));
-#else
     m_llvm_type_prepare_closure_func = llvm::PointerType::getUnqual (llvm::FunctionType::get (m_llvm_type_void, params, false));
-#endif
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
 }
 
@@ -1268,7 +1235,6 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     llvm::PassManager &passes (*m_llvm_passes);
     passes.add (new llvm::TargetData(llvm_module()));
 
-#if OSL_LLVM_VERSION >= 30
     if (shadingsys().llvm_optimize() >= 1 && shadingsys().llvm_optimize() <= 3) {
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
         // same set of optimizations as clang -O1, -O2, -O3
@@ -1283,9 +1249,7 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
         //                                    true /* inline once again */);
         builder.populateModulePassManager (passes);
     }
-    else
-#endif
-    {
+    else {
     // LLVM 2.x, or unknown choices for llvm_optimize: use the same basic
     // set of passes that we always have.
 
@@ -1322,8 +1286,4 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
 
 
 }; // namespace pvt
-}; // namespace osl
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

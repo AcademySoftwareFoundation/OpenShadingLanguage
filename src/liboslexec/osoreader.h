@@ -32,9 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osl_pvt.h"
 
 #include "OpenImageIO/thread.h"
-#ifdef OIIO_NAMESPACE
-using OIIO::mutex;
-#endif
 
 
 
@@ -42,11 +39,8 @@ class osoFlexLexer;
 extern int osoparse ();
 
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 
@@ -136,18 +130,12 @@ public:
 private:
     ErrorHandler &m_err;
     int m_lineno;
-    static mutex m_osoread_mutex;
+    static OIIO::mutex m_osoread_mutex;
 };
 
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* OSL_OSOREADER_H */

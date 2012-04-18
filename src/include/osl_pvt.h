@@ -37,12 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using std::tr1::shared_ptr;
 
 
-
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {
 
 class ASTNode;
@@ -854,11 +849,6 @@ typedef std::vector<Opcode> OpcodeVec;
 
 
 }; // namespace OSL::pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
+OSL_NAMESPACE_EXIT
 
 #endif /* OSL_PVT_H */

@@ -31,11 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "genclosure.h"
 #include "oslexec_pvt.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 namespace pvt {
 
 class AshikhminVelvetClosure : public BSDFClosure {
@@ -176,7 +172,4 @@ ClosureParam bsdf_ashikhmin_velvet_params[] = {
 CLOSURE_PREPARE(bsdf_ashikhmin_velvet_prepare, AshikhminVelvetClosure)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

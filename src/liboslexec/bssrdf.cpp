@@ -31,11 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "genclosure.h"
 #include "oslexec_pvt.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {
 
 class BSSRDFCubicClosure : public BSSRDFClosure {
@@ -100,7 +97,4 @@ ClosureParam closure_bssrdf_cubic_params[] = {
 CLOSURE_PREPARE(closure_bssrdf_cubic_prepare, BSSRDFCubicClosure)
 
 }; // namespace pvt
-}; // namespace OSL
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

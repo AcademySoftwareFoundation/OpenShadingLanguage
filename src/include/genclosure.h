@@ -32,11 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/ustring.h>
 #include "oslconfig.h"
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 
 struct ClosureParam {
@@ -99,12 +95,6 @@ void name(RendererServices *, int id, void *data) \
 }
 
 
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-using namespace OSL_NAMESPACE;
-#endif
-
+OSL_NAMESPACE_EXIT
 
 #endif /* OSLCLOSURE_H */

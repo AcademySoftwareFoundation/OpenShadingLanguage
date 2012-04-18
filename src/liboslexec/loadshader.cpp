@@ -41,18 +41,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/timer.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/filesystem.h"
-#ifdef OIIO_NAMESPACE
-namespace Filesystem = OIIO::Filesystem;
-using OIIO::Timer;
-#endif
 
 
 
+OSL_NAMESPACE_ENTER
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
@@ -511,14 +504,14 @@ ShadingSystemImpl::loadshader (const char *cname)
 
     // Not found in the map
     OSOReaderToMaster oso (*this);
-    std::string filename = Filesystem::searchpath_find (name.string() + ".oso",
+    std::string filename = OIIO::Filesystem::searchpath_find (name.string() + ".oso",
                                                         m_searchpath_dirs);
     if (filename.empty ()) {
         // FIXME -- error
         error ("No .oso file could be found for shader \"%s\"", name.c_str());
         return NULL;
     }
-    Timer timer;
+    OIIO::Timer timer;
     bool ok = oso.parse (filename);
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
@@ -546,8 +539,4 @@ ShadingSystemImpl::loadshader (const char *cname)
 
 
 }; // namespace pvt
-}; // namespace OSL
-
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

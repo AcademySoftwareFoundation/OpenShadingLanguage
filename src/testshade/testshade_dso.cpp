@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <dlfcn.h>
 
 #include <OpenImageIO/plugin.h>
-using namespace OIIO_NAMESPACE;
+using namespace OIIO;
 
 
 typedef int (*EntryPoint)(int argc, const char *argv[]);
@@ -67,12 +67,8 @@ main (int argc, const char *argv[])
 
     std::string pluginname = std::string("libtestshade.") 
                              + Plugin::plugin_extension();
-#if OPENIMAGEIO_VERSION >= 1000 /* 0.10.0 */
     Plugin::Handle handle = Plugin::open (pluginname, 
                                           false /* NOT RTLD_GLOBAL! */);
-#else
-    Plugin::Handle handle = Plugin::open (pluginname);
-#endif
     if (! handle) {
         std::cerr << "Could not open " << pluginname << "\n";
         exit (1);

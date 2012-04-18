@@ -38,15 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/strutil.h"
-#ifdef OIIO_NAMESPACE
 namespace Strutil = OIIO::Strutil;
-#endif
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
+OSL_NAMESPACE_ENTER
 
-namespace OSL {
 namespace pvt {   // OSL::pvt
 
 
@@ -954,8 +949,5 @@ ASTliteral::print (std::ostream &out, int indentlevel) const
 
 
 }; // namespace pvt
-}; // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+OSL_NAMESPACE_EXIT

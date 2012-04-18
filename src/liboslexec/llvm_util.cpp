@@ -76,12 +76,7 @@ llvm::Type *
 RuntimeOptimizer::llvm_type_struct (const std::vector<llvm::Type *> &types,
                                     const std::string &name)
 {
-#if OSL_LLVM_VERSION <= 29
-    return (llvm::Type *) llvm::StructType::get(llvm_context(),
-                            *(std::vector<const llvm::Type*>*)&types);
-#else
     return llvm::StructType::create(llvm_context(), types, name);
-#endif
 }
 
 
@@ -706,11 +701,7 @@ RuntimeOptimizer::llvm_call_function (llvm::Value *func,
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
-#if OSL_LLVM_VERSION <= 29
-    llvm::Value *r = builder().CreateCall (func, args, args+nargs);
-#else
     llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args, nargs));
-#endif
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }
@@ -808,16 +799,9 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
         (llvm::Type *) llvm::Type::getInt32Ty(llvm_context())
     };
 
-#if OSL_LLVM_VERSION <= 29
-    llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
-        llvm::Intrinsic::memset,
-        (const llvm::Type**) types,
-        sizeof(types)/sizeof(llvm::Type*));
-#else
     llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
         llvm::Intrinsic::memset,
         llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
-#endif
 
     // NOTE(boulos): llvm_constant(0) would return an i32
     // version of 0, but we need the i8 version. If we make an
@@ -845,16 +829,9 @@ RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
         (llvm::Type *) llvm::Type::getInt32Ty(llvm_context())
     };
 
-#if OSL_LLVM_VERSION <= 29
-    llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
-        llvm::Intrinsic::memcpy,
-        (const llvm::Type**) types,
-        sizeof(types) / sizeof(llvm::Type*));
-#else
     llvm::Function* func = llvm::Intrinsic::getDeclaration (llvm_module(),
         llvm::Intrinsic::memcpy,
         llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
-#endif
 
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)

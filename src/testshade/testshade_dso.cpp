@@ -67,12 +67,8 @@ main (int argc, const char *argv[])
 
     std::string pluginname = std::string("libtestshade.") 
                              + Plugin::plugin_extension();
-#if OPENIMAGEIO_VERSION >= 1000 /* 0.10.0 */
     Plugin::Handle handle = Plugin::open (pluginname, 
                                           false /* NOT RTLD_GLOBAL! */);
-#else
-    Plugin::Handle handle = Plugin::open (pluginname);
-#endif
     if (! handle) {
         std::cerr << "Could not open " << pluginname << "\n";
         exit (1);

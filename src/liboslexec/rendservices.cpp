@@ -136,7 +136,6 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
                              const Vec3 &dPdx, const Vec3 &dPdy,
                              const Vec3 &dPdz, float *result)
 {
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     bool status = texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
                                             result);
     if (!status)
@@ -149,9 +148,6 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
         }
     }
     return status;
-#else
-    return false;
-#endif
 }
 
 
@@ -161,7 +157,6 @@ RendererServices::environment (ustring filename, TextureOpt &options,
                                ShaderGlobals *sg, const Vec3 &R,
                                const Vec3 &dRdx, const Vec3 &dRdy, float *result)
 {
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     bool status = texturesys()->environment (filename, options, R, dRdx, dRdy, result);
     if (!status) {
         std::string err = texturesys()->geterror();
@@ -172,9 +167,6 @@ RendererServices::environment (ustring filename, TextureOpt &options,
         }
     }
     return status;
-#else
-    return false;
-#endif
 }
 
 
@@ -184,12 +176,8 @@ RendererServices::get_texture_info (ustring filename, int subimage,
                                     ustring dataname,
                                     TypeDesc datatype, void *data)
 {
-#if OPENIMAGEIO_VERSION >= 900  /* 0.9.0 */
     bool status = texturesys()->get_texture_info (filename, subimage, dataname,
                                                    datatype, data);
-#else
-    bool status = texturesys()->get_texture_info (filename, dataname, datatype, data);
-#endif
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {

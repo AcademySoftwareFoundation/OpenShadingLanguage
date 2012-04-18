@@ -659,8 +659,9 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
             f = 0;  // FIXME?
             completed = false;
         }
-        out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
-                                f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f);
+        std::string s = Strutil::format ("%.8g ", f);
+        for (int i = 0;  i < 16;  ++i)
+            out += s;
     } else if (type.is_string()) {
         if (islit && lit->typespec().is_string())
             out += Strutil::format ("\"%s\" ", lit->strval());

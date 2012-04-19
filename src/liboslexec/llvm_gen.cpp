@@ -1678,8 +1678,18 @@ LLVMGEN (llvm_gen_sincos)
 
     rop.llvm_call_function (name.c_str(), &valargs[0], 3);
 
+    // If the input angle didn't have derivatives, we would not have
+    // called the version of sincos with derivs; however in that case we
+    // need to clear the derivs of either of the outputs that has them.
+    if (Sin_out.has_derivs() && !theta_deriv)
+        rop.llvm_zero_derivs (Sin_out);
+    if (Cos_out.has_derivs() && !theta_deriv)
+        rop.llvm_zero_derivs (Cos_out);
+
     return true;
 }
+
+
 
 LLVMGEN (llvm_gen_andor)
 {

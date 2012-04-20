@@ -38,9 +38,10 @@ if (NOT CMAKE_COMPILER_IS_CLANG)
     endif ()
 endif ()
 
-## turn on more detailed warnings
-set ( CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror" )
+## turn on more detailed warnings and consider warnings as errors
+if (NOT MSVC)
+    add_definitions ("-Wall -Werror")
+endif ()
 
 ## disable RTTI
 ## NOTE(ckulla): LLVM builds without RTTI by default so beware
@@ -56,14 +57,10 @@ if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
     add_definitions ("-DBOOST_NO_TYPEID")
 endif ()
 
-# Turn off a few pesky clang warnings that we shouldn't allow to be errors.
-# Mostly these are warnings it generates in boost headers.  I'd love to
-# turn off the warnings just for external code, not project code, but I
-# don't think there's a way to do this.
 if (CMAKE_COMPILER_IS_CLANG)
-    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-parentheses-equality")
-    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-char-subscripts")
-    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
+    # CMake doesn't automatically know what do do with
+    # include_directories(SYSTEM...) when using clang.
+    set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
 endif ()
 
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")

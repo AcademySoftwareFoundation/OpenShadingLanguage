@@ -134,7 +134,8 @@ endmacro ()
 
 message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 
-set (Boost_ADDITIONAL_VERSIONS "1.40" "1.39" "1.38" "1.38.0" "1.37" "1.37.0" "1.34.1" "1_34_1")
+set (Boost_ADDITIONAL_VERSIONS "1.49" "1.48" "1.47" "1.46" "1.45"
+                               "1.44" "1.43" "1.42" "1.41" "1.40")
 #set (Boost_USE_STATIC_LIBS   ON)
 set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
@@ -155,7 +156,7 @@ message (STATUS "Boost include dirs ${Boost_INCLUDE_DIRS}")
 message (STATUS "Boost library dirs ${Boost_LIBRARY_DIRS}")
 message (STATUS "Boost libraries    ${Boost_LIBRARIES}")
 
-include_directories ("${Boost_INCLUDE_DIRS}")
+include_directories (SYSTEM "${Boost_INCLUDE_DIRS}")
 link_directories ("${Boost_LIBRARY_DIRS}")
 
 # end Boost setup

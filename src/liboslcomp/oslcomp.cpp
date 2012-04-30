@@ -43,6 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/sysutil.h"
 #include "OpenImageIO/dassert.h"
+#include "OpenImageIO/filesystem.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -227,16 +228,16 @@ preprocess (const std::string &filename,
 #define pclose _pclose
 #endif
 
+    std::string cppcommand = "/usr/bin/cpp";
 #ifdef __APPLE__
-    // Default /usr/bin/cpp on Apple is very bare bones, doesn't seem to
-    // support all the preprocessor directives (like # and ##), but the
-    // explicit gcc 4.2 one does.  Watch out for needed changes to this
-    // with future OS X releases.
-    std::string cppcommand = "/usr/bin/cpp-4.2 -xc -nostdinc ";
-#else
-    std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
+    // Default /usr/bin/cpp on pre-Lion Apple is very bare bones,
+    // doesn't seem to support all the preprocessor directives (like #
+    // and ##), but the explicit gcc 4.2 one does.
+    if (OIIO::Filesystem::exists ("/usr/bin/cpp-4.2"))
+        cppcommand = "/usr/bin/cpp-4.2";
 #endif
 
+    cppcommand += std::string (" -xc -nostdinc ");
     cppcommand += options;
 
     if (! stdinclude.empty())
@@ -282,7 +283,7 @@ bool
 OSLCompilerImpl::compile (const std::string &filename,
                           const std::vector<std::string> &options)
 {
-    if (! boost::filesystem::exists (filename)) {
+    if (! OIIO::Filesystem::exists (filename)) {
         error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
         return false;
     }
@@ -306,7 +307,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         path = path.parent_path ();  // now the parent dir
         path = path / "shaders";
         bool found = false;
-        if (boost::filesystem::exists (path)) {
+        if (OIIO::Filesystem::exists (path.string())) {
 #ifdef USE_BOOST_WAVE
             includepaths.push_back(path.string());
 #else
@@ -316,7 +317,7 @@ OSLCompilerImpl::compile (const std::string &filename,
             cppoptions += "\" ";
 #endif
             path = path / "stdosl.h";
-            if (boost::filesystem::exists (path)) {
+            if (OIIO::Filesystem::exists (path.string())) {
                 stdinclude = path.string();
                 found = true;
             }

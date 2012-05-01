@@ -600,7 +600,7 @@ public:
         CompareClosureFunc        compare;
     };
 
-    void register_closure (const char *name, int id, const ClosureParam *params, int size,
+    void register_closure (const char *name, int id, const ClosureParam *params,
                            PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
 
     const ClosureEntry *get_entry (ustring name) const;
@@ -724,7 +724,7 @@ public:
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
+    virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);

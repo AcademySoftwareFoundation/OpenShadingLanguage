@@ -432,7 +432,7 @@ ShadingSystemImpl::setup_op_descriptors ()
 
 
 void
-ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params, int size,
+ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params,
                                     PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
@@ -441,7 +441,7 @@ ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam
             return;
         }
     }
-    m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare);
+    m_closure_registry.register_closure(name, id, params, prepare, setup, compare);
 }
 
 
@@ -1306,7 +1306,7 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 
-void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params, int size,
+void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params,
                                        PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
     if (m_closure_table.size() <= (size_t)id)
@@ -1316,14 +1316,18 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     entry.name = name;
     entry.nformal = 0;
     entry.nkeyword = 0;
-    for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
+    entry.struct_size = 0; /* params could be NULL */
+    for (int i = 0; params; ++i) {
+        if (params[i].type == TypeDesc()) {
+            entry.struct_size = params[i].offset;
+            break;
+        }
         entry.params.push_back(params[i]);
         if (params[i].key == NULL)
             entry.nformal ++;
         else
             entry.nkeyword ++;
     }
-    entry.struct_size = size;
     entry.prepare = prepare;
     entry.setup = setup;
     entry.compare = compare;

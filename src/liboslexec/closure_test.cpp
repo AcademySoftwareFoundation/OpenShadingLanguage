@@ -114,7 +114,7 @@ int main()
     ShadingContext *context = shadingsys->get_context();
 
     ClosureParam my_params[] = { CLOSURE_FINISH_PARAM(MyClosure) };
-    shadingsys->register_closure("my", MY_ID, my_params, sizeof(MyClosure), NULL, NULL, my_compare);
+    shadingsys->register_closure("my", MY_ID, my_params, NULL, NULL, my_compare);
     ClosureColor *A = create_component (context, Color3(.1, .1, .1), 0.33f);
     // Add another component with different params.  It should now look
     // like two components, not combine with the others.

@@ -224,7 +224,7 @@ public:
     ///
     virtual std::string getstats (int level=1) const = 0;
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
+    virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
 
     void register_builtin_closures();

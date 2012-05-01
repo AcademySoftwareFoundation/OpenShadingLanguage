@@ -192,11 +192,8 @@ void ShadingSystem::register_builtin_closures()
     for (int cid = 0; cid < NBUILTIN_CLOSURES; ++cid)
     {
         BuiltinClosure *clinfo = &builtin_closures[cid];
-        int j;
-        for (j = 0; clinfo->params[j].type != TypeDesc(); ++j);
-        int size = clinfo->params[j].offset;
         ASSERT(clinfo->id == cid);
-        register_closure (clinfo->name, cid, clinfo->params, size, clinfo->prepare, generic_closure_setup, generic_closure_compare);
+        register_closure (clinfo->name, cid, clinfo->params, clinfo->prepare, generic_closure_setup, generic_closure_compare);
     }
 }
 

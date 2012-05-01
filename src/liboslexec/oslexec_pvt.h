@@ -1234,6 +1234,7 @@ namespace Strings {
     extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
     extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
     extern ustring op_dowhile, op_for, op_while;
+    extern ustring subimage, subimagename;
 }; // namespace Strings
 
 

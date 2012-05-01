@@ -57,7 +57,7 @@ if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
     add_definitions ("-DBOOST_NO_TYPEID")
 endif ()
 
-if (CMAKE_COMPILER_IS_CLANG)
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
     # include_directories(SYSTEM...) when using clang.
     set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")

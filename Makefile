@@ -59,6 +59,10 @@ ifneq (${NAMESPACE},)
 MY_CMAKE_FLAGS += -DOSL_NAMESPACE:STRING=${NAMESPACE}
 endif
 
+ifneq (${USE_BOOST_WAVE},)
+MY_CMAKE_FLAGS += -DUSE_BOOST_WAVE:BOOL=${USE_BOOST_WAVE}
+endif
+
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -197,4 +201,5 @@ help:
 	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
 	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
 	@echo "  make NAMESPACE=name         Wrap everything in another namespace"
+	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"
 	@echo ""

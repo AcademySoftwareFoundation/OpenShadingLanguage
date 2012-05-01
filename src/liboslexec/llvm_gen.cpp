@@ -1937,6 +1937,11 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
             else
                 rop.llvm_call_function ("osl_texture_set_interp_name", opt, val);
 
+        } else if (name == Strings::subimage && valtype == TypeDesc::INT) {
+            rop.llvm_call_function ("osl_texture_set_subimage", opt, val);
+        } else if (name == Strings::subimage && valtype == TypeDesc::STRING) {
+            rop.llvm_call_function ("osl_texture_set_subimagename", opt, val);
+
         } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);
             if (Val.has_derivs()) {
@@ -2025,12 +2030,12 @@ LLVMGEN (llvm_gen_texture3d)
     Symbol &P = *rop.opargsym (op, 2);
 
     bool user_derivs = false;
-    int first_optional_arg = 4;
+    int first_optional_arg = 3;
     if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
         user_derivs = true;
-        first_optional_arg = 6;
+        first_optional_arg = 5;
+        DASSERT (rop.opargsym(op,3)->typespec().is_triple());
         DASSERT (rop.opargsym(op,4)->typespec().is_triple());
-        DASSERT (rop.opargsym(op,5)->typespec().is_triple());
     }
 
     llvm::Value* opt;   // TextureOpt

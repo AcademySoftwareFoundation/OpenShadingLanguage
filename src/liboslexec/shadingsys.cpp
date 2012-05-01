@@ -163,6 +163,7 @@ ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
 ustring anisotropic("anisotropic"), direction("direction");
 ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
+ustring subimage("subimage"), subimagename("subimagename");
 
 };
 

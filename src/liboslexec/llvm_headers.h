@@ -29,6 +29,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_LLVM_HEADERS_H
 #define OSL_LLVM_HEADERS_H
 
+#ifdef LLVM_NAMESPACE
+namespace llvm = LLVM_NAMESPACE;
+#endif
+
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Constants.h>
 #include <llvm/DerivedTypes.h>

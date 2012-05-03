@@ -55,6 +55,10 @@ ifneq (${LLVM_VERSION},)
 MY_CMAKE_FLAGS += -DLLVM_VERSION:STRING=${LLVM_VERSION}
 endif
 
+ifneq (${LLVM_NAMESPACE},)
+MY_CMAKE_FLAGS += -DLLVM_NAMESPACE:STRING=${LLVM_NAMESPACE}
+endif
+
 ifneq (${NAMESPACE},)
 MY_CMAKE_FLAGS += -DOSL_NAMESPACE:STRING=${NAMESPACE}
 endif
@@ -200,6 +204,7 @@ help:
 	@echo "  make USE_TBB=0 ...          Don't use TBB"
 	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
 	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
-	@echo "  make NAMESPACE=name         Wrap everything in another namespace"
+	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"
+	@echo "  make NAMESPACE=name         Wrap OSL APIs in another namespace"
 	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"
 	@echo ""

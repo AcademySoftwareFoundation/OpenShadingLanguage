@@ -824,8 +824,10 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
     // Now read lines up to and including the file we want.
     char buf[10240];
     while (m_last_sourceline < line) {
-        fgets (buf, sizeof(buf), m_sourcefile);
-        ++m_last_sourceline;
+        if (fgets (buf, sizeof(buf), m_sourcefile))
+            ++m_last_sourceline;
+        else
+            break;
     }
 
     // strip trailing newline

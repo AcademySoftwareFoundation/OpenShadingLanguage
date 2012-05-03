@@ -70,6 +70,11 @@ else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
 
+if (LLVM_NAMESPACE)
+    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
+endif ()
+
+
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/cmake/modules"
      "${PROJECT_SOURCE_DIR}/cmake")

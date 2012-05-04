@@ -1243,7 +1243,9 @@ osl_texture_set_subimage (void *opt, int subimage)
 OSL_SHADEOP void
 osl_texture_set_subimagename (void *opt, const char *subimagename)
 {
+#if OIIO_VERSION >= 10100
     ((TextureOpt *)opt)->subimagename = USTR(subimagename);
+#endif
 }
 
 

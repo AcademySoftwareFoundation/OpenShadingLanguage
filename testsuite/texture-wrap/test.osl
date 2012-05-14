@@ -1,10 +1,11 @@
 shader
-test (string filename = "../common/textures/mandrill.tif",
+test (string filename = "mandrill.tx",
       string wrap = "periodic",
       output color Cblack = 0,
       output color Cperiodic = 0,
       output color Cclamp = 0,
-      output color Cmirror = 0)
+      output color Cmirror = 0,
+      output color Cdefault = 0)
 {
     Cblack = (color) texture (filename, -0.1 + 2 * u, -0.2 + 2 * v,
                               "wrap", "black");
@@ -14,4 +15,6 @@ test (string filename = "../common/textures/mandrill.tif",
                               "wrap", "clamp");
     Cmirror = (color) texture (filename, -0.1 + 2 * u, -0.2 + 2 * v,
                                "wrap", "mirror");
+    Cdefault = (color) texture (filename, -0.1 + 2 * u, -0.2 + 2 * v,
+                               "wrap", "default");
 }

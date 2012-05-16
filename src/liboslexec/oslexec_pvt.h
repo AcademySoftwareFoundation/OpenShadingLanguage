@@ -131,11 +131,7 @@ struct OpDescriptor {
 
 
 // Prefix for OSL shade up declarations, so LLVM can find them
-#ifdef _MSC_VER
-#define OSL_SHADEOP extern "C" __declspec(dllexport)
-#else
-#define OSL_SHADEOP extern "C"
-#endif
+#define OSL_SHADEOP extern "C" OSLEXECPUBLIC
 
 
 
@@ -623,10 +619,10 @@ private:
 
 
 
-class ShadingSystemImpl : public ShadingSystem
+class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
 {
 public:
-    ShadingSystemImpl (RendererServices *renderer=NULL,
+    OSLEXECPUBLIC ShadingSystemImpl (RendererServices *renderer=NULL,
                        TextureSystem *texturesystem=NULL,
                        ErrorHandler *err=NULL);
     virtual ~ShadingSystemImpl ();
@@ -1216,25 +1212,25 @@ private:
 
 
 namespace Strings {
-    extern ustring camera, common, object, shader, screen, NDC;
-    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
-    extern ustring null, default_;
-    extern ustring label;
-    extern ustring sidedness, front, back, both;
-    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
-    extern ustring Ci;
-    extern ustring width, swidth, twidth, rwidth;
-    extern ustring blur, sblur, tblur, rblur;
-    extern ustring wrap, swrap, twrap, rwrap;
-    extern ustring black, clamp, periodic, mirror;
-    extern ustring firstchannel, fill, alpha;
-    extern ustring interp, closest, linear, cubic, smartcubic;
-    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
-    extern ustring cell, cellnoise, pcellnoise;
-    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern ustring op_dowhile, op_for, op_while;
-    extern ustring subimage, subimagename;
+    extern OSLEXECPUBLIC ustring camera, common, object, shader, screen, NDC;
+    extern OSLEXECPUBLIC ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
+    extern OSLEXECPUBLIC ustring null, default_;
+    extern OSLEXECPUBLIC ustring label;
+    extern OSLEXECPUBLIC ustring sidedness, front, back, both;
+    extern OSLEXECPUBLIC ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
+    extern OSLEXECPUBLIC ustring Ci;
+    extern OSLEXECPUBLIC ustring width, swidth, twidth, rwidth;
+    extern OSLEXECPUBLIC ustring blur, sblur, tblur, rblur;
+    extern OSLEXECPUBLIC ustring wrap, swrap, twrap, rwrap;
+    extern OSLEXECPUBLIC ustring black, clamp, periodic, mirror;
+    extern OSLEXECPUBLIC ustring firstchannel, fill, alpha;
+    extern OSLEXECPUBLIC ustring interp, closest, linear, cubic, smartcubic;
+    extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
+    extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
+    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while;
+    extern OSLEXECPUBLIC ustring subimage, subimagename;
 }; // namespace Strings
 
 

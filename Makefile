@@ -59,8 +59,16 @@ ifneq (${LLVM_NAMESPACE},)
 MY_CMAKE_FLAGS += -DLLVM_NAMESPACE:STRING=${LLVM_NAMESPACE}
 endif
 
+ifneq (${LLVM_STATIC},)
+MY_CMAKE_FLAGS += -DLLVM_STATIC:BOOL=${LLVM_STATIC}
+endif
+
 ifneq (${NAMESPACE},)
 MY_CMAKE_FLAGS += -DOSL_NAMESPACE:STRING=${NAMESPACE}
+endif
+
+ifneq (${HIDE_SYMBOLS},)
+MY_CMAKE_FLAGS += -DHIDE_SYMBOLS:BOOL=${HIDE_SYMBOLS}
 endif
 
 ifneq (${USE_BOOST_WAVE},)
@@ -205,6 +213,8 @@ help:
 	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
 	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
 	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"
+	@echo "  make LLVM_STATIC=1          Use static LLVM libraries"
 	@echo "  make NAMESPACE=name         Wrap OSL APIs in another namespace"
+	@echo "  make HIDE_SYMBOLS=1         Hide symbols not in the public API"
 	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"
 	@echo ""

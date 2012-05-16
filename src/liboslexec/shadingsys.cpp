@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <fstream>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -1353,3 +1354,13 @@ const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)con
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
+
+
+// Symbols needed to resolve some linkage issues because we pull some
+// components in from liboslcomp.
+int oslparse() { return 0; }
+class oslFlexLexer {
+public:
+    oslFlexLexer (std::istream *in, std::ostream *out);
+};
+oslFlexLexer::oslFlexLexer (std::istream *in, std::ostream *out) { }

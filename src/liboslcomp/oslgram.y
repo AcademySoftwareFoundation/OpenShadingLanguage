@@ -42,8 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 
 #include "oslcomp_pvt.h"
-#include "ast.h"
-#include "symtab.h"
 
 #undef yylex
 #define yyFlexLexer oslFlexLexer
@@ -949,7 +947,7 @@ yyerror (const char *err)
 
 
 // Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
-TypeDesc
+inline TypeDesc
 OSL::pvt::lextype (int lex)
 {
     switch (lex) {

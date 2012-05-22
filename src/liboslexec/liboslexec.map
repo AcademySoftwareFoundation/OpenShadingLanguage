@@ -1,0 +1,4 @@
+{
+    global: *OSL*; osl_*;
+    local: *;
+};

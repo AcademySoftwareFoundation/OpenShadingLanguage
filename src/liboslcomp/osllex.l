@@ -93,6 +93,7 @@ CPLUSCOMMENT    \/\/.*\n
 #include <string>
 
 #include "oslcomp_pvt.h"
+
 using namespace OSL;
 using namespace OSL::pvt;
 

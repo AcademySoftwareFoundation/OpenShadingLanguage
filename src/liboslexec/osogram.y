@@ -331,7 +331,7 @@ yyerror (const char *err)
 
 
 // Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
-TypeDesc
+inline TypeDesc
 OSL::pvt::lextype (int lex)
 {
     switch (lex) {

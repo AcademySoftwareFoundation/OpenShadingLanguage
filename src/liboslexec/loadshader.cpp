@@ -234,7 +234,8 @@ OSOReaderToMaster::symdefault (float def)
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
             m_master->m_fconsts[offset] = def;
         else {
-            ASSERT (0 && "unexpected type");
+            ASSERTMSG (0, "unexpected type: %s (%s)",
+                       sym.typespec().c_str(), sym.name().c_str());
         }
     }
 }
@@ -252,13 +253,15 @@ OSOReaderToMaster::symdefault (const char *def)
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
             m_master->m_sdefaults[offset] = ustring(def);
         else {
-            ASSERT (0 && "unexpected type");
+            ASSERTMSG (0, "unexpected type: %s (%s)",
+                       sym.typespec().c_str(), sym.name().c_str());
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
             m_master->m_sconsts[offset] = ustring(def);
         else {
-            ASSERT (0 && "unexpected type");
+            ASSERTMSG (0, "unexpected type: %s (%s)",
+                       sym.typespec().c_str(), sym.name().c_str());
         }
     }
 }

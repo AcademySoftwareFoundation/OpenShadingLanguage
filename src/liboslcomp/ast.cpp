@@ -34,7 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
-#include "ast.h"
 
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/strutil.h"

@@ -22,9 +22,12 @@ SET ( liboslexec_srcs
           ../liboslcomp/typecheck.cpp
     )
 
-FILE ( GLOB compiler_headers "*.h" )
 
-FLEX_BISON ( osolex.l osogram.y oso liboslexec_srcs compiler_headers )
+include_directories ( ${CMAKE_SOURCE_DIR}/liboslcomp )
+
+FILE ( GLOB exec_headers "*.h" )
+
+FLEX_BISON ( osolex.l osogram.y oso liboslexec_srcs exec_headers )
 
 SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 
@@ -94,9 +97,12 @@ else ()
 endif ()
 
 ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
-TARGET_LINK_LIBRARIES ( oslexec oslcomp ${OPENIMAGEIO_LIBRARY}
+TARGET_LINK_LIBRARIES ( oslexec
+                        ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
+                        ${OPENIMAGEIO_LIBRARY}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
-                        ${LLVM_LIBRARY} )
+                        ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
+ADD_DEPENDENCIES (oslexec ${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map)
 LINK_ILMBASE ( oslexec )
 
 INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib )

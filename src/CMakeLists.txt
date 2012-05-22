@@ -22,6 +22,11 @@ endif ()
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions ("-DDEBUG=1")
+    set (DEBUGMODE ON)
+endif ()
+
 
 # Figure out which compiler we're using
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -63,12 +68,27 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
 endif ()
 
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
+    if (HIDE_SYMBOLS AND NOT DEBUGMODE)
+        # Turn default symbol visibility to hidden
+        set (VISIBILITY_COMMAND "-fvisibility=hidden")
+        add_definitions (${VISIBILITY_COMMAND})
+    endif ()
+    if (LLVM_STATIC AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT DEBUGMODE)
+        # Linux: When linking against LLVM statically, we can also hide
+        # all its symbols to prevent clashes if OSL is linked against an
+        # app that also embeds LLVM.
+        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/liboslexec/liboslexec.map")
+    endif ()
+endif ()
+
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 if (WIN32)
     set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
 else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
+set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -92,10 +112,6 @@ include_directories (
 
 
 include_directories ("include")
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions ("-DDEBUG=1")
-endif ()
 
 if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")

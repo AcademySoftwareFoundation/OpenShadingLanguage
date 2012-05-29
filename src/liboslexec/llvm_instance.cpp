@@ -981,6 +981,20 @@ public:
     virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
     virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
     virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
+#if OSL_LLVM_VERSION >= 31
+    virtual void *getPointerToNamedFunction(const std::string &Name,
+                                            bool AbortOnFailure = true) {
+        return mm->getPointerToNamedFunction (Name, AbortOnFailure);
+    }
+    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID) {
+        return mm->allocateCodeSection(Size, Alignment, SectionID);
+    }
+    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID) {
+        return mm->allocateDataSection(Size, Alignment, SectionID);
+    }
+#endif
 };
 
 

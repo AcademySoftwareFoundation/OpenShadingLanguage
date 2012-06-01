@@ -1990,11 +1990,18 @@ DECLFOLDER(constfold_texture)
                 }                                                       \
             }
             
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-compare"
+#endif
             CHECK_str (width, float, TypeDesc::FLOAT)
             else CHECK_str (blur, float, TypeDesc::FLOAT)
             else CHECK_str (wrap, ustring, TypeDesc::STRING)
             else CHECK (firstchannel, int, TypeDesc::INT)
             else CHECK (fill, float, TypeDesc::FLOAT)
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #undef CHECK_STR
 #undef CHECK
 

@@ -56,6 +56,10 @@ void yyerror (const char *err);
 static TypeSpec current_typespec;
 static std::string current_shader_name;
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
+
 // Forward declaration
 OSL_NAMESPACE_ENTER
 namespace pvt {

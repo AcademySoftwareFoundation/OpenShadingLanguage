@@ -53,6 +53,9 @@ void yyerror (const char *err);
 using namespace OSL;
 using namespace OSL::pvt;
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
 
 // Forward declaration
 OSL_NAMESPACE_ENTER

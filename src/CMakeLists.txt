@@ -67,8 +67,13 @@ endif ()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
-    # include_directories(SYSTEM...) when using clang.
+    # include_directories(SYSTEM...) when using clang or gcc.
     set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
+endif ()
+
+if (CMAKE_COMPILER_IS_CLANG)
+    # disable warning about unused command line arguments
+    add_definitions ("-Qunused-arguments")
 endif ()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)

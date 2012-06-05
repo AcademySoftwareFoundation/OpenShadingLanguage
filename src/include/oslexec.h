@@ -239,6 +239,26 @@ public:
     /// specified number of threads (0 means use all available HW cores).
     virtual void optimize_all_groups (int nthreads=0) = 0;
 
+    /// Helper function -- copy or convert a source value (described by
+    /// srctype) to destination (described by dsttype).  The function
+    /// returns true upon success, or false if the types differ in a way
+    /// that cannot be converted.  The following type conversions are
+    /// supported:
+    /// 1. Identical types copy without modification.
+    /// 2. Conversions following the same rules as type casting and
+    /// assignment in OSL itself:
+    ///   int -> float             convert to float
+    ///   int -> triple            convert to float and replicate x3
+    ///   float -> triple          replicate x3
+    ///   float -> int             truncate like a (int) type cast
+    ///   triple -> triple         copy, regarless of differing vector types
+    /// 3. Additional rules not allowed in OSL source code:
+    ///   float -> float[2]        replicate x2
+    ///   int -> float[2]          convert to float and replicate x2
+    ///   float[2] -> triple       (f[0], f[1], 0)
+    static bool convert_value (void *dst, TypeDesc dsttype,
+                               const void *src, TypeDesc srctype);
+
 private:
     // Make delete private and unimplemented in order to prevent apps
     // from calling it.  Instead, they should call ShadingSystem::destroy().

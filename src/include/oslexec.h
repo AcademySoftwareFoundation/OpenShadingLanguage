@@ -242,8 +242,12 @@ public:
     /// Helper function -- copy or convert a source value (described by
     /// srctype) to destination (described by dsttype).  The function
     /// returns true upon success, or false if the types differ in a way
-    /// that cannot be converted.  The following type conversions are
-    /// supported:
+    /// that cannot be converted.  As a special case, if dst==NULL or
+    /// src==NULL, no copying is performed, and convert_value merely
+    /// returns a bool indicating if the proposed type conversion is
+    /// allowed.
+    ///
+    /// The following type conversions are supported:
     /// 1. Identical types copy without modification.
     /// 2. Conversions following the same rules as type casting and
     /// assignment in OSL itself:
@@ -256,6 +260,9 @@ public:
     ///   float -> float[2]        replicate x2
     ///   int -> float[2]          convert to float and replicate x2
     ///   float[2] -> triple       (f[0], f[1], 0)
+    ///
+    /// Observation: none of the supported conversions require more
+    /// storage for src than for dst.
     static bool convert_value (void *dst, TypeDesc dsttype,
                                const void *src, TypeDesc srctype);
 

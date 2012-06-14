@@ -110,11 +110,13 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
 {
     // Just copy equivalent types
     if (equivalent (dsttype, srctype)) {
-        size_t size = dsttype.size();
-        if (size == sizeof(float))    // common case: float/int copy
-            *(float *)dst = *(const float *)src;
-        else
-            memcpy (dst, src, dsttype.size());  // otherwise, memcpy
+        if (dst && src) {
+            size_t size = dsttype.size();
+            if (size == sizeof(float))    // common case: float/int copy
+                *(float *)dst = *(const float *)src;
+            else
+                memcpy (dst, src, dsttype.size());  // otherwise, memcpy
+        }
         return true;
     }
 
@@ -127,20 +129,25 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
     if (srctype == TypeDesc::TypeFloat) {
         // float->triple conversion
         if (equivalent(dsttype, TypeDesc::TypePoint)) {
-            float f = *(const float *)src;
-            ((OSL::Vec3 *)dst)->setValue (f, f, f);
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((OSL::Vec3 *)dst)->setValue (f, f, f);
+            }
             return true;
         }
         // float->int
         if (dsttype == TypeDesc::TypeInt) {
-            *(int *)dst = (int) *(const float *)src;
+            if (dst && src)
+                *(int *)dst = (int) *(const float *)src;
             return true;
         }
         // float->float[2]
         if (dsttype == TypeFloatArray2) {
-            float f = *(const float *)src;
-            ((float *)dst)[0] = f;
-            ((float *)dst)[1] = f;
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((float *)dst)[0] = f;
+                ((float *)dst)[1] = f;
+            }
             return true;
         }
         return false; // Unsupported conversion
@@ -148,9 +155,11 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
 
     // float[2] -> triple
     if (srctype == TypeFloatArray2 && equivalent(dsttype, TypeDesc::TypePoint)) {
-        float f0 = ((const float *)src)[0];
-        float f1 = ((const float *)src)[0];
-        ((OSL::Vec3 *)dst)->setValue (f0, f1, 0.0f);
+        if (dst && src) {
+            float f0 = ((const float *)src)[0];
+            float f1 = ((const float *)src)[1];
+            ((OSL::Vec3 *)dst)->setValue (f0, f1, 0.0f);
+        }
         return true;
     }
 

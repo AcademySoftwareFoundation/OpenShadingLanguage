@@ -100,6 +100,74 @@ ShadingSystem::~ShadingSystem ()
 
 
 
+static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
+
+
+
+bool
+ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
+                              const void *src, TypeDesc srctype)
+{
+    // Just copy equivalent types
+    if (equivalent (dsttype, srctype)) {
+        if (dst && src) {
+            size_t size = dsttype.size();
+            if (size == sizeof(float))    // common case: float/int copy
+                *(float *)dst = *(const float *)src;
+            else
+                memcpy (dst, src, dsttype.size());  // otherwise, memcpy
+        }
+        return true;
+    }
+
+    if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
+        // int -> any-float-based ... up-convert to float and recurse
+        float f = (float) (*(const int *)src);
+        return convert_value (dst, dsttype, &f, TypeDesc::TypeFloat);
+    }
+
+    if (srctype == TypeDesc::TypeFloat) {
+        // float->triple conversion
+        if (equivalent(dsttype, TypeDesc::TypePoint)) {
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((OSL::Vec3 *)dst)->setValue (f, f, f);
+            }
+            return true;
+        }
+        // float->int
+        if (dsttype == TypeDesc::TypeInt) {
+            if (dst && src)
+                *(int *)dst = (int) *(const float *)src;
+            return true;
+        }
+        // float->float[2]
+        if (dsttype == TypeFloatArray2) {
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((float *)dst)[0] = f;
+                ((float *)dst)[1] = f;
+            }
+            return true;
+        }
+        return false; // Unsupported conversion
+    }
+
+    // float[2] -> triple
+    if (srctype == TypeFloatArray2 && equivalent(dsttype, TypeDesc::TypePoint)) {
+        if (dst && src) {
+            float f0 = ((const float *)src)[0];
+            float f1 = ((const float *)src)[1];
+            ((OSL::Vec3 *)dst)->setValue (f0, f1, 0.0f);
+        }
+        return true;
+    }
+
+    return false;   // Unsupported conversion
+}
+
+
+
 PerThreadInfo::PerThreadInfo ()
     : llvm_context(NULL), llvm_jitmm(NULL)
 {

@@ -4753,11 +4753,21 @@ empty string \qkw{}, the renderer will first search
 per-object attributes on the current object, then if not found it will search
 searching global scene-wide attributes.  
 
-If the attribute is found found and it matches the type of
+If the attribute is found and can be converted to the type of
 \emph{destination}, the attribute's value will be stored in
 \emph{destination} and {\cf getattribute} will return {\cf 1}.  If not
-found, or the type does not match, \emph{destination} will not be
+found, or the type cannot be converted, \emph{destination} will not be
 modified and {\cf getattribute} will return {\cf 0}.
+
+The automatic type conversions include those that are allowed by
+assignment in OSL source code: {\cf int} to {\cf float}, {\cf float} to
+{\cf int} (truncation), {\cf float} (or {\cf int}) to \emph{triple}
+(replicating the value), any \emph{triple} to any other \emph{triple}.
+Additionally, the following conversions which are not allowed by
+assignment in OSL source code will also be performed by this call: 
+{\cf float} (or {\cf int}) to {\cf float[2]} (replication into both
+array elements), {\cf float[2]} to \emph{triple} (setting the third
+component to 0).
 
 The forms of this function that have the the {\cf arrayindex} parameter
 will retrieve the individual indexed element of the named array.  In this

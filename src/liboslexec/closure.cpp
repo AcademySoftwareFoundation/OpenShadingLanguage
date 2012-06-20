@@ -119,7 +119,9 @@ namespace pvt {
 
 
 static void
-print_component_value(std::ostream &out, TypeDesc type, const void *data)
+print_component_value(std::ostream &out, ShadingSystemImpl *ss,
+                      TypeDesc type, const void *data)
+
 {
     if (type == TypeDesc::TypeInt)
         out << *(int *)data;
@@ -131,6 +133,8 @@ print_component_value(std::ostream &out, TypeDesc type, const void *data)
         out << "(" << ((Vec3 *)data)->x << ", " << ((Vec3 *)data)->y << ", " << ((Vec3 *)data)->z << ")";
     else if (type == TypeDesc::TypeString)
         out << "\"" << ((ustring *)data)->c_str() << "\"";
+    else if (type == TypeDesc::PTR)  // this only happens for closures
+        print_closure (out, *(const ClosureColor **)data, ss);
 }
 
 
@@ -148,7 +152,7 @@ print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemI
         if (clentry->params[i].type.numelements() > 1) out << "[";
         for (size_t j = 0; j < clentry->params[i].type.numelements(); ++j) {
             if (j) out << ", ";
-            print_component_value(out, clentry->params[i].type.elementtype(),
+            print_component_value(out, ss, clentry->params[i].type.elementtype(),
                                   (const char *)comp->data() + clentry->params[i].offset
                                                              + clentry->params[i].type.elementsize() * j);
         }
@@ -165,7 +169,7 @@ print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemI
                     td = clentry->params[clentry->nformal + p].type;
             if (td != TypeDesc()) {
                 out << "\"" << attrs[j].key.c_str() << "\", ";
-                print_component_value(out, td, &attrs[j].value);
+                print_component_value(out, ss, td, &attrs[j].value);
             }
         }
     }

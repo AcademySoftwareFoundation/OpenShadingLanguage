@@ -653,13 +653,40 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
             f = lit->intval();
         else if (islit && lit->typespec().is_float())
             f = lit->floatval();
-        else {
-            f = 0;  // FIXME?
+        else if (init && init->typespec() == type &&
+                   init->nodetype() == ASTNode::type_constructor_node) {
+            ASTtype_constructor *ctr = (ASTtype_constructor *) init;
+            ASTNode::ref val = ctr->args();
+            float f[16];
+            int nargs = 0;
+            for (int c = 0;  c < 16;  ++c) {
+                if (val.get())
+                    ++nargs;
+                if (val.get() && val->nodetype() == ASTNode::literal_node) {
+                    f[c] = ((ASTliteral *)val.get())->floatval ();
+                    val = val->next();
+                } else {
+                    f[c] = 0;
+                    completed = false;
+                }
+            }
+            if (nargs == 1)
+                out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                        f[0], f[0], f[0], f[0], f[0], f[0], f[0], f[0])
+                     + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                        f[0], f[0], f[0], f[0], f[0], f[0], f[0], f[0]);
+            else
+                out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                        f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7])
+                     + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g",
+                                        f[8], f[9], f[10], f[11], f[12], f[13], f[14], f[15]);
+        } else {
+            f = 0;
+            std::string s = Strutil::format ("%.8g ", f);
+            for (int i = 0;  i < 16;  ++i)
+                out += s;
             completed = false;
         }
-        std::string s = Strutil::format ("%.8g ", f);
-        for (int i = 0;  i < 16;  ++i)
-            out += s;
     } else if (type.is_string()) {
         if (islit && lit->typespec().is_string())
             out += Strutil::format ("\"%s\" ", lit->strval());

@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 
 #include <boost/regex_fwd.hpp>
+#include <boost/unordered_map.hpp>
 
-#include "OpenImageIO/hash.h"
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/paramlist.h"
@@ -754,11 +754,7 @@ public:
 
     virtual void optimize_all_groups (int nthreads=0);
 
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
     typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
-#else
-    typedef hash_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
-#endif
 
     /// Look up OpDescriptor for the named op, return NULL for unknown op.
     ///
@@ -1159,11 +1155,7 @@ private:
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_closures_allotted;         ///< Closure memory allotted
     int m_curuse;                       ///< Current use that we're running
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
-#else
-    typedef hash_map<ustring, boost::regex*, ustringHash> RegexMap;
-#endif
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
 

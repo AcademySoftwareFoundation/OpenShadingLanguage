@@ -33,8 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
+#include <boost/unordered_map.hpp>
 
-#include <OpenImageIO/hash.h>
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 

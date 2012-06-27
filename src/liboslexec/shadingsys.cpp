@@ -121,9 +121,12 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
     }
 
     if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
-        // int -> any-float-based ... up-convert to float and recurse
-        float f = (float) (*(const int *)src);
-        return convert_value (dst, dsttype, &f, TypeDesc::TypeFloat);
+        if (dst && src) {
+            // int -> any-float-based ... up-convert to float and recurse
+            float f = (float) (*(const int *)src);
+            return convert_value (dst, dsttype, &f, TypeDesc::TypeFloat);
+        }
+        return convert_value (NULL, dsttype, NULL, TypeDesc::TypeFloat);
     }
 
     if (srctype == TypeDesc::TypeFloat) {

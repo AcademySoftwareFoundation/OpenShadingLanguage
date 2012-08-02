@@ -240,7 +240,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             struct-within-struct ternary
             texture-alpha texture-blur texture-field3d
             texture-firstchannel texture-interp texture-simple
-            texture-smallderivs
+            texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap
             transform transformc trig typecast vecctr vector
             wavelength_color xml )

@@ -1,0 +1,21 @@
+// Inspired by a similar shader by Chris Foster in Aqsis (used with
+// author's permission)
+
+
+shader
+swirl (string texturename = "../common/textures/grid.tx",
+       float blurScale = 0,
+       float swirl = 0,
+       output color Cout = 0)
+{
+    float s1 = -1 + 2*u;
+    float t1 = -1 + 2*v;
+
+    float r = hypot (s1, t1);
+    float blur = blurScale*(1-exp(-0.05*r*r));
+
+    float s1Rot = s1*cos(swirl*r) - t1*sin(swirl*r);
+    float t1Rot = s1*sin(swirl*r) + t1*cos(swirl*r);
+    Cout = (color) texture(texturename, s1Rot, t1Rot,
+                           "blur", blur, "wrap", "periodic");
+}

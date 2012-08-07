@@ -1,0 +1,313 @@
+/////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.  All Rights Reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+// * Redistributions of source code must retain the above copyright
+//   notice, this list of conditions and the following disclaimer.
+// * Redistributions in binary form must reproduce the above copyright
+//   notice, this list of conditions and the following disclaimer in the
+//   documentation and/or other materials provided with the distribution.
+// * Neither the name of Sony Pictures Imageworks nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/////////////////////////////////////////////////////////////////////////////
+//
+// ubersurface.osl
+// 
+// 
+// A demonstration of writing a production-like generalized surface shader in OSL
+// This shader combines diffuse, specular, refractive and emissive closure to create
+// a flexible material description.
+//
+// See the help metadata on the parameters for usage info.  Hopefully much of it is 
+// self-explanatory.
+//
+// Author: Adam S. Martinez
+// Date: August 5th, 2011
+// Soundtrack: Gojira - Flying Whales
+//
+
+// The TEXTURE_PARAMS macro defines a set of parameters common to all texture maps.  
+// The metadata provides paramater display hints to host applications. These metadata 
+// blocks are in The Foundry's Katana format.
+#define TEXTURE_PARAMS(MAPNAME) \
+    string Texture_ ## MAPNAME ## _Name = ""\
+        [[ string widget = "filename", string help = "A texture file name", \
+           string page = #MAPNAME ".Texture"]],\
+    float  Texture_ ## MAPNAME ## _Blur    = 0.0\
+        [[ string help = "The blur amount, as a portion of the image size.", \
+           string page = #MAPNAME ".Texture"]],  \
+    float  Texture_ ## MAPNAME ## _Width   = 1.0 \
+        [[ string help = "A multiplier on the surface derivatives.  Lower \
+           numbers cause larger resolution mip levels to be used.", \
+           string page = #MAPNAME ".Texture"]], \
+    string Texture_ ## MAPNAME ## _Wrap_Mode = "periodic"\
+        [[ string widget = "popup", \
+           string options = "black|clamp|file|mirror|periodic",\
+           string help = "The U and V wrap mode for this texture. ", \
+           string page = #MAPNAME ".Texture"]],\
+    float Texture_ ## MAPNAME ## _Scale_U = 1.0\
+        [[ string help = "Scales the U texture coordinate prior to texture lookup.", \
+           string page = #MAPNAME ".Texture"]], \
+    float Texture_ ## MAPNAME ## _Scale_V = 1.0\
+        [[ string help = "Scales the V texture coordinate prior to texture lookup.", \
+           string page = #MAPNAME ".Texture"]], \
+    int Texture_ ## MAPNAME ## _Flip_U = 0\
+        [[ string help = "Flips the U texture coordinate prior to texture lookup.", \
+           string page = #MAPNAME ".Texture"]], \
+    int Texture_ ## MAPNAME ## _Flip_V = 0\
+        [[ string help = "Flips the V texture coordinate prior to texture lookup.", \
+           string page = #MAPNAME ".Texture"]],
+
+// The evaluate texture function manipulates the texture coordinates and executes the texture() call
+// because this function gets called via a macro (defined below), the results are stored in the output
+// parameter 'result.'
+void evaluateTexture( string texfile, float blur, float width, string wrap, float scale_u, 
+                      float scale_v, int flip_u, int flip_v, float uu, float vv, output color result)
+{
+    if(texfile != "")
+    {
+        float u_tex = uu ;
+        float v_tex = vv ;
+
+        if(flip_u)
+            u_tex = 1.0 - u_tex;
+
+        if(flip_v)
+            v_tex = 1.0 - v_tex;
+
+        u_tex *= scale_u;
+        v_tex *= scale_v;
+
+        result = texture(texfile, u_tex, v_tex, "width", width, "blur", blur, "swrap", wrap, "twrap", wrap);
+    }
+}
+
+// The following is a float version of the above.  Note that the texture() call will return a float value 
+// representing the first channel found in the texture file.
+void evaluateTexture( string texfile, float blur, float width, string wrap, float scale_u, 
+                      float scale_v, int flip_u, int flip_v, float uu, float vv, output float result)
+{
+    if(texfile != "")
+    {
+        float u_tex = uu ;
+        float v_tex = vv ;
+
+        if(flip_u)
+            u_tex = 1.0 - u_tex;
+
+        if(flip_v)
+            v_tex = 1.0 - v_tex;
+
+        u_tex *= scale_u;
+        v_tex *= scale_v;
+
+        result = texture(texfile, u_tex, v_tex, "width", width, "blur", blur, "swrap", wrap, "twrap", wrap);
+    }
+}
+
+// This macro allows us to easily call the evaluateTexture functions using the texture parameters defined by the 
+// TEXTURE_PARAMS macro.  The parameters are the map definition, which must have an equivalent TEXTURE_PARAMS 
+// call in the parameter list, and a storage variable for the texture lookup result.
+#define TEXTURE_EVAL(MAPNAME, RESULT)\
+    evaluateTexture(\
+    Texture_ ## MAPNAME ## _Name,\
+    Texture_ ## MAPNAME ## _Blur,\
+    Texture_ ## MAPNAME ## _Width,\
+    Texture_ ## MAPNAME ## _Wrap_Mode,\
+    Texture_ ## MAPNAME ## _Scale_U,\
+    Texture_ ## MAPNAME ## _Scale_V,\
+    Texture_ ## MAPNAME ## _Flip_U,\
+    Texture_ ## MAPNAME ## _Flip_V,\
+    In_U,\
+    In_V,\
+    RESULT);
+
+// The Shader
+surface
+ubersurface
+(
+    float   Opacity = 1
+       [[   string help = "The overall opacity of the surface", 
+            string page = "Opacity",
+            float UImin = 0, float UImax = 1]],
+
+    TEXTURE_PARAMS(Opacity)
+
+    float   Kbump = 0
+       [[   string help = "The amount to bump the surface by", 
+            string page = "Bump"]],
+
+    TEXTURE_PARAMS(Bump)
+
+    float   Kd = 0.5
+       [[   string help = "Diffuse closure weight", 
+            string page = "Diffuse",
+            float UImin = 0, float UImax = 1]],
+
+    color   Diffuse_Color = 1
+       [[   string help = "Diffuse closure color", 
+            string page = "Diffuse"]],
+
+    TEXTURE_PARAMS(Diffuse)
+
+    float   IOR = 1.33
+       [[   string help = "The index of refraction for specular effects.", 
+            string page = "Specular"]],
+
+    float   Roughness = 0.2
+       [[   string help = "The surface roughness for specular effects. A value of 0 forces perfect reflection/refraction.", 
+            string page = "Specular",
+            float UImin = 0, float UImax = 1]],
+
+
+    float   Ks = 0.5
+       [[   string help = "Specular closure weight", 
+            string page = "Specular",        
+            float UImin = 0, float UImax = 1]],
+
+    color   Specular_Color = 1
+       [[   string help = "Specular closure color", 
+            string page = "Specular"]],
+
+    TEXTURE_PARAMS(Specular)
+
+    float   Kt = 0
+       [[   string help = "Transmissive, or refraction, closure weight.", 
+            string page = "Refraction",   
+            float UImin = 0, float UImax = 1]],
+
+    color   Refraction_Color = 1
+       [[   string help = "Refraction closure color", 
+            string page = "Refraction"]],        
+
+    TEXTURE_PARAMS(Refraction)
+
+    color   Absorption_Color = 0
+       [[   string help = "Color to absorb inside a refractive volume.", 
+            string page = "Refraction"]],
+
+    float   Ke = 0
+       [[   string help = "Emissive, or incandescent, closure weight.", 
+            string page = "Emission"]],   
+
+    color   Emission_Color = 1
+       [[   string help = "Emissive closure color.", 
+            string page = "Emission"]],   
+
+    TEXTURE_PARAMS(Emission)
+
+    // These parameters are provided to use shading variables from external shaders
+    normal In_Normal = N,
+
+    float  In_U = u,
+
+    float  In_V = v
+
+)
+{
+
+    // Nshading will store a modified N if bump mapping is used
+    normal Nshading = In_Normal;
+
+    // Determine opacity and prepare a transparent closure
+    float opacity = 1;
+    TEXTURE_EVAL(Opacity, opacity)
+    opacity *= Opacity;
+    closure color transparencyClosure =  transparent() * (1.0-opacity);
+
+    // Test for shadow rays and exit early, supplying only the transparency closure.
+    if(raytype("shadow")) {
+        Ci = transparencyClosure;
+
+    } else {
+    	// Storage for weighted closures that we will accumulate at the end of this 'beauty' block 
+        closure color diffuseClosure	= 0;
+    	closure color specularClosure	= 0;
+	closure color emissionClosure	= 0;
+    	closure color refractionClosure = 0;
+	
+	// Determine index of refraction based on which side we have hit.
+	float eta = IOR;
+	if(backfacing()) eta = 1.0/IOR;
+
+	// Bump
+	if(Kbump) {
+            float bumpTexture = 0;
+    	    TEXTURE_EVAL(Bump, bumpTexture)
+            bumpTexture *= Kbump;
+            if(bumpTexture) {
+	        point Pbump = P + normalize(Nshading) * bumpTexture;
+                Nshading = normalize(calculatenormal(Pbump));
+    	    }
+	}
+
+    	// Diffuse
+	if(Kd) {
+            color diffuseTexture = color(1);
+    	    TEXTURE_EVAL(Diffuse, diffuseTexture)
+            diffuseClosure = diffuse(Nshading) * Kd * Diffuse_Color * diffuseTexture;
+        }
+
+    	// Specular
+        if(Ks) {
+            if(Roughness <= 0.005) {
+	        specularClosure = reflection(Nshading, eta);
+            } else {
+        	specularClosure = microfacet_beckmann(Nshading, Roughness, eta);
+	    }
+
+    	    color specularTexture = color(1);
+            TEXTURE_EVAL(Specular, specularTexture)
+	    specularClosure *= specularTexture * Ks * Specular_Color;
+	}
+
+    	// Emission 
+	if(Ke) {
+            // Because emission() returns a radiance that, integrated over all
+            // angles, yields a power density of 1, we multipy by the desired
+            // total power and divide by the total surface area.  In this
+            // manner, the 'Ke' parameter gives the total power of the light
+            // (e.g., in Watts) independently of its physical size or shape
+            // (which may be changed to affect shadow softness without altering
+            // overall illumination).  N.B.: The total power is BEFORE Emission_Color
+            // filters the color!
+	    color emissionTexture = color(1);
+    	    TEXTURE_EVAL(Emission, emissionTexture)
+	    emissionClosure = emission() * (Ke / surfacearea()) * Emission_Color * emissionTexture;
+    	}
+
+	// Refraction
+    	if(Kt) {
+	    if(Roughness <= 0.005) {
+                refractionClosure = refraction(Nshading, eta, "absorption", Absorption_Color);
+    	    } else {
+                refractionClosure = microfacet_beckmann_refraction(Nshading, Roughness, eta, "absorption", Absorption_Color);
+            }
+
+	    color refractionTexture = color(1);
+    	    TEXTURE_EVAL(Refraction, refractionTexture)
+	    refractionClosure *= refractionTexture * Kt * Refraction_Color;
+	    // Attenuate diffuse by inverse of refraction Kt. 
+	    diffuseClosure *= 1.0-Kt;
+    	}
+
+	// Accumulate and output
+    	Ci = ((diffuseClosure + specularClosure + emissionClosure + refractionClosure) * opacity) + transparencyClosure;
+    }
+}
+
+

@@ -1,0 +1,4 @@
+shader furnace(float Kb = 1)
+{
+   Ci = Kb * background();
+}

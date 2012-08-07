@@ -1,0 +1,29 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+   <Option max_bounces="int 10" />
+   <ShaderGroup>
+      <Shader name="metal" layer="layer1" />
+   </ShaderGroup>
+   <Quad corner="-2000,0,0" edge_x="0,0,4000" edge_y="4000,0,0" /> <!-- Botm -->
+
+   <ShaderGroup>
+      <Shader name="bumptest" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="-60,15,120"        radius="15" />
+   <Sphere center="-20,15,120"        radius="15" />
+   <Sphere center=" 20,15,120"        radius="15" />
+   <Sphere center=" 60,15,120"        radius="15" />
+
+   <ShaderGroup>
+      <Parameter eta="float 1.7" />
+      <Shader name="glass" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="-22,40,170"        radius="15" />
+
+   <ShaderGroup>
+      <Parameter eta="float 1.1" />
+      <Shader name="glass" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center=" 22,40,170"        radius="15" />
+   
+</World>

@@ -1,0 +1,11 @@
+shader envmap(float Kb = 1, string filename = "")
+{
+   vector dir = normalize(I);
+   float radial = atan2(-dir[2], dir[0]);
+   float nradial = acos(dir[1]);
+   float r = 0.5 * sin(nradial * 0.5);
+   float tu = 0.5 + r * cos(radial);
+   float tv = 0.5 - r * sin(radial);
+   color c = texture(filename, tu, tv);
+   Ci = Kb * c * background();
+}

@@ -73,7 +73,7 @@ endif ()
 
 if (CMAKE_COMPILER_IS_CLANG)
     # disable warning about unused command line arguments
-    add_definitions ("-Qunused-arguments")
+    add_definitions ("-Qunused-arguments -Wno-unknown-pragmas")
 endif ()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
@@ -163,6 +163,7 @@ add_subdirectory (oslc)
 add_subdirectory (shaders)
 add_subdirectory (oslinfo)
 add_subdirectory (testshade)
+add_subdirectory (testrender)
 
 add_subdirectory (include)
 add_subdirectory (doc)
@@ -201,9 +202,11 @@ macro ( TESTSUITE )
         message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
 
         # Run the test unoptimized
-        set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
-        add_test ( NAME ${_testname}
-                   COMMAND env ${_env} ${_runtest} )
+        if (NOT _testname MATCHES "^render")
+          set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
+          add_test ( NAME ${_testname}
+                     COMMAND env ${_env} ${_runtest} )
+        endif ()
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
         set (_env TESTSHADE_OPT=2 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
@@ -229,7 +232,9 @@ TESTSUITE ( arithmetic array array-derivs array-range
             noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
-            raytype shortcircuit spline splineinverse string 
+            raytype render-background render-bumptest render-cornell render-furnace-diffuse
+            render-microfacet render-oren-nayar render-veachmis render-ward
+            shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture
             struct-err struct-layers struct-with-array 
             struct-within-struct ternary

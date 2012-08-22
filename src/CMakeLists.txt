@@ -102,6 +102,10 @@ if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
 endif ()
 
+if (EXTRA_CPP_DEFINITIONS)
+    add_definitions ("${EXTRA_CPP_DEFINITIONS}")
+endif()
+
 
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/cmake/modules"

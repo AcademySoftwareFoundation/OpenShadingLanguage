@@ -1,3 +1,8 @@
+Release 1.3.x - in progress (compared to 1.2)
+----------------------------------------------
+
+
+
 Release 1.2.0 - Aug 30, 2012 (compared to 1.1)
 ----------------------------------------------
 Note: this is more or less the production-hardened version of OSL that
@@ -26,7 +31,7 @@ Language, standard libary, and compiler changes:
   of mycolor.
 
 ShadingSystem API changes and new options:
-* Remove unused 'size' parameter from teh register_closure API.
+* Remove unused 'size' parameter from the register_closure API.
 
 Optimization improvements:
 * Constant-fold pointcloud_search calls when the position is a constant if
@@ -76,7 +81,7 @@ Build & test system improvements and developer goodies:
 
 
 
-Release 1.1.0 - Mar 14, 2011 (compared to 1.0.0)
+Release 1.1.0 - Mar 14, 2012 (compared to 1.0.0)
 ------------------------------------------------
 Language, standard libary, and compiler changes:
 * Allow closures as parameters to closures.

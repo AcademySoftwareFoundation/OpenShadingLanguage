@@ -45,8 +45,8 @@ static void
 usage ()
 {
     std::cout <<
-        "oslc -- Open Shading Language compiler\n"
-        "(c) Copyright 2009-2010 Sony Pictures Imageworks, Inc. All Rights Reserved.\n"
+        "oslc -- Open Shading Language compiler " OSL_LIBRARY_VERSION_STRING "\n"
+        OSL_COPYRIGHT_STRING "\n"
         "Usage:  oslc [options] file\n"
         "  Options:\n"
         "\t--help         Print this usage message\n"

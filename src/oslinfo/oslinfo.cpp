@@ -51,7 +51,8 @@ using namespace OSL;
 static void
 usage (void)
 {
-    std::cout << "oslinfo -- list parameters of a compiled OSL shader\n";
+    std::cout << "oslinfo " OSL_LIBRARY_VERSION_STRING " -- list parameters of a compiled OSL shader\n";
+    std::cout << OSL_COPYRIGHT_STRING "\n";
     std::cout << "Usage:  oslinfo [options] file0 [file1 ...]\n";
     std::cout << "Options:\n";
     std::cout << "       -v       Verbose\n";

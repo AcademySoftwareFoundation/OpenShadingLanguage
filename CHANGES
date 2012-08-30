@@ -1,4 +1,82 @@
-Release 1.1.0 - Mar 14, 2011 (compared to 1.0.0)
+Release 1.2.0 - Aug 30, 2012 (compared to 1.1)
+----------------------------------------------
+Note: this is more or less the production-hardened version of OSL that
+was used to complete Men in Black 3, The Amazing Spider-Man, and Hotel
+Transylvania.
+
+New tools/utilities:
+* New program "testrender" is a tiny ray-tracing renderer that uses OSL
+  for shading.  Features are very minimal (only spheres are permitted at
+  this time) and there has been no attention to performance, but it
+  demonstrates how the OSL libraries may be integrated into a working
+  renderer, what interfaces the renderer needs to supply, and how the
+  BSDFs/radiance closures should be evaluated and integrated (including
+  with multiple importance sampling).
+* shaders/ubersurface.osl is an example of a general purpose surface
+  shader.
+
+Language, standard libary, and compiler changes:
+* texture()/texture3d() support for subimage/face selection by name as
+  well as by numeric index.
+* getattribute() performs automatic type conversions that mostly
+  correspond to the kind of automatic type casting you would get from
+  ordinary assignments in OSL.  For example, getattribute("attrib",mycolor)
+  used to fail if "attrib" turned out to be a float rather than a color;
+  but now it succeeds and copies the float value to all three channels
+  of mycolor.
+
+ShadingSystem API changes and new options:
+* Remove unused 'size' parameter from the register_closure API.
+
+Optimization improvements:
+* Constant-fold pointcloud_search calls when the position is a constant if
+  the search returns few enough results, by doing the query at optimization
+  time and putting the results into new constant arrays.
+* Matrix parameters initialized by m=matrix(constA,constB,...) now 
+  statically initialize, and no longer need to run initialization code
+  each time the shader executes.
+
+Bug fixes and minor improvements:
+* Fix pointcloud_search to optionally take a 'sort' parameter, as
+  originally documented.
+* Unit tests weren't properly run as part of the testsuite.
+* Track local+temp memory usage of optimized shaders and consider it an 
+  error if a shader needs more than a maximum amount at runtime, set with
+  the "max_local_mem_KB" attribute.
+* Add pointcloud statistics.
+* Fix derivative error for sincos() when the inputs have no derivatives but
+  the outputs do.
+* Bug fix to vector-returning Gabor noise (it could previously generate
+  different values for different platforms).
+* printf() of closures built from other closures allows for proper
+  recursive printing of the closure tree.
+
+Build & test system improvements and developer goodies:
+* Simplify the namespace scheme.
+* Remove support for certain old dependencies: OIIO versions < 0.10,
+  LLVM < 3.0, and Boost < 1.40.
+* Lots of little fixes to solve compiler warnings on various compilers.
+* Support for newer OSX releases, particularly if /usr/bin/cpp-4.2 is not
+  found.
+* Better support for Boost::wave (portable C preprocessor replacement).
+  Build with 'make USE_BOOST_WAVE=1' to force Wave use instead of system
+  cpp.
+* You can select a custom LLVM namespace with 'make LLVM_NAMESPACE=...'.
+* Symbols that are not part of the OSL public APIs are now hidden from the
+  linker in Linux/OSX if the CMake variable HIDE_SYMBOLS is on.
+* New Makefile/CMake option LLVM_STATIC can be used to use static LLVM
+  libraries rather than the default dynamic libraries.
+* Support for LLVM 3.1.
+* Support for building with Clang 3.1 (lots of warning fixes).
+* Makefile/CMake variable EXTRA_CPP_DEFINITIONS allows you to inject
+  additional compiler flags that you may need to customize the build for
+  your site or a choice of unusual compiler.
+* Add support for 'PROFILE=1' builds that are appropriate for use with
+  a profile.
+
+
+
+Release 1.1.0 - Mar 14, 2012 (compared to 1.0.0)
 ------------------------------------------------
 Language, standard libary, and compiler changes:
 * Allow closures as parameters to closures.

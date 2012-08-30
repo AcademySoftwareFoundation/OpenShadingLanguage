@@ -23,6 +23,11 @@ renderer used for feature film animation and visual effects. The
 language specification was developed with input by other visual effects
 and animation studios who also wish to use it.
 
+OSL is robust and production-proven, and was the exclusive shading
+system for big VFX films such as "Men in Black 3: and "The Amazing
+Spider-Man," animated features such as "Hotel Transylvania", and several
+other films currently in production.
+
 OSL is distributed under the "New BSD" license (see the "LICENSE" file
 that comes with the distribution).  In short, you are free to use it in
 your own applications, whether they are free or commercial, open or
@@ -93,7 +98,7 @@ find are different in OSL compared to other languages:
   surface, and is included in the main radiance closure computed by a
   surface shader.
 
-* Renderer outputs (AOV's) are specified using "light path expressions."
+* Renderer outputs (AOV's) may be specified using "light path expressions."
 
   Sometimes it is desirable to output images containing individual
   lighting components such as specular, diffuse, reflection, individual
@@ -178,8 +183,16 @@ The OSL open source distribution consists of the following components:
   outputs as images.  This allows for verification of shaders (and the
   shading system) without needing to be integrated into a fully
   functional renderer, and is the basis for most of our testsuite
-  verification.  Also note that the source code for testshade is
-  currently the best example of how to call the OSL libraries.
+  verification.  Along with testrender, testshade is a good example
+  of how to call the OSL libraries.
+
+* testrender, a tiny ray-tracing renderer that uses OSL for shading.
+  Features are very minimal (only spheres are permitted at this time)
+  and there has been no attention to performance, but it demonstrates how
+  the OSL libraries may be integrated into a working renderer, what
+  interfaces the renderer needs to supply, and how the BSDFs/radiance
+  closures should be evaluated and integrated (including with multiple
+  importance sampling).
 
 * A few sample shaders.
 
@@ -202,40 +215,29 @@ Current state of the project and road map
 -----------------------------------------
 
 At Sony Pictures Imageworks, we are exclusively using OSL in our
-proprietary renderer, "Arnold."  Multiple major visual effects films as
-well as feature animation are in production now.  Our shader-writing
-team works entirely in OSL, all productions use OSL, and we've even
-removed all the code from the renderer that allows people to write the
-old-style "C" shaders.  At the time we removed the old shader facility,
-the OSL shaders were consistently outperforming their equivalent old
-compiled C shaders in the old system.
-
-What's missing?  Here are a number of things that we wish had been
-included in the first public release of the code but are not ready yet,
-we promise that we are working on them:
-
-* More documentation, in particular the "Integration Guide" that
-  documents all the public APIs of the OSL libraries that you use when
-  integrating into a renderer.
-
-* The 'testshade' program runs shaders on an unwrapped flat rectangular
-  array of points, and does not have any good way to test whether lights
-  are working properly.  We will eventually have another test program
-  that will render a "lit ball" that will be more indicative of how the
-  integration and lighting work.
-
-* Currently, you have to write your own "integrator" from scratch when
-  incorporating into a renderer application, which is less than ideal.
-  We will eventually provide at least one sample integrator which may be
-  used in a renderer, and outline what you need to do for more
-  sophisticated integration strategies.
-
-* Our set of sample shaders is quite anemic.  We will eventually have a
-  more extensive set of useful shaders.
+proprietary renderer, "Arnold."  Completed productions that used 100%
+OSL for their shading include Men in Black 3, The Amazing Spider-Man,
+and Hotel Transylvania, and other unreleased shows that are still in
+production.  Our shader-writing team works entirely in OSL, all
+productions use OSL, and we've even removed all the code from the
+renderer that allows people to write the old-style "C" shaders.  At the
+time we removed the old shader facility, the OSL shaders were
+consistently outperforming their equivalent old compiled C shaders in
+the old system.
 
 In the longer term, there are a number of projects we hope to get to
 leading to a 2.x or 3.x cut of the language and library.  Among our
 long-term goals:
+
+* More documentation, in particular the "Integration Guide" that
+  documents all the public APIs of the OSL libraries that you use when
+  integrating into a renderer.  Currently, the source code to
+  "testrender" is the best/only example of how to integrate OSL into a
+  renderer.
+
+* Our set of sample shaders is quite anemic.  We will eventually have a
+  more extensive set of useful, production-quality shaders and utility
+  functions you can call from your shaders.
 
 * Currently "closure primitives" are implemented in C++ in the OSL
   library or in the renderer, but we would like a future spec of the
@@ -297,6 +299,7 @@ The main developers of OSL are (in order of joining the project):
     Alejandro Conty
     Jay Reynolds
     Solomon Boulos
+    Adam Martinez
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

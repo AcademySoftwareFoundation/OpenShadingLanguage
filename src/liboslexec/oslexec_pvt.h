@@ -270,7 +270,14 @@ public:
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
-    Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
+    Symbol *symbol (int index) {
+        DASSERT (index < (int)m_symbols.size());
+        return index >= 0 ? &m_symbols[index] : NULL;
+    }
+    const Symbol *symbol (int index) const {
+        DASSERT (index < (int)m_symbols.size());
+        return index >= 0 ? &m_symbols[index] : NULL;
+    }
 
     /// Return the name of the shader.
     ///
@@ -334,7 +341,6 @@ struct Connection {
 typedef std::vector<Connection> ConnectionVec;
 
 
-
 /// ShaderInstance is a particular instance of a shader, with its own
 /// set of parameter values, coordinate transform, and connections to
 /// other instances within the same shader group.
@@ -374,8 +380,20 @@ public:
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
-    Symbol *symbol (int index) { return index >= 0 ? &m_instsymbols[index] : NULL; }
-    const Symbol *symbol (int index) const { return index >= 0 ? &m_instsymbols[index] : NULL; }
+    Symbol *symbol (int index) {
+        DASSERT (index < (int)m_instsymbols.size());
+        return index >= 0 ? &m_instsymbols[index] : NULL;
+    }
+    const Symbol *symbol (int index) const {
+        DASSERT (index < (int)m_instsymbols.size());
+        return index >= 0 ? &m_instsymbols[index] : NULL;
+    }
+
+    /// Return a pointer to the master's version of the indexed symbol.
+    /// It's a const*, since you shouldn't mess with the master's copy.
+    const Symbol *mastersymbol (int index) const {
+        return index >= 0 ? master()->symbol(index) : NULL;
+    }
 
     /// Estimate how much to round the required heap size up if npoints
     /// is odd, to account for getting the desired alignment for each
@@ -466,8 +484,29 @@ public:
     ///
     void copy_code_from_master ();
 
+    /// Small data structure to hold just the symbol info that the
+    /// instance overrides from the master copy.
+    struct SymOverrideInfo {
+        void *m_data;
+        char m_valuesource;
+        bool m_connected_down;
+
+        SymOverrideInfo () : m_data(NULL), m_valuesource(Symbol::DefaultVal),
+                             m_connected_down(false) { }
+        void data (void *d) { m_data = d; }
+        void *data () const { return m_data; }
+        void valuesource (Symbol::ValueSource v) { m_valuesource = v; }
+        Symbol::ValueSource valuesource () const { return (Symbol::ValueSource) m_valuesource; }
+        bool connected_down () const { return m_connected_down; }
+        void connected_down (bool c) { m_connected_down = c; }
+    };
+    typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
+
+    SymOverrideInfo *instoverride (int i) { return &m_instoverrides[i]; }
+
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
+    SymOverrideInfoVec m_instoverrides; ///< Instance parameter info
     SymbolVec m_instsymbols;            ///< Symbols used by the instance
     OpcodeVec m_instops;                ///< Actual code instructions
     std::vector<int> m_instargs;        ///< Arguments for all the ops

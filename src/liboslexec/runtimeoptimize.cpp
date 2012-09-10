@@ -2647,7 +2647,6 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, const char *why)
         Rdefault = &inst()->m_sparams[R->dataoffset()];
     DASSERT (Rdefault != NULL);
     R->data (Rdefault);
-    R->step (0);
 
     // Get rid of any init ops
     if (R->has_init_ops()) {

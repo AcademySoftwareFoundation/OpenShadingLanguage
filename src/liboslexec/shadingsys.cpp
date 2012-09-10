@@ -1172,8 +1172,8 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     }
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
-    dstinst->symbol(dstcon.param)->valuesource (Symbol::ConnectedVal);
-    srcinst->symbol(srccon.param)->connected_down (true);
+    dstinst->instoverride(dstcon.param)->valuesource (Symbol::ConnectedVal);
+    srcinst->instoverride(srccon.param)->connected_down (true);
     srcinst->outgoing_connections (true);
 
     if (debug())
@@ -1310,7 +1310,7 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         return c;
     }
 
-    Symbol *sym = inst->symbol (c.param);
+    const Symbol *sym = inst->mastersymbol (c.param);
     ASSERT (sym);
 
     // Only params, output params, and globals are legal for connections

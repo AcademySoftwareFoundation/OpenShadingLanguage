@@ -65,15 +65,8 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
     m_id = ++(*(atomic_int *)&next_id);
     shadingsys().m_stat_instances += 1;
 
-    // Copy just the part of the symbol table that includes the params.
-    // We'll copy the rest only when it's time to optimize.  If we copy
-    // now, it'll be too huge.
-    if (lastparam() > 0) {
-        m_instsymbols.insert (m_instsymbols.begin(), m_master->m_symbols.begin(),
-                              m_master->m_symbols.begin() + lastparam());
-        DASSERT (m_instsymbols.size() == (size_t)m_master->m_lastparam &&
-                 m_instsymbols.size() <= m_master->m_symbols.size());
-    }
+    // We don't copy the symbol table yet, it stays with the master, but
+    // we'll keep track of local override information in m_instoverrides.
 
     // Make it easy for quick lookups of common symbols
     m_Psym = findsymbol (Strings::P);
@@ -81,13 +74,11 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
 
     // Adjust statistics
     ShadingSystemImpl &ss (shadingsys());
-    off_t symmem = vectorbytes (m_instsymbols);
     off_t parammem = vectorbytes (m_iparams)
         + vectorbytes (m_fparams) + vectorbytes (m_sparams);
-    off_t totalmem = (symmem + parammem + sizeof(ShaderInstance));
+    off_t totalmem = (parammem + sizeof(ShaderInstance));
     {
         spin_lock lock (ss.m_stat_mutex);
-        ss.m_stat_mem_inst_syms += symmem;
         ss.m_stat_mem_inst_paramvals += parammem;
         ss.m_stat_mem_inst += totalmem;
         ss.m_stat_memory += totalmem;
@@ -102,7 +93,7 @@ ShaderInstance::~ShaderInstance ()
 
     ASSERT (m_instops.size() == 0 && m_instargs.size() == 0);
     ShadingSystemImpl &ss (shadingsys());
-    off_t symmem = vectorbytes (m_instsymbols);
+    off_t symmem = vectorbytes (m_instsymbols) + vectorbytes(m_instoverrides);
     off_t parammem = vectorbytes (m_iparams)
         + vectorbytes (m_fparams) + vectorbytes (m_sparams);
     off_t connectionmem = vectorbytes (m_connections);
@@ -123,7 +114,7 @@ ShaderInstance::~ShaderInstance ()
 int
 ShaderInstance::findsymbol (ustring name) const
 {
-    for (size_t i = 0;  i < m_instsymbols.size();  ++i)
+    for (size_t i = 0, e = m_instsymbols.size();  i < e;  ++i)
         if (m_instsymbols[i].name() == name)
             return (int)i;
 
@@ -139,9 +130,16 @@ ShaderInstance::findsymbol (ustring name) const
 int
 ShaderInstance::findparam (ustring name) const
 {
-    for (int i = m_firstparam;  i < m_lastparam;  ++i)
-        if (m_instsymbols[i].name() == name)
+    if (m_instsymbols.size())
+        for (int i = m_firstparam, e = m_lastparam;  i < e;  ++i)
+            if (m_instsymbols[i].name() == name)
+                return i;
+
+    // Not found? Try the master.
+    for (int i = m_firstparam, e = m_lastparam;  i < e;  ++i)
+        if (master()->symbol(i)->name() == name)
             return i;
+
     return -1;
 }
 
@@ -154,15 +152,25 @@ ShaderInstance::parameters (const ParamValueList &params)
     m_iparams = m_master->m_idefaults;
     m_fparams = m_master->m_fdefaults;
     m_sparams = m_master->m_sdefaults;
+
+    m_instoverrides.resize (std::max (0, lastparam()));
+    for (int i = 0, e = lastparam();  i < e;  ++i) {
+        m_instoverrides[i].data (master()->symbol(i)->data());
+        m_instoverrides[i].valuesource (master()->symbol(i)->valuesource());
+        m_instoverrides[i].connected_down (master()->symbol(i)->connected_down());
+    }
+
     {
         // Adjust the stats
         ShadingSystemImpl &ss (shadingsys());
         spin_lock lock (ss.m_stat_mutex);
-        size_t mem = (vectorbytes(m_iparams) + vectorbytes(m_fparams) +
-                      vectorbytes(m_sparams));
-        ss.m_stat_mem_inst_paramvals += mem;
-        ss.m_stat_mem_inst += mem;
-        ss.m_stat_memory += mem;
+        size_t symmem = vectorbytes(m_instoverrides);
+        size_t parammem = (vectorbytes(m_iparams) + vectorbytes(m_fparams) +
+                           vectorbytes(m_sparams));
+        ss.m_stat_mem_inst_syms += symmem;
+        ss.m_stat_mem_inst_paramvals += parammem;
+        ss.m_stat_mem_inst += (symmem+parammem);
+        ss.m_stat_memory += (symmem+parammem);
     }
 
     BOOST_FOREACH (const ParamValue &p, params) {
@@ -171,37 +179,37 @@ ShaderInstance::parameters (const ParamValueList &params)
                                p.name().c_str(), p.type().c_str());
         int i = findparam (p.name());
         if (i >= 0) {
-            Symbol *s = symbol(i);
-            TypeSpec t = s->typespec();
+            const Symbol *sm = master()->symbol(i);
+            SymOverrideInfo *so = &m_instoverrides[i];
+            TypeSpec t = sm->typespec();
             // don't allow assignment of closures
             if (t.is_closure()) {
-                shadingsys().warning ("skipping assignment of closure: %s", s->name().c_str());
+                shadingsys().warning ("skipping assignment of closure: %s", sm->name().c_str());
                 continue;
             }
             if (t.is_structure())
                 continue;
             // check type of parameter and matching symbol
             if (t.simpletype() != p.type()) {
-                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", s->name().c_str(), t.c_str(), p.type().c_str());
+                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", sm->name().c_str(), t.c_str(), p.type().c_str());
                 continue;
             }
 
-            s->step (0);
-            s->valuesource (Symbol::InstanceVal);
+            so->valuesource (Symbol::InstanceVal);
             if (t.simpletype().basetype == TypeDesc::INT) {
-                s->data (&m_iparams[s->dataoffset()]);
+                so->data (&m_iparams[sm->dataoffset()]);
             } else if (t.simpletype().basetype == TypeDesc::FLOAT) {
-                s->data (&m_fparams[s->dataoffset()]);
+                so->data (&m_fparams[sm->dataoffset()]);
             } else if (t.simpletype().basetype == TypeDesc::STRING) {
-                s->data (&m_sparams[s->dataoffset()]);
+                so->data (&m_sparams[sm->dataoffset()]);
             } else {
                 ASSERT (0);
             }
-            memcpy (s->data(), p.data(), t.simpletype().size());
+            memcpy (so->data(), p.data(), t.simpletype().size());
             if (shadingsys().debug())
                 shadingsys().info ("    sym %s offset %llu address %p",
-                        s->name().c_str(),
-                        (unsigned long long)s->dataoffset(), s->data());
+                        sm->name().c_str(),
+                        (unsigned long long)sm->dataoffset(), so->data());
         }
         else {
             shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name().c_str());
@@ -262,19 +270,26 @@ ShaderInstance::copy_code_from_master ()
     m_instargs.reserve (master()->m_args.size()+10);
     m_instops = master()->m_ops;
     m_instargs = master()->m_args;
-    // We already have the symbols on [0,lastparam).  Now copy the rest.
-    off_t symmem = vectorbytes(m_instsymbols);
-    ASSERT (m_master->m_lastparam < 0 ||
-            m_instsymbols.size() == (size_t)m_master->m_lastparam);
-    ASSERT (m_instsymbols.size() <= m_master->m_symbols.size());
-    m_instsymbols.reserve (m_master->m_symbols.size());
-    for (size_t i = m_instsymbols.size(), e = m_master->m_symbols.size();
-         i < e;  ++i)
-        m_instsymbols.push_back (m_master->m_symbols[i]);
-    ASSERT (m_instsymbols.size() == m_master->m_symbols.size());
+
+    // Copy the symbols from the master
+    ASSERT (m_instsymbols.size() == 0 &&
+            "should not have copied m_instsymbols yet");
+    m_instsymbols = m_master->m_symbols;
+
+    // Copy the instance override data
+    ASSERT (m_instoverrides.size() == (size_t)std::max(0,lastparam()));
+    ASSERT (m_instsymbols.size() >= (size_t)std::max(0,lastparam()));
+    if (m_instoverrides.size()) {
+        for (size_t i = 0, e = lastparam();  i < e;  ++i) {
+            m_instsymbols[i].data (m_instoverrides[i].data());
+            m_instsymbols[i].valuesource (m_instoverrides[i].valuesource());
+            m_instsymbols[i].connected_down (m_instoverrides[i].connected_down());
+        }
+    }
+    off_t symmem = vectorbytes(m_instsymbols) - vectorbytes(m_instoverrides);
+    SymOverrideInfoVec().swap (m_instoverrides);  // free it
 
     // adjust stats
-    symmem = vectorbytes(m_instsymbols) - symmem;  // just the new mem
     {
         spin_lock lock (shadingsys().m_stat_mutex);
         shadingsys().m_stat_mem_inst_syms += symmem;

@@ -1,0 +1,6 @@
+shader b (color in = color(0,1,0))
+{
+    printf ("b start, Ci = '%s'\n", Ci);
+    Ci = in * emission();
+    printf ("b end, Ci = '%s'\n", Ci);
+}

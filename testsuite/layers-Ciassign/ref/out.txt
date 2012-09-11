@@ -1,0 +1,8 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect alayer.out to blayer.in
+b start, Ci = ''
+a start, Ci = ''
+a end, Ci = '(1, 0, 0) * emission ()'
+b end, Ci = '(0, 1, 0.5) * emission ()'
+

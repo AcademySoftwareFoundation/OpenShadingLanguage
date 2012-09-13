@@ -487,14 +487,11 @@ public:
     /// Small data structure to hold just the symbol info that the
     /// instance overrides from the master copy.
     struct SymOverrideInfo {
-        void *m_data;
         char m_valuesource;
         bool m_connected_down;
 
-        SymOverrideInfo () : m_data(NULL), m_valuesource(Symbol::DefaultVal),
+        SymOverrideInfo () : m_valuesource(Symbol::DefaultVal),
                              m_connected_down(false) { }
-        void data (void *d) { m_data = d; }
-        void *data () const { return m_data; }
         void valuesource (Symbol::ValueSource v) { m_valuesource = v; }
         Symbol::ValueSource valuesource () const { return (Symbol::ValueSource) m_valuesource; }
         bool connected_down () const { return m_connected_down; }

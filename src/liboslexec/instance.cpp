@@ -154,11 +154,6 @@ ShaderInstance::parameters (const ParamValueList &params)
     m_sparams = m_master->m_sdefaults;
 
     m_instoverrides.resize (std::max (0, lastparam()));
-    for (int i = 0, e = lastparam();  i < e;  ++i) {
-        m_instoverrides[i].data (master()->symbol(i)->data());
-        m_instoverrides[i].valuesource (master()->symbol(i)->valuesource());
-        m_instoverrides[i].connected_down (master()->symbol(i)->connected_down());
-    }
 
     {
         // Adjust the stats
@@ -196,20 +191,21 @@ ShaderInstance::parameters (const ParamValueList &params)
             }
 
             so->valuesource (Symbol::InstanceVal);
+            void *data = NULL;
             if (t.simpletype().basetype == TypeDesc::INT) {
-                so->data (&m_iparams[sm->dataoffset()]);
+                data = &m_iparams[sm->dataoffset()];
             } else if (t.simpletype().basetype == TypeDesc::FLOAT) {
-                so->data (&m_fparams[sm->dataoffset()]);
+                data = &m_fparams[sm->dataoffset()];
             } else if (t.simpletype().basetype == TypeDesc::STRING) {
-                so->data (&m_sparams[sm->dataoffset()]);
+                data = &m_sparams[sm->dataoffset()];
             } else {
                 ASSERT (0);
             }
-            memcpy (so->data(), p.data(), t.simpletype().size());
+            memcpy (data, p.data(), t.simpletype().size());
             if (shadingsys().debug())
                 shadingsys().info ("    sym %s offset %llu address %p",
                         sm->name().c_str(),
-                        (unsigned long long)sm->dataoffset(), so->data());
+                        (unsigned long long)sm->dataoffset(), data);
         }
         else {
             shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name().c_str());
@@ -281,9 +277,20 @@ ShaderInstance::copy_code_from_master ()
     ASSERT (m_instsymbols.size() >= (size_t)std::max(0,lastparam()));
     if (m_instoverrides.size()) {
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
-            m_instsymbols[i].data (m_instoverrides[i].data());
-            m_instsymbols[i].valuesource (m_instoverrides[i].valuesource());
-            m_instsymbols[i].connected_down (m_instoverrides[i].connected_down());
+            if (m_instoverrides[i].valuesource() != Symbol::DefaultVal) {
+                Symbol *si = &m_instsymbols[i];
+                TypeSpec t = si->typespec();
+                const Symbol *sm = master()->symbol(i);
+                if (t.simpletype().basetype == TypeDesc::INT) {
+                    si->data (&m_iparams[sm->dataoffset()]);
+                } else if (t.simpletype().basetype == TypeDesc::FLOAT) {
+                    si->data (&m_fparams[sm->dataoffset()]);
+                } else if (t.simpletype().basetype == TypeDesc::STRING) {
+                    si->data (&m_sparams[sm->dataoffset()]);
+                }
+                si->valuesource (m_instoverrides[i].valuesource());
+                si->connected_down (m_instoverrides[i].connected_down());
+            }
         }
     }
     off_t symmem = vectorbytes(m_instsymbols) - vectorbytes(m_instoverrides);

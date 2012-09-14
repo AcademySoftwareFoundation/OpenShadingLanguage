@@ -42,9 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/filesystem.h"
-#if OIIO_VERSION >= 1100
-# include "OpenImageIO/optparser.h"
-#endif
+#include "OpenImageIO/optparser.h"
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -552,11 +550,9 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         return true;                                                    \
     }
 
-#if OIIO_VERSION >= 1100 /* 0.11 and higher only */
     if (name == "options" && type == TypeDesc::STRING) {
         return OIIO::optparser (*(ShadingSystem *)this, *(const char **)val);
     }
-#endif
 
     lock_guard guard (m_mutex);  // Thread safety
     ATTR_SET ("statistics:level", int, m_statslevel);

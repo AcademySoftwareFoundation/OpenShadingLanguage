@@ -50,16 +50,11 @@ endif # SP_ARCH == spinux1_x86_64
 # set up OpenImageIO distribution environment
 ifeq (${OPENIMAGEIOHOME},)
     MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/${platform}${variant}/ \
-                      -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE} \
-                      -DOPENIMAGEIO_NAMESPACE:STRING=${OPENIMAGEIO_NAMESPACE}
+                      -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE}
 else
     MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${IMAGEIOHOME} \
-                      -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE} \
-                      -DOPENIMAGEIO_NAMESPACE:STRING=${OPENIMAGEIO_NAMESPACE}
+                      -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE}
 endif
 
-# N.B. -- once we're confident that we only build against OIIO >= 0.9.x,
-# specifically versions after we did the big namespace change, then we
-# can completely eliminate the 'OPENIMAGEIO_NAMESPACE' parts above.
 
 $(info MY_CMAKE_FLAGS: $(MY_CMAKE_FLAGS))

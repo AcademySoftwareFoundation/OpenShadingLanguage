@@ -311,12 +311,14 @@ private:
 /// optinally an array index and/or channel number within that parameter.
 struct ConnectedParam {
     int param;            ///< Parameter number (in the symbol table)
-    int arrayindex;       ///< Array index (-1 for not an index)
-    int channel;          ///< Channel number (-1 for no channel selection)
-    int offset;           ///< Offset into the data of the element/channel
+    int arrayindex:27;    ///< Array index (-1 for not an index)
+    int channel:5;        ///< Channel number (-1 for no channel selection)
     TypeSpec type;        ///< Type of data being connected
-
-    ConnectedParam () : param(-1), arrayindex(-1), channel(-1), offset(0) { }
+    // N.B. Use bitfields to squeeze the structure down by 4 bytes.
+    // Consequence is that you can't connect individual elements of
+    // arrays with more than 2^26 (32M) elements. Somehow I don't think
+    // that's going to be a limitation to worry about.
+    ConnectedParam () : param(-1), arrayindex(-1), channel(-1) { }
 
     bool valid () const { return (param >= 0); }
 };
@@ -418,6 +420,14 @@ public:
     ConnectionVec & connections () { return m_connections; }
     const ConnectionVec & connections () const { return m_connections; }
 
+    /// Free all the connection data, return the amount of memory they
+    /// previously consumed.
+    size_t clear_connections () {
+        size_t mem = vectorbytes (m_connections);
+        ConnectionVec().swap (m_connections);
+        return mem;
+    }
+
     /// Return the unique ID of this instance.
     ///
     int id () const { return m_id; }
@@ -515,7 +525,7 @@ private:
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
-    std::vector<Connection> m_connections; ///< Connected input params
+    ConnectionVec m_connections;        ///< Connected input params
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
     int m_Psym, m_Nsym;                 ///< Quick lookups of common syms

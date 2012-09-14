@@ -3810,6 +3810,7 @@ RuntimeOptimizer::optimize_group ()
     // Once we're generated the IR, we really don't need the ops and args,
     // and we only need the syms that include the params.
     off_t symmem = 0;
+    size_t connectionmem = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         // We no longer needs ops and args -- create empty vectors and
@@ -3824,6 +3825,8 @@ RuntimeOptimizer::optimize_group ()
             SymbolVec nosyms;
             std::swap (inst()->symbols(), nosyms);
             symmem += vectorbytes(nosyms);
+            // also don't need the connection info any more
+            connectionmem += (off_t) inst()->clear_connections ();
         }
     }
     {
@@ -3831,8 +3834,9 @@ RuntimeOptimizer::optimize_group ()
         ShadingSystemImpl &ss (shadingsys());
         spin_lock lock (ss.m_stat_mutex);
         ss.m_stat_mem_inst_syms -= symmem;
-        ss.m_stat_mem_inst -= symmem;
-        ss.m_stat_memory -= symmem;
+        ss.m_stat_mem_inst_connections -= connectionmem;
+        ss.m_stat_mem_inst -= symmem + connectionmem;
+        ss.m_stat_memory -= symmem + connectionmem;
         ss.m_stat_preopt_syms += old_nsyms;
         ss.m_stat_preopt_ops += old_nops;
         ss.m_stat_postopt_syms += new_nsyms;

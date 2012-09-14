@@ -1335,7 +1335,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
             c.arrayindex = c.type.arraylength() - 1;  // clamp it
         }
         c.type.make_array (0);              // chop to the element type
-        c.offset += c.type.simpletype().size() * c.arrayindex;
         bracket = strchr (bracket+1, '[');  // skip to next bracket
     }
 
@@ -1351,7 +1350,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         }
         // chop to just the scalar part
         c.type = TypeSpec ((TypeDesc::BASETYPE)c.type.simpletype().basetype);
-        c.offset += c.type.simpletype().size() * c.channel;
         bracket = strchr (bracket+1, '[');     // skip to next bracket
     }
 

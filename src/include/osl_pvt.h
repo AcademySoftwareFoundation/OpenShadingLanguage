@@ -454,7 +454,7 @@ class Symbol {
 public:
     Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
             ASTNode *declaration_node=NULL) 
-        : m_data(NULL), m_step(0), m_size((int)datatype.simpletype().size()),
+        : m_data(NULL), m_size((int)datatype.simpletype().size()),
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
@@ -549,10 +549,6 @@ public:
     ///
     void *data () const { return m_data; }
 
-    /// Return a pointer to the symbol's data at a particular index.
-    ///
-    void *data (int index) const { return (char *)m_data + index*m_step; }
-
     /// Specify the location of the symbol's data.
     ///
     void data (void *d) { m_data = d; }
@@ -560,14 +556,7 @@ public:
     void dataoffset (int d) { m_dataoffset = d; }
     int dataoffset () const { return m_dataoffset; }
 
-    int step () const { return m_step; }
-    void step (int newstep) { m_step = newstep; }
-
-    bool is_uniform () const { return m_step == 0; }
-    bool is_varying () const { return m_step != 0; }
-
     bool has_derivs () const { return m_has_derivs; }
-    int deriv_step () const { return m_size; /*m_deriv_step;*/ }
     void has_derivs (bool new_derivs) {
         m_has_derivs = new_derivs;
     }
@@ -656,7 +645,6 @@ public:
 
 protected:
     void *m_data;               ///< Pointer to the data
-    int m_step;                 ///< Step (in bytes) from point to point
     int m_size;                 ///< Size of data (in bytes)
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol

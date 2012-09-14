@@ -93,6 +93,7 @@ CPLUSCOMMENT    \/\/.*\n
 #include <string>
 
 #include "oslcomp_pvt.h"
+
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -259,15 +260,35 @@ preprocess (const char *yytext)
             p += 4;
         int line = atoi (p);
         if (line > 0) {
-            oslcompiler->lineno (line);
 	    const char *f = strchr (yytext, '\"');
 	    if (f) {
                 ++f;  // increment to past the quote
 	        int len = 0;  // count of chars within quotes
 	        while (f[len] && f[len] != '\"')
 		    ++len;
-	        oslcompiler->filename (ustring (f, len));
+                std::string filename (f, len);
+                // Make it relative to the working directory, so error output
+                // isn't hugely cluttered (and also to make Boost::wave's
+                // error output match the standard cpp.
+                if (filename.find (oslcompiler->cwd()) == 0) {
+                    filename.erase (0, oslcompiler->cwd().size());
+                    if (filename.size() && 
+                        (filename[0] == '/' || filename[0] == '\\'))
+                        filename.erase (0, 1);
+                }
+	        oslcompiler->filename (ustring (filename));
+#ifdef USE_BOOST_WAVE
+                // Spooky workaround for Boost Wave bug: force_include
+                // is broken and doesn't give us the right lines/files, so
+                // instead we forcefully insert a '#include "stdosl.h"' into
+                // the stream ourselves, but this in turn makes the rest
+                // of the main file all have line counts one line off!
+                // So we fix it here, ugh.
+                if (filename == oslcompiler->main_filename())
+                    --line;
+#endif
             }
+            oslcompiler->lineno (line);
 	} else {
             fprintf (stderr, "Error: \"%s\", line %d:\n"
                      "\tUnrecognized preprocessor command: #%s\n",

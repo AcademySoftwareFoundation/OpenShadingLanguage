@@ -49,58 +49,57 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// dilemma since the same header file is used by both the library and
 /// its clients.  Sheesh!
 ///
+/// But on Linux/OSX as well, we want to only have the DSO export the
+/// symbols we designate as the public interface.  So we link with
+/// -fvisibility=hidden to default to hiding the symbols.  See
+/// http://gcc.gnu.org/wiki/Visibility
+///
 /// We solve this awful mess by defining these macros:
 ///
-/// OSLPUBLIC - normally, assumes that it's being seen by a client
-///             of the library, and therefore declare as 'imported'.
-///             But if OSL_EXPORT_PUBLIC is defined, change the declaration
-///             to 'exported' -- you want to define this macro when
-///             compiling the module that actually defines the class.
-///
-/// Note that on Linux, all symbols are exported so this just isn't a
-/// problem, so we define these macros to be nothing.
-///
-/// It's a shame that we have to clutter all our header files with these
-/// stupid macros just because the Windows world is such a mess.
+/// OSL*PUBLIC - normally, assumes that it's being seen by a client
+///              of the library, and therefore declare as 'imported'.
+///              But if OSL_EXPORT_PUBLIC is defined, change the declaration
+///              to 'exported' -- you want to define this macro when
+///              compiling the module that actually defines the class.
 ///
 /// There is a separate define for each library, because there inter-
 /// dependencies, and so what is exported for one may be imported for
 /// another.
 
-#ifndef OSLCOMPPUBLIC
-#  if defined(_MSC_VER) && defined(_WIN32)
-#    if defined(oslcomp_EXPORTS)
-#      define OSLCOMPPUBLIC __declspec(dllexport)
-#    else
-#      define OSLCOMPPUBLIC __declspec(dllimport)
-#    endif
-#  else
-#    define OSLCOMPPUBLIC
-#  endif
+#if defined(_MSC_VER) || defined(__CYGWIN__)
+  #define OSL_DLL_IMPORT __declspec(dllimport)
+  #define OSL_DLL_EXPORT __declspec(dllexport)
+  #define OSL_DLL_LOCAL
+#else
+  #if __GNUC__ >= 4
+    #define OSL_DLL_IMPORT __attribute__ ((visibility ("default")))
+    #define OSL_DLL_EXPORT __attribute__ ((visibility ("default")))
+    #define OSL_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
+  #else
+    #define OSL_DLL_IMPORT
+    #define OSL_DLL_EXPORT
+    #define OSL_DLL_LOCAL
+  #endif
 #endif
 
-#ifndef OSLEXECPUBLIC
-#  if defined(_MSC_VER) && defined(_WIN32)
-#    if defined(oslexec_EXPORTS)
-#      define OSLEXECPUBLIC __declspec(dllexport)
-#    else
-#      define OSLEXECPUBLIC __declspec(dllimport)
-#    endif
-#  else
-#    define OSLEXECPUBLIC
-#  endif
+
+
+#if defined(oslcomp_EXPORTS)
+#  define OSLCOMPPUBLIC OSL_DLL_EXPORT
+#else
+#  define OSLCOMPPUBLIC OSL_DLL_IMPORT
 #endif
 
-#ifndef OSLQUERYPUBLIC
-#  if defined(_MSC_VER) && defined(_WIN32)
-#    if defined(oslquery_EXPORTS)
-#      define OSLQUERYPUBLIC __declspec(dllexport)
-#    else
-#      define OSLQUERYPUBLIC __declspec(dllimport)
-#    endif
-#  else
-#    define OSLQUERYPUBLIC
-#  endif
+#if defined(oslexec_EXPORTS)
+#  define OSLEXECPUBLIC OSL_DLL_EXPORT
+#else
+#  define OSLEXECPUBLIC OSL_DLL_IMPORT
+#endif
+
+#if defined(oslquery_EXPORTS)
+#  define OSLQUERYPUBLIC OSL_DLL_EXPORT
+#else
+#  define OSLQUERYPUBLIC OSL_DLL_IMPORT
 #endif
 
 #endif // OSL_EXPORT_H

@@ -42,8 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 
 #include "oslcomp_pvt.h"
-#include "ast.h"
-#include "symtab.h"
 
 #undef yylex
 #define yyFlexLexer oslFlexLexer
@@ -55,6 +53,9 @@ void yyerror (const char *err);
 using namespace OSL;
 using namespace OSL::pvt;
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
 
 // Forward declaration
 OSL_NAMESPACE_ENTER
@@ -949,7 +950,7 @@ yyerror (const char *err)
 
 
 // Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
-TypeDesc
+inline TypeDesc
 OSL::pvt::lextype (int lex)
 {
     switch (lex) {

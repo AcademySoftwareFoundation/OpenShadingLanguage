@@ -34,9 +34,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <vector>
 
+#include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
+
 #include "oslconfig.h"
 
-#include <OpenImageIO/hash.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -46,8 +48,6 @@ OSL_NAMESPACE_ENTER
 // General container for integer sets
 typedef std::set<int> IntSet; // probably faster to test for equality, unions and so
 
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
-
 typedef boost::unordered_set<ustring, ustringHash> SymbolSet;
 // This is for the transition table used in DfAutomata::State
 typedef boost::unordered_map<ustring, int, ustringHash> SymbolToInt;
@@ -55,18 +55,6 @@ typedef boost::unordered_map<ustring, int, ustringHash> SymbolToInt;
 // has several movements for each symbol
 typedef boost::unordered_map<ustring, IntSet, ustringHash> SymbolToIntList;
 typedef boost::unordered_map<int, int> HashIntInt;
-
-#else  // !OIIO_HAVE_BOOST_UNORDERED_MAP
-
-typedef hash_set<ustring, ustringHash> SymbolSet;
-// This is for the transition table used in DfAutomata::State
-typedef hash_map<ustring, int, ustringHash> SymbolToInt;
-// And this is for the transition table in NdfAutomata which
-// has several movements for each symbol
-typedef hash_map<ustring, IntSet, ustringHash> SymbolToIntList;
-typedef hash_map<int, int> HashIntInt;
-
-#endif // OIIO_HAVE_BOOST_UNORDERED_MAP
 
 // For the rules in the deterministic states, we don't need a real set
 // cause when converting from the NDF automata we will never find the same

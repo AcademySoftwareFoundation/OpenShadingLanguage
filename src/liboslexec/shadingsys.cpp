@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <fstream>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -99,6 +100,77 @@ ShadingSystem::~ShadingSystem ()
 
 
 
+static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
+
+
+
+bool
+ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
+                              const void *src, TypeDesc srctype)
+{
+    // Just copy equivalent types
+    if (equivalent (dsttype, srctype)) {
+        if (dst && src) {
+            size_t size = dsttype.size();
+            if (size == sizeof(float))    // common case: float/int copy
+                *(float *)dst = *(const float *)src;
+            else
+                memcpy (dst, src, dsttype.size());  // otherwise, memcpy
+        }
+        return true;
+    }
+
+    if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
+        if (dst && src) {
+            // int -> any-float-based ... up-convert to float and recurse
+            float f = (float) (*(const int *)src);
+            return convert_value (dst, dsttype, &f, TypeDesc::TypeFloat);
+        }
+        return convert_value (NULL, dsttype, NULL, TypeDesc::TypeFloat);
+    }
+
+    if (srctype == TypeDesc::TypeFloat) {
+        // float->triple conversion
+        if (equivalent(dsttype, TypeDesc::TypePoint)) {
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((OSL::Vec3 *)dst)->setValue (f, f, f);
+            }
+            return true;
+        }
+        // float->int
+        if (dsttype == TypeDesc::TypeInt) {
+            if (dst && src)
+                *(int *)dst = (int) *(const float *)src;
+            return true;
+        }
+        // float->float[2]
+        if (dsttype == TypeFloatArray2) {
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((float *)dst)[0] = f;
+                ((float *)dst)[1] = f;
+            }
+            return true;
+        }
+        return false; // Unsupported conversion
+    }
+
+    // float[2] -> triple
+    if (srctype == TypeFloatArray2 && equivalent(dsttype, TypeDesc::TypePoint)) {
+        if (dst && src) {
+            float f0 = ((const float *)src)[0];
+            float f1 = ((const float *)src)[1];
+            ((OSL::Vec3 *)dst)->setValue (f0, f1, 0.0f);
+        }
+        return true;
+    }
+
+    return false;   // Unsupported conversion
+}
+
+
+
 PerThreadInfo::PerThreadInfo ()
     : llvm_context(NULL), llvm_jitmm(NULL)
 {
@@ -163,6 +235,7 @@ ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
 ustring anisotropic("anisotropic"), direction("direction");
 ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
+ustring subimage("subimage"), subimagename("subimagename");
 
 };
 
@@ -432,7 +505,7 @@ ShadingSystemImpl::setup_op_descriptors ()
 
 
 void
-ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params, int size,
+ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params,
                                     PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
@@ -441,7 +514,7 @@ ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam
             return;
         }
     }
-    m_closure_registry.register_closure(name, id, params, size, prepare, setup, compare);
+    m_closure_registry.register_closure(name, id, params, prepare, setup, compare);
 }
 
 
@@ -1306,7 +1379,7 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 
-void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params, int size,
+void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params,
                                        PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
 {
     if (m_closure_table.size() <= (size_t)id)
@@ -1316,14 +1389,18 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     entry.name = name;
     entry.nformal = 0;
     entry.nkeyword = 0;
-    for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
+    entry.struct_size = 0; /* params could be NULL */
+    for (int i = 0; params; ++i) {
+        if (params[i].type == TypeDesc()) {
+            entry.struct_size = params[i].offset;
+            break;
+        }
         entry.params.push_back(params[i]);
         if (params[i].key == NULL)
             entry.nformal ++;
         else
             entry.nkeyword ++;
     }
-    entry.struct_size = size;
     entry.prepare = prepare;
     entry.setup = setup;
     entry.compare = compare;
@@ -1348,3 +1425,13 @@ const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)con
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
+
+
+// Symbols needed to resolve some linkage issues because we pull some
+// components in from liboslcomp.
+int oslparse() { return 0; }
+class oslFlexLexer {
+public:
+    oslFlexLexer (std::istream *in, std::ostream *out);
+};
+oslFlexLexer::oslFlexLexer (std::istream *in, std::ostream *out) { }

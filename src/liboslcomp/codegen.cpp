@@ -33,8 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/foreach.hpp>
 
 #include "oslcomp_pvt.h"
-#include "symtab.h"
-#include "ast.h"
 
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/strutil.h"
@@ -655,13 +653,40 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
             f = lit->intval();
         else if (islit && lit->typespec().is_float())
             f = lit->floatval();
-        else {
-            f = 0;  // FIXME?
+        else if (init && init->typespec() == type &&
+                   init->nodetype() == ASTNode::type_constructor_node) {
+            ASTtype_constructor *ctr = (ASTtype_constructor *) init;
+            ASTNode::ref val = ctr->args();
+            float f[16];
+            int nargs = 0;
+            for (int c = 0;  c < 16;  ++c) {
+                if (val.get())
+                    ++nargs;
+                if (val.get() && val->nodetype() == ASTNode::literal_node) {
+                    f[c] = ((ASTliteral *)val.get())->floatval ();
+                    val = val->next();
+                } else {
+                    f[c] = 0;
+                    completed = false;
+                }
+            }
+            if (nargs == 1)
+                out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                        f[0], f[0], f[0], f[0], f[0], f[0], f[0], f[0])
+                     + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                        f[0], f[0], f[0], f[0], f[0], f[0], f[0], f[0]);
+            else
+                out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
+                                        f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7])
+                     + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g",
+                                        f[8], f[9], f[10], f[11], f[12], f[13], f[14], f[15]);
+        } else {
+            f = 0;
+            std::string s = Strutil::format ("%.8g ", f);
+            for (int i = 0;  i < 16;  ++i)
+                out += s;
             completed = false;
         }
-        std::string s = Strutil::format ("%.8g ", f);
-        for (int i = 0;  i < 16;  ++i)
-            out += s;
     } else if (type.is_string()) {
         if (islit && lit->typespec().is_string())
             out += Strutil::format ("\"%s\" ", lit->strval());
@@ -1205,24 +1230,30 @@ ASTunary_expression::codegen (Symbol *dest)
 Symbol *
 ASTbinary_expression::codegen (Symbol *dest)
 {
-    // Special case for logal ops that short-circuit
+    // Special case for logic ops that short-circuit
     if (m_op == And || m_op == Or)
         return codegen_logic (dest);
-
-    // Special case for closure operations
-    if (typespec().is_closure())
-        return codegen_closure (dest);
 
     Symbol *lsym = left()->codegen ();
     Symbol *rsym = right()->codegen ();
     if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
         dest = m_compiler->make_temporary (typespec());
 
-    // FIXME -- what about coerced types, do we need a temp and copy here?
+    // Special case for closure operations
+    if (typespec().is_closure()) {
+        ASSERT (m_op == Mul || m_op == Div || m_op == Add);
+        if (m_op == Mul || m_op == Div) {
+            // Need to coerce the weight into a color.
+            // N.B. The typecheck always reorders c=k*c into c=c*k.
+            rsym = coerce (rsym, TypeDesc::TypeColor, true);
+        }
+        emitcode (opword(), dest, lsym, rsym);
+        return dest;
+    }
 
     // Promote ints to float-like types, for mixed arithmetic
     if ((m_op == Mul || m_op == Div || m_op == Add || m_op == Sub)) {
-        if ((lsym->typespec().is_closure() || lsym->typespec().is_floatbased()) && rsym->typespec().is_int()) {
+        if (lsym->typespec().is_floatbased() && rsym->typespec().is_int()) {
             if (rsym->symtype() == SymTypeConst) {
                 float val = ((ConstantSymbol *)rsym)->floatval();
                 rsym = m_compiler->make_constant (val);
@@ -1231,7 +1262,7 @@ ASTbinary_expression::codegen (Symbol *dest)
                 rsym = m_compiler->make_temporary (lsym->typespec());
                 emitcode ("assign", rsym, tmp);  // type coercion
             }
-        } else if (lsym->typespec().is_int() && (rsym->typespec().is_closure() || rsym->typespec().is_floatbased())) {
+        } else if (lsym->typespec().is_int() && rsym->typespec().is_floatbased()) {
             if (lsym->symtype() == SymTypeConst) {
                 float val = ((ConstantSymbol *)lsym)->floatval();
                 lsym = m_compiler->make_constant (val);
@@ -1276,93 +1307,6 @@ ASTbinary_expression::codegen_logic (Symbol *dest)
     int donelabel = m_compiler->next_op_label ();
     m_compiler->pop_nesting (false);
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
-    return dest;
-}
-
-
-
-bool
-ASTbinary_expression::subtrees_involve_closure (Symbol *s)
-{
-    if (m_op == Mul || m_op == Div) {
-        // N.B. The typecheck always reorders c=k*c into c=c*k.
-        ASSERT (left()->typespec().is_closure() &&
-                !right()->typespec().is_closure());
-        // There are only a couple cases here.  Either this node is
-        //     closure_variable * scalar             (is the var s?)
-        // or  closure_binary_expression * scalar    (recurse)
-        // or  closure_function * scalar             (definitely not s)
-        ASTNode *l = left().get();
-        if (l->nodetype() == variable_ref_node)
-            return ((ASTvariable_ref *)l)->sym() == s;
-        else if (l->nodetype() == binary_expression_node)
-            return ((ASTbinary_expression *)l)->subtrees_involve_closure (s);
-        else
-            return false;
-    } else if (m_op == Add) {
-        // There are only a couple cases here.  Left and right can each
-        // either be a closure variable (test it), a binary expression
-        // (recurse), or a closure function (definitely false).
-        bool left_uses_result = false, right_uses_result = false;
-        ASTNode *l = left().get(), *r = right().get();
-        if (l->nodetype() == variable_ref_node)
-            left_uses_result |= ((ASTvariable_ref *)l)->sym() == s;
-        else if (l->nodetype() == binary_expression_node)
-            left_uses_result |= ((ASTbinary_expression *)l)->subtrees_involve_closure (s);
-        if (r->nodetype() == variable_ref_node)
-            right_uses_result |= ((ASTvariable_ref *)l)->sym() == s;
-        else if (r->nodetype() == binary_expression_node)
-            right_uses_result |= ((ASTbinary_expression *)r)->subtrees_involve_closure (s);
-        return left_uses_result | right_uses_result;
-    }
-    ASSERT (0 && "unhandled closure op case");  // can't get here
-}
-
-
-
-Symbol *
-ASTbinary_expression::codegen_closure (Symbol *dest)
-{
-    if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
-        dest = m_compiler->make_temporary (typespec());
-
-    if (m_op == Mul || m_op == Div) {
-        // Special handling of r = closure * k   (or closure/k)
-        // Instead of generating "closure tmp1 ... ; mul r tmp1 k", 
-        // generate the more efficient "closure r ... ; mul r r k".
-        // N.B. The typecheck always reorders c=k*c into c=c*k.
-        Symbol *lsym = left()->codegen (dest);
-        Symbol *rsym = coerce (right()->codegen(), TypeDesc::TypeColor, true);
-        emitcode (opword(), dest, lsym, rsym);
-    } else if (m_op == Add) {
-        ASSERT (left()->typespec().is_closure() &&
-                right()->typespec().is_closure());
-        // Special handling of r = closure1 + closure2, which in reality
-        // is often r = k1*closure1 + k2*closure2, and thus would lead to
-        // code like this:
-        //      mul tmp1 k1 c1 ; mul tmp2 k2 c2 ; add r tmp1 tmp2
-        // And note that the add (and maybe the muls) implicitly have
-        // a clear and copy in them. Instead, generate this:
-        //      mul r k1 c1; mul tmp2 k2 c2; add r r tmp2
-        // This results in one fewer temp, fewer copies.  BUT... must be
-        // careful of situations like r = k1*c1 + k2*r, where we might
-        // overwrite r too soon.
-        Symbol *lsym;
-        if (! subtrees_involve_closure (dest)) {
-            // None of the subtrees involve the destination, so use it
-            lsym = left()->codegen (dest);
-        } else {
-            // The subtrees involve the destination, so be safe and let it
-            // generate a new destination.
-            lsym = left()->codegen ();
-        }
-        Symbol *rsym = right()->codegen ();
-        emitcode (opword(), dest, lsym, rsym);
-    } else {
-        // I don't think this can happen
-        ASSERT (0 && "unhandled closure op case");
-    }
-
     return dest;
 }
 

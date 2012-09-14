@@ -42,7 +42,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/strutil.h"
 #include "OpenImageIO/sysutil.h"
+#include "OpenImageIO/strutil.h"
 #include "OpenImageIO/dassert.h"
+#include "OpenImageIO/filesystem.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -135,7 +137,6 @@ static bool
 preprocess (const std::string &filename,
             const std::string &stdinclude,
             const std::vector<std::string> &defines,
-            const std::vector<std::string> &undefines,
             const std::vector<std::string> &includepaths,
             std::string &result)
 {
@@ -143,17 +144,18 @@ preprocess (const std::string &filename,
     boost::wave::util::file_position_type current_position;
 
     try {
-        // Read file contents into string
+        // Read file contents into a string
         std::ifstream instream (filename.c_str());
-
         if (! instream.is_open()) {
-            std::cerr << "Could not open '" << filename.c_str() << "'\n";
+            std::cerr << "Could not open '" << filename << "'\n";
             return false;
         }
 
         instream.unsetf (std::ios::skipws);
-        std::string instring (std::istreambuf_iterator<char>(instream.rdbuf()),
-            std::istreambuf_iterator<char>());
+        std::string instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude)
+            + std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
+                           std::istreambuf_iterator<char>());
+        instream.close ();
 
         typedef boost::wave::cpplexer::lex_token<> token_type;
         typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
@@ -162,12 +164,12 @@ preprocess (const std::string &filename,
         // Setup wave context
         context_type ctx (instring.begin(), instring.end(), filename.c_str());
 
-        for (size_t i = 0; i < defines.size(); ++i)
-            ctx.add_macro_definition (defines[i].c_str());
-
-        for (size_t i = 0; i < undefines.size(); ++i)
-            ctx.remove_macro_definition (undefines[i].c_str());
-
+        for (size_t i = 0; i < defines.size(); ++i) {
+            if (defines[i][1] == 'D')
+                ctx.add_macro_definition (defines[i].c_str()+2);
+            else if (defines[i][1] == 'U')
+                ctx.remove_macro_definition (defines[i].c_str()+2);
+        }
         for (size_t i = 0; i < includepaths.size(); ++i) {
             ctx.add_sysinclude_path (includepaths[i].c_str());
             ctx.add_include_path (includepaths[i].c_str());
@@ -176,8 +178,18 @@ preprocess (const std::string &filename,
         context_type::iterator_type first = ctx.begin();
         context_type::iterator_type last = ctx.end();
 
+#if 0
+        // N.B. The force_include() method is buggy, see
+        // https://svn.boost.org/trac/boost/ticket/6838
+        // It turns out that it screws up all file/line tracking therafter.
+        // So instead, we simply force a '#include "stdosl.h"' as the first
+        // line (see above) and then doctor the subsequent line numbers to
+        // subtract one in osllex.h.  Oh, the tangled web we weave when 
+        // we attempt to work around boost bugs.
+
         // Add standard include
         first.force_include (stdinclude.c_str(), true);
+#endif
 
         // Get result
         while (first != last) {
@@ -227,16 +239,16 @@ preprocess (const std::string &filename,
 #define pclose _pclose
 #endif
 
+    std::string cppcommand = "/usr/bin/cpp";
 #ifdef __APPLE__
-    // Default /usr/bin/cpp on Apple is very bare bones, doesn't seem to
-    // support all the preprocessor directives (like # and ##), but the
-    // explicit gcc 4.2 one does.  Watch out for needed changes to this
-    // with future OS X releases.
-    std::string cppcommand = "/usr/bin/cpp-4.2 -xc -nostdinc ";
-#else
-    std::string cppcommand = "/usr/bin/cpp -xc -nostdinc ";
+    // Default /usr/bin/cpp on pre-Lion Apple is very bare bones,
+    // doesn't seem to support all the preprocessor directives (like #
+    // and ##), but the explicit gcc 4.2 one does.
+    if (OIIO::Filesystem::exists ("/usr/bin/cpp-4.2"))
+        cppcommand = "/usr/bin/cpp-4.2";
 #endif
 
+    cppcommand += std::string (" -xc -nostdinc ");
     cppcommand += options;
 
     if (! stdinclude.empty())
@@ -282,7 +294,7 @@ bool
 OSLCompilerImpl::compile (const std::string &filename,
                           const std::vector<std::string> &options)
 {
-    if (! boost::filesystem::exists (filename)) {
+    if (! OIIO::Filesystem::exists (filename)) {
         error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
         return false;
     }
@@ -291,11 +303,13 @@ OSLCompilerImpl::compile (const std::string &filename,
 
 #ifdef USE_BOOST_WAVE
     std::vector<std::string> defines;
-    std::vector<std::string> undefines;
     std::vector<std::string> includepaths;
 #else
     std::string cppoptions;
 #endif
+
+    m_cwd = boost::filesystem::initial_path().string();
+    m_main_filename = filename;
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
@@ -306,7 +320,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         path = path.parent_path ();  // now the parent dir
         path = path / "shaders";
         bool found = false;
-        if (boost::filesystem::exists (path)) {
+        if (OIIO::Filesystem::exists (path.string())) {
 #ifdef USE_BOOST_WAVE
             includepaths.push_back(path.string());
 #else
@@ -316,7 +330,7 @@ OSLCompilerImpl::compile (const std::string &filename,
             cppoptions += "\" ";
 #endif
             path = path / "stdosl.h";
-            if (boost::filesystem::exists (path)) {
+            if (OIIO::Filesystem::exists (path.string())) {
                 stdinclude = path.string();
                 found = true;
             }
@@ -352,11 +366,9 @@ OSLCompilerImpl::compile (const std::string &filename,
 #ifdef USE_BOOST_WAVE
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
-            if(options[i].c_str()[1] == 'D')
+            if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
                 defines.push_back(options[i].substr(2));
-            else if(options[i].c_str()[1] == 'U')
-                undefines.push_back(options[i].substr(2));
-            else if(options[i].c_str()[1] == 'I')
+            else if (options[i].c_str()[1] == 'I')
                 includepaths.push_back(options[i].substr(2));
 #else
         } else {
@@ -371,7 +383,7 @@ OSLCompilerImpl::compile (const std::string &filename,
     std::string preprocess_result;
 
 #ifdef USE_BOOST_WAVE
-    if (! preprocess(filename, stdinclude, defines, undefines, includepaths, preprocess_result)) {
+    if (! preprocess(filename, stdinclude, defines, includepaths, preprocess_result)) {
 #else
     if (! preprocess(filename, stdinclude, cppoptions, preprocess_result)) {
 #endif
@@ -823,8 +835,10 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
     // Now read lines up to and including the file we want.
     char buf[10240];
     while (m_last_sourceline < line) {
-        fgets (buf, sizeof(buf), m_sourcefile);
-        ++m_last_sourceline;
+        if (fgets (buf, sizeof(buf), m_sourcefile))
+            ++m_last_sourceline;
+        else
+            break;
     }
 
     // strip trailing newline

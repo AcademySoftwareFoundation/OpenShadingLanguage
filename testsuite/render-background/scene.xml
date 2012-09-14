@@ -1,0 +1,42 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+
+   <ShaderGroup>
+      <Parameter filename="../common/textures/kitchen_probe.hdr" />
+      <Shader name="envmap" layer="layer1" />
+   </ShaderGroup>
+   <Background resolution="1024" />
+
+   <ShaderGroup>
+      <Parameter scale_s="float 20" />
+      <Parameter scale_t="float 20" />
+      <Parameter Ca="color 0.1 0.1 0.1" />
+      <Parameter Cb="color 0.5 0.5 0.5" />
+      <Shader name="checkerboard" layer="tex" />
+      <Shader name="matte" layer="layer1" />      
+      <ConnectShaders srclayer="tex" srcparam="Cout" dstlayer="layer1" dstparam="Cs" />
+   </ShaderGroup>
+   <Quad corner="-200,0,0" edge_x="400,0,0" edge_y="0,400,0" /> <!-- Back -->
+   <Quad corner="-200,0,0" edge_x="0,0,400" edge_y="400,0,0" /> <!-- Botm -->
+
+   <ShaderGroup>
+      <Parameter ax="float 0.001" />
+      <Parameter ay="float 0.2" />
+      <Parameter Cs="color 0.5 0.5 0.5" />
+      <Shader name="ward" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="-60,30,120"        radius="30" />
+   <ShaderGroup>
+      <Parameter Cs="color 0.5 0.5 0.5" />
+      <Shader name="matte" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="  0,30,120"        radius="30" />
+      <ShaderGroup>
+      <Parameter ax="float 0.001" />
+      <Parameter ay="float 0.001" />
+      <Parameter Cs="color 0.5 0.5 0.5" />
+      <Shader name="ward" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center=" 60,30,120"        radius="30" />
+   
+</World>

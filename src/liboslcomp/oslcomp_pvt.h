@@ -282,6 +282,9 @@ public:
                                  SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 
                                  SymbolPtrVec &params);
 
+    const std::string main_filename () const { return m_main_filename; }
+    const std::string cwd () const { return m_cwd; }
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -348,6 +351,8 @@ private:
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing
     std::string m_output_filename; ///< Output filename
+    std::string m_main_filename; ///< Main input filename
+    std::string m_cwd;        ///< Current working directory
     ASTNode::ref m_shader;    ///< The shader's syntax tree
     bool m_err;               ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table

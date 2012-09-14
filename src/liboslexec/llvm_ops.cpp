@@ -1233,6 +1233,23 @@ osl_texture_set_interp_code (void *opt, int mode)
 }
 
 
+OSL_SHADEOP void
+osl_texture_set_subimage (void *opt, int subimage)
+{
+    ((TextureOpt *)opt)->subimage = subimage;
+}
+
+
+OSL_SHADEOP void
+osl_texture_set_subimagename (void *opt, const char *subimagename)
+{
+#if OIIO_VERSION >= 10100
+    ((TextureOpt *)opt)->subimagename = USTR(subimagename);
+#endif
+}
+
+
+
 OSL_SHADEOP int
 osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,

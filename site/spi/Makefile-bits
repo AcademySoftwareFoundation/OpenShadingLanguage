@@ -28,6 +28,8 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
         -DOPENEXR_CUSTOM=1 \
         -DOPENEXR_CUSTOM_LIBRARY="SpiIlmImf" \
         -DLLVM_CUSTOM=1 \
+	-DLLVM_STATIC=1 \
+	-DEXTRA_OSLEXEC_LIBRARIES="/usr/lib64/libpthread.so" \
         -DLLVM_VERSION=${LLVM_VERSION} \
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
     ifeq (${COMPILER}, clang)

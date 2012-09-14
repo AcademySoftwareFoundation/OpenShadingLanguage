@@ -402,6 +402,10 @@ static const char *llvm_helper_function_table[] = {
     "osl_texture_set_rwidth", "xXf",
     "osl_texture_set_fill", "xXf",
     "osl_texture_set_time", "xXf",
+    "osl_texture_set_interp_name", "xXs",
+    "osl_texture_set_interp_code", "xXi",
+    "osl_texture_set_subimage", "xXi",
+    "osl_texture_set_subimagename", "xXs",
     "osl_texture", "iXsXffffffiXXX",
     "osl_texture_alpha", "iXsXffffffiXXXXXX",
     "osl_texture3d", "iXsXXXXXiXXXX",
@@ -977,6 +981,20 @@ public:
     virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
     virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
     virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
+#if OSL_LLVM_VERSION >= 31
+    virtual void *getPointerToNamedFunction(const std::string &Name,
+                                            bool AbortOnFailure = true) {
+        return mm->getPointerToNamedFunction (Name, AbortOnFailure);
+    }
+    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID) {
+        return mm->allocateCodeSection(Size, Alignment, SectionID);
+    }
+    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID) {
+        return mm->allocateDataSection(Size, Alignment, SectionID);
+    }
+#endif
 };
 
 

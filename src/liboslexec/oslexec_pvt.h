@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 
 #include <boost/regex_fwd.hpp>
+#include <boost/unordered_map.hpp>
 
-#include "OpenImageIO/hash.h"
 #include "OpenImageIO/ustring.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/paramlist.h"
@@ -131,11 +131,7 @@ struct OpDescriptor {
 
 
 // Prefix for OSL shade up declarations, so LLVM can find them
-#ifdef _MSC_VER
-#define OSL_SHADEOP extern "C" __declspec(dllexport)
-#else
-#define OSL_SHADEOP extern "C"
-#endif
+#define OSL_SHADEOP extern "C" OSLEXECPUBLIC
 
 
 
@@ -600,7 +596,7 @@ public:
         CompareClosureFunc        compare;
     };
 
-    void register_closure (const char *name, int id, const ClosureParam *params, int size,
+    void register_closure (const char *name, int id, const ClosureParam *params,
                            PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
 
     const ClosureEntry *get_entry (ustring name) const;
@@ -623,10 +619,10 @@ private:
 
 
 
-class ShadingSystemImpl : public ShadingSystem
+class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
 {
 public:
-    ShadingSystemImpl (RendererServices *renderer=NULL,
+    OSLEXECPUBLIC ShadingSystemImpl (RendererServices *renderer=NULL,
                        TextureSystem *texturesystem=NULL,
                        ErrorHandler *err=NULL);
     virtual ~ShadingSystemImpl ();
@@ -724,7 +720,7 @@ public:
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params, int size,
+    virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
@@ -758,11 +754,7 @@ public:
 
     virtual void optimize_all_groups (int nthreads=0);
 
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
     typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
-#else
-    typedef hash_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
-#endif
 
     /// Look up OpDescriptor for the named op, return NULL for unknown op.
     ///
@@ -1163,11 +1155,7 @@ private:
     std::vector<char> m_heap;           ///< Heap memory
     size_t m_closures_allotted;         ///< Closure memory allotted
     int m_curuse;                       ///< Current use that we're running
-#ifdef OIIO_HAVE_BOOST_UNORDERED_MAP
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
-#else
-    typedef hash_map<ustring, boost::regex*, ustringHash> RegexMap;
-#endif
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
 
@@ -1216,24 +1204,25 @@ private:
 
 
 namespace Strings {
-    extern ustring camera, common, object, shader, screen, NDC;
-    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
-    extern ustring null, default_;
-    extern ustring label;
-    extern ustring sidedness, front, back, both;
-    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
-    extern ustring Ci;
-    extern ustring width, swidth, twidth, rwidth;
-    extern ustring blur, sblur, tblur, rblur;
-    extern ustring wrap, swrap, twrap, rwrap;
-    extern ustring black, clamp, periodic, mirror;
-    extern ustring firstchannel, fill, alpha;
-    extern ustring interp, closest, linear, cubic, smartcubic;
-    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
-    extern ustring cell, cellnoise, pcellnoise;
-    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern ustring op_dowhile, op_for, op_while;
+    extern OSLEXECPUBLIC ustring camera, common, object, shader, screen, NDC;
+    extern OSLEXECPUBLIC ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
+    extern OSLEXECPUBLIC ustring null, default_;
+    extern OSLEXECPUBLIC ustring label;
+    extern OSLEXECPUBLIC ustring sidedness, front, back, both;
+    extern OSLEXECPUBLIC ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
+    extern OSLEXECPUBLIC ustring Ci;
+    extern OSLEXECPUBLIC ustring width, swidth, twidth, rwidth;
+    extern OSLEXECPUBLIC ustring blur, sblur, tblur, rblur;
+    extern OSLEXECPUBLIC ustring wrap, swrap, twrap, rwrap;
+    extern OSLEXECPUBLIC ustring black, clamp, periodic, mirror;
+    extern OSLEXECPUBLIC ustring firstchannel, fill, alpha;
+    extern OSLEXECPUBLIC ustring interp, closest, linear, cubic, smartcubic;
+    extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
+    extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
+    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while;
+    extern OSLEXECPUBLIC ustring subimage, subimagename;
 }; // namespace Strings
 
 

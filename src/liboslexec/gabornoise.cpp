@@ -257,7 +257,14 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
     Dual2<float> sum = 0;
 
     for (int i = 0; i < n_impulses; i++) {
-        Vec3 x_i_c (rng(), rng(), rng());
+        // OLD code: Vec3 x_i_c (rng(), rng(), rng());
+        // Turned out that C++ spec says order of args are unspecified.
+        // gcc appeared to do right-to-left, so to make sure our noise
+        // function is locked down (and works identically for clang,
+        // which evaluates left-to-right), we ask for the rng() calls
+        // one at a time and match the way it looked before.
+        float z_rng = rng(), y_rng = rng(), x_rng = rng();
+        Vec3 x_i_c (x_rng, y_rng, z_rng);
         Dual2<Vec3> x_k_i = gp.radius * (x_c_i - x_i_c);        
         float phi_i;
         Vec3 omega_i;

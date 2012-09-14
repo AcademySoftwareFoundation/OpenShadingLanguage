@@ -1,0 +1,15 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+
+   <ShaderGroup>
+      <Parameter Kb="float 0.5" />
+      <Shader name="furnace" layer="layer1" />
+   </ShaderGroup>
+   <Background />
+
+   <ShaderGroup>
+      <Parameter Cs="color 1.0 1.0 1.0" />
+      <Shader name="matte" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="  0,0,0"        radius="30" />
+</World>

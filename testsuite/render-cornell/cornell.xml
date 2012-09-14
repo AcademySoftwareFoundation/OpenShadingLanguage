@@ -1,0 +1,43 @@
+<World>
+   <Camera eye="50, 50, 300" dir="0,0,-1" fov="60" />
+   
+   <ShaderGroup>
+      <Parameter Cs="color 0.75 0.25 0.25" />
+      <Shader name="matte" layer="layer1" />
+   </ShaderGroup>
+   <Quad corner="0, 0, 0" edge_x="0,100,0" edge_y="0,0,150" /> <!-- Left -->
+
+   <ShaderGroup>
+      <Parameter Cs="color 0.25 0.25 0.75" />
+      <Shader name="matte" layer="layer1" />
+   </ShaderGroup>
+   <Quad corner="100, 0, 0" edge_x="0,0,150" edge_y="0,100,0" /> <!-- Right -->
+   
+   <ShaderGroup>
+      <Parameter Cs="color 0.25 0.25 0.25" />
+      <Shader name="matte" layer="layer1" />
+   </ShaderGroup>
+   <Quad corner="0, 0, 0" edge_x="100,0,0" edge_y="0,100,0" /> <!-- Back -->
+   <Quad corner="0, 0, 0" edge_x="0,0,150" edge_y="100,0,0" /> <!-- Botm -->
+   <Quad corner="0,100,0" edge_x="100,0,0" edge_y="0,0,150" /> <!-- Top  -->
+
+   <ShaderGroup>
+      <Parameter Cs="color 0.35 0.35 0.35" />
+      <Shader name="matte" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="73,16.5,78"        radius="16.5" /> <!-- Grey -->
+
+   
+   <ShaderGroup>
+      <Parameter eta="float 15" />
+      <Shader name="metal" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="27,16.5,47"        radius="16.5" /> <!-- Mirror -->
+
+   <ShaderGroup>
+      <Parameter power="float 26000" />
+      <Shader name="emitter" layer="layer1" />
+   </ShaderGroup>
+   <Quad corner="40, 99.99, 40" edge_x="20, 0, 0" edge_y="0, 0, 20" is_light="yes" /> <!--Lite -->
+   
+</World>

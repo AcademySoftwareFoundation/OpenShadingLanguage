@@ -2,7 +2,7 @@ project (OSL)
 
 # Release version of the library
 set (OSL_LIBRARY_VERSION_MAJOR 1)
-set (OSL_LIBRARY_VERSION_MINOR 1)
+set (OSL_LIBRARY_VERSION_MINOR 3)
 set (OSL_LIBRARY_VERSION_PATCH 0)
 
 # Version of the OSO file format and instruction set
@@ -11,6 +11,9 @@ set (OSO_FILE_VERSION_MINOR 0)
 
 
 cmake_minimum_required (VERSION 2.6)
+if (NOT CMAKE_VERSION VERSION_LESS 2.8.4)
+    cmake_policy (SET CMP0017 NEW)
+endif ()
 set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
 message (STATUS "Project build dir = ${CMAKE_BINARY_DIR}")
@@ -22,6 +25,11 @@ endif ()
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions ("-DDEBUG=1")
+    set (DEBUGMODE ON)
+endif ()
+
 
 # Figure out which compiler we're using
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -57,10 +65,29 @@ if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
     add_definitions ("-DBOOST_NO_TYPEID")
 endif ()
 
-if (CMAKE_COMPILER_IS_CLANG)
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
-    # include_directories(SYSTEM...) when using clang.
+    # include_directories(SYSTEM...) when using clang or gcc.
     set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
+endif ()
+
+if (CMAKE_COMPILER_IS_CLANG)
+    # disable warning about unused command line arguments
+    add_definitions ("-Qunused-arguments -Wno-unknown-pragmas")
+endif ()
+
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
+    if (HIDE_SYMBOLS AND NOT DEBUGMODE)
+        # Turn default symbol visibility to hidden
+        set (VISIBILITY_COMMAND "-fvisibility=hidden")
+        add_definitions (${VISIBILITY_COMMAND})
+    endif ()
+    if (LLVM_STATIC AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT DEBUGMODE)
+        # Linux: When linking against LLVM statically, we can also hide
+        # all its symbols to prevent clashes if OSL is linked against an
+        # app that also embeds LLVM.
+        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/liboslexec/liboslexec.map")
+    endif ()
 endif ()
 
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
@@ -69,6 +96,16 @@ if (WIN32)
 else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
+set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
+
+if (LLVM_NAMESPACE)
+    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
+endif ()
+
+if (EXTRA_CPP_DEFINITIONS)
+    add_definitions ("${EXTRA_CPP_DEFINITIONS}")
+endif()
+
 
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/cmake/modules"
@@ -87,10 +124,6 @@ include_directories (
 
 
 include_directories ("include")
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions ("-DDEBUG=1")
-endif ()
 
 if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
@@ -134,6 +167,7 @@ add_subdirectory (oslc)
 add_subdirectory (shaders)
 add_subdirectory (oslinfo)
 add_subdirectory (testshade)
+add_subdirectory (testrender)
 
 add_subdirectory (include)
 add_subdirectory (doc)
@@ -172,9 +206,11 @@ macro ( TESTSUITE )
         message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
 
         # Run the test unoptimized
-        set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
-        add_test ( NAME ${_testname}
-                   COMMAND env ${_env} ${_runtest} )
+        if (NOT _testname MATCHES "^render")
+          set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
+          add_test ( NAME ${_testname}
+                     COMMAND env ${_env} ${_runtest} )
+        endif ()
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
         set (_env TESTSHADE_OPT=2 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
@@ -193,20 +229,23 @@ TESTSUITE ( arithmetic array array-derivs array-range
             derivs derivs-muldiv-clobber error-dupes exponential
             function-earlyreturn function-simple function-outputelem
             geomath getsymbol-nonheap gettextureinfo hyperb
-            ieee_fp if incdec initops intbits layers layers-lazy
+            ieee_fp if incdec initops intbits
+            layers layers-Ciassign layers-lazy
             logic loop matrix message miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
-            raytype shortcircuit spline splineinverse string 
+            raytype render-background render-bumptest render-cornell render-furnace-diffuse
+            render-microfacet render-oren-nayar render-veachmis render-ward
+            shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture
             struct-err struct-layers struct-with-array 
             struct-within-struct ternary
             texture-alpha texture-blur texture-field3d
             texture-firstchannel texture-interp texture-simple
-            texture-smallderivs
+            texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap
             transform transformc trig typecast vecctr vector
             wavelength_color xml )

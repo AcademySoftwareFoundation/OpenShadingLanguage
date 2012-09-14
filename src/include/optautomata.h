@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OPTAUTOMATA_H
 #define OPTAUTOMATA_H
 
-#include <OpenImageIO/hash.h>
 #include <OpenImageIO/ustring.h>
 
 #include <vector>

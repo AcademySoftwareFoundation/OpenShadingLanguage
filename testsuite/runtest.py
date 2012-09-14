@@ -28,11 +28,15 @@ def oslc (args) :
 
 
 
-# Construct a command that will compile the shader file, appending output to
+# Construct a command that run testshade with the specified arguments, appending output to
 # the file "out.txt".
 def testshade (args) :
     return (osl_app("testshade") + args + " >> out.txt 2>&1 ;\n")
 
+# Construct a command that run testrender with the specified arguments, appending output to
+# the file "out.txt".
+def testrender (args) :
+    return (osl_app("testrender") + " -v --stats " + args + " >> out.txt 2>&1 ;\n")
 
 
 def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
@@ -163,13 +167,15 @@ if os.path.exists("run.py") :
     execfile ("run.py")
 
 # Force out.txt to be in the outputs
-if "out.txt" not in outputs :
-    outputs.append ("out.txt")
+##if "out.txt" not in outputs :
+##    outputs.append ("out.txt")
 
 # Force any local shaders to compile automatically, prepending the
 # compilation onto whatever else the individual run.py file requested.
 compiles = ""
-for testfile in glob.glob ("*.osl") :
+oslfiles = glob.glob ("*.osl")
+oslfiles.sort() ## sort the shaders to compile so that they always compile in the same order
+for testfile in oslfiles :
     compiles += oslc (testfile)
 command = compiles + command
 

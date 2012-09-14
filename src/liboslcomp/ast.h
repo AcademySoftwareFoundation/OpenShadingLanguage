@@ -728,11 +728,6 @@ public:
 private:
     // Special code generation for short-circuiting logical ops
     Symbol *codegen_logic (Symbol *dest);
-    // Special code generation for closure multiplies
-    Symbol *codegen_closure (Symbol *dest);
-    // Helper, for closure expressions only: does either subtree involve
-    // closure symbol s?
-    bool subtrees_involve_closure (Symbol *s);
 };
 
 

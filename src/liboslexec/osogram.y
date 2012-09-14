@@ -56,6 +56,10 @@ void yyerror (const char *err);
 static TypeSpec current_typespec;
 static std::string current_shader_name;
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
+
 // Forward declaration
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -331,7 +335,7 @@ yyerror (const char *err)
 
 
 // Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
-TypeDesc
+inline TypeDesc
 OSL::pvt::lextype (int lex)
 {
     switch (lex) {

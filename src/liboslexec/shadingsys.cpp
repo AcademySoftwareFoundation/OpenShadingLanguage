@@ -1172,8 +1172,8 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     }
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
-    dstinst->symbol(dstcon.param)->valuesource (Symbol::ConnectedVal);
-    srcinst->symbol(srccon.param)->connected_down (true);
+    dstinst->instoverride(dstcon.param)->valuesource (Symbol::ConnectedVal);
+    srcinst->instoverride(srccon.param)->connected_down (true);
     srcinst->outgoing_connections (true);
 
     if (debug())
@@ -1310,7 +1310,7 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         return c;
     }
 
-    Symbol *sym = inst->symbol (c.param);
+    const Symbol *sym = inst->mastersymbol (c.param);
     ASSERT (sym);
 
     // Only params, output params, and globals are legal for connections
@@ -1335,7 +1335,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
             c.arrayindex = c.type.arraylength() - 1;  // clamp it
         }
         c.type.make_array (0);              // chop to the element type
-        c.offset += c.type.simpletype().size() * c.arrayindex;
         bracket = strchr (bracket+1, '[');  // skip to next bracket
     }
 
@@ -1351,7 +1350,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         }
         // chop to just the scalar part
         c.type = TypeSpec ((TypeDesc::BASETYPE)c.type.simpletype().basetype);
-        c.offset += c.type.simpletype().size() * c.channel;
         bracket = strchr (bracket+1, '[');     // skip to next bracket
     }
 

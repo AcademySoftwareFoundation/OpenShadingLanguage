@@ -190,4 +190,39 @@ RendererServices::get_texture_info (ustring filename, int subimage,
 }
 
 
+
+int
+RendererServices::pointcloud_search (ShaderGlobals *sg,
+                                     ustring filename, const OSL::Vec3 &center,
+                                     float radius, int max_points, bool sort,
+                                     size_t *out_indices,
+                                     float *out_distances, int derivs_offset)
+{
+    return 0;
+}
+
+
+
+int
+RendererServices::pointcloud_get (ustring filename, size_t *indices, int count,
+                                  ustring attr_name, TypeDesc attr_type,
+                                  void *out_data)
+{
+    return 0;
+}
+
+
+
+bool
+RendererServices::pointcloud_write (ShaderGlobals *sg,
+                                    ustring filename, const OSL::Vec3 &pos,
+                                    int nattribs, const ustring *names,
+                                    const TypeDesc *types,
+                                    const void **data)
+{
+    return false;
+}
+
+
+
 OSL_NAMESPACE_EXIT

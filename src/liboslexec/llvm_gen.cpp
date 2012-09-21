@@ -3108,6 +3108,64 @@ LLVMGEN (llvm_gen_pointcloud_get)
 
 
 
+LLVMGEN (llvm_gen_pointcloud_write)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    DASSERT (op.nargs() >= 3);
+    Symbol& Result   = *rop.opargsym (op, 0);
+    Symbol& Filename = *rop.opargsym (op, 1);
+    Symbol& Pos      = *rop.opargsym (op, 2);
+    DASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
+             Pos.typespec().is_triple());
+    DASSERTMSG (op.nargs() & 1, "must have an even number of attribs");
+
+    int nattrs = (op.nargs() - 3) / 2;
+    llvm::Value *nattrs_val = rop.llvm_constant (nattrs);
+
+    // Generate local space for the names/types/values arrays
+    llvm::Value *names = rop.builder().CreateAlloca (rop.llvm_type_string(),
+                                                     nattrs_val);
+    llvm::Value *types = rop.builder().CreateAlloca (rop.llvm_type_typedesc(),
+                                                     nattrs_val);
+    llvm::Value *values = rop.builder().CreateAlloca (rop.llvm_type_void_ptr(),
+                                                      nattrs_val);
+
+    // Fill in the arrays with the params, use helper function because
+    // it's a pain to offset things into the array ourselves.
+    for (int i = 0;  i < nattrs;  ++i) {
+        Symbol *namesym = rop.opargsym (op, 3+2*i);
+        Symbol *valsym = rop.opargsym (op, 3+2*i+1);
+        llvm::Value * args[7] = {
+            rop.llvm_void_ptr (names),
+            rop.llvm_void_ptr (types),
+            rop.llvm_void_ptr (values),
+            rop.llvm_constant (i),
+            rop.llvm_load_value (*namesym),  // name[i]
+            rop.llvm_constant (valsym->typespec().simpletype()), // type[i]
+            rop.llvm_void_ptr (*valsym)  // value[i]
+        };
+        rop.llvm_call_function ("osl_pointcloud_write_helper", &args[0], 7);
+    }
+
+    llvm::Value * args[7] = {
+        rop.sg_void_ptr(),   // shaderglobals pointer
+        rop.llvm_load_value (Filename),  // name
+        rop.llvm_void_ptr (Pos),   // position
+        nattrs_val,   // number of attributes
+        rop.llvm_void_ptr (names),   // attribute names array
+        rop.llvm_void_ptr (types),   // attribute types array
+        rop.llvm_void_ptr (values)   // attribute values array
+    };
+    llvm::Value *ret = rop.llvm_call_function ("osl_pointcloud_write", &args[0], 7);
+    rop.llvm_store_value (ret, Result);
+
+    return true;
+}
+
+
+
+
 LLVMGEN (llvm_gen_dict_find)
 {
     // OSL has two variants of this function:

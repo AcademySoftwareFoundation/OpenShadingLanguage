@@ -56,15 +56,6 @@ public:
                                void *renderstate, void *val);
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
 
-    virtual int pointcloud_search (ShaderGlobals *sg,
-                                   ustring filename, const OSL::Vec3 &center,
-                                   float radius, int max_points, 
-                                   bool sort, size_t *out_indices,
-                                   float *out_distances, int derivs_offset);
-    virtual int pointcloud_get (ustring filename, size_t *indices, int count,
-                                ustring attr_name, TypeDesc attr_type,
-                                void *out_data);
-
     // implementation specific method to setup internals:
     void name_transform (const char *name, const Matrix44& xform);
     void camera_params (const Matrix44& world_to_camera, float hfov, int xres, int yres);

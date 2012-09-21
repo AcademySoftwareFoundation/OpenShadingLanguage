@@ -56,6 +56,7 @@ static ustring u_nop    ("nop"),
                u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
+               u_pointcloud_write ("pointcloud_write"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
 
@@ -2733,6 +2734,11 @@ RuntimeOptimizer::useless_op_elision (Opcode &op, int opnum)
         }
         // If we get this far, nothing written had any effect
         if (writes_something) {
+            // Enumerate exceptions -- ops that write something, but have
+            // side effects that means they shouldn't be eliminated.
+            if (op.opname() == u_pointcloud_write)
+                return false;
+            // It's a useless op, eliminate it
             turn_into_nop (op, "eliminated op whose writes will never be read");
             return true;
         }

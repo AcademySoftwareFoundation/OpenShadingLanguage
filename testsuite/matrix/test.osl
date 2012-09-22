@@ -21,8 +21,17 @@ void matrix_fromto (string from, string to)
 
 
 shader
-test ()
+test (matrix matrixparam0 = 0,
+      matrix matrixparam1 = 1,
+      matrix matrixparam1m = matrix(1))
 {
+    // Test parameter initialization
+    printf ("Parameter initialization:\n");
+    printf ("  matrixparam0  = %g\n", matrixparam0);
+    printf ("  matrixparam1  = %g\n", matrixparam1);
+    printf ("  matrixparam1m = %g\n", matrixparam1m);
+    printf ("\n");
+
     // Test matrix constructors
     {
         float a = 0.1, b = 0.2, c = 0.3, d = 0.4,

@@ -648,12 +648,13 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
             completed = false;
         }
     } else if (type.is_matrix()) {
-        float f = 0;
-        if (islit && lit->typespec().is_int())
-            f = lit->intval();
-        else if (islit && lit->typespec().is_float())
-            f = lit->floatval();
-        else if (init && init->typespec() == type &&
+        if (islit && lit->typespec().is_int()) {
+            float f = lit->intval();
+            out += Strutil::format ("%.8g 0 0 0  0 %.8g 0 0  0 0 %.8g 0  0 0 0 %.8g ", f, f, f, f);
+        } else if (islit && lit->typespec().is_float()) {
+            float f = lit->floatval();
+            out += Strutil::format ("%.8g 0 0 0  0 %.8g 0 0  0 0 %.8g 0  0 0 0 %.8g ", f, f, f, f);
+        } else if (init && init->typespec() == type &&
                    init->nodetype() == ASTNode::type_constructor_node) {
             ASTtype_constructor *ctr = (ASTtype_constructor *) init;
             ASTNode::ref val = ctr->args();
@@ -665,26 +666,23 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
                 if (val.get() && val->nodetype() == ASTNode::literal_node) {
                     f[c] = ((ASTliteral *)val.get())->floatval ();
                     val = val->next();
+                    if (! val.get())  // we're done -- no more args
+                        break;
                 } else {
                     f[c] = 0;
                     completed = false;
                 }
             }
             if (nargs == 1)
-                out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
-                                        f[0], f[0], f[0], f[0], f[0], f[0], f[0], f[0])
-                     + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
-                                        f[0], f[0], f[0], f[0], f[0], f[0], f[0], f[0]);
+                out += Strutil::format ("%.8g 0 0 0  0 %.8g 0 0  0 0 %.8g 0  0 0 0 %.8g ",
+                                        f[0], f[0], f[0], f[0]);
             else
                 out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
                                         f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7])
                      + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g",
                                         f[8], f[9], f[10], f[11], f[12], f[13], f[14], f[15]);
         } else {
-            f = 0;
-            std::string s = Strutil::format ("%.8g ", f);
-            for (int i = 0;  i < 16;  ++i)
-                out += s;
+            out += "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
             completed = false;
         }
     } else if (type.is_string()) {

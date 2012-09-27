@@ -4199,59 +4199,6 @@ implemented as follows:
 \end{code}
 \apiend
 
-\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness, \pl)}
-\indexapi{orennayar()}
-
-Returns a \colorclosure that represents the diffuse reflectance of a
-rough surface, implementing the Oren-Nayar reflectance formula.  The
-\emph{roughness} parameter indicates how smooth or rough the
-microstructure of the material is, with 0 being perfectly smooth and
-giving an appearance identical to {\cf lambert()}.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf orennayar()} was
-implemented as follows:
-
-\begin{code}
-    normal Nf = faceforward (normalize(N), I);
-    vector V = -normalize(I);
-    float sigma2 = roughness * roughness;
-    float A = 1 - 0.5 * sigma2 / (sigma2 + 0.33);
-    float B = 0.45 * sigma2 / (sigma2 + 0.09);
-    float  theta_r = acos (dot (V, Nf));         // Angle between V and N
-    vector V_perp_N = normalize(V-Nf*dot(V,Nf)); // Part of V perpendicular to N
-    color C = 0;
-    for all lights within the hemisphere defined by (P, Nf, PI/2) {
-        /* L is the direction of light i, Cl is its incoming radiance */
-        vector LN = normalize(L);
-        float cos_theta_i = dot(LN, N);
-        float cos_phi_diff = dot (V_perp_N, normalize(LN - Nf*cos_theta_i));
-        float theta_i = acos (cos_theta_i);
-        float alpha = max (theta_i, theta_r);
-        float beta = min (theta_i, theta_r);
-        C += Cl * cos_theta_i * 
-                (A + B * max(0,cos_phi_diff) * sin(alpha) * tan(beta));
-    }
-    return C;
-\end{code}
-
-\apiend
-
 \apiitem{\colorclosure\ {\ce phong} (normal N, float exponent, \pl)}
 \indexapi{phong()}
 
@@ -4283,35 +4230,10 @@ implemented as follows:
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce cooktorrance} (normal N, float roughness, \pl)}
-\indexapi{cooktorrance()}
+\apiitem{\colorclosure\ {\ce phong_ramp} (normal N, float exponent, color colors[8] \pl)}
+\indexapi{phong_ramp()}
 
-Returns a \colorclosure that represents specular reflectance of the
-surface using the Cook-Torrence BRDF.  The \emph{roughness} parameter
-indicates how smooth or rough the microstructure of the material is.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf cooktorrance()} was
-implemented as follows:
-
-\begin{code}
-    code eventually will go here
-\end{code}
+FIXME
 
 \apiend
 
@@ -4407,6 +4329,14 @@ implemented as follows:
 
 \apiend
 
+\apiitem{\colorclosure\ {\ce microfacet_beckmann_refraction} (normal N, float roughness,
+  float eta, \pl)}
+\indexapi{microfacet_beckmann_refraction()}
+
+FIXME
+
+\apiend
+
 
 \apiitem{\colorclosure\ {\ce microfacet_ggx} (normal N, float roughness,
   float eta, \pl)}
@@ -4443,8 +4373,16 @@ implemented as follows:
 
 \apiend
 
+\apiitem{\colorclosure\ {\ce microfacet_ggx_refraction} (normal N, float roughness,
+  float eta, \pl)}
+\indexapi{microfacet_ggx_refraction()}
 
-\apiitem{\colorclosure\ \colorclosure\ {\ce reflection} (normal N, float eta, \pl)}
+FIXME
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce reflection} (normal N, float eta, \pl)}
 \indexapi{reflection()}
 
 Returns a \colorclosure that represents sharp mirror-like reflection
@@ -4647,7 +4585,7 @@ implemented as follows:
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce translucence} (\pl)}
+\apiitem{\colorclosure\ {\ce translucence} (normal N, \pl)}
 \indexapi{translucence()}
 
 Returns a \colorclosure that represents the Lambertian diffuse
@@ -4671,22 +4609,62 @@ geometry.
 \apiend
 \end{comment}
 
+\apiitem{\colorclosure\ {\ce hair_diffuse} (vector T, \pl)}
+\indexapi{hair_diffuse()}
 
-\apiitem{\colorclosure\ {\ce subsurface} (\pl)}
-\indexapi{subsurface}
+FIXME
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce hair_specular} (vector T, float offset, float exponent, \pl)}
+\indexapi{hair_specular()}
+
+FIXME
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce ashikhmin_velvet} (normal N, float sigma, float eta, \pl)}
+\indexapi{ashikhmin_velvet()}
+
+FIXME
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce westin_backscatter} (normal N, float roughness, \pl)}
+\indexapi{westin_backscatter()}
+
+FIXME
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce westin_sheen} (normal N, float edginess, \pl)}
+\indexapi{westin_sheen()}
+
+FIXME
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce subsurface} (float eta, float g, color mfp, color albedo, \pl)}
+\indexapi{subsurface()}
 Returns a \colorclosure that represents the amount of \emph{subsurface
 scattering} exhibited by the surface.
+\apiend
 
-\begin{annotate}
-We'll determine later what the arguments to {\cf subsurface} need to be.
+\apiitem{\colorclosure\ {\ce bssrdf_cubic} (color radius, \pl)}
+\indexapi{bssrdf_cubic()}
+
 FIXME
-\end{annotate}
+
 \apiend
 
 
 \apiitem{\colorclosure\ {\ce emission} (\pl) \\
-\colorclosure\ {\ce emission} (vector axis, float angle, \pl)}
-\indexapi{emission}
+\colorclosure\ {\ce emission} (float outer_angle, \pl) \\
+\colorclosure\ {\ce emission} (float inner_angle, float outer_angle, \pl)}
+\indexapi{emission()}
+
+ToDo: Fix description below (arguments changed).
 
 Returns a \colorclosure that represents a glowing/emissive surface.
 By default, light is emitted in a full hemisphere centered around the
@@ -4722,12 +4700,35 @@ cutoff at the cone boundary.
 
 \apiend
 
+\apiitem{\colorclosure\ {\ce debug} (string tag, \pl)}
+\indexapi{debug()}
+
+FIXME
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce background} (\pl)}
+\indexapi{background()}
+
+FIXME
+
+\apiend
+
+\apiitem{\colorclosure\ {\ce holdout} (\pl)}
+\indexapi{holdout()}
+
+FIXME
+
+\apiend
+
 
 \begin{comment}
 FIXME
 shadow
 indirect
 occlusion
+cloth
+fakefur
 \end{comment}
 
 

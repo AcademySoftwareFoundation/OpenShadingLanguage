@@ -888,6 +888,11 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
         error ("function '%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
+        return;
+    }
+    if (m_sym->symtype() != SymTypeFunction) {
+        error ("'%s' is not a function", name.c_str());
+        return;
     }
 }
 

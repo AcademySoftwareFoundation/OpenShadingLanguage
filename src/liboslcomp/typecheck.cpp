@@ -1221,9 +1221,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     case '*' : break; // anything will match, so keep 'UNKNOWN'
     case '.' : break; // anything will match, so keep 'UNKNOWN'
     default:
-        std::cerr << "Don't know how to decode type code '" 
-                  << code << "' " << (int)code[0] << "\n";
-        ASSERT (0);   // FIXME
+        ASSERTMSG (0, "Don't know how to decode type code '%d'", (int)code[0]);
         if (advance)
             *advance = 1;
         return TypeSpec();

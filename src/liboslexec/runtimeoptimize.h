@@ -684,6 +684,7 @@ public:
     llvm::Type *llvm_type_bool() { return m_llvm_type_bool; }
     llvm::Type *llvm_type_longlong() { return m_llvm_type_longlong; }
     llvm::Type *llvm_type_void() { return m_llvm_type_void; }
+    llvm::Type *llvm_type_typedesc() { return llvm_type_longlong(); }
     llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
     llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
     llvm::PointerType *llvm_type_int_ptr() { return m_llvm_type_int_ptr; }

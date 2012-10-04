@@ -66,16 +66,6 @@ public:
                                void *renderstate, void *val);
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
 
-    virtual int pointcloud_search (ShaderGlobals *sg,
-                                   ustring filename, const OSL::Vec3 &center,
-                                   float radius, int max_points, 
-                                   bool sort, size_t *out_indices,
-                                   float *out_distances, int derivs_offset);
-
-    virtual int pointcloud_get (ustring filename, size_t *indices, int count,
-                                ustring attr_name, TypeDesc attr_type,
-                                void *out_data);
-
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
     void camera_params (const Matrix44 &world_to_camera, ustring projection,

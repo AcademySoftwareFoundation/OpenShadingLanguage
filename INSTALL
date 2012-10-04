@@ -29,7 +29,7 @@ Here are the steps to check out, build, and test the OSL distribution:
    DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
    to find it.
 
-1. Check out a copy of the source code from the SVN repository:
+1. Check out a copy of the source code from the Git repository:
 
      git clone https://github.com/imageworks/OpenShadingLanguage.git osl
 

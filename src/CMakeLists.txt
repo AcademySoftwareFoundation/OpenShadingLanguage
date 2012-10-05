@@ -96,6 +96,7 @@ if (WIN32)
 else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
+set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 
 if (LLVM_NAMESPACE)
@@ -237,6 +238,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
+            pointcloud
             raytype render-background render-bumptest render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 

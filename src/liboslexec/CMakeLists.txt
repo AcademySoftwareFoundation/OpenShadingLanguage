@@ -101,6 +101,7 @@ ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
 TARGET_LINK_LIBRARIES ( oslexec
                         ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
                         ${OPENIMAGEIO_LIBRARY}
+                        ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
                         ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
 ADD_DEPENDENCIES (oslexec ${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map)

@@ -9,11 +9,11 @@ SET ( liboslexec_srcs
           vol_subsurface.cpp
           context.cpp gabornoise.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          opcolor.cpp opcloud.cpp
+          opcolor.cpp 
           opmessage.cpp opnoise.cpp 
           opspline.cpp opstring.cpp
           oslexec.cpp osoreader.cpp
-          rendservices.cpp runtimeoptimize.cpp typespec.cpp
+          pointcloud.cpp rendservices.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp builtin_closures.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp

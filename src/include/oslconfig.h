@@ -50,9 +50,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
-#if (OIIO_VERSION < 10100)
-namespace OIIO = OIIO_NAMESPACE;
-#endif
 
 // Extensions to Imath
 #include "matrix22.h"

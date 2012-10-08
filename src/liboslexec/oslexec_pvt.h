@@ -997,11 +997,16 @@ public:
             delete [] m_blocks[i];
     }
 
-    char * alloc(size_t size) {
-        ASSERT(size < BlockSize);
+    char * alloc(size_t size, size_t alignment=1) {
+        // Fail if beyond allocation limits or senseless alignment
+        if (size > BlockSize || (size % alignment) != 0)
+            return NULL;
+        m_block_offset -= (m_block_offset % alignment); // Fix up alignment
         if (size <= m_block_offset) {
+            // Enough space in current block
             m_block_offset -= size;
         } else {
+            // Need to allocate a new block
             m_current_block++;
             m_block_offset = BlockSize - size;
             if (m_blocks.size() == m_current_block)
@@ -1183,6 +1188,10 @@ public:
 
     PerThreadInfo *thread_info () { return m_threadinfo; }
 
+    void * alloc_scratch (size_t size, size_t align=1) {
+        return m_scratch_pool.alloc (size, align);
+    }
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
@@ -1206,6 +1215,7 @@ private:
     MessageList m_messages;             ///< Message blackboard
 
     SimplePool<20 * 1024> m_closure_pool;
+    SimplePool<64*1024> m_scratch_pool;
 
     Dictionary *m_dictionary;
 

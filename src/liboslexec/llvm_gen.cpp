@@ -3118,7 +3118,7 @@ LLVMGEN (llvm_gen_pointcloud_write)
     Symbol& Pos      = *rop.opargsym (op, 2);
     DASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
              Pos.typespec().is_triple());
-    DASSERTMSG (op.nargs() & 1, "must have an even number of attribs");
+    DASSERT ((op.nargs() & 1) && "must have an even number of attribs");
 
     int nattrs = (op.nargs() - 3) / 2;
     llvm::Value *nattrs_val = rop.llvm_constant (nattrs);

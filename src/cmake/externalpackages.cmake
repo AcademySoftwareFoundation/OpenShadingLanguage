@@ -46,8 +46,13 @@ mark_as_advanced (ILMBASE_HOME)
 
 find_package (IlmBase REQUIRED)
 
-include_directories ("${ILMBASE_INCLUDE_DIR}")
-include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
+if (ILMBASE_FOUND)
+    include_directories ("${ILMBASE_INCLUDE_DIR}")
+    include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
+    message (STATUS "ILMBASE_INCLUDE_DIR=${ILMBASE_INCLUDE_DIR}")
+else ()
+    message (STATUS "ILMBASE not found!")
+endif ()
 
 macro (LINK_ILMBASE target)
     target_link_libraries (${target} ${ILMBASE_LIBRARIES})
@@ -62,7 +67,8 @@ endmacro ()
 
 message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 
-set (Boost_ADDITIONAL_VERSIONS "1.49" "1.48" "1.47" "1.46" "1.45"
+set (Boost_ADDITIONAL_VERSIONS "1.51" "1.50" "1.49" "1.48"
+                               "1.47" "1.46" "1.45"
                                "1.44" "1.43" "1.42" "1.41" "1.40")
 #set (Boost_USE_STATIC_LIBS   ON)
 set (Boost_USE_MULTITHREADED ON)
@@ -74,7 +80,7 @@ else ()
         list (APPEND Boost_COMPONENTS wave)
     endif ()
 
-    find_package (Boost 1.34 REQUIRED 
+    find_package (Boost 1.40 REQUIRED 
                   COMPONENTS ${Boost_COMPONENTS}
                  )
 endif ()

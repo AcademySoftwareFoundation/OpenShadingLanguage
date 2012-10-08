@@ -77,7 +77,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       -I${CMAKE_CURRENT_SOURCE_DIR}
       -I${CMAKE_SOURCE_DIR}/include
       -I${CMAKE_BINARY_DIR}/include
-      -I${OPENIMAGEIO_INCLUDES} -I${ILMBASE_INCLUDE_AREA}
+      -I${OPENIMAGEIO_INCLUDES} -I${ILMBASE_INCLUDE_DIR}
       -I${Boost_INCLUDE_DIRS} -I${TBB_INCLUDES} -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
 
       COMMAND ${LLVM_DIRECTORY}/bin/llvm-as -f -o ${llvm_bc} ${llvm_asm}

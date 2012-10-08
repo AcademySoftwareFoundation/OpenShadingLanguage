@@ -158,6 +158,19 @@ compatiblePartioType (Partio::ParticleAttribute *received, int expected)
 }
 
 
+
+inline const char *
+partioTypeString(Partio::ParticleAttribute *ptype)
+{
+    switch (ptype->type) {
+    case Partio::INT:    return "int";
+    case Partio::FLOAT:  return "float";
+    case Partio::VECTOR: return "vector";
+    default:             return "none";
+    }
+}
+
+
 #endif
 
 }  // anon namespace
@@ -250,7 +263,8 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
 
 
 int
-RendererServices::pointcloud_get (ustring filename, size_t *indices, int count,
+RendererServices::pointcloud_get (ShaderGlobals *sg,
+                                  ustring filename, size_t *indices, int count,
                                   ustring attr_name, TypeDesc attr_type,
                                   void *out_data)
 {
@@ -267,8 +281,7 @@ RendererServices::pointcloud_get (ustring filename, size_t *indices, int count,
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();
     if (! attr) {
-        // FIXME -- error message?
-        // error("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
+        sg->context->shadingsys().error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
         return 0;
     }
 
@@ -292,9 +305,9 @@ RendererServices::pointcloud_get (ustring filename, size_t *indices, int count,
 
     // Finally check for some equivalent types like float3 and vector
     if (!compatiblePartioType(attr, attr_partio_type)) {
-        // error("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
-        //      attr_name.c_str(), partioTypeString(attr), attr->count,
-        //      element_type.c_str(), filename.c_str());
+        sg->context->shadingsys().error ("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
+                    attr_name.c_str(), partioTypeString(attr), attr->count,
+                    element_type.c_str(), filename.c_str());
         return 0;
     }
 
@@ -419,7 +432,8 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
         ustring  attr_name = USTR (va_arg (args, const char *));
         TypeDesc attr_type = TYPEDESC (va_arg (args, long long));
         void     *out_data = va_arg (args, void*);
-        sg->context->renderer()->pointcloud_get (USTR(filename), indices, count, attr_name, attr_type, out_data);
+        sg->context->renderer()->pointcloud_get (sg, USTR(filename), indices,
+                                        count, attr_name, attr_type, out_data);
     }
     va_end (args);
 
@@ -446,7 +460,7 @@ osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, i
 
     sg->context->shadingsys().pointcloud_stats (0, 1, 0);
 
-    return sg->context->renderer()->pointcloud_get (USTR(filename), (size_t *)indices, count, USTR(attr_name),
+    return sg->context->renderer()->pointcloud_get (sg, USTR(filename), (size_t *)indices, count, USTR(attr_name),
                                                     TYPEDESC(attr_type), out_data);
 
 }

@@ -86,11 +86,11 @@ void erase_if (Container &c, const Predicate &p)
 
 
 RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
-                                    ShaderGroup &group)
+                                    ShaderGroup &group, ShadingContext *ctx)
     : m_shadingsys(shadingsys),
       m_thread(shadingsys.get_perthread_info()),
       m_group(group),
-      m_inst(NULL),
+      m_inst(NULL), m_context(ctx),
       m_debug(shadingsys.debug()),
       m_optimize(shadingsys.optimize()),
       m_opt_constant_param(shadingsys.m_opt_constant_param),
@@ -111,6 +111,8 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_llvm_passes(NULL), m_llvm_func_passes(NULL)
 {
     set_debug ();
+    memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
+    m_shaderglobals.context = m_context;
 }
 
 
@@ -2089,7 +2091,7 @@ DECLFOLDER(constfold_pointcloud_search)
     ustring filename = *(ustring *)Filename.data();
     int count = 0;
     if (! filename.empty()) {
-        count = rop.renderer()->pointcloud_search (NULL, filename,
+        count = rop.renderer()->pointcloud_search (rop.shaderglobals(), filename,
                              *(Vec3 *)Center.data(), *(float *)Radius.data(),
                              maxpoints, false, indices, distances, 0);
         rop.shadingsys().pointcloud_stats (1, 0, count);
@@ -2149,7 +2151,8 @@ DECLFOLDER(constfold_pointcloud_search)
             }
         } else {
             // Named queries.
-            bool ok = rop.renderer()->pointcloud_get (filename, indices, count,
+            bool ok = rop.renderer()->pointcloud_get (rop.shaderglobals(),
+                                          filename, indices, count,
                                           names[i], const_valtype, const_data);
             rop.shadingsys().pointcloud_stats (0, 1, 0);
             if (! ok) {
@@ -3909,8 +3912,10 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
 
     double locking_time = timer();
 
-    RuntimeOptimizer rop (*this, group);
+    ShadingContext *ctx = get_context ();
+    RuntimeOptimizer rop (*this, group, ctx);
     rop.optimize_group ();
+    release_context (ctx);
 
     attribstate.changed_shaders ();
     group.m_optimized = true;

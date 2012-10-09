@@ -1,0 +1,4 @@
+shader test ()
+{
+    printf ("ray roughness = %g\n", rayroughness());
+}

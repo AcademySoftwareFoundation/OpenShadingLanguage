@@ -1688,6 +1688,12 @@ OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
 }
 
 
+OSL_SHADEOP float osl_rayroughness (void *sg_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    return sg->rayroughness;
+}
+
 
 
 /***********************************************************************

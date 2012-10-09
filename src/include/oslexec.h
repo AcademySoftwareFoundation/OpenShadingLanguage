@@ -307,6 +307,7 @@ struct ShaderGlobals {
     float surfacearea;               /**< Total area of the object (defined by
                                           light shaders for energy normalization) */
     int raytype;                     /**< Bit field of ray type flags */
+    float rayroughness;              /**< Accumulated roughness of incident ray */
     int flipHandedness;              /**< flips the result of calculatenormal() */
     int backfacing;                  /**< True if we want are shading the
                                           backside of the surface */

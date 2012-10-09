@@ -459,6 +459,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (printf,      printf,              none,          false);
     OP (psnoise,     noise,               none,          true);
     OP (radians,     generic,             none,          true);
+    OP (rayroughness,rayroughness,        none,          true);
     OP (raytype,     raytype,             none,          true);
     OP (regex_match, regex,               none,          false);
     OP (regex_search, regex,              regex_search,  false);

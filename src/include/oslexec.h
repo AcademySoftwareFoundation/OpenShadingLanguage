@@ -539,9 +539,6 @@ public:
                              TypeDesc type, void *val, bool derivatives) {
         return false;
     }
-
-private:
-    TextureSystem *m_texturesys;   // For default texture implementation
 };
 
 

@@ -45,7 +45,8 @@ namespace pvt {   // OSL::pvt
 /// Container for state that needs to be passed around
 class RuntimeOptimizer {
 public:
-    RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group);
+    RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group,
+                      ShadingContext *context);
 
     ~RuntimeOptimizer ();
 
@@ -83,6 +84,12 @@ public:
     TextureSystem *texturesys () const { return shadingsys().texturesys(); }
 
     RendererServices *renderer () const { return shadingsys().renderer(); }
+
+    /// Retrieve the dummy shading context.
+    ShadingContext *shadingcontext () const { return m_context; }
+
+    /// Retrieve the dummy shader globals
+    ShaderGlobals *shaderglobals () { return &m_shaderglobals; }
 
     /// Are we in debugging mode?
     int debug() const { return m_debug; }
@@ -765,6 +772,7 @@ private:
     ShaderGroup &m_group;             ///< Group we're optimizing
     int m_layer;                      ///< Layer we're optimizing
     ShaderInstance *m_inst;           ///< Instance we're optimizing
+    ShadingContext *m_context;        ///< Shading context
     int m_debug;                      ///< Current debug level
     int m_optimize;                   ///< Current optimization level
     bool m_opt_constant_param;            ///< Turn instance params into const?
@@ -775,6 +783,7 @@ private:
     bool m_opt_peephole;                  ///< Do some peephole optimizations?
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
+    ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // All below is just for the one inst we're optimizing:
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst

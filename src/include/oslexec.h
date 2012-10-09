@@ -500,7 +500,8 @@ public:
     /// of the requested type stored in out_data.
     ///
     /// Return 1 if the attribute is found, 0 otherwise.
-    virtual int pointcloud_get (ustring filename, size_t *indices, int count,
+    virtual int pointcloud_get (ShaderGlobals *sg,
+                                ustring filename, size_t *indices, int count,
                                 ustring attr_name, TypeDesc attr_type,
                                 void *out_data);
 

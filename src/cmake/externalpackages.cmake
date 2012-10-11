@@ -241,7 +241,10 @@ message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
 if (LLVM_LIBRARY AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
   # ensure include directory is added (in case of non-standard locations
   include_directories (BEFORE "${LLVM_INCLUDES}")
+  # Extract any wayward dots or "svn" suffixes from the version to yield
+  # an integer version number we can use to make compilation decisions.
   string (REGEX REPLACE "\\." "" OSL_LLVM_VERSION ${LLVM_VERSION})
+  string (REGEX REPLACE "svn" "" OSL_LLVM_VERSION ${OSL_LLVM_VERSION})
   message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
   add_definitions ("-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION}")
   if (LLVM_STATIC)

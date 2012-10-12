@@ -4912,6 +4912,19 @@ OSL, but is expected to include at a minimum \qkw{camera},
 exception that camera rays should be of class \qkw{camera} and no other.
 \apiend
 
+\apiitem{float {\ce rayroughness} ()}
+\indexapi{rayroughness()}
+Returns a measure of how much ``roughness'' has been encountered in the
+ray path from the camera to the current shading point: {\cf 0} indicates
+a direct view or specular surfaces only, {\cf 1} indicates at least one
+step of purely diffuse scattering, with intermediate values indicating
+increasing amounts of incoherent scattering.  The precise definition
+is purposely undefined, and is renderer-dependent.  The purpose of this
+function is to allow shaders to take various shortcuts when they know
+that the point being shaded will be viewed through a sufficiently
+diffuse or incoherent series of scatterings.
+\apiend
+
 
 \section{Dictionary Lookups}
 \label{sec:stdlib:dictionaries}

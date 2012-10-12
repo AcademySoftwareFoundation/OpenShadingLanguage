@@ -3263,6 +3263,20 @@ LLVMGEN (llvm_gen_raytype)
 
 
 
+// float rayroughness ()
+LLVMGEN (llvm_gen_rayroughness)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() == 1);
+    Symbol& Result = *rop.opargsym (op, 0);
+    llvm::Value *ret = rop.llvm_call_function ("osl_rayroughness",
+                                               rop.sg_void_ptr());
+    rop.llvm_store_value (ret, Result);
+    return true;
+}
+
+
+
 // color blackbody (float temperatureK)
 // color wavelength_color (float wavelength_nm)  // same function signature
 LLVMGEN (llvm_gen_blackbody)

@@ -74,6 +74,7 @@ static int sparamindex = 0;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
+static float rayroughness = 0.0f;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
@@ -181,6 +182,7 @@ getargs (int argc, const char *argv[])
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
                 "--raytype %s", &raytype, "Set the raytype",
+                "--rayroughness %f", &rayroughness, "Set the ray roughness",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
@@ -263,6 +265,9 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 
     // Just make it look like all shades are the result of 'raytype' rays.
     sg.raytype = shadingsys->raytype_bit (ustring(raytype));
+
+    // Set ray roughness as specified on the command line
+    sg.rayroughness = rayroughness;
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set

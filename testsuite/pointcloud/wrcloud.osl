@@ -1,0 +1,6 @@
+shader wrcloud (string filename = "cloud.geo",
+                output color Cout = 0)
+{
+    pointcloud_write (filename, P, "uv", color(u,v,0), "u", u, "v", v);
+    Cout = color(u,v,0);
+}

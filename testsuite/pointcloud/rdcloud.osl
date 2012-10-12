@@ -1,0 +1,21 @@
+shader rdcloud (string filename = "cloud.geo",
+                float radius = 0.1,
+                output color Cout = 0)
+{
+    int maxpoint = 10;
+    int indices[10];
+    float distances[10];
+    color uv[10];
+    int n = pointcloud_search (filename, P, radius, maxpoint, 1,
+                               "index", indices, "distance", distances);
+    Cout = 0;
+    if (pointcloud_get (filename, indices, n, "uv", uv)) {
+        float weight = 0;
+        for (int i = 0;  i < n;  ++i) {
+            float w = 1 - distances[i]/radius;
+            Cout += uv[i]*w;
+            weight += w;
+        }
+        Cout /= weight;
+    }
+}

@@ -79,6 +79,14 @@ ifneq (${ILMBASE_HOME},)
 MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
 endif
 
+ifneq (${USE_PARTIO},)
+MY_CMAKE_FLAGS += -DUSE_PARTIO:BOOL=${USE_BOOST_WAVE}
+endif
+
+ifneq (${PARTIO_HOME},)
+MY_CMAKE_FLAGS += -DPARTIO_HOME:BOOL=${PARTIO_HOME} -DUSE_PARTIO:BOOL=1
+endif
+
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -226,4 +234,5 @@ help:
 	@echo "  make HIDE_SYMBOLS=1         Hide symbols not in the public API"
 	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"
 	@echo "  make ILMBASE_HOME=path ...  Custom Ilmbase installation"
+	@echo "  make PARTIO_HOME=...        Use Partio from the given location"
 	@echo ""

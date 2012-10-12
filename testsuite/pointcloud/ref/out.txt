@@ -1,0 +1,10 @@
+Compiled rdcloud.osl -> rdcloud.oso
+Compiled test.osl -> test.oso
+Compiled wrcloud.osl -> wrcloud.oso
+
+Output Cout to out0.tif
+Partio: sort, Failed to find position in particle
+
+Output Cout to out1.tif
+
+Output Cout to out2.tif

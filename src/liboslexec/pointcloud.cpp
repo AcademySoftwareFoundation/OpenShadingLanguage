@@ -485,6 +485,7 @@ osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
                       const TypeDesc *types, const void **values)
 {
     RendererServices *renderer (sg->context->renderer());
+    sg->context->shadingsys().pointcloud_stats (0, 0, 0, 1);
     return renderer->pointcloud_write (sg, USTR(filename), *pos,
                                        nattribs, names, types, values);
 }

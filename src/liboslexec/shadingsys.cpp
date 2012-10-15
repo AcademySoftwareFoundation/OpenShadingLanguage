@@ -293,6 +293,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_pointcloud_max_results = 0;
     m_stat_pointcloud_failures = 0;
     m_stat_pointcloud_gets = 0;
+    m_stat_pointcloud_writes = 0;
 
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
@@ -685,6 +686,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
     ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
     ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
+    ATTR_DECODE ("stat:pointcloud_writes", long long, m_stat_pointcloud_writes);
     ATTR_DECODE ("stat:pointcloud_searches_total_results", long long, m_stat_pointcloud_searches_total_results);
     ATTR_DECODE ("stat:pointcloud_max_results", int, m_stat_pointcloud_max_results);
     ATTR_DECODE ("stat:pointcloud_failures", int, m_stat_pointcloud_failures);
@@ -819,7 +821,8 @@ ShadingSystemImpl::message (const std::string &msg)
 
 
 void
-ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
+ShadingSystemImpl::pointcloud_stats (int search, int get, int results,
+                                     int writes)
 {
     spin_lock lock (m_stat_mutex);
     m_stat_pointcloud_searches += search;
@@ -829,6 +832,7 @@ ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
         ++m_stat_pointcloud_failures;
     m_stat_pointcloud_max_results = std::max (m_stat_pointcloud_max_results,
                                               results);
+    m_stat_pointcloud_writes += writes;
 }
 
 
@@ -918,13 +922,16 @@ ShadingSystemImpl::getstats (int level) const
         out << "     (fail time "
             << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
     }
-    if (m_stat_pointcloud_searches) {
-        out << "  pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
+    if (m_stat_pointcloud_searches || m_stat_pointcloud_writes) {
+        out << "  Pointcloud operations:\n";
+        out << "    pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
         out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
-        out << "      average query results: " 
-            << Strutil::format ("%.1f", (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches) << "\n";
+        double avg = m_stat_pointcloud_searches ? 
+            (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches : 0.0;
+        out << "      average query results: " << Strutil::format ("%.1f", avg) << "\n";
         out << "      failures: " << m_stat_pointcloud_failures << "\n";
-        out << "  pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
+        out << "    pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
+        out << "    pointcloud_write calls: " << m_stat_pointcloud_writes << "\n";
     }
     out << "  Memory total: " << m_stat_memory.memstat() << '\n';
     out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';

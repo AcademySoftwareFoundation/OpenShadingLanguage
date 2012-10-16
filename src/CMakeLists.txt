@@ -47,8 +47,12 @@ if (NOT CMAKE_COMPILER_IS_CLANG)
 endif ()
 
 ## turn on more detailed warnings and consider warnings as errors
+set (STOP_ON_WARNING ON CACHE BOOL "Stop building if there are any compiler warnings")
 if (NOT MSVC)
-    add_definitions ("-Wall -Werror")
+    add_definitions ("-Wall")
+    if (STOP_ON_WARNING)
+        add_definitions ("-Werror")
+    endif ()
 endif ()
 
 ## disable RTTI

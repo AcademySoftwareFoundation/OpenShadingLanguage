@@ -812,7 +812,7 @@ public:
             return NULL;
     }
 
-    void pointcloud_stats (int search, int get, int results);
+    void pointcloud_stats (int search, int get, int results, int writes=0);
 
 private:
     void printstats () const;
@@ -948,6 +948,7 @@ private:
     int m_stat_pointcloud_max_results;
     int m_stat_pointcloud_failures;
     long long m_stat_pointcloud_gets;
+    long long m_stat_pointcloud_writes;
 
     int m_stat_max_llvm_local_mem;        ///< Stat: max LLVM local mem
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory

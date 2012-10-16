@@ -1,0 +1,19 @@
+// Read a pointcloud in a way that it should be able to completely
+// constant-fold and not do any lookups at render time.
+
+shader rdcloud (string filename = "cloud.geo",
+                float radius = 1000,
+                output color Cout = 0)
+{
+    int maxpoint = 16;
+    int indices[32];
+    color uv[32];
+    int n = pointcloud_search (filename, point(.5,.5,1), radius, maxpoint, 0,
+                               "index", indices);
+    Cout = 0;
+    if (pointcloud_get (filename, indices, n, "uv", uv)) {
+        for (int i = 0;  i < n;  ++i) {
+            printf ("uv[%d] = %g\n", i, uv[i]);
+        }
+    }
+}

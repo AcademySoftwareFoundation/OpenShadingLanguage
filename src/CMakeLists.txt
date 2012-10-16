@@ -238,7 +238,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
-            pointcloud
+            pointcloud pointcloud-fold
             raytype render-background render-bumptest render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 

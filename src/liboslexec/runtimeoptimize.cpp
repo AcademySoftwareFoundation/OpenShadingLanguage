@@ -2106,8 +2106,7 @@ DECLFOLDER(constfold_pointcloud_search)
     // If the query returned no matching points, just turn the whole
     // pointcloud_search call into an assignment of 0 to the 'result'.
     if (count < 1) {
-        rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &count),
-                              "Folded constant pointcloud_search lookup");
+        rop.turn_into_assign_zero (op, "Folded constant pointcloud_search lookup");
         return 1;
     }
 
@@ -2131,7 +2130,10 @@ DECLFOLDER(constfold_pointcloud_search)
             continue;
         void *const_data = NULL;
         TypeDesc const_valtype = value_types[i];
-        const_valtype.arraylen = count;
+        // How big should the constant arrays be?  Shrink to the size of
+        // the results if they are much smaller.
+        if (count < const_valtype.arraylen/2 && const_valtype.arraylen > 8)
+            const_valtype.arraylen = count;
         tmp.clear ();
         tmp.resize (const_valtype.size(), 0);
         const_data = &tmp[0];
@@ -2177,6 +2179,61 @@ DECLFOLDER(constfold_pointcloud_search)
     args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
     rop.insert_code (opnum, u_assign, args_to_add, true);
     
+    return 1;
+}
+
+
+
+DECLFOLDER(constfold_pointcloud_get)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    // Symbol& Result     = *rop.opargsym (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Indices    = *rop.opargsym (op, 2);
+    Symbol& Count      = *rop.opargsym (op, 3);
+    Symbol& Attr_name  = *rop.opargsym (op, 4);
+    Symbol& Data       = *rop.opargsym (op, 5);
+    if (! (Filename.is_constant() && Indices.is_constant() &&
+           Count.is_constant() && Attr_name.is_constant()))
+        return 0;
+
+    // All inputs are constants -- we can just turn this into an array
+    // assignment.
+
+    ustring filename = *(ustring *)Filename.data();
+    int count = *(int *)Count.data();
+    if (filename.empty() || count < 1) {
+        rop.turn_into_assign_zero (op, "Folded constant pointcloud_get");
+        return 1;
+    }
+
+    if (count >= 1024)  // Too many, don't bother folding
+        return 0;
+
+    // Must transfer to size_t array
+    size_t *indices = ALLOCA (size_t, count);
+    for (int i = 0;  i < count;  ++i)
+        indices[i] = ((int *)Indices.data())[i];
+
+    TypeDesc valtype = Data.typespec().simpletype();
+    std::vector<char> data (valtype.size());
+    int ok = rop.renderer()->pointcloud_get (rop.shaderglobals(), filename,
+                                             indices, count,
+                                             *(ustring *)Attr_name.data(),
+                                             valtype.elementtype(), &data[0]);
+    rop.shadingsys().pointcloud_stats (0, 1, 0);
+
+    rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &ok),
+                          "Folded constant pointcloud_get");
+
+    // Now make a constant array for those results we just retrieved...
+    int const_array_sym = rop.add_constant (valtype, &data[0]);
+    // ... and add an instruction to copy the constant into the
+    // original destination for the query.
+    std::vector<int> args_to_add;
+    args_to_add.push_back (rop.oparg(op,5) /* Data symbol*/);
+    args_to_add.push_back (const_array_sym);
+    rop.insert_code (opnum, u_assign, args_to_add, true);
     return 1;
 }
 

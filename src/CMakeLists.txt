@@ -236,7 +236,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             geomath getsymbol-nonheap gettextureinfo hyperb
             ieee_fp if incdec initops intbits
             layers layers-Ciassign layers-lazy
-            logic loop matrix message miscmath missing-shader
+            logic loop matrix message metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin

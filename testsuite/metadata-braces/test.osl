@@ -1,0 +1,8 @@
+shader test (
+    int myparam = 0 [[ int foo = 1,
+                       string mymetadata = "blah{}blah",
+                       int bar = 5 ]]
+    )
+{
+    printf ("myparam = %d\n", myparam);
+}

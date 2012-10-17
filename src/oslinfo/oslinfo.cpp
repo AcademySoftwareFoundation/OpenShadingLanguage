@@ -131,6 +131,8 @@ print_metadata (const OSLQuery::Parameter &m)
 {
     std::string typestring (m.type.c_str());
     std::cout << "\t\tmetadata: " << typestring << ' ' << m.name << " =";
+    for (unsigned int d = 0;  d < m.idefault.size();  ++d)
+        std::cout << " " << m.idefault[d];
     for (unsigned int d = 0;  d < m.fdefault.size();  ++d)
         std::cout << " " << m.fdefault[d];
     for (unsigned int d = 0;  d < m.sdefault.size();  ++d)

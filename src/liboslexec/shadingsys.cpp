@@ -257,7 +257,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
-      m_opt_assign(true),
+      m_opt_assign(true), m_opt_mix(true),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
       m_debug(false), m_llvm_debug(false),
@@ -445,6 +445,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (mxcompassign, mxcompassign,       none,          false);
     OP (mxcompref,   mxcompref,           none,          true);
     OP (min,         minmax,              min,           true);
+    OP (mix,         mix,                 mix,           true);
     OP (mod,         modulus,             none,          true);
     OP (mul,         mul,                 mul,           true);
     OP (neg,         neg,                 neg,           true);
@@ -574,6 +575,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_peephole", int, m_opt_peephole);
     ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_SET ("opt_assign", int, m_opt_assign);
+    ATTR_SET ("opt_mix", int, m_opt_mix);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -650,6 +652,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_peephole", int, m_opt_peephole);
     ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
+    ATTR_DECODE ("opt_mix", int, m_opt_mix);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);

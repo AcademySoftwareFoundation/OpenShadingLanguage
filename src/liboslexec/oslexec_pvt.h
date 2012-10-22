@@ -883,6 +883,7 @@ private:
     bool m_opt_peephole;                  ///< Do some peephole optimizations?
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
+    bool m_opt_mix;                       ///< Special 'mix' optimizations
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output

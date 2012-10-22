@@ -18,14 +18,18 @@ test ()
         printf ("  step (%g, %g) = %g\n", b, a, step (b,a));
         printf ("  step (%g, %g) = %g\n", b, c, step (b,c));
         float t = 0.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        float m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 0.25;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 1.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
     }
 
+    // triple versions
     { 
         vector a = 1;
         vector b = 3;
@@ -41,11 +45,14 @@ test ()
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
         vector t = 0.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        vector m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 0.25;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 1.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
     }
 
     printf (" varying:\n");
@@ -66,11 +73,14 @@ test ()
         printf ("  step (%g, %g) = %g\n", b, a, step (b,a));
         printf ("  step (%g, %g) = %g\n", b, c, step (b,c));
         float t = 0.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        float m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 0.25;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 1.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         printf ("  smoothstep (%g, %g, %g) = %g\n", b, c, a, smoothstep (b,c,a));
     }
 
@@ -89,10 +99,13 @@ test ()
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
         float t = 0.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        color m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 0.25;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
         t = 1.0;
-        printf ("  mix (%g, %g, %g) = %g\n", b, c, t, mix (b,c,t));
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
     }
 }

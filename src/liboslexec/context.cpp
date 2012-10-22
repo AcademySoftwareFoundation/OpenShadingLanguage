@@ -113,6 +113,9 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
     // Clear the message blackboard
     m_messages.clear ();
 
+    // Clear miscellaneous scratch space
+    m_scratch_pool.clear ();
+
     if (run) {
         ssg.context = this;
         ssg.Ci = NULL;

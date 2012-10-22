@@ -42,9 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenImageIO/dassert.h"
 #include "OpenImageIO/thread.h"
 #include "OpenImageIO/filesystem.h"
-#if OIIO_VERSION >= 1100
-# include "OpenImageIO/optparser.h"
-#endif
+#include "OpenImageIO/optparser.h"
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -295,6 +293,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_pointcloud_max_results = 0;
     m_stat_pointcloud_failures = 0;
     m_stat_pointcloud_gets = 0;
+    m_stat_pointcloud_writes = 0;
 
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
@@ -455,7 +454,8 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (pnoise,      noise,               none,          true);
     OP (point,       construct_triple,    triple,        true);
     OP (pointcloud_search, pointcloud_search, pointcloud_search, false);
-    OP (pointcloud_get, pointcloud_get,   none,          false);
+    OP (pointcloud_get, pointcloud_get,   pointcloud_get,false);
+    OP (pointcloud_write, pointcloud_write, none,        false);
     OP (pow,         generic,             pow,           true);
     OP (printf,      printf,              none,          false);
     OP (psnoise,     noise,               none,          true);
@@ -551,11 +551,9 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         return true;                                                    \
     }
 
-#if OIIO_VERSION >= 1100 /* 0.11 and higher only */
     if (name == "options" && type == TypeDesc::STRING) {
         return OIIO::optparser (*(ShadingSystem *)this, *(const char **)val);
     }
-#endif
 
     lock_guard guard (m_mutex);  // Thread safety
     ATTR_SET ("statistics:level", int, m_statslevel);
@@ -688,6 +686,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
     ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
     ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
+    ATTR_DECODE ("stat:pointcloud_writes", long long, m_stat_pointcloud_writes);
     ATTR_DECODE ("stat:pointcloud_searches_total_results", long long, m_stat_pointcloud_searches_total_results);
     ATTR_DECODE ("stat:pointcloud_max_results", int, m_stat_pointcloud_max_results);
     ATTR_DECODE ("stat:pointcloud_failures", int, m_stat_pointcloud_failures);
@@ -822,7 +821,8 @@ ShadingSystemImpl::message (const std::string &msg)
 
 
 void
-ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
+ShadingSystemImpl::pointcloud_stats (int search, int get, int results,
+                                     int writes)
 {
     spin_lock lock (m_stat_mutex);
     m_stat_pointcloud_searches += search;
@@ -832,6 +832,7 @@ ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
         ++m_stat_pointcloud_failures;
     m_stat_pointcloud_max_results = std::max (m_stat_pointcloud_max_results,
                                               results);
+    m_stat_pointcloud_writes += writes;
 }
 
 
@@ -921,13 +922,16 @@ ShadingSystemImpl::getstats (int level) const
         out << "     (fail time "
             << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
     }
-    if (m_stat_pointcloud_searches) {
-        out << "  pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
+    if (m_stat_pointcloud_searches || m_stat_pointcloud_writes) {
+        out << "  Pointcloud operations:\n";
+        out << "    pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
         out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
-        out << "      average query results: " 
-            << Strutil::format ("%.1f", (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches) << "\n";
+        double avg = m_stat_pointcloud_searches ? 
+            (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches : 0.0;
+        out << "      average query results: " << Strutil::format ("%.1f", avg) << "\n";
         out << "      failures: " << m_stat_pointcloud_failures << "\n";
-        out << "  pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
+        out << "    pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
+        out << "    pointcloud_write calls: " << m_stat_pointcloud_writes << "\n";
     }
     out << "  Memory total: " << m_stat_memory.memstat() << '\n';
     out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';
@@ -1172,8 +1176,8 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     }
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
-    dstinst->symbol(dstcon.param)->valuesource (Symbol::ConnectedVal);
-    srcinst->symbol(srccon.param)->connected_down (true);
+    dstinst->instoverride(dstcon.param)->valuesource (Symbol::ConnectedVal);
+    srcinst->instoverride(srccon.param)->connected_down (true);
     srcinst->outgoing_connections (true);
 
     if (debug())
@@ -1310,7 +1314,7 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         return c;
     }
 
-    Symbol *sym = inst->symbol (c.param);
+    const Symbol *sym = inst->mastersymbol (c.param);
     ASSERT (sym);
 
     // Only params, output params, and globals are legal for connections
@@ -1335,7 +1339,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
             c.arrayindex = c.type.arraylength() - 1;  // clamp it
         }
         c.type.make_array (0);              // chop to the element type
-        c.offset += c.type.simpletype().size() * c.arrayindex;
         bracket = strchr (bracket+1, '[');  // skip to next bracket
     }
 
@@ -1351,7 +1354,6 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
         }
         // chop to just the scalar part
         c.type = TypeSpec ((TypeDesc::BASETYPE)c.type.simpletype().basetype);
-        c.offset += c.type.simpletype().size() * c.channel;
         bracket = strchr (bracket+1, '[');     // skip to next bracket
     }
 

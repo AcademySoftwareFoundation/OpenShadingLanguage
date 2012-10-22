@@ -9,11 +9,11 @@ SET ( liboslexec_srcs
           vol_subsurface.cpp
           context.cpp gabornoise.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          opcolor.cpp opcloud.cpp
+          opcolor.cpp 
           opmessage.cpp opnoise.cpp 
           opspline.cpp opstring.cpp
           oslexec.cpp osoreader.cpp
-          rendservices.cpp runtimeoptimize.cpp typespec.cpp
+          pointcloud.cpp rendservices.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp builtin_closures.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
@@ -43,6 +43,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     SET ( ${srclist} ${${srclist}} ${llvm_bc_cpp} )
     EXEC_PROGRAM ( ${LLVM_DIRECTORY}/bin/llvm-config ARGS --cxxflags OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
     set (LLVM_COMPILE_FLAGS "${LLVM_COMPILE_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -O3 --combine")
+    LIST (APPEND LLVM_COMPILE_FLAGS "-I${ILMBASE_INCLUDE_DIR}")
     if (OSL_NAMESPACE)
         LIST (APPEND LLVM_COMPILE_FLAGS "-DOSL_NAMESPACE=${OSL_NAMESPACE}")
     endif ()
@@ -76,7 +77,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       -I${CMAKE_CURRENT_SOURCE_DIR}
       -I${CMAKE_SOURCE_DIR}/include
       -I${CMAKE_BINARY_DIR}/include
-      -I${OPENIMAGEIO_INCLUDES} -I${ILMBASE_INCLUDE_AREA}
+      -I${OPENIMAGEIO_INCLUDES} -I${ILMBASE_INCLUDE_DIR}
       -I${Boost_INCLUDE_DIRS} -I${TBB_INCLUDES} -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
 
       COMMAND ${LLVM_DIRECTORY}/bin/llvm-as -f -o ${llvm_bc} ${llvm_asm}
@@ -100,6 +101,7 @@ ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
 TARGET_LINK_LIBRARIES ( oslexec
                         ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
                         ${OPENIMAGEIO_LIBRARY}
+                        ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
                         ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
 ADD_DEPENDENCIES (oslexec ${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map)

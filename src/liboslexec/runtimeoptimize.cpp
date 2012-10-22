@@ -56,6 +56,7 @@ static ustring u_nop    ("nop"),
                u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
+               u_pointcloud_write ("pointcloud_write"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
 
@@ -85,11 +86,11 @@ void erase_if (Container &c, const Predicate &p)
 
 
 RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
-                                    ShaderGroup &group)
+                                    ShaderGroup &group, ShadingContext *ctx)
     : m_shadingsys(shadingsys),
       m_thread(shadingsys.get_perthread_info()),
       m_group(group),
-      m_inst(NULL),
+      m_inst(NULL), m_context(ctx),
       m_debug(shadingsys.debug()),
       m_optimize(shadingsys.optimize()),
       m_opt_constant_param(shadingsys.m_opt_constant_param),
@@ -110,6 +111,8 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_llvm_passes(NULL), m_llvm_func_passes(NULL)
 {
     set_debug ();
+    memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
+    m_shaderglobals.context = m_context;
 }
 
 
@@ -2088,7 +2091,7 @@ DECLFOLDER(constfold_pointcloud_search)
     ustring filename = *(ustring *)Filename.data();
     int count = 0;
     if (! filename.empty()) {
-        count = rop.renderer()->pointcloud_search (NULL, filename,
+        count = rop.renderer()->pointcloud_search (rop.shaderglobals(), filename,
                              *(Vec3 *)Center.data(), *(float *)Radius.data(),
                              maxpoints, false, indices, distances, 0);
         rop.shadingsys().pointcloud_stats (1, 0, count);
@@ -2103,8 +2106,7 @@ DECLFOLDER(constfold_pointcloud_search)
     // If the query returned no matching points, just turn the whole
     // pointcloud_search call into an assignment of 0 to the 'result'.
     if (count < 1) {
-        rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &count),
-                              "Folded constant pointcloud_search lookup");
+        rop.turn_into_assign_zero (op, "Folded constant pointcloud_search lookup");
         return 1;
     }
 
@@ -2128,7 +2130,10 @@ DECLFOLDER(constfold_pointcloud_search)
             continue;
         void *const_data = NULL;
         TypeDesc const_valtype = value_types[i];
-        const_valtype.arraylen = count;
+        // How big should the constant arrays be?  Shrink to the size of
+        // the results if they are much smaller.
+        if (count < const_valtype.arraylen/2 && const_valtype.arraylen > 8)
+            const_valtype.arraylen = count;
         tmp.clear ();
         tmp.resize (const_valtype.size(), 0);
         const_data = &tmp[0];
@@ -2148,7 +2153,8 @@ DECLFOLDER(constfold_pointcloud_search)
             }
         } else {
             // Named queries.
-            bool ok = rop.renderer()->pointcloud_get (filename, indices, count,
+            bool ok = rop.renderer()->pointcloud_get (rop.shaderglobals(),
+                                          filename, indices, count,
                                           names[i], const_valtype, const_data);
             rop.shadingsys().pointcloud_stats (0, 1, 0);
             if (! ok) {
@@ -2173,6 +2179,61 @@ DECLFOLDER(constfold_pointcloud_search)
     args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
     rop.insert_code (opnum, u_assign, args_to_add, true);
     
+    return 1;
+}
+
+
+
+DECLFOLDER(constfold_pointcloud_get)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    // Symbol& Result     = *rop.opargsym (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Indices    = *rop.opargsym (op, 2);
+    Symbol& Count      = *rop.opargsym (op, 3);
+    Symbol& Attr_name  = *rop.opargsym (op, 4);
+    Symbol& Data       = *rop.opargsym (op, 5);
+    if (! (Filename.is_constant() && Indices.is_constant() &&
+           Count.is_constant() && Attr_name.is_constant()))
+        return 0;
+
+    // All inputs are constants -- we can just turn this into an array
+    // assignment.
+
+    ustring filename = *(ustring *)Filename.data();
+    int count = *(int *)Count.data();
+    if (filename.empty() || count < 1) {
+        rop.turn_into_assign_zero (op, "Folded constant pointcloud_get");
+        return 1;
+    }
+
+    if (count >= 1024)  // Too many, don't bother folding
+        return 0;
+
+    // Must transfer to size_t array
+    size_t *indices = ALLOCA (size_t, count);
+    for (int i = 0;  i < count;  ++i)
+        indices[i] = ((int *)Indices.data())[i];
+
+    TypeDesc valtype = Data.typespec().simpletype();
+    std::vector<char> data (valtype.size());
+    int ok = rop.renderer()->pointcloud_get (rop.shaderglobals(), filename,
+                                             indices, count,
+                                             *(ustring *)Attr_name.data(),
+                                             valtype.elementtype(), &data[0]);
+    rop.shadingsys().pointcloud_stats (0, 1, 0);
+
+    rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &ok),
+                          "Folded constant pointcloud_get");
+
+    // Now make a constant array for those results we just retrieved...
+    int const_array_sym = rop.add_constant (valtype, &data[0]);
+    // ... and add an instruction to copy the constant into the
+    // original destination for the query.
+    std::vector<int> args_to_add;
+    args_to_add.push_back (rop.oparg(op,5) /* Data symbol*/);
+    args_to_add.push_back (const_array_sym);
+    rop.insert_code (opnum, u_assign, args_to_add, true);
     return 1;
 }
 
@@ -2647,7 +2708,6 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, const char *why)
         Rdefault = &inst()->m_sparams[R->dataoffset()];
     DASSERT (Rdefault != NULL);
     R->data (Rdefault);
-    R->step (0);
 
     // Get rid of any init ops
     if (R->has_init_ops()) {
@@ -2734,6 +2794,11 @@ RuntimeOptimizer::useless_op_elision (Opcode &op, int opnum)
         }
         // If we get this far, nothing written had any effect
         if (writes_something) {
+            // Enumerate exceptions -- ops that write something, but have
+            // side effects that means they shouldn't be eliminated.
+            if (op.opname() == u_pointcloud_write)
+                return false;
+            // It's a useless op, eliminate it
             turn_into_nop (op, "eliminated op whose writes will never be read");
             return true;
         }
@@ -3811,6 +3876,7 @@ RuntimeOptimizer::optimize_group ()
     // Once we're generated the IR, we really don't need the ops and args,
     // and we only need the syms that include the params.
     off_t symmem = 0;
+    size_t connectionmem = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         // We no longer needs ops and args -- create empty vectors and
@@ -3825,6 +3891,8 @@ RuntimeOptimizer::optimize_group ()
             SymbolVec nosyms;
             std::swap (inst()->symbols(), nosyms);
             symmem += vectorbytes(nosyms);
+            // also don't need the connection info any more
+            connectionmem += (off_t) inst()->clear_connections ();
         }
     }
     {
@@ -3832,8 +3900,9 @@ RuntimeOptimizer::optimize_group ()
         ShadingSystemImpl &ss (shadingsys());
         spin_lock lock (ss.m_stat_mutex);
         ss.m_stat_mem_inst_syms -= symmem;
-        ss.m_stat_mem_inst -= symmem;
-        ss.m_stat_memory -= symmem;
+        ss.m_stat_mem_inst_connections -= connectionmem;
+        ss.m_stat_mem_inst -= symmem + connectionmem;
+        ss.m_stat_memory -= symmem + connectionmem;
         ss.m_stat_preopt_syms += old_nsyms;
         ss.m_stat_preopt_ops += old_nops;
         ss.m_stat_postopt_syms += new_nsyms;
@@ -3900,8 +3969,10 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
 
     double locking_time = timer();
 
-    RuntimeOptimizer rop (*this, group);
+    ShadingContext *ctx = get_context ();
+    RuntimeOptimizer rop (*this, group, ctx);
     rop.optimize_group ();
+    release_context (ctx);
 
     attribstate.changed_shaders ();
     group.m_optimized = true;

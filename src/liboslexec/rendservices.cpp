@@ -190,4 +190,5 @@ RendererServices::get_texture_info (ustring filename, int subimage,
 }
 
 
+
 OSL_NAMESPACE_EXIT

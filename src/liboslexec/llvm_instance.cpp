@@ -266,6 +266,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud_search", "iXsXfiiXXii*",
     "osl_pointcloud_get", "iXsXisLX",
+    "osl_pointcloud_write", "iXsXiXXX",
+    "osl_pointcloud_write_helper", "xXXXisLX",
     "osl_blackbody_vf", "xXXf",
     "osl_wavelength_color_vf", "xXXf",
     "osl_luminance_fv", "xXXX",

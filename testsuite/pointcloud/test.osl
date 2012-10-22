@@ -1,0 +1,26 @@
+surface test (float Kd = 1, color Cs = 1,
+               string attr_name = "color" [[ int lockgeom = 0 ]],
+               output color Cout = 0.5)
+{
+    int indices[50];
+    color colors[50];
+    float distances[50];
+    float radius = 1.5;
+
+    int nfound = pointcloud_search("cloud.geo", P, radius, 50, "distance", distances, "index", indices);
+
+    float weight = 0.5; // blend to the default color in abscence of points
+    color accum = Cs * weight;
+    if (pointcloud_get("cloud.geo", indices, nfound, attr_name, colors))
+    {
+        for (int i = 0; i < nfound; ++i)
+        {
+            float w = 1.0 - distances[i] / radius;
+            accum += colors[i] * w;
+            weight += w;
+        }
+        accum = accum * (1.0 / weight);
+    }
+
+    Cout = accum;
+}

@@ -482,27 +482,37 @@ public:
                                    void *data);
 
 
-    /// Lookup nearest points in a point cloud. It will search for points
-    /// around the given center within the specified radius. A list of indices
-    /// is returned so the programmer can later retrieve attributes with
-    /// pointcloud_get. The indices array is mandatory, but distances can be NULL.
-    /// If a derivs_offset > 0 is given, derivatives will be computed for
-    /// distances (when provided).
+    /// Lookup nearest points in a point cloud. It will search for
+    /// points around the given center within the specified radius. A
+    /// list of indices is returned so the programmer can later retrieve
+    /// attributes with pointcloud_get. The indices array is mandatory,
+    /// but distances can be NULL.  If a derivs_offset > 0 is given,
+    /// derivatives will be computed for distances (when provided).
     ///
     /// Return the number of points found, always < max_points
     virtual int pointcloud_search (ShaderGlobals *sg,
                                    ustring filename, const OSL::Vec3 &center,
                                    float radius, int max_points, bool sort,
                                    size_t *out_indices,
-                                   float *out_distances, int derivs_offset) = 0;
+                                   float *out_distances, int derivs_offset);
 
     /// Retrieve an attribute for an index list. The result is another array
     /// of the requested type stored in out_data.
     ///
     /// Return 1 if the attribute is found, 0 otherwise.
-    virtual int pointcloud_get (ustring filename, size_t *indices, int count,
+    virtual int pointcloud_get (ShaderGlobals *sg,
+                                ustring filename, size_t *indices, int count,
                                 ustring attr_name, TypeDesc attr_type,
-                                void *out_data) = 0;
+                                void *out_data);
+
+    /// Write a point to the named pointcloud, which will be saved 
+    /// at the end of the frame.  Return true if everything is ok,
+    /// false if there was an error.
+    virtual bool pointcloud_write (ShaderGlobals *sg,
+                                   ustring filename, const OSL::Vec3 &pos,
+                                   int nattribs, const ustring *names,
+                                   const TypeDesc *types,
+                                   const void **data);
 
     /// Options for the trace call.
     struct TraceOpt {
@@ -529,9 +539,6 @@ public:
                              TypeDesc type, void *val, bool derivatives) {
         return false;
     }
-
-private:
-    TextureSystem *m_texturesys;   // For default texture implementation
 };
 
 

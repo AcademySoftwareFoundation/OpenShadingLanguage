@@ -27,6 +27,11 @@ def oslc (args) :
     return (osl_app("oslc") + args + " >> out.txt 2>&1 ;\n")
 
 
+# Construct a command that will run oslinfo, appending output to
+# the file "out.txt".
+def oslinfo (args) :
+    return (osl_app("oslinfo") + args + " >> out.txt 2>&1 ;\n")
+
 
 # Construct a command that run testshade with the specified arguments, appending output to
 # the file "out.txt".

@@ -33,9 +33,7 @@ endif ()
 
 
 ###########################################################################
-# IlmBase and OpenEXR setup
-
-# TODO: Place the OpenEXR stuff into a separate FindOpenEXR.cmake module.
+# IlmBase setup
 
 # example of using setup_var instead:
 #setup_var (ILMBASE_VERSION 1.0.1 "Version of the ILMBase library")
@@ -45,96 +43,32 @@ mark_as_advanced (ILMBASE_VERSION)
 setup_path (ILMBASE_HOME "${THIRD_PARTY_TOOLS_HOME}"
             "Location of the ILMBase library install")
 mark_as_advanced (ILMBASE_HOME)
-find_path (ILMBASE_INCLUDE_AREA OpenEXR/half.h
-           ${ILMBASE_HOME}/include/ilmbase-${ILMBASE_VERSION}
-           ${ILMBASE_HOME}/include
-          )
-if (ILMBASE_CUSTOM)
-    set (IlmBase_Libraries ${ILMBASE_CUSTOM_LIBRARIES})
-    separate_arguments(IlmBase_Libraries)
+
+find_package (IlmBase REQUIRED)
+
+if (ILMBASE_FOUND)
+    include_directories ("${ILMBASE_INCLUDE_DIR}")
+    include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
+    message (STATUS "ILMBASE_INCLUDE_DIR=${ILMBASE_INCLUDE_DIR}")
 else ()
-    set (IlmBase_Libraries Imath Half IlmThread Iex)
-endif ()
-
-foreach (_lib ${IlmBase_Libraries})
-    find_library (current_lib ${_lib}
-                  PATHS ${ILMBASE_HOME}/lib ${ILMBASE_HOME}/lib64
-                        ${ILMBASE_LIB_AREA}
-                  )
-    list(APPEND ILMBASE_LIBRARIES ${current_lib})
-    # this effectively unsets ${current_lib} so that find_library()
-    # won't use the previous search results from the cache
-    set (current_lib current_lib-NOTFOUND)
-endforeach ()
-
-message (STATUS "ILMBASE_INCLUDE_AREA = ${ILMBASE_INCLUDE_AREA}")
-message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
-
-if (ILMBASE_INCLUDE_AREA AND ILMBASE_LIBRARIES)
-    set (ILMBASE_FOUND true)
-    include_directories ("${ILMBASE_INCLUDE_AREA}")
-    include_directories ("${ILMBASE_INCLUDE_AREA}/OpenEXR")
-else ()
-    message (FATAL_ERROR "ILMBASE not found!")
+    message (STATUS "ILMBASE not found!")
 endif ()
 
 macro (LINK_ILMBASE target)
     target_link_libraries (${target} ${ILMBASE_LIBRARIES})
 endmacro ()
 
-setup_string (OPENEXR_VERSION 1.6.1 "OpenEXR version number")
-setup_string (OPENEXR_VERSION_DIGITS 010601 "OpenEXR version preprocessor number")
-mark_as_advanced (OPENEXR_VERSION)
-mark_as_advanced (OPENEXR_VERSION_DIGITS)
-# FIXME -- should instead do the search & replace automatically, like this
-# way it was done in the old makefiles:
-#     OPENEXR_VERSION_DIGITS ?= 0$(subst .,0,${OPENEXR_VERSION})
-setup_path (OPENEXR_HOME "${THIRD_PARTY_TOOLS_HOME}"
-            "Location of the OpenEXR library install")
-mark_as_advanced (OPENEXR_HOME)
-find_path (OPENEXR_INCLUDE_AREA OpenEXR/OpenEXRConfig.h
-           ${OPENEXR_HOME}/include
-           ${ILMBASE_HOME}/include/openexr-${OPENEXR_VERSION}
-          )
-if (OPENEXR_CUSTOM)
-    find_library (OPENEXR_LIBRARY ${OPENEXR_CUSTOM_LIBRARY}
-                  PATHS ${OPENEXR_HOME}/lib
-                        ${OPENEXR_HOME}/lib64
-                        ${OPENEXR_LIB_AREA}
-                 )
-else ()
-    find_library (OPENEXR_LIBRARY IlmImf
-                  PATHS ${OPENEXR_HOME}/lib
-                        ${OPENEXR_HOME}/lib64
-                        ${OPENEXR_LIB_AREA}
-                 )
-endif ()
-
-message (STATUS "OPENEXR_INCLUDE_AREA = ${OPENEXR_INCLUDE_AREA}")
-message (STATUS "OPENEXR_LIBRARY = ${OPENEXR_LIBRARY}")
-if (OPENEXR_INCLUDE_AREA AND OPENEXR_LIBRARY)
-    set (OPENEXR_FOUND true)
-    include_directories (${OPENEXR_INCLUDE_AREA})
-    include_directories (${OPENEXR_INCLUDE_AREA}/OpenEXR)
-else ()
-    message (STATUS "OPENEXR not found!")
-endif ()
-add_definitions ("-DOPENEXR_VERSION=${OPENEXR_VERSION_DIGITS}")
-find_package (ZLIB)
-macro (LINK_OPENEXR target)
-    target_link_libraries (${target} ${OPENEXR_LIBRARY} ${ZLIB_LIBRARIES})
-endmacro ()
-
-
-# end IlmBase and OpenEXR setup
+# end IlmBase setup
 ###########################################################################
+
 
 ###########################################################################
 # Boost setup
 
 message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 
-set (Boost_ADDITIONAL_VERSIONS "1.49" "1.48" "1.47" "1.46" "1.45"
+set (Boost_ADDITIONAL_VERSIONS "1.51" "1.50" "1.49" "1.48"
+                               "1.47" "1.46" "1.45"
                                "1.44" "1.43" "1.42" "1.41" "1.40")
 #set (Boost_USE_STATIC_LIBS   ON)
 set (Boost_USE_MULTITHREADED ON)
@@ -146,7 +80,7 @@ else ()
         list (APPEND Boost_COMPONENTS wave)
     endif ()
 
-    find_package (Boost 1.34 REQUIRED 
+    find_package (Boost 1.40 REQUIRED 
                   COMPONENTS ${Boost_COMPONENTS}
                  )
 endif ()
@@ -162,16 +96,6 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 # end Boost setup
 ###########################################################################
 
-###########################################################################
-# OpenGL setup
-
-if (USE_OPENGL)
-    find_package (OpenGL)
-endif ()
-message (STATUS "OPENGL_FOUND=${OPENGL_FOUND} USE_OPENGL=${USE_OPENGL}")
-
-# end OpenGL setup
-###########################################################################
 
 ###########################################################################
 # TBB (Intel Thread Building Blocks) setup
@@ -219,23 +143,32 @@ endif ()
 ###########################################################################
 
 ###########################################################################
-# GL Extension Wrangler library setup
+# Partio
 
-if (USE_OPENGL)
-    set (GLEW_VERSION 1.5.1)
-    find_library (GLEW_LIBRARIES
-                  NAMES GLEW)
-    find_path (GLEW_INCLUDES
-               NAMES glew.h
-               PATH_SUFFIXES GL)
-    if (GLEW_INCLUDES AND GLEW_LIBRARIES)
-        set (GLEW_FOUND TRUE)
-        message (STATUS "GLEW includes = ${GLEW_INCLUDES}")
-        message (STATUS "GLEW library = ${GLEW_LIBRARIES}")
+find_package (ZLIB)
+if (USE_PARTIO)
+    find_library (PARTIO_LIBRARIES
+                  NAMES partio
+                  PATHS ${PARTIO_HOME}/lib)
+    find_path (PARTIO_INCLUDE_DIR
+               NAMES Partio.h
+               PATHS ${PARTIO_HOME}/include)
+    if (PARTIO_INCLUDE_DIR AND PARTIO_LIBRARIES)
+        set (PARTIO_FOUND TRUE)
+        add_definitions ("-DUSE_PARTIO=1")
+        include_directories ("${PARTIO_INCLUDE_DIR}")
+        message (STATUS "Partio include = ${PARTIO_INCLUDE_DIR}")
+        message (STATUS "Partio library = ${PARTIO_LIBRARIES}")
     else ()
-        message (STATUS "GLEW not found")
+        add_definitions ("-DUSE_PARTIO=0")
+        set (PARTIO_FOUND FALSE)
+        set (PARTIO_LIBRARIES "")
+        message (STATUS "Partio not found")
     endif ()
-endif (USE_OPENGL)
+else ()
+    set (PARTIO_FOUND FALSE)
+    set (PARTIO_LIBRARIES "")
+endif (USE_PARTIO)
 
 # end GL Extension Wrangler library setup
 ###########################################################################
@@ -273,7 +206,10 @@ message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
 if (LLVM_LIBRARY AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
   # ensure include directory is added (in case of non-standard locations
   include_directories (BEFORE "${LLVM_INCLUDES}")
+  # Extract any wayward dots or "svn" suffixes from the version to yield
+  # an integer version number we can use to make compilation decisions.
   string (REGEX REPLACE "\\." "" OSL_LLVM_VERSION ${LLVM_VERSION})
+  string (REGEX REPLACE "svn" "" OSL_LLVM_VERSION ${OSL_LLVM_VERSION})
   message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
   add_definitions ("-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION}")
   if (LLVM_STATIC)

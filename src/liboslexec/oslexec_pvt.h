@@ -270,7 +270,14 @@ public:
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
-    Symbol *symbol (int index) { return index >= 0 ? &m_symbols[index] : NULL; }
+    Symbol *symbol (int index) {
+        DASSERT (index < (int)m_symbols.size());
+        return index >= 0 ? &m_symbols[index] : NULL;
+    }
+    const Symbol *symbol (int index) const {
+        DASSERT (index < (int)m_symbols.size());
+        return index >= 0 ? &m_symbols[index] : NULL;
+    }
 
     /// Return the name of the shader.
     ///
@@ -304,12 +311,14 @@ private:
 /// optinally an array index and/or channel number within that parameter.
 struct ConnectedParam {
     int param;            ///< Parameter number (in the symbol table)
-    int arrayindex;       ///< Array index (-1 for not an index)
-    int channel;          ///< Channel number (-1 for no channel selection)
-    int offset;           ///< Offset into the data of the element/channel
+    int arrayindex:27;    ///< Array index (-1 for not an index)
+    int channel:5;        ///< Channel number (-1 for no channel selection)
     TypeSpec type;        ///< Type of data being connected
-
-    ConnectedParam () : param(-1), arrayindex(-1), channel(-1), offset(0) { }
+    // N.B. Use bitfields to squeeze the structure down by 4 bytes.
+    // Consequence is that you can't connect individual elements of
+    // arrays with more than 2^26 (32M) elements. Somehow I don't think
+    // that's going to be a limitation to worry about.
+    ConnectedParam () : param(-1), arrayindex(-1), channel(-1) { }
 
     bool valid () const { return (param >= 0); }
 };
@@ -332,7 +341,6 @@ struct Connection {
 
 
 typedef std::vector<Connection> ConnectionVec;
-
 
 
 /// ShaderInstance is a particular instance of a shader, with its own
@@ -374,8 +382,20 @@ public:
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
-    Symbol *symbol (int index) { return index >= 0 ? &m_instsymbols[index] : NULL; }
-    const Symbol *symbol (int index) const { return index >= 0 ? &m_instsymbols[index] : NULL; }
+    Symbol *symbol (int index) {
+        DASSERT (index < (int)m_instsymbols.size());
+        return index >= 0 ? &m_instsymbols[index] : NULL;
+    }
+    const Symbol *symbol (int index) const {
+        DASSERT (index < (int)m_instsymbols.size());
+        return index >= 0 ? &m_instsymbols[index] : NULL;
+    }
+
+    /// Return a pointer to the master's version of the indexed symbol.
+    /// It's a const*, since you shouldn't mess with the master's copy.
+    const Symbol *mastersymbol (int index) const {
+        return index >= 0 ? master()->symbol(index) : NULL;
+    }
 
     /// Estimate how much to round the required heap size up if npoints
     /// is odd, to account for getting the desired alignment for each
@@ -399,6 +419,14 @@ public:
     ///
     ConnectionVec & connections () { return m_connections; }
     const ConnectionVec & connections () const { return m_connections; }
+
+    /// Free all the connection data, return the amount of memory they
+    /// previously consumed.
+    size_t clear_connections () {
+        size_t mem = vectorbytes (m_connections);
+        ConnectionVec().swap (m_connections);
+        return mem;
+    }
 
     /// Return the unique ID of this instance.
     ///
@@ -466,8 +494,26 @@ public:
     ///
     void copy_code_from_master ();
 
+    /// Small data structure to hold just the symbol info that the
+    /// instance overrides from the master copy.
+    struct SymOverrideInfo {
+        char m_valuesource;
+        bool m_connected_down;
+
+        SymOverrideInfo () : m_valuesource(Symbol::DefaultVal),
+                             m_connected_down(false) { }
+        void valuesource (Symbol::ValueSource v) { m_valuesource = v; }
+        Symbol::ValueSource valuesource () const { return (Symbol::ValueSource) m_valuesource; }
+        bool connected_down () const { return m_connected_down; }
+        void connected_down (bool c) { m_connected_down = c; }
+    };
+    typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
+
+    SymOverrideInfo *instoverride (int i) { return &m_instoverrides[i]; }
+
 private:
     ShaderMaster::ref m_master;         ///< Reference to the master
+    SymOverrideInfoVec m_instoverrides; ///< Instance parameter info
     SymbolVec m_instsymbols;            ///< Symbols used by the instance
     OpcodeVec m_instops;                ///< Actual code instructions
     std::vector<int> m_instargs;        ///< Arguments for all the ops
@@ -479,7 +525,7 @@ private:
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
-    std::vector<Connection> m_connections; ///< Connected input params
+    ConnectionVec m_connections;        ///< Connected input params
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
     int m_Psym, m_Nsym;                 ///< Quick lookups of common syms
@@ -766,7 +812,7 @@ public:
             return NULL;
     }
 
-    void pointcloud_stats (int search, int get, int results);
+    void pointcloud_stats (int search, int get, int results, int writes=0);
 
 private:
     void printstats () const;
@@ -902,6 +948,7 @@ private:
     int m_stat_pointcloud_max_results;
     int m_stat_pointcloud_failures;
     long long m_stat_pointcloud_gets;
+    long long m_stat_pointcloud_writes;
 
     int m_stat_max_llvm_local_mem;        ///< Stat: max LLVM local mem
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory
@@ -951,11 +998,16 @@ public:
             delete [] m_blocks[i];
     }
 
-    char * alloc(size_t size) {
-        ASSERT(size < BlockSize);
+    char * alloc(size_t size, size_t alignment=1) {
+        // Fail if beyond allocation limits or senseless alignment
+        if (size > BlockSize || (size % alignment) != 0)
+            return NULL;
+        m_block_offset -= (m_block_offset % alignment); // Fix up alignment
         if (size <= m_block_offset) {
+            // Enough space in current block
             m_block_offset -= size;
         } else {
+            // Need to allocate a new block
             m_current_block++;
             m_block_offset = BlockSize - size;
             if (m_blocks.size() == m_current_block)
@@ -1137,6 +1189,10 @@ public:
 
     PerThreadInfo *thread_info () { return m_threadinfo; }
 
+    void * alloc_scratch (size_t size, size_t align=1) {
+        return m_scratch_pool.alloc (size, align);
+    }
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
@@ -1160,6 +1216,7 @@ private:
     MessageList m_messages;             ///< Message blackboard
 
     SimplePool<20 * 1024> m_closure_pool;
+    SimplePool<64*1024> m_scratch_pool;
 
     Dictionary *m_dictionary;
 

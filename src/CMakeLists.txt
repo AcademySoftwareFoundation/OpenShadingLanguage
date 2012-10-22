@@ -47,8 +47,12 @@ if (NOT CMAKE_COMPILER_IS_CLANG)
 endif ()
 
 ## turn on more detailed warnings and consider warnings as errors
+set (STOP_ON_WARNING ON CACHE BOOL "Stop building if there are any compiler warnings")
 if (NOT MSVC)
-    add_definitions ("-Wall -Werror")
+    add_definitions ("-Wall")
+    if (STOP_ON_WARNING)
+        add_definitions ("-Werror")
+    endif ()
 endif ()
 
 ## disable RTTI
@@ -96,6 +100,7 @@ if (WIN32)
 else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
+set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 
 if (LLVM_NAMESPACE)
@@ -231,12 +236,13 @@ TESTSUITE ( arithmetic array array-derivs array-range
             geomath getsymbol-nonheap gettextureinfo hyperb
             ieee_fp if incdec initops intbits
             layers layers-Ciassign layers-lazy
-            logic loop matrix message miscmath missing-shader
+            logic loop matrix message metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-noreturn oslc-err-paramdefault
+            pointcloud pointcloud-fold
             raytype render-background render-bumptest render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 

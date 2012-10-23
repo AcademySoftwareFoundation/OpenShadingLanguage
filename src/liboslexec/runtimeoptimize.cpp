@@ -3911,27 +3911,29 @@ RuntimeOptimizer::optimize_group ()
                                                   m_llvm_local_mem);
     }
 
-    if (m_group.name()) {
-        m_shadingsys.info ("Optimized shader group %s:", m_group.name().c_str());
-        m_shadingsys.info ("    New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-          new_nsyms, old_nsyms,
-          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
-          new_nops, old_nops,
-          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
-    } else {
-        m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-          new_nsyms, old_nsyms,
-          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
-          new_nops, old_nops,
-          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+    if (m_shadingsys.m_compile_report) {
+        if (m_group.name()) {
+            m_shadingsys.info ("Optimized shader group %s:", m_group.name().c_str());
+            m_shadingsys.info ("    New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+              new_nsyms, old_nsyms,
+              100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
+              new_nops, old_nops,
+              100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+        } else {
+            m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+              new_nsyms, old_nsyms,
+              100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
+              new_nops, old_nops,
+              100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+        }
+        m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
+                           m_stat_total_llvm_time+m_stat_specialization_time,
+                           m_stat_specialization_time, 
+                           m_stat_opt_locking_time, m_stat_llvm_setup_time,
+                           m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
+                           m_stat_llvm_jit_time,
+                           m_llvm_local_mem/1024);
     }
-    m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
-                       m_stat_total_llvm_time+m_stat_specialization_time,
-                       m_stat_specialization_time, 
-                       m_stat_opt_locking_time, m_stat_llvm_setup_time,
-                       m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
-                       m_stat_llvm_jit_time,
-                       m_llvm_local_mem/1024);
 }
 
 

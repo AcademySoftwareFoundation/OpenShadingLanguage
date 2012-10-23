@@ -248,7 +248,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
       m_lazyglobals (false),
-      m_clearmemory (false), m_rebind (false), m_debugnan (false),
+      m_clearmemory (false), m_debugnan (false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
       m_greedyjit(false),
@@ -264,6 +264,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
       m_max_local_mem_KB(1024),
+      m_compile_report(false),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
@@ -561,7 +562,6 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("lazylayers", int, m_lazylayers);
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
     ATTR_SET ("clearmemory", int, m_clearmemory);
-    ATTR_SET ("rebind", int, m_rebind);
     ATTR_SET ("debugnan", int, m_debugnan);
     ATTR_SET ("lockgeom", int, m_lockgeom_default);
     ATTR_SET ("optimize", int, m_optimize);
@@ -581,6 +581,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
+    ATTR_SET ("compile_report", int, m_compile_report);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -636,7 +637,6 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
-    ATTR_DECODE ("rebind", int, m_rebind);
     ATTR_DECODE ("debugnan", int, m_debugnan);
     ATTR_DECODE ("lockgeom", int, m_lockgeom_default);
     ATTR_DECODE ("optimize", int, m_optimize);
@@ -662,6 +662,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE_STRING ("debug_layername", m_debug_layername);
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
+    ATTR_DECODE ("compile_report", int, m_compile_report);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);

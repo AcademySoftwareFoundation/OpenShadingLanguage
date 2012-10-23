@@ -744,8 +744,6 @@ public:
     ///
     TextureSystem *texturesys () const { return m_texturesys; }
 
-    bool allow_rebind () const { return m_rebind; }
-
     bool debug_nan () const { return m_debugnan; }
     bool lockgeom_default () const { return m_lockgeom_default; }
     bool strict_messages() const { return m_strict_messages; }
@@ -869,7 +867,6 @@ private:
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?
-    bool m_rebind;                        ///< Allow rebinding?
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     bool m_strict_messages;               ///< Strict checking of message passing usage?
@@ -898,6 +895,7 @@ private:
     std::vector<ustring> m_raytypes;      ///< Names of ray types
     ustring m_colorspace;                 ///< What RGB colors mean
     int m_max_local_mem_KB;               ///< Local storage can a shader use
+    bool m_compile_report;
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)

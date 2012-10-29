@@ -411,11 +411,14 @@ inline Dual2<float> logb (const Dual2<float> &f) {
     return Dual2<float> (safe_logb(f.val()), 0.0, 0.0);
 }
 
-
-/// On Linux platforms using glibc < 2.16, the implementation of expf is unreasonably slow
-/// It is much faster to use the double version instead and cast back to floats
 inline float fast_expf(float x) {
+#if defined(__GNU_LIBRARY__) && defined(__GLIBC__ ) && defined(__GLIBC_MINOR__) && __GLIBC__  <= 2 &&  __GLIBC_MINOR__ < 16
+   /// On Linux platforms using glibc < 2.16, the implementation of expf is unreasonably slow
+   /// It is much faster to use the double version instead and cast back to floats
    return static_cast<float>(std::exp(static_cast<double>(x)));
+#else
+   return std::exp(x);
+#endif
 }
 
 inline Dual2<float> fast_expf(const Dual2<float>& a) {
@@ -423,6 +426,7 @@ inline Dual2<float> fast_expf(const Dual2<float>& a) {
    return Dual2<float> (expa, expa * a.dx(), expa * a.dy());
 
 }
+
 
 MAKE_UNARY_PERCOMPONENT_OP (log, safe_log, log)
 MAKE_UNARY_PERCOMPONENT_OP (log2, safe_log2, log2)

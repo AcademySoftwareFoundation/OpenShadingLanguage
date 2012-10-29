@@ -411,12 +411,28 @@ inline Dual2<float> logb (const Dual2<float> &f) {
     return Dual2<float> (safe_logb(f.val()), 0.0, 0.0);
 }
 
+inline float fast_expf(float x) {
+#if defined(__GNU_LIBRARY__) && defined(__GLIBC__ ) && defined(__GLIBC_MINOR__) && __GLIBC__  <= 2 &&  __GLIBC_MINOR__ < 16
+   /// On Linux platforms using glibc < 2.16, the implementation of expf is unreasonably slow
+   /// It is much faster to use the double version instead and cast back to floats
+   return static_cast<float>(std::exp(static_cast<double>(x)));
+#else
+   return std::exp(x);
+#endif
+}
+
+inline Dual2<float> fast_expf(const Dual2<float>& a) {
+   float expa = fast_expf(a.val());
+   return Dual2<float> (expa, expa * a.dx(), expa * a.dy());
+
+}
+
 
 MAKE_UNARY_PERCOMPONENT_OP (log, safe_log, log)
 MAKE_UNARY_PERCOMPONENT_OP (log2, safe_log2, log2)
 MAKE_UNARY_PERCOMPONENT_OP (log10, safe_log10, log10)
 MAKE_UNARY_PERCOMPONENT_OP (logb, safe_logb, logb)
-MAKE_UNARY_PERCOMPONENT_OP (exp, std::exp, exp)
+MAKE_UNARY_PERCOMPONENT_OP (exp, fast_expf, fast_expf)
 MAKE_UNARY_PERCOMPONENT_OP (exp2, exp2f, exp2)
 MAKE_UNARY_PERCOMPONENT_OP (expm1, expm1f, expm1)
 MAKE_BINARY_PERCOMPONENT_OP (pow, safe_pow, pow)
@@ -1447,8 +1463,8 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
 
 
 
-OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_, 
-                                   void *dnam_,  int type, 
+OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_,
+                                   void *dnam_,  int type,
                                    int arraylen, int aggregate, void *data)
 {
     // recreate TypeDesc
@@ -1456,7 +1472,7 @@ OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_,
     typedesc.basetype  = type;
     typedesc.arraylen  = arraylen;
     typedesc.aggregate = aggregate;
- 
+
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
     RendererServices *renderer (sg->context->renderer());
 
@@ -1635,30 +1651,30 @@ OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
 {
     Dual2<Vec3> &x = DVEC(x_);
 
-    VEC(out).x = filter_width (x.dx().x, x.dy().x);   
-    VEC(out).y = filter_width (x.dx().y, x.dy().y);   
-    VEC(out).z = filter_width (x.dx().z, x.dy().z);   
+    VEC(out).x = filter_width (x.dx().x, x.dy().x);
+    VEC(out).y = filter_width (x.dx().y, x.dy().y);
+    VEC(out).z = filter_width (x.dx().z, x.dy().z);
 }
 
 
 
 OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_find (nodeID, USTR(query));
 }
 
 
 OSL_SHADEOP int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_find (USTR(dictionary), USTR(query));
 }
 
 
 OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_next (nodeID);
 }
 
@@ -1666,7 +1682,7 @@ OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
 OSL_SHADEOP int osl_dict_value (void *sg_, int nodeID, void *attribname,
                                long long type, void *data)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_value (nodeID, USTR(attribname), TYPEDESC(type), data);
 }
 
@@ -1675,7 +1691,7 @@ OSL_SHADEOP int osl_dict_value (void *sg_, int nodeID, void *attribname,
 // Asked if the raytype is a name we can't know until mid-shader.
 OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     int bit = sg->context->shadingsys().raytype_bit (USTR(name));
     return (sg->raytype & bit) != 0;
 }
@@ -1683,7 +1699,7 @@ OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
 // Asked if the raytype includes a bit pattern.
 OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_; 
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return (sg->raytype & bit) != 0;
 }
 

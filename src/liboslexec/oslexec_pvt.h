@@ -873,6 +873,7 @@ private:
     bool m_range_checking;                ///< Range check arrays & components?
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     bool m_greedyjit;                     ///< JIT as much as we can?
+    bool m_countlayerexecs;               ///< Count number of layer execs?
     int m_optimize;                       ///< Runtime optimization level
     bool m_opt_constant_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
@@ -947,6 +948,7 @@ private:
     int m_stat_pointcloud_failures;
     long long m_stat_pointcloud_gets;
     long long m_stat_pointcloud_writes;
+    atomic_ll m_stat_layers_executed;     ///< Total layers executed
 
     int m_stat_max_llvm_local_mem;        ///< Stat: max LLVM local mem
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory
@@ -1191,6 +1193,8 @@ public:
         return m_scratch_pool.alloc (size, align);
     }
 
+    void incr_layers_executed () { shadingsys().m_stat_layers_executed += 1; }
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
@@ -1207,7 +1211,6 @@ private:
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
-    size_t m_closures_allotted;         ///< Closure memory allotted
     int m_curuse;                       ///< Current use that we're running
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's

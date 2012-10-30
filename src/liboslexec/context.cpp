@@ -74,7 +74,6 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
 
     m_curuse = use;
     m_attribs = &sas;
-    m_closures_allotted = 0;
 
     if (shadingsys().m_groups_to_compile_count) {
         // If we are greedily JITing, optimize/JIT everything now
@@ -242,6 +241,15 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
 #endif
 //    std::cout << "getattribute! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << " ok=" << ok << ", objdata was " << objdata << "\n";
     return ok;
+}
+
+
+
+OSL_SHADEOP void
+osl_incr_layers_executed (ShaderGlobals *sg)
+{
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    ctx->incr_layers_executed ();
 }
 
 

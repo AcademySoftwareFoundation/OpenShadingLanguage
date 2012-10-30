@@ -106,6 +106,7 @@ public:
     ///                              that don't specify it (0).  Lockgeom
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
+    ///    int countlayerexecs    Add extra code to count total layers run
     /// 3. Attributes that that are intended for developers debugging
     /// liboslexec itself:
     /// These attributes may be helpful for liboslexec developers or

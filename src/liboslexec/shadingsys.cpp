@@ -251,7 +251,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_clearmemory (false), m_debugnan (false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
-      m_greedyjit(false),
+      m_greedyjit(false), m_countlayerexecs(false),
       m_optimize (2),
       m_opt_constant_param(true), m_opt_constant_fold(true),
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
@@ -295,6 +295,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_pointcloud_failures = 0;
     m_stat_pointcloud_gets = 0;
     m_stat_pointcloud_writes = 0;
+    m_stat_layers_executed = 0;
 
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
@@ -580,6 +581,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET ("compile_report", int, m_compile_report);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
@@ -656,6 +658,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
+    ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
@@ -860,6 +863,8 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Avg instances per group: " 
         << Strutil::format ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
+    if (m_countlayerexecs)
+        out << "  Total layers executed: " << m_stat_layers_executed << "\n";
 
 #if 0
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +

@@ -106,6 +106,7 @@ public:
     ///                              that don't specify it (0).  Lockgeom
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
+    ///    int countlayerexecs    Add extra code to count total layers run
     /// 3. Attributes that that are intended for developers debugging
     /// liboslexec itself:
     /// These attributes may be helpful for liboslexec developers or
@@ -117,7 +118,7 @@ public:
     ///       off individual classes of runtime optimizations:
     ///         opt_constant_param, opt_constant_fold, opt_stale_assign,
     ///         opt_elide_useless_ops, opt_elide_unconnected_outputs,
-    ///         opt_peephole, opt_coalesce_temps, opt_assign
+    ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
     ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
     ///    int llvm_debug         Turn on extra LLVM debug info (0)
     ///    int max_local_mem_KB   Error if shader group needs more than this

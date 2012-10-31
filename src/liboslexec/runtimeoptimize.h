@@ -75,6 +75,12 @@ public:
     /// group.
     ShaderInstance *inst () const { return m_inst; }
 
+    /// Return a reference to a particular indexed op in the current inst
+    Opcode &op (int opnum) { return inst()->ops()[opnum]; }
+
+    /// Return a pointer to a particular indexed symbol in the current inst
+    Symbol *symbol (int symnum) { return inst()->symbol(symnum); }
+
     /// Return a reference to the shader group being optimized.
     ///
     ShaderGroup &group () const { return m_group; }
@@ -105,6 +111,11 @@ public:
     /// returning its index if one exists, or else creating a new constant
     /// and returning its index.
     int add_constant (const TypeSpec &type, const void *data);
+    int add_constant (float c) { return add_constant(TypeDesc::TypeFloat, &c); }
+    int add_constant (int c) { return add_constant(TypeDesc::TypeInt, &c); }
+
+    /// Create a new temporary variable of the given type, return its index.
+    int add_temp (const TypeSpec &type);
 
     /// Turn the op into a simple assignment of the new symbol index to the
     /// previous first argument of the op.  That is, changes "OP arg0 arg1..."
@@ -120,6 +131,14 @@ public:
     /// first argument of the op.  That is, changes "OP arg0 arg1 ..."
     /// into "assign arg0 one".
     void turn_into_assign_one (Opcode &op, const char *why=NULL);
+
+    /// Turn the op into a new simple unary or binary op with arguments
+    /// newarg1 and newarg2.  If newarg2 < 0, then it's a unary op,
+    /// otherwise a binary op.  Argument 0 (the result) remains the same
+    /// as always.  The original arg list must have at least as many
+    /// operands as the new one, since no new arg space is allocated.
+    void turn_into_new_op (Opcode &op, ustring newop, int newarg1,
+                           int newarg2, const char *why=NULL);
 
     /// Turn the op into a no-op.  Return 1 if it changed, 0 if it was
     /// already a nop.
@@ -218,11 +237,32 @@ public:
 
     void make_symbol_room (int howmany=1);
 
+    /// Insert instruction 'opname' with arguments 'args_to_add' into the 
+    /// code at instruction 'opnum'.  The existing code and concatenated 
+    /// argument lists can be found in code and opargs, respectively, and
+    /// allsyms contains pointers to all symbols.  mainstart is a reference
+    /// to the address where the 'main' shader begins, and may be modified
+    /// if the new instruction is inserted before that point.
+    /// If recompute_rw_ranges is true, also adjust all symbols' read/write
+    /// ranges to take the new instruction into consideration.
+    /// Relation indicates its relation to surrounding instructions:
+    /// 0 means none, -1 means it should have the same method, sourcefile,
+    /// and sourceline as the preceeding instruction, 1 means it should
+    /// have the same method, sourcefile, and sourceline as the subsequent
+    /// instruction.
     void insert_code (int opnum, ustring opname,
                       const std::vector<int> &args_to_add,
-                      bool recompute_rw_ranges=false);
+                      bool recompute_rw_ranges=false, int relation=0);
+    /// insert_code with begin/end arg array pointers.
+    void insert_code (int opnum, ustring opname,
+                      const int *argsbegin, const int *argsend,
+                      bool recompute_rw_ranges=false, int relation=0);
+    /// insert_code with explicit arguments (up to 4, a value of -1 means
+    /// the arg isn't used).  Presume recompute_rw_ranges is true.
+    void insert_code (int opnum, ustring opname, int relation,
+                      int arg0=-1, int arg1=-1, int arg2=-1, int arg3=-1);
 
-    void insert_useparam (size_t opnum, std::vector<int> &params_to_use);
+    void insert_useparam (size_t opnum, const std::vector<int> &params_to_use);
 
     /// Add a 'useparam' before any op that reads parameters.  This is what
     /// tells the runtime that it needs to run the layer it came from, if
@@ -460,6 +500,12 @@ public:
     /// semantics that x mod 0 = 0, not inf.
     llvm::Value *llvm_make_safe_mod (TypeDesc type,
                                      llvm::Value *a, llvm::Value *b);
+
+    /// Test whether val is nonzero, return the llvm::Value* that's the
+    /// result of a CreateICmpNE or CreateFCmpUNE (depending on the
+    /// type).  If test_derivs is true, it it also tests whether the
+    /// derivs are zero.
+    llvm::Value *llvm_test_nonzero (Symbol &val, bool test_derivs = false);
 
     /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
@@ -766,6 +812,12 @@ public:
         return m_opt_elide_unconnected_outputs;
     }
 
+    /// Are special optimizations to 'mix' requested?
+    bool opt_mix () const { return m_opt_mix; }
+
+    /// Which optimization pass are we on?
+    int optimization_pass () const { return m_pass; }
+
 private:
     ShadingSystemImpl &m_shadingsys;
     PerThreadInfo *m_thread;
@@ -773,6 +825,7 @@ private:
     int m_layer;                      ///< Layer we're optimizing
     ShaderInstance *m_inst;           ///< Instance we're optimizing
     ShadingContext *m_context;        ///< Shading context
+    int m_pass;                       ///< Optimization pass we're on now
     int m_debug;                      ///< Current debug level
     int m_optimize;                   ///< Current optimization level
     bool m_opt_constant_param;            ///< Turn instance params into const?
@@ -783,11 +836,13 @@ private:
     bool m_opt_peephole;                  ///< Do some peephole optimizations?
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
+    bool m_opt_mix;                       ///< Do mix optimizations?
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // All below is just for the one inst we're optimizing:
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst
     int m_next_newconst;              ///< Unique ID for next new const we add
+    int m_next_newtemp;               ///< Unique ID for next new temp we add
     std::map<int,int> m_symbol_aliases; ///< Global symbol aliases
     std::vector<int> m_block_aliases;   ///< Local block aliases
     std::map<int,int> m_param_aliases;  ///< Params aliasing to params/globals

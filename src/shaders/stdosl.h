@@ -140,6 +140,7 @@ vector clamp (vector x, vector minval, vector maxval) { return max(min(x,maxval)
 point  clamp (point x, point minval, point maxval) { return max(min(x,maxval),minval); }
 color  clamp (color x, color minval, color maxval) { return max(min(x,maxval),minval); }
 float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+#if 0
 normal mix (normal x, normal y, normal a) { return x*(1-a) + y*a; }
 normal mix (normal x, normal y, float  a) { return x*(1-a) + y*a; }
 vector mix (vector x, vector y, vector a) { return x*(1-a) + y*a; }
@@ -149,6 +150,17 @@ point  mix (point  x, point  y, float  a) { return x*(1-a) + y*a; }
 color  mix (color  x, color  y, color  a) { return x*(1-a) + y*a; }
 color  mix (color  x, color  y, float  a) { return x*(1-a) + y*a; }
 float  mix (float  x, float  y, float  a) { return x*(1-a) + y*a; }
+#else
+normal mix (normal x, normal y, normal a) BUILTIN;
+normal mix (normal x, normal y, float  a) BUILTIN;
+vector mix (vector x, vector y, vector a) BUILTIN;
+vector mix (vector x, vector y, float  a) BUILTIN;
+point  mix (point  x, point  y, point  a) BUILTIN;
+point  mix (point  x, point  y, float  a) BUILTIN;
+color  mix (color  x, color  y, color  a) BUILTIN;
+color  mix (color  x, color  y, float  a) BUILTIN;
+float  mix (float  x, float  y, float  a) BUILTIN;
+#endif
 int isnan (float x) BUILTIN;
 int isinf (float x) BUILTIN;
 int isfinite (float x) BUILTIN;

@@ -225,6 +225,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_printf", "xXs*",
     "osl_error", "xXs*",
     "osl_warning", "xXs*",
+    "osl_incr_layers_executed", "xX",
 #if 1
     NOISE_IMPL(cellnoise),
     NOISE_DERIV_IMPL(cellnoise),
@@ -800,6 +801,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     delete m_builder;
     m_builder = new llvm::IRBuilder<> (entry_bb);
     // llvm_gen_debug_printf (std::string("enter layer ")+inst()->shadername());
+    if (shadingsys().m_countlayerexecs)
+        llvm_call_function ("osl_incr_layers_executed", sg_void_ptr());
 
     if (groupentry) {
         if (m_num_used_layers > 1) {

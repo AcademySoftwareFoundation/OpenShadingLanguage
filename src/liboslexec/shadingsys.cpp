@@ -251,13 +251,13 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_clearmemory (false), m_debugnan (false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
-      m_greedyjit(false),
+      m_greedyjit(false), m_countlayerexecs(false),
       m_optimize (2),
       m_opt_constant_param(true), m_opt_constant_fold(true),
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
-      m_opt_assign(true),
+      m_opt_assign(true), m_opt_mix(true),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
       m_debug(false), m_llvm_debug(false),
@@ -295,6 +295,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_pointcloud_failures = 0;
     m_stat_pointcloud_gets = 0;
     m_stat_pointcloud_writes = 0;
+    m_stat_layers_executed = 0;
 
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
@@ -444,6 +445,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (mxcompassign, mxcompassign,       none,          false);
     OP (mxcompref,   mxcompref,           none,          true);
     OP (min,         minmax,              min,           true);
+    OP (mix,         mix,                 mix,           true);
     OP (mod,         modulus,             none,          true);
     OP (mul,         mul,                 mul,           true);
     OP (neg,         neg,                 neg,           true);
@@ -573,6 +575,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_peephole", int, m_opt_peephole);
     ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_SET ("opt_assign", int, m_opt_assign);
+    ATTR_SET ("opt_mix", int, m_opt_mix);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -580,6 +583,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET ("compile_report", int, m_compile_report);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
@@ -648,6 +652,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_peephole", int, m_opt_peephole);
     ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
+    ATTR_DECODE ("opt_mix", int, m_opt_mix);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);
@@ -656,6 +661,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
+    ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
@@ -860,6 +866,8 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Avg instances per group: " 
         << Strutil::format ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
+    if (m_countlayerexecs)
+        out << "  Total layers executed: " << m_stat_layers_executed << "\n";
 
 #if 0
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +

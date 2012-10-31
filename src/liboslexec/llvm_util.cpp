@@ -899,6 +899,43 @@ RuntimeOptimizer::llvm_make_safe_mod (TypeDesc type,
 
 
 
+llvm::Value *
+RuntimeOptimizer::llvm_test_nonzero (Symbol &val, bool test_derivs)
+{
+    const TypeSpec &ts (val.typespec());
+    ASSERT (! ts.is_array() && ! ts.is_closure() && ! ts.is_string());
+    TypeDesc t = ts.simpletype();
+
+    // Handle int case -- guaranteed no derivs, no multi-component
+    if (t == TypeDesc::TypeInt)
+        return builder().CreateICmpNE (llvm_load_value(val), llvm_constant(0));
+
+    // float-based
+    int ncomps = t.aggregate;
+    int nderivs = (test_derivs && val.has_derivs()) ? 3 : 1;
+    llvm::Value *isnonzero = NULL;
+    for (int d = 0;  d < nderivs;  ++d) {
+        for (int c = 0;  c < ncomps;  ++c) {
+#if 1
+            llvm::Value *v = llvm_load_value (val, d, c);
+            llvm::Value *nz = builder().CreateFCmpONE (v, llvm_constant(0.0f));
+#else
+            // Alternate technique: convert to int and then do int compare.
+            // Seems to be about the same speed as comparing floats.
+            llvm::Value *v = llvm_load_value (val, d, c, TypeDesc::TypeInt);
+            llvm::Value *nz = builder().CreateICmpNE (v, llvm_constant(0));
+#endif
+            if (isnonzero)  // multi-component/deriv: OR with running result
+                isnonzero = builder().CreateOr (nz, isnonzero);
+            else
+                isnonzero = nz;
+        }
+    }
+    return isnonzero;
+}
+
+
+
 bool
 RuntimeOptimizer::llvm_assign_impl (Symbol &Result, Symbol &Src,
                                     int arrayindex)

@@ -51,7 +51,9 @@ static ustring u_nop    ("nop"),
                u_assign ("assign"),
                u_add    ("add"),
                u_sub    ("sub"),
+               u_mul    ("mul"),
                u_if     ("if"),
+               u_eq     ("eq"),
                u_break ("break"),
                u_continue ("continue"),
                u_return ("return"),
@@ -91,6 +93,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_thread(shadingsys.get_perthread_info()),
       m_group(group),
       m_inst(NULL), m_context(ctx),
+      m_pass(0),
       m_debug(shadingsys.debug()),
       m_optimize(shadingsys.optimize()),
       m_opt_constant_param(shadingsys.m_opt_constant_param),
@@ -101,7 +104,8 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_peephole(shadingsys.m_opt_peephole),
       m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
       m_opt_assign(shadingsys.m_opt_assign),
-      m_next_newconst(0),
+      m_opt_mix(shadingsys.m_opt_mix),
+      m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
@@ -164,6 +168,7 @@ RuntimeOptimizer::set_debug ()
             m_opt_peephole = true;
             m_opt_coalesce_temps = true;
             m_opt_assign = true;
+            m_opt_mix = true;
         }
     }
     // if user said to only debug one layer, turn off debug if not it
@@ -221,6 +226,47 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
 
 
 
+int
+RuntimeOptimizer::add_temp (const TypeSpec &type)
+{
+    Symbol newtemp (ustring::format ("$opttemp%d", m_next_newtemp++),
+                    type, SymTypeTemp);
+    ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
+            "we shouldn't have to realloc here");
+    inst()->symbols().push_back (newtemp);
+    return (int) inst()->symbols().size()-1;
+}
+
+
+
+void
+RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
+                                    int newarg2, const char *why)
+{
+    int opnum = &op - &(inst()->ops()[0]);
+    DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
+    if (debug() > 1)
+        std::cout << "turned op " << opnum
+                  << " from " << op.opname() << " to "
+                  << newop << ' ' << inst()->symbol(newarg1)->name() << ' '
+                  << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
+                  << (why ? " : " : "") << (why ? why : "") << "\n";
+    op.reset (newop, newarg2<0 ? 1 : 2);
+    op.argwriteonly (0);
+    inst()->args()[op.firstarg()+1] = newarg1;
+    op.argread (1, true);
+    op.argwrite (1, false);
+    opargsym(op, 1)->mark_rw (opnum, true, false);
+    if (newarg2 >= 0) {
+        inst()->args()[op.firstarg()+2] = newarg2;
+        op.argread (2, true);
+        op.argwrite (2, false);
+        opargsym(op, 2)->mark_rw (opnum, true, false);
+    }
+}
+
+
+
 void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
@@ -228,7 +274,8 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
     if (debug() > 1)
         std::cout << "turned op " << opnum
                   << " from " << op.opname() << " to "
-                  << opargsym(op,0)->name() << " = " << opargsym(op,1)->name()
+                  << opargsym(op,0)->name() << " = " 
+                  << inst()->symbol(newarg)->name()
                   << (why ? " : " : "") << (why ? why : "") << "\n";
     op.reset (u_assign, 2);
     inst()->args()[op.firstarg()+1] = newarg;
@@ -313,28 +360,27 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, const char *why)
 
 
 
-/// Insert instruction 'opname' with arguments 'args_to_add' into the 
-/// code at instruction 'opnum'.  The existing code and concatenated 
-/// argument lists can be found in code and opargs, respectively, and
-/// allsyms contains pointers to all symbols.  mainstart is a reference
-/// to the address where the 'main' shader begins, and may be modified
-/// if the new instruction is inserted before that point.
-/// If recompute_rw_ranges is true, also adjust all symbols' read/write
-/// ranges to take the new instruction into consideration.
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
-                               const std::vector<int> &args_to_add,
-                               bool recompute_rw_ranges)
+                               const int *argsbegin, const int *argsend,
+                               bool recompute_rw_ranges, int relation)
 {
     OpcodeVec &code (inst()->ops());
     std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
-    Opcode op (opname, method, opargs.size(), args_to_add.size());
+    int nargs = argsend - argsbegin;
+    Opcode op (opname, method, opargs.size(), nargs);
     code.insert (code.begin()+opnum, op);
-    opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
+    opargs.insert (opargs.end(), argsbegin, argsend);
     if (opnum < inst()->m_maincodebegin)
         ++inst()->m_maincodebegin;
     ++inst()->m_maincodeend;
+    if ((relation == -1 && opnum > 0) ||
+        (relation == 1 && opnum < (int)code.size()-1)) {
+        code[opnum].method (code[opnum+relation].method());
+        code[opnum].source (code[opnum+relation].sourcefile(),
+                            code[opnum+relation].sourceline());
+    }
 
     // Unless we were inserting at the end, we may need to adjust
     // the jump addresses of other ops and the param init ranges.
@@ -364,7 +410,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         BOOST_FOREACH (Symbol &s, inst()->symbols()) {
             if (s.everread()) {
                 int first = s.firstread(), last = s.lastread();
-                if (first > opnum)
+                if (first >= opnum)
                     ++first;
                 if (last >= opnum)
                     ++last;
@@ -372,7 +418,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
             }
             if (s.everwritten()) {
                 int first = s.firstwrite(), last = s.lastwrite();
-                if (first > opnum)
+                if (first >= opnum)
                     ++first;
                 if (last >= opnum)
                     ++last;
@@ -398,15 +444,45 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
                           m_in_loop[opnum]);
     }
 
-    if (opname != u_useparam) {
+    if (opname == u_if) {
+        // special case for 'if' -- the arg is read, not written
+        inst()->symbol(argsbegin[0])->mark_rw (opnum, true, false);
+    }
+    else if (opname != u_useparam) {
         // Mark the args as being used for this op (assume that the
         // first is written, the others are read).  Enforce that with an
         // DASSERT to be sure we only use insert_code for the couple of
         // instructions that we think it is used for.
-        DASSERT (opname == u_assign);
-        for (size_t a = 0;  a < args_to_add.size();  ++a)
-            inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
+        for (int a = 0;  a < nargs;  ++a)
+            inst()->symbol(argsbegin[a])->mark_rw (opnum, a>0, a==0);
     }
+}
+
+
+
+void
+RuntimeOptimizer::insert_code (int opnum, ustring opname,
+                               const std::vector<int> &args_to_add,
+                               bool recompute_rw_ranges, int relation)
+{
+    insert_code (opnum, opname, (const int *)&args_to_add[0],
+                 (const int *)&args_to_add[args_to_add.size()],
+                 recompute_rw_ranges, relation);
+}
+
+
+
+void
+RuntimeOptimizer::insert_code (int opnum, ustring opname, int relation,
+                               int arg0, int arg1, int arg2, int arg3)
+{
+    int args[4];
+    int nargs = 0;
+    if (arg0 >= 0) args[nargs++] = arg0;
+    if (arg1 >= 0) args[nargs++] = arg1;
+    if (arg2 >= 0) args[nargs++] = arg2;
+    if (arg3 >= 0) args[nargs++] = arg3;
+    insert_code (opnum, opname, args, args+nargs, true, relation);
 }
 
 
@@ -415,10 +491,11 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
 /// reference the symbols in 'params'.
 void
 RuntimeOptimizer::insert_useparam (size_t opnum,
-                                   std::vector<int> &params_to_use)
+                                   const std::vector<int> &params_to_use)
 {
+    ASSERT (params_to_use.size() > 0);
     OpcodeVec &code (inst()->ops());
-    insert_code (opnum, u_useparam, params_to_use);
+    insert_code (opnum, u_useparam, params_to_use, 1);
 
     // All ops are "read"
     code[opnum].argwrite (0, false);
@@ -572,6 +649,8 @@ unequal_consts (const Symbol &A, const Symbol &B)
 inline bool
 is_zero (const Symbol &A)
 {
+    if (! A.is_constant())
+        return false;
     const TypeSpec &Atype (A.typespec());
     static Vec3 Vzero (0, 0, 0);
     return (Atype.is_float() && *(const float *)A.data() == 0) ||
@@ -584,6 +663,8 @@ is_zero (const Symbol &A)
 inline bool
 is_one (const Symbol &A)
 {
+    if (! A.is_constant())
+        return false;
     const TypeSpec &Atype (A.typespec());
     static Vec3 Vone (1, 1, 1);
     static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -1449,6 +1530,160 @@ DECLFOLDER(constfold_clamp)
         rop.turn_into_assign (op, cind, "const fold");
         return 1;
     }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_mix)
+{
+    // Try to turn R=mix(a,b,x) into 
+    //   R = c             if all are constant
+    //   R = A             if x is constant and x == 0
+    //   R = B             if x is constant and x == 1
+    // 
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int Rind = rop.oparg(op,0);
+    int Aind = rop.oparg(op,1);
+    int Bind = rop.oparg(op,2);
+    int Xind = rop.oparg(op,3);
+    Symbol &R (*rop.inst()->symbol(Rind));
+    Symbol &A (*rop.inst()->symbol(Aind));
+    Symbol &B (*rop.inst()->symbol(Bind));
+    Symbol &X (*rop.inst()->symbol(Xind));
+    // Everything better be a float or triple
+    if (! ((A.typespec().is_float() || A.typespec().is_triple()) &&
+           (B.typespec().is_float() || B.typespec().is_triple()) &&
+           (X.typespec().is_float() || X.typespec().is_triple())))
+        return 0;
+    if (X.is_constant() && A.is_constant() && B.is_constant()) {
+        // All three constants
+        float result[3];
+        const float *a = (const float *) A.data();
+        const float *b = (const float *) B.data();
+        const float *x = (const float *) X.data();
+        bool atriple = A.typespec().is_triple();
+        bool btriple = B.typespec().is_triple();
+        bool xtriple = X.typespec().is_triple();
+        bool rtriple = R.typespec().is_triple();
+        int ncomps = rtriple ? 3 : 1;
+        for (int i = 0;  i < ncomps;  ++i) {
+            float xval = x[xtriple*i];
+            result[i] = (1.0f-xval) * a[atriple*i] + xval * b[btriple*i];
+        }
+        int cind = rop.add_constant (R.typespec(), &result);
+        rop.turn_into_assign (op, cind, "const fold");
+        return 1;
+    }
+    if (X.is_constant()) {
+        // Two special cases... X is 0, X is 1
+        if (is_zero(X)) {  // mix(A,B,0) == A
+            rop.turn_into_assign (op, Aind, "const fold");
+            return 1;
+        }
+        if (is_one(X)) {  // mix(A,B,1) == B
+            rop.turn_into_assign (op, Bind, "const fold");
+            return 1;
+        }
+    }
+    if (is_zero(A) && is_zero(X)) {   // mix(0,B,0) == 0
+        rop.turn_into_assign_zero (op, "const fold");
+        return 1;
+    }
+    if (is_zero(A) && is_one(X)) {   // mix(0,B,1) == B
+        rop.turn_into_assign (op, Bind, "const fold");
+        return 1;
+    }
+    if (is_zero(B) && is_one(X)) {   // mix(a,0,1) == 0
+        rop.turn_into_assign_zero (op, "const fold");
+        return 1;
+    }
+    if (is_zero(B) && is_zero(X)) {  // mix(a,0,0) == A
+        rop.turn_into_assign (op, Aind, "const fold");
+        return 1;
+    }
+
+    if (is_zero(A) &&
+        (! B.connected() || !rop.opt_mix() || rop.optimization_pass() > 2)) {
+        // mix(0,b,x) == b*x, but only do this if b is not connected
+        rop.turn_into_new_op (op, u_mul, Bind, Xind, "const fold");
+        return 1;
+    }
+#if 0
+    // This seems to almost never happen, so don't worry about it
+    if (is_zero(B) && ! A.connected()) {
+        // mix(a,0,x) == (1-x)*a, but only do this if b is not connected
+    }
+#endif
+
+    // Special sauce: mix(a,b,x) is implemented as a*(1-x)+b*x.  But
+    // consider cases where x is not constant (thus not foldable), but
+    // nonetheless turns out to be 0 or 1 much of the time.  If a and b
+    // are short local computations, it's not so bad, but if they are
+    // shader parameters connected to other layers, this affair may
+    // needlessly evaluate other layers for no purpose other than to
+    // multiply their results by zero.  So we try to ameliorate that
+    // case with some extra tests here.  N.B. we delay doing this until
+    // a few optimization passes in, to give enough time to optimize
+    // away the inputs in other ways before introducing the 'if'.
+    if (rop.opt_mix() && rop.optimization_pass() > 1 &&
+        !X.is_constant() && (A.connected() || B.connected())) {
+        // A or B are connected, and thus presumed expensive, so turn into:
+        //    if (X == 0)  // But eliminate this clause if B not connected
+        //        R = A;
+        //    else if (X == 1)  // But eliminate this clause if A not connected
+        //        R = B;
+        //    else
+        //        R = A*(1-X) + B*X;
+        int if0op = -1;  // Op where we have the 'if' for testing x==0
+        int if1op = -1;  // Op where we have the 'if' for testing x==1
+        if (B.connected()) {
+            // Add the test and conditional for X==0, in which case we can
+            // just R=A and not have to access B
+            int cond = rop.add_temp (TypeDesc::TypeInt);
+            int fzero = rop.add_constant (0.0f);
+            rop.insert_code (opnum++, u_eq, 1 /*relation*/, cond, Xind, fzero);
+            if0op = opnum;
+            rop.insert_code (opnum++, u_if, 1 /*relation*/, cond);
+            rop.op(if0op).argreadonly (0);
+            rop.symbol(cond)->mark_rw (if0op, true, false);
+            // Add the true (R=A) clause
+            rop.insert_code (opnum++, u_assign, 1 /*relation*/, Rind, Aind);
+        }
+        int if0op_false = opnum;  // Where we jump if the 'if x==0' is false
+        if (A.connected()) {
+            // Add the test and conditional for X==1, in which case we can
+            // just R=B and not have to access A
+            int cond = rop.add_temp (TypeDesc::TypeInt);
+            int fone = rop.add_constant (1.0f);
+            rop.insert_code (opnum++, u_eq, 1 /*relation*/, cond, Xind, fone);
+            if1op = opnum;
+            rop.insert_code (opnum++, u_if, 1 /*relation*/, cond);
+            rop.op(if1op).argreadonly (0);
+            rop.symbol(cond)->mark_rw (if1op, true, false);
+            // Add the true (R=B) clause
+            rop.insert_code (opnum++, u_assign, 1 /*relation*/, Rind, Bind);
+        }
+        int if1op_false = opnum;  // Where we jump if the 'if x==1' is false
+        // Add the (R=A*(1-X)+B*X) clause -- always need that
+        int one_minus_x = rop.add_temp (X.typespec());
+        int temp1 = rop.add_temp (A.typespec());
+        int temp2 = rop.add_temp (B.typespec());
+        int fone = rop.add_constant (1.0f);
+        rop.insert_code (opnum++, u_sub, 1 /*relation*/, one_minus_x, fone, Xind);
+        rop.insert_code (opnum++, u_mul, 1 /*relation*/, temp1, Aind, one_minus_x);
+        rop.insert_code (opnum++, u_mul, 1 /*relation*/, temp2, Bind, Xind);
+        rop.insert_code (opnum++, u_add, 1 /*relation*/, Rind, temp1, temp2);
+        // Now go back and patch the 'if' ops with the right jump addresses
+        if (if0op >= 0)
+            rop.op(if0op).set_jump (if0op_false, opnum);
+        if (if1op >= 0)
+            rop.op(if1op).set_jump (if1op_false, opnum);
+        // The next op is the original mix, make it nop
+        rop.turn_into_nop (rop.op(opnum), "smart 'mix'");
+        return 1;
+    }
+
     return 0;
 }
 
@@ -3068,16 +3303,16 @@ RuntimeOptimizer::optimize_instance ()
     // Try to fold constants.  We take several passes, until we get to
     // the point that not much is improving.  It rarely goes beyond 3-4
     // passes, but we have a hard cutoff at 10 just to be sure we don't
-    // ever get into an infinite loop from an unforseen cycle.  where we
+    // ever get into an infinite loop from an unforseen cycle where we
     // end up inadvertently transforming A => B => A => etc.
     int totalchanged = 0;
-    int reallydone = 0;   // Force one pass after we think we're done
-    for (int pass = 0;  pass < 10;  ++pass) {
+    int reallydone = 0;   // Force a few passes after we think we're done
+    for (m_pass = 0;  m_pass < 10;  ++m_pass) {
 
         // Once we've made one pass (and therefore called
         // mark_outgoing_connections), we may notice that the layer is
         // unused, and therefore can stop doing work to optimize it.
-        if (pass != 0 && inst()->unused())
+        if (m_pass != 0 && inst()->unused())
             break;
 
         // Track basic blocks and conditional states
@@ -3094,7 +3329,9 @@ RuntimeOptimizer::optimize_instance ()
         int changed = 0;
         int lastblock = -1;
         size_t num_ops = inst()->ops().size();
-        for (int opnum = 0;  opnum < (int)num_ops;  ++opnum) {
+        int skipops = 0;   // extra inserted ops to skip over
+        for (int opnum = 0;  opnum < (int)num_ops;  opnum += 1+skipops) {
+            skipops = 0;
             // Before getting a reference to this op, be sure that a space
             // is reserved at the end in case a folding routine inserts an
             // op.  That ensures that the reference won't be invalid.
@@ -3139,9 +3376,11 @@ RuntimeOptimizer::optimize_instance ()
             if (optimize() >= 2 && m_opt_constant_fold) {
                 const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
                 if (opd && opd->folder) {
+                    size_t old_num_ops = inst()->ops().size();
                     changed += (*opd->folder) (*this, opnum);
                     // Re-check num_ops in case the folder inserted something
                     num_ops = inst()->ops().size();
+                    skipops = num_ops - old_num_ops;
                 }
             }
 

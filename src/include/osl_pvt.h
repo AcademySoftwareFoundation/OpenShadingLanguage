@@ -780,6 +780,12 @@ public:
         argread (arg, false);
         argwrite (arg, true);
     }
+    /// Declare that argument number 'arg' is only read (not written!) by
+    /// this op.
+    void argreadonly (int arg) {
+        argread (arg, true);
+        argwrite (arg, false);
+    }
 
     /// Does the argument number 'arg' take derivatives?
     ///

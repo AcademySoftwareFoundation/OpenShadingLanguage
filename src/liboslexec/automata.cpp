@@ -263,7 +263,7 @@ NdfAutomata::tostr()const
     std::string s;
     for (size_t i = 0; i < m_states.size(); ++i) {
         char temp[32];
-        snprintf(temp, 32, "%ld : ", i);
+        snprintf(temp, 32, "%d : ", (int)i);
         s += temp + m_states[i]->tostr() + "\n";
     }
     return s;
@@ -411,7 +411,7 @@ DfAutomata::tostr()const
     std::string s;
     for (size_t i = 0; i < m_states.size(); ++i) {
         char temp[32];
-        snprintf(temp, 32, "%ld : ", i);
+        snprintf(temp, 32, "%d : ", (int)i);
         s += temp + m_states[i]->tostr() + "\n";
     }
     return s;

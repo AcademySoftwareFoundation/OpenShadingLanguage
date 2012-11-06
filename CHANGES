@@ -1,3 +1,16 @@
+Release 1.2.1 - 6 Nov, 2012 (compared to 1.2.0)
+-----------------------------------------------
+* Fix incorrect oso output of matrix parameter initialization. (This did
+  not affect shader execution, but could result in oslquery/oslinfo not
+  reporting default matrix parameter values correctly.)
+* Build: remove unused OpenGL and GLEW searching from CMake files.
+* Build: Fix a variety of compiler warnings, particularly on newer compilers,
+  32 bit platforms, and Windows.
+* Build: Find LLVM correctly even when using "svn" LLVM versions.
+* Bug fix: oslinfo didn't print int metadata values properly.
+
+
+
 Release 1.2.0 - Aug 30, 2012 (compared to 1.1)
 ----------------------------------------------
 Note: this is more or less the production-hardened version of OSL that

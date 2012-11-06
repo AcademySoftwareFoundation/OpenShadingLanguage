@@ -1,6 +1,73 @@
 Release 1.3.x - in progress (compared to 1.2)
 ----------------------------------------------
+Language, standard libary, and compiler changes (for shader writers):
+* pointcloud_write() allows shaders to write data and save it as a point
+  cloud.
 
+ShadingSystem API changes and new options (for renderer writers):
+* Default implementation of all the pointcloud_*() functions in
+  RendererServices, if Partio is found at build time.
+* ShadingSystem attribute "compile_report" controls whether information
+  should be sent to the renderer for each shading group as it compiles.
+  (The default is now to be more silent, set this to nonzero if you want
+  to see the old per-group status messages.)
+* ShadingSystem attribute "countlayerexecs" adds debugging code to count
+  the total number of shader layer executions (off by default; it slows
+  shader execution down slightly, is only meant for debugging).
+  
+Performance improvements:
+* Reduce instance symbol memory use, lowering OSL-related memory by 1/2-2/3
+  for large scenes.
+* Better constant-folding for pointcloud_get (if indices are known).
+* Speed up implementation of exp() for some Linux platform (works around
+  a known glibc issue).
+* Speed up of mix() by making it a built-in function (rather than defined
+  in stdosl.h) and doing aggressive constant folding on it. Also some special
+  cases to try to avoid having mix() unnecessarily trigger execution of
+  earlier layers when one or both of its arguments is a connected shader
+  param and the mix value turns out to be 0 or 1.
+
+Bug fixes and minor improvements:
+* Fix incorrect oso output of matrix parameter initialization. (This did
+  not affect shader execution, but could result in oslquery/oslinfo not
+  reporting default matrix parameter values correctly.)
+* Bug fix: oslinfo didn't print int metadata values properly.
+* oslc better error checking when calling a variable as if it were a
+  function.
+* Parsing of oso files was broken for compiled shaders that had string
+  metadata whose metadata value contained the '}' character.
+
+Under the hood:
+* Simplify code generation of binary ops involving closures.
+
+Build & test system improvements and developer goodies:
+* Remove unused OpenGL and GLEW searching from CMake files.
+* Fix a variety of compiler warnings, particularly on newer compilers,
+  32 bit platforms, and Windows.
+* Find LLVM correctly even when using "svn" LLVM versions.
+* Adjust failure threshold on some tests to account for minor platform
+  differences.
+* New minimum OIIO version: 1.1.
+* CMake fixes: Simplify searching for and using IlmBase, and remove
+  unneeded search for OpenEXR.
+* Find Partio (automatically, or using 'make PARTIO_HOME=...'), and if
+  found, use it to provide default RendererServices implementations of
+  all the pointcloud-related functions.
+* Make/CMake STOP_ON_WARNING flag (set to 0 or 1) controls whether the
+  build will stop upon any compiler warning (default) or if it should
+  keep going (=0).
+
+
+Release 1.2.1 - 6 Nov, 2012 (compared to 1.2.0)
+-----------------------------------------------
+* Fix incorrect oso output of matrix parameter initialization. (This did
+  not affect shader execution, but could result in oslquery/oslinfo not
+  reporting default matrix parameter values correctly.)
+* Build: remove unused OpenGL and GLEW searching from CMake files.
+* Build: Fix a variety of compiler warnings, particularly on newer compilers,
+  32 bit platforms, and Windows.
+* Build: Find LLVM correctly even when using "svn" LLVM versions.
+* Bug fix: oslinfo didn't print int metadata values properly.
 
 
 Release 1.2.0 - Aug 30, 2012 (compared to 1.1)

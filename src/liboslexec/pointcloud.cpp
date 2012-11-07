@@ -129,7 +129,7 @@ PointCloud::PointCloud (ustring filename,
 PointCloud::~PointCloud ()
 {
     // Save the file if we wrote to it
-    if (m_write)
+    if (m_write && m_filename)
         Partio::write (m_filename.c_str(), *m_partio_cloud);
     if (m_partio_cloud)
         m_partio_cloud->release ();
@@ -190,6 +190,8 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
                                      float *out_distances, int derivs_offset)
 {
 #if USE_PARTIO
+    if (! filename)
+        return 0;
     PointCloud *pc = PointCloud::get(filename);
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
@@ -341,6 +343,8 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
                                     const void **data)
 {
 #if USE_PARTIO
+    if (! filename)
+        return false;
     PointCloud *pc = PointCloud::get(filename, false /* don't read from disk */);
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;

@@ -152,7 +152,7 @@ preprocess (const std::string &filename,
         }
 
         instream.unsetf (std::ios::skipws);
-        std::string instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude)
+        std::string instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude.c_str())
             + std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
                            std::istreambuf_iterator<char>());
         instream.close ();

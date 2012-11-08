@@ -57,7 +57,12 @@ public:
     /// Read in the oso file, parse it, call the various callbacks.
     /// Return true if the file was correctly parsed, false if there was
     /// an unrecoverable error reading the file.
-    virtual bool parse (const std::string &filename);
+    virtual bool parse_file (const std::string &filename);
+
+    /// Read in OSO from memory, parse, call the various callbacks.
+    /// Return true if the OSO code was correctly parsed, false if there was
+    /// an unrecoverable error reading.
+    virtual bool parse_memory (const std::string &buffer);
 
     /// Declare the shader version.
     ///

@@ -684,6 +684,8 @@ public:
     virtual bool ShaderGroupEnd (void);
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
+    virtual bool LoadMemoryShader (const char *shadername,
+                                   const char *buffer);
     virtual ShadingAttribStateRef state ();
     virtual void clear_state ();
 

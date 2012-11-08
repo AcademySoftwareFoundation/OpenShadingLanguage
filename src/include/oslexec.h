@@ -217,6 +217,11 @@ public:
     ///
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam)=0;
+    
+    // Load OSO data from memory buffer, overriding shader lookups in the
+    // shader search path
+    virtual bool LoadMemoryShader (const char *shadername,
+                                   const char *buffer)=0;
 
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.

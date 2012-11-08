@@ -290,7 +290,7 @@ OSLQuery::open (const std::string &shadername,
         return false;
     }
 
-    bool ok = oso.parse (filename);
+    bool ok = oso.parse_file (filename);
     return ok;
 }
 

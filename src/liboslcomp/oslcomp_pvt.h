@@ -69,7 +69,8 @@ public:
     /// Fully compile a shader located in 'filename', with the command-line
     /// options ("-I" and the like) in the options vector.
     virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options);
+                          const std::vector<std::string> &options,
+                          const std::string &stdoslpath = "");
 
     /// The name of the file we're currently parsing
     ///

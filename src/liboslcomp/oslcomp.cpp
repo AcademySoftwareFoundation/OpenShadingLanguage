@@ -290,7 +290,8 @@ preprocess (const std::string &filename,
 
 bool
 OSLCompilerImpl::compile (const std::string &filename,
-                          const std::vector<std::string> &options)
+                          const std::vector<std::string> &options,
+                          const std::string &stdoslpath)
 {
     if (! OIIO::Filesystem::exists (filename)) {
         error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
@@ -311,32 +312,36 @@ OSLCompilerImpl::compile (const std::string &filename,
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
-    std::string program = OIIO::Sysutil::this_program_path ();
-    if (program.size()) {
-        boost::filesystem::path path (program);  // our program
-        path = path.parent_path ();  // now the bin dir of our program
-        path = path.parent_path ();  // now the parent dir
-        path = path / "shaders";
-        bool found = false;
-        if (OIIO::Filesystem::exists (path.string())) {
-#ifdef USE_BOOST_WAVE
-            includepaths.push_back(path.string());
-#else
-            // pass along to cpp
-            cppoptions += "\"-I";
-            cppoptions += path.string();
-            cppoptions += "\" ";
-#endif
-            path = path / "stdosl.h";
+    if (stdoslpath.empty()) {
+        std::string program = OIIO::Sysutil::this_program_path ();
+        if (program.size()) {
+            boost::filesystem::path path (program);  // our program
+            path = path.parent_path ();  // now the bin dir of our program
+            path = path.parent_path ();  // now the parent dir
+            path = path / "shaders";
+            bool found = false;
             if (OIIO::Filesystem::exists (path.string())) {
-                stdinclude = path.string();
-                found = true;
+#ifdef USE_BOOST_WAVE
+                includepaths.push_back(path.string());
+#else
+                // pass along to cpp
+                cppoptions += "\"-I";
+                cppoptions += path.string();
+                cppoptions += "\" ";
+#endif
+                path = path / "stdosl.h";
+                if (OIIO::Filesystem::exists (path.string())) {
+                    stdinclude = path.string();
+                    found = true;
+                }
             }
+            if (! found)
+                warning (ustring(filename), 0, "Unable to find \"%s\"",
+                         path.string().c_str());
         }
-        if (! found)
-            warning (ustring(filename), 0, "Unable to find \"%s\"",
-                     path.string().c_str());
     }
+    else
+        stdinclude = stdoslpath;
 
     m_output_filename.clear ();
     bool preprocess_only = false;

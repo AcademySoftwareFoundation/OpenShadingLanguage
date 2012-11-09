@@ -59,7 +59,8 @@ public:
           m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
       { }
     virtual ~OSOReaderToMaster () { }
-    virtual bool parse (const std::string &filename);
+    virtual bool parse_file (const std::string &filename);
+    virtual bool parse_memory (const std::string &oso);
     virtual void version (const char *specid, int major, int minor);
     virtual void shader (const char *shadertype, const char *name);
     virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
@@ -93,15 +94,29 @@ private:
 
 
 bool
-OSOReaderToMaster::parse (const std::string &filename)
+OSOReaderToMaster::parse_file (const std::string &filename)
 {
     m_master->m_osofilename = filename;
     m_master->m_maincodebegin = 0;
     m_master->m_maincodeend = 0;
     m_codesection.clear ();
     m_codesym = -1;
-    return OSOReader::parse (filename);
+    return OSOReader::parse_file (filename);
 }
+
+
+
+bool
+OSOReaderToMaster::parse_memory (const std::string &oso)
+{
+    m_master->m_osofilename = "<none>";
+    m_master->m_maincodebegin = 0;
+    m_master->m_maincodeend = 0;
+    m_codesection.clear ();
+    m_codesym = -1;
+    return OSOReader::parse_memory (oso);
+}
+
 
 
 
@@ -515,7 +530,7 @@ ShadingSystemImpl::loadshader (const char *cname)
         return NULL;
     }
     OIIO::Timer timer;
-    bool ok = oso.parse (filename);
+    bool ok = oso.parse_file (filename);
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
     if (ok) {
@@ -537,6 +552,57 @@ ShadingSystemImpl::loadshader (const char *cname)
     }
 
     return r;
+}
+
+
+
+bool
+ShadingSystemImpl::LoadMemoryShader (const char *shadername,
+                                     const char *buffer)
+{
+    if (! shadername || ! shadername[0]) {
+        error ("Attempt to load shader with empty name \"\".");
+        return false;
+    }
+    if (! buffer || ! buffer[0]) {
+        error ("Attempt to load shader \"%s\" with empty OSO data.", shadername);
+        return false;
+    }
+
+    ustring name (shadername);
+    lock_guard guard (m_mutex);  // Thread safety
+    ShaderNameMap::const_iterator found = m_shader_masters.find (name);
+    if (found != m_shader_masters.end()) {
+        if (debug())
+            info ("Preload shader %s already exists in shader_masters", name.c_str());
+        return false;
+    }
+
+    // Not found in the map
+    OSOReaderToMaster reader (*this);
+    OIIO::Timer timer;
+    bool ok = reader.parse_memory (buffer);
+    ShaderMaster::ref r = ok ? reader.master() : NULL;
+    m_shader_masters[name] = r;
+    if (ok) {
+        ++m_stat_shaders_loaded;
+        info ("Loaded \"%s\" (took %s)", shadername, Strutil::timeintervalformat(timer(), 2).c_str());
+    } else {
+        error ("Unable to parse preloaded shader \"%s\"", shadername);
+    }
+    // FIXME -- catch errors
+
+    if (r) {
+        r->resolve_syms ();
+    }
+
+    if (r && m_debug) {
+        std::string s = r->print ();
+        if (s.length())
+            info ("%s", s.c_str());
+    }
+
+    return true;
 }
 
 

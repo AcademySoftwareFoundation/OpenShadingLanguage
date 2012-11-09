@@ -277,7 +277,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 {
 #if USE_PARTIO
     if (! count)
-        return 0;
+        return 1;  // always succeed if not asking for any data
 
     PointCloud *pc = PointCloud::get(filename);
     spin_lock lock (pc->m_mutex);

@@ -676,6 +676,8 @@ public:
     virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
     virtual bool getattribute (const std::string &name, TypeDesc type, void *val);
 
+    virtual bool LoadMemoryCompiledShader (const char *shadername,
+                                   const char *buffer);
     virtual bool Parameter (const char *name, TypeDesc t, const void *val);
     virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
@@ -684,8 +686,6 @@ public:
     virtual bool ShaderGroupEnd (void);
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
-    virtual bool LoadMemoryShader (const char *shadername,
-                                   const char *buffer);
     virtual ShadingAttribStateRef state ();
     virtual void clear_state ();
 

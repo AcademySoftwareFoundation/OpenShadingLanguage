@@ -1,12 +1,13 @@
-Contents of this file:
+Table of contents
+------------------
 
-  * Introduction
-  * How OSL is different
-  * What OSL consists of
-  * Building OSL
-  * Current state of the project and road map
-  * Contacts
-  * Credits
+* Introduction
+* How OSL is different
+* What OSL consists of
+* Building OSL
+* Current state of the project and road map
+* Contacts
+* Credits
 
 
 Introduction
@@ -266,26 +267,22 @@ development avenues for OSL than we would be able to do alone.
 Contacts
 --------
 
-OSL home page at SPI:    http://opensource.imageworks.com/?p=osl
+[OSL home page at SPI](http://opensource.imageworks.com/?p=osl)
 
-OSL GitHub page:
-     https://github.com/imageworks/OpenShadingLanguage
 
-Read or subscribe to the OSL development mail list:  
-     http://groups.google.com/group/osl-dev
+[OSL GitHub page](https://github.com/imageworks/OpenShadingLanguage)
+
+[Read or subscribe to the OSL development mail list](http://groups.google.com/group/osl-dev)
 
 Email the lead architect:  lg AT imageworks DOT com
 
-Most recent PDF of the OSL language specification:
-    https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
+[Most recent PDF of the OSL language specification](https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
+)
 
-Sony Pictures Imageworks main open source page:  
-     http://opensource.imageworks.com
+[Sony Pictures Imageworks main open source page](http://opensource.imageworks.com)
 
 If you want to contribute code back to the project, you'll need to
-sign a Contributor License Agreement, here:
-     http://opensource.imageworks.com/cla/
-
+sign [a Contributor License Agreement](http://opensource.imageworks.com/cla/).
 
 
 Credits
@@ -293,13 +290,19 @@ Credits
 
 The main developers of OSL are (in order of joining the project):
 
-    Larry Gritz
-    Cliff Stein
-    Chris Kulla
-    Alejandro Conty
-    Jay Reynolds
-    Solomon Boulos
-    Adam Martinez
+* Larry Gritz
+
+* Cliff Stein
+
+* Chris Kulla
+
+* Alejandro Conty
+
+* Jay Reynolds
+
+* Solomon Boulos
+
+* Adam Martinez
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
@@ -320,7 +323,12 @@ and studios involved.)
 The OSL implementation incorporates or depends upon several other open
 source packages:
 
-OpenImageIO (c) Larry Gritz, et al.     http://www.openimageio.org
-Boost - various authors                 http://www.boost.org
-IlmBase (c) Industrial Light & Magic.   http://www.openexr.com
-LLVM Compiler Infrastructure            http://llvm.org
+[OpenImageIO (c) Larry Gritz, et al](http://www.openimageio.org)
+
+[Boost - various authors](http://www.boost.org)
+
+[IlmBase (c) Industrial Light & Magic](http://www.openexr.com)
+
+[LLVM Compiler Infrastructure](http://llvm.org)
+
+

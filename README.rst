@@ -274,8 +274,7 @@ Sony Pictures Imageworks main open source page:
      http://opensource.imageworks.com
 
 If you want to contribute code back to the project, you'll need to
-sign a Contributor License Agreement, here:
-     http://opensource.imageworks.com/cla/
+sign `a Contributor License Agreement <http://opensource.imageworks.com/cla/>`_.
 
 
 
@@ -284,13 +283,19 @@ Credits
 
 The main developers of OSL are (in order of joining the project):
 
-    Larry Gritz
-    Cliff Stein
-    Chris Kulla
-    Alejandro Conty
-    Jay Reynolds
-    Solomon Boulos
-    Adam Martinez
+* Larry Gritz
+
+* Cliff Stein
+
+* Chris Kulla
+
+* Alejandro Conty
+
+* Jay Reynolds
+
+* Solomon Boulos
+
+*Adam Martinez
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
@@ -312,6 +317,9 @@ The OSL implementation incorporates or depends upon several other open
 source packages:
 
 OpenImageIO (c) Larry Gritz, et al.     http://www.openimageio.org
+
 Boost - various authors                 http://www.boost.org
+
 IlmBase (c) Industrial Light & Magic.   http://www.openexr.com
+
 LLVM Compiler Infrastructure            http://llvm.org

@@ -1,13 +1,4 @@
-Contents of this file:
-
-  * Introduction
-  * How OSL is different
-  * What OSL consists of
-  * Building OSL
-  * Current state of the project and road map
-  * Contacts
-  * Credits
-
+.. contents :: :local:
 
 Introduction
 ------------
@@ -271,7 +262,7 @@ OSL home page at SPI:    http://opensource.imageworks.com/?p=osl
 OSL GitHub page:
      https://github.com/imageworks/OpenShadingLanguage
 
-Read or subscribe to the OSL development mail list:  
+Read or subscribe to the OSL development mail list:
      http://groups.google.com/group/osl-dev
 
 Email the lead architect:  lg AT imageworks DOT com
@@ -279,7 +270,7 @@ Email the lead architect:  lg AT imageworks DOT com
 Most recent PDF of the OSL language specification:
     https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
 
-Sony Pictures Imageworks main open source page:  
+Sony Pictures Imageworks main open source page:
      http://opensource.imageworks.com
 
 If you want to contribute code back to the project, you'll need to

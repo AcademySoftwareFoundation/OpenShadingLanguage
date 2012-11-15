@@ -403,7 +403,7 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
         }
     }
 
-    return false;
+    return ok;
 #else
     return false;
 #endif

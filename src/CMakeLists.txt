@@ -48,7 +48,9 @@ endif ()
 
 ## turn on more detailed warnings and consider warnings as errors
 if (NOT MSVC)
-    add_definitions ("-Wall -Werror")
+    # XXX -Werror will fail on linux at least!
+#    add_definitions ("-Wall -Werror")
+    add_definitions ("-Wall")
 endif ()
 
 ## disable RTTI

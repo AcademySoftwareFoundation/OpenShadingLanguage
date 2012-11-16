@@ -251,7 +251,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
                   << newop << ' ' << inst()->symbol(newarg1)->name() << ' '
                   << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
                   << (why ? " : " : "") << (why ? why : "") << "\n";
-    op.reset (newop, newarg2<0 ? 1 : 2);
+    op.reset (newop, newarg2<0 ? 2 : 3);
     op.argwriteonly (0);
     inst()->args()[op.firstarg()+1] = newarg1;
     op.argread (1, true);
@@ -1585,22 +1585,6 @@ DECLFOLDER(constfold_mix)
             rop.turn_into_assign (op, Bind, "const fold");
             return 1;
         }
-    }
-    if (is_zero(A) && is_zero(X)) {   // mix(0,B,0) == 0
-        rop.turn_into_assign_zero (op, "const fold");
-        return 1;
-    }
-    if (is_zero(A) && is_one(X)) {   // mix(0,B,1) == B
-        rop.turn_into_assign (op, Bind, "const fold");
-        return 1;
-    }
-    if (is_zero(B) && is_one(X)) {   // mix(a,0,1) == 0
-        rop.turn_into_assign_zero (op, "const fold");
-        return 1;
-    }
-    if (is_zero(B) && is_zero(X)) {  // mix(a,0,0) == A
-        rop.turn_into_assign (op, Aind, "const fold");
-        return 1;
     }
 
     if (is_zero(A) &&

@@ -405,6 +405,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (Dy,          DxDy,                none,          true);
     OP (Dz,          Dz,                  none,          true);
     OP (dowhile,     loop_op,             none,          false);
+    OP (end,         end,                 none,          false);
     OP (endswith,    generic,             endswith,      true);
     OP (environment, environment,         none,          true);
     OP (eq,          compare_op,          eq,            true);

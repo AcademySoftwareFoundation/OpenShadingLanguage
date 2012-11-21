@@ -1,0 +1,14 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.3.0
+shader test
+oparam	float	fout	0 		 %read{2147483647,-1} %write{2147483647,-1}
+global	point	P	 %read{0,0} %write{2147483647,-1}
+temp	int	$tmp1	 %read{2147483647,-1} %write{0,0}
+const	string	$const1	""		 %read{0,0} %write{2147483647,-1}
+const	string	$const2	"foo"		 %read{0,0} %write{2147483647,-1}
+const	float	$const3	1		 %read{0,0} %write{2147483647,-1}
+code ___main___
+# test.osl:4
+#     pointcloud_write ("", P, "foo", 1.0);
+	blahblah	$tmp1 $const1 P $const2 $const3 	%filename{"test.osl"} %line{4} %argrw{"wrrrr"}
+	end

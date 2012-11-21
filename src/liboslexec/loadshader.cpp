@@ -56,7 +56,8 @@ class OSOReaderToMaster : public OSOReader
 public:
     OSOReaderToMaster (ShadingSystemImpl &shadingsys)
         : OSOReader (&shadingsys.errhandler()), m_shadingsys (shadingsys),
-          m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
+          m_master (new ShaderMaster (shadingsys)),
+          m_reading_instruction(false), m_errors(false)
       { }
     virtual ~OSOReaderToMaster () { }
     virtual bool parse_file (const std::string &filename);
@@ -89,6 +90,7 @@ private:
     int m_codesym;                    ///< Which param is being initialized?
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
+    bool m_errors;                    ///< Did we hit any errors?
 };
 
 
@@ -101,7 +103,7 @@ OSOReaderToMaster::parse_file (const std::string &filename)
     m_master->m_maincodeend = 0;
     m_codesection.clear ();
     m_codesym = -1;
-    return OSOReader::parse_file (filename);
+    return OSOReader::parse_file (filename) && ! m_errors;
 }
 
 
@@ -114,7 +116,7 @@ OSOReaderToMaster::parse_memory (const std::string &oso)
     m_master->m_maincodeend = 0;
     m_codesection.clear ();
     m_codesym = -1;
-    return OSOReader::parse_memory (oso);
+    return OSOReader::parse_memory (oso) && ! m_errors;
 }
 
 
@@ -431,6 +433,7 @@ OSOReaderToMaster::codemarker (const char *name)
     } else if (m_codesym < 0) {
         m_shadingsys.error ("Parsing shader %s: don't know what to do with code section \"%s\"",
                             m_master->shadername().c_str(), name);
+        m_errors = true;
     }
 }
 
@@ -456,11 +459,17 @@ OSOReaderToMaster::codeend ()
 void
 OSOReaderToMaster::instruction (int label, const char *opcode)
 {
-    Opcode op (ustring(opcode), m_codesection);
+    ustring uopcode (opcode);
+    Opcode op (uopcode, m_codesection);
     m_master->m_ops.push_back (op);
     m_firstarg = m_master->m_args.size();
     m_nargs = 0;
     m_reading_instruction = true;
+    if (! m_shadingsys.op_descriptor (uopcode)) {
+        m_shadingsys.error ("Parsing shader \"%s\": instruction \"%s\" is not known. Maybe compiled with a too-new oslc?",
+                            m_master->shadername().c_str(), opcode);
+        m_errors = true;
+    }
 }
 
 
@@ -480,6 +489,7 @@ OSOReaderToMaster::instruction_arg (const char *name)
 //    m_master->m_args.push_back (0);  // FIXME
     m_shadingsys.error ("Parsing shader %s: unknown arg %s",
                         m_master->shadername().c_str(), name);
+    m_errors = true;
 }
 
 
@@ -525,7 +535,6 @@ ShadingSystemImpl::loadshader (const char *cname)
     std::string filename = OIIO::Filesystem::searchpath_find (name.string() + ".oso",
                                                         m_searchpath_dirs);
     if (filename.empty ()) {
-        // FIXME -- error
         error ("No .oso file could be found for shader \"%s\"", name.c_str());
         return NULL;
     }
@@ -536,19 +545,15 @@ ShadingSystemImpl::loadshader (const char *cname)
     if (ok) {
         ++m_stat_shaders_loaded;
         info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(timer(), 2).c_str());
+        ASSERT (r);
+        r->resolve_syms ();
+        if (m_debug) {
+            std::string s = r->print ();
+            if (s.length())
+                info ("%s", s.c_str());
+        }
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
-    }
-    // FIXME -- catch errors
-
-    if (r) {
-        r->resolve_syms ();
-    }
-
-    if (r && m_debug) {
-        std::string s = r->print ();
-        if (s.length())
-            info ("%s", s.c_str());
     }
 
     return r;
@@ -587,19 +592,15 @@ ShadingSystemImpl::LoadMemoryCompiledShader (const char *shadername,
     if (ok) {
         ++m_stat_shaders_loaded;
         info ("Loaded \"%s\" (took %s)", shadername, Strutil::timeintervalformat(timer(), 2).c_str());
+        ASSERT (r);
+        r->resolve_syms ();
+        if (m_debug) {
+            std::string s = r->print ();
+            if (s.length())
+                info ("%s", s.c_str());
+        }
     } else {
         error ("Unable to parse preloaded shader \"%s\"", shadername);
-    }
-    // FIXME -- catch errors
-
-    if (r) {
-        r->resolve_syms ();
-    }
-
-    if (r && m_debug) {
-        std::string s = r->print ();
-        if (s.length())
-            info ("%s", s.c_str());
     }
 
     return true;

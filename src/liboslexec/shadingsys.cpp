@@ -257,7 +257,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
-      m_opt_assign(true), m_opt_mix(true),
+      m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(true),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
       m_debug(false), m_llvm_debug(false),
@@ -270,6 +270,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
       m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0),
+      m_stat_inst_merge_time(0),
       m_stat_max_llvm_local_mem(0)
 {
     m_stat_shaders_loaded = 0;
@@ -279,6 +280,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_instances_compiled = 0;
     m_stat_groups_compiled = 0;
     m_stat_empty_instances = 0;
+    m_stat_merged_inst = 0;
+    m_stat_merged_inst_opt = 0;
     m_stat_empty_groups = 0;
     m_stat_regexes = 0;
     m_stat_preopt_syms = 0;
@@ -577,6 +580,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_SET ("opt_assign", int, m_opt_assign);
     ATTR_SET ("opt_mix", int, m_opt_mix);
+    ATTR_SET ("opt_merge_instances", int, m_opt_merge_instances);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -654,6 +658,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
     ATTR_DECODE ("opt_mix", int, m_opt_mix);
+    ATTR_DECODE ("opt_merge_instances", int, m_opt_merge_instances);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);
@@ -676,6 +681,8 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);
     ATTR_DECODE ("stat:groups_compiled", int, m_stat_groups_compiled);
     ATTR_DECODE ("stat:empty_instances", int, m_stat_empty_instances);
+    ATTR_DECODE ("stat:merged_inst", int, m_stat_merged_inst);
+    ATTR_DECODE ("stat:merged_inst_opt", int, m_stat_merged_inst_opt);
     ATTR_DECODE ("stat:empty_groups", int, m_stat_empty_groups);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
     ATTR_DECODE ("stat:regexes", int, m_stat_regexes);
@@ -691,6 +698,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:llvm_irgen_time", float, m_stat_llvm_irgen_time);
     ATTR_DECODE ("stat:llvm_opt_time", float, m_stat_llvm_opt_time);
     ATTR_DECODE ("stat:llvm_jit_time", float, m_stat_llvm_jit_time);
+    ATTR_DECODE ("stat:inst_merge_time", float, m_stat_inst_merge_time);
     ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
     ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
     ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
@@ -892,20 +900,27 @@ ShadingSystemImpl::getstats (int level) const
 
     out << "  Compiled " << m_stat_groups_compiled << " groups, "
         << m_stat_instances_compiled << " instances\n";
-    out << "  After optimization, " << m_stat_empty_instances 
-        << " empty instances ("
-        << (int)(100.0f*m_stat_empty_instances/m_stat_instances_compiled)
-        << "%)\n";
-    out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
-        << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
-    out << Strutil::format ("  Optimized %llu ops to %llu (%.1f%%)\n",
-                            (long long)m_stat_preopt_ops,
-                            (long long)m_stat_postopt_ops,
-                            100.0*(double(m_stat_postopt_ops)/double(m_stat_preopt_ops)-1.0));
-    out << Strutil::format ("  Optimized %llu symbols to %llu (%.1f%%)\n",
-                            (long long)m_stat_preopt_syms,
-                            (long long)m_stat_postopt_syms,
-                            100.0*(double(m_stat_postopt_syms)/double(m_stat_preopt_syms)-1.0));
+    out << "  Merged " << (m_stat_merged_inst+m_stat_merged_inst_opt)
+        << " instances (" << m_stat_merged_inst << " initial, "
+        << m_stat_merged_inst_opt << " after opt) in "
+        << Strutil::timeintervalformat (m_stat_inst_merge_time, 2) << "\n";
+    if (m_stat_instances_compiled > 0)
+        out << "  After optimization, " << m_stat_empty_instances 
+            << " empty instances ("
+            << (int)(100.0f*m_stat_empty_instances/m_stat_instances_compiled) << "%)\n";
+    if (m_stat_groups_compiled > 0)
+        out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
+            << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
+    if (m_stat_instances_compiled > 0 || m_stat_groups_compiled > 0) {
+        out << Strutil::format ("  Optimized %llu ops to %llu (%.1f%%)\n",
+                                (long long)m_stat_preopt_ops,
+                                (long long)m_stat_postopt_ops,
+                                100.0*(double(m_stat_postopt_ops)/double(std::max(1,(int)m_stat_preopt_ops))-1.0));
+        out << Strutil::format ("  Optimized %llu symbols to %llu (%.1f%%)\n",
+                                (long long)m_stat_preopt_syms,
+                                (long long)m_stat_postopt_syms,
+                                100.0*(double(m_stat_postopt_syms)/double(std::max(1,(int)m_stat_preopt_syms))-1.0));
+    }
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "
@@ -1050,9 +1065,12 @@ ShadingSystemImpl::ShaderGroupEnd (void)
         }
     }
 
+    merge_instances (m_curattrib->shadergroup (m_group_use));
+
     m_in_group = false;
     m_group_use = ShadUseUnknown;
     m_group_name.clear ();
+
     return true;
 }
 

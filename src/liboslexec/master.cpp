@@ -85,6 +85,42 @@ ShaderMaster::findsymbol (ustring name) const
 
 
 
+void *
+ShaderMaster::param_default_storage (int index)
+{
+    const Symbol *sym = symbol(index);
+    TypeDesc t = sym->typespec().simpletype();
+    if (t.basetype == TypeDesc::INT) {
+        return &m_idefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::FLOAT) {
+        return &m_fdefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::STRING) {
+        return &m_sdefaults[sym->dataoffset()];
+    } else {
+        return NULL;
+    }
+}
+
+
+
+const void *
+ShaderMaster::param_default_storage (int index) const
+{
+    const Symbol *sym = symbol(index);
+    TypeDesc t = sym->typespec().simpletype();
+    if (t.basetype == TypeDesc::INT) {
+        return &m_idefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::FLOAT) {
+        return &m_fdefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::STRING) {
+        return &m_sdefaults[sym->dataoffset()];
+    } else {
+        return NULL;
+    }
+}
+
+
+
 void
 ShaderMaster::resolve_syms ()
 {

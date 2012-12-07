@@ -837,6 +837,7 @@ private:
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
+    bool m_opt_merge_instances;           ///< Merge identical instances?
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // All below is just for the one inst we're optimizing:

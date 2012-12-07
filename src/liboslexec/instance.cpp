@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <algorithm>
 
 #include <boost/foreach.hpp>
 
@@ -145,6 +146,42 @@ ShaderInstance::findparam (ustring name) const
 
 
 
+void *
+ShaderInstance::param_storage (int index)
+{
+    const Symbol *sym = m_instsymbols.size() ? symbol(index) : mastersymbol(index);
+    TypeDesc t = sym->typespec().simpletype();
+    if (t.basetype == TypeDesc::INT) {
+        return &m_iparams[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::FLOAT) {
+        return &m_fparams[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::STRING) {
+        return &m_sparams[sym->dataoffset()];
+    } else {
+        return NULL;
+    }
+}
+
+
+
+const void *
+ShaderInstance::param_storage (int index) const
+{
+    const Symbol *sym = m_instsymbols.size() ? symbol(index) : mastersymbol(index);
+    TypeDesc t = sym->typespec().simpletype();
+    if (t.basetype == TypeDesc::INT) {
+        return &m_iparams[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::FLOAT) {
+        return &m_fparams[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::STRING) {
+        return &m_sparams[sym->dataoffset()];
+    } else {
+        return NULL;
+    }
+}
+
+
+
 void
 ShaderInstance::parameters (const ParamValueList &params)
 {
@@ -190,17 +227,14 @@ ShaderInstance::parameters (const ParamValueList &params)
                 continue;
             }
 
+            // If the instance value is the same as the master's default,
+            // just skip the parameter, let it "keep" the default.
+            void *defaultdata = m_master->param_default_storage(i);
+            if (memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
+                continue;
+
             so->valuesource (Symbol::InstanceVal);
-            void *data = NULL;
-            if (t.simpletype().basetype == TypeDesc::INT) {
-                data = &m_iparams[sm->dataoffset()];
-            } else if (t.simpletype().basetype == TypeDesc::FLOAT) {
-                data = &m_fparams[sm->dataoffset()];
-            } else if (t.simpletype().basetype == TypeDesc::STRING) {
-                data = &m_sparams[sm->dataoffset()];
-            } else {
-                ASSERT (0);
-            }
+            void *data = param_storage(i);
             memcpy (data, p.data(), t.simpletype().size());
             if (shadingsys().debug())
                 shadingsys().info ("    sym %s offset %llu address %p",
@@ -279,15 +313,7 @@ ShaderInstance::copy_code_from_master ()
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
             if (m_instoverrides[i].valuesource() != Symbol::DefaultVal) {
                 Symbol *si = &m_instsymbols[i];
-                TypeSpec t = si->typespec();
-                const Symbol *sm = master()->symbol(i);
-                if (t.simpletype().basetype == TypeDesc::INT) {
-                    si->data (&m_iparams[sm->dataoffset()]);
-                } else if (t.simpletype().basetype == TypeDesc::FLOAT) {
-                    si->data (&m_fparams[sm->dataoffset()]);
-                } else if (t.simpletype().basetype == TypeDesc::STRING) {
-                    si->data (&m_sparams[sm->dataoffset()]);
-                }
+                si->data (param_storage(i));
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
             }
@@ -366,6 +392,166 @@ ShaderInstance::print ()
         out << "\n";
     }
     return out.str ();
+}
+
+
+
+// Are the two vectors equivalent(a[i],b[i]) in each of their members?
+template<class T>
+inline bool
+equivalent (const std::vector<T> &a, const std::vector<T> &b)
+{
+    if (a.size() != b.size())
+        return false;
+    typename std::vector<T>::const_iterator ai, ae, bi;
+    for (ai = a.begin(), ae = a.end(), bi = b.begin();  ai != ae;  ++ai, ++bi)
+        if (! equivalent(*ai, *bi))
+            return false;
+    return true;
+}
+
+
+
+/// Are two symbols equivalent (from the point of view of merging
+/// shader instances)?  Note that this is not a true ==, it ignores
+/// the m_data, m_node, and m_alias pointers!
+static bool
+equivalent (const Symbol &a, const Symbol &b)
+{
+    // If they aren't used, don't consider them a mismatch
+    if (! a.everused() && ! b.everused())
+        return true;
+
+    // Different symbol types or data types are a mismatch
+    if (a.symtype() != b.symtype() || a.typespec() != b.typespec())
+        return false;
+
+    // Don't consider different names to be a mismatch if the symbol
+    // is a temp or constant.
+    if (a.symtype() != SymTypeTemp && a.symtype() != SymTypeConst &&
+        a.name() != b.name())
+        return false;
+    // But constants had better match their values!
+    if (a.symtype() == SymTypeConst &&
+        memcmp (a.data(), b.data(), a.typespec().simpletype().size()))
+        return false;
+
+    return a.has_derivs() == b.has_derivs() &&
+        a.lockgeom() == b.lockgeom() &&
+        a.valuesource() == b.valuesource() &&
+        a.fieldid() == b.fieldid() &&
+        a.initbegin() == b.initbegin() &&
+        a.initend() == b.initend()
+        ;
+}
+
+
+
+bool
+ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
+{
+    // Must both be instances of the same master -- very fast early-out
+    // for most potential pair comparisons.
+    if (master() != b.master())
+        return false;
+
+    // If the shaders haven't been optimized yet, they don't yet have
+    // their own symbol tables and instructions (they just refer to
+    // their unoptimized master), but they may have an "instance
+    // override" vector that describes which parameters have
+    // instance-specific values or connections.
+    bool optimized = (m_instsymbols.size() != 0 || m_instops.size() != 0);
+
+    // Same instance overrides
+    if (m_instoverrides.size() || b.m_instoverrides.size()) {
+        ASSERT (! optimized);  // should not be post-opt
+        ASSERT (m_instoverrides.size() == b.m_instoverrides.size());
+        for (size_t i = 0, e = m_instoverrides.size();  i < e;  ++i) {
+            if ((m_instoverrides[i].valuesource() == Symbol::DefaultVal ||
+                 m_instoverrides[i].valuesource() == Symbol::InstanceVal) &&
+                (b.m_instoverrides[i].valuesource() == Symbol::DefaultVal ||
+                 b.m_instoverrides[i].valuesource() == Symbol::InstanceVal)) {
+                // If both params are defaults or instances, let the
+                // instance parameter value checking below handle
+                // things. No need to reject default-vs-instance
+                // mismatches if the actual values turn out to be the
+                // same later.
+                continue;
+            }
+
+            if (! (equivalent(m_instoverrides[i], b.m_instoverrides[i]))) {
+                const Symbol *sym = mastersymbol(i);  // remember, it's pre-opt
+                if (! sym->everused())
+                    continue;
+                return false;
+            }
+        }
+    }
+
+    // Make sure that the two nodes have the same parameter values.  If
+    // the group has already been optimized, it's got an
+    // instance-specific symbol table to check; but if it hasn't been
+    // optimized, we check the symbol table int he master.
+    for (int i = firstparam();  i < lastparam();  ++i) {
+        const Symbol *sym = optimized ? symbol(i) : mastersymbol(i);
+        if (! sym->everused())
+            continue;
+        if (sym->typespec().is_closure())
+            continue;   // Closures can't have instance override values
+        if ((sym->valuesource() == Symbol::InstanceVal || sym->valuesource() == Symbol::DefaultVal)
+            && memcmp (param_storage(i), b.param_storage(i),
+                       sym->typespec().simpletype().size())) {
+            return false;
+        }
+    }
+
+    if (m_run_lazily != b.m_run_lazily) {
+        return false;
+    }
+
+    // The connection list need to be the same for the two shaders.
+    if (m_connections.size() != b.m_connections.size()) {
+        return false;
+    }
+    if (m_connections != b.m_connections) {
+        return false;
+    }
+
+    // If there are no "local" ops or symbols, this instance hasn't been
+    // optimized yet.  In that case, we've already done enough checking,
+    // since the masters being the same and having the same instance
+    // params and connections is all it takes.  The rest (below) only
+    // comes into play after instances are more fully elaborated from
+    // their masters in order to be optimized.
+    if (!optimized) {
+        return true;
+    }
+
+    // Same symbol table
+    if (! equivalent (m_instsymbols, b.m_instsymbols)) {
+        return false;
+    }
+
+    // Same opcodes to run
+    if (! equivalent (m_instops, b.m_instops)) {
+        return false;
+    }
+    // Same arguments to the ops
+    if (m_instargs != b.m_instargs) {
+        return false;
+    }
+
+    // Parameter and code ranges
+    if (m_firstparam != b.m_firstparam ||
+        m_lastparam != b.m_lastparam ||
+        m_maincodebegin != b.m_maincodebegin ||
+        m_maincodeend != b.m_maincodeend ||
+        m_Psym != b.m_Psym || m_Nsym != b.m_Nsym) {
+        return false;
+    }
+
+    // Nothing left to check, they must be identical!
+    return true;
 }
 
 

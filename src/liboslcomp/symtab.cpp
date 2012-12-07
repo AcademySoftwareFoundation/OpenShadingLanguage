@@ -108,9 +108,9 @@ StructSpec::mangled () const
 
 
 const char *
-Symbol::valuesourcename () const
+Symbol::valuesourcename (ValueSource v)
 {
-    switch (valuesource()) {
+    switch (v) {
     case DefaultVal   : return "default";
     case InstanceVal  : return "instance";
     case GeomVal      : return "geom";
@@ -118,6 +118,14 @@ Symbol::valuesourcename () const
     }
     ASSERT(0 && "unknown valuesource");
     return NULL;
+}
+
+
+
+const char *
+Symbol::valuesourcename () const
+{
+    return valuesourcename (valuesource());
 }
 
 

@@ -441,7 +441,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
     else if (expr->typespec().is_triple()) // component access
         m_typespec = TypeDesc::FLOAT;
     else {
-        ASSERT (0 && "botched ASTindex");
+        error ("indexing into non-array or non-component type");
     }
 }
 
@@ -459,7 +459,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr,
              expr->typespec().elementtype().is_triple())
         m_typespec = TypeDesc::FLOAT;
     else {
-        ASSERT (0 && "botched ASTindex");
+        error ("indexing into non-array or non-component type");
     }
 }
 

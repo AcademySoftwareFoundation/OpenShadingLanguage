@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 21 Sep, 2012 \\
+\date{{\large Date: 10 Dec, 2012 \\
 %(with corrections, 22 Feb, 2012)
 }}
 
@@ -3469,7 +3469,6 @@ function.
 \apiitem{\emph{type} {\ce spline} (string basis, float x, \emph{type} $\mathtt{y}_0$, \emph{type} $\mathtt{y}_1$, ... \emph{type} $\mathtt{y}_{n-1}$)\\
 \emph{type} {\ce spline} (string basis, float x, \emph{type} y[]) \\
 \emph{type} {\ce spline} (string basis, float x, int nknots, \emph{type} y[])}
-
 \indexapi{spline()}
 
 As $x$ varies from 0 to 1, {\cf spline} returns the value of a cubic
@@ -3484,13 +3483,15 @@ each component will be interpolated separately.
 
 The type of interpolation is specified by the \emph{basis} name,
 \emph{basis} parameter, which may be any of: \qkw{catmull-rom},
-\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, or \qkw{linear}.  Some basis
+\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, \qkw{linear}, or 
+\qkw{constant}. Some basis
 types require particular numbers of knot values -- Bezier splines
 require $4n+3$ values, Hermite splines require $4n+2$ values,
 Catmull-Rom and linear splines may use any number of values $n\ge 4$.
-To maintain consistency with the other spline types, linear splines will
-ignore the first and last data value, interpolating piecewise-linearly
-between $y_1$ and $y_{n-2}$.
+To maintain consistency with the other spline types, \qkw{linear} splines will
+ignore the first and last data value; interpolating piecewise-linearly
+between $y_1$ and $y_{n-2}$, and \qkw{constant} splines ignore the first
+and the two last data values.
 \apiend
 
 \apiitem{float {\ce splineinverse} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\

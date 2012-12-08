@@ -1,0 +1,8 @@
+shader constspline (output color Cspline = 0)
+{
+    color colors[9] = { color(0,0,0), color(0,0,1), color(0,1,0), color(0,1,1),
+                        color(1,0,0), color(1,0,1), color(1,1,0), color(1,1,1),
+                        color(0,0,0) };
+
+    Cspline = spline (v < 0.5 ? "constant" : "linear", u, colors);
+}

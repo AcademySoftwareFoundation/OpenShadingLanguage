@@ -58,7 +58,7 @@ namespace {
 //
 // ========================================================
 
-static const int kNumSplineTypes = 5;
+static const int kNumSplineTypes = 6;
 static const int kLinearSpline = kNumSplineTypes - 1;
 static Spline::SplineBasis gBasisSet[kNumSplineTypes] = {
    { ustring("catmull-rom"), 1, Matrix44( (-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f),
@@ -80,7 +80,8 @@ static Spline::SplineBasis gBasisSet[kNumSplineTypes] = {
    { ustring("linear"),      1, Matrix44(  0,  0,  0,  0,
                                            0,  0,  0,  0,
                                            0, -1,  1,  0,
-                                           0,  1,  0,  0) }
+                                           0,  1,  0,  0) },
+   { ustring("constant"),    1, Matrix44(0.0f) }  // special marker for constant
 };
 
 };  // End anonymous namespace

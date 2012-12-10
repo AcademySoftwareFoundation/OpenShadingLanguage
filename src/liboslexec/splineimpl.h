@@ -42,6 +42,8 @@ namespace pvt {
 // namespaces with all these templated helper functions.
 namespace Spline {
 
+static ustring u_constant("constant");
+
 
 // We need to know explicitly whether the knots have
 // derivatives associated with them because of the way
@@ -125,6 +127,14 @@ void spline_evaluate(const SplineBasis *spline,
     int segnum = (int)seg_x;
     if (segnum > (nsegs-1))
        segnum = nsegs-1;
+
+    if (spline->basis_name == u_constant) {
+        // Special case for "constant" basis
+        RTYPE P = removeDerivatives (knots[segnum+1]);
+        assignment (result, P);
+        return;
+    }
+
     // x is the position along segment 'segnum'
     x = x - float(segnum);
     int s = segnum*spline->basis_step;

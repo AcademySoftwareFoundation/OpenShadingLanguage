@@ -2978,6 +2978,11 @@ RuntimeOptimizer::remove_unused_params ()
 void
 RuntimeOptimizer::optimize_instance ()
 {
+    // If "opt_layername" attribute is set, only optimize the named layer
+    if (shadingsys().m_opt_layername &&
+        shadingsys().m_opt_layername != inst()->layername())
+        return;
+
     // Make a list of the indices of all constants.
     for (int i = 0, e = (int)inst()->symbols().size();  i < e;  ++i)
         if (inst()->symbol(i)->symtype() == SymTypeConst)

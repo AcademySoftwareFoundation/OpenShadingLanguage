@@ -586,6 +586,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
+    ATTR_SET_STRING ("opt_layername", m_opt_layername);
     ATTR_SET_STRING ("only_groupname", m_only_groupname);
 
     // cases for special handling
@@ -662,6 +663,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
     ATTR_DECODE_STRING ("debug_layername", m_debug_layername);
+    ATTR_DECODE_STRING ("opt_layername", m_opt_layername);
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
 

@@ -1065,9 +1065,9 @@ ShadingSystemImpl::ShaderGroupEnd (void)
                 inst->run_lazily (false);
             }
         }
-    }
 
-    merge_instances (m_curattrib->shadergroup (m_group_use));
+        merge_instances (m_curattrib->shadergroup (m_group_use));
+    }
 
     m_in_group = false;
     m_group_use = ShadUseUnknown;

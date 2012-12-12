@@ -199,7 +199,8 @@ RuntimeOptimizer::find_constant (const TypeSpec &type, const void *data)
 
 
 int
-RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
+RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
+                                TypeDesc datatype)
 {
     int ind = find_constant (type, data);
     if (ind < 0) {
@@ -208,14 +209,44 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
         void *newdata;
         TypeDesc t (type.simpletype());
         size_t n = t.aggregate * t.numelements();
-        if (t.basetype == TypeDesc::INT)
+        if (datatype == TypeDesc::UNKNOWN)
+            datatype = t;
+        size_t datan = datatype.aggregate * datatype.numelements();
+        if (t.basetype == TypeDesc::INT &&
+                datatype.basetype == TypeDesc::INT && n == datan) {
             newdata = inst()->shadingsys().alloc_int_constants (n);
-        else if (t.basetype == TypeDesc::FLOAT)
+            memcpy (newdata, data, t.size());
+        } else if (t.basetype == TypeDesc::FLOAT &&
+                   datatype.basetype == TypeDesc::FLOAT) {
             newdata = inst()->shadingsys().alloc_float_constants (n);
-        else if (t.basetype == TypeDesc::STRING)
+            if (n == datan)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const float *)data)[i];
+            else if (datan == 1)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const float *)data)[0];
+            else {
+                ASSERT (0 && "unsupported type for add_constant");
+            }
+        } else if (t.basetype == TypeDesc::FLOAT &&
+                   datatype.basetype == TypeDesc::INT) {
+            newdata = inst()->shadingsys().alloc_float_constants (n);
+            if (n == datan)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const int *)data)[i];
+            else if (datan == 1)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const int *)data)[0];
+            else {
+                ASSERT (0 && "unsupported type for add_constant");
+            }
+        } else if (t.basetype == TypeDesc::STRING &&
+                   datatype.basetype == TypeDesc::STRING && n == datan) {
             newdata = inst()->shadingsys().alloc_string_constants (n);
-        else { ASSERT (0 && "unsupported type for add_constant"); }
-        memcpy (newdata, data, t.size());
+            memcpy (newdata, data, t.size());
+        } else {
+            ASSERT (0 && "unsupported type for add_constant");
+        }
         newconst.data (newdata);
         ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
                 "we shouldn't have to realloc here");
@@ -2618,11 +2649,12 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
                         !srcsym->has_init_ops()) {
                         make_symbol_room (1);
                         s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
-                        int cind = add_constant (s->typespec(), srcsym->data());
+                        int cind = add_constant (s->typespec(), srcsym->data(),
+                                                 srcsym->typespec().simpletype());
                         // Alias this symbol to the new const
                         global_alias (i, cind);
                         make_param_use_instanceval (s, "- upstream layer sets it to a constant");
-                        replace_param_value (s, srcsym->data());
+                        replace_param_value (s, srcsym->data(), srcsym->typespec());
                         break;
                     }
                 }
@@ -2856,31 +2888,62 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
 
 void
-RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata)
+RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata,
+                                       const TypeSpec &newdata_type)
 {
     ASSERT (R->symtype() == SymTypeParam || R->symtype() == SymTypeOutputParam);
     TypeDesc Rtype = R->typespec().simpletype();
-    void *Rdefault = NULL;
     DASSERT (R->dataoffset() >= 0);
-#ifdef DEBUG
-    int nvals = int(Rtype.aggregate * Rtype.numelements());
-#endif
-    if (Rtype.basetype == TypeDesc::FLOAT) {
-        Rdefault = &inst()->m_fparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+nvals) <= (int)inst()->m_fparams.size());
+    int Rnvals = int(Rtype.aggregate * Rtype.numelements());
+    TypeDesc Ntype = newdata_type.simpletype();
+    if (Ntype == TypeDesc::UNKNOWN)
+        Ntype = Rtype;
+    int Nnvals = int(Ntype.aggregate * Ntype.numelements());
+    if (Rtype.basetype == TypeDesc::FLOAT &&
+          Ntype.basetype == TypeDesc::FLOAT) {
+        float *Rdefault = &inst()->m_fparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
+        if (Rnvals == Nnvals)   // straight copy
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const float *)newdata)[i];
+        else if (Nnvals == 1)  // scalar -> aggregate, by replication
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const float *)newdata)[0];
+        else {
+            ASSERT (0 && "replace_param_value: unexpected types");
+        }
     }
-    else if (Rtype.basetype == TypeDesc::INT) {
-        Rdefault = &inst()->m_iparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+nvals) <= (int)inst()->m_iparams.size());
+    else if (Rtype.basetype == TypeDesc::FLOAT &&
+             Ntype.basetype == TypeDesc::INT) {
+        // Careful, this is an int-to-float conversion
+        float *Rdefault = &inst()->m_fparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
+        if (Rnvals == Nnvals)   // straight copy
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const int *)newdata)[i];
+        else if (Nnvals == 1)  // scalar -> aggregate, by replication
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const int *)newdata)[0];
+        else {
+            ASSERT (0 && "replace_param_value: unexpected types");
+        }
     }
-    else if (Rtype.basetype == TypeDesc::STRING) {
-        Rdefault = &inst()->m_sparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+nvals) <= (int)inst()->m_sparams.size());
+    else if (Rtype.basetype == TypeDesc::INT &&
+             Ntype.basetype == TypeDesc::INT && Rnvals == Nnvals) {
+        int *Rdefault = &inst()->m_iparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_iparams.size());
+        for (int i = 0;  i < Rnvals;  ++i)
+            Rdefault[i] = ((const int *)newdata)[i];
+    }
+    else if (Rtype.basetype == TypeDesc::STRING &&
+             Ntype.basetype == TypeDesc::STRING && Rnvals == Nnvals) {
+        ustring *Rdefault = &inst()->m_sparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_sparams.size());
+        for (int i = 0;  i < Rnvals;  ++i)
+            Rdefault[i] = ((const ustring *)newdata)[i];
     } else {
-        ASSERT (0 && "replace_param_value: unexpected type");
+        ASSERT (0 && "replace_param_value: unexpected types");
     }
-    DASSERT (Rdefault != NULL);
-    memcpy (Rdefault, newdata, Rtype.size());
 }
 
 
@@ -2916,7 +2979,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, const char *why)
     // If it isn't a connection or computed, it doesn't need derivs.
     R->has_derivs (false);
 
-    // Point the symbol's data pointer to its param default and make it
+    // Point the symbol's data pointer to its instance value
     // uniform
     void *Rdefault = NULL;
     DASSERT (R->dataoffset() >= 0);
@@ -2976,7 +3039,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // default value entirely and get rid of the assignment.
         if (R->firstread() > opnum) {
             make_param_use_instanceval (R, "- written once, with a constant, before any reads");
-            replace_param_value (R, A->data());
+            replace_param_value (R, A->data(), A->typespec());
             turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
             return true;
         }

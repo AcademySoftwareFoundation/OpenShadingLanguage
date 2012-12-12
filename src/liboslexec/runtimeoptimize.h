@@ -110,7 +110,8 @@ public:
     /// Search for a constant whose type and value match type and data[...],
     /// returning its index if one exists, or else creating a new constant
     /// and returning its index.
-    int add_constant (const TypeSpec &type, const void *data);
+    int add_constant (const TypeSpec &type, const void *data,
+                      TypeDesc datatype=TypeDesc::UNKNOWN);
     int add_constant (float c) { return add_constant(TypeDesc::TypeFloat, &c); }
     int add_constant (int c) { return add_constant(TypeDesc::TypeInt, &c); }
 
@@ -229,7 +230,8 @@ public:
 
     /// Replace R's instance value with new data.
     ///
-    void replace_param_value (Symbol *R, const void *newdata);
+    void replace_param_value (Symbol *R, const void *newdata,
+                              const TypeSpec &newdata_type);
 
     bool outparam_assign_elision (int opnum, Opcode &op);
 

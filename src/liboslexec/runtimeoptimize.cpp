@@ -59,6 +59,7 @@ static ustring u_nop    ("nop"),
                u_return ("return"),
                u_useparam ("useparam"),
                u_pointcloud_write ("pointcloud_write"),
+               u_isconnected ("isconnected"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
 
@@ -3594,6 +3595,24 @@ RuntimeOptimizer::optimize_instance ()
 
 
 void
+RuntimeOptimizer::resolve_isconnected ()
+{
+    for (int i = 0, n = (int)inst()->ops().size();  i < n;  ++i) {
+        Opcode &op (inst()->ops()[i]);
+        if (op.opname() == u_isconnected) {
+            inst()->make_symbol_room (1);
+            SymbolPtr s = inst()->argsymbol (op.firstarg() + 1);
+            if (s->connected())
+                turn_into_assign_one (op, "resolve isconnected() [1]");
+            else
+                turn_into_assign_zero (op, "resolve isconnected() [0]");
+        }
+    }
+}
+
+
+
+void
 RuntimeOptimizer::track_variable_lifetimes (const SymbolPtrVec &allsymptrs)
 {
     SymbolPtrVec oparg_ptrs;
@@ -4104,6 +4123,12 @@ RuntimeOptimizer::optimize_group ()
 
         old_nsyms += inst()->symbols().size();
         old_nops += inst()->ops().size();
+
+        // N.B. we need to resolve isconnected() calls before the instance
+        // is otherwise optimized, or else isconnected() may not reflect
+        // the original connectivity after substitutions are made.
+        resolve_isconnected ();
+
         optimize_instance ();
     }
 

@@ -293,6 +293,9 @@ public:
 
     int remove_unused_params ();
 
+    /// Turn isconnected() calls into constant assignments
+    void resolve_isconnected ();
+
     /// Squeeze out unused symbols from an instance that has been
     /// optimized.
     void collapse_syms ();

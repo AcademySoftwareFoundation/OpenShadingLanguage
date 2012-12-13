@@ -234,7 +234,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             derivs derivs-muldiv-clobber error-dupes exponential
             function-earlyreturn function-simple function-outputelem
             geomath getsymbol-nonheap gettextureinfo hyperb
-            ieee_fp if incdec initops intbits
+            ieee_fp if incdec initops intbits isconnected
             layers layers-Ciassign layers-lazy
             logic loop matrix message metadata-braces miscmath missing-shader
             noise noise-cell

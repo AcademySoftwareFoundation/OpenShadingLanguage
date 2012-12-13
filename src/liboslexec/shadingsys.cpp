@@ -433,6 +433,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (gt,          compare_op,          gt,            true);
     OP (if,          if,                  if,            false);
     OP (inversesqrt, generic,             none,          true);
+    OP (isconnected, generic,             none,          true);
     OP (isfinite,    generic,             none,          true);
     OP (isinf,       generic,             none,          true);
     OP (isnan,       generic,             none,          true);

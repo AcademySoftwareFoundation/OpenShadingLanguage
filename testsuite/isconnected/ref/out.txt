@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+Compiled upstream.osl -> upstream.oso
+Connect upstream.out to downstream.a
+a is connected
+b is not connected
+

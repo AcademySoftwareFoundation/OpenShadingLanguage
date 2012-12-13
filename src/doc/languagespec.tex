@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 10 Dec, 2012 \\
+\date{{\large Date: 13 Dec, 2012 \\
 %(with corrections, 22 Feb, 2012)
 }}
 
@@ -4911,6 +4911,15 @@ OSL, but is expected to include at a minimum \qkw{camera},
 \qkw{shadow}, \qkw{diffuse}, \qkw{glossy}, \qkw{reflection},
 \qkw{refraction}.  They are not necessarily mutually exclusive, with the
 exception that camera rays should be of class \qkw{camera} and no other.
+\apiend
+
+\apiitem{int {\ce isconnected} (\emph{type} parameter)}
+\indexapi{isconnected()}
+Returns {\cf 1} if the argument is a shader parameter and is connected
+to an earlier layer in the shader group, otherwise returns {\cf 0}.
+Remember that function arguments in OSL are always pass-by-reference,
+so {\cf isconnected()} applied to a function parameter will depend on
+what was passed in as the actual parameter.
 \apiend
 
 

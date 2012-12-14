@@ -19,8 +19,8 @@ surface test ()
     test_ctransform ("hsl", uv);
     test_ctransform ("YIQ", c);
     test_ctransform ("YIQ", uv);
-    test_ctransform ("xyz", c);
-    test_ctransform ("xyz", uv);
+    test_ctransform ("XYZ", c);
+    test_ctransform ("XYZ", uv);
     printf ("\n");
 }
 

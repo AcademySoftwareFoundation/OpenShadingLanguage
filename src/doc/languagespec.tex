@@ -1957,6 +1957,18 @@ following example:
     }
 \end{code}
 
+It is allowed in OSL to copy an entire array at once using the {\cf =}
+operator, provided that the arrays contain elements of the same type
+and that the destination array is at least as long as the source
+array.  For example:
+
+\begin{code}
+    float array[4], anotherarray[4];
+    ...
+    anotherarray = array;
+\end{code}
+
+
 \section{Structures}
 \label{sec:types:struct}
 \indexapi{struct} \index{types!structures} \index{structures|see{{\cf struct}}}

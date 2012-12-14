@@ -462,6 +462,17 @@ ASTassign_expression::codegen (Symbol *dest)
     Symbol *operand = expr()->codegen (dest);
     ASSERT (operand != NULL);
 
+    if (typespec().is_structure_array()) {
+        // Assign entire array-of-struct to another array-of-struct
+        if (operand != dest) {
+            StructSpec *structspec = typespec().structspec ();
+            codegen_assign_struct (structspec, ustring(dest->mangled()),
+                                   ustring(operand->mangled()), NULL,
+                                   true, 0);
+        }
+        return dest;
+    }
+
     if (typespec().is_structure()) {
         // Assignment of struct copies each element individually
         if (operand != dest) {
@@ -495,7 +506,8 @@ ASTassign_expression::codegen (Symbol *dest)
     if (index)
         index->codegen_assign (operand);
     else if (operand != dest)
-        emitcode ("assign", dest, operand);
+        emitcode (typespec().is_array() ? "arraycopy" : "assign",
+                  dest, operand);
     return dest;
 }
 
@@ -561,17 +573,7 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             }
         } else if (dfield->typespec().is_array()) {
             // field is an array
-#if 1
             emitcode ("arraycopy", dfield, ofield);
-#else
-            TypeSpec elemtype = dfield->typespec().elementtype();
-            Symbol *tmp = m_compiler->make_temporary (elemtype);
-            for (int e = 0;  e < dfield->typespec().arraylength();  ++e) {
-                Symbol *index = m_compiler->make_constant (e);
-                emitcode ("aref", tmp, ofield, index);
-                emitcode ("aassign", dfield, index, tmp);
-            }
-#endif
         } else {
             // field is a scalar, struct is a scalar
             emitcode ("assign", dfield, ofield);

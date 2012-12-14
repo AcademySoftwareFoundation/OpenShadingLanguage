@@ -389,9 +389,19 @@ ASTassign_expression::typecheck (TypeSpec expected)
 
     ASSERT (m_op == Assign);  // all else handled by binary_op
 
-    // We don't currently support assignment of whole arrays
+    // Handle array case
     if (vt.is_array() || et.is_array()) {
-        error ("Can't assign entire arrays");
+        if (vt.is_array() && et.is_array() &&
+            vt.arraylength() >= et.arraylength()) {
+            if (vt.structure() && (vt.structure() == et.structure())) {
+                return m_typespec = vt;
+            }
+            if (equivalent(vt.elementtype(), et.elementtype()) &&
+                !vt.structure() && !et.structure()) {
+                return m_typespec = vt;
+            }
+        }
+        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         return TypeSpec();
     }
 

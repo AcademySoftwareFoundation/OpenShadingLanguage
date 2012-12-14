@@ -41,4 +41,12 @@ test ()
     printf ("after c=a[2], c = { %g, %g }\n", c.f, c.p);
     a[3] = c;
     printf ("after a[3]=c, a[3] = { %g, %g }\n", a[3].f, a[3].p);
+
+    printf ("test array-of-struct assignmment:\n");
+    Astruct a2[5];
+    a2 = a;
+    float f2;
+    f2 = a[2].f;
+    printf ("a2 = a; float f2; f = a2[2].f;  ==> %g (should be %g)\n", f2, f);
+    
 }

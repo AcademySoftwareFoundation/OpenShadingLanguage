@@ -8,7 +8,8 @@ SET ( liboslexec_srcs
           opmessage.cpp opnoise.cpp 
           opspline.cpp opstring.cpp
           oslexec.cpp osoreader.cpp
-          pointcloud.cpp rendservices.cpp runtimeoptimize.cpp typespec.cpp
+          pointcloud.cpp rendservices.cpp 
+          constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp builtin_closures.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp

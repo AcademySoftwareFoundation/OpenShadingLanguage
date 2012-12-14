@@ -823,6 +823,10 @@ public:
     /// Which optimization pass are we on?
     int optimization_pass () const { return m_pass; }
 
+    // Maximum number of new constant symbols that a constant-folding
+    // function is able to add.
+    static const int max_new_consts_per_fold = 10;
+
 private:
     ShadingSystemImpl &m_shadingsys;
     PerThreadInfo *m_thread;

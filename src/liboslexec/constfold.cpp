@@ -1497,6 +1497,99 @@ DECLFOLDER(constfold_getmessage)
 
 
 
+DECLFOLDER(constfold_getattribute)
+{
+    if (! rop.shadingsys().fold_getattribute())
+        return 0;
+
+    // getattribute() has eight "flavors":
+    //   * getattribute (attribute_name, value)
+    //   * getattribute (attribute_name, value[])
+    //   * getattribute (attribute_name, index, value)
+    //   * getattribute (attribute_name, index, value[])
+    //   * getattribute (object, attribute_name, value)
+    //   * getattribute (object, attribute_name, value[])
+    //   * getattribute (object, attribute_name, index, value)
+    //   * getattribute (object, attribute_name, index, value[])
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    DASSERT (nargs >= 3 && nargs <= 5);
+    bool array_lookup = rop.opargsym(op,nargs-2)->typespec().is_int();
+    bool object_lookup = rop.opargsym(op,2)->typespec().is_string() && nargs >= 4;
+    int object_slot = (int)object_lookup;
+    int attrib_slot = object_slot + 1;
+    int index_slot = nargs - 2;
+    int dest_slot = nargs - 1;
+
+//    Symbol& Result      = *rop.opargsym (op, 0);
+    Symbol& ObjectName  = *rop.opargsym (op, object_slot); // only valid if object_slot is true
+    Symbol& Attribute   = *rop.opargsym (op, attrib_slot);
+    Symbol& Index       = *rop.opargsym (op, index_slot);  // only valid if array_lookup is true
+    Symbol& Destination = *rop.opargsym (op, dest_slot);
+
+    // If the object name is not supplied, it implies that we are
+    // supposed to search the shaded object first, then if ihat fails,
+    // the scene-wide namespace.  We can't do that yet, have to wait
+    // until shade time.
+    ustring obj_name;
+    if (object_lookup)
+        obj_name = *(const ustring *)ObjectName.data();
+    if (! obj_name)
+        return 0;
+
+    if (! Attribute.is_constant() ||
+        ! ObjectName.is_constant() ||
+        (array_lookup && ! Index.is_constant()))
+        return 0;   // Non-constant things prevent a fold
+    if (Destination.typespec().is_array())
+        return 0;   // Punt on arrays for now
+
+    const size_t maxbufsize = 1024;
+    char buf[maxbufsize];
+    TypeDesc attr_type = Destination.typespec().simpletype();
+    if (attr_type.size() > maxbufsize)
+        return 0;  // Don't constant fold humongous things
+    ustring attr_name = *(const ustring *)Attribute.data();
+    bool found = array_lookup
+        ? rop.renderer()->get_array_attribute (NULL, false,
+                                               obj_name, attr_type, attr_name,
+                                               *(const int *)Index.data(), buf)
+        : rop.renderer()->get_attribute (NULL, false,
+                                         obj_name, attr_type, attr_name,
+                                         buf);
+    if (found) {
+        // Now we turn the existing getattribute op into this for success:
+        //       assign result 1
+        //       assign data [retrieved values]
+        // but if it fails, don't change anything, because we want it to
+        // issue errors at runtime.
+
+        // Make the data destination be the first argument
+        int oldresultarg = rop.inst()->args()[op.firstarg()+0];
+        int dataarg = rop.inst()->args()[op.firstarg()+dest_slot];
+        rop.inst()->args()[op.firstarg()+0] = dataarg;
+        // Now turn it into an assignment
+        int cind = rop.add_constant (attr_type, &buf);
+        rop.turn_into_assign (op, cind, "const fold");
+        // Now insert a new instruction that assigns 1 to the
+        // original return result of getattribute.
+        int one = 1;
+        std::vector<int> args_to_add;
+        args_to_add.push_back (oldresultarg);
+        args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
+        rop.insert_code (opnum, u_assign, args_to_add, true);
+        Opcode &newop (rop.inst()->ops()[opnum]);
+        newop.argwriteonly (0);
+        newop.argread (1, true);
+        newop.argwrite (1, false);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+
 DECLFOLDER(constfold_gettextureinfo)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -1508,7 +1601,7 @@ DECLFOLDER(constfold_gettextureinfo)
             Dataname.typespec().is_string());
 
     if (Filename.is_constant() && Dataname.is_constant() &&
-          ! Data.typespec().is_array()) {
+            ! Data.typespec().is_array() /* N.B. we punt on arrays */) {
         ustring filename = *(ustring *)Filename.data();
         ustring dataname = *(ustring *)Dataname.data();
         TypeDesc t = Data.typespec().simpletype();
@@ -1522,27 +1615,22 @@ DECLFOLDER(constfold_gettextureinfo)
         // into this for success:
         //       assign result 1
         //       assign data [retrieved values]
-        // or, if it failed:
-        //       assign result 0
+        // but if it fails, don't change anything, because we want it to
+        // issue errors at runtime.
         if (result) {
-            int resultarg = rop.inst()->args()[op.firstarg()+0];
+            int oldresultarg = rop.inst()->args()[op.firstarg()+0];
             int dataarg = rop.inst()->args()[op.firstarg()+3];
-            // If not an array, turn the gettextureinfo into an assignment
-            // to data.  (Punt on arrays -- just let the gettextureinfo
-            // happen as before.)
-            if (! t.arraylen) {
-                // Make data the first argument
-                rop.inst()->args()[op.firstarg()+0] = dataarg;
-                // Now turn it into an assignment
-                int cind = rop.add_constant (Data.typespec(), mydata);
-                rop.turn_into_assign (op, cind, "const fold");
-            }
+            // Make data the first argument
+            rop.inst()->args()[op.firstarg()+0] = dataarg;
+            // Now turn it into an assignment
+            int cind = rop.add_constant (Data.typespec(), mydata);
+            rop.turn_into_assign (op, cind, "const fold");
 
             // Now insert a new instruction that assigns 1 to the
             // original return result of gettextureinfo.
             int one = 1;
             std::vector<int> args_to_add;
-            args_to_add.push_back (resultarg);
+            args_to_add.push_back (oldresultarg);
             args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
             rop.insert_code (opnum, u_assign, args_to_add, true);
             Opcode &newop (rop.inst()->ops()[opnum]);

@@ -258,6 +258,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
       m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(true),
+      m_opt_fold_getattribute(true),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
       m_debug(false), m_llvm_debug(false),
@@ -426,7 +427,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (format,      printf,              format,        true);
     OP (functioncall, functioncall,       functioncall,  false);
     OP (ge,          compare_op,          ge,            true);
-    OP (getattribute, getattribute,       none,          false);
+    OP (getattribute, getattribute,       getattribute,  false);
     OP (getmatrix,   getmatrix,           getmatrix,     false);
     OP (getmessage,  getmessage,          getmessage,    false);
     OP (gettextureinfo, gettextureinfo,   gettextureinfo,false);
@@ -582,6 +583,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_assign", int, m_opt_assign);
     ATTR_SET ("opt_mix", int, m_opt_mix);
     ATTR_SET ("opt_merge_instances", int, m_opt_merge_instances);
+    ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -661,6 +663,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
     ATTR_DECODE ("opt_mix", int, m_opt_mix);
     ATTR_DECODE ("opt_merge_instances", int, m_opt_merge_instances);
+    ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);

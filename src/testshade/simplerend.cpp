@@ -192,6 +192,13 @@ bool
 SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring object,
                                TypeDesc type, ustring name, void *val)
 {
+    // In order to test getattribute(), respond positively to
+    // "options"/"blahblah"
+    if (object == "options" && name == "blahblah" &&
+        type == TypeDesc::TypeFloat) {
+        *(float *)val = 3.14159;
+        return true;
+    }
     return false;
 }
 

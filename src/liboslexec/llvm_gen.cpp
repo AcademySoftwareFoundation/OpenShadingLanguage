@@ -2554,51 +2554,20 @@ LLVMGEN (llvm_gen_getattribute)
     //   * getattribute (object, attribute_name, index, value)
     //   * getattribute (object, attribute_name, index, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    DASSERT (nargs >= 3 && nargs <= 5);
 
-    DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
+    bool array_lookup = rop.opargsym(op,nargs-2)->typespec().is_int();
+    bool object_lookup = rop.opargsym(op,2)->typespec().is_string() && nargs >= 4;
+    int object_slot = (int)object_lookup;
+    int attrib_slot = object_slot + 1;
+    int index_slot = array_lookup ? nargs - 2 : 0;
 
-    bool object_lookup = false;
-    bool array_lookup  = false;
-
-    // slot indices when (nargs==3)
-    int result_slot = 0; // never changes
-    int attrib_slot = 1;
-    int object_slot = 0; // initially not used
-    int index_slot  = 0; // initially not used
-    int dest_slot   = 2;
-
-    // figure out which "flavor" of getattribute() to use
-    if (op.nargs() == 5) {
-        object_slot = 1;
-        attrib_slot = 2;
-        index_slot  = 3;
-        dest_slot   = 4;
-        array_lookup  = true;
-        object_lookup = true;
-    }
-    else if (op.nargs() == 4) {
-        if (rop.opargsym (op, 2)->typespec().is_int()) {
-            attrib_slot = 1;
-            index_slot  = 2;
-            dest_slot   = 3;
-            array_lookup = true;
-        }
-        else {
-            object_slot = 1;
-            attrib_slot = 2;
-            dest_slot   = 3;
-            object_lookup = true;
-        }
-    }
-
-    Symbol& Result      = *rop.opargsym (op, result_slot);
-    Symbol& ObjectName  = *rop.opargsym (op, object_slot); // might be aliased to Result
-    Symbol& Index       = *rop.opargsym (op, index_slot);  // might be aliased to Result
+    Symbol& Result      = *rop.opargsym (op, 0);
+    Symbol& ObjectName  = *rop.opargsym (op, object_slot); // only valid if object_slot is true
     Symbol& Attribute   = *rop.opargsym (op, attrib_slot);
-    Symbol& Destination = *rop.opargsym (op, dest_slot);
-
-    bool     dest_derivs    = Destination.has_derivs();
-
+    Symbol& Index       = *rop.opargsym (op, index_slot);  // only valid if array_lookup is true
+    Symbol& Destination = *rop.opargsym (op, nargs-1);
     DASSERT (!Result.typespec().is_closure_based() &&
              !ObjectName.typespec().is_closure_based() && 
              !Attribute.typespec().is_closure_based() &&
@@ -2612,7 +2581,7 @@ LLVMGEN (llvm_gen_getattribute)
 
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_constant ((int)dest_derivs));
+    args.push_back (rop.llvm_constant ((int)Destination.has_derivs()));
     args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
                                     rop.llvm_constant (ustring()));
     args.push_back (rop.llvm_load_value (Attribute));

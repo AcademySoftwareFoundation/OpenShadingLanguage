@@ -99,7 +99,6 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
-      m_opt_merge_instances(shadingsys.m_opt_merge_instances),
       m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
@@ -164,7 +163,6 @@ RuntimeOptimizer::set_debug ()
             m_opt_coalesce_temps = true;
             m_opt_assign = true;
             m_opt_mix = true;
-            m_opt_merge_instances = true;
         }
     }
     // if user said to only debug one layer, turn off debug if not it

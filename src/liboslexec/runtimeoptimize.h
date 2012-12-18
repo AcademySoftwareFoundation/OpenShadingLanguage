@@ -830,6 +830,8 @@ public:
     /// Which optimization pass are we on?
     int optimization_pass () const { return m_pass; }
 
+    ShaderGlobals &dummy_shaderglobals () { return m_shaderglobals; }
+
     // Maximum number of new constant symbols that a constant-folding
     // function is able to add.
     static const int max_new_consts_per_fold = 10;
@@ -853,7 +855,6 @@ private:
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
-    bool m_opt_merge_instances;           ///< Merge identical instances?
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // All below is just for the one inst we're optimizing:

@@ -119,7 +119,7 @@ public:
     ///         opt_constant_param, opt_constant_fold, opt_stale_assign,
     ///         opt_elide_useless_ops, opt_elide_unconnected_outputs,
     ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
-    ///         opt_merge_instances
+    ///         opt_merge_instances, opt_fold_getattribute
     ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
     ///    int llvm_debug         Turn on extra LLVM debug info (0)
     ///    int max_local_mem_KB   Error if shader group needs more than this
@@ -467,6 +467,13 @@ public:
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene". 
+    ///
+    /// Note to renderers: if renderstate is NULL, that means
+    /// get_attribute is being called speculatively by the runtime
+    /// optimizer, and it doesn't know which object the shader will be
+    /// run on. Be robust to this situation, return 'true' (retrieve the
+    /// attribute) if you can (known object and attribute name), but
+    /// otherwise just fail by returning 'false'.
     virtual bool get_attribute (void *renderstate, bool derivatives, 
                                 ustring object, TypeDesc type, ustring name, 
                                 void *val ) = 0;

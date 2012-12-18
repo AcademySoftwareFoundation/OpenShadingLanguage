@@ -1456,13 +1456,25 @@ RuntimeOptimizer::optimize_instance ()
         int lastblock = -1;
         size_t num_ops = inst()->ops().size();
         int skipops = 0;   // extra inserted ops to skip over
-        for (int opnum = 0;  opnum < (int)num_ops;  opnum += 1+skipops) {
-            skipops = 0;
+        for (int opnum = 0;  opnum < (int)num_ops;  opnum += 1) {
             // Before getting a reference to this op, be sure that a space
             // is reserved at the end in case a folding routine inserts an
             // op.  That ensures that the reference won't be invalid.
             inst()->ops().reserve (num_ops+1);
             Opcode &op (inst()->ops()[opnum]);
+
+            if (skipops) {
+                // If a previous optimization inserted ops and told us
+                // to skip over the new ones, we still need to unalias
+                // any symbols written by this op, but otherwise skip
+                // all subsequent optimizations until we run down the
+                // skipops counter.
+                block_unalias_written_args (op);
+                ASSERT (lastblock == m_bblockids[opnum] &&
+                        "this should not be a new basic block");
+                --skipops;
+                continue;   // Move along to the next op, no opimization here
+            }
 
             // Things to do if we've just moved to a new basic block
             if (lastblock != m_bblockids[opnum]) {
@@ -1512,9 +1524,7 @@ RuntimeOptimizer::optimize_instance ()
 
             // Clear local block aliases for any args that were written
             // by this op
-            for (int i = 0, e = op.nargs();  i < e;  ++i)
-                if (op.argwrite(i))
-                    block_unalias (inst()->arg(op.firstarg()+i));
+            block_unalias_written_args (op);
 
             // Get rid of an 'if' if it contains no statements to execute
             if (optimize() >= 2 && op.opname() == u_if &&
@@ -1608,7 +1618,6 @@ RuntimeOptimizer::optimize_instance ()
             // Peephole optimization involving pair of instructions
             if (optimize() >= 2 && m_opt_peephole)
                 changed += peephole2 (opnum);
-
         }
 
         // Now that we've rewritten the code, we need to re-track the

@@ -182,6 +182,13 @@ public:
         m_block_aliases[symindex] = -1;
     }
 
+    /// Clear local block aliases for any args that are written by this op.
+    void block_unalias_written_args (Opcode &op) {
+        for (int i = 0, e = op.nargs();  i < e;  ++i)
+            if (op.argwrite(i))
+                block_unalias (inst()->arg(op.firstarg()+i));
+    }
+
     /// Reset all block-local aliases (done when we enter a new basic
     /// block).
     void clear_block_aliases () {
@@ -328,7 +335,7 @@ public:
 
     /// Helper: return the symbol index of the symbol that is the argnum-th
     /// argument to the given op.
-    int oparg (const Opcode &op, int argnum) {
+    int oparg (const Opcode &op, int argnum) const {
         return inst()->arg (op.firstarg()+argnum);
     }
 

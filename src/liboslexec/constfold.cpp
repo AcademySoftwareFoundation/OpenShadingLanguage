@@ -1527,8 +1527,15 @@ DECLFOLDER(constfold_getattribute)
     Symbol& Index       = *rop.opargsym (op, index_slot);  // only valid if array_lookup is true
     Symbol& Destination = *rop.opargsym (op, dest_slot);
 
+    if (! Attribute.is_constant() ||
+        ! ObjectName.is_constant() ||
+        (array_lookup && ! Index.is_constant()))
+        return 0;   // Non-constant things prevent a fold
+    if (Destination.typespec().is_array())
+        return 0;   // Punt on arrays for now
+
     // If the object name is not supplied, it implies that we are
-    // supposed to search the shaded object first, then if ihat fails,
+    // supposed to search the shaded object first, then if that fails,
     // the scene-wide namespace.  We can't do that yet, have to wait
     // until shade time.
     ustring obj_name;
@@ -1536,13 +1543,6 @@ DECLFOLDER(constfold_getattribute)
         obj_name = *(const ustring *)ObjectName.data();
     if (! obj_name)
         return 0;
-
-    if (! Attribute.is_constant() ||
-        ! ObjectName.is_constant() ||
-        (array_lookup && ! Index.is_constant()))
-        return 0;   // Non-constant things prevent a fold
-    if (Destination.typespec().is_array())
-        return 0;   // Punt on arrays for now
 
     const size_t maxbufsize = 1024;
     char buf[maxbufsize];

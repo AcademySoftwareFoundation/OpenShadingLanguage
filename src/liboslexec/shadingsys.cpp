@@ -106,34 +106,31 @@ bool
 ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
                               const void *src, TypeDesc srctype)
 {
+    int tmp_int;
+    if (srctype == TypeDesc::UINT8) {
+        // uint8 src: Up-convert the source to int
+        if (src) {
+            tmp_int = *(const unsigned char *)src;
+            src = &tmp_int;
+        }
+        srctype = TypeDesc::TypeInt;
+    }
+
+    float tmp_float;
+    if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
+        // int -> float-based : up-convert the source to float
+        if (src) {
+            tmp_float = (float) (*(const int *)src);
+            src = &tmp_float;
+        }
+        srctype = TypeDesc::TypeFloat;
+    }
+
     // Just copy equivalent types
     if (equivalent (dsttype, srctype)) {
-        if (dst && src) {
-            size_t size = dsttype.size();
-            if (size == sizeof(float))    // common case: float/int copy
-                *(float *)dst = *(const float *)src;
-            else
-                memcpy (dst, src, dsttype.size());  // otherwise, memcpy
-        }
+        if (dst && src)
+            memcpy (dst, src, dsttype.size());
         return true;
-    }
-
-    if (srctype == TypeDesc::UINT8 && dsttype.basetype == TypeDesc::INT) {
-        if (dst && src) {
-            // uint8 -> int ... up-convert and recurse
-            int i = *(const unsigned char *)src;
-            return convert_value (dst, dsttype, &i, TypeDesc::TypeInt);
-        }
-        return convert_value (NULL, dsttype, NULL, TypeDesc::TypeInt);
-    }
-
-    if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
-        if (dst && src) {
-            // int -> any-float-based ... up-convert to float and recurse
-            float f = (float) (*(const int *)src);
-            return convert_value (dst, dsttype, &f, TypeDesc::TypeFloat);
-        }
-        return convert_value (NULL, dsttype, NULL, TypeDesc::TypeFloat);
     }
 
     if (srctype == TypeDesc::TypeFloat) {

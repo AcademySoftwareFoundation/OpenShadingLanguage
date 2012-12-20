@@ -287,7 +287,8 @@ public:
 
     /// For each symbol, have a list of the symbols it depends on (or that
     /// depends on it).
-    typedef std::map<int, std::set<int> > SymDependency;
+    typedef std::set<int> SymIntSet;
+    typedef std::map<int, SymIntSet> SymDependency;
 
     void syms_used_in_op (Opcode &op,
                           std::vector<int> &rsyms, std::vector<int> &wsyms);
@@ -295,6 +296,8 @@ public:
     void track_variable_dependencies ();
 
     void add_dependency (SymDependency &dmap, int A, int B);
+
+    void mark_symbol_derivatives (SymDependency &symdeps, SymIntSet &visited, int d);
 
     void mark_outgoing_connections ();
 

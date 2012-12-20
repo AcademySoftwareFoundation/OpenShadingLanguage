@@ -1069,18 +1069,37 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
 }
 
 
+// This has O(n^2) memory usage, so only for debugging
+//#define DEBUG_SYMBOL_DEPENDENCIES
 
 // Add to the dependency map that "A depends on B".
 static void
 add_dependency (SymDependencyMap &dmap, const Symbol *A, const Symbol *B)
 {
     dmap[A].insert (B);
+
+#ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Perform unification -- all of B's dependencies are now
     // dependencies of A.
     BOOST_FOREACH (const Symbol *r, dmap[B])
         dmap[A].insert (r);
+#endif
 }
 
+
+static void
+mark_symbol_derivatives (SymDependencyMap &dmap, SymPtrSet &visited, const Symbol *sym)
+{
+    BOOST_FOREACH (const Symbol *r, dmap[sym]) {
+		if (visited.find(r) == visited.end()) {
+			visited.insert(r);
+
+			const_cast<Symbol *>(r)->has_derivs (true);
+
+			mark_symbol_derivatives(dmap, visited, r);
+		}
+	}
+}
 
 
 /// Run through all the ops, for each one marking its 'written'
@@ -1157,11 +1176,11 @@ OSLCompilerImpl::track_variable_dependencies ()
         }
     }
 
-    // Mark all symbols needing derivatives as such
-    BOOST_FOREACH (const Symbol *d, m_symdeps[m_derivsym])
-        const_cast<Symbol *>(d)->has_derivs (true);
+    // Recursively tag all symbols that need derivatives
+    SymPtrSet visited;
+    mark_symbol_derivatives (m_symdeps, visited, m_derivsym);
 
-#if 0
+#ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Helpful for debugging
 
     std::cerr << "track_variable_dependencies\n";

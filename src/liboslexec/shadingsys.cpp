@@ -118,6 +118,15 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
         return true;
     }
 
+    if (srctype == TypeDesc::UINT8 && dsttype.basetype == TypeDesc::INT) {
+        if (dst && src) {
+            // uint8 -> int ... up-convert and recurse
+            int i = *(const unsigned char *)src;
+            return convert_value (dst, dsttype, &i, TypeDesc::TypeInt);
+        }
+        return convert_value (NULL, dsttype, NULL, TypeDesc::TypeInt);
+    }
+
     if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
         if (dst && src) {
             // int -> any-float-based ... up-convert to float and recurse

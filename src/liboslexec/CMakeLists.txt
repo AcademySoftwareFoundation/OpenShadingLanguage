@@ -18,11 +18,20 @@ SET ( liboslexec_srcs
           bsdf_cloth_fncs.cpp bsdf_cloth.cpp bsdf_cloth_specular.cpp
           bsdf_reflection.cpp bsdf_refraction.cpp bsdf_transparent.cpp bsdf_ward.cpp
           bssrdf.cpp bsdf_hair.cpp bsdf_fakefur.cpp
-          ../liboslcomp/ast.cpp ../liboslcomp/codegen.cpp
-          ../liboslcomp/oslcomp.cpp ../liboslcomp/symtab.cpp
-          ../liboslcomp/typecheck.cpp
     )
 
+# oslcomp symbols used in oslexec
+if (NOT BUILDSTATIC)
+    LIST(APPEND liboslexec_srcs
+        ../liboslcomp/ast.cpp
+        ../liboslcomp/codegen.cpp
+        ../liboslcomp/oslcomp.cpp
+        ../liboslcomp/symtab.cpp
+        ../liboslcomp/typecheck.cpp
+        )
+
+    add_definitions ( -Doslcomp_EXPORTS )
+endif ()
 
 include_directories ( ${CMAKE_SOURCE_DIR}/liboslcomp )
 
@@ -98,7 +107,13 @@ else ()
     SET (liboslexec_srcs ${liboslexec_srcs} llvm_ops.cpp)
 endif ()
 
-ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
+if (BUILDSTATIC)
+    ADD_LIBRARY ( oslexec STATIC ${liboslexec_srcs} )
+    ADD_DEFINITIONS (-DBUILD_STATIC=1)
+else ()
+    ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
+endif ()
+
 TARGET_LINK_LIBRARIES ( oslexec
                         ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
                         ${OPENIMAGEIO_LIBRARY}
@@ -108,15 +123,17 @@ TARGET_LINK_LIBRARIES ( oslexec
 ADD_DEPENDENCIES (oslexec ${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map)
 LINK_ILMBASE ( oslexec )
 
-INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib )
-
-
+if (BUILDSTATIC)
+    INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+else ()
+    INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib )
+endif ()
 
 # Unit tests
 add_executable (closure_test closure_test.cpp)
 add_executable (accum_test accum_test.cpp)
-target_link_libraries ( closure_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-target_link_libraries ( accum_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries ( closure_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
+target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
 link_ilmbase (closure_test)
 link_ilmbase (accum_test)
 add_test (unit_closure ${CMAKE_BINARY_DIR}/liboslexec/closure_test)

@@ -550,13 +550,15 @@ ASTbinary_expression::typecheck (TypeSpec expected)
                 return m_typespec = l;
         }
         if (m_op == Mul) {
-            if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
-                return m_typespec = l;
-            if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
-                // N.B. Reorder so that it's always r = closure * k,
-                // not r = k * closure.  See codegen for why this helps.
-                std::swap (m_children[0], m_children[1]);
-                return m_typespec = r;
+            if (l.is_color_closure() != r.is_color_closure()) {
+                if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
+                    return m_typespec = l;
+                if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
+                    // N.B. Reorder so that it's always r = closure * k,
+                    // not r = k * closure.  See codegen for why this helps.
+                    std::swap (m_children[0], m_children[1]);
+                    return m_typespec = r;
+                }
             }
         }
         if (m_op == And || m_op == Or) {

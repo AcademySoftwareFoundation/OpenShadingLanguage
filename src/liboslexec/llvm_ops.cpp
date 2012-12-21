@@ -1102,6 +1102,18 @@ osl_endswith_iss (const char *s, const char *substr)
         return strncmp (s+USTR(s).length()-len, substr, len) == 0;
 }
 
+OSL_SHADEOP int
+osl_strtoi_is (const char *str)
+{
+    return strtol(str, NULL, 10);
+}
+
+OSL_SHADEOP float
+osl_strtof_fs (const char *str)
+{
+    return (float)strtod(str, NULL);
+}
+
 OSL_SHADEOP const char *
 osl_substr_ssii (const char *s, int start, int length)
 {

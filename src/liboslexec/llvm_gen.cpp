@@ -3289,6 +3289,43 @@ LLVMGEN (llvm_gen_dict_value)
 
 
 
+LLVMGEN (llvm_gen_split)
+{
+    // int split (string str, output string result[], string sep, int maxsplit)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
+    Symbol& R       = *rop.opargsym (op, 0);
+    Symbol& Str     = *rop.opargsym (op, 1);
+    Symbol& Results = *rop.opargsym (op, 2);
+    DASSERT (R.typespec().is_int() && Str.typespec().is_string() &&
+             Results.typespec().is_array() &&
+             Results.typespec().simpletype() == TypeDesc::TypeString);
+
+    llvm::Value *args[5];
+    args[0] = rop.llvm_load_value (Str);
+    args[1] = rop.llvm_void_ptr (Results);
+    if (op.nargs() >= 4) {
+        Symbol& Sep = *rop.opargsym (op, 3);
+        DASSERT (Sep.typespec().is_string());
+        args[2] = rop.llvm_load_value (Sep);
+    } else {
+        args[2] = rop.llvm_constant ("");
+    }
+    if (op.nargs() >= 5) {
+        Symbol& Maxsplit = *rop.opargsym (op, 4);
+        DASSERT (Maxsplit.typespec().is_int());
+        args[3] = rop.llvm_load_value (Maxsplit);
+    } else {
+        args[3] = rop.llvm_constant (Results.typespec().arraylength());
+    }
+    args[4] = rop.llvm_constant (Results.typespec().arraylength());
+    llvm::Value *ret = rop.llvm_call_function ("osl_split", &args[0], 5);
+    rop.llvm_store_value (ret, R);
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_raytype)
 {
     // int raytype (string name)

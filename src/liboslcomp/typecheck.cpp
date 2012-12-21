@@ -917,6 +917,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (5);
         } else if (m_name == "pointcloud_search") {
             mark_optional_output(5, pointcloud_out_args);
+        } else if (m_name == "split") {
+            argwriteonly (2);
         } else if (func()->texture_args()) {
             mark_optional_output(2, tex_out_args);
         }
@@ -1142,6 +1144,7 @@ static const char * builtin_func_args [] = {
     "snoise", NOISE_ARGS, NULL,
     "spline", "fsff[]", "csfc[]", "psfp[]", "vsfv[]", "nsfn[]", "fsfif[]", "csfic[]", "psfip[]", "vsfiv[]", "nsfin[]", NULL,
     "splineinverse", "fsff[]", "fsfif[]", NULL,
+    "split", "iss[]si", "iss[]s", "iss[]", "!rw", NULL,
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,

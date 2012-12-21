@@ -491,10 +491,13 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (snoise,      noise,               none,          true);
     OP (spline,      spline,              none,          true);
     OP (splineinverse, spline,            none,          true);
+    OP (split,       split,               split,         false);
     OP (sqrt,        generic,             sqrt,          true);
     OP (startswith,  generic,             none,          true);
     OP (step,        generic,             none,          true);
     OP (strlen,      generic,             strlen,        true);
+    OP (strtoi,      generic,             strtoi,        true);
+    OP (strtof,      generic,             strtof,        true);
     OP (sub,         sub,                 sub,           true);
     OP (substr,      generic,             none,          true);
     OP (surfacearea, get_simple_SG_field, none,          true);

@@ -273,6 +273,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_wavelength_color_vf", "xXXf",
     "osl_luminance_fv", "xXXX",
     "osl_luminance_dfdv", "xXXX",
+    "osl_split", "isXsii",
 
 #ifdef OSL_LLVM_NO_BITCODE
     "osl_assert_nonnull", "xXs",

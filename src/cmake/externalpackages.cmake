@@ -177,23 +177,34 @@ endif (USE_PARTIO)
 ###########################################################################
 # LLVM library setup
 
-if (LLVM_DIRECTORY)
-    set (LLVM_CONFIG "${LLVM_DIRECTORY}/bin/llvm-config")
-else ()
-    set (LLVM_CONFIG llvm-config)
-endif ()
-execute_process (COMMAND ${LLVM_CONFIG} --version
-                 OUTPUT_VARIABLE LLVM_VERSION
-	         OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process (COMMAND ${LLVM_CONFIG} --prefix
-                 OUTPUT_VARIABLE LLVM_DIRECTORY
-	         OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process (COMMAND ${LLVM_CONFIG} --libdir
-                 OUTPUT_VARIABLE LLVM_LIB_DIR
-  	         OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process (COMMAND ${LLVM_CONFIG} --includedir
-                 OUTPUT_VARIABLE LLVM_INCLUDES
-  	         OUTPUT_STRIP_TRAILING_WHITESPACE)
+# try to find llvm-config, with a specific version if specified
+if(LLVM_DIRECTORY)
+  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION} HINTS ${LLVM_DIRECTORY}/bin NO_CMAKE_PATH)
+  if(NOT LLVM_CONFIG)
+    FIND_PROGRAM(LLVM_CONFIG llvm-config HINTS ${LLVM_DIRECTORY}/bin NO_CMAKE_PATH)
+  endif()
+else()
+  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION})
+  if(NOT LLVM_CONFIG)
+    FIND_PROGRAM(LLVM_CONFIG llvm-config)
+  endif()
+endif()
+
+if(NOT LLVM_DIRECTORY OR EXISTS ${LLVM_CONFIG})
+  execute_process (COMMAND ${LLVM_CONFIG} --version
+       OUTPUT_VARIABLE LLVM_VERSION
+       OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process (COMMAND ${LLVM_CONFIG} --prefix
+       OUTPUT_VARIABLE LLVM_DIRECTORY
+       OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process (COMMAND ${LLVM_CONFIG} --libdir
+       OUTPUT_VARIABLE LLVM_LIB_DIR
+       OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process (COMMAND ${LLVM_CONFIG} --includedir
+       OUTPUT_VARIABLE LLVM_INCLUDES
+       OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION}
                PATHS ${LLVM_LIB_DIR})
@@ -203,7 +214,8 @@ message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
 message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
 message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
 
-if (LLVM_LIBRARY AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
+# shared llvm library may not be available, this is not an error if we use LLVM_STATIC.
+if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
   # ensure include directory is added (in case of non-standard locations
   include_directories (BEFORE "${LLVM_INCLUDES}")
   # Extract any wayward dots or "svn" suffixes from the version to yield
@@ -216,17 +228,17 @@ if (LLVM_LIBRARY AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
     # if static LLVM libraries were requested, use llvm-config to generate
     # the list of what libraries we need, and substitute that in the right
     # way for LLVM_LIBRARY.
-    set (LLVM_LIBRARY "")
-    execute_process (COMMAND ${LLVM_CONFIG} --libs
-                 OUTPUT_VARIABLE llvm_library_list
-	         OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string (REPLACE "-l" "" llvm_library_list ${llvm_library_list})
-    string (REPLACE " " ";" llvm_library_list ${llvm_library_list})
-    foreach (f ${llvm_library_list})
-      list (APPEND LLVM_LIBRARY "${LLVM_LIB_DIR}/lib${f}.a")
-    endforeach ()
+    execute_process (COMMAND ${LLVM_CONFIG} --libfiles
+                     OUTPUT_VARIABLE LLVM_LIBRARY
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string (REPLACE " " ";" LLVM_LIBRARY ${LLVM_LIBRARY})
   endif ()
   message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
+
+
+  if (NOT LLVM_LIBRARY)
+    message (FATAL_ERROR "LLVM library not found.")
+  endif()
 else ()
   message (FATAL_ERROR "LLVM not found.")
 endif ()

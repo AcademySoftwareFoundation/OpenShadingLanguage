@@ -152,9 +152,16 @@ preprocess (const std::string &filename,
         }
 
         instream.unsetf (std::ios::skipws);
-        std::string instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude.c_str())
-            + std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
-                           std::istreambuf_iterator<char>());
+        std::string instring;
+
+        if (!stdinclude.empty())
+            instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude.c_str());
+        else
+            instring = "\n";
+
+        instring += std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
+                                 std::istreambuf_iterator<char>());
+
         instream.close ();
 
         typedef boost::wave::cpplexer::lex_token<> token_type;
@@ -252,7 +259,7 @@ preprocess (const std::string &filename,
     cppcommand += options;
 
     if (! stdinclude.empty())
-        cppcommand += std::string("-include ") + stdinclude + " ";
+        cppcommand += std::string("-include \"") + stdinclude + "\" ";
 
     cppcommand += "\"";
     cppcommand += filename;

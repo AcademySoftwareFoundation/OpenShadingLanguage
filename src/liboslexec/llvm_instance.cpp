@@ -354,6 +354,8 @@ static const char *llvm_helper_function_table[] = {
     UNARY_OP_IMPL(abs),
     UNARY_OP_IMPL(fabs),
 
+    BINARY_OP_IMPL(fmod),
+
     "osl_smoothstep_ffff", "ffff",
     "osl_smoothstep_dfffdf", "xXffX",
     "osl_smoothstep_dffdff", "xXfXf",

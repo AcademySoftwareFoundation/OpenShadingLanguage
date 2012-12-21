@@ -356,6 +356,9 @@ static const char *llvm_helper_function_table[] = {
     "osl_transformn_vmv", "xXXX",
     "osl_transformn_dvmdv", "xXXX",
 
+    "osl_transform_triple", "iXXiXiXXi",
+    "osl_transform_triple_nonlinear", "iXXiXiXXi",
+
     "osl_mul_mm", "xXXX",
     "osl_mul_mf", "xXXf",
     "osl_mul_m_ff", "xXff",
@@ -398,6 +401,9 @@ static const char *llvm_helper_function_table[] = {
     "osl_texture_set_swrap", "xXs",
     "osl_texture_set_twrap", "xXs",
     "osl_texture_set_rwrap", "xXs",
+    "osl_texture_set_swrap_code", "xXi",
+    "osl_texture_set_twrap_code", "xXi",
+    "osl_texture_set_rwrap_code", "xXs",
     "osl_texture_set_sblur", "xXf",
     "osl_texture_set_tblur", "xXf",
     "osl_texture_set_rblur", "xXf",
@@ -436,6 +442,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_raytype_name", "iXX",
     "osl_raytype_bit", "iXi",
     "osl_bind_interpolated_param", "iXXLiX",
+    "osl_range_check", "iiiXXi",
+    "osl_naninf_check", "xiXiXXiX",
 #endif // OSL_LLVM_NO_BITCODE
 
     NULL

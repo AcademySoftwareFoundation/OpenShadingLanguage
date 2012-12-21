@@ -98,6 +98,9 @@ using namespace OSL::pvt;
 
 #define yylval osolval
 
+#ifdef _WIN32
+#define YY_NO_UNISTD_H
+#endif
 
 %}
 

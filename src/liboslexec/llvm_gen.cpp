@@ -619,6 +619,13 @@ LLVMGEN (llvm_gen_modulus)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
+#ifdef OSL_LLVM_NO_BITCODE
+    // On Windows 32 bit this calls an unknown instruction, probably need to
+    // link with LLVM compiler-rt to fix, for now just fall back to op
+    if (is_float)
+        return llvm_gen_generic (rop, opnum);
+#endif
+
     // The following should handle f%f, v%v, v%f, i%i
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {

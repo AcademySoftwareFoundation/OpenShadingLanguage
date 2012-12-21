@@ -475,7 +475,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
              expr->typespec().elementtype().is_matrix())
         m_typespec = TypeDesc::FLOAT;
     else {
-        ASSERT (0 && "botched ASTindex");
+        error ("indexing into non-array or non-component type");
     }
 }
 

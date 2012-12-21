@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <cmath>
+#include <cstdlib>
 
 #include <boost/regex.hpp>
 
@@ -841,6 +842,81 @@ DECLFOLDER(constfold_endswith)
 
 
 
+DECLFOLDER(constfold_strtoi)
+{
+    // Try to turn R=strtoi(s) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (S.is_constant()) {
+        ASSERT (S.typespec().is_string());
+        ustring s = *(ustring *)S.data();
+        int cind = rop.add_constant ((int) strtol(s.c_str(), NULL, 10));
+        rop.turn_into_assign (op, cind, "const fold");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_strtof)
+{
+    // Try to turn R=strtof(s) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (S.is_constant()) {
+        ASSERT (S.typespec().is_string());
+        ustring s = *(ustring *)S.data();
+        int cind = rop.add_constant ((float) strtod(s.c_str(), NULL));
+        rop.turn_into_assign (op, cind, "const fold");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_split)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    // Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol &Str (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &Results (*rop.inst()->argsymbol(op.firstarg()+2));
+    Symbol &Sep (*rop.inst()->argsymbol(op.firstarg()+3));
+    Symbol &Maxsplit (*rop.inst()->argsymbol(op.firstarg()+4));
+    if (Str.is_constant() && Sep.is_constant() && Maxsplit.is_constant()) {
+        // The split string, separator string, and maxsplit are all constants.
+        // Compute the results with Strutil::split.
+        int resultslen = Results.typespec().arraylength();
+        int maxsplit = Imath::clamp (*(int *)Maxsplit.data(), 0, resultslen);
+        std::vector<std::string> splits;
+        Strutil::split ((*(ustring *)Str.data()).string(), splits,
+                        (*(ustring *)Sep.data()).string(), maxsplit);
+        int n = std::min (maxsplit, (int)splits.size());
+        // Temporarily stash the index of the symbol holding results
+        int resultsarg = rop.inst()->args()[op.firstarg()+2];
+        // Turn the 'split' into a straight assignment of the return value...
+        rop.turn_into_assign (op, rop.add_constant(n));
+        // Create a constant array holding the split results
+        std::vector<ustring> usplits (resultslen);
+        for (int i = 0;  i < n;  ++i)
+            usplits[i] = ustring(splits[i]);
+        int cind = rop.add_constant (TypeDesc(TypeDesc::STRING,resultslen),
+                                     &usplits[0]);
+        // And insert an instruction copying our constant array to the
+        // user's results array.
+        std::vector<int> args;
+        args.push_back (resultsarg);
+        args.push_back (cind);
+        rop.insert_code (opnum, u_assign, args, true, 1 /* relation */);
+        return 1;
+    }
+
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_concat)
 {
     // Try to turn R=concat(s,...) into R=C
@@ -1409,7 +1485,7 @@ DECLFOLDER(constfold_getmatrix)
         std::vector<int> args_to_add;
         args_to_add.push_back (resultarg);
         args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-        rop.insert_code (opnum, u_assign, args_to_add, true);
+        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
         Opcode &newop (rop.inst()->ops()[opnum]);
         newop.argwriteonly (0);
         newop.argread (1, true);
@@ -1577,7 +1653,7 @@ DECLFOLDER(constfold_getattribute)
         std::vector<int> args_to_add;
         args_to_add.push_back (oldresultarg);
         args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-        rop.insert_code (opnum, u_assign, args_to_add, true);
+        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
         Opcode &newop (rop.inst()->ops()[opnum]);
         newop.argwriteonly (0);
         newop.argread (1, true);
@@ -1632,7 +1708,7 @@ DECLFOLDER(constfold_gettextureinfo)
             std::vector<int> args_to_add;
             args_to_add.push_back (oldresultarg);
             args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-            rop.insert_code (opnum, u_assign, args_to_add, true);
+            rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
             Opcode &newop (rop.inst()->ops()[opnum]);
             newop.argwriteonly (0);
             newop.argread (1, true);
@@ -1893,7 +1969,7 @@ DECLFOLDER(constfold_pointcloud_search)
         std::vector<int> args_to_add;
         args_to_add.push_back (value_args[i]);
         args_to_add.push_back (const_array_sym);
-        rop.insert_code (opnum, u_assign, args_to_add, true);
+        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
     }
 
     // Query results all copied.  The only thing left to do is to assign
@@ -1901,7 +1977,7 @@ DECLFOLDER(constfold_pointcloud_search)
     std::vector<int> args_to_add;
     args_to_add.push_back (result_sym);
     args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
-    rop.insert_code (opnum, u_assign, args_to_add, true);
+    rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
     
     return 1;
 }
@@ -1957,7 +2033,7 @@ DECLFOLDER(constfold_pointcloud_get)
     std::vector<int> args_to_add;
     args_to_add.push_back (rop.oparg(op,5) /* Data symbol*/);
     args_to_add.push_back (const_array_sym);
-    rop.insert_code (opnum, u_assign, args_to_add, true);
+    rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
     return 1;
 }
 

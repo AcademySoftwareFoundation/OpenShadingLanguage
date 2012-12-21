@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 13 Dec, 2012 \\
+\date{{\large Date: 20 Dec, 2012 \\
 %(with corrections, 22 Feb, 2012)
 }}
 
@@ -3706,6 +3706,34 @@ otherwise return 0.
 \indexapi{startswith()}
 Return 1 if string {\cf s} ends with the substring {\cf suffix},
 otherwise return 0.
+\apiend
+
+\apiitem{int {\ce strtoi} (string str)}
+\indexapi{srttoi()}
+Convert/decode the initial part of {\cf str} to an {\cf int} 
+representation.  Base 10 is assumed.
+The return value will be {\cf 0} if the string doesn't appear to hold
+valid representation of the destination type.
+\apiend
+
+\apiitem{float {\ce strtof} (string str)}
+\indexapi{strtof()}
+Convert/decode the initial part of {\cf str} to a {\cf float} representation.
+The return value will be {\cf 0} if the string doesn't appear to hold
+valid representation of the destination type.
+\apiend
+
+\apiitem{int {\ce split} (string str, output string results[], string sep, int maxsplit) \\
+int {\ce split} (string str, output string results[], string sep) \\
+int {\ce split} (string str, output string results[])}
+\indexapi{split()}
+
+Fills the {\cf result} array with the words in the string {\cf str},
+using {\cf sep} as the delimiter string.  If {\cf maxsplit} is supplied,
+at most {\cf maxsplit} splits are done.  If {\cf sep} is {\cf ""} (or if
+not supplied), any whitespace string is a separator.  The value returned
+is the number of elements (separated strings) written to the {\cf results}
+array.
 \apiend
 
 \apiitem{string {\ce substr} (string s, int start, int length)\\

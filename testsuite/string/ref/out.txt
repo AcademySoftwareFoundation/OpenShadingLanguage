@@ -36,6 +36,14 @@ endswith ("abcdef", "") = 1
 endswith ("", "abc") = 0
 endswith ("", "") = 1
 
+strtoi("-23") = -23
+strtof("3.14") = 3.140000
+
+testing split " 2 4	6    8" by "":
+	4:  "2" "4" "6" "8"
+testing split "3,6,9,12" by ",":
+	4:  "3" "6" "9" "12"
+
 regex_match ("foo", "f") = 0
 regex_match ("foo", "f[Oo]{2}") = 1
 regex_match ("foo", ".*o") = 1
@@ -85,6 +93,14 @@ endswith ("abcdef", "ghiabcdef") = 0
 endswith ("abcdef", "") = 1
 endswith ("", "abc") = 0
 endswith ("", "") = 1
+
+strtoi("-23") = -23
+strtof("3.14") = 3.140000
+
+testing split " 2 4	6    8" by "":
+	4:  "2" "4" "6" "8"
+testing split "3,6,9,12" by ",":
+	4:  "3" "6" "9" "12"
 
 regex_match ("foo", "f") = 0
 regex_match ("foo", "f[Oo]{2}") = 1
@@ -136,6 +152,14 @@ endswith ("abcdef", "") = 1
 endswith ("", "abc") = 0
 endswith ("", "") = 1
 
+strtoi("-23") = -23
+strtof("3.14") = 3.140000
+
+testing split " 2 4	6    8" by "":
+	4:  "2" "4" "6" "8"
+testing split "3,6,9,12" by ",":
+	4:  "3" "6" "9" "12"
+
 regex_match ("foo", "f") = 0
 regex_match ("foo", "f[Oo]{2}") = 1
 regex_match ("foo", ".*o") = 1
@@ -185,6 +209,14 @@ endswith ("abcdef", "ghiabcdef") = 0
 endswith ("abcdef", "") = 1
 endswith ("", "abc") = 0
 endswith ("", "") = 1
+
+strtoi("-23") = -23
+strtof("3.14") = 3.140000
+
+testing split " 2 4	6    8" by "":
+	4:  "2" "4" "6" "8"
+testing split "3,6,9,12" by ",":
+	4:  "3" "6" "9" "12"
 
 regex_match ("foo", "f") = 0
 regex_match ("foo", "f[Oo]{2}") = 1

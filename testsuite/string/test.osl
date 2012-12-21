@@ -58,6 +58,19 @@ void test_endswith (string s, string substr)
 
 
 
+void test_split (string s, string sep)
+{
+    printf ("testing split \"%s\" by \"%s\":\n", s, sep);
+    string results[10];
+    int r = split (s, results, sep);
+    printf ("\t%d: ", r);
+    for (int i = 0;  i < r;  ++i)
+        printf (" \"%s\"", results[i]);
+    printf ("\n");
+}
+
+
+
 shader
 test ()
 {
@@ -114,6 +127,18 @@ test ()
     test_endswith ("abcdef", "");
     test_endswith ("", "abc");
     test_endswith ("", "");
+
+    // Conversion
+    printf ("\n");
+    string conv = "-23";
+    printf ("strtoi(\"%s\") = %d\n", conv, strtoi(conv));
+    conv = "3.14";
+    printf ("strtof(\"%s\") = %f\n", conv, strtof(conv));
+
+    // Split
+    printf ("\n");
+    test_split (" 2 4\t6    8", "");
+    test_split ("3,6,9,12", ",");
 
     // Regular expressions
     printf ("\n");

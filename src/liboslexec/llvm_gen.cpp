@@ -1720,13 +1720,16 @@ LLVMGEN (llvm_gen_generic)
                                                      &(args[1]), op.nargs()-1);
             rop.llvm_store_value (r, Result);
         } else {
-            rop.llvm_call_function (name.c_str(), &(args[0]), op.nargs());
+            rop.llvm_call_function (name.c_str(),
+                                    (args.size())? &(args[0]): NULL, op.nargs());
         }
         rop.llvm_zero_derivs (Result);
     } else {
         // Cases with derivs
         ASSERT (Result.has_derivs() && any_deriv_args);
-        rop.llvm_call_function (name.c_str(), &(args[0]), op.nargs(), true);
+        rop.llvm_call_function (name.c_str(),
+                                (args.size())? &(args[0]): NULL, op.nargs(),
+                                true);
     }
     return true;
 }

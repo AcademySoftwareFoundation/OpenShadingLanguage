@@ -1419,9 +1419,11 @@ ASTtype_constructor::codegen (Symbol *dest)
         argdest.push_back (argval);
     }
     if (nargs == 1)
-        emitcode ("assign", argdest.size(), &argdest[0]);
+        emitcode ("assign",
+                  argdest.size(), (argdest.size())? &argdest[0]: NULL);
     else
-        emitcode (typespec().string().c_str(), argdest.size(), &argdest[0]);
+        emitcode (typespec().string().c_str(),
+                  argdest.size(), (argdest.size())? &argdest[0]: NULL);
     return dest;
 }
 
@@ -1576,7 +1578,8 @@ ASTfunction_call::codegen (Symbol *dest)
             argdest_return_offset++;
         }
         // Emit the actual op
-        emitcode (isclosure ? "closure" : m_name.c_str(), argdest.size(), &argdest[0]);
+        emitcode (isclosure ? "closure" : m_name.c_str(),
+                  argdest.size(), (argdest.size())? &argdest[0]: NULL);
         // Propagate derivative-taking info to the opcode
         m_compiler->lastop().set_argbits (m_argread, m_argwrite,
                                           m_argtakesderivs);

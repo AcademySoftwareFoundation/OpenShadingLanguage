@@ -490,8 +490,10 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
                                const std::vector<int> &args_to_add,
                                bool recompute_rw_ranges, int relation)
 {
-    insert_code (opnum, opname, (const int *)&args_to_add[0],
-                 (const int *)&args_to_add[args_to_add.size()],
+    const int *argsbegin = (args_to_add.size())? &args_to_add[0]: NULL;
+    const int *argsend = argsbegin + args_to_add.size();
+
+    insert_code (opnum, opname, argsbegin, argsend,
                  recompute_rw_ranges, relation);
 }
 

@@ -378,7 +378,7 @@ Dictionary::dict_value (int nodeID, ustring attribname,
     if (type.basetype == TypeDesc::FLOAT) {
         r.valueoffset = (int) m_floatdata.size();
         for (int i = 0;  i < n;  ++i) {
-            float v = strtof (val, (char **)&val);
+            float v = (float) strtod (val, (char **)&val);
             while (isspace(*val) || *val == ',')
                 ++val;
             m_floatdata.push_back (v);

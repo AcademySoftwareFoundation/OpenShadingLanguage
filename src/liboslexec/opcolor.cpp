@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////
 
+#include <OpenImageIO/fmath.h>
 
 #include <iostream>
 #include <cmath>
@@ -41,6 +42,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "dual.h"
 
+#ifdef _MSC_VER
+using OIIO::expm1;
+#endif
 
 OSL_NAMESPACE_ENTER
 namespace pvt {

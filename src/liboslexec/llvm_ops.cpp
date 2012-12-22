@@ -118,7 +118,9 @@ using OIIO::erfcf;
 using OIIO::log2f;
 using OIIO::logbf;
 using OIIO::exp2f;
-#else
+#endif
+
+#ifndef _MSC_VER
 using OIIO::isnan;
 using OIIO::isfinite;
 #endif

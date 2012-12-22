@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/regex.hpp>
 
+#include <OpenImageIO/sysutil.h>
+
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
 #include "dual.h"

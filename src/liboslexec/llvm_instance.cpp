@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
 
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/sysutil.h>
 
 #include "llvm_headers.h"
 

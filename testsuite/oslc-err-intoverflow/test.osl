@@ -1,0 +1,11 @@
+
+shader
+test ()
+{
+    int a = 2147483647;
+    int b = 2147483648; // Overflow, but can't detect it yet
+    int c = 2147483649; // Error: integer overflow
+    int d = -2147483648;
+    int e = -2147483649; // Error: integer overflow
+}
+

@@ -1,0 +1,16 @@
+
+shader test()
+{
+	float f = 1.0;
+	float a = f[0]; // Error: indexing into non-array type
+
+	point p = point(1.0, 1.0, 1.0);
+	float b = p[0];
+	float c = p[0][0]; // Error: indexing into non-array type
+
+	matrix m = matrix(1.0);
+	float d = m[0]; // Error: indexing into non-array type
+	float e = m[0][0];
+	float g = m[0][0][0]; // Error: indexing into non-array type
+}
+

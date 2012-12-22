@@ -737,7 +737,9 @@ RuntimeOptimizer::llvm_call_function (const char *name,
         else
             valargs[i] = llvm_load_value (s);
     }
-    return llvm_call_function (name, &valargs[0], (int)valargs.size());
+    return llvm_call_function (name,
+                               (valargs.size())? &valargs[0]: NULL,
+                               (int)valargs.size());
 }
 
 

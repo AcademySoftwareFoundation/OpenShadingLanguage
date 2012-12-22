@@ -1,0 +1,8 @@
+
+shader
+test ()
+{
+    // Error closure * closure not allowed
+    Ci = emission() * emission();
+}
+

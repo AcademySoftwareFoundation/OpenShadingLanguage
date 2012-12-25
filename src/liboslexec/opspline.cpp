@@ -92,6 +92,12 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
+// This symbol is strictly to force linkage of this file when building
+// static library.
+int opspline_cpp_dummy = 1;
+
+
+
 const Spline::SplineBasis *Spline::getSplineBasis(const ustring &basis_name)
 {
     int basis_type = -1;
@@ -103,10 +109,6 @@ const Spline::SplineBasis *Spline::getSplineBasis(const ustring &basis_name)
 
     return &gBasisSet[basis_type];
 }
-
-
-}; // namespace pvt
-OSL_NAMESPACE_EXIT
 
 
 
@@ -213,3 +215,6 @@ OSL_SHADEOP void osl_splineinverse_dffdf(void *out, const char *spline_, void *x
 }
 
 
+
+} // namespace pvt
+OSL_NAMESPACE_EXIT

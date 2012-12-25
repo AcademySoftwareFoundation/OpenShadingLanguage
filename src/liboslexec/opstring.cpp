@@ -45,6 +45,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define USTR(cstr) (*((ustring *)&cstr))
 
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+
+// This symbol is strictly to force linkage of this file when building
+// static library.
+int opstring_cpp_dummy = 1;
 
 
 // Heavy lifting of OSL regex operations.
@@ -140,3 +147,7 @@ osl_split (const char *str, ustring *results, const char *sep,
         results[i] = ustring(splits[i]);
     return n;
 }
+
+
+} // end namespace pvt
+OSL_NAMESPACE_EXIT

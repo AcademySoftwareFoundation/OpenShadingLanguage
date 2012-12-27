@@ -1771,3 +1771,16 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
             return;
         }
 }
+
+
+#ifdef OSL_LLVM_NO_BITCODE
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+// This symbol is strictly to force linkage of this file when building
+// static library.
+int llvm_ops_cpp_dummy = 1;
+
+} // end namespace pvt
+OSL_NAMESPACE_EXIT
+#endif

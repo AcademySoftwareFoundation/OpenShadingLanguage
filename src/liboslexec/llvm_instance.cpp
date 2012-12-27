@@ -120,9 +120,15 @@ static ustring op_nop("nop");
 extern int opclosure_cpp_dummy, opcolor_cpp_dummy;
 extern int opmessage_cpp_dummy, opnoise_cpp_dummy;
 extern int opspline_cpp_dummy, opstring_cpp_dummy;
+#ifdef OSL_LLVM_NO_BITCODE
+extern int llvm_ops_cpp_dummy;
+#endif
 int *force_osl_op_linkage[] = {
     &opclosure_cpp_dummy, &opcolor_cpp_dummy, &opmessage_cpp_dummy,
-    &opnoise_cpp_dummy, &opspline_cpp_dummy,  &opstring_cpp_dummy
+    &opnoise_cpp_dummy, &opspline_cpp_dummy,  &opstring_cpp_dummy,
+#ifdef OSL_LLVM_NO_BITCODE
+    &llvm_ops_cpp_dummy
+#endif
 };
 
 

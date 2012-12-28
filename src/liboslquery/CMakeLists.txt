@@ -5,9 +5,17 @@ INCLUDE_DIRECTORIES ( ../liboslexec )
 
 FLEX_BISON ( ../liboslexec/osolex.l ../liboslexec/osogram.y oso liboslquery_srcs compiler_headers )
 
-ADD_LIBRARY ( oslquery SHARED ${liboslquery_srcs} )
+if (BUILDSTATIC)
+    ADD_LIBRARY ( oslquery STATIC ${liboslquery_srcs} )
+else ()
+    ADD_LIBRARY ( oslquery SHARED ${liboslquery_srcs} )
+endif ()
+
 TARGET_LINK_LIBRARIES ( oslquery ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} )
 LINK_ILMBASE ( oslquery )
 
-INSTALL ( TARGETS oslquery LIBRARY DESTINATION lib )
-
+if (BUILDSTATIC)
+    INSTALL ( TARGETS oslquery LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+else ()
+    INSTALL ( TARGETS oslquery LIBRARY DESTINATION lib )
+endif ()

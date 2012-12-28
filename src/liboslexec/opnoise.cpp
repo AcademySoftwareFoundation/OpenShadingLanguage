@@ -37,6 +37,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OSL;
 
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+// This symbol is strictly to force linkage of this file when building
+// static library.
+int opnoise_cpp_dummy = 1;
+
+
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range
 
@@ -714,5 +722,8 @@ struct GenericPNoise {
 
 PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
 
+
+} // namespace pvt
+OSL_NAMESPACE_EXIT
 
 #endif

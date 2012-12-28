@@ -42,7 +42,11 @@ namespace pvt {
 llvm::Type *
 RuntimeOptimizer::llvm_type_union(const std::vector<llvm::Type *> &types)
 {
+#if OSL_LLVM_VERSION >= 32
+    llvm::DataLayout target(llvm_module());
+#else
     llvm::TargetData target(llvm_module());
+#endif
     size_t max_size = 0;
     size_t max_align = 1;
     for (size_t i = 0; i < types.size(); ++i) {

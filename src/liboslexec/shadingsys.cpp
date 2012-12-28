@@ -361,13 +361,13 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 
 
 
-void
-ShadingSystemImpl::setup_op_descriptors ()
+static void
+shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
 #define OP(name,ll,f,simp)                                               \
     extern bool llvm_gen_##ll (RuntimeOptimizer &rop, int opnum);        \
     extern int  constfold_##f (RuntimeOptimizer &rop, int opnum);        \
-    m_op_descriptor[ustring(#name)] = OpDescriptor(#name, llvm_gen_##ll, \
+    op_descriptor[ustring(#name)] = OpDescriptor(#name, llvm_gen_##ll,   \
                                                    constfold_##f, simp);
 
     // name          llvmgen              folder         simple
@@ -518,6 +518,16 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (while,       loop_op,             none,          false);
     OP (xor,         bitwise_binary_op,   none,          true);
 #undef OP
+}
+
+
+
+void
+ShadingSystemImpl::setup_op_descriptors ()
+{
+    // This is not a class member function to avoid namespace issues with function
+    // declarations in the function body, when building with visual studio.
+	shading_system_setup_op_descriptors(m_op_descriptor);
 }
 
 

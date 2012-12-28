@@ -45,10 +45,18 @@ namespace llvm = LLVM_NAMESPACE;
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
 #include <llvm/PassManager.h>
+#if OSL_LLVM_VERSION >= 32
+#include <llvm/IRBuilder.h>
+#else
 #include <llvm/Support/IRBuilder.h>
+#endif
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/raw_ostream.h>
+#if OSL_LLVM_VERSION >= 32
+#include <llvm/DataLayout.h>
+#else
 #include <llvm/Target/TargetData.h>
+#endif
 
 #endif /* OSL_LLVM_HEADERS_H */

@@ -1273,13 +1273,21 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     //
     m_llvm_func_passes = new llvm::FunctionPassManager(llvm_module());
     llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
+#if OSL_LLVM_VERSION >= 32
+    fpm.add (new llvm::DataLayout(llvm_module()));
+#else
     fpm.add (new llvm::TargetData(llvm_module()));
+#endif
 
     // Specify module-wide (interprocedural optimization) passes
     //
     m_llvm_passes = new llvm::PassManager;
     llvm::PassManager &passes (*m_llvm_passes);
+#if OSL_LLVM_VERSION >= 32
+    passes.add (new llvm::DataLayout(llvm_module()));
+#else
     passes.add (new llvm::TargetData(llvm_module()));
+#endif
 
     if (shadingsys().llvm_optimize() >= 1 && shadingsys().llvm_optimize() <= 3) {
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the

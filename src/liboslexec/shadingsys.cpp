@@ -1483,7 +1483,7 @@ const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)con
 OSL_NAMESPACE_EXIT
 
 
-#ifndef BUILD_STATIC
+#ifndef OSL_STATIC_LIBRARY
 // Symbols needed to resolve some linkage issues because we pull some
 // components in from liboslcomp.
 int oslparse() { return 0; }

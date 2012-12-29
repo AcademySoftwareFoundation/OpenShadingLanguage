@@ -67,9 +67,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// another.
 
 #if defined(_MSC_VER) || defined(__CYGWIN__)
-  #define OSL_DLL_IMPORT __declspec(dllimport)
-  #define OSL_DLL_EXPORT __declspec(dllexport)
-  #define OSL_DLL_LOCAL
+  #if defined(OSL_STATIC_LIBRARY)
+    #define OSL_DLL_IMPORT
+    #define OSL_DLL_EXPORT
+    #define OSL_DLL_LOCAL
+  #else
+    #define OSL_DLL_IMPORT __declspec(dllimport)
+    #define OSL_DLL_EXPORT __declspec(dllexport)
+    #define OSL_DLL_LOCAL
+  #endif
+  #define OSL_LLVM_EXPORT __declspec(dllexport)
 #else
   #if __GNUC__ >= 4
     #define OSL_DLL_IMPORT __attribute__ ((visibility ("default")))
@@ -80,6 +87,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #define OSL_DLL_EXPORT
     #define OSL_DLL_LOCAL
   #endif
+  #define OSL_LLVM_EXPORT OSL_DLL_EXPORT
 #endif
 
 

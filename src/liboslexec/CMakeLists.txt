@@ -29,8 +29,6 @@ if (NOT BUILDSTATIC)
         ../liboslcomp/symtab.cpp
         ../liboslcomp/typecheck.cpp
         )
-
-    add_definitions ( -Doslcomp_EXPORTS )
 endif ()
 
 include_directories ( ${CMAKE_SOURCE_DIR}/liboslcomp )
@@ -109,7 +107,6 @@ endif ()
 
 if (BUILDSTATIC)
     ADD_LIBRARY ( oslexec STATIC ${liboslexec_srcs} )
-    ADD_DEFINITIONS (-DBUILD_STATIC=1)
 else ()
     ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
 endif ()

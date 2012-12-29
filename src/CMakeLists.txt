@@ -71,6 +71,11 @@ if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
     add_definitions ("-DBOOST_NO_TYPEID")
 endif ()
 
+# Needed to disable dllimport/dllexport for static library
+if (BUILDSTATIC)
+    add_definitions ("-DOSL_STATIC_LIBRARY")
+endif()
+
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
     # include_directories(SYSTEM...) when using clang or gcc.

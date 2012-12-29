@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 #include <cmath>
-#include <dlfcn.h>
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>

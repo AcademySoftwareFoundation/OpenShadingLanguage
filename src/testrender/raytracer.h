@@ -1,10 +1,10 @@
 #pragma once
 
+#include <OpenImageIO/fmath.h>
+
 #include "dual_vec.h"
 #include "oslconfig.h"
 #include <vector>
-#include <limits>
-#include <cmath>
 
 OSL_NAMESPACE_ENTER
 

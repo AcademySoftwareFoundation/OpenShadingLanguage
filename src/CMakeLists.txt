@@ -77,6 +77,11 @@ endif ()
 if (WIN32 AND Boost_USE_STATIC_LIBS)
     add_definitions ("-DBOOST_ALL_NO_LIB")
     add_definitions ("-DBOOST_THREAD_USE_LIB")
+endif ()
+
+# Needed to disable dllimport/dllexport for static library
+if (BUILDSTATIC)
+    add_definitions ("-DOSL_STATIC_LIBRARY")
 endif()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)

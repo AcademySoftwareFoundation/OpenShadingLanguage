@@ -844,9 +844,9 @@ DECLFOLDER(constfold_endswith)
 
 
 
-DECLFOLDER(constfold_strtoi)
+DECLFOLDER(constfold_stoi)
 {
-    // Try to turn R=strtoi(s) into R=C
+    // Try to turn R=stoi(s) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
@@ -861,9 +861,9 @@ DECLFOLDER(constfold_strtoi)
 
 
 
-DECLFOLDER(constfold_strtof)
+DECLFOLDER(constfold_stof)
 {
-    // Try to turn R=strtof(s) into R=C
+    // Try to turn R=stof(s) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {

@@ -233,7 +233,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             blackbody blendmath breakcont bug-locallifetime
             cellnoise closure color comparison
             component-range const-array-params debugnan
-            derivs derivs-muldiv-clobber error-dupes exponential
+            derivs derivs-muldiv-clobber error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
             geomath getsymbol-nonheap gettextureinfo hyperb
             ieee_fp if incdec initops intbits isconnected

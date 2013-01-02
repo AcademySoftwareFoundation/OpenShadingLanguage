@@ -816,6 +816,12 @@ public:
         return m_return_block.back();
     }
 
+    /// Return the basic block of the exit for the whole instance.
+    ///
+    llvm::BasicBlock *llvm_exit_instance_block () const {
+        return m_exit_instance_block;
+    }
+
     /// Check for inf/nan in all written-to arguments of the op
     void llvm_generate_debugnan (const Opcode &op);
 
@@ -897,6 +903,7 @@ private:
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
+    llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_int;
     llvm::Type *m_llvm_type_addrint;

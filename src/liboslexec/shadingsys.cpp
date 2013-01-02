@@ -422,6 +422,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (erf,         generic,             none,          true);
     OP (erfc,        generic,             none,          true);
     OP (error,       printf,              none,          false);
+    OP (exit,        return,              none,          false);
     OP (exp,         generic,             none,          true);
     OP (exp2,        generic,             none,          true);
     OP (expm1,       generic,             none,          true);

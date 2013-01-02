@@ -820,6 +820,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     m_llvm_groupdata_ptr = arg_it++;
 
     llvm::BasicBlock *entry_bb = llvm_new_basic_block (unique_layer_name);
+    m_exit_instance_block = llvm_new_basic_block (unique_layer_name+"_exit_");
 
     // Set up a new IR builder
     delete m_builder;
@@ -933,6 +934,9 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         }
     }
     // llvm_gen_debug_printf ("done copying connections");
+
+    builder().CreateBr (m_exit_instance_block);
+    builder().SetInsertPoint (m_exit_instance_block);
 
     // All done
     // llvm_gen_debug_printf (std::string("exit layer ")+inst()->shadername());

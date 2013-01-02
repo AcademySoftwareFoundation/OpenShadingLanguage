@@ -62,7 +62,12 @@ endif ()
 ##   if you find the need to turn this on, as OSL classes
 ##   extending LLVM ones will cause linker errors (unless you
 ##   rebuild LLVM with rtti enabled)
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+
+if (NOT MSVC)
+	set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+else ()
+	set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-" )
+endif()
 
 # For gcc < 4.3, Boost needs some extra help detecting that we've
 # disabled RTTI.
@@ -70,6 +75,12 @@ if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
     add_definitions ("-DBOOST_NO_RTTI")
     add_definitions ("-DBOOST_NO_TYPEID")
 endif ()
+
+# Needed for static boost libraries on Windows
+if (WIN32 AND Boost_USE_STATIC_LIBS)
+    add_definitions ("-DBOOST_ALL_NO_LIB")
+    add_definitions ("-DBOOST_THREAD_USE_LIB")
+endif()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with

@@ -68,9 +68,10 @@ else ()
     set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
 endif()
 
-# For gcc < 4.3, Boost needs some extra help detecting that we've
-# disabled RTTI.
-if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
+# For gcc < 4.3 and certain Clang versions, Boost needs some extra help
+# detecting that we've disabled RTTI.
+if ((CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
+    OR CMAKE_COMPILER_IS_CLANG)
     add_definitions ("-DBOOST_NO_RTTI")
     add_definitions ("-DBOOST_NO_TYPEID")
 endif ()
@@ -90,6 +91,8 @@ endif ()
 if (CMAKE_COMPILER_IS_CLANG)
     # disable warning about unused command line arguments
     add_definitions ("-Qunused-arguments -Wno-unknown-pragmas")
+    # disable warning in flex-generated code
+    add_definitions ("-Wno-null-conversion")
 endif ()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)

@@ -9,9 +9,6 @@ set (OSL_LIBRARY_VERSION_PATCH 0)
 set (OSO_FILE_VERSION_MAJOR 1)
 set (OSO_FILE_VERSION_MINOR 0)
 
-set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
-
-
 cmake_minimum_required (VERSION 2.6)
 if (NOT CMAKE_VERSION VERSION_LESS 2.8.4)
     cmake_policy (SET CMP0017 NEW)
@@ -109,6 +106,10 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     endif ()
 endif ()
 
+
+set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
+set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
+set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 if (WIN32)
     set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
@@ -116,7 +117,6 @@ else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
-set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -223,7 +223,9 @@ macro ( TESTSUITE )
                                       --solution-path "${CMAKE_BINARY_DIR}" )
         endif ()
 
-        message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
+        if (VERBOSE)
+            message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
+        endif ()
 
         # Run the test unoptimized
         if (NOT _testname MATCHES "^render")

@@ -3430,7 +3430,8 @@ LLVMGEN (llvm_gen_return)
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
     if (op.opname() == op_exit) {
-        // If it's a real "exit", totally jump out of the shader instance
+        // If it's a real "exit", totally jump out of the shader instance.
+        // The exit instance block will be created if it doesn't yet exist.
         rop.builder().CreateBr (rop.llvm_exit_instance_block());
     } else {
         // If it's a "return", jump to the exit point of the function.

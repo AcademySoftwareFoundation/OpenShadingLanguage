@@ -818,7 +818,17 @@ public:
 
     /// Return the basic block of the exit for the whole instance.
     ///
-    llvm::BasicBlock *llvm_exit_instance_block () const {
+    bool llvm_has_exit_instance_block () const {
+        return m_exit_instance_block;
+    }
+
+    /// Return the basic block of the exit for the whole instance.
+    ///
+    llvm::BasicBlock *llvm_exit_instance_block () {
+        if (! m_exit_instance_block) {
+            std::string name = Strutil::format ("%s_%d_exit_", inst()->layername().c_str(), inst()->id());
+            m_exit_instance_block = llvm_new_basic_block (name);
+        }
         return m_exit_instance_block;
     }
 

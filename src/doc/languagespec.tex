@@ -56,14 +56,14 @@ Language Specification
 %\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2012 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2013 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
  \bigskip \\
 }
-\date{{\large Date: 20 Dec, 2012 \\
+\date{{\large Date: 1 Jan, 2013 \\
 %(with corrections, 22 Feb, 2012)
 }}
 
@@ -126,7 +126,7 @@ documentation are:
 
 \vspace*{0.2in}
 
-Copyright (c) 2009-2012 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2013 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 \vspace*{0.2in}
@@ -3704,16 +3704,16 @@ Return 1 if string {\cf s} ends with the substring {\cf suffix},
 otherwise return 0.
 \apiend
 
-\apiitem{int {\ce strtoi} (string str)}
-\indexapi{srttoi()}
+\apiitem{int {\ce stoi} (string str)}
+\indexapi{stoi()}
 Convert/decode the initial part of {\cf str} to an {\cf int} 
 representation.  Base 10 is assumed.
 The return value will be {\cf 0} if the string doesn't appear to hold
 valid representation of the destination type.
 \apiend
 
-\apiitem{float {\ce strtof} (string str)}
-\indexapi{strtof()}
+\apiitem{float {\ce stof} (string str)}
+\indexapi{stof()}
 Convert/decode the initial part of {\cf str} to a {\cf float} representation.
 The return value will be {\cf 0} if the string doesn't appear to hold
 valid representation of the destination type.

@@ -364,11 +364,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
-#define OP(name,ll,f,simp)                                               \
+#define OP2(alias,name,ll,f,simp)                                        \
     extern bool llvm_gen_##ll (RuntimeOptimizer &rop, int opnum);        \
     extern int  constfold_##f (RuntimeOptimizer &rop, int opnum);        \
-    op_descriptor[ustring(#name)] = OpDescriptor(#name, llvm_gen_##ll,   \
+    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
                                                    constfold_##f, simp);
+#define OP(name,ll,f,simp) OP2(name,name,ll,f,simp)
 
     // name          llvmgen              folder         simple
     OP (aassign,     aassign,             none,          false);
@@ -496,9 +497,11 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (sqrt,        generic,             sqrt,          true);
     OP (startswith,  generic,             none,          true);
     OP (step,        generic,             none,          true);
+    OP (stof,        generic,             stof,          true);
+    OP (stoi,        generic,             stoi,          true);
     OP (strlen,      generic,             strlen,        true);
-    OP (strtoi,      generic,             strtoi,        true);
-    OP (strtof,      generic,             strtof,        true);
+    OP2(strtof,stof, generic,             stof,          true);
+    OP2(strtoi,stoi, generic,             stoi,          true);
     OP (sub,         sub,                 sub,           true);
     OP (substr,      generic,             none,          true);
     OP (surfacearea, get_simple_SG_field, none,          true);

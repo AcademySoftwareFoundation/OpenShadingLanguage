@@ -430,8 +430,8 @@ int startswith (string s, string prefix) BUILTIN;
 int endswith (string s, string suffix) BUILTIN;
 string substr (string s, int start, int len) BUILTIN;
 string substr (string s, int start) { return substr (s, start, strlen(s)); }
-float strtof (string str) BUILTIN;
-int strtoi (string str) BUILTIN;
+float stof (string str) BUILTIN;
+int stoi (string str) BUILTIN;
 
 // Define concat in terms of shorter concat
 string concat (string a, string b, string c) {

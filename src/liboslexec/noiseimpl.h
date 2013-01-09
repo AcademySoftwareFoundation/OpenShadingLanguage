@@ -296,8 +296,9 @@ inline int imod(int a, int b) {
 // FIXME: already implemented inside OIIO but can't easily override it for duals
 //        inside a different namespace
 inline float floorfrac(float x, int* i) {
-    *i = quick_floor(x);
-    return x - *i;
+    float fx = floorf(x);
+    *i = (int)fx;
+    return x - fx;
 }
 
 inline Dual2<float> floorfrac(const Dual2<float> &x, int* i) {

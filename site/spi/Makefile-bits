@@ -20,7 +20,7 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
     platform=spinux1
     # put any gcc-4.4/spinux1 specific stuff here
     ifeq (${LLVM_DIRECTORY},)
-    LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.0
+    LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.2
     endif
     MY_CMAKE_FLAGS += \
         -DILMBASE_CUSTOM=1 \

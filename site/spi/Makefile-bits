@@ -20,7 +20,7 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
     platform=spinux1
     # put any gcc-4.4/spinux1 specific stuff here
     ifeq (${LLVM_DIRECTORY},)
-	LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.0
+    LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.0
     endif
     MY_CMAKE_FLAGS += \
         -DILMBASE_CUSTOM=1 \
@@ -31,7 +31,7 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
         -DLLVM_VERSION=${LLVM_VERSION} \
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
     ifeq (${COMPILER}, clang)
-	MY_CMAKE_FLAGS += \
+	 MY_CMAKE_FLAGS += \
 	    -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
 	    -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     endif
@@ -40,8 +40,11 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
          -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.6.3-test/bin/gcc \
          -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.6.3-test/bin/g++
     endif
-    
-
+    ifeq (${COMPILER}, gcc470)
+    MY_CMAKE_FLAGS += \
+         -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.0-test/bin/gcc \
+         -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.0-test/bin/g++
+    endif
 endif # SP_ARCH == spinux1_x86_64
 
 

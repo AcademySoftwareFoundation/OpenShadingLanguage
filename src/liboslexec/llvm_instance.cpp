@@ -1042,6 +1042,15 @@ RuntimeOptimizer::build_llvm_group ()
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     OIIO::Timer timer;
+    std::string err;
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // I don't know which exact part has thread safety issues, but it
+    // crashes on windows when we don't lock
+    {
+    static spin_mutex mutex;
+    OIIO::spin_lock lock (mutex);
+#endif
 
     if (! m_thread->llvm_context)
         m_thread->llvm_context = new llvm::LLVMContext();
@@ -1053,13 +1062,12 @@ RuntimeOptimizer::build_llvm_group ()
     }
 
     ASSERT (! m_llvm_module);
+#ifdef OSL_LLVM_NO_BITCODE
+    m_llvm_module = new llvm::Module("llvm_ops", *m_thread->llvm_context);
+#else
     // Load the LLVM bitcode and parse it into a Module
     const char *data = osl_llvm_compiled_ops_block;
     llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
-    std::string err;
-#ifdef OSL_LLVM_NO_BITCODE
-    m_llvm_module = new llvm::Module("llvm_ops", *llvm_context());
-#else
     // Load the LLVM bitcode and parse it into a Module
     m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
     if (err.length())
@@ -1082,6 +1090,11 @@ RuntimeOptimizer::build_llvm_group ()
     // will be stealing the JIT code memory from under its nose and
     // destroying the Module & ExecutionEngine.
     m_llvm_exec->DisableLazyCompilation ();
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // End of mutex lock
+    }
+#endif
 
     m_stat_llvm_setup_time += timer.lap();
 

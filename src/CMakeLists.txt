@@ -60,9 +60,9 @@ endif ()
 ##   extending LLVM ones will cause linker errors (unless you
 ##   rebuild LLVM with rtti enabled)
 
-set (DISABLERTTI ON CACHE BOOL "Build without RTTI")
+set (ENABLERTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
 
-if (DISABLERTTI)
+if (NOT ENABLERTTI)
     if (MSVC)
         set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-" )
     else ()

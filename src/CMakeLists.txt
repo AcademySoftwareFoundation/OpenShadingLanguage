@@ -54,12 +54,12 @@ if (NOT MSVC)
     endif ()
 endif ()
 
-## disable RTTI
-## NOTE(ckulla): LLVM builds without RTTI by default so beware
-##   if you find the need to turn this on, as OSL classes
-##   extending LLVM ones will cause linker errors (unless you
-##   rebuild LLVM with rtti enabled)
-
+## enable RTTI
+##   NOTE: LLVM builds without RTTI by default so beware
+##   if you find the need to turn this on, to use OSL in a
+##   project that requires RTTI for example, you need to build
+##   LLVM with RRTI, otherwise OSL classes extending LLVM ones
+##   will cause linker errors.
 set (ENABLERTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
 
 if (NOT ENABLERTTI)

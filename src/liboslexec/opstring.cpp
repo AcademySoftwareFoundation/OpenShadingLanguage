@@ -126,11 +126,13 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
 OSL_SHADEOP void
 osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 {
-    va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
-    va_end (args);
-    sg->context->shadingsys().warning (s);
+    if (sg->context->allow_warnings()) {
+        va_list args;
+        va_start (args, format_str);
+        std::string s = Strutil::vformat (format_str, args);
+        va_end (args);
+        sg->context->shadingsys().warning (s);
+    }
 }
 
 

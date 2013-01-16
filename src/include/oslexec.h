@@ -88,6 +88,8 @@ public:
     ///                              when NaN/Inf happens (0).
     ///    int compile_report     Issue info messages to the renderer for
     ///                              every shader compiled (0).
+    ///    int max_warnings_per_thread  Number of warning calls that should be
+    ///                              processed per thread (100).
     /// 2. Attributes that should be set by applications/renderers that
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")
@@ -205,7 +207,7 @@ public:
 #endif
 
     /// Create a new shader instance, either replacing the one for the
-    /// specified usage (if not within a group) or appending to the 
+    /// specified usage (if not within a group) or appending to the
     /// current group (if a group has been started).
     virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
@@ -223,7 +225,7 @@ public:
     ///
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam)=0;
-    
+
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.
     virtual ShadingAttribStateRef state () = 0;
@@ -330,7 +332,7 @@ private:
 
 
 
-/// This struct represents the global variables accessible from a shader, note 
+/// This struct represents the global variables accessible from a shader, note
 /// that not all fields will be valid in all contexts.
 ///
 /// All points, vectors and normals are given in "common" space.
@@ -370,7 +372,7 @@ struct ShaderGlobals {
 
 
 
-/// RendererServices defines an abstract interface through which a 
+/// RendererServices defines an abstract interface through which a
 /// renderer may provide callback to the ShadingSystem.
 class OSLEXECPUBLIC RendererServices {
 public:
@@ -444,7 +446,7 @@ public:
     /// some renderers to provide transformations that cannot be
     /// expressed by a 4x4 matrix.
     ///
-    /// If npoints == 0, the function should just return true if a 
+    /// If npoints == 0, the function should just return true if a
     /// known nonlinear transformation is available to transform points
     /// between the two spaces, otherwise false.  (For this calling
     /// pattern, sg, Pin, Pout, and time will not be used and may be 0.
@@ -466,7 +468,7 @@ public:
     /// write it into 'val'.  Otherwise, return false.  If no object is
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
-    /// unsuccessful, on the currently shaded "scene". 
+    /// unsuccessful, on the currently shaded "scene".
     ///
     /// Note to renderers: if renderstate is NULL, that means
     /// get_attribute is being called speculatively by the runtime
@@ -474,14 +476,14 @@ public:
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
-    virtual bool get_attribute (void *renderstate, bool derivatives, 
-                                ustring object, TypeDesc type, ustring name, 
+    virtual bool get_attribute (void *renderstate, bool derivatives,
+                                ustring object, TypeDesc type, ustring name,
                                 void *val ) = 0;
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute (void *renderstate, bool derivatives, 
-                                      ustring object, TypeDesc type, 
+    virtual bool get_array_attribute (void *renderstate, bool derivatives,
+                                      ustring object, TypeDesc type,
                                       ustring name, int index, void *val ) = 0;
 
     /// Get the named user-data from the current object and write it into
@@ -568,7 +570,7 @@ public:
                                 ustring attr_name, TypeDesc attr_type,
                                 void *out_data);
 
-    /// Write a point to the named pointcloud, which will be saved 
+    /// Write a point to the named pointcloud, which will be saved
     /// at the end of the frame.  Return true if everything is ok,
     /// false if there was an error.
     virtual bool pointcloud_write (ShaderGlobals *sg,
@@ -598,7 +600,7 @@ public:
     /// Get the named message from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  This is only
     /// called for "sourced" messages, not ordinary intra-group messages.
-    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name, 
+    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name,
                              TypeDesc type, void *val, bool derivatives) {
         return false;
     }

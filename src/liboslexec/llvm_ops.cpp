@@ -125,6 +125,14 @@ using OIIO::isnan;
 using OIIO::isfinite;
 #endif
 
+#if defined(__FreeBSD__)
+#include <sys/param.h>
+#if __FreeBSD_version < 803000
+// freebsd before 8.3 doesn't have log2f - use OIIO lib replacement
+using OIIO::log2f;
+#endif
+#endif
+
 // Handy re-casting macros
 #define USTR(cstr) (*((ustring *)&cstr))
 #define MAT(m) (*(Matrix44 *)m)

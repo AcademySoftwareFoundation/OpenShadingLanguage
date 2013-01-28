@@ -258,7 +258,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
       m_greedyjit(false), m_countlayerexecs(false),
-      m_optimize (2),
+      m_max_warnings_per_thread(100),
+      m_optimize(2),
       m_opt_constant_param(true), m_opt_constant_fold(true),
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
@@ -517,7 +518,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (trunc,       generic,             none,          true);
     OP (useparam,    useparam,            useparam,      false);
     OP (vector,      construct_triple,    triple,        true);
-    OP (warning,     printf,              none,          false);
+    OP (warning,     printf,              warning,       false);
     OP (wavelength_color, blackbody,      none,          true);
     OP (while,       loop_op,             none,          false);
     OP (xor,         bitwise_binary_op,   none,          true);
@@ -616,6 +617,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
     ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
+    ATTR_SET ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET ("compile_report", int, m_compile_report);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
@@ -697,6 +699,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
     ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
+    ATTR_DECODE ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
@@ -758,7 +761,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
-    
+
     return false;
 #undef ATTR_DECODE
 #undef ATTR_DECODE_STRING
@@ -902,7 +905,7 @@ ShadingSystemImpl::getstats (int level) const
     out << "  Shading groups:   " << m_stat_groups << "\n";
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
     float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);
-    out << "    Avg instances per group: " 
+    out << "    Avg instances per group: "
         << Strutil::format ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
     if (m_countlayerexecs)
@@ -925,7 +928,7 @@ ShadingSystemImpl::getstats (int level) const
 
     out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
-                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1)); 
+                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
 #endif
 
     out << "  Compiled " << m_stat_groups_compiled << " groups, "
@@ -935,7 +938,7 @@ ShadingSystemImpl::getstats (int level) const
         << m_stat_merged_inst_opt << " after opt) in "
         << Strutil::timeintervalformat (m_stat_inst_merge_time, 2) << "\n";
     if (m_stat_instances_compiled > 0)
-        out << "  After optimization, " << m_stat_empty_instances 
+        out << "  After optimization, " << m_stat_empty_instances
             << " empty instances ("
             << (int)(100.0f*m_stat_empty_instances/m_stat_instances_compiled) << "%)\n";
     if (m_stat_groups_compiled > 0)
@@ -981,7 +984,7 @@ ShadingSystemImpl::getstats (int level) const
         out << "  Pointcloud operations:\n";
         out << "    pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
         out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
-        double avg = m_stat_pointcloud_searches ? 
+        double avg = m_stat_pointcloud_searches ?
             (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches : 0.0;
         out << "      average query results: " << Strutil::format ("%.1f", avg) << "\n";
         out << "      failures: " << m_stat_pointcloud_failures << "\n";
@@ -1402,7 +1405,7 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
 
     if (bracket && ! c.type.is_closure() &&
             c.type.aggregate() != TypeDesc::SCALAR) {
-        // There was at least one set of brackets that appears to be 
+        // There was at least one set of brackets that appears to be
         // selecting a color/vector component.
         c.channel = atoi (bracket+1);
         if (c.channel >= (int)c.type.aggregate()) {

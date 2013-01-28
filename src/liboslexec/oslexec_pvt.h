@@ -106,7 +106,7 @@ class RuntimeOptimizer;
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
-typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*); 
+typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 
 /// Signature of a constant-folding method
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
@@ -136,7 +136,7 @@ struct OpDescriptor {
 
 
 
-/// Like an int (of type T), but also internally keeps track of the 
+/// Like an int (of type T), but also internally keeps track of the
 /// maximum value is has held, and the total "requested" deltas.
 /// You really shouldn't use an unsigned type for T, for two reasons:
 /// (1) Our implementation of '-=' will fail; and (2) you actually
@@ -245,7 +245,7 @@ inline void stlfree (T &v)
 
 /// ShaderMaster is the full internal representation of a complete
 /// shader that would be a .oso file on disk: symbols, instructions,
-/// arguments, you name it.  A master copy is shared by all the 
+/// arguments, you name it.  A master copy is shared by all the
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
@@ -382,7 +382,7 @@ public:
     ShadingSystemImpl & shadingsys () const { return m_master->shadingsys(); }
 
     /// Apply pending parameters
-    /// 
+    ///
     void parameters (const ParamValueList &params);
 
     /// Find the named symbol, return its index in the symbol array, or
@@ -470,13 +470,19 @@ public:
     /// Return a begin/end Symbol* pair for the set of param symbols
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
-        return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[i->firstparam()],
-                                           &i->m_instsymbols[i->lastparam()]);
+        if (i->firstparam() == i->lastparam())
+            return std::pair<Symbol*,Symbol*> (NULL, NULL);
+        else
+            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[i->firstparam()],
+                                               &i->m_instsymbols[i->lastparam()]);
     }
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
-        return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[i->firstparam()],
-                                                       &i->m_instsymbols[i->lastparam()]);
+        if (i->firstparam() == i->lastparam())
+            return std::pair<const Symbol*,const Symbol*> (NULL, NULL);
+        else
+            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[i->firstparam()],
+                                                           &i->m_instsymbols[i->lastparam()]);
     }
 
     int Psym () const { return m_Psym; }
@@ -777,6 +783,7 @@ public:
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
     bool fold_getattribute () { return m_opt_fold_getattribute; }
+    int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
@@ -904,6 +911,7 @@ private:
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     bool m_greedyjit;                     ///< JIT as much as we can?
     bool m_countlayerexecs;               ///< Count number of layer execs?
+    int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
     int m_optimize;                       ///< Runtime optimization level
     bool m_opt_constant_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
@@ -974,7 +982,7 @@ private:
     double m_stat_llvm_setup_time;        ///<     llvm setup time
     double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
-    double m_stat_llvm_jit_time;          ///<     llvm JIT time 
+    double m_stat_llvm_jit_time;          ///<     llvm JIT time
     double m_stat_inst_merge_time;        ///< Stat: time merging instances
     double m_stat_getattribute_time;      ///< Stat: time spent in getattribute
     double m_stat_getattribute_fail_time; ///< Stat: time spent in getattribute
@@ -1232,6 +1240,17 @@ public:
 
     void incr_layers_executed () { shadingsys().m_stat_layers_executed += 1; }
 
+    bool allow_warnings() {
+        if (m_max_warnings > 0) {
+            // at least one more to go
+            m_max_warnings--;
+            return true;
+        } else {
+            // we've processed enough with this context
+            return false;
+        }
+    }
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
@@ -1252,6 +1271,7 @@ private:
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
+    int m_max_warnings;                 ///< To avoid processing too many warnings
 
     SimplePool<20 * 1024> m_closure_pool;
     SimplePool<64*1024> m_scratch_pool;

@@ -1111,9 +1111,9 @@ have an on/off checkbox, is intended to be a filename, etc.
 Metadata is specified inside double brackets {\cf [[} and {\cf ]]}
 enclosing a comma-separated list of metadata items.  Each metadatum
 looks like a parameter declaration --- having a data type, name, and
-initializer.  However, metadata may only be simple types (not arrays or
-closures) and their value initializers must be numeric or string
-constants (not computed expression).
+initializer.  However, metadata may only be simple types (not arrays,
+structs, or closures) and their value initializers must be numeric or
+string constants (not computed expressions).
 
 Metadata about the shader as a whole is placed between the shader name
 and the parameter list.  Metadata about shader parameters are placed
@@ -1126,18 +1126,21 @@ parameter metadata:
 
 \begin{code}
     surface wood 
-                [[ string description = "Realistic wood shader" ]]
+                [[ string help = "Realistic wood shader" ]]
         ( 
            float Kd = 0.5
-               [[ string description = "Diffuse reflectivity",
-                  float UImin = 0, float UImax = 1 ]] ,
+               [[ string help = "Diffuse reflectivity",
+                  float min = 0, float max = 1 ]] ,
            color woodcolor = color (.7, .5, .3)
-               [[ string description = "Base color of the wood" ]],
+               [[ string help = "Base color of the wood" ]],
            color ringcolor = 0.25 * woodcolor
-               [[ string description = "Color of the dark rings" ]],
+               [[ string help = "Color of the dark rings" ]],
            string texturename = "wood.tx"
-               [[ string description = "Texture map for the grain",
-                  string UItype = "filename" ]]
+               [[ string help = "Texture map for the grain",
+                  string widget = "filename" ]],
+           int pattern = 0
+               [[ string widget = "mapper",
+                  string options = "oak:0|elm:1|walnut:2" ]]
         )
     {
        ...
@@ -1157,8 +1160,122 @@ below.  These conventions are not intended to be comprehensive, nor to
 meet all your needs --- merely to establish a common nomenclature for
 the most common metadata uses.
 
-\apiitem{string description}
-Describes the purpose and use of the shader or parameter.
+The use of metadata is entirely optional on the part of the shader
+writer, and any application that queries shader metadata is free to
+honor or ignore any metadata it finds.
+
+\apiitem{string label}
+A short label to be displayed in the UI for this parameter.  If not
+present, the parameter name itself should be used as the widget label.
+\apiend
+
+\apiitem{string help}
+Help text that describes the purpose and use of the shader or parameter.
+\apiend
+
+\apiitem{string page}
+Helps to group related widgets by ``page.''
+\apiend
+
+\apiitem{string widget}
+The type of widget that should be used to adjust this parameter.
+Suggested widget types:
+
+\apiitem{"number"}
+\vspace{12pt}
+Provide a slider and/or numeric input. This is the default widget type
+for {\cf float} or {\cf int} parameters.  Numeric inputs also may be
+influenced by the following metadata: \qkw{min}, \qkw{max},
+\qkw{sensitivity}, \qkw{digits}, \qkw{slider}, \qkw{slidermin},
+\qkw{slidermax}, \qkw{slidercenter}, \qkw{sliderexponent}.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"string"}
+\vspace{12pt}
+Provide a text entry widget. This is the default widget type for
+{\cf string} parameters.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"boolean"}
+\vspace{12pt}
+Provide a pop-up menu with ``Yes'' and ``No'' options. Works on strings
+or numbers.  With strings, ``Yes'' and ``No'' values are used, with
+numbers, 0 and 1 are used.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"checkBox"}
+\vspace{12pt}
+A boolean widget displayed as a checkbox. Works on strings or
+numbers. With strings, "Yes" and "No" values are used, with numbers,
+0 and 1 are used.
+\apiend
+\vspace{-12pt}
+
+\apiitem{"popup"}
+\vspace{12pt}
+A pop-up menu of literal choices. This widget further requires
+parameter metadata \qkw{options} (a string listing the supported
+menu items, delimited by the `{\cf |}' character), and optionally \qkw{editable}
+(an integer, which if nonzero means the widget should allow the
+text field should be directly editable).  For example:
+\begin{code}
+    string wrap = "default"
+        [[ string widget = "popup",
+           string options = "default|black|clamp|periodic|mirror" ]]
+\end{code}
+\apiend
+\vspace{-16pt}
+
+\apiitem{"mapper"}
+\vspace{12pt}
+A pop-up with associative choices (an enumerated type, if the values
+are integers).  This widget further requires
+parameter metadata \qkw{options}, a `{\cf |}'-delimited string with
+``key:value'' pairs.  For example:
+\begin{code}
+    int pattern = 0
+        [[ string widget = "mapper",
+           string options = "oak:0|elm:1|walnut:2" ]]
+\end{code}
+\apiend
+\vspace{-16pt}
+
+\apiitem{"filename"}
+\vspace{12pt}
+A file selection dialog.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"null"}
+\vspace{12pt}
+A hidden widget.
+\apiend
+\vspace{-16pt}
+
+\apiend
+
+\apiitem{float min\\ float max \\[0.5ex] int min \\ int max}
+The minimum and/or maximum value that the parameter may take on.
+\apiend
+
+\apiitem{float sensitivity \\ int sensitivity}
+The precision or step size for incrementing or decrementing the value
+(within the appropriate min/max range).
+\apiend
+
+\apiitem{int digits}
+The number of digits to show (-1 for full precision).
+\apiend
+
+\apiitem{int slider}
+If nonzero, enables display of a slider sub-widget.  This also respects
+the following additional metadata that control the slider specifically:
+\qkw{slidermin} (minimum value for the slider, \qkw{slidermax} (maximum
+value for the slider), \qkw{slidercenter} (origin value for
+the slider), \qkw{sliderexponent} (nonlinear slider options).
 \apiend
 
 \apiitem{string URL}
@@ -1173,111 +1290,15 @@ assumption is being violated (for example, the compiler can warn
 if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
 \apiend
 
-\apiitem{int normalized}
-For a \vector or \normal, a nonzero value is a hint that the shader
-expects the vector to be unit length.  The renderer may use this hint to
-print a warning if the parameter or value is not of unit length, and the
-compiler may warn if a \qkw{normalized} variable is assigned a non-unit
-value.
-\apiend
+%\apiitem{string UIenabler}
+%The name of another parameter that, only if nonzero (or the
+%non-empty string) unlocks adjustment of this parameter.  For example,
+%a parameter called \qkw{Kr} (reflectivity) may be en enabler for
+%the \qkw{reflectionblur} parameter; zero reflectivity would gray-out
+%the blur controls, which would be ignored if there were no reflection.
+%\apiend
 
-\apiitem{string UIlabel}
-A short label to be displayed in the UI for this parameter.  If not
-present, the parameter name itself should be used as the widget label.
-\apiend
 
-\apiitem{float UImin \\ float UImax}
-Minimum and maximum values for a parameter that should never be
-exceeded.  If either the minimum or maximum is not present, valid values
-for the parameter are assumed to be unbounded in one or both directions.
-(For an {\cf int} parameter, the {\cf UImin} and/or {\cf UImax} should
-also be declared as an {\cf int}.)
-\apiend
-
-\apiitem{float UIsoftmin \\ float UIsoftmax}
-``Soft'' minimum and maximum value for a \float parameter, that is, a
-default range for presentation in the UI, but which may be overridden by
-the user. (For an {\cf int} parameter, the {\cf UIsoftmin} and/or {\cf
-  UIsoftmax} should also be declared as an {\cf int}.)
-\apiend
-
-\apiitem{float UIstep}
-The suggested step size for incrementing or decrementing the value
-(within the appropriate min/max range).
-\apiend
-
-\apiitem{string UIenabler}
-The name of another parameter that, only if nonzero (or the
-non-empty string) unlocks adjustment of this parameter.  For example,
-a parameter called \qkw{Kr} (reflectivity) may be en enabler for
-the \qkw{reflectionblur} parameter; zero reflectivity would gray-out
-the blur controls, which would be ignored if there were no reflection.
-\apiend
-
-\apiitem{float UIseparator}
-If nonzero, hints that the application's GUI should draw a visual 
-separator immediately before this parameter.
-\apiend
-
-\apiitem{string UIgroupbegin \\ string UIgroupend}
-Denote the first and last parameters of a set of related parameters, as a
-hint that an application may wish to label or visually separate a
-collection of parameters.  The string value should be the name or brief
-description of the group.
-\apiend
-
-\apiitem{string UItype} 
-Provides a hint about exactly what kind of UI widget is appropriate for
-the given parameter (if not the obvious default, such as a slider for a
-\float parameter, or a color picker for a \color parameter).  Recommended
-values include:
-
-\vspace{-12pt}
-\begin{description}
-\item[] \spc
-\item[\rm \halfspc ~ \qkw{bool}] Indicates that a \float or {\cf int}
-  parameter should only take on a 0 or 1 value, and therefore a checkbox
-  may be a more appropriate UI widget.
-\item[\rm \qkw{string}] Indicates that the appropriate UI widget is a text
-  input box (default for string parameters).  A smart UI may also allow
-  a file selection dialog, since most strings (but not all) are used
-  for texture names.
-\item[\rm \qkw{texture}] Indicates a string variable whose value will be
-  used as the name of a texture map.  An appropriate GUI widget might
-  be a file selection dialog.
-\item[\rm \qkw{environment}] Indicates a string variable whose value may
-  either be an environment map or the name of a geometry set.  An
-  appropriate GUI widget might be a combination file selection and
-  pull-down menu of known geometry set names.
-\item[\rm \qkw{shadow}] Indicates a string variable whose value may
-  either be a shadow map or the name of a geometry set.
-\item[\rm \qkw{geometryset}] Indicates a string variable whose value must
-  be a geometry set.  An appropriate GUI widget may be a pull-down
-  menu of known geometry sets.
-\item[\rm \qkw{coordsys}] Indicates a string variable whose value will be
-  used as a coordinate system name.  An appropriate GUI widget may be
-  a pull-down menu of known coordinate systems.
-\item[\rm \qkw{enum:label0,label1,...}] Indicates that the appropriate UI
-  widget is a pulldown menu that selects among the strings \qkw{label0},
-  \qkw{label1}, and so on.
-  If the shader parameter is a {\cf string}, the selected label should be
-  passed as the shader parameter value.  If the shader parameter is an
-  \inttype, the selected label should indicate that the value passed
-  should be 0, 1, 2, ..., the index of the selected label.
-  Labels may be associated with \float or {\cf int} values other than
-  their indices using the following syntax:
-  \begin{code}
-    float frequency = 0.5
-        [[ string UItype = "enum:low=0.2,medium=0.5,high=0.9" ]]
-    int pattern = 0
-        [[ string UItype = "enum:oak=0,elm=1,walnut=2" ]]
-  \end{code}
-\end{description}
-\apiend
-
-The use of metadata is entirely optional on the part of the shader
-writer, and any application that queries shader metadata is free to
-honor or ignore any metadata it finds.
 
 
 \newpage

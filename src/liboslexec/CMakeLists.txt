@@ -101,7 +101,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 ENDMACRO ( )
 
-if (NOT WIN32)
+if (USE_LLVM_BITCODE)
     LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due

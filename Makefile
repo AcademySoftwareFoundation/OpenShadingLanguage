@@ -64,6 +64,10 @@ ifneq (${LLVM_STATIC},)
 MY_CMAKE_FLAGS += -DLLVM_STATIC:BOOL=${LLVM_STATIC}
 endif
 
+ifneq (${USE_LLVM_BITCODE},)
+MY_CMAKE_FLAGS += -DUSE_LLVM_BITCODE:BOOL=${USE_LLVM_BITCODE}
+endif
+
 ifneq (${NAMESPACE},)
 MY_CMAKE_FLAGS += -DOSL_NAMESPACE:STRING=${NAMESPACE}
 endif
@@ -239,6 +243,7 @@ help:
 	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
 	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"
 	@echo "  make LLVM_STATIC=1          Use static LLVM libraries"
+	@echo "  make USE_LLVM_BITCODE=0     Don't generate embedded LLVM bitcode"
 	@echo "  make NAMESPACE=name         Wrap OSL APIs in another namespace"
 	@echo "  make HIDE_SYMBOLS=1         Hide symbols not in the public API"
 	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"

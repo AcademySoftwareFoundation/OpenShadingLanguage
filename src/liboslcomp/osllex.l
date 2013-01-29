@@ -142,7 +142,7 @@ void preprocess (const char *yytext);
 "else"			{  SETLINE;  return (yylval.i=ELSE); }
 "float"			{  SETLINE;  return (yylval.i=FLOATTYPE); }
 "for"			{  SETLINE;  return (yylval.i=FOR); }
-"if"			{  SETLINE;  return (yylval.i=IF); }
+"if"			{  SETLINE;  return (yylval.i=IF_TOKEN); }
 "illuminance"	        {  SETLINE;  return (yylval.i=ILLUMINANCE); }
 "illuminate"	        {  SETLINE;  return (yylval.i=ILLUMINATE); }
 "int"		        {  SETLINE;  return (yylval.i=INTTYPE); }

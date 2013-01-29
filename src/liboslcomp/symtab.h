@@ -32,11 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <stack>
 
-/* fix for GCC version < 4.4 conflict with boost */
-#ifdef IF
-#undef IF
-#endif
-
 #include <boost/unordered_map.hpp>
 
 #include "OpenImageIO/typedesc.h"

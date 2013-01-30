@@ -29,14 +29,14 @@
 
 surface
 matte
-    [[ string description = "Lambertian diffuse material" ]]
+    [[ string help = "Lambertian diffuse material" ]]
 (
     float Kd = 1
-        [[  string description = "Diffuse scaling",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "Diffuse scaling",
+            float min = 0, float max = 1 ]],
     color Cs = 1
-        [[  string description = "Base color",
-            float UImin = 0, float UImax = 1 ]]
+        [[  string help = "Base color",
+            float min = 0, float max = 1 ]]
   )
 {
     Ci = Kd * Cs * diffuse (N);

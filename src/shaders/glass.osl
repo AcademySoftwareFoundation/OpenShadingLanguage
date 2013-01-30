@@ -29,21 +29,23 @@
 
 surface
 glass
-    [[ string description = "Simple dielectric material" ]]
+    [[ string help = "Simple dielectric material" ]]
 (
     float Ks = 1
-        [[  string description = "Color scaling",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "Color scaling of the refraction",
+            float min = 0, float max = 1 ]],
     color Cs = 1
-        [[  string description = "Base color",
-            float UImin = 0, float UImax = 1 ]],
+        [[  string help = "Base color",
+            float min = 0, float max = 1 ]],
     float eta = 1.5
-        [[  string description = "Index of refraction",
-            float UImin = 1, float UIsoftmax = 2.5 ]],
+        [[  string help = "Index of refraction",
+            float min = 1, float max = 3 ]],
     int caustics = 0
-        [[  string description = "Enable indirect lighting through glass" ]],
+        [[  string help = "Enable indirect lighting through glass",
+            string widget = "checkBox" ]],
     int TIR = 0
-        [[  string description = "Enable Total Internal Reflection" ]]
+        [[  string help = "Enable Total Internal Reflection",
+            string widget = "checkBox" ]]
   )
 {
     // If the current ray type is glossy or diffuse, that means we
@@ -51,19 +53,17 @@ glass
     // glass produces caustics, which are normally hard to trace and
     // noisy. So we only return closures if that's not the case or
     // the "caustics" flag is on.
-    if (caustics || (!raytype("glossy") && !raytype("diffuse")))
-    {
+    if (caustics || (!raytype("glossy") && !raytype("diffuse"))) {
         // Take into account backfacing to invert eta accordingly
-        if (backfacing())
-        {
-            Ci = refraction(N, 1.0 / eta);
-            // If Total Internal Reflection is enabled, we also return a reflection
-            // closure, which might make rays bounce too much inside an object. That's
-            // why we make it optional.
+        if (backfacing()) {
+            Ci = Cs * refraction(N, 1.0 / eta);
+            // If Total Internal Reflection is enabled, we also return a
+            // reflection closure, which might make rays bounce too much
+            // inside an object. That's why we make it optional.
             if (TIR)
-               Ci += reflection(N, 1.0 / eta);
+               Ci += Ks * reflection(N, 1.0 / eta);
+        } else {
+            Ci = Ks * reflection(N, eta) + Cs * refraction(N, eta);
         }
-        else
-            Ci = reflection(N, eta) + refraction(N, eta);
     }
 }

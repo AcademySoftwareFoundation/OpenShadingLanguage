@@ -29,12 +29,14 @@ system for big VFX films such as "Men in Black 3: and "The Amazing
 Spider-Man," animated features such as "Hotel Transylvania", and several
 other films currently in production.
 
-OSL is distributed under the "New BSD" license (see the "LICENSE" file
-that comes with the distribution).  In short, you are free to use it in
-your own applications, whether they are free or commercial, open or
-proprietary, as well as to modify the OSL code as you desire, provided
-that you retain the original copyright notices as described in the
-license.
+The OSL code is distributed under the "New BSD" license (see the
+"LICENSE" file that comes with the distribution), and the documentation
+under the Creative Commons Attribution 3.0 Unported License
+(http://creativecommons.org/licenses/by/3.0/).  In short, you are free
+to use OSL in your own applications, whether they are free or
+commercial, open or proprietary, as well as to modify the OSL code and
+documentation as you desire, provided that you retain the original
+copyright notices as described in the license.
 
 
 
@@ -303,6 +305,13 @@ The main developers of OSL are (in order of joining the project):
 * Solomon Boulos
 
 * Adam Martinez
+
+* Brecht Van Lommel
+
+Additionally, many others have contributed fixes and other small
+changes: Shane Ambler, Sven-Hendrik Haase, Erich Ocean, Mikko Ohtamaa,
+Alex Schworer, Alexander von Knorring.  (Listed alphabetically; if we've
+left anybody out, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

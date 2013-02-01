@@ -114,6 +114,7 @@ public:
                       TypeDesc datatype=TypeDesc::UNKNOWN);
     int add_constant (float c) { return add_constant(TypeDesc::TypeFloat, &c); }
     int add_constant (int c) { return add_constant(TypeDesc::TypeInt, &c); }
+    int add_constant (ustring s) { return add_constant(TypeDesc::TypeString, &s); }
 
     /// Create a new temporary variable of the given type, return its index.
     int add_temp (const TypeSpec &type);

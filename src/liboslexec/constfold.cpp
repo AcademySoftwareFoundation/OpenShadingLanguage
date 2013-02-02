@@ -49,6 +49,7 @@ static ustring u_nop    ("nop"),
                u_mul    ("mul"),
                u_if     ("if"),
                u_eq     ("eq"),
+               u_error  ("error"),
                u_return ("return");
 
 
@@ -1717,11 +1718,18 @@ DECLFOLDER(constfold_gettextureinfo)
             newop.argwrite (1, false);
             return 1;
         } else {
-            // Return without constant folding gettextureinfo -- because
-            // we WANT the shader to fail and issue error messages at
-            // the appropriate time.
-            (void) rop.texturesys()->geterror (); // eat the error
-            return 0;
+            // Nix the gettextureinfo and add an "error" op.
+            std::string errmsg = rop.texturesys()->geterror ();
+            if (errmsg.empty())
+                errmsg = Strutil::format ("failed gettextureinfo (\"%s\", \"%s\")",
+                                          filename.c_str(), dataname.c_str());
+            rop.turn_into_assign_zero (op, "const fold failed gettextureinfo");
+            rop.insert_code (opnum, u_error, 1 /*relation*/,
+                             rop.add_constant(ustring("%s")),
+                             rop.add_constant(ustring(errmsg)));
+            ASSERT (rop.inst()->ops()[opnum].opname() == "error");
+            rop.inst()->ops()[opnum].argreadonly (0);
+            return 1;
         }
     }
     return 0;

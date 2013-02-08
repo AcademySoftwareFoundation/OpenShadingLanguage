@@ -803,6 +803,8 @@ public:
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+    virtual bool query_closure(const char **name, int *id,
+                               const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
     }

@@ -553,6 +553,29 @@ ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam
 
 
 
+bool
+ShadingSystemImpl::query_closure(const char **name, int *id,
+                                 const ClosureParam **params)
+{
+    ASSERT(name || id);
+    const ClosureRegistry::ClosureEntry *entry =
+        (name && *name) ? m_closure_registry.get_entry(ustring(*name))
+                        : m_closure_registry.get_entry(*id);
+    if (!entry)
+        return false;
+
+    if (name)
+        *name   = entry->name.c_str();
+    if (id)
+        *id     = entry->id;
+    if (params)
+        *params = &entry->params[0];
+
+    return true;
+}
+
+
+
 ShadingSystemImpl::~ShadingSystemImpl ()
 {
     printstats ();
@@ -1454,11 +1477,12 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     entry.nkeyword = 0;
     entry.struct_size = 0; /* params could be NULL */
     for (int i = 0; params; ++i) {
+        /* always push so the end marker is there */
+        entry.params.push_back(params[i]);
         if (params[i].type == TypeDesc()) {
             entry.struct_size = params[i].offset;
             break;
         }
-        entry.params.push_back(params[i]);
         if (params[i].key == NULL)
             entry.nformal ++;
         else

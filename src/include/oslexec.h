@@ -284,6 +284,13 @@ public:
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
+    /// Query either by name or id an existing closure. If name is non
+    /// NULL it will use it for the search, otherwise id would be used
+    /// and the name will be placed in name if successful. Also return
+    /// pointer to the params array in the last argument. All args are
+    /// optional but at least one of name or id must non NULL.
+    virtual bool query_closure(const char **name, int *id,
+                               const ClosureParam **params) = 0;
 
     void register_builtin_closures();
 

@@ -473,16 +473,16 @@ public:
         if (i->firstparam() == i->lastparam())
             return std::pair<Symbol*,Symbol*> (NULL, NULL);
         else
-            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[i->firstparam()],
-                                               &i->m_instsymbols[i->lastparam()]);
+            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
+                                               &i->m_instsymbols[0] + i->lastparam());
     }
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
             return std::pair<const Symbol*,const Symbol*> (NULL, NULL);
         else
-            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[i->firstparam()],
-                                                           &i->m_instsymbols[i->lastparam()]);
+            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
+                                                           &i->m_instsymbols[0] + i->lastparam());
     }
 
     int Psym () const { return m_Psym; }
@@ -803,6 +803,8 @@ public:
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+    virtual bool query_closure(const char **name, int *id,
+                               const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
     }

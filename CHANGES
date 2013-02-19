@@ -1,4 +1,4 @@
-Release 1.3.0 - in progress (compared to 1.2)
+Release 1.3.0 - 14 Feb 2013 (compared to 1.2)
 ----------------------------------------------
 
 Language, standard libary, and compiler changes (for shader writers):
@@ -95,6 +95,7 @@ Bug fixes and minor improvements:
 * oslc: proper handling of preprocessor errors when stdosl.h is in a path 
   containing spaces.
 * Fix bugs in the OSL exit() function.
+* Don't error/warn if metadata name masks a global scope name.
 
 Under the hood:
 

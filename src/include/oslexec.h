@@ -94,6 +94,9 @@ public:
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")
     ///    string[] raytypes      Array of ray type names
+    ///    string[] renderer_outputs
+    ///                           Array of names of renderer outputs (AOVs)
+    ///                              that should not be optimized away.
     ///    int unknown_coordsys_error  Should errors be issued when unknown
     ///                                   coord system names are used?
     ///    int strict_messages    Issue error if a message is set after

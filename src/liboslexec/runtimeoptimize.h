@@ -348,6 +348,9 @@ public:
         return inst()->argsymbol (op.firstarg()+argnum);
     }
 
+    /// Is the named symbol among the renderer outputs?
+    bool is_renderer_output (ustring name) const;
+
     /// Create an llvm function for the whole shader group, JIT it,
     /// and store the llvm::Function* handle to it with the ShaderGroup.
     void build_llvm_group ();

@@ -671,6 +671,12 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
             m_raytypes.push_back (ustring(((const char **)val)[i]));
         return true;
     }
+    if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
+        m_renderer_outputs.clear ();
+        for (size_t i = 0;  i < type.numelements();  ++i)
+            m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
+        return true;
+    }
     return false;
 #undef ATTR_SET
 #undef ATTR_SET_STRING

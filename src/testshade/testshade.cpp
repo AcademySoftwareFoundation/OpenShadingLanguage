@@ -78,7 +78,6 @@ static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 
 
-
 static void
 inject_params ()
 {
@@ -123,10 +122,6 @@ add_shader (int argc, const char *argv[])
         shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debugnan", debugnan);
-    // Must be sure we do not optimize away assignments to unconnected
-    // output params -- our use of shadingsys->get_symbol() depends on
-    // this for how testshade can dump any output to an image file.
-    shadingsys->attribute ("opt_elide_unconnected_outputs", 0);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
@@ -308,6 +303,16 @@ static void
 setup_output_images (ShadingSystem *shadingsys,
                      ShadingAttribStateRef &shaderstate)
 {
+    // Tell the shading system which outputs we want
+    if (outputvars.size()) {
+        std::vector<const char *> aovnames (outputvars.size());
+        for (size_t i = 0; i < outputvars.size(); ++i)
+            aovnames[i] = outputvars[i].c_str();
+        shadingsys->attribute ("renderer_outputs",
+                               TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
+                               &aovnames[0]);
+    }
+
     ShadingContext *ctx = shadingsys->get_context ();
     // Because we can only call get_symbol on something that has been
     // set up to shade (or executed), we call execute() but tell it not

@@ -938,6 +938,15 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 
 
 bool
+RuntimeOptimizer::is_renderer_output (ustring name) const
+{
+    const std::vector<ustring> &aovs (shadingsys().m_renderer_outputs);
+    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
+}
+
+
+
+bool
 RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 {
     // Try to figure out if this symbol is completely unused after this
@@ -949,9 +958,14 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
     // Params may be read afterwards if connected to a downstream
     // layer or if "elide_unconnected_outputs" is turned off.
-    if ((A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) &&
-        (A->connected_down() || ! m_opt_elide_unconnected_outputs))
-        return false;
+    if (A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) {
+        if (! m_opt_elide_unconnected_outputs)
+            return false;   // Asked not do do this optimization
+        if (A->connected_down())
+            return false;   // Connected to something downstream
+        if (is_renderer_output (A->name()))
+            return false;   // This is a renderer output -- don't cull it
+    }
 
     // For all else, check if it's either never read at all in this
     // layer or it's only read earlier and we're not part of a loop
@@ -1227,9 +1241,15 @@ public:
     bool operator() (const Symbol &sym) const {
         if (sym.symtype() == SymTypeParam)
             return (sym.lastuse() < sym.initend()) && !sym.connected_down();
-        if (sym.symtype() == SymTypeOutputParam)
-            return m_rop.opt_elide_unconnected_outputs() &&
-                   (sym.lastuse() < sym.initend()) && !sym.connected_down();
+        if (sym.symtype() == SymTypeOutputParam) {
+            if (! m_rop.opt_elide_unconnected_outputs())
+                return false;   // Asked not to do this optimization
+            if (sym.connected_down())
+                return false;   // Connected to something downstream
+            if (m_rop.is_renderer_output (sym.name()))
+                return false;   // This is a renderer output
+            return (sym.lastuse() < sym.initend());
+        }
         return ! sym.everused();  // all other symbol types
     }
     bool operator() (int symid) const {

@@ -938,6 +938,7 @@ private:
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
+    std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     ustring m_colorspace;                 ///< What RGB colors mean
     int m_max_local_mem_KB;               ///< Local storage can a shader use
     bool m_compile_report;

@@ -331,6 +331,11 @@ struct ConnectedParam {
         return param == p.param && arrayindex == p.arrayindex &&
             channel == p.channel && type == p.type;
     }
+
+    // Is it a complete connection, not partial?
+    bool is_complete () const {
+        return arrayindex == -1 && channel == -1;
+    }
 };
 
 
@@ -396,13 +401,16 @@ public:
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) {
-        DASSERT (index < (int)m_instsymbols.size());
-        return index >= 0 ? &m_instsymbols[index] : NULL;
+        return index >= 0 && index < (int)m_instsymbols.size()
+            ? &m_instsymbols[index] : NULL;
     }
     const Symbol *symbol (int index) const {
-        DASSERT (index < (int)m_instsymbols.size());
-        return index >= 0 ? &m_instsymbols[index] : NULL;
+        return index >= 0 && index < (int)m_instsymbols.size()
+            ? &m_instsymbols[index] : NULL;
     }
+
+    /// Given symbol pointer, what is its index in the table?
+    int symbolindex (Symbol *s) { return s - &m_instsymbols[0]; }
 
     /// Return a pointer to the master's version of the indexed symbol.
     /// It's a const*, since you shouldn't mess with the master's copy.
@@ -926,6 +934,7 @@ private:
     bool m_opt_mix;                       ///< Special 'mix' optimizations
     bool m_opt_merge_instances;           ///< Merge identical instances?
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
+    bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output
@@ -978,6 +987,7 @@ private:
     atomic_int m_stat_postopt_syms;       ///< Stat: post-optimization symbols
     atomic_int m_stat_preopt_ops;         ///< Stat: pre-optimization ops
     atomic_int m_stat_postopt_ops;        ///< Stat: post-optimization ops
+    atomic_int m_stat_middlemen_eliminated; ///< Stat: middlemen eliminated
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   runtime specialization time
@@ -1339,7 +1349,7 @@ namespace Strings {
     extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
     extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
     extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while;
+    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
     extern OSLEXECPUBLIC ustring subimage, subimagename;
 }; // namespace Strings
 

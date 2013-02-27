@@ -155,6 +155,13 @@ public:
 
     void find_loops ();
 
+    /// Will the op executed for-sure unconditionally every time the
+    /// shader is run?  (Not inside a loop or conditional or after a
+    /// possible early exit from the shader.)
+    bool op_is_unconditionally_executed (int opnum) const {
+        return !m_in_conditional[opnum] && opnum < m_first_return;
+    }
+
     void find_basic_blocks (bool do_llvm = false);
 
     bool coerce_assigned_constant (Opcode &op);
@@ -305,6 +312,8 @@ public:
 
     /// Turn isconnected() calls into constant assignments
     void resolve_isconnected ();
+
+    int eliminate_middleman ();
 
     /// Squeeze out unused symbols from an instance that has been
     /// optimized.
@@ -877,6 +886,7 @@ private:
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
+    bool m_opt_middleman;                 ///< Do middleman optimizations?
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // All below is just for the one inst we're optimizing:
@@ -892,6 +902,7 @@ private:
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
     std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
     std::vector<bool> m_in_loop;        ///< Whether each op is in a loop
+    int m_first_return;                 ///< Op number of first return or exit
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     std::set<int> m_layers_already_run; ///< List of layers run
     int m_num_used_layers;              ///< Number of layers actually used

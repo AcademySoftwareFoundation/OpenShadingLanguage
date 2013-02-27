@@ -100,6 +100,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
+      m_opt_middleman(shadingsys.m_opt_middleman),
       m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
@@ -164,6 +165,7 @@ RuntimeOptimizer::set_debug ()
             m_opt_coalesce_temps = true;
             m_opt_assign = true;
             m_opt_mix = true;
+            m_opt_middleman = true;
         }
     }
     // if user said to only debug one layer, turn off debug if not it
@@ -469,6 +471,9 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         m_in_loop.insert (m_in_loop.begin()+opnum, 1,
                           m_in_loop[opnum]);
     }
+    // If the first return happened after this, bump it up
+    if (m_first_return >= opnum)
+        ++m_first_return;
 
     if (opname == u_if) {
         // special case for 'if' -- the arg is read, not written
@@ -602,7 +607,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
                     if (! (simple_assign && a == 0))
                         params.push_back (opargs[argind]);
                     // mark as already initialized unconditionally, if we do
-                    if (! m_in_conditional[opnum] &&
+                    if (op_is_unconditionally_executed(opnum) &&
                             op.method() == OSLCompilerImpl::main_method_name())
                         s->initialized (true);
                 }
@@ -739,7 +744,10 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
 
 
 /// Set up m_in_conditional[] to be true for all ops that are inside of
-/// conditionals, false for all unconditionally-executed ops.
+/// conditionals, false for all unconditionally-executed ops, m_in_loop[]
+/// to be true for all ops that are inside a loop, and m_first_return
+/// to be the op number of the first return/exit statement (or code.size()
+/// if there is no return/exit statement).
 void
 RuntimeOptimizer::find_conditionals ()
 {
@@ -749,6 +757,7 @@ RuntimeOptimizer::find_conditionals ()
     m_in_conditional.resize (code.size(), false);
     m_in_loop.clear ();
     m_in_loop.resize (code.size(), false);
+    m_first_return = (int)code.size();
     for (int i = 0;  i < (int)code.size();  ++i) {
         if (code[i].jump(0) >= 0) {
             std::fill (m_in_conditional.begin()+i,
@@ -760,6 +769,8 @@ RuntimeOptimizer::find_conditionals ()
                            m_in_loop.begin()+code[i].farthest_jump(), true);
             }
         }
+        if (code[i].opname() == Strings::op_exit)
+            m_first_return = std::min (m_first_return, i);
     }
 }
 
@@ -1417,6 +1428,112 @@ RuntimeOptimizer::remove_unused_params ()
 
 
 
+/// Find situations where an output is simply a copy of a connected
+/// input, and eliminate the middleman.
+int
+RuntimeOptimizer::eliminate_middleman ()
+{
+    int changed = 0;
+    FOREACH_PARAM (Symbol &s, inst()) {
+        // Skip if this isn't a shader output parameter that's connected
+        // to a later layer.
+        if (s.symtype() != SymTypeOutputParam || !s.connected_down())
+            continue;
+        // If it's written more than once, or has init ops, don't bother
+        if (s.firstwrite() != s.lastwrite() || s.has_init_ops())
+            continue;
+        // Ok, s is a connected output, written only once, without init ops.
+
+        // If the one time it's written isn't a simple assignment, never mind
+        int opnum = s.firstwrite();
+        Opcode &op (inst()->ops()[opnum]);
+        if (op.opname() != u_assign)
+            continue;   // only consider direct assignments
+        // Now what's it assigned from?  If it's not a connected
+        // parameter, or if it's not an equivalent data type, or if it's
+        // a closure, never mind.
+        int src_index = oparg (op, 1);
+        Symbol *src = opargsym (op, 1);
+        if (! (src->symtype() == SymTypeParam && src->connected()) ||
+              ! equivalent(src->typespec(), s.typespec()) ||
+              s.typespec().is_closure())
+            continue;
+
+        // Only works if the assignment is unconditional.  Needs to not
+        // be in a conditional or loop, and not have any exit or return
+        // statement before the assignment.
+        if (! op_is_unconditionally_executed (opnum))
+            continue;
+
+        // OK, output param 's' is simply and unconditionally assigned
+        // the value of the equivalently-typed input parameter 'src'.
+        // Doctor downstream shaders that use s to connect directly to
+        // src.
+
+        // First, find what src is connected to.
+        int upstream_layer = -1, upstream_symbol = -1;
+        for (int i = 0, e = inst()->nconnections();  i < e;  ++i) {
+            const Connection &c = inst()->connection(i);
+            if (c.dst.param == src_index &&  // the connection we want
+                c.src.is_complete() && c.dst.is_complete() &&
+                equivalent(c.src.type,c.dst.type) &&
+                !c.src.type.is_closure() && ! c.dst.type.is_closure()) {
+                upstream_layer = c.srclayer;
+                upstream_symbol = c.src.param;
+                break;
+            }
+        }
+        if (upstream_layer < 0 || upstream_symbol < 0)
+            continue;  // not a complete connection, forget it
+            
+        ShaderInstance *upinst = group()[upstream_layer];
+        if (debug() > 1)
+            std::cout << "Noticing that " << inst()->layername() << "." 
+                      << s.name() << " merely copied from " << src->name() 
+                      << ", connected from " << upinst->layername() << "."
+                      << upinst->symbol(upstream_symbol)->name() << "\n";
+
+        // Find all the downstream connections of s, make them 
+        // connections to src.
+        int s_index = inst()->symbolindex(&s);
+        for (int laynum = layer()+1;  laynum < group().nlayers();  ++laynum) {
+            ShaderInstance *downinst = group()[laynum];
+            for (int i = 0, e = downinst->nconnections();  i < e;  ++i) {
+                Connection &c = downinst->connections()[i];
+                if (c.srclayer == layer() && // connected to our layer
+                    c.src.param == s_index && // connected to s
+                    c.src.is_complete() && c.dst.is_complete() &&
+                    equivalent(c.src.type,c.dst.type)) {
+                    // just change the connection's referrant to the
+                    // upstream source of s.
+                    c.srclayer = upstream_layer;
+                    c.src.param = upstream_symbol;
+                    ++changed;
+                    shadingsys().m_stat_middlemen_eliminated += 1;
+                    if (debug() > 1) {
+                        const Symbol *dsym = downinst->symbol(c.dst.param);
+                        if (! dsym)
+                            dsym = downinst->mastersymbol(c.dst.param);
+                        const Symbol *usym = upinst->symbol(upstream_symbol);
+                        if (! usym)
+                            usym = downinst->mastersymbol(upstream_symbol);
+                        ASSERT (dsym && usym);
+                        std::cout << "Removed " << inst()->layername() << "."
+                                  << s.name() << " middleman for " 
+                                  << downinst->layername() << "."
+                                  << dsym->name() << ", now connected to "
+                                  << upinst->layername() << "."
+                                  << usym->name() << "\n";
+                    }
+                }
+            }
+        }
+    }
+    return changed;
+}
+
+
+
 void
 RuntimeOptimizer::optimize_instance ()
 {
@@ -1647,6 +1764,15 @@ RuntimeOptimizer::optimize_instance ()
 
         // Recompute which of our params have downstream connections.
         mark_outgoing_connections ();
+
+        // Find situations where an output is simply a copy of a connected
+        // input, and eliminate the middleman.
+        if (optimize() >= 2 && m_opt_middleman) {
+            int c = eliminate_middleman ();
+            if (c)
+                mark_outgoing_connections ();
+            changed += c;
+        }
 
         // Elide unconnected parameters that are never read.
         changed += remove_unused_params ();

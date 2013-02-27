@@ -239,6 +239,7 @@ ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
 ustring anisotropic("anisotropic"), direction("direction");
 ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
+ustring op_exit("exit");
 ustring subimage("subimage"), subimagename("subimagename");
 
 };
@@ -266,6 +267,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_peephole(true), m_opt_coalesce_temps(true),
       m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(true),
       m_opt_fold_getattribute(true),
+      m_opt_middleman(true),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
       m_debug(false), m_llvm_debug(false),
@@ -296,6 +298,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_postopt_syms = 0;
     m_stat_preopt_ops = 0;
     m_stat_postopt_ops = 0;
+    m_stat_middlemen_eliminated = 0;
     m_stat_optimization_time = 0;
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
@@ -632,6 +635,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_mix", int, m_opt_mix);
     ATTR_SET ("opt_merge_instances", int, m_opt_merge_instances);
     ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
+    ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -719,6 +723,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_mix", int, m_opt_mix);
     ATTR_DECODE ("opt_merge_instances", int, m_opt_merge_instances);
     ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
+    ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);
@@ -752,6 +757,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:postopt_syms", int, m_stat_postopt_syms);
     ATTR_DECODE ("stat:preopt_ops", int, m_stat_preopt_ops);
     ATTR_DECODE ("stat:postopt_ops", int, m_stat_postopt_ops);
+    ATTR_DECODE ("stat:middlemen_eliminated", int, m_stat_middlemen_eliminated);
     ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
     ATTR_DECODE ("stat:opt_locking_time", float, m_stat_opt_locking_time);
     ATTR_DECODE ("stat:specialization_time", float, m_stat_specialization_time);
@@ -983,6 +989,8 @@ ShadingSystemImpl::getstats (int level) const
                                 (long long)m_stat_postopt_syms,
                                 100.0*(double(m_stat_postopt_syms)/double(std::max(1,(int)m_stat_preopt_syms))-1.0));
     }
+    out << Strutil::format ("  Middlemen eliminated: %d\n",
+                            (int)m_stat_middlemen_eliminated);
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "

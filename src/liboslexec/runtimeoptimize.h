@@ -118,6 +118,10 @@ public:
     /// Create a new temporary variable of the given type, return its index.
     int add_temp (const TypeSpec &type);
 
+    /// Search for the given global, adding it to the symbol table if
+    /// necessary, and returning its index.
+    int add_global (ustring name, const TypeSpec &type);
+
     /// Turn the op into a simple assignment of the new symbol index to the
     /// previous first argument of the op.  That is, changes "OP arg0 arg1..."
     /// into "assign arg0 newarg".
@@ -149,11 +153,11 @@ public:
     /// of instructions that were altered.
     int turn_into_nop (int begin, int end, const char *why=NULL);
 
-    void find_constant_params (ShaderGroup &group);
-
     void find_conditionals ();
 
-    void find_loops ();
+    void simplify_params ();
+
+    void find_params_holding_globals ();
 
     /// Will the op executed for-sure unconditionally every time the
     /// shader is run?  (Not inside a loop or conditional or after a
@@ -870,14 +874,10 @@ public:
 private:
     ShadingSystemImpl &m_shadingsys;
     PerThreadInfo *m_thread;
-    ShaderGroup &m_group;             ///< Group we're optimizing
-    int m_layer;                      ///< Layer we're optimizing
-    ShaderInstance *m_inst;           ///< Instance we're optimizing
     ShadingContext *m_context;        ///< Shading context
-    int m_pass;                       ///< Optimization pass we're on now
     int m_debug;                      ///< Current debug level
     int m_optimize;                   ///< Current optimization level
-    bool m_opt_constant_param;            ///< Turn instance params into const?
+    bool m_opt_simplify_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
     bool m_opt_stale_assign;              ///< Optimize stale assignments?
     bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
@@ -889,7 +889,16 @@ private:
     bool m_opt_middleman;                 ///< Do middleman optimizations?
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
-    // All below is just for the one inst we're optimizing:
+    // Keep track of some things for the whole shader group:
+    ShaderGroup &m_group;             ///< Group we're optimizing
+    typedef boost::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
+    std::vector<ustringmap_t> m_params_holding_globals;
+                   ///< Which params of each layer really just hold globals
+
+    // All below is just for the one inst we're optimizing at the moment:
+    ShaderInstance *m_inst;           ///< Instance we're optimizing
+    int m_layer;                      ///< Layer we're optimizing
+    int m_pass;                       ///< Optimization pass we're on now
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst
     int m_next_newconst;              ///< Unique ID for next new const we add
     int m_next_newtemp;               ///< Unique ID for next new temp we add

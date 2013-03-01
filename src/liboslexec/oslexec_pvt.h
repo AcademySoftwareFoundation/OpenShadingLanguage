@@ -923,7 +923,7 @@ private:
     bool m_countlayerexecs;               ///< Count number of layer execs?
     int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
     int m_optimize;                       ///< Runtime optimization level
-    bool m_opt_constant_param;            ///< Turn instance params into const?
+    bool m_opt_simplify_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
     bool m_opt_stale_assign;              ///< Optimize stale assignments?
     bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
@@ -988,6 +988,8 @@ private:
     atomic_int m_stat_preopt_ops;         ///< Stat: pre-optimization ops
     atomic_int m_stat_postopt_ops;        ///< Stat: post-optimization ops
     atomic_int m_stat_middlemen_eliminated; ///< Stat: middlemen eliminated
+    atomic_int m_stat_const_connections;  ///< Stat: const connections elim'd
+    atomic_int m_stat_global_connections; ///< Stat: global connections elim'd
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   runtime specialization time

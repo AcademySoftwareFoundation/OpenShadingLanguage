@@ -1,7 +1,7 @@
 shader a (float Kd = 0.5,
           output float f_out = 0,
           output color c_out = 0,
-          output float dummy = u  // just to force a real connection when opt is on
+          output float dummy = u+v  // just to force a real connection when opt is on
     )
 {
     f_out = Kd;

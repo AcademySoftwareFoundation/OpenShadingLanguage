@@ -744,6 +744,8 @@ RuntimeOptimizer::simplify_params ()
                     // examining.
                     ShaderInstance *uplayer = m_group[c.srclayer];
                     Symbol *srcsym = uplayer->symbol(c.src.param);
+                    if (!srcsym->lockgeom())
+                        continue; // Not if it can be overridden by geometry
 
                     // Is the source symbol known to be a global, from
                     // earlier analysis by find_params_holding_globals?
@@ -766,9 +768,7 @@ RuntimeOptimizer::simplify_params ()
                         break;
                     }
 
-// FIXME -- also, I'm not sure the conditional below is true.  Why does
-// it depend on the srcsym never being used? DOes this ever kick in?
-                    if (!srcsym->everused() &&
+                    if (!srcsym->everwritten() &&
                         (srcsym->valuesource() == Symbol::DefaultVal ||
                          srcsym->valuesource() == Symbol::InstanceVal) &&
                         !srcsym->has_init_ops()) {

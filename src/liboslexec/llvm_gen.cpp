@@ -56,7 +56,6 @@ static ustring op_dowhile("dowhile");
 static ustring op_eq("eq");
 static ustring op_error("error");
 static ustring op_fabs("fabs");
-static ustring op_exit("exit");
 static ustring op_floor("floor");
 static ustring op_for("for");
 static ustring op_format("format");
@@ -3436,7 +3435,7 @@ LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
-    if (op.opname() == op_exit) {
+    if (op.opname() == Strings::op_exit) {
         // If it's a real "exit", totally jump out of the shader instance.
         // The exit instance block will be created if it doesn't yet exist.
         rop.builder().CreateBr (rop.llvm_exit_instance_block());

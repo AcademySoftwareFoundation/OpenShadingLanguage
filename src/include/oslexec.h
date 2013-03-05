@@ -121,7 +121,7 @@ public:
     ///    int optimize           Runtime optimization level (2)
     ///       And there are several int options that, if set to 0, will turn
     ///       off individual classes of runtime optimizations:
-    ///         opt_constant_param, opt_constant_fold, opt_stale_assign,
+    ///         opt_simplify_param, opt_constant_fold, opt_stale_assign,
     ///         opt_elide_useless_ops, opt_elide_unconnected_outputs,
     ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
     ///         opt_merge_instances, opt_fold_getattribute

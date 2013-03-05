@@ -73,6 +73,7 @@ static int sparamindex = 0;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
+static std::string extraoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
@@ -181,6 +182,7 @@ getargs (int argc, const char *argv[])
                 "-O2", &O2, "Do lots of runtime shader optimization",
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
+                "--options %s", &extraoptions, "Set extra OSL options",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
@@ -312,6 +314,9 @@ setup_output_images (ShadingSystem *shadingsys,
                                TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
                                &aovnames[0]);
     }
+
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
 
     ShadingContext *ctx = shadingsys->get_context ();
     // Because we can only call get_symbol on something that has been

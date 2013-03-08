@@ -1642,7 +1642,7 @@ RuntimeOptimizer::optimize_instance ()
         simplify_params ();
     }
 
-#ifdef DEBUG
+#ifndef NDEBUG
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
@@ -2363,7 +2363,7 @@ RuntimeOptimizer::collapse_syms ()
             inst()->m_Nsym = i;
         ++i;
     }
-#ifdef DEBUG
+#ifndef NDEBUG
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {

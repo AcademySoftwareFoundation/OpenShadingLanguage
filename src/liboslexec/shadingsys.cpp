@@ -70,7 +70,7 @@ ShadingSystem::create (RendererServices *renderer,
 
     // Doesn't need a shared cache
     ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem, err);
-#ifdef DEBUG
+#ifndef NDEBUG
     err->info ("creating new ShadingSystem %p", (void *)ts);
 #endif
     return ts;

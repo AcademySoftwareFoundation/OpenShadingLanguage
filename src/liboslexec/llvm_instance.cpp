@@ -578,11 +578,6 @@ RuntimeOptimizer::llvm_type_groupdata ()
                                                 (long long unsigned int)group().name().hash());
     m_llvm_type_groupdata = llvm_type_struct (fields, groupdataname);
 
-#ifdef DEBUG
-//    llvm::outs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
-//    llvm::outs() << "  size = " << offset << "\n";
-#endif
-
     return m_llvm_type_groupdata;
 }
 

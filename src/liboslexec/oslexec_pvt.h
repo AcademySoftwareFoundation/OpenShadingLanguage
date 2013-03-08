@@ -632,7 +632,7 @@ public:
     long long int executions () const { return m_executions; }
 
     void start_running () {
-#ifdef DEBUG
+#ifndef NDEBUG
        m_executions++;
 #endif
     }

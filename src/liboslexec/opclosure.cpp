@@ -26,10 +26,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <iostream>
 #include <cmath>
 
 #include "oslexec_pvt.h"
 #include "genclosure.h"
+
+
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+// This symbol is strictly to force linkage of this file when building
+// static library.
+int opclosure_cpp_dummy = 1;
+
 
 
 OSL_SHADEOP const ClosureColor *
@@ -75,3 +85,6 @@ osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)
     return ustring(stream.str ()).c_str();
 }
 
+
+} // namespace pvt
+OSL_NAMESPACE_EXIT

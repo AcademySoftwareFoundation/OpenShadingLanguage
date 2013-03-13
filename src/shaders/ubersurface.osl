@@ -67,9 +67,11 @@
            string page = #MAPNAME ".Texture"]], \
     int Texture_ ## MAPNAME ## _Flip_U = 0\
         [[ string help = "Flips the U texture coordinate prior to texture lookup.", \
+           string widget = "checkBox", \
            string page = #MAPNAME ".Texture"]], \
     int Texture_ ## MAPNAME ## _Flip_V = 0\
         [[ string help = "Flips the V texture coordinate prior to texture lookup.", \
+           string widget = "checkBox", \
            string page = #MAPNAME ".Texture"]],
 
 // The evaluate texture function manipulates the texture coordinates and executes the texture() call

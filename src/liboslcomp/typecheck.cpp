@@ -389,9 +389,19 @@ ASTassign_expression::typecheck (TypeSpec expected)
 
     ASSERT (m_op == Assign);  // all else handled by binary_op
 
-    // We don't currently support assignment of whole arrays
+    // Handle array case
     if (vt.is_array() || et.is_array()) {
-        error ("Can't assign entire arrays");
+        if (vt.is_array() && et.is_array() &&
+            vt.arraylength() >= et.arraylength()) {
+            if (vt.structure() && (vt.structure() == et.structure())) {
+                return m_typespec = vt;
+            }
+            if (equivalent(vt.elementtype(), et.elementtype()) &&
+                !vt.structure() && !et.structure()) {
+                return m_typespec = vt;
+            }
+        }
+        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         return TypeSpec();
     }
 
@@ -540,13 +550,15 @@ ASTbinary_expression::typecheck (TypeSpec expected)
                 return m_typespec = l;
         }
         if (m_op == Mul) {
-            if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
-                return m_typespec = l;
-            if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
-                // N.B. Reorder so that it's always r = closure * k,
-                // not r = k * closure.  See codegen for why this helps.
-                std::swap (m_children[0], m_children[1]);
-                return m_typespec = r;
+            if (l.is_color_closure() != r.is_color_closure()) {
+                if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
+                    return m_typespec = l;
+                if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
+                    // N.B. Reorder so that it's always r = closure * k,
+                    // not r = k * closure.  See codegen for why this helps.
+                    std::swap (m_children[0], m_children[1]);
+                    return m_typespec = r;
+                }
             }
         }
         if (m_op == And || m_op == Or) {
@@ -907,6 +919,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (5);
         } else if (m_name == "pointcloud_search") {
             mark_optional_output(5, pointcloud_out_args);
+        } else if (m_name == "split") {
+            argwriteonly (2);
         } else if (func()->texture_args()) {
             mark_optional_output(2, tex_out_args);
         }
@@ -1115,6 +1129,7 @@ static const char * builtin_func_args [] = {
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "hash", NOISE_ARGS, NULL,
+    "isconnected", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,
     "pnoise", PGNOISE_ARGS, PNOISE_ARGS, "!deriv", NULL,
     "pointcloud_search", "ispfi.", "ispfii.", "!rw", NULL,
@@ -1131,6 +1146,7 @@ static const char * builtin_func_args [] = {
     "snoise", NOISE_ARGS, NULL,
     "spline", "fsff[]", "csfc[]", "psfp[]", "vsfv[]", "nsfn[]", "fsfif[]", "csfic[]", "psfip[]", "vsfiv[]", "nsfin[]", NULL,
     "splineinverse", "fsff[]", "fsfif[]", NULL,
+    "split", "iss[]si", "iss[]s", "iss[]", "!rw", NULL,
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,

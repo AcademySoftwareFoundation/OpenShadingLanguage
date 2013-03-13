@@ -29,14 +29,12 @@
 
 surface
 emitter
-    [[ string description = "Lambertian emitter material" ]]
+    [[ string help = "Lambertian emitter material" ]]
 (
     float power = 1
-        [[  string description = "Total power of the light",
-            float UImin = 0 ]],
+        [[  string help = "Total power of the light" ]],
     color Cs = 1
-        [[  string description = "Base color",
-            float UImin = 0, float UImax = 1 ]]
+        [[  string help = "Base color" ]]
   )
 {
     // Because emission() returns a radiance that, integrated over all

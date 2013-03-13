@@ -56,10 +56,12 @@ class OSOReaderToMaster : public OSOReader
 public:
     OSOReaderToMaster (ShadingSystemImpl &shadingsys)
         : OSOReader (&shadingsys.errhandler()), m_shadingsys (shadingsys),
-          m_master (new ShaderMaster (shadingsys)), m_reading_instruction(false)
+          m_master (new ShaderMaster (shadingsys)),
+          m_reading_instruction(false), m_errors(false)
       { }
     virtual ~OSOReaderToMaster () { }
-    virtual bool parse (const std::string &filename);
+    virtual bool parse_file (const std::string &filename);
+    virtual bool parse_memory (const std::string &oso);
     virtual void version (const char *specid, int major, int minor);
     virtual void shader (const char *shadertype, const char *name);
     virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
@@ -88,20 +90,35 @@ private:
     int m_codesym;                    ///< Which param is being initialized?
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
+    bool m_errors;                    ///< Did we hit any errors?
 };
 
 
 
 bool
-OSOReaderToMaster::parse (const std::string &filename)
+OSOReaderToMaster::parse_file (const std::string &filename)
 {
     m_master->m_osofilename = filename;
     m_master->m_maincodebegin = 0;
     m_master->m_maincodeend = 0;
     m_codesection.clear ();
     m_codesym = -1;
-    return OSOReader::parse (filename);
+    return OSOReader::parse_file (filename) && ! m_errors;
 }
+
+
+
+bool
+OSOReaderToMaster::parse_memory (const std::string &oso)
+{
+    m_master->m_osofilename = "<none>";
+    m_master->m_maincodebegin = 0;
+    m_master->m_maincodeend = 0;
+    m_codesection.clear ();
+    m_codesym = -1;
+    return OSOReader::parse_memory (oso) && ! m_errors;
+}
+
 
 
 
@@ -416,6 +433,7 @@ OSOReaderToMaster::codemarker (const char *name)
     } else if (m_codesym < 0) {
         m_shadingsys.error ("Parsing shader %s: don't know what to do with code section \"%s\"",
                             m_master->shadername().c_str(), name);
+        m_errors = true;
     }
 }
 
@@ -441,11 +459,21 @@ OSOReaderToMaster::codeend ()
 void
 OSOReaderToMaster::instruction (int label, const char *opcode)
 {
-    Opcode op (ustring(opcode), m_codesection);
+    ustring uopcode (opcode);
+    Opcode op (uopcode, m_codesection);
     m_master->m_ops.push_back (op);
     m_firstarg = m_master->m_args.size();
     m_nargs = 0;
     m_reading_instruction = true;
+    const OpDescriptor *od = m_shadingsys.op_descriptor (uopcode);
+    if (od) {
+        // Replace the name in case it was aliased for compatibility
+        uopcode = od->name;
+    } else {
+        m_shadingsys.error ("Parsing shader \"%s\": instruction \"%s\" is not known. Maybe compiled with a too-new oslc?",
+                            m_master->shadername().c_str(), opcode);
+        m_errors = true;
+    }
 }
 
 
@@ -465,6 +493,7 @@ OSOReaderToMaster::instruction_arg (const char *name)
 //    m_master->m_args.push_back (0);  // FIXME
     m_shadingsys.error ("Parsing shader %s: unknown arg %s",
                         m_master->shadername().c_str(), name);
+    m_errors = true;
 }
 
 
@@ -510,33 +539,75 @@ ShadingSystemImpl::loadshader (const char *cname)
     std::string filename = OIIO::Filesystem::searchpath_find (name.string() + ".oso",
                                                         m_searchpath_dirs);
     if (filename.empty ()) {
-        // FIXME -- error
         error ("No .oso file could be found for shader \"%s\"", name.c_str());
         return NULL;
     }
     OIIO::Timer timer;
-    bool ok = oso.parse (filename);
+    bool ok = oso.parse_file (filename);
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
     if (ok) {
         ++m_stat_shaders_loaded;
         info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(timer(), 2).c_str());
+        ASSERT (r);
+        r->resolve_syms ();
+        if (m_debug) {
+            std::string s = r->print ();
+            if (s.length())
+                info ("%s", s.c_str());
+        }
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }
-    // FIXME -- catch errors
-
-    if (r) {
-        r->resolve_syms ();
-    }
-
-    if (r && m_debug) {
-        std::string s = r->print ();
-        if (s.length())
-            info ("%s", s.c_str());
-    }
 
     return r;
+}
+
+
+
+bool
+ShadingSystemImpl::LoadMemoryCompiledShader (const char *shadername,
+                                             const char *buffer)
+{
+    if (! shadername || ! shadername[0]) {
+        error ("Attempt to load shader with empty name \"\".");
+        return false;
+    }
+    if (! buffer || ! buffer[0]) {
+        error ("Attempt to load shader \"%s\" with empty OSO data.", shadername);
+        return false;
+    }
+
+    ustring name (shadername);
+    lock_guard guard (m_mutex);  // Thread safety
+    ShaderNameMap::const_iterator found = m_shader_masters.find (name);
+    if (found != m_shader_masters.end()) {
+        if (debug())
+            info ("Preload shader %s already exists in shader_masters", name.c_str());
+        return false;
+    }
+
+    // Not found in the map
+    OSOReaderToMaster reader (*this);
+    OIIO::Timer timer;
+    bool ok = reader.parse_memory (buffer);
+    ShaderMaster::ref r = ok ? reader.master() : NULL;
+    m_shader_masters[name] = r;
+    if (ok) {
+        ++m_stat_shaders_loaded;
+        info ("Loaded \"%s\" (took %s)", shadername, Strutil::timeintervalformat(timer(), 2).c_str());
+        ASSERT (r);
+        r->resolve_syms ();
+        if (m_debug) {
+            std::string s = r->print ();
+            if (s.length())
+                info ("%s", s.c_str());
+        }
+    } else {
+        error ("Unable to parse preloaded shader \"%s\"", shadername);
+    }
+
+    return true;
 }
 
 

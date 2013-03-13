@@ -2,13 +2,12 @@ project (OSL)
 
 # Release version of the library
 set (OSL_LIBRARY_VERSION_MAJOR 1)
-set (OSL_LIBRARY_VERSION_MINOR 3)
+set (OSL_LIBRARY_VERSION_MINOR 4)
 set (OSL_LIBRARY_VERSION_PATCH 0)
 
 # Version of the OSO file format and instruction set
 set (OSO_FILE_VERSION_MAJOR 1)
 set (OSO_FILE_VERSION_MINOR 0)
-
 
 cmake_minimum_required (VERSION 2.6)
 if (NOT CMAKE_VERSION VERSION_LESS 2.8.4)
@@ -26,8 +25,12 @@ if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions ("-DDEBUG=1")
     set (DEBUGMODE ON)
+endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    # cmake bug workaround -- on some platforms, cmake doesn't set
+    # NDEBUG for RelWithDebInfo mode
+    add_definitions ("-DNDEBUG")
 endif ()
 
 
@@ -55,19 +58,40 @@ if (NOT MSVC)
     endif ()
 endif ()
 
-## disable RTTI
-## NOTE(ckulla): LLVM builds without RTTI by default so beware
-##   if you find the need to turn this on, as OSL classes
-##   extending LLVM ones will cause linker errors (unless you
-##   rebuild LLVM with rtti enabled)
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+## enable RTTI
+##   NOTE: LLVM builds without RTTI by default so beware
+##   if you find the need to turn this on, to use OSL in a
+##   project that requires RTTI for example, you need to build
+##   LLVM with RRTI, otherwise OSL classes extending LLVM ones
+##   will cause linker errors.
+set (ENABLERTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
 
-# For gcc < 4.3, Boost needs some extra help detecting that we've
-# disabled RTTI.
-if (CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
-    add_definitions ("-DBOOST_NO_RTTI")
-    add_definitions ("-DBOOST_NO_TYPEID")
+if (NOT ENABLERTTI)
+    if (MSVC)
+        set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-" )
+    else ()
+        set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+    endif()
+
+    # For gcc < 4.3, Boost needs some extra help detecting that we've
+    # disabled RTTI.
+    if ((CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
+        OR CMAKE_COMPILER_IS_CLANG)
+        add_definitions ("-DBOOST_NO_RTTI")
+        add_definitions ("-DBOOST_NO_TYPEID")
+    endif ()
+endif()
+
+# Needed for static boost libraries on Windows
+if (WIN32 AND Boost_USE_STATIC_LIBS)
+    add_definitions ("-DBOOST_ALL_NO_LIB")
+    add_definitions ("-DBOOST_THREAD_USE_LIB")
 endif ()
+
+# Needed to disable dllimport/dllexport for static library
+if (BUILDSTATIC)
+    add_definitions ("-DOSL_STATIC_LIBRARY")
+endif()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
@@ -78,6 +102,8 @@ endif ()
 if (CMAKE_COMPILER_IS_CLANG)
     # disable warning about unused command line arguments
     add_definitions ("-Qunused-arguments -Wno-unknown-pragmas")
+    # disable warning in flex-generated code
+    add_definitions ("-Wno-null-conversion")
 endif ()
 
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
@@ -94,14 +120,19 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     endif ()
 endif ()
 
+
+set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
+set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
+set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 if (WIN32)
     set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
+    set (USE_LLVM_BITCODE OFF CACHE BOOL "Generate embedded LLVM bitcode")
 else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
+    set (USE_LLVM_BITCODE ON CACHE BOOL "Generated embedded LLVM bitcode")
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
-set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -208,7 +239,9 @@ macro ( TESTSUITE )
                                       --solution-path "${CMAKE_BINARY_DIR}" )
         endif ()
 
-        message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
+        if (VERBOSE)
+            message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
+        endif ()
 
         # Run the test unoptimized
         if (NOT _testname MATCHES "^render")
@@ -231,16 +264,17 @@ TESTSUITE ( arithmetic array array-derivs array-range
             blackbody blendmath breakcont bug-locallifetime
             cellnoise closure color comparison
             component-range const-array-params debugnan
-            derivs derivs-muldiv-clobber error-dupes exponential
+            derivs derivs-muldiv-clobber error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
             geomath getsymbol-nonheap gettextureinfo hyperb
-            ieee_fp if incdec initops intbits
+            ieee_fp if incdec initops intbits isconnected
             layers layers-Ciassign layers-lazy
             logic loop matrix message metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
+            oslc-err-arrayindex oslc-err-closuremul oslc-err-intoverflow
             oslc-err-noreturn oslc-err-paramdefault
             pointcloud pointcloud-fold
             raytype render-background render-bumptest render-cornell render-furnace-diffuse
@@ -253,7 +287,8 @@ TESTSUITE ( arithmetic array array-derivs array-range
             texture-firstchannel texture-interp texture-simple
             texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap
-            transform transformc trig typecast vecctr vector
+            transform transformc trig typecast
+            unknown-instruction vecctr vector
             wavelength_color xml )
 
 
@@ -272,7 +307,7 @@ set (CPACK_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERS
 #set (CPACK_PACKAGE_INSTALL_DIRECTORY ${PROJECT_SOURCE_DIR}/..)
 exec_program ("cmake -E copy ${PROJECT_SOURCE_DIR}/../LICENSE ${CMAKE_BINARY_DIR}/License.txt")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/License.txt")
-exec_program ("cmake -E copy ${PROJECT_SOURCE_DIR}/../README ${CMAKE_BINARY_DIR}/Readme.txt")
+exec_program ("cmake -E copy ${PROJECT_SOURCE_DIR}/../README.md ${CMAKE_BINARY_DIR}/Readme.txt")
 set (CPACK_RESOURCE_FILE_README "${CMAKE_BINARY_DIR}/Readme.txt")
 set (CPACK_RESOURCE_FILE_WELCOME "${PROJECT_SOURCE_DIR}/doc/Welcome.txt")
 #set (CPACK_PACKAGE_EXECUTABLES I'm not sure what this is for)

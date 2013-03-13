@@ -29,7 +29,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <iostream>
 #include <cstdlib>
+
+#ifdef __linux__
 #include <dlfcn.h>
+#endif
 
 #include <OpenImageIO/plugin.h>
 using namespace OIIO;
@@ -50,8 +53,8 @@ main (int argc, const char *argv[])
     // the app called by the IR.  Since we can't control the app
     // (Houdini and Maya, I'm talking to you!), we compensate by asking
     // to dlopen it here, the "right" way, and then later on, LLVM will
-    // be able to find the symbols.  I haven't can't seem to reproduce
-    // this issue on OS X, so for now we only do this on Linux.
+    // be able to find the symbols.  I can't seem to reproduce this
+    // issue on OS X, so for now we only do this on Linux.
     //
     // This would not be necessary if we didn't specifically disallow
     // RTLD_GLOBAL in the Plugin::open call below, but we are purposely

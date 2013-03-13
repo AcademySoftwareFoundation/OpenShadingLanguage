@@ -152,9 +152,16 @@ preprocess (const std::string &filename,
         }
 
         instream.unsetf (std::ios::skipws);
-        std::string instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude)
-            + std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
-                           std::istreambuf_iterator<char>());
+        std::string instring;
+
+        if (!stdinclude.empty())
+            instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude.c_str());
+        else
+            instring = "\n";
+
+        instring += std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
+                                 std::istreambuf_iterator<char>());
+
         instream.close ();
 
         typedef boost::wave::cpplexer::lex_token<> token_type;
@@ -252,7 +259,7 @@ preprocess (const std::string &filename,
     cppcommand += options;
 
     if (! stdinclude.empty())
-        cppcommand += std::string("-include ") + stdinclude + " ";
+        cppcommand += std::string("-include \"") + stdinclude + "\" ";
 
     cppcommand += "\"";
     cppcommand += filename;
@@ -281,10 +288,8 @@ preprocess (const std::string &filename,
         fb.close ();
     }
 
-    if (cpppipe)
-        pclose (cpppipe);
-
-    return true;
+    // Test for error in exit status
+    return (pclose(cpppipe) == 0);
 }
 
 #endif
@@ -292,7 +297,8 @@ preprocess (const std::string &filename,
 
 bool
 OSLCompilerImpl::compile (const std::string &filename,
-                          const std::vector<std::string> &options)
+                          const std::vector<std::string> &options,
+                          const std::string &stdoslpath)
 {
     if (! OIIO::Filesystem::exists (filename)) {
         error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
@@ -313,32 +319,36 @@ OSLCompilerImpl::compile (const std::string &filename,
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
-    std::string program = OIIO::Sysutil::this_program_path ();
-    if (program.size()) {
-        boost::filesystem::path path (program);  // our program
-        path = path.parent_path ();  // now the bin dir of our program
-        path = path.parent_path ();  // now the parent dir
-        path = path / "shaders";
-        bool found = false;
-        if (OIIO::Filesystem::exists (path.string())) {
-#ifdef USE_BOOST_WAVE
-            includepaths.push_back(path.string());
-#else
-            // pass along to cpp
-            cppoptions += "\"-I";
-            cppoptions += path.string();
-            cppoptions += "\" ";
-#endif
-            path = path / "stdosl.h";
+    if (stdoslpath.empty()) {
+        std::string program = OIIO::Sysutil::this_program_path ();
+        if (program.size()) {
+            boost::filesystem::path path (program);  // our program
+            path = path.parent_path ();  // now the bin dir of our program
+            path = path.parent_path ();  // now the parent dir
+            path = path / "shaders";
+            bool found = false;
             if (OIIO::Filesystem::exists (path.string())) {
-                stdinclude = path.string();
-                found = true;
+#ifdef USE_BOOST_WAVE
+                includepaths.push_back(path.string());
+#else
+                // pass along to cpp
+                cppoptions += "\"-I";
+                cppoptions += path.string();
+                cppoptions += "\" ";
+#endif
+                path = path / "stdosl.h";
+                if (OIIO::Filesystem::exists (path.string())) {
+                    stdinclude = path.string();
+                    found = true;
+                }
             }
+            if (! found)
+                warning (ustring(filename), 0, "Unable to find \"%s\"",
+                         path.string().c_str());
         }
-        if (! found)
-            warning (ustring(filename), 0, "Unable to find \"%s\"",
-                     path.string().c_str());
     }
+    else
+        stdinclude = stdoslpath;
 
     m_output_filename.clear ();
     bool preprocess_only = false;
@@ -401,7 +411,10 @@ OSLCompilerImpl::compile (const std::string &filename,
         delete m_lexer;
 
         if (! parseerr) {
-            shader()->typecheck ();
+            if (shader())
+                shader()->typecheck ();
+            else
+                error (ustring(), 0, "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -440,36 +453,36 @@ struct GlobalTable {
     TypeSpec type;
 };
 
-static GlobalTable globals[] = {
-    { "P", TypeDesc::TypePoint },
-    { "I", TypeDesc::TypeVector },
-    { "N", TypeDesc::TypeNormal },
-    { "Ng", TypeDesc::TypeNormal },
-    { "u", TypeDesc::TypeFloat },
-    { "v", TypeDesc::TypeFloat },
-    { "dPdu", TypeDesc::TypeVector },
-    { "dPdv", TypeDesc::TypeVector },
-#if 0
-    // Light variables -- we don't seem to be on a route to support this
-    // kind of light shader, so comment these out for now.
-    { "L", TypeDesc::TypeVector },
-    { "Cl", TypeDesc::TypeColor },
-    { "Ns", TypeDesc::TypeNormal },
-    { "Pl", TypeDesc::TypePoint },
-    { "Nl", TypeDesc::TypeNormal },
-#endif
-    { "Ps", TypeDesc::TypePoint },
-    { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
-    { "time", TypeDesc::TypeFloat },
-    { "dtime", TypeDesc::TypeFloat },
-    { "dPdtime", TypeDesc::TypeVector },
-    { NULL }
-};
-
 
 void
 OSLCompilerImpl::initialize_globals ()
 {
+    static GlobalTable globals[] = {
+        { "P", TypeDesc::TypePoint },
+        { "I", TypeDesc::TypeVector },
+        { "N", TypeDesc::TypeNormal },
+        { "Ng", TypeDesc::TypeNormal },
+        { "u", TypeDesc::TypeFloat },
+        { "v", TypeDesc::TypeFloat },
+        { "dPdu", TypeDesc::TypeVector },
+        { "dPdv", TypeDesc::TypeVector },
+    #if 0
+        // Light variables -- we don't seem to be on a route to support this
+        // kind of light shader, so comment these out for now.
+        { "L", TypeDesc::TypeVector },
+        { "Cl", TypeDesc::TypeColor },
+        { "Ns", TypeDesc::TypeNormal },
+        { "Pl", TypeDesc::TypePoint },
+        { "Nl", TypeDesc::TypeNormal },
+    #endif
+        { "Ps", TypeDesc::TypePoint },
+        { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
+        { "time", TypeDesc::TypeFloat },
+        { "dtime", TypeDesc::TypeFloat },
+        { "dPdtime", TypeDesc::TypeVector },
+        { NULL }
+    };
+
     for (int i = 0;  globals[i].name;  ++i) {
         Symbol *s = new Symbol (ustring(globals[i].name), globals[i].type,
                                 SymTypeGlobal);
@@ -1063,18 +1076,37 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
 }
 
 
+// This has O(n^2) memory usage, so only for debugging
+//#define DEBUG_SYMBOL_DEPENDENCIES
 
 // Add to the dependency map that "A depends on B".
 static void
 add_dependency (SymDependencyMap &dmap, const Symbol *A, const Symbol *B)
 {
     dmap[A].insert (B);
+
+#ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Perform unification -- all of B's dependencies are now
     // dependencies of A.
     BOOST_FOREACH (const Symbol *r, dmap[B])
         dmap[A].insert (r);
+#endif
 }
 
+
+static void
+mark_symbol_derivatives (SymDependencyMap &dmap, SymPtrSet &visited, const Symbol *sym)
+{
+    BOOST_FOREACH (const Symbol *r, dmap[sym]) {
+		if (visited.find(r) == visited.end()) {
+			visited.insert(r);
+
+			const_cast<Symbol *>(r)->has_derivs (true);
+
+			mark_symbol_derivatives(dmap, visited, r);
+		}
+	}
+}
 
 
 /// Run through all the ops, for each one marking its 'written'
@@ -1151,11 +1183,11 @@ OSLCompilerImpl::track_variable_dependencies ()
         }
     }
 
-    // Mark all symbols needing derivatives as such
-    BOOST_FOREACH (const Symbol *d, m_symdeps[m_derivsym])
-        const_cast<Symbol *>(d)->has_derivs (true);
+    // Recursively tag all symbols that need derivatives
+    SymPtrSet visited;
+    mark_symbol_derivatives (m_symdeps, visited, m_derivsym);
 
-#if 0
+#ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Helpful for debugging
 
     std::cerr << "track_variable_dependencies\n";

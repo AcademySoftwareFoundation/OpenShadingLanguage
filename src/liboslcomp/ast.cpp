@@ -314,7 +314,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
 {
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
-    if (f) {
+    if (f  &&  ! m_ismetadata) {
         std::string e = Strutil::format ("\"%s\" already declared in this scope", name.c_str());
         if (f->node()) {
             boost::filesystem::path p(f->node()->sourcefile().string());
@@ -441,7 +441,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
     else if (expr->typespec().is_triple()) // component access
         m_typespec = TypeDesc::FLOAT;
     else {
-        ASSERT (0 && "botched ASTindex");
+        error ("indexing into non-array or non-component type");
     }
 }
 
@@ -459,7 +459,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr,
              expr->typespec().elementtype().is_triple())
         m_typespec = TypeDesc::FLOAT;
     else {
-        ASSERT (0 && "botched ASTindex");
+        error ("indexing into non-array or non-component type");
     }
 }
 
@@ -475,7 +475,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
              expr->typespec().elementtype().is_matrix())
         m_typespec = TypeDesc::FLOAT;
     else {
-        ASSERT (0 && "botched ASTindex");
+        error ("indexing into non-array or non-component type");
     }
 }
 

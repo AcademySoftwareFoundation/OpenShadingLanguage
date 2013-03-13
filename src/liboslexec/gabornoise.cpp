@@ -35,6 +35,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/fmath.h>
 
+#ifndef _MSC_VER
+using OIIO::isfinite;
+#endif
+
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -69,7 +73,7 @@ public:
     }
     // Return uniform on [0,1)
     float operator() () {
-        return (m_seed *= 3039177861) / float(UINT_MAX);
+        return (m_seed *= 3039177861u) / float(UINT_MAX);
     }
     // Return poisson distribution with the given mean
     int poisson (float mean) {
@@ -305,7 +309,7 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
                 multMatrix (gp.local, x_k_i, xkit);
                 Dual2<Vec2> x_k_i_t = make_Vec2 (comp(xkit,0), comp(xkit,1));
                 Dual2<float> gk = gabor_kernel (w_i_t_s_f, omega_i_t_s_f, phi_i_t_s_f, a_i_t_s_f, x_k_i_t); // 2D
-                if (! std::isfinite(gk.val())) {
+                if (! isfinite(gk.val())) {
                     // Numeric failure of the filtered version.  Fall
                     // back on the unfiltered.
                     gk = gabor_kernel (gp.weight, omega_i, phi_i, gp.a, x_k_i);  // 3D

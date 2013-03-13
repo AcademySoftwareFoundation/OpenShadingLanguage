@@ -45,6 +45,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
 
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+// This symbol is strictly to force linkage of this file when building
+// static library.
+int opmessage_cpp_dummy = 1;
+
 
 
 #define USTR(cstr) (*((ustring *)&cstr))
@@ -167,3 +174,6 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
     return 0;
 }
 
+
+} // namespace pvt
+OSL_NAMESPACE_EXIT

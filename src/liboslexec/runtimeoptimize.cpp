@@ -27,21 +27,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <vector>
-#include <string>
 #include <cstdio>
 #include <cmath>
 
 #include <boost/foreach.hpp>
-#include <boost/regex.hpp>
-#include <boost/unordered_map.hpp>
 
+#include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
 #include "../liboslcomp/oslcomp_pvt.h"
-#include "dual.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -51,12 +48,14 @@ static ustring u_nop    ("nop"),
                u_assign ("assign"),
                u_add    ("add"),
                u_sub    ("sub"),
+               u_mul    ("mul"),
                u_if     ("if"),
                u_break ("break"),
                u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
                u_pointcloud_write ("pointcloud_write"),
+               u_isconnected ("isconnected"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage");
 
@@ -68,10 +67,8 @@ namespace pvt {   // OSL::pvt
 using OIIO::spin_lock;
 using OIIO::Timer;
 
+DECLFOLDER(constfold_assign);  // forward decl
 
-// Maximum number of new constant symbols that a constant-folding function
-// is able to add.
-static const int max_new_consts_per_fold = 10;
 
 
 /// Wrapper that erases elements of c for which predicate p is true.
@@ -89,11 +86,10 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
                                     ShaderGroup &group, ShadingContext *ctx)
     : m_shadingsys(shadingsys),
       m_thread(shadingsys.get_perthread_info()),
-      m_group(group),
-      m_inst(NULL), m_context(ctx),
+      m_context(ctx),
       m_debug(shadingsys.debug()),
       m_optimize(shadingsys.optimize()),
-      m_opt_constant_param(shadingsys.m_opt_constant_param),
+      m_opt_simplify_param(shadingsys.m_opt_simplify_param),
       m_opt_constant_fold(shadingsys.m_opt_constant_fold),
       m_opt_stale_assign(shadingsys.m_opt_stale_assign),
       m_opt_elide_useless_ops(shadingsys.m_opt_elide_useless_ops),
@@ -101,7 +97,11 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_peephole(shadingsys.m_opt_peephole),
       m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
       m_opt_assign(shadingsys.m_opt_assign),
-      m_next_newconst(0),
+      m_opt_mix(shadingsys.m_opt_mix),
+      m_opt_middleman(shadingsys.m_opt_middleman),
+      m_group(group),
+      m_inst(NULL), m_pass(0),
+      m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
@@ -156,7 +156,7 @@ RuntimeOptimizer::set_debug ()
             // everything from running 10x slower just because you want to
             // debug one shader.
             m_optimize = 3;
-            m_opt_constant_param = true;
+            m_opt_simplify_param = true;
             m_opt_constant_fold = true;
             m_opt_stale_assign = true;
             m_opt_elide_useless_ops = true;
@@ -164,6 +164,8 @@ RuntimeOptimizer::set_debug ()
             m_opt_peephole = true;
             m_opt_coalesce_temps = true;
             m_opt_assign = true;
+            m_opt_mix = true;
+            m_opt_middleman = true;
         }
     }
     // if user said to only debug one layer, turn off debug if not it
@@ -192,7 +194,8 @@ RuntimeOptimizer::find_constant (const TypeSpec &type, const void *data)
 
 
 int
-RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
+RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
+                                TypeDesc datatype)
 {
     int ind = find_constant (type, data);
     if (ind < 0) {
@@ -201,14 +204,44 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
         void *newdata;
         TypeDesc t (type.simpletype());
         size_t n = t.aggregate * t.numelements();
-        if (t.basetype == TypeDesc::INT)
+        if (datatype == TypeDesc::UNKNOWN)
+            datatype = t;
+        size_t datan = datatype.aggregate * datatype.numelements();
+        if (t.basetype == TypeDesc::INT &&
+                datatype.basetype == TypeDesc::INT && n == datan) {
             newdata = inst()->shadingsys().alloc_int_constants (n);
-        else if (t.basetype == TypeDesc::FLOAT)
+            memcpy (newdata, data, t.size());
+        } else if (t.basetype == TypeDesc::FLOAT &&
+                   datatype.basetype == TypeDesc::FLOAT) {
             newdata = inst()->shadingsys().alloc_float_constants (n);
-        else if (t.basetype == TypeDesc::STRING)
+            if (n == datan)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const float *)data)[i];
+            else if (datan == 1)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const float *)data)[0];
+            else {
+                ASSERT (0 && "unsupported type for add_constant");
+            }
+        } else if (t.basetype == TypeDesc::FLOAT &&
+                   datatype.basetype == TypeDesc::INT) {
+            newdata = inst()->shadingsys().alloc_float_constants (n);
+            if (n == datan)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const int *)data)[i];
+            else if (datan == 1)
+                for (size_t i = 0;  i < n;  ++i)
+                    ((float *)newdata)[i] = ((const int *)data)[0];
+            else {
+                ASSERT (0 && "unsupported type for add_constant");
+            }
+        } else if (t.basetype == TypeDesc::STRING &&
+                   datatype.basetype == TypeDesc::STRING && n == datan) {
             newdata = inst()->shadingsys().alloc_string_constants (n);
-        else { ASSERT (0 && "unsupported type for add_constant"); }
-        memcpy (newdata, data, t.size());
+            memcpy (newdata, data, t.size());
+        } else {
+            ASSERT (0 && "unsupported type for add_constant");
+        }
         newconst.data (newdata);
         ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
                 "we shouldn't have to realloc here");
@@ -221,6 +254,63 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data)
 
 
 
+int
+RuntimeOptimizer::add_temp (const TypeSpec &type)
+{
+    Symbol newtemp (ustring::format ("$opttemp%d", m_next_newtemp++),
+                    type, SymTypeTemp);
+    ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
+            "we shouldn't have to realloc here");
+    inst()->symbols().push_back (newtemp);
+    return (int) inst()->symbols().size()-1;
+}
+
+
+
+int
+RuntimeOptimizer::add_global (ustring name, const TypeSpec &type)
+{
+    int index = inst()->findsymbol (name);
+    if (index < 0) {
+        Symbol newglobal (name, type, SymTypeGlobal);
+        ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
+                "we shouldn't have to realloc here");
+        index = (int) inst()->symbols().size ();
+        inst()->symbols().push_back (newglobal);
+    }
+    return index;
+}
+
+
+
+void
+RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
+                                    int newarg2, const char *why)
+{
+    int opnum = &op - &(inst()->ops()[0]);
+    DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
+    if (debug() > 1)
+        std::cout << "turned op " << opnum
+                  << " from " << op.opname() << " to "
+                  << newop << ' ' << inst()->symbol(newarg1)->name() << ' '
+                  << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
+                  << (why ? " : " : "") << (why ? why : "") << "\n";
+    op.reset (newop, newarg2<0 ? 2 : 3);
+    op.argwriteonly (0);
+    inst()->args()[op.firstarg()+1] = newarg1;
+    op.argread (1, true);
+    op.argwrite (1, false);
+    opargsym(op, 1)->mark_rw (opnum, true, false);
+    if (newarg2 >= 0) {
+        inst()->args()[op.firstarg()+2] = newarg2;
+        op.argread (2, true);
+        op.argwrite (2, false);
+        opargsym(op, 2)->mark_rw (opnum, true, false);
+    }
+}
+
+
+
 void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
@@ -228,7 +318,8 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
     if (debug() > 1)
         std::cout << "turned op " << opnum
                   << " from " << op.opname() << " to "
-                  << opargsym(op,0)->name() << " = " << opargsym(op,1)->name()
+                  << opargsym(op,0)->name() << " = " 
+                  << inst()->symbol(newarg)->name()
                   << (why ? " : " : "") << (why ? why : "") << "\n";
     op.reset (u_assign, 2);
     inst()->args()[op.firstarg()+1] = newarg;
@@ -313,28 +404,27 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, const char *why)
 
 
 
-/// Insert instruction 'opname' with arguments 'args_to_add' into the 
-/// code at instruction 'opnum'.  The existing code and concatenated 
-/// argument lists can be found in code and opargs, respectively, and
-/// allsyms contains pointers to all symbols.  mainstart is a reference
-/// to the address where the 'main' shader begins, and may be modified
-/// if the new instruction is inserted before that point.
-/// If recompute_rw_ranges is true, also adjust all symbols' read/write
-/// ranges to take the new instruction into consideration.
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
-                               const std::vector<int> &args_to_add,
-                               bool recompute_rw_ranges)
+                               const int *argsbegin, const int *argsend,
+                               bool recompute_rw_ranges, int relation)
 {
     OpcodeVec &code (inst()->ops());
     std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
-    Opcode op (opname, method, opargs.size(), args_to_add.size());
+    int nargs = argsend - argsbegin;
+    Opcode op (opname, method, opargs.size(), nargs);
     code.insert (code.begin()+opnum, op);
-    opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
+    opargs.insert (opargs.end(), argsbegin, argsend);
     if (opnum < inst()->m_maincodebegin)
         ++inst()->m_maincodebegin;
     ++inst()->m_maincodeend;
+    if ((relation == -1 && opnum > 0) ||
+        (relation == 1 && opnum < (int)code.size()-1)) {
+        code[opnum].method (code[opnum+relation].method());
+        code[opnum].source (code[opnum+relation].sourcefile(),
+                            code[opnum+relation].sourceline());
+    }
 
     // Unless we were inserting at the end, we may need to adjust
     // the jump addresses of other ops and the param init ranges.
@@ -364,7 +454,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         BOOST_FOREACH (Symbol &s, inst()->symbols()) {
             if (s.everread()) {
                 int first = s.firstread(), last = s.lastread();
-                if (first > opnum)
+                if (first >= opnum)
                     ++first;
                 if (last >= opnum)
                     ++last;
@@ -372,7 +462,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
             }
             if (s.everwritten()) {
                 int first = s.firstwrite(), last = s.lastwrite();
-                if (first > opnum)
+                if (first >= opnum)
                     ++first;
                 if (last >= opnum)
                     ++last;
@@ -397,16 +487,51 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         m_in_loop.insert (m_in_loop.begin()+opnum, 1,
                           m_in_loop[opnum]);
     }
+    // If the first return happened after this, bump it up
+    if (m_first_return >= opnum)
+        ++m_first_return;
 
-    if (opname != u_useparam) {
+    if (opname == u_if) {
+        // special case for 'if' -- the arg is read, not written
+        inst()->symbol(argsbegin[0])->mark_rw (opnum, true, false);
+    }
+    else if (opname != u_useparam) {
         // Mark the args as being used for this op (assume that the
         // first is written, the others are read).  Enforce that with an
         // DASSERT to be sure we only use insert_code for the couple of
         // instructions that we think it is used for.
-        DASSERT (opname == u_assign);
-        for (size_t a = 0;  a < args_to_add.size();  ++a)
-            inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
+        for (int a = 0;  a < nargs;  ++a)
+            inst()->symbol(argsbegin[a])->mark_rw (opnum, a>0, a==0);
     }
+}
+
+
+
+void
+RuntimeOptimizer::insert_code (int opnum, ustring opname,
+                               const std::vector<int> &args_to_add,
+                               bool recompute_rw_ranges, int relation)
+{
+    const int *argsbegin = (args_to_add.size())? &args_to_add[0]: NULL;
+    const int *argsend = argsbegin + args_to_add.size();
+
+    insert_code (opnum, opname, argsbegin, argsend,
+                 recompute_rw_ranges, relation);
+}
+
+
+
+void
+RuntimeOptimizer::insert_code (int opnum, ustring opname, int relation,
+                               int arg0, int arg1, int arg2, int arg3)
+{
+    int args[4];
+    int nargs = 0;
+    if (arg0 >= 0) args[nargs++] = arg0;
+    if (arg1 >= 0) args[nargs++] = arg1;
+    if (arg2 >= 0) args[nargs++] = arg2;
+    if (arg3 >= 0) args[nargs++] = arg3;
+    insert_code (opnum, opname, args, args+nargs, true, relation);
 }
 
 
@@ -415,10 +540,11 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
 /// reference the symbols in 'params'.
 void
 RuntimeOptimizer::insert_useparam (size_t opnum,
-                                   std::vector<int> &params_to_use)
+                                   const std::vector<int> &params_to_use)
 {
+    ASSERT (params_to_use.size() > 0);
     OpcodeVec &code (inst()->ops());
-    insert_code (opnum, u_useparam, params_to_use);
+    insert_code (opnum, u_useparam, params_to_use, 1);
 
     // All ops are "read"
     code[opnum].argwrite (0, false);
@@ -497,7 +623,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
                     if (! (simple_assign && a == 0))
                         params.push_back (opargs[argind]);
                     // mark as already initialized unconditionally, if we do
-                    if (! m_in_conditional[opnum] &&
+                    if (op_is_unconditionally_executed(opnum) &&
                             op.method() == OSLCompilerImpl::main_method_name())
                         s->initialized (true);
                 }
@@ -550,1791 +676,14 @@ RuntimeOptimizer::message_possibly_set (ustring name) const
 
 
 
-inline bool
-equal_consts (const Symbol &A, const Symbol &B)
-{
-    return (&A == &B ||
-            (equivalent (A.typespec(), B.typespec()) &&
-             !memcmp (A.data(), B.data(), A.typespec().simpletype().size())));
-}
-
-
-
-inline bool
-unequal_consts (const Symbol &A, const Symbol &B)
-{
-    return (equivalent (A.typespec(), B.typespec()) &&
-            memcmp (A.data(), B.data(), A.typespec().simpletype().size()));
-}
-
-
-
-inline bool
-is_zero (const Symbol &A)
-{
-    const TypeSpec &Atype (A.typespec());
-    static Vec3 Vzero (0, 0, 0);
-    return (Atype.is_float() && *(const float *)A.data() == 0) ||
-        (Atype.is_int() && *(const int *)A.data() == 0) ||
-        (Atype.is_triple() && *(const Vec3 *)A.data() == Vzero);
-}
-
-
-
-inline bool
-is_one (const Symbol &A)
-{
-    const TypeSpec &Atype (A.typespec());
-    static Vec3 Vone (1, 1, 1);
-    static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    return (Atype.is_float() && *(const float *)A.data() == 1) ||
-        (Atype.is_int() && *(const int *)A.data() == 1) ||
-        (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
-        (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
-}
-
-
-
-DECLFOLDER(constfold_none)
-{
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_add)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant()) {
-        if (is_zero(A)) {
-            // R = 0 + B  =>   R = B
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                                  "const fold");
-            return 1;
-        }
-    }
-    if (B.is_constant()) {
-        if (is_zero(B)) {
-            // R = A + 0   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "const fold");
-            return 1;
-        }
-    }
-    if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() + *(int *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = *(float *)A.data() + *(float *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data() + *(Vec3 *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_sub)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (B.is_constant()) {
-        if (is_zero(B)) {
-            // R = A - 0   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "subtract zero");
-            return 1;
-        }
-    }
-    // R = A - B, if both are constants, =>  R = C
-    if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() - *(int *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = *(float *)A.data() - *(float *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data() - *(Vec3 *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    // R = A - A  =>  R = 0    even if not constant!
-    if (&A == &B) {
-        rop.turn_into_assign_zero (op, "sub from itself");
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_mul)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant()) {
-        if (is_one(A)) {
-            // R = 1 * B  =>   R = B
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                                  "mul by 1");
-            return 1;
-        }
-        if (is_zero(A)) {
-            // R = 0 * B  =>   R = 0
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "mul by 0");
-            return 1;
-        }
-    }
-    if (B.is_constant()) {
-        if (is_one(B)) {
-            // R = A * 1   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "mul by 1");
-            return 1;
-        }
-        if (is_zero(B)) {
-            // R = A * 0   =>   R = 0
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                                  "mul by 0");
-            return 1;
-        }
-    }
-    if (A.is_constant() && B.is_constant()) {
-        if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() * *(int *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = (*(float *)A.data()) * (*(float *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = (*(Vec3 *)A.data()) * (*(Vec3 *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
-            Vec3 result = (*(Vec3 *)A.data()) * (*(float *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            Vec3 result = (*(float *)A.data()) * (*(Vec3 *)B.data());
-            int cind = rop.add_constant (B.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_div)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (B.is_constant()) {
-        if (is_one(B)) {
-            // R = A / 1   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "div by 1");
-            return 1;
-        }
-        if (is_zero(B) && (B.typespec().is_float() ||
-                           B.typespec().is_triple() || B.typespec().is_int())) {
-            // R = A / 0   =>   R = 0      because of OSL div by zero rule
-            rop.turn_into_assign_zero (op, "div by 0");
-            return 1;
-        }
-    }
-    if (A.is_constant() && B.is_constant()) {
-        int cind = -1;
-        if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() / *(int *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_float() && B.typespec().is_int()) {
-            float result = *(float *)A.data() / *(int *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = *(float *)A.data() / *(float *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_int() && B.typespec().is_float()) {
-            float result = *(int *)A.data() / *(float *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data() / *(Vec3 *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
-            Vec3 result = *(Vec3 *)A.data() / *(float *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            float a = *(float *)A.data();
-            Vec3 result = Vec3(a,a,a) / *(Vec3 *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        }
-        if (cind >= 0) {
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_dot)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-
-    // Dot with (0,0,0) -> 0
-    if ((A.is_constant() && is_zero(A)) || (B.is_constant() && is_zero(B))) {
-        rop.turn_into_assign_zero (op, "dot with 0");
-        return 1;
-    }
-
-    // dot(const,const) -> const
-    if (A.is_constant() && B.is_constant()) {
-        DASSERT (A.typespec().is_triple() && B.typespec().is_triple());
-        float result = (*(Vec3 *)A.data()).dot (*(Vec3 *)B.data());
-        int cind = rop.add_constant (TypeDesc::TypeFloat, &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_neg)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (A.is_constant()) {
-        if (A.typespec().is_int()) {
-            int result =  - *(int *)A.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_float()) {
-            float result =  - *(float *)A.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_triple()) {
-            Vec3 result = - *(Vec3 *)A.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_abs)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (A.is_constant()) {
-        if (A.typespec().is_int()) {
-            int result = std::abs(*(int *)A.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_float()) {
-            float result =  std::abs(*(float *)A.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        } else if (A.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data();
-            result.x = std::abs(result.x);
-            result.y = std::abs(result.y);
-            result.z = std::abs(result.z);
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_eq)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant() && B.is_constant()) {
-        bool val = false;
-        if (equivalent (A.typespec(), B.typespec())) {
-            val = equal_consts (A, B);
-        } else if (A.typespec().is_float() && B.typespec().is_int()) {
-            val = (*(float *)A.data() == *(int *)B.data());
-        } else if (A.typespec().is_int() && B.typespec().is_float()) {
-            val = (*(int *)A.data() == *(float *)B.data());
-        } else {
-            return 0;  // unhandled cases
-        }
-        // Turn the 'eq R A B' into 'assign R X' where X is 0 or 1.
-        static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_neq)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant() && B.is_constant()) {
-        bool val = false;
-        if (equivalent (A.typespec(), B.typespec())) {
-            val = ! equal_consts (A, B);
-        } else if (A.typespec().is_float() && B.typespec().is_int()) {
-            val = (*(float *)A.data() != *(int *)B.data());
-        } else if (A.typespec().is_int() && B.typespec().is_float()) {
-            val = (*(int *)A.data() != *(float *)B.data());
-        } else {
-            return 0;  // unhandled case
-        }
-        // Turn the 'neq R A B' into 'assign R X' where X is 0 or 1.
-        static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_lt)
-{
-    static const int int_zero = 0, int_one = 1;
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
-    if (A.is_constant() && B.is_constant()) {
-        // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
-        bool val = false;
-        if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() < *(float *)B.data());
-        } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() < *(int *)B.data());
-        } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() < *(float *)B.data());
-        } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() < *(int *)B.data());
-        } else {
-            return 0;  // unhandled case
-        }
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_le)
-{
-    static const int int_zero = 0, int_one = 1;
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
-    if (A.is_constant() && B.is_constant()) {
-        // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
-        bool val = false;
-        if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() <= *(float *)B.data());
-        } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() <= *(int *)B.data());
-        } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() <= *(float *)B.data());
-        } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() <= *(int *)B.data());
-        } else {
-            return 0;  // unhandled case
-        }
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_gt)
-{
-    static const int int_zero = 0, int_one = 1;
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
-    if (A.is_constant() && B.is_constant()) {
-        // Turn the 'gt R A B' into 'assign R X' where X is 0 or 1.
-        bool val = false;
-        if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() > *(float *)B.data());
-        } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() > *(int *)B.data());
-        } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() > *(float *)B.data());
-        } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() > *(int *)B.data());
-        } else {
-            return 0;  // unhandled case
-        }
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_ge)
-{
-    static const int int_zero = 0, int_one = 1;
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
-    if (A.is_constant() && B.is_constant()) {
-        // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
-        bool val = false;
-        if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() >= *(float *)B.data());
-        } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() >= *(int *)B.data());
-        } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() >= *(float *)B.data());
-        } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() >= *(int *)B.data());
-        } else {
-            return 0;  // unhandled case
-        }
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_or)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant() && B.is_constant()) {
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
-        bool val = *(int *)A.data() || *(int *)B.data();
-        // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
-        static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_and)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant() && B.is_constant()) {
-        // Turn the 'and R A B' into 'assign R X' where X is 0 or 1.
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
-        bool val = *(int *)A.data() && *(int *)B.data();
-        static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant (TypeDesc::TypeInt,
-                                     val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_if)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &C (*rop.inst()->argsymbol(op.firstarg()+0));
-    if (C.is_constant()) {
-        int result = -1;   // -1 == we don't know
-        if (C.typespec().is_int())
-            result = (((int *)C.data())[0] != 0);
-        else if (C.typespec().is_float())
-            result = (((float *)C.data())[0] != 0.0f);
-        else if (C.typespec().is_triple())
-            result = (((Vec3 *)C.data())[0] != Vec3(0,0,0));
-        else if (C.typespec().is_string()) {
-            ustring s = ((ustring *)C.data())[0];
-            result = (s.length() != 0);
-        }
-        int changed = 0;
-        if (result > 0) {
-            changed += rop.turn_into_nop (op.jump(0), op.jump(1), "elide 'else'");
-            changed += rop.turn_into_nop (op, "elide 'else'");
-        } else if (result == 0) {
-            changed += rop.turn_into_nop (opnum, op.jump(0), "elide 'if'");
-        }
-        return changed;
-    }
-    return 0;
-}
-
-
-
-// Is an array known to have all elements having the same value?
-static bool
-array_all_elements_equal (const Symbol &s)
-{
-    TypeDesc t = s.typespec().simpletype();
-    size_t size = t.elementsize();
-    size_t n = t.numelements();
-    for (size_t i = 1;  i < n;  ++i)
-        if (memcmp ((const char *)s.data(), (const char *)s.data()+i*size, size))
-            return false;
-    return true;
-}
-
-
-
-DECLFOLDER(constfold_aref)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Index (*rop.inst()->argsymbol(op.firstarg()+2));
-    DASSERT (A.typespec().is_array() && Index.typespec().is_int());
-
-    // Try to turn R=A[I] into R=C if A and I are const.
-    if (A.is_constant() && Index.is_constant()) {
-        TypeSpec elemtype = A.typespec().elementtype();
-        ASSERT (equivalent(elemtype, R.typespec()));
-        int index = *(int *)Index.data();
-        if (index < 0 || index >= A.typespec().arraylength()) {
-            // We are indexing a const array out of range.  But this
-            // isn't necessarily a reportable error, because it may be a
-            // code path that will never be taken.  Punt -- don't
-            // optimize this op, leave it to the execute-time range
-            // check to catch, if indeed it is a problem.
-            return 0;
-        }
-        ASSERT (index < A.typespec().arraylength());
-        int cind = rop.add_constant (elemtype,
-                        (char *)A.data() + index*elemtype.simpletype().size());
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    // Even if the index isn't constant, we still know the answer if all
-    // the array elements are equal!
-    if (A.is_constant() && array_all_elements_equal(A)) {
-        TypeSpec elemtype = A.typespec().elementtype();
-        ASSERT (equivalent(elemtype, R.typespec()));
-        int cind = rop.add_constant (elemtype, (char *)A.data());
-        rop.turn_into_assign (op, cind, "aref of elements-equal array");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_arraylength)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    ASSERT (R.typespec().is_int() && A.typespec().is_array());
-
-    // Try to turn R=arraylength(A) into R=C if the array length is known
-    int len = A.typespec().arraylength();
-    if (len > 0) {
-        int cind = rop.add_constant (TypeSpec(TypeDesc::INT), &len);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_compassign)
-{
-    // Component assignment
-    Opcode &op (rop.inst()->ops()[opnum]);
-    // Symbol *A (rop.inst()->argsymbol(op.firstarg()+0));
-    // We are obviously not assigning to a constant, but it could be
-    // that at this point in our current block, the value of A is known,
-    // and that will show up as a block alias.
-    int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
-    Symbol *AA = rop.inst()->symbol(Aalias);
-    Symbol *I (rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
-    // N.B. symbol returns NULL if Aalias is < 0
-
-    // Try to turn A[I]=C into nop if A[I] already is C
-    // The optimization we are making here is that if the current (at
-    // this point in this block) value of A is known (revealed by A's
-    // block alias, AA, being a constant), and we are assigning the same
-    // value it already has, then this is a nop.
-    if (I->is_constant() && C->is_constant() && AA && AA->is_constant()) {
-        ASSERT (AA->typespec().is_triple() &&
-                (C->typespec().is_float() || C->typespec().is_int()));
-        int index = *(int *)I->data();
-        if (index < 0 || index >= 3) {
-            // We are indexing a const triple out of range.  But this
-            // isn't necessarily a reportable error, because it may be a
-            // code path that will never be taken.  Punt -- don't
-            // optimize this op, leave it to the execute-time range
-            // check to catch, if indeed it is a problem.
-            return 0;
-        }
-        float *aa = (float *)AA->data();
-        float c = C->typespec().is_int() ? *(int *)C->data()
-                                         : *(float *)C->data();
-        if (aa[index] == c) {
-            rop.turn_into_nop (op, "useless compassign");
-            return 1;
-        }
-        // FIXME -- we can take this one step further, by giving A a new
-        // alias that is the modified constant.
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_compref)
-{
-    // Component reference
-    // Try to turn R=A[I] into R=C if A and I are const.
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Index (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant() && Index.is_constant()) {
-        ASSERT (A.typespec().is_triple() && Index.typespec().is_int());
-        int index = *(int *)Index.data();
-        if (index < 0 || index >= 3) {
-            // We are indexing a const triple out of range.  But this
-            // isn't necessarily a reportable error, because it may be a
-            // code path that will never be taken.  Punt -- don't
-            // optimize this op, leave it to the execute-time range
-            // check to catch, if indeed it is a problem.
-            return 0;
-        }
-        int cind = rop.add_constant (TypeDesc::TypeFloat, (float *)A.data() + index);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_strlen)
-{
-    // Try to turn R=strlen(s) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (S.is_constant()) {
-        ASSERT (S.typespec().is_string());
-        int result = (int) (*(ustring *)S.data()).length();
-        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_endswith)
-{
-    // Try to turn R=endswith(s,e) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &E (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (S.is_constant() && E.is_constant()) {
-        ASSERT (S.typespec().is_string() && E.typespec().is_string());
-        ustring s = *(ustring *)S.data();
-        ustring e = *(ustring *)E.data();
-        size_t elen = e.length(), slen = s.length();
-        int result = 0;
-        if (elen <= slen)
-            result = (strncmp (s.c_str()+slen-elen, e.c_str(), elen) == 0);
-        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_concat)
-{
-    // Try to turn R=concat(s,...) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    ustring result;
-    for (int i = 1;  i < op.nargs();  ++i) {
-        Symbol &S (*rop.inst()->argsymbol(op.firstarg()+i));
-        if (! S.is_constant())
-            return 0;  // something non-constant
-        ustring old = result;
-        ustring s = *(ustring *)S.data();
-        result = ustring::format ("%s%s", old.c_str() ? old.c_str() : "",
-                                  s.c_str() ? s.c_str() : "");
-    }
-    // If we made it this far, all args were constants, and the
-    // concatenation is in result.
-    int cind = rop.add_constant (TypeDesc::TypeString, &result);
-    rop.turn_into_assign (op, cind, "const fold");
-    return 1;
-}
-
-
-
-DECLFOLDER(constfold_format)
-{
-    // Try to turn R=format(fmt,...) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Format (*rop.opargsym(op, 1));
-    ustring fmt = *(ustring *)Format.data();
-    std::vector<void *> argptrs;
-    for (int i = 2;  i < op.nargs();  ++i) {
-        Symbol &S (*rop.opargsym(op, i));
-        if (! S.is_constant())
-            return 0;  // something non-constant
-        argptrs.push_back (S.data());
-    }
-    // If we made it this far, all args were constants, and the
-    // arg data pointers are in argptrs[].
-
-    // It's actually a HUGE pain to make this work generally, because
-    // the Strutil::vformat we use in the runtime implementation wants a
-    // va_list, but we just have raw pointers at this point.  No matter,
-    // let's just make it work for several simple common cases.
-    if (op.nargs() == 3) {
-        // Just result=format(fmt, one_argument)
-        Symbol &Val (*rop.opargsym(op, 2));
-        if (Val.typespec().is_string()) {
-            // Single %s
-            ustring result = ustring::format (fmt.c_str(),
-                                              ((ustring *)Val.data())->c_str());
-            int cind = rop.add_constant (TypeDesc::TypeString, &result);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_regex_search)
-{
-    // Try to turn R=regex_search(subj,reg) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Subj (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Reg (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (op.nargs() == 3 // only the 2-arg version without search results
-          && Subj.is_constant() && Reg.is_constant()) {
-        DASSERT (Subj.typespec().is_string() && Reg.typespec().is_string());
-        const ustring &s (*(ustring *)Subj.data());
-        const ustring &r (*(ustring *)Reg.data());
-        boost::regex reg (r.string());
-        int result = boost::regex_search (s.string(), reg);
-        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-inline float clamp (float x, float minv, float maxv)
-{
-    if (x < minv) return minv;
-    else if (x > maxv) return maxv;
-    else return x;
-}
-
-
-
-DECLFOLDER(constfold_clamp)
-{
-    // Try to turn R=clamp(x,min,max) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Min (*rop.inst()->argsymbol(op.firstarg()+2));
-    Symbol &Max (*rop.inst()->argsymbol(op.firstarg()+3));
-    if (X.is_constant() && Min.is_constant() && Max.is_constant() &&
-        equivalent(X.typespec(), Min.typespec()) &&
-        equivalent(X.typespec(), Max.typespec()) &&
-        (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        const float *min = (const float *) Min.data();
-        const float *max = (const float *) Max.data();
-        float result[3];
-        result[0] = clamp (x[0], min[0], max[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = clamp (x[1], min[1], max[1]);
-            result[2] = clamp (x[2], min[2], max[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_min)
-{
-    // Try to turn R=min(x,y) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (X.is_constant() && Y.is_constant() &&
-        equivalent(X.typespec(), Y.typespec()) &&
-        (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        const float *y = (const float *) Y.data();
-        float result[3];
-        result[0] = std::min (x[0], y[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = std::min (x[1], y[1]);
-            result[2] = std::min (x[2], y[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_max)
-{
-    // Try to turn R=max(x,y) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (X.is_constant() && Y.is_constant() &&
-        equivalent(X.typespec(), Y.typespec()) &&
-        (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        const float *y = (const float *) Y.data();
-        float result[3];
-        result[0] = std::max (x[0], y[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = std::max (x[1], y[1]);
-            result[2] = std::max (x[2], y[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_sqrt)
-{
-    // Try to turn R=sqrt(x) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (X.is_constant() &&
-          (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        float result[3];
-        result[0] = sqrtf (std::max (0.0f, x[0]));
-        if (X.typespec().is_triple()) {
-            result[1] = sqrtf (std::max (0.0f, x[1]));
-            result[2] = sqrtf (std::max (0.0f, x[2]));
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_floor)
-{
-    // Try to turn R=floor(x) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (X.is_constant() &&
-          (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        float result[3];
-        result[0] = floorf (x[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = floorf (x[1]);
-            result[2] = floorf (x[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_ceil)
-{
-    // Try to turn R=ceil(x) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (X.is_constant() &&
-          (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        float result[3];
-        result[0] = ceilf (x[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = ceilf (x[1]);
-            result[2] = ceilf (x[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_pow)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
-
-    if (Y.is_constant() && is_zero(Y)) {
-        // x^0 == 1
-        rop.turn_into_assign_one (op, "pow^0");
-        return 1;
-    }
-    if (Y.is_constant() && is_one(Y)) {
-        // x^1 == x
-        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1), "pow^1");
-        return 1;
-    }
-    if (X.is_constant() && is_zero(X)) {
-        // 0^y == 0
-        rop.turn_into_assign_zero (op, "pow 0^x");
-        return 1;
-    }
-    if (X.is_constant() && Y.is_constant() && Y.typespec().is_float() &&
-            (X.typespec().is_float() || X.typespec().is_triple())) {
-        // if x and y are both constant, pre-compute x^y
-        const float *x = (const float *) X.data();
-        float y = *(const float *) Y.data();
-        int ncomps = X.typespec().is_triple() ? 3 : 1;
-        float result[3];
-        for (int i = 0;  i < ncomps;  ++i)
-            result[i] = safe_pow (x[i], y);
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    if (Y.is_constant() && Y.typespec().is_float() &&
-            *(const float *)Y.data() == 2.0f) {
-        // Turn x^2 into x*x, even if x is not constant
-        static ustring kmul("mul");
-        op.reset (kmul, 2);
-        rop.inst()->args()[op.firstarg()+2] = rop.inst()->args()[op.firstarg()+1];
-        return 1;
-    }
-
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_triple)
-{
-    // Turn R=triple(a,b,c) into R=C if the components are all constants
-    Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 4 || op.nargs() == 5); 
-    bool using_space = (op.nargs() == 5);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
-//    Symbol &Space (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1+using_space));
-    Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2+using_space));
-    Symbol &C (*rop.inst()->argsymbol(op.firstarg()+3+using_space));
-    if (A.is_constant() && A.typespec().is_float() &&
-            B.is_constant() && C.is_constant() && !using_space) {
-        DASSERT (A.typespec().is_float() && 
-                 B.typespec().is_float() && C.typespec().is_float());
-        float result[3];
-        result[0] = *(const float *)A.data();
-        result[1] = *(const float *)B.data();
-        result[2] = *(const float *)C.data();
-        int cind = rop.add_constant (R.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_matrix)
-{
-    // Try to turn R=matrix(from,to) into R=const if it's an identity
-    // transform or if the result is a non-time-varying matrix.
-    Opcode &op (rop.inst()->ops()[opnum]);
-    if (op.nargs() == 3) {
-        Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
-        Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
-        if (! (From.is_constant() && From.typespec().is_string() &&
-               To.is_constant() && To.typespec().is_string()))
-            return 0;
-        // OK, From and To are constant strings.
-        ustring from = *(ustring *)From.data();
-        ustring to = *(ustring *)To.data();
-        ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
-        if (from == to || (from == Strings::common && to == commonsyn) ||
-            (from == commonsyn && to == Strings::common)) {
-            static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-            int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
-            rop.turn_into_assign (op, cind, "identity matrix");
-            return 1;
-        }
-        // Shader and object spaces will vary from execution to execution,
-        // so we can't optimize those away.
-        if (from == Strings::shader || from == Strings::object ||
-            to == Strings::shader || to == Strings::object)
-            return 0;
-        // But whatever spaces are left *may* be optimizable if they are
-        // not time-varying.
-        RendererServices *rs = rop.shadingsys().renderer();
-        Matrix44 Mfrom, Mto;
-        bool ok = true;
-        if (from == Strings::common || from == commonsyn)
-            Mfrom.makeIdentity ();
-        else
-            ok &= rs->get_matrix (Mfrom, from);
-        if (to == Strings::common || to == commonsyn)
-            Mto.makeIdentity ();
-        else
-            ok &= rs->get_inverse_matrix (Mto, to);
-        if (ok) {
-            // The from-to matrix is known and not time-varying, so just
-            // turn it into a constant rather than calling getmatrix at
-            // execution time.
-            Matrix44 Mresult = Mfrom * Mto;
-            int cind = rop.add_constant (TypeDesc::TypeMatrix, &Mresult);
-            rop.turn_into_assign (op, cind, "const fold");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_getmatrix)
-{
-    // Try to turn R=getmatrix(from,to,M) into R=1,M=const if it's an
-    // identity transform or if the result is a non-time-varying matrix.
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (! (From.is_constant() && To.is_constant()))
-        return 0;
-    // OK, From and To are constant strings.
-    ustring from = *(ustring *)From.data();
-    ustring to = *(ustring *)To.data();
-    ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
-    if (from == to || (from == Strings::common && to == commonsyn) ||
-        (from == commonsyn && to == Strings::common)) {
-        static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-        int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
-        rop.turn_into_assign (op, cind, "identity matrix");
-        return 1;
-    }
-    // Shader and object spaces will vary from execution to execution,
-    // so we can't optimize those away.
-    if (from == Strings::shader || from == Strings::object ||
-        to == Strings::shader || to == Strings::object)
-        return 0;
-    // But whatever spaces are left *may* be optimizable if they are
-    // not time-varying.
-    RendererServices *rs = rop.shadingsys().renderer();
-    Matrix44 Mfrom, Mto;
-    bool ok = true;
-    if (from == Strings::common || from == commonsyn)
-        Mfrom.makeIdentity ();
-    else
-        ok &= rs->get_matrix (Mfrom, from);
-    if (to == Strings::common || to == commonsyn)
-        Mto.makeIdentity ();
-    else
-        ok &= rs->get_inverse_matrix (Mto, to);
-    if (ok) {
-        // The from-to matrix is known and not time-varying, so just
-        // turn it into a constant rather than calling getmatrix at
-        // execution time.
-        int resultarg = rop.inst()->args()[op.firstarg()+0];
-        int dataarg = rop.inst()->args()[op.firstarg()+3];
-        // Make data the first argument
-        rop.inst()->args()[op.firstarg()+0] = dataarg;
-        // Now turn it into an assignment
-        Matrix44 Mresult = Mfrom * Mto;
-        int cind = rop.add_constant (TypeDesc::TypeMatrix, &Mresult);
-        rop.turn_into_assign (op, cind, "known matrix");
-        
-        // Now insert a new instruction that assigns 1 to the
-        // original return result of getmatrix.
-        int one = 1;
-        std::vector<int> args_to_add;
-        args_to_add.push_back (resultarg);
-        args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-        rop.insert_code (opnum, u_assign, args_to_add, true);
-        Opcode &newop (rop.inst()->ops()[opnum]);
-        newop.argwriteonly (0);
-        newop.argread (1, true);
-        newop.argwrite (1, false);
-        return 1;
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_transform)
-{
-    // Try to turn identity transforms into assignments
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &M (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (op.nargs() == 3 && M.typespec().is_matrix() &&
-          M.is_constant() && is_one(M)) {
-        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                              "transform by identity");
-        return 1;
-    }
-    if (op.nargs() == 4) {
-        Symbol &T (*rop.inst()->argsymbol(op.firstarg()+2));
-        if (M.is_constant() && T.is_constant()) {
-            DASSERT (M.typespec().is_string() && T.typespec().is_string());
-            ustring from = *(ustring *)M.data();
-            ustring to = *(ustring *)T.data();
-            ustring syn = rop.shadingsys().commonspace_synonym();
-            if (from == syn)
-                from = Strings::common;
-            if (to == syn)
-                to = Strings::common;
-            if (from == to) {
-                rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+3),
-                                      "transform by identity");
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
-
-
-DECLFOLDER(constfold_setmessage)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+0));
-
-    // Record that the inst set a message
-    if (Name.is_constant()) {
-        ASSERT (Name.typespec().is_string());
-        rop.register_message (*(ustring *)Name.data());
-    } else {
-        rop.register_unknown_message ();
-    }
-
-    return 0;
-}
-
-
-
-
-DECLFOLDER(constfold_getmessage)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    int has_source = (op.nargs() == 4);
-    if (has_source)
-        return 0;    // Don't optimize away sourced getmessage
-    Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+1+(int)has_source));
-    if (Name.is_constant()) {
-        ASSERT (Name.typespec().is_string());
-        if (! rop.message_possibly_set (*(ustring *)Name.data())) {
-            // If the messages could not have been sent, get rid of the
-            // getmessage op, leave the destination value alone, and
-            // assign 0 to the returned status of getmessage.
-            rop.turn_into_assign_zero (op, "impossible getmessage");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-
-
-DECLFOLDER(constfold_gettextureinfo)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
-    Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
-    Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));
-    ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() && 
-            Dataname.typespec().is_string());
-
-    if (Filename.is_constant() && Dataname.is_constant() &&
-          ! Data.typespec().is_array()) {
-        ustring filename = *(ustring *)Filename.data();
-        ustring dataname = *(ustring *)Dataname.data();
-        TypeDesc t = Data.typespec().simpletype();
-        void *mydata = alloca (t.size ());
-        // FIXME(ptex) -- exclude folding of ptex, since these things
-        // can vary per face.
-        int result = rop.texturesys()->get_texture_info (filename, 0,
-                                                         dataname, t, mydata);
-        // Now we turn
-        //       gettextureinfo result filename dataname data
-        // into this for success:
-        //       assign result 1
-        //       assign data [retrieved values]
-        // or, if it failed:
-        //       assign result 0
-        if (result) {
-            int resultarg = rop.inst()->args()[op.firstarg()+0];
-            int dataarg = rop.inst()->args()[op.firstarg()+3];
-            // If not an array, turn the getattribute into an assignment
-            // to data.  (Punt on arrays -- just let the gettextureinfo
-            // happen as before.)
-            if (! t.arraylen) {
-                // Make data the first argument
-                rop.inst()->args()[op.firstarg()+0] = dataarg;
-                // Now turn it into an assignment
-                int cind = rop.add_constant (Data.typespec(), mydata);
-                rop.turn_into_assign (op, cind, "const fold");
-            }
-
-            // Now insert a new instruction that assigns 1 to the
-            // original return result of gettextureinfo.
-            int one = 1;
-            std::vector<int> args_to_add;
-            args_to_add.push_back (resultarg);
-            args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-            rop.insert_code (opnum, u_assign, args_to_add, true);
-            Opcode &newop (rop.inst()->ops()[opnum]);
-            newop.argwriteonly (0);
-            newop.argread (1, true);
-            newop.argwrite (1, false);
-            return 1;
-        } else {
-#if 1
-            // Return without constant folding gettextureinfo -- because
-            // we WANT the shader to fail and issue error messages at
-            // the appropriate time.
-            (void) rop.texturesys()->geterror (); // eat the error
-            return 0;
-#else
-            rop.turn_into_assign_zero (op, "const fold");
-            // If the get_texture_info failed, bubble error messages
-            // from the texture system back up to the renderer.
-            std::string err = rop.texturesys()->geterror();
-            if (! err.empty())
-                rop.shadingsys().error ("%s", err.c_str());
-            return 1;
-#endif
-        }
-    }
-    return 0;
-}
-
-
-
-// texture -- we can eliminate a lot of superfluous setting of optional
-// parameters to their default values.
-DECLFOLDER(constfold_texture)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    // Symbol &Result = *rop.opargsym (op, 0);
-    // Symbol &Filename = *rop.opargsym (op, 1);
-    // Symbol &S = *rop.opargsym (op, 2);
-    // Symbol &T = *rop.opargsym (op, 3);
-
-    int first_optional_arg = 4;
-    if (op.nargs() > 4 && rop.opargsym(op,4)->typespec().is_float()) {
-        //user_derivs = true;
-        first_optional_arg = 8;
-        DASSERT (rop.opargsym(op,5)->typespec().is_float());
-        DASSERT (rop.opargsym(op,6)->typespec().is_float());
-        DASSERT (rop.opargsym(op,7)->typespec().is_float());
-    }
-
-    TextureOpt opt;  // So we can check the defaults
-    bool swidth_set = false, twidth_set = false, rwidth_set = false;
-    bool sblur_set = false, tblur_set = false, rblur_set = false;
-    bool swrap_set = false, twrap_set = false, rwrap_set = false;
-    bool firstchannel_set = false, fill_set = false, interp_set = false;
-    bool any_elided = false;
-    for (int i = first_optional_arg;  i < op.nargs()-1;  i += 2) {
-        Symbol &Name = *rop.opargsym (op, i);
-        Symbol &Value = *rop.opargsym (op, i+1);
-        DASSERT (Name.typespec().is_string());
-        if (Name.is_constant()) {
-            ustring name = *(ustring *)Name.data();
-            bool elide = false;
-            void *value = Value.is_constant() ? Value.data() : NULL;
-            TypeDesc valuetype = Value.typespec().simpletype();
-
-// Keep from repeating the same tedious code for {s,t,r, }{width,blur,wrap}
-#define CHECK(field,ctype,osltype)                              \
-            if (name == Strings::field && ! field##_set) {      \
-                if (value && osltype == TypeDesc::FLOAT &&      \
-                    valuetype == TypeDesc::INT &&               \
-                    *(int *)value == opt.field)                 \
-                    elide = true;                               \
-                else if (value && valuetype == osltype &&       \
-                      *(ctype *)value == opt.field)             \
-                    elide = true;                               \
-                else                                            \
-                    field##_set = true;                         \
-            }
-#define CHECK_str(field,ctype,osltype)                                  \
-            CHECK (s##field,ctype,osltype)                              \
-            else CHECK (t##field,ctype,osltype)                         \
-            else CHECK (r##field,ctype,osltype)                         \
-            else if (name == Strings::field && !s##field##_set &&       \
-                     ! t##field##_set && ! r##field##_set &&            \
-                     valuetype == osltype) {                            \
-                ctype *v = (ctype *)value;                              \
-                if (v && *v == opt.s##field && *v == opt.t##field       \
-                    && *v == opt.r##field)                              \
-                    elide = true;                                       \
-                else {                                                  \
-                    s##field##_set = true;                              \
-                    t##field##_set = true;                              \
-                    r##field##_set = true;                              \
-                }                                                       \
-            }
-            
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#endif
-            CHECK_str (width, float, TypeDesc::FLOAT)
-            else CHECK_str (blur, float, TypeDesc::FLOAT)
-            else CHECK_str (wrap, ustring, TypeDesc::STRING)
-            else CHECK (firstchannel, int, TypeDesc::INT)
-            else CHECK (fill, float, TypeDesc::FLOAT)
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-#undef CHECK_STR
-#undef CHECK
-
-            // Cases that don't fit the pattern
-            else if (name == Strings::interp && !interp_set) {
-                if (value && valuetype == TypeDesc::STRING &&
-                    tex_interp_to_code(*(ustring *)value) == opt.interpmode)
-                    elide = true;
-                else
-                    interp_set = true;
-            }
-
-            if (elide) {
-                // Just turn the param name into empty string and it will
-                // be skipped.
-                ustring empty;
-                int cind = rop.add_constant (TypeDesc::TypeString, &empty);
-                rop.inst()->args()[op.firstarg()+i] = cind;
-                rop.inst()->args()[op.firstarg()+i+1] = cind;
-                any_elided = true;
-            }
-        }
-    }
-    return any_elided;
-}
-
-
-
-DECLFOLDER(constfold_pointcloud_search)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() >= 5);
-    int result_sym     = rop.oparg (op, 0);
-    Symbol& Filename   = *rop.opargsym (op, 1);
-    Symbol& Center     = *rop.opargsym (op, 2);
-    Symbol& Radius     = *rop.opargsym (op, 3);
-    Symbol& Max_points = *rop.opargsym (op, 4);
-    DASSERT (Filename.typespec().is_string() &&
-             Center.typespec().is_triple() && Radius.typespec().is_float() &&
-             Max_points.typespec().is_int());
-
-    // Can't constant fold unless all the required input args are constant
-    if (! (Filename.is_constant() && Center.is_constant() &&
-           Radius.is_constant() && Max_points.is_constant()))
-        return 0;
-
-    // Handle the optional 'sort' flag, and don't bother constant folding
-    // if sorted results may be required.
-    int attr_arg_offset = 5; // where the opt attrs begin
-    if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
-        // Sorting requested
-        Symbol *Sort = rop.opargsym(op,5);
-        if (! Sort->is_constant() || *(int *)Sort->data())
-            return 0;  // forget it if sorted data might be requested
-        ++attr_arg_offset;
-    }
-    int nattrs = (op.nargs() - attr_arg_offset) / 2;
-
-    // First pass through the optional arguments: gather the query names,
-    // types, and destinations.  If any of the query names are not known
-    // constants, we can't optimize this call so just return.
-    std::vector<ustring> names;
-    std::vector<int> value_args;
-    std::vector<TypeDesc> value_types;
-    for (int i = 0, num_queries = 0; i < nattrs; ++i) {
-        Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
-        Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
-        ASSERT (Name.typespec().is_string());
-        if (!Name.is_constant())
-            return 0;  // unknown optional argument, punt
-        if (++num_queries > max_new_consts_per_fold)
-            return 0;
-        names.push_back (*(ustring *)Name.data());
-        value_args.push_back (rop.oparg (op, attr_arg_offset + i*2 + 1));
-        value_types.push_back (Value.typespec().simpletype());
-    }
-
-    // We're doing a fixed query, so instead of running at every shade,
-    // perform the search now.
-    const int maxconst = 256;  // Max number of points to consider a constant
-    size_t indices[maxconst+1]; // Make room for one more!
-    float distances[maxconst+1];
-    int maxpoints = std::min (maxconst+1, *(int *)Max_points.data());
-    ustring filename = *(ustring *)Filename.data();
-    int count = 0;
-    if (! filename.empty()) {
-        count = rop.renderer()->pointcloud_search (rop.shaderglobals(), filename,
-                             *(Vec3 *)Center.data(), *(float *)Radius.data(),
-                             maxpoints, false, indices, distances, 0);
-        rop.shadingsys().pointcloud_stats (1, 0, count);
-    }
-
-    // If it returns few enough results (256 points or less), just fold
-    // those results into constant arrays.  If more than that, let the
-    // query happen at runtime to avoid tying up a bunch of memory.
-    if (count > maxconst)
-        return 0;
-
-    // If the query returned no matching points, just turn the whole
-    // pointcloud_search call into an assignment of 0 to the 'result'.
-    if (count < 1) {
-        rop.turn_into_assign_zero (op, "Folded constant pointcloud_search lookup");
-        return 1;
-    }
-
-    // From here on out, we are able to fold the query (it returned
-    // results, but not too many).  Start by removing the original
-    // pointcloud_search call itself from the shader code.
-    rop.turn_into_nop (op, "Folded constant pointcloud_search lookup");
-
-    // Now, for each optional individual query, do a pointcloud_get NOW
-    // to retrieve it, create a constant array for the shader to hold
-    // those results, and add to the shader an array copy to move it
-    // from the constant into the place the shader wanted the query
-    // results to go.  (This assignment can be further optimized later
-    // on as well, depending on how it's used.)  If any of the individual
-    // queries fail now, we will return a failed result in the end.
-    std::vector<char> tmp;  // temporary data
-    for (int i = 0; i < nattrs; ++i) {
-        // We had stashed names, data types, and destinations earlier.
-        // Retrieve them now to build a query.
-        if (! names[i])
-            continue;
-        void *const_data = NULL;
-        TypeDesc const_valtype = value_types[i];
-        // How big should the constant arrays be?  Shrink to the size of
-        // the results if they are much smaller.
-        if (count < const_valtype.arraylen/2 && const_valtype.arraylen > 8)
-            const_valtype.arraylen = count;
-        tmp.clear ();
-        tmp.resize (const_valtype.size(), 0);
-        const_data = &tmp[0];
-        if (names[i] == "index") {
-            // "index" is a special case -- it's retrieving the hit point
-            // indices, not data on those hit points.
-            // 
-            // Because the presumed Partio underneath passes indices as
-            // size_t, but OSL only allows int parameters, we need to
-            // copy.  But just cast if size_t and int are the same size.
-            if (sizeof(size_t) == sizeof(int)) {
-                const_data = indices;
-            } else {
-                int *int_indices = (int *)const_data;
-                for (int i = 0;  i < count;  ++i)
-                    int_indices[i] = (int) indices[i];
-            }
-        } else {
-            // Named queries.
-            bool ok = rop.renderer()->pointcloud_get (rop.shaderglobals(),
-                                          filename, indices, count,
-                                          names[i], const_valtype, const_data);
-            rop.shadingsys().pointcloud_stats (0, 1, 0);
-            if (! ok) {
-                count = 0;  // Make it look like an error in the end
-                break;
-            }
-        }
-        // Now make a constant array for those results we just retrieved...
-        int const_array_sym = rop.add_constant (const_valtype, const_data);
-        // ... and add an instruction to copy the constant into the
-        // original destination for the query.
-        std::vector<int> args_to_add;
-        args_to_add.push_back (value_args[i]);
-        args_to_add.push_back (const_array_sym);
-        rop.insert_code (opnum, u_assign, args_to_add, true);
-    }
-
-    // Query results all copied.  The only thing left to do is to assign
-    // status (query result count) to the original "result".
-    std::vector<int> args_to_add;
-    args_to_add.push_back (result_sym);
-    args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
-    rop.insert_code (opnum, u_assign, args_to_add, true);
-    
-    return 1;
-}
-
-
-
-DECLFOLDER(constfold_pointcloud_get)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    // Symbol& Result     = *rop.opargsym (op, 0);
-    Symbol& Filename   = *rop.opargsym (op, 1);
-    Symbol& Indices    = *rop.opargsym (op, 2);
-    Symbol& Count      = *rop.opargsym (op, 3);
-    Symbol& Attr_name  = *rop.opargsym (op, 4);
-    Symbol& Data       = *rop.opargsym (op, 5);
-    if (! (Filename.is_constant() && Indices.is_constant() &&
-           Count.is_constant() && Attr_name.is_constant()))
-        return 0;
-
-    // All inputs are constants -- we can just turn this into an array
-    // assignment.
-
-    ustring filename = *(ustring *)Filename.data();
-    int count = *(int *)Count.data();
-    if (filename.empty() || count < 1) {
-        rop.turn_into_assign_zero (op, "Folded constant pointcloud_get");
-        return 1;
-    }
-
-    if (count >= 1024)  // Too many, don't bother folding
-        return 0;
-
-    // Must transfer to size_t array
-    size_t *indices = ALLOCA (size_t, count);
-    for (int i = 0;  i < count;  ++i)
-        indices[i] = ((int *)Indices.data())[i];
-
-    TypeDesc valtype = Data.typespec().simpletype();
-    std::vector<char> data (valtype.size());
-    int ok = rop.renderer()->pointcloud_get (rop.shaderglobals(), filename,
-                                             indices, count,
-                                             *(ustring *)Attr_name.data(),
-                                             valtype.elementtype(), &data[0]);
-    rop.shadingsys().pointcloud_stats (0, 1, 0);
-
-    rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &ok),
-                          "Folded constant pointcloud_get");
-
-    // Now make a constant array for those results we just retrieved...
-    int const_array_sym = rop.add_constant (valtype, &data[0]);
-    // ... and add an instruction to copy the constant into the
-    // original destination for the query.
-    std::vector<int> args_to_add;
-    args_to_add.push_back (rop.oparg(op,5) /* Data symbol*/);
-    args_to_add.push_back (const_array_sym);
-    rop.insert_code (opnum, u_assign, args_to_add, true);
-    return 1;
-}
-
-
-
-DECLFOLDER(constfold_functioncall)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    // Make a "functioncall" block disappear if the only non-nop statements
-    // inside it is 'return'.
-    bool has_return = false;
-    bool has_anything_else = false;
-    for (int i = opnum+1, e = op.jump(0);  i < e;  ++i) {
-        Opcode &op (rop.inst()->ops()[i]);
-        if (op.opname() == u_return)
-            has_return = true;
-        else if (op.opname() != u_nop)
-            has_anything_else = true;
-    }
-    int changed = 0;
-    if (! has_anything_else) {
-        // Possibly due to optimizations, there's nothing in the
-        // function body but the return.  So just eliminate the whole
-        // block of ops.
-        for (int i = opnum, e = op.jump(0);  i < e;  ++i) {
-            if (rop.inst()->ops()[i].opname() != u_nop) {
-                rop.turn_into_nop (rop.inst()->ops()[i], "empty function");
-                ++changed;
-            }
-        }
-    } else if (! has_return) {
-        // The function is just a straight-up execution, no return
-        // statement, so kill the "function" op.
-        rop.turn_into_nop (op, "'function' not necessary");
-        ++changed;
-    }
-    
-    return changed;
-}
-
-
-
-
-DECLFOLDER(constfold_useparam)
-{
-    // Just eliminate useparam (from shaders compiled with old oslc)
-    Opcode &op (rop.inst()->ops()[opnum]);
-    rop.turn_into_nop (op);
-    return 1;
-}
-
-
-
-DECLFOLDER(constfold_assign)
-{
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol *B (rop.inst()->argsymbol(op.firstarg()+1));
-    int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
-    Symbol *AA = rop.inst()->symbol(Aalias);
-    // N.B. symbol() returns NULL if alias is < 0
-
-    if (B->is_constant() && AA && AA->is_constant()) {
-        // Try to turn A=C into nop if A already is C
-        if (AA->typespec().is_int() && B->typespec().is_int()) {
-            if (*(int *)AA->data() == *(int *)B->data()) {
-                rop.turn_into_nop (op, "reassignment of current value");
-                return 1;
-            }
-        } else if (AA->typespec().is_float() && B->typespec().is_float()) {
-            if (*(float *)AA->data() == *(float *)B->data()) {
-                rop.turn_into_nop (op, "reassignment of current value");
-                return 1;
-            }
-        } else if (AA->typespec().is_float() && B->typespec().is_int()) {
-            if (*(float *)AA->data() == *(int *)B->data()) {
-                rop.turn_into_nop (op, "reassignment of current value");
-                return 1;
-            }
-        } else if (AA->typespec().is_triple() && B->typespec().is_triple()) {
-            if (*(Vec3 *)AA->data() == *(Vec3 *)B->data()) {
-                rop.turn_into_nop (op, "reassignment of current value");
-                return 1;
-            }
-        } else if (AA->typespec().is_triple() && B->typespec().is_float()) {
-            float b = *(float *)B->data();
-            if (*(Vec3 *)AA->data() == Vec3(b,b,b)) {
-                rop.turn_into_nop (op, "reassignment of current value");
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
-
-
-/// For all the instance's parameters, if they can be found to be
-/// effectively constants, make constants for them an alias them to the
-/// constant.
+/// For all the instance's parameters (that can't be overridden by the
+/// geometry), if they can be found to be effectively constants or
+/// globals, make constants for them and alias them to the constant. If
+/// they are connected to an earlier layer's output, if it can determine
+/// that the output will be a constant or global, then sever the
+/// connection and just alias our parameter to that value.
 void
-RuntimeOptimizer::find_constant_params (ShaderGroup &group)
+RuntimeOptimizer::simplify_params ()
 {
     for (int i = inst()->firstparam();  i < inst()->lastparam();  ++i) {
         Symbol *s (inst()->symbol(i));
@@ -2386,22 +735,52 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
             }
         } else if (s->valuesource() == Symbol::ConnectedVal) {
             // It's connected to an earlier layer.  If the output var of
-            // the upstream shader is effectively constant, then so is
-            // this variable.
+            // the upstream shader is effectively constant or a global,
+            // then so is this variable.
             BOOST_FOREACH (Connection &c, inst()->connections()) {
                 if (c.dst.param == i) {
-                    Symbol *srcsym = group[c.srclayer]->symbol(c.src.param);
-                    if (!srcsym->everused() &&
+                    // srcsym is the earlier group's output param, which
+                    // is connected as the input to the param we're
+                    // examining.
+                    ShaderInstance *uplayer = m_group[c.srclayer];
+                    Symbol *srcsym = uplayer->symbol(c.src.param);
+                    if (!srcsym->lockgeom())
+                        continue; // Not if it can be overridden by geometry
+
+                    // Is the source symbol known to be a global, from
+                    // earlier analysis by find_params_holding_globals?
+                    // If so, make sure the global is in this instance's
+                    // symbol table, and alias the parameter to it.
+                    ustringmap_t &g (m_params_holding_globals[c.srclayer]);
+                    ustringmap_t::const_iterator f;
+                    f = g.find (srcsym->name());
+                    if (f != g.end()) {
+                        if (debug() > 1)
+                            std::cout << "Remapping " << inst()->layername()
+                              << "." << s->name() << " because it's connected to "
+                              << uplayer->layername() << "." << srcsym->name()
+                              << ", which is known to be " << f->second << "\n";
+                        make_symbol_room (1);
+                        s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
+                        int ind = add_global (f->second, srcsym->typespec());
+                        global_alias (i, ind);
+                        shadingsys().m_stat_global_connections += 1;
+                        break;
+                    }
+
+                    if (!srcsym->everwritten() &&
                         (srcsym->valuesource() == Symbol::DefaultVal ||
                          srcsym->valuesource() == Symbol::InstanceVal) &&
                         !srcsym->has_init_ops()) {
                         make_symbol_room (1);
                         s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
-                        int cind = add_constant (s->typespec(), srcsym->data());
+                        int cind = add_constant (s->typespec(), srcsym->data(),
+                                                 srcsym->typespec().simpletype());
                         // Alias this symbol to the new const
                         global_alias (i, cind);
                         make_param_use_instanceval (s, "- upstream layer sets it to a constant");
-                        replace_param_value (s, srcsym->data());
+                        replace_param_value (s, srcsym->data(), srcsym->typespec());
+                        shadingsys().m_stat_const_connections += 1;
                         break;
                     }
                 }
@@ -2412,8 +791,48 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
 
 
 
+/// For all the instance's parameters, if they are simply assigned globals,
+/// record that in m_params_holding_globals.
+void
+RuntimeOptimizer::find_params_holding_globals ()
+{
+    FOREACH_PARAM (Symbol &s, inst()) {
+        // Skip if this isn't a shader output parameter that's connected
+        // to a later layer.
+        if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam)
+            continue;  // Skip non-params
+        if (!s.connected_down())
+            continue;  // Skip unconnected params -- who cares
+        if (s.valuesource() != Symbol::DefaultVal)
+            continue;  // Skip -- must be connected or an instance value
+        if (s.firstwrite() < 0 || s.firstwrite() != s.lastwrite())
+            continue;  // Skip -- written more than once
+
+        int opnum = s.firstwrite();
+        Opcode &op (inst()->ops()[opnum]);
+        if (op.opname() != u_assign || ! op_is_unconditionally_executed(opnum))
+            continue;   // Not a simple assignment unconditionally performed
+
+        // what s is assigned from (fully dealiased)
+        Symbol *src = inst()->symbol (dealias_symbol (oparg (op, 1), opnum));
+
+        if (src->symtype() != SymTypeGlobal)
+            continue;   // only interested in global assignments
+
+        if (debug() > 1)
+            std::cout << "I think that " << inst()->layername() << "."
+                      << s.name() << " will always be " << src->name() << "\n";
+        m_params_holding_globals[layer()][s.name()] = src->name();
+    }
+}
+
+
+
 /// Set up m_in_conditional[] to be true for all ops that are inside of
-/// conditionals, false for all unconditionally-executed ops.
+/// conditionals, false for all unconditionally-executed ops, m_in_loop[]
+/// to be true for all ops that are inside a loop, and m_first_return
+/// to be the op number of the first return/exit statement (or code.size()
+/// if there is no return/exit statement).
 void
 RuntimeOptimizer::find_conditionals ()
 {
@@ -2423,6 +842,7 @@ RuntimeOptimizer::find_conditionals ()
     m_in_conditional.resize (code.size(), false);
     m_in_loop.clear ();
     m_in_loop.resize (code.size(), false);
+    m_first_return = (int)code.size();
     for (int i = 0;  i < (int)code.size();  ++i) {
         if (code[i].jump(0) >= 0) {
             std::fill (m_in_conditional.begin()+i,
@@ -2434,6 +854,8 @@ RuntimeOptimizer::find_conditionals ()
                            m_in_loop.begin()+code[i].farthest_jump(), true);
             }
         }
+        if (code[i].opname() == Strings::op_exit)
+            m_first_return = std::min (m_first_return, i);
     }
 }
 
@@ -2612,6 +1034,15 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 
 
 bool
+RuntimeOptimizer::is_renderer_output (ustring name) const
+{
+    const std::vector<ustring> &aovs (shadingsys().m_renderer_outputs);
+    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
+}
+
+
+
+bool
 RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 {
     // Try to figure out if this symbol is completely unused after this
@@ -2623,9 +1054,14 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
     // Params may be read afterwards if connected to a downstream
     // layer or if "elide_unconnected_outputs" is turned off.
-    if ((A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) &&
-        (A->connected_down() || ! m_opt_elide_unconnected_outputs))
-        return false;
+    if (A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) {
+        if (! m_opt_elide_unconnected_outputs)
+            return false;   // Asked not do do this optimization
+        if (A->connected_down())
+            return false;   // Connected to something downstream
+        if (is_renderer_output (A->name()))
+            return false;   // This is a renderer output -- don't cull it
+    }
 
     // For all else, check if it's either never read at all in this
     // layer or it's only read earlier and we're not part of a loop
@@ -2635,31 +1071,62 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
 
 void
-RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata)
+RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata,
+                                       const TypeSpec &newdata_type)
 {
     ASSERT (R->symtype() == SymTypeParam || R->symtype() == SymTypeOutputParam);
     TypeDesc Rtype = R->typespec().simpletype();
-    void *Rdefault = NULL;
     DASSERT (R->dataoffset() >= 0);
-#ifdef DEBUG
-    int nvals = int(Rtype.aggregate * Rtype.numelements());
-#endif
-    if (Rtype.basetype == TypeDesc::FLOAT) {
-        Rdefault = &inst()->m_fparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+nvals) <= (int)inst()->m_fparams.size());
+    int Rnvals = int(Rtype.aggregate * Rtype.numelements());
+    TypeDesc Ntype = newdata_type.simpletype();
+    if (Ntype == TypeDesc::UNKNOWN)
+        Ntype = Rtype;
+    int Nnvals = int(Ntype.aggregate * Ntype.numelements());
+    if (Rtype.basetype == TypeDesc::FLOAT &&
+          Ntype.basetype == TypeDesc::FLOAT) {
+        float *Rdefault = &inst()->m_fparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
+        if (Rnvals == Nnvals)   // straight copy
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const float *)newdata)[i];
+        else if (Nnvals == 1)  // scalar -> aggregate, by replication
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const float *)newdata)[0];
+        else {
+            ASSERT (0 && "replace_param_value: unexpected types");
+        }
     }
-    else if (Rtype.basetype == TypeDesc::INT) {
-        Rdefault = &inst()->m_iparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+nvals) <= (int)inst()->m_iparams.size());
+    else if (Rtype.basetype == TypeDesc::FLOAT &&
+             Ntype.basetype == TypeDesc::INT) {
+        // Careful, this is an int-to-float conversion
+        float *Rdefault = &inst()->m_fparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
+        if (Rnvals == Nnvals)   // straight copy
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const int *)newdata)[i];
+        else if (Nnvals == 1)  // scalar -> aggregate, by replication
+            for (int i = 0;  i < Rnvals;  ++i)
+                Rdefault[i] = ((const int *)newdata)[0];
+        else {
+            ASSERT (0 && "replace_param_value: unexpected types");
+        }
     }
-    else if (Rtype.basetype == TypeDesc::STRING) {
-        Rdefault = &inst()->m_sparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+nvals) <= (int)inst()->m_sparams.size());
+    else if (Rtype.basetype == TypeDesc::INT &&
+             Ntype.basetype == TypeDesc::INT && Rnvals == Nnvals) {
+        int *Rdefault = &inst()->m_iparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_iparams.size());
+        for (int i = 0;  i < Rnvals;  ++i)
+            Rdefault[i] = ((const int *)newdata)[i];
+    }
+    else if (Rtype.basetype == TypeDesc::STRING &&
+             Ntype.basetype == TypeDesc::STRING && Rnvals == Nnvals) {
+        ustring *Rdefault = &inst()->m_sparams[R->dataoffset()];
+        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_sparams.size());
+        for (int i = 0;  i < Rnvals;  ++i)
+            Rdefault[i] = ((const ustring *)newdata)[i];
     } else {
-        ASSERT (0 && "replace_param_value: unexpected type");
+        ASSERT (0 && "replace_param_value: unexpected types");
     }
-    DASSERT (Rdefault != NULL);
-    memcpy (Rdefault, newdata, Rtype.size());
 }
 
 
@@ -2695,7 +1162,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, const char *why)
     // If it isn't a connection or computed, it doesn't need derivs.
     R->has_derivs (false);
 
-    // Point the symbol's data pointer to its param default and make it
+    // Point the symbol's data pointer to its instance value
     // uniform
     void *Rdefault = NULL;
     DASSERT (R->dataoffset() >= 0);
@@ -2755,7 +1222,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // default value entirely and get rid of the assignment.
         if (R->firstread() > opnum) {
             make_param_use_instanceval (R, "- written once, with a constant, before any reads");
-            replace_param_value (R, A->data());
+            replace_param_value (R, A->data(), A->typespec());
             turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
             return true;
         }
@@ -2870,9 +1337,15 @@ public:
     bool operator() (const Symbol &sym) const {
         if (sym.symtype() == SymTypeParam)
             return (sym.lastuse() < sym.initend()) && !sym.connected_down();
-        if (sym.symtype() == SymTypeOutputParam)
-            return m_rop.opt_elide_unconnected_outputs() &&
-                   (sym.lastuse() < sym.initend()) && !sym.connected_down();
+        if (sym.symtype() == SymTypeOutputParam) {
+            if (! m_rop.opt_elide_unconnected_outputs())
+                return false;   // Asked not to do this optimization
+            if (sym.connected_down())
+                return false;   // Connected to something downstream
+            if (m_rop.is_renderer_output (sym.name()))
+                return false;   // This is a renderer output
+            return (sym.lastuse() < sym.initend());
+        }
         return ! sym.everused();  // all other symbol types
     }
     bool operator() (int symid) const {
@@ -3040,20 +1513,136 @@ RuntimeOptimizer::remove_unused_params ()
 
 
 
+/// Find situations where an output is simply a copy of a connected
+/// input, and eliminate the middleman.
+int
+RuntimeOptimizer::eliminate_middleman ()
+{
+    int changed = 0;
+    FOREACH_PARAM (Symbol &s, inst()) {
+        // Skip if this isn't a shader output parameter that's connected
+        // to a later layer.
+        if (s.symtype() != SymTypeOutputParam || !s.connected_down())
+            continue;
+        // If it's written more than once, or has init ops, don't bother
+        if (s.firstwrite() != s.lastwrite() || s.has_init_ops())
+            continue;
+        // Ok, s is a connected output, written only once, without init ops.
+
+        // If the one time it's written isn't a simple assignment, never mind
+        int opnum = s.firstwrite();
+        Opcode &op (inst()->ops()[opnum]);
+        if (op.opname() != u_assign)
+            continue;   // only consider direct assignments
+        // Now what's it assigned from?  If it's not a connected
+        // parameter, or if it's not an equivalent data type, or if it's
+        // a closure, never mind.
+        int src_index = oparg (op, 1);
+        Symbol *src = opargsym (op, 1);
+
+        if (! (src->symtype() == SymTypeParam && src->connected()) ||
+              ! equivalent(src->typespec(), s.typespec()) ||
+              s.typespec().is_closure())
+            continue;
+
+        // Only works if the assignment is unconditional.  Needs to not
+        // be in a conditional or loop, and not have any exit or return
+        // statement before the assignment.
+        if (! op_is_unconditionally_executed (opnum))
+            continue;
+
+        // OK, output param 's' is simply and unconditionally assigned
+        // the value of the equivalently-typed input parameter 'src'.
+        // Doctor downstream shaders that use s to connect directly to
+        // src.
+
+        // First, find what src is connected to.
+        int upstream_layer = -1, upstream_symbol = -1;
+        for (int i = 0, e = inst()->nconnections();  i < e;  ++i) {
+            const Connection &c = inst()->connection(i);
+            if (c.dst.param == src_index &&  // the connection we want
+                c.src.is_complete() && c.dst.is_complete() &&
+                equivalent(c.src.type,c.dst.type) &&
+                !c.src.type.is_closure() && ! c.dst.type.is_closure()) {
+                upstream_layer = c.srclayer;
+                upstream_symbol = c.src.param;
+                break;
+            }
+        }
+        if (upstream_layer < 0 || upstream_symbol < 0)
+            continue;  // not a complete connection, forget it
+            
+        ShaderInstance *upinst = group()[upstream_layer];
+        if (debug() > 1)
+            std::cout << "Noticing that " << inst()->layername() << "." 
+                      << s.name() << " merely copied from " << src->name() 
+                      << ", connected from " << upinst->layername() << "."
+                      << upinst->symbol(upstream_symbol)->name() << "\n";
+
+        // Find all the downstream connections of s, make them 
+        // connections to src.
+        int s_index = inst()->symbolindex(&s);
+        for (int laynum = layer()+1;  laynum < group().nlayers();  ++laynum) {
+            ShaderInstance *downinst = group()[laynum];
+            for (int i = 0, e = downinst->nconnections();  i < e;  ++i) {
+                Connection &c = downinst->connections()[i];
+                if (c.srclayer == layer() && // connected to our layer
+                    c.src.param == s_index && // connected to s
+                    c.src.is_complete() && c.dst.is_complete() &&
+                    equivalent(c.src.type,c.dst.type)) {
+                    // just change the connection's referrant to the
+                    // upstream source of s.
+                    c.srclayer = upstream_layer;
+                    c.src.param = upstream_symbol;
+                    ++changed;
+                    shadingsys().m_stat_middlemen_eliminated += 1;
+                    if (debug() > 1) {
+                        const Symbol *dsym = downinst->symbol(c.dst.param);
+                        if (! dsym)
+                            dsym = downinst->mastersymbol(c.dst.param);
+                        const Symbol *usym = upinst->symbol(upstream_symbol);
+                        if (! usym)
+                            usym = downinst->mastersymbol(upstream_symbol);
+                        ASSERT (dsym && usym);
+                        std::cout << "Removed " << inst()->layername() << "."
+                                  << s.name() << " middleman for " 
+                                  << downinst->layername() << "."
+                                  << dsym->name() << ", now connected to "
+                                  << upinst->layername() << "."
+                                  << usym->name() << "\n";
+                    }
+                }
+            }
+        }
+    }
+    return changed;
+}
+
+
+
 void
 RuntimeOptimizer::optimize_instance ()
 {
+    // If "opt_layername" attribute is set, only optimize the named layer
+    if (shadingsys().m_opt_layername &&
+        shadingsys().m_opt_layername != inst()->layername())
+        return;
+
     // Make a list of the indices of all constants.
     for (int i = 0, e = (int)inst()->symbols().size();  i < e;  ++i)
         if (inst()->symbol(i)->symtype() == SymTypeConst)
             m_all_consts.push_back (i);
 
-    // Turn all geom-locked parameters into constants.
-    if (optimize() >= 2 && m_opt_constant_param) {
-        find_constant_params (group());
+    // Turn all parameters with instance or default values, and which
+    // cannot be overridden by geometry values, into constants or
+    // aliases for globals.  Also turn connections from earlier layers'
+    // outputs that are known to be constants or globals into constants
+    // or global aliases without any connection.
+    if (optimize() >= 2 && m_opt_simplify_param) {
+        simplify_params ();
     }
 
-#ifdef DEBUG
+#ifndef NDEBUG
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
@@ -3068,16 +1657,16 @@ RuntimeOptimizer::optimize_instance ()
     // Try to fold constants.  We take several passes, until we get to
     // the point that not much is improving.  It rarely goes beyond 3-4
     // passes, but we have a hard cutoff at 10 just to be sure we don't
-    // ever get into an infinite loop from an unforseen cycle.  where we
+    // ever get into an infinite loop from an unforseen cycle where we
     // end up inadvertently transforming A => B => A => etc.
     int totalchanged = 0;
-    int reallydone = 0;   // Force one pass after we think we're done
-    for (int pass = 0;  pass < 10;  ++pass) {
+    int reallydone = 0;   // Force a few passes after we think we're done
+    for (m_pass = 0;  m_pass < 10;  ++m_pass) {
 
         // Once we've made one pass (and therefore called
         // mark_outgoing_connections), we may notice that the layer is
         // unused, and therefore can stop doing work to optimize it.
-        if (pass != 0 && inst()->unused())
+        if (m_pass != 0 && inst()->unused())
             break;
 
         // Track basic blocks and conditional states
@@ -3091,15 +1680,34 @@ RuntimeOptimizer::optimize_instance ()
         m_local_unknown_message_sent = false;
         m_local_messages_sent.clear ();
 
+        // Figure out which params are just aliases for globals (only
+        // necessary to do once, on the first pass).
+        if (m_pass == 0 && optimize() >= 2)
+            find_params_holding_globals ();
+
         int changed = 0;
         int lastblock = -1;
         size_t num_ops = inst()->ops().size();
-        for (int opnum = 0;  opnum < (int)num_ops;  ++opnum) {
+        int skipops = 0;   // extra inserted ops to skip over
+        for (int opnum = 0;  opnum < (int)num_ops;  opnum += 1) {
             // Before getting a reference to this op, be sure that a space
             // is reserved at the end in case a folding routine inserts an
             // op.  That ensures that the reference won't be invalid.
             inst()->ops().reserve (num_ops+1);
             Opcode &op (inst()->ops()[opnum]);
+
+            if (skipops) {
+                // If a previous optimization inserted ops and told us
+                // to skip over the new ones, we still need to unalias
+                // any symbols written by this op, but otherwise skip
+                // all subsequent optimizations until we run down the
+                // skipops counter.
+                block_unalias_written_args (op);
+                ASSERT (lastblock == m_bblockids[opnum] &&
+                        "this should not be a new basic block");
+                --skipops;
+                continue;   // Move along to the next op, no opimization here
+            }
 
             // Things to do if we've just moved to a new basic block
             if (lastblock != m_bblockids[opnum]) {
@@ -3139,17 +1747,17 @@ RuntimeOptimizer::optimize_instance ()
             if (optimize() >= 2 && m_opt_constant_fold) {
                 const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
                 if (opd && opd->folder) {
+                    size_t old_num_ops = inst()->ops().size();
                     changed += (*opd->folder) (*this, opnum);
                     // Re-check num_ops in case the folder inserted something
                     num_ops = inst()->ops().size();
+                    skipops = num_ops - old_num_ops;
                 }
             }
 
             // Clear local block aliases for any args that were written
             // by this op
-            for (int i = 0, e = op.nargs();  i < e;  ++i)
-                if (op.argwrite(i))
-                    block_unalias (inst()->arg(op.firstarg()+i));
+            block_unalias_written_args (op);
 
             // Get rid of an 'if' if it contains no statements to execute
             if (optimize() >= 2 && op.opname() == u_if &&
@@ -3243,7 +1851,6 @@ RuntimeOptimizer::optimize_instance ()
             // Peephole optimization involving pair of instructions
             if (optimize() >= 2 && m_opt_peephole)
                 changed += peephole2 (opnum);
-
         }
 
         // Now that we've rewritten the code, we need to re-track the
@@ -3252,6 +1859,15 @@ RuntimeOptimizer::optimize_instance ()
 
         // Recompute which of our params have downstream connections.
         mark_outgoing_connections ();
+
+        // Find situations where an output is simply a copy of a connected
+        // input, and eliminate the middleman.
+        if (optimize() >= 2 && m_opt_middleman) {
+            int c = eliminate_middleman ();
+            if (c)
+                mark_outgoing_connections ();
+            changed += c;
+        }
 
         // Elide unconnected parameters that are never read.
         changed += remove_unused_params ();
@@ -3301,6 +1917,24 @@ RuntimeOptimizer::optimize_instance ()
 
 
 void
+RuntimeOptimizer::resolve_isconnected ()
+{
+    for (int i = 0, n = (int)inst()->ops().size();  i < n;  ++i) {
+        Opcode &op (inst()->ops()[i]);
+        if (op.opname() == u_isconnected) {
+            inst()->make_symbol_room (1);
+            SymbolPtr s = inst()->argsymbol (op.firstarg() + 1);
+            if (s->connected())
+                turn_into_assign_one (op, "resolve isconnected() [1]");
+            else
+                turn_into_assign_zero (op, "resolve isconnected() [0]");
+        }
+    }
+}
+
+
+
+void
 RuntimeOptimizer::track_variable_lifetimes (const SymbolPtrVec &allsymptrs)
 {
     SymbolPtrVec oparg_ptrs;
@@ -3326,6 +1960,8 @@ RuntimeOptimizer::track_variable_lifetimes ()
 }
 
 
+// This has O(n^2) memory usage, so only for debugging
+//#define DEBUG_SYMBOL_DEPENDENCIES
 
 // Add to the dependency map that "symbol A depends on symbol B".
 void
@@ -3334,11 +1970,13 @@ RuntimeOptimizer::add_dependency (SymDependency &dmap, int A, int B)
     ASSERT (A < (int)inst()->symbols().size());
     ASSERT (B < (int)inst()->symbols().size());
     dmap[A].insert (B);
+
+#ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Unification -- make all of B's dependencies be dependencies of A.
     BOOST_FOREACH (int r, dmap[B])
         dmap[A].insert (r);
+#endif
 }
-
 
 
 void
@@ -3363,6 +2001,25 @@ RuntimeOptimizer::syms_used_in_op (Opcode &op, std::vector<int> &rsyms,
 // Fake symbol index for "derivatives" entry in dependency map.
 static const int DerivSym = -1;
 
+
+// Recursively mark symbols that have derivatives from dependency map
+void
+RuntimeOptimizer::mark_symbol_derivatives (SymDependency &symdeps, SymIntSet &visited, int d)
+{
+    BOOST_FOREACH (int r, symdeps[d]) {
+        if (visited.find(r) == visited.end()) {
+            visited.insert(r);
+            
+            Symbol *s = inst()->symbol(r);
+
+            if (! s->typespec().is_closure_based() && 
+                    s->typespec().elementtype().is_floatbased())
+                s->has_derivs (true);
+
+            mark_symbol_derivatives(symdeps, visited, r);
+        }
+    }
+}
 
 
 /// Run through all the ops, for each one marking its 'written'
@@ -3466,12 +2123,8 @@ RuntimeOptimizer::track_variable_dependencies ()
     }
 
     // Mark all symbols needing derivatives as such
-    BOOST_FOREACH (int d, symdeps[DerivSym]) {
-        Symbol *s = inst()->symbol(d);
-        if (! s->typespec().is_closure_based() && 
-                s->typespec().elementtype().is_floatbased())
-            s->has_derivs (true);
-    }
+    SymIntSet visited;
+    mark_symbol_derivatives (symdeps, visited, DerivSym);
 
     // Only some globals are allowed to have derivatives
     BOOST_FOREACH (Symbol &s, inst()->symbols()) {
@@ -3484,7 +2137,7 @@ RuntimeOptimizer::track_variable_dependencies ()
             s.has_derivs (false);
     }
 
-#if 0
+#ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Helpful for debugging
 
     std::cerr << "track_variable_dependencies\n";
@@ -3710,7 +2363,7 @@ RuntimeOptimizer::collapse_syms ()
             inst()->m_Nsym = i;
         ++i;
     }
-#ifdef DEBUG
+#ifndef NDEBUG
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
@@ -3785,9 +2438,7 @@ RuntimeOptimizer::optimize_group ()
                            m_group.name().c_str());
     int nlayers = (int) m_group.nlayers ();
 
-    // Clear info about which messages have been set
-    m_unknown_message_sent = false;
-    m_messages_sent.clear ();
+    m_params_holding_globals.resize (nlayers);
 
     // If no closures were provided, register the builtin ones
     if (m_shadingsys.m_closure_registry.empty())
@@ -3797,6 +2448,8 @@ RuntimeOptimizer::optimize_group ()
     size_t old_nsyms = 0, old_nops = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
+        if (inst()->unused())
+            continue;
         m_inst->copy_code_from_master ();
         if (debug() && optimize() >= 1) {
             std::cout.flush ();
@@ -3809,6 +2462,12 @@ RuntimeOptimizer::optimize_group ()
 
         old_nsyms += inst()->symbols().size();
         old_nops += inst()->ops().size();
+
+        // N.B. we need to resolve isconnected() calls before the instance
+        // is otherwise optimized, or else isconnected() may not reflect
+        // the original connectivity after substitutions are made.
+        resolve_isconnected ();
+
         optimize_instance ();
     }
 
@@ -3821,8 +2480,13 @@ RuntimeOptimizer::optimize_group ()
             optimize_instance ();
     }
 
+    // Try merging instances again, now that we've optimized
+    shadingsys().merge_instances (group(), true);
+
     for (int layer = nlayers-1;  layer >= 0;  --layer) {
         set_inst (layer);
+        if (inst()->unused())
+            continue;
         track_variable_dependencies ();
 
         // For our parameters that require derivatives, mark their
@@ -3844,6 +2508,9 @@ RuntimeOptimizer::optimize_group ()
         if (! inst()->unused())
             post_optimize_instance ();
     }
+
+    // Last chance to eliminate duplicate instances
+    shadingsys().merge_instances (group(), true);
 
     // Get rid of nop instructions and unused symbols.
     size_t new_nsyms = 0, new_nops = 0;
@@ -3911,27 +2578,29 @@ RuntimeOptimizer::optimize_group ()
                                                   m_llvm_local_mem);
     }
 
-    if (m_group.name()) {
-        m_shadingsys.info ("Optimized shader group %s:", m_group.name().c_str());
-        m_shadingsys.info ("    New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-          new_nsyms, old_nsyms,
-          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
-          new_nops, old_nops,
-          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
-    } else {
-        m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-          new_nsyms, old_nsyms,
-          100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
-          new_nops, old_nops,
-          100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+    if (m_shadingsys.m_compile_report) {
+        if (m_group.name()) {
+            m_shadingsys.info ("Optimized shader group %s:", m_group.name().c_str());
+            m_shadingsys.info ("    New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+              new_nsyms, old_nsyms,
+              100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
+              new_nops, old_nops,
+              100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+        } else {
+            m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+              new_nsyms, old_nsyms,
+              100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
+              new_nops, old_nops,
+              100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+        }
+        m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
+                           m_stat_total_llvm_time+m_stat_specialization_time,
+                           m_stat_specialization_time, 
+                           m_stat_opt_locking_time, m_stat_llvm_setup_time,
+                           m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
+                           m_stat_llvm_jit_time,
+                           m_llvm_local_mem/1024);
     }
-    m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
-                       m_stat_total_llvm_time+m_stat_specialization_time,
-                       m_stat_specialization_time, 
-                       m_stat_opt_locking_time, m_stat_llvm_setup_time,
-                       m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
-                       m_stat_llvm_jit_time,
-                       m_llvm_local_mem/1024);
 }
 
 
@@ -4042,6 +2711,118 @@ ShadingSystemImpl::optimize_all_groups (int nthreads)
                 optimize_group (*sas, sgroup);
         }
     }
+}
+
+
+
+int
+ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
+{
+    // Look through the shader group for pairs of nodes/layers that
+    // actually do exactly the same thing, and eliminate one of the
+    // rundantant shaders, carefully rewiring all its outgoing
+    // connections to later layers to refer to the one we keep.
+    //
+    // It turns out that in practice, it's not uncommon to have
+    // duplicate nodes.  For example, some materials are "layered" --
+    // like a character skin shader that has separate sub-networks for
+    // skin, oil, wetness, and so on -- and those different sub-nets
+    // often reference the same texture maps or noise functions by
+    // repetition.  Yes, ideally, the redundancies would be eliminated
+    // before they were fed to the renderer, but in practice that's hard
+    // and for many scenes we get substantial savings of time (mostly
+    // because of reduced texture calls) and instance memory by finding
+    // these redundancies automatically.  The amount of savings is quite
+    // scene dependent, as well as probably very dependent on the
+    // general shading and lookdev approach of the studio.  But it was
+    // very helpful for us in many cases.
+    //
+    // The basic loop below looks very inefficient, O(n^2) in number of
+    // instances in the group. But it's really not -- a few seconds (sum
+    // of all threads) for even our very complex scenes. This is because
+    // most potential pairs have a very fast rejection case if they are
+    // not using the same master.  Since there's no appreciable cost to
+    // the brute force approach, it seems silly to have a complex scheme
+    // to try to reduce the number of pairings.
+
+    if (! m_opt_merge_instances)
+        return 0;
+
+    Timer timer;                // Time we spend looking for and doing merges
+    int merges = 0;             // number of merges we do
+    size_t connectionmem = 0;   // Connection memory we free
+    int nlayers = group.nlayers();
+
+    // Loop over all layers...
+    for (int a = 0;  a < nlayers;  ++a) {
+        if (group[a]->unused())    // Don't merge a layer that's not used
+            continue;
+        // Check all later layers...
+        for (int b = a+1;  b < nlayers;  ++b) {
+            if (group[b]->unused())    // Don't merge a layer that's not used
+                continue;
+
+            // Now we have two used layers, a and b, to examine.
+            // See if they are mergeable (identical).  All the heavy
+            // lifting is done by ShaderInstance::mergeable().
+            if (! group[a]->mergeable (*group[b], group))
+                continue;
+
+            // The two nodes a and b are mergeable, so merge them.
+            ShaderInstance *A = group[a];
+            ShaderInstance *B = group[b];
+            ++merges;
+
+            // We'll keep A, get rid of B.  For all layers later than B,
+            // check its incoming connections and replace all references
+            // to B with references to A.
+            for (int j = b+1;  j < nlayers;  ++j) {
+                ShaderInstance *inst = group[j];
+                if (inst->unused())  // don't bother if it's unused
+                    continue;
+                for (int c = 0, ce = inst->nconnections();  c < ce;  ++c) {
+                    Connection &con = inst->connection(c);
+                    if (con.srclayer == b) {
+                        con.srclayer = a;
+                        if (B->symbols().size()) {
+                            ASSERT (A->symbol(con.src.param)->name() ==
+                                    B->symbol(con.src.param)->name());
+                        }
+                    }
+                }
+            }
+
+            // Mark parameters of B as no longer connected
+            for (int p = B->firstparam();  p < B->lastparam();  ++p) {
+                if (B->symbols().size())
+                    B->symbol(p)->connected_down(false);
+                if (B->m_instoverrides.size())
+                    B->instoverride(p)->connected_down(false);
+            }
+            // B won't be used, so mark it as having no outgoing
+            // connections and clear its incoming connections (which are
+            // no longer used).
+            B->outgoing_connections (false);
+            B->run_lazily (true);
+            connectionmem += B->clear_connections ();
+            ASSERT (B->unused());
+        }
+    }
+
+    {
+        // Adjust stats
+        spin_lock lock (m_stat_mutex);
+        m_stat_mem_inst_connections -= connectionmem;
+        m_stat_mem_inst -= connectionmem;
+        m_stat_memory -= connectionmem;
+        if (post_opt)
+            m_stat_merged_inst_opt += merges;
+        else
+            m_stat_merged_inst += merges;
+        m_stat_inst_merge_time += timer();
+    }
+
+    return merges;
 }
 
 

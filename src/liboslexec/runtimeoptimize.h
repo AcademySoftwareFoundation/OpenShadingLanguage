@@ -75,6 +75,12 @@ public:
     /// group.
     ShaderInstance *inst () const { return m_inst; }
 
+    /// Return a reference to a particular indexed op in the current inst
+    Opcode &op (int opnum) { return inst()->ops()[opnum]; }
+
+    /// Return a pointer to a particular indexed symbol in the current inst
+    Symbol *symbol (int symnum) { return inst()->symbol(symnum); }
+
     /// Return a reference to the shader group being optimized.
     ///
     ShaderGroup &group () const { return m_group; }
@@ -104,7 +110,17 @@ public:
     /// Search for a constant whose type and value match type and data[...],
     /// returning its index if one exists, or else creating a new constant
     /// and returning its index.
-    int add_constant (const TypeSpec &type, const void *data);
+    int add_constant (const TypeSpec &type, const void *data,
+                      TypeDesc datatype=TypeDesc::UNKNOWN);
+    int add_constant (float c) { return add_constant(TypeDesc::TypeFloat, &c); }
+    int add_constant (int c) { return add_constant(TypeDesc::TypeInt, &c); }
+
+    /// Create a new temporary variable of the given type, return its index.
+    int add_temp (const TypeSpec &type);
+
+    /// Search for the given global, adding it to the symbol table if
+    /// necessary, and returning its index.
+    int add_global (ustring name, const TypeSpec &type);
 
     /// Turn the op into a simple assignment of the new symbol index to the
     /// previous first argument of the op.  That is, changes "OP arg0 arg1..."
@@ -121,6 +137,14 @@ public:
     /// into "assign arg0 one".
     void turn_into_assign_one (Opcode &op, const char *why=NULL);
 
+    /// Turn the op into a new simple unary or binary op with arguments
+    /// newarg1 and newarg2.  If newarg2 < 0, then it's a unary op,
+    /// otherwise a binary op.  Argument 0 (the result) remains the same
+    /// as always.  The original arg list must have at least as many
+    /// operands as the new one, since no new arg space is allocated.
+    void turn_into_new_op (Opcode &op, ustring newop, int newarg1,
+                           int newarg2, const char *why=NULL);
+
     /// Turn the op into a no-op.  Return 1 if it changed, 0 if it was
     /// already a nop.
     int turn_into_nop (Opcode &op, const char *why=NULL);
@@ -129,11 +153,18 @@ public:
     /// of instructions that were altered.
     int turn_into_nop (int begin, int end, const char *why=NULL);
 
-    void find_constant_params (ShaderGroup &group);
-
     void find_conditionals ();
 
-    void find_loops ();
+    void simplify_params ();
+
+    void find_params_holding_globals ();
+
+    /// Will the op executed for-sure unconditionally every time the
+    /// shader is run?  (Not inside a loop or conditional or after a
+    /// possible early exit from the shader.)
+    bool op_is_unconditionally_executed (int opnum) const {
+        return !m_in_conditional[opnum] && opnum < m_first_return;
+    }
 
     void find_basic_blocks (bool do_llvm = false);
 
@@ -160,6 +191,13 @@ public:
     /// anything.
     void block_unalias (int symindex) {
         m_block_aliases[symindex] = -1;
+    }
+
+    /// Clear local block aliases for any args that are written by this op.
+    void block_unalias_written_args (Opcode &op) {
+        for (int i = 0, e = op.nargs();  i < e;  ++i)
+            if (op.argwrite(i))
+                block_unalias (inst()->arg(op.firstarg()+i));
     }
 
     /// Reset all block-local aliases (done when we enter a new basic
@@ -210,7 +248,8 @@ public:
 
     /// Replace R's instance value with new data.
     ///
-    void replace_param_value (Symbol *R, const void *newdata);
+    void replace_param_value (Symbol *R, const void *newdata,
+                              const TypeSpec &newdata_type);
 
     bool outparam_assign_elision (int opnum, Opcode &op);
 
@@ -218,11 +257,32 @@ public:
 
     void make_symbol_room (int howmany=1);
 
+    /// Insert instruction 'opname' with arguments 'args_to_add' into the 
+    /// code at instruction 'opnum'.  The existing code and concatenated 
+    /// argument lists can be found in code and opargs, respectively, and
+    /// allsyms contains pointers to all symbols.  mainstart is a reference
+    /// to the address where the 'main' shader begins, and may be modified
+    /// if the new instruction is inserted before that point.
+    /// If recompute_rw_ranges is true, also adjust all symbols' read/write
+    /// ranges to take the new instruction into consideration.
+    /// Relation indicates its relation to surrounding instructions:
+    /// 0 means none, -1 means it should have the same method, sourcefile,
+    /// and sourceline as the preceeding instruction, 1 means it should
+    /// have the same method, sourcefile, and sourceline as the subsequent
+    /// instruction.
     void insert_code (int opnum, ustring opname,
                       const std::vector<int> &args_to_add,
-                      bool recompute_rw_ranges=false);
+                      bool recompute_rw_ranges=false, int relation=0);
+    /// insert_code with begin/end arg array pointers.
+    void insert_code (int opnum, ustring opname,
+                      const int *argsbegin, const int *argsend,
+                      bool recompute_rw_ranges=false, int relation=0);
+    /// insert_code with explicit arguments (up to 4, a value of -1 means
+    /// the arg isn't used).  Presume recompute_rw_ranges is true.
+    void insert_code (int opnum, ustring opname, int relation,
+                      int arg0=-1, int arg1=-1, int arg2=-1, int arg3=-1);
 
-    void insert_useparam (size_t opnum, std::vector<int> &params_to_use);
+    void insert_useparam (size_t opnum, const std::vector<int> &params_to_use);
 
     /// Add a 'useparam' before any op that reads parameters.  This is what
     /// tells the runtime that it needs to run the layer it came from, if
@@ -238,7 +298,8 @@ public:
 
     /// For each symbol, have a list of the symbols it depends on (or that
     /// depends on it).
-    typedef std::map<int, std::set<int> > SymDependency;
+    typedef std::set<int> SymIntSet;
+    typedef std::map<int, SymIntSet> SymDependency;
 
     void syms_used_in_op (Opcode &op,
                           std::vector<int> &rsyms, std::vector<int> &wsyms);
@@ -247,9 +308,16 @@ public:
 
     void add_dependency (SymDependency &dmap, int A, int B);
 
+    void mark_symbol_derivatives (SymDependency &symdeps, SymIntSet &visited, int d);
+
     void mark_outgoing_connections ();
 
     int remove_unused_params ();
+
+    /// Turn isconnected() calls into constant assignments
+    void resolve_isconnected ();
+
+    int eliminate_middleman ();
 
     /// Squeeze out unused symbols from an instance that has been
     /// optimized.
@@ -283,7 +351,7 @@ public:
 
     /// Helper: return the symbol index of the symbol that is the argnum-th
     /// argument to the given op.
-    int oparg (const Opcode &op, int argnum) {
+    int oparg (const Opcode &op, int argnum) const {
         return inst()->arg (op.firstarg()+argnum);
     }
 
@@ -292,6 +360,9 @@ public:
     Symbol *opargsym (const Opcode &op, int argnum) {
         return inst()->argsymbol (op.firstarg()+argnum);
     }
+
+    /// Is the named symbol among the renderer outputs?
+    bool is_renderer_output (ustring name) const;
 
     /// Create an llvm function for the whole shader group, JIT it,
     /// and store the llvm::Function* handle to it with the ShaderGroup.
@@ -460,6 +531,12 @@ public:
     /// semantics that x mod 0 = 0, not inf.
     llvm::Value *llvm_make_safe_mod (TypeDesc type,
                                      llvm::Value *a, llvm::Value *b);
+
+    /// Test whether val is nonzero, return the llvm::Value* that's the
+    /// result of a CreateICmpNE or CreateFCmpUNE (depending on the
+    /// type).  If test_derivs is true, it it also tests whether the
+    /// derivs are zero.
+    llvm::Value *llvm_test_nonzero (Symbol &val, bool test_derivs = false);
 
     /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
@@ -755,6 +832,22 @@ public:
         return m_return_block.back();
     }
 
+    /// Return the basic block of the exit for the whole instance.
+    ///
+    bool llvm_has_exit_instance_block () const {
+        return m_exit_instance_block;
+    }
+
+    /// Return the basic block of the exit for the whole instance.
+    ///
+    llvm::BasicBlock *llvm_exit_instance_block () {
+        if (! m_exit_instance_block) {
+            std::string name = Strutil::format ("%s_%d_exit_", inst()->layername().c_str(), inst()->id());
+            m_exit_instance_block = llvm_new_basic_block (name);
+        }
+        return m_exit_instance_block;
+    }
+
     /// Check for inf/nan in all written-to arguments of the op
     void llvm_generate_debugnan (const Opcode &op);
 
@@ -766,16 +859,25 @@ public:
         return m_opt_elide_unconnected_outputs;
     }
 
+    /// Are special optimizations to 'mix' requested?
+    bool opt_mix () const { return m_opt_mix; }
+
+    /// Which optimization pass are we on?
+    int optimization_pass () const { return m_pass; }
+
+    ShaderGlobals &dummy_shaderglobals () { return m_shaderglobals; }
+
+    // Maximum number of new constant symbols that a constant-folding
+    // function is able to add.
+    static const int max_new_consts_per_fold = 10;
+
 private:
     ShadingSystemImpl &m_shadingsys;
     PerThreadInfo *m_thread;
-    ShaderGroup &m_group;             ///< Group we're optimizing
-    int m_layer;                      ///< Layer we're optimizing
-    ShaderInstance *m_inst;           ///< Instance we're optimizing
     ShadingContext *m_context;        ///< Shading context
     int m_debug;                      ///< Current debug level
     int m_optimize;                   ///< Current optimization level
-    bool m_opt_constant_param;            ///< Turn instance params into const?
+    bool m_opt_simplify_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
     bool m_opt_stale_assign;              ///< Optimize stale assignments?
     bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
@@ -783,11 +885,23 @@ private:
     bool m_opt_peephole;                  ///< Do some peephole optimizations?
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
+    bool m_opt_mix;                       ///< Do mix optimizations?
+    bool m_opt_middleman;                 ///< Do middleman optimizations?
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
-    // All below is just for the one inst we're optimizing:
+    // Keep track of some things for the whole shader group:
+    ShaderGroup &m_group;             ///< Group we're optimizing
+    typedef boost::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
+    std::vector<ustringmap_t> m_params_holding_globals;
+                   ///< Which params of each layer really just hold globals
+
+    // All below is just for the one inst we're optimizing at the moment:
+    ShaderInstance *m_inst;           ///< Instance we're optimizing
+    int m_layer;                      ///< Layer we're optimizing
+    int m_pass;                       ///< Optimization pass we're on now
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst
     int m_next_newconst;              ///< Unique ID for next new const we add
+    int m_next_newtemp;               ///< Unique ID for next new temp we add
     std::map<int,int> m_symbol_aliases; ///< Global symbol aliases
     std::vector<int> m_block_aliases;   ///< Local block aliases
     std::map<int,int> m_param_aliases;  ///< Params aliasing to params/globals
@@ -797,6 +911,7 @@ private:
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
     std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
     std::vector<bool> m_in_loop;        ///< Whether each op is in a loop
+    int m_first_return;                 ///< Op number of first return or exit
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     std::set<int> m_layers_already_run; ///< List of layers run
     int m_num_used_layers;              ///< Number of layers actually used
@@ -821,6 +936,7 @@ private:
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
+    llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_int;
     llvm::Type *m_llvm_type_addrint;

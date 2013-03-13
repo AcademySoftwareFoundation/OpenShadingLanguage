@@ -1,0 +1,11 @@
+void status (float variable, string name)
+{
+    printf ("%s %s connected\n", name, isconnected(variable) ? "is" : "is not");
+}
+
+
+shader test (float a = 0, float b = 0)
+{
+    status (a, "a");
+    status (b, "b");
+}

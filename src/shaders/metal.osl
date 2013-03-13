@@ -29,17 +29,17 @@
 
 surface
 metal
-    [[ string description = "Lambertian diffuse material" ]]
+    [[ string help = "Shiny metallic material" ]]
 (
     float Ks = 1
-        [[  string description = "Specular scaling",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "Specular scaling",
+            float min = 0, float max = 1 ]],
     float eta = 10
-        [[  string description = "Metal's index of refraction (controls fresnel effect)",
-            float UImin = 1, float UIsoftmax = 100 ]],
+        [[  string help = "Index of refraction (controls fresnel effect)",
+            float min = 1, float max = 100 ]],
     color Cs = 1
-        [[  string description = "Base color",
-            float UImin = 0, float UImax = 1 ]]
+        [[  string help = "Base color",
+            float min = 0, float max = 1 ]]
   )
 {
     Ci = Ks * Cs * reflection (N, eta);

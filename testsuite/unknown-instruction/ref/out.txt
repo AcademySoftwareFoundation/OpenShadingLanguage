@@ -1,0 +1,4 @@
+ERROR: Parsing shader "test": instruction "blahblah" is not known. Maybe compiled with a too-new oslc?
+ERROR: Unable to read "test.oso"
+ERROR: Could not find shader "test"
+

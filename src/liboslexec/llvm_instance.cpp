@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
 
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/sysutil.h>
 
 #include "llvm_headers.h"
 
@@ -116,6 +117,20 @@ namespace pvt {
 static ustring op_end("end");
 static ustring op_nop("nop");
 
+// Trickery to force linkage of files when building static libraries.
+extern int opclosure_cpp_dummy, opcolor_cpp_dummy;
+extern int opmessage_cpp_dummy, opnoise_cpp_dummy;
+extern int opspline_cpp_dummy, opstring_cpp_dummy;
+#ifdef OSL_LLVM_NO_BITCODE
+extern int llvm_ops_cpp_dummy;
+#endif
+int *force_osl_op_linkage[] = {
+    &opclosure_cpp_dummy, &opcolor_cpp_dummy, &opmessage_cpp_dummy,
+    &opnoise_cpp_dummy, &opspline_cpp_dummy,  &opstring_cpp_dummy,
+#ifdef OSL_LLVM_NO_BITCODE
+    &llvm_ops_cpp_dummy
+#endif
+};
 
 
 #define NOISE_IMPL(name)                        \
@@ -225,6 +240,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_printf", "xXs*",
     "osl_error", "xXs*",
     "osl_warning", "xXs*",
+    "osl_incr_layers_executed", "xX",
 #if 1
     NOISE_IMPL(cellnoise),
     NOISE_DERIV_IMPL(cellnoise),
@@ -272,6 +288,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_wavelength_color_vf", "xXXf",
     "osl_luminance_fv", "xXXX",
     "osl_luminance_dfdv", "xXXX",
+    "osl_split", "isXsii",
 
 #ifdef OSL_LLVM_NO_BITCODE
     "osl_assert_nonnull", "xXs",
@@ -338,6 +355,8 @@ static const char *llvm_helper_function_table[] = {
     UNARY_OP_IMPL(abs),
     UNARY_OP_IMPL(fabs),
 
+    BINARY_OP_IMPL(fmod),
+
     "osl_smoothstep_ffff", "ffff",
     "osl_smoothstep_dfffdf", "xXffX",
     "osl_smoothstep_dffdff", "xXfXf",
@@ -353,6 +372,9 @@ static const char *llvm_helper_function_table[] = {
     "osl_transformv_dvmdv", "xXXX",
     "osl_transformn_vmv", "xXXX",
     "osl_transformn_dvmdv", "xXXX",
+
+    "osl_transform_triple", "iXXiXiXXi",
+    "osl_transform_triple_nonlinear", "iXXiXiXXi",
 
     "osl_mul_mm", "xXXX",
     "osl_mul_mf", "xXXf",
@@ -396,6 +418,9 @@ static const char *llvm_helper_function_table[] = {
     "osl_texture_set_swrap", "xXs",
     "osl_texture_set_twrap", "xXs",
     "osl_texture_set_rwrap", "xXs",
+    "osl_texture_set_swrap_code", "xXi",
+    "osl_texture_set_twrap_code", "xXi",
+    "osl_texture_set_rwrap_code", "xXs",
     "osl_texture_set_sblur", "xXf",
     "osl_texture_set_tblur", "xXf",
     "osl_texture_set_rblur", "xXf",
@@ -434,6 +459,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_raytype_name", "iXX",
     "osl_raytype_bit", "iXi",
     "osl_bind_interpolated_param", "iXXLiX",
+    "osl_range_check", "iiiXXi",
+    "osl_naninf_check", "xiXiXXiX",
 #endif // OSL_LLVM_NO_BITCODE
 
     NULL
@@ -550,11 +577,6 @@ RuntimeOptimizer::llvm_type_groupdata ()
     std::string groupdataname = Strutil::format("Groupdata_%llu",
                                                 (long long unsigned int)group().name().hash());
     m_llvm_type_groupdata = llvm_type_struct (fields, groupdataname);
-
-#ifdef DEBUG
-//    llvm::outs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
-//    llvm::outs() << "  size = " << offset << "\n";
-#endif
 
     return m_llvm_type_groupdata;
 }
@@ -795,11 +817,14 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     m_llvm_groupdata_ptr = arg_it++;
 
     llvm::BasicBlock *entry_bb = llvm_new_basic_block (unique_layer_name);
+    m_exit_instance_block = NULL;
 
     // Set up a new IR builder
     delete m_builder;
     m_builder = new llvm::IRBuilder<> (entry_bb);
     // llvm_gen_debug_printf (std::string("enter layer ")+inst()->shadername());
+    if (shadingsys().m_countlayerexecs)
+        llvm_call_function ("osl_incr_layers_executed", sg_void_ptr());
 
     if (groupentry) {
         if (m_num_used_layers > 1) {
@@ -907,6 +932,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     }
     // llvm_gen_debug_printf ("done copying connections");
 
+    if (llvm_has_exit_instance_block()) {
+        builder().CreateBr (m_exit_instance_block);
+        builder().SetInsertPoint (m_exit_instance_block);
+    }
+
     // All done
     // llvm_gen_debug_printf (std::string("exit layer ")+inst()->shadername());
     builder().CreateRetVoid();
@@ -1007,6 +1037,17 @@ RuntimeOptimizer::build_llvm_group ()
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     OIIO::Timer timer;
+    std::string err;
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // I don't know which exact part has thread safety issues, but it
+    // crashes on windows when we don't lock.
+    // FIXME -- try subsequent LLVM releases on Windows to see if this
+    // is a problem that is eventually fixed on the LLVM side.
+    {
+    static spin_mutex mutex;
+    OIIO::spin_lock lock (mutex);
+#endif
 
     if (! m_thread->llvm_context)
         m_thread->llvm_context = new llvm::LLVMContext();
@@ -1018,13 +1059,12 @@ RuntimeOptimizer::build_llvm_group ()
     }
 
     ASSERT (! m_llvm_module);
+#ifdef OSL_LLVM_NO_BITCODE
+    m_llvm_module = new llvm::Module("llvm_ops", *m_thread->llvm_context);
+#else
     // Load the LLVM bitcode and parse it into a Module
     const char *data = osl_llvm_compiled_ops_block;
     llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
-    std::string err;
-#ifdef OSL_LLVM_NO_BITCODE
-    m_llvm_module = new llvm::Module("llvm_ops", *llvm_context());
-#else
     // Load the LLVM bitcode and parse it into a Module
     m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
     if (err.length())
@@ -1047,6 +1087,11 @@ RuntimeOptimizer::build_llvm_group ()
     // will be stealing the JIT code memory from under its nose and
     // destroying the Module & ExecutionEngine.
     m_llvm_exec->DisableLazyCompilation ();
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // End of mutex lock
+    }
+#endif
 
     m_stat_llvm_setup_time += timer.lap();
 
@@ -1247,13 +1292,21 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     //
     m_llvm_func_passes = new llvm::FunctionPassManager(llvm_module());
     llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
+#if OSL_LLVM_VERSION >= 32
+    fpm.add (new llvm::DataLayout(llvm_module()));
+#else
     fpm.add (new llvm::TargetData(llvm_module()));
+#endif
 
     // Specify module-wide (interprocedural optimization) passes
     //
     m_llvm_passes = new llvm::PassManager;
     llvm::PassManager &passes (*m_llvm_passes);
+#if OSL_LLVM_VERSION >= 32
+    passes.add (new llvm::DataLayout(llvm_module()));
+#else
     passes.add (new llvm::TargetData(llvm_module()));
+#endif
 
     if (shadingsys().llvm_optimize() >= 1 && shadingsys().llvm_optimize() <= 3) {
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the

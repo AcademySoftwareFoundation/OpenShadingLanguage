@@ -42,7 +42,11 @@ namespace pvt {
 llvm::Type *
 RuntimeOptimizer::llvm_type_union(const std::vector<llvm::Type *> &types)
 {
+#if OSL_LLVM_VERSION >= 32
+    llvm::DataLayout target(llvm_module());
+#else
     llvm::TargetData target(llvm_module());
+#endif
     size_t max_size = 0;
     size_t max_align = 1;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -737,7 +741,9 @@ RuntimeOptimizer::llvm_call_function (const char *name,
         else
             valargs[i] = llvm_load_value (s);
     }
-    return llvm_call_function (name, &valargs[0], (int)valargs.size());
+    return llvm_call_function (name,
+                               (valargs.size())? &valargs[0]: NULL,
+                               (int)valargs.size());
 }
 
 
@@ -895,6 +901,43 @@ RuntimeOptimizer::llvm_make_safe_mod (TypeDesc type,
         llvm::Value *iszero = builder().CreateICmpEQ (b, zero);
         return builder().CreateSelect (iszero, zero, mod);
     }
+}
+
+
+
+llvm::Value *
+RuntimeOptimizer::llvm_test_nonzero (Symbol &val, bool test_derivs)
+{
+    const TypeSpec &ts (val.typespec());
+    ASSERT (! ts.is_array() && ! ts.is_closure() && ! ts.is_string());
+    TypeDesc t = ts.simpletype();
+
+    // Handle int case -- guaranteed no derivs, no multi-component
+    if (t == TypeDesc::TypeInt)
+        return builder().CreateICmpNE (llvm_load_value(val), llvm_constant(0));
+
+    // float-based
+    int ncomps = t.aggregate;
+    int nderivs = (test_derivs && val.has_derivs()) ? 3 : 1;
+    llvm::Value *isnonzero = NULL;
+    for (int d = 0;  d < nderivs;  ++d) {
+        for (int c = 0;  c < ncomps;  ++c) {
+#if 1
+            llvm::Value *v = llvm_load_value (val, d, c);
+            llvm::Value *nz = builder().CreateFCmpONE (v, llvm_constant(0.0f));
+#else
+            // Alternate technique: convert to int and then do int compare.
+            // Seems to be about the same speed as comparing floats.
+            llvm::Value *v = llvm_load_value (val, d, c, TypeDesc::TypeInt);
+            llvm::Value *nz = builder().CreateICmpNE (v, llvm_constant(0));
+#endif
+            if (isnonzero)  // multi-component/deriv: OR with running result
+                isnonzero = builder().CreateOr (nz, isnonzero);
+            else
+                isnonzero = nz;
+        }
+    }
+    return isnonzero;
 }
 
 

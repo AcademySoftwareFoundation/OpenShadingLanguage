@@ -1,6 +1,165 @@
-Release 1.3.x - in progress (compared to 1.2)
+Release 1.3.0 - 14 Feb 2013 (compared to 1.2)
 ----------------------------------------------
 
+Language, standard libary, and compiler changes (for shader writers):
+
+* pointcloud_write() allows shaders to write data and save it as a point
+  cloud.
+* spline now accepts a "constant" interpolation type, which interpolates
+  with discrete steps.
+* isconnected(var) returns true if var is a shader parameter and is
+  connected to an earlier layer. This is helpful in having shader logic
+  that can discern between a connected parameter versus a default.
+* Whole-array assignment is now supported.  That is, if A and B are arrays
+  of the same type and length(A) >= length(B), it is legal to write
+  A=B without needing to write a loop to copy each element separately.
+* stoi() and stof() convert strings to int or float types, respectively
+  (just like the identically-named functions in C++11).  These do properly
+  constant-fold during runtime optimization if their inputs can be deduced.
+* split() splits a string into tokens and stores them in the elements of an
+  array of strings (and does constant-fold!).
+* distance(point A, point B, point Q) gives the distance from Q to the
+  line segment joining A and B.  This was described by the OSL spec all
+  along, but somehow was not properly implemented.
+
+ShadingSystem API changes and new options (for renderer writers):
+
+* Default implementation of all the pointcloud_*() functions in
+  RendererServices, if Partio is found at build time.
+* ShadingSystem attribute "compile_report" controls whether information
+  should be sent to the renderer for each shading group as it compiles.
+  (The default is now to be more silent, set this to nonzero if you want
+  to see the old per-group status messages.)
+* ShadingSystem attribute "countlayerexecs" adds debugging code to count
+  the total number of shader layer executions (off by default; it slows
+  shader execution down slightly, is only meant for debugging).
+* Add a parameter to OSLCompiler::compile to specify the path to the
+  stdosl.h file.
+* New call: ShadingSystem::LoadMemoryCompiledShader() loads a shader with
+  OSO data from a memory buffer, rather than from a file.
+
+Performance improvements:
+
+* Reduce instance symbol memory use, lowering OSL-related memory by 1/2-2/3
+  for large scenes.
+* Identical shader instances within a shader group are automatically
+  merged -- this can have substiantial performance and memory
+  improvements for very complex shader groups that may (inadvertently,
+  for convenience, or as an artifact of certain lookdev tools) have
+  multiple instances with identical input parameters and connections.
+  We have seen some shots that render up to 20% faster with this change.
+* Better constant-folding for pointcloud_get (if indices are known).
+* Speed up implementation of exp() for some Linux platform (works around
+  a known glibc issue).
+* Speed up of mix() by making it a built-in function (rather than defined
+  in stdosl.h) and doing aggressive constant folding on it. Also some special
+  cases to try to avoid having mix() unnecessarily trigger execution of
+  earlier layers when one or both of its arguments is a connected shader
+  param and the mix value turns out to be 0 or 1.
+* Runtime optimization now includes constant-folding of getattribute()
+  calls, for those attributes which are scene-wide (such as renderer options
+  that apply to the whole frame).
+* Improvements in the algorithm that tracks which symbols need to carry
+  derivatives around results in MUCH faster compile times for extremely
+  complex shaders.
+* Improve bad performance for shaders that call warning() prolifically, by
+  imposing a maximum number of shader warnings that are echoed back to the
+  renderer (controlled by ShadingSystem attribute "max_warnings_per_thread",
+  which defaults to 100; 0 means that there is no maximum).
+
+Bug fixes and minor improvements:
+
+* Fix incorrect oso output of matrix parameter initialization. (This did
+  not affect shader execution, but could result in oslquery/oslinfo not
+  reporting default matrix parameter values correctly.)
+* Bug fix: oslinfo didn't print int metadata values properly.
+* oslc better error checking when calling a variable as if it were a
+  function.
+* Parsing of oso files was broken for compiled shaders that had string
+  metadata whose metadata value contained the '}' character.
+* Pointcloud function bug fixes: now robust to being passed empty filenames,
+  or calling pointcloud_get when count=0.
+* Fix crash with C preprocessor when #include fails or no shader function
+  is defined.
+* Improve error reporting when parsing oso, especially in improving the
+  error messages when an old renderer tries to load a .oso file created by
+  a "newer" oslc, and the oso contains new instruction opcodes that the
+  older renderer didn't know about.
+* oslc now gives a helpful error message, rather than hitting an assertion,
+  if you try to index into a non-array or non-component type.
+* Broken "XYZ" color space transformations because of confusion between
+  "xyz" and "XYZ" names.
+* oslc: correctly catch errors with integer literals that overflow.
+* oslc: proper error, rather than assertion, for 
+  'closure color * closure color'.
+* oslc: proper handling of preprocessor errors when stdosl.h is in a path 
+  containing spaces.
+* Fix bugs in the OSL exit() function.
+* Don't error/warn if metadata name masks a global scope name.
+
+Under the hood:
+
+* Simplify code generation of binary ops involving closures.
+
+Build & test system improvements and developer goodies:
+
+* Many, many fixes to enable building and correct running of OSL on
+  Windows.  Too many to list individually, let's just say that OSL 1.3
+  builds and runs pretty robustly on Windows, older versions did not.
+* Remove unused OpenGL and GLEW searching from CMake files.
+* Fix a variety of compiler warnings, particularly on newer compilers,
+  32 bit platforms, and Windows.
+* Find LLVM correctly even when using "svn" LLVM versions.
+* Adjust failure threshold on some tests to account for minor platform
+  differences.
+* New minimum OIIO version: 1.1.
+* CMake fixes: Simplify searching for and using IlmBase, and remove
+  unneeded search for OpenEXR.
+* Find Partio (automatically, or using 'make PARTIO_HOME=...'), and if
+  found, use it to provide default RendererServices implementations of
+  all the pointcloud-related functions.
+* Make/CMake STOP_ON_WARNING flag (set to 0 or 1) controls whether the
+  build will stop upon any compiler warning (default) or if it should
+  keep going (=0).
+* Fixed bad interaction between weave preprocessor, OIIO::Strutil::format,
+  and gcc 4.7.2.
+* Fixes for static linkage of liboslcomp.
+* Addressed compilation errors on g++ 4.7.2.
+* Improved logic and error reporting for finding OpenImageIO at build time.
+* Add support for linking to static LLVM libraries, and for specifying
+  a particular LLVM version to be used.
+* New BUILDSTATIC option for CMake/Make allows building of static OSL 
+  libraries.
+* Fixes to allow OSL to use LLVM 3.2.
+* Fixes to allow OSL to be compiled by clang 3.2.
+* Fixes to allow building on Windows with MinGW.
+* Fix for building from a chroot where the host may be, e.g., 64 bit, but
+  the target is 32 bit.
+* Minimize cmake output clutter for things that aren't errors, unless
+  VERBOSE=1.
+* Various fixes to get OSL building and running on FreeBSD.
+* Cmake/make option USE_LLVM_BITCODE to be able to force LLVM bitcode
+  compilation on or off (defaults to on for Windows, off for Unix/Linux).
+
+Documentation:
+* Clarify that documentation is licensed under Creative Commons 3.0 BY.
+* Clean up OSL Spec discussion of built-in material closures.
+* Overhaul the suggested metadata conventions in the OSL spec (now 
+  conforms to the conventions used by Katana).
+
+
+
+
+Release 1.2.1 - 6 Nov, 2012 (compared to 1.2.0)
+-----------------------------------------------
+* Fix incorrect oso output of matrix parameter initialization. (This did
+  not affect shader execution, but could result in oslquery/oslinfo not
+  reporting default matrix parameter values correctly.)
+* Build: remove unused OpenGL and GLEW searching from CMake files.
+* Build: Fix a variety of compiler warnings, particularly on newer compilers,
+  32 bit platforms, and Windows.
+* Build: Find LLVM correctly even when using "svn" LLVM versions.
+* Bug fix: oslinfo didn't print int metadata values properly.
 
 
 Release 1.2.0 - Aug 30, 2012 (compared to 1.1)

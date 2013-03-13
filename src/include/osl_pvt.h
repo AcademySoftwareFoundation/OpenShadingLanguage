@@ -578,6 +578,7 @@ public:
     ValueSource valuesource () const { return (ValueSource) m_valuesource; }
     void valuesource (ValueSource v) { m_valuesource = v; }
     const char *valuesourcename () const;
+    static const char *valuesourcename (ValueSource v);
 
     int fieldid () const { return m_fieldid; }
     void fieldid (int id) { m_fieldid = id; }
@@ -780,6 +781,12 @@ public:
         argread (arg, false);
         argwrite (arg, true);
     }
+    /// Declare that argument number 'arg' is only read (not written!) by
+    /// this op.
+    void argreadonly (int arg) {
+        argread (arg, true);
+        argwrite (arg, false);
+    }
 
     /// Does the argument number 'arg' take derivatives?
     ///
@@ -812,6 +819,15 @@ public:
     /// Return the entire argtakesderivs at once with a full bitfield.
     ///
     unsigned int argtakesderivs_all () const { return m_argtakesderivs; }
+
+    /// Are two opcodes identical enough to merge their instances?  Note
+    /// that this isn't a true 'equal', we don't compare fields that
+    /// won't matter for that purpose.
+    friend bool equivalent (const Opcode &a, const Opcode &b) {
+        return a.m_op == b.m_op &&
+            a.m_firstarg == b.m_firstarg && a.m_nargs == b.m_nargs &&
+            std::equal(&a.m_jump[0], &a.m_jump[max_jumps], &b.m_jump[0]);
+    }
 
 private:
     ustring m_op;                   ///< Name of opcode

@@ -45,9 +45,9 @@ OSL_NAMESPACE_ENTER
 
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
-                                PerThreadInfo *threadinfo) 
+                                PerThreadInfo *threadinfo)
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_attribs(NULL), m_dictionary(NULL), m_next_failed_attrib(0)
+      m_attribs(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL), m_next_failed_attrib(0)
 {
     m_shadingsys.m_stat_contexts += 1;
     m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
@@ -74,7 +74,6 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
 
     m_curuse = use;
     m_attribs = &sas;
-    m_closures_allotted = 0;
 
     if (shadingsys().m_groups_to_compile_count) {
         // If we are greedily JITing, optimize/JIT everything now
@@ -92,7 +91,7 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
             return false;
     } else {
        // empty shader - nothing to do!
-       return false; 
+       return false;
     }
 
     // Allocate enough space on the heap
@@ -191,7 +190,7 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
                                    TypeDesc attr_type, void *attr_dest)
 {
 #if 0
-    // Change the #if's below if you want to 
+    // Change the #if's below if you want to
     OIIO::Timer timer;
 #endif
     bool ok;
@@ -242,6 +241,15 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
 #endif
 //    std::cout << "getattribute! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << " ok=" << ok << ", objdata was " << objdata << "\n";
     return ok;
+}
+
+
+
+OSL_SHADEOP void
+osl_incr_layers_executed (ShaderGlobals *sg)
+{
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    ctx->incr_layers_executed ();
 }
 
 

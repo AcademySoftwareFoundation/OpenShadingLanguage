@@ -1,0 +1,4 @@
+shader upstream (output float out = 0)
+{
+    out = 1;
+}

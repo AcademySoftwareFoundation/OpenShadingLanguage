@@ -116,6 +116,8 @@ namespace pvt {
 
 static ustring op_end("end");
 static ustring op_nop("nop");
+static ustring op_aassign("aassign");
+static ustring op_compassign("compassign");
 
 // Trickery to force linkage of files when building static libraries.
 extern int opclosure_cpp_dummy, opcolor_cpp_dummy;
@@ -460,7 +462,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_raytype_bit", "iXi",
     "osl_bind_interpolated_param", "iXXLiX",
     "osl_range_check", "iiiXXi",
-    "osl_naninf_check", "xiXiXXiX",
+    "osl_naninf_check", "xiXiXXiXii",
 #endif // OSL_LLVM_NO_BITCODE
 
     NULL
@@ -749,15 +751,35 @@ RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
         TypeDesc t = sym.typespec().simpletype();
         if (t.basetype != TypeDesc::FLOAT)
             continue;  // just check float-based types
-        int ncomps = t.numelements() * t.aggregate;
-        llvm::Value *args[] = { llvm_constant(ncomps),
+        llvm::Value *ncomps = llvm_constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = llvm_constant(0);
+        llvm::Value *ncheck = ncomps;
+        if (op.opname() == op_aassign) {
+            // Special case -- array assignment -- only check one element
+            ASSERT (i == 0 && "only arg 0 is written for aassign");
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
+            llvm::Value *agg = llvm_constant(t.aggregate);
+            offset = t.aggregate == 1 ? ind : builder().CreateMul (ind, agg);
+            ncheck = agg;
+        } else if (op.opname() == op_compassign) {
+            // Special case -- component assignment -- only check one channel
+            ASSERT (i == 0 && "only arg 0 is written for compassign");
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
+            offset = ind;
+            ncheck = llvm_constant(1);
+        }
+
+        llvm::Value *args[] = { ncomps,
                                 llvm_void_ptr(sym),
                                 llvm_constant((int)sym.has_derivs()),
                                 sg_void_ptr(), 
                                 llvm_constant(op.sourcefile()),
                                 llvm_constant(op.sourceline()),
-                                llvm_constant(sym.name()) };
-        llvm_call_function ("osl_naninf_check", args, 7);
+                                llvm_constant(sym.name()),
+                                offset,
+                                ncheck
+                              };
+        llvm_call_function ("osl_naninf_check", args, 9);
     }
 }
 
@@ -883,8 +905,10 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                 llvm::Value *args[] = { llvm_constant(ncomps), llvm_void_ptr(s),
                      llvm_constant((int)s.has_derivs()), sg_void_ptr(), 
                      llvm_constant(ustring(inst()->shadername())),
-                     llvm_constant(0), llvm_constant(s.name()) };
-                llvm_call_function ("osl_naninf_check", args, 7);
+                     llvm_constant(0), llvm_constant(s.name()),
+                     llvm_constant(0), llvm_constant(ncomps)
+                };
+                llvm_call_function ("osl_naninf_check", args, 9);
             }
         }
     }

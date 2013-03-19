@@ -1776,22 +1776,33 @@ osl_range_check (int indexvalue, int length,
 
 
 
+// vals points to a symbol with a total of ncomps floats (ncomps ==
+// aggregate*arraylen).  If has_derivs is true, it's actually 3 times
+// that length, the main values then the derivatives.  We want to check
+// for nans in vals[firstcheck..firstcheck+nchecks-1], and also in the
+// derivatives if present.  Note that if firstcheck==0 and nchecks==ncomps,
+// we are checking the entire contents of the symbol.  More restrictive
+// firstcheck,nchecks are used to check just one element of an array.
 OSL_SHADEOP void
 osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
                   void *sg, const void *sourcefile, int sourceline,
-                  void *symbolname)
+                  void *symbolname, int firstcheck, int nchecks)
 {
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     const float *vals = (const float *)vals_;
-    for (int i = 0, e = has_derivs ? 3*ncomps : ncomps;  i < e;  ++i)
-        if (! isfinite(vals[i])) {
-            ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-            ctx->shadingsys().error ("Detected %g value in %s%s at %s:%d",
-                                     vals[i],
-                                     i>=ncomps ? "the derivatives of " : "",
-                                     USTR(symbolname).c_str(),
-                                     USTR(sourcefile).c_str(), sourceline);
-            return;
+    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
+        for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
+            int i = d*ncomps + c;
+            if (! isfinite(vals[i])) {
+                ctx->shadingsys().error ("Detected %g value in %s%s at %s:%d",
+                                         vals[i],
+                                         d > 0 ? "the derivatives of " : "",
+                                         USTR(symbolname).c_str(),
+                                         USTR(sourcefile).c_str(), sourceline);
+                return;
+            }
         }
+    }
 }
 
 

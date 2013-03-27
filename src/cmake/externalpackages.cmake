@@ -67,22 +67,24 @@ endmacro ()
 ###########################################################################
 # Boost setup
 
-set (Boost_ADDITIONAL_VERSIONS "1.52" "1.51" "1.50" "1.49" "1.48"
-                               "1.47" "1.46" "1.45"
-                               "1.44" "1.43" "1.42" "1.41" "1.40")
+set (Boost_ADDITIONAL_VERSIONS "1.53" "1.52" "1.51" "1.50"
+                               "1.49" "1.48" "1.47" "1.46" "1.45"
+                               "1.44" "1.43" "1.42")
 if (LINKSTATIC)
     set (Boost_USE_STATIC_LIBS   ON)
 endif ()
 set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
     set (Boost_FOUND true)
+    # N.B. For a custom version, the caller had better set up the variables
+    # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
 else ()
     set (Boost_COMPONENTS filesystem regex system thread)
     if (USE_BOOST_WAVE)
         list (APPEND Boost_COMPONENTS wave)
     endif ()
 
-    find_package (Boost 1.40 REQUIRED 
+    find_package (Boost 1.42 REQUIRED 
                   COMPONENTS ${Boost_COMPONENTS}
                  )
 endif ()

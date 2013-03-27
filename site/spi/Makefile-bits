@@ -45,6 +45,14 @@ ifeq ($(SP_ARCH), spinux1_x86_64)
          -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.0-test/bin/gcc \
          -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.0-test/bin/g++
     endif
+    ifeq (${SPCOMP2_USE_BOOSTVERS}, 1)
+    BOOSTVERS_UNDERSCORE = ${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
+    MY_CMAKE_FLAGS += \
+        -DBOOST_CUSTOM=1 \
+        -DBoost_INCLUDE_DIRS=/usr/include/boost_${BOOSTVERS} \
+        -DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS} \
+        -DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERS}/libboost_filesystem-gcc44-mt-${BOOSTVERS_UNDERSCORE}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_filesystem-gcc44-mt-${BOOSTVERS_UNDERSCORE}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_regex-gcc44-mt-${BOOSTVERS_UNDERSCORE}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_system-gcc44-mt-${BOOSTVERS_UNDERSCORE}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_thread-gcc44-mt-${BOOSTVERS_UNDERSCORE}.so"
+    endif
 endif # SP_ARCH == spinux1_x86_64
 
 

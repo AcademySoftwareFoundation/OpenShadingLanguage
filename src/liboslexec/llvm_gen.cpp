@@ -2394,14 +2394,14 @@ llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
 
 
 
-// T noise (string name, float s, ...);
-// T noise (string name, float s, float t, ...);
-// T noise (string name, point P, ...);
-// T noise (string name, point P, float t, ...);
-// T pnoise (string name, float s, float sper, ...);
-// T pnoise (string name, float s, float t, float sper, float tper, ...);
-// T pnoise (string name, point P, point Pper, ...);
-// T pnoise (string name, point P, float t, point Pper, float tper, ...);
+// T noise ([string name,] float s, ...);
+// T noise ([string name,] float s, float t, ...);
+// T noise ([string name,] point P, ...);
+// T noise ([string name,] point P, float t, ...);
+// T pnoise ([string name,] float s, float sper, ...);
+// T pnoise ([string name,] float s, float t, float sper, float tper, ...);
+// T pnoise ([string name,] point P, point Pper, ...);
+// T pnoise ([string name,] point P, float t, point Pper, float tper, ...);
 LLVMGEN (llvm_gen_noise)
 {
     Opcode &op (rop.inst()->ops()[opnum]);

@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
 #include "dual.h"
+#include "noiseimpl.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -50,6 +51,7 @@ static ustring u_nop    ("nop"),
                u_if     ("if"),
                u_eq     ("eq"),
                u_return ("return");
+static ustring u_cell ("cell"), u_cellnoise ("cellnoise");
 
 
 OSL_NAMESPACE_ENTER
@@ -2037,6 +2039,88 @@ DECLFOLDER(constfold_pointcloud_get)
     args_to_add.push_back (const_array_sym);
     rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
     return 1;
+}
+
+
+
+DECLFOLDER(constfold_noise)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    // Take an early out if any args are not constant (other than the result)
+    for (int i = 1; i < op.nargs(); ++i)
+        if (! rop.opargsym(op,i)->is_constant())
+            return 0;
+
+    // Decode some info about which noise function we're dealing with
+//    bool periodic = (op.opname() == Strings::pnoise);
+    int arg = 0;   // Next arg to read
+    Symbol &Result = *rop.opargsym (op, arg++);
+    int outdim = Result.typespec().is_triple() ? 3 : 1;
+    Symbol *Name = rop.opargsym (op, arg++);
+    ustring name;
+    if (Name->typespec().is_string()) {
+        name = Name->is_constant() ? *(ustring *)Name->data() : ustring();
+    } else {
+        // Not a string, must be the old-style noise/pnoise
+        --arg;  // forget that arg
+        Name = NULL;
+        name = op.opname();
+    }
+
+    // Early out: for now, we only fold cell noise
+    if (name != u_cellnoise && name != u_cell)
+        return 0;
+
+    // Extract the constant input coordinates
+    float input[4];
+    int indim = 0;
+    for ( ; arg < op.nargs() && indim < 4; ++arg) {
+        Symbol *in = rop.opargsym(op,arg);
+        if (in->typespec().is_float()) {
+            input[indim++] = ((float *)in->data())[0];
+        } else if (in->typespec().is_triple()) {
+            input[indim++] = ((float *)in->data())[0];
+            input[indim++] = ((float *)in->data())[1];
+            input[indim++] = ((float *)in->data())[2];
+        }
+        else
+            return 0;  // optional args starting, we don't fold them yet
+    }
+
+    if (name == u_cellnoise || name == u_cell) {
+        CellNoise cell;
+        if (outdim == 1) {
+            float n;
+            if (indim == 1)
+                cell (n, input[0]);
+            else if (indim == 2)
+                cell (n, input[0], input[1]);
+            else if (indim == 3)
+                cell (n, Vec3(input[0], input[1], input[2]));
+            else
+                cell (n, Vec3(input[0], input[1], input[2]), input[3]);
+            int cind = rop.add_constant (n);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        } else {
+            ASSERT (outdim == 3);
+            Vec3 n;
+            if (indim == 1)
+                cell (n, input[0]);
+            else if (indim == 2)
+                cell (n, input[0], input[1]);
+            else if (indim == 3)
+                cell (n, Vec3(input[0], input[1], input[2]));
+            else
+                cell (n, Vec3(input[0], input[1], input[2]), input[3]);
+            int cind = rop.add_constant (TypeDesc::TypePoint, &n);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 

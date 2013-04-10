@@ -272,7 +272,7 @@ TESTSUITE ( arithmetic array array-derivs array-range
             logic loop matrix message metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
-            noise-perlin noise-uperlin
+            noise-perlin noise-uperlin noise-simplex noise-usimplex
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             oslc-err-arrayindex oslc-err-closuremul oslc-err-intoverflow
             oslc-err-noreturn oslc-err-paramdefault

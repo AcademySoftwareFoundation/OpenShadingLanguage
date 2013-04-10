@@ -1350,6 +1350,7 @@ namespace Strings {
     extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
     extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern OSLEXECPUBLIC ustring simplex, usimplex, simplexnoise, usimplexnoise;
     extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
     extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
     extern OSLEXECPUBLIC ustring subimage, subimagename;

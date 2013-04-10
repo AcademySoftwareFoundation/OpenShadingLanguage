@@ -236,6 +236,8 @@ ustring cell("cell"), cellnoise("cellnoise"), pcellnoise("pcellnoise");
 ustring pnoise("pnoise"), psnoise("psnoise");
 ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
 ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
+ustring simplex("simplex"), usimplex("usimplex");
+ustring simplexnoise("simplexnoise"), usimplexnoise("usimplexnoise");
 ustring anisotropic("anisotropic"), direction("direction");
 ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");

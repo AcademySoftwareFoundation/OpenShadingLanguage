@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_AST_H
 #define OSL_AST_H
 
+#include <boost/intrusive_ptr.hpp>
 #include "OpenImageIO/refcnt.h"
 
 #include "oslconfig.h"
@@ -56,7 +57,7 @@ class TypeSpec;
 ///
 class ASTNode : public OIIO::RefCnt {
 public:
-    typedef intrusive_ptr<ASTNode> ref;  ///< Ref-counted pointer to an ASTNode
+    typedef boost::intrusive_ptr<ASTNode> ref;  ///< Ref-counted pointer to an ASTNode
 
     /// List of all the types of AST nodes.
     ///

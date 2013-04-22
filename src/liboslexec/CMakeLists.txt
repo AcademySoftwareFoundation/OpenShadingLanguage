@@ -2,10 +2,11 @@ SET ( liboslexec_srcs
           shadingsys.cpp closure.cpp
           emissive.cpp background.cpp debug.cpp dictionary.cpp
           vol_subsurface.cpp
-          context.cpp gabornoise.cpp instance.cpp 
+          context.cpp instance.cpp 
           loadshader.cpp master.cpp 
           opcolor.cpp 
-          opmessage.cpp opnoise.cpp 
+          opmessage.cpp
+          opnoise.cpp simplexnoise.cpp gabornoise.cpp
           opspline.cpp opstring.cpp
           oslexec.cpp osoreader.cpp
           pointcloud.cpp rendservices.cpp 

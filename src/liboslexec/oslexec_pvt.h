@@ -473,7 +473,7 @@ public:
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
-            return std::pair<Symbol*,Symbol*> (NULL, NULL);
+            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
         else
             return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
                                                &i->m_instsymbols[0] + i->lastparam());
@@ -481,7 +481,7 @@ public:
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
-            return std::pair<const Symbol*,const Symbol*> (NULL, NULL);
+            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
         else
             return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
                                                            &i->m_instsymbols[0] + i->lastparam());

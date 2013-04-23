@@ -38,10 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/regex_fwd.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/intrusive_ptr.hpp>
 
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/paramlist.h"
+#include <OpenImageIO/ustring.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/paramlist.h>
+#include <OpenImageIO/refcnt.h>
 
 #include "oslexec.h"
 #include "oslclosure.h"
@@ -249,7 +251,7 @@ inline void stlfree (T &v)
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
-    typedef intrusive_ptr<ShaderMaster> ref;
+    typedef boost::intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
     ~ShaderMaster ();
 
@@ -479,7 +481,7 @@ public:
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
-            return std::pair<Symbol*,Symbol*> (NULL, NULL);
+            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
         else
             return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
                                                &i->m_instsymbols[0] + i->lastparam());
@@ -487,7 +489,7 @@ public:
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
-            return std::pair<const Symbol*,const Symbol*> (NULL, NULL);
+            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
         else
             return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
                                                            &i->m_instsymbols[0] + i->lastparam());

@@ -33,7 +33,6 @@ using namespace OSL::pvt;
 #if USE_PARTIO
 #include <Partio.h>
 #include <boost/unordered_map.hpp>
-#include <boost/shared_ptr.hpp>
 #endif
 
 
@@ -48,7 +47,7 @@ public:
     ~PointCloud ();
     static PointCloud *get (ustring filename, bool read=true);
 
-    typedef boost::unordered_map<ustring, boost::shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
+    typedef boost::unordered_map<ustring, shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
     // N.B./FIXME(C++11): shared_ptr is probably overkill, but
     // scoped_ptr is not copyable and therefore can't be used in
     // standard containers.  When C++11 is uniquitous, unique_ptr is the
@@ -63,7 +62,7 @@ public:
 };
 
 
-typedef boost::unordered_map<ustring, boost::shared_ptr<PointCloud>, ustringHash> PointCloudMap;
+typedef boost::unordered_map<ustring, shared_ptr<PointCloud>, ustringHash> PointCloudMap;
 // See above note about shared_ptr vs unique_ptr.
 static PointCloudMap pointclouds;
 static spin_mutex pointcloudmap_mutex;

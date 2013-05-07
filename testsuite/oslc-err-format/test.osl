@@ -1,0 +1,13 @@
+shader test(output color Cout = 0, string fmtstring = "non-const %d %s")
+{
+    int i = 3;
+    string s = "blah";
+    printf (fmtstring, i, s);
+    printf ("good %3d %s\n", i, s);
+    printf ("bad  %3f %s\n", i, s);
+    printf ("bad  %3i %s\n", i, u);
+    printf ("bad  %s %d\n", i, s);
+    printf ("bad  %s % % xxx\n", i, s);
+    printf ("bad  %d %d\n", i);
+    printf ("bad  %d %d\n", i, i, i);
+}

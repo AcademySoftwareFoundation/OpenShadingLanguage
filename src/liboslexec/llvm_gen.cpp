@@ -268,7 +268,7 @@ LLVMGEN (llvm_gen_printf)
                    *format != 'p' && *format != 's' && *format != 'u' &&
                    *format != 'v' && *format != 'x' && *format != 'X')
                 ++format;
-            ++format; // Also eat the format char
+            char formatchar = *format++;  // Also eat the format char
             if (arg >= op.nargs()) {
                 rop.shadingsys().error ("Mismatch between format string and arguments (%s:%d)",
                                         op.sourcefile().c_str(), op.sourceline());
@@ -281,6 +281,22 @@ LLVMGEN (llvm_gen_printf)
             TypeDesc simpletype (sym.typespec().simpletype());
             int num_elements = simpletype.numelements();
             int num_components = simpletype.aggregate;
+            if ((sym.typespec().is_closure_based() ||
+                 simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                ourformat[ourformat.length()-1] = 's';
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
+                formatchar != 'i' && formatchar != 'o' && formatchar != 'u' &&
+                formatchar != 'x' && formatchar != 'X') {
+                ourformat[ourformat.length()-1] = 'd';
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
+                formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
+                formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
+                formatchar != 'v') {
+                ourformat[ourformat.length()-1] = 'f';
+            }
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.llvm_constant(a) : NULL;

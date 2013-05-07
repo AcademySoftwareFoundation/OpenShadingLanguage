@@ -274,7 +274,8 @@ TESTSUITE ( arithmetic array array-derivs array-range
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin noise-simplex noise-usimplex
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
-            oslc-err-arrayindex oslc-err-closuremul oslc-err-intoverflow
+            oslc-err-arrayindex oslc-err-closuremul
+            oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-paramdefault
             pointcloud pointcloud-fold
             raytype render-background render-bumptest render-cornell render-furnace-diffuse

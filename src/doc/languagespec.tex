@@ -3698,14 +3698,13 @@ positions.
 Much as in C, {\cf printf()} takes a format string {\cf fmt} and an
 argument list, and prints the resulting formatted string to the console.
 
-Where the {\cf fmt} contains the characters {\cf \%d}, {\cf \%i}, {\cf \%f},
-{\cf \%g}, and {\cf \%s}, {\cf printf} will substitute arguments, in
-order.  The {\cf \%d} and {\cf \%i} arguments expect an {\cf int}
-argument; {\cf \%f} and {\cf \%g} expect a \float, \color, point-like,
-or \matrix argument (for multi-component types such as \color, the
-format will be applied to each of the components); and {\cf \%s} expects
-a {\cf string} argument.  In addition, {\cf \%d} and {\cf \%i} will also
-print \float's, truncating and printing them as if they were integers.
+Where the {\cf fmt} contains a format string similar to {\cf printf} in
+the C language. The {\cf \%d}, {\cf \%i}, {\cf \%o}, and {\cf \%x}
+arguments expect an {\cf int} argument.  The {\cf \%f}, {\cf \%g}, and
+{\cf \%e} expect a \float, \color, point-like, or \matrix argument (for
+multi-component types such as \color, the format will be applied to each
+of the components).  The {\cf \%s} expects a {\cf string} or 
+{\cf closure} argument.
 
 All of the substition commands follow the usual C/C++ formatting rules,
 so format commands such as {\cf "\%6.2f"}, etc., should work as

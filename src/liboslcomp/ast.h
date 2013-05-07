@@ -835,6 +835,11 @@ private:
     /// checks for printf- and texture-like, etc.
     void typecheck_builtin_specialcase ();
 
+    /// Make sure the printf-like format string matches the list of
+    /// arguments poitned to by arg.  If ok, return true, otherwise
+    /// return false and call an appropriate error().
+    bool typecheck_printf_args (const char *format, ASTNode *arg);
+
     /// Is the argument number 'arg' read by the op?
     ///
     bool argread (int arg) const;

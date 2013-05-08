@@ -3483,33 +3483,22 @@ The old {\cf cellnoise(...coords...)} function is equivalent to
 \apiitem{\emph{type} {\ce hash} (float u) \\
 \emph{type} {\ce hash} (float u, float v) \\
 \emph{type} {\ce hash} (point p) \\
-\emph{type} {\ce hash} (point p, float t)}
+\emph{type} {\ce hash} (point p, float t) \\
+\emph{type} {\ce hash} (int i) \\
+\emph{type} {\ce hash} (string s)}
 \indexapi{hash()}
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
-4-D coordinates.  The return values will be evenly distributed on
-$[0,1]$ and be completely repeatable when passed the same coordinates
-again, yet will be uncorrellated to hashes of any other positions
-(including nearby points).  This is like having a random value indexed
-spatially, but that will be repeatable from frame to frame of an
+4-D coordinates, integer, or string.  The return values will be evenly
+distributed on $[0,1]$ and be completely repeatable when passed the same
+coordinates again, yet will be uncorrellated to hashes of any other
+positions (including nearby points).  This is like having a random value
+indexed spatially, but that will be repeatable from frame to frame of an
 animation (provided its input is \emph{precisely} identical).
 
 The return \emph{type} may be any of \float, \color, \point, \vector, or
 \normal, depending on the type of the variable the result is assigned to
 (or based on an explicit type cast).  For multi-component return types
 (e.g., \point), each component is an uncorrelated \float\ {\cf hash}
-function.
-\apiend
-
-\apiitem{\emph{type} {\ce random} ()}
-\indexapi{random()}
-Returns a pseudorandom value uniformly distributed on $[0,1]$.  Use with
-extreme caution --- the results are not necessarily repeatable from
-frame to frame.
-
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ {\cf random()}
 function.
 \apiend
 

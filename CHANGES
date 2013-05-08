@@ -1,3 +1,68 @@
+Release 1.4.0 - in progress (compared to 1.3)
+----------------------------------------------
+
+Language, standard libary, and compiler changes (for shader writers):
+
+* Simplex noise: new noise varieties "simplex" and "usimplex" are 
+  faster than Perlin noise (and MUCH faster for the 4-D variety),
+  but has a somewhat different appearance.  Judge for yourself, use
+  whichever noise suits your purpose.
+* oslc now catches mismatches between the format string and the types
+  of arguments to format(), printf(), fprintf(), warning(), and error().
+
+ShadingSystem API changes and new options (for renderer writers):
+
+* New ShadingSystem attribute "renderer_outputs" enumerates the renderer
+  outputs (AOVs) explicitly, so that elision of unused outputs can be done
+  with full understanding of which params will or will not be sued.
+  Beware: if you enable "opt_elide_unconnected_outputs", you MUST pass
+  "renderer_outputs" or your AOVs may be eliminated!
+
+Performance improvements:
+
+* "Middleman" optimization notices when you have 3 layers A,B,C with
+  connections A.Aout -> B.Bin and B.Bout -> C.Cin, an Bout is simply
+  copied unconditionally from Bin.  In this case, Aout is connected
+  directly to Cin, potentially leading to further optimizations, including
+  layer B getting culled entirely.
+* Layer-to-layer global propagation: Notice cases where an upstream
+  output is guaranteed to be aassigned a global variable (such as N or u)
+  and then alias the downstream parameter to that global (eliminating
+  the connection and possibly culling the upstream layer entirely).
+* Improve constant propagation from layer to layer (it used to do so only
+  if the output of the earlier layer was never used in the upstream layer;
+  but actually it's ok for it to be read, as long as it's not rewritten).
+* Runtime constant-folding of cellnoise() calls.
+
+Bug fixes:
+
+* Fix 'debugnan' tendency to give false positives for certain assignments
+  to arrays and multi-component variables (colors, points, etc.).
+
+Under the hood:
+
+* Eliminate use of custom DEBUG preprocessor symbol in favor of the more
+  standard NDEBUG (beware: its sense is reversed).
+
+Build & test system improvements and developer goodies:
+
+* testshade: --options lets you set arbitrary options to the ShadingSystem
+  for test runs.
+* Cmake option to enable/disable RTTI (useful if you have to link against
+  a version of LLVM that has RTTI enabled).
+* Fix some ambiguity about which variety of shared_ptr we are using -- 
+  this could produce problems in apps that include the OSL headers but also
+  use different shared_ptr varieties.
+* Fix a variety of build issues and warnings under Windows.
+
+Documentation:
+
+* Eliminate references to OSL random() function; it was never
+  implemented and nobody seemed to miss it or have a compelling use
+  case.
+
+
+
 Release 1.3.0 - 14 Feb 2013 (compared to 1.2)
 ----------------------------------------------
 

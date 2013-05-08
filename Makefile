@@ -44,10 +44,6 @@ MY_CMAKE_FLAGS += -DVERBOSE:BOOL=1
 TEST_FLAGS += -V
 endif
 
-ifneq (${USE_TBB},)
-MY_CMAKE_FLAGS += -DUSE_TBB:BOOL=${USE_TBB}
-endif
-
 ifneq (${LLVM_DIRECTORY},)
 MY_CMAKE_FLAGS += -DLLVM_DIRECTORY:STRING=${LLVM_DIRECTORY}
 endif
@@ -242,7 +238,6 @@ help:
 	@echo "  make VERBOSE=1 ...          Show all compilation commands"
 	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
 	@echo "  make OSL_SITE=xx            Use custom site build mods"
-	@echo "  make USE_TBB=0 ...          Don't use TBB"
 	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
 	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
 	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"

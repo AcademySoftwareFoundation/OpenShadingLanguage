@@ -125,7 +125,6 @@ endif ()
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
 set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
-set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 set (USE_EXTERNAL_PUGIXML OFF CACHE BOOL
      "Use an externally built shared library version of the pugixml library")
 set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML library")
@@ -163,7 +162,7 @@ include (flexbison)
 include_directories (
       ${CMAKE_SOURCE_DIR}/include
       ${CMAKE_BINARY_DIR}/include
-      ${OPENIMAGEIO_INCLUDES} ${TBB_INCLUDES}
+      ${OPENIMAGEIO_INCLUDES}
   )
 
 

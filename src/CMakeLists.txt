@@ -124,7 +124,6 @@ endif ()
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
 set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
-set (USE_TBB ON CACHE BOOL "Use TBB if needed")
 if (WIN32)
     set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
     set (USE_LLVM_BITCODE OFF CACHE BOOL "Generate embedded LLVM bitcode")
@@ -155,7 +154,7 @@ include (flexbison)
 include_directories (
       ${CMAKE_SOURCE_DIR}/include
       ${CMAKE_BINARY_DIR}/include
-      ${OPENIMAGEIO_INCLUDES} ${TBB_INCLUDES}
+      ${OPENIMAGEIO_INCLUDES}
   )
 
 

@@ -886,6 +886,75 @@ ASTfunction_call::mark_optional_output (int firstopt, const char **tags)
 
 
 
+bool
+ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
+{
+    int argnum = (m_name == "fprintf") ? 3 : 2;
+    while (*format != '\0') {
+        if (*format == '%') {
+            if (format[1] == '%') {
+                // '%%' is a literal '%'
+                format += 2;  // skip both percentages
+                continue;
+            }
+            const char *oldfmt = format;  // mark beginning of format
+            while (*format &&
+                   *format != 'c' && *format != 'd' && *format != 'e' &&
+                   *format != 'f' && *format != 'g' && *format != 'i' &&
+                   *format != 'm' && *format != 'n' && *format != 'o' &&
+                   *format != 'p' && *format != 's' && *format != 'u' &&
+                   *format != 'v' && *format != 'x' && *format != 'X')
+                ++format;
+            char formatchar = *format++;  // Also eat the format char
+            if (! arg) {
+                error ("%s has mismatched format string and arguments (not enough args)",
+                       m_name.c_str());
+                return false;
+            }
+
+            std::string ourformat (oldfmt, format);  // straddle the format
+            // Doctor it to fix mismatches between format and data
+            TypeDesc simpletype (arg->typespec().simpletype());
+            if ((arg->typespec().is_closure_based() ||
+                 simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                error ("%s has mismatched format string and arguments (arg %d needs %%s)",
+                       m_name.c_str());
+                return false;
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
+                formatchar != 'i' && formatchar != 'o' &&
+                formatchar != 'x' && formatchar != 'X') {
+                error ("%s has mismatched format string and arguments (arg %d needs %%d, %%i, %%o, %%x, or %%X)",
+                       m_name.c_str(), argnum);
+                return false;
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
+                formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
+                formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
+                formatchar != 'v') {
+                error ("%s has mismatched format string and arguments (arg %d needs %%f, %%g, or %%e)",
+                       m_name.c_str(), argnum);
+                return false;
+            }
+
+            arg = arg->nextptr();
+            ++argnum;
+        } else {
+            // Everything else -- just copy the character and advance
+            ++format;
+        }
+    }
+    if (arg) {
+        error ("%s has mismatched format string and arguments (too many args)",
+               m_name.c_str());
+        return false;
+    }
+    return true;  // all ok
+}
+
+
+
 void
 ASTfunction_call::typecheck_builtin_specialcase ()
 {
@@ -923,6 +992,22 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (2);
         } else if (func()->texture_args()) {
             mark_optional_output(2, tex_out_args);
+        }
+    }
+
+    if (func()->printf_args()) {
+        ASTNode *arg = args().get();  // first arg
+        if (arg && m_name == "fprintf")
+            arg = arg->nextptr();  // skip filename param for fprintf
+        const char *format = NULL;
+        if (arg && arg->nodetype() == ASTNode::literal_node &&
+            arg->typespec().is_string() &&
+            (format = ((ASTliteral *)arg)->strval())) {
+            arg = arg->nextptr ();
+            typecheck_printf_args (format, arg);
+        } else {
+            warning ("%s() uses a format string that is not a constant.",
+                     m_name.c_str());
         }
     }
 
@@ -1124,7 +1209,7 @@ static const char * builtin_func_args [] = {
     "exit", "x", NULL,
     "filterwidth", "ff", "vp", "vv", NULL,
     "format", "ss*", "!printf", NULL,
-    "fprintf", "xs*", "!printf", NULL,
+    "fprintf", "xss*", "!printf", NULL,
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
@@ -1153,7 +1238,7 @@ static const char * builtin_func_args [] = {
     "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
-    "warning", "xs*", NULL,   // FIXME -- further checking
+    "warning", "xs*", "!printf", NULL,   // FIXME -- further checking
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

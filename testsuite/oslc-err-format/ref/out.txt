@@ -1,0 +1,8 @@
+test.osl:5: warning: printf() uses a format string that is not a constant.
+test.osl:7: error: printf has mismatched format string and arguments (arg 2 needs %d, %i, %o, %x, or %X)
+test.osl:8: error: printf has mismatched format string and arguments (arg 3 needs %f, %g, or %e)
+test.osl:9: error: printf has mismatched format string and arguments (arg 2 needs %d, %i, %o, %x, or %X)
+test.osl:10: error: printf has mismatched format string and arguments (arg 2 needs %d, %i, %o, %x, or %X)
+test.osl:11: error: printf has mismatched format string and arguments (not enough args)
+test.osl:12: error: printf has mismatched format string and arguments (too many args)
+FAILED test.osl

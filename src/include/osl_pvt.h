@@ -645,7 +645,7 @@ public:
 
     /// Stream output
     std::ostream& print (std::ostream& out) const;
-    std::ostream& print_vals (std::ostream& out) const;
+    std::ostream& print_vals (std::ostream& out, int maxvals=10000000) const;
 
 protected:
     void *m_data;               ///< Pointer to the data

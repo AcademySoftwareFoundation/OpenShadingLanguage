@@ -382,14 +382,14 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     // name          llvmgen              folder         simple
     OP (aassign,     aassign,             none,          false);
     OP (abs,         generic,             abs,           true);
-    OP (acos,        generic,             none,          true);
+    OP (acos,        generic,             acos,          true);
     OP (add,         add,                 add,           true);
     OP (and,         andor,               and,           true);
     OP (area,        area,                none,          true);
     OP (aref,        aref,                aref,          true);
     OP (arraycopy,   arraycopy,           none,          false);
     OP (arraylength, arraylength,         arraylength,   true);
-    OP (asin,        generic,             none,          true);
+    OP (asin,        generic,             asin,          true);
     OP (assign,      assign,              none,          true);
     OP (atan,        generic,             none,          true);
     OP (atan2,       generic,             none,          true);
@@ -409,7 +409,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (compref,     compref,             compref,       true);
     OP (concat,      generic,             concat,        true);
     OP (continue,    loopmod_op,          none,          false);
-    OP (cos,         generic,             none,          true);
+    OP (cos,         generic,             cos,          true);
     OP (cosh,        generic,             none,          true);
     OP (cross,       generic,             none,          true);
     OP (degrees,     generic,             none,          true);
@@ -474,7 +474,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (neq,         compare_op,          neq,           true);
     OP (noise,       noise,               noise,         true);
     OP (normal,      construct_triple,    triple,        true);
-    OP (normalize,   generic,             none,          true);
+    OP (normalize,   generic,             normalize,     true);
     OP (or,          andor,               or,            true);
     OP (pnoise,      noise,               noise,         true);
     OP (point,       construct_triple,    triple,        true);
@@ -494,7 +494,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (shl,         bitwise_binary_op,   none,          true);
     OP (shr,         bitwise_binary_op,   none,          true);
     OP (sign,        generic,             none,          true);
-    OP (sin,         generic,             none,          true);
+    OP (sin,         generic,             sin,           true);
     OP (sincos,      sincos,              none,          false);
     OP (sinh,        generic,             none,          true);
     OP (smoothstep,  generic,             none,          true);

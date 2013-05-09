@@ -885,8 +885,10 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     BOOST_FOREACH (Symbol &s, inst()->symbols()) {
-        // Skip non-array constants -- we always inline them
-        if (s.symtype() == SymTypeConst && !s.typespec().is_array())
+        // Skip constants -- we always inline scalar constants, and for
+        // array constants we will just use the pointers to the copy of
+        // the constant that belongs to the instance.
+        if (s.symtype() == SymTypeConst)
             continue;
         // Skip structure placeholders
         if (s.typespec().is_structure())

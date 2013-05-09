@@ -203,7 +203,7 @@ OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
     size_t typesize = type.size();
     BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
         if (sym->typespec().simpletype() == type &&
-              memcmp(val, sym->data(), typesize))
+              ! memcmp(val, sym->data(), typesize))
             return sym;
     }
     // It's not a constant we've added before

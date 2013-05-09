@@ -134,12 +134,15 @@ normal mod (normal a, float  b) { return a - b*floor(a/b); }
 color  mod (color  a, float  b) { return a - b*floor(a/b); }
 float  mod (float  a, float  b) { return a - b*floor(a/b); }
 PERCOMP2 (min)
+int min (int a, int b) BUILTIN;
 PERCOMP2 (max)
+int max (int a, int b) BUILTIN;
 normal clamp (normal x, normal minval, normal maxval) { return max(min(x,maxval),minval); }
 vector clamp (vector x, vector minval, vector maxval) { return max(min(x,maxval),minval); }
 point  clamp (point x, point minval, point maxval) { return max(min(x,maxval),minval); }
 color  clamp (color x, color minval, color maxval) { return max(min(x,maxval),minval); }
 float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+int    clamp (int x, int minval, int maxval) { return max(min(x,maxval),minval); }
 #if 0
 normal mix (normal x, normal y, normal a) { return x*(1-a) + y*a; }
 normal mix (normal x, normal y, float  a) { return x*(1-a) + y*a; }

@@ -369,7 +369,7 @@ ShaderInstance::print ()
             out << " " << s->name();
             if (s->symtype() == SymTypeConst) {
                 out << " (";
-                s->print_vals(out);
+                s->print_vals(out,16);
                 out << ")";
             }
             if (op.argread(a))

@@ -125,28 +125,65 @@ private:
 
 
 /// Subclass of Symbol used just for constants, which are different
-/// because they need to carry around their value.
+/// because they need to carry around their value.  For small basic
+/// types (int, float, Vec3, string), the storage is local.  For the
+/// general case (like arrays), it allocates memory and uses the
+/// parent class's fields m_data and m_data_free, which will also cause
+/// the parent class to properly free it upon destruction.
 class ConstantSymbol : public Symbol {
 public:
     ConstantSymbol (ustring n, ustring val)
-        : Symbol(n, TypeDesc::TypeString, SymTypeConst), m_s(val) { }
+        : Symbol(n, TypeDesc::TypeString, SymTypeConst) {
+        m_val.s = val.c_str();
+        m_data = &m_val.s;
+    }
     ConstantSymbol (ustring n, int val)
-        : Symbol(n, TypeDesc::TypeInt, SymTypeConst), m_i(val) { }
+        : Symbol(n, TypeDesc::TypeInt, SymTypeConst) {
+        m_val.i = val;
+        m_data = &m_val.i;
+    }
     ConstantSymbol (ustring n, float val)
-        : Symbol(n, TypeDesc::TypeFloat, SymTypeConst), m_f(val) { }
+        : Symbol(n, TypeDesc::TypeFloat, SymTypeConst) {
+        m_val.f = val;
+        m_data = &m_val.f;
+    }
     ConstantSymbol (ustring n, TypeDesc type, float x, float y, float z)
-        : Symbol(n, type, SymTypeConst), m_v(x,y,z) { }
+        : Symbol(n, type, SymTypeConst) {
+        m_val.v[0] = x;  m_val.v[1] = y;  m_val.v[2] = z;
+        m_data = &m_val.v;
+    }
+    ConstantSymbol (ustring n, TypeDesc type)
+        : Symbol(n, type, SymTypeConst) {
+        if (type == TypeDesc::FLOAT)
+            m_data = &m_val.f;
+        else if (type == TypeDesc::INT)
+            m_data = &m_val.i;
+        else if (type == TypeDesc::STRING)
+            m_data = &m_val.s;
+        else if (equivalent(type,TypeDesc::TypeVector))
+            m_data = &m_val.v;
+        else {
+            ASSERT (m_data == NULL);
+            m_data = new char [type.size()];
+            m_free_data = true;
+        }
+    }
 
-    ustring strval () const { return m_s; }
-    int intval () const { return m_i; }
-    float floatval () const { return m_typespec.is_int() ? (float)m_i : m_f; }
-    const Vec3 &vecval () const { return m_v; }
+    ustring strval (int i=0) const { return ((const ustring *)data())[i]; }
+    int intval (int i=0) const { return ((const int *)data())[i]; }
+    float floatval (int i=0) const {
+        return m_typespec.simpletype().basetype == TypeDesc::INT
+                   ? intval(i) : ((const float *)data())[i];
+    }
+    const Vec3 &vecval (int i=0) const { return ((const Vec3 *)data())[i]; }
 
 private:
-    ustring m_s;
-    int m_i;
-    float m_f;
-    Vec3 m_v;
+    union {
+        const char *s;  // actually a ustring
+        int i;
+        float f;
+        float v[3];     // actually a Vec3
+    } m_val;
 };
 
 

@@ -198,6 +198,26 @@ OSLCompilerImpl::make_constant (ustring val)
 
 
 Symbol *
+OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
+{
+    size_t typesize = type.size();
+    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+        if (sym->typespec().simpletype() == type &&
+              memcmp(val, sym->data(), typesize))
+            return sym;
+    }
+    // It's not a constant we've added before
+    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ConstantSymbol *s = new ConstantSymbol (name, type);
+    memcpy (s->data(), val, typesize);
+    symtab().insert (s);
+    m_const_syms.push_back (s);
+    return s;
+}
+
+
+
+Symbol *
 OSLCompilerImpl::make_constant (int val)
 {
     BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
@@ -779,6 +799,49 @@ void
 ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
                                            Symbol *sym)
 {
+    // Special case for arrays initialized by only constants of the
+    // right type.
+    ASSERT (sym->typespec() == type);
+    if (type.is_array() && ! type.is_closure_based() &&
+        ! type.is_structure_array()) {
+        TypeDesc elemtype = type.simpletype().elementtype();
+        bool all_const = true;
+        int length = 0;
+        for (ref i = init;  i;  i = i->next(), ++length) {
+            // It's not a constant if the initializer isn't a literal
+            if (i->nodetype() != ASTNode::literal_node) {
+                all_const = false;
+                break;
+            }
+            // Also check that the initializer type is equivalent to the
+            // element type of the array, but allow for float arrays with
+            // int literal initializers.
+            TypeDesc itype = i->typespec().simpletype();
+            if (itype != elemtype &&
+                !(itype == TypeDesc::INT && elemtype == TypeDesc::FLOAT)) {
+                all_const = false;
+                break;
+            }
+        }
+        if (all_const) {
+            std::vector<char> arrayvals (type.simpletype().size());
+            for (int i = 0;  init;  init = init->next(), ++i) {
+                ASTliteral *lit = (ASTliteral *)init.get();
+                if (elemtype == TypeDesc::INT)
+                    ((int *)&arrayvals[0])[i] = lit->intval();
+                else if (elemtype == TypeDesc::FLOAT)
+                    ((float *)&arrayvals[0])[i] = lit->floatval();
+                else if (elemtype == TypeDesc::STRING)
+                    ((ustring *)&arrayvals[0])[i] = lit->ustrval();
+                else { ASSERT(0); }
+            }
+            Symbol *c = m_compiler->make_constant (type.simpletype(),
+                                                   &arrayvals[0]);
+            emitcode ("assign", sym, c);
+            return;
+        }
+    }
+
     // Loop over a list of initializers (it's just 1 if not an array)...
     for (int i = 0;  init;  init = init->next(), ++i) {
         Symbol *dest = init->codegen (sym);

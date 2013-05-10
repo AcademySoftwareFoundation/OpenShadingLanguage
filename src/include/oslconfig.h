@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////
 
 // Test if we are using C++11
-#if (__cplusplus >= 201103L)
+#if (__cplusplus >= 201103L) || (_MSC_VER >= 1700)
 #define OSL_USING_CPLUSPLUS11 1
 #endif
 

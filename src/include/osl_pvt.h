@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/dassert.h"
 
-#ifdef OSL_USING_CPLUSPLUS11
+#ifndef OSL_USING_CPLUSPLUS11
 #include <boost/tr1/memory.hpp>
 #endif
 

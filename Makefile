@@ -96,6 +96,10 @@ ifneq (${BUILDSTATIC},)
 MY_CMAKE_FLAGS += -DBUILDSTATIC:BOOL=${BUILDSTATIC}
 endif
 
+ifneq (${USE_EXTERNAL_PUGIXML},)
+MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
+endif
+
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -246,4 +250,5 @@ help:
 	@echo "  make PARTIO_HOME=...        Use Partio from the given location"
 	@echo "  make STOP_ON_WARNING=0      Do not stop building if compiler warns"
 	@echo "  make BUILDSTATIC=1 ...      Build static library instead of shared"
+	@echo "  make USE_EXTERNAL_PUGIXML=1 Use the system PugiXML, not the one in OIIO"
 	@echo ""

@@ -36,7 +36,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/algorithm/string.hpp>
 
 #include <OpenImageIO/dassert.h>
-#include <OpenImageIO/pugixml.hpp>
+
+#ifdef USE_EXTERNAL_PUGIXML
+# include <pugixml.hpp>
+#else
+# include <OpenImageIO/pugixml.hpp>
+#endif
 
 #include "oslexec_pvt.h"
 
@@ -45,7 +50,9 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
+#ifndef USE_EXTERNAL_PUGIXML
 namespace pugi = OIIO::pugi;
+#endif
 
 
 

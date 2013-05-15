@@ -124,6 +124,9 @@ endif ()
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
 set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
+set (USE_EXTERNAL_PUGIXML OFF CACHE BOOL
+     "Use an externally built shared library version of the pugixml library")
+set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML library")
 if (WIN32)
     set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
     set (USE_LLVM_BITCODE OFF CACHE BOOL "Generate embedded LLVM bitcode")
@@ -135,6 +138,10 @@ set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
+endif ()
+
+if (USE_EXTERNAL_PUGIXML)
+    add_definitions ("-DUSE_EXTERNAL_PUGIXML")
 endif ()
 
 if (EXTRA_CPP_DEFINITIONS)

@@ -1,3 +1,23 @@
+Release 1.3.1 - 15 May 2013 (compared to 1.3.0)
+-----------------------------------------------
+* The integer versions of min(), max(), and clamp() were not working
+  properly.
+* Added CMake option 'ENABLERTTI' that enables use of RTTI for sites that
+  must link against an RTTI-enabled LLVM (the default is to assume LLVM
+  is built without RTTI, so we don't use it either).
+* Work around CMake bug where on some platforms, CMake doesn't define the
+  'NDEBUG' when making the 'RelWithDebInfo' target (which is sometimes
+  used for profiling).
+* Docs: Eliminated discussion of random(), which was never implemented
+  and we can't think of a good use case.
+* Add Make/CMake option 'USE_EXTERNAL_PUGIXML' which if set to nonzero
+  will find and use a system-installed PugiXML rather than assuming that
+  it's included in libOpenImageIO.  When used, it will also use the
+  environment variable PUGIXML_HOME (if set) as a hint for where to find
+  it, in case it's not in a usual system library directory.
+
+
+
 Release 1.3.0 - 14 Feb 2013 (compared to 1.2)
 ----------------------------------------------
 

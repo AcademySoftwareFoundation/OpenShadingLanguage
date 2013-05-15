@@ -33,27 +33,50 @@ Performance improvements:
   if the output of the earlier layer was never used in the upstream layer;
   but actually it's ok for it to be read, as long as it's not rewritten).
 * Runtime constant-folding of cellnoise() calls.
+* Local variables that are arrays initialized with float, int, or string
+  constants have been greatly optimized.  If that's the only time anything
+  is written into the array, it will be turned into a true static constant
+  with no per-shader-invocation initialization or allocation costs.
+  Thus, it is no longer expensive to use a large array of constants as a
+  table... it may look like a per-shade cost to set up the array, but by
+  the time the optimizer gets done with it, it is not.
+* Improved runtime constant-folding of max/min (now works for the integer
+  case, as well as previously working for the float-based types).
+* Runtime constant-folding of cos, sin, acos, asin, normalize, inversesqrt,
+  exp, exp2, expm1, log, log2, log10, logb, erf, erfc, radians, degrees.
 
 Bug fixes:
 
 * Fix 'debugnan' tendency to give false positives for certain assignments
   to arrays and multi-component variables (colors, points, etc.).
+* The integer versions of min(), max(), and clamp() were not working
+  properly.
 
 Under the hood:
 
 * Eliminate use of custom DEBUG preprocessor symbol in favor of the more
   standard NDEBUG (beware: its sense is reversed).
+* All references to and vestiges of TBB have been removed.
 
 Build & test system improvements and developer goodies:
 
 * testshade: --options lets you set arbitrary options to the ShadingSystem
   for test runs.
-* Cmake option to enable/disable RTTI (useful if you have to link against
-  a version of LLVM that has RTTI enabled).
+* Added CMake option 'ENABLERTTI' that enables use of RTTI for sites that
+  must link against an RTTI-enabled LLVM (the default is to assume LLVM
+  is built without RTTI, so we don't use it either).
 * Fix some ambiguity about which variety of shared_ptr we are using -- 
   this could produce problems in apps that include the OSL headers but also
   use different shared_ptr varieties.
 * Fix a variety of build issues and warnings under Windows.
+* Work around CMake bug where on some platforms, CMake doesn't define the
+  'NDEBUG' when making the 'RelWithDebInfo' target (which is sometimes
+  used for profiling).
+* Add Make/CMake option 'USE_EXTERNAL_PUGIXML' which if set to nonzero
+  will find and use a system-installed PugiXML rather than assuming that
+  it's included in libOpenImageIO.  When used, it will also use the
+  environment variable PUGIXML_HOME (if set) as a hint for where to find
+  it, in case it's not in a usual system library directory.
 
 Documentation:
 

@@ -241,104 +241,52 @@ OSL_SHADEOP void osl_##name##_dvdvdv (void *r_, void *a_, void *b_) \
                                                                     \
 OSL_SHADEOP void osl_##name##_dvvdv (void *r_, void *a_, void *b_)  \
 {                                                                   \
-    Dual2<Vec3> &r (DVEC(r_));                                      \
-    Dual2<Vec3> a (VEC(a_), Vec3(0,0,0), Vec3(0,0,0));              \
-    Dual2<Vec3> &b (DVEC(b_));                                      \
-    /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */           \
-    Dual2<float> ax, ay, az;                                        \
-    ax = dualfunc (Dual2<float> (a.val().x, a.dx().x, a.dy().x),    \
-                   Dual2<float> (b.val().x, b.dx().x, b.dy().x));   \
-    ay = dualfunc (Dual2<float> (a.val().y, a.dx().y, a.dy().y),    \
-                   Dual2<float> (b.val().y, b.dx().y, b.dy().y));   \
-    az = dualfunc (Dual2<float> (a.val().z, a.dx().z, a.dy().z),    \
-                   Dual2<float> (b.val().z, b.dx().z, b.dy().z));   \
-    /* Now swizzle back */                                          \
-    r.set (Vec3( ax.val(), ay.val(), az.val()),                     \
-           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                     \
-           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
+    Dual2<Vec3> a (VEC(a_));                                        \
+    osl_##name##_dvdvdv (r_, &a, b_);                               \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void osl_##name##_dvdvv (void *r_, void *a_, void *b_)  \
 {                                                                   \
-    Dual2<Vec3> &r (DVEC(r_));                                      \
-    Dual2<Vec3> &a (DVEC(a_));                                      \
-    Dual2<Vec3> b (VEC(b_), Vec3(0,0,0), Vec3(0,0,0));              \
-    /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */           \
-    Dual2<float> ax, ay, az;                                        \
-    ax = dualfunc (Dual2<float> (a.val().x, a.dx().x, a.dy().x),    \
-                   Dual2<float> (b.val().x, b.dx().x, b.dy().x));   \
-    ay = dualfunc (Dual2<float> (a.val().y, a.dx().y, a.dy().y),    \
-                   Dual2<float> (b.val().y, b.dx().y, b.dy().y));   \
-    az = dualfunc (Dual2<float> (a.val().z, a.dx().z, a.dy().z),    \
-                   Dual2<float> (b.val().z, b.dx().z, b.dy().z));   \
-    /* Now swizzle back */                                          \
-    r.set (Vec3( ax.val(), ay.val(), az.val()),                     \
-           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                     \
-           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
+    Dual2<Vec3> b (VEC(b_));                                        \
+    osl_##name##_dvdvdv (r_, a_, &b);                               \
 }
 
 
 // Mixed vec func(vec,float)
-#define MAKE_BINARY_PERCOMPONENT_VF_OP(name,floatfunc,dualfunc)     \
-OSL_SHADEOP void osl_##name##_vvf (void *r_, void *a_, float b) {   \
-    Vec3 &r (VEC(r_));                                              \
-    Vec3 &a (VEC(a_));                                              \
-    r[0] = floatfunc (a[0], b);                                     \
-    r[1] = floatfunc (a[1], b);                                     \
-    r[2] = floatfunc (a[2], b);                                     \
-}                                                                   \
-                                                                    \
-OSL_SHADEOP void osl_##name##_dvdvdf (void *r_, void *a_, void *b_) \
-{                                                                   \
-    Dual2<Vec3> &r (DVEC(r_));                                      \
-    Dual2<Vec3> &a (DVEC(a_));                                      \
-    Dual2<float> &b (DFLOAT(b_));                                   \
-    Dual2<float> ax, ay, az;                                        \
-    ax = dualfunc (Dual2<float> (a.val().x, a.dx().x, a.dy().x),    \
-                   Dual2<float> (b.val(), b.dx(), b.dy()));         \
-    ay = dualfunc (Dual2<float> (a.val().y, a.dx().y, a.dy().y),    \
-                   Dual2<float> (b.val(), b.dx(), b.dy()));         \
-    az = dualfunc (Dual2<float> (a.val().z, a.dx().z, a.dy().z),    \
-                   Dual2<float> (b.val(), b.dx(), b.dy()));         \
-    /* Now swizzle back */                                          \
-    r.set (Vec3( ax.val(), ay.val(), az.val()),                     \
-           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                     \
-           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
-}                                                                   \
-                                                                    \
-OSL_SHADEOP void osl_##name##_dvvdf (void *r_, void *a_, void *b_)  \
-{                                                                   \
-    Dual2<Vec3> &r (DVEC(r_));                                      \
-    Vec3 &a (VEC(a_));                                              \
-    Dual2<float> &b (DFLOAT(b_));                                   \
-    /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */           \
-    Dual2<float> ax, ay, az;                                        \
-    ax = dualfunc (Dual2<float> (a.x),                              \
-                   Dual2<float> (b.val(), b.dx(), b.dy()));         \
-    ay = dualfunc (Dual2<float> (a.y),                              \
-                   Dual2<float> (b.val(), b.dx(), b.dy()));         \
-    az = dualfunc (Dual2<float> (a.z),                              \
-                   Dual2<float> (b.val(), b.dx(), b.dy()));         \
-    /* Now swizzle back */                                          \
-    r.set (Vec3( ax.val(), ay.val(), az.val()),                     \
-           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                     \
-           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
-}                                                                   \
-                                                                    \
-OSL_SHADEOP void osl_##name##_dvdvf (void *r_, void *a_, float b_)  \
-{                                                                   \
-    Dual2<Vec3> &r (DVEC(r_));                                      \
-    Dual2<Vec3> &a (DVEC(a_));                                      \
-    Dual2<float> b (b_);                                            \
-    /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */           \
-    Dual2<float> ax, ay, az;                                        \
-    ax = dualfunc (Dual2<float> (a.val().x, a.dx().x, a.dy().x), b);\
-    ay = dualfunc (Dual2<float> (a.val().y, a.dx().y, a.dy().y), b);\
-    az = dualfunc (Dual2<float> (a.val().z, a.dx().z, a.dy().z), b);\
-    /* Now swizzle back */                                          \
-    r.set (Vec3( ax.val(), ay.val(), az.val()),                     \
-           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                     \
-           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
+#define MAKE_BINARY_PERCOMPONENT_VF_OP(name,floatfunc,dualfunc)         \
+OSL_SHADEOP void osl_##name##_vvf (void *r_, void *a_, float b) {       \
+    Vec3 &r (VEC(r_));                                                  \
+    Vec3 &a (VEC(a_));                                                  \
+    r[0] = floatfunc (a[0], b);                                         \
+    r[1] = floatfunc (a[1], b);                                         \
+    r[2] = floatfunc (a[2], b);                                         \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_##name##_dvdvdf (void *r_, void *a_, void *b_)     \
+{                                                                       \
+    Dual2<Vec3> &r (DVEC(r_));                                          \
+    Dual2<Vec3> &a (DVEC(a_));                                          \
+    Dual2<float> &b (DFLOAT(b_));                                       \
+    Dual2<float> ax, ay, az;                                            \
+    ax = dualfunc (Dual2<float> (a.val().x, a.dx().x, a.dy().x), b);    \
+    ay = dualfunc (Dual2<float> (a.val().y, a.dx().y, a.dy().y), b);    \
+    az = dualfunc (Dual2<float> (a.val().z, a.dx().z, a.dy().z), b);    \
+    /* Now swizzle back */                                              \
+    r.set (Vec3( ax.val(), ay.val(), az.val()),                         \
+           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                         \
+           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                        \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_##name##_dvvdf (void *r_, void *a_, void *b_)      \
+{                                                                       \
+    Dual2<Vec3> a (VEC(a_));                                            \
+    osl_##name##_dvdvdf (r_, &a, b_);                                   \
+}                                                                       \
+                                                                        \
+OSL_SHADEOP void osl_##name##_dvdvf (void *r_, void *a_, float b_)      \
+{                                                                       \
+    Dual2<float> b (b_);                                                \
+    osl_##name##_dvdvdf (r_, a_, &b);                                   \
 }
 
 

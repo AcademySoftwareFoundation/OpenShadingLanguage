@@ -152,8 +152,10 @@ ShadingContext::symbol_data (Symbol &sym)
     if (! sgroup.llvm_compiled_version())
         return NULL;   // can't retrieve symbol if we didn't JIT and runit
 
-    if (sym.dataoffset() >= 0)  // lives on the heap
+    if (sym.dataoffset() >= 0 && (int)m_heap.size() > sym.dataoffset()) {
+        // lives on the heap
         return &m_heap[sym.dataoffset()];
+    }
 
     // doesn't live on the heap
     if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) &&

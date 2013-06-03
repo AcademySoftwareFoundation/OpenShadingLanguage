@@ -267,7 +267,7 @@ endmacro ()
 # special installed tests.
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( arithmetic array array-derivs array-range
-            blackbody blendmath breakcont bug-locallifetime
+            blackbody blendmath breakcont bug-locallifetime bug-outputinit
             cellnoise closure color comparison
             component-range const-array-params debugnan
             derivs derivs-muldiv-clobber error-dupes exit exponential

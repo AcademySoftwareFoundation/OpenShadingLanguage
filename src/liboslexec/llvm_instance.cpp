@@ -925,7 +925,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         if (s.typespec().is_structure())
             continue;
         // Skip if it's never read and isn't connected
-        if (! s.everread() && ! s.connected_down() && ! s.connected())
+        if (! s.everread() && ! s.connected_down() && ! s.connected()
+              && ! is_renderer_output(s.name()))
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);

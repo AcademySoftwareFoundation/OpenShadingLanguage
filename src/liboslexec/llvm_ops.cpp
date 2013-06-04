@@ -1758,6 +1758,59 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
 }
 
 
+
+// vals points to the data of a float-, int-, or string-based symbol.
+// string (ncomps == aggregate*arraylen).  We want to check
+// vals[firstcheck..firstcheck+nchecks-1] for floats that are NaN , or
+// ints that are -MAXINT, or strings that are "!!!uninitialized!!!"
+// which would indicate that the value is uninitialized if
+// 'debug_uninit' is turned on.  Note that if firstcheck==0 and
+// nchecks==ncomps, we are checking the entire contents of the symbol.
+// More restrictive firstcheck,nchecks are used to check just one
+// element of an array.
+OSL_SHADEOP void
+osl_uninit_check (long long typedesc_, void *vals_,
+                  void *sg, const void *sourcefile, int sourceline,
+                  void *symbolname, int firstcheck, int nchecks)
+{
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    int ncomps = typedesc.aggregate * typedesc.numelements();
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+    bool uninit = false;
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float *vals = (float *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (!isfinite(vals[c])) {
+                uninit = true;
+                vals[c] = 0;
+            }
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int *vals = (int *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (vals[c] == std::numeric_limits<int>::min()) {
+                uninit = true;
+                vals[c] = 0;
+            }
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring *vals = (ustring *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (vals[c] == Strings::uninitialized_string) {
+                uninit = true;
+                vals[c] = ustring();
+            }
+    }
+    if (uninit) {
+        ctx->shadingsys().error ("Detected possible use of uninitialized value in %s at %s:%d",
+                                 USTR(symbolname).c_str(),
+                                 USTR(sourcefile).c_str(), sourceline);
+//        ASSERT(0);
+    }
+}
+
+
+
 #ifdef OSL_LLVM_NO_BITCODE
 OSL_NAMESPACE_ENTER
 namespace pvt {

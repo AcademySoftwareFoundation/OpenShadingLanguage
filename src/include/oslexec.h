@@ -84,8 +84,10 @@ public:
     ///    string colorspace      Name of RGB color space ("Rec709")
     ///    int range_checking     Generate extra code for component & array
     ///                              range checking (1)
-    ///    int debugnan           Add extra (expensive) code to pinpoint
+    ///    int debug_nan          Add extra (expensive) code to pinpoint
     ///                              when NaN/Inf happens (0).
+    ///    int debug_uninit       Add extra (expensive) code to pinpoint
+    ///                              use of uninitialized variables (0).
     ///    int compile_report     Issue info messages to the renderer for
     ///                              every shader compiled (0).
     ///    int max_warnings_per_thread  Number of warning calls that should be

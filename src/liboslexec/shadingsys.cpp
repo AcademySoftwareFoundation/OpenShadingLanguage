@@ -243,7 +243,7 @@ ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
 ustring op_exit("exit");
 ustring subimage("subimage"), subimagename("subimagename");
-
+ustring uninitialized_string("!!!uninitialized!!!");
 };
 
 
@@ -257,7 +257,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
       m_lazyglobals (false),
-      m_clearmemory (false), m_debugnan (false),
+      m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
       m_greedyjit(false), m_countlayerexecs(false),
@@ -625,7 +625,9 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("lazylayers", int, m_lazylayers);
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
     ATTR_SET ("clearmemory", int, m_clearmemory);
-    ATTR_SET ("debugnan", int, m_debugnan);
+    ATTR_SET ("debug_nan", int, m_debugnan);
+    ATTR_SET ("debugnan", int, m_debugnan);  // back-compatible alias
+    ATTR_SET ("debug_uninit", int, m_debug_uninit);
     ATTR_SET ("lockgeom", int, m_lockgeom_default);
     ATTR_SET ("optimize", int, m_optimize);
     ATTR_SET ("opt_simplify_param", int, m_opt_simplify_param);
@@ -713,7 +715,9 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
-    ATTR_DECODE ("debugnan", int, m_debugnan);
+    ATTR_DECODE ("debug_nan", int, m_debugnan);
+    ATTR_DECODE ("debugnan", int, m_debugnan);  // back-compatible alias
+    ATTR_DECODE ("debug_uninit", int, m_debug_uninit);
     ATTR_DECODE ("lockgeom", int, m_lockgeom_default);
     ATTR_DECODE ("optimize", int, m_optimize);
     ATTR_DECODE ("opt_simplify_param", int, m_opt_simplify_param);

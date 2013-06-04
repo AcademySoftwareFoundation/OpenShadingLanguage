@@ -299,6 +299,12 @@ public:
         return m_simple.basetype == TypeDesc::STRING;
     }
 
+    /// Is it an int or an array of ints?
+    ///
+    bool is_int_based () const {
+        return m_simple.basetype == TypeDesc::INT;
+    }
+
     /// Is it a void?
     ///
     bool is_void () const {

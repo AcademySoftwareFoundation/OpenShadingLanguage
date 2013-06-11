@@ -1175,16 +1175,24 @@ ASTfunction_call::typecheck (TypeSpec expected)
 #define ANY_ONE_FLOAT_BASED "ff", "cc", "pp", "vv", "nn"
 #define NOISE_ARGS "ff", "fff", "fp", "fpf", \
                    "cf", "cff", "cp", "cpf", \
-                   "vf", "vff", "vp", "vpf"
+                   "vf", "vff", "vp", "vpf", \
+                   "pf", "pff", "pp", "ppf", \
+                   "nf", "nff", "np", "npf"
 #define PNOISE_ARGS "fff", "fffff", "fpp", "fpfpf", \
                     "cff", "cffff", "cpp", "cpfpf", \
-                    "vff", "vffff", "vpp", "vpfpf"
+                    "vff", "vffff", "vpp", "vpfpf", \
+                    "pff", "pffff", "ppp", "ppfpf", \
+                    "nff", "nffff", "npp", "npfpf"
 #define GNOISE_ARGS "fsf.", "fsff.", "fsp.", "fspf.", \
                     "csf.", "csff.", "csp.", "cspf.", \
-                    "vsf.", "vsff.", "vsp.", "vspf."
+                    "vsf.", "vsff.", "vsp.", "vspf.", \
+                    "psf.", "psff.", "psp.", "pspf.", \
+                    "nsf.", "nsff.", "nsp.", "nspf."
 #define PGNOISE_ARGS "fsff.", "fsffff.", "fspp.", "fspfpf.", \
                      "csff.", "csffff.", "cspp.", "cspfpf.", \
-                     "vsff.", "vsffff.", "vspp.", "vspfpf."
+                     "vsff.", "vsffff.", "vspp.", "vspfpf.", \
+                     "psff.", "psffff.", "pspp.", "pspfpf.", \
+                     "nsff.", "nsffff.", "nspp.", "nspfpf."
 
 static const char * builtin_func_args [] = {
 
@@ -1204,7 +1212,7 @@ static const char * builtin_func_args [] = {
     "Dz", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,
     "environment", "fsv.", "fsvvv.","csv.", "csvvv.", 
-               "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,
+               "vsv.", "vsvvv.", "psv.", "psvvv.", "nsv.", "nsvvv.", "!tex", "!rw", "!deriv", NULL,
     "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
     "filterwidth", "ff", "vp", "vv", NULL,
@@ -1234,9 +1242,9 @@ static const char * builtin_func_args [] = {
     "split", "iss[]si", "iss[]s", "iss[]", "!rw", NULL,
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
-               "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
+               "vsff.", "vsffffff.", "!tex", "psff.", "psffffff.", "nsff.", "nsffffff.", "!rw", "!deriv", NULL,
     "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
-               "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
+               "vsp.", "vspvvv.", "psp.", "pspvvv.", "nsp.", "nspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
     "warning", "xs*", "!printf", NULL,   // FIXME -- further checking
     NULL

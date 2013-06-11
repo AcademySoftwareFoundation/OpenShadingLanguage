@@ -824,16 +824,19 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
 
 
 TypeSpec
-ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
+ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerceargs,
+                                      bool equivreturn)
 {
     for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
         const char *code = poly->argcodes().c_str();
         int advance;
         TypeSpec returntype = m_compiler->type_from_code (code, &advance);
         code += advance;
-        if (check_arglist (m_name.c_str(), args(), code, coerce)) {
+        if (check_arglist (m_name.c_str(), args(), code, coerceargs)) {
             // Return types also must match if not coercible
-            if (expected == TypeSpec() || expected == returntype) {
+            if (expected == returntype ||
+                (equivreturn && equivalent(expected,returntype)) ||
+                expected == TypeSpec()) {
                 m_sym = poly;
                 return returntype;
             }
@@ -1079,27 +1082,39 @@ ASTfunction_call::typecheck (TypeSpec expected)
     bool match = false;
 
     // Look for an exact match, including expected return type
-    m_typespec = typecheck_all_poly (expected, false);
+    m_typespec = typecheck_all_poly (expected, false, false);
     if (m_typespec != TypeSpec())
         match = true;
 
-    // Now look for an exact match on args, but any assignable return type
+    // Now look for an exact match for arguments, but equivalent return type
+    m_typespec = typecheck_all_poly (expected, false, true);
+    if (m_typespec != TypeSpec())
+        match = true;
+
+    // Now look for an exact match on args, but any return type
     if (! match && expected != TypeSpec()) {
-        m_typespec = typecheck_all_poly (TypeSpec(), false);
+        m_typespec = typecheck_all_poly (TypeSpec(), false, false);
         if (m_typespec != TypeSpec())
             match = true;
     }
 
     // Now look for a coercible match of args, exact march on return type
     if (! match) {
-        m_typespec = typecheck_all_poly (expected, true);
+        m_typespec = typecheck_all_poly (expected, true, false);
+        if (m_typespec != TypeSpec())
+            match = true;
+    }
+
+    // Now look for a coercible match of args, equivalent march on return type
+    if (! match) {
+        m_typespec = typecheck_all_poly (expected, true, true);
         if (m_typespec != TypeSpec())
             match = true;
     }
 
     // All that failed, try for a coercible match on everything
     if (! match && expected != TypeSpec()) {
-        m_typespec = typecheck_all_poly (TypeSpec(), true);
+        m_typespec = typecheck_all_poly (TypeSpec(), true, false);
         if (m_typespec != TypeSpec())
             match = true;
     }

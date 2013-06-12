@@ -396,6 +396,10 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
         // find the things that almost matched and offer suggestions.
         return;
     }
+    if (m_sym->symtype() == SymTypeFunction) {
+        error ("function '%s' can't be used as a variable", name.c_str());
+        return;
+    }
     m_typespec = m_sym->typespec();
 }
 

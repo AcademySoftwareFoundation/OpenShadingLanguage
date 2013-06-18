@@ -942,6 +942,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
 
     build_llvm_code (inst()->maincodebegin(), inst()->maincodeend());
 
+    if (llvm_has_exit_instance_block()) {
+        builder().CreateBr (m_exit_instance_block);
+        builder().SetInsertPoint (m_exit_instance_block);
+    }
+
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
     for (int layer = m_layer+1;  layer < group().nlayers();  ++layer) {
@@ -962,11 +967,6 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         }
     }
     // llvm_gen_debug_printf ("done copying connections");
-
-    if (llvm_has_exit_instance_block()) {
-        builder().CreateBr (m_exit_instance_block);
-        builder().SetInsertPoint (m_exit_instance_block);
-    }
 
     // All done
     // llvm_gen_debug_printf (std::string("exit layer ")+inst()->shadername());

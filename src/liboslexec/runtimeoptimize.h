@@ -97,8 +97,11 @@ public:
     /// Retrieve the dummy shader globals
     ShaderGlobals *shaderglobals () { return &m_shaderglobals; }
 
-    /// Are we in debugging mode?
+    /// What debug level are we at?
     int debug() const { return m_debug; }
+
+    /// What LLVM debug level are we at?
+    int llvm_debug() const;
 
     /// What's our current optimization level?
     int optimize() const { return m_optimize; }

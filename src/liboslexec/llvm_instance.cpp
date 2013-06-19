@@ -547,7 +547,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
     // For each layer in the group, add entries for all params that are
     // connected or interpolated, and output params.  Also mark those
     // symbols with their offset within the group struct.
-    if (shadingsys().llvm_debug() >= 2)
+    if (llvm_debug() >= 2)
         std::cout << "Group param struct:\n";
     m_param_order_map.clear ();
     int order = 1;
@@ -569,7 +569,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
                     sym.typespec().simpletype().basesize();
             if (offset & (align-1))
                 offset += align - (offset & (align-1));
-            if (shadingsys().llvm_debug() >= 2)
+            if (llvm_debug() >= 2)
                 std::cout << "  " << inst->layername() 
                           << " (" << inst->id() << ") " << sym.mangled()
                           << " " << ts.c_str() << ", field " << order 
@@ -930,7 +930,13 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Set up a new IR builder
     delete m_builder;
     m_builder = new llvm::IRBuilder<> (entry_bb);
-    // llvm_gen_debug_printf (std::string("enter layer ")+inst()->shadername());
+#if 0 /* helpful for debuggin */
+    if (llvm_debug() && groupentry)
+        llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",m_group.name()));
+    if (llvm_debug())
+        llvm_gen_debug_printf (Strutil::format("enter layer %s %s",
+                                  inst()->layername(), inst()->shadername()));
+#endif
     if (shadingsys().m_countlayerexecs)
         llvm_call_function ("osl_incr_layers_executed", sg_void_ptr());
 
@@ -1054,11 +1060,15 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // llvm_gen_debug_printf ("done copying connections");
 
     // All done
-    // llvm_gen_debug_printf (std::string("exit layer ")+inst()->shadername());
+#if 0 /* helpful for debugging */
+    if (llvm_debug())
+        llvm_gen_debug_printf (Strutil::format("exit layer %s %s",
+                                   inst()->layername(), inst()->shadername()));
+#endif
     builder().CreateRetVoid();
 
-    if (shadingsys().llvm_debug())
-        llvm::outs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
+    if (llvm_debug())
+        llvm::outs() << "layer_func (" << unique_layer_name << ") " << this->layer() << "/" << group().nlayers() << " after llvm  = " << *m_layer_func << "\n";
 
     delete m_builder;
     m_builder = NULL;
@@ -1261,13 +1271,13 @@ RuntimeOptimizer::build_llvm_group ()
 
     m_stat_llvm_opt_time += timer.lap();
 
-    if (shadingsys().llvm_debug()) {
+    if (llvm_debug()) {
         llvm::outs() << "func after opt  = " << *entry_func << "\n";
         llvm::outs().flush();
     }
 
     // Debug code to dump the resulting bitcode to a file
-    if (shadingsys().llvm_debug() >= 2) {
+    if (llvm_debug() >= 2) {
         std::string err_info;
         std::string name = Strutil::format ("%s_%d.bc",
                                             inst()->layername().c_str(),

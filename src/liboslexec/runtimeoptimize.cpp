@@ -178,6 +178,22 @@ RuntimeOptimizer::set_debug ()
 
 
 int
+RuntimeOptimizer::llvm_debug() const
+{
+    if (shadingsys().m_llvm_debug == 0)
+        return 0;
+    if (shadingsys().m_debug_groupname &&
+        shadingsys().m_debug_groupname != m_group.name())
+        return 0;
+    if (inst() && shadingsys().m_debug_layername &&
+        shadingsys().m_debug_layername != inst()->layername())
+        return 0;
+    return shadingsys().m_llvm_debug;
+}
+
+
+
+int
 RuntimeOptimizer::find_constant (const TypeSpec &type, const void *data)
 {
     for (int i = 0;  i < (int)m_all_consts.size();  ++i) {
@@ -2433,10 +2449,10 @@ void
 RuntimeOptimizer::optimize_group ()
 {
     Timer rop_timer;
-    if (debug())
-        m_shadingsys.info ("About to optimize shader group %s:",
-                           m_group.name().c_str());
     int nlayers = (int) m_group.nlayers ();
+    if (debug())
+        m_shadingsys.info ("About to optimize shader group %s (%d layers):",
+                           m_group.name().c_str(), nlayers);
 
     m_params_holding_globals.resize (nlayers);
 

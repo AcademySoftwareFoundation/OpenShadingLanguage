@@ -932,14 +932,16 @@ ASTfunction_call::typecheck_builtin_specialcase ()
         // N.B. This counts arguments in the same way that opcodes do --
         // assuming "arg 0" is the return value.
         size_t nargs = listlength(args());
-        if (m_name == "area") {
+        if (m_name == "area" || m_name == "filterwidth") {
             argtakesderivs (1, true);
+#if 0
         } else if (m_name == "aastep") {
             // all but the 5-arg version take derivs of edge param
             argtakesderivs (1, nargs<5);
             // aastep(f,f) and aastep(f,f,str) take derivs of s param
             if (nargs == 2 || list_nth(args(),2)->typespec().is_string())
                 argtakesderivs (2, true);
+#endif
         } else if (m_name == "bump" || m_name == "displace") {
             // FIXME -- come back to this
         } else if (m_name == "calculatenormal") {
@@ -1103,7 +1105,6 @@ ASTfunction_call::typecheck (TypeSpec expected)
 
 static const char * builtin_func_args [] = {
 
-    "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", "!deriv", NULL,
     "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
     "backfacing", "i", NULL,
@@ -1122,7 +1123,7 @@ static const char * builtin_func_args [] = {
                "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,
     "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
-    "filterwidth", "ff", "vp", "vv", NULL,
+    "filterwidth", "ff", "vp", "vv", "!deriv", NULL,
     "format", "ss*", "!printf", NULL,
     "fprintf", "xs*", "!printf", NULL,
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?

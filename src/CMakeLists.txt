@@ -266,7 +266,7 @@ endmacro ()
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
 #TESTSUITE ( oslc-empty )
-TESTSUITE ( arithmetic array array-derivs array-range
+TESTSUITE ( aastep arithmetic array array-derivs array-range
             blackbody blendmath breakcont bug-locallifetime bug-outputinit
             cellnoise closure color comparison
             component-range const-array-params debugnan debug-uninit

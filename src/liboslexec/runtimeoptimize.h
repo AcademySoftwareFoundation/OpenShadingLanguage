@@ -850,6 +850,8 @@ public:
 
     /// Check for inf/nan in all written-to arguments of the op
     void llvm_generate_debugnan (const Opcode &op);
+    /// Check for uninitialized values in all read-from arguments to the op
+    void llvm_generate_debug_uninit (const Opcode &op);
 
     llvm::Function *layer_func () const { return m_layer_func; }
 

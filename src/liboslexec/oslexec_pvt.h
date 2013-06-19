@@ -785,6 +785,7 @@ public:
     TextureSystem *texturesys () const { return m_texturesys; }
 
     bool debug_nan () const { return m_debugnan; }
+    bool debug_uninit () const { return m_debug_uninit; }
     bool lockgeom_default () const { return m_lockgeom_default; }
     bool strict_messages() const { return m_strict_messages; }
     bool range_checking() const { return m_range_checking; }
@@ -917,6 +918,7 @@ private:
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
+    bool m_debug_uninit;                  ///< Find use of uninitialized vars?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     bool m_strict_messages;               ///< Strict checking of message passing usage?
     bool m_range_checking;                ///< Range check arrays & components?
@@ -1356,6 +1358,7 @@ namespace Strings {
     extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
     extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
     extern OSLEXECPUBLIC ustring subimage, subimagename;
+    extern OSLEXECPUBLIC ustring uninitialized_string;
 }; // namespace Strings
 
 

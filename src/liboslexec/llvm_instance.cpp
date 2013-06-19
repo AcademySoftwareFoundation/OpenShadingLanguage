@@ -118,6 +118,8 @@ static ustring op_end("end");
 static ustring op_nop("nop");
 static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
+static ustring op_aref("aref");
+static ustring op_compref("compref");
 
 // Trickery to force linkage of files when building static libraries.
 extern int opclosure_cpp_dummy, opcolor_cpp_dummy;
@@ -467,6 +469,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_bind_interpolated_param", "iXXLiX",
     "osl_range_check", "iiiXXi",
     "osl_naninf_check", "xiXiXXiXii",
+    "osl_uninit_check", "xLXXXiXii",
 #endif // OSL_LLVM_NO_BITCODE
 
     NULL
@@ -672,16 +675,43 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
     if (sym.typespec().is_closure_based() &&
         sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam) {
         llvm_assign_zero (sym);
+        return;
     }
 
-    if (sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam &&
-        sym.symtype() != SymTypeConst && sym.typespec().is_string_based()) {
-        // Strings are pointers.  Can't take any chance on leaving local/tmp
-        // syms uninitialized.
-        DASSERT (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp);
+    if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp)
+          && shadingsys().debug_uninit()) {
+        // Handle the "debug uninitialized values" case
+        bool isarray = sym.typespec().is_array();
+        int alen = isarray ? sym.typespec().arraylength() : 1;
+        llvm::Value *u = NULL;
+        if (sym.typespec().is_closure_based()) {
+            // skip closures
+        }
+        else if (sym.typespec().is_floatbased())
+            u = llvm_constant (std::numeric_limits<float>::quiet_NaN());
+        else if (sym.typespec().is_int_based())
+            u = llvm_constant (std::numeric_limits<int>::min());
+        else if (sym.typespec().is_string_based())
+            u = llvm_constant (Strings::uninitialized_string);
+        if (u) {
+            for (int a = 0;  a < alen;  ++a) {
+                llvm::Value *aval = isarray ? llvm_constant(a) : NULL;
+                for (int c = 0;  c < (int)sym.typespec().aggregate(); ++c)
+                    llvm_store_value (u, sym, 0, aval, c);
+            }
+        }
+        return;
+    }
+
+    if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp) &&
+        sym.typespec().is_string_based()) {
+        // Strings are pointers.  Can't take any chance on leaving
+        // local/tmp syms uninitialized.
         llvm_assign_zero (sym);
         return;  // we're done, the parts below are just for params
     }
+    ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
+                "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
 
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.
@@ -789,6 +819,56 @@ RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
 
 
 
+void
+RuntimeOptimizer::llvm_generate_debug_uninit (const Opcode &op)
+{
+    for (int i = 0;  i < op.nargs();  ++i) {
+        Symbol &sym (*opargsym (op, i));
+        if (! op.argread(i))
+            continue;
+        if (sym.typespec().is_closure_based())
+            continue;
+        TypeDesc t = sym.typespec().simpletype();
+        if (t.basetype != TypeDesc::FLOAT && t.basetype != TypeDesc::INT &&
+            t.basetype != TypeDesc::STRING)
+            continue;  // just check float, int, string based types
+        llvm::Value *ncheck = llvm_constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = llvm_constant(0);
+        // Some special cases...
+        if (op.opname() == Strings::op_for && i == 0) {
+            // The first argument of 'for' is the condition temp, but
+            // note that it may not have had its initializer run yet, so
+            // don't generate uninit test code for it.
+            continue;
+        }
+        if (op.opname() == op_aref && i == 1) {
+            // Special case -- array assignment -- only check one element
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
+            llvm::Value *agg = llvm_constant(t.aggregate);
+            offset = t.aggregate == 1 ? ind : builder().CreateMul (ind, agg);
+            ncheck = agg;
+        } else if (op.opname() == op_compref && i == 1) {
+            // Special case -- component assignment -- only check one channel
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
+            offset = ind;
+            ncheck = llvm_constant(1);
+        }
+
+        llvm::Value *args[] = { llvm_constant(t),
+                                llvm_void_ptr(sym),
+                                sg_void_ptr(), 
+                                llvm_constant(op.sourcefile()),
+                                llvm_constant(op.sourceline()),
+                                llvm_constant(sym.name()),
+                                offset,
+                                ncheck
+                              };
+        llvm_call_function ("osl_uninit_check", args, 8);
+    }
+}
+
+
+
 bool
 RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
@@ -799,6 +879,8 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         const Opcode& op = inst()->ops()[opnum];
         const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
         if (opd && opd->llvmgen) {
+            if (m_shadingsys.debug_uninit() /* debug uninitialized vals */)
+                llvm_generate_debug_uninit (op);
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
@@ -900,8 +982,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         // Set initial value for constants, closures, and strings that are
         // not parameters.
         if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
+            s.symtype() != SymTypeGlobal &&
             (s.is_constant() || s.typespec().is_closure_based() ||
-             s.typespec().is_string_based()))
+             s.typespec().is_string_based() || 
+             ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
+              && shadingsys().debug_uninit())))
             llvm_assign_initial_value (s);
         // If debugnan is turned on, globals check that their values are ok
         if (s.symtype() == SymTypeGlobal && m_shadingsys.debug_nan()) {

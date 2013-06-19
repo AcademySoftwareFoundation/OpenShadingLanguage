@@ -1,3 +1,18 @@
+Release 1.3.2 - 19 Jun 2013 (compared to 1.3.1)
+-----------------------------------------------
+* fmod(triple,triple,float) was not working properly in Windows.
+* Nicer debug printing (for developers) when an op doesn't have an
+  associated source line.
+* Avoid incorrect heap addressing when retrieving a symbol's address.
+* oslc new gives a compile error when trying to use a function as
+  if it were an ordinary variable.
+* Fix for a bug where an early 'return' from a shader could lead to
+  output parameters not being properly copied to the inputs of their
+  downstream connections.
+* Fix bug where filterwidth() didn't properly mark itself as needing
+  derivatives of its argument.
+
+
 Release 1.3.1 - 15 May 2013 (compared to 1.3.0)
 -----------------------------------------------
 * The integer versions of min(), max(), and clamp() were not working

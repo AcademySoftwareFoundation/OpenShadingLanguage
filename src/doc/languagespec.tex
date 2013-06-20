@@ -63,7 +63,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 30 Apr, 2013 \\
-~ %(with corrections, 22 Feb, 2012)
+~ (with corrections, 19 Jun 2013)
 }
 \bigskip
 \bigskip
@@ -3613,28 +3613,13 @@ taking into account surface orientation.
 
 \apiitem{float {\ce aastep} (float edge, float s) \\
 float {\ce aastep} (float edge, float s, float ds) \\
-float {\ce aastep} (float edge, float s, float dedge, float ds)
-\smallskip \\
-float {\ce aastep} (float edge, float s, string filter) \\
-float {\ce aastep} (float edge, float s, float ds, string filter) \\
-float {\ce aastep} (float edge, float s, float dedge, float ds, string filter)}
+float {\ce aastep} (float edge, float s, float dedge, float ds)}
 \indexapi{aastep()}
 Computes an antialiased step function, similar to {\cf step(edge,s)} but
 filtering the edge to take into account how rapidly {\cf s} and {\cf edge}
 are changing over the surface.  If the differentials {\cf ds} and/or
 {\cf dedge} are not passed explicitly, they will be automatically 
 computed (using {\cf aastep()}).
-
-The optional {\cf filter} parameter specifies which filter should be
-used: \qkw{catmull-rom}, \qkw{box}, \qkw{triangle}, or \qkw{gaussian}.
-If no {\cf filter} parameter is supplied, a Catmull-Rom filter will be
-used.
-
-%\begin{annotate}
-%\QUESTION This is similar to RenderMan's ``filterstep'', but not quite.
-%Is it better to call it ``filterstep'' even if it doesn't exactly match,
-%or should we stick to the changed name to match the changed functionality?
-%\end{annotate}
 \apiend
 
 

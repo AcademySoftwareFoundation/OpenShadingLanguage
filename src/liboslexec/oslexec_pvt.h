@@ -1063,10 +1063,12 @@ public:
     }
 
     char * alloc(size_t size, size_t alignment=1) {
+        // Alignment must be power of two
+        DASSERT ((alignment & (alignment - 1)) == 0);
         // Fail if beyond allocation limits or senseless alignment
-        if (size > BlockSize || (size % alignment) != 0)
+        if (size > BlockSize || (size & (alignment - 1)) != 0)
             return NULL;
-        m_block_offset -= (m_block_offset % alignment); // Fix up alignment
+        m_block_offset -= (m_block_offset & (alignment - 1)); // Fix up alignment
         if (size <= m_block_offset) {
             // Enough space in current block
             m_block_offset -= size;

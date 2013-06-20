@@ -1022,12 +1022,6 @@ ASTfunction_call::typecheck_builtin_specialcase ()
         size_t nargs = listlength(args());
         if (m_name == "area") {
             argtakesderivs (1, true);
-        } else if (m_name == "aastep") {
-            // all but the 5-arg version take derivs of edge param
-            argtakesderivs (1, nargs<5);
-            // aastep(f,f) and aastep(f,f,str) take derivs of s param
-            if (nargs == 2 || list_nth(args(),2)->typespec().is_string())
-                argtakesderivs (2, true);
         } else if (m_name == "bump" || m_name == "displace") {
             // FIXME -- come back to this
         } else if (m_name == "calculatenormal") {
@@ -1203,7 +1197,6 @@ ASTfunction_call::typecheck (TypeSpec expected)
 
 static const char * builtin_func_args [] = {
 
-    "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", "!deriv", NULL,
     "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
     "backfacing", "i", NULL,

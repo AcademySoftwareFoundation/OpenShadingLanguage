@@ -9,6 +9,17 @@ Language, standard libary, and compiler changes (for shader writers):
   whichever noise suits your purpose.
 * oslc now catches mismatches between the format string and the types
   of arguments to format(), printf(), fprintf(), warning(), and error().
+* oslc new gives a compile error when trying to use a function as
+  if it were an ordinary variable. (1.3.2)
+* Improvement to oslc function type checking -- allow more nuanced
+  matching of polymorphism based on return types.  First we check for
+  identical return types, then we test allowing non-identical spatial
+  triples to match, then finally we allow any return type to match.
+* New ShadingSystem attribute "debug_uninit", which when set to nonzero
+  tries to detect use of uninitialized variables at runtime.  (Off by
+  default because it's very expensive, just use if you are debugging.)
+* Implemented the OSL aastep() function, which was always described in
+  the docs but never implemented.
 
 ShadingSystem API changes and new options (for renderer writers):
 
@@ -44,13 +55,29 @@ Performance improvements:
   case, as well as previously working for the float-based types).
 * Runtime constant-folding of cos, sin, acos, asin, normalize, inversesqrt,
   exp, exp2, expm1, log, log2, log10, logb, erf, erfc, radians, degrees.
+* Optimization that speeds up certain closure manipulations and can
+  cut overhead especially for relatively simple shaders.
+* New peephole optimizations for two common patterns: 
+  (1) add A B C ; sub D A C => [add A B C;] assign D B
+  and the same if the order of add & sub are switched.
+  (2) OP A B... ; assign A C => OP C B...  as long as A is not subsequently
+  used and OP fully overwrites A and writes to no other variables.
 
 Bug fixes:
 
 * Fix 'debugnan' tendency to give false positives for certain assignments
   to arrays and multi-component variables (colors, points, etc.).
 * The integer versions of min(), max(), and clamp() were not working
-  properly.
+  properly. (1.3.1)
+* fmod(triple,triple,float) was not working properly in Windows. (1.3.2)
+* Avoid incorrect heap addressing when retrieving a symbol's address. (1.3.2)
+* Fix for a bug where an early 'return' from a shader could lead to
+  output parameters not being properly copied to the inputs of their
+  downstream connections. (1.3.2)
+* Fix bug where filterwidth() didn't properly mark itself as needing
+  derivatives of its argument. (1.3.2)
+* Bug fix: Was not properly initializing the default values of output
+  params if they were written but never subsequently read.
 
 Under the hood:
 
@@ -64,25 +91,34 @@ Build & test system improvements and developer goodies:
   for test runs.
 * Added CMake option 'ENABLERTTI' that enables use of RTTI for sites that
   must link against an RTTI-enabled LLVM (the default is to assume LLVM
-  is built without RTTI, so we don't use it either).
+  is built without RTTI, so we don't use it either). (1.3.1)
 * Fix some ambiguity about which variety of shared_ptr we are using -- 
   this could produce problems in apps that include the OSL headers but also
   use different shared_ptr varieties.
 * Fix a variety of build issues and warnings under Windows.
 * Work around CMake bug where on some platforms, CMake doesn't define the
   'NDEBUG' when making the 'RelWithDebInfo' target (which is sometimes
-  used for profiling).
+  used for profiling). (1.3.1)
 * Add Make/CMake option 'USE_EXTERNAL_PUGIXML' which if set to nonzero
   will find and use a system-installed PugiXML rather than assuming that
   it's included in libOpenImageIO.  When used, it will also use the
   environment variable PUGIXML_HOME (if set) as a hint for where to find
-  it, in case it's not in a usual system library directory.
+  it, in case it's not in a usual system library directory. (1.3.1)
+* Nicer debug printing (for developers) when an op doesn't have an
+  associated source line. (1.3.2)
+* Reorder include directories for building LLVM bitcode so that the
+  openimageio, ilmbase and boost directories are ahead of any system
+  directories given by llvm-config --cxxflags.  This avoids the LLVM
+  bitcode getting compiled against different library versions than the
+  rest of the code if multiple versions are installed.
+* Have debug_groupname and debug_layername apply to LLVM debugging info
+  as well.
 
 Documentation:
 
 * Eliminate references to OSL random() function; it was never
   implemented and nobody seemed to miss it or have a compelling use
-  case.
+  case. (1.3.1)
 
 
 

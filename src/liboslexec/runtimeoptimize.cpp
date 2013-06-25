@@ -330,6 +330,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
 void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
+    // We don't know the op num here, so we subtract the pointers
     int opnum = &op - &(inst()->ops()[0]);
     if (debug() > 1)
         std::cout << "turned op " << opnum
@@ -343,8 +344,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
     op.argread (1, true);
     op.argwrite (1, false);
     // Need to make sure the symbol we're assigning is marked as read
-    // for this op.  Unfortunately, mark_rw takes the op number, we just
-    // have the pointer, so we subtract to get it.
+    // for this op.
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     Symbol *arg = opargsym (op, 1);
     arg->mark_rw (opnum, true, false);
@@ -1470,6 +1470,50 @@ RuntimeOptimizer::peephole2 (int opnum)
         turn_into_nop (op, "simplify add/sub pair");
         turn_into_nop (next, "simplify add/sub pair");
         return 2;
+    }
+
+    // Look for add of a value then subtract of the same value
+    //     add a b c     or:    sub a b c
+    //     sub d a c            add d a c
+    // the second instruction should be changed to
+    //     assign d b
+    // and furthermore, if the only use of a is on these two lines or
+    // if a == d, then the first instruction can be changed to a 'nop'.
+    if (((op.opname() == u_add && next.opname() == u_sub) ||
+         (op.opname() == u_sub && next.opname() == u_add)) &&
+          opargsym(op,0) == opargsym(next,1) &&
+          opargsym(op,2) == opargsym(next,2) &&
+        opargsym(op,0) != opargsym(next,2) /* a != c */) {
+        Symbol *a = opargsym(op,0);
+        Symbol *d = opargsym(next,0);
+        turn_into_assign (next, oparg(op,1)/*b*/, "simplify add/sub pair");
+        if ((a->firstuse() >= opnum && a->lastuse() <= op2num) || a == d) {
+            turn_into_nop (op, "simplify add/sub pair");
+            return 2;
+        }
+        else
+            return 1;
+    }
+
+    // Look for simple functions followed by an assignment:
+    //    OP a b...
+    //    assign c a
+    // If OP is "simple" (completely overwrites its first argument, only
+    // reads the rest), and a and c are the same type, and a is never
+    // used again, then we can replace those two instructions with:
+    //    OP c b...
+    if (next.opname() == u_assign && 
+        op.nargs() >= 1 && opargsym(op,0) == opargsym(next,1) &&
+        is_simple_assign(op)) {
+        Symbol *a = opargsym(op,0);
+        Symbol *c = opargsym(next,0);
+        if (a->firstuse() >= opnum && a->lastuse() <= op2num &&
+              equivalent (a->typespec(), c->typespec())) {
+            inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
+            c->mark_rw (opnum, false, true);
+            turn_into_nop (next, "daisy-chain op and assignment");
+            return 2;
+        }
     }
 
     // No changes

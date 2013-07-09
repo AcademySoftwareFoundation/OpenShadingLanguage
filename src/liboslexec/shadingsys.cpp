@@ -385,7 +385,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (acos,        generic,             acos,          true);
     OP (add,         add,                 add,           true);
     OP (and,         andor,               and,           true);
-    OP (area,        area,                none,          true);
+    OP (area,        area,                deriv,         true);
     OP (aref,        aref,                aref,          true);
     OP (arraycopy,   arraycopy,           none,          false);
     OP (arraylength, arraylength,         arraylength,   true);
@@ -420,9 +420,9 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (distance,    generic,             none,          true);
     OP (div,         div,                 div,           true);
     OP (dot,         generic,             dot,           true);
-    OP (Dx,          DxDy,                none,          true);
-    OP (Dy,          DxDy,                none,          true);
-    OP (Dz,          Dz,                  none,          true);
+    OP (Dx,          DxDy,                deriv,         true);
+    OP (Dy,          DxDy,                deriv,         true);
+    OP (Dz,          Dz,                  deriv,         true);
     OP (dowhile,     loop_op,             none,          false);
     OP (end,         end,                 none,          false);
     OP (endswith,    generic,             endswith,      true);
@@ -436,7 +436,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (exp2,        generic,             exp2,          true);
     OP (expm1,       generic,             expm1,         true);
     OP (fabs,        generic,             abs,           true);
-    OP (filterwidth, filterwidth,         none,          true);
+    OP (filterwidth, filterwidth,         deriv,         true);
     OP (floor,       generic,             floor,         true);
     OP (fmod,        modulus,             none,          true);
     OP (for,         loop_op,             none,          false);

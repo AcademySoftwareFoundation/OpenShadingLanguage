@@ -2246,5 +2246,19 @@ DECLFOLDER(constfold_warning)
 
 
 
+DECLFOLDER(constfold_deriv)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (A.is_constant()) {
+        rop.turn_into_assign_zero (op, "const fold - deriv of constant");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

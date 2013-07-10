@@ -1479,15 +1479,19 @@ RuntimeOptimizer::peephole2 (int opnum)
     //     assign d b
     // and furthermore, if the only use of a is on these two lines or
     // if a == d, then the first instruction can be changed to a 'nop'.
+    // Careful, "only used on these two lines" can be tricky if 'a' is a
+    // global or output parameter, which are used after the shader finishes!
     if (((op.opname() == u_add && next.opname() == u_sub) ||
          (op.opname() == u_sub && next.opname() == u_add)) &&
-          opargsym(op,0) == opargsym(next,1) &&
-          opargsym(op,2) == opargsym(next,2) &&
+        opargsym(op,0) == opargsym(next,1) &&
+        opargsym(op,2) == opargsym(next,2) &&
         opargsym(op,0) != opargsym(next,2) /* a != c */) {
         Symbol *a = opargsym(op,0);
         Symbol *d = opargsym(next,0);
         turn_into_assign (next, oparg(op,1)/*b*/, "simplify add/sub pair");
-        if ((a->firstuse() >= opnum && a->lastuse() <= op2num) || a == d) {
+        if ((a->firstuse() >= opnum && a->lastuse() <= op2num &&
+             ((a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam)))
+            || a == d) {
             turn_into_nop (op, "simplify add/sub pair");
             return 2;
         }
@@ -1502,15 +1506,23 @@ RuntimeOptimizer::peephole2 (int opnum)
     // reads the rest), and a and c are the same type, and a is never
     // used again, then we can replace those two instructions with:
     //    OP c b...
+    // Careful, "never used again" can be tricky if 'a' is a global or
+    // output parameter, which are used after the shader finishes!
     if (next.opname() == u_assign && 
         op.nargs() >= 1 && opargsym(op,0) == opargsym(next,1) &&
         is_simple_assign(op)) {
         Symbol *a = opargsym(op,0);
         Symbol *c = opargsym(next,0);
         if (a->firstuse() >= opnum && a->lastuse() <= op2num &&
+              (a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam) &&
               equivalent (a->typespec(), c->typespec())) {
             inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
             c->mark_rw (opnum, false, true);
+            // Any time we write to a variable that wasn't written to at
+            // this op previously, we need to block_unalias it, or it
+            // can dealias to the wrong thing when examining subsequent
+            // instructions.
+            block_unalias (oparg(op,0));  // clear any aliases
             turn_into_nop (next, "daisy-chain op and assignment");
             return 2;
         }

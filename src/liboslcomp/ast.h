@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSL_AST_H
 #define OSL_AST_H
 
+#include <boost/intrusive_ptr.hpp>
 #include "OpenImageIO/refcnt.h"
 
 #include "oslconfig.h"
@@ -56,7 +57,7 @@ class TypeSpec;
 ///
 class ASTNode : public OIIO::RefCnt {
 public:
-    typedef intrusive_ptr<ASTNode> ref;  ///< Ref-counted pointer to an ASTNode
+    typedef boost::intrusive_ptr<ASTNode> ref;  ///< Ref-counted pointer to an ASTNode
 
     /// List of all the types of AST nodes.
     ///
@@ -825,14 +826,21 @@ private:
     /// re-jigger m_sym to point to the specific polymorphic match.
     /// Allow arguments to be coerced (e.g., substituting a vector where
     /// a point was expected, or a float where a color was expected) only
-    /// if coerce is true; allow return value to be coerced only if
-    /// expected is TypeSpec() (i.e., unknown).
-    TypeSpec typecheck_all_poly (TypeSpec expected, bool coerce);
+    /// if coerceargs is true.  For return values, allow spatial triples to
+    /// mutually match if 'equivreturn' is true, and allow any coercive
+    /// return type if 'expected' is TypeSpec() (i.e., unknown).
+    TypeSpec typecheck_all_poly (TypeSpec expected, bool coerceargs,
+                                 bool equivreturn);
 
     /// Handle all the special cases for built-ins.  This includes
     /// irregular patterns of which args are read vs written, special 
     /// checks for printf- and texture-like, etc.
     void typecheck_builtin_specialcase ();
+
+    /// Make sure the printf-like format string matches the list of
+    /// arguments poitned to by arg.  If ok, return true, otherwise
+    /// return false and call an appropriate error().
+    bool typecheck_printf_args (const char *format, ASTNode *arg);
 
     /// Is the argument number 'arg' read by the op?
     ///

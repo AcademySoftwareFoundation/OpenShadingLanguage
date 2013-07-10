@@ -16,7 +16,9 @@ macro (osl_compile oslsrc objlist headers)
 
 #    include_directories ( ${CMAKE_CURRENT_BINARY_DIR} )
 #    include_directories ( ${CMAKE_CURRENT_SOURCE_DIR} )
-    message (STATUS "cmd: ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}")
+    if (VERBOSE)
+        message (STATUS "cmd: ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}")
+    endif ()
     add_custom_command (OUTPUT ${osofile}
         COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}
         MAIN_DEPENDENCY ${oslsrc}

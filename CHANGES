@@ -1,10 +1,153 @@
-Release 1.3.x - in progress (compared to 1.2)
+Release 1.4.0 - in progress (compared to 1.3)
 ----------------------------------------------
+
 Language, standard libary, and compiler changes (for shader writers):
-* pointcloud_write() allows shaders to write data and save it as a point
-  cloud.
+
+* Simplex noise: new noise varieties "simplex" and "usimplex" are 
+  faster than Perlin noise (and MUCH faster for the 4-D variety),
+  but has a somewhat different appearance.  Judge for yourself, use
+  whichever noise suits your purpose.
+* oslc now catches mismatches between the format string and the types
+  of arguments to format(), printf(), fprintf(), warning(), and error().
+* oslc new gives a compile error when trying to use a function as
+  if it were an ordinary variable. (1.3.2)
+* Improvement to oslc function type checking -- allow more nuanced
+  matching of polymorphism based on return types.  First we check for
+  identical return types, then we test allowing non-identical spatial
+  triples to match, then finally we allow any return type to match.
+* New ShadingSystem attribute "debug_uninit", which when set to nonzero
+  tries to detect use of uninitialized variables at runtime.  (Off by
+  default because it's very expensive, just use if you are debugging.)
+* Implemented the OSL aastep() function, which was always described in
+  the docs but never implemented.
 
 ShadingSystem API changes and new options (for renderer writers):
+
+* New ShadingSystem attribute "renderer_outputs" enumerates the renderer
+  outputs (AOVs) explicitly, so that elision of unused outputs can be done
+  with full understanding of which params will or will not be sued.
+  Beware: if you enable "opt_elide_unconnected_outputs", you MUST pass
+  "renderer_outputs" or your AOVs may be eliminated!
+
+Performance improvements:
+
+* "Middleman" optimization notices when you have 3 layers A,B,C with
+  connections A.Aout -> B.Bin and B.Bout -> C.Cin, an Bout is simply
+  copied unconditionally from Bin.  In this case, Aout is connected
+  directly to Cin, potentially leading to further optimizations, including
+  layer B getting culled entirely.
+* Layer-to-layer global propagation: Notice cases where an upstream
+  output is guaranteed to be aassigned a global variable (such as N or u)
+  and then alias the downstream parameter to that global (eliminating
+  the connection and possibly culling the upstream layer entirely).
+* Improve constant propagation from layer to layer (it used to do so only
+  if the output of the earlier layer was never used in the upstream layer;
+  but actually it's ok for it to be read, as long as it's not rewritten).
+* Runtime constant-folding of cellnoise() calls.
+* Local variables that are arrays initialized with float, int, or string
+  constants have been greatly optimized.  If that's the only time anything
+  is written into the array, it will be turned into a true static constant
+  with no per-shader-invocation initialization or allocation costs.
+  Thus, it is no longer expensive to use a large array of constants as a
+  table... it may look like a per-shade cost to set up the array, but by
+  the time the optimizer gets done with it, it is not.
+* Improved runtime constant-folding of max/min (now works for the integer
+  case, as well as previously working for the float-based types).
+* Runtime constant-folding of cos, sin, acos, asin, normalize, inversesqrt,
+  exp, exp2, expm1, log, log2, log10, logb, erf, erfc, radians, degrees.
+* Optimization that speeds up certain closure manipulations and can
+  cut overhead especially for relatively simple shaders.
+* New peephole optimizations for two common patterns: 
+  (1) add A B C ; sub D A C => [add A B C;] assign D B
+  and the same if the order of add & sub are switched.
+  (2) OP A B... ; assign A C => OP C B...  as long as A is not subsequently
+  used and OP fully overwrites A and writes to no other variables.
+
+Bug fixes:
+
+* Fix 'debugnan' tendency to give false positives for certain assignments
+  to arrays and multi-component variables (colors, points, etc.).
+* The integer versions of min(), max(), and clamp() were not working
+  properly. (1.3.1)
+* fmod(triple,triple,float) was not working properly in Windows. (1.3.2)
+* Avoid incorrect heap addressing when retrieving a symbol's address. (1.3.2)
+* Fix for a bug where an early 'return' from a shader could lead to
+  output parameters not being properly copied to the inputs of their
+  downstream connections. (1.3.2)
+* Fix bug where filterwidth() didn't properly mark itself as needing
+  derivatives of its argument. (1.3.2)
+* Bug fix: Was not properly initializing the default values of output
+  params if they were written but never subsequently read.
+
+Under the hood:
+
+* Eliminate use of custom DEBUG preprocessor symbol in favor of the more
+  standard NDEBUG (beware: its sense is reversed).
+* All references to and vestiges of TBB have been removed.
+
+Build & test system improvements and developer goodies:
+
+* testshade: --options lets you set arbitrary options to the ShadingSystem
+  for test runs.
+* Added CMake option 'ENABLERTTI' that enables use of RTTI for sites that
+  must link against an RTTI-enabled LLVM (the default is to assume LLVM
+  is built without RTTI, so we don't use it either). (1.3.1)
+* Fix some ambiguity about which variety of shared_ptr we are using -- 
+  this could produce problems in apps that include the OSL headers but also
+  use different shared_ptr varieties.
+* Fix a variety of build issues and warnings under Windows.
+* Work around CMake bug where on some platforms, CMake doesn't define the
+  'NDEBUG' when making the 'RelWithDebInfo' target (which is sometimes
+  used for profiling). (1.3.1)
+* Add Make/CMake option 'USE_EXTERNAL_PUGIXML' which if set to nonzero
+  will find and use a system-installed PugiXML rather than assuming that
+  it's included in libOpenImageIO.  When used, it will also use the
+  environment variable PUGIXML_HOME (if set) as a hint for where to find
+  it, in case it's not in a usual system library directory. (1.3.1)
+* Nicer debug printing (for developers) when an op doesn't have an
+  associated source line. (1.3.2)
+* Reorder include directories for building LLVM bitcode so that the
+  openimageio, ilmbase and boost directories are ahead of any system
+  directories given by llvm-config --cxxflags.  This avoids the LLVM
+  bitcode getting compiled against different library versions than the
+  rest of the code if multiple versions are installed.
+* Have debug_groupname and debug_layername apply to LLVM debugging info
+  as well.
+
+Documentation:
+
+* Eliminate references to OSL random() function; it was never
+  implemented and nobody seemed to miss it or have a compelling use
+  case. (1.3.1)
+
+
+
+Release 1.3.0 - 14 Feb 2013 (compared to 1.2)
+----------------------------------------------
+
+Language, standard libary, and compiler changes (for shader writers):
+
+* pointcloud_write() allows shaders to write data and save it as a point
+  cloud.
+* spline now accepts a "constant" interpolation type, which interpolates
+  with discrete steps.
+* isconnected(var) returns true if var is a shader parameter and is
+  connected to an earlier layer. This is helpful in having shader logic
+  that can discern between a connected parameter versus a default.
+* Whole-array assignment is now supported.  That is, if A and B are arrays
+  of the same type and length(A) >= length(B), it is legal to write
+  A=B without needing to write a loop to copy each element separately.
+* stoi() and stof() convert strings to int or float types, respectively
+  (just like the identically-named functions in C++11).  These do properly
+  constant-fold during runtime optimization if their inputs can be deduced.
+* split() splits a string into tokens and stores them in the elements of an
+  array of strings (and does constant-fold!).
+* distance(point A, point B, point Q) gives the distance from Q to the
+  line segment joining A and B.  This was described by the OSL spec all
+  along, but somehow was not properly implemented.
+
+ShadingSystem API changes and new options (for renderer writers):
+
 * Default implementation of all the pointcloud_*() functions in
   RendererServices, if Partio is found at build time.
 * ShadingSystem attribute "compile_report" controls whether information
@@ -14,10 +157,21 @@ ShadingSystem API changes and new options (for renderer writers):
 * ShadingSystem attribute "countlayerexecs" adds debugging code to count
   the total number of shader layer executions (off by default; it slows
   shader execution down slightly, is only meant for debugging).
-  
+* Add a parameter to OSLCompiler::compile to specify the path to the
+  stdosl.h file.
+* New call: ShadingSystem::LoadMemoryCompiledShader() loads a shader with
+  OSO data from a memory buffer, rather than from a file.
+
 Performance improvements:
+
 * Reduce instance symbol memory use, lowering OSL-related memory by 1/2-2/3
   for large scenes.
+* Identical shader instances within a shader group are automatically
+  merged -- this can have substiantial performance and memory
+  improvements for very complex shader groups that may (inadvertently,
+  for convenience, or as an artifact of certain lookdev tools) have
+  multiple instances with identical input parameters and connections.
+  We have seen some shots that render up to 20% faster with this change.
 * Better constant-folding for pointcloud_get (if indices are known).
 * Speed up implementation of exp() for some Linux platform (works around
   a known glibc issue).
@@ -26,8 +180,19 @@ Performance improvements:
   cases to try to avoid having mix() unnecessarily trigger execution of
   earlier layers when one or both of its arguments is a connected shader
   param and the mix value turns out to be 0 or 1.
+* Runtime optimization now includes constant-folding of getattribute()
+  calls, for those attributes which are scene-wide (such as renderer options
+  that apply to the whole frame).
+* Improvements in the algorithm that tracks which symbols need to carry
+  derivatives around results in MUCH faster compile times for extremely
+  complex shaders.
+* Improve bad performance for shaders that call warning() prolifically, by
+  imposing a maximum number of shader warnings that are echoed back to the
+  renderer (controlled by ShadingSystem attribute "max_warnings_per_thread",
+  which defaults to 100; 0 means that there is no maximum).
 
 Bug fixes and minor improvements:
+
 * Fix incorrect oso output of matrix parameter initialization. (This did
   not affect shader execution, but could result in oslquery/oslinfo not
   reporting default matrix parameter values correctly.)
@@ -36,11 +201,35 @@ Bug fixes and minor improvements:
   function.
 * Parsing of oso files was broken for compiled shaders that had string
   metadata whose metadata value contained the '}' character.
+* Pointcloud function bug fixes: now robust to being passed empty filenames,
+  or calling pointcloud_get when count=0.
+* Fix crash with C preprocessor when #include fails or no shader function
+  is defined.
+* Improve error reporting when parsing oso, especially in improving the
+  error messages when an old renderer tries to load a .oso file created by
+  a "newer" oslc, and the oso contains new instruction opcodes that the
+  older renderer didn't know about.
+* oslc now gives a helpful error message, rather than hitting an assertion,
+  if you try to index into a non-array or non-component type.
+* Broken "XYZ" color space transformations because of confusion between
+  "xyz" and "XYZ" names.
+* oslc: correctly catch errors with integer literals that overflow.
+* oslc: proper error, rather than assertion, for 
+  'closure color * closure color'.
+* oslc: proper handling of preprocessor errors when stdosl.h is in a path 
+  containing spaces.
+* Fix bugs in the OSL exit() function.
+* Don't error/warn if metadata name masks a global scope name.
 
 Under the hood:
+
 * Simplify code generation of binary ops involving closures.
 
 Build & test system improvements and developer goodies:
+
+* Many, many fixes to enable building and correct running of OSL on
+  Windows.  Too many to list individually, let's just say that OSL 1.3
+  builds and runs pretty robustly on Windows, older versions did not.
 * Remove unused OpenGL and GLEW searching from CMake files.
 * Fix a variety of compiler warnings, particularly on newer compilers,
   32 bit platforms, and Windows.
@@ -56,6 +245,33 @@ Build & test system improvements and developer goodies:
 * Make/CMake STOP_ON_WARNING flag (set to 0 or 1) controls whether the
   build will stop upon any compiler warning (default) or if it should
   keep going (=0).
+* Fixed bad interaction between weave preprocessor, OIIO::Strutil::format,
+  and gcc 4.7.2.
+* Fixes for static linkage of liboslcomp.
+* Addressed compilation errors on g++ 4.7.2.
+* Improved logic and error reporting for finding OpenImageIO at build time.
+* Add support for linking to static LLVM libraries, and for specifying
+  a particular LLVM version to be used.
+* New BUILDSTATIC option for CMake/Make allows building of static OSL 
+  libraries.
+* Fixes to allow OSL to use LLVM 3.2.
+* Fixes to allow OSL to be compiled by clang 3.2.
+* Fixes to allow building on Windows with MinGW.
+* Fix for building from a chroot where the host may be, e.g., 64 bit, but
+  the target is 32 bit.
+* Minimize cmake output clutter for things that aren't errors, unless
+  VERBOSE=1.
+* Various fixes to get OSL building and running on FreeBSD.
+* Cmake/make option USE_LLVM_BITCODE to be able to force LLVM bitcode
+  compilation on or off (defaults to on for Windows, off for Unix/Linux).
+
+Documentation:
+* Clarify that documentation is licensed under Creative Commons 3.0 BY.
+* Clean up OSL Spec discussion of built-in material closures.
+* Overhaul the suggested metadata conventions in the OSL spec (now 
+  conforms to the conventions used by Katana).
+
+
 
 
 Release 1.2.1 - 6 Nov, 2012 (compared to 1.2.0)

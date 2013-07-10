@@ -268,7 +268,7 @@ LLVMGEN (llvm_gen_printf)
                    *format != 'p' && *format != 's' && *format != 'u' &&
                    *format != 'v' && *format != 'x' && *format != 'X')
                 ++format;
-            ++format; // Also eat the format char
+            char formatchar = *format++;  // Also eat the format char
             if (arg >= op.nargs()) {
                 rop.shadingsys().error ("Mismatch between format string and arguments (%s:%d)",
                                         op.sourcefile().c_str(), op.sourceline());
@@ -281,6 +281,22 @@ LLVMGEN (llvm_gen_printf)
             TypeDesc simpletype (sym.typespec().simpletype());
             int num_elements = simpletype.numelements();
             int num_components = simpletype.aggregate;
+            if ((sym.typespec().is_closure_based() ||
+                 simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                ourformat[ourformat.length()-1] = 's';
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
+                formatchar != 'i' && formatchar != 'o' && formatchar != 'u' &&
+                formatchar != 'x' && formatchar != 'X') {
+                ourformat[ourformat.length()-1] = 'd';
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
+                formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
+                formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
+                formatchar != 'v') {
+                ourformat[ourformat.length()-1] = 'f';
+            }
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.llvm_constant(a) : NULL;
@@ -617,6 +633,13 @@ LLVMGEN (llvm_gen_modulus)
     TypeDesc type = Result.typespec().simpletype();
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // On Windows 32 bit this calls an unknown instruction, probably need to
+    // link with LLVM compiler-rt to fix, for now just fall back to op
+    if (is_float)
+        return llvm_gen_generic (rop, opnum);
+#endif
 
     // The following should handle f%f, v%v, v%f, i%i
     // That's all that should be allowed by oslc.
@@ -1519,7 +1542,7 @@ LLVMGEN (llvm_gen_filterwidth)
         rop.llvm_zero_derivs (Result);
     } else {
         // No derivs to be had
-        rop.llvm_assign_zero (Src);
+        rop.llvm_assign_zero (Result);
     }
 
     return true;
@@ -2387,14 +2410,14 @@ llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
 
 
 
-// T noise (string name, float s, ...);
-// T noise (string name, float s, float t, ...);
-// T noise (string name, point P, ...);
-// T noise (string name, point P, float t, ...);
-// T pnoise (string name, float s, float sper, ...);
-// T pnoise (string name, float s, float t, float sper, float tper, ...);
-// T pnoise (string name, point P, point Pper, ...);
-// T pnoise (string name, point P, float t, point Pper, float tper, ...);
+// T noise ([string name,] float s, ...);
+// T noise ([string name,] float s, float t, ...);
+// T noise ([string name,] point P, ...);
+// T noise ([string name,] point P, float t, ...);
+// T pnoise ([string name,] float s, float sper, ...);
+// T pnoise ([string name,] float s, float t, float sper, float tper, ...);
+// T pnoise ([string name,] point P, point Pper, ...);
+// T pnoise ([string name,] point P, float t, point Pper, float tper, ...);
 LLVMGEN (llvm_gen_noise)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -2461,6 +2484,10 @@ LLVMGEN (llvm_gen_noise)
     } else if (name == Strings::cell || name == Strings::cellnoise) {
         name = periodic ? Strings::pcellnoise : Strings::cellnoise;
         derivs = false;  // cell noise derivs are always zero
+    } else if (name == Strings::simplex && !periodic) {
+        name = Strings::simplexnoise;
+    } else if (name == Strings::usimplex && !periodic) {
+        name = Strings::usimplexnoise;
     } else if (name == Strings::gabor) {
         // already named
         pass_name = true;
@@ -2469,8 +2496,9 @@ LLVMGEN (llvm_gen_noise)
         derivs = true;
         name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
-        rop.shadingsys().error ("Noise type \"%s\" is unknown, called from (%s:%d)",
-                                name.c_str(), op.sourcefile().c_str(), op.sourceline());
+        rop.shadingsys().error ("%snoise type \"%s\" is unknown, called from (%s:%d)",
+                                (periodic ? "periodic " : ""), name.c_str(),
+                                op.sourcefile().c_str(), op.sourceline());
         return false;
     }
 
@@ -3428,7 +3456,14 @@ LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
-    rop.builder().CreateBr (rop.llvm_return_block());
+    if (op.opname() == Strings::op_exit) {
+        // If it's a real "exit", totally jump out of the shader instance.
+        // The exit instance block will be created if it doesn't yet exist.
+        rop.builder().CreateBr (rop.llvm_exit_instance_block());
+    } else {
+        // If it's a "return", jump to the exit point of the function.
+        rop.builder().CreateBr (rop.llvm_return_block());
+    }
     llvm::BasicBlock* next_block = rop.llvm_new_basic_block ("");
     rop.builder().SetInsertPoint (next_block);
     return true;

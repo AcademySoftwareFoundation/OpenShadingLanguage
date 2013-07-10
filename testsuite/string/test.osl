@@ -131,9 +131,9 @@ test ()
     // Conversion
     printf ("\n");
     string conv = "-23";
-    printf ("strtoi(\"%s\") = %d\n", conv, strtoi(conv));
+    printf ("stoi(\"%s\") = %d\n", conv, stoi(conv));
     conv = "3.14";
-    printf ("strtof(\"%s\") = %f\n", conv, strtof(conv));
+    printf ("stof(\"%s\") = %f\n", conv, stof(conv));
 
     // Split
     printf ("\n");

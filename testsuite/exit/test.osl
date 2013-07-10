@@ -1,0 +1,6 @@
+shader test()
+{
+    printf ("This should print\n");
+    exit ();
+    printf ("This should NOT NOT NOT print\n");
+}

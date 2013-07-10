@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
 
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/sysutil.h>
 
 #include "llvm_headers.h"
 
@@ -115,6 +116,10 @@ namespace pvt {
 
 static ustring op_end("end");
 static ustring op_nop("nop");
+static ustring op_aassign("aassign");
+static ustring op_compassign("compassign");
+static ustring op_aref("aref");
+static ustring op_compref("compref");
 
 // Trickery to force linkage of files when building static libraries.
 extern int opclosure_cpp_dummy, opcolor_cpp_dummy;
@@ -247,6 +252,10 @@ static const char *llvm_helper_function_table[] = {
     NOISE_DERIV_IMPL(noise),
     NOISE_IMPL(snoise),
     NOISE_DERIV_IMPL(snoise),
+    NOISE_IMPL(simplexnoise),
+    NOISE_DERIV_IMPL(simplexnoise),
+    NOISE_IMPL(usimplexnoise),
+    NOISE_DERIV_IMPL(usimplexnoise),
     GENERIC_NOISE_DERIV_IMPL(gabornoise),
     GENERIC_NOISE_DERIV_IMPL(genericnoise),
     PNOISE_IMPL(pcellnoise),
@@ -354,6 +363,8 @@ static const char *llvm_helper_function_table[] = {
     UNARY_OP_IMPL(abs),
     UNARY_OP_IMPL(fabs),
 
+    BINARY_OP_IMPL(fmod),
+
     "osl_smoothstep_ffff", "ffff",
     "osl_smoothstep_dfffdf", "xXffX",
     "osl_smoothstep_dffdff", "xXfXf",
@@ -457,7 +468,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_raytype_bit", "iXi",
     "osl_bind_interpolated_param", "iXXLiX",
     "osl_range_check", "iiiXXi",
-    "osl_naninf_check", "xiXiXXiX",
+    "osl_naninf_check", "xiXiXXiXii",
+    "osl_uninit_check", "xLXXXiXii",
 #endif // OSL_LLVM_NO_BITCODE
 
     NULL
@@ -535,7 +547,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
     // For each layer in the group, add entries for all params that are
     // connected or interpolated, and output params.  Also mark those
     // symbols with their offset within the group struct.
-    if (shadingsys().llvm_debug() >= 2)
+    if (llvm_debug() >= 2)
         std::cout << "Group param struct:\n";
     m_param_order_map.clear ();
     int order = 1;
@@ -557,7 +569,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
                     sym.typespec().simpletype().basesize();
             if (offset & (align-1))
                 offset += align - (offset & (align-1));
-            if (shadingsys().llvm_debug() >= 2)
+            if (llvm_debug() >= 2)
                 std::cout << "  " << inst->layername() 
                           << " (" << inst->id() << ") " << sym.mangled()
                           << " " << ts.c_str() << ", field " << order 
@@ -574,11 +586,6 @@ RuntimeOptimizer::llvm_type_groupdata ()
     std::string groupdataname = Strutil::format("Groupdata_%llu",
                                                 (long long unsigned int)group().name().hash());
     m_llvm_type_groupdata = llvm_type_struct (fields, groupdataname);
-
-#ifdef DEBUG
-//    llvm::outs() << "\nGroup struct = " << *m_llvm_type_groupdata << "\n";
-//    llvm::outs() << "  size = " << offset << "\n";
-#endif
 
     return m_llvm_type_groupdata;
 }
@@ -668,16 +675,43 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
     if (sym.typespec().is_closure_based() &&
         sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam) {
         llvm_assign_zero (sym);
+        return;
     }
 
-    if (sym.symtype() != SymTypeParam && sym.symtype() != SymTypeOutputParam &&
-        sym.symtype() != SymTypeConst && sym.typespec().is_string_based()) {
-        // Strings are pointers.  Can't take any chance on leaving local/tmp
-        // syms uninitialized.
-        DASSERT (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp);
+    if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp)
+          && shadingsys().debug_uninit()) {
+        // Handle the "debug uninitialized values" case
+        bool isarray = sym.typespec().is_array();
+        int alen = isarray ? sym.typespec().arraylength() : 1;
+        llvm::Value *u = NULL;
+        if (sym.typespec().is_closure_based()) {
+            // skip closures
+        }
+        else if (sym.typespec().is_floatbased())
+            u = llvm_constant (std::numeric_limits<float>::quiet_NaN());
+        else if (sym.typespec().is_int_based())
+            u = llvm_constant (std::numeric_limits<int>::min());
+        else if (sym.typespec().is_string_based())
+            u = llvm_constant (Strings::uninitialized_string);
+        if (u) {
+            for (int a = 0;  a < alen;  ++a) {
+                llvm::Value *aval = isarray ? llvm_constant(a) : NULL;
+                for (int c = 0;  c < (int)sym.typespec().aggregate(); ++c)
+                    llvm_store_value (u, sym, 0, aval, c);
+            }
+        }
+        return;
+    }
+
+    if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp) &&
+        sym.typespec().is_string_based()) {
+        // Strings are pointers.  Can't take any chance on leaving
+        // local/tmp syms uninitialized.
         llvm_assign_zero (sym);
         return;  // we're done, the parts below are just for params
     }
+    ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
+                "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
 
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.
@@ -751,15 +785,85 @@ RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
         TypeDesc t = sym.typespec().simpletype();
         if (t.basetype != TypeDesc::FLOAT)
             continue;  // just check float-based types
-        int ncomps = t.numelements() * t.aggregate;
-        llvm::Value *args[] = { llvm_constant(ncomps),
+        llvm::Value *ncomps = llvm_constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = llvm_constant(0);
+        llvm::Value *ncheck = ncomps;
+        if (op.opname() == op_aassign) {
+            // Special case -- array assignment -- only check one element
+            ASSERT (i == 0 && "only arg 0 is written for aassign");
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
+            llvm::Value *agg = llvm_constant(t.aggregate);
+            offset = t.aggregate == 1 ? ind : builder().CreateMul (ind, agg);
+            ncheck = agg;
+        } else if (op.opname() == op_compassign) {
+            // Special case -- component assignment -- only check one channel
+            ASSERT (i == 0 && "only arg 0 is written for compassign");
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
+            offset = ind;
+            ncheck = llvm_constant(1);
+        }
+
+        llvm::Value *args[] = { ncomps,
                                 llvm_void_ptr(sym),
                                 llvm_constant((int)sym.has_derivs()),
                                 sg_void_ptr(), 
                                 llvm_constant(op.sourcefile()),
                                 llvm_constant(op.sourceline()),
-                                llvm_constant(sym.name()) };
-        llvm_call_function ("osl_naninf_check", args, 7);
+                                llvm_constant(sym.name()),
+                                offset,
+                                ncheck
+                              };
+        llvm_call_function ("osl_naninf_check", args, 9);
+    }
+}
+
+
+
+void
+RuntimeOptimizer::llvm_generate_debug_uninit (const Opcode &op)
+{
+    for (int i = 0;  i < op.nargs();  ++i) {
+        Symbol &sym (*opargsym (op, i));
+        if (! op.argread(i))
+            continue;
+        if (sym.typespec().is_closure_based())
+            continue;
+        TypeDesc t = sym.typespec().simpletype();
+        if (t.basetype != TypeDesc::FLOAT && t.basetype != TypeDesc::INT &&
+            t.basetype != TypeDesc::STRING)
+            continue;  // just check float, int, string based types
+        llvm::Value *ncheck = llvm_constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = llvm_constant(0);
+        // Some special cases...
+        if (op.opname() == Strings::op_for && i == 0) {
+            // The first argument of 'for' is the condition temp, but
+            // note that it may not have had its initializer run yet, so
+            // don't generate uninit test code for it.
+            continue;
+        }
+        if (op.opname() == op_aref && i == 1) {
+            // Special case -- array assignment -- only check one element
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
+            llvm::Value *agg = llvm_constant(t.aggregate);
+            offset = t.aggregate == 1 ? ind : builder().CreateMul (ind, agg);
+            ncheck = agg;
+        } else if (op.opname() == op_compref && i == 1) {
+            // Special case -- component assignment -- only check one channel
+            llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
+            offset = ind;
+            ncheck = llvm_constant(1);
+        }
+
+        llvm::Value *args[] = { llvm_constant(t),
+                                llvm_void_ptr(sym),
+                                sg_void_ptr(), 
+                                llvm_constant(op.sourcefile()),
+                                llvm_constant(op.sourceline()),
+                                llvm_constant(sym.name()),
+                                offset,
+                                ncheck
+                              };
+        llvm_call_function ("osl_uninit_check", args, 8);
     }
 }
 
@@ -775,6 +879,8 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         const Opcode& op = inst()->ops()[opnum];
         const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
         if (opd && opd->llvmgen) {
+            if (m_shadingsys.debug_uninit() /* debug uninitialized vals */)
+                llvm_generate_debug_uninit (op);
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
@@ -819,11 +925,18 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     m_llvm_groupdata_ptr = arg_it++;
 
     llvm::BasicBlock *entry_bb = llvm_new_basic_block (unique_layer_name);
+    m_exit_instance_block = NULL;
 
     // Set up a new IR builder
     delete m_builder;
     m_builder = new llvm::IRBuilder<> (entry_bb);
-    // llvm_gen_debug_printf (std::string("enter layer ")+inst()->shadername());
+#if 0 /* helpful for debuggin */
+    if (llvm_debug() && groupentry)
+        llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",m_group.name()));
+    if (llvm_debug())
+        llvm_gen_debug_printf (Strutil::format("enter layer %s %s",
+                                  inst()->layername(), inst()->shadername()));
+#endif
     if (shadingsys().m_countlayerexecs)
         llvm_call_function ("osl_incr_layers_executed", sg_void_ptr());
 
@@ -860,8 +973,10 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     BOOST_FOREACH (Symbol &s, inst()->symbols()) {
-        // Skip non-array constants -- we always inline them
-        if (s.symtype() == SymTypeConst && !s.typespec().is_array())
+        // Skip constants -- we always inline scalar constants, and for
+        // array constants we will just use the pointers to the copy of
+        // the constant that belongs to the instance.
+        if (s.symtype() == SymTypeConst)
             continue;
         // Skip structure placeholders
         if (s.typespec().is_structure())
@@ -873,8 +988,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         // Set initial value for constants, closures, and strings that are
         // not parameters.
         if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
+            s.symtype() != SymTypeGlobal &&
             (s.is_constant() || s.typespec().is_closure_based() ||
-             s.typespec().is_string_based()))
+             s.typespec().is_string_based() || 
+             ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
+              && shadingsys().debug_uninit())))
             llvm_assign_initial_value (s);
         // If debugnan is turned on, globals check that their values are ok
         if (s.symtype() == SymTypeGlobal && m_shadingsys.debug_nan()) {
@@ -884,8 +1002,10 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                 llvm::Value *args[] = { llvm_constant(ncomps), llvm_void_ptr(s),
                      llvm_constant((int)s.has_derivs()), sg_void_ptr(), 
                      llvm_constant(ustring(inst()->shadername())),
-                     llvm_constant(0), llvm_constant(s.name()) };
-                llvm_call_function ("osl_naninf_check", args, 7);
+                     llvm_constant(0), llvm_constant(s.name()),
+                     llvm_constant(0), llvm_constant(ncomps)
+                };
+                llvm_call_function ("osl_naninf_check", args, 9);
             }
         }
     }
@@ -896,7 +1016,8 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
         if (s.typespec().is_structure())
             continue;
         // Skip if it's never read and isn't connected
-        if (! s.everread() && ! s.connected_down() && ! s.connected())
+        if (! s.everread() && ! s.connected_down() && ! s.connected()
+              && ! is_renderer_output(s.name()))
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);
@@ -911,6 +1032,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     m_layers_already_run.clear ();
 
     build_llvm_code (inst()->maincodebegin(), inst()->maincodeend());
+
+    if (llvm_has_exit_instance_block()) {
+        builder().CreateBr (m_exit_instance_block);
+        builder().SetInsertPoint (m_exit_instance_block);
+    }
 
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
@@ -934,11 +1060,15 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     // llvm_gen_debug_printf ("done copying connections");
 
     // All done
-    // llvm_gen_debug_printf (std::string("exit layer ")+inst()->shadername());
+#if 0 /* helpful for debugging */
+    if (llvm_debug())
+        llvm_gen_debug_printf (Strutil::format("exit layer %s %s",
+                                   inst()->layername(), inst()->shadername()));
+#endif
     builder().CreateRetVoid();
 
-    if (shadingsys().llvm_debug())
-        llvm::outs() << "layer_func (" << unique_layer_name << ") after llvm  = " << *m_layer_func << "\n";
+    if (llvm_debug())
+        llvm::outs() << "layer_func (" << unique_layer_name << ") " << this->layer() << "/" << group().nlayers() << " after llvm  = " << *m_layer_func << "\n";
 
     delete m_builder;
     m_builder = NULL;
@@ -1033,6 +1163,17 @@ RuntimeOptimizer::build_llvm_group ()
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     OIIO::Timer timer;
+    std::string err;
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // I don't know which exact part has thread safety issues, but it
+    // crashes on windows when we don't lock.
+    // FIXME -- try subsequent LLVM releases on Windows to see if this
+    // is a problem that is eventually fixed on the LLVM side.
+    {
+    static spin_mutex mutex;
+    OIIO::spin_lock lock (mutex);
+#endif
 
     if (! m_thread->llvm_context)
         m_thread->llvm_context = new llvm::LLVMContext();
@@ -1044,13 +1185,12 @@ RuntimeOptimizer::build_llvm_group ()
     }
 
     ASSERT (! m_llvm_module);
+#ifdef OSL_LLVM_NO_BITCODE
+    m_llvm_module = new llvm::Module("llvm_ops", *m_thread->llvm_context);
+#else
     // Load the LLVM bitcode and parse it into a Module
     const char *data = osl_llvm_compiled_ops_block;
     llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
-    std::string err;
-#ifdef OSL_LLVM_NO_BITCODE
-    m_llvm_module = new llvm::Module("llvm_ops", *llvm_context());
-#else
     // Load the LLVM bitcode and parse it into a Module
     m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
     if (err.length())
@@ -1073,6 +1213,11 @@ RuntimeOptimizer::build_llvm_group ()
     // will be stealing the JIT code memory from under its nose and
     // destroying the Module & ExecutionEngine.
     m_llvm_exec->DisableLazyCompilation ();
+
+#ifdef OSL_LLVM_NO_BITCODE
+    // End of mutex lock
+    }
+#endif
 
     m_stat_llvm_setup_time += timer.lap();
 
@@ -1126,13 +1271,13 @@ RuntimeOptimizer::build_llvm_group ()
 
     m_stat_llvm_opt_time += timer.lap();
 
-    if (shadingsys().llvm_debug()) {
+    if (llvm_debug()) {
         llvm::outs() << "func after opt  = " << *entry_func << "\n";
         llvm::outs().flush();
     }
 
     // Debug code to dump the resulting bitcode to a file
-    if (shadingsys().llvm_debug() >= 2) {
+    if (llvm_debug() >= 2) {
         std::string err_info;
         std::string name = Strutil::format ("%s_%d.bc",
                                             inst()->layername().c_str(),

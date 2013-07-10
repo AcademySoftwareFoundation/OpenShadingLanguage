@@ -49,7 +49,9 @@ find_package (IlmBase REQUIRED)
 if (ILMBASE_FOUND)
     include_directories ("${ILMBASE_INCLUDE_DIR}")
     include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
-    message (STATUS "ILMBASE_INCLUDE_DIR=${ILMBASE_INCLUDE_DIR}")
+    if (VERBOSE)
+        message (STATUS "ILMBASE_INCLUDE_DIR=${ILMBASE_INCLUDE_DIR}")
+    endif ()
 else ()
     message (STATUS "ILMBASE not found!")
 endif ()
@@ -65,12 +67,12 @@ endmacro ()
 ###########################################################################
 # Boost setup
 
-message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
-
-set (Boost_ADDITIONAL_VERSIONS "1.51" "1.50" "1.49" "1.48"
+set (Boost_ADDITIONAL_VERSIONS "1.52" "1.51" "1.50" "1.49" "1.48"
                                "1.47" "1.46" "1.45"
                                "1.44" "1.43" "1.42" "1.41" "1.40")
-#set (Boost_USE_STATIC_LIBS   ON)
+if (LINKSTATIC)
+    set (Boost_USE_STATIC_LIBS   ON)
+endif ()
 set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
     set (Boost_FOUND true)
@@ -85,10 +87,14 @@ else ()
                  )
 endif ()
 
-message (STATUS "Boost found ${Boost_FOUND} ")
-message (STATUS "Boost include dirs ${Boost_INCLUDE_DIRS}")
-message (STATUS "Boost library dirs ${Boost_LIBRARY_DIRS}")
-message (STATUS "Boost libraries    ${Boost_LIBRARIES}")
+if (VERBOSE)
+    message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
+    message (STATUS "Boost found ${Boost_FOUND} ")
+    message (STATUS "Boost version      ${Boost_VERSION}")
+    message (STATUS "Boost include dirs ${Boost_INCLUDE_DIRS}")
+    message (STATUS "Boost library dirs ${Boost_LIBRARY_DIRS}")
+    message (STATUS "Boost libraries    ${Boost_LIBRARIES}")
+endif ()
 
 include_directories (SYSTEM "${Boost_INCLUDE_DIRS}")
 link_directories ("${Boost_LIBRARY_DIRS}")
@@ -96,51 +102,6 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 # end Boost setup
 ###########################################################################
 
-
-###########################################################################
-# TBB (Intel Thread Building Blocks) setup
-
-setup_path (TBB_HOME "${THIRD_PARTY_TOOLS_HOME}"
-            "Location of the TBB library install")
-mark_as_advanced (TBB_HOME)
-if (USE_TBB)
-    set (TBB_VERSION 22_004oss)
-    if (MSVC)
-        find_library (TBB_LIBRARY
-                      NAMES tbb
-                      PATHS ${TBB_HOME}/lib
-                      PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/
-                      ${TBB_HOME}/tbb-${TBB_VERSION}/lib/
-                     )
-        find_library (TBB_DEBUG_LIBRARY
-                      NAMES tbb_debug
-                      PATHS ${TBB_HOME}/lib
-                      PATHS ${THIRD_PARTY_TOOLS_HOME}/lib/
-                      ${TBB_HOME}/tbb-${TBB_VERSION}/lib/)
-    endif (MSVC)
-    find_path (TBB_INCLUDES tbb/tbb_stddef.h
-               ${TBB_HOME}/include/tbb${TBB_VERSION}
-               ${THIRD_PARTY_TOOLS}/include/tbb${TBB_VERSION}
-               ${PROJECT_SOURCE_DIR}/include
-               ${OPENIMAGEIOHOME}/include/OpenImageIO
-              )
-    if (TBB_INCLUDES OR TBB_LIBRARY)
-        set (TBB_FOUND TRUE)
-        message (STATUS "TBB includes = ${TBB_INCLUDES}")
-        message (STATUS "TBB library = ${TBB_LIBRARY}")
-        add_definitions ("-DUSE_TBB=1")
-    else ()
-        message (STATUS "TBB not found")
-    endif ()
-else ()
-    add_definitions ("-DUSE_TBB=0")
-    message (STATUS "TBB will not be used")
-    set(TBB_INCLUDES "")
-    set(TBB_LIBRARY "")
-endif ()
-
-# end TBB setup
-###########################################################################
 
 ###########################################################################
 # Partio
@@ -157,8 +118,10 @@ if (USE_PARTIO)
         set (PARTIO_FOUND TRUE)
         add_definitions ("-DUSE_PARTIO=1")
         include_directories ("${PARTIO_INCLUDE_DIR}")
-        message (STATUS "Partio include = ${PARTIO_INCLUDE_DIR}")
-        message (STATUS "Partio library = ${PARTIO_LIBRARIES}")
+        if (VERBOSE)
+            message (STATUS "Partio include = ${PARTIO_INCLUDE_DIR}")
+            message (STATUS "Partio library = ${PARTIO_LIBRARIES}")
+        endif ()
     else ()
         add_definitions ("-DUSE_PARTIO=0")
         set (PARTIO_FOUND FALSE)
@@ -171,6 +134,20 @@ else ()
 endif (USE_PARTIO)
 
 # end GL Extension Wrangler library setup
+###########################################################################
+
+
+###########################################################################
+# Pugixml setup.  Normally we just use the version bundled with oiio, but
+# some linux distros are quite particular about having separate packages so we
+# allow this to be overridden to use the distro-provided package if desired.
+if (USE_EXTERNAL_PUGIXML)
+    find_package (PugiXML REQUIRED)
+    # insert include path to pugixml first, to ensure that the external
+    # pugixml is found, and not the one in OIIO's include directory.
+    include_directories (BEFORE ${PUGIXML_INCLUDE_DIR})
+endif()
+# end Pugixml setup
 ###########################################################################
 
 
@@ -208,11 +185,13 @@ endif()
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION}
                PATHS ${LLVM_LIB_DIR})
-message (STATUS "LLVM version  = ${LLVM_VERSION}")
-message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
-message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
-message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
-message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
+if (VERBOSE)
+    message (STATUS "LLVM version  = ${LLVM_VERSION}")
+    message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
+    message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
+    message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
+    message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
+endif ()
 
 # shared llvm library may not be available, this is not an error if we use LLVM_STATIC.
 if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
@@ -222,7 +201,6 @@ if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_
   # an integer version number we can use to make compilation decisions.
   string (REGEX REPLACE "\\." "" OSL_LLVM_VERSION ${LLVM_VERSION})
   string (REGEX REPLACE "svn" "" OSL_LLVM_VERSION ${OSL_LLVM_VERSION})
-  message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
   add_definitions ("-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION}")
   if (LLVM_STATIC)
     # if static LLVM libraries were requested, use llvm-config to generate
@@ -233,7 +211,10 @@ if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
     string (REPLACE " " ";" LLVM_LIBRARY ${LLVM_LIBRARY})
   endif ()
-  message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
+  if (VERBOSE)
+      message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
+      message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
+  endif ()
 
 
   if (NOT LLVM_LIBRARY)

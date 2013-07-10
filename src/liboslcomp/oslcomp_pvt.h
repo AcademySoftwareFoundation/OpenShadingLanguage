@@ -197,6 +197,10 @@ public:
     ///
     Symbol *make_temporary (const TypeSpec &type);
 
+    /// Make a generic constant symbol
+    ///
+    Symbol *make_constant (TypeDesc type, const void *val);
+
     /// Make a constant string symbol
     ///
     Symbol *make_constant (ustring s);

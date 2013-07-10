@@ -32,9 +32,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/regex.hpp>
 
+#include <OpenImageIO/fmath.h>
+#include <OpenImageIO/sysutil.h>
+
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
 #include "dual.h"
+#include "noiseimpl.h"
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -48,6 +52,7 @@ static ustring u_nop    ("nop"),
                u_if     ("if"),
                u_eq     ("eq"),
                u_return ("return");
+static ustring u_cell ("cell"), u_cellnoise ("cellnoise");
 
 
 OSL_NAMESPACE_ENTER
@@ -462,8 +467,8 @@ DECLFOLDER(constfold_lt)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
+    const TypeSpec &ta (A.typespec());
+    const TypeSpec &tb (B.typespec());
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
@@ -494,8 +499,8 @@ DECLFOLDER(constfold_le)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
+    const TypeSpec &ta (A.typespec());
+    const TypeSpec &tb (B.typespec());
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
@@ -526,8 +531,8 @@ DECLFOLDER(constfold_gt)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
+    const TypeSpec &ta (A.typespec());
+    const TypeSpec &tb (B.typespec());
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'gt R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
@@ -558,8 +563,8 @@ DECLFOLDER(constfold_ge)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    const TypeSpec &ta (A.typespec()); 
-    const TypeSpec &tb (B.typespec()); 
+    const TypeSpec &ta (A.typespec());
+    const TypeSpec &tb (B.typespec());
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
@@ -842,9 +847,9 @@ DECLFOLDER(constfold_endswith)
 
 
 
-DECLFOLDER(constfold_strtoi)
+DECLFOLDER(constfold_stoi)
 {
-    // Try to turn R=strtoi(s) into R=C
+    // Try to turn R=stoi(s) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
@@ -859,9 +864,9 @@ DECLFOLDER(constfold_strtoi)
 
 
 
-DECLFOLDER(constfold_strtof)
+DECLFOLDER(constfold_stof)
 {
-    // Try to turn R=strtof(s) into R=C
+    // Try to turn R=stof(s) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
@@ -1040,11 +1045,11 @@ DECLFOLDER(constfold_clamp)
 
 DECLFOLDER(constfold_mix)
 {
-    // Try to turn R=mix(a,b,x) into 
+    // Try to turn R=mix(a,b,x) into
     //   R = c             if all are constant
     //   R = A             if x is constant and x == 0
     //   R = B             if x is constant and x == 1
-    // 
+    //
     Opcode &op (rop.inst()->ops()[opnum]);
     int Rind = rop.oparg(op,0);
     int Aind = rop.oparg(op,1);
@@ -1183,19 +1188,28 @@ DECLFOLDER(constfold_min)
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
     if (X.is_constant() && Y.is_constant() &&
-        equivalent(X.typespec(), Y.typespec()) &&
-        (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        const float *y = (const float *) Y.data();
-        float result[3];
-        result[0] = std::min (x[0], y[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = std::min (x[1], y[1]);
-            result[2] = std::min (x[2], y[2]);
+        equivalent(X.typespec(), Y.typespec())) {
+        if (X.typespec().is_float() || X.typespec().is_triple()) {
+            const float *x = (const float *) X.data();
+            const float *y = (const float *) Y.data();
+            float result[3];
+            result[0] = std::min (x[0], y[0]);
+            if (X.typespec().is_triple()) {
+                result[1] = std::min (x[1], y[1]);
+                result[2] = std::min (x[2], y[2]);
+            }
+            int cind = rop.add_constant (X.typespec(), &result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
         }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
+        if (X.typespec().is_int()) {
+            const int *x = (const int *) X.data();
+            const int *y = (const int *) Y.data();
+            int result = std::min (x[0], y[0]);
+            int cind = rop.add_constant (result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        }
     }
     return 0;
 }
@@ -1209,91 +1223,81 @@ DECLFOLDER(constfold_max)
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
     if (X.is_constant() && Y.is_constant() &&
-        equivalent(X.typespec(), Y.typespec()) &&
-        (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        const float *y = (const float *) Y.data();
-        float result[3];
-        result[0] = std::max (x[0], y[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = std::max (x[1], y[1]);
-            result[2] = std::max (x[2], y[2]);
+        equivalent(X.typespec(), Y.typespec())) {
+        if (X.typespec().is_float() || X.typespec().is_triple()) {
+            const float *x = (const float *) X.data();
+            const float *y = (const float *) Y.data();
+            float result[3];
+            result[0] = std::max (x[0], y[0]);
+            if (X.typespec().is_triple()) {
+                result[1] = std::max (x[1], y[1]);
+                result[2] = std::max (x[2], y[2]);
+            }
+            int cind = rop.add_constant (X.typespec(), &result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
         }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
+        if (X.typespec().is_int()) {
+            const int *x = (const int *) X.data();
+            const int *y = (const int *) Y.data();
+            int result = std::max (x[0], y[0]);
+            int cind = rop.add_constant (result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        }
     }
     return 0;
 }
 
 
 
-DECLFOLDER(constfold_sqrt)
-{
-    // Try to turn R=sqrt(x) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (X.is_constant() &&
-          (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        float result[3];
-        result[0] = sqrtf (std::max (0.0f, x[0]));
-        if (X.typespec().is_triple()) {
-            result[1] = sqrtf (std::max (0.0f, x[1]));
-            result[2] = sqrtf (std::max (0.0f, x[2]));
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
+// Handy macro for automatically constructing a constant-folder for
+// a simple function of one argument that can be float or triple
+// and returns the same type as its argument.
+#define AUTO_DECLFOLDER_FLOAT_OR_TRIPLE(name,impl)                      \
+DECLFOLDER(constfold_ ## name)                                          \
+{                                                                       \
+    /* Try to turn R=f(x) into R=C */                                   \
+    Opcode &op (rop.inst()->ops()[opnum]);                              \
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));                \
+    if (X.is_constant() &&                                              \
+          (X.typespec().is_float() || X.typespec().is_triple())) {      \
+        const float *x = (const float *) X.data();                      \
+        float result[3];                                                \
+        result[0] = impl (x[0]);                                        \
+        if (X.typespec().is_triple()) {                                 \
+            result[1] = impl (x[1]);                                    \
+            result[2] = impl (x[2]);                                    \
+        }                                                               \
+        int cind = rop.add_constant (X.typespec(), &result);            \
+        rop.turn_into_assign (op, cind, "const fold");                  \
+        return 1;                                                       \
+    }                                                                   \
+    return 0;                                                           \
 }
 
 
 
-DECLFOLDER(constfold_floor)
-{
-    // Try to turn R=floor(x) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (X.is_constant() &&
-          (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        float result[3];
-        result[0] = floorf (x[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = floorf (x[1]);
-            result[2] = floorf (x[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sqrt, OIIO::safe_sqrtf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (inversesqrt, OIIO::safe_inversesqrt)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cos, cosf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sin, sinf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (acos, OIIO::safe_acosf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (asin, OIIO::safe_asinf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (floor, floorf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (ceil, ceilf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp, expf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp2, exp2f)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (expm1, expm1f)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (erf, erff)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (erfc, erfcf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log, OIIO::safe_log)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10, OIIO::safe_log10)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2, OIIO::safe_log2)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (logb, OIIO::safe_logb)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (degrees, OIIO::degrees)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (radians, OIIO::radians)
 
-
-
-DECLFOLDER(constfold_ceil)
-{
-    // Try to turn R=ceil(x) into R=C
-    Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (X.is_constant() &&
-          (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        float result[3];
-        result[0] = ceilf (x[0]);
-        if (X.typespec().is_triple()) {
-            result[1] = ceilf (x[1]);
-            result[2] = ceilf (x[2]);
-        }
-        int cind = rop.add_constant (X.typespec(), &result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
-    }
-    return 0;
-}
 
 
 
@@ -1345,11 +1349,29 @@ DECLFOLDER(constfold_pow)
 
 
 
+DECLFOLDER(constfold_normalize)
+{
+    // Try to turn R=normalze(x) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
+    DASSERT (X.typespec().is_triple());
+    if (X.is_constant()) {
+        Vec3 result = *(const Vec3 *)X.data();
+        result.normalize();
+        int cind = rop.add_constant (X.typespec(), &result);
+        rop.turn_into_assign (op, cind, "const fold");
+        return 1;
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_triple)
 {
     // Turn R=triple(a,b,c) into R=C if the components are all constants
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 4 || op.nargs() == 5); 
+    DASSERT (op.nargs() == 4 || op.nargs() == 5);
     bool using_space = (op.nargs() == 5);
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
 //    Symbol &Space (*rop.inst()->argsymbol(op.firstarg()+1));
@@ -1358,7 +1380,7 @@ DECLFOLDER(constfold_triple)
     Symbol &C (*rop.inst()->argsymbol(op.firstarg()+3+using_space));
     if (A.is_constant() && A.typespec().is_float() &&
             B.is_constant() && C.is_constant() && !using_space) {
-        DASSERT (A.typespec().is_float() && 
+        DASSERT (A.typespec().is_float() &&
                  B.typespec().is_float() && C.typespec().is_float());
         float result[3];
         result[0] = *(const float *)A.data();
@@ -1478,7 +1500,7 @@ DECLFOLDER(constfold_getmatrix)
         Matrix44 Mresult = Mfrom * Mto;
         int cind = rop.add_constant (TypeDesc::TypeMatrix, &Mresult);
         rop.turn_into_assign (op, cind, "known matrix");
-        
+
         // Now insert a new instruction that assigns 1 to the
         // original return result of getmatrix.
         int one = 1;
@@ -1673,7 +1695,7 @@ DECLFOLDER(constfold_gettextureinfo)
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
     Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));
-    ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() && 
+    ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
             Dataname.typespec().is_string());
 
     if (Filename.is_constant() && Dataname.is_constant() &&
@@ -1792,7 +1814,7 @@ DECLFOLDER(constfold_texture)
                     r##field##_set = true;                              \
                 }                                                       \
             }
-            
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wtautological-compare"
@@ -1940,7 +1962,7 @@ DECLFOLDER(constfold_pointcloud_search)
         if (names[i] == "index") {
             // "index" is a special case -- it's retrieving the hit point
             // indices, not data on those hit points.
-            // 
+            //
             // Because the presumed Partio underneath passes indices as
             // size_t, but OSL only allows int parameters, we need to
             // copy.  But just cast if size_t and int are the same size.
@@ -1978,7 +2000,7 @@ DECLFOLDER(constfold_pointcloud_search)
     args_to_add.push_back (result_sym);
     args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
     rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
-    
+
     return 1;
 }
 
@@ -2039,6 +2061,88 @@ DECLFOLDER(constfold_pointcloud_get)
 
 
 
+DECLFOLDER(constfold_noise)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    // Take an early out if any args are not constant (other than the result)
+    for (int i = 1; i < op.nargs(); ++i)
+        if (! rop.opargsym(op,i)->is_constant())
+            return 0;
+
+    // Decode some info about which noise function we're dealing with
+//    bool periodic = (op.opname() == Strings::pnoise);
+    int arg = 0;   // Next arg to read
+    Symbol &Result = *rop.opargsym (op, arg++);
+    int outdim = Result.typespec().is_triple() ? 3 : 1;
+    Symbol *Name = rop.opargsym (op, arg++);
+    ustring name;
+    if (Name->typespec().is_string()) {
+        name = Name->is_constant() ? *(ustring *)Name->data() : ustring();
+    } else {
+        // Not a string, must be the old-style noise/pnoise
+        --arg;  // forget that arg
+        Name = NULL;
+        name = op.opname();
+    }
+
+    // Early out: for now, we only fold cell noise
+    if (name != u_cellnoise && name != u_cell)
+        return 0;
+
+    // Extract the constant input coordinates
+    float input[4];
+    int indim = 0;
+    for ( ; arg < op.nargs() && indim < 4; ++arg) {
+        Symbol *in = rop.opargsym(op,arg);
+        if (in->typespec().is_float()) {
+            input[indim++] = ((float *)in->data())[0];
+        } else if (in->typespec().is_triple()) {
+            input[indim++] = ((float *)in->data())[0];
+            input[indim++] = ((float *)in->data())[1];
+            input[indim++] = ((float *)in->data())[2];
+        }
+        else
+            return 0;  // optional args starting, we don't fold them yet
+    }
+
+    if (name == u_cellnoise || name == u_cell) {
+        CellNoise cell;
+        if (outdim == 1) {
+            float n;
+            if (indim == 1)
+                cell (n, input[0]);
+            else if (indim == 2)
+                cell (n, input[0], input[1]);
+            else if (indim == 3)
+                cell (n, Vec3(input[0], input[1], input[2]));
+            else
+                cell (n, Vec3(input[0], input[1], input[2]), input[3]);
+            int cind = rop.add_constant (n);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        } else {
+            ASSERT (outdim == 3);
+            Vec3 n;
+            if (indim == 1)
+                cell (n, input[0]);
+            else if (indim == 2)
+                cell (n, input[0], input[1]);
+            else if (indim == 3)
+                cell (n, Vec3(input[0], input[1], input[2]));
+            else
+                cell (n, Vec3(input[0], input[1], input[2]), input[3]);
+            int cind = rop.add_constant (TypeDesc::TypePoint, &n);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_functioncall)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -2070,7 +2174,7 @@ DECLFOLDER(constfold_functioncall)
         rop.turn_into_nop (op, "'function' not necessary");
         ++changed;
     }
-    
+
     return changed;
 }
 
@@ -2126,6 +2230,18 @@ DECLFOLDER(constfold_assign)
         }
     }
     return 0;
+}
+
+
+
+DECLFOLDER(constfold_warning)
+{
+   if (rop.shadingsys().max_warnings_per_thread() == 0) {
+      Opcode &op (rop.inst()->ops()[opnum]);
+      rop.turn_into_nop(op, "warnings disabled by max_warnings_per_thread == 0");
+      return 1;
+   }
+   return 0;
 }
 
 

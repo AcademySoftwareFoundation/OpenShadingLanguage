@@ -7,7 +7,7 @@ a: f_out = 0.5, c_out = 0.25 1 1
 a: set message 'foo' to 0.125 0.5 0.5
 a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
 a: set message 'array' to { 42 43 44 45 }
-dummy = 0.5, force connection with optimization
+dummy = 1, force connection with optimization
 ERROR: message "wrong_direction_test" was queried before being set (queried here: a.osl:26) setting it now (b.osl:9) would lead to inconsistent results
 b: f_in = 0.5, c_in = 0.25 1 1
 b: retrieved message 'foo', result = 1, foo = 0.125 0.5 0.5

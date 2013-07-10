@@ -86,6 +86,7 @@ CPLUSCOMMENT    \/\/.*\n
   * C code that will be inserted at the top of code that flex generates.
   */
 %{
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -101,6 +102,14 @@ using namespace OSL::pvt;
 
 #define yylval osllval
 #define yylloc osllloc
+
+#ifdef _WIN32
+#define YY_NO_UNISTD_H
+
+#ifdef _MSC_VER
+#define strtoll _strtoi64
+#endif
+#endif
 
 void preprocess (const char *yytext);
 
@@ -133,7 +142,7 @@ void preprocess (const char *yytext);
 "else"			{  SETLINE;  return (yylval.i=ELSE); }
 "float"			{  SETLINE;  return (yylval.i=FLOATTYPE); }
 "for"			{  SETLINE;  return (yylval.i=FOR); }
-"if"			{  SETLINE;  return (yylval.i=IF); }
+"if"			{  SETLINE;  return (yylval.i=IF_TOKEN); }
 "illuminance"	        {  SETLINE;  return (yylval.i=ILLUMINANCE); }
 "illuminate"	        {  SETLINE;  return (yylval.i=ILLUMINATE); }
 "int"		        {  SETLINE;  return (yylval.i=INTTYPE); }
@@ -173,7 +182,16 @@ void preprocess (const char *yytext);
 
  /* Literal values */
 {INTEGER}               {
-                            yylval.i = atoi (YYText());
+                            long long llval = strtoll (YYText(), (char**)NULL, 10);
+                            // we do not detect overflow when the value is INT_MAX+1,
+                            // because negation happens later and -(INT_MAX+1) == INT_MIN
+                            if (llval > ((long long)INT_MAX)+1) {
+                                oslcompiler->error (oslcompiler->filename(),
+                                                    oslcompiler->lineno(),
+                                                    "integer overflow, value must be between %d and %d.",
+                                                    INT_MIN, INT_MAX);
+                            }
+                            yylval.i = (int)llval;
                             SETLINE;
                             return INT_LITERAL;
                         }

@@ -465,7 +465,11 @@ OSOReaderToMaster::instruction (int label, const char *opcode)
     m_firstarg = m_master->m_args.size();
     m_nargs = 0;
     m_reading_instruction = true;
-    if (! m_shadingsys.op_descriptor (uopcode)) {
+    const OpDescriptor *od = m_shadingsys.op_descriptor (uopcode);
+    if (od) {
+        // Replace the name in case it was aliased for compatibility
+        uopcode = od->name;
+    } else {
         m_shadingsys.error ("Parsing shader \"%s\": instruction \"%s\" is not known. Maybe compiled with a too-new oslc?",
                             m_master->shadername().c_str(), opcode);
         m_errors = true;

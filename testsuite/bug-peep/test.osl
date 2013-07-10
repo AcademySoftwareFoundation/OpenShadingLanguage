@@ -1,0 +1,36 @@
+// Regression for a peephole optimization bug
+
+
+void transformST (
+    float S, float T, float Scale_S, float Scale_T,
+    float Offset_S, float Offset_T,
+    int Swap_ST_On,
+    output float outS, output float outT
+    )
+{
+    outS = S * Scale_S - Offset_S;
+    outT = T * Scale_T - Offset_T;
+    if (Swap_ST_On) {
+        float tmpF = outS;
+        outS = outT;
+        outT = tmpF;
+    }
+}
+
+
+shader test (
+    float S = u,
+    float T = v,
+    float Scale_S = 2, float Scale_T = 1.0,
+    float Offset_S = 0.0, float Offset_T = 0.0,
+    int Swap_ST_On = 1,
+    output float outS = 0.0,
+    output float outT = 0.0
+    )
+{
+    outS = S;
+    outT = T;
+    transformST (S, T, Scale_S, Scale_T, Offset_S, Offset_T, Swap_ST_On,
+                 outS, outT);
+    printf ("S=%g T=%g    outS=%g outT=%g\n", S, T, outS, outT);
+}

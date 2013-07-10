@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 
+#include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 
@@ -85,12 +86,10 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
                                     ShaderGroup &group, ShadingContext *ctx)
     : m_shadingsys(shadingsys),
       m_thread(shadingsys.get_perthread_info()),
-      m_group(group),
-      m_inst(NULL), m_context(ctx),
-      m_pass(0),
+      m_context(ctx),
       m_debug(shadingsys.debug()),
       m_optimize(shadingsys.optimize()),
-      m_opt_constant_param(shadingsys.m_opt_constant_param),
+      m_opt_simplify_param(shadingsys.m_opt_simplify_param),
       m_opt_constant_fold(shadingsys.m_opt_constant_fold),
       m_opt_stale_assign(shadingsys.m_opt_stale_assign),
       m_opt_elide_useless_ops(shadingsys.m_opt_elide_useless_ops),
@@ -99,6 +98,9 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_coalesce_temps(shadingsys.m_opt_coalesce_temps),
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
+      m_opt_middleman(shadingsys.m_opt_middleman),
+      m_group(group),
+      m_inst(NULL), m_pass(0),
       m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
@@ -154,7 +156,7 @@ RuntimeOptimizer::set_debug ()
             // everything from running 10x slower just because you want to
             // debug one shader.
             m_optimize = 3;
-            m_opt_constant_param = true;
+            m_opt_simplify_param = true;
             m_opt_constant_fold = true;
             m_opt_stale_assign = true;
             m_opt_elide_useless_ops = true;
@@ -163,6 +165,7 @@ RuntimeOptimizer::set_debug ()
             m_opt_coalesce_temps = true;
             m_opt_assign = true;
             m_opt_mix = true;
+            m_opt_middleman = true;
         }
     }
     // if user said to only debug one layer, turn off debug if not it
@@ -170,6 +173,22 @@ RuntimeOptimizer::set_debug ()
         shadingsys().m_debug_layername != inst()->layername()) {
         m_debug = 0;
     }
+}
+
+
+
+int
+RuntimeOptimizer::llvm_debug() const
+{
+    if (shadingsys().m_llvm_debug == 0)
+        return 0;
+    if (shadingsys().m_debug_groupname &&
+        shadingsys().m_debug_groupname != m_group.name())
+        return 0;
+    if (inst() && shadingsys().m_debug_layername &&
+        shadingsys().m_debug_layername != inst()->layername())
+        return 0;
+    return shadingsys().m_llvm_debug;
 }
 
 
@@ -264,6 +283,22 @@ RuntimeOptimizer::add_temp (const TypeSpec &type)
 
 
 
+int
+RuntimeOptimizer::add_global (ustring name, const TypeSpec &type)
+{
+    int index = inst()->findsymbol (name);
+    if (index < 0) {
+        Symbol newglobal (name, type, SymTypeGlobal);
+        ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
+                "we shouldn't have to realloc here");
+        index = (int) inst()->symbols().size ();
+        inst()->symbols().push_back (newglobal);
+    }
+    return index;
+}
+
+
+
 void
 RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
                                     int newarg2, const char *why)
@@ -295,6 +330,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
 void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
+    // We don't know the op num here, so we subtract the pointers
     int opnum = &op - &(inst()->ops()[0]);
     if (debug() > 1)
         std::cout << "turned op " << opnum
@@ -308,8 +344,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
     op.argread (1, true);
     op.argwrite (1, false);
     // Need to make sure the symbol we're assigning is marked as read
-    // for this op.  Unfortunately, mark_rw takes the op number, we just
-    // have the pointer, so we subtract to get it.
+    // for this op.
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     Symbol *arg = opargsym (op, 1);
     arg->mark_rw (opnum, true, false);
@@ -468,6 +503,9 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         m_in_loop.insert (m_in_loop.begin()+opnum, 1,
                           m_in_loop[opnum]);
     }
+    // If the first return happened after this, bump it up
+    if (m_first_return >= opnum)
+        ++m_first_return;
 
     if (opname == u_if) {
         // special case for 'if' -- the arg is read, not written
@@ -601,7 +639,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
                     if (! (simple_assign && a == 0))
                         params.push_back (opargs[argind]);
                     // mark as already initialized unconditionally, if we do
-                    if (! m_in_conditional[opnum] &&
+                    if (op_is_unconditionally_executed(opnum) &&
                             op.method() == OSLCompilerImpl::main_method_name())
                         s->initialized (true);
                 }
@@ -654,11 +692,14 @@ RuntimeOptimizer::message_possibly_set (ustring name) const
 
 
 
-/// For all the instance's parameters, if they can be found to be
-/// effectively constants, make constants for them an alias them to the
-/// constant.
+/// For all the instance's parameters (that can't be overridden by the
+/// geometry), if they can be found to be effectively constants or
+/// globals, make constants for them and alias them to the constant. If
+/// they are connected to an earlier layer's output, if it can determine
+/// that the output will be a constant or global, then sever the
+/// connection and just alias our parameter to that value.
 void
-RuntimeOptimizer::find_constant_params (ShaderGroup &group)
+RuntimeOptimizer::simplify_params ()
 {
     for (int i = inst()->firstparam();  i < inst()->lastparam();  ++i) {
         Symbol *s (inst()->symbol(i));
@@ -710,12 +751,40 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
             }
         } else if (s->valuesource() == Symbol::ConnectedVal) {
             // It's connected to an earlier layer.  If the output var of
-            // the upstream shader is effectively constant, then so is
-            // this variable.
+            // the upstream shader is effectively constant or a global,
+            // then so is this variable.
             BOOST_FOREACH (Connection &c, inst()->connections()) {
                 if (c.dst.param == i) {
-                    Symbol *srcsym = group[c.srclayer]->symbol(c.src.param);
-                    if (!srcsym->everused() &&
+                    // srcsym is the earlier group's output param, which
+                    // is connected as the input to the param we're
+                    // examining.
+                    ShaderInstance *uplayer = m_group[c.srclayer];
+                    Symbol *srcsym = uplayer->symbol(c.src.param);
+                    if (!srcsym->lockgeom())
+                        continue; // Not if it can be overridden by geometry
+
+                    // Is the source symbol known to be a global, from
+                    // earlier analysis by find_params_holding_globals?
+                    // If so, make sure the global is in this instance's
+                    // symbol table, and alias the parameter to it.
+                    ustringmap_t &g (m_params_holding_globals[c.srclayer]);
+                    ustringmap_t::const_iterator f;
+                    f = g.find (srcsym->name());
+                    if (f != g.end()) {
+                        if (debug() > 1)
+                            std::cout << "Remapping " << inst()->layername()
+                              << "." << s->name() << " because it's connected to "
+                              << uplayer->layername() << "." << srcsym->name()
+                              << ", which is known to be " << f->second << "\n";
+                        make_symbol_room (1);
+                        s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
+                        int ind = add_global (f->second, srcsym->typespec());
+                        global_alias (i, ind);
+                        shadingsys().m_stat_global_connections += 1;
+                        break;
+                    }
+
+                    if (!srcsym->everwritten() &&
                         (srcsym->valuesource() == Symbol::DefaultVal ||
                          srcsym->valuesource() == Symbol::InstanceVal) &&
                         !srcsym->has_init_ops()) {
@@ -727,6 +796,7 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
                         global_alias (i, cind);
                         make_param_use_instanceval (s, "- upstream layer sets it to a constant");
                         replace_param_value (s, srcsym->data(), srcsym->typespec());
+                        shadingsys().m_stat_const_connections += 1;
                         break;
                     }
                 }
@@ -737,8 +807,48 @@ RuntimeOptimizer::find_constant_params (ShaderGroup &group)
 
 
 
+/// For all the instance's parameters, if they are simply assigned globals,
+/// record that in m_params_holding_globals.
+void
+RuntimeOptimizer::find_params_holding_globals ()
+{
+    FOREACH_PARAM (Symbol &s, inst()) {
+        // Skip if this isn't a shader output parameter that's connected
+        // to a later layer.
+        if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam)
+            continue;  // Skip non-params
+        if (!s.connected_down())
+            continue;  // Skip unconnected params -- who cares
+        if (s.valuesource() != Symbol::DefaultVal)
+            continue;  // Skip -- must be connected or an instance value
+        if (s.firstwrite() < 0 || s.firstwrite() != s.lastwrite())
+            continue;  // Skip -- written more than once
+
+        int opnum = s.firstwrite();
+        Opcode &op (inst()->ops()[opnum]);
+        if (op.opname() != u_assign || ! op_is_unconditionally_executed(opnum))
+            continue;   // Not a simple assignment unconditionally performed
+
+        // what s is assigned from (fully dealiased)
+        Symbol *src = inst()->symbol (dealias_symbol (oparg (op, 1), opnum));
+
+        if (src->symtype() != SymTypeGlobal)
+            continue;   // only interested in global assignments
+
+        if (debug() > 1)
+            std::cout << "I think that " << inst()->layername() << "."
+                      << s.name() << " will always be " << src->name() << "\n";
+        m_params_holding_globals[layer()][s.name()] = src->name();
+    }
+}
+
+
+
 /// Set up m_in_conditional[] to be true for all ops that are inside of
-/// conditionals, false for all unconditionally-executed ops.
+/// conditionals, false for all unconditionally-executed ops, m_in_loop[]
+/// to be true for all ops that are inside a loop, and m_first_return
+/// to be the op number of the first return/exit statement (or code.size()
+/// if there is no return/exit statement).
 void
 RuntimeOptimizer::find_conditionals ()
 {
@@ -748,6 +858,7 @@ RuntimeOptimizer::find_conditionals ()
     m_in_conditional.resize (code.size(), false);
     m_in_loop.clear ();
     m_in_loop.resize (code.size(), false);
+    m_first_return = (int)code.size();
     for (int i = 0;  i < (int)code.size();  ++i) {
         if (code[i].jump(0) >= 0) {
             std::fill (m_in_conditional.begin()+i,
@@ -759,6 +870,8 @@ RuntimeOptimizer::find_conditionals ()
                            m_in_loop.begin()+code[i].farthest_jump(), true);
             }
         }
+        if (code[i].opname() == Strings::op_exit)
+            m_first_return = std::min (m_first_return, i);
     }
 }
 
@@ -937,6 +1050,15 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 
 
 bool
+RuntimeOptimizer::is_renderer_output (ustring name) const
+{
+    const std::vector<ustring> &aovs (shadingsys().m_renderer_outputs);
+    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
+}
+
+
+
+bool
 RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 {
     // Try to figure out if this symbol is completely unused after this
@@ -948,9 +1070,14 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
     // Params may be read afterwards if connected to a downstream
     // layer or if "elide_unconnected_outputs" is turned off.
-    if ((A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) &&
-        (A->connected_down() || ! m_opt_elide_unconnected_outputs))
-        return false;
+    if (A->symtype() == SymTypeOutputParam || A->symtype() == SymTypeParam) {
+        if (! m_opt_elide_unconnected_outputs)
+            return false;   // Asked not do do this optimization
+        if (A->connected_down())
+            return false;   // Connected to something downstream
+        if (is_renderer_output (A->name()))
+            return false;   // This is a renderer output -- don't cull it
+    }
 
     // For all else, check if it's either never read at all in this
     // layer or it's only read earlier and we're not part of a loop
@@ -1226,9 +1353,15 @@ public:
     bool operator() (const Symbol &sym) const {
         if (sym.symtype() == SymTypeParam)
             return (sym.lastuse() < sym.initend()) && !sym.connected_down();
-        if (sym.symtype() == SymTypeOutputParam)
-            return m_rop.opt_elide_unconnected_outputs() &&
-                   (sym.lastuse() < sym.initend()) && !sym.connected_down();
+        if (sym.symtype() == SymTypeOutputParam) {
+            if (! m_rop.opt_elide_unconnected_outputs())
+                return false;   // Asked not to do this optimization
+            if (sym.connected_down())
+                return false;   // Connected to something downstream
+            if (m_rop.is_renderer_output (sym.name()))
+                return false;   // This is a renderer output
+            return (sym.lastuse() < sym.initend());
+        }
         return ! sym.everused();  // all other symbol types
     }
     bool operator() (int symid) const {
@@ -1339,6 +1472,62 @@ RuntimeOptimizer::peephole2 (int opnum)
         return 2;
     }
 
+    // Look for add of a value then subtract of the same value
+    //     add a b c     or:    sub a b c
+    //     sub d a c            add d a c
+    // the second instruction should be changed to
+    //     assign d b
+    // and furthermore, if the only use of a is on these two lines or
+    // if a == d, then the first instruction can be changed to a 'nop'.
+    // Careful, "only used on these two lines" can be tricky if 'a' is a
+    // global or output parameter, which are used after the shader finishes!
+    if (((op.opname() == u_add && next.opname() == u_sub) ||
+         (op.opname() == u_sub && next.opname() == u_add)) &&
+        opargsym(op,0) == opargsym(next,1) &&
+        opargsym(op,2) == opargsym(next,2) &&
+        opargsym(op,0) != opargsym(next,2) /* a != c */) {
+        Symbol *a = opargsym(op,0);
+        Symbol *d = opargsym(next,0);
+        turn_into_assign (next, oparg(op,1)/*b*/, "simplify add/sub pair");
+        if ((a->firstuse() >= opnum && a->lastuse() <= op2num &&
+             ((a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam)))
+            || a == d) {
+            turn_into_nop (op, "simplify add/sub pair");
+            return 2;
+        }
+        else
+            return 1;
+    }
+
+    // Look for simple functions followed by an assignment:
+    //    OP a b...
+    //    assign c a
+    // If OP is "simple" (completely overwrites its first argument, only
+    // reads the rest), and a and c are the same type, and a is never
+    // used again, then we can replace those two instructions with:
+    //    OP c b...
+    // Careful, "never used again" can be tricky if 'a' is a global or
+    // output parameter, which are used after the shader finishes!
+    if (next.opname() == u_assign && 
+        op.nargs() >= 1 && opargsym(op,0) == opargsym(next,1) &&
+        is_simple_assign(op)) {
+        Symbol *a = opargsym(op,0);
+        Symbol *c = opargsym(next,0);
+        if (a->firstuse() >= opnum && a->lastuse() <= op2num &&
+              (a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam) &&
+              equivalent (a->typespec(), c->typespec())) {
+            inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
+            c->mark_rw (opnum, false, true);
+            // Any time we write to a variable that wasn't written to at
+            // this op previously, we need to block_unalias it, or it
+            // can dealias to the wrong thing when examining subsequent
+            // instructions.
+            block_unalias (oparg(op,0));  // clear any aliases
+            turn_into_nop (next, "daisy-chain op and assignment");
+            return 2;
+        }
+    }
+
     // No changes
     return 0;
 }
@@ -1396,6 +1585,113 @@ RuntimeOptimizer::remove_unused_params ()
 
 
 
+/// Find situations where an output is simply a copy of a connected
+/// input, and eliminate the middleman.
+int
+RuntimeOptimizer::eliminate_middleman ()
+{
+    int changed = 0;
+    FOREACH_PARAM (Symbol &s, inst()) {
+        // Skip if this isn't a shader output parameter that's connected
+        // to a later layer.
+        if (s.symtype() != SymTypeOutputParam || !s.connected_down())
+            continue;
+        // If it's written more than once, or has init ops, don't bother
+        if (s.firstwrite() != s.lastwrite() || s.has_init_ops())
+            continue;
+        // Ok, s is a connected output, written only once, without init ops.
+
+        // If the one time it's written isn't a simple assignment, never mind
+        int opnum = s.firstwrite();
+        Opcode &op (inst()->ops()[opnum]);
+        if (op.opname() != u_assign)
+            continue;   // only consider direct assignments
+        // Now what's it assigned from?  If it's not a connected
+        // parameter, or if it's not an equivalent data type, or if it's
+        // a closure, never mind.
+        int src_index = oparg (op, 1);
+        Symbol *src = opargsym (op, 1);
+
+        if (! (src->symtype() == SymTypeParam && src->connected()) ||
+              ! equivalent(src->typespec(), s.typespec()) ||
+              s.typespec().is_closure())
+            continue;
+
+        // Only works if the assignment is unconditional.  Needs to not
+        // be in a conditional or loop, and not have any exit or return
+        // statement before the assignment.
+        if (! op_is_unconditionally_executed (opnum))
+            continue;
+
+        // OK, output param 's' is simply and unconditionally assigned
+        // the value of the equivalently-typed input parameter 'src'.
+        // Doctor downstream shaders that use s to connect directly to
+        // src.
+
+        // First, find what src is connected to.
+        int upstream_layer = -1, upstream_symbol = -1;
+        for (int i = 0, e = inst()->nconnections();  i < e;  ++i) {
+            const Connection &c = inst()->connection(i);
+            if (c.dst.param == src_index &&  // the connection we want
+                c.src.is_complete() && c.dst.is_complete() &&
+                equivalent(c.src.type,c.dst.type) &&
+                !c.src.type.is_closure() && ! c.dst.type.is_closure()) {
+                upstream_layer = c.srclayer;
+                upstream_symbol = c.src.param;
+                break;
+            }
+        }
+        if (upstream_layer < 0 || upstream_symbol < 0)
+            continue;  // not a complete connection, forget it
+            
+        ShaderInstance *upinst = group()[upstream_layer];
+        if (debug() > 1)
+            std::cout << "Noticing that " << inst()->layername() << "." 
+                      << s.name() << " merely copied from " << src->name() 
+                      << ", connected from " << upinst->layername() << "."
+                      << upinst->symbol(upstream_symbol)->name() << "\n";
+
+        // Find all the downstream connections of s, make them 
+        // connections to src.
+        int s_index = inst()->symbolindex(&s);
+        for (int laynum = layer()+1;  laynum < group().nlayers();  ++laynum) {
+            ShaderInstance *downinst = group()[laynum];
+            for (int i = 0, e = downinst->nconnections();  i < e;  ++i) {
+                Connection &c = downinst->connections()[i];
+                if (c.srclayer == layer() && // connected to our layer
+                    c.src.param == s_index && // connected to s
+                    c.src.is_complete() && c.dst.is_complete() &&
+                    equivalent(c.src.type,c.dst.type)) {
+                    // just change the connection's referrant to the
+                    // upstream source of s.
+                    c.srclayer = upstream_layer;
+                    c.src.param = upstream_symbol;
+                    ++changed;
+                    shadingsys().m_stat_middlemen_eliminated += 1;
+                    if (debug() > 1) {
+                        const Symbol *dsym = downinst->symbol(c.dst.param);
+                        if (! dsym)
+                            dsym = downinst->mastersymbol(c.dst.param);
+                        const Symbol *usym = upinst->symbol(upstream_symbol);
+                        if (! usym)
+                            usym = downinst->mastersymbol(upstream_symbol);
+                        ASSERT (dsym && usym);
+                        std::cout << "Removed " << inst()->layername() << "."
+                                  << s.name() << " middleman for " 
+                                  << downinst->layername() << "."
+                                  << dsym->name() << ", now connected to "
+                                  << upinst->layername() << "."
+                                  << usym->name() << "\n";
+                    }
+                }
+            }
+        }
+    }
+    return changed;
+}
+
+
+
 void
 RuntimeOptimizer::optimize_instance ()
 {
@@ -1409,12 +1705,16 @@ RuntimeOptimizer::optimize_instance ()
         if (inst()->symbol(i)->symtype() == SymTypeConst)
             m_all_consts.push_back (i);
 
-    // Turn all geom-locked parameters into constants.
-    if (optimize() >= 2 && m_opt_constant_param) {
-        find_constant_params (group());
+    // Turn all parameters with instance or default values, and which
+    // cannot be overridden by geometry values, into constants or
+    // aliases for globals.  Also turn connections from earlier layers'
+    // outputs that are known to be constants or globals into constants
+    // or global aliases without any connection.
+    if (optimize() >= 2 && m_opt_simplify_param) {
+        simplify_params ();
     }
 
-#ifdef DEBUG
+#ifndef NDEBUG
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
@@ -1451,6 +1751,11 @@ RuntimeOptimizer::optimize_instance ()
         // Clear local messages for this instance
         m_local_unknown_message_sent = false;
         m_local_messages_sent.clear ();
+
+        // Figure out which params are just aliases for globals (only
+        // necessary to do once, on the first pass).
+        if (m_pass == 0 && optimize() >= 2)
+            find_params_holding_globals ();
 
         int changed = 0;
         int lastblock = -1;
@@ -1626,6 +1931,15 @@ RuntimeOptimizer::optimize_instance ()
 
         // Recompute which of our params have downstream connections.
         mark_outgoing_connections ();
+
+        // Find situations where an output is simply a copy of a connected
+        // input, and eliminate the middleman.
+        if (optimize() >= 2 && m_opt_middleman) {
+            int c = eliminate_middleman ();
+            if (c)
+                mark_outgoing_connections ();
+            changed += c;
+        }
 
         // Elide unconnected parameters that are never read.
         changed += remove_unused_params ();
@@ -2121,7 +2435,7 @@ RuntimeOptimizer::collapse_syms ()
             inst()->m_Nsym = i;
         ++i;
     }
-#ifdef DEBUG
+#ifndef NDEBUG
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
@@ -2191,14 +2505,12 @@ void
 RuntimeOptimizer::optimize_group ()
 {
     Timer rop_timer;
-    if (debug())
-        m_shadingsys.info ("About to optimize shader group %s:",
-                           m_group.name().c_str());
     int nlayers = (int) m_group.nlayers ();
+    if (debug())
+        m_shadingsys.info ("About to optimize shader group %s (%d layers):",
+                           m_group.name().c_str(), nlayers);
 
-    // Clear info about which messages have been set
-    m_unknown_message_sent = false;
-    m_messages_sent.clear ();
+    m_params_holding_globals.resize (nlayers);
 
     // If no closures were provided, register the builtin ones
     if (m_shadingsys.m_closure_registry.empty())

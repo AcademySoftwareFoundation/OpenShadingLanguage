@@ -1,0 +1,12 @@
+shader
+test (output color Cout = 0)
+{
+    int i_init = 0;
+    int i_uninit;
+    float f_init = 0.5;
+    float f_uninit;
+    string s_init = "";
+    string s_uninit;
+    Cout = color (f_uninit, (float)i_uninit, 0);
+    Cout *= texture (s_uninit, u, v);
+}

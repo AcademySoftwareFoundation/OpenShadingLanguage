@@ -1,0 +1,13 @@
+// This tests an error condition -- at one point there was a bug where
+// it was possible for an output param that was written, but never read,
+// to not get its default value properly assigned.  Of course, if the
+// output was assigned unconditionally, you wouldn't see this problem;
+// it's only obvious if the output sometimes is assigned in the shader
+// body, but other times needs its default value.
+
+shader
+test (output color Cout = 0.5)
+{
+    if (u > 0.5)
+        Cout = 0.1;
+}

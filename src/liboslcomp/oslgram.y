@@ -90,7 +90,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %token <i> COLORTYPE FLOATTYPE INTTYPE MATRIXTYPE 
 %token <i> NORMALTYPE POINTTYPE STRINGTYPE VECTORTYPE VOIDTYPE
 %token <i> CLOSURE OUTPUT PUBLIC STRUCT
-%token <i> BREAK CONTINUE DO ELSE FOR IF ILLUMINATE ILLUMINANCE RETURN WHILE
+%token <i> BREAK CONTINUE DO ELSE FOR IF_TOKEN ILLUMINATE ILLUMINANCE RETURN WHILE
 %token <i> RESERVED
 
 
@@ -601,12 +601,12 @@ scoped_statements
         ;
 
 conditional_statement
-        : IF '(' expression ')' statement
+        : IF_TOKEN '(' expression ')' statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5);
                     $$->sourceline (@1.first_line);
                 }
-        | IF '(' expression ')' statement ELSE statement
+        | IF_TOKEN '(' expression ')' statement ELSE statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
                     $$->sourceline (@1.first_line);

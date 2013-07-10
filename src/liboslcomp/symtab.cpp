@@ -131,12 +131,12 @@ Symbol::valuesourcename () const
 
 
 std::ostream &
-Symbol::print_vals (std::ostream &out) const
+Symbol::print_vals (std::ostream &out, int maxvals) const
 {
     if (! data())
         return out;
     TypeDesc t = typespec().simpletype();
-    int n = t.aggregate * t.numelements();
+    int n = std::min (int(t.aggregate * t.numelements()), maxvals);
     if (t.basetype == TypeDesc::FLOAT) {
         for (int j = 0;  j < n;  ++j)
             out << (j ? " " : "") << ((float *)data())[j];
@@ -149,6 +149,8 @@ Symbol::print_vals (std::ostream &out) const
                 << Strutil::escape_chars(((ustring *)data())[j].string())
                 << "\"";
     }
+    if (int(t.aggregate * t.numelements()) > maxvals)
+        out << "...";
     return out;
 }
 

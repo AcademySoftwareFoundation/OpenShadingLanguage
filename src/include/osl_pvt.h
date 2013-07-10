@@ -299,6 +299,12 @@ public:
         return m_simple.basetype == TypeDesc::STRING;
     }
 
+    /// Is it an int or an array of ints?
+    ///
+    bool is_int_based () const {
+        return m_simple.basetype == TypeDesc::INT;
+    }
+
     /// Is it a void?
     ///
     bool is_void () const {
@@ -459,15 +465,18 @@ public:
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
           m_initialized(false), m_lockgeom(false),
-          m_valuesource(DefaultVal), m_fieldid(-1),
-          m_scope(0), m_dataoffset(-1), 
+          m_valuesource(DefaultVal), m_free_data(false), m_fieldid(-1),
+          m_scope(0), m_dataoffset(-1),
           m_node(declaration_node), m_alias(NULL),
           m_initbegin(0), m_initend(0),
           m_firstread(std::numeric_limits<int>::max()), m_lastread(-1),
           m_firstwrite(std::numeric_limits<int>::max()), m_lastwrite(-1)
     { }
-    Symbol () { }  // Default ctr needed for vector resize
-    ~Symbol () { }
+    Symbol () : m_data(NULL), m_free_data(false) { }
+    ~Symbol () {
+        if (m_free_data)
+            delete [] (char *)m_data;
+    }
 
     const Symbol & operator= (const Symbol &a) {
         // Make absolutely sure that symbol copying goes blazingly fast,
@@ -642,7 +651,7 @@ public:
 
     /// Stream output
     std::ostream& print (std::ostream& out) const;
-    std::ostream& print_vals (std::ostream& out) const;
+    std::ostream& print_vals (std::ostream& out, int maxvals=10000000) const;
 
 protected:
     void *m_data;               ///< Pointer to the data
@@ -656,6 +665,7 @@ protected:
     unsigned m_initialized:1;   ///< If a param, has it been initialized?
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
     char m_valuesource;         ///< Where did the value come from?
+    bool m_free_data;           ///< Free m_data upon destruction?
     short m_fieldid;            ///< Struct field of this var (or -1)
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)

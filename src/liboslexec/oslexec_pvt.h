@@ -38,10 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/regex_fwd.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/intrusive_ptr.hpp>
 
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/paramlist.h"
+#include <OpenImageIO/ustring.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/paramlist.h>
+#include <OpenImageIO/refcnt.h>
 
 #include "oslexec.h"
 #include "oslclosure.h"
@@ -106,7 +108,7 @@ class RuntimeOptimizer;
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
-typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*); 
+typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 
 /// Signature of a constant-folding method
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
@@ -132,11 +134,11 @@ struct OpDescriptor {
 
 
 // Prefix for OSL shade up declarations, so LLVM can find them
-#define OSL_SHADEOP extern "C" OSLEXECPUBLIC
+#define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
 
 
 
-/// Like an int (of type T), but also internally keeps track of the 
+/// Like an int (of type T), but also internally keeps track of the
 /// maximum value is has held, and the total "requested" deltas.
 /// You really shouldn't use an unsigned type for T, for two reasons:
 /// (1) Our implementation of '-=' will fail; and (2) you actually
@@ -245,11 +247,11 @@ inline void stlfree (T &v)
 
 /// ShaderMaster is the full internal representation of a complete
 /// shader that would be a .oso file on disk: symbols, instructions,
-/// arguments, you name it.  A master copy is shared by all the 
+/// arguments, you name it.  A master copy is shared by all the
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
-    typedef intrusive_ptr<ShaderMaster> ref;
+    typedef boost::intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
     ~ShaderMaster ();
 
@@ -331,6 +333,11 @@ struct ConnectedParam {
         return param == p.param && arrayindex == p.arrayindex &&
             channel == p.channel && type == p.type;
     }
+
+    // Is it a complete connection, not partial?
+    bool is_complete () const {
+        return arrayindex == -1 && channel == -1;
+    }
 };
 
 
@@ -382,7 +389,7 @@ public:
     ShadingSystemImpl & shadingsys () const { return m_master->shadingsys(); }
 
     /// Apply pending parameters
-    /// 
+    ///
     void parameters (const ParamValueList &params);
 
     /// Find the named symbol, return its index in the symbol array, or
@@ -396,13 +403,16 @@ public:
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) {
-        DASSERT (index < (int)m_instsymbols.size());
-        return index >= 0 ? &m_instsymbols[index] : NULL;
+        return index >= 0 && index < (int)m_instsymbols.size()
+            ? &m_instsymbols[index] : NULL;
     }
     const Symbol *symbol (int index) const {
-        DASSERT (index < (int)m_instsymbols.size());
-        return index >= 0 ? &m_instsymbols[index] : NULL;
+        return index >= 0 && index < (int)m_instsymbols.size()
+            ? &m_instsymbols[index] : NULL;
     }
+
+    /// Given symbol pointer, what is its index in the table?
+    int symbolindex (Symbol *s) { return s - &m_instsymbols[0]; }
 
     /// Return a pointer to the master's version of the indexed symbol.
     /// It's a const*, since you shouldn't mess with the master's copy.
@@ -470,13 +480,19 @@ public:
     /// Return a begin/end Symbol* pair for the set of param symbols
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
-        return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[i->firstparam()],
-                                           &i->m_instsymbols[i->lastparam()]);
+        if (i->firstparam() == i->lastparam())
+            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
+        else
+            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
+                                               &i->m_instsymbols[0] + i->lastparam());
     }
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
-        return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[i->firstparam()],
-                                                       &i->m_instsymbols[i->lastparam()]);
+        if (i->firstparam() == i->lastparam())
+            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
+        else
+            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
+                                                           &i->m_instsymbols[0] + i->lastparam());
     }
 
     int Psym () const { return m_Psym; }
@@ -618,7 +634,7 @@ public:
     long long int executions () const { return m_executions; }
 
     void start_running () {
-#ifdef DEBUG
+#ifndef NDEBUG
        m_executions++;
 #endif
     }
@@ -690,7 +706,7 @@ private:
 class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
 {
 public:
-    OSLEXECPUBLIC ShadingSystemImpl (RendererServices *renderer=NULL,
+    ShadingSystemImpl (RendererServices *renderer=NULL,
                        TextureSystem *texturesystem=NULL,
                        ErrorHandler *err=NULL);
     virtual ~ShadingSystemImpl ();
@@ -769,6 +785,7 @@ public:
     TextureSystem *texturesys () const { return m_texturesys; }
 
     bool debug_nan () const { return m_debugnan; }
+    bool debug_uninit () const { return m_debug_uninit; }
     bool lockgeom_default () const { return m_lockgeom_default; }
     bool strict_messages() const { return m_strict_messages; }
     bool range_checking() const { return m_range_checking; }
@@ -777,6 +794,7 @@ public:
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
     bool fold_getattribute () { return m_opt_fold_getattribute; }
+    int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
@@ -796,6 +814,8 @@ public:
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
                                   PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+    virtual bool query_closure(const char **name, int *id,
+                               const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
     }
@@ -898,14 +918,16 @@ private:
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
+    bool m_debug_uninit;                  ///< Find use of uninitialized vars?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     bool m_strict_messages;               ///< Strict checking of message passing usage?
     bool m_range_checking;                ///< Range check arrays & components?
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     bool m_greedyjit;                     ///< JIT as much as we can?
     bool m_countlayerexecs;               ///< Count number of layer execs?
+    int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
     int m_optimize;                       ///< Runtime optimization level
-    bool m_opt_constant_param;            ///< Turn instance params into const?
+    bool m_opt_simplify_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
     bool m_opt_stale_assign;              ///< Optimize stale assignments?
     bool m_opt_elide_useless_ops;         ///< Optimize away useless ops?
@@ -916,6 +938,7 @@ private:
     bool m_opt_mix;                       ///< Special 'mix' optimizations
     bool m_opt_merge_instances;           ///< Merge identical instances?
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
+    bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output
@@ -928,6 +951,7 @@ private:
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
+    std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     ustring m_colorspace;                 ///< What RGB colors mean
     int m_max_local_mem_KB;               ///< Local storage can a shader use
     bool m_compile_report;
@@ -967,6 +991,9 @@ private:
     atomic_int m_stat_postopt_syms;       ///< Stat: post-optimization symbols
     atomic_int m_stat_preopt_ops;         ///< Stat: pre-optimization ops
     atomic_int m_stat_postopt_ops;        ///< Stat: post-optimization ops
+    atomic_int m_stat_middlemen_eliminated; ///< Stat: middlemen eliminated
+    atomic_int m_stat_const_connections;  ///< Stat: const connections elim'd
+    atomic_int m_stat_global_connections; ///< Stat: global connections elim'd
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   runtime specialization time
@@ -974,7 +1001,7 @@ private:
     double m_stat_llvm_setup_time;        ///<     llvm setup time
     double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
     double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
-    double m_stat_llvm_jit_time;          ///<     llvm JIT time 
+    double m_stat_llvm_jit_time;          ///<     llvm JIT time
     double m_stat_inst_merge_time;        ///< Stat: time merging instances
     double m_stat_getattribute_time;      ///< Stat: time spent in getattribute
     double m_stat_getattribute_fail_time; ///< Stat: time spent in getattribute
@@ -1036,10 +1063,12 @@ public:
     }
 
     char * alloc(size_t size, size_t alignment=1) {
+        // Alignment must be power of two
+        DASSERT ((alignment & (alignment - 1)) == 0);
         // Fail if beyond allocation limits or senseless alignment
-        if (size > BlockSize || (size % alignment) != 0)
+        if (size > BlockSize || (size & (alignment - 1)) != 0)
             return NULL;
-        m_block_offset -= (m_block_offset % alignment); // Fix up alignment
+        m_block_offset -= (m_block_offset & (alignment - 1)); // Fix up alignment
         if (size <= m_block_offset) {
             // Enough space in current block
             m_block_offset -= size;
@@ -1232,6 +1261,17 @@ public:
 
     void incr_layers_executed () { shadingsys().m_stat_layers_executed += 1; }
 
+    bool allow_warnings() {
+        if (m_max_warnings > 0) {
+            // at least one more to go
+            m_max_warnings--;
+            return true;
+        } else {
+            // we've processed enough with this context
+            return false;
+        }
+    }
+
 private:
 
     /// Execute the llvm-compiled shaders for the given use (for example,
@@ -1252,6 +1292,7 @@ private:
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
+    int m_max_warnings;                 ///< To avoid processing too many warnings
 
     SimplePool<20 * 1024> m_closure_pool;
     SimplePool<64*1024> m_scratch_pool;
@@ -1315,9 +1356,11 @@ namespace Strings {
     extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
     extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern OSLEXECPUBLIC ustring simplex, usimplex, simplexnoise, usimplexnoise;
     extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while;
+    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
     extern OSLEXECPUBLIC ustring subimage, subimagename;
+    extern OSLEXECPUBLIC ustring uninitialized_string;
 }; // namespace Strings
 
 

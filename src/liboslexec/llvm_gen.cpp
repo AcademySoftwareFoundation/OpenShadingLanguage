@@ -1542,7 +1542,7 @@ LLVMGEN (llvm_gen_filterwidth)
         rop.llvm_zero_derivs (Result);
     } else {
         // No derivs to be had
-        rop.llvm_assign_zero (Src);
+        rop.llvm_assign_zero (Result);
     }
 
     return true;

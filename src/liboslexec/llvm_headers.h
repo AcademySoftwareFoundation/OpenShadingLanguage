@@ -33,30 +33,67 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace llvm = LLVM_NAMESPACE;
 #endif
 
-#include <llvm/Bitcode/ReaderWriter.h>
-#include <llvm/Constants.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/ExecutionEngine/GenericValue.h>
-#include <llvm/ExecutionEngine/JIT.h>
-#include <llvm/ExecutionEngine/JITMemoryManager.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
-#include <llvm/Linker.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/PassManager.h>
-#if OSL_LLVM_VERSION >= 32
-#include <llvm/IRBuilder.h>
-#else
-#include <llvm/Support/IRBuilder.h>
+#if OSL_LLVM_VERSION >= 33
+
+# include <llvm/IR/Constants.h>
+# include <llvm/IR/DerivedTypes.h>
+# include <llvm/IR/Instructions.h>
+# include <llvm/IR/Intrinsics.h>
+# include <llvm/IR/Module.h>
+# include <llvm/IR/LLVMContext.h>
+# include <llvm/IR/IRBuilder.h>
+# include <llvm/IR/DataLayout.h>
+# include <llvm/Bitcode/ReaderWriter.h>
+# include <llvm/ExecutionEngine/GenericValue.h>
+# include <llvm/ExecutionEngine/JIT.h>
+# include <llvm/ExecutionEngine/JITMemoryManager.h>
+# include <llvm/Linker.h>
+# include <llvm/PassManager.h>
+# include <llvm/Support/ManagedStatic.h>
+# include <llvm/Support/MemoryBuffer.h>
+# include <llvm/Support/raw_ostream.h>
+
+#elif OSL_LLVM_VERSION == 32
+
+# include <llvm/Bitcode/ReaderWriter.h>
+# include <llvm/Constants.h>
+# include <llvm/DerivedTypes.h>
+# include <llvm/ExecutionEngine/GenericValue.h>
+# include <llvm/ExecutionEngine/JIT.h>
+# include <llvm/ExecutionEngine/JITMemoryManager.h>
+# include <llvm/Instructions.h>
+# include <llvm/Intrinsics.h>
+# include <llvm/Linker.h>
+# include <llvm/LLVMContext.h>
+# include <llvm/Module.h>
+# include <llvm/PassManager.h>
+# include <llvm/IRBuilder.h>
+# include <llvm/Support/ManagedStatic.h>
+# include <llvm/Support/MemoryBuffer.h>
+# include <llvm/Support/raw_ostream.h>
+# include <llvm/DataLayout.h>
+
+#else /* older releases */
+
+# include <llvm/Bitcode/ReaderWriter.h>
+# include <llvm/Constants.h>
+# include <llvm/DerivedTypes.h>
+# include <llvm/ExecutionEngine/GenericValue.h>
+# include <llvm/ExecutionEngine/JIT.h>
+# include <llvm/ExecutionEngine/JITMemoryManager.h>
+# include <llvm/Instructions.h>
+# include <llvm/Intrinsics.h>
+# include <llvm/Linker.h>
+# include <llvm/LLVMContext.h>
+# include <llvm/Module.h>
+# include <llvm/PassManager.h>
+# include <llvm/Support/IRBuilder.h>
+# include <llvm/Support/ManagedStatic.h>
+# include <llvm/Support/MemoryBuffer.h>
+# include <llvm/Support/raw_ostream.h>
+# include <llvm/Target/TargetData.h>
+
 #endif
-#include <llvm/Support/ManagedStatic.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/raw_ostream.h>
-#if OSL_LLVM_VERSION >= 32
-#include <llvm/DataLayout.h>
-#else
-#include <llvm/Target/TargetData.h>
-#endif
+
 
 #endif /* OSL_LLVM_HEADERS_H */

@@ -1148,10 +1148,20 @@ public:
                                          unsigned SectionID) {
         return mm->allocateCodeSection(Size, Alignment, SectionID);
     }
+#if OSL_LLVM_VERSION >= 33
+    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID, bool IsReadOnly) {
+        return mm->allocateDataSection(Size, Alignment, SectionID, IsReadOnly);
+    }
+    virtual bool applyPermissions(std::string *ErrMsg = 0) {
+        return mm->applyPermissions(ErrMsg);
+    }
+#else
     virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
                                          unsigned SectionID) {
         return mm->allocateDataSection(Size, Alignment, SectionID);
     }
+#endif
 #endif
 };
 

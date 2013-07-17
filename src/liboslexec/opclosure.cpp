@@ -56,6 +56,9 @@ OSL_SHADEOP const ClosureColor *
 osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
 {
     if (a == NULL) return NULL;
+    if (w->x == 0.0f &&
+        w->y == 0.0f &&
+        w->z == 0.0f) return NULL;
     return sg->context->closure_mul_allot (*w, a);
 }
 
@@ -64,6 +67,7 @@ OSL_SHADEOP const ClosureColor *
 osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 {
     if (a == NULL) return NULL;
+    if (w == 0.0f) return NULL;
     return sg->context->closure_mul_allot (w, a);
 }
 

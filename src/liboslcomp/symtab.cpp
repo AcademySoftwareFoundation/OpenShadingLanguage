@@ -157,7 +157,7 @@ Symbol::print_vals (std::ostream &out, int maxvals) const
 
 
 std::ostream &
-Symbol::print (std::ostream &out) const
+Symbol::print (std::ostream &out, int maxvals) const
 {
     out << Symbol::symtype_shortname(symtype())
         << " " << typespec().string() << " " << name();
@@ -183,16 +183,16 @@ Symbol::print (std::ostream &out) const
     out << "\n";
     if (symtype() == SymTypeConst) {
         out << "\tconst: ";
-        print_vals(out);
+        print_vals (out, maxvals);
         out << "\n";
     } else if (symtype() == SymTypeParam || symtype() == SymTypeOutputParam) {
         if (valuesource() == Symbol::DefaultVal && !has_init_ops()) {
             out << "\tdefault: ";
-            print_vals(out);
+            print_vals (out, maxvals);
             out << "\n";
         } else if (valuesource() == Symbol::InstanceVal) {
             out << "\tvalue: ";
-            print_vals(out);
+            print_vals (out, maxvals);
             out << "\n";
         }
     }

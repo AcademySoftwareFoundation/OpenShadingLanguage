@@ -341,7 +341,7 @@ ShaderInstance::print ()
     out << "  symbols:\n";
     for (size_t i = 0;  i < m_instsymbols.size();  ++i) {
         const Symbol &s (*symbol(i));
-        s.print (out);
+        s.print (out, 256);
     }
 #if 0
     out << "  int consts:\n    ";

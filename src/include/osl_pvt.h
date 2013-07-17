@@ -650,8 +650,8 @@ public:
     bool is_constant () const { return symtype() == SymTypeConst; }
 
     /// Stream output
-    std::ostream& print (std::ostream& out) const;
-    std::ostream& print_vals (std::ostream& out, int maxvals=10000000) const;
+    std::ostream& print (std::ostream& out, int maxvals=100000000) const;
+    std::ostream& print_vals (std::ostream& out, int maxvals=100000000) const;
 
 protected:
     void *m_data;               ///< Pointer to the data

@@ -192,10 +192,16 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
     if (! filename)
         return 0;
     PointCloud *pc = PointCloud::get(filename);
+    if (pc == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        return 0;
+    }
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
-    if (cloud == NULL) // The file failed to load
+    if (cloud == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
         return 0;
+    }
 
     // If we need derivs of the distances, we'll need access to the 
     // found point's positions.
@@ -279,10 +285,16 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
         return 1;  // always succeed if not asking for any data
 
     PointCloud *pc = PointCloud::get(filename);
+    if (pc == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        return 0;
+    }
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
-    if (cloud == NULL) // The file failed to load
+    if (cloud == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
         return 0;
+    }
 
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();

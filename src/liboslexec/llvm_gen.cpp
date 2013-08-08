@@ -2889,7 +2889,7 @@ llvm_gen_keyword_fill(RuntimeOptimizer &rop, Opcode &op, const ClosureRegistry::
     int Nattrs = (op.nargs() - argsoffset) / 2;
 
     for (int attr_i = 0; attr_i < Nattrs; ++attr_i) {
-        int argno = attr_i * 2 + argsoffset;;
+        int argno = attr_i * 2 + argsoffset;
         Symbol &Key     = *rop.opargsym (op, argno);
         Symbol &Value   = *rop.opargsym (op, argno + 1);
         ASSERT(Key.typespec().is_string());
@@ -2929,8 +2929,10 @@ LLVMGEN (llvm_gen_closure)
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() >= 2); // at least the result and the ID
 
-    Symbol &Result   = *rop.opargsym (op, 0);
-    Symbol &Id       = *rop.opargsym (op, 1);
+    Symbol &Result = *rop.opargsym (op, 0);
+    int weighted   = rop.opargsym(op,1)->typespec().is_string() ? 0 : 1;
+    Symbol *weight = weighted ? rop.opargsym (op, 1) : NULL;
+    Symbol &Id     = *rop.opargsym (op, 1+weighted);
     DASSERT(Result.typespec().is_closure());
     DASSERT(Id.typespec().is_string());
     ustring closure_name = *((ustring *)Id.data());
@@ -2942,8 +2944,8 @@ LLVMGEN (llvm_gen_closure)
         return false;
     }
 
-    ASSERT (op.nargs() >= (2 + clentry->nformal));
-    int nattrs = (op.nargs() - (2 + clentry->nformal)) / 2;
+    ASSERT (op.nargs() >= (2 + weighted + clentry->nformal));
+    int nattrs = (op.nargs() - (2 + weighted + clentry->nformal)) / 2;
 
     // Call osl_allocate_closure_component(closure, id, size).  It returns
     // the memory for the closure parameter data.
@@ -2952,8 +2954,31 @@ LLVMGEN (llvm_gen_closure)
     llvm::Value *id_int = rop.llvm_constant(clentry->id);
     llvm::Value *size_int = rop.llvm_constant(clentry->struct_size);
     llvm::Value *nattrs_int = rop.llvm_constant(nattrs);
-    llvm::Value *alloc_args[4] = {sg_ptr, id_int, size_int, nattrs_int};
-    llvm::Value *comp_void_ptr = rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 4);
+    llvm::Value *alloc_args[5] = { sg_ptr, id_int, size_int, nattrs_int,
+                                   weighted ? rop.llvm_void_ptr(*weight) : NULL };
+    llvm::Value *return_ptr = weighted ?
+          rop.llvm_call_function ("osl_allocate_weighted_closure_component", alloc_args, 5)
+        : rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 4);
+    llvm::Value *comp_void_ptr = return_ptr;
+
+    // For the weighted closures, we need a surrounding "if" so that it's safe
+    // for osl_allocate_weighted_closure_component to return NULL (unless we
+    // know for sure that it's constant weighted and that the weight is
+    // not zero).
+    llvm::BasicBlock *next_block = NULL;
+    if (weighted && ! (weight->is_constant() && !rop.is_zero(*weight))) {
+        llvm::BasicBlock *notnull_block = rop.llvm_new_basic_block ("non_null_closure");
+        next_block = rop.llvm_new_basic_block ("");
+        llvm::Value *cond = rop.builder().CreateICmpNE (return_ptr, rop.llvm_void_ptr_null());
+        rop.builder().CreateCondBr (cond, notnull_block, next_block);
+        rop.builder().SetInsertPoint (notnull_block);
+    }
+
+    // For the weighted option, the pointer is actually to a ClosureMul,
+    // and the ClosureComponent is one past this.
+    if (weighted)
+        comp_void_ptr = rop.llvm_offset_ptr (comp_void_ptr, (int)sizeof(ClosureMul));
+
     llvm::Value *comp_ptr = rop.llvm_ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
     // Get the address of the primitive buffer, which is the 5th field
     llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 4);
@@ -2976,7 +3001,7 @@ LLVMGEN (llvm_gen_closure)
         const ClosureParam &p = clentry->params[carg];
         if (p.key != NULL) break;
         ASSERT(p.offset < clentry->struct_size);
-        Symbol &sym = *rop.opargsym (op, carg + 2);
+        Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
         if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
             t.vecsemantics = TypeDesc::VECTOR;
@@ -3002,10 +3027,16 @@ LLVMGEN (llvm_gen_closure)
 
     llvm::Value *attrs_void_ptr = rop.llvm_offset_ptr (mem_void_ptr, clentry->struct_size);
     llvm::Value *attrs_ptr = rop.llvm_ptr_cast(attrs_void_ptr, rop.llvm_type_closure_component_attr_ptr());
-    llvm_gen_keyword_fill(rop, op, clentry, closure_name, attrs_ptr, clentry->nformal + 2);
+    llvm_gen_keyword_fill(rop, op, clentry, closure_name, attrs_ptr,
+                          2 + weighted + clentry->nformal);
+
+    if (next_block) {
+        rop.builder().CreateBr (next_block);
+        rop.builder().SetInsertPoint (next_block);
+    }
 
     // Store result at the end, otherwise Ci = modifier(Ci) won't work
-    rop.llvm_store_value (comp_void_ptr, Result, 0, NULL, 0);
+    rop.llvm_store_value (return_ptr, Result, 0, NULL, 0);
 
     return true;
 }

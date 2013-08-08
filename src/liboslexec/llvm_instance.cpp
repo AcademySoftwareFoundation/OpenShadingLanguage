@@ -239,6 +239,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_mul_closure_float", "CXCf",
     "osl_mul_closure_color", "CXCc",
     "osl_allocate_closure_component", "CXiii",
+    "osl_allocate_weighted_closure_component", "CXiiiX",
     "osl_closure_to_string", "sXC",
     "osl_format", "ss*",
     "osl_printf", "xXs*",

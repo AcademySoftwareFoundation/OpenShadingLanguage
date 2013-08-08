@@ -54,6 +54,7 @@ static ustring u_nop    ("nop"),
                u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
+               u_closure ("closure"),
                u_pointcloud_write ("pointcloud_write"),
                u_isconnected ("isconnected"),
                u_setmessage ("setmessage"),
@@ -1558,6 +1559,56 @@ RuntimeOptimizer::peephole2 (int opnum)
         }
     }
 
+    // Convert this combination
+    //     closure A name arg...
+    //     mul B A weight
+    // into
+    //     closure B C name arg...
+    // That is, collapse a creation and immediate scale of a closure into
+    // a single closure-with-scale constructor. (Valid if A is not used
+    // elsewhere.)  Further refinement: if weight = 1, no need to do
+    // the scale, and if weight == 0, eliminate the work entirely.
+    // We only do this optimization on pass > 1, to give a fair chance
+    // for other optimizations to be able to turn the weight into a
+    // constant before we do this one (since if it's 1 or 0, we can
+    // simplify further).
+    if (op.opname() == u_closure && next.opname() == u_mul
+          && optimization_pass() > 1) {
+        Symbol *a = opargsym(op,0);
+        Symbol *name = opargsym(op,1);
+        Symbol *aa = opargsym(next,1);
+        Symbol *weight = opargsym(next,2);
+        int weightarg = 2;
+        if (weight->typespec().is_closure()) {  // opposite order
+            std::swap (aa, weight);
+            weightarg = 1;
+        }
+        if (name->typespec().is_string() &&
+            a->firstuse() >= opnum && a->lastuse() <= op2num &&
+            a == aa && weight->typespec().is_triple()) {
+            if (is_zero(*weight)) {
+                turn_into_nop (op, "zero-weighted closure");
+                turn_into_assign (next, add_constant(0.0f),
+                                  "zero-weighted closure");
+                return 1;
+            }
+            // FIXME - handle weight being a float as well
+            std::vector<int> newargs;
+            newargs.push_back (oparg(next,0)); // B
+            if (! is_one(*weight))
+                newargs.push_back (oparg(next,weightarg)); // weight
+            for (int i = 1;  i < op.nargs();  ++i)
+                newargs.push_back (oparg(op,i));
+            turn_into_nop (op, "combine closure+mul");
+            turn_into_nop (next, "combine closure+mul");
+            insert_code (opnum, u_closure, newargs, true, 1);
+            if (debug() > 1)
+                std::cout << "op " << opnum << "-" << (op2num) 
+                          << " combined closure+mul\n";            
+            return 1;
+        }
+    }
+
     // No changes
     return 0;
 }
@@ -1901,6 +1952,12 @@ RuntimeOptimizer::optimize_instance ()
                 // have performed all the other transformations that may
                 // turn this op into an assignment.
                 changed += constfold_assign (*this, opnum);
+                if (op.opname() != u_assign) {
+                    // The const fold has changed the assignment to something
+                    // other than assign (presumably nop), so skip the other
+                    // assignment transformations below.
+                    continue;
+                }
 
                 if ((A->is_constant() || A->lastwrite() < opnum) &&
                     equivalent(R->typespec(), A->typespec())) {
@@ -1939,11 +1996,13 @@ RuntimeOptimizer::optimize_instance ()
                     // Just an assignment to itself -- turn into NOP!
                     turn_into_nop (op, "self-assignment");
                     ++changed;
+                    continue;
                 } else if (R_local_or_tmp && R->lastread() < opnum
                            && ! m_in_loop[opnum]) {
                     // Don't bother assigning if we never read it again
                     turn_into_nop (op, "symbol never read again");
                     ++changed;
+                    continue;
                 }
             }
 

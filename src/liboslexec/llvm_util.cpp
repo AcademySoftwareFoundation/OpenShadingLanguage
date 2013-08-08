@@ -225,7 +225,11 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 {
     // Just memset the whole thing to zero, let LLVM sort it out.
     // This even works for closures.
-    int len = sym.typespec().is_closure_based() ? sizeof(void *) : sym.derivsize();
+    int len;
+    if (sym.typespec().is_closure_based())
+        len = sizeof(void *) * std::max(1,sym.typespec().arraylength());
+    else
+        len = sym.derivsize();
     // N.B. derivsize() includes derivs, if there are any
     size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
                          sym.typespec().simpletype().basesize();

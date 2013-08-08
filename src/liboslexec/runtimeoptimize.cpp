@@ -666,6 +666,36 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
 
 
 
+bool
+RuntimeOptimizer::is_zero (const Symbol &A)
+{
+    if (! A.is_constant())
+        return false;
+    const TypeSpec &Atype (A.typespec());
+    static Vec3 Vzero (0, 0, 0);
+    return (Atype.is_float() && *(const float *)A.data() == 0) ||
+        (Atype.is_int() && *(const int *)A.data() == 0) ||
+        (Atype.is_triple() && *(const Vec3 *)A.data() == Vzero);
+}
+
+
+
+bool
+RuntimeOptimizer::is_one (const Symbol &A)
+{
+    if (! A.is_constant())
+        return false;
+    const TypeSpec &Atype (A.typespec());
+    static Vec3 Vone (1, 1, 1);
+    static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    return (Atype.is_float() && *(const float *)A.data() == 1) ||
+        (Atype.is_int() && *(const int *)A.data() == 1) ||
+        (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
+        (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
+}
+
+
+
 void
 RuntimeOptimizer::register_message (ustring name)
 {

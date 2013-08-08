@@ -216,6 +216,11 @@ public:
         m_symbol_aliases[symindex] = alias;
     }
 
+    /// Is the symbol a constant whose value is 0?
+    static bool is_zero (const Symbol &A);
+    /// Is the symbol a constant whose value is 1?
+    static bool is_one (const Symbol &A);
+
     /// Is the given symbol stale?  A "stale" symbol is one that, within
     /// the current basic block, has been assigned in a simple manner
     /// (by a single op with no other side effects), but not yet used.

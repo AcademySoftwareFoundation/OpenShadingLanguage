@@ -79,36 +79,6 @@ unequal_consts (const Symbol &A, const Symbol &B)
 
 
 
-inline bool
-is_zero (const Symbol &A)
-{
-    if (! A.is_constant())
-        return false;
-    const TypeSpec &Atype (A.typespec());
-    static Vec3 Vzero (0, 0, 0);
-    return (Atype.is_float() && *(const float *)A.data() == 0) ||
-        (Atype.is_int() && *(const int *)A.data() == 0) ||
-        (Atype.is_triple() && *(const Vec3 *)A.data() == Vzero);
-}
-
-
-
-inline bool
-is_one (const Symbol &A)
-{
-    if (! A.is_constant())
-        return false;
-    const TypeSpec &Atype (A.typespec());
-    static Vec3 Vone (1, 1, 1);
-    static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    return (Atype.is_float() && *(const float *)A.data() == 1) ||
-        (Atype.is_int() && *(const int *)A.data() == 1) ||
-        (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
-        (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
-}
-
-
-
 DECLFOLDER(constfold_none)
 {
     return 0;
@@ -121,21 +91,17 @@ DECLFOLDER(constfold_add)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant()) {
-        if (is_zero(A)) {
-            // R = 0 + B  =>   R = B
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                                  "const fold");
-            return 1;
-        }
+    if (rop.is_zero(A)) {
+        // R = 0 + B  =>   R = B
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
+                              "const fold");
+        return 1;
     }
-    if (B.is_constant()) {
-        if (is_zero(B)) {
+    if (rop.is_zero(B)) {
             // R = A + 0   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "const fold");
-            return 1;
-        }
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
+                              "const fold");
+        return 1;
     }
     if (A.is_constant() && B.is_constant()) {
         if (A.typespec().is_int() && B.typespec().is_int()) {
@@ -175,13 +141,11 @@ DECLFOLDER(constfold_sub)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (B.is_constant()) {
-        if (is_zero(B)) {
-            // R = A - 0   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "subtract zero");
-            return 1;
-        }
+    if (rop.is_zero(B)) {
+        // R = A - 0   =>   R = A
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
+                              "subtract zero");
+        return 1;
     }
     // R = A - B, if both are constants, =>  R = C
     if (A.is_constant() && B.is_constant()) {
@@ -226,33 +190,29 @@ DECLFOLDER(constfold_mul)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (A.is_constant()) {
-        if (is_one(A)) {
-            // R = 1 * B  =>   R = B
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                                  "mul by 1");
-            return 1;
-        }
-        if (is_zero(A)) {
-            // R = 0 * B  =>   R = 0
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "mul by 0");
-            return 1;
-        }
+    if (rop.is_one(A)) {
+        // R = 1 * B  =>   R = B
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
+                              "mul by 1");
+        return 1;
     }
-    if (B.is_constant()) {
-        if (is_one(B)) {
-            // R = A * 1   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "mul by 1");
-            return 1;
-        }
-        if (is_zero(B)) {
-            // R = A * 0   =>   R = 0
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                                  "mul by 0");
-            return 1;
-        }
+    if (rop.is_zero(A)) {
+        // R = 0 * B  =>   R = 0
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
+                              "mul by 0");
+        return 1;
+    }
+    if (rop.is_one(B)) {
+        // R = A * 1   =>   R = A
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
+                              "mul by 1");
+        return 1;
+    }
+    if (rop.is_zero(B)) {
+        // R = A * 0   =>   R = 0
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
+                              "mul by 0");
+        return 1;
     }
     if (A.is_constant() && B.is_constant()) {
         if (A.typespec().is_int() && B.typespec().is_int()) {
@@ -293,19 +253,17 @@ DECLFOLDER(constfold_div)
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    if (B.is_constant()) {
-        if (is_one(B)) {
-            // R = A / 1   =>   R = A
-            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                                  "div by 1");
-            return 1;
-        }
-        if (is_zero(B) && (B.typespec().is_float() ||
+    if (rop.is_one(B)) {
+        // R = A / 1   =>   R = A
+        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
+                              "div by 1");
+        return 1;
+    }
+    if (rop.is_zero(B) && (B.typespec().is_float() ||
                            B.typespec().is_triple() || B.typespec().is_int())) {
-            // R = A / 0   =>   R = 0      because of OSL div by zero rule
-            rop.turn_into_assign_zero (op, "div by 0");
-            return 1;
-        }
+        // R = A / 0   =>   R = 0      because of OSL div by zero rule
+        rop.turn_into_assign_zero (op, "div by 0");
+        return 1;
     }
     if (A.is_constant() && B.is_constant()) {
         int cind = -1;
@@ -349,7 +307,7 @@ DECLFOLDER(constfold_dot)
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
 
     // Dot with (0,0,0) -> 0
-    if ((A.is_constant() && is_zero(A)) || (B.is_constant() && is_zero(B))) {
+    if (rop.is_zero(A) || rop.is_zero(B)) {
         rop.turn_into_assign_zero (op, "dot with 0");
         return 1;
     }
@@ -1103,19 +1061,18 @@ DECLFOLDER(constfold_mix)
         rop.turn_into_assign (op, cind, "const fold");
         return 1;
     }
-    if (X.is_constant()) {
-        // Two special cases... X is 0, X is 1
-        if (is_zero(X)) {  // mix(A,B,0) == A
-            rop.turn_into_assign (op, Aind, "const fold");
-            return 1;
-        }
-        if (is_one(X)) {  // mix(A,B,1) == B
-            rop.turn_into_assign (op, Bind, "const fold");
-            return 1;
-        }
+
+    // Two special cases... X is 0, X is 1
+    if (rop.is_zero(X)) {  // mix(A,B,0) == A
+        rop.turn_into_assign (op, Aind, "const fold");
+        return 1;
+    }
+    if (rop.is_one(X)) {  // mix(A,B,1) == B
+        rop.turn_into_assign (op, Bind, "const fold");
+        return 1;
     }
 
-    if (is_zero(A) &&
+    if (rop.is_zero(A) &&
         (! B.connected() || !rop.opt_mix() || rop.optimization_pass() > 2)) {
         // mix(0,b,x) == b*x, but only do this if b is not connected
         rop.turn_into_new_op (op, u_mul, Bind, Xind, "const fold");
@@ -1123,7 +1080,7 @@ DECLFOLDER(constfold_mix)
     }
 #if 0
     // This seems to almost never happen, so don't worry about it
-    if (is_zero(B) && ! A.connected()) {
+    if (rop.is_zero(B) && ! A.connected()) {
         // mix(a,0,x) == (1-x)*a, but only do this if b is not connected
     }
 #endif
@@ -1327,17 +1284,17 @@ DECLFOLDER(constfold_pow)
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Y (*rop.inst()->argsymbol(op.firstarg()+2));
 
-    if (Y.is_constant() && is_zero(Y)) {
+    if (rop.is_zero(Y)) {
         // x^0 == 1
         rop.turn_into_assign_one (op, "pow^0");
         return 1;
     }
-    if (Y.is_constant() && is_one(Y)) {
+    if (rop.is_one(Y)) {
         // x^1 == x
         rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1), "pow^1");
         return 1;
     }
-    if (X.is_constant() && is_zero(X)) {
+    if (rop.is_zero(X)) {
         // 0^y == 0
         rop.turn_into_assign_zero (op, "pow 0^x");
         return 1;
@@ -1544,8 +1501,7 @@ DECLFOLDER(constfold_transform)
     // Try to turn identity transforms into assignments
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &M (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (op.nargs() == 3 && M.typespec().is_matrix() &&
-          M.is_constant() && is_one(M)) {
+    if (op.nargs() == 3 && M.typespec().is_matrix() && rop.is_one(M)) {
         rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
                               "transform by identity");
         return 1;

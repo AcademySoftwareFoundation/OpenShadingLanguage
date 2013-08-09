@@ -153,6 +153,16 @@ DECLFOLDER(constfold_add)
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "const fold");
             return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
+            Vec3 result = *(Vec3 *)A.data() + Vec3(*(float *)B.data());
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            Vec3 result = Vec3(*(float *)A.data()) + *(Vec3 *)B.data();
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
         }
     }
     return 0;
@@ -187,6 +197,16 @@ DECLFOLDER(constfold_sub)
             return 1;
         } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
             Vec3 result = *(Vec3 *)A.data() - *(Vec3 *)B.data();
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
+            Vec3 result = *(Vec3 *)A.data() - Vec3(*(float *)B.data());
+            int cind = rop.add_constant (A.typespec(), &result);
+            rop.turn_into_assign (op, cind, "const fold");
+            return 1;
+        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
+            Vec3 result = Vec3(*(float *)A.data()) - *(Vec3 *)B.data();
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "const fold");
             return 1;

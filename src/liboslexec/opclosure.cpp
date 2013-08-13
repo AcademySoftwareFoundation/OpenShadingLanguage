@@ -59,6 +59,9 @@ osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
     if (w->x == 0.0f &&
         w->y == 0.0f &&
         w->z == 0.0f) return NULL;
+    if (w->x == 1.0f &&
+        w->y == 1.0f &&
+        w->z == 1.0f) return a;
     return sg->context->closure_mul_allot (*w, a);
 }
 
@@ -68,6 +71,7 @@ osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 {
     if (a == NULL) return NULL;
     if (w == 0.0f) return NULL;
+    if (w == 1.0f) return a;
     return sg->context->closure_mul_allot (w, a);
 }
 
@@ -76,6 +80,28 @@ OSL_SHADEOP ClosureComponent *
 osl_allocate_closure_component (ShaderGlobals *sg, int id, int size, int nattrs)
 {
     return sg->context->closure_component_allot(id, size, nattrs);
+}
+
+
+
+OSL_SHADEOP ClosureColor *
+osl_allocate_weighted_closure_component (ShaderGlobals *sg, int id, int size,
+                                         int nattrs, const Color3 *w)
+{
+    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
+        return NULL;
+    return sg->context->closure_component_allot(id, size, nattrs, *w);
+}
+
+
+
+OSL_SHADEOP ClosureColor *
+osl_allocate_weighted_closure_component_float (ShaderGlobals *sg, int id, int size,
+                                               int nattrs, float w)
+{
+    if (w == 0.0f)
+        return NULL;
+    return sg->context->closure_component_allot(id, size, nattrs, Color3(w,w,w));
 }
 
 

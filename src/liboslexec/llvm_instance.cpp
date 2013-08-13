@@ -82,18 +82,18 @@ Schematically, we want to create code that resembles the following:
         // ...and so on for all the other locals & temps...
 
         // then run the shader body:
-        *x = sg->u * group->param_2_bar;
+        *x = sg->u * group->param_0_bar;
         group->param_1_foo = *x;
     }
 
-    void $layer_0 (ShaderGlobals *sg, GroupData_1 *group)
+    void $layer_1 (ShaderGlobals *sg, GroupData_1 *group)
     {
-        if (group->layer_run[0])
+        if (group->layer_run[1])
             return;
-        group->layer_run[0] = 1;
+        group->layer_run[1] = 1;
         // ...
         $layer_0 (sg, group);    // because we need its outputs
-        *y = sg->u * group->$param_2_bar;
+        *y = sg->u * group->$param_1_bar;
     }
 
     void $group_1 (ShaderGlobals *sg, GroupData_1 *group)
@@ -239,6 +239,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_mul_closure_float", "CXCf",
     "osl_mul_closure_color", "CXCc",
     "osl_allocate_closure_component", "CXiii",
+    "osl_allocate_weighted_closure_component", "CXiiiX",
     "osl_closure_to_string", "sXC",
     "osl_format", "ss*",
     "osl_printf", "xXs*",

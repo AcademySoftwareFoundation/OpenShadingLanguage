@@ -70,6 +70,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSO_FILE_VERSION_MINOR @OSO_FILE_VERSION_MINOR@
 
 
+// Symbols documenting specific API or other changes
+#define OSL_SUPPORTS_WEIGHTED_CLOSURE_COMPONENTS 1
+
+
 #ifdef OSL_NAMESPACE
 // Macros to use in each file to enter and exit the right name spaces.
 #define OSL_NAMESPACE_ENTER namespace OSL_NAMESPACE { namespace OSL {

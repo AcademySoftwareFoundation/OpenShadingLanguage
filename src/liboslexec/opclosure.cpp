@@ -79,7 +79,7 @@ osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 OSL_SHADEOP ClosureComponent *
 osl_allocate_closure_component (ShaderGlobals *sg, int id, int size, int nattrs)
 {
-    return sg->context->closure_component_allot(id, size, nattrs);
+    return sg->context->closure_component_allot(id, size, nattrs, Color3(1.0f));
 }
 
 

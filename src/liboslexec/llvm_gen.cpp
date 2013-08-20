@@ -2974,14 +2974,9 @@ LLVMGEN (llvm_gen_closure)
         rop.builder().SetInsertPoint (notnull_block);
     }
 
-    // For the weighted option, the pointer is actually to a ClosureMul,
-    // and the ClosureComponent is one past this.
-    if (weighted)
-        comp_void_ptr = rop.llvm_offset_ptr (comp_void_ptr, (int)sizeof(ClosureMul));
-
     llvm::Value *comp_ptr = rop.llvm_ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
     // Get the address of the primitive buffer, which is the 5th field
-    llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 4);
+    llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 5);
     mem_void_ptr = rop.llvm_ptr_cast(mem_void_ptr, rop.llvm_type_void_ptr());
 
     // If the closure has a "prepare" method, call

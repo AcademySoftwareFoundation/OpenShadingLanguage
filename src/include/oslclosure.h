@@ -452,6 +452,7 @@ struct ClosureComponent : public ClosureColor
     int    id;       ///< Id of the component
     int    size;     ///< Memory used by the primitive
     int    nattrs;   ///< Number of keyword attributes
+    Vec3   w;        ///< Weight of this component
     char   mem[4];   ///< Memory for the primitive
                      ///  4 is the minimum, allocation
                      ///  will be scaled to requirements

@@ -612,6 +612,7 @@ RuntimeOptimizer::llvm_type_closure_component ()
     comp_types.push_back (llvm_type_int());     // id
     comp_types.push_back (llvm_type_int());     // size
     comp_types.push_back (llvm_type_int());     // nattrs
+    comp_types.push_back (llvm_type_triple());  // w
     comp_types.push_back (llvm_type_int());     // fake field for char mem[4]
 
     return m_llvm_type_closure_component = llvm_type_struct (comp_types, "ClosureComponent");

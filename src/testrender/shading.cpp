@@ -526,6 +526,8 @@ void process_closure (ShadingResult& result, const ClosureColor* closure, const 
        }
        case ClosureColor::COMPONENT: {
            const ClosureComponent* comp = (const ClosureComponent*) closure;
+           const Color3 &weight (w);
+           Color3 w = weight * comp->w;
            if (comp->id == EMISSION_ID)
                result.Le += float(M_1_PI) * w;
            else if (!light_only) {
@@ -574,7 +576,7 @@ Vec3 process_background_closure(const ClosureColor* closure) {
            case ClosureColor::COMPONENT: {
                const ClosureComponent* comp = (const ClosureComponent*) closure;
                if (comp->id == BACKGROUND_ID)
-                   return Vec3(1, 1, 1);
+                   return comp->w;
            }
     }
     // should never happen

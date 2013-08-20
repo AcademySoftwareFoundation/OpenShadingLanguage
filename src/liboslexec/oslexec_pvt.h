@@ -1180,25 +1180,23 @@ public:
         comp->id = id;
         comp->size = prim_size;
         comp->nattrs = nattrs;
+        comp->w[0] = 1.0f;
+        comp->w[1] = 1.0f;
+        comp->w[2] = 1.0f;
         return comp;
     }
 
-    // Allot a weighted component (combine the mull and the component)
-    ClosureMul * closure_component_allot(int id, size_t prim_size, int nattrs, const Color3 &w) {
+    ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs, const Color3 &w) {
         // Allocate the component and the mul back to back
-        size_t needed = sizeof(ClosureMul) +
-                        sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
+        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
                                                  + sizeof(ClosureComponent::Attr) * nattrs;
-        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(needed);
-        ClosureComponent *comp = (ClosureComponent *)(mul+1);
+        ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed);
         comp->type = ClosureColor::COMPONENT;
         comp->id = id;
         comp->size = prim_size;
         comp->nattrs = nattrs;
-        mul->type = ClosureColor::MUL;
-        mul->weight = w;
-        mul->closure = comp;
-        return mul;
+        comp->w = w;
+        return comp;
     }
 
     ClosureMul *closure_mul_allot (const Color3 &w, const ClosureColor *c) {

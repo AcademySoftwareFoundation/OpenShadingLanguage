@@ -39,6 +39,23 @@
 // Date: August 5th, 2011
 // Soundtrack: Gojira - Flying Whales
 //
+// August 2013:
+// This update employs a simple material layering mechanism that allows
+// two ubersurface shaders to connect and composite in a consistent manner.
+// Connecting ubersurfaceB.Out_Ci to ubersurfaceA.Next_Layer results in 
+// the appearance of ubersurfaceA over ubersurfaceB.  
+//
+// In this logic, opacity of 0 will pass through the top layer and call the
+// Next_Layer.  Refractive materials will filter Next_Layer according to 
+// the Refraction_Color.
+//
+// See testsuite/render-material-layer for an example.
+// 
+// Note:  This shader uses the "absorption" closure keyword for 
+// the microfacet_beckmann_refraction closure.  This is currently 
+// unsupported by the testrender application.
+//
+
 
 // The TEXTURE_PARAMS macro defines a set of parameters common to all texture maps.  
 // The metadata provides paramater display hints to host applications. These metadata 
@@ -217,7 +234,11 @@ ubersurface
 
     float  In_U = u,
 
-    float  In_V = v
+    float  In_V = v,
+
+    // Shader Layering
+    output closure color Out_Ci = 0,
+    closure color Next_Layer = 0
 
 )
 {
@@ -231,9 +252,17 @@ ubersurface
     opacity *= Opacity;
     closure color transparencyClosure =  transparent() * (1.0-opacity);
 
+    // For material layering we have to keep some extra stuff around...
+    color refractionFilter = 1;
+
     // Test for shadow rays and exit early, supplying only the transparency closure.
     if(raytype("shadow")) {
-        Ci = transparencyClosure;
+        Out_Ci = transparencyClosure;
+
+	//Naive layering of in shadow context
+	if(isconnected(Next_Layer)){
+	   Out_Ci = Out_Ci + Next_Layer;
+	}
 
     } else {
     	// Storage for weighted closures that we will accumulate at the end of this 'beauty' block 
@@ -291,9 +320,11 @@ ubersurface
     	    TEXTURE_EVAL(Emission, emissionTexture)
 	    emissionClosure = emission() * (Ke / surfacearea()) * Emission_Color * emissionTexture;
     	}
+	
 
 	// Refraction
-    	if(Kt) {
+    	refractionFilter = 1.0-opacity;
+	if(Kt) {
 	    if(Roughness <= 0.005) {
                 refractionClosure = refraction(Nshading, eta, "absorption", Absorption_Color);
     	    } else {
@@ -305,11 +336,22 @@ ubersurface
 	    refractionClosure *= refractionTexture * Kt * Refraction_Color;
 	    // Attenuate diffuse by inverse of refraction Kt. 
 	    diffuseClosure *= 1.0-Kt;
+	    refractionFilter = mix(color(1), refractionTexture * Refraction_Color, Kt*opacity );
     	}
 
 	// Accumulate and output
-    	Ci = ((diffuseClosure + specularClosure + emissionClosure + refractionClosure) * opacity) + transparencyClosure;
+    	Out_Ci = ((diffuseClosure + specularClosure + emissionClosure) * opacity);
+
+	if(isconnected(Next_Layer))
+	{
+	   Out_Ci = Next_Layer * refractionFilter + Out_Ci;
+	} else {
+	   Out_Ci = Out_Ci + (refractionClosure*opacity) + transparencyClosure;
+	}
     }
+
+    Ci = Out_Ci;
+
 }
 
 

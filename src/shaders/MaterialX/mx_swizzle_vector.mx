@@ -1,0 +1,29 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+
+#include "mx_types.h"
+#include "swizzle.h"
+
+shader
+SHADER_NAME(mx_swizzle_vector)
+    [[ string help = "Perform an arbitrary permutation of the channels of the input stream" ]]
+
+  (
+    vector in = 0,
+    string channels = "xyz",
+    output TYPE out = TYPE_ZERO
+  )
+{
+    float inF[4];
+
+    inF[0] = in[0];
+    inF[1] = in[1];
+    inF[2] = in[2];
+    
+    out = swizzle(inF, channels);
+}
+

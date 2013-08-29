@@ -1,0 +1,23 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_clamp) 
+    [[ string help = TYPE_STR" Clamp incoming value to a specified range of values." ]]
+  (
+    TYPE in = TYPE_DEFAULT_IN,
+
+    TYPE low = TYPE_ZERO,
+    TYPE high = TYPE_ONE,
+
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = clamp(in, low, high);
+}

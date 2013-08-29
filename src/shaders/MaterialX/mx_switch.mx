@@ -1,0 +1,37 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_switch)
+    [[ string help = "Pass on the value of one of five input streams, according to the value of a selector parameter." ]]
+  (
+    TYPE in1 = TYPE_ZERO,
+    TYPE in2 = TYPE_ZERO,
+    TYPE in3 = TYPE_ZERO,
+    TYPE in4 = TYPE_ZERO,
+    TYPE in5 = TYPE_ZERO,
+    float which = 1,
+    output TYPE out = TYPE_ZERO
+  )
+{
+    int selection = int(clamp(floor(which), 0, 4));
+    
+    if( selection == 0 ){
+        out = in1;
+    } else if (selection == 1){
+        out = in2;
+    } else if (selection == 2){
+        out = in3;
+    } else if (selection == 3){
+        out = in4;
+    } else if (selection == 4){
+        out = in5;
+    }
+
+}

@@ -1,0 +1,23 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+
+#include "mx_types.h"
+
+
+shader SHADER_NAME(mx_mult_surfaceshader)
+    [[ string help = "multiply surfaceshader closures" ]]
+  (
+    
+    closure color in1 = 0,
+    TYPE in2 = 1,
+
+    output closure color out = 0
+  )
+{
+    out = in1 * in2; 
+
+}

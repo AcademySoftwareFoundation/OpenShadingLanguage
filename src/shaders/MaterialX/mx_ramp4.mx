@@ -1,0 +1,34 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_ramp4)
+    [[ string help = "linear value ramp source, top to bottom" ]]
+  (
+    TYPE valuetl = TYPE_ZERO
+        [[  string help = "value at the top right (s=0,t=0) edge"  ]],
+    TYPE valuetr = TYPE_ONE
+        [[  string help = "value at the top right (s=1,t=0) edge"  ]],
+    TYPE valuebl = TYPE_ZERO
+        [[  string help = "value at the bottom left (s=0,t=1) edge"  ]],
+    TYPE valuebr = TYPE_ONE
+        [[  string help = "value at the bottom right (s=1,t=1) edge"  ]],
+
+    vector2 texcoord = { u, v }
+        [[  string help = "input coordinate position",
+            int lockgeom = 0 ]],
+
+    output TYPE out = TYPE_ZERO
+  )
+{
+    float ss = clamp (texcoord.x, 0, 1);
+    float tt = clamp (texcoord.y, 0, 1);
+    out = mix ( mix(valuetl, valuetr, ss),
+                mix(valuebl, valuebr, ss), 
+                tt);
+}

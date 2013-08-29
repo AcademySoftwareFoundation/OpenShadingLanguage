@@ -149,6 +149,7 @@ add_subdirectory (src/liboslnoise)
 add_subdirectory (src/oslc)
 add_subdirectory (src/shaders)
 add_subdirectory (src/oslinfo)
+add_subdirectory (src/shaders/MaterialX)
 
 if (OSL_BUILD_TESTS)
 add_subdirectory (src/testshade)

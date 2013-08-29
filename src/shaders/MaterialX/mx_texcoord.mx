@@ -1,0 +1,24 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_texcoord)
+    [[ string help = " The 2D texture coordinates" ]]
+  (
+    output TYPE out = TYPE_ZERO
+  )
+{
+#if defined(VECTOR2)
+    vector2 out_value = {u, v};
+#elif defined(VECTOR)
+    vector out_value = vector(u, v, 0);
+#endif
+
+    out = out_value;
+}

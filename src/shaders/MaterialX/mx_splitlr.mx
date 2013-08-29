@@ -1,0 +1,29 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+    
+shader
+SHADER_NAME(mx_splitlr)
+    [[ string help = "split left/right"  ]]
+  (
+
+    TYPE valuel = TYPE_ZERO
+        [[  string help = "value on the left"  ]],
+    TYPE valuer = TYPE_ONE
+        [[  string help = "value on the right"  ]],
+    float center = 0.5
+        [[  string help = "coordinate to split at"  ]],
+    vector2 texcoord = { u, v }
+        [[  string help = "input coordinate position",
+            int lockgeom = 0 ]],
+
+    output TYPE out = TYPE_ZERO
+  )
+{
+
+    out = mix (valuel, valuer, aastep (center, texcoord.x));
+}

@@ -203,6 +203,10 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
         return 0;
     }
 
+    // Early exit if the pointcloud contains no particles.
+    if (cloud->numParticles() == 0)
+       return 0;
+
     // If we need derivs of the distances, we'll need access to the 
     // found point's positions.
     Partio::ParticleAttribute *pos_attr = NULL;

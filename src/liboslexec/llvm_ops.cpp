@@ -1248,6 +1248,21 @@ osl_texture_set_subimagename (void *opt, const char *subimagename)
     ((TextureOpt *)opt)->subimagename = USTR(subimagename);
 }
 
+OSL_SHADEOP void
+osl_texture_set_missingcolor_arena (void *opt, const void *missing)
+{
+    ((TextureOpt *)opt)->missingcolor = (const float *)missing;
+}
+
+OSL_SHADEOP void
+osl_texture_set_missingcolor_alpha (void *opt, int alphaindex,
+                                    float missingalpha)
+{
+    float *m = (float *)((TextureOpt *)opt)->missingcolor;
+    if (m)
+        m[alphaindex] = missingalpha;
+}
+
 
 
 OSL_SHADEOP int

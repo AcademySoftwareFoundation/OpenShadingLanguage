@@ -1376,6 +1376,7 @@ namespace Strings {
     extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
     extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
     extern OSLEXECPUBLIC ustring subimage, subimagename;
+    extern OSLEXECPUBLIC ustring missingcolor, missingalpha;
     extern OSLEXECPUBLIC ustring uninitialized_string;
 }; // namespace Strings
 

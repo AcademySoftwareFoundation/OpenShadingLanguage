@@ -442,6 +442,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_texture_set_interp_code", "xXi",
     "osl_texture_set_subimage", "xXi",
     "osl_texture_set_subimagename", "xXs",
+    "osl_texture_set_missingcolor_arena", "xXX",
+    "osl_texture_set_missingcolor_alpha", "xXif",
     "osl_texture", "iXsXffffffiXXX",
     "osl_texture_alpha", "iXsXffffffiXXXXXX",
     "osl_texture3d", "iXsXXXXXiXXXX",

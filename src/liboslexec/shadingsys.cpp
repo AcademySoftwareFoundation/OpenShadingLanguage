@@ -243,6 +243,7 @@ ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
 ustring op_exit("exit");
 ustring subimage("subimage"), subimagename("subimagename");
+ustring missingcolor("missingcolor"), missingalpha("missingalpha");
 ustring uninitialized_string("!!!uninitialized!!!");
 };
 

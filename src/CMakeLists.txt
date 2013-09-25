@@ -292,7 +292,8 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             struct-err struct-layers struct-with-array 
             struct-within-struct ternary
             texture-alpha texture-blur texture-field3d
-            texture-firstchannel texture-interp texture-simple
+            texture-firstchannel texture-interp 
+            texture-missingcolor texture-simple
             texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap
             transform transformc trig typecast

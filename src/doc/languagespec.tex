@@ -3903,8 +3903,19 @@ within a multi-image texture file (default: subimage 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested,
+but not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -3995,8 +4006,19 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested,
+but not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -4066,8 +4088,19 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested, but 
+not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 

@@ -1929,7 +1929,7 @@ LLVMGEN (llvm_gen_loopmod_op)
 
 static llvm::Value *
 llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
-                          int first_optional_arg, bool tex3d,
+                          int first_optional_arg, bool tex3d, int nchans,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
                           llvm::Value* &dalphady)
 {
@@ -1939,6 +1939,7 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
                                                   rop.llvm_constant((int)tosize));
     opt = rop.llvm_void_ptr (opt);
     rop.llvm_call_function ("osl_texture_clear", opt);
+    llvm::Value* missingcolor = NULL;
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -2058,6 +2059,34 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
                 dalphady = rop.llvm_get_pointer (Val, 2);
                 // NO z derivs!  dalphadz = rop.llvm_get_pointer (Val, 3);
             }
+
+        } else if (name == Strings::missingcolor &&
+                   equivalent(valtype,TypeDesc::TypeColor)) {
+            if (! missingcolor) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special 
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
+                                              rop.llvm_constant((int)4*sizeof(float)));
+                rop.llvm_call_function ("osl_texture_set_missingcolor_arena",
+                                        opt, rop.llvm_void_ptr(missingcolor));
+            }
+            rop.llvm_memcpy (rop.llvm_void_ptr(missingcolor),
+                             rop.llvm_void_ptr(Val), (int)sizeof(Color3));
+        } else if (name == Strings::missingalpha &&
+                   valtype == TypeDesc::FLOAT) {
+            if (! missingcolor) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special 
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
+                                              rop.llvm_constant((int)4*sizeof(float)));
+                rop.llvm_call_function ("osl_texture_set_missingcolor_arena",
+                                        opt, missingcolor);
+            }
+            rop.llvm_call_function ("osl_texture_set_missingcolor_alpha",
+                                    opt, rop.llvm_constant(nchans), val);
+
         } else {
             rop.shadingsys().error ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
                                     tex3d ? "3d" : "",
@@ -2078,6 +2107,7 @@ LLVMGEN (llvm_gen_texture)
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &S = *rop.opargsym (op, 2);
     Symbol &T = *rop.opargsym (op, 3);
+    int nchans = Result.typespec().aggregate();
 
     bool user_derivs = false;
     int first_optional_arg = 4;
@@ -2092,7 +2122,8 @@ LLVMGEN (llvm_gen_texture)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-                                    false /*3d*/, alpha, dalphadx, dalphady);
+                                    false /*3d*/, nchans,
+                                    alpha, dalphadx, dalphady);
 
     // Now call the osl_texture function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2114,7 +2145,7 @@ LLVMGEN (llvm_gen_texture)
         args.push_back (rop.llvm_load_value (S, 2));
         args.push_back (rop.llvm_load_value (T, 2));
     }
-    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_constant (nchans));
     args.push_back (rop.llvm_void_ptr (rop.llvm_get_pointer (Result, 0)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_get_pointer (Result, 1)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_get_pointer (Result, 2)));
@@ -2137,6 +2168,7 @@ LLVMGEN (llvm_gen_texture3d)
     Symbol &Result = *rop.opargsym (op, 0);
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &P = *rop.opargsym (op, 2);
+    int nchans = Result.typespec().aggregate();
 
     bool user_derivs = false;
     int first_optional_arg = 3;
@@ -2150,7 +2182,8 @@ LLVMGEN (llvm_gen_texture3d)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-                                    true /*3d*/, alpha, dalphadx, dalphady);
+                                    true /*3d*/, nchans,
+                                    alpha, dalphadx, dalphady);
 
     // Now call the osl_texture3d function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2180,7 +2213,7 @@ LLVMGEN (llvm_gen_texture3d)
             args.push_back (rop.llvm_void_ptr(vzero));
         }
     }
-    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_constant (nchans));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 0)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 1)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 2)));
@@ -2205,6 +2238,7 @@ LLVMGEN (llvm_gen_environment)
     Symbol &Result = *rop.opargsym (op, 0);
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &R = *rop.opargsym (op, 2);
+    int nchans = Result.typespec().aggregate();
 
     bool user_derivs = false;
     int first_optional_arg = 3;
@@ -2217,7 +2251,8 @@ LLVMGEN (llvm_gen_environment)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-                                    false /*3d*/, alpha, dalphadx, dalphady);
+                                    false /*3d*/, nchans,
+                                    alpha, dalphadx, dalphady);
 
     // Now call the osl_environment function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2234,7 +2269,7 @@ LLVMGEN (llvm_gen_environment)
         args.push_back (rop.llvm_void_ptr (R, 1));
         args.push_back (rop.llvm_void_ptr (R, 2));
     }
-    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_constant (nchans));
     args.push_back (rop.llvm_void_ptr (Result, 0));
     args.push_back (rop.llvm_void_ptr (Result, 1));
     args.push_back (rop.llvm_void_ptr (Result, 2));

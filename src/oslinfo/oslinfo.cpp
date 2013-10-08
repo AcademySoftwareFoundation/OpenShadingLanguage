@@ -80,23 +80,18 @@ static void
 print_default_int_vals (const OSLQuery::Parameter *p, bool verbose)
 {
     size_t nf = p->type.aggregate;
-    for (size_t a = 0;  a < p->type.numelements();  ++a) {
-        if (verbose) {
-            std::cout << "\t\tDefault value: ";
-            if (p->spacename.size() > a && ! p->spacename[a].empty())
-                std::cout << "\"" << p->spacename[a] << "\" ";
-        }
-        if (nf > 1)
-            std::cout << "[ ";
-        for (size_t f = 0;  f < nf; ++f) {
-            std::cout << p->idefault[a*nf+f];
-            if (f < nf-1)
-                std::cout << ' ';
-        }
-        if (nf > 1)
-            std::cout << " ]";
-        std::cout << std::endl;
+    size_t ne = p->type.numelements();
+    if (verbose)
+        std::cout << "\t\tDefault value:";
+    if (p->type.arraylen || nf > 1)
+        std::cout << " [";
+    for (size_t a = 0;  a < ne;  ++a) {
+        for (size_t f = 0;  f < nf; ++f)
+            std::cout << ' ' << p->idefault[a*nf+f];
     }
+    if (p->type.arraylen || nf > 1)
+        std::cout << " ]";
+    std::cout << std::endl;
 }
 
 
@@ -105,23 +100,20 @@ static void
 print_default_float_vals (const OSLQuery::Parameter *p, bool verbose)
 {
     size_t nf = p->type.aggregate;
-    for (size_t a = 0;  a < p->type.numelements();  ++a) {
-        if (verbose) {
-            std::cout << "\t\tDefault value: ";
-            if (p->spacename.size() > a && ! p->spacename[a].empty())
-                std::cout << "\"" << p->spacename[a] << "\" ";
-        }
-        if (nf > 1)
-            std::cout << "[ ";
-        for (size_t f = 0;  f < nf; ++f) {
-            std::cout << p->fdefault[a*nf+f];
-            if (f < nf-1)
-                std::cout << ' ';
-        }
-        if (nf > 1)
-            std::cout << " ]";
-        std::cout << std::endl;
+    size_t ne = p->type.numelements();
+    if (verbose)
+        std::cout << "\t\tDefault value:";
+    if (p->type.arraylen || nf > 1)
+        std::cout << " [";
+    for (size_t a = 0;  a < ne;  ++a) {
+        if (verbose && p->spacename.size() > a && ! p->spacename[a].empty())
+            std::cout << " \"" << p->spacename[a] << "\"";
+        for (size_t f = 0;  f < nf; ++f)
+            std::cout << ' ' << p->fdefault[a*nf+f];
     }
+    if (p->type.arraylen || nf > 1)
+        std::cout << " ]";
+    std::cout << std::endl;
 }
 
 

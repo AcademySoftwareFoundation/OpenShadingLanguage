@@ -116,6 +116,8 @@ public:
     virtual void symdefault (const char *def);
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
+    virtual bool parse_code_section () { return false; }
+    virtual bool stop_parsing_at_temp_symbols () { return true; }
 
 private:
     OSLQuery &m_query;

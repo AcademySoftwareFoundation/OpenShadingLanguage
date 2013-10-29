@@ -366,7 +366,8 @@ public:
     /// Helper: return the ptr to the symbol that is the argnum-th
     /// argument to the given op.
     Symbol *opargsym (const Opcode &op, int argnum) {
-        return inst()->argsymbol (op.firstarg()+argnum);
+        return (argnum < op.nargs()) ?
+                    inst()->argsymbol (op.firstarg()+argnum) : NULL;
     }
 
     /// Is the named symbol among the renderer outputs?

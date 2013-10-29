@@ -3391,7 +3391,7 @@ LLVMGEN (llvm_gen_split)
     Symbol& Results = *rop.opargsym (op, 2);
     DASSERT (R.typespec().is_int() && Str.typespec().is_string() &&
              Results.typespec().is_array() &&
-             Results.typespec().simpletype() == TypeDesc::TypeString);
+             Results.typespec().is_string_based());
 
     llvm::Value *args[5];
     args[0] = rop.llvm_load_value (Str);

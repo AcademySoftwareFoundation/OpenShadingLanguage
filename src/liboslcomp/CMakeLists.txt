@@ -29,6 +29,3 @@ else ()
     INSTALL ( TARGETS oslcomp LIBRARY DESTINATION lib )
 endif ()
 
-IF ( USE_BOOST_WAVE )
-    ADD_DEFINITIONS ( -DUSE_BOOST_WAVE )
-ENDIF ()

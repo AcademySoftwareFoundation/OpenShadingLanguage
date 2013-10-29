@@ -46,14 +46,10 @@ if (CMAKE_COMPILER_IS_GNUCC)
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
     message (STATUS "Using gcc ${GCC_VERSION} as the compiler")
 endif ()
-if (NOT CMAKE_COMPILER_IS_CLANG)
-    message (STATUS "CMAKE_CXX_COMPILER is ${CMAKE_CXX_COMPILER}")
-    string (REGEX MATCH clang CMAKE_COMPILER_IS_CLANG ${CMAKE_CXX_COMPILER})
-    message (STATUS "CMAKE_COMPILER_IS_CLANG is '${CMAKE_COMPILER_IS_CLANG}'")
-    if (CMAKE_COMPILER_IS_CLANG)
-        set (CMAKE_COMPILER_IS_CLANG 1)
-        message (STATUS "Using clang as the compiler")
-    endif ()
+message (STATUS "CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set (CMAKE_COMPILER_IS_CLANG 1)
+    message (STATUS "Using clang as the compiler")
 endif ()
 
 ## turn on more detailed warnings and consider warnings as errors
@@ -127,6 +123,12 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     endif ()
 endif ()
 
+# Try to detect if this is an OSX distro new enough that the system library
+# is libc++, in which case we should force use of Boost Wave (because that
+# avoids a nonstandard g++ extension in the other code path).
+if (EXISTS "/usr/lib/libc++.dylib" OR OSL_USE_LIBCPP)
+    set (OSL_SYSTEM_HAS_LIBCPP ON)
+endif ()
 
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
 set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
@@ -135,11 +137,14 @@ set (USE_EXTERNAL_PUGIXML OFF CACHE BOOL
      "Use an externally built shared library version of the pugixml library")
 set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML library")
 if (WIN32)
-    set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
     set (USE_LLVM_BITCODE OFF CACHE BOOL "Generate embedded LLVM bitcode")
 else ()
-    set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
     set (USE_LLVM_BITCODE ON CACHE BOOL "Generated embedded LLVM bitcode")
+endif ()
+if (WIN32 OR OSL_SYSTEM_HAS_LIBCPP)
+    set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
+else ()
+    set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 
@@ -155,6 +160,14 @@ if (EXTRA_CPP_DEFINITIONS)
     add_definitions ("${EXTRA_CPP_DEFINITIONS}")
 endif()
 
+if (USE_BOOST_WAVE)
+    add_definitions ("-DUSE_BOOST_WAVE")
+endif ()
+
+if (CMAKE_COMPILER_IS_CLANG AND OSL_USE_LIBCPP)
+    message (STATUS "Using libc++")
+    add_definitions ("-stdlib=libc++")
+endif ()
 
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/cmake/modules"

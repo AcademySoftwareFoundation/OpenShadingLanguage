@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include <cstdio>
 #include <streambuf>
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(_LIBCPP_VERSION) && !defined(USE_BOOST_WAVE)
 # include <ext/stdio_filebuf.h>
 #endif
 #include <cstdio>
@@ -268,7 +268,7 @@ preprocess (const std::string &filename,
     // std::cout << "cpp command:\n>" << cppcommand << "<\n";
     FILE *cpppipe = popen (cppcommand.c_str(), "r");
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(_LIBCPP_VERSION)
     __gnu_cxx::stdio_filebuf<char> fb (cpppipe, std::ios::in);
 #else
     std::filebuf fb (cpppipe);

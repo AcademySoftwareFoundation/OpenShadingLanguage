@@ -851,7 +851,7 @@ public:
     ///
     llvm::BasicBlock *llvm_exit_instance_block () {
         if (! m_exit_instance_block) {
-            std::string name = Strutil::format ("%s_%d_exit_", inst()->layername().c_str(), inst()->id());
+            std::string name = Strutil::format ("%s_%d_exit_", inst()->layername(), inst()->id());
             m_exit_instance_block = llvm_new_basic_block (name);
         }
         return m_exit_instance_block;
@@ -920,8 +920,8 @@ private:
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::vector<int> m_bblockids;       ///< Basic block IDs for each op
-    std::vector<bool> m_in_conditional; ///< Whether each op is in a cond
-    std::vector<bool> m_in_loop;        ///< Whether each op is in a loop
+    std::vector<char> m_in_conditional; ///< Whether each op is in a cond
+    std::vector<char> m_in_loop;        ///< Whether each op is in a loop
     int m_first_return;                 ///< Op number of first return or exit
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     std::set<int> m_layers_already_run; ///< List of layers run

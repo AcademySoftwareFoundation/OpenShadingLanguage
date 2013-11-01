@@ -5,9 +5,89 @@ import glob
 import sys
 import platform
 import subprocess
+import difflib
+import filecmp
+
 from optparse import OptionParser
 
+
+#
+# Get standard testsuite test arguments: srcdir exepath
+#
+
+srcdir = "."
+tmpdir = "."
+path = "../.."
+
+# Options for the command line
+parser = OptionParser()
+parser.add_option("-p", "--path", help="add to executable path",
+                  action="store", type="string", dest="path", default="")
+parser.add_option("--devenv-config", help="use a MS Visual Studio configuration",
+                  action="store", type="string", dest="devenv_config", default="")
+parser.add_option("--solution-path", help="MS Visual Studio solution path",
+                  action="store", type="string", dest="solution_path", default="")
+(options, args) = parser.parse_args()
+
+if args and len(args) > 0 :
+    srcdir = args[0]
+    srcdir = os.path.abspath (srcdir) + "/"
+    os.chdir (srcdir)
+if args and len(args) > 1 :
+    path = args[1]
+path = os.path.normpath (path)
+
+tmpdir = "."
+tmpdir = os.path.abspath (tmpdir)
+
+refdir = "ref/"
+parent = "../../../../../"
+
+command = ""
+outputs = [ "out.txt" ]    # default
+failureok = 0
+failthresh = 0.004
+failpercent = 0.02
+
+#print ("srcdir = " + srcdir)
+#print ("tmpdir = " + tmpdir)
+#print ("path = " + path)
+#print ("refdir = " + refdir)
+
+###########################################################################
+
 # Handy functions...
+
+# Compare two text files. Returns 0 if they are equal otherwise returns
+# a non-zero value and writes the differences to "diff_file".
+# Based on the command-line interface to difflib example from the Python
+# documentation
+def text_diff (fromfile, tofile, diff_file=None):
+    import time
+    try:
+        fromdate = time.ctime (os.stat (fromfile).st_mtime)
+        todate = time.ctime (os.stat (tofile).st_mtime)
+        fromlines = open (fromfile, 'rU').readlines()
+        tolines   = open (tofile, 'rU').readlines()
+    except:
+        print ("Unexpected error:", sys.exc_info()[0])
+        return -1
+        
+    diff = difflib.unified_diff(fromlines, tolines, fromfile, tofile,
+                                fromdate, todate)
+    # Diff is a generator, but since we need a way to tell if it is
+    # empty we just store all the text in advance
+    diff_lines = [l for l in diff]
+    if not diff_lines:
+        return 0
+    if diff_file:
+        try:
+            open (diff_file, 'w').writelines (diff_lines)
+        except:
+            print ("Unexpected error:", sys.exc_info()[0])
+    return 1
+
+
 
 def osl_app (app):
     # when we use Visual Studio, built applications are stored
@@ -44,16 +124,11 @@ def testrender (args) :
     return (osl_app("testrender") + " -v --stats " + args + " >> out.txt 2>&1 ;\n")
 
 
+# Run 'command'.  For each file in 'outputs', compare it to the copy
+# in 'ref/'.  If all outputs match their reference copies, return 0
+# to pass.  If any outputs do not match their references return 1 to
+# fail.
 def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
-    parser = OptionParser()
-    parser.add_option("-p", "--path", help="add to executable path",
-                      action="store", type="string", dest="path", default="")
-    parser.add_option("--devenv-config", help="use a MS Visual Studio configuration",
-                      action="store", type="string", dest="devenv_config", default="")
-    parser.add_option("--solution-path", help="MS Visual Studio solution path",
-                      action="store", type="string", dest="solution_path", default="")
-    (options, args) = parser.parse_args()
-
 #    print ("working dir = " + tmpdir)
     os.chdir (srcdir)
     open ("out.txt", "w").close()    # truncate out.txt
@@ -87,13 +162,14 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
 
     err = 0
     for out in outputs :
+        extension = os.path.splitext(out)[1]
         ok = 0
-        # We will first compare out to ref/out, and if that fails, we will
-        # compare it to everything else in the ref directory.  That allows us
-        # to have multiple matching variants for different platforms, etc.
-        for testfile in (["ref/"+out] + glob.glob (os.path.join ("ref", "*"))) :
-            #print ("comparing " + out + " to " + testfile)
-            extension = os.path.splitext(out)[1]
+        # We will first compare out to ref/out, and if that fails, we
+        # will compare it to everything else with the same extension in
+        # the ref directory.  That allows us to have multiple matching
+        # variants for different platforms, etc.
+        for testfile in (["ref/"+out] + glob.glob (os.path.join ("ref", "*"+extension))) :
+            # print ("comparing " + out + " to " + testfile)
             if extension == ".tif" or extension == ".exr" :
                 # images -- use idiff
                 cmpcommand = (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "idiff")
@@ -102,16 +178,13 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
                               + " -hardfail " + str(failthresh)
                               + " -warn " + str(2*failthresh)
                               + " " + out + " " + testfile)
+                # print "cmpcommand = " + cmpcommand
+                cmpresult = os.system (cmpcommand)
+            elif extension == ".txt" :
+                cmpresult = text_diff (out, testfile, out + ".diff")
             else :
-                # anything else, mainly text files
-                if (platform.system () == 'Windows'):
-                    diff_cmd = "fc "
-                else:
-                    diff_cmd = "diff "
-                cmpcommand = (diff_cmd + out + " " + testfile)
-
-            print "cmpcommand = " + cmpcommand
-            cmpresult = os.system (cmpcommand)
+                # anything else
+                cmpresult = 0 if filecmp.cmp (out, testfile) else 1
             if cmpresult == 0 :
                 print ("PASS: " + out + " matches " + testfile)
                 ok = 1
@@ -125,42 +198,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
     return (err)
 
 
-
 ##########################################################################
-
-#
-# Get standard testsuite test arguments: srcdir exepath
-#
-
-srcdir = "."
-tmpdir = "."
-path = "../.."
-
-if len(sys.argv) > 1 :
-    srcdir = sys.argv[1]
-    srcdir = os.path.abspath (srcdir) + "/"
-    os.chdir (srcdir)
-if len(sys.argv) > 2 :
-    path = sys.argv[2]
-
-tmpdir = "."
-tmpdir = os.path.abspath (tmpdir)
-
-refdir = "ref/"
-parent = "../../../../../"
-
-outputs = [ "out.txt" ]    # default
-
-command = ""
-failureok = 0
-failthresh = 0.004
-failpercent = 0.02
-
-
-#print ("srcdir = " + srcdir)
-#print ("tmpdir = " + tmpdir)
-#print ("path = " + path)
-#print ("refdir = " + refdir)
 
 
 

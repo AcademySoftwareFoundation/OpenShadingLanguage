@@ -4157,13 +4157,27 @@ one of: \qkw{Plain Texture}, \qkw{Shadow}, \qkw{Environment},
 specifically distinguishes between the different types of shadows and
 environment maps.  \\[0.75ex]
 
-\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
-transforms points from \commonspace to the \cameraspace from which the
-texture was created. \\[0.75ex]
+\qkw{datawindow} & {\cf int[]} \\
+Returns the pixel data window of the image.  The argument is an {\cf int}
+array either of length 4 or 6, in which will be placed the (xmin, ymin,
+xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
+(N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
+they will be 0). [0.75ex]
 
-{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
-matrix that transforms points from \commonspace to a 2D coordinate
-system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
+\qkw{displaywindow} & {\cf int[]} \\
+Returns the display (a.k.a.\ full) window of the image.  The argument is an {\cf int}
+array either of length 4 or 6, in which will be placed the (xmin, ymin,
+xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
+(N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
+they will be 0). [0.75ex]
+
+%\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
+%transforms points from \commonspace to the \cameraspace from which the
+%texture was created. \\[0.75ex]
+%
+%{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
+%matrix that transforms points from \commonspace to a 2D coordinate
+%system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
 
 \emph{anything else} & \emph{any} & Searches for matching name and
 type in the metadata or other header information of the texture file.

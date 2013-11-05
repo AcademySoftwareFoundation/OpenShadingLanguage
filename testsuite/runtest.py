@@ -113,13 +113,21 @@ def oslinfo (args) :
     return (osl_app("oslinfo") + args + " >> out.txt 2>&1 ;\n")
 
 
-# Construct a command that run testshade with the specified arguments, appending output to
-# the file "out.txt".
+# Construct a command that runs oiiotool, appending console output
+# to the file "out.txt".
+def oiiotool (args) :
+    return (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "oiiotool") +
+            " " + args + " >> out.txt 2>&1 ;\n")
+
+
+# Construct a command that run testshade with the specified arguments,
+# appending output to the file "out.txt".
 def testshade (args) :
     return (osl_app("testshade") + args + " >> out.txt 2>&1 ;\n")
 
-# Construct a command that run testrender with the specified arguments, appending output to
-# the file "out.txt".
+
+# Construct a command that run testrender with the specified arguments,
+# appending output to the file "out.txt".
 def testrender (args) :
     return (osl_app("testrender") + " -v --stats " + args + " >> out.txt 2>&1 ;\n")
 

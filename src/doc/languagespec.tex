@@ -4189,17 +4189,20 @@ type in the metadata or other header information of the texture file.
 
 \newpage
 \apiitem{int {\ce pointcloud_search} (string ptcname, point pos, float radius,\\
-\bigspc\bigspc      int maxpoints, int sort,
+\bigspc\bigspc      int maxpoints, [int sort,]
                        string attr, Type data[],\\
 \bigspc\bigspc         ..., string attrN, Type dataN[] )}
 \indexapi{pointcloud_search}
 
-Search the named point cloud for points within {\cf radius} of {\cf pos},
+Search the named point cloud for the {\cf maxpoints} closest points to
+{\cf pos} within the given {\cf radius},
 returning the values of any named attributes of those points in the the
-given {\cf data} arrays.  If {\cf sort} is nonzero, The ordering of the points
-found will be sorted by distance from {\cf pos}, from closest to farthest; if
-{\cf sort} is 0, the results are not guaranteed to be sorted (searching may
-be faster for some implementations when sorted results are not
+given {\cf data} arrays.  If the optional {\cf sort} parameter is present
+and is nonzero, the ordering of the points
+found will be sorted by distance from {\cf pos}, from closest to farthest;
+otherwise, the results are guaranteed to be the {\cf maxpoints} closest
+to {\cf pos}, but not necessarily softed by distance (this may be
+faster for some implementations than when sorted results are
 required).  The return value is the number of points returned, ranging
 from 0 (nothing found in the neighborhood) to the lesser of {\cf maxpoints}
 and the actual lengths of the arrays (the arrays will never be written

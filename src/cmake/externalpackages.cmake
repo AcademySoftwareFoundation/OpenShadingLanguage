@@ -2,14 +2,13 @@
 # Find libraries
 
 setup_path (THIRD_PARTY_TOOLS_HOME 
-#            "${PROJECT_SOURCE_DIR}/../../external/dist/${platform}"
             "unknown"
             "Location of third party libraries in the external project")
 
 # Add all third party tool directories to the include and library paths so
 # that they'll be correctly found by the various FIND_PACKAGE() invocations.
-if (THIRD_PARTY_TOOLS_HOME AND EXISTS ${THIRD_PARTY_TOOLS_HOME})
-    set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include" ${CMAKE_INCLUDE_PATH})
+if (THIRD_PARTY_TOOLS_HOME AND EXISTS "${THIRD_PARTY_TOOLS_HOME}")
+    set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include" "${CMAKE_INCLUDE_PATH}")
     # Detect third party tools which have been successfully built using the
     # lock files which are placed there by the external project Makefile.
     file (GLOB _external_dir_lockfiles "${THIRD_PARTY_TOOLS_HOME}/*.d")
@@ -100,10 +99,10 @@ find_package (ZLIB)
 if (USE_PARTIO)
     find_library (PARTIO_LIBRARIES
                   NAMES partio
-                  PATHS ${PARTIO_HOME}/lib)
+                  PATHS "${PARTIO_HOME}/lib")
     find_path (PARTIO_INCLUDE_DIR
                NAMES Partio.h
-               PATHS ${PARTIO_HOME}/include)
+               PATHS "${PARTIO_HOME}/include")
     if (PARTIO_INCLUDE_DIR AND PARTIO_LIBRARIES)
         set (PARTIO_FOUND TRUE)
         add_definitions ("-DUSE_PARTIO=1")
@@ -135,7 +134,7 @@ if (USE_EXTERNAL_PUGIXML)
     find_package (PugiXML REQUIRED)
     # insert include path to pugixml first, to ensure that the external
     # pugixml is found, and not the one in OIIO's include directory.
-    include_directories (BEFORE ${PUGIXML_INCLUDE_DIR})
+    include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
 endif()
 # end Pugixml setup
 ###########################################################################
@@ -146,9 +145,9 @@ endif()
 
 # try to find llvm-config, with a specific version if specified
 if(LLVM_DIRECTORY)
-  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION} HINTS ${LLVM_DIRECTORY}/bin NO_CMAKE_PATH)
+  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION} HINTS "${LLVM_DIRECTORY}/bin" NO_CMAKE_PATH)
   if(NOT LLVM_CONFIG)
-    FIND_PROGRAM(LLVM_CONFIG llvm-config HINTS ${LLVM_DIRECTORY}/bin NO_CMAKE_PATH)
+    FIND_PROGRAM(LLVM_CONFIG llvm-config HINTS "${LLVM_DIRECTORY}/bin" NO_CMAKE_PATH)
   endif()
 else()
   FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION})

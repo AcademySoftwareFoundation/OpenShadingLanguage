@@ -17,7 +17,7 @@ set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
 message (STATUS "Project build dir = ${CMAKE_BINARY_DIR}")
 
-if (${PROJECT_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message (FATAL_ERROR "Not allowed to run in-source build!")
 endif ()
 
@@ -179,9 +179,9 @@ include (oiio)
 include (externalpackages)
 include (flexbison)
 include_directories (
-      ${CMAKE_SOURCE_DIR}/include
-      ${CMAKE_BINARY_DIR}/include
-      ${OPENIMAGEIO_INCLUDES}
+      "${CMAKE_SOURCE_DIR}/include"
+      "${CMAKE_BINARY_DIR}/include"
+      "${OPENIMAGEIO_INCLUDES}"
   )
 
 
@@ -241,8 +241,8 @@ add_subdirectory (doc)
 
 # Make a copy of the testsuite into the build area
 if (DEFINED CMAKE_VERSION AND NOT CMAKE_VERSION VERSION_LESS 2.8)
-    file (COPY ${PROJECT_SOURCE_DIR}/../testsuite
-          DESTINATION ${CMAKE_BINARY_DIR})
+    file (COPY "${PROJECT_SOURCE_DIR}/../testsuite"
+          DESTINATION "${CMAKE_BINARY_DIR}")
 endif()
 
 macro ( TESTSUITE )
@@ -258,7 +258,7 @@ macro ( TESTSUITE )
         if (_ats_LABEL MATCHES "broken")
             set (_testname "${_testname}-broken")
         endif ()
-        set (_runtest python ${CMAKE_BINARY_DIR}/testsuite/runtest.py
+        set (_runtest python "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
                              ${_testdir} ${_extra_test_args})
         if (MSVC_IDE)
             set (_runtest ${_runtest} --devenv-config $<CONFIGURATION>
@@ -333,10 +333,11 @@ set (CPACK_PACKAGE_VENDOR "Sony Pictures Imageworks")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenShadingLanguage is...")
 set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/doc/Description.txt")
 set (CPACK_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERSION_MINOR}.${OSL_LIBRARY_VERSION_PATCH}-${platform})
-#set (CPACK_PACKAGE_INSTALL_DIRECTORY ${PROJECT_SOURCE_DIR}/..)
-exec_program ("cmake -E copy ${PROJECT_SOURCE_DIR}/../LICENSE ${CMAKE_BINARY_DIR}/License.txt")
+file (COPY "${PROJECT_SOURCE_DIR}/../LICENSE" DESTINATION "${CMAKE_BINARY_DIR}")
+file (RENAME "${CMAKE_BINARY_DIR}/LICENSE" "${CMAKE_BINARY_DIR}/License.txt")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/License.txt")
-exec_program ("cmake -E copy ${PROJECT_SOURCE_DIR}/../README.md ${CMAKE_BINARY_DIR}/Readme.txt")
+file (COPY "${PROJECT_SOURCE_DIR}/../README.md" DESTINATION "${CMAKE_BINARY_DIR}")
+file (RENAME "${CMAKE_BINARY_DIR}/README.md" "${CMAKE_BINARY_DIR}/Readme.txt")
 set (CPACK_RESOURCE_FILE_README "${CMAKE_BINARY_DIR}/Readme.txt")
 set (CPACK_RESOURCE_FILE_WELCOME "${PROJECT_SOURCE_DIR}/doc/Welcome.txt")
 #set (CPACK_PACKAGE_EXECUTABLES I'm not sure what this is for)

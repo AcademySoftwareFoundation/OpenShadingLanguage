@@ -32,7 +32,7 @@ if (NOT BUILDSTATIC)
         )
 endif ()
 
-include_directories ( "${CMAKE_SOURCE_DIR}/liboslcomp" )
+include_directories ( "${CMAKE_SOURCE_DIR}/src/liboslcomp" )
 
 FILE ( GLOB exec_headers "*.h" )
 
@@ -89,7 +89,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
       COMMAND ${LLVM_BC_GENERATOR}
       "-I${CMAKE_CURRENT_SOURCE_DIR}"
-      "-I${CMAKE_SOURCE_DIR}/include"
+      "-I${CMAKE_SOURCE_DIR}/src/include"
       "-I${CMAKE_BINARY_DIR}/include"
       "-I${OPENIMAGEIO_INCLUDES}"
       "-I${ILMBASE_INCLUDE_DIR}"
@@ -142,5 +142,5 @@ target_link_libraries ( closure_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_
 target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
 link_ilmbase (closure_test)
 link_ilmbase (accum_test)
-add_test (unit_closure "${CMAKE_BINARY_DIR}/liboslexec/closure_test")
-add_test (unit_accum "${CMAKE_BINARY_DIR}/liboslexec/accum_test")
+add_test (unit_closure "${CMAKE_BINARY_DIR}/src/liboslexec/closure_test")
+add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")

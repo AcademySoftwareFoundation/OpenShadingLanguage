@@ -119,7 +119,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
         # Linux: When linking against LLVM statically, we can also hide
         # all its symbols to prevent clashes if OSL is linked against an
         # app that also embeds LLVM.
-        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/liboslexec/liboslexec.map")
+        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/liboslexec/liboslexec.map")
     endif ()
 endif ()
 
@@ -170,8 +170,8 @@ if (CMAKE_COMPILER_IS_CLANG AND OSL_USE_LIBCPP)
 endif ()
 
 set (CMAKE_MODULE_PATH
-     "${PROJECT_SOURCE_DIR}/cmake/modules"
-     "${PROJECT_SOURCE_DIR}/cmake")
+     "${PROJECT_SOURCE_DIR}/src/cmake/modules"
+     "${PROJECT_SOURCE_DIR}/src/cmake")
 
 include (util_macros)
 include (platform)
@@ -179,13 +179,10 @@ include (oiio)
 include (externalpackages)
 include (flexbison)
 include_directories (
-      "${CMAKE_SOURCE_DIR}/include"
+      "${CMAKE_SOURCE_DIR}/src/include"
       "${CMAKE_BINARY_DIR}/include"
       "${OPENIMAGEIO_INCLUDES}"
   )
-
-
-include_directories ("include")
 
 if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
@@ -221,18 +218,18 @@ include (CTest)
 
 
 # Tell CMake to process the sub-directories
-add_subdirectory (liboslcomp)
-add_subdirectory (liboslquery)
-add_subdirectory (liboslexec)
+add_subdirectory (src/liboslcomp)
+add_subdirectory (src/liboslquery)
+add_subdirectory (src/liboslexec)
 
-add_subdirectory (oslc)
-add_subdirectory (shaders)
-add_subdirectory (oslinfo)
-add_subdirectory (testshade)
-add_subdirectory (testrender)
+add_subdirectory (src/oslc)
+add_subdirectory (src/shaders)
+add_subdirectory (src/oslinfo)
+add_subdirectory (src/testshade)
+add_subdirectory (src/testrender)
 
-add_subdirectory (include)
-add_subdirectory (doc)
+add_subdirectory (src/include)
+add_subdirectory (src/doc)
 
 
 
@@ -241,7 +238,7 @@ add_subdirectory (doc)
 
 # Make a copy of the testsuite into the build area
 if (DEFINED CMAKE_VERSION AND NOT CMAKE_VERSION VERSION_LESS 2.8)
-    file (COPY "${PROJECT_SOURCE_DIR}/../testsuite"
+    file (COPY "${PROJECT_SOURCE_DIR}/testsuite"
           DESTINATION "${CMAKE_BINARY_DIR}")
 endif()
 
@@ -331,15 +328,15 @@ set (CPACK_PACKAGE_VERSION_PATCH ${OSL_LIBRARY_VERSION_PATCH})
 # the rest of the copyright notices say.
 set (CPACK_PACKAGE_VENDOR "Sony Pictures Imageworks")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenShadingLanguage is...")
-set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/doc/Description.txt")
+set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/src/doc/Description.txt")
 set (CPACK_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERSION_MINOR}.${OSL_LIBRARY_VERSION_PATCH}-${platform})
-file (COPY "${PROJECT_SOURCE_DIR}/../LICENSE" DESTINATION "${CMAKE_BINARY_DIR}")
+file (COPY "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_BINARY_DIR}")
 file (RENAME "${CMAKE_BINARY_DIR}/LICENSE" "${CMAKE_BINARY_DIR}/License.txt")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/License.txt")
-file (COPY "${PROJECT_SOURCE_DIR}/../README.md" DESTINATION "${CMAKE_BINARY_DIR}")
+file (COPY "${PROJECT_SOURCE_DIR}/README.md" DESTINATION "${CMAKE_BINARY_DIR}")
 file (RENAME "${CMAKE_BINARY_DIR}/README.md" "${CMAKE_BINARY_DIR}/Readme.txt")
 set (CPACK_RESOURCE_FILE_README "${CMAKE_BINARY_DIR}/Readme.txt")
-set (CPACK_RESOURCE_FILE_WELCOME "${PROJECT_SOURCE_DIR}/doc/Welcome.txt")
+set (CPACK_RESOURCE_FILE_WELCOME "${PROJECT_SOURCE_DIR}/src/doc/Welcome.txt")
 #set (CPACK_PACKAGE_EXECUTABLES I'm not sure what this is for)
 #set (CPACK_STRIP_FILES Do we need this?)
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

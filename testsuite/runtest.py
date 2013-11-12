@@ -97,7 +97,7 @@ def osl_app (app):
     # because on Windows it is a forbidden filename due to the "<>" chars.
     if (platform.system () == 'Windows'):
         return app + "/$<CONFIGURATION>/" + app + " "
-    return path + "/" + app + "/" + app + " "
+    return path + "/src/" + app + "/" + app + " "
 
 
 

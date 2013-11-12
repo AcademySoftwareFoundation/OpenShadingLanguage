@@ -32,7 +32,7 @@ if (NOT BUILDSTATIC)
         )
 endif ()
 
-include_directories ( ${CMAKE_SOURCE_DIR}/liboslcomp )
+include_directories ( "${CMAKE_SOURCE_DIR}/liboslcomp" )
 
 FILE ( GLOB exec_headers "*.h" )
 
@@ -52,7 +52,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
         MESSAGE (STATUS "LLVM_COMPILE cpp=${llvm_bc_cpp}")
     endif ()
     SET ( ${srclist} ${${srclist}} ${llvm_bc_cpp} )
-    EXEC_PROGRAM ( ${LLVM_DIRECTORY}/bin/llvm-config ARGS --cxxflags OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
+    EXEC_PROGRAM ( "${LLVM_DIRECTORY}/bin/llvm-config" ARGS --cxxflags OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
     set (LLVM_COMPILE_FLAGS "${LLVM_COMPILE_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -O3 --combine")
     if (OSL_NAMESPACE)
         LIST (APPEND LLVM_COMPILE_FLAGS "-DOSL_NAMESPACE=${OSL_NAMESPACE}")
@@ -69,7 +69,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     endforeach()
 
     # First try looking in their build (clang++ first, then llvm-g++)
-    FIND_PROGRAM(LLVM_BC_GENERATOR NAMES "clang++" "llvm-g++" PATHS ${LLVM_DIRECTORY}/bin NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH)
+    FIND_PROGRAM(LLVM_BC_GENERATOR NAMES "clang++" "llvm-g++" PATHS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH)
 
     if(NOT LLVM_BC_GENERATOR)
       # Wasn't in their build, look anywhere
@@ -88,20 +88,20 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
       COMMAND ${LLVM_BC_GENERATOR}
-      -I${CMAKE_CURRENT_SOURCE_DIR}
-      -I${CMAKE_SOURCE_DIR}/include
-      -I${CMAKE_BINARY_DIR}/include
-      -I${OPENIMAGEIO_INCLUDES}
-      -I${ILMBASE_INCLUDE_DIR}
-      -I${Boost_INCLUDE_DIRS}
+      "-I${CMAKE_CURRENT_SOURCE_DIR}"
+      "-I${CMAKE_SOURCE_DIR}/include"
+      "-I${CMAKE_BINARY_DIR}/include"
+      "-I${OPENIMAGEIO_INCLUDES}"
+      "-I${ILMBASE_INCLUDE_DIR}"
+      "-I${Boost_INCLUDE_DIRS}"
       ${LLVM_COMPILE_FLAGS}
       -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
 
-      COMMAND ${LLVM_DIRECTORY}/bin/llvm-as -f -o ${llvm_bc} ${llvm_asm}
-      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash ${llvm_bc} ${llvm_bc_cpp}
+      COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
+      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}
       MAIN_DEPENDENCY ${llvm_src}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 ENDMACRO ( )
 
 if (USE_LLVM_BITCODE)
@@ -126,7 +126,7 @@ TARGET_LINK_LIBRARIES ( oslexec
                         ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
                         ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
-ADD_DEPENDENCIES (oslexec ${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map)
+ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map")
 LINK_ILMBASE ( oslexec )
 
 if (BUILDSTATIC)
@@ -142,5 +142,5 @@ target_link_libraries ( closure_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_
 target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
 link_ilmbase (closure_test)
 link_ilmbase (accum_test)
-add_test (unit_closure ${CMAKE_BINARY_DIR}/liboslexec/closure_test)
-add_test (unit_accum ${CMAKE_BINARY_DIR}/liboslexec/accum_test)
+add_test (unit_closure "${CMAKE_BINARY_DIR}/liboslexec/closure_test")
+add_test (unit_accum "${CMAKE_BINARY_DIR}/liboslexec/accum_test")

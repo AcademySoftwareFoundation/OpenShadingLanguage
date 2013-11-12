@@ -1,7 +1,7 @@
-add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdosl.h
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h ${CMAKE_CURRENT_BINARY_DIR}
-    MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stdosl.h"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h" "${CMAKE_CURRENT_BINARY_DIR}"
+    MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 macro (osl_compile oslsrc objlist headers)
     # message (STATUS "OSL_COMPILE src=${oslsrc}")
@@ -20,9 +20,9 @@ macro (osl_compile oslsrc objlist headers)
         message (STATUS "cmd: ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}")
     endif ()
     add_custom_command (OUTPUT ${osofile}
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}
+        COMMAND "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc" ${oslsrc}
         MAIN_DEPENDENCY ${oslsrc}
-        DEPENDS ${${headers}} ${oslsrc} ${CMAKE_CURRENT_BINARY_DIR}/stdosl.h ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc
+        DEPENDS ${${headers}} ${oslsrc} "${CMAKE_CURRENT_BINARY_DIR}/stdosl.h" "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endmacro ()
 

@@ -16,7 +16,7 @@ find_library ( OPENIMAGEIO_LIBRARY
                NAMES OpenImageIO
                HINTS ${OPENIMAGEIOHOME}
                PATH_SUFFIXES lib64 lib
-               PATHS ${OPENIMAGEIOHOME}/lib )
+               PATHS "${OPENIMAGEIOHOME}/lib" )
 find_path ( OPENIMAGEIO_INCLUDES
             NAMES OpenImageIO/imageio.h
             HINTS ${OPENIMAGEIOHOME}

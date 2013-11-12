@@ -61,8 +61,8 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 30 Apr, 2013 \\
-~ (with corrections, 19 Jun 2013)
+\date{{\large Date: 12 Nov, 2013 \\
+%~ (with corrections, 19 Jun 2013)
 }
 \bigskip
 \bigskip
@@ -4156,19 +4156,19 @@ one of: \qkw{Plain Texture}, \qkw{Shadow}, \qkw{Environment},
 specifically distinguishes between the different types of shadows and
 environment maps.  \\[0.75ex]
 
-\qkw{datawindow} & {\cf int[]} \\
+\qkw{datawindow} & {\cf int[]} &
 Returns the pixel data window of the image.  The argument is an {\cf int}
 array either of length 4 or 6, in which will be placed the (xmin, ymin,
 xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
 (N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
-they will be 0). [0.75ex]
+they will be 0). \\[0.75ex]
 
-\qkw{displaywindow} & {\cf int[]} \\
+\qkw{displaywindow} & {\cf int[]} &
 Returns the display (a.k.a.\ full) window of the image.  The argument is an {\cf int}
 array either of length 4 or 6, in which will be placed the (xmin, ymin,
 xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
 (N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
-they will be 0). [0.75ex]
+they will be 0). \\[0.75ex]
 
 %\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
 %transforms points from \commonspace to the \cameraspace from which the

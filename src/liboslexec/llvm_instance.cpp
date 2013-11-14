@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
-#include "runtimeoptimize.h"
+#include "backendllvm.h"
 
 /*
 This whole file is concerned with taking our post-optimized OSO
@@ -113,6 +113,8 @@ using namespace OSL::pvt;
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
+
+static spin_mutex llvm_mutex;
 
 static ustring op_end("end");
 static ustring op_nop("nop");
@@ -480,8 +482,51 @@ static const char *llvm_helper_function_table[] = {
 
 
 
+BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
+                          ShaderGroup &group, ShadingContext *ctx)
+    : OSOProcessorBase (shadingsys, group, ctx),
+      m_thread(shadingsys.get_perthread_info()),
+      m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
+      m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
+      m_stat_llvm_jit_time(0),
+      m_llvm_context(NULL), m_llvm_module(NULL),
+      m_llvm_exec(NULL), m_builder(NULL),
+      m_llvm_passes(NULL), m_llvm_func_passes(NULL)
+{
+    // set_debug ();
+    // memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
+    // m_shaderglobals.context = m_context;
+}
+
+
+
+BackendLLVM::~BackendLLVM ()
+{
+    delete m_builder;
+    delete m_llvm_passes;
+    delete m_llvm_func_passes;
+}
+
+
+
+int
+BackendLLVM::llvm_debug() const
+{
+    if (shadingsys().llvm_debug() == 0)
+        return 0;
+    if (shadingsys().debug_groupname() &&
+        shadingsys().debug_groupname() != group().name())
+        return 0;
+    if (inst() && shadingsys().debug_layername() &&
+        shadingsys().debug_layername() != inst()->layername())
+        return 0;
+    return shadingsys().llvm_debug();
+}
+
+
+
 llvm::Type *
-RuntimeOptimizer::llvm_type_sg ()
+BackendLLVM::llvm_type_sg ()
 {
     // Create a type that defines the ShaderGlobals for LLVM IR.  This
     // absolutely MUST exactly match the ShaderGlobals struct in oslexec.h.
@@ -525,7 +570,7 @@ RuntimeOptimizer::llvm_type_sg ()
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_sg_ptr ()
+BackendLLVM::llvm_type_sg_ptr ()
 {
     return (llvm::Type *) llvm::PointerType::get (llvm_type_sg(), 0);
 }
@@ -533,7 +578,7 @@ RuntimeOptimizer::llvm_type_sg_ptr ()
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_groupdata ()
+BackendLLVM::llvm_type_groupdata ()
 {
     // If already computed, return it
     if (m_llvm_type_groupdata)
@@ -554,8 +599,8 @@ RuntimeOptimizer::llvm_type_groupdata ()
         std::cout << "Group param struct:\n";
     m_param_order_map.clear ();
     int order = 1;
-    for (int layer = 0;  layer < m_group.nlayers();  ++layer) {
-        ShaderInstance *inst = m_group[layer];
+    for (int layer = 0;  layer < group().nlayers();  ++layer) {
+        ShaderInstance *inst = group()[layer];
         if (inst->unused())
             continue;
         FOREACH_PARAM (Symbol &sym, inst) {
@@ -584,7 +629,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
             ++order;
         }
     }
-    m_group.llvm_groupdata_size (offset);
+    group().llvm_groupdata_size (offset);
 
     std::string groupdataname = Strutil::format("Groupdata_%llu",
                                                 (long long unsigned int)group().name().hash());
@@ -596,7 +641,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_groupdata_ptr ()
+BackendLLVM::llvm_type_groupdata_ptr ()
 {
     return llvm::PointerType::get (llvm_type_groupdata(), 0);
 }
@@ -604,7 +649,7 @@ RuntimeOptimizer::llvm_type_groupdata_ptr ()
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_closure_component ()
+BackendLLVM::llvm_type_closure_component ()
 {
     if (m_llvm_type_closure_component)
         return m_llvm_type_closure_component;
@@ -623,14 +668,14 @@ RuntimeOptimizer::llvm_type_closure_component ()
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_closure_component_ptr ()
+BackendLLVM::llvm_type_closure_component_ptr ()
 {
     return (llvm::Type *) llvm::PointerType::get (llvm_type_closure_component(), 0);
 }
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_closure_component_attr ()
+BackendLLVM::llvm_type_closure_component_attr ()
 {
     if (m_llvm_type_closure_component_attr)
         return m_llvm_type_closure_component_attr;
@@ -652,7 +697,7 @@ RuntimeOptimizer::llvm_type_closure_component_attr ()
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_closure_component_attr_ptr ()
+BackendLLVM::llvm_type_closure_component_attr_ptr ()
 {
     return (llvm::Type *) llvm::PointerType::get (llvm_type_closure_component_attr(), 0);
 }
@@ -660,7 +705,7 @@ RuntimeOptimizer::llvm_type_closure_component_attr_ptr ()
 
 
 void
-RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
+BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
 {
     // Don't write over connections!  Connection values are written into
     // our layer when the earlier layer is run, as part of its code.  So
@@ -766,7 +811,7 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_offset_ptr (llvm::Value *ptr, int offset,
+BackendLLVM::llvm_offset_ptr (llvm::Value *ptr, int offset,
                                    llvm::Type *ptrtype)
 {
     llvm::Value *i = builder().CreatePtrToInt (ptr, llvm_type_addrint());
@@ -780,7 +825,7 @@ RuntimeOptimizer::llvm_offset_ptr (llvm::Value *ptr, int offset,
 
 
 void
-RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
+BackendLLVM::llvm_generate_debugnan (const Opcode &op)
 {
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol &sym (*opargsym (op, i));
@@ -824,7 +869,7 @@ RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
 
 
 void
-RuntimeOptimizer::llvm_generate_debug_uninit (const Opcode &op)
+BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
 {
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol &sym (*opargsym (op, i));
@@ -874,21 +919,21 @@ RuntimeOptimizer::llvm_generate_debug_uninit (const Opcode &op)
 
 
 bool
-RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
+BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
     if (bb)
         builder().SetInsertPoint (bb);
 
     for (int opnum = beginop;  opnum < endop;  ++opnum) {
         const Opcode& op = inst()->ops()[opnum];
-        const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
+        const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
         if (opd && opd->llvmgen) {
-            if (m_shadingsys.debug_uninit() /* debug uninitialized vals */)
+            if (shadingsys().debug_uninit() /* debug uninitialized vals */)
                 llvm_generate_debug_uninit (op);
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
-            if (m_shadingsys.debug_nan() /* debug NaN/Inf */
+            if (shadingsys().debug_nan() /* debug NaN/Inf */
                 && op.farthest_jump() < 0 /* Jumping ops don't need it */) {
                 llvm_generate_debugnan (op);
             }
@@ -896,7 +941,7 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                    op.opname() == op_end) {
             // Skip this op, it does nothing...
         } else {
-            m_shadingsys.error ("LLVMOSL: Unsupported op %s in layer %s\n", op.opname().c_str(), inst()->layername().c_str());
+            shadingsys().error ("LLVMOSL: Unsupported op %s in layer %s\n", op.opname().c_str(), inst()->layername().c_str());
             return false;
         }
 
@@ -912,7 +957,7 @@ RuntimeOptimizer::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 
 
 llvm::Function*
-RuntimeOptimizer::build_llvm_instance (bool groupentry)
+BackendLLVM::build_llvm_instance (bool groupentry)
 {
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
@@ -936,12 +981,12 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
     m_builder = new llvm::IRBuilder<> (entry_bb);
 #if 0 /* helpful for debuggin */
     if (llvm_debug() && groupentry)
-        llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",m_group.name()));
+        llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
     if (llvm_debug())
         llvm_gen_debug_printf (Strutil::format("enter layer %s %s",
                                   inst()->layername(), inst()->shadername()));
 #endif
-    if (shadingsys().m_countlayerexecs)
+    if (shadingsys().countlayerexecs())
         llvm_call_function ("osl_incr_layers_executed", sg_void_ptr());
 
     if (groupentry) {
@@ -999,7 +1044,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
               && shadingsys().debug_uninit())))
             llvm_assign_initial_value (s);
         // If debugnan is turned on, globals check that their values are ok
-        if (s.symtype() == SymTypeGlobal && m_shadingsys.debug_nan()) {
+        if (s.symtype() == SymTypeGlobal && shadingsys().debug_nan()) {
             TypeDesc t = s.typespec().simpletype();
             if (t.basetype == TypeDesc::FLOAT) { // just check float-based types
                 int ncomps = t.numelements() * t.aggregate;
@@ -1021,7 +1066,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
             continue;
         // Skip if it's never read and isn't connected
         if (! s.everread() && ! s.connected_down() && ! s.connected()
-              && ! is_renderer_output(s.name()))
+              && ! shadingsys().is_renderer_output(s.name()))
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);
@@ -1031,7 +1076,7 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
 
     // Mark all the basic blocks, including allocating llvm::BasicBlock
     // records for each.
-    find_basic_blocks (true);
+    find_basic_blocks ();
     find_conditionals ();
     m_layers_already_run.clear ();
 
@@ -1044,11 +1089,11 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
 
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
-    for (int layer = m_layer+1;  layer < group().nlayers();  ++layer) {
-        ShaderInstance *child = m_group[layer];
+    for (int layer = this->layer()+1;  layer < group().nlayers();  ++layer) {
+        ShaderInstance *child = group()[layer];
         for (int c = 0;  c < child->nconnections();  ++c) {
             const Connection &con (child->connection (c));
-            if (con.srclayer == m_layer) {
+            if (con.srclayer == this->layer()) {
                 ASSERT (con.src.arrayindex == -1 && con.src.channel == -1 &&
                         con.dst.arrayindex == -1 && con.dst.channel == -1 &&
                         "no support for individual element/channel connection");
@@ -1172,161 +1217,7 @@ public:
 
 
 void
-RuntimeOptimizer::build_llvm_group ()
-{
-    // At this point, we already hold the lock for this group, by virtue
-    // of ShadingSystemImpl::optimize_group.
-    OIIO::Timer timer;
-    std::string err;
-
-#ifdef OSL_LLVM_NO_BITCODE
-    // I don't know which exact part has thread safety issues, but it
-    // crashes on windows when we don't lock.
-    // FIXME -- try subsequent LLVM releases on Windows to see if this
-    // is a problem that is eventually fixed on the LLVM side.
-    {
-    static spin_mutex mutex;
-    OIIO::spin_lock lock (mutex);
-#endif
-
-    if (! m_thread->llvm_context)
-        m_thread->llvm_context = new llvm::LLVMContext();
-
-    if (! m_thread->llvm_jitmm) {
-        m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
-        OIIO::spin_lock lock (m_shadingsys.m_llvm_mutex);  // lock m_llvm_jitmm_hold
-        m_shadingsys.m_llvm_jitmm_hold.push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
-    }
-
-    ASSERT (! m_llvm_module);
-#ifdef OSL_LLVM_NO_BITCODE
-    m_llvm_module = new llvm::Module("llvm_ops", *m_thread->llvm_context);
-#else
-    // Load the LLVM bitcode and parse it into a Module
-    const char *data = osl_llvm_compiled_ops_block;
-    llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
-    // Load the LLVM bitcode and parse it into a Module
-    m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
-    if (err.length())
-        m_shadingsys.error ("ParseBitcodeFile returned '%s'\n", err.c_str());
-    delete buf;
-#endif
-
-    // Create the ExecutionEngine
-    ASSERT (! m_llvm_exec);
-    err.clear ();
-    llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
-    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm, llvm::CodeGenOpt::Default, /*AllocateGVsWithCode*/ false);
-    if (! m_llvm_exec) {
-        m_shadingsys.error ("Failed to create engine: %s\n", err.c_str());
-        ASSERT (0);
-        return;
-    }
-    // Force it to JIT as soon as we ask it for the code pointer,
-    // don't take any chances that it might JIT lazily, since we
-    // will be stealing the JIT code memory from under its nose and
-    // destroying the Module & ExecutionEngine.
-    m_llvm_exec->DisableLazyCompilation ();
-
-#ifdef OSL_LLVM_NO_BITCODE
-    // End of mutex lock
-    }
-#endif
-
-    m_stat_llvm_setup_time += timer.lap();
-
-    // Set up m_num_used_layers to be the number of layers that are
-    // actually used, and m_layer_remap[] to map original layer numbers
-    // to the shorter list of actually-called layers.
-    int nlayers = m_group.nlayers();
-    m_layer_remap.resize (nlayers);
-    m_num_used_layers = 0;
-    for (int layer = 0;  layer < m_group.nlayers();  ++layer) {
-        bool lastlayer = (layer == (nlayers-1));
-        if (! m_group[layer]->unused() || lastlayer)
-            m_layer_remap[layer] = m_num_used_layers++;
-        else
-            m_layer_remap[layer] = -1;
-    }
-    m_shadingsys.m_stat_empty_instances += m_group.nlayers()-m_num_used_layers;
-
-    initialize_llvm_group ();
-
-    // Generate the LLVM IR for each layer.  Skip unused layers.
-    m_llvm_local_mem = 0;
-    llvm::Function** funcs = (llvm::Function**)alloca(m_num_used_layers * sizeof(llvm::Function*));
-    for (int layer = 0; layer < nlayers; ++layer) {
-        set_inst (layer);
-        bool lastlayer = (layer == (nlayers-1));
-        int index = m_layer_remap[layer];
-        if (index != -1)
-            funcs[index] = build_llvm_instance (lastlayer);
-    }
-    llvm::Function* entry_func = funcs[m_num_used_layers-1];
-    m_stat_llvm_irgen_time += timer.lap();
-
-    if (m_shadingsys.m_max_local_mem_KB &&
-        m_llvm_local_mem/1024 > m_shadingsys.m_max_local_mem_KB) {
-        m_shadingsys.error ("Shader group \"%s\" needs too much local storage: %d KB",
-                            m_group.name().c_str(), m_llvm_local_mem/1024);
-    }
-
-    // Optimize the LLVM IR unless it's just a ret void group (1 layer,
-    // 1 BB, 1 inst == retvoid)
-    bool skip_optimization = m_num_used_layers == 1 && entry_func->size() == 1 && entry_func->front().size() == 1;
-    // Label the group as being retvoid or not.
-    m_group.does_nothing(skip_optimization);
-    if (skip_optimization) {
-        m_shadingsys.m_stat_empty_groups += 1;
-        m_shadingsys.m_stat_empty_instances += 1;  // the one layer is empty
-    } else {
-        m_llvm_passes->run (*llvm_module());
-    }
-
-    m_stat_llvm_opt_time += timer.lap();
-
-    if (llvm_debug()) {
-        llvm::outs() << "func after opt  = " << *entry_func << "\n";
-        llvm::outs().flush();
-    }
-
-    // Debug code to dump the resulting bitcode to a file
-    if (llvm_debug() >= 2) {
-        std::string err_info;
-        std::string name = Strutil::format ("%s_%d.bc",
-                                            inst()->layername().c_str(),
-                                            inst()->id());
-        llvm::raw_fd_ostream out (name.c_str(), err_info);
-        llvm::WriteBitcodeToFile (llvm_module(), out);
-    }
-
-    // Force the JIT to happen now
-    RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
-    m_group.llvm_compiled_version (f);
-
-    // Remove the IR for the group layer functions, we've already JITed it
-    // and will never need the IR again.  This saves memory, and also saves
-    // a huge amount of time since we won't re-optimize it again and again
-    // if we keep adding new shader groups to the same Module.
-    for (int i = 0; i < m_num_used_layers; ++i) {
-        funcs[i]->deleteBody();
-    }
-
-    // Free the exec and module to reclaim all the memory.  This definitely
-    // saves memory, and has almost no effect on runtime.
-    delete m_llvm_exec;
-    m_llvm_exec = NULL;
-
-    // N.B. Destroying the EE should have destroyed the module as well.
-    m_llvm_module = NULL;
-
-    m_stat_llvm_jit_time += timer.lap();
-}
-
-
-
-void
-RuntimeOptimizer::initialize_llvm_group ()
+BackendLLVM::initialize_llvm_group ()
 {
     // I don't think we actually need to lock here (lg)
     // static spin_mutex mutex;
@@ -1424,7 +1315,7 @@ ShadingSystemImpl::SetupLLVM ()
 
 
 void
-RuntimeOptimizer::llvm_setup_optimization_passes ()
+BackendLLVM::llvm_setup_optimization_passes ()
 {
     ASSERT (m_llvm_passes == NULL && m_llvm_func_passes == NULL);
 
@@ -1493,6 +1384,170 @@ RuntimeOptimizer::llvm_setup_optimization_passes ()
     passes.add (llvm::createCFGSimplificationPass());
     // Try to make stuff into registers one last time.
     passes.add (llvm::createPromoteMemoryToRegisterPass());
+    }
+}
+
+
+void
+BackendLLVM::run ()
+{
+    // At this point, we already hold the lock for this group, by virtue
+    // of ShadingSystemImpl::optimize_group.
+    OIIO::Timer timer;
+    std::string err;
+
+    {
+#ifdef OSL_LLVM_NO_BITCODE
+    // I don't know which exact part has thread safety issues, but it
+    // crashes on windows when we don't lock.
+    // FIXME -- try subsequent LLVM releases on Windows to see if this
+    // is a problem that is eventually fixed on the LLVM side.
+    static spin_mutex mutex;
+    OIIO::spin_lock lock (mutex);
+#endif
+
+    if (! m_thread->llvm_context)
+        m_thread->llvm_context = new llvm::LLVMContext();
+
+    if (! m_thread->llvm_jitmm) {
+        m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
+        OIIO::spin_lock lock (llvm_mutex);  // lock m_llvm_jitmm_hold
+        shadingsys().llvm_jitmm_hold().push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
+    }
+
+    ASSERT (! m_llvm_module);
+#ifdef OSL_LLVM_NO_BITCODE
+    m_llvm_module = new llvm::Module("llvm_ops", *m_thread->llvm_context);
+#else
+    // Load the LLVM bitcode and parse it into a Module
+    const char *data = osl_llvm_compiled_ops_block;
+    llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
+    // Load the LLVM bitcode and parse it into a Module
+    m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
+    if (err.length())
+        shadingsys().error ("ParseBitcodeFile returned '%s'\n", err.c_str());
+    delete buf;
+#endif
+
+    // Create the ExecutionEngine
+    ASSERT (! m_llvm_exec);
+    err.clear ();
+    llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
+    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm, llvm::CodeGenOpt::Default, /*AllocateGVsWithCode*/ false);
+    if (! m_llvm_exec) {
+        shadingsys().error ("Failed to create engine: %s\n", err.c_str());
+        ASSERT (0);
+        return;
+    }
+    // Force it to JIT as soon as we ask it for the code pointer,
+    // don't take any chances that it might JIT lazily, since we
+    // will be stealing the JIT code memory from under its nose and
+    // destroying the Module & ExecutionEngine.
+    m_llvm_exec->DisableLazyCompilation ();
+
+    // End of mutex lock, for the OSL_LLVM_NO_BITCODE case
+    }
+
+    m_stat_llvm_setup_time += timer.lap();
+
+    // Set up m_num_used_layers to be the number of layers that are
+    // actually used, and m_layer_remap[] to map original layer numbers
+    // to the shorter list of actually-called layers.
+    int nlayers = group().nlayers();
+    m_layer_remap.resize (nlayers);
+    m_num_used_layers = 0;
+    for (int layer = 0;  layer < group().nlayers();  ++layer) {
+        bool lastlayer = (layer == (nlayers-1));
+        if (! group()[layer]->unused() || lastlayer)
+            m_layer_remap[layer] = m_num_used_layers++;
+        else
+            m_layer_remap[layer] = -1;
+    }
+    shadingsys().m_stat_empty_instances += group().nlayers()-m_num_used_layers;
+
+    initialize_llvm_group ();
+
+    // Generate the LLVM IR for each layer.  Skip unused layers.
+    m_llvm_local_mem = 0;
+    llvm::Function** funcs = (llvm::Function**)alloca(m_num_used_layers * sizeof(llvm::Function*));
+    for (int layer = 0; layer < nlayers; ++layer) {
+        set_inst (layer);
+        bool lastlayer = (layer == (nlayers-1));
+        int index = m_layer_remap[layer];
+        if (index != -1)
+            funcs[index] = build_llvm_instance (lastlayer);
+    }
+    llvm::Function* entry_func = funcs[m_num_used_layers-1];
+    m_stat_llvm_irgen_time += timer.lap();
+
+    if (shadingsys().m_max_local_mem_KB &&
+        m_llvm_local_mem/1024 > shadingsys().m_max_local_mem_KB) {
+        shadingsys().error ("Shader group \"%s\" needs too much local storage: %d KB",
+                            group().name().c_str(), m_llvm_local_mem/1024);
+    }
+
+    // Optimize the LLVM IR unless it's just a ret void group (1 layer,
+    // 1 BB, 1 inst == retvoid)
+    bool skip_optimization = m_num_used_layers == 1 && entry_func->size() == 1 && entry_func->front().size() == 1;
+    // Label the group as being retvoid or not.
+    group().does_nothing(skip_optimization);
+    if (skip_optimization) {
+        shadingsys().m_stat_empty_groups += 1;
+        shadingsys().m_stat_empty_instances += 1;  // the one layer is empty
+    } else {
+        m_llvm_passes->run (*llvm_module());
+    }
+
+    m_stat_llvm_opt_time += timer.lap();
+
+    if (llvm_debug()) {
+        llvm::outs() << "func after opt  = " << *entry_func << "\n";
+        llvm::outs().flush();
+    }
+
+    // Debug code to dump the resulting bitcode to a file
+    if (llvm_debug() >= 2) {
+        std::string err_info;
+        std::string name = Strutil::format ("%s_%d.bc",
+                                            inst()->layername().c_str(),
+                                            inst()->id());
+        llvm::raw_fd_ostream out (name.c_str(), err_info);
+        llvm::WriteBitcodeToFile (llvm_module(), out);
+    }
+
+    // Force the JIT to happen now
+    RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
+    group().llvm_compiled_version (f);
+
+    // Remove the IR for the group layer functions, we've already JITed it
+    // and will never need the IR again.  This saves memory, and also saves
+    // a huge amount of time since we won't re-optimize it again and again
+    // if we keep adding new shader groups to the same Module.
+    for (int i = 0; i < m_num_used_layers; ++i) {
+        funcs[i]->deleteBody();
+    }
+
+    // Free the exec and module to reclaim all the memory.  This definitely
+    // saves memory, and has almost no effect on runtime.
+    delete m_llvm_exec;
+    m_llvm_exec = NULL;
+
+    // N.B. Destroying the EE should have destroyed the module as well.
+    m_llvm_module = NULL;
+
+    m_stat_llvm_jit_time += timer.lap();
+
+    m_stat_total_llvm_time = timer();
+
+    if (shadingsys().m_compile_report) {
+        shadingsys().info ("JITed shader group %s:",
+                           group().name() ? group().name().c_str() : "");
+        shadingsys().info ("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
+                           m_stat_total_llvm_time, 
+                           m_stat_llvm_setup_time,
+                           m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
+                           m_stat_llvm_jit_time,
+                           m_llvm_local_mem/1024);
     }
 }
 

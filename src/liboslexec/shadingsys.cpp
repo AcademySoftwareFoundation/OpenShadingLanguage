@@ -37,12 +37,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "genclosure.h"
 #include "llvm_headers.h"
+#include "backendllvm.h"
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
-#include "OpenImageIO/optparser.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/timer.h>
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/optparser.h>
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -374,7 +376,7 @@ static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
 #define OP2(alias,name,ll,f,simp)                                        \
-    extern bool llvm_gen_##ll (RuntimeOptimizer &rop, int opnum);        \
+    extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##f (RuntimeOptimizer &rop, int opnum);        \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
                                                    constfold_##f, simp);
@@ -1491,6 +1493,280 @@ ShadingSystemImpl::raytype_bit (ustring name)
     return 0;  // not found
 }
 
+
+
+bool
+ShadingSystemImpl::is_renderer_output (ustring name) const
+{
+    const std::vector<ustring> &aovs (m_renderer_outputs);
+    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
+}
+
+
+
+void
+ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
+{
+    // Once we're generated the IR, we really don't need the ops and args,
+    // and we only need the syms that include the params.
+    off_t symmem = 0;
+    size_t connectionmem = 0;
+    for (int layer = 0;  layer < group.nlayers();  ++layer) {
+        ShaderInstance *inst = group[layer];
+        // We no longer needs ops and args -- create empty vectors and
+        // swap with the ones in the instance.
+        OpcodeVec emptyops;
+        inst->ops().swap (emptyops);
+        std::vector<int> emptyargs;
+        inst->args().swap (emptyargs);
+        if (inst->unused()) {
+            // If we'll never use the layer, we don't need the syms at all
+            SymbolVec nosyms;
+            std::swap (inst->symbols(), nosyms);
+            symmem += vectorbytes(nosyms);
+            // also don't need the connection info any more
+            connectionmem += (off_t) inst->clear_connections ();
+        }
+    }
+    {
+        // adjust memory stats
+        spin_lock lock (m_stat_mutex);
+        m_stat_mem_inst_syms -= symmem;
+        m_stat_mem_inst_connections -= connectionmem;
+        m_stat_mem_inst -= symmem + connectionmem;
+        m_stat_memory -= symmem + connectionmem;
+    }
+}
+
+
+
+void
+ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate, 
+                                   ShaderGroup &group)
+{
+    OIIO::Timer timer;
+    lock_guard lock (group.m_mutex);
+    if (group.optimized()) {
+        // The group was somehow optimized by another thread between the
+        // time we checked group.optimized() and now that we have the lock.
+        // Nothing to do but record how long we waited for the lock.
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+
+    if (m_only_groupname && m_only_groupname != group.name()) {
+        // For debugging purposes, we are requested to compile only one
+        // shader group, and this is not it.  Mark it as does_nothing,
+        // and also as optimized so nobody locks on it again, and record
+        // how long we waited for the lock.
+        group.does_nothing (true);
+        group.m_optimized = true;
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+
+    double locking_time = timer();
+
+    ShadingContext *ctx = get_context ();
+    RuntimeOptimizer rop (*this, group, ctx);
+    rop.run ();
+
+    BackendLLVM lljitter (*this, group, ctx);
+    lljitter.run ();
+
+    group_post_jit_cleanup (group);
+
+    release_context (ctx);
+
+    attribstate.changed_shaders ();
+    group.m_optimized = true;
+    spin_lock stat_lock (m_stat_mutex);
+    m_stat_optimization_time += timer();
+    m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
+    m_stat_specialization_time += rop.m_stat_specialization_time;
+    m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
+    m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
+    m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
+    m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
+    m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
+    m_stat_max_llvm_local_mem = std::max (m_stat_max_llvm_local_mem,
+                                          lljitter.m_llvm_local_mem);
+    m_stat_groups_compiled += 1;
+    m_stat_instances_compiled += group.nlayers();
+}
+
+
+
+static void optimize_all_groups_wrapper (ShadingSystemImpl *ss)
+{
+    ss->optimize_all_groups (1);
+}
+
+
+
+void
+ShadingSystemImpl::optimize_all_groups (int nthreads)
+{
+    if (! m_greedyjit) {
+        // No greedy JIT, just free any groups we've recorded
+        spin_lock lock (m_groups_to_compile_mutex);
+        m_groups_to_compile.clear ();
+        m_groups_to_compile_count = 0;
+        return;
+    }
+
+    // Spawn a bunch of threads to do this in parallel -- just call this
+    // routine again (with threads=1) for each thread.
+    if (nthreads < 1)  // threads <= 0 means use all hardware available
+        nthreads = std::min ((int)boost::thread::hardware_concurrency(),
+                             (int)m_groups_to_compile_count);
+    if (nthreads > 1) {
+        if (m_threads_currently_compiling)
+            return;   // never mind, somebody else spawned the JIT threads
+        boost::thread_group threads;
+        m_threads_currently_compiling += nthreads;
+        for (int t = 0;  t < nthreads;  ++t)
+            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this));
+        threads.join_all ();
+        m_threads_currently_compiling -= nthreads;
+        return;
+    }
+
+    // And here's the single thread case
+    while (m_groups_to_compile_count) {
+        ShadingAttribStateRef sas;
+        {
+            spin_lock lock (m_groups_to_compile_mutex);
+            if (m_groups_to_compile.size() == 0)
+                return;  // Nothing left to compile
+            sas = m_groups_to_compile.back ();
+            m_groups_to_compile.pop_back ();
+        }
+        --m_groups_to_compile_count;
+        if (! sas.unique()) {   // don't compile if nobody recorded it but us
+            ShaderGroup &sgroup (sas->shadergroup (ShadUseSurface));
+                optimize_group (*sas, sgroup);
+        }
+    }
+}
+
+
+
+int
+ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
+{
+    // Look through the shader group for pairs of nodes/layers that
+    // actually do exactly the same thing, and eliminate one of the
+    // rundantant shaders, carefully rewiring all its outgoing
+    // connections to later layers to refer to the one we keep.
+    //
+    // It turns out that in practice, it's not uncommon to have
+    // duplicate nodes.  For example, some materials are "layered" --
+    // like a character skin shader that has separate sub-networks for
+    // skin, oil, wetness, and so on -- and those different sub-nets
+    // often reference the same texture maps or noise functions by
+    // repetition.  Yes, ideally, the redundancies would be eliminated
+    // before they were fed to the renderer, but in practice that's hard
+    // and for many scenes we get substantial savings of time (mostly
+    // because of reduced texture calls) and instance memory by finding
+    // these redundancies automatically.  The amount of savings is quite
+    // scene dependent, as well as probably very dependent on the
+    // general shading and lookdev approach of the studio.  But it was
+    // very helpful for us in many cases.
+    //
+    // The basic loop below looks very inefficient, O(n^2) in number of
+    // instances in the group. But it's really not -- a few seconds (sum
+    // of all threads) for even our very complex scenes. This is because
+    // most potential pairs have a very fast rejection case if they are
+    // not using the same master.  Since there's no appreciable cost to
+    // the brute force approach, it seems silly to have a complex scheme
+    // to try to reduce the number of pairings.
+
+    if (! m_opt_merge_instances)
+        return 0;
+
+    OIIO::Timer timer;          // Time we spend looking for and doing merges
+    int merges = 0;             // number of merges we do
+    size_t connectionmem = 0;   // Connection memory we free
+    int nlayers = group.nlayers();
+
+    // Loop over all layers...
+    for (int a = 0;  a < nlayers;  ++a) {
+        if (group[a]->unused())    // Don't merge a layer that's not used
+            continue;
+        // Check all later layers...
+        for (int b = a+1;  b < nlayers;  ++b) {
+            if (group[b]->unused())    // Don't merge a layer that's not used
+                continue;
+
+            // Now we have two used layers, a and b, to examine.
+            // See if they are mergeable (identical).  All the heavy
+            // lifting is done by ShaderInstance::mergeable().
+            if (! group[a]->mergeable (*group[b], group))
+                continue;
+
+            // The two nodes a and b are mergeable, so merge them.
+            ShaderInstance *A = group[a];
+            ShaderInstance *B = group[b];
+            ++merges;
+
+            // We'll keep A, get rid of B.  For all layers later than B,
+            // check its incoming connections and replace all references
+            // to B with references to A.
+            for (int j = b+1;  j < nlayers;  ++j) {
+                ShaderInstance *inst = group[j];
+                if (inst->unused())  // don't bother if it's unused
+                    continue;
+                for (int c = 0, ce = inst->nconnections();  c < ce;  ++c) {
+                    Connection &con = inst->connection(c);
+                    if (con.srclayer == b) {
+                        con.srclayer = a;
+                        if (B->symbols().size()) {
+                            ASSERT (A->symbol(con.src.param)->name() ==
+                                    B->symbol(con.src.param)->name());
+                        }
+                    }
+                }
+            }
+
+            // Mark parameters of B as no longer connected
+            for (int p = B->firstparam();  p < B->lastparam();  ++p) {
+                if (B->symbols().size())
+                    B->symbol(p)->connected_down(false);
+                if (B->m_instoverrides.size())
+                    B->instoverride(p)->connected_down(false);
+            }
+            // B won't be used, so mark it as having no outgoing
+            // connections and clear its incoming connections (which are
+            // no longer used).
+            B->outgoing_connections (false);
+            B->run_lazily (true);
+            connectionmem += B->clear_connections ();
+            ASSERT (B->unused());
+        }
+    }
+
+    {
+        // Adjust stats
+        spin_lock lock (m_stat_mutex);
+        m_stat_mem_inst_connections -= connectionmem;
+        m_stat_mem_inst -= connectionmem;
+        m_stat_memory -= connectionmem;
+        if (post_opt)
+            m_stat_merged_inst_opt += merges;
+        else
+            m_stat_merged_inst += merges;
+        m_stat_inst_merge_time += timer();
+    }
+
+    return merges;
+}
 
 
 

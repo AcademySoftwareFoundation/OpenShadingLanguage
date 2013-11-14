@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#pragma once
 #ifndef OSLEXEC_PVT_H
 #define OSLEXEC_PVT_H
 
@@ -104,6 +105,7 @@ class ShaderGroup;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
+class BackendLLVM;
 
 
 /// Signature of the function that LLVM generates to run the shader
@@ -114,7 +116,7 @@ typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
-typedef bool (*OpLLVMGen) (RuntimeOptimizer &rop, int opnum);
+typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
 
 struct OpDescriptor {
     ustring name;           // name of op
@@ -795,8 +797,12 @@ public:
     int llvm_debug () const { return m_llvm_debug; }
     bool fold_getattribute () { return m_opt_fold_getattribute; }
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
+    bool countlayerexecs() const { return m_countlayerexecs; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
+
+    ustring debug_groupname() const { return m_debug_groupname; }
+    ustring debug_layername() const { return m_debug_layername; }
 
     /// Look within the group for separate nodes that are actually
     /// duplicates of each other and combine them.  Return the number of
@@ -807,6 +813,11 @@ public:
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
     void optimize_group (ShadingAttribState &attribstate, ShaderGroup &group);
+
+    /// After doing all optimization and code JIT, we can clean up by
+    /// deleting the instances' code and arguments, and paring their
+    /// symbol tables down to just parameters.
+    void group_post_jit_cleanup (ShaderGroup &group);
 
     int *alloc_int_constants (size_t n) { return m_int_pool.alloc (n); }
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
@@ -861,6 +872,13 @@ public:
     }
 
     void pointcloud_stats (int search, int get, int results, int writes=0);
+
+    /// Is the named symbol among the renderer outputs?
+    bool is_renderer_output (ustring name) const;
+
+    std::vector<shared_ptr<llvm::JITMemoryManager> >& llvm_jitmm_hold () {
+        return m_llvm_jitmm_hold;
+    }
 
 private:
     void printstats () const;
@@ -1035,8 +1053,6 @@ private:
     atomic_int m_threads_currently_compiling;
     spin_mutex m_groups_to_compile_mutex;
 
-    // LLVM stuff
-    spin_mutex m_llvm_mutex;
     // Can't throw away jitmm's until we're totally done
     std::vector<shared_ptr<llvm::JITMemoryManager> > m_llvm_jitmm_hold;
 
@@ -1044,6 +1060,7 @@ private:
     friend class ShaderMaster;
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
+    friend class BackendLLVM;
 };
 
 
@@ -1413,6 +1430,118 @@ struct NoiseParams {
     {
     }
 };
+
+
+
+
+namespace pvt {
+
+/// Base class for objects that examine compiled shader groups (oso).
+/// This includes optimization passes, "back end" code generators, etc.
+/// The base class holds common data structures and methods that all
+/// such processors will need.
+class OSOProcessorBase {
+public:
+    OSOProcessorBase (ShadingSystemImpl &shadingsys, ShaderGroup &group,
+                      ShadingContext *context);
+
+    virtual ~OSOProcessorBase ();
+
+    /// Do its thing.
+    virtual void run () { }
+
+    /// Return a reference to the shader group being optimized.
+    ShaderGroup &group () const { return m_group; }
+
+    /// Return a reference to the shading system.
+    ShadingSystemImpl &shadingsys () const { return m_shadingsys; }
+
+    /// Return a reference to the texture system.
+    TextureSystem *texturesys () const { return shadingsys().texturesys(); }
+
+    /// Return a reference to the RendererServices.
+    RendererServices *renderer () const { return shadingsys().renderer(); }
+
+    /// Retrieve the dummy shading context.
+    ShadingContext *shadingcontext () const { return m_context; }
+
+    /// Re-set what debugging level we ought to be at.
+    virtual void set_debug ();
+
+    /// What debug level are we at?
+    int debug() const { return m_debug; }
+
+    /// Set which instance (layer within the group) we are currently
+    /// examining.  This lets you walk through the layers in turn.
+    virtual void set_inst (int layer);
+
+    /// Return the layer number that we currently examining.
+    int layer () const { return m_layer; }
+
+    /// Return a pointer to the currently-examining instance within the
+    /// group.
+    ShaderInstance *inst () const { return m_inst; }
+
+    /// Return a reference to a particular indexed op in the current inst
+    Opcode &op (int opnum) { return inst()->ops()[opnum]; }
+
+    /// Return a pointer to a particular indexed symbol in the current inst
+    Symbol *symbol (int symnum) { return inst()->symbol(symnum); }
+
+    /// Return the symbol index of the symbol that is the argnum-th argument
+    /// to the given op in the current instance.
+    int oparg (const Opcode &op, int argnum) const {
+        return inst()->arg (op.firstarg()+argnum);
+    }
+
+    /// Return the ptr to the symbol that is the argnum-th argument to the
+    /// given op in the current instance.
+    Symbol *opargsym (const Opcode &op, int argnum) {
+        return (argnum < op.nargs()) ?
+                    inst()->argsymbol (op.firstarg()+argnum) : NULL;
+    }
+
+    /// Is the symbol a constant whose value is 0?
+    static bool is_zero (const Symbol &A);
+
+    /// Is the symbol a constant whose value is 1?
+    static bool is_one (const Symbol &A);
+
+    /// Set up m_in_conditional[] to be true for all ops that are inside of
+    /// conditionals, false for all unconditionally-executed ops,
+    /// m_in_loop[] to be true for all ops that are inside a loop, and
+    /// m_first_return to be the op number of the first return/exit
+    /// statement (or code.size() if there is no return/exit statement).
+    void find_conditionals ();
+
+    /// Identify basic blocks by assigning a basic block ID for each
+    /// instruction.  Within any basic bock, there are no jumps in or out.
+    /// Also note which instructions are inside conditional states.
+    void find_basic_blocks ();
+
+    /// Will the op executed for-sure unconditionally every time the
+    /// shader is run?  (Not inside a loop or conditional or after a
+    /// possible early exit from the shader.)
+    bool op_is_unconditionally_executed (int opnum) const {
+        return !m_in_conditional[opnum] && opnum < m_first_return;
+    }
+
+protected:
+    ShadingSystemImpl &m_shadingsys;  ///< Backpointer to shading system
+    ShaderGroup &m_group;             ///< Group we're processing
+    ShadingContext *m_context;        ///< Shading context
+    int m_debug;                      ///< Current debug level
+
+    // All below is just for the one inst we're optimizing at the moment:
+    ShaderInstance *m_inst;           ///< Instance we're optimizing
+    int m_layer;                      ///< Layer we're optimizing
+    std::vector<int> m_bblockids;       ///< Basic block IDs for each op
+    std::vector<char> m_in_conditional; ///< Whether each op is in a cond
+    std::vector<char> m_in_loop;        ///< Whether each op is in a loop
+    int m_first_return;                 ///< Op number of first return or exit
+};
+
+}; // namespace pvt
 
 
 OSL_NAMESPACE_EXIT

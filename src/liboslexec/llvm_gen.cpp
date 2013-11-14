@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "genclosure.h"
-#include "runtimeoptimize.h"
+#include "backendllvm.h"
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -87,7 +87,7 @@ static ustring u_index ("index");
 
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
-#define LLVMGEN_ARGS     RuntimeOptimizer &rop, int opnum
+#define LLVMGEN_ARGS     BackendLLVM &rop, int opnum
 
 /// Macro that defines the full declaration of an LLVM generator.
 /// 
@@ -99,7 +99,7 @@ LLVMGEN (llvm_gen_generic);
 
 
 void
-RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
+BackendLLVM::llvm_gen_debug_printf (const std::string &message)
 {
     ustring s = ustring::format ("(%s %s) %s", inst()->shadername().c_str(),
                                  inst()->layername().c_str(), message.c_str());
@@ -112,7 +112,7 @@ RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
 
 
 void
-RuntimeOptimizer::llvm_call_layer (int layer, bool unconditional)
+BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 {
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer]) {
@@ -157,7 +157,7 @@ RuntimeOptimizer::llvm_call_layer (int layer, bool unconditional)
 
 
 void
-RuntimeOptimizer::llvm_run_connected_layers (Symbol &sym, int symindex,
+BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
                                              int opnum,
                                              std::set<int> *already_run)
 {
@@ -1928,7 +1928,7 @@ LLVMGEN (llvm_gen_loopmod_op)
 
 
 static llvm::Value *
-llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
+llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                           int first_optional_arg, bool tex3d, int nchans,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
                           llvm::Value* &dalphady)
@@ -2289,7 +2289,7 @@ LLVMGEN (llvm_gen_environment)
 
 
 static llvm::Value *
-llvm_gen_trace_options (RuntimeOptimizer &rop, int opnum,
+llvm_gen_trace_options (BackendLLVM &rop, int opnum,
                         int first_optional_arg)
 {
     // Reserve space for the TraceOpt, with alignment
@@ -2389,7 +2389,7 @@ arg_typecode (Symbol *sym, bool derivs)
 
 
 static llvm::Value *
-llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
+llvm_gen_noise_options (BackendLLVM &rop, int opnum,
                         int first_optional_arg)
 {
     // Reserve space for the NoiseParams, with alignment
@@ -2917,7 +2917,7 @@ LLVMGEN (llvm_gen_spline)
 
 
 static void
-llvm_gen_keyword_fill(RuntimeOptimizer &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *attr_p, int argsoffset)
+llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *attr_p, int argsoffset)
 {
     DASSERT(((op.nargs() - argsoffset) % 2) == 0);
 

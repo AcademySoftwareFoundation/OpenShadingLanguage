@@ -17,6 +17,6 @@ index: languagespec_index
 languagespec_index:
 	pdflatex ${PDFLATEX_FLAGS} languagespec.tex
 	pdflatex ${PDFLATEX_FLAGS} languagespec.tex
-	makeindex languagespec.tex
+	makeindex languagespec
 	pdflatex ${PDFLATEX_FLAGS} languagespec.tex
 

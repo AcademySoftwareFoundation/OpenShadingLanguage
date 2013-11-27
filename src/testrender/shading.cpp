@@ -104,7 +104,7 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
             builtins[i].name,
             builtins[i].id,
             builtins[i].params,
-            NULL, NULL, NULL);
+            NULL, NULL);
     }
 }
 

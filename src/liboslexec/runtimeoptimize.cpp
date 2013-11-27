@@ -2596,10 +2596,6 @@ RuntimeOptimizer::run ()
 
     m_params_holding_globals.resize (nlayers);
 
-    // If no closures were provided, register the builtin ones
-    if (shadingsys().m_closure_registry.empty())
-        shadingsys().register_builtin_closures();
-
     // Optimize each layer, from first to last
     size_t old_nsyms = 0, old_nops = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {

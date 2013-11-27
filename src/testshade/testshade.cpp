@@ -433,6 +433,7 @@ test_shade (int argc, const char *argv[])
     // the TextureSystem (that just makes 'create' make its own TS), and
     // an error handler.
     shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
+    register_closures(shadingsys);
 
     // Remember that each shader parameter may optionally have a
     // metadata hint [[int lockgeom=...]], where 0 indicates that the

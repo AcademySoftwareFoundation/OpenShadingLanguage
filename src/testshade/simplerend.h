@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 
-
+void register_closures(OSL::ShadingSystem* shadingsys);
 
 class SimpleRenderer : public RendererServices
 {

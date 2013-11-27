@@ -550,7 +550,7 @@ ShadingSystemImpl::setup_op_descriptors ()
 
 void
 ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params,
-                                    PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
+                                    PrepareClosureFunc prepare, SetupClosureFunc setup)
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
         if (params[i].key == NULL && params[i].type.size() != (size_t)params[i].field_size) {
@@ -558,7 +558,7 @@ ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam
             return;
         }
     }
-    m_closure_registry.register_closure(name, id, params, prepare, setup, compare);
+    m_closure_registry.register_closure(name, id, params, prepare, setup);
 }
 
 
@@ -1771,7 +1771,7 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
 
 
 void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params,
-                                       PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
+                                       PrepareClosureFunc prepare, SetupClosureFunc setup)
 {
     if (m_closure_table.size() <= (size_t)id)
         m_closure_table.resize(id + 1);
@@ -1795,7 +1795,6 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     }
     entry.prepare = prepare;
     entry.setup = setup;
-    entry.compare = compare;
     m_closure_name_to_id[ustring(name)] = id;
 }
 

@@ -57,7 +57,6 @@ typedef const void * TransformationPtr;
 // Callbacks for closure creation
 typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
 typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
-typedef bool (*CompareClosureFunc)(int id, const void *dataA, const void *dataB);
 
 
 class OSLEXECPUBLIC ShadingSystem
@@ -288,7 +287,7 @@ public:
     virtual std::string getstats (int level=1) const = 0;
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup) = 0;
     /// Query either by name or id an existing closure. If name is non
     /// NULL it will use it for the search, otherwise id would be used
     /// and the name will be placed in name if successful. Also return
@@ -296,8 +295,6 @@ public:
     /// optional but at least one of name or id must non NULL.
     virtual bool query_closure(const char **name, int *id,
                                const ClosureParam **params) = 0;
-
-    void register_builtin_closures();
 
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves

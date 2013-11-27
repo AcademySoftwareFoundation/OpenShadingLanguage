@@ -94,8 +94,6 @@ struct PerThreadInfo
     llvm::JITMemoryManager *llvm_jitmm;
 };
 
-
-
 namespace pvt {
 
 // forward definitions
@@ -107,6 +105,7 @@ class Dictionary;
 class RuntimeOptimizer;
 class BackendLLVM;
 
+void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
@@ -679,11 +678,10 @@ public:
         // Creation callbacks
         PrepareClosureFunc        prepare;
         SetupClosureFunc          setup;
-        CompareClosureFunc        compare;
     };
 
     void register_closure (const char *name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
 
     const ClosureEntry *get_entry (ustring name) const;
     const ClosureEntry *get_entry (int id) const {
@@ -705,7 +703,7 @@ private:
 
 
 
-class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
+class ShadingSystemImpl : public ShadingSystem
 {
 public:
     ShadingSystemImpl (RendererServices *renderer=NULL,
@@ -824,7 +822,7 @@ public:
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup);
     virtual bool query_closure(const char **name, int *id,
                                const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {

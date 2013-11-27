@@ -1,7 +1,6 @@
 SET ( liboslexec_srcs
           shadingsys.cpp closure.cpp
-          emissive.cpp background.cpp debug.cpp dictionary.cpp
-          vol_subsurface.cpp
+          dictionary.cpp
           context.cpp instance.cpp 
           loadshader.cpp master.cpp 
           opcolor.cpp 
@@ -12,13 +11,8 @@ SET ( liboslexec_srcs
           pointcloud.cpp rendservices.cpp 
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
-          opclosure.cpp builtin_closures.cpp
+          opclosure.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
-          bsdf.cpp bsdf_diffuse.cpp bsdf_microfacet.cpp bsdf_phong.cpp
-          bsdf_westin.cpp bsdf_ashikhmin_velvet.cpp
-          bsdf_cloth_fncs.cpp bsdf_cloth.cpp bsdf_cloth_specular.cpp
-          bsdf_reflection.cpp bsdf_refraction.cpp bsdf_transparent.cpp bsdf_ward.cpp
-          bssrdf.cpp bsdf_hair.cpp bsdf_fakefur.cpp
     )
 
 # oslcomp symbols used in oslexec
@@ -136,11 +130,7 @@ else ()
 endif ()
 
 # Unit tests
-add_executable (closure_test closure_test.cpp)
 add_executable (accum_test accum_test.cpp)
-target_link_libraries ( closure_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
 target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
-link_ilmbase (closure_test)
 link_ilmbase (accum_test)
-add_test (unit_closure "${CMAKE_BINARY_DIR}/src/liboslexec/closure_test")
 add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")

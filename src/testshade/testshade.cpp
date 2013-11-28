@@ -603,7 +603,7 @@ test_shade (int argc, const char *argv[])
 
     // Print some debugging info
     if (debug || stats) {
-        double runtime = timer();
+        double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";

@@ -1083,14 +1083,27 @@ ShadingSystemImpl::printstats () const
 
 
 bool
-ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
+ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val,
+                              bool lockgeom)
 {
     // We work very hard not to do extra copies of the data.  First,
     // grow the pending list by one (empty) slot...
     m_pending_params.resize (m_pending_params.size() + 1);
     // ...then initialize it in place
     m_pending_params.back().init (name, t, 1, val);
+    // If we have a possible geometric override (lockgeom=false), set the
+    // param's interpolation to VERTEX rather than the default CONSTANT.
+    if (lockgeom == false)
+        m_pending_params.back().interp (OIIO::ParamValue::INTERP_VERTEX);
     return true;
+}
+
+
+
+bool
+ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
+{
+    return Parameter (name, t, val, true);
 }
 
 

@@ -529,16 +529,20 @@ public:
     struct SymOverrideInfo {
         char m_valuesource;
         bool m_connected_down;
+        bool m_lockgeom;
 
         SymOverrideInfo () : m_valuesource(Symbol::DefaultVal),
-                             m_connected_down(false) { }
+                             m_connected_down(false), m_lockgeom(true) { }
         void valuesource (Symbol::ValueSource v) { m_valuesource = v; }
         Symbol::ValueSource valuesource () const { return (Symbol::ValueSource) m_valuesource; }
         const char *valuesourcename () const { return Symbol::valuesourcename(valuesource()); }
         bool connected_down () const { return m_connected_down; }
         void connected_down (bool c) { m_connected_down = c; }
+        bool lockgeom () const { return m_lockgeom; }
+        void lockgeom (bool l) { m_lockgeom = l; }
         friend bool equivalent (const SymOverrideInfo &a, const SymOverrideInfo &b) {
-            return a.valuesource() == b.valuesource();
+            return a.valuesource() == b.valuesource() &&
+                   a.lockgeom() == b.lockgeom();
         }
     };
     typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
@@ -717,6 +721,8 @@ public:
     virtual bool LoadMemoryCompiledShader (const char *shadername,
                                    const char *buffer);
     virtual bool Parameter (const char *name, TypeDesc t, const void *val);
+    virtual bool Parameter (const char *name, TypeDesc t, const void *val,
+                            bool lockgeom);
     virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
                          const char *layername=NULL);

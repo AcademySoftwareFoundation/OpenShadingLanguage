@@ -195,6 +195,16 @@ public:
     ///
     virtual bool Parameter (const char *name, TypeDesc t, const void *val)
         { return true; }
+
+    /// Set a parameter of the next shader, and override the 'lockgeom'
+    /// metadata for that parameter (despite how it may have been set in
+    /// the shader).  If lockgeom is false, it means that this parameter
+    /// should NOT be considered locked against changes by the geometry,
+    /// and therefore the shader should not optimize assuming that the
+    /// instance value (the 'val' specified by this call) is a constant.
+    virtual bool Parameter (const char *name, TypeDesc t, const void *val,
+                            bool lockgeom)
+        { return true; }
 #if 0
     virtual bool Parameter (const char *name, int val) {
         Parameter (name, TypeDesc::IntType, &val);

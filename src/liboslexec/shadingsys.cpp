@@ -1108,17 +1108,17 @@ ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
 
 
 
-bool
+ShaderGroupRef
 ShadingSystemImpl::ShaderGroupBegin (const char *groupname)
 {
     if (m_in_group) {
         error ("Nested ShaderGroupBegin() calls");
-        return false;
+        return ShaderGroupRef();
     }
     m_in_group = true;
     m_group_use = ShadUseUnknown;
-    m_group_name = ustring (groupname);
-    return true;
+    m_curgroup.reset (new ShaderGroup(groupname));
+    return m_curgroup;
 }
 
 
@@ -1133,11 +1133,9 @@ ShadingSystemImpl::ShaderGroupEnd (void)
 
     // Mark the layers that can be run lazily
     if (m_group_use != ShadUseUnknown) {
-        ShaderGroup &sgroup (m_curattrib->shadergroup (m_group_use));
-        sgroup.name (m_group_name);
-        size_t nlayers = sgroup.nlayers ();
+        size_t nlayers = m_curgroup->nlayers ();
         for (size_t layer = 0;  layer < nlayers;  ++layer) {
-            ShaderInstance *inst = sgroup[layer];
+            ShaderInstance *inst = (*m_curgroup)[layer];
             if (! inst)
                 continue;
             if (m_lazylayers) {
@@ -1164,12 +1162,18 @@ ShadingSystemImpl::ShaderGroupEnd (void)
             }
         }
 
-        merge_instances (m_curattrib->shadergroup (m_group_use));
+        merge_instances (*m_curgroup);
+    }
+
+    {
+        // Record the group for later greedy JITing
+        spin_lock lock (m_groups_to_compile_mutex);
+        m_groups_to_compile.push_back (m_curgroup);
+        ++m_groups_to_compile_count;
     }
 
     m_in_group = false;
     m_group_use = ShadUseUnknown;
-    m_group_name.clear ();
 
     return true;
 }
@@ -1182,8 +1186,8 @@ ShadingSystemImpl::Shader (const char *shaderusage,
                            const char *layername)
 {
     // Make sure we have a current attrib state
-    if (! m_curattrib)
-        m_curattrib.reset (new ShadingAttribState);
+    if (! m_curgroup)
+        m_curgroup.reset (new ShaderGroup (""));
 
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
@@ -1197,21 +1201,13 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         return false;
     }
 
-    // If somebody is already hanging onto the shader state, clone it before
-    // we modify it.
-    if (! m_curattrib.unique ()) {
-        ShadingAttribStateRef newstate (new ShadingAttribState (*m_curattrib));
-        m_curattrib = newstate;
-    }
-
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
 
-    ShaderGroup &shadergroup (m_curattrib->shadergroup (use));
     if (! m_in_group || m_group_use == ShadUseUnknown) {
         // A singleton, or the first in a group
-        shadergroup.clear ();
+        m_curgroup->clear ();
         m_stat_groups += 1;
     }
     if (m_in_group) {
@@ -1224,8 +1220,7 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         }
     }
 
-    shadergroup.append (instance);
-    m_curattrib->changed_shaders ();
+    m_curgroup->append (instance);
     m_stat_groupinstances += 1;
 
     // FIXME -- check for duplicate layer name within the group?
@@ -1317,26 +1312,17 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
 
 
 
-ShadingAttribStateRef
+ShaderGroupRef
 ShadingSystemImpl::state ()
 {
     {
         // Record the state for later greedy JITing
         spin_lock lock (m_groups_to_compile_mutex);
-        m_groups_to_compile.push_back (m_curattrib);
+        m_groups_to_compile.push_back (m_curgroup);
         ++m_groups_to_compile_count;
     }
-    return m_curattrib;
+    return m_curgroup;
 }
-
-
-
-void
-ShadingSystemImpl::clear_state ()
-{
-    m_curattrib.reset (new ShadingAttribState);
-}
-
 
 
 
@@ -1380,10 +1366,10 @@ ShadingSystemImpl::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystemImpl::execute (ShadingContext &ctx, ShadingAttribState &sas,
+ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
                             ShaderGlobals &ssg, bool run)
 {
-    return ctx.execute (ShadUseSurface, sas, ssg, run);
+    return ctx.execute (ShadUseSurface, group, ssg, run);
 }
 
 
@@ -1410,7 +1396,7 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
     inst = NULL;
     if (m_group_use >= ShadUseUnknown)
         return -1;
-    ShaderGroup &group (m_curattrib->shadergroup (m_group_use));
+    ShaderGroup &group (*m_curgroup);
     for (int i = 0;  i < group.nlayers();  ++i) {
         if (group[i]->layername() == layername) {
             inst = group[i];
@@ -1554,8 +1540,7 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 
 void
-ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate, 
-                                   ShaderGroup &group)
+ShadingSystemImpl::optimize_group (ShaderGroup &group)
 {
     OIIO::Timer timer;
     lock_guard lock (group.m_mutex);
@@ -1597,7 +1582,6 @@ ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate,
 
     release_context (ctx);
 
-    attribstate.changed_shaders ();
     group.m_optimized = true;
     spin_lock stat_lock (m_stat_mutex);
     m_stat_optimization_time += timer();
@@ -1653,18 +1637,17 @@ ShadingSystemImpl::optimize_all_groups (int nthreads)
 
     // And here's the single thread case
     while (m_groups_to_compile_count) {
-        ShadingAttribStateRef sas;
+        ShaderGroupRef group;
         {
             spin_lock lock (m_groups_to_compile_mutex);
             if (m_groups_to_compile.size() == 0)
                 return;  // Nothing left to compile
-            sas = m_groups_to_compile.back ();
+            group = m_groups_to_compile.back ();
             m_groups_to_compile.pop_back ();
         }
         --m_groups_to_compile_count;
-        if (! sas.unique()) {   // don't compile if nobody recorded it but us
-            ShaderGroup &sgroup (sas->shadergroup (ShadUseSurface));
-                optimize_group (*sas, sgroup);
+        if (! group.unique()) {   // don't compile if nobody recorded it but us
+            optimize_group (*group);
         }
     }
 }

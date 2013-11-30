@@ -77,7 +77,7 @@ Scene scene;
 int backgroundShaderID = -1;
 int backgroundResolution = 0;
 Background background;
-std::vector<ShadingAttribStateRef> shaders;
+std::vector<ShaderGroupRef> shaders;
 std::string scenefile, imagefile;
 
 int get_filenames(int argc, const char *argv[])
@@ -298,7 +298,7 @@ void parse_scene() {
                 backgroundResolution = strtoint(res_attr.value());
             backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
-            shadingsys->ShaderGroupBegin();
+            ShaderGroupRef group = shadingsys->ShaderGroupBegin();
             ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
             for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
                 if (strcmp(gnode.name(), "Parameter") == 0) {
@@ -339,7 +339,7 @@ void parse_scene() {
                 }
             }
             shadingsys->ShaderGroupEnd();
-            shaders.push_back(shadingsys->state());
+            shaders.push_back (group);
         } else {
             // unknown element?
         }

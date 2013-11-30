@@ -563,17 +563,24 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 }
 
 
+}; // namespace pvt
 
-ShaderGroup::ShaderGroup ()
-  : m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
+
+
+ShaderGroup::ShaderGroup (const char *name)
+  : m_name(name),
+    m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
+    m_optimized(0), m_does_nothing(false)
 {
     m_executions = 0;
 }
 
 
 
-ShaderGroup::ShaderGroup (const ShaderGroup &g)
-  : m_layers(g.m_layers), m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
+ShaderGroup::ShaderGroup (const ShaderGroup &g, const char *name)
+  : m_name(name), m_layers(g.m_layers),
+    m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
+    m_optimized(0), m_does_nothing(false)
 {
     m_executions = 0;
 }
@@ -597,5 +604,4 @@ ShaderGroup::~ShaderGroup ()
 }
 
 
-}; // namespace pvt
 OSL_NAMESPACE_EXIT

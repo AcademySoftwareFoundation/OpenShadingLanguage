@@ -67,19 +67,18 @@ ShadingContext::~ShadingContext ()
 
 
 bool
-ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
+ShadingContext::execute (ShaderUse use, ShaderGroup &sgroup,
                          ShaderGlobals &ssg, bool run)
 {
     DASSERT (use == ShadUseSurface);  // FIXME
     m_curuse = use;
-    m_attribs = &sas;
+    m_attribs = &sgroup;
 
     // Optimize if we haven't already
-    ShaderGroup &sgroup (sas.shadergroup (use));
     if (sgroup.nlayers()) {
         sgroup.start_running ();
         if (! sgroup.optimized()) {
-            shadingsys().optimize_group (sas, sgroup);
+            shadingsys().optimize_group (sgroup);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().optimize_all_groups ();
@@ -129,7 +128,7 @@ ShadingContext::execute (ShaderUse use, ShadingAttribState &sas,
 Symbol *
 ShadingContext::symbol (ShaderUse use, ustring name)
 {
-    ShaderGroup &sgroup (attribs()->shadergroup (use));
+    ShaderGroup &sgroup (*attribs());
     int nlayers = sgroup.nlayers ();
     if (sgroup.llvm_compiled_version()) {
         for (int layer = nlayers-1;  layer >= 0;  --layer) {
@@ -146,7 +145,7 @@ ShadingContext::symbol (ShaderUse use, ustring name)
 void *
 ShadingContext::symbol_data (Symbol &sym)
 {
-    ShaderGroup &sgroup (attribs()->shadergroup ((ShaderUse)m_curuse));
+    ShaderGroup &sgroup (*attribs());
     if (! sgroup.llvm_compiled_version())
         return NULL;   // can't retrieve symbol if we didn't JIT and runit
 

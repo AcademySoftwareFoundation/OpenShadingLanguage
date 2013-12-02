@@ -39,8 +39,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 class RendererServices;
-class ShadingAttribState;
-typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
+class ShaderGroup;
+typedef shared_ptr<ShaderGroup> ShaderGroupRef;
+typedef ShaderGroup ShadingAttribState;       // DEPRECATED name
+typedef ShaderGroupRef ShadingAttribStateRef; // DEPRECATED name
 struct ShaderGlobals;
 struct ClosureColor;
 struct ClosureParam;
@@ -191,6 +193,32 @@ public:
     virtual bool LoadMemoryCompiledShader (const char *shadername,
                                            const char *buffer)=0;
 
+    // The basic sequence for declaring a shader group looks like this:
+    // ShadingSystem *ss = ...;
+    // ShaderGroupRef group = ss->ShaderGroupBegin (groupname);
+    //    /* First layer - texture lookup shader: */
+    //       /* Specify instance parameter values */
+    //       const char *mapname = "colormap.exr";
+    //       ss->Parameter ("texturename", TypeDesc::TypeString, &mapname);
+    //       float blur = 0.001;
+    //       ss->Parameter ("blur", TypeDesc::TypeFloat, &blur);
+    //    ss->Shader ("surface", "texmap", "texturelayer");
+    //    /* Second layer - generate the BSDF closure: */
+    //       float roughness = 0.05;
+    //       ss->Parameter ("roughness", TypeDesc::TypeFloat, &roughness);
+    //    ss->Shader ("surface", "plastic", "illumlayer");
+    //    /* Make a connection between the layers */
+    //    ss->ConnectShaders ("texturelayer", "Cout", "illumlayer", "Cs");
+    // ss->ShaderGroupEnd ();
+
+    /// Signal the start of a new shader group.  The return value is a
+    /// reference-counted opaque handle to the ShaderGroup.
+    virtual ShaderGroupRef ShaderGroupBegin (const char *groupname=NULL) = 0;
+
+    /// Signal the end of a new shader group.
+    ///
+    virtual bool ShaderGroupEnd (void) = 0;
+
     /// Set a parameter of the next shader.
     ///
     virtual bool Parameter (const char *name, TypeDesc t, const void *val)
@@ -227,14 +255,6 @@ public:
                          const char *shadername=NULL,
                          const char *layername=NULL) = 0;
 
-    /// Signal the start of a new shader group.
-    ///
-    virtual bool ShaderGroupBegin (const char *groupname=NULL) = 0;
-
-    /// Signal the end of a new shader group.
-    ///
-    virtual bool ShaderGroupEnd (void) = 0;
-
     /// Connect two shaders within the current group
     ///
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
@@ -242,11 +262,8 @@ public:
 
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.
-    virtual ShadingAttribStateRef state () = 0;
-
-    /// Clear the current shading attribute state, i.e., no shaders
-    /// specified.
-    virtual void clear_state () = 0;
+    /// DEPRECATED -- instead, retrive via ShaderGroupBegin().
+    virtual ShaderGroupRef state () = 0;
 
     /// Optional: create the per-thread data needed for shader
     /// execution.  Doing this and passing it to get_context speeds is a
@@ -274,13 +291,13 @@ public:
     virtual void release_context (ShadingContext *ctx) = 0;
 
     /// Execute the shader bound to context ctx, with the given
-    /// ShadingAttribState (that specifies the shader group to run) and
+    /// ShaderGroup (that specifies the shader group to run) and
     /// ShaderGlobals (specific information for this shade point).  If
     /// 'run' is false, do all the usual preparation, but don't actually
     /// run the shader.  Return true if the shader executed (or could
     /// have executed, if 'run' had been true), false the shader turned
     /// out to be empty.
-    virtual bool execute (ShadingContext &ctx, ShadingAttribState &sas,
+    virtual bool execute (ShadingContext &ctx, ShaderGroup &sas,
                           ShaderGlobals &ssg, bool run=true) = 0;
 
     /// Get a raw pointer to a named symbol (such as you'd need to pull

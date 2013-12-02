@@ -351,7 +351,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 
 static void
 setup_output_images (ShadingSystem *shadingsys,
-                     ShadingAttribStateRef &shaderstate)
+                     ShaderGroupRef &shadergroup)
 {
     // Tell the shading system which outputs we want
     if (outputvars.size()) {
@@ -372,7 +372,7 @@ setup_output_images (ShadingSystem *shadingsys,
     // to actually run the shader.
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
-    shadingsys->execute (*ctx, *shaderstate, sg, false);
+    shadingsys->execute (*ctx, *shadergroup, sg, false);
 
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
@@ -506,7 +506,7 @@ test_shade (int argc, const char *argv[])
     // 
     // A shader group declaration typically looks like this:
     //
-    //   ss->ShaderGroupBegin ();
+    //   ShaderGroupRef shadergroup = ss->ShaderGroupBegin ();
     //   ss->Parameter ("paramname", TypeDesc paramtype, void *value);
     //      ... and so on for all the other parameters of...
     //   ss->Shader ("shadertype", "shadername", "layername");
@@ -516,8 +516,6 @@ test_shade (int argc, const char *argv[])
     //   ss->ConnectShaders ("layer1", "param1", "layer2", "param2");
     //   ... and other connections ...
     //   ss->ShaderGroupEnd ();
-    //   // and now grab an opaque reference to that shader group:
-    //   ShadingAttribStateRef shaderstate = s->state ();
     // 
     // It looks so simple, and it really is, except that the way this
     // testshade program works is that all the Parameter() and Shader()
@@ -525,8 +523,9 @@ test_shade (int argc, const char *argv[])
     // line arguments, whereas the connections accumulate and have
     // to be processed at the end.  Bear with us.
     
-    // Start the shader group.
-    shadingsys->ShaderGroupBegin ();
+    // Start the shader group and grab a reference to it.
+    ShaderGroupRef shadergroup = shadingsys->ShaderGroupBegin ();
+
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
     getargs (argc, argv);
@@ -548,8 +547,6 @@ test_shade (int argc, const char *argv[])
     // End the group
     shadingsys->ShaderGroupEnd ();
 
-    // Now we should have a valid shading state, to get a reference to it.
-    ShadingAttribStateRef shaderstate = shadingsys->state ();
     if (outputfiles.size() != 0)
         std::cout << "\n";
 
@@ -561,7 +558,7 @@ test_shade (int argc, const char *argv[])
     setup_transformations (rend, Mshad, Mobj);
 
     // Set up the image outputs requested on the command line
-    setup_output_images (shadingsys, shaderstate);
+    setup_output_images (shadingsys, shadergroup);
 
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
@@ -611,7 +608,7 @@ test_shade (int argc, const char *argv[])
                 setup_shaderglobals (shaderglobals, shadingsys, x, y);
 
                 // Actually run the shader for this point
-                shadingsys->execute (*ctx, *shaderstate, shaderglobals);
+                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
 
                 // Save all the designated outputs.  But only do so if we
                 // are on the last iteration requested, so that if we are

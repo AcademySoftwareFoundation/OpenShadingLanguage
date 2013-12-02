@@ -43,7 +43,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec.h"
 #include "simplerend.h"
 using namespace OSL;
-
+using OIIO::TypeDesc;
+using OIIO::ParamValue;
+using OIIO::ParamValueList;
 
 
 static ShadingSystem *shadingsys = NULL;
@@ -64,13 +66,7 @@ static bool debug_uninit = false;
 static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
-static std::vector<std::string> iparams, fparams, vparams, sparams;
-static float fparamdata[1000];   // bet that's big enough
-static int fparamindex = 0;
-static int iparamdata[1000];
-static int iparamindex = 0;
-static ustring sparamdata[1000];
-static int sparamindex = 0;
+static ParamValueList params;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
@@ -83,31 +79,10 @@ static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static void
 inject_params ()
 {
-    for (size_t p = 0;  p < fparams.size();  p += 2) {
-        fparamdata[fparamindex] = atof (fparams[p+1].c_str());
-        shadingsys->Parameter (fparams[p].c_str(), TypeDesc::TypeFloat,
-                               &fparamdata[fparamindex]);
-        fparamindex += 1;
-    }
-    for (size_t p = 0;  p < iparams.size();  p += 2) {
-        iparamdata[iparamindex] = atoi (iparams[p+1].c_str());
-        shadingsys->Parameter (iparams[p].c_str(), TypeDesc::TypeInt,
-                               &iparamdata[iparamindex]);
-        iparamindex += 1;
-    }
-    for (size_t p = 0;  p < vparams.size();  p += 4) {
-        fparamdata[fparamindex+0] = atof (vparams[p+1].c_str());
-        fparamdata[fparamindex+1] = atof (vparams[p+2].c_str());
-        fparamdata[fparamindex+2] = atof (vparams[p+3].c_str());
-        shadingsys->Parameter (vparams[p].c_str(), TypeDesc::TypeVector,
-                               &fparamdata[fparamindex]);
-        fparamindex += 3;
-    }
-    for (size_t p = 0;  p < sparams.size();  p += 2) {
-        sparamdata[sparamindex] = ustring (sparams[p+1]);
-        shadingsys->Parameter (sparams[p].c_str(), TypeDesc::TypeString,
-                               &sparamdata[sparamindex]);
-        sparamindex += 1;
+    for (size_t p = 0;  p < params.size();  ++p) {
+        const ParamValue &pv (params[p]);
+        shadingsys->Parameter (pv.name().c_str(), pv.type(), pv.data());
+//                               pv.interp() == ParamValue::INTERP_CONSTANT);
     }
 }
 
@@ -134,12 +109,92 @@ add_shader (int argc, const char *argv[])
                             layername.length() ? layername.c_str() : NULL);
 
         layername.clear ();
-        iparams.clear ();
-        fparams.clear ();
-        vparams.clear ();
-        sparams.clear ();
+        params.clear ();
     }
     return 0;
+}
+
+
+
+static void
+action_param (int argc, const char *argv[])
+{
+    std::string command = argv[0];
+    std::string paramname = argv[1];
+    std::string stringval = argv[2];
+    TypeDesc type = TypeDesc::UNKNOWN;
+    bool unlockgeom = false;
+    float f[16];
+
+    size_t pos;
+    while ((pos = command.find_first_of(":")) != std::string::npos) {
+        command = command.substr (pos+1, std::string::npos);
+        std::vector<std::string> splits;
+        OIIO::Strutil::split (command, splits, ":", 1);
+        if (splits.size() < 1) {}
+        else if (OIIO::Strutil::istarts_with(splits[0],"type="))
+            type.fromstring (splits[0].c_str()+5);
+        else if (OIIO::Strutil::istarts_with(splits[0],"lockgeom="))
+            unlockgeom = (strtol (splits[0].c_str()+9, NULL, 10) == 0);
+    }
+
+    // If it is or might be a matrix, look for 16 comma-separated floats
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeMatrix)
+        && sscanf (stringval.c_str(),
+                   "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
+                   &f[0], &f[1], &f[2], &f[3],
+                   &f[4], &f[5], &f[6], &f[7], &f[8], &f[9], &f[10], &f[11],
+                   &f[12], &f[13], &f[14], &f[15]) == 16) {
+        params.push_back (ParamValue());
+        params.back().init (paramname, TypeDesc::TypeMatrix, 1, f);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+    // If it is or might be a vector type, look for 3 comma-separated floats
+    if ((type == TypeDesc::UNKNOWN || equivalent(type,TypeDesc::TypeVector))
+        && sscanf (stringval.c_str(), "%g, %g, %g", &f[0], &f[1], &f[2]) == 3) {
+        if (type == TypeDesc::UNKNOWN)
+            type = TypeDesc::TypeVector;
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, f);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+    // If it is or might be an int, look for an int that takes up the whole
+    // string.
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeInt)) {
+        char *endptr = NULL;
+        int ival = strtol(stringval.c_str(),&endptr,10);
+        if (endptr && *endptr == 0) {
+            params.push_back (ParamValue());
+            params.back().init (paramname, TypeDesc::TypeInt, 1, &ival);
+            if (unlockgeom)
+                params.back().interp (ParamValue::INTERP_VERTEX);
+            return;
+        }
+    }
+    // If it is or might be an float, look for a float that takes up the
+    // whole string.
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeFloat)) {
+        char *endptr = NULL;
+        float fval = (float) strtod(stringval.c_str(),&endptr);
+        if (endptr && *endptr == 0) {
+            params.push_back (ParamValue());
+            params.back().init (paramname, TypeDesc::TypeFloat, 1, &fval);
+            if (unlockgeom)
+                params.back().interp (ParamValue::INTERP_VERTEX);
+            return;
+        }
+    }
+
+    // All remaining cases -- it's a string
+    const char *s = stringval.c_str();
+    params.push_back (ParamValue());
+    params.back().init (paramname, TypeDesc::TypeString, 1, &s);
+    if (unlockgeom)
+        params.back().interp (ParamValue::INTERP_VERTEX);
 }
 
 
@@ -162,18 +217,8 @@ getargs (int argc, const char *argv[])
                 "-od %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
                 "--layer %s", &layername, "Set next layer name",
-                "--fparam %L %L",
-                        &fparams, &fparams,
-                        "Add a float param (args: name value)",
-                "--iparam %L %L",
-                        &iparams, &iparams,
-                        "Add an integer param (args: name value)",
-                "--vparam %L %L %L %L",
-                        &vparams, &vparams, &vparams, &vparams,
-                        "Add a vector or color param (args: name x y z)",
-                "--sparam %L %L",
-                        &sparams, &sparams,
-                        "Add a string param (args: name value)",
+                "--param %@ %s %s", &action_param, NULL, NULL,
+                        "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
@@ -522,8 +567,6 @@ test_shade (int argc, const char *argv[])
     ShaderGlobals shaderglobals;
 
     double setuptime = timer.lap ();
-
-    std::vector<float> pixel;
 
     // Optional: high-performance apps may request this thread-specific
     // pointer in order to save a bit of time on each shade.  Just like

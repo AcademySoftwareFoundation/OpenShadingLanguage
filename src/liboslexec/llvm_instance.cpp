@@ -1423,10 +1423,16 @@ BackendLLVM::run ()
     const char *data = osl_llvm_compiled_ops_block;
     llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
     // Load the LLVM bitcode and parse it into a Module
+#if 0 /* Parse the whole thing now */
     m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
+    delete buf;
+#else /* Create a lazily deserialized IR module */
+    m_llvm_module = llvm::getLazyBitcodeModule (buf, *m_thread->llvm_context, &err);
+    // don't delete buf, the module has taken ownership of it
+#endif
     if (err.length())
         shadingsys().error ("ParseBitcodeFile returned '%s'\n", err.c_str());
-    delete buf;
+    ASSERT (m_llvm_module);
 #endif
 
     // Create the ExecutionEngine

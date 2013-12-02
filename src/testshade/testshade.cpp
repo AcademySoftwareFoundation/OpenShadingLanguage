@@ -81,8 +81,8 @@ inject_params ()
 {
     for (size_t p = 0;  p < params.size();  ++p) {
         const ParamValue &pv (params[p]);
-        shadingsys->Parameter (pv.name().c_str(), pv.type(), pv.data());
-//                               pv.interp() == ParamValue::INTERP_CONSTANT);
+        shadingsys->Parameter (pv.name().c_str(), pv.type(), pv.data(),
+                               pv.interp() == ParamValue::INTERP_CONSTANT);
     }
 }
 

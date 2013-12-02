@@ -234,6 +234,12 @@ ShaderInstance::parameters (const ParamValueList &params)
                 continue;
 
             so->valuesource (Symbol::InstanceVal);
+            // Lock the param against geometric primitive overrides if the
+            // master thinks it was so locked, AND the Parameter() call
+            // didn't specify lockgeom=false (which would be indicated by
+            // the parameter's interpolation being non-CONSTANT).
+            so->lockgeom (sm->lockgeom() &&
+                          p.interp() == ParamValue::INTERP_CONSTANT);
             void *data = param_storage(i);
             memcpy (data, p.data(), t.simpletype().size());
             if (shadingsys().debug())
@@ -316,6 +322,7 @@ ShaderInstance::copy_code_from_master ()
                 si->data (param_storage(i));
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
+                si->lockgeom (m_instoverrides[i].lockgeom());
             }
         }
     }

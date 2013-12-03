@@ -47,7 +47,6 @@ using OIIO::TypeDesc;
 using OIIO::ParamValue;
 using OIIO::ParamValueList;
 
-
 static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
@@ -67,6 +66,8 @@ static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
 static ParamValueList params;
+static ParamValueList reparams;
+static std::string reparam_layer;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
@@ -120,6 +121,12 @@ static void
 action_param (int argc, const char *argv[])
 {
     std::string command = argv[0];
+    bool use_reparam = false;
+    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
+        OIIO::Strutil::istarts_with(command, "-reparam"))
+        use_reparam = true;
+    ParamValueList &params (use_reparam ? reparams : (::params));
+
     std::string paramname = argv[1];
     std::string stringval = argv[2];
     TypeDesc type = TypeDesc::UNKNOWN;
@@ -199,6 +206,18 @@ action_param (int argc, const char *argv[])
 
 
 
+// reparam -- just set reparam_layer and then let action_param do all the
+// hard work.
+static void
+action_reparam (int argc, const char *argv[])
+{
+    reparam_layer = argv[1];
+    const char *newargv[] = { argv[0], argv[2], argv[3] };
+    action_param (3, newargv);
+}
+
+
+
 static void
 getargs (int argc, const char *argv[])
 {
@@ -222,6 +241,8 @@ getargs (int argc, const char *argv[])
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
+                "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
+                        "Change a parameter (args: layername paramname value) (options: type=%s)",
                 "--raytype %s", &raytype, "Set the raytype",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
@@ -617,6 +638,16 @@ test_shade (int argc, const char *argv[])
                 if (iter == (iters - 1)) {
                     save_outputs (shadingsys, ctx, x, y);
                 }
+            }
+        }
+
+        // If any reparam was requested, do it now
+        if (reparams.size() && reparam_layer.size()) {
+            for (size_t p = 0;  p < reparams.size();  ++p) {
+                const ParamValue &pv (reparams[p]);
+                shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),
+                                         pv.name().c_str(), pv.type(),
+                                         pv.data());
             }
         }
     }

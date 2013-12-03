@@ -1,0 +1,6 @@
+shader
+test (float scale = 20,
+      output color Cout = 0)
+{
+   Cout = (float) noise(u*scale, v*scale);
+}

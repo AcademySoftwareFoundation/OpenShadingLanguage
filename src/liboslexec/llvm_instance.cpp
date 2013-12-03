@@ -765,9 +765,17 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.
         build_llvm_code (sym.initbegin(), sym.initend());
+    } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
+        // geometrically-varying param; memcpy its default value
+        TypeDesc t = sym.typespec().simpletype();
+        llvm_memcpy (llvm_void_ptr (sym), llvm_constant_ptr (sym.data()),
+                     t.size(), t.elementtype().size() /*align*/);
+        if (sym.has_derivs())
+            llvm_zero_derivs (sym);
     } else {
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;
+        TypeSpec elemtype = sym.typespec().elementtype();
         for (int a = 0, c = 0; a < arraylen;  ++a) {
             llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
             if (sym.typespec().is_closure_based())
@@ -775,7 +783,6 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
             for (int i = 0; i < num_components; ++i, ++c) {
                 // Fill in the constant val
                 llvm::Value* init_val = 0;
-                TypeSpec elemtype = sym.typespec().elementtype();
                 if (elemtype.is_floatbased())
                     init_val = llvm_constant (((float*)sym.data())[c]);
                 else if (elemtype.is_string())

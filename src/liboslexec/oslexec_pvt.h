@@ -657,6 +657,9 @@ public:
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
     virtual ShaderGroupRef state ();
+    virtual bool ReParameter (ShaderGroup &group,
+                              const char *layername, const char *paramname,
+                              TypeDesc type, const void *val);
 
     /// Internal error reporting routine, with printf-like arguments.
     ///

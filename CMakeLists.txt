@@ -311,7 +311,9 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-paramdefault
             pointcloud pointcloud-fold
-            raytype render-background render-bumptest render-cornell render-furnace-diffuse
+            raytype reparam
+            render-background render-bumptest
+            render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture

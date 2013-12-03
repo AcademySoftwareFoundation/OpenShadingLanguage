@@ -227,19 +227,22 @@ ShaderInstance::parameters (const ParamValueList &params)
                 continue;
             }
 
-            // If the instance value is the same as the master's default,
-            // just skip the parameter, let it "keep" the default.
-            void *defaultdata = m_master->param_default_storage(i);
-            if (memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
-                continue;
-
-            so->valuesource (Symbol::InstanceVal);
             // Lock the param against geometric primitive overrides if the
             // master thinks it was so locked, AND the Parameter() call
             // didn't specify lockgeom=false (which would be indicated by
             // the parameter's interpolation being non-CONSTANT).
-            so->lockgeom (sm->lockgeom() &&
-                          p.interp() == ParamValue::INTERP_CONSTANT);
+            bool lockgeom = (sm->lockgeom() &&
+                             p.interp() == ParamValue::INTERP_CONSTANT);
+            so->lockgeom (lockgeom);
+
+            // If the instance value is the same as the master's default,
+            // just skip the parameter, let it "keep" the default.
+            void *defaultdata = m_master->param_default_storage(i);
+            if (lockgeom && 
+                  memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
+                continue;
+
+            so->valuesource (Symbol::InstanceVal);
             void *data = param_storage(i);
             memcpy (data, p.data(), t.simpletype().size());
             if (shadingsys().debug())

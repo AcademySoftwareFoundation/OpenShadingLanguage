@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_LLVM_HEADERS_H
-#define OSL_LLVM_HEADERS_H
+#pragma once
 
 #ifdef LLVM_NAMESPACE
 namespace llvm = LLVM_NAMESPACE;
@@ -94,6 +93,3 @@ namespace llvm = LLVM_NAMESPACE;
 # include <llvm/Target/TargetData.h>
 
 #endif
-
-
-#endif /* OSL_LLVM_HEADERS_H */

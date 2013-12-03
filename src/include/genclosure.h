@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef GENCLOSURE_H
-#define GENCLOSURE_H
+#pragma once
 
 #include <OpenImageIO/ustring.h>
 #include "oslconfig.h"
@@ -85,5 +84,3 @@ struct ClosureParam {
 #define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), NULL, 0 }
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCLOSURE_H */

@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCONFIG_H
-#define OSLCONFIG_H
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////
 /// \file
@@ -117,5 +116,3 @@ using OIIO::ustringHash;
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCONFIG_H */

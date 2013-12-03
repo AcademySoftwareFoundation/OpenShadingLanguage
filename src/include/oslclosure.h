@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCLOSURE_H
-#define OSLCLOSURE_H
+#pragma once
 
 #include <cstring>
 #include <OpenImageIO/ustring.h>
@@ -165,5 +164,3 @@ struct OSLEXECPUBLIC ClosureAdd : public ClosureColor
 };
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCLOSURE_H */

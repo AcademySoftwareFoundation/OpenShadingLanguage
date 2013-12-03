@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_AST_H
-#define OSL_AST_H
+#pragma once
 
 #include <boost/intrusive_ptr.hpp>
 #include "OpenImageIO/refcnt.h"
@@ -950,5 +949,3 @@ private:
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_AST_H */

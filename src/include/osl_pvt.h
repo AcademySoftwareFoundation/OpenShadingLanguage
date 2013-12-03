@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_PVT_H
-#define OSL_PVT_H
+#pragma once
 
 #include "oslconfig.h"
 
@@ -864,5 +863,3 @@ typedef std::vector<Opcode> OpcodeVec;
 
 }; // namespace OSL::pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_PVT_H */

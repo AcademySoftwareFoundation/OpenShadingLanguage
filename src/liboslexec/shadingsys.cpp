@@ -1326,6 +1326,46 @@ ShadingSystemImpl::state ()
 
 
 
+bool
+ShadingSystemImpl::ReParameter (ShaderGroup &group, const char *layername_,
+                                const char *paramname,
+                                TypeDesc type, const void *val)
+{
+    // Find the named layer
+    ustring layername (layername_);
+    ShaderInstance *layer = NULL;
+    for (int i = 0, e = group.nlayers();  i < e;  ++i) {
+        if (group[i]->layername() == layername) {
+            layer = group[i];
+            break;
+        }
+    }
+    if (! layer)
+        return false;   // could not find the named layer
+
+    // Find the named parameter within the layer
+    int paramindex = layer->findparam (ustring(paramname));
+    if (paramindex < 0)
+        return false;   // could not find the named parameter
+    Symbol *sym = layer->symbol (paramindex);
+    ASSERT (sym != NULL);
+
+    // Check for mismatch versus previously-declared type
+    if (!equivalent(sym->typespec(), type))
+        return false;
+
+    // Can't change param value if the group has already been optimized,
+    // unless that parameter is marked lockgeom=0.
+    if (group.optimized() && sym->lockgeom())
+        return false;
+
+    // Do the deed
+    memcpy (sym->data(), val, type.size());
+    return true;
+}
+
+
+
 PerThreadInfo *
 ShadingSystemImpl::create_thread_info()
 {

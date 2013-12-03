@@ -265,6 +265,18 @@ public:
     /// DEPRECATED -- instead, retrive via ShaderGroupBegin().
     virtual ShaderGroupRef state () = 0;
 
+    /// Replace a parameter value in a previously-declared shader group.
+    /// This is meant to called after the ShaderGroupBegin/End, but will
+    /// fail if the shader has already been irrevocably optimized/compiled,
+    /// unless the paraticular parameter is marked as lockgeom=0 (which
+    /// indicates that it's a parameter that may be overridden by the
+    /// geometric primitive).  This call gives you a way of changing the
+    /// instance value, even if it's not a geometric override.
+    virtual bool ReParameter (ShaderGroup &group,
+                              const char *layername, const char *paramname,
+                              TypeDesc type, const void *val)
+        { return false; }
+
     /// Optional: create the per-thread data needed for shader
     /// execution.  Doing this and passing it to get_context speeds is a
     /// bit faster than get_context having to do a thread-specific

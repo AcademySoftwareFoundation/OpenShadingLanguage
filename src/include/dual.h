@@ -26,8 +26,9 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef DUAL_H
-#define DUAL_H
+#pragma once
+#ifndef OSL_DUAL_H
+#define OSL_DUAL_H
 
 #include "oslversion.h"
 OSL_NAMESPACE_ENTER
@@ -788,4 +789,4 @@ inline Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<
 
 OSL_NAMESPACE_EXIT
 
-#endif /* DUAL_H */
+#endif /* OSL_DUAL_H */

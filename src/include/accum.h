@@ -26,8 +26,9 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef ACCUM_H
-#define ACCUM_H
+#pragma once
+#ifndef OSL_ACCUM_H
+#define OSL_ACCUM_H
 
 #include "oslconfig.h"
 #include "optautomata.h"
@@ -246,4 +247,4 @@ class OSLEXECPUBLIC Accumulator
 
 OSL_NAMESPACE_EXIT
 
-#endif // ACCUM_H
+#endif // OSL_ACCUM_H

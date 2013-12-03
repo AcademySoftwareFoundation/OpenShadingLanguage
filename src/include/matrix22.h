@@ -37,8 +37,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Lucas Digital Ltd. LLC.  All rights reserved.
 
 
-#ifndef MATRIX22_H
-#define MATRIX22_H
+#pragma once
+#ifndef OSL_MATRIX22_H
+#define OSL_MATRIX22_H
 
 
 #include <OpenEXR/ImathMatrix.h>
@@ -906,4 +907,4 @@ operator << (std::ostream &s, const Matrix22<T> &m)
 
 } // namespace Imathx
 
-#endif /* ifndef(MATRIX22_H) */
+#endif /* ifndef(OSL_MATRIX22_H) */

@@ -37,6 +37,7 @@ Sony Pictures Imageworks terms, above.
 */
 
 
+#pragma once
 #ifndef OSLQUERY_H
 #define OSLQUERY_H
 

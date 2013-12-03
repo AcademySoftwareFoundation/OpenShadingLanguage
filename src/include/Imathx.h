@@ -36,8 +36,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Lucas Digital Ltd. LLC.  All rights reserved.
 
 
-#ifndef IMATHX_H
-#define IMATHX_H
+#pragma once
+#ifndef OSL_IMATHX_H
+#define OSL_IMATHX_H
 
 
 #include <OpenEXR/ImathVec.h>
@@ -96,4 +97,4 @@ T determinant (const Imathx::Matrix22<T> &m)
 
 OSL_NAMESPACE_EXIT
 
-#endif /* ifndef(IMATHX_H) */
+#endif /* ifndef(OSL_IMATHX_H) */

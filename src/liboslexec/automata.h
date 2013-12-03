@@ -26,8 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef AUTOMATA_H
-#define AUTOMATA_H
+#ifndef OSL_AUTOMATA_H
+#define OSL_AUTOMATA_H
 
 #include <set>
 #include <map>
@@ -338,4 +338,4 @@ void ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata);
 
 OSL_NAMESPACE_EXIT
 
-#endif // AUTOMATA_H
+#endif // OSL_AUTOMATA_H

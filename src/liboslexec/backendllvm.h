@@ -27,8 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef BACKENDLLVM_H
-#define BACKENDLLVM_H
+#ifndef OSL_BACKENDLLVM_H
+#define OSL_BACKENDLLVM_H
 
 #include <vector>
 #include <map>
@@ -608,4 +608,4 @@ private:
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
 
-#endif /* BACKENDLLVM_H */
+#endif /* OSL_BACKENDLLVM_H */

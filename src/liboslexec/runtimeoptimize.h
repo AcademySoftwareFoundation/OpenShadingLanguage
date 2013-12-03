@@ -27,8 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef RUNTIMEOPTIMIZE_H
-#define RUNTIMEOPTIMIZE_H
+#ifndef OSL_RUNTIMEOPTIMIZE_H
+#define OSL_RUNTIMEOPTIMIZE_H
 
 #include <vector>
 #include <map>
@@ -376,5 +376,5 @@ private:
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
 
-#endif /* RUNTIMEOPTIMIZE_H */
+#endif /* OSL_RUNTIMEOPTIMIZE_H */
 

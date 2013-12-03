@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_DUAL_H
-#define OSL_DUAL_H
 
 #include "oslversion.h"
 OSL_NAMESPACE_ENTER
@@ -788,5 +786,3 @@ inline Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_DUAL_H */

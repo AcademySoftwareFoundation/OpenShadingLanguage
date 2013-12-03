@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_OSOREADER_H
-#define OSL_OSOREADER_H
 
 #include "osl_pvt.h"
 
@@ -152,5 +150,3 @@ private:
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_OSOREADER_H */

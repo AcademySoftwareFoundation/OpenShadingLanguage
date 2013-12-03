@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSLCONFIG_H
-#define OSLCONFIG_H
 
 /////////////////////////////////////////////////////////////////////////
 /// \file
@@ -118,5 +116,3 @@ using OIIO::ustringHash;
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCONFIG_H */

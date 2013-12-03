@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_SIMPLEREND_H
-#define OSL_SIMPLEREND_H
 
 #include <map>
 
@@ -85,5 +83,3 @@ private:
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_SIMPLEREND_H */

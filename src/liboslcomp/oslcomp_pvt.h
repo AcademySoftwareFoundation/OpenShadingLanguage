@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSLCOMP_PVT_H
-#define OSLCOMP_PVT_H
 
 #include <vector>
 #include <stack>
@@ -393,6 +391,3 @@ extern OSLCompilerImpl *oslcompiler;
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-
-#endif /* OSLCOMP_PVT_H */

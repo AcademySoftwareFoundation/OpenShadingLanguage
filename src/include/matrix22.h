@@ -38,8 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #pragma once
-#ifndef OSL_MATRIX22_H
-#define OSL_MATRIX22_H
 
 
 #include <OpenEXR/ImathMatrix.h>
@@ -906,5 +904,3 @@ operator << (std::ostream &s, const Matrix22<T> &m)
 }
 
 } // namespace Imathx
-
-#endif /* ifndef(OSL_MATRIX22_H) */

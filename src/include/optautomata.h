@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_OPTAUTOMATA_H
-#define OSL_OPTAUTOMATA_H
 
 #include <OpenImageIO/ustring.h>
 
@@ -96,5 +94,3 @@ class DfOptimizedAutomata
 };
 
 OSL_NAMESPACE_EXIT
-
-#endif // OSL_OPTAUTOMATA_H

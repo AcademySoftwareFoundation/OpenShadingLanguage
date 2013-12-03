@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_ACCUM_H
-#define OSL_ACCUM_H
 
 #include "oslconfig.h"
 #include "optautomata.h"
@@ -246,5 +244,3 @@ class OSLEXECPUBLIC Accumulator
 
 
 OSL_NAMESPACE_EXIT
-
-#endif // OSL_ACCUM_H

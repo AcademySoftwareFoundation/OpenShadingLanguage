@@ -28,8 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #pragma once
-#ifndef OSL_EXPORT_H
-#define OSL_EXPORT_H
 
 /// \file
 /// OSLPUBLIC and OSLEXPORT macros that are necessary for proper symbol
@@ -110,5 +108,3 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #  define OSLQUERYPUBLIC OSL_DLL_IMPORT
 #endif
-
-#endif // OSL_EXPORT_H

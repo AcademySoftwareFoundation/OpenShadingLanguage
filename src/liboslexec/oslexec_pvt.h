@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSLEXEC_PVT_H
-#define OSLEXEC_PVT_H
 
 #include <string>
 #include <vector>
@@ -1524,5 +1522,3 @@ protected:
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLEXEC_PVT_H */

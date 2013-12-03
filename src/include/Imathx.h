@@ -37,9 +37,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #pragma once
-#ifndef OSL_IMATHX_H
-#define OSL_IMATHX_H
-
 
 #include <OpenEXR/ImathVec.h>
 #include <OpenEXR/ImathMatrix.h>
@@ -96,5 +93,3 @@ T determinant (const Imathx::Matrix22<T> &m)
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* ifndef(OSL_IMATHX_H) */

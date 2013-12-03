@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_CONSTANTPOOL_H
-#define OSL_CONSTANTPOOL_H
 
 #include <vector>
 #include <list>
@@ -99,5 +97,3 @@ private:
 
 }; // namespace OSL::pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_CONSTANTPOOL_H */

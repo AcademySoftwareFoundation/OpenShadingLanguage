@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_SYMTAB_H
-#define OSL_SYMTAB_H
 
 #include <vector>
 #include <stack>
@@ -292,5 +290,3 @@ private:
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_SYMTAB_H */

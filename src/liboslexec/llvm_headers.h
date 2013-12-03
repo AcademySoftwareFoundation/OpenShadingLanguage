@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_LLVM_HEADERS_H
-#define OSL_LLVM_HEADERS_H
 
 #ifdef LLVM_NAMESPACE
 namespace llvm = LLVM_NAMESPACE;
@@ -95,6 +93,3 @@ namespace llvm = LLVM_NAMESPACE;
 # include <llvm/Target/TargetData.h>
 
 #endif
-
-
-#endif /* OSL_LLVM_HEADERS_H */

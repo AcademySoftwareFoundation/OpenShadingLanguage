@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_LEPARSE_H
-#define OSL_LEPARSE_H
 
 #include "lpexp.h"
 
@@ -148,5 +146,3 @@ class Parser
 
 
 OSL_NAMESPACE_EXIT
-
-#endif // OSL_LEPARSE_H

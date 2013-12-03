@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_AST_H
-#define OSL_AST_H
 
 #include <boost/intrusive_ptr.hpp>
 #include "OpenImageIO/refcnt.h"
@@ -951,5 +949,3 @@ private:
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_AST_H */

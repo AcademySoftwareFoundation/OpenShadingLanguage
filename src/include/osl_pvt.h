@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_PVT_H
-#define OSL_PVT_H
 
 #include "oslconfig.h"
 
@@ -865,5 +863,3 @@ typedef std::vector<Opcode> OpcodeVec;
 
 }; // namespace OSL::pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_PVT_H */

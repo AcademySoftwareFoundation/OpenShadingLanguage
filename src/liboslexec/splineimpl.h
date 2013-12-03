@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_SPLINEIMPL_H
-#define OSL_SPLINEIMPL_H
 
 // avoid naming conflict with MSVC macro
 #ifdef BTYPE
@@ -242,4 +240,3 @@ void spline_inverse (const SplineBasis *spline,
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
 
-#endif // OSL_SPLINEIMPL_H

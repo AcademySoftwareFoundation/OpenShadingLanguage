@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_DUAL_VEC_H
-#define OSL_DUAL_VEC_H
 
 #include "oslconfig.h"
 #include "dual.h"
@@ -360,5 +358,3 @@ distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_DUAL_VEC_H */

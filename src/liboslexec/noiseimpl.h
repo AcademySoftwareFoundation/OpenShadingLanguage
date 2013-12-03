@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_NOISEIMPL_H
-#define OSL_NOISEIMPL_H
 
 #include <limits>
 
@@ -1482,5 +1480,3 @@ Dual2<Vec3> pgabor3 (const Dual2<float> &x, float xperiod,
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_NOISEIMPL_H */

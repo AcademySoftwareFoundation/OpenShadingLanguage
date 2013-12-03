@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSL_REGEXP_H
-#define OSL_REGEXP_H
 
 #include "automata.h"
 
@@ -209,5 +207,3 @@ class Rule
 } // namespace regexp
 
 OSL_NAMESPACE_EXIT
-
-#endif // OSL_REGEXP_H

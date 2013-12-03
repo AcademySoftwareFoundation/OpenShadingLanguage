@@ -27,8 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
-#ifndef OSLEXEC_H
-#define OSLEXEC_H
 
 
 #include "oslconfig.h"
@@ -657,5 +655,3 @@ public:
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLEXEC_H */

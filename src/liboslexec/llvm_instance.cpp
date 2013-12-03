@@ -769,7 +769,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();
         llvm_memcpy (llvm_void_ptr (sym), llvm_constant_ptr (sym.data()),
-                     t.size(), t.elementtype().size() /*align*/);
+                     t.size(), t.basesize() /*align*/);
         if (sym.has_derivs())
             llvm_zero_derivs (sym);
     } else {

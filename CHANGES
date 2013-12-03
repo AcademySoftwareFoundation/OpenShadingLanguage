@@ -1,3 +1,50 @@
+Release 1.5 -- in progress (compared to 1.4)
+--------------------------------------------
+Language, standard libary, and compiler changes (for shader writers):
+
+ShadingSystem API changes and new options (for renderer writers):
+* ShadingSystem::Parameter() has a new variety that can set lockgeom=0
+  for a particular parameter at runtime, even if it was not declared
+  this way in the shader's metadata.  This allows an app to effectively
+  say "I intend to vary this shader's parameter value, don't optimize as
+  if it were a a constant." (1.5.1)
+* New ShadingSystem::ReParameter() lets you change the instance value of
+  a shader parameter after the shader group has already been declared
+  (but only if the shader has not yet been optimized, OR if the
+  parameter was declared with lockgeom=0). This, in combination with the
+  new SS::Parameter() variety, lets an app select a parameter for
+  variation, compile the shader network, and then continuously modify
+  the value and re-render without needing to redeclare and recompile the
+  shader group (though at a slightly higher execution cost than if the
+  parameter were fully optimized. (1.5.1)
+* ShadingAttribState has been simlified and replaced with ShaderGroup.
+  And ShadingAttribStateRef replaced by ShaderGroupRef. (1.5.1)
+* ShaderGroupBegin returns the ShaderGroupRef for the group, there is
+  no need to call state() to get the group reference. (1.5.1)
+
+Performance improvements:
+* Dramatically speed up LLVM optimization & JIT of small shaders --
+  reducing the per-shader-network compile overhead of small shaders
+  from 0.1-0.2s to less than 0.01s per shader group. (1.5.1)
+
+Bug fixes:
+* testshade/testrender timer didn't properly break out execution time
+  from setup time. (1.5.1)
+
+Under the hood:
+* Internals refactor that separates the runtime optimization from the
+  LLVM generation and JIT. (1.5.1)
+* Removed legacy built-in closures that weren't actually used. (1.5.1)
+
+Build & test system improvements and developer goodies:
+* testshade consolidates --iparam, --fparam, --vparam, --sparam into
+  just --param that figures out the types (or could be explicitly
+  told. (1.5.1)
+
+Documentation:
+
+
+
 Release 1.4.0 - 12 November 2013 (compared to 1.3)
 --------------------------------------------------
 

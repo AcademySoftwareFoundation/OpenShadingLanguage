@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+S=0 T=0    outS=0 outT=0
+S=1 T=0    outS=0 outT=2
+S=0 T=1    outS=1 outT=0
+S=1 T=1    outS=1 outT=2
+

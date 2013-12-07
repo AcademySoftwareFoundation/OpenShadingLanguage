@@ -60,7 +60,7 @@ using namespace OSL::pvt;
 // Forward declaration
 OSL_NAMESPACE_ENTER
 namespace pvt {
-TypeDesc lextype (int lex);
+TypeDesc osllextype (int lex);
 };
 OSL_NAMESPACE_EXIT
 
@@ -90,7 +90,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %token <i> COLORTYPE FLOATTYPE INTTYPE MATRIXTYPE 
 %token <i> NORMALTYPE POINTTYPE STRINGTYPE VECTORTYPE VOIDTYPE
 %token <i> CLOSURE OUTPUT PUBLIC STRUCT
-%token <i> BREAK CONTINUE DO ELSE FOR IF ILLUMINATE ILLUMINANCE RETURN WHILE
+%token <i> BREAK CONTINUE DO ELSE FOR IF_TOKEN ILLUMINATE ILLUMINANCE RETURN WHILE
 %token <i> RESERVED
 
 
@@ -260,14 +260,14 @@ metadatum
         : simple_typename IDENTIFIER initializer
                 {
                     ASTvariable_declaration *var;
-                    var = new ASTvariable_declaration (oslcompiler, lextype($1),
+                    var = new ASTvariable_declaration (oslcompiler, osllextype($1),
                                                        ustring ($2), $3, false,
                                                        true /* ismeta */);
                     $$ = var;
                 }
         | simple_typename IDENTIFIER arrayspec initializer_list
                 {
-                    TypeDesc simple = lextype ($1);
+                    TypeDesc simple = osllextype ($1);
                     simple.arraylen = $3;
                     if (simple.arraylen < 1)
                         oslcompiler->error (oslcompiler->filename(),
@@ -548,12 +548,12 @@ arrayspec
 typespec
         : simple_typename
                 {
-                    oslcompiler->current_typespec (TypeSpec (lextype ($1)));
+                    oslcompiler->current_typespec (TypeSpec (osllextype ($1)));
                     $$ = 0;
                 }
         | CLOSURE simple_typename
                 {
-                    oslcompiler->current_typespec (TypeSpec (lextype ($2), true));
+                    oslcompiler->current_typespec (TypeSpec (osllextype ($2), true));
                     $$ = 0;
                 }
         | IDENTIFIER /* struct name */
@@ -601,12 +601,12 @@ scoped_statements
         ;
 
 conditional_statement
-        : IF '(' expression ')' statement
+        : IF_TOKEN '(' expression ')' statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5);
                     $$->sourceline (@1.first_line);
                 }
-        | IF '(' expression ')' statement ELSE statement
+        | IF_TOKEN '(' expression ')' statement ELSE statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
                     $$->sourceline (@1.first_line);
@@ -858,7 +858,7 @@ type_constructor
         : simple_typename '(' expression_list ')'
                 {
                     $$ = new ASTtype_constructor (oslcompiler,
-                                                  TypeSpec (lextype ($1)), $3);
+                                                  TypeSpec (osllextype ($1)), $3);
                 }
         ;
 
@@ -923,7 +923,7 @@ typecast_expression
         : '(' simple_typename ')' expression
                 {
                     $$ = new ASTtypecast_expression (oslcompiler, 
-                                                     TypeSpec (lextype ($2)),
+                                                     TypeSpec (osllextype ($2)),
                                                      $4);
                 }
         ;
@@ -951,7 +951,7 @@ yyerror (const char *err)
 
 // Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
 inline TypeDesc
-OSL::pvt::lextype (int lex)
+OSL::pvt::osllextype (int lex)
 {
     switch (lex) {
     case COLORTYPE  : return TypeDesc::TypeColor;

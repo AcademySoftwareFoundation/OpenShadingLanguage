@@ -29,30 +29,32 @@
 
 shader
 image
-    [[ string description = "Texture lookup" ]]
+    [[ string help = "Texture lookup" ]]
 (
     string filename = ""
-        [[  string description = "Texture filename" ]],
+        [[  string help = "Texture filename" ]],
     float s = u
-        [[  string description = "s coordinate for the lookup",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "s coordinate for the lookup" ]],
     float t = v
-        [[  string description = "t coordinate for the lookup",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "t coordinate for the lookup" ]],
     float  sblur = 0
-        [[  string description = "Blur in the s direction",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "Blur in the s direction",
+            float min = 0, float max = 1 ]],
     float  tblur = 0
-        [[  string description = "Blur in the s direction",
-            float UImin = 0, float UIsoftmax = 1 ]],
+        [[  string help = "Blur in the s direction",
+            float min = 0, float max = 1 ]],
     string swrap = "periodic"
-        [[  string description = "Wrap mode for the s direction" ]],
+        [[  string help = "Wrap mode for the s direction",
+            string widget = "popup",
+            string options = "default|black|clamp|periodic|mirror" ]],
     string twrap = "periodic"
-        [[  string description = "Wrap mode for the t direction" ]],
+        [[  string help = "Wrap mode for the t direction",
+            string widget = "popup",
+            string options = "default|black|clamp|periodic|mirror" ]],
     output color Cout = 0
-        [[  string description = "Output color",
-            float UImin = 0, float UImax = 1 ]]
+        [[  string help = "Output color" ]]
   )
 {
-    Cout = texture(filename, s, t, "sblur", sblur, "tblur", tblur, "swrap", swrap, "twrap", twrap);
+    Cout = texture (filename, s, t, "sblur", sblur, "tblur", tblur,
+                    "swrap", swrap, "twrap", twrap);
 }

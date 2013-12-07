@@ -63,7 +63,7 @@ static std::string current_shader_name;
 // Forward declaration
 OSL_NAMESPACE_ENTER
 namespace pvt {
-TypeDesc lextype (int lex);
+TypeDesc osolextype (int lex);
 };
 OSL_NAMESPACE_EXIT
 
@@ -147,6 +147,8 @@ symbols_opt
 codemarker
         : CODE IDENTIFIER ENDOFLINE
                 {
+                    if (! OSOReader::osoreader->parse_code_section())
+                        YYACCEPT;
                     OSOReader::osoreader->codemarker ($2);
                 }
         ;
@@ -181,6 +183,9 @@ symbols
 symbol
         : SYMTYPE typespec arraylen_opt IDENTIFIER 
                 {
+                    if ((SymType)$1 == SymTypeTemp &&
+                        OSOReader::osoreader->stop_parsing_at_temp_symbols())
+                        YYACCEPT;
                     TypeSpec typespec = current_typespec;
                     if ($3)
                         typespec.make_array ($3);
@@ -194,12 +199,12 @@ symbol
 typespec
         : simple_typename
                 {
-                    current_typespec = lextype ($1);
+                    current_typespec = osolextype ($1);
                     $$ = 0;
                 }
         | CLOSURE simple_typename
                 {
-                    current_typespec = TypeSpec (lextype ($2), true);
+                    current_typespec = TypeSpec (osolextype ($2), true);
                     $$ = 0;
                 }
         | STRUCT IDENTIFIER
@@ -336,7 +341,7 @@ yyerror (const char *err)
 
 // Convert from the lexer's symbolic type (COLORTYPE, etc.) to a TypeDesc.
 inline TypeDesc
-OSL::pvt::lextype (int lex)
+OSL::pvt::osolextype (int lex)
 {
     switch (lex) {
     case COLORTYPE  : return TypeDesc::TypeColor;

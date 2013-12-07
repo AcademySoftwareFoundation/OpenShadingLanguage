@@ -37,7 +37,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
-#include <OpenImageIO/pugixml.hpp>
+
+#ifdef USE_EXTERNAL_PUGIXML
+# include <pugixml.hpp>
+#else
+# include <OpenImageIO/pugixml.hpp>
+#endif
 
 #include <boost/thread.hpp>
 #include <boost/ref.hpp>
@@ -72,7 +77,7 @@ Scene scene;
 int backgroundShaderID = -1;
 int backgroundResolution = 0;
 Background background;
-std::vector<ShadingAttribStateRef> shaders;
+std::vector<ShaderGroupRef> shaders;
 std::string scenefile, imagefile;
 
 int get_filenames(int argc, const char *argv[])
@@ -293,7 +298,7 @@ void parse_scene() {
                 backgroundResolution = strtoint(res_attr.value());
             backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
-            shadingsys->ShaderGroupBegin();
+            ShaderGroupRef group = shadingsys->ShaderGroupBegin();
             ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
             for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
                 if (strcmp(gnode.name(), "Parameter") == 0) {
@@ -334,7 +339,7 @@ void parse_scene() {
                 }
             }
             shadingsys->ShaderGroupEnd();
-            shaders.push_back(shadingsys->state());
+            shaders.push_back (group);
         } else {
             // unknown element?
         }
@@ -642,7 +647,7 @@ int main (int argc, const char *argv[]) {
 
     // Print some debugging info
     if (debug || stats) {
-        double runtime = timer();
+        double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";

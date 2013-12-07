@@ -29,7 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "llvm_headers.h"
 
 #include "oslexec_pvt.h"
-#include "runtimeoptimize.h"
+#include "backendllvm.h"
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -40,9 +40,13 @@ namespace pvt {
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_union(const std::vector<llvm::Type *> &types)
+BackendLLVM::llvm_type_union(const std::vector<llvm::Type *> &types)
 {
+#if OSL_LLVM_VERSION >= 32
+    llvm::DataLayout target(llvm_module());
+#else
     llvm::TargetData target(llvm_module());
+#endif
     size_t max_size = 0;
     size_t max_align = 1;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -73,7 +77,7 @@ RuntimeOptimizer::llvm_type_union(const std::vector<llvm::Type *> &types)
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type_struct (const std::vector<llvm::Type *> &types,
+BackendLLVM::llvm_type_struct (const std::vector<llvm::Type *> &types,
                                     const std::string &name)
 {
     return llvm::StructType::create(llvm_context(), types, name);
@@ -82,7 +86,7 @@ RuntimeOptimizer::llvm_type_struct (const std::vector<llvm::Type *> &types,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant (float f)
+BackendLLVM::llvm_constant (float f)
 {
     return llvm::ConstantFP::get (llvm_context(), llvm::APFloat(f));
 }
@@ -90,7 +94,7 @@ RuntimeOptimizer::llvm_constant (float f)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant (int i)
+BackendLLVM::llvm_constant (int i)
 {
     return llvm::ConstantInt::get (llvm_context(), llvm::APInt(32,i));
 }
@@ -98,7 +102,7 @@ RuntimeOptimizer::llvm_constant (int i)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant (size_t i)
+BackendLLVM::llvm_constant (size_t i)
 {
     int bits = sizeof(size_t)*8;
     return llvm::ConstantInt::get (llvm_context(), llvm::APInt(bits,i));
@@ -107,7 +111,7 @@ RuntimeOptimizer::llvm_constant (size_t i)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant_bool (bool i)
+BackendLLVM::llvm_constant_bool (bool i)
 {
     return llvm::ConstantInt::get (llvm_context(), llvm::APInt(1,i));
 }
@@ -115,7 +119,7 @@ RuntimeOptimizer::llvm_constant_bool (bool i)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant (ustring s)
+BackendLLVM::llvm_constant (ustring s)
 {
     // Create a const size_t with the ustring contents
     size_t bits = sizeof(size_t)*8;
@@ -128,7 +132,7 @@ RuntimeOptimizer::llvm_constant (ustring s)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant_ptr (void *p)
+BackendLLVM::llvm_constant_ptr (void *p)
 {
     // Create a const size_t with the address
     size_t bits = sizeof(size_t)*8;
@@ -141,7 +145,7 @@ RuntimeOptimizer::llvm_constant_ptr (void *p)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_constant (const TypeDesc &type)
+BackendLLVM::llvm_constant (const TypeDesc &type)
 {
     long long *i = (long long *)&type;
     return llvm::ConstantInt::get (llvm_context(), llvm::APInt(64,*i));
@@ -150,7 +154,7 @@ RuntimeOptimizer::llvm_constant (const TypeDesc &type)
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
+BackendLLVM::llvm_type (const TypeSpec &typespec)
 {
     if (typespec.is_closure_based())
         return llvm_type_void_ptr();
@@ -182,7 +186,7 @@ RuntimeOptimizer::llvm_type (const TypeSpec &typespec)
 
 
 llvm::Type *
-RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
+BackendLLVM::llvm_pass_type (const TypeSpec &typespec)
 {
     if (typespec.is_closure_based())
         return llvm_type_void_ptr();
@@ -217,11 +221,15 @@ RuntimeOptimizer::llvm_pass_type (const TypeSpec &typespec)
 
 
 void
-RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
+BackendLLVM::llvm_assign_zero (const Symbol &sym)
 {
     // Just memset the whole thing to zero, let LLVM sort it out.
     // This even works for closures.
-    int len = sym.typespec().is_closure_based() ? sizeof(void *) : sym.derivsize();
+    int len;
+    if (sym.typespec().is_closure_based())
+        len = sizeof(void *) * std::max(1,sym.typespec().arraylength());
+    else
+        len = sym.derivsize();
     // N.B. derivsize() includes derivs, if there are any
     size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
                          sym.typespec().simpletype().basesize();
@@ -231,7 +239,7 @@ RuntimeOptimizer::llvm_assign_zero (const Symbol &sym)
 
 
 void
-RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
+BackendLLVM::llvm_zero_derivs (const Symbol &sym)
 {
     if (sym.typespec().is_closure_based())
         return; // Closures don't have derivs
@@ -248,7 +256,7 @@ RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym)
 
 
 void
-RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
+BackendLLVM::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
 {
     if (sym.typespec().is_closure_based())
         return; // Closures don't have derivs
@@ -266,7 +274,7 @@ RuntimeOptimizer::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
 
 
 int
-RuntimeOptimizer::ShaderGlobalNameToIndex (ustring name)
+BackendLLVM::ShaderGlobalNameToIndex (ustring name)
 {
     // N.B. The order of names in this table MUST exactly match the
     // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
@@ -292,7 +300,7 @@ RuntimeOptimizer::ShaderGlobalNameToIndex (ustring name)
 
 
 llvm::Value *
-RuntimeOptimizer::getLLVMSymbolBase (const Symbol &sym)
+BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
 {
     Symbol* dealiased = sym.dealias();
 
@@ -329,7 +337,7 @@ RuntimeOptimizer::getLLVMSymbolBase (const Symbol &sym)
 
 
 llvm::AllocaInst *
-RuntimeOptimizer::llvm_alloca (const TypeSpec &type, bool derivs,
+BackendLLVM::llvm_alloca (const TypeSpec &type, bool derivs,
                                const std::string &name)
 {
     TypeSpec elemtype = type.elementtype();
@@ -345,7 +353,7 @@ RuntimeOptimizer::llvm_alloca (const TypeSpec &type, bool derivs,
 
 
 llvm::Value *
-RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
+BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
 {
     DASSERT ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
               sym.symtype() == SymTypeConst)
@@ -366,7 +374,7 @@ RuntimeOptimizer::getOrAllocateLLVMSymbol (const Symbol& sym)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_get_pointer (const Symbol& sym, int deriv,
+BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
                                     llvm::Value *arrayindex)
 {
     bool has_derivs = sym.has_derivs();
@@ -407,7 +415,7 @@ RuntimeOptimizer::llvm_get_pointer (const Symbol& sym, int deriv,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
+BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
                                    llvm::Value *arrayindex, int component,
                                    TypeDesc cast)
 {
@@ -452,7 +460,7 @@ RuntimeOptimizer::llvm_load_value (const Symbol& sym, int deriv,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
+BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
                                    int deriv, llvm::Value *arrayindex,
                                    int component, TypeDesc cast)
 {
@@ -493,7 +501,7 @@ RuntimeOptimizer::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_load_constant_value (const Symbol& sym, 
+BackendLLVM::llvm_load_constant_value (const Symbol& sym, 
                                             int arrayindex, int component,
                                             TypeDesc cast)
 {
@@ -537,7 +545,7 @@ RuntimeOptimizer::llvm_load_constant_value (const Symbol& sym,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_load_component_value (const Symbol& sym, int deriv,
+BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
                                              llvm::Value *component)
 {
     bool has_derivs = sym.has_derivs();
@@ -568,7 +576,7 @@ RuntimeOptimizer::llvm_load_component_value (const Symbol& sym, int deriv,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_load_arg (const Symbol& sym, bool derivs)
+BackendLLVM::llvm_load_arg (const Symbol& sym, bool derivs)
 {
     ASSERT (sym.typespec().is_floatbased());
     if (sym.typespec().is_int() ||
@@ -602,7 +610,7 @@ RuntimeOptimizer::llvm_load_arg (const Symbol& sym, bool derivs)
 
 
 bool
-RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
+BackendLLVM::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
                                     int deriv, llvm::Value* arrayindex,
                                     int component)
 {
@@ -619,7 +627,7 @@ RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
 
 
 bool
-RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
+BackendLLVM::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
                                     const TypeSpec &type,
                                     int deriv, llvm::Value* arrayindex,
                                     int component)
@@ -651,7 +659,7 @@ RuntimeOptimizer::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
 
 
 bool
-RuntimeOptimizer::llvm_store_component_value (llvm::Value* new_val,
+BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
                                               const Symbol& sym, int deriv,
                                               llvm::Value* component)
 {
@@ -681,7 +689,7 @@ RuntimeOptimizer::llvm_store_component_value (llvm::Value* new_val,
 
 
 llvm::Value *
-RuntimeOptimizer::layer_run_ptr (int layer)
+BackendLLVM::layer_run_ptr (int layer)
 {
     llvm::Value *layer_run = builder().CreateConstGEP2_32 (groupdata_ptr(), 0, 0);
     return builder().CreateConstGEP2_32 (layer_run, 0, layer);
@@ -690,7 +698,7 @@ RuntimeOptimizer::layer_run_ptr (int layer)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (llvm::Value *func,
+BackendLLVM::llvm_call_function (llvm::Value *func,
                                       llvm::Value **args, int nargs)
 {
     ASSERT (func);
@@ -709,7 +717,7 @@ RuntimeOptimizer::llvm_call_function (llvm::Value *func,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (const char *name,
+BackendLLVM::llvm_call_function (const char *name,
                                       llvm::Value **args, int nargs)
 {
     llvm::Function *func = llvm_module()->getFunction (name);
@@ -721,7 +729,7 @@ RuntimeOptimizer::llvm_call_function (const char *name,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (const char *name, 
+BackendLLVM::llvm_call_function (const char *name, 
                                       const Symbol **symargs, int nargs,
                                       bool deriv_ptrs)
 {
@@ -737,13 +745,15 @@ RuntimeOptimizer::llvm_call_function (const char *name,
         else
             valargs[i] = llvm_load_value (s);
     }
-    return llvm_call_function (name, &valargs[0], (int)valargs.size());
+    return llvm_call_function (name,
+                               (valargs.size())? &valargs[0]: NULL,
+                               (int)valargs.size());
 }
 
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
+BackendLLVM::llvm_call_function (const char *name, const Symbol &A,
                                       bool deriv_ptrs)
 {
     const Symbol *args[1];
@@ -754,7 +764,7 @@ RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
+BackendLLVM::llvm_call_function (const char *name, const Symbol &A,
                                       const Symbol &B, bool deriv_ptrs)
 {
     const Symbol *args[2];
@@ -766,7 +776,7 @@ RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
+BackendLLVM::llvm_call_function (const char *name, const Symbol &A,
                                       const Symbol &B, const Symbol &C,
                                       bool deriv_ptrs)
 {
@@ -780,7 +790,7 @@ RuntimeOptimizer::llvm_call_function (const char *name, const Symbol &A,
 
 
 void
-RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
+BackendLLVM::llvm_memset (llvm::Value *ptr, int val,
                                int len, int align)
 {
     llvm_memset(ptr, val, llvm_constant(len), align);
@@ -789,7 +799,7 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
 
 
 void
-RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
+BackendLLVM::llvm_memset (llvm::Value *ptr, int val,
                                llvm::Value *len, int align)
 {
     // memset with i32 len
@@ -818,7 +828,7 @@ RuntimeOptimizer::llvm_memset (llvm::Value *ptr, int val,
 
 
 void
-RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
+BackendLLVM::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
                                int len, int align)
 {
     // i32 len
@@ -844,7 +854,7 @@ RuntimeOptimizer::llvm_memcpy (llvm::Value *dst, llvm::Value *src,
 /// Convert a float llvm value to an integer.
 ///
 llvm::Value *
-RuntimeOptimizer::llvm_float_to_int (llvm::Value* fval)
+BackendLLVM::llvm_float_to_int (llvm::Value* fval)
 {
     return builder().CreateFPToSI(fval, llvm_type_int());
 }
@@ -854,7 +864,7 @@ RuntimeOptimizer::llvm_float_to_int (llvm::Value* fval)
 /// Convert an integer llvm value to a float.
 ///
 llvm::Value *
-RuntimeOptimizer::llvm_int_to_float (llvm::Value* ival)
+BackendLLVM::llvm_int_to_float (llvm::Value* ival)
 {
     return builder().CreateSIToFP(ival, llvm_type_float());
 }
@@ -862,7 +872,7 @@ RuntimeOptimizer::llvm_int_to_float (llvm::Value* ival)
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_make_safe_div (TypeDesc type,
+BackendLLVM::llvm_make_safe_div (TypeDesc type,
                                       llvm::Value *a, llvm::Value *b)
 {
     if (type.basetype == TypeDesc::FLOAT) {
@@ -881,7 +891,7 @@ RuntimeOptimizer::llvm_make_safe_div (TypeDesc type,
 
 
 llvm::Value *
-RuntimeOptimizer::llvm_make_safe_mod (TypeDesc type,
+BackendLLVM::llvm_make_safe_mod (TypeDesc type,
                                       llvm::Value *a, llvm::Value *b)
 {
     if (type.basetype == TypeDesc::FLOAT) {
@@ -899,8 +909,45 @@ RuntimeOptimizer::llvm_make_safe_mod (TypeDesc type,
 
 
 
+llvm::Value *
+BackendLLVM::llvm_test_nonzero (Symbol &val, bool test_derivs)
+{
+    const TypeSpec &ts (val.typespec());
+    ASSERT (! ts.is_array() && ! ts.is_closure() && ! ts.is_string());
+    TypeDesc t = ts.simpletype();
+
+    // Handle int case -- guaranteed no derivs, no multi-component
+    if (t == TypeDesc::TypeInt)
+        return builder().CreateICmpNE (llvm_load_value(val), llvm_constant(0));
+
+    // float-based
+    int ncomps = t.aggregate;
+    int nderivs = (test_derivs && val.has_derivs()) ? 3 : 1;
+    llvm::Value *isnonzero = NULL;
+    for (int d = 0;  d < nderivs;  ++d) {
+        for (int c = 0;  c < ncomps;  ++c) {
+#if 1
+            llvm::Value *v = llvm_load_value (val, d, c);
+            llvm::Value *nz = builder().CreateFCmpONE (v, llvm_constant(0.0f));
+#else
+            // Alternate technique: convert to int and then do int compare.
+            // Seems to be about the same speed as comparing floats.
+            llvm::Value *v = llvm_load_value (val, d, c, TypeDesc::TypeInt);
+            llvm::Value *nz = builder().CreateICmpNE (v, llvm_constant(0));
+#endif
+            if (isnonzero)  // multi-component/deriv: OR with running result
+                isnonzero = builder().CreateOr (nz, isnonzero);
+            else
+                isnonzero = nz;
+        }
+    }
+    return isnonzero;
+}
+
+
+
 bool
-RuntimeOptimizer::llvm_assign_impl (Symbol &Result, Symbol &Src,
+BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
                                     int arrayindex)
 {
     ASSERT (! Result.typespec().is_structure());

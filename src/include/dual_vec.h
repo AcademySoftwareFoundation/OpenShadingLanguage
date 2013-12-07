@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_DUAL_VEC_H
-#define OSL_DUAL_VEC_H
+#pragma once
 
 #include "oslconfig.h"
 #include "dual.h"
@@ -353,22 +352,9 @@ normalize (const Dual2<Vec3> &a)
 inline Dual2<float>
 distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 {
-    Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
-    Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);
-    Dual2<float> az (a.val().z, a.dx().z, a.dy().z);
-    Dual2<float> bx (b.val().x, b.dx().x, b.dy().x);
-    Dual2<float> by (b.val().y, b.dx().y, b.dy().y);
-    Dual2<float> bz (b.val().z, b.dx().z, b.dy().z);
-
-    Dual2<float> dx = bx - ax;
-    Dual2<float> dy = by - ay;
-    Dual2<float> dz = bz - az;
-
-    return sqrt(dx*dx + dy*dy + dz*dz);
+    return length (a - b);
 }
 
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_DUAL_VEC_H */

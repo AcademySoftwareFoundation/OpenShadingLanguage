@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstdio>
-#include <unistd.h>
 
 #include "oslquery.h"
 #include "../liboslexec/osoreader.h"
@@ -117,6 +116,8 @@ public:
     virtual void symdefault (const char *def);
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
+    virtual bool parse_code_section () { return false; }
+    virtual bool stop_parsing_at_temp_symbols () { return true; }
 
 private:
     OSLQuery &m_query;
@@ -285,12 +286,12 @@ OSLQuery::open (const std::string &shadername,
         Filesystem::searchpath_split (searchpath, dirs);
         filename = Filesystem::searchpath_find (filename, dirs);
     }
-    if (filename.empty() ||  access (filename.c_str(), R_OK) < 0) {
+    if (filename.empty()) {
         m_error = std::string("File \"") + shadername + "\" could not be found";
         return false;
     }
 
-    bool ok = oso.parse (filename);
+    bool ok = oso.parse_file (filename);
     return ok;
 }
 

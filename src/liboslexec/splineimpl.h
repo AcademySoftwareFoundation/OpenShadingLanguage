@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SPLINEIMPL_H
-#define SPLINEIMPL_H
+#pragma once
 
 // avoid naming conflict with MSVC macro
 #ifdef BTYPE
@@ -41,6 +40,8 @@ namespace pvt {
 // declaring a Spline namespace to avoid polluting the existing
 // namespaces with all these templated helper functions.
 namespace Spline {
+
+static ustring u_constant("constant");
 
 
 // We need to know explicitly whether the knots have
@@ -125,6 +126,14 @@ void spline_evaluate(const SplineBasis *spline,
     int segnum = (int)seg_x;
     if (segnum > (nsegs-1))
        segnum = nsegs-1;
+
+    if (spline->basis_name == u_constant) {
+        // Special case for "constant" basis
+        RTYPE P = removeDerivatives (knots[segnum+1]);
+        assignment (result, P);
+        return;
+    }
+
     // x is the position along segment 'segnum'
     x = x - float(segnum);
     int s = segnum*spline->basis_step;
@@ -231,4 +240,3 @@ void spline_inverse (const SplineBasis *spline,
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
 
-#endif // SPLINEIMPL_H

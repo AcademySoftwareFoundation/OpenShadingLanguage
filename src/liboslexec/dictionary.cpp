@@ -36,7 +36,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/algorithm/string.hpp>
 
 #include <OpenImageIO/dassert.h>
-#include <OpenImageIO/pugixml.hpp>
+
+#ifdef USE_EXTERNAL_PUGIXML
+# include <pugixml.hpp>
+#else
+# include <OpenImageIO/pugixml.hpp>
+#endif
 
 #include "oslexec_pvt.h"
 
@@ -45,7 +50,9 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
+#ifdef USING_OIIO_PUGI
 namespace pugi = OIIO::pugi;
+#endif
 
 
 
@@ -378,7 +385,7 @@ Dictionary::dict_value (int nodeID, ustring attribname,
     if (type.basetype == TypeDesc::FLOAT) {
         r.valueoffset = (int) m_floatdata.size();
         for (int i = 0;  i < n;  ++i) {
-            float v = strtof (val, (char **)&val);
+            float v = (float) strtod (val, (char **)&val);
             while (isspace(*val) || *val == ',')
                 ++val;
             m_floatdata.push_back (v);

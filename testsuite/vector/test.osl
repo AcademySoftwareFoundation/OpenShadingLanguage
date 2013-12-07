@@ -21,6 +21,19 @@ test ()
         printf ("  length (%g) = %g\n", XY, length(XY));
         printf ("  distance ((%g), (%g)) = %g\n", X, Y, distance(X,Y));
         printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
+        printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                X, Y, X, distance(X,Y,X));
+        printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                X, Y, Y, distance(X,Y,Y));
+        point Q = point(0.5,0.5,0);
+        printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                X, Y, Q, distance(X,Y,Q));
+        Q = point(0.5,0.5,0.5);
+        printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                X, Y, Q, distance(X,Y,Q));
+        Q = point(2,1,0);
+        printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                X, Y, Q, distance(X,Y,Q));
         printf ("  normalize (%g) = %g\n", XY, normalize(XY));
         printf ("  normalize (%g) = %g\n", V, normalize(V));
         printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));

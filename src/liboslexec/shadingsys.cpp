@@ -37,14 +37,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "genclosure.h"
 #include "llvm_headers.h"
+#include "backendllvm.h"
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
-#if OIIO_VERSION >= 1100
-# include "OpenImageIO/optparser.h"
-#endif
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/timer.h>
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/optparser.h>
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -72,7 +72,7 @@ ShadingSystem::create (RendererServices *renderer,
 
     // Doesn't need a shared cache
     ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem, err);
-#ifdef DEBUG
+#ifndef NDEBUG
     err->info ("creating new ShadingSystem %p", (void *)ts);
 #endif
     return ts;
@@ -108,25 +108,31 @@ bool
 ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
                               const void *src, TypeDesc srctype)
 {
-    // Just copy equivalent types
-    if (equivalent (dsttype, srctype)) {
-        if (dst && src) {
-            size_t size = dsttype.size();
-            if (size == sizeof(float))    // common case: float/int copy
-                *(float *)dst = *(const float *)src;
-            else
-                memcpy (dst, src, dsttype.size());  // otherwise, memcpy
+    int tmp_int;
+    if (srctype == TypeDesc::UINT8) {
+        // uint8 src: Up-convert the source to int
+        if (src) {
+            tmp_int = *(const unsigned char *)src;
+            src = &tmp_int;
         }
-        return true;
+        srctype = TypeDesc::TypeInt;
     }
 
+    float tmp_float;
     if (srctype == TypeDesc::TypeInt && dsttype.basetype == TypeDesc::FLOAT) {
-        if (dst && src) {
-            // int -> any-float-based ... up-convert to float and recurse
-            float f = (float) (*(const int *)src);
-            return convert_value (dst, dsttype, &f, TypeDesc::TypeFloat);
+        // int -> float-based : up-convert the source to float
+        if (src) {
+            tmp_float = (float) (*(const int *)src);
+            src = &tmp_float;
         }
-        return convert_value (NULL, dsttype, NULL, TypeDesc::TypeFloat);
+        srctype = TypeDesc::TypeFloat;
+    }
+
+    // Just copy equivalent types
+    if (equivalent (dsttype, srctype)) {
+        if (dst && src)
+            memcpy (dst, src, dsttype.size());
+        return true;
     }
 
     if (srctype == TypeDesc::TypeFloat) {
@@ -232,11 +238,15 @@ ustring cell("cell"), cellnoise("cellnoise"), pcellnoise("pcellnoise");
 ustring pnoise("pnoise"), psnoise("psnoise");
 ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
 ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
+ustring simplex("simplex"), usimplex("usimplex");
+ustring simplexnoise("simplexnoise"), usimplexnoise("usimplexnoise");
 ustring anisotropic("anisotropic"), direction("direction");
 ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
 ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
+ustring op_exit("exit");
 ustring subimage("subimage"), subimagename("subimagename");
-
+ustring missingcolor("missingcolor"), missingalpha("missingalpha");
+ustring uninitialized_string("!!!uninitialized!!!");
 };
 
 
@@ -250,27 +260,32 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
       m_lazyglobals (false),
-      m_clearmemory (false), m_rebind (false), m_debugnan (false),
+      m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
-      m_greedyjit(false),
-      m_optimize (2),
-      m_opt_constant_param(true), m_opt_constant_fold(true),
+      m_greedyjit(false), m_countlayerexecs(false),
+      m_max_warnings_per_thread(100),
+      m_optimize(2),
+      m_opt_simplify_param(true), m_opt_constant_fold(true),
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
-      m_opt_assign(true),
+      m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(true),
+      m_opt_fold_getattribute(true),
+      m_opt_middleman(true),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
-      m_debug(false), m_llvm_debug(false),
+      m_debug(0), m_llvm_debug(0),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
       m_max_local_mem_KB(1024),
+      m_compile_report(false),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
       m_stat_llvm_opt_time(0), m_stat_llvm_jit_time(0),
+      m_stat_inst_merge_time(0),
       m_stat_max_llvm_local_mem(0)
 {
     m_stat_shaders_loaded = 0;
@@ -280,12 +295,17 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_instances_compiled = 0;
     m_stat_groups_compiled = 0;
     m_stat_empty_instances = 0;
+    m_stat_merged_inst = 0;
+    m_stat_merged_inst_opt = 0;
     m_stat_empty_groups = 0;
     m_stat_regexes = 0;
     m_stat_preopt_syms = 0;
     m_stat_postopt_syms = 0;
     m_stat_preopt_ops = 0;
     m_stat_postopt_ops = 0;
+    m_stat_middlemen_eliminated = 0;
+    m_stat_const_connections = 0;
+    m_stat_global_connections = 0;
     m_stat_optimization_time = 0;
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
@@ -295,6 +315,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_pointcloud_max_results = 0;
     m_stat_pointcloud_failures = 0;
     m_stat_pointcloud_gets = 0;
+    m_stat_pointcloud_writes = 0;
+    m_stat_layers_executed = 0;
 
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
@@ -350,26 +372,27 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 
 
 
-void
-ShadingSystemImpl::setup_op_descriptors ()
+static void
+shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
-#define OP(name,ll,f,simp)                                               \
-    extern bool llvm_gen_##ll (RuntimeOptimizer &rop, int opnum);        \
+#define OP2(alias,name,ll,f,simp)                                        \
+    extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##f (RuntimeOptimizer &rop, int opnum);        \
-    m_op_descriptor[ustring(#name)] = OpDescriptor(#name, llvm_gen_##ll, \
+    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
                                                    constfold_##f, simp);
+#define OP(name,ll,f,simp) OP2(name,name,ll,f,simp)
 
     // name          llvmgen              folder         simple
     OP (aassign,     aassign,             none,          false);
     OP (abs,         generic,             abs,           true);
-    OP (acos,        generic,             none,          true);
+    OP (acos,        generic,             acos,          true);
     OP (add,         add,                 add,           true);
     OP (and,         andor,               and,           true);
-    OP (area,        area,                none,          true);
+    OP (area,        area,                deriv,         true);
     OP (aref,        aref,                aref,          true);
     OP (arraycopy,   arraycopy,           none,          false);
     OP (arraylength, arraylength,         arraylength,   true);
-    OP (asin,        generic,             none,          true);
+    OP (asin,        generic,             asin,          true);
     OP (assign,      assign,              none,          true);
     OP (atan,        generic,             none,          true);
     OP (atan2,       generic,             none,          true);
@@ -380,7 +403,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (break,       loopmod_op,          none,          false);
     OP (calculatenormal, calculatenormal, none,          true);
     OP (ceil,        generic,             ceil,          true);
-    OP (cellnoise,   noise,               none,          true);
+    OP (cellnoise,   noise,               noise,         true);
     OP (clamp,       clamp,               clamp,         true);
     OP (closure,     closure,             none,          true);
     OP (color,       construct_color,     triple,        true);
@@ -389,10 +412,10 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (compref,     compref,             compref,       true);
     OP (concat,      generic,             concat,        true);
     OP (continue,    loopmod_op,          none,          false);
-    OP (cos,         generic,             none,          true);
+    OP (cos,         generic,             cos,           true);
     OP (cosh,        generic,             none,          true);
     OP (cross,       generic,             none,          true);
-    OP (degrees,     generic,             none,          true);
+    OP (degrees,     generic,             degrees,       true);
     OP (determinant, generic,             none,          true);
     OP (dict_find,   dict_find,           none,          false);
     OP (dict_next,   dict_next,           none,          false);
@@ -400,43 +423,46 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (distance,    generic,             none,          true);
     OP (div,         div,                 div,           true);
     OP (dot,         generic,             dot,           true);
-    OP (Dx,          DxDy,                none,          true);
-    OP (Dy,          DxDy,                none,          true);
-    OP (Dz,          Dz,                  none,          true);
+    OP (Dx,          DxDy,                deriv,         true);
+    OP (Dy,          DxDy,                deriv,         true);
+    OP (Dz,          Dz,                  deriv,         true);
     OP (dowhile,     loop_op,             none,          false);
+    OP (end,         end,                 none,          false);
     OP (endswith,    generic,             endswith,      true);
     OP (environment, environment,         none,          true);
     OP (eq,          compare_op,          eq,            true);
-    OP (erf,         generic,             none,          true);
-    OP (erfc,        generic,             none,          true);
+    OP (erf,         generic,             erf,           true);
+    OP (erfc,        generic,             erfc,          true);
     OP (error,       printf,              none,          false);
-    OP (exp,         generic,             none,          true);
-    OP (exp2,        generic,             none,          true);
-    OP (expm1,       generic,             none,          true);
-    OP (fabs,        generic,             none,          true);
-    OP (filterwidth, filterwidth,         none,          true);
-    OP (floor,       generic,             floor,          true);
+    OP (exit,        return,              none,          false);
+    OP (exp,         generic,             exp,           true);
+    OP (exp2,        generic,             exp2,          true);
+    OP (expm1,       generic,             expm1,         true);
+    OP (fabs,        generic,             abs,           true);
+    OP (filterwidth, filterwidth,         deriv,         true);
+    OP (floor,       generic,             floor,         true);
     OP (fmod,        modulus,             none,          true);
     OP (for,         loop_op,             none,          false);
     OP (format,      printf,              format,        true);
     OP (functioncall, functioncall,       functioncall,  false);
     OP (ge,          compare_op,          ge,            true);
-    OP (getattribute, getattribute,       none,          false);
+    OP (getattribute, getattribute,       getattribute,  false);
     OP (getmatrix,   getmatrix,           getmatrix,     false);
     OP (getmessage,  getmessage,          getmessage,    false);
     OP (gettextureinfo, gettextureinfo,   gettextureinfo,false);
     OP (gt,          compare_op,          gt,            true);
     OP (if,          if,                  if,            false);
-    OP (inversesqrt, generic,             none,          true);
+    OP (inversesqrt, generic,             inversesqrt,   true);
+    OP (isconnected, generic,             none,          true);
     OP (isfinite,    generic,             none,          true);
     OP (isinf,       generic,             none,          true);
     OP (isnan,       generic,             none,          true);
     OP (le,          compare_op,          le,            true);
     OP (length,      generic,             none,          true);
-    OP (log,         generic,             none,          true);
-    OP (log10,       generic,             none,          true);
-    OP (log2,        generic,             none,          true);
-    OP (logb,        generic,             none,          true);
+    OP (log,         generic,             log,           true);
+    OP (log10,       generic,             log10,         true);
+    OP (log2,        generic,             log2,          true);
+    OP (logb,        generic,             logb,          true);
     OP (lt,          compare_op,          lt,            true);
     OP (luminance,   luminance,           none,          true);
     OP (matrix,      matrix,              matrix,        true);
@@ -444,23 +470,24 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (mxcompassign, mxcompassign,       none,          false);
     OP (mxcompref,   mxcompref,           none,          true);
     OP (min,         minmax,              min,           true);
+    OP (mix,         mix,                 mix,           true);
     OP (mod,         modulus,             none,          true);
     OP (mul,         mul,                 mul,           true);
     OP (neg,         neg,                 neg,           true);
     OP (neq,         compare_op,          neq,           true);
-    OP (noise,       noise,               none,          true);
+    OP (noise,       noise,               noise,         true);
     OP (normal,      construct_triple,    triple,        true);
-    OP (normalize,   generic,             none,          true);
+    OP (normalize,   generic,             normalize,     true);
     OP (or,          andor,               or,            true);
-    OP (pnoise,      noise,               none,          true);
+    OP (pnoise,      noise,               noise,         true);
     OP (point,       construct_triple,    triple,        true);
     OP (pointcloud_search, pointcloud_search, pointcloud_search, false);
-    OP (pointcloud_get, pointcloud_get,   none,          false);
+    OP (pointcloud_get, pointcloud_get,   pointcloud_get,false);
     OP (pointcloud_write, pointcloud_write, none,        false);
     OP (pow,         generic,             pow,           true);
     OP (printf,      printf,              none,          false);
-    OP (psnoise,     noise,               none,          true);
-    OP (radians,     generic,             none,          true);
+    OP (psnoise,     noise,               noise,         true);
+    OP (radians,     generic,             radians,       true);
     OP (raytype,     raytype,             none,          true);
     OP (regex_match, regex,               none,          false);
     OP (regex_search, regex,              regex_search,  false);
@@ -470,17 +497,22 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (shl,         bitwise_binary_op,   none,          true);
     OP (shr,         bitwise_binary_op,   none,          true);
     OP (sign,        generic,             none,          true);
-    OP (sin,         generic,             none,          true);
+    OP (sin,         generic,             sin,           true);
     OP (sincos,      sincos,              none,          false);
     OP (sinh,        generic,             none,          true);
     OP (smoothstep,  generic,             none,          true);
-    OP (snoise,      noise,               none,          true);
+    OP (snoise,      noise,               noise,         true);
     OP (spline,      spline,              none,          true);
     OP (splineinverse, spline,            none,          true);
+    OP (split,       split,               split,         false);
     OP (sqrt,        generic,             sqrt,          true);
     OP (startswith,  generic,             none,          true);
     OP (step,        generic,             none,          true);
+    OP (stof,        generic,             stof,          true);
+    OP (stoi,        generic,             stoi,          true);
     OP (strlen,      generic,             strlen,        true);
+    OP2(strtof,stof, generic,             stof,          true);
+    OP2(strtoi,stoi, generic,             stoi,          true);
     OP (sub,         sub,                 sub,           true);
     OP (substr,      generic,             none,          true);
     OP (surfacearea, get_simple_SG_field, none,          true);
@@ -496,7 +528,7 @@ ShadingSystemImpl::setup_op_descriptors ()
     OP (trunc,       generic,             none,          true);
     OP (useparam,    useparam,            useparam,      false);
     OP (vector,      construct_triple,    triple,        true);
-    OP (warning,     printf,              none,          false);
+    OP (warning,     printf,              warning,       false);
     OP (wavelength_color, blackbody,      none,          true);
     OP (while,       loop_op,             none,          false);
     OP (xor,         bitwise_binary_op,   none,          true);
@@ -506,8 +538,19 @@ ShadingSystemImpl::setup_op_descriptors ()
 
 
 void
+ShadingSystemImpl::setup_op_descriptors ()
+{
+    // This is not a class member function to avoid namespace issues
+    // with function declarations in the function body, when building
+    // with visual studio.
+    shading_system_setup_op_descriptors(m_op_descriptor);
+}
+
+
+
+void
 ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params,
-                                    PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
+                                    PrepareClosureFunc prepare, SetupClosureFunc setup)
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
         if (params[i].key == NULL && params[i].type.size() != (size_t)params[i].field_size) {
@@ -515,7 +558,30 @@ ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam
             return;
         }
     }
-    m_closure_registry.register_closure(name, id, params, prepare, setup, compare);
+    m_closure_registry.register_closure(name, id, params, prepare, setup);
+}
+
+
+
+bool
+ShadingSystemImpl::query_closure(const char **name, int *id,
+                                 const ClosureParam **params)
+{
+    ASSERT(name || id);
+    const ClosureRegistry::ClosureEntry *entry =
+        (name && *name) ? m_closure_registry.get_entry(ustring(*name))
+                        : m_closure_registry.get_entry(*id);
+    if (!entry)
+        return false;
+
+    if (name)
+        *name   = entry->name.c_str();
+    if (id)
+        *id     = entry->id;
+    if (params)
+        *params = &entry->params[0];
+
+    return true;
 }
 
 
@@ -552,11 +618,9 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         return true;                                                    \
     }
 
-#if OIIO_VERSION >= 1100 /* 0.11 and higher only */
     if (name == "options" && type == TypeDesc::STRING) {
         return OIIO::optparser (*(ShadingSystem *)this, *(const char **)val);
     }
-#endif
 
     lock_guard guard (m_mutex);  // Thread safety
     ATTR_SET ("statistics:level", int, m_statslevel);
@@ -564,11 +628,12 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("lazylayers", int, m_lazylayers);
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
     ATTR_SET ("clearmemory", int, m_clearmemory);
-    ATTR_SET ("rebind", int, m_rebind);
-    ATTR_SET ("debugnan", int, m_debugnan);
+    ATTR_SET ("debug_nan", int, m_debugnan);
+    ATTR_SET ("debugnan", int, m_debugnan);  // back-compatible alias
+    ATTR_SET ("debug_uninit", int, m_debug_uninit);
     ATTR_SET ("lockgeom", int, m_lockgeom_default);
     ATTR_SET ("optimize", int, m_optimize);
-    ATTR_SET ("opt_constant_param", int, m_opt_constant_param);
+    ATTR_SET ("opt_simplify_param", int, m_opt_simplify_param);
     ATTR_SET ("opt_constant_fold", int, m_opt_constant_fold);
     ATTR_SET ("opt_stale_assign", int, m_opt_stale_assign);
     ATTR_SET ("opt_elide_useless_ops", int, m_opt_elide_useless_ops);
@@ -576,6 +641,10 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("opt_peephole", int, m_opt_peephole);
     ATTR_SET ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_SET ("opt_assign", int, m_opt_assign);
+    ATTR_SET ("opt_mix", int, m_opt_mix);
+    ATTR_SET ("opt_merge_instances", int, m_opt_merge_instances);
+    ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
+    ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -583,10 +652,14 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
+    ATTR_SET ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
+    ATTR_SET ("compile_report", int, m_compile_report);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
+    ATTR_SET_STRING ("opt_layername", m_opt_layername);
     ATTR_SET_STRING ("only_groupname", m_only_groupname);
 
     // cases for special handling
@@ -609,6 +682,12 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
         m_raytypes.clear ();
         for (size_t i = 0;  i < type.numelements();  ++i)
             m_raytypes.push_back (ustring(((const char **)val)[i]));
+        return true;
+    }
+    if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
+        m_renderer_outputs.clear ();
+        for (size_t i = 0;  i < type.numelements();  ++i)
+            m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
         return true;
     }
     return false;
@@ -639,11 +718,12 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
-    ATTR_DECODE ("rebind", int, m_rebind);
-    ATTR_DECODE ("debugnan", int, m_debugnan);
+    ATTR_DECODE ("debug_nan", int, m_debugnan);
+    ATTR_DECODE ("debugnan", int, m_debugnan);  // back-compatible alias
+    ATTR_DECODE ("debug_uninit", int, m_debug_uninit);
     ATTR_DECODE ("lockgeom", int, m_lockgeom_default);
     ATTR_DECODE ("optimize", int, m_optimize);
-    ATTR_DECODE ("opt_constant_param", int, m_opt_constant_param);
+    ATTR_DECODE ("opt_simplify_param", int, m_opt_simplify_param);
     ATTR_DECODE ("opt_constant_fold", int, m_opt_constant_fold);
     ATTR_DECODE ("opt_stale_assign", int, m_opt_stale_assign);
     ATTR_DECODE ("opt_elide_useless_ops", int, m_opt_elide_useless_ops);
@@ -651,6 +731,10 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("opt_peephole", int, m_opt_peephole);
     ATTR_DECODE ("opt_coalesce_temps", int, m_opt_coalesce_temps);
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
+    ATTR_DECODE ("opt_mix", int, m_opt_mix);
+    ATTR_DECODE ("opt_merge_instances", int, m_opt_merge_instances);
+    ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
+    ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);
@@ -659,18 +743,24 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
+    ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
+    ATTR_DECODE ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);
     ATTR_DECODE_STRING ("debug_groupname", m_debug_groupname);
     ATTR_DECODE_STRING ("debug_layername", m_debug_layername);
+    ATTR_DECODE_STRING ("opt_layername", m_opt_layername);
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
+    ATTR_DECODE ("compile_report", int, m_compile_report);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
     ATTR_DECODE ("stat:instances_compiled", int, m_stat_instances_compiled);
     ATTR_DECODE ("stat:groups_compiled", int, m_stat_groups_compiled);
     ATTR_DECODE ("stat:empty_instances", int, m_stat_empty_instances);
+    ATTR_DECODE ("stat:merged_inst", int, m_stat_merged_inst);
+    ATTR_DECODE ("stat:merged_inst_opt", int, m_stat_merged_inst_opt);
     ATTR_DECODE ("stat:empty_groups", int, m_stat_empty_groups);
     ATTR_DECODE ("stat:instances", int, m_stat_groupinstances);
     ATTR_DECODE ("stat:regexes", int, m_stat_regexes);
@@ -678,6 +768,9 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:postopt_syms", int, m_stat_postopt_syms);
     ATTR_DECODE ("stat:preopt_ops", int, m_stat_preopt_ops);
     ATTR_DECODE ("stat:postopt_ops", int, m_stat_postopt_ops);
+    ATTR_DECODE ("stat:middlemen_eliminated", int, m_stat_middlemen_eliminated);
+    ATTR_DECODE ("stat:const_connections", int, m_stat_const_connections);
+    ATTR_DECODE ("stat:global_connections", int, m_stat_global_connections);
     ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
     ATTR_DECODE ("stat:opt_locking_time", float, m_stat_opt_locking_time);
     ATTR_DECODE ("stat:specialization_time", float, m_stat_specialization_time);
@@ -686,9 +779,11 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:llvm_irgen_time", float, m_stat_llvm_irgen_time);
     ATTR_DECODE ("stat:llvm_opt_time", float, m_stat_llvm_opt_time);
     ATTR_DECODE ("stat:llvm_jit_time", float, m_stat_llvm_jit_time);
+    ATTR_DECODE ("stat:inst_merge_time", float, m_stat_inst_merge_time);
     ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
     ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
     ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
+    ATTR_DECODE ("stat:pointcloud_writes", long long, m_stat_pointcloud_writes);
     ATTR_DECODE ("stat:pointcloud_searches_total_results", long long, m_stat_pointcloud_searches_total_results);
     ATTR_DECODE ("stat:pointcloud_max_results", int, m_stat_pointcloud_max_results);
     ATTR_DECODE ("stat:pointcloud_failures", int, m_stat_pointcloud_failures);
@@ -714,7 +809,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
-    
+
     return false;
 #undef ATTR_DECODE
 #undef ATTR_DECODE_STRING
@@ -823,7 +918,8 @@ ShadingSystemImpl::message (const std::string &msg)
 
 
 void
-ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
+ShadingSystemImpl::pointcloud_stats (int search, int get, int results,
+                                     int writes)
 {
     spin_lock lock (m_stat_mutex);
     m_stat_pointcloud_searches += search;
@@ -833,6 +929,7 @@ ShadingSystemImpl::pointcloud_stats (int search, int get, int results)
         ++m_stat_pointcloud_failures;
     m_stat_pointcloud_max_results = std::max (m_stat_pointcloud_max_results,
                                               results);
+    m_stat_pointcloud_writes += writes;
 }
 
 
@@ -856,9 +953,11 @@ ShadingSystemImpl::getstats (int level) const
     out << "  Shading groups:   " << m_stat_groups << "\n";
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
     float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);
-    out << "    Avg instances per group: " 
+    out << "    Avg instances per group: "
         << Strutil::format ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
+    if (m_countlayerexecs)
+        out << "  Total layers executed: " << m_stat_layers_executed << "\n";
 
 #if 0
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
@@ -877,25 +976,38 @@ ShadingSystemImpl::getstats (int level) const
 
     out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
-                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1)); 
+                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
 #endif
 
     out << "  Compiled " << m_stat_groups_compiled << " groups, "
         << m_stat_instances_compiled << " instances\n";
-    out << "  After optimization, " << m_stat_empty_instances 
-        << " empty instances ("
-        << (int)(100.0f*m_stat_empty_instances/m_stat_instances_compiled)
-        << "%)\n";
-    out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
-        << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
-    out << Strutil::format ("  Optimized %llu ops to %llu (%.1f%%)\n",
-                            (long long)m_stat_preopt_ops,
-                            (long long)m_stat_postopt_ops,
-                            100.0*(double(m_stat_postopt_ops)/double(m_stat_preopt_ops)-1.0));
-    out << Strutil::format ("  Optimized %llu symbols to %llu (%.1f%%)\n",
-                            (long long)m_stat_preopt_syms,
-                            (long long)m_stat_postopt_syms,
-                            100.0*(double(m_stat_postopt_syms)/double(m_stat_preopt_syms)-1.0));
+    out << "  Merged " << (m_stat_merged_inst+m_stat_merged_inst_opt)
+        << " instances (" << m_stat_merged_inst << " initial, "
+        << m_stat_merged_inst_opt << " after opt) in "
+        << Strutil::timeintervalformat (m_stat_inst_merge_time, 2) << "\n";
+    if (m_stat_instances_compiled > 0)
+        out << "  After optimization, " << m_stat_empty_instances
+            << " empty instances ("
+            << (int)(100.0f*m_stat_empty_instances/m_stat_instances_compiled) << "%)\n";
+    if (m_stat_groups_compiled > 0)
+        out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
+            << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
+    if (m_stat_instances_compiled > 0 || m_stat_groups_compiled > 0) {
+        out << Strutil::format ("  Optimized %llu ops to %llu (%.1f%%)\n",
+                                (long long)m_stat_preopt_ops,
+                                (long long)m_stat_postopt_ops,
+                                100.0*(double(m_stat_postopt_ops)/double(std::max(1,(int)m_stat_preopt_ops))-1.0));
+        out << Strutil::format ("  Optimized %llu symbols to %llu (%.1f%%)\n",
+                                (long long)m_stat_preopt_syms,
+                                (long long)m_stat_postopt_syms,
+                                100.0*(double(m_stat_postopt_syms)/double(std::max(1,(int)m_stat_preopt_syms))-1.0));
+    }
+    out << Strutil::format ("  Constant connections eliminated: %d\n",
+                            (int)m_stat_const_connections);
+    out << Strutil::format ("  Global connections eliminated: %d\n",
+                            (int)m_stat_global_connections);
+    out << Strutil::format ("  Middlemen eliminated: %d\n",
+                            (int)m_stat_middlemen_eliminated);
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "
@@ -922,13 +1034,16 @@ ShadingSystemImpl::getstats (int level) const
         out << "     (fail time "
             << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
     }
-    if (m_stat_pointcloud_searches) {
-        out << "  pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
+    if (m_stat_pointcloud_searches || m_stat_pointcloud_writes) {
+        out << "  Pointcloud operations:\n";
+        out << "    pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
         out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
-        out << "      average query results: " 
-            << Strutil::format ("%.1f", (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches) << "\n";
+        double avg = m_stat_pointcloud_searches ?
+            (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches : 0.0;
+        out << "      average query results: " << Strutil::format ("%.1f", avg) << "\n";
         out << "      failures: " << m_stat_pointcloud_failures << "\n";
-        out << "  pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
+        out << "    pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
+        out << "    pointcloud_write calls: " << m_stat_pointcloud_writes << "\n";
     }
     out << "  Memory total: " << m_stat_memory.memstat() << '\n';
     out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';
@@ -968,29 +1083,42 @@ ShadingSystemImpl::printstats () const
 
 
 bool
-ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
+ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val,
+                              bool lockgeom)
 {
     // We work very hard not to do extra copies of the data.  First,
     // grow the pending list by one (empty) slot...
     m_pending_params.resize (m_pending_params.size() + 1);
     // ...then initialize it in place
     m_pending_params.back().init (name, t, 1, val);
+    // If we have a possible geometric override (lockgeom=false), set the
+    // param's interpolation to VERTEX rather than the default CONSTANT.
+    if (lockgeom == false)
+        m_pending_params.back().interp (OIIO::ParamValue::INTERP_VERTEX);
     return true;
 }
 
 
 
 bool
+ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
+{
+    return Parameter (name, t, val, true);
+}
+
+
+
+ShaderGroupRef
 ShadingSystemImpl::ShaderGroupBegin (const char *groupname)
 {
     if (m_in_group) {
         error ("Nested ShaderGroupBegin() calls");
-        return false;
+        return ShaderGroupRef();
     }
     m_in_group = true;
     m_group_use = ShadUseUnknown;
-    m_group_name = ustring (groupname);
-    return true;
+    m_curgroup.reset (new ShaderGroup(groupname));
+    return m_curgroup;
 }
 
 
@@ -1005,11 +1133,9 @@ ShadingSystemImpl::ShaderGroupEnd (void)
 
     // Mark the layers that can be run lazily
     if (m_group_use != ShadUseUnknown) {
-        ShaderGroup &sgroup (m_curattrib->shadergroup (m_group_use));
-        sgroup.name (m_group_name);
-        size_t nlayers = sgroup.nlayers ();
+        size_t nlayers = m_curgroup->nlayers ();
         for (size_t layer = 0;  layer < nlayers;  ++layer) {
-            ShaderInstance *inst = sgroup[layer];
+            ShaderInstance *inst = (*m_curgroup)[layer];
             if (! inst)
                 continue;
             if (m_lazylayers) {
@@ -1035,11 +1161,20 @@ ShadingSystemImpl::ShaderGroupEnd (void)
                 inst->run_lazily (false);
             }
         }
+
+        merge_instances (*m_curgroup);
+    }
+
+    {
+        // Record the group for later greedy JITing
+        spin_lock lock (m_groups_to_compile_mutex);
+        m_groups_to_compile.push_back (m_curgroup);
+        ++m_groups_to_compile_count;
     }
 
     m_in_group = false;
     m_group_use = ShadUseUnknown;
-    m_group_name.clear ();
+
     return true;
 }
 
@@ -1051,8 +1186,8 @@ ShadingSystemImpl::Shader (const char *shaderusage,
                            const char *layername)
 {
     // Make sure we have a current attrib state
-    if (! m_curattrib)
-        m_curattrib.reset (new ShadingAttribState);
+    if (! m_curgroup)
+        m_curgroup.reset (new ShaderGroup (""));
 
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
@@ -1066,21 +1201,13 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         return false;
     }
 
-    // If somebody is already hanging onto the shader state, clone it before
-    // we modify it.
-    if (! m_curattrib.unique ()) {
-        ShadingAttribStateRef newstate (new ShadingAttribState (*m_curattrib));
-        m_curattrib = newstate;
-    }
-
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
 
-    ShaderGroup &shadergroup (m_curattrib->shadergroup (use));
     if (! m_in_group || m_group_use == ShadUseUnknown) {
         // A singleton, or the first in a group
-        shadergroup.clear ();
+        m_curgroup->clear ();
         m_stat_groups += 1;
     }
     if (m_in_group) {
@@ -1093,8 +1220,7 @@ ShadingSystemImpl::Shader (const char *shaderusage,
         }
     }
 
-    shadergroup.append (instance);
-    m_curattrib->changed_shaders ();
+    m_curgroup->append (instance);
     m_stat_groupinstances += 1;
 
     // FIXME -- check for duplicate layer name within the group?
@@ -1186,26 +1312,57 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
 
 
 
-ShadingAttribStateRef
+ShaderGroupRef
 ShadingSystemImpl::state ()
 {
     {
         // Record the state for later greedy JITing
         spin_lock lock (m_groups_to_compile_mutex);
-        m_groups_to_compile.push_back (m_curattrib);
+        m_groups_to_compile.push_back (m_curgroup);
         ++m_groups_to_compile_count;
     }
-    return m_curattrib;
+    return m_curgroup;
 }
 
 
 
-void
-ShadingSystemImpl::clear_state ()
+bool
+ShadingSystemImpl::ReParameter (ShaderGroup &group, const char *layername_,
+                                const char *paramname,
+                                TypeDesc type, const void *val)
 {
-    m_curattrib.reset (new ShadingAttribState);
-}
+    // Find the named layer
+    ustring layername (layername_);
+    ShaderInstance *layer = NULL;
+    for (int i = 0, e = group.nlayers();  i < e;  ++i) {
+        if (group[i]->layername() == layername) {
+            layer = group[i];
+            break;
+        }
+    }
+    if (! layer)
+        return false;   // could not find the named layer
 
+    // Find the named parameter within the layer
+    int paramindex = layer->findparam (ustring(paramname));
+    if (paramindex < 0)
+        return false;   // could not find the named parameter
+    Symbol *sym = layer->symbol (paramindex);
+    ASSERT (sym != NULL);
+
+    // Check for mismatch versus previously-declared type
+    if (!equivalent(sym->typespec(), type))
+        return false;
+
+    // Can't change param value if the group has already been optimized,
+    // unless that parameter is marked lockgeom=0.
+    if (group.optimized() && sym->lockgeom())
+        return false;
+
+    // Do the deed
+    memcpy (sym->data(), val, type.size());
+    return true;
+}
 
 
 
@@ -1249,10 +1406,10 @@ ShadingSystemImpl::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystemImpl::execute (ShadingContext &ctx, ShadingAttribState &sas,
+ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
                             ShaderGlobals &ssg, bool run)
 {
-    return ctx.execute (ShadUseSurface, sas, ssg, run);
+    return ctx.execute (ShadUseSurface, group, ssg, run);
 }
 
 
@@ -1279,7 +1436,7 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
     inst = NULL;
     if (m_group_use >= ShadUseUnknown)
         return -1;
-    ShaderGroup &group (m_curattrib->shadergroup (m_group_use));
+    ShaderGroup &group (*m_curgroup);
     for (int i = 0;  i < group.nlayers();  ++i) {
         if (group[i]->layername() == layername) {
             inst = group[i];
@@ -1341,7 +1498,7 @@ ShadingSystemImpl::decode_connected_param (const char *connectionname,
 
     if (bracket && ! c.type.is_closure() &&
             c.type.aggregate() != TypeDesc::SCALAR) {
-        // There was at least one set of brackets that appears to be 
+        // There was at least one set of brackets that appears to be
         // selecting a color/vector component.
         c.channel = atoi (bracket+1);
         if (c.channel >= (int)c.type.aggregate()) {
@@ -1377,9 +1534,280 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 
+bool
+ShadingSystemImpl::is_renderer_output (ustring name) const
+{
+    const std::vector<ustring> &aovs (m_renderer_outputs);
+    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
+}
+
+
+
+void
+ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
+{
+    // Once we're generated the IR, we really don't need the ops and args,
+    // and we only need the syms that include the params.
+    off_t symmem = 0;
+    size_t connectionmem = 0;
+    for (int layer = 0;  layer < group.nlayers();  ++layer) {
+        ShaderInstance *inst = group[layer];
+        // We no longer needs ops and args -- create empty vectors and
+        // swap with the ones in the instance.
+        OpcodeVec emptyops;
+        inst->ops().swap (emptyops);
+        std::vector<int> emptyargs;
+        inst->args().swap (emptyargs);
+        if (inst->unused()) {
+            // If we'll never use the layer, we don't need the syms at all
+            SymbolVec nosyms;
+            std::swap (inst->symbols(), nosyms);
+            symmem += vectorbytes(nosyms);
+            // also don't need the connection info any more
+            connectionmem += (off_t) inst->clear_connections ();
+        }
+    }
+    {
+        // adjust memory stats
+        spin_lock lock (m_stat_mutex);
+        m_stat_mem_inst_syms -= symmem;
+        m_stat_mem_inst_connections -= connectionmem;
+        m_stat_mem_inst -= symmem + connectionmem;
+        m_stat_memory -= symmem + connectionmem;
+    }
+}
+
+
+
+void
+ShadingSystemImpl::optimize_group (ShaderGroup &group)
+{
+    OIIO::Timer timer;
+    lock_guard lock (group.m_mutex);
+    if (group.optimized()) {
+        // The group was somehow optimized by another thread between the
+        // time we checked group.optimized() and now that we have the lock.
+        // Nothing to do but record how long we waited for the lock.
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+
+    if (m_only_groupname && m_only_groupname != group.name()) {
+        // For debugging purposes, we are requested to compile only one
+        // shader group, and this is not it.  Mark it as does_nothing,
+        // and also as optimized so nobody locks on it again, and record
+        // how long we waited for the lock.
+        group.does_nothing (true);
+        group.m_optimized = true;
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+
+    double locking_time = timer();
+
+    ShadingContext *ctx = get_context ();
+    RuntimeOptimizer rop (*this, group, ctx);
+    rop.run ();
+
+    BackendLLVM lljitter (*this, group, ctx);
+    lljitter.run ();
+
+    group_post_jit_cleanup (group);
+
+    release_context (ctx);
+
+    group.m_optimized = true;
+    spin_lock stat_lock (m_stat_mutex);
+    m_stat_optimization_time += timer();
+    m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
+    m_stat_specialization_time += rop.m_stat_specialization_time;
+    m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
+    m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
+    m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
+    m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
+    m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
+    m_stat_max_llvm_local_mem = std::max (m_stat_max_llvm_local_mem,
+                                          lljitter.m_llvm_local_mem);
+    m_stat_groups_compiled += 1;
+    m_stat_instances_compiled += group.nlayers();
+}
+
+
+
+static void optimize_all_groups_wrapper (ShadingSystemImpl *ss)
+{
+    ss->optimize_all_groups (1);
+}
+
+
+
+void
+ShadingSystemImpl::optimize_all_groups (int nthreads)
+{
+    if (! m_greedyjit) {
+        // No greedy JIT, just free any groups we've recorded
+        spin_lock lock (m_groups_to_compile_mutex);
+        m_groups_to_compile.clear ();
+        m_groups_to_compile_count = 0;
+        return;
+    }
+
+    // Spawn a bunch of threads to do this in parallel -- just call this
+    // routine again (with threads=1) for each thread.
+    if (nthreads < 1)  // threads <= 0 means use all hardware available
+        nthreads = std::min ((int)boost::thread::hardware_concurrency(),
+                             (int)m_groups_to_compile_count);
+    if (nthreads > 1) {
+        if (m_threads_currently_compiling)
+            return;   // never mind, somebody else spawned the JIT threads
+        boost::thread_group threads;
+        m_threads_currently_compiling += nthreads;
+        for (int t = 0;  t < nthreads;  ++t)
+            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this));
+        threads.join_all ();
+        m_threads_currently_compiling -= nthreads;
+        return;
+    }
+
+    // And here's the single thread case
+    while (m_groups_to_compile_count) {
+        ShaderGroupRef group;
+        {
+            spin_lock lock (m_groups_to_compile_mutex);
+            if (m_groups_to_compile.size() == 0)
+                return;  // Nothing left to compile
+            group = m_groups_to_compile.back ();
+            m_groups_to_compile.pop_back ();
+        }
+        --m_groups_to_compile_count;
+        if (! group.unique()) {   // don't compile if nobody recorded it but us
+            optimize_group (*group);
+        }
+    }
+}
+
+
+
+int
+ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
+{
+    // Look through the shader group for pairs of nodes/layers that
+    // actually do exactly the same thing, and eliminate one of the
+    // rundantant shaders, carefully rewiring all its outgoing
+    // connections to later layers to refer to the one we keep.
+    //
+    // It turns out that in practice, it's not uncommon to have
+    // duplicate nodes.  For example, some materials are "layered" --
+    // like a character skin shader that has separate sub-networks for
+    // skin, oil, wetness, and so on -- and those different sub-nets
+    // often reference the same texture maps or noise functions by
+    // repetition.  Yes, ideally, the redundancies would be eliminated
+    // before they were fed to the renderer, but in practice that's hard
+    // and for many scenes we get substantial savings of time (mostly
+    // because of reduced texture calls) and instance memory by finding
+    // these redundancies automatically.  The amount of savings is quite
+    // scene dependent, as well as probably very dependent on the
+    // general shading and lookdev approach of the studio.  But it was
+    // very helpful for us in many cases.
+    //
+    // The basic loop below looks very inefficient, O(n^2) in number of
+    // instances in the group. But it's really not -- a few seconds (sum
+    // of all threads) for even our very complex scenes. This is because
+    // most potential pairs have a very fast rejection case if they are
+    // not using the same master.  Since there's no appreciable cost to
+    // the brute force approach, it seems silly to have a complex scheme
+    // to try to reduce the number of pairings.
+
+    if (! m_opt_merge_instances)
+        return 0;
+
+    OIIO::Timer timer;          // Time we spend looking for and doing merges
+    int merges = 0;             // number of merges we do
+    size_t connectionmem = 0;   // Connection memory we free
+    int nlayers = group.nlayers();
+
+    // Loop over all layers...
+    for (int a = 0;  a < nlayers;  ++a) {
+        if (group[a]->unused())    // Don't merge a layer that's not used
+            continue;
+        // Check all later layers...
+        for (int b = a+1;  b < nlayers;  ++b) {
+            if (group[b]->unused())    // Don't merge a layer that's not used
+                continue;
+
+            // Now we have two used layers, a and b, to examine.
+            // See if they are mergeable (identical).  All the heavy
+            // lifting is done by ShaderInstance::mergeable().
+            if (! group[a]->mergeable (*group[b], group))
+                continue;
+
+            // The two nodes a and b are mergeable, so merge them.
+            ShaderInstance *A = group[a];
+            ShaderInstance *B = group[b];
+            ++merges;
+
+            // We'll keep A, get rid of B.  For all layers later than B,
+            // check its incoming connections and replace all references
+            // to B with references to A.
+            for (int j = b+1;  j < nlayers;  ++j) {
+                ShaderInstance *inst = group[j];
+                if (inst->unused())  // don't bother if it's unused
+                    continue;
+                for (int c = 0, ce = inst->nconnections();  c < ce;  ++c) {
+                    Connection &con = inst->connection(c);
+                    if (con.srclayer == b) {
+                        con.srclayer = a;
+                        if (B->symbols().size()) {
+                            ASSERT (A->symbol(con.src.param)->name() ==
+                                    B->symbol(con.src.param)->name());
+                        }
+                    }
+                }
+            }
+
+            // Mark parameters of B as no longer connected
+            for (int p = B->firstparam();  p < B->lastparam();  ++p) {
+                if (B->symbols().size())
+                    B->symbol(p)->connected_down(false);
+                if (B->m_instoverrides.size())
+                    B->instoverride(p)->connected_down(false);
+            }
+            // B won't be used, so mark it as having no outgoing
+            // connections and clear its incoming connections (which are
+            // no longer used).
+            B->outgoing_connections (false);
+            B->run_lazily (true);
+            connectionmem += B->clear_connections ();
+            ASSERT (B->unused());
+        }
+    }
+
+    {
+        // Adjust stats
+        spin_lock lock (m_stat_mutex);
+        m_stat_mem_inst_connections -= connectionmem;
+        m_stat_mem_inst -= connectionmem;
+        m_stat_memory -= connectionmem;
+        if (post_opt)
+            m_stat_merged_inst_opt += merges;
+        else
+            m_stat_merged_inst += merges;
+        m_stat_inst_merge_time += timer();
+    }
+
+    return merges;
+}
+
+
 
 void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params,
-                                       PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare)
+                                       PrepareClosureFunc prepare, SetupClosureFunc setup)
 {
     if (m_closure_table.size() <= (size_t)id)
         m_closure_table.resize(id + 1);
@@ -1390,11 +1818,12 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     entry.nkeyword = 0;
     entry.struct_size = 0; /* params could be NULL */
     for (int i = 0; params; ++i) {
+        /* always push so the end marker is there */
+        entry.params.push_back(params[i]);
         if (params[i].type == TypeDesc()) {
             entry.struct_size = params[i].offset;
             break;
         }
-        entry.params.push_back(params[i]);
         if (params[i].key == NULL)
             entry.nformal ++;
         else
@@ -1402,7 +1831,6 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
     }
     entry.prepare = prepare;
     entry.setup = setup;
-    entry.compare = compare;
     m_closure_name_to_id[ustring(name)] = id;
 }
 
@@ -1426,6 +1854,7 @@ const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)con
 OSL_NAMESPACE_EXIT
 
 
+#ifndef OSL_STATIC_LIBRARY
 // Symbols needed to resolve some linkage issues because we pull some
 // components in from liboslcomp.
 int oslparse() { return 0; }
@@ -1434,3 +1863,4 @@ public:
     oslFlexLexer (std::istream *in, std::ostream *out);
 };
 oslFlexLexer::oslFlexLexer (std::istream *in, std::ostream *out) { }
+#endif

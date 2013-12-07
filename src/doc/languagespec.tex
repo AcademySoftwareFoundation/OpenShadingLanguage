@@ -14,17 +14,16 @@
 %\usepackage{apalike}
 \usepackage{pslatex}
 \usepackage{techref}
-\usepackage{epsfig}
+%\usepackage{epsfig}
 \usepackage{verbatim}
 \usepackage{moreverb}
 \usepackage{graphicx}
 \usepackage{xspace}
-\usepackage{multicol}
-\usepackage{color}
+%\usepackage{multicol}
+%\usepackage{color}
 \usepackage{html}
-\usepackage{version}
+%\usepackage{version}
 \usepackage{makeidx}
-%\usepackage{showidx}
 \usepackage[chapter]{algorithm}
 \floatname{algorithm}{Listing}
 
@@ -44,7 +43,7 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{1.3}
+\def\versionnumber{1.5}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
@@ -56,16 +55,21 @@ Language Specification
 %\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2012 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2013 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
- \bigskip \\
 }
-\date{{\large Date: 21 Sep, 2012 \\
-%(with corrections, 22 Feb, 2012)
-}}
+\date{{\large Date: 12 Nov, 2013 \\
+~ (with corrections, 15 Nov 2013)
+}
+\bigskip
+\bigskip
+\bigskip
+ \bigskip 
+}
+
 
 
 \include{macros}
@@ -126,10 +130,15 @@ documentation are:
 
 \vspace*{0.2in}
 
-Copyright (c) 2009-2012 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2013 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
-\vspace*{0.2in}
+\vspace{0.5in}
+
+The code that implements Open Shading Language is licensed under
+the BSD 3-clause (also sometimes known as ``new BSD'') license:
+
+\vspace{0.25in}
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -157,6 +166,20 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+\vspace{0.5in}
+
+This specification and other text documentation about Open Shading
+Language is licensed under a the Creative Commons Attribution 3.0
+Unported License. \\
+
+\smallskip
+\spc \includegraphics[width=0.85in]{Figures/CC-30BY.png} 
+\spc http://creativecommons.org/licenses/by/3.0/
+ \bigskip 
+
+
 
 \newpage
 
@@ -331,12 +354,18 @@ The main developers of OSL are (in order of joining the project):
 
     Jay Reynolds
 
+    Solomon Boulos
+
+    Adam Martinez
+
+    Brecht Van Lommel
+
 \vspace*{0.2in}
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
 wholeheartedly, and permitted us to release the source, especially Rob
-Bredow, Brian Keeney, Barbara Ford, and Rene Limberger.
+Bredow, Brian Keeney, Barbara Ford, Rene Limberger, and Erik Strauss.
 
 Huge thanks also go to the crack shading team at SPI, and the brave
 lookdev TDs and CG supes willing to use OSL on their shows.  They served
@@ -358,8 +387,6 @@ other open source packages:
 {\cf http://openimageio.org}
 \item Ilmbase \copyright\ 2006, Industrial Light \& Magic.
 {\cf http://www.openexr.com}
-\item Thread Building Blocks (TBB), \copyright\ 2005--2008 Intel Corporation.\\
-{\cf http://www.threadingbuildingblocks.org/}
 \item Boost \copyright\ various authors.  {\cf http://www.boost.org}
 \item LLVM \copyright\ 2003-2010 University of Illinois at
   Urbana-Champaign. {\cf http://llvm.org}
@@ -890,12 +917,6 @@ side of the medium.  They are similar to {\cf surface} shaders, except
 that they may be called from positions that do not lie upon (and are not
 necessarily associated with) any particular primitive.
 
-\begin{comment}
-\subsection*{{\cf light} shaders}
-
-Light shaders describe how much energy a light source deposits at a
-given destination.
-\end{comment}
 
 
 \subsection*{{\cf shader} generic shaders}
@@ -1087,9 +1108,9 @@ have an on/off checkbox, is intended to be a filename, etc.
 Metadata is specified inside double brackets {\cf [[} and {\cf ]]}
 enclosing a comma-separated list of metadata items.  Each metadatum
 looks like a parameter declaration --- having a data type, name, and
-initializer.  However, metadata may only be simple types (not arrays or
-closures) and their value initializers must be numeric or string
-constants (not computed expression).
+initializer.  However, metadata may only be simple types (not arrays,
+structs, or closures) and their value initializers must be numeric or
+string constants (not computed expressions).
 
 Metadata about the shader as a whole is placed between the shader name
 and the parameter list.  Metadata about shader parameters are placed
@@ -1102,18 +1123,21 @@ parameter metadata:
 
 \begin{code}
     surface wood 
-                [[ string description = "Realistic wood shader" ]]
+                [[ string help = "Realistic wood shader" ]]
         ( 
            float Kd = 0.5
-               [[ string description = "Diffuse reflectivity",
-                  float UImin = 0, float UImax = 1 ]] ,
+               [[ string help = "Diffuse reflectivity",
+                  float min = 0, float max = 1 ]] ,
            color woodcolor = color (.7, .5, .3)
-               [[ string description = "Base color of the wood" ]],
+               [[ string help = "Base color of the wood" ]],
            color ringcolor = 0.25 * woodcolor
-               [[ string description = "Color of the dark rings" ]],
+               [[ string help = "Color of the dark rings" ]],
            string texturename = "wood.tx"
-               [[ string description = "Texture map for the grain",
-                  string UItype = "filename" ]]
+               [[ string help = "Texture map for the grain",
+                  string widget = "filename" ]],
+           int pattern = 0
+               [[ string widget = "mapper",
+                  string options = "oak:0|elm:1|walnut:2" ]]
         )
     {
        ...
@@ -1133,8 +1157,122 @@ below.  These conventions are not intended to be comprehensive, nor to
 meet all your needs --- merely to establish a common nomenclature for
 the most common metadata uses.
 
-\apiitem{string description}
-Describes the purpose and use of the shader or parameter.
+The use of metadata is entirely optional on the part of the shader
+writer, and any application that queries shader metadata is free to
+honor or ignore any metadata it finds.
+
+\apiitem{string label}
+A short label to be displayed in the UI for this parameter.  If not
+present, the parameter name itself should be used as the widget label.
+\apiend
+
+\apiitem{string help}
+Help text that describes the purpose and use of the shader or parameter.
+\apiend
+
+\apiitem{string page}
+Helps to group related widgets by ``page.''
+\apiend
+
+\apiitem{string widget}
+The type of widget that should be used to adjust this parameter.
+Suggested widget types:
+
+\apiitem{"number"}
+\vspace{12pt}
+Provide a slider and/or numeric input. This is the default widget type
+for {\cf float} or {\cf int} parameters.  Numeric inputs also may be
+influenced by the following metadata: \qkw{min}, \qkw{max},
+\qkw{sensitivity}, \qkw{digits}, \qkw{slider}, \qkw{slidermin},
+\qkw{slidermax}, \qkw{slidercenter}, \qkw{sliderexponent}.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"string"}
+\vspace{12pt}
+Provide a text entry widget. This is the default widget type for
+{\cf string} parameters.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"boolean"}
+\vspace{12pt}
+Provide a pop-up menu with ``Yes'' and ``No'' options. Works on strings
+or numbers.  With strings, ``Yes'' and ``No'' values are used, with
+numbers, 0 and 1 are used.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"checkBox"}
+\vspace{12pt}
+A boolean widget displayed as a checkbox. Works on strings or
+numbers. With strings, "Yes" and "No" values are used, with numbers,
+0 and 1 are used.
+\apiend
+\vspace{-12pt}
+
+\apiitem{"popup"}
+\vspace{12pt}
+A pop-up menu of literal choices. This widget further requires
+parameter metadata \qkw{options} (a string listing the supported
+menu items, delimited by the `{\cf |}' character), and optionally \qkw{editable}
+(an integer, which if nonzero means the widget should allow the
+text field should be directly editable).  For example:
+\begin{code}
+    string wrap = "default"
+        [[ string widget = "popup",
+           string options = "default|black|clamp|periodic|mirror" ]]
+\end{code}
+\apiend
+\vspace{-16pt}
+
+\apiitem{"mapper"}
+\vspace{12pt}
+A pop-up with associative choices (an enumerated type, if the values
+are integers).  This widget further requires
+parameter metadata \qkw{options}, a `{\cf |}'-delimited string with
+``key:value'' pairs.  For example:
+\begin{code}
+    int pattern = 0
+        [[ string widget = "mapper",
+           string options = "oak:0|elm:1|walnut:2" ]]
+\end{code}
+\apiend
+\vspace{-16pt}
+
+\apiitem{"filename"}
+\vspace{12pt}
+A file selection dialog.
+\apiend
+\vspace{-16pt}
+
+\apiitem{"null"}
+\vspace{12pt}
+A hidden widget.
+\apiend
+\vspace{-16pt}
+
+\apiend
+
+\apiitem{float min\\ float max \\[0.5ex] int min \\ int max}
+The minimum and/or maximum value that the parameter may take on.
+\apiend
+
+\apiitem{float sensitivity \\ int sensitivity}
+The precision or step size for incrementing or decrementing the value
+(within the appropriate min/max range).
+\apiend
+
+\apiitem{int digits}
+The number of digits to show (-1 for full precision).
+\apiend
+
+\apiitem{int slider}
+If nonzero, enables display of a slider sub-widget.  This also respects
+the following additional metadata that control the slider specifically:
+\qkw{slidermin} (minimum value for the slider, \qkw{slidermax} (maximum
+value for the slider), \qkw{slidercenter} (origin value for
+the slider), \qkw{sliderexponent} (nonlinear slider options).
 \apiend
 
 \apiitem{string URL}
@@ -1149,111 +1287,15 @@ assumption is being violated (for example, the compiler can warn
 if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
 \apiend
 
-\apiitem{int normalized}
-For a \vector or \normal, a nonzero value is a hint that the shader
-expects the vector to be unit length.  The renderer may use this hint to
-print a warning if the parameter or value is not of unit length, and the
-compiler may warn if a \qkw{normalized} variable is assigned a non-unit
-value.
-\apiend
+%\apiitem{string UIenabler}
+%The name of another parameter that, only if nonzero (or the
+%non-empty string) unlocks adjustment of this parameter.  For example,
+%a parameter called \qkw{Kr} (reflectivity) may be en enabler for
+%the \qkw{reflectionblur} parameter; zero reflectivity would gray-out
+%the blur controls, which would be ignored if there were no reflection.
+%\apiend
 
-\apiitem{string UIlabel}
-A short label to be displayed in the UI for this parameter.  If not
-present, the parameter name itself should be used as the widget label.
-\apiend
 
-\apiitem{float UImin \\ float UImax}
-Minimum and maximum values for a parameter that should never be
-exceeded.  If either the minimum or maximum is not present, valid values
-for the parameter are assumed to be unbounded in one or both directions.
-(For an {\cf int} parameter, the {\cf UImin} and/or {\cf UImax} should
-also be declared as an {\cf int}.)
-\apiend
-
-\apiitem{float UIsoftmin \\ float UIsoftmax}
-``Soft'' minimum and maximum value for a \float parameter, that is, a
-default range for presentation in the UI, but which may be overridden by
-the user. (For an {\cf int} parameter, the {\cf UIsoftmin} and/or {\cf
-  UIsoftmax} should also be declared as an {\cf int}.)
-\apiend
-
-\apiitem{float UIstep}
-The suggested step size for incrementing or decrementing the value
-(within the appropriate min/max range).
-\apiend
-
-\apiitem{string UIenabler}
-The name of another parameter that, only if nonzero (or the
-non-empty string) unlocks adjustment of this parameter.  For example,
-a parameter called \qkw{Kr} (reflectivity) may be en enabler for
-the \qkw{reflectionblur} parameter; zero reflectivity would gray-out
-the blur controls, which would be ignored if there were no reflection.
-\apiend
-
-\apiitem{float UIseparator}
-If nonzero, hints that the application's GUI should draw a visual 
-separator immediately before this parameter.
-\apiend
-
-\apiitem{string UIgroupbegin \\ string UIgroupend}
-Denote the first and last parameters of a set of related parameters, as a
-hint that an application may wish to label or visually separate a
-collection of parameters.  The string value should be the name or brief
-description of the group.
-\apiend
-
-\apiitem{string UItype} 
-Provides a hint about exactly what kind of UI widget is appropriate for
-the given parameter (if not the obvious default, such as a slider for a
-\float parameter, or a color picker for a \color parameter).  Recommended
-values include:
-
-\vspace{-12pt}
-\begin{description}
-\item[] \spc
-\item[\rm \halfspc ~ \qkw{bool}] Indicates that a \float or {\cf int}
-  parameter should only take on a 0 or 1 value, and therefore a checkbox
-  may be a more appropriate UI widget.
-\item[\rm \qkw{string}] Indicates that the appropriate UI widget is a text
-  input box (default for string parameters).  A smart UI may also allow
-  a file selection dialog, since most strings (but not all) are used
-  for texture names.
-\item[\rm \qkw{texture}] Indicates a string variable whose value will be
-  used as the name of a texture map.  An appropriate GUI widget might
-  be a file selection dialog.
-\item[\rm \qkw{environment}] Indicates a string variable whose value may
-  either be an environment map or the name of a geometry set.  An
-  appropriate GUI widget might be a combination file selection and
-  pull-down menu of known geometry set names.
-\item[\rm \qkw{shadow}] Indicates a string variable whose value may
-  either be a shadow map or the name of a geometry set.
-\item[\rm \qkw{geometryset}] Indicates a string variable whose value must
-  be a geometry set.  An appropriate GUI widget may be a pull-down
-  menu of known geometry sets.
-\item[\rm \qkw{coordsys}] Indicates a string variable whose value will be
-  used as a coordinate system name.  An appropriate GUI widget may be
-  a pull-down menu of known coordinate systems.
-\item[\rm \qkw{enum:label0,label1,...}] Indicates that the appropriate UI
-  widget is a pulldown menu that selects among the strings \qkw{label0},
-  \qkw{label1}, and so on.
-  If the shader parameter is a {\cf string}, the selected label should be
-  passed as the shader parameter value.  If the shader parameter is an
-  \inttype, the selected label should indicate that the value passed
-  should be 0, 1, 2, ..., the index of the selected label.
-  Labels may be associated with \float or {\cf int} values other than
-  their indices using the following syntax:
-  \begin{code}
-    float frequency = 0.5
-        [[ string UItype = "enum:low=0.2,medium=0.5,high=0.9" ]]
-    int pattern = 0
-        [[ string UItype = "enum:oak=0,elm=1,walnut=2" ]]
-  \end{code}
-\end{description}
-\apiend
-
-The use of metadata is entirely optional on the part of the shader
-writer, and any application that queries shader metadata is free to
-honor or ignore any metadata it finds.
 
 
 \newpage
@@ -1956,6 +1998,18 @@ following example:
         return s;
     }
 \end{code}
+
+It is allowed in OSL to copy an entire array at once using the {\cf =}
+operator, provided that the arrays contain elements of the same type
+and that the destination array is at least as long as the source
+array.  For example:
+
+\begin{code}
+    float array[4], anotherarray[4];
+    ...
+    anotherarray = array;
+\end{code}
+
 
 \section{Structures}
 \label{sec:types:struct}
@@ -2956,10 +3010,6 @@ Returns the distance between two points.
 \indexapi{distance()}
 Returns the distance from {\cf Q} to the closest point on the line
 segment joining {\cf P0} and {\cf P1}.
-
-%\begin{annotate}
-%\QUESTION In RMan this was called `ptlined'.  Do we like that better, or `distance'?
-%\end{annotate}
 \apiend
 
 \apiitem{vector {\ce normalize} (vector V) \\
@@ -3217,12 +3267,6 @@ Computes the transpose of matrix $M$.
 \apiend
 
 
-\begin{comment}
-translate
-rotate
-scale
-\end{comment}
-
 
 \section{Pattern generation}
 \label{sec:stdlib:pattern}
@@ -3296,9 +3340,23 @@ large-scale average is 0.5, and its values are evenly distributed over
 $[0,1]$.
 \apiend
 
+\apiitem{"simplex"}
+\vspace{12pt}
+\NEW % 1.4
+A signed simplex noise with an output range of $[-1,1]$,
+approximate average value of $0$.
+\apiend
+
+\apiitem{"usimplex"}
+\vspace{12pt}
+\NEW % 1.4
+An unsigned simplex noise with an output range of $[0,1]$,
+approximate average value of $0.5$.
+\apiend
+
 \apiitem{"gabor"}
 \vspace{12pt}
-\NEW A band-limited, filtered, sparse convolution noise based on the
+A band-limited, filtered, sparse convolution noise based on the
 Gabor impulse function (see Lagae et al., SIGGRAPH 2012).  Our Gabor
 noise is designed to have somewhat similar frequency content and range
 as Perlin noise (range $[-1,1]$, approximately large-scale average of
@@ -3436,14 +3494,16 @@ The old {\cf cellnoise(...coords...)} function is equivalent to
 \apiitem{\emph{type} {\ce hash} (float u) \\
 \emph{type} {\ce hash} (float u, float v) \\
 \emph{type} {\ce hash} (point p) \\
-\emph{type} {\ce hash} (point p, float t)}
+\emph{type} {\ce hash} (point p, float t) \\
+\emph{type} {\ce hash} (int i) \\
+\emph{type} {\ce hash} (string s)}
 \indexapi{hash()}
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
-4-D coordinates.  The return values will be evenly distributed on
-$[0,1]$ and be completely repeatable when passed the same coordinates
-again, yet will be uncorrellated to hashes of any other positions
-(including nearby points).  This is like having a random value indexed
-spatially, but that will be repeatable from frame to frame of an
+4-D coordinates, integer, or string.  The return values will be evenly
+distributed on $[0,1]$ and be completely repeatable when passed the same
+coordinates again, yet will be uncorrellated to hashes of any other
+positions (including nearby points).  This is like having a random value
+indexed spatially, but that will be repeatable from frame to frame of an
 animation (provided its input is \emph{precisely} identical).
 
 The return \emph{type} may be any of \float, \color, \point, \vector, or
@@ -3453,23 +3513,9 @@ The return \emph{type} may be any of \float, \color, \point, \vector, or
 function.
 \apiend
 
-\apiitem{\emph{type} {\ce random} ()}
-\indexapi{random()}
-Returns a pseudorandom value uniformly distributed on $[0,1]$.  Use with
-extreme caution --- the results are not necessarily repeatable from
-frame to frame.
-
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ {\cf random()}
-function.
-\apiend
-
 \apiitem{\emph{type} {\ce spline} (string basis, float x, \emph{type} $\mathtt{y}_0$, \emph{type} $\mathtt{y}_1$, ... \emph{type} $\mathtt{y}_{n-1}$)\\
 \emph{type} {\ce spline} (string basis, float x, \emph{type} y[]) \\
 \emph{type} {\ce spline} (string basis, float x, int nknots, \emph{type} y[])}
-
 \indexapi{spline()}
 
 As $x$ varies from 0 to 1, {\cf spline} returns the value of a cubic
@@ -3484,13 +3530,15 @@ each component will be interpolated separately.
 
 The type of interpolation is specified by the \emph{basis} name,
 \emph{basis} parameter, which may be any of: \qkw{catmull-rom},
-\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, or \qkw{linear}.  Some basis
+\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, \qkw{linear}, or 
+\qkw{constant}. Some basis
 types require particular numbers of knot values -- Bezier splines
 require $4n+3$ values, Hermite splines require $4n+2$ values,
 Catmull-Rom and linear splines may use any number of values $n\ge 4$.
-To maintain consistency with the other spline types, linear splines will
-ignore the first and last data value, interpolating piecewise-linearly
-between $y_1$ and $y_{n-2}$.
+To maintain consistency with the other spline types, \qkw{linear} splines will
+ignore the first and last data value; interpolating piecewise-linearly
+between $y_1$ and $y_{n-2}$, and \qkw{constant} splines ignore the first
+and the two last data values.
 \apiend
 
 \apiitem{float {\ce splineinverse} (string basis, float v, float $\mathtt{y}_0$, ... float $\mathtt{y}_{n-1}$)\\
@@ -3564,28 +3612,13 @@ taking into account surface orientation.
 
 \apiitem{float {\ce aastep} (float edge, float s) \\
 float {\ce aastep} (float edge, float s, float ds) \\
-float {\ce aastep} (float edge, float s, float dedge, float ds)
-\smallskip \\
-float {\ce aastep} (float edge, float s, string filter) \\
-float {\ce aastep} (float edge, float s, float ds, string filter) \\
-float {\ce aastep} (float edge, float s, float dedge, float ds, string filter)}
+float {\ce aastep} (float edge, float s, float dedge, float ds)}
 \indexapi{aastep()}
 Computes an antialiased step function, similar to {\cf step(edge,s)} but
 filtering the edge to take into account how rapidly {\cf s} and {\cf edge}
 are changing over the surface.  If the differentials {\cf ds} and/or
 {\cf dedge} are not passed explicitly, they will be automatically 
-computed (using {\cf aastep()}).
-
-The optional {\cf filter} parameter specifies which filter should be
-used: \qkw{catmull-rom}, \qkw{box}, \qkw{triangle}, or \qkw{gaussian}.
-If no {\cf filter} parameter is supplied, a Catmull-Rom filter will be
-used.
-
-%\begin{annotate}
-%\QUESTION This is similar to RenderMan's ``filterstep'', but not quite.
-%Is it better to call it ``filterstep'' even if it doesn't exactly match,
-%or should we stick to the changed name to match the changed functionality?
-%\end{annotate}
+computed (using {\cf filterwidth()}).
 \apiend
 
 
@@ -3636,14 +3669,13 @@ positions.
 Much as in C, {\cf printf()} takes a format string {\cf fmt} and an
 argument list, and prints the resulting formatted string to the console.
 
-Where the {\cf fmt} contains the characters {\cf \%d}, {\cf \%i}, {\cf \%f},
-{\cf \%g}, and {\cf \%s}, {\cf printf} will substitute arguments, in
-order.  The {\cf \%d} and {\cf \%i} arguments expect an {\cf int}
-argument; {\cf \%f} and {\cf \%g} expect a \float, \color, point-like,
-or \matrix argument (for multi-component types such as \color, the
-format will be applied to each of the components); and {\cf \%s} expects
-a {\cf string} argument.  In addition, {\cf \%d} and {\cf \%i} will also
-print \float's, truncating and printing them as if they were integers.
+Where the {\cf fmt} contains a format string similar to {\cf printf} in
+the C language. The {\cf \%d}, {\cf \%i}, {\cf \%o}, and {\cf \%x}
+arguments expect an {\cf int} argument.  The {\cf \%f}, {\cf \%g}, and
+{\cf \%e} expect a \float, \color, point-like, or \matrix argument (for
+multi-component types such as \color, the format will be applied to each
+of the components).  The {\cf \%s} expects a {\cf string} or 
+{\cf closure} argument.
 
 All of the substition commands follow the usual C/C++ formatting rules,
 so format commands such as {\cf "\%6.2f"}, etc., should work as
@@ -3693,6 +3725,34 @@ otherwise return 0.
 \indexapi{startswith()}
 Return 1 if string {\cf s} ends with the substring {\cf suffix},
 otherwise return 0.
+\apiend
+
+\apiitem{int {\ce stoi} (string str)}
+\indexapi{stoi()}
+Convert/decode the initial part of {\cf str} to an {\cf int} 
+representation.  Base 10 is assumed.
+The return value will be {\cf 0} if the string doesn't appear to hold
+valid representation of the destination type.
+\apiend
+
+\apiitem{float {\ce stof} (string str)}
+\indexapi{stof()}
+Convert/decode the initial part of {\cf str} to a {\cf float} representation.
+The return value will be {\cf 0} if the string doesn't appear to hold
+valid representation of the destination type.
+\apiend
+
+\apiitem{int {\ce split} (string str, output string results[], string sep, int maxsplit) \\
+int {\ce split} (string str, output string results[], string sep) \\
+int {\ce split} (string str, output string results[])}
+\indexapi{split()}
+
+Fills the {\cf result} array with the words in the string {\cf str},
+using {\cf sep} as the delimiter string.  If {\cf maxsplit} is supplied,
+at most {\cf maxsplit} splits are done.  If {\cf sep} is {\cf ""} (or if
+not supplied), any whitespace string is a separator.  The value returned
+is the number of elements (separated strings) written to the {\cf results}
+array.
 \apiend
 
 \apiitem{string {\ce substr} (string s, int start, int length)\\
@@ -3842,8 +3902,19 @@ within a multi-image texture file (default: subimage 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested,
+but not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -3934,8 +4005,19 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested,
+but not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -4005,8 +4087,19 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested, but 
+not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -4063,13 +4156,27 @@ one of: \qkw{Plain Texture}, \qkw{Shadow}, \qkw{Environment},
 specifically distinguishes between the different types of shadows and
 environment maps.  \\[0.75ex]
 
-\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
-transforms points from \commonspace to the \cameraspace from which the
-texture was created. \\[0.75ex]
+\qkw{datawindow} & {\cf int[]} &
+Returns the pixel data window of the image.  The argument is an {\cf int}
+array either of length 4 or 6, in which will be placed the (xmin, ymin,
+xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
+(N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
+they will be 0). \\[0.75ex]
 
-{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
-matrix that transforms points from \commonspace to a 2D coordinate
-system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
+\qkw{displaywindow} & {\cf int[]} &
+Returns the display (a.k.a.\ full) window of the image.  The argument is an {\cf int}
+array either of length 4 or 6, in which will be placed the (xmin, ymin,
+xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
+(N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
+they will be 0). \\[0.75ex]
+
+%\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
+%transforms points from \commonspace to the \cameraspace from which the
+%texture was created. \\[0.75ex]
+%
+%{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
+%matrix that transforms points from \commonspace to a 2D coordinate
+%system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
 
 \emph{anything else} & \emph{any} & Searches for matching name and
 type in the metadata or other header information of the texture file.
@@ -4081,17 +4188,20 @@ type in the metadata or other header information of the texture file.
 
 \newpage
 \apiitem{int {\ce pointcloud_search} (string ptcname, point pos, float radius,\\
-\bigspc\bigspc      int maxpoints, int sort,
+\bigspc\bigspc      int maxpoints, [int sort,]
                        string attr, Type data[],\\
 \bigspc\bigspc         ..., string attrN, Type dataN[] )}
 \indexapi{pointcloud_search}
 
-Search the named point cloud for points within {\cf radius} of {\cf pos},
+Search the named point cloud for the {\cf maxpoints} closest points to
+{\cf pos} within the given {\cf radius},
 returning the values of any named attributes of those points in the the
-given {\cf data} arrays.  If {\cf sort} is nonzero, The ordering of the points
-found will be sorted by distance from {\cf pos}, from closest to farthest; if
-{\cf sort} is 0, the results are not guaranteed to be sorted (searching may
-be faster for some implementations when sorted results are not
+given {\cf data} arrays.  If the optional {\cf sort} parameter is present
+and is nonzero, the ordering of the points
+found will be sorted by distance from {\cf pos}, from closest to farthest;
+otherwise, the results are guaranteed to be the {\cf maxpoints} closest
+to {\cf pos}, but not necessarily softed by distance (this may be
+faster for some implementations than when sorted results are
 required).  The return value is the number of points returned, ranging
 from 0 (nothing found in the neighborhood) to the lesser of {\cf maxpoints}
 and the actual lengths of the arrays (the arrays will never be written
@@ -4169,53 +4279,52 @@ Example:
 
 
 \newpage
-\section{Light and Shadows}
+\section{Material Closures}
 \label{sec:stdlib:light}
-\index{light and shadow functions}
-\index{functions!light and shadows}
+\label{sec:stdlib:closures}
+\index{material closure functions}
+\index{functions!closures}
 
-\apiitem{\colorclosure\ {\ce diffuse} (normal N, \pl)}
+For \closurecolor functions, the return ``value'' is symbolic and is may
+be passed to an output variable or assigned to \Ci, to be evaluated at a
+later time convenient to the renderer in order to compute the exitant
+radiance in the direction {\cf -I}.  But the shader itself cannot
+examine the numeric values of the \colorclosure.
+
+The intent of this specification is to give a minimal but useful set of
+material closures that you can expect any renderer implementation to
+provide.  Individual renderers may supply additional closures that are
+specific to the workings of that renderer.  Additionally, invidual
+renderers may allow additional parameters or controls on the standard
+closures, passed as token/value pairs following the required arguments
+(much like the optional arguments to the {\cf texture()} function).
+Consult the documentation for your specific renderer for details.
+
+
+
+\subsection{Surface material closures}
+
+\apiitem{\colorclosure\ {\ce diffuse} (normal N)}
 \indexapi{diffuse()}
-
 Returns a \colorclosure that represents the Lambertian diffuse
 reflectance of a smooth surface,
-$$ \int_{\Omega}{Cl(P,\omega) \max(0, N \cdot \omega) d\omega} $$
+$$ \int_{\Omega}{\frac{1}{\pi} \max(0, N \cdot \omega) Cl(P,\omega) d\omega} $$
 where $N$ is the unit-length forward-facing surface normal at \P,
 $\Omega$ is the set of all outgoing directions in the hemisphere
 surrounding $N$, and $Cl(P,\omega)$ is the incident radiance at
 \P coming from the direction $-\omega$.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf diffuse()} was
-implemented as follows:
-
-\begin{code}
-    color C = 0;
-    normal Nf = faceforward (normalize(N), I);
-    for all lights within the hemisphere defined by (P, Nf, PI/2) {
-        /* L is the direction of light i, Cl is its incoming radiance */
-        C += Cl * dot (normalize(L), Nf);
-    }
-    return C;
-\end{code}
 \apiend
 
-\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness, \pl)}
+\apiitem{\colorclosure\ {\ce phong} (normal N, float exponent)}
+\indexapi{phong()}
+Returns a \colorclosure that represents specular reflectance of the
+surface using the Phong BRDF.  The \emph{exponent} parameter
+indicates how smooth or rough the material is (higher \emph{exponent}
+values indicate a smoother surface).
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness)}
 \indexapi{orennayar()}
 
 Returns a \colorclosure that represents the diffuse reflectance of a
@@ -4224,18 +4333,11 @@ rough surface, implementing the Oren-Nayar reflectance formula.  The
 microstructure of the material is, with 0 being perfectly smooth and
 giving an appearance identical to {\cf lambert()}.
 
-Additional optional arguments may be passed as token/value pairs:
+The Oren-Nayar reflection model is described in  M.\ Oren and S.\ K.\
+Nayar, ``Generalization of Lambert's Reflectance Model,'' Proceedings of
+SIGGRAPH 1994, pp.239-246 (July, 1994).
 
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
+\begin{comment}
 Like all \closurecolors, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
@@ -4265,96 +4367,26 @@ implemented as follows:
     }
     return C;
 \end{code}
+\end{comment}
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce phong} (normal N, float exponent, \pl)}
-\indexapi{phong()}
-
-Returns a \colorclosure that represents specular reflectance of the
-surface using the Phong BRDF.  The \emph{exponent} parameter
-indicates how smooth or rough the material is.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf phong()} was
-implemented as follows:
-
-\begin{code}
-    code eventually will go here
-\end{code}
-
-\apiend
-
-\apiitem{\colorclosure\ {\ce cooktorrance} (normal N, float roughness, \pl)}
-\indexapi{cooktorrance()}
-
-Returns a \colorclosure that represents specular reflectance of the
-surface using the Cook-Torrence BRDF.  The \emph{roughness} parameter
-indicates how smooth or rough the microstructure of the material is.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf cooktorrance()} was
-implemented as follows:
-
-\begin{code}
-    code eventually will go here
-\end{code}
-
-\apiend
-
-\apiitem{\colorclosure\ {\ce ward} (normal N, vector T, \\
-  \bigspc float xrough, float yrough, \pl)}
+\apiitem{\colorclosure\ {\ce ward} (normal N, vector T, 
+  float xrough, float yrough)}
 \indexapi{ward()}
 
 Returns a \colorclosure that represents the anisotropic specular
-reflectance of the surface at \P.  The \N and {\cf T} vectors,
-both presumed to be unit-length, are the surface normal and tangent,
-used to
-establish a local coordinate system for the anisotropic effects.
-The \emph{xrough} and \emph{yrough} specify the amount of roughness
-in the {\cf T} and {\cf T} $\times$ {\cf N} directions, respectively.
+reflectance of the surface at \P.  The \N and {\cf T} vectors, both
+presumed to be unit-length, are the surface normal and tangent, used to
+establish a local coordinate system for the anisotropic effects.  The
+\emph{xrough} and \emph{yrough} specify the amount of roughness in the
+tangent ({\cf T}) and bitangent ({\cf N} $\times$ {\cf T}) directions,
+respectively.
 
-Additional optional arguments may be passed as token/value pairs:
+The Ward BRDF is described in Ward, G., ``Measuring and Modeling
+Anisotropic Reflection,'' Proceedings of SIGGRAPH 1992.
 
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
+\begin{comment}
 Like all \closurecolors, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
@@ -4365,16 +4397,15 @@ implemented as follows:
 \begin{code}
     float sqr (float x) { return x*x; }
 
-    normal Nf = faceforward (normalize(N), I);
     vector V = -normalize(I);
-    float cos_theta_r = clamp (dot(Nf,V), 0.0001, 1);
+    float cos_theta_r = clamp (dot(N,V), 0.0001, 1);
     vector X = T / xroughness;
     vector Y = cross(T,N) / yroughness;
     color C = 0;
-    for all lights within the hemisphere defined by (P, Nf, PI/2) {
+    for all lights within the hemisphere defined by (P, N, PI/2) {
         /* L is the direction of light i, Cl is its incoming radiance */
         vector LN = normalize (L);
-        float cos_theta_i = dot (LN,Nf);
+        float cos_theta_i = dot (LN,N);
         if (cos_theta_i > 0.0) {
             vector H = normalize (V + LN);
             float rho = exp (-2 * (sqr(dot(X,H)) +
@@ -4385,11 +4416,12 @@ implemented as follows:
     }
     return C / (4 * xroughness * yroughness);
 \end{code}
+\end{comment}
 \apiend
 
 
 \apiitem{\colorclosure\ {\ce microfacet_beckmann} (normal N, float roughness,
-  float eta, \pl)}
+  float eta)}
 \indexapi{microfacet_beckmann()}
 
 Returns a \colorclosure that represents specular reflectance of the
@@ -4399,33 +4431,11 @@ Eurographics Symposium on Rendering, 2007).
 The {\cf roughness} controls how rough the microstructure of the surface
 is.  The {\cf eta} parameter is the index of refraction of the material.
 
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-\begin{comment}
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf microfacet_beckmann()} was
-implemented as follows:
-\begin{code}
-    code eventually will go here
-\end{code}
-\end{comment}
-
 \apiend
 
 
 \apiitem{\colorclosure\ {\ce microfacet_ggx} (normal N, float roughness,
-  float eta, \pl)}
+  float eta)}
 \indexapi{microfacet_ggx()}
 
 Returns a \colorclosure that represents specular reflectance of the
@@ -4435,93 +4445,27 @@ Eurographics Symposium on Rendering, 2007.
 The {\cf roughness} controls how rough the microstructure of the surface
 is.  The {\cf eta} parameter is the index of refraction of the material.
 
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-\begin{comment}
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf microfacet_ggx()} was
-implemented as follows:
-\begin{code}
-    code eventually will go here
-\end{code}
-\end{comment}
-
 \apiend
 
 
-\apiitem{\colorclosure\ \colorclosure\ {\ce reflection} (normal N, float eta, \pl)}
+\apiitem{\colorclosure\ \colorclosure\ {\ce reflection} (normal N, float eta)}
 \indexapi{reflection()}
 
 Returns a \colorclosure that represents sharp mirror-like reflection
 from the surface.  The reflection direction will be automatically computed
 based on the incident angle.  The {\cf eta} parameter is the index of
-refraction of the material.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf reflection()} was
-implemented as follows:
+refraction of the material.  The {\cf reflection} closure behaves
+as if it were implemented as follows:
 
 \begin{code}
     vector R = reflect (I, N);
     return raytrace (R);
 \end{code}
 
-\begin{comment}
-If \emph{source} is supplied, it indicates the name of a geometry set to
-ray-trace against, or of an environment map to read (if not set, the
-renderer will use a global default).  If \emph{angle} is supplied, it
-specifies the angle (in radians) of a cone of centered around the
-reflection direction, from which reflection information will be sampled
-(this results in a blurry reflection).
-\end{comment}
-
 \apiend
 
-\begin{comment}   % DEPRECATED
-\apiitem{\colorclosure\ {\ce reflection} (vector R) \\
-\colorclosure\ {\ce reflection} (vector R, float angle) \\
-\colorclosure\ {\ce reflection} (string source, vector R) \\
-\colorclosure\ {\ce reflection} (string source, vector R, float angle)}
-\indexapi{reflection()}
-These alternative versions of {\cf reflection()} explicitly specify a
-reflection direction \emph{R}.  These are only supplied for the rare
-case where you need to use a nonphysical reflection direction, and
-introduce an undesired view-dependence to the surface description that
-you can avoid by using the version of {\cf reflection()} that
-automatically calculates the reflection vector for you.  View-dependence
-may confuse or defeat clever renderer speedups or intelligent sampling
-strategies.  Use with caution!
-\apiend
-\end{comment}
 
-
-\apiitem{\colorclosure\ {\ce refraction} (normal N, float eta, \pl)}
+\apiitem{\colorclosure\ {\ce refraction} (normal N, float eta)}
 \indexapi{refraction()}
 
 Returns a \colorclosure that represents sharp glass-like refraction of
@@ -4529,29 +4473,11 @@ objects ``behind'' the surface.  The \emph{eta} parameter is the ratio
 of the index of refraction of the medium on the ``inside'' of the
 surface divided by the index of refration of the medium on the
 ``outside'' of the surface.  The ``outside'' direction is the one
-specified by \N.
-
+specified by \N.  
 The refraction direction will be automatically computed based on the
 incident angle and \emph{eta}, and the radiance returned will be
 automatically scaled by the Fresnel factor for dielectrics.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf refraction()} was
+The {\cf refraction} closure behaves as if it were
 implemented as follows:
 
 \begin{code}
@@ -4560,101 +4486,44 @@ implemented as follows:
     fresnel (I, N, eta, Kr, Kt, R, T);
     return Kt * raytrace (T);
 \end{code}
-
-\begin{comment}
-If \emph{source} is supplied, it indicates the name of a geometry set to
-ray-trace against, or of an environment map to read (if not set, the
-renderer will use a global default).  If \emph{angle} is supplied, it
-specifies the angle (in radians) of a cone of centered around the
-refraction direction, from which refraction information will be sampled
-(this results in a blurred refraction).
-\end{comment}
-
 \apiend
 
-\begin{comment}   % DEPRECATED
-\apiitem{\colorclosure\ {\ce refraction} (vector R, float eta) \\
-\colorclosure\ {\ce refraction} (vector R, float eta, float angle) \\
-\colorclosure\ {\ce refraction} (string source, vector R, float eta) \\
-\colorclosure\ {\ce refraction} (string source, vector R, float eta, float angle)}
-\indexapi{refraction()}
-These alternative versions of {\cf refraction()} explicitly specify a
-refraction direction \emph{R}.  These are only supplied for the rare
-case where you need to use a nonphysical refraction direction, and
-introduce an undesired view-dependence to the surface description that
-you can avoid by using the version of {\cf refraction()} that
-automatically calculates the refraction vector for you.  View-dependence
-may confuse or defeat clever renderer speedups or intelligent sampling
-strategies.  Use with caution!
-\apiend
-\end{comment}
 
+\apiitem{\colorclosure\ {\ce microfacet_beckmann_refraction} (normal N,
+\\ \bigspc\bigspc\bigspc  float roughness, float eta)}
+\indexapi{microfacet_beckmann_refraction()}
 
-\apiitem{\colorclosure\ {\ce dielectric} (normal N, float eta, \pl)}
-\indexapi{dielectric()}
-
-Returns a \colorclosure that represents both the reflection and
-refraction from delectric materials such as glass or transparent
-plastic.  The \emph{eta} parameter is the ratio of the index of
-refraction of the medium on the ``inside'' of the surface divided by the
-index of refration of the medium on the ``outside'' of the surface.  The
-``outside'' direction is the one specified by \N.
-
-The reflection and refraction directions will be automatically computed
-based on the incident angle and \emph{eta}, and the radiance returned
-will be automatically scaled by the Fresnel factors for dielectrics.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf dielectric()} was
-implemented as follows:
-
-\begin{code}
-    float Kr, Kt;
-    vector R, T;
-    fresnel (I, N, eta, Kr, Kt, R, T);
-    return Kr * raytrace (R) + Kt * raytrace (T);
-\end{code}
+Returns a \colorclosure that represents refraction of the surface using
+the ``Beckmann'' microfacet BRDF, and is coordinated so that it is
+energy-balanced with the corresponding {\cf microfacet_beckmann}.  The
+{\cf roughness} parameter controls how rough the microstructure of the
+surface is.  The {\cf eta} parameter is the index of refraction of the
+material.
 
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce transparent} (\pl)}
+\apiitem{\colorclosure\ {\ce microfacet_ggx_refraction} (normal N,
+\\ \bigspc\bigspc\bigspc  float roughness, float eta)}
+\indexapi{microfacet_ggx_refraction()}
+
+Returns a \colorclosure that represents refraction of the
+surface using the ``GGX'' microfacet BRDF, and is coordinated
+so that it is energy-balanced with the corresponding {\cf microfacet_ggx}.
+The {\cf roughness} parameter controls how rough the microstructure of
+the surface is.  The {\cf eta} parameter is the index of refraction of
+the material.
+
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce transparent} ( )}
 \indexapi{transparent()}
 
 Returns a \colorclosure that shows the light \emph{behind} the surface
 without any refractive bending of the light directions.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\hspace{0.5in}None currently supported.
-\vspace{.25in}
-%\apiitem{"penumbra", <float>}
-%\vspace{12pt}
-%Specifies...
-%\apiend
-%\vspace{-16pt}
-
-Like all \closurecolors, the return ``value'' is symbolic and is may be
-evaluated at a later time convenient to the renderer in order to compute
-the exitant radiance in the direction {\cf -I}.  But aside from the
-fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf transparent()} was
-implemented as follows:
+The {\cf transparent()} closure behaves as if it were implemented
+as follows:
 
 \begin{code}
     return raytrace (I);
@@ -4662,33 +4531,24 @@ implemented as follows:
 
 \apiend
 
-
-\apiitem{\colorclosure\ {\ce translucence} (\pl)}
-\indexapi{translucence()}
+\apiitem{\colorclosure\ {\ce translucent} ( )}
+\indexapi{translucent()}
 
 Returns a \colorclosure that represents the Lambertian diffuse
 translucence of a smooth surface, which is much like {\cf diffuse()}
 except that it gathers light from the \emph{far} side of the surface.
+The {\cf translucent()} closure behaves as if it were implemented
+as follows:
+
+\begin{code}
+    return diffuse (-N);
+\end{code}
 
 \apiend
 
 
 \begin{comment}
-\apiitem{\colorclosure\ {\ce ambient} () \\
-\colorclosure\ {\ce ambient} (vector N)}
-\indexapi{ambient}
-
-Returns a \colorclosure that represents the amount of light hitting the
-surfaces from \emph{ambient} light sources.  If the optional vector \N
-is supplied giving the surface normal, ambient lights that have
-positions will only be considered if they are in front of the surface
-geometry.
-
-\apiend
-\end{comment}
-
-
-\apiitem{\colorclosure\ {\ce subsurface} (\pl)}
+\apiitem{\colorclosure\ {\ce subsurface} ( )}
 \indexapi{subsurface}
 Returns a \colorclosure that represents the amount of \emph{subsurface
 scattering} exhibited by the surface.
@@ -4698,53 +4558,94 @@ We'll determine later what the arguments to {\cf subsurface} need to be.
 FIXME
 \end{annotate}
 \apiend
+\end{comment}
 
 
-\apiitem{\colorclosure\ {\ce emission} (\pl) \\
-\colorclosure\ {\ce emission} (vector axis, float angle, \pl)}
+\subsection{Volumetric material closures}
+
+\apiitem{\colorclosure\ {\ce isotropic} ( )}
+\indexapi{isotropic}
+Returns a \colorclosure that represents the scattering of an isotropic
+volumetric material, scattering light evenly in all directions,
+regardless of its original direction.
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce henyey_greenstein} (float g)}
+\indexapi{henyey_greenstein}
+Returns a \colorclosure that represents the directional volumetric
+scattering by small suspended particles.  The {\cf g} parameter is the
+anisotropy factor, ranging from $-1$ to $1$), with positive values
+indicating predominantly forward-scattering, negative values indicating
+predominantly back-scattering, and value of $g=0$ resulting in isotropic
+scattering.
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce absorption} ( )}
+\indexapi{absorption}
+Returns a \colorclosure that does not represent any additional
+light scattering, but rather signals to the renderer the absorption
+represents the scattering of an isotropic
+volumetric material, scattering light evenly in all directions,
+regardless of its original direction.
+\apiend
+
+
+\subsection{Light emission closures}
+
+\apiitem{\colorclosure\ {\ce emission} ( )}
 \indexapi{emission}
-
-Returns a \colorclosure that represents a glowing/emissive surface.
-By default, light is emitted in a full hemisphere centered around the
-surface normal.  Optionally, \emph{axis} and \emph{angle} parameters
-may explicitly specify the emission cone (\emph{axis} = \N and
-\emph{angle} = {\cf PI/2} indicate the full hemisphere around \N).
+Returns a \colorclosure that represents a glowing/emissive material.
+When called in the context of a surface shader group, it implies that
+light is emitted in a full hemisphere centered around the surface
+normal. When called in the context of a volume shader group, it implies
+that light is emitted evenly in all directions around the point being
+shaded.
 
 The emission closure returns a radiance value (e.g.,
 $\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$) that, integrated
 over all angles, yields a power density of 1.0 (e.g.,
-$\mathrm{W}\cdot\mathrm{m}^{-2}$).  This may be multiplied by a scalar
-to adjust the desired power density of your light.  If you divide by
+$\mathrm{W}\cdot\mathrm{m}^{-2}$). This may be multiplied by a scalar to
+adjust the desired power density of your light.
+
+For surface emission, If you divide {\cf emission()} by 
 {\cf surfacearea()}, then you can easily specify the total emissive
-power of the light (e.g., $\mathrm{W}$), regardless of its physical size.
-
-Additional optional arguments may be passed as token/value pairs:
-
-\apiitem{"penumbra", <float>}
-\vspace{12pt}
-
-Specifies a transition angle for light to fall off.  If $\alpha$ is the
-angle between the axis and an illumination direction, then light is
-emitted evenly in all diretions for which $\alpha \le \mathit{angle} -
-\mathit{penumbra}$, no light is emitted in directions for which $\alpha
-> \mathit{angle}$, and the illumination falls gradually for
-$\mathit{angle} - \mathit{penumbra} < \alpha \le \mathit{angle}$.  If
-\emph{penumbra} is not supplied, it defaults to 0, indicating a hard
-cutoff at the cone boundary.
-
-\apiend
-\vspace{-16pt}
-
-
+power of the light (e.g., $\mathrm{W}$), regardless of its physical
+size.
 \apiend
 
 
-\begin{comment}
-FIXME
-shadow
-indirect
-occlusion
-\end{comment}
+\apiitem{\colorclosure\ {\ce background} ( )}
+\indexapi{background}
+Returns a \colorclosure that represents the radiance of the
+``background'' infinitely far away in the view direction.  The
+implementation is renderer-specific, but often involves looking
+up from an HDRI environment map.
+\apiend
+
+
+\subsection{Signaling closures}
+
+\apiitem{\colorclosure\ {\ce holdout} ( )}
+\indexapi{holdout()}
+Returns a \colorclosure that does not represent any additional light
+reflection from the surface, but does signal to the renderer that 
+the surface is a \emph{holdout object} (appears transparent in
+the final output yet hides objects behind it).  ``Partial holdouts''
+may be designated by weighting the {\cf holdout()} closure by a
+weight that is less than 1.0.
+\apiend
+
+
+\apiitem{\colorclosure\ {\ce debug} (string outputname)}
+\indexapi{debug()}
+Returns a \colorclosure that does not represent any additional light
+reflection from the surface, but does signal to the renderer to add
+the weight of the closure (which may be a {\cf float} or a \color)
+to the named output (i.e., AOV).
+\apiend
+
 
 
 
@@ -4910,6 +4811,15 @@ OSL, but is expected to include at a minimum \qkw{camera},
 \qkw{shadow}, \qkw{diffuse}, \qkw{glossy}, \qkw{reflection},
 \qkw{refraction}.  They are not necessarily mutually exclusive, with the
 exception that camera rays should be of class \qkw{camera} and no other.
+\apiend
+
+\apiitem{int {\ce isconnected} (\emph{type} parameter)}
+\indexapi{isconnected()}
+Returns {\cf 1} if the argument is a shader parameter and is connected
+to an earlier layer in the shader group, otherwise returns {\cf 0}.
+Remember that function arguments in OSL are always pass-by-reference,
+so {\cf isconnected()} applied to a function parameter will depend on
+what was passed in as the actual parameter.
 \apiend
 
 
@@ -5633,7 +5543,7 @@ primitive, usually employing a ``compositing'' method; (4) making an
 object ``disappear'' to form a ``stencil'' effect under shader control.
 
 It is clear that \#1 and \#2 are properly handled with our usual 
-material closures ({\cf translucence} and {\cf refraction()},
+material closures ({\cf translucent} and {\cf refraction()},
 respectively).
 
 The real question is how to handle the kind of compositing opacity of

@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <cstdio>
 
 #include "osoreader.h"
@@ -53,7 +54,7 @@ OIIO::mutex OSOReader::m_osoread_mutex;
 
 
 bool
-OSOReader::parse (const std::string &filename)
+OSOReader::parse_file (const std::string &filename)
 {
     // The lexer/parser isn't thread-safe, so make sure Only one thread
     // can actually be reading a .oso file at a time.
@@ -80,6 +81,32 @@ OSOReader::parse (const std::string &filename)
     input.close ();
     return ok;
 }
+
+
+bool
+OSOReader::parse_memory (const std::string &buffer)
+{
+    // The lexer/parser isn't thread-safe, so make sure Only one thread
+    // can actually be reading a .oso file at a time.
+    OIIO::lock_guard guard (m_osoread_mutex);
+
+    std::istringstream input (buffer.c_str(), std::ios::in);
+
+    osoreader = this;
+    osolexer = new osoFlexLexer (&input);
+    assert (osolexer);
+    bool ok = ! osoparse ();   // osoparse returns nonzero if error
+    if (ok) {
+//        m_err.info ("Correctly parsed preloaded OSO code");
+    } else {
+        m_err.error ("Failed parse of preloaded OSO code");
+    }
+    delete osolexer;
+    osolexer = NULL;
+
+    return ok;
+}
+
 
 
 

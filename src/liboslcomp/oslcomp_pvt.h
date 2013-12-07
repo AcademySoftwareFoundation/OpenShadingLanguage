@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCOMP_PVT_H
-#define OSLCOMP_PVT_H
+#pragma once
 
 #include <vector>
 #include <stack>
@@ -69,7 +68,8 @@ public:
     /// Fully compile a shader located in 'filename', with the command-line
     /// options ("-I" and the like) in the options vector.
     virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options);
+                          const std::vector<std::string> &options,
+                          const std::string &stdoslpath = "");
 
     /// The name of the file we're currently parsing
     ///
@@ -195,6 +195,10 @@ public:
     /// Make a temporary symbol of the given type.
     ///
     Symbol *make_temporary (const TypeSpec &type);
+
+    /// Make a generic constant symbol
+    ///
+    Symbol *make_constant (TypeDesc type, const void *val);
 
     /// Make a constant string symbol
     ///
@@ -387,6 +391,3 @@ extern OSLCompilerImpl *oslcompiler;
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-
-#endif /* OSLCOMP_PVT_H */

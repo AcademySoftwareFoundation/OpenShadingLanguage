@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCOMP_H
-#define OSLCOMP_H
+#pragma once
 
 #include "oslconfig.h"
 
@@ -44,7 +43,8 @@ public:
     /// Compile the given file, using the list of command-line options.
     /// Return true if ok, false if the compile failed.
     virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options) = 0;
+                          const std::vector<std::string> &options,
+                          const std::string &stdoslpath = "") = 0;
 
     /// Return the name of our compiled output (must be called after
     /// compile()).
@@ -54,5 +54,3 @@ public:
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCOMP_H */

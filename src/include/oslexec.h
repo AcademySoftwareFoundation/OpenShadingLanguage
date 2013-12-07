@@ -26,21 +26,22 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLEXEC_H
-#define OSLEXEC_H
+#pragma once
 
 
 #include "oslconfig.h"
 
-#include <OpenImageIO/refcnt.h>     // just to get shared_ptr from boost ?!
+#include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
 
 
 OSL_NAMESPACE_ENTER
 
 class RendererServices;
-class ShadingAttribState;
-typedef shared_ptr<ShadingAttribState> ShadingAttribStateRef;
+class ShaderGroup;
+typedef shared_ptr<ShaderGroup> ShaderGroupRef;
+typedef ShaderGroup ShadingAttribState;       // DEPRECATED name
+typedef ShaderGroupRef ShadingAttribStateRef; // DEPRECATED name
 struct ShaderGlobals;
 struct ClosureColor;
 struct ClosureParam;
@@ -57,7 +58,6 @@ typedef const void * TransformationPtr;
 // Callbacks for closure creation
 typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
 typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
-typedef bool (*CompareClosureFunc)(int id, const void *dataA, const void *dataB);
 
 
 class OSLEXECPUBLIC ShadingSystem
@@ -75,9 +75,67 @@ public:
                                   ErrorHandler *err=NULL);
     static void destroy (ShadingSystem *x);
 
-    /// Set an attribute controlling the texture system.  Return true
+    /// Set an attribute controlling the shading system.  Return true
     /// if the name and type were recognized and the attrib was set.
-    /// Documented attributes:
+    /// Documented attributes are as follows:
+    /// 1. Attributes that should be exposed to users:
+    ///    int statistics:level   Automatically print OSL statistics (0).
+    ///    string searchpath:shader  Colon-separated path to search for .oso
+    ///    string colorspace      Name of RGB color space ("Rec709")
+    ///    int range_checking     Generate extra code for component & array
+    ///                              range checking (1)
+    ///    int debug_nan          Add extra (expensive) code to pinpoint
+    ///                              when NaN/Inf happens (0).
+    ///    int debug_uninit       Add extra (expensive) code to pinpoint
+    ///                              use of uninitialized variables (0).
+    ///    int compile_report     Issue info messages to the renderer for
+    ///                              every shader compiled (0).
+    ///    int max_warnings_per_thread  Number of warning calls that should be
+    ///                              processed per thread (100).
+    /// 2. Attributes that should be set by applications/renderers that
+    /// incorporate OSL:
+    ///    string commonspace     Name of "common" coord system ("world")
+    ///    string[] raytypes      Array of ray type names
+    ///    string[] renderer_outputs
+    ///                           Array of names of renderer outputs (AOVs)
+    ///                              that should not be optimized away.
+    ///    int unknown_coordsys_error  Should errors be issued when unknown
+    ///                                   coord system names are used?
+    ///    int strict_messages    Issue error if a message is set after
+    ///                              being queried (1).
+    ///    int lazylayers         Evaluate shader layers only when their
+    ///                              outputs are first needed (1)
+    ///    int lazyglobals        Run layers lazily even if they write to
+    ///                              globals (0)
+    ///    int greedyjit          Optimize and compile all shaders up front,
+    ///                              versus only as needed (0).
+    ///    int lockgeom           Default 'lockgeom' value for shader params
+    ///                              that don't specify it (0).  Lockgeom
+    ///                              means a param CANNOT be overridden by
+    ///                              interpolated geometric parameters.
+    ///    int countlayerexecs    Add extra code to count total layers run
+    /// 3. Attributes that that are intended for developers debugging
+    /// liboslexec itself:
+    /// These attributes may be helpful for liboslexec developers or
+    /// for debugging, but probably not for using OSL in production:
+    ///    int debug              Set debug output level (0)
+    ///    int clearmemory        Zero out working memory before each shade (0)
+    ///    int optimize           Runtime optimization level (2)
+    ///       And there are several int options that, if set to 0, will turn
+    ///       off individual classes of runtime optimizations:
+    ///         opt_simplify_param, opt_constant_fold, opt_stale_assign,
+    ///         opt_elide_useless_ops, opt_elide_unconnected_outputs,
+    ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
+    ///         opt_merge_instances, opt_fold_getattribute
+    ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
+    ///    int llvm_debug         Set LLVM extra debug level (0)
+    ///    int max_local_mem_KB   Error if shader group needs more than this
+    ///                              much local storage to execute (1024K)
+    ///    string debug_groupname Name of shader group -- debug only this one
+    ///    string debug_layername Name of shader layer -- debug only this one
+    ///    int optimize_nondebug  If 1, fully optimize shaders that are not
+    ///                              designated as the debug shaders.
+    ///    string only_groupname  Compile only this one group (skip all others)
     ///
     virtual bool attribute (const std::string &name, TypeDesc type,
                             const void *val) = 0;
@@ -129,9 +187,50 @@ public:
         return ok;
     }
 
+    /// Load compiled shader (oso) from a memory buffer, overriding
+    /// shader lookups in the shader search path
+    virtual bool LoadMemoryCompiledShader (const char *shadername,
+                                           const char *buffer)=0;
+
+    // The basic sequence for declaring a shader group looks like this:
+    // ShadingSystem *ss = ...;
+    // ShaderGroupRef group = ss->ShaderGroupBegin (groupname);
+    //    /* First layer - texture lookup shader: */
+    //       /* Specify instance parameter values */
+    //       const char *mapname = "colormap.exr";
+    //       ss->Parameter ("texturename", TypeDesc::TypeString, &mapname);
+    //       float blur = 0.001;
+    //       ss->Parameter ("blur", TypeDesc::TypeFloat, &blur);
+    //    ss->Shader ("surface", "texmap", "texturelayer");
+    //    /* Second layer - generate the BSDF closure: */
+    //       float roughness = 0.05;
+    //       ss->Parameter ("roughness", TypeDesc::TypeFloat, &roughness);
+    //    ss->Shader ("surface", "plastic", "illumlayer");
+    //    /* Make a connection between the layers */
+    //    ss->ConnectShaders ("texturelayer", "Cout", "illumlayer", "Cs");
+    // ss->ShaderGroupEnd ();
+
+    /// Signal the start of a new shader group.  The return value is a
+    /// reference-counted opaque handle to the ShaderGroup.
+    virtual ShaderGroupRef ShaderGroupBegin (const char *groupname=NULL) = 0;
+
+    /// Signal the end of a new shader group.
+    ///
+    virtual bool ShaderGroupEnd (void) = 0;
+
     /// Set a parameter of the next shader.
     ///
     virtual bool Parameter (const char *name, TypeDesc t, const void *val)
+        { return true; }
+
+    /// Set a parameter of the next shader, and override the 'lockgeom'
+    /// metadata for that parameter (despite how it may have been set in
+    /// the shader).  If lockgeom is false, it means that this parameter
+    /// should NOT be considered locked against changes by the geometry,
+    /// and therefore the shader should not optimize assuming that the
+    /// instance value (the 'val' specified by this call) is a constant.
+    virtual bool Parameter (const char *name, TypeDesc t, const void *val,
+                            bool lockgeom)
         { return true; }
 #if 0
     virtual bool Parameter (const char *name, int val) {
@@ -149,19 +248,11 @@ public:
 #endif
 
     /// Create a new shader instance, either replacing the one for the
-    /// specified usage (if not within a group) or appending to the 
+    /// specified usage (if not within a group) or appending to the
     /// current group (if a group has been started).
     virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
                          const char *layername=NULL) = 0;
-
-    /// Signal the start of a new shader group.
-    ///
-    virtual bool ShaderGroupBegin (const char *groupname=NULL) = 0;
-
-    /// Signal the end of a new shader group.
-    ///
-    virtual bool ShaderGroupEnd (void) = 0;
 
     /// Connect two shaders within the current group
     ///
@@ -170,11 +261,20 @@ public:
 
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.
-    virtual ShadingAttribStateRef state () = 0;
+    /// DEPRECATED -- instead, retrive via ShaderGroupBegin().
+    virtual ShaderGroupRef state () = 0;
 
-    /// Clear the current shading attribute state, i.e., no shaders
-    /// specified.
-    virtual void clear_state () = 0;
+    /// Replace a parameter value in a previously-declared shader group.
+    /// This is meant to called after the ShaderGroupBegin/End, but will
+    /// fail if the shader has already been irrevocably optimized/compiled,
+    /// unless the paraticular parameter is marked as lockgeom=0 (which
+    /// indicates that it's a parameter that may be overridden by the
+    /// geometric primitive).  This call gives you a way of changing the
+    /// instance value, even if it's not a geometric override.
+    virtual bool ReParameter (ShaderGroup &group,
+                              const char *layername, const char *paramname,
+                              TypeDesc type, const void *val)
+        { return false; }
 
     /// Optional: create the per-thread data needed for shader
     /// execution.  Doing this and passing it to get_context speeds is a
@@ -202,13 +302,13 @@ public:
     virtual void release_context (ShadingContext *ctx) = 0;
 
     /// Execute the shader bound to context ctx, with the given
-    /// ShadingAttribState (that specifies the shader group to run) and
+    /// ShaderGroup (that specifies the shader group to run) and
     /// ShaderGlobals (specific information for this shade point).  If
     /// 'run' is false, do all the usual preparation, but don't actually
     /// run the shader.  Return true if the shader executed (or could
     /// have executed, if 'run' had been true), false the shader turned
     /// out to be empty.
-    virtual bool execute (ShadingContext &ctx, ShadingAttribState &sas,
+    virtual bool execute (ShadingContext &ctx, ShaderGroup &sas,
                           ShaderGlobals &ssg, bool run=true) = 0;
 
     /// Get a raw pointer to a named symbol (such as you'd need to pull
@@ -225,9 +325,14 @@ public:
     virtual std::string getstats (int level=1) const = 0;
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare) = 0;
-
-    void register_builtin_closures();
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup) = 0;
+    /// Query either by name or id an existing closure. If name is non
+    /// NULL it will use it for the search, otherwise id would be used
+    /// and the name will be placed in name if successful. Also return
+    /// pointer to the params array in the last argument. All args are
+    /// optional but at least one of name or id must non NULL.
+    virtual bool query_closure(const char **name, int *id,
+                               const ClosureParam **params) = 0;
 
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves
@@ -274,7 +379,7 @@ private:
 
 
 
-/// This struct represents the global variables accessible from a shader, note 
+/// This struct represents the global variables accessible from a shader, note
 /// that not all fields will be valid in all contexts.
 ///
 /// All points, vectors and normals are given in "common" space.
@@ -314,7 +419,7 @@ struct ShaderGlobals {
 
 
 
-/// RendererServices defines an abstract interface through which a 
+/// RendererServices defines an abstract interface through which a
 /// renderer may provide callback to the ShadingSystem.
 class OSLEXECPUBLIC RendererServices {
 public:
@@ -388,7 +493,7 @@ public:
     /// some renderers to provide transformations that cannot be
     /// expressed by a 4x4 matrix.
     ///
-    /// If npoints == 0, the function should just return true if a 
+    /// If npoints == 0, the function should just return true if a
     /// known nonlinear transformation is available to transform points
     /// between the two spaces, otherwise false.  (For this calling
     /// pattern, sg, Pin, Pout, and time will not be used and may be 0.
@@ -410,15 +515,22 @@ public:
     /// write it into 'val'.  Otherwise, return false.  If no object is
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
-    /// unsuccessful, on the currently shaded "scene". 
-    virtual bool get_attribute (void *renderstate, bool derivatives, 
-                                ustring object, TypeDesc type, ustring name, 
+    /// unsuccessful, on the currently shaded "scene".
+    ///
+    /// Note to renderers: if renderstate is NULL, that means
+    /// get_attribute is being called speculatively by the runtime
+    /// optimizer, and it doesn't know which object the shader will be
+    /// run on. Be robust to this situation, return 'true' (retrieve the
+    /// attribute) if you can (known object and attribute name), but
+    /// otherwise just fail by returning 'false'.
+    virtual bool get_attribute (void *renderstate, bool derivatives,
+                                ustring object, TypeDesc type, ustring name,
                                 void *val ) = 0;
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute (void *renderstate, bool derivatives, 
-                                      ustring object, TypeDesc type, 
+    virtual bool get_array_attribute (void *renderstate, bool derivatives,
+                                      ustring object, TypeDesc type,
                                       ustring name, int index, void *val ) = 0;
 
     /// Get the named user-data from the current object and write it into
@@ -500,11 +612,12 @@ public:
     /// of the requested type stored in out_data.
     ///
     /// Return 1 if the attribute is found, 0 otherwise.
-    virtual int pointcloud_get (ustring filename, size_t *indices, int count,
+    virtual int pointcloud_get (ShaderGlobals *sg,
+                                ustring filename, size_t *indices, int count,
                                 ustring attr_name, TypeDesc attr_type,
                                 void *out_data);
 
-    /// Write a point to the named pointcloud, which will be saved 
+    /// Write a point to the named pointcloud, which will be saved
     /// at the end of the frame.  Return true if everything is ok,
     /// false if there was an error.
     virtual bool pointcloud_write (ShaderGlobals *sg,
@@ -534,16 +647,11 @@ public:
     /// Get the named message from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  This is only
     /// called for "sourced" messages, not ordinary intra-group messages.
-    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name, 
+    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name,
                              TypeDesc type, void *val, bool derivatives) {
         return false;
     }
-
-private:
-    TextureSystem *m_texturesys;   // For default texture implementation
 };
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLEXEC_H */

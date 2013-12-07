@@ -49,6 +49,14 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
     carray[2] = color (u, v, 4);
     printf ("carray = [(%g) (%g) (%g)]\n", carray[0], carray[1], carray[2]);
 
+    printf ("\nTest whole-array assignment:\n");
+    float farray2[3];
+    farray2 = farray;
+    printf ("farray = [%g %g %g]\n",
+            farray[0], farray[1], farray[2]);
+    printf ("after farray2 = farray, farray2 = [%g %g %g]\n\n",
+            farray2[0], farray2[1], farray2[2]);
+
     test_unspecified_length (sarray);
 
     {

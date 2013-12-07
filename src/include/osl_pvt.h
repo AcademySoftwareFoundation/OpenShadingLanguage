@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_PVT_H
-#define OSL_PVT_H
+#pragma once
 
 #include "oslconfig.h"
 
@@ -299,6 +298,12 @@ public:
         return m_simple.basetype == TypeDesc::STRING;
     }
 
+    /// Is it an int or an array of ints?
+    ///
+    bool is_int_based () const {
+        return m_simple.basetype == TypeDesc::INT;
+    }
+
     /// Is it a void?
     ///
     bool is_void () const {
@@ -459,15 +464,18 @@ public:
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
           m_initialized(false), m_lockgeom(false),
-          m_valuesource(DefaultVal), m_fieldid(-1),
-          m_scope(0), m_dataoffset(-1), 
+          m_valuesource(DefaultVal), m_free_data(false), m_fieldid(-1),
+          m_scope(0), m_dataoffset(-1),
           m_node(declaration_node), m_alias(NULL),
           m_initbegin(0), m_initend(0),
           m_firstread(std::numeric_limits<int>::max()), m_lastread(-1),
           m_firstwrite(std::numeric_limits<int>::max()), m_lastwrite(-1)
     { }
-    Symbol () { }  // Default ctr needed for vector resize
-    ~Symbol () { }
+    Symbol () : m_data(NULL), m_free_data(false) { }
+    ~Symbol () {
+        if (m_free_data)
+            delete [] (char *)m_data;
+    }
 
     const Symbol & operator= (const Symbol &a) {
         // Make absolutely sure that symbol copying goes blazingly fast,
@@ -578,6 +586,7 @@ public:
     ValueSource valuesource () const { return (ValueSource) m_valuesource; }
     void valuesource (ValueSource v) { m_valuesource = v; }
     const char *valuesourcename () const;
+    static const char *valuesourcename (ValueSource v);
 
     int fieldid () const { return m_fieldid; }
     void fieldid (int id) { m_fieldid = id; }
@@ -640,8 +649,8 @@ public:
     bool is_constant () const { return symtype() == SymTypeConst; }
 
     /// Stream output
-    std::ostream& print (std::ostream& out) const;
-    std::ostream& print_vals (std::ostream& out) const;
+    std::ostream& print (std::ostream& out, int maxvals=100000000) const;
+    std::ostream& print_vals (std::ostream& out, int maxvals=100000000) const;
 
 protected:
     void *m_data;               ///< Pointer to the data
@@ -655,6 +664,7 @@ protected:
     unsigned m_initialized:1;   ///< If a param, has it been initialized?
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
     char m_valuesource;         ///< Where did the value come from?
+    bool m_free_data;           ///< Free m_data upon destruction?
     short m_fieldid;            ///< Struct field of this var (or -1)
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
@@ -780,6 +790,12 @@ public:
         argread (arg, false);
         argwrite (arg, true);
     }
+    /// Declare that argument number 'arg' is only read (not written!) by
+    /// this op.
+    void argreadonly (int arg) {
+        argread (arg, true);
+        argwrite (arg, false);
+    }
 
     /// Does the argument number 'arg' take derivatives?
     ///
@@ -813,6 +829,15 @@ public:
     ///
     unsigned int argtakesderivs_all () const { return m_argtakesderivs; }
 
+    /// Are two opcodes identical enough to merge their instances?  Note
+    /// that this isn't a true 'equal', we don't compare fields that
+    /// won't matter for that purpose.
+    friend bool equivalent (const Opcode &a, const Opcode &b) {
+        return a.m_op == b.m_op &&
+            a.m_firstarg == b.m_firstarg && a.m_nargs == b.m_nargs &&
+            std::equal(&a.m_jump[0], &a.m_jump[max_jumps], &b.m_jump[0]);
+    }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument
@@ -838,5 +863,3 @@ typedef std::vector<Opcode> OpcodeVec;
 
 }; // namespace OSL::pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_PVT_H */

@@ -85,6 +85,42 @@ ShaderMaster::findsymbol (ustring name) const
 
 
 
+void *
+ShaderMaster::param_default_storage (int index)
+{
+    const Symbol *sym = symbol(index);
+    TypeDesc t = sym->typespec().simpletype();
+    if (t.basetype == TypeDesc::INT) {
+        return &m_idefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::FLOAT) {
+        return &m_fdefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::STRING) {
+        return &m_sdefaults[sym->dataoffset()];
+    } else {
+        return NULL;
+    }
+}
+
+
+
+const void *
+ShaderMaster::param_default_storage (int index) const
+{
+    const Symbol *sym = symbol(index);
+    TypeDesc t = sym->typespec().simpletype();
+    if (t.basetype == TypeDesc::INT) {
+        return &m_idefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::FLOAT) {
+        return &m_fdefaults[sym->dataoffset()];
+    } else if (t.basetype == TypeDesc::STRING) {
+        return &m_sdefaults[sym->dataoffset()];
+    } else {
+        return NULL;
+    }
+}
+
+
+
 void
 ShaderMaster::resolve_syms ()
 {
@@ -98,7 +134,8 @@ ShaderMaster::resolve_syms ()
         // Fix up the size of the symbol's data (for one point, not 
         // counting derivatives).
         if (s.typespec().is_closure()) {
-            s.size (sizeof (ClosureColor *)); // heap stores ptrs to closures
+            int alen = std::max (1, s.typespec().arraylength());
+            s.size (alen * sizeof (ClosureColor *)); // heap stores ptrs to closures
         } else if (s.typespec().is_structure()) {
             // structs are just placeholders, their fields are separate
             // symbols that hold the real data.

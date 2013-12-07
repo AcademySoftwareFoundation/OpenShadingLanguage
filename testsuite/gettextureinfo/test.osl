@@ -1,7 +1,8 @@
 
 
 shader
-test (string filename = "../common/textures/grid.tx")
+test (string filename = "../common/textures/grid.tx",
+      int date = 1)
 {
     printf ("Executing...\n");
     int r;
@@ -22,10 +23,19 @@ test (string filename = "../common/textures/grid.tx")
     r = gettextureinfo (filename, "textureformat", textureformat);
     printf ("%s textureformat: %s (%d)\n", filename, textureformat, r);
 
+    int datawin[4], displaywin[4];
+    r = gettextureinfo (filename, "datawindow", datawin);
+    printf ("%s datawindow: %d %d %d %d\n", filename,
+            datawin[0], datawin[1], datawin[2], datawin[3]);
+    r = gettextureinfo (filename, "displaywindow", displaywin);
+    printf ("%s displaywindow: %d %d %d %d\n", filename,
+            displaywin[0], displaywin[1], displaywin[2], displaywin[3]);
+
     // Test arbitrary metadata
     string datetime;
     r = gettextureinfo (filename, "DateTime", datetime);
-    printf ("%s datetime: %s (%d)\n", filename, datetime, r);
+    if (date)
+        printf ("%s datetime: %s (%d)\n", filename, datetime, r);
 
     // Test failure of unfound info name
     string foobar = "not found";

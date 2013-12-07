@@ -1,0 +1,3 @@
+test.osl:6: error: Not allowed: 'closure color * closure color'
+test.osl:6: error: Cannot assign 'unknown' to 'closure color'
+FAILED test.osl

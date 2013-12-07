@@ -37,8 +37,7 @@ Sony Pictures Imageworks terms, above.
 */
 
 
-#ifndef OSLQUERY_H
-#define OSLQUERY_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -78,13 +77,13 @@ public:
         { }
     };
 
-    OSLQUERYPUBLIC OSLQuery ();
-    OSLQUERYPUBLIC ~OSLQuery ();
+    OSLQuery ();
+    ~OSLQuery ();
 
     /// Get info on the named shader with optional searcphath.  Return
     /// true for success, false if the shader could not be found or
     /// opened properly.
-    OSLQUERYPUBLIC bool open (const std::string &shadername,
+    bool open (const std::string &shadername,
                const std::string &searchpath=std::string());
 
     /// Return the shader type: "surface", "displacement", "volume",
@@ -136,5 +135,3 @@ private:
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLQUERY_H */

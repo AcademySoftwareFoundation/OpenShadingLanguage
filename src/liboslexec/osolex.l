@@ -67,11 +67,6 @@ FLT3            [-+]?{DIGIT}+{E}
 FLT             {FLT1}|{FLT2}|{FLT3}
  /* string literal */
 STR     \"(\\.|[^\\"])*\"
-STRDUMMY \"(\\.|[^\\"])*\"
- /* Dumb note: STRDUMMY is just to fix my syntax highlighting in emacs,
-  * which is thrown off by the odd number of quotes!
-  */
-
  /* Identifier: alphanumeric, may contain digits after the first character.
   * Also '$' and '.' are allowed!
   */
@@ -79,7 +74,7 @@ IDENT           ({ALPHA}|[_$])({ALPHA}|{DIGIT}|[_$\.])*
  /* C preprocessor (cpp) directives */
 COMMENT         \#[^\n]*\n
  /* Hints */
-HINTPATTERN     \%{IDENT}(\{[^\}]*\})?
+HINTPATTERN     \%{IDENT}(\{([^\}\\"]|{STR})*\})?
 
 
  /* Note for lex newbies: the following '%{ .. %}' section contains literal
@@ -103,6 +98,9 @@ using namespace OSL::pvt;
 
 #define yylval osolval
 
+#ifdef _WIN32
+#define YY_NO_UNISTD_H
+#endif
 
 %}
 

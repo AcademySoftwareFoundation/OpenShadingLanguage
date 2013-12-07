@@ -389,9 +389,19 @@ ASTassign_expression::typecheck (TypeSpec expected)
 
     ASSERT (m_op == Assign);  // all else handled by binary_op
 
-    // We don't currently support assignment of whole arrays
+    // Handle array case
     if (vt.is_array() || et.is_array()) {
-        error ("Can't assign entire arrays");
+        if (vt.is_array() && et.is_array() &&
+            vt.arraylength() >= et.arraylength()) {
+            if (vt.structure() && (vt.structure() == et.structure())) {
+                return m_typespec = vt;
+            }
+            if (equivalent(vt.elementtype(), et.elementtype()) &&
+                !vt.structure() && !et.structure()) {
+                return m_typespec = vt;
+            }
+        }
+        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         return TypeSpec();
     }
 
@@ -540,13 +550,15 @@ ASTbinary_expression::typecheck (TypeSpec expected)
                 return m_typespec = l;
         }
         if (m_op == Mul) {
-            if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
-                return m_typespec = l;
-            if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
-                // N.B. Reorder so that it's always r = closure * k,
-                // not r = k * closure.  See codegen for why this helps.
-                std::swap (m_children[0], m_children[1]);
-                return m_typespec = r;
+            if (l.is_color_closure() != r.is_color_closure()) {
+                if (l.is_color_closure() && (r.is_color() || r.is_int_or_float()))
+                    return m_typespec = l;
+                if (r.is_color_closure() && (l.is_color() || l.is_int_or_float())) {
+                    // N.B. Reorder so that it's always r = closure * k,
+                    // not r = k * closure.  See codegen for why this helps.
+                    std::swap (m_children[0], m_children[1]);
+                    return m_typespec = r;
+                }
             }
         }
         if (m_op == And || m_op == Or) {
@@ -812,16 +824,19 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
 
 
 TypeSpec
-ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerce)
+ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerceargs,
+                                      bool equivreturn)
 {
     for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
         const char *code = poly->argcodes().c_str();
         int advance;
         TypeSpec returntype = m_compiler->type_from_code (code, &advance);
         code += advance;
-        if (check_arglist (m_name.c_str(), args(), code, coerce)) {
+        if (check_arglist (m_name.c_str(), args(), code, coerceargs)) {
             // Return types also must match if not coercible
-            if (expected == TypeSpec() || expected == returntype) {
+            if (expected == returntype ||
+                (equivreturn && equivalent(expected,returntype)) ||
+                expected == TypeSpec()) {
                 m_sym = poly;
                 return returntype;
             }
@@ -874,6 +889,75 @@ ASTfunction_call::mark_optional_output (int firstopt, const char **tags)
 
 
 
+bool
+ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
+{
+    int argnum = (m_name == "fprintf") ? 3 : 2;
+    while (*format != '\0') {
+        if (*format == '%') {
+            if (format[1] == '%') {
+                // '%%' is a literal '%'
+                format += 2;  // skip both percentages
+                continue;
+            }
+            const char *oldfmt = format;  // mark beginning of format
+            while (*format &&
+                   *format != 'c' && *format != 'd' && *format != 'e' &&
+                   *format != 'f' && *format != 'g' && *format != 'i' &&
+                   *format != 'm' && *format != 'n' && *format != 'o' &&
+                   *format != 'p' && *format != 's' && *format != 'u' &&
+                   *format != 'v' && *format != 'x' && *format != 'X')
+                ++format;
+            char formatchar = *format++;  // Also eat the format char
+            if (! arg) {
+                error ("%s has mismatched format string and arguments (not enough args)",
+                       m_name.c_str());
+                return false;
+            }
+
+            std::string ourformat (oldfmt, format);  // straddle the format
+            // Doctor it to fix mismatches between format and data
+            TypeDesc simpletype (arg->typespec().simpletype());
+            if ((arg->typespec().is_closure_based() ||
+                 simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                error ("%s has mismatched format string and arguments (arg %d needs %%s)",
+                       m_name.c_str());
+                return false;
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
+                formatchar != 'i' && formatchar != 'o' &&
+                formatchar != 'x' && formatchar != 'X') {
+                error ("%s has mismatched format string and arguments (arg %d needs %%d, %%i, %%o, %%x, or %%X)",
+                       m_name.c_str(), argnum);
+                return false;
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
+                formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
+                formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
+                formatchar != 'v') {
+                error ("%s has mismatched format string and arguments (arg %d needs %%f, %%g, or %%e)",
+                       m_name.c_str(), argnum);
+                return false;
+            }
+
+            arg = arg->nextptr();
+            ++argnum;
+        } else {
+            // Everything else -- just copy the character and advance
+            ++format;
+        }
+    }
+    if (arg) {
+        error ("%s has mismatched format string and arguments (too many args)",
+               m_name.c_str());
+        return false;
+    }
+    return true;  // all ok
+}
+
+
+
 void
 ASTfunction_call::typecheck_builtin_specialcase ()
 {
@@ -907,8 +991,26 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (5);
         } else if (m_name == "pointcloud_search") {
             mark_optional_output(5, pointcloud_out_args);
+        } else if (m_name == "split") {
+            argwriteonly (2);
         } else if (func()->texture_args()) {
             mark_optional_output(2, tex_out_args);
+        }
+    }
+
+    if (func()->printf_args()) {
+        ASTNode *arg = args().get();  // first arg
+        if (arg && m_name == "fprintf")
+            arg = arg->nextptr();  // skip filename param for fprintf
+        const char *format = NULL;
+        if (arg && arg->nodetype() == ASTNode::literal_node &&
+            arg->typespec().is_string() &&
+            (format = ((ASTliteral *)arg)->strval())) {
+            arg = arg->nextptr ();
+            typecheck_printf_args (format, arg);
+        } else {
+            warning ("%s() uses a format string that is not a constant.",
+                     m_name.c_str());
         }
     }
 
@@ -918,14 +1020,16 @@ ASTfunction_call::typecheck_builtin_specialcase ()
         // N.B. This counts arguments in the same way that opcodes do --
         // assuming "arg 0" is the return value.
         size_t nargs = listlength(args());
-        if (m_name == "area") {
+        if (m_name == "area" || m_name == "filterwidth") {
             argtakesderivs (1, true);
+#if 0
         } else if (m_name == "aastep") {
             // all but the 5-arg version take derivs of edge param
             argtakesderivs (1, nargs<5);
             // aastep(f,f) and aastep(f,f,str) take derivs of s param
             if (nargs == 2 || list_nth(args(),2)->typespec().is_string())
                 argtakesderivs (2, true);
+#endif
         } else if (m_name == "bump" || m_name == "displace") {
             // FIXME -- come back to this
         } else if (m_name == "calculatenormal") {
@@ -980,27 +1084,39 @@ ASTfunction_call::typecheck (TypeSpec expected)
     bool match = false;
 
     // Look for an exact match, including expected return type
-    m_typespec = typecheck_all_poly (expected, false);
+    m_typespec = typecheck_all_poly (expected, false, false);
     if (m_typespec != TypeSpec())
         match = true;
 
-    // Now look for an exact match on args, but any assignable return type
+    // Now look for an exact match for arguments, but equivalent return type
+    m_typespec = typecheck_all_poly (expected, false, true);
+    if (m_typespec != TypeSpec())
+        match = true;
+
+    // Now look for an exact match on args, but any return type
     if (! match && expected != TypeSpec()) {
-        m_typespec = typecheck_all_poly (TypeSpec(), false);
+        m_typespec = typecheck_all_poly (TypeSpec(), false, false);
         if (m_typespec != TypeSpec())
             match = true;
     }
 
     // Now look for a coercible match of args, exact march on return type
     if (! match) {
-        m_typespec = typecheck_all_poly (expected, true);
+        m_typespec = typecheck_all_poly (expected, true, false);
+        if (m_typespec != TypeSpec())
+            match = true;
+    }
+
+    // Now look for a coercible match of args, equivalent march on return type
+    if (! match) {
+        m_typespec = typecheck_all_poly (expected, true, true);
         if (m_typespec != TypeSpec())
             match = true;
     }
 
     // All that failed, try for a coercible match on everything
     if (! match && expected != TypeSpec()) {
-        m_typespec = typecheck_all_poly (TypeSpec(), true);
+        m_typespec = typecheck_all_poly (TypeSpec(), true, false);
         if (m_typespec != TypeSpec())
             match = true;
     }
@@ -1089,7 +1205,6 @@ ASTfunction_call::typecheck (TypeSpec expected)
 
 static const char * builtin_func_args [] = {
 
-    "aastep", "fff", "ffff", "fffff", "fffs", "ffffs", "fffffs", "!deriv", NULL,
     "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
     "backfacing", "i", NULL,
@@ -1108,13 +1223,14 @@ static const char * builtin_func_args [] = {
                "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,
     "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
-    "filterwidth", "ff", "vp", "vv", NULL,
+    "filterwidth", "ff", "vp", "vv", "!deriv", NULL,
     "format", "ss*", "!printf", NULL,
-    "fprintf", "xs*", "!printf", NULL,
+    "fprintf", "xss*", "!printf", NULL,
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "hash", NOISE_ARGS, NULL,
+    "isconnected", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,
     "pnoise", PGNOISE_ARGS, PNOISE_ARGS, "!deriv", NULL,
     "pointcloud_search", "ispfi.", "ispfii.", "!rw", NULL,
@@ -1131,13 +1247,14 @@ static const char * builtin_func_args [] = {
     "snoise", NOISE_ARGS, NULL,
     "spline", "fsff[]", "csfc[]", "psfp[]", "vsfv[]", "nsfn[]", "fsfif[]", "csfic[]", "psfip[]", "vsfiv[]", "nsfin[]", NULL,
     "splineinverse", "fsff[]", "fsfif[]", NULL,
+    "split", "iss[]si", "iss[]s", "iss[]", "!rw", NULL,
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
     "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
-    "warning", "xs*", NULL,   // FIXME -- further checking
+    "warning", "xs*", "!printf", NULL,   // FIXME -- further checking
     NULL
 #undef ANY_ONE_FLOAT_BASED
 #undef NOISE_ARGS

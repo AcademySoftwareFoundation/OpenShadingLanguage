@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef REGEXP_H
-#define REGEXP_H
+#pragma once
 
 #include "automata.h"
 
@@ -208,5 +207,3 @@ class Rule
 } // namespace regexp
 
 OSL_NAMESPACE_EXIT
-
-#endif // REGEXP_H

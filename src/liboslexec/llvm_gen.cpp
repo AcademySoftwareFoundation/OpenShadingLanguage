@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "genclosure.h"
-#include "runtimeoptimize.h"
+#include "backendllvm.h"
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -87,7 +87,7 @@ static ustring u_index ("index");
 
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
-#define LLVMGEN_ARGS     RuntimeOptimizer &rop, int opnum
+#define LLVMGEN_ARGS     BackendLLVM &rop, int opnum
 
 /// Macro that defines the full declaration of an LLVM generator.
 /// 
@@ -99,7 +99,7 @@ LLVMGEN (llvm_gen_generic);
 
 
 void
-RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
+BackendLLVM::llvm_gen_debug_printf (const std::string &message)
 {
     ustring s = ustring::format ("(%s %s) %s", inst()->shadername().c_str(),
                                  inst()->layername().c_str(), message.c_str());
@@ -112,7 +112,7 @@ RuntimeOptimizer::llvm_gen_debug_printf (const std::string &message)
 
 
 void
-RuntimeOptimizer::llvm_call_layer (int layer, bool unconditional)
+BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 {
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer]) {
@@ -157,7 +157,7 @@ RuntimeOptimizer::llvm_call_layer (int layer, bool unconditional)
 
 
 void
-RuntimeOptimizer::llvm_run_connected_layers (Symbol &sym, int symindex,
+BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
                                              int opnum,
                                              std::set<int> *already_run)
 {
@@ -268,7 +268,7 @@ LLVMGEN (llvm_gen_printf)
                    *format != 'p' && *format != 's' && *format != 'u' &&
                    *format != 'v' && *format != 'x' && *format != 'X')
                 ++format;
-            ++format; // Also eat the format char
+            char formatchar = *format++;  // Also eat the format char
             if (arg >= op.nargs()) {
                 rop.shadingsys().error ("Mismatch between format string and arguments (%s:%d)",
                                         op.sourcefile().c_str(), op.sourceline());
@@ -281,6 +281,22 @@ LLVMGEN (llvm_gen_printf)
             TypeDesc simpletype (sym.typespec().simpletype());
             int num_elements = simpletype.numelements();
             int num_components = simpletype.aggregate;
+            if ((sym.typespec().is_closure_based() ||
+                 simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                ourformat[ourformat.length()-1] = 's';
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
+                formatchar != 'i' && formatchar != 'o' && formatchar != 'u' &&
+                formatchar != 'x' && formatchar != 'X') {
+                ourformat[ourformat.length()-1] = 'd';
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
+                formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
+                formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
+                formatchar != 'v') {
+                ourformat[ourformat.length()-1] = 'f';
+            }
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.llvm_constant(a) : NULL;
@@ -618,6 +634,13 @@ LLVMGEN (llvm_gen_modulus)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
+#ifdef OSL_LLVM_NO_BITCODE
+    // On Windows 32 bit this calls an unknown instruction, probably need to
+    // link with LLVM compiler-rt to fix, for now just fall back to op
+    if (is_float)
+        return llvm_gen_generic (rop, opnum);
+#endif
+
     // The following should handle f%f, v%v, v%f, i%i
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {
@@ -716,6 +739,90 @@ LLVMGEN (llvm_gen_clamp)
         rop.llvm_store_value (valdx, Result, 1, i);
         rop.llvm_store_value (valdy, Result, 2, i);
     }
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_mix)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+    Symbol& X = *rop.opargsym (op, 3);
+    TypeDesc type = Result.typespec().simpletype();
+    ASSERT (!Result.typespec().is_closure_based() &&
+            Result.typespec().is_floatbased());
+    int num_components = type.aggregate;
+    int x_components = X.typespec().aggregate();
+    bool derivs = (Result.has_derivs() &&
+                   (A.has_derivs() || B.has_derivs() || X.has_derivs()));
+
+    llvm::Value *one = rop.llvm_constant (1.0f);
+    llvm::Value *x = rop.llvm_load_value (X, 0, 0, type);
+    llvm::Value *one_minus_x = rop.builder().CreateFSub (one, x);
+    llvm::Value *xx = derivs ? rop.llvm_load_value (X, 1, 0, type) : NULL;
+    llvm::Value *xy = derivs ? rop.llvm_load_value (X, 2, 0, type) : NULL;
+    for (int i = 0; i < num_components; i++) {
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
+        if (!a || !b)
+            return false;
+        if (i > 0 && x_components > 1) {
+            // Only need to recompute x and 1-x if they change
+            x = rop.llvm_load_value (X, 0, i, type);
+            one_minus_x = rop.builder().CreateFSub (one, x);
+        }
+        // r = a*one_minus_x + b*x
+        llvm::Value *r1 = rop.builder().CreateFMul (a, one_minus_x);
+        llvm::Value *r2 = rop.builder().CreateFMul (b, x);
+        llvm::Value *r = rop.builder().CreateFAdd (r1, r2);
+        rop.llvm_store_value (r, Result, 0, i);
+
+        if (derivs) {
+            // mix of duals:
+            //   (a*one_minus_x + b*x, 
+            //    a*one_minus_x.dx + a.dx*one_minus_x + b*x.dx + b.dx*x,
+            //    a*one_minus_x.dy + a.dy*one_minus_x + b*x.dy + b.dy*x)
+            // and since one_minus_x.dx = -x.dx, one_minus_x.dy = -x.dy,
+            //   (a*one_minus_x + b*x, 
+            //    -a*x.dx + a.dx*one_minus_x + b*x.dx + b.dx*x,
+            //    -a*x.dy + a.dy*one_minus_x + b*x.dy + b.dy*x)
+            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
+            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
+            if (i > 0 && x_components > 1)
+                xx = rop.llvm_load_value (X, 1, i, type);
+            llvm::Value *rx1 = rop.builder().CreateFMul (a, xx);
+            llvm::Value *rx2 = rop.builder().CreateFMul (ax, one_minus_x);
+            llvm::Value *rx = rop.builder().CreateFSub (rx2, rx1);
+            llvm::Value *rx3 = rop.builder().CreateFMul (b, xx);
+            rx = rop.builder().CreateFAdd (rx, rx3);
+            llvm::Value *rx4 = rop.builder().CreateFMul (bx, x);
+            rx = rop.builder().CreateFAdd (rx, rx4);
+
+            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type);
+            llvm::Value *by = rop.llvm_load_value (B, 2, i, type);
+            if (i > 0 && x_components > 1)
+                xy = rop.llvm_load_value (X, 2, i, type);
+            llvm::Value *ry1 = rop.builder().CreateFMul (a, xy);
+            llvm::Value *ry2 = rop.builder().CreateFMul (ay, one_minus_x);
+            llvm::Value *ry = rop.builder().CreateFSub (ry2, ry1);
+            llvm::Value *ry3 = rop.builder().CreateFMul (b, xy);
+            ry = rop.builder().CreateFAdd (ry, ry3);
+            llvm::Value *ry4 = rop.builder().CreateFMul (by, x);
+            ry = rop.builder().CreateFAdd (ry, ry4);
+
+            rop.llvm_store_value (rx, Result, 1, i);
+            rop.llvm_store_value (ry, Result, 2, i);
+        }
+    }
+
+    if (Result.has_derivs() && !derivs) {
+        // Result has derivs, operands do not
+        rop.llvm_zero_derivs (Result);
+    }
+        
     return true;
 }
 
@@ -1435,7 +1542,7 @@ LLVMGEN (llvm_gen_filterwidth)
         rop.llvm_zero_derivs (Result);
     } else {
         // No derivs to be had
-        rop.llvm_assign_zero (Src);
+        rop.llvm_assign_zero (Result);
     }
 
     return true;
@@ -1636,13 +1743,16 @@ LLVMGEN (llvm_gen_generic)
                                                      &(args[1]), op.nargs()-1);
             rop.llvm_store_value (r, Result);
         } else {
-            rop.llvm_call_function (name.c_str(), &(args[0]), op.nargs());
+            rop.llvm_call_function (name.c_str(),
+                                    (args.size())? &(args[0]): NULL, op.nargs());
         }
         rop.llvm_zero_derivs (Result);
     } else {
         // Cases with derivs
         ASSERT (Result.has_derivs() && any_deriv_args);
-        rop.llvm_call_function (name.c_str(), &(args[0]), op.nargs(), true);
+        rop.llvm_call_function (name.c_str(),
+                                (args.size())? &(args[0]): NULL, op.nargs(),
+                                true);
     }
     return true;
 }
@@ -1734,9 +1844,8 @@ LLVMGEN (llvm_gen_if)
     Symbol& cond = *rop.opargsym (op, 0);
 
     // Load the condition variable and figure out if it's nonzero
-    llvm::Value* cond_val = rop.llvm_load_value (cond, 0, 0, TypeDesc::TypeInt);
-    cond_val = rop.builder().CreateICmpNE (cond_val, rop.llvm_constant(0));
-    
+    llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+
     // Branch on the condition, to our blocks
     llvm::BasicBlock* then_block = rop.llvm_new_basic_block ("then");
     llvm::BasicBlock* else_block = rop.llvm_new_basic_block ("else");
@@ -1780,8 +1889,8 @@ LLVMGEN (llvm_gen_loop_op)
 
     // Load the condition variable and figure out if it's nonzero
     rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
-    llvm::Value* cond_val = rop.llvm_load_value (cond, 0, 0, TypeDesc::TypeInt);
-    cond_val = rop.builder().CreateICmpNE (cond_val, rop.llvm_constant(0));
+    llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+
     // Jump to either LoopBody or AfterLoop
     rop.builder().CreateCondBr (cond_val, body_block, after_block);
 
@@ -1819,8 +1928,8 @@ LLVMGEN (llvm_gen_loopmod_op)
 
 
 static llvm::Value *
-llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
-                          int first_optional_arg, bool tex3d,
+llvm_gen_texture_options (BackendLLVM &rop, int opnum,
+                          int first_optional_arg, bool tex3d, int nchans,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
                           llvm::Value* &dalphady)
 {
@@ -1830,6 +1939,7 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
                                                   rop.llvm_constant((int)tosize));
     opt = rop.llvm_void_ptr (opt);
     rop.llvm_call_function ("osl_texture_clear", opt);
+    llvm::Value* missingcolor = NULL;
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -1949,6 +2059,34 @@ llvm_gen_texture_options (RuntimeOptimizer &rop, int opnum,
                 dalphady = rop.llvm_get_pointer (Val, 2);
                 // NO z derivs!  dalphadz = rop.llvm_get_pointer (Val, 3);
             }
+
+        } else if (name == Strings::missingcolor &&
+                   equivalent(valtype,TypeDesc::TypeColor)) {
+            if (! missingcolor) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special 
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
+                                              rop.llvm_constant((int)4*sizeof(float)));
+                rop.llvm_call_function ("osl_texture_set_missingcolor_arena",
+                                        opt, rop.llvm_void_ptr(missingcolor));
+            }
+            rop.llvm_memcpy (rop.llvm_void_ptr(missingcolor),
+                             rop.llvm_void_ptr(Val), (int)sizeof(Color3));
+        } else if (name == Strings::missingalpha &&
+                   valtype == TypeDesc::FLOAT) {
+            if (! missingcolor) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special 
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor = rop.builder().CreateAlloca(rop.llvm_type_void_ptr(),
+                                              rop.llvm_constant((int)4*sizeof(float)));
+                rop.llvm_call_function ("osl_texture_set_missingcolor_arena",
+                                        opt, missingcolor);
+            }
+            rop.llvm_call_function ("osl_texture_set_missingcolor_alpha",
+                                    opt, rop.llvm_constant(nchans), val);
+
         } else {
             rop.shadingsys().error ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
                                     tex3d ? "3d" : "",
@@ -1969,6 +2107,7 @@ LLVMGEN (llvm_gen_texture)
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &S = *rop.opargsym (op, 2);
     Symbol &T = *rop.opargsym (op, 3);
+    int nchans = Result.typespec().aggregate();
 
     bool user_derivs = false;
     int first_optional_arg = 4;
@@ -1983,7 +2122,8 @@ LLVMGEN (llvm_gen_texture)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-                                    false /*3d*/, alpha, dalphadx, dalphady);
+                                    false /*3d*/, nchans,
+                                    alpha, dalphadx, dalphady);
 
     // Now call the osl_texture function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2005,7 +2145,7 @@ LLVMGEN (llvm_gen_texture)
         args.push_back (rop.llvm_load_value (S, 2));
         args.push_back (rop.llvm_load_value (T, 2));
     }
-    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_constant (nchans));
     args.push_back (rop.llvm_void_ptr (rop.llvm_get_pointer (Result, 0)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_get_pointer (Result, 1)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_get_pointer (Result, 2)));
@@ -2028,6 +2168,7 @@ LLVMGEN (llvm_gen_texture3d)
     Symbol &Result = *rop.opargsym (op, 0);
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &P = *rop.opargsym (op, 2);
+    int nchans = Result.typespec().aggregate();
 
     bool user_derivs = false;
     int first_optional_arg = 3;
@@ -2041,7 +2182,8 @@ LLVMGEN (llvm_gen_texture3d)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-                                    true /*3d*/, alpha, dalphadx, dalphady);
+                                    true /*3d*/, nchans,
+                                    alpha, dalphadx, dalphady);
 
     // Now call the osl_texture3d function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2071,7 +2213,7 @@ LLVMGEN (llvm_gen_texture3d)
             args.push_back (rop.llvm_void_ptr(vzero));
         }
     }
-    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_constant (nchans));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 0)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 1)));
     args.push_back (rop.llvm_void_ptr (rop.llvm_void_ptr (Result, 2)));
@@ -2096,6 +2238,7 @@ LLVMGEN (llvm_gen_environment)
     Symbol &Result = *rop.opargsym (op, 0);
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &R = *rop.opargsym (op, 2);
+    int nchans = Result.typespec().aggregate();
 
     bool user_derivs = false;
     int first_optional_arg = 3;
@@ -2108,7 +2251,8 @@ LLVMGEN (llvm_gen_environment)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-                                    false /*3d*/, alpha, dalphadx, dalphady);
+                                    false /*3d*/, nchans,
+                                    alpha, dalphadx, dalphady);
 
     // Now call the osl_environment function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2125,7 +2269,7 @@ LLVMGEN (llvm_gen_environment)
         args.push_back (rop.llvm_void_ptr (R, 1));
         args.push_back (rop.llvm_void_ptr (R, 2));
     }
-    args.push_back (rop.llvm_constant ((int)Result.typespec().aggregate()));
+    args.push_back (rop.llvm_constant (nchans));
     args.push_back (rop.llvm_void_ptr (Result, 0));
     args.push_back (rop.llvm_void_ptr (Result, 1));
     args.push_back (rop.llvm_void_ptr (Result, 2));
@@ -2145,7 +2289,7 @@ LLVMGEN (llvm_gen_environment)
 
 
 static llvm::Value *
-llvm_gen_trace_options (RuntimeOptimizer &rop, int opnum,
+llvm_gen_trace_options (BackendLLVM &rop, int opnum,
                         int first_optional_arg)
 {
     // Reserve space for the TraceOpt, with alignment
@@ -2245,7 +2389,7 @@ arg_typecode (Symbol *sym, bool derivs)
 
 
 static llvm::Value *
-llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
+llvm_gen_noise_options (BackendLLVM &rop, int opnum,
                         int first_optional_arg)
 {
     // Reserve space for the NoiseParams, with alignment
@@ -2301,14 +2445,14 @@ llvm_gen_noise_options (RuntimeOptimizer &rop, int opnum,
 
 
 
-// T noise (string name, float s, ...);
-// T noise (string name, float s, float t, ...);
-// T noise (string name, point P, ...);
-// T noise (string name, point P, float t, ...);
-// T pnoise (string name, float s, float sper, ...);
-// T pnoise (string name, float s, float t, float sper, float tper, ...);
-// T pnoise (string name, point P, point Pper, ...);
-// T pnoise (string name, point P, float t, point Pper, float tper, ...);
+// T noise ([string name,] float s, ...);
+// T noise ([string name,] float s, float t, ...);
+// T noise ([string name,] point P, ...);
+// T noise ([string name,] point P, float t, ...);
+// T pnoise ([string name,] float s, float sper, ...);
+// T pnoise ([string name,] float s, float t, float sper, float tper, ...);
+// T pnoise ([string name,] point P, point Pper, ...);
+// T pnoise ([string name,] point P, float t, point Pper, float tper, ...);
 LLVMGEN (llvm_gen_noise)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -2375,6 +2519,10 @@ LLVMGEN (llvm_gen_noise)
     } else if (name == Strings::cell || name == Strings::cellnoise) {
         name = periodic ? Strings::pcellnoise : Strings::cellnoise;
         derivs = false;  // cell noise derivs are always zero
+    } else if (name == Strings::simplex && !periodic) {
+        name = Strings::simplexnoise;
+    } else if (name == Strings::usimplex && !periodic) {
+        name = Strings::usimplexnoise;
     } else if (name == Strings::gabor) {
         // already named
         pass_name = true;
@@ -2383,8 +2531,9 @@ LLVMGEN (llvm_gen_noise)
         derivs = true;
         name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
-        rop.shadingsys().error ("Noise type \"%s\" is unknown, called from (%s:%d)",
-                                name.c_str(), op.sourcefile().c_str(), op.sourceline());
+        rop.shadingsys().error ("%snoise type \"%s\" is unknown, called from (%s:%d)",
+                                (periodic ? "periodic " : ""), name.c_str(),
+                                op.sourcefile().c_str(), op.sourceline());
         return false;
     }
 
@@ -2471,51 +2620,20 @@ LLVMGEN (llvm_gen_getattribute)
     //   * getattribute (object, attribute_name, index, value)
     //   * getattribute (object, attribute_name, index, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    DASSERT (nargs >= 3 && nargs <= 5);
 
-    DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
+    bool array_lookup = rop.opargsym(op,nargs-2)->typespec().is_int();
+    bool object_lookup = rop.opargsym(op,2)->typespec().is_string() && nargs >= 4;
+    int object_slot = (int)object_lookup;
+    int attrib_slot = object_slot + 1;
+    int index_slot = array_lookup ? nargs - 2 : 0;
 
-    bool object_lookup = false;
-    bool array_lookup  = false;
-
-    // slot indices when (nargs==3)
-    int result_slot = 0; // never changes
-    int attrib_slot = 1;
-    int object_slot = 0; // initially not used
-    int index_slot  = 0; // initially not used
-    int dest_slot   = 2;
-
-    // figure out which "flavor" of getattribute() to use
-    if (op.nargs() == 5) {
-        object_slot = 1;
-        attrib_slot = 2;
-        index_slot  = 3;
-        dest_slot   = 4;
-        array_lookup  = true;
-        object_lookup = true;
-    }
-    else if (op.nargs() == 4) {
-        if (rop.opargsym (op, 2)->typespec().is_int()) {
-            attrib_slot = 1;
-            index_slot  = 2;
-            dest_slot   = 3;
-            array_lookup = true;
-        }
-        else {
-            object_slot = 1;
-            attrib_slot = 2;
-            dest_slot   = 3;
-            object_lookup = true;
-        }
-    }
-
-    Symbol& Result      = *rop.opargsym (op, result_slot);
-    Symbol& ObjectName  = *rop.opargsym (op, object_slot); // might be aliased to Result
-    Symbol& Index       = *rop.opargsym (op, index_slot);  // might be aliased to Result
+    Symbol& Result      = *rop.opargsym (op, 0);
+    Symbol& ObjectName  = *rop.opargsym (op, object_slot); // only valid if object_slot is true
     Symbol& Attribute   = *rop.opargsym (op, attrib_slot);
-    Symbol& Destination = *rop.opargsym (op, dest_slot);
-
-    bool     dest_derivs    = Destination.has_derivs();
-
+    Symbol& Index       = *rop.opargsym (op, index_slot);  // only valid if array_lookup is true
+    Symbol& Destination = *rop.opargsym (op, nargs-1);
     DASSERT (!Result.typespec().is_closure_based() &&
              !ObjectName.typespec().is_closure_based() && 
              !Attribute.typespec().is_closure_based() &&
@@ -2529,7 +2647,7 @@ LLVMGEN (llvm_gen_getattribute)
 
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_constant ((int)dest_derivs));
+    args.push_back (rop.llvm_constant ((int)Destination.has_derivs()));
     args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
                                     rop.llvm_constant (ustring()));
     args.push_back (rop.llvm_load_value (Attribute));
@@ -2799,14 +2917,14 @@ LLVMGEN (llvm_gen_spline)
 
 
 static void
-llvm_gen_keyword_fill(RuntimeOptimizer &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *attr_p, int argsoffset)
+llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *attr_p, int argsoffset)
 {
     DASSERT(((op.nargs() - argsoffset) % 2) == 0);
 
     int Nattrs = (op.nargs() - argsoffset) / 2;
 
     for (int attr_i = 0; attr_i < Nattrs; ++attr_i) {
-        int argno = attr_i * 2 + argsoffset;;
+        int argno = attr_i * 2 + argsoffset;
         Symbol &Key     = *rop.opargsym (op, argno);
         Symbol &Value   = *rop.opargsym (op, argno + 1);
         ASSERT(Key.typespec().is_string());
@@ -2846,8 +2964,10 @@ LLVMGEN (llvm_gen_closure)
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() >= 2); // at least the result and the ID
 
-    Symbol &Result   = *rop.opargsym (op, 0);
-    Symbol &Id       = *rop.opargsym (op, 1);
+    Symbol &Result = *rop.opargsym (op, 0);
+    int weighted   = rop.opargsym(op,1)->typespec().is_string() ? 0 : 1;
+    Symbol *weight = weighted ? rop.opargsym (op, 1) : NULL;
+    Symbol &Id     = *rop.opargsym (op, 1+weighted);
     DASSERT(Result.typespec().is_closure());
     DASSERT(Id.typespec().is_string());
     ustring closure_name = *((ustring *)Id.data());
@@ -2859,8 +2979,8 @@ LLVMGEN (llvm_gen_closure)
         return false;
     }
 
-    ASSERT (op.nargs() >= (2 + clentry->nformal));
-    int nattrs = (op.nargs() - (2 + clentry->nformal)) / 2;
+    ASSERT (op.nargs() >= (2 + weighted + clentry->nformal));
+    int nattrs = (op.nargs() - (2 + weighted + clentry->nformal)) / 2;
 
     // Call osl_allocate_closure_component(closure, id, size).  It returns
     // the memory for the closure parameter data.
@@ -2869,11 +2989,29 @@ LLVMGEN (llvm_gen_closure)
     llvm::Value *id_int = rop.llvm_constant(clentry->id);
     llvm::Value *size_int = rop.llvm_constant(clentry->struct_size);
     llvm::Value *nattrs_int = rop.llvm_constant(nattrs);
-    llvm::Value *alloc_args[4] = {sg_ptr, id_int, size_int, nattrs_int};
-    llvm::Value *comp_void_ptr = rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 4);
+    llvm::Value *alloc_args[5] = { sg_ptr, id_int, size_int, nattrs_int,
+                                   weighted ? rop.llvm_void_ptr(*weight) : NULL };
+    llvm::Value *return_ptr = weighted ?
+          rop.llvm_call_function ("osl_allocate_weighted_closure_component", alloc_args, 5)
+        : rop.llvm_call_function ("osl_allocate_closure_component", alloc_args, 4);
+    llvm::Value *comp_void_ptr = return_ptr;
+
+    // For the weighted closures, we need a surrounding "if" so that it's safe
+    // for osl_allocate_weighted_closure_component to return NULL (unless we
+    // know for sure that it's constant weighted and that the weight is
+    // not zero).
+    llvm::BasicBlock *next_block = NULL;
+    if (weighted && ! (weight->is_constant() && !rop.is_zero(*weight))) {
+        llvm::BasicBlock *notnull_block = rop.llvm_new_basic_block ("non_null_closure");
+        next_block = rop.llvm_new_basic_block ("");
+        llvm::Value *cond = rop.builder().CreateICmpNE (return_ptr, rop.llvm_void_ptr_null());
+        rop.builder().CreateCondBr (cond, notnull_block, next_block);
+        rop.builder().SetInsertPoint (notnull_block);
+    }
+
     llvm::Value *comp_ptr = rop.llvm_ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
     // Get the address of the primitive buffer, which is the 5th field
-    llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 4);
+    llvm::Value *mem_void_ptr = rop.builder().CreateConstGEP2_32 (comp_ptr, 0, 5);
     mem_void_ptr = rop.llvm_ptr_cast(mem_void_ptr, rop.llvm_type_void_ptr());
 
     // If the closure has a "prepare" method, call
@@ -2893,7 +3031,7 @@ LLVMGEN (llvm_gen_closure)
         const ClosureParam &p = clentry->params[carg];
         if (p.key != NULL) break;
         ASSERT(p.offset < clentry->struct_size);
-        Symbol &sym = *rop.opargsym (op, carg + 2);
+        Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
         if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
             t.vecsemantics = TypeDesc::VECTOR;
@@ -2919,10 +3057,16 @@ LLVMGEN (llvm_gen_closure)
 
     llvm::Value *attrs_void_ptr = rop.llvm_offset_ptr (mem_void_ptr, clentry->struct_size);
     llvm::Value *attrs_ptr = rop.llvm_ptr_cast(attrs_void_ptr, rop.llvm_type_closure_component_attr_ptr());
-    llvm_gen_keyword_fill(rop, op, clentry, closure_name, attrs_ptr, clentry->nformal + 2);
+    llvm_gen_keyword_fill(rop, op, clentry, closure_name, attrs_ptr,
+                          2 + weighted + clentry->nformal);
+
+    if (next_block) {
+        rop.builder().CreateBr (next_block);
+        rop.builder().SetInsertPoint (next_block);
+    }
 
     // Store result at the end, otherwise Ci = modifier(Ci) won't work
-    rop.llvm_store_value (comp_void_ptr, Result, 0, NULL, 0);
+    rop.llvm_store_value (return_ptr, Result, 0, NULL, 0);
 
     return true;
 }
@@ -3118,7 +3262,7 @@ LLVMGEN (llvm_gen_pointcloud_write)
     Symbol& Pos      = *rop.opargsym (op, 2);
     DASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
              Pos.typespec().is_triple());
-    DASSERTMSG (op.nargs() & 1, "must have an even number of attribs");
+    DASSERT ((op.nargs() & 1) && "must have an even number of attribs");
 
     int nattrs = (op.nargs() - 3) / 2;
     llvm::Value *nattrs_val = rop.llvm_constant (nattrs);
@@ -3237,6 +3381,43 @@ LLVMGEN (llvm_gen_dict_value)
 
 
 
+LLVMGEN (llvm_gen_split)
+{
+    // int split (string str, output string result[], string sep, int maxsplit)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
+    Symbol& R       = *rop.opargsym (op, 0);
+    Symbol& Str     = *rop.opargsym (op, 1);
+    Symbol& Results = *rop.opargsym (op, 2);
+    DASSERT (R.typespec().is_int() && Str.typespec().is_string() &&
+             Results.typespec().is_array() &&
+             Results.typespec().is_string_based());
+
+    llvm::Value *args[5];
+    args[0] = rop.llvm_load_value (Str);
+    args[1] = rop.llvm_void_ptr (Results);
+    if (op.nargs() >= 4) {
+        Symbol& Sep = *rop.opargsym (op, 3);
+        DASSERT (Sep.typespec().is_string());
+        args[2] = rop.llvm_load_value (Sep);
+    } else {
+        args[2] = rop.llvm_constant ("");
+    }
+    if (op.nargs() >= 5) {
+        Symbol& Maxsplit = *rop.opargsym (op, 4);
+        DASSERT (Maxsplit.typespec().is_int());
+        args[3] = rop.llvm_load_value (Maxsplit);
+    } else {
+        args[3] = rop.llvm_constant (Results.typespec().arraylength());
+    }
+    args[4] = rop.llvm_constant (Results.typespec().arraylength());
+    llvm::Value *ret = rop.llvm_call_function ("osl_split", &args[0], 5);
+    rop.llvm_store_value (ret, R);
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_raytype)
 {
     // int raytype (string name)
@@ -3336,10 +3517,25 @@ LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
-    rop.builder().CreateBr (rop.llvm_return_block());
+    if (op.opname() == Strings::op_exit) {
+        // If it's a real "exit", totally jump out of the shader instance.
+        // The exit instance block will be created if it doesn't yet exist.
+        rop.builder().CreateBr (rop.llvm_exit_instance_block());
+    } else {
+        // If it's a "return", jump to the exit point of the function.
+        rop.builder().CreateBr (rop.llvm_return_block());
+    }
     llvm::BasicBlock* next_block = rop.llvm_new_basic_block ("");
     rop.builder().SetInsertPoint (next_block);
     return true;
+}
+
+
+
+LLVMGEN (llvm_gen_end)
+{
+    // Dummy routine needed only for the op_descriptor table
+    return false;
 }
 
 

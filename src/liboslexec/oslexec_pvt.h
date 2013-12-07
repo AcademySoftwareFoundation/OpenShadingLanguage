@@ -1156,7 +1156,7 @@ private:
     bool m_does_nothing;             ///< Is the shading group just func() { return; }
     atomic_ll m_executions;          ///< Number of times the group executed
     mutex m_mutex;                   ///< Thread-safe optimization
-    friend class ShadingSystemImpl;
+    friend class OSL::pvt::ShadingSystemImpl;
 };
 
 

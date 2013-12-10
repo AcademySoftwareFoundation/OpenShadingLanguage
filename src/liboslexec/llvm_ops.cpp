@@ -620,14 +620,14 @@ OSL_SHADEOP void osl_transform_vmv(void *result, void* M_, void* v_)
 {
    Vec3 v = VEC(v_);
    Matrix44 M = MAT(M_);
-   M.multVecMatrix (v, VEC(result));
+   robust_multVecMatrix (M, v, VEC(result));
 }
 
 OSL_SHADEOP void osl_transform_dvmdv(void *result, void* M_, void* v_)
 {
    Dual2<Vec3> v = DVEC(v_);
    Matrix44    M = MAT(M_);
-   multVecMatrix (M, v, DVEC(result));
+   robust_multVecMatrix (M, v, DVEC(result));
 }
 
 // vector = M * vector

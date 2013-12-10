@@ -137,20 +137,48 @@ multMatrix (const Imath::Matrix33<T> &M, const Dual2<Imath::Vec3<S> > &src,
     dst = make_Vec3 (a, b, c);
 }
 
+inline void robust_multVecMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
+{
+   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
+   float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
+   float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
+   float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
 
+   if (w != 0) {
+      dst.x = a / w;
+      dst.y = b / w;
+      dst.z = c / w;
+   } else {
+      dst.x = 0;
+      dst.y = 0;
+      dst.z = 0;
+   }
+}
 
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
 inline void
-multVecMatrix (const Matrix44 &M, Dual2<Vec3> &in, Dual2<Vec3> &out)
+robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 {
     // Rearrange into a Vec3<Dual2<float> >
     Imath::Vec3<Dual2<float> > din, dout;
     for (int i = 0;  i < 3;  ++i)
         din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
 
-    // N.B. the following function has a divide by 'w'
-    M.multVecMatrix (din, dout);
+    Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
+    Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
+    Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
+    Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
+
+    if (w.val() != 0) {
+       dout.x = a / w;
+       dout.y = b / w;
+       dout.z = c / w;
+    } else {
+       dout.x = 0;
+       dout.y = 0;
+       dout.z = 0;
+    }
 
     // Rearrange back into Dual2<Vec3>
     out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),

@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "oslconfig.h"
+#include "shaderglobals.h"
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
@@ -42,8 +43,6 @@ class ShaderGroup;
 typedef shared_ptr<ShaderGroup> ShaderGroupRef;
 typedef ShaderGroup ShadingAttribState;       // DEPRECATED name
 typedef ShaderGroupRef ShadingAttribStateRef; // DEPRECATED name
-struct ShaderGlobals;
-struct ClosureColor;
 struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
@@ -375,46 +374,6 @@ private:
     // Make delete private and unimplemented in order to prevent apps
     // from calling it.  Instead, they should call ShadingSystem::destroy().
     void operator delete (void *todel) { }
-};
-
-
-
-/// This struct represents the global variables accessible from a shader, note
-/// that not all fields will be valid in all contexts.
-///
-/// All points, vectors and normals are given in "common" space.
-struct ShaderGlobals {
-    Vec3 P, dPdx, dPdy;              /**< Position */
-    Vec3 dPdz;                       /**< z zeriv for volume shading */
-    Vec3 I, dIdx, dIdy;              /**< Incident ray */
-    Vec3 N;                          /**< Shading normal */
-    Vec3 Ng;                         /**< True geometric normal */
-    float u, dudx, dudy;             /**< Surface parameter u */
-    float v, dvdx, dvdy;             /**< Surface parameter v */
-    Vec3 dPdu, dPdv;                 /**< Tangents on the surface */
-    float time;                      /**< Time for each sample */
-    float dtime;                     /**< Time interval for each sample */
-    Vec3 dPdtime;                    /**< Velocity */
-    Vec3 Ps, dPsdx, dPsdy;           /**< Point being lit (valid only in light
-                                          attenuation shaders */
-    void* renderstate;               /**< Opaque pointer to renderer state (can
-                                          be used to retrieve renderer specific
-                                          details like userdata) */
-    void* tracedata;                 /**< Opaque pointer to renderer state
-                                          resuling from a trace() call. */
-    void* objdata;                   /**< Opaque pointer to object data */
-    ShadingContext* context;         /**< ShadingContext (this will be set by
-                                          OSL itself) */
-    TransformationPtr object2common; /**< Object->common xform */
-    TransformationPtr shader2common; /**< Shader->common xform */
-    ClosureColor *Ci;                /**< Output closure (should be initialized
-                                          to NULL) */
-    float surfacearea;               /**< Total area of the object (defined by
-                                          light shaders for energy normalization) */
-    int raytype;                     /**< Bit field of ray type flags */
-    int flipHandedness;              /**< flips the result of calculatenormal() */
-    int backfacing;                  /**< True if we want are shading the
-                                          backside of the surface */
 };
 
 

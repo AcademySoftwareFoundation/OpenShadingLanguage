@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <dlfcn.h>
 #endif
 
-#include <OpenImageIO/plugin.h>
+#include "OpenImageIO/plugin.h"
 using namespace OIIO;
 
 

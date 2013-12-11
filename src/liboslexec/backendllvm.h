@@ -35,12 +35,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
-#include "llvm_headers.h"
 #include "runtimeoptimize.h"
+#include "llvm_util.h"
+
+
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
+
 
 
 /// OSOProcessor that generates LLVM IR and JITs it to give machine
@@ -75,13 +78,11 @@ public:
     /// current basic block if bb==NULL).
     bool build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb=NULL);
 
-    typedef std::map<std::string, llvm::AllocaInst*> AllocationMap;
+    typedef std::map<std::string, llvm::Value*> AllocationMap;
 
     void llvm_assign_initial_value (const Symbol& sym);
-    llvm::LLVMContext &llvm_context () const { return *m_llvm_context; }
-    llvm::Module *llvm_module () const { return m_llvm_module; }
+    llvm::LLVMContext &llvm_context () const { return ll.context(); }
     AllocationMap &named_values () { return m_named_values; }
-    llvm::IRBuilder<> &builder () { return *m_builder; }
 
     /// Return an llvm::Value* corresponding to the address of the given
     /// symbol element, with derivative (0=value, 1=dx, 2=dy) and array
@@ -194,10 +195,9 @@ public:
     }
 
     /// Generate an alloca instruction to allocate space for the given
-    /// type, with derivs if derivs==true, and return the AllocaInst of
-    /// its pointer.
-    llvm::AllocaInst *llvm_alloca (const TypeSpec &type, bool derivs,
-                                   const std::string &name="");
+    /// type, with derivs if derivs==true, and return the its pointer.
+    llvm::Value *llvm_alloca (const TypeSpec &type, bool derivs,
+                              const std::string &name="");
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
     /// start of that symbol (first element, first component, and just the
@@ -205,24 +205,6 @@ public:
     llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
 
     llvm::Value *getLLVMSymbolBase (const Symbol &sym);
-
-    /// Generate the LLVM IR code to convert fval from a float to
-    /// an integer and return the new value.
-    llvm::Value *llvm_float_to_int (llvm::Value *fval);
-
-    /// Generate the LLVM IR code to convert ival from an int to a float
-    /// and return the new value.
-    llvm::Value *llvm_int_to_float (llvm::Value *ival);
-
-    /// Generate IR code for simple a/b, but considering OSL's semantics
-    /// that x/0 = 0, not inf.
-    llvm::Value *llvm_make_safe_div (TypeDesc type,
-                                     llvm::Value *a, llvm::Value *b);
-
-    /// Generate IR code for simple a mod b, but considering OSL's
-    /// semantics that x mod 0 = 0, not inf.
-    llvm::Value *llvm_make_safe_mod (TypeDesc type,
-                                     llvm::Value *a, llvm::Value *b);
 
     /// Test whether val is nonzero, return the llvm::Value* that's the
     /// result of a CreateICmpNE or CreateFCmpUNE (depending on the
@@ -234,15 +216,6 @@ public:
     /// designates a particular array index to assign.
     bool llvm_assign_impl (Symbol &Result, Symbol &Src, int arrayindex = -1);
 
-
-    /// This will return a llvm::Type that is the same as a C union of
-    /// the given types[].
-    llvm::Type *llvm_type_union(const std::vector<llvm::Type *> &types);
-
-    /// This will return a llvm::Type that is the same as a C struct
-    /// comprised fields of the given types[], in order.
-    llvm::Type *llvm_type_struct(const std::vector<llvm::Type *> &types,
-                                 const std::string &name="");
 
     /// Convert the name of a global (and its derivative index) into the
     /// field number of the ShaderGlobals struct.
@@ -268,27 +241,15 @@ public:
     /// Return the ShaderGlobals pointer cast as a void*.
     ///
     llvm::Value *sg_void_ptr () {
-        return llvm_void_ptr (m_llvm_shaderglobals_ptr);
-    }
-
-    llvm::Value *llvm_ptr_cast (llvm::Value* val, llvm::Type *type) {
-        return builder().CreatePointerCast(val,type);
+        return ll.void_ptr (m_llvm_shaderglobals_ptr);
     }
 
     llvm::Value *llvm_ptr_cast (llvm::Value* val, const TypeSpec &type) {
-        return llvm_ptr_cast (val, llvm::PointerType::get (llvm_type(type), 0));
-    }
-
-    llvm::Value *llvm_void_ptr (llvm::Value* val) {
-        return builder().CreatePointerCast(val,llvm_type_void_ptr());
+        return ll.ptr_cast (val, type.simpletype());
     }
 
     llvm::Value *llvm_void_ptr (const Symbol &sym, int deriv=0) {
-        return llvm_void_ptr (llvm_get_pointer(sym, deriv));
-    }
-
-    llvm::Value *llvm_void_ptr_null () {
-        return llvm::ConstantPointerNull::get (llvm_type_void_ptr());
+        return ll.void_ptr (llvm_get_pointer(sym, deriv));
     }
 
     /// Return the LLVM type handle for a structure of the common group
@@ -306,49 +267,12 @@ public:
     /// Return the group data pointer cast as a void*.
     ///
     llvm::Value *groupdata_void_ptr () {
-        return llvm_void_ptr (m_llvm_groupdata_ptr);
+        return ll.void_ptr (m_llvm_groupdata_ptr);
     }
 
     /// Return a ref to where the "layer_run" flag is stored for the
     /// named layer.
     llvm::Value *layer_run_ptr (int layer);
-
-    /// Return an llvm::Value holding the given floating point constant.
-    ///
-    llvm::Value *llvm_constant (float f);
-
-    /// Return an llvm::Value holding the given integer constant.
-    ///
-    llvm::Value *llvm_constant (int i);
-
-    /// Return an llvm::Value holding the given size_t constant.
-    ///
-    llvm::Value *llvm_constant (size_t i);
-
-    /// Return an llvm::Value holding the given bool constant.
-    /// Change the name so it doesn't get mixed up with int.
-    llvm::Value *llvm_constant_bool (bool b);
-
-    /// Return a constant void pointer to the given address
-    ///
-    llvm::Value *llvm_constant_ptr (void *p, llvm::PointerType *type)
-    {
-        return builder().CreateIntToPtr (llvm_constant (size_t (p)), type, "const pointer");
-    }
-
-    /// Return an llvm::Value holding the given string constant.
-    ///
-    llvm::Value *llvm_constant (ustring s);
-    llvm::Value *llvm_constant (const char *s) {
-        return llvm_constant(ustring(s));
-    }
-    /// Return an llvm::Value holding the given pointer constant.
-    ///
-    llvm::Value *llvm_constant_ptr (void *p);
-
-    /// Return an llvm::Value for a long long that is a packed
-    /// representation of a TypeDesc.
-    llvm::Value *llvm_constant (const TypeDesc &type);
 
     /// Generate LLVM code to zero out the variable (including derivs)
     ///
@@ -362,42 +286,6 @@ public:
     /// only for the first count elements of it.
     ///
     void llvm_zero_derivs (const Symbol &sym, llvm::Value *count);
-
-    /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
-    /// If ptrtype is NULL, just return a void*.
-    llvm::Value *llvm_offset_ptr (llvm::Value *ptr, int offset,
-                                  llvm::Type *ptrtype=NULL);
-
-    /// Generate code for a call to the function pointer, with the given
-    /// arg list.  Return an llvm::Value* corresponding to the return
-    /// value of the function, if any.
-    llvm::Value *llvm_call_function (llvm::Value *func,
-                                     llvm::Value **args, int nargs);
-    /// Generate code for a call to the named function with the given arg
-    /// list.  Return an llvm::Value* corresponding to the return value of
-    /// the function, if any.
-    llvm::Value *llvm_call_function (const char *name,
-                                     llvm::Value **args, int nargs);
-
-    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0) {
-        return llvm_call_function (name, &arg0, 1);
-    }
-    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
-                                     llvm::Value *arg1) {
-        llvm::Value *args[2] = { arg0, arg1 };
-        return llvm_call_function (name, args, 2);
-    }
-    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
-                                     llvm::Value *arg1, llvm::Value *arg2) {
-        llvm::Value *args[3] = { arg0, arg1, arg2 };
-        return llvm_call_function (name, args, 3);
-    }
-    llvm::Value *llvm_call_function (const char *name, llvm::Value *arg0,
-                                     llvm::Value *arg1, llvm::Value *arg2,
-                                     llvm::Value *arg3) {
-        llvm::Value *args[4] = { arg0, arg1, arg2, arg3 };
-        return llvm_call_function (name, args, 4);
-    }
 
     void llvm_gen_debug_printf (const std::string &message);
 
@@ -431,98 +319,25 @@ public:
                                      const Symbol &B, const Symbol &C,
                                      bool deriv_ptrs=false);
 
-    /// Generate code for a memset.
-    ///
-    void llvm_memset (llvm::Value *ptr, int val, int len, int align=1);
+    TypeDesc llvm_typedesc (const TypeSpec &typespec) {
+        return typespec.is_closure_based()
+           ? TypeDesc(TypeDesc::PTR, typespec.arraylength())
+           : typespec.simpletype();
+    }
 
-    /// Generate code for variable size memset
-    ///
-    void llvm_memset (llvm::Value *ptr, int val, llvm::Value *len, int align=1);
-
-    /// Generate code for a memcpy.
-    ///
-    void llvm_memcpy (llvm::Value *dst, llvm::Value *src,
-                      int len, int align=1);
-
-    /// Generate the appropriate llvm type definition for an OSL TypeSpec
+    /// Generate the appropriate llvm type definition for a TypeSpec
     /// (this is the actual type, for example when we allocate it).
-    llvm::Type *llvm_type (const TypeSpec &typespec);
+    /// Allocates ptrs for closures.
+    llvm::Type *llvm_type (const TypeSpec &typespec) {
+        return ll.llvm_type (llvm_typedesc(typespec));
+    }
 
     /// Generate the parameter-passing llvm type definition for an OSL
     /// TypeSpec.
     llvm::Type *llvm_pass_type (const TypeSpec &typespec);
 
-    llvm::Type *llvm_type_float() { return m_llvm_type_float; }
-    llvm::Type *llvm_type_triple() { return m_llvm_type_triple; }
-    llvm::Type *llvm_type_matrix() { return m_llvm_type_matrix; }
-    llvm::Type *llvm_type_int() { return m_llvm_type_int; }
-    llvm::Type *llvm_type_addrint() { return m_llvm_type_addrint; }
-    llvm::Type *llvm_type_bool() { return m_llvm_type_bool; }
-    llvm::Type *llvm_type_longlong() { return m_llvm_type_longlong; }
-    llvm::Type *llvm_type_void() { return m_llvm_type_void; }
-    llvm::Type *llvm_type_typedesc() { return llvm_type_longlong(); }
     llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
     llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
-    llvm::PointerType *llvm_type_int_ptr() { return m_llvm_type_int_ptr; }
-    llvm::PointerType *llvm_type_void_ptr() { return m_llvm_type_char_ptr; }
-    llvm::PointerType *llvm_type_string() { return m_llvm_type_char_ptr; }
-    llvm::PointerType *llvm_type_ustring_ptr() { return m_llvm_type_ustring_ptr; }
-    llvm::PointerType *llvm_type_float_ptr() { return m_llvm_type_float_ptr; }
-    llvm::PointerType *llvm_type_triple_ptr() { return m_llvm_type_triple_ptr; }
-    llvm::PointerType *llvm_type_matrix_ptr() { return m_llvm_type_matrix_ptr; }
-
-    /// Shorthand to create a new LLVM basic block and return its handle.
-    ///
-    llvm::BasicBlock *llvm_new_basic_block (const std::string &name) {
-        return llvm::BasicBlock::Create (llvm_context(), name, m_layer_func);
-    }
-
-    /// Save the basic block pointers when entering a loop.
-    ///
-    void llvm_push_loop (llvm::BasicBlock *step, llvm::BasicBlock *after) {
-        m_loop_step_block.push_back (step);
-        m_loop_after_block.push_back (after);
-    }
-
-    /// Pop basic block pointers when exiting a loop.
-    ///
-    void llvm_pop_loop () {
-        ASSERT (! m_loop_step_block.empty() && ! m_loop_after_block.empty());
-        m_loop_step_block.pop_back ();
-        m_loop_after_block.pop_back ();
-    }
-
-    /// Return the basic block of the current loop's 'step' instructions.
-    llvm::BasicBlock *llvm_loop_step_block () const {
-        ASSERT (! m_loop_step_block.empty());
-        return m_loop_step_block.back();
-    }
-
-    /// Return the basic block of the current loop's exit point.
-    llvm::BasicBlock *llvm_loop_after_block () const {
-        ASSERT (! m_loop_after_block.empty());
-        return m_loop_after_block.back();
-    }
-
-    /// Save the return block pointer when entering a function.
-    ///
-    void llvm_push_function (llvm::BasicBlock *after) {
-        m_return_block.push_back (after);
-    }
-
-    /// Pop basic return destination when exiting a function.
-    ///
-    void llvm_pop_function () {
-        ASSERT (! m_return_block.empty());
-        m_return_block.pop_back ();
-    }
-
-    /// Return the basic block of the current loop's 'step' instructions.
-    ///
-    llvm::BasicBlock *llvm_return_block () const {
-        ASSERT (! m_return_block.empty());
-        return m_return_block.back();
-    }
 
     /// Return the basic block of the exit for the whole instance.
     ///
@@ -535,7 +350,7 @@ public:
     llvm::BasicBlock *llvm_exit_instance_block () {
         if (! m_exit_instance_block) {
             std::string name = Strutil::format ("%s_%d_exit_", inst()->layername(), inst()->id());
-            m_exit_instance_block = llvm_new_basic_block (name);
+            m_exit_instance_block = ll.new_basic_block (name);
         }
         return m_exit_instance_block;
     }
@@ -545,12 +360,13 @@ public:
     /// Check for uninitialized values in all read-from arguments to the op
     void llvm_generate_debug_uninit (const Opcode &op);
 
-    llvm::Function *layer_func () const { return m_layer_func; }
+    llvm::Function *layer_func () const { return ll.current_function(); }
 
     void llvm_setup_optimization_passes ();
 
+    LLVM_Util ll;
+
 private:
-    PerThreadInfo *m_thread;
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     std::set<int> m_layers_already_run; ///< List of layers run
     int m_num_used_layers;              ///< Number of layers actually used
@@ -562,41 +378,17 @@ private:
     double m_stat_llvm_jit_time;          ///<     llvm JIT time
 
     // LLVM stuff
-    llvm::LLVMContext *m_llvm_context;
-    llvm::Module *m_llvm_module;
-    llvm::ExecutionEngine *m_llvm_exec;
     AllocationMap m_named_values;
     std::map<const Symbol*,int> m_param_order_map;
-    llvm::IRBuilder<> *m_builder;
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
-    llvm::Function *m_layer_func;     ///< Current layer func we're building
-    std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
-    std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
-    std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
-    llvm::Type *m_llvm_type_float;
-    llvm::Type *m_llvm_type_int;
-    llvm::Type *m_llvm_type_addrint;
-    llvm::Type *m_llvm_type_bool;
-    llvm::Type *m_llvm_type_longlong;
-    llvm::Type *m_llvm_type_void;
-    llvm::Type *m_llvm_type_triple;
-    llvm::Type *m_llvm_type_matrix;
-    llvm::PointerType *m_llvm_type_ustring_ptr;
-    llvm::PointerType *m_llvm_type_char_ptr;
-    llvm::PointerType *m_llvm_type_int_ptr;
-    llvm::PointerType *m_llvm_type_float_ptr;
-    llvm::PointerType *m_llvm_type_triple_ptr;
-    llvm::PointerType *m_llvm_type_matrix_ptr;
     llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
     llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
     llvm::Type *m_llvm_type_closure_component_attr; // LLVM type for ClosureMeta::Attr
     llvm::PointerType *m_llvm_type_prepare_closure_func;
     llvm::PointerType *m_llvm_type_setup_closure_func;
-    llvm::PassManager *m_llvm_passes;
-    llvm::FunctionPassManager *m_llvm_func_passes;
     int m_llvm_local_mem;             // Amount of memory we use for locals
 
     friend class ShadingSystemImpl;

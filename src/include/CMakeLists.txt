@@ -1,5 +1,6 @@
 set (public_headers accum.h dual.h dual_vec.h
-                    export.h genclosure.h Imathx.h matrix22.h optautomata.h oslclosure.h
+                    export.h genclosure.h Imathx.h llvm_util.h
+                    matrix22.h optautomata.h oslclosure.h
                     oslcomp.h oslconfig.h oslexec.h oslquery.h
                     shaderglobals.h)
 message (STATUS "Create oslversion.h from oslversion.h.in")

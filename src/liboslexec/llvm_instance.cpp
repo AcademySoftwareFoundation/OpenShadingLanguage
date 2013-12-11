@@ -27,23 +27,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <cmath>
-#include <cstddef> // FIXME: OIIO's timer.h depends on NULL being defined and should include this itself
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
-
-#include "llvm_headers.h"
-
-// More LLVM headers that we only need for setup and calling the JIT and
-// optimizer
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/Support/PrettyStackTrace.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
@@ -485,13 +471,9 @@ static const char *llvm_helper_function_table[] = {
 BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
                           ShaderGroup &group, ShadingContext *ctx)
     : OSOProcessorBase (shadingsys, group, ctx),
-      m_thread(shadingsys.get_perthread_info()),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
-      m_stat_llvm_jit_time(0),
-      m_llvm_context(NULL), m_llvm_module(NULL),
-      m_llvm_exec(NULL), m_builder(NULL),
-      m_llvm_passes(NULL), m_llvm_func_passes(NULL)
+      m_stat_llvm_jit_time(0)
 {
     // set_debug ();
     // memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
@@ -502,9 +484,6 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
 
 BackendLLVM::~BackendLLVM ()
 {
-    delete m_builder;
-    delete m_llvm_passes;
-    delete m_llvm_func_passes;
 }
 
 
@@ -537,34 +516,35 @@ BackendLLVM::llvm_type_sg ()
     llvm::Type *float_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, 3));
     llvm::Type *triple_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, 3));
     std::vector<llvm::Type*> sg_types;
-    sg_types.push_back (triple_deriv);        // P, dPdx, dPdy
-    sg_types.push_back (llvm_type_triple());  // dPdz
-    sg_types.push_back (triple_deriv);        // I, dIdx, dIdy
-    sg_types.push_back (llvm_type_triple());  // N
-    sg_types.push_back (llvm_type_triple());  // Ng
-    sg_types.push_back (float_deriv);         // u, dudx, dudy
-    sg_types.push_back (float_deriv);         // v, dvdx, dvdy
-    sg_types.push_back (llvm_type_triple());  // dPdu
-    sg_types.push_back (llvm_type_triple());  // dPdv
-    sg_types.push_back (llvm_type_float());   // time
-    sg_types.push_back (llvm_type_float());   // dtime
-    sg_types.push_back (llvm_type_triple());  // dPdtime
-    sg_types.push_back (triple_deriv);        // Ps
+    sg_types.push_back (triple_deriv);      // P, dPdx, dPdy
+    sg_types.push_back (ll.type_triple());  // dPdz
+    sg_types.push_back (triple_deriv);      // I, dIdx, dIdy
+    sg_types.push_back (ll.type_triple());  // N
+    sg_types.push_back (ll.type_triple());  // Ng
+    sg_types.push_back (float_deriv);       // u, dudx, dudy
+    sg_types.push_back (float_deriv);       // v, dvdx, dvdy
+    sg_types.push_back (ll.type_triple());  // dPdu
+    sg_types.push_back (ll.type_triple());  // dPdv
+    sg_types.push_back (ll.type_float());   // time
+    sg_types.push_back (ll.type_float());   // dtime
+    sg_types.push_back (ll.type_triple());  // dPdtime
+    sg_types.push_back (triple_deriv);      // Ps
 
-    sg_types.push_back(llvm_type_void_ptr()); // opaque renderstate*
-    sg_types.push_back(llvm_type_void_ptr()); // opaque tracedata*
-    sg_types.push_back(llvm_type_void_ptr()); // opaque objdata*
-    sg_types.push_back(llvm_type_void_ptr()); // ShadingContext*
-    sg_types.push_back(llvm_type_void_ptr()); // object2common
-    sg_types.push_back(llvm_type_void_ptr()); // shader2common
-    sg_types.push_back(llvm_type_void_ptr()); // Ci
+    llvm::Type *vp = (llvm::Type *)ll.type_void_ptr();
+    sg_types.push_back(vp);                 // opaque renderstate*
+    sg_types.push_back(vp);                 // opaque tracedata*
+    sg_types.push_back(vp);                 // opaque objdata*
+    sg_types.push_back(vp);                 // ShadingContext*
+    sg_types.push_back(vp);                 // object2common
+    sg_types.push_back(vp);                 // shader2common
+    sg_types.push_back(vp);                 // Ci
 
-    sg_types.push_back (llvm_type_float());   // surfacearea
-    sg_types.push_back (llvm_type_int());     // raytype
-    sg_types.push_back (llvm_type_int());     // flipHandedness
-    sg_types.push_back (llvm_type_int());     // backfacing
+    sg_types.push_back (ll.type_float());   // surfacearea
+    sg_types.push_back (ll.type_int());     // raytype
+    sg_types.push_back (ll.type_int());     // flipHandedness
+    sg_types.push_back (ll.type_int());     // backfacing
 
-    return m_llvm_type_sg = llvm_type_struct (sg_types, "ShaderGlobals");
+    return m_llvm_type_sg = ll.type_struct (sg_types, "ShaderGlobals");
 }
 
 
@@ -572,7 +552,7 @@ BackendLLVM::llvm_type_sg ()
 llvm::Type *
 BackendLLVM::llvm_type_sg_ptr ()
 {
-    return (llvm::Type *) llvm::PointerType::get (llvm_type_sg(), 0);
+    return ll.type_ptr (llvm_type_sg());
 }
 
 
@@ -589,7 +569,7 @@ BackendLLVM::llvm_type_groupdata ()
     // First, add the array that tells if each layer has run.  But only make
     // slots for the layers that may be called/used.
     int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
-    fields.push_back ((llvm::Type *)llvm::ArrayType::get(llvm_type_bool(), sz));
+    fields.push_back (ll.type_array (ll.type_bool(), sz));
     size_t offset = sz * sizeof(bool);
 
     // For each layer in the group, add entries for all params that are
@@ -633,7 +613,7 @@ BackendLLVM::llvm_type_groupdata ()
 
     std::string groupdataname = Strutil::format("Groupdata_%llu",
                                                 (long long unsigned int)group().name().hash());
-    m_llvm_type_groupdata = llvm_type_struct (fields, groupdataname);
+    m_llvm_type_groupdata = ll.type_struct (fields, groupdataname);
 
     return m_llvm_type_groupdata;
 }
@@ -643,7 +623,7 @@ BackendLLVM::llvm_type_groupdata ()
 llvm::Type *
 BackendLLVM::llvm_type_groupdata_ptr ()
 {
-    return llvm::PointerType::get (llvm_type_groupdata(), 0);
+    return ll.type_ptr (llvm_type_groupdata());
 }
 
 
@@ -655,14 +635,14 @@ BackendLLVM::llvm_type_closure_component ()
         return m_llvm_type_closure_component;
 
     std::vector<llvm::Type*> comp_types;
-    comp_types.push_back (llvm_type_int());     // parent.type
-    comp_types.push_back (llvm_type_int());     // id
-    comp_types.push_back (llvm_type_int());     // size
-    comp_types.push_back (llvm_type_int());     // nattrs
-    comp_types.push_back (llvm_type_triple());  // w
-    comp_types.push_back (llvm_type_int());     // fake field for char mem[4]
+    comp_types.push_back (ll.type_int());     // parent.type
+    comp_types.push_back (ll.type_int());     // id
+    comp_types.push_back (ll.type_int());     // size
+    comp_types.push_back (ll.type_int());     // nattrs
+    comp_types.push_back (ll.type_triple());  // w
+    comp_types.push_back (ll.type_int());     // fake field for char mem[4]
 
-    return m_llvm_type_closure_component = llvm_type_struct (comp_types, "ClosureComponent");
+    return m_llvm_type_closure_component = ll.type_struct (comp_types, "ClosureComponent");
 }
 
 
@@ -670,7 +650,7 @@ BackendLLVM::llvm_type_closure_component ()
 llvm::Type *
 BackendLLVM::llvm_type_closure_component_ptr ()
 {
-    return (llvm::Type *) llvm::PointerType::get (llvm_type_closure_component(), 0);
+    return ll.type_ptr (llvm_type_closure_component());
 }
 
 
@@ -681,17 +661,17 @@ BackendLLVM::llvm_type_closure_component_attr ()
         return m_llvm_type_closure_component_attr;
 
     std::vector<llvm::Type*> attr_types;
-    attr_types.push_back (llvm_type_string());  // key
+    attr_types.push_back ((llvm::Type *) ll.type_string());  // key
 
     std::vector<llvm::Type*> union_types;
-    union_types.push_back (llvm_type_int());
-    union_types.push_back (llvm_type_float());
-    union_types.push_back (llvm_type_triple());
-    union_types.push_back (llvm_type_void_ptr());
+    union_types.push_back (ll.type_int());
+    union_types.push_back (ll.type_float());
+    union_types.push_back (ll.type_triple());
+    union_types.push_back ((llvm::Type *) ll.type_void_ptr());
 
-    attr_types.push_back (llvm_type_union (union_types)); // value union
+    attr_types.push_back (ll.type_union (union_types)); // value union
 
-    return m_llvm_type_closure_component_attr = llvm_type_struct (attr_types, "ClosureComponentAttr");
+    return m_llvm_type_closure_component_attr = ll.type_struct (attr_types, "ClosureComponentAttr");
 }
 
 
@@ -699,7 +679,7 @@ BackendLLVM::llvm_type_closure_component_attr ()
 llvm::Type *
 BackendLLVM::llvm_type_closure_component_attr_ptr ()
 {
-    return (llvm::Type *) llvm::PointerType::get (llvm_type_closure_component_attr(), 0);
+    return ll.type_ptr (llvm_type_closure_component_attr());
 }
 
 
@@ -737,14 +717,14 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
             // skip closures
         }
         else if (sym.typespec().is_floatbased())
-            u = llvm_constant (std::numeric_limits<float>::quiet_NaN());
+            u = ll.constant (std::numeric_limits<float>::quiet_NaN());
         else if (sym.typespec().is_int_based())
-            u = llvm_constant (std::numeric_limits<int>::min());
+            u = ll.constant (std::numeric_limits<int>::min());
         else if (sym.typespec().is_string_based())
-            u = llvm_constant (Strings::uninitialized_string);
+            u = ll.constant (Strings::uninitialized_string);
         if (u) {
             for (int a = 0;  a < alen;  ++a) {
-                llvm::Value *aval = isarray ? llvm_constant(a) : NULL;
+                llvm::Value *aval = isarray ? ll.constant(a) : NULL;
                 for (int c = 0;  c < (int)sym.typespec().aggregate(); ++c)
                     llvm_store_value (u, sym, 0, aval, c);
             }
@@ -768,8 +748,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
     } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();
-        llvm_memcpy (llvm_void_ptr (sym), llvm_constant_ptr (sym.data()),
-                     t.size(), t.basesize() /*align*/);
+        ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
+                      t.size(), t.basesize() /*align*/);
         if (sym.has_derivs())
             llvm_zero_derivs (sym);
     } else {
@@ -777,18 +757,18 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         int num_components = sym.typespec().simpletype().aggregate;
         TypeSpec elemtype = sym.typespec().elementtype();
         for (int a = 0, c = 0; a < arraylen;  ++a) {
-            llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
+            llvm::Value *arrind = sym.typespec().is_array() ? ll.constant(a) : NULL;
             if (sym.typespec().is_closure_based())
                 continue;
             for (int i = 0; i < num_components; ++i, ++c) {
                 // Fill in the constant val
                 llvm::Value* init_val = 0;
                 if (elemtype.is_floatbased())
-                    init_val = llvm_constant (((float*)sym.data())[c]);
+                    init_val = ll.constant (((float*)sym.data())[c]);
                 else if (elemtype.is_string())
-                    init_val = llvm_constant (((ustring*)sym.data())[c]);
+                    init_val = ll.constant (((ustring*)sym.data())[c]);
                 else if (elemtype.is_int())
-                    init_val = llvm_constant (((int*)sym.data())[c]);
+                    init_val = ll.constant (((int*)sym.data())[c]);
                 ASSERT (init_val);
                 llvm_store_value (init_val, sym, 0, arrind, i);
             }
@@ -806,27 +786,13 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         && ! sym.lockgeom()) {
         std::vector<llvm::Value*> args;
         args.push_back (sg_void_ptr());
-        args.push_back (llvm_constant (sym.name()));
-        args.push_back (llvm_constant (sym.typespec().simpletype()));
-        args.push_back (llvm_constant ((int) sym.has_derivs()));
+        args.push_back (ll.constant (sym.name()));
+        args.push_back (ll.constant (sym.typespec().simpletype()));
+        args.push_back (ll.constant ((int) sym.has_derivs()));
         args.push_back (llvm_void_ptr (sym));
-        llvm_call_function ("osl_bind_interpolated_param",
-                            &args[0], args.size());                            
+        ll.call_function ("osl_bind_interpolated_param",
+                          &args[0], args.size());                            
     }
-}
-
-
-
-llvm::Value *
-BackendLLVM::llvm_offset_ptr (llvm::Value *ptr, int offset,
-                                   llvm::Type *ptrtype)
-{
-    llvm::Value *i = builder().CreatePtrToInt (ptr, llvm_type_addrint());
-    i = builder().CreateAdd (i, llvm_constant ((size_t)offset));
-    ptr = builder().CreateIntToPtr (i, llvm_type_void_ptr());
-    if (ptrtype)
-        ptr = llvm_ptr_cast (ptr, ptrtype);
-    return ptr;
 }
 
 
@@ -841,35 +807,35 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
         TypeDesc t = sym.typespec().simpletype();
         if (t.basetype != TypeDesc::FLOAT)
             continue;  // just check float-based types
-        llvm::Value *ncomps = llvm_constant (int(t.numelements() * t.aggregate));
-        llvm::Value *offset = llvm_constant(0);
+        llvm::Value *ncomps = ll.constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = ll.constant(0);
         llvm::Value *ncheck = ncomps;
         if (op.opname() == op_aassign) {
             // Special case -- array assignment -- only check one element
             ASSERT (i == 0 && "only arg 0 is written for aassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
-            llvm::Value *agg = llvm_constant(t.aggregate);
-            offset = t.aggregate == 1 ? ind : builder().CreateMul (ind, agg);
+            llvm::Value *agg = ll.constant(t.aggregate);
+            offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
             ncheck = agg;
         } else if (op.opname() == op_compassign) {
             // Special case -- component assignment -- only check one channel
             ASSERT (i == 0 && "only arg 0 is written for compassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             offset = ind;
-            ncheck = llvm_constant(1);
+            ncheck = ll.constant(1);
         }
 
         llvm::Value *args[] = { ncomps,
                                 llvm_void_ptr(sym),
-                                llvm_constant((int)sym.has_derivs()),
+                                ll.constant((int)sym.has_derivs()),
                                 sg_void_ptr(), 
-                                llvm_constant(op.sourcefile()),
-                                llvm_constant(op.sourceline()),
-                                llvm_constant(sym.name()),
+                                ll.constant(op.sourcefile()),
+                                ll.constant(op.sourceline()),
+                                ll.constant(sym.name()),
                                 offset,
                                 ncheck
                               };
-        llvm_call_function ("osl_naninf_check", args, 9);
+        ll.call_function ("osl_naninf_check", args, 9);
     }
 }
 
@@ -888,8 +854,8 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
         if (t.basetype != TypeDesc::FLOAT && t.basetype != TypeDesc::INT &&
             t.basetype != TypeDesc::STRING)
             continue;  // just check float, int, string based types
-        llvm::Value *ncheck = llvm_constant (int(t.numelements() * t.aggregate));
-        llvm::Value *offset = llvm_constant(0);
+        llvm::Value *ncheck = ll.constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = ll.constant(0);
         // Some special cases...
         if (op.opname() == Strings::op_for && i == 0) {
             // The first argument of 'for' is the condition temp, but
@@ -900,26 +866,26 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
         if (op.opname() == op_aref && i == 1) {
             // Special case -- array assignment -- only check one element
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
-            llvm::Value *agg = llvm_constant(t.aggregate);
-            offset = t.aggregate == 1 ? ind : builder().CreateMul (ind, agg);
+            llvm::Value *agg = ll.constant(t.aggregate);
+            offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
             ncheck = agg;
         } else if (op.opname() == op_compref && i == 1) {
             // Special case -- component assignment -- only check one channel
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
             offset = ind;
-            ncheck = llvm_constant(1);
+            ncheck = ll.constant(1);
         }
 
-        llvm::Value *args[] = { llvm_constant(t),
+        llvm::Value *args[] = { ll.constant(t),
                                 llvm_void_ptr(sym),
                                 sg_void_ptr(), 
-                                llvm_constant(op.sourcefile()),
-                                llvm_constant(op.sourceline()),
-                                llvm_constant(sym.name()),
+                                ll.constant(op.sourcefile()),
+                                ll.constant(op.sourceline()),
+                                ll.constant(sym.name()),
                                 offset,
                                 ncheck
                               };
-        llvm_call_function ("osl_uninit_check", args, 8);
+        ll.call_function ("osl_uninit_check", args, 8);
     }
 }
 
@@ -929,7 +895,7 @@ bool
 BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
     if (bb)
-        builder().SetInsertPoint (bb);
+        ll.set_insert_point (bb);
 
     for (int opnum = beginop;  opnum < endop;  ++opnum) {
         const Opcode& op = inst()->ops()[opnum];
@@ -970,22 +936,21 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Note that the GroupData* is passed as a void*.
     std::string unique_layer_name = Strutil::format ("%s_%d", inst()->layername(), inst()->id());
 
-    m_layer_func = llvm::cast<llvm::Function>(m_llvm_module->getOrInsertFunction(unique_layer_name,
-                    llvm_type_void(), llvm_type_sg_ptr(),
-                    llvm_type_groupdata_ptr(), NULL));
-    // Use fastcall for non-entry layer functions to encourage register calling
-    if (!groupentry) m_layer_func->setCallingConv(llvm::CallingConv::Fast);
-    llvm::Function::arg_iterator arg_it = m_layer_func->arg_begin();
-    // Get shader globals pointer
-    m_llvm_shaderglobals_ptr = arg_it++;
-    m_llvm_groupdata_ptr = arg_it++;
+    ll.current_function (
+           ll.make_function (unique_layer_name,
+                             !groupentry, // fastcall for non-entry layer functions
+                             ll.type_void(), // return type
+                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
 
-    llvm::BasicBlock *entry_bb = llvm_new_basic_block (unique_layer_name);
+    // Get shader globals and groupdata pointers
+    m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
+    m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
+
+    llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;
 
     // Set up a new IR builder
-    delete m_builder;
-    m_builder = new llvm::IRBuilder<> (entry_bb);
+    ll.new_builder (entry_bb);
 #if 0 /* helpful for debuggin */
     if (llvm_debug() && groupentry)
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
@@ -994,7 +959,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                                   inst()->layername(), inst()->shadername()));
 #endif
     if (shadingsys().countlayerexecs())
-        llvm_call_function ("osl_incr_layers_executed", sg_void_ptr());
+        ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
 
     if (groupentry) {
         if (m_num_used_layers > 1) {
@@ -1002,7 +967,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
             // executed" bits.  If it's not the group entry (but rather is
             // an upstream node), then set its bit!
             int sz = (m_num_used_layers + 3) & (~3);  // round up to 32 bits
-            llvm_memset (llvm_void_ptr(layer_run_ptr(0)), 0, sz, 4 /*align*/);
+            ll.op_memset (ll.void_ptr(layer_run_ptr(0)), 0, sz, 4 /*align*/);
         }
         // Group entries also need to allot space for ALL layers' params
         // that are closures (to avoid weird order of layer eval problems).
@@ -1013,9 +978,9 @@ BackendLLVM::build_llvm_instance (bool groupentry)
             FOREACH_PARAM (Symbol &sym, gi) {
                if (sym.typespec().is_closure_based()) {
                     int arraylen = std::max (1, sym.typespec().arraylength());
-                    llvm::Value *val = llvm_constant_ptr(NULL, llvm_type_void_ptr());
+                    llvm::Value *val = ll.constant_ptr(NULL, ll.type_void_ptr());
                     for (int a = 0; a < arraylen;  ++a) {
-                        llvm::Value *arrind = sym.typespec().is_array() ? llvm_constant(a) : NULL;
+                        llvm::Value *arrind = sym.typespec().is_array() ? ll.constant(a) : NULL;
                         llvm_store_value (val, sym, 0, arrind, 0);
                     }
                 }
@@ -1055,13 +1020,13 @@ BackendLLVM::build_llvm_instance (bool groupentry)
             TypeDesc t = s.typespec().simpletype();
             if (t.basetype == TypeDesc::FLOAT) { // just check float-based types
                 int ncomps = t.numelements() * t.aggregate;
-                llvm::Value *args[] = { llvm_constant(ncomps), llvm_void_ptr(s),
-                     llvm_constant((int)s.has_derivs()), sg_void_ptr(), 
-                     llvm_constant(ustring(inst()->shadername())),
-                     llvm_constant(0), llvm_constant(s.name()),
-                     llvm_constant(0), llvm_constant(ncomps)
+                llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(s),
+                     ll.constant((int)s.has_derivs()), sg_void_ptr(), 
+                     ll.constant(ustring(inst()->shadername())),
+                     ll.constant(0), ll.constant(s.name()),
+                     ll.constant(0), ll.constant(ncomps)
                 };
-                llvm_call_function ("osl_naninf_check", args, 9);
+                ll.call_function ("osl_naninf_check", args, 9);
             }
         }
     }
@@ -1089,10 +1054,8 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 
     build_llvm_code (inst()->maincodebegin(), inst()->maincodeend());
 
-    if (llvm_has_exit_instance_block()) {
-        builder().CreateBr (m_exit_instance_block);
-        builder().SetInsertPoint (m_exit_instance_block);
-    }
+    if (llvm_has_exit_instance_block())
+        ll.op_branch (m_exit_instance_block); // also sets insert point
 
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
@@ -1121,119 +1084,24 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         llvm_gen_debug_printf (Strutil::format("exit layer %s %s",
                                    inst()->layername(), inst()->shadername()));
 #endif
-    builder().CreateRetVoid();
+    ll.op_return();
 
     if (llvm_debug())
-        llvm::outs() << "layer_func (" << unique_layer_name << ") " << this->layer() << "/" << group().nlayers() << " after llvm  = " << *m_layer_func << "\n";
+        std::cout << "layer_func (" << unique_layer_name << ") "<< this->layer() 
+                  << "/" << group().nlayers() << " after llvm  = " 
+                  << ll.bitcode_string(ll.current_function()) << "\n";
 
-    delete m_builder;
-    m_builder = NULL;
+    ll.end_builder();  // clear the builder
 
-    return m_layer_func;
+    return ll.current_function();
 }
-
-
-
-/// OSL_Dummy_JITMemoryManager - Create a shell that passes on requests
-/// to a real JITMemoryManager underneath, but can be retained after the
-/// dummy is destroyed.  Also, we don't pass along any deallocations.
-class OSL_Dummy_JITMemoryManager : public llvm::JITMemoryManager {
-protected:
-    llvm::JITMemoryManager *mm;
-public:
-    OSL_Dummy_JITMemoryManager(llvm::JITMemoryManager *realmm) : mm(realmm) { HasGOT = realmm->isManagingGOT(); }
-    virtual ~OSL_Dummy_JITMemoryManager() { }
-    virtual void setMemoryWritable() { mm->setMemoryWritable(); }
-    virtual void setMemoryExecutable() { mm->setMemoryExecutable(); }
-    virtual void setPoisonMemory(bool poison) { mm->setPoisonMemory(poison); }
-    virtual void AllocateGOT() { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
-    virtual uint8_t *getGOTBase() const { return mm->getGOTBase(); }
-    virtual uint8_t *startFunctionBody(const llvm::Function *F,
-                                       uintptr_t &ActualSize) {
-        return mm->startFunctionBody (F, ActualSize);
-    }
-    virtual uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
-                                  unsigned Alignment) {
-        return mm->allocateStub (F, StubSize, Alignment);
-    }
-    virtual void endFunctionBody(const llvm::Function *F,
-                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) {
-        mm->endFunctionBody (F, FunctionStart, FunctionEnd);
-    }
-    virtual uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) {
-        return mm->allocateSpace (Size, Alignment);
-    }
-    virtual uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) {
-        return mm->allocateGlobal (Size, Alignment);
-    }
-    virtual void deallocateFunctionBody(void *Body) {
-        // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
-    }
-    virtual uint8_t* startExceptionTable(const llvm::Function* F,
-                                         uintptr_t &ActualSize) {
-        return mm->startExceptionTable (F, ActualSize);
-    }
-    virtual void endExceptionTable(const llvm::Function *F, uint8_t *TableStart,
-                                   uint8_t *TableEnd, uint8_t* FrameRegister) {
-        mm->endExceptionTable (F, TableStart, TableEnd, FrameRegister);
-    }
-    virtual void deallocateExceptionTable(void *ET) {
-        // DON'T DEALLOCATE mm->deallocateExceptionTable(ET);
-    }
-    virtual bool CheckInvariants(std::string &s) {
-        return mm->CheckInvariants(s);
-    }
-    virtual size_t GetDefaultCodeSlabSize() {
-        return mm->GetDefaultCodeSlabSize();
-    }
-    virtual size_t GetDefaultDataSlabSize() {
-        return mm->GetDefaultDataSlabSize();
-    }
-    virtual size_t GetDefaultStubSlabSize() {
-        return mm->GetDefaultStubSlabSize();
-    }
-    virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
-    virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
-    virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
-#if OSL_LLVM_VERSION >= 31
-    virtual void *getPointerToNamedFunction(const std::string &Name,
-                                            bool AbortOnFailure = true) {
-        return mm->getPointerToNamedFunction (Name, AbortOnFailure);
-    }
-    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                                         unsigned SectionID) {
-        return mm->allocateCodeSection(Size, Alignment, SectionID);
-    }
-#if OSL_LLVM_VERSION >= 33
-    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                                         unsigned SectionID, bool IsReadOnly) {
-        return mm->allocateDataSection(Size, Alignment, SectionID, IsReadOnly);
-    }
-    virtual bool applyPermissions(std::string *ErrMsg = 0) {
-        return mm->applyPermissions(ErrMsg);
-    }
-#else
-    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                                         unsigned SectionID) {
-        return mm->allocateDataSection(Size, Alignment, SectionID);
-    }
-#endif
-#endif
-};
 
 
 
 void
 BackendLLVM::initialize_llvm_group ()
 {
-    // I don't think we actually need to lock here (lg)
-    // static spin_mutex mutex;
-    // OIIO::spin_lock lock (mutex);
-
-    m_llvm_context = m_thread->llvm_context;
-    ASSERT (m_llvm_context && m_llvm_module);
-
-    llvm_setup_optimization_passes ();
+    ll.setup_optimization_passes (shadingsys().llvm_optimize());
 
     // Clear the shaderglobals and groupdata types -- they will be
     // created on demand.
@@ -1241,31 +1109,6 @@ BackendLLVM::initialize_llvm_group ()
     m_llvm_type_groupdata = NULL;
     m_llvm_type_closure_component = NULL;
     m_llvm_type_closure_component_attr = NULL;
-
-    // Set up aliases for types we use over and over
-    m_llvm_type_float = (llvm::Type *) llvm::Type::getFloatTy (*m_llvm_context);
-    m_llvm_type_int = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
-    if (sizeof(char *) == 4)
-        m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
-    else
-        m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
-    m_llvm_type_int_ptr = (llvm::PointerType *) llvm::Type::getInt32PtrTy (*m_llvm_context);
-    m_llvm_type_bool = (llvm::Type *) llvm::Type::getInt1Ty (*m_llvm_context);
-    m_llvm_type_longlong = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
-    m_llvm_type_void = (llvm::Type *) llvm::Type::getVoidTy (*m_llvm_context);
-    m_llvm_type_char_ptr = (llvm::PointerType *) llvm::Type::getInt8PtrTy (*m_llvm_context);
-    m_llvm_type_float_ptr = (llvm::PointerType *) llvm::Type::getFloatPtrTy (*m_llvm_context);
-    m_llvm_type_ustring_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_char_ptr, 0);
-
-    // A triple is a struct composed of 3 floats
-    std::vector<llvm::Type*> triplefields(3, m_llvm_type_float);
-    m_llvm_type_triple = llvm_type_struct (triplefields, "Vec3");
-    m_llvm_type_triple_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_triple, 0);
-
-    // A matrix is a struct composed 16 floats
-    std::vector<llvm::Type*> matrixfields(16, m_llvm_type_float);
-    m_llvm_type_matrix = llvm_type_struct (matrixfields, "Matrix4");
-    m_llvm_type_matrix_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_matrix, 0);
 
     for (int i = 0;  llvm_helper_function_table[i];  i += 2) {
         const char *funcname = llvm_helper_function_table[i];
@@ -1287,112 +1130,18 @@ BackendLLVM::initialize_llvm_group ()
             }
             types += advance;
         }
-        llvm::FunctionType *func = llvm::FunctionType::get (llvm_type(rettype), params, varargs);
-        m_llvm_module->getOrInsertFunction (funcname, func);
+        ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
     }
 
     // Needed for closure setup
     std::vector<llvm::Type*> params(3);
-    params[0] = m_llvm_type_char_ptr;
-    params[1] = m_llvm_type_int;
-    params[2] = m_llvm_type_char_ptr;
-    m_llvm_type_prepare_closure_func = llvm::PointerType::getUnqual (llvm::FunctionType::get (m_llvm_type_void, params, false));
+    params[0] = (llvm::Type *) ll.type_char_ptr();
+    params[1] = ll.type_int();
+    params[2] = (llvm::Type *) ll.type_char_ptr();
+    m_llvm_type_prepare_closure_func = ll.type_function_ptr (ll.type_void(), params);
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
 }
 
-
-
-void
-ShadingSystemImpl::SetupLLVM ()
-{
-    static mutex setup_mutex;
-    static bool done = false;
-    lock_guard lock (setup_mutex);
-    if (done)
-        return;
-    // Some global LLVM initialization for the first thread that
-    // gets here.
-    info ("Setting up LLVM");
-    llvm::DisablePrettyStackTrace = true;
-    llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
-    llvm::InitializeNativeTarget();
-    done = true;
-}
-
-
-
-void
-BackendLLVM::llvm_setup_optimization_passes ()
-{
-    ASSERT (m_llvm_passes == NULL && m_llvm_func_passes == NULL);
-
-    // Specify per-function passes
-    //
-    m_llvm_func_passes = new llvm::FunctionPassManager(llvm_module());
-    llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
-#if OSL_LLVM_VERSION >= 32
-    fpm.add (new llvm::DataLayout(llvm_module()));
-#else
-    fpm.add (new llvm::TargetData(llvm_module()));
-#endif
-
-    // Specify module-wide (interprocedural optimization) passes
-    //
-    m_llvm_passes = new llvm::PassManager;
-    llvm::PassManager &passes (*m_llvm_passes);
-#if OSL_LLVM_VERSION >= 32
-    passes.add (new llvm::DataLayout(llvm_module()));
-#else
-    passes.add (new llvm::TargetData(llvm_module()));
-#endif
-
-    if (shadingsys().llvm_optimize() >= 1 && shadingsys().llvm_optimize() <= 3) {
-        // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
-        // same set of optimizations as clang -O1, -O2, -O3
-        llvm::PassManagerBuilder builder;
-        builder.OptLevel = shadingsys().llvm_optimize();
-        builder.Inliner = llvm::createFunctionInliningPass();
-        // builder.DisableUnrollLoops = true;
-        builder.populateFunctionPassManager (fpm);
-        builder.populateModulePassManager (passes);
-        // Skip this for now, investigate later.  FIXME.
-        //    builder.populateLTOPassManager (passes, true /* internalize */,
-        //                                    true /* inline once again */);
-        builder.populateModulePassManager (passes);
-    }
-    else {
-    // LLVM 2.x, or unknown choices for llvm_optimize: use the same basic
-    // set of passes that we always have.
-
-    // Always add verifier?
-    passes.add (llvm::createVerifierPass());
-    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-    passes.add (llvm::createCFGSimplificationPass());
-    // Change memory references to registers
-//    passes.add (llvm::createPromoteMemoryToRegisterPass());
-    passes.add (llvm::createScalarReplAggregatesPass());
-    // Combine instructions where possible -- peephole opts & bit-twiddling
-    passes.add (llvm::createInstructionCombiningPass());
-    // Inline small functions
-    passes.add (llvm::createFunctionInliningPass());  // 250?
-    // Eliminate early returns
-    passes.add (llvm::createUnifyFunctionExitNodesPass());
-    // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
-    passes.add (llvm::createReassociatePass());
-    // Eliminate common sub-expressions
-    passes.add (llvm::createGVNPass());
-    // Constant propagation with SCCP
-    passes.add (llvm::createSCCPPass());
-    // More dead code elimination
-    passes.add (llvm::createAggressiveDCEPass());
-    // Combine instructions where possible -- peephole opts & bit-twiddling
-    passes.add (llvm::createInstructionCombiningPass());
-    // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-    passes.add (llvm::createCFGSimplificationPass());
-    // Try to make stuff into registers one last time.
-    passes.add (llvm::createPromoteMemoryToRegisterPass());
-    }
-}
 
 
 void
@@ -1413,50 +1162,22 @@ BackendLLVM::run ()
     OIIO::spin_lock lock (mutex);
 #endif
 
-    if (! m_thread->llvm_context)
-        m_thread->llvm_context = new llvm::LLVMContext();
-
-    if (! m_thread->llvm_jitmm) {
-        m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
-        OIIO::spin_lock lock (llvm_mutex);  // lock m_llvm_jitmm_hold
-        shadingsys().llvm_jitmm_hold().push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
-    }
-
-    ASSERT (! m_llvm_module);
 #ifdef OSL_LLVM_NO_BITCODE
-    m_llvm_module = new llvm::Module("llvm_ops", *m_thread->llvm_context);
+    ll.module (ll.new_module ("llvm_ops"));
 #else
-    // Load the LLVM bitcode and parse it into a Module
-    const char *data = osl_llvm_compiled_ops_block;
-    llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(data, osl_llvm_compiled_ops_size));
-    // Load the LLVM bitcode and parse it into a Module
-#if 0 /* Parse the whole thing now */
-    m_llvm_module = llvm::ParseBitcodeFile (buf, *m_thread->llvm_context, &err);
-    delete buf;
-#else /* Create a lazily deserialized IR module */
-    m_llvm_module = llvm::getLazyBitcodeModule (buf, *m_thread->llvm_context, &err);
-    // don't delete buf, the module has taken ownership of it
-#endif
+    ll.module (ll.module_from_bitcode (osl_llvm_compiled_ops_block,
+                                       osl_llvm_compiled_ops_size, &err));
     if (err.length())
         shadingsys().error ("ParseBitcodeFile returned '%s'\n", err.c_str());
-    ASSERT (m_llvm_module);
+    ASSERT (ll.module());
 #endif
 
     // Create the ExecutionEngine
-    ASSERT (! m_llvm_exec);
-    err.clear ();
-    llvm::JITMemoryManager *mm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
-    m_llvm_exec = llvm::ExecutionEngine::createJIT (m_llvm_module, &err, mm, llvm::CodeGenOpt::Default, /*AllocateGVsWithCode*/ false);
-    if (! m_llvm_exec) {
+    if (! ll.make_jit_execengine (&err)) {
         shadingsys().error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
         return;
     }
-    // Force it to JIT as soon as we ask it for the code pointer,
-    // don't take any chances that it might JIT lazily, since we
-    // will be stealing the JIT code memory from under its nose and
-    // destroying the Module & ExecutionEngine.
-    m_llvm_exec->DisableLazyCompilation ();
 
     // End of mutex lock, for the OSL_LLVM_NO_BITCODE case
     }
@@ -1501,52 +1222,47 @@ BackendLLVM::run ()
 
     // Optimize the LLVM IR unless it's just a ret void group (1 layer,
     // 1 BB, 1 inst == retvoid)
-    bool skip_optimization = m_num_used_layers == 1 && entry_func->size() == 1 && entry_func->front().size() == 1;
+    bool skip_optimization = m_num_used_layers == 1 && ll.func_is_empty(entry_func);
     // Label the group as being retvoid or not.
     group().does_nothing(skip_optimization);
     if (skip_optimization) {
         shadingsys().m_stat_empty_groups += 1;
         shadingsys().m_stat_empty_instances += 1;  // the one layer is empty
     } else {
-        m_llvm_passes->run (*llvm_module());
+        ll.do_optimize();
     }
 
     m_stat_llvm_opt_time += timer.lap();
 
     if (llvm_debug()) {
-        llvm::outs() << "func after opt  = " << *entry_func << "\n";
-        llvm::outs().flush();
+        std::cout << "func after opt  = " << ll.bitcode_string (entry_func) << "\n";
+        std::cout.flush();
     }
 
     // Debug code to dump the resulting bitcode to a file
     if (llvm_debug() >= 2) {
-        std::string err_info;
-        std::string name = Strutil::format ("%s_%d.bc",
-                                            inst()->layername().c_str(),
+        std::string name = Strutil::format ("%s_%d.bc", inst()->layername(),
                                             inst()->id());
-        llvm::raw_fd_ostream out (name.c_str(), err_info);
-        llvm::WriteBitcodeToFile (llvm_module(), out);
+        ll.write_bitcode_file (name.c_str());
     }
 
-    // Force the JIT to happen now
-    RunLLVMGroupFunc f = (RunLLVMGroupFunc) m_llvm_exec->getPointerToFunction(entry_func);
-    group().llvm_compiled_version (f);
+    // Force the JIT to happen now and retrieve the JITed function
+    group().llvm_compiled_version ((RunLLVMGroupFunc) ll.getPointerToFunction(entry_func));
 
     // Remove the IR for the group layer functions, we've already JITed it
     // and will never need the IR again.  This saves memory, and also saves
     // a huge amount of time since we won't re-optimize it again and again
     // if we keep adding new shader groups to the same Module.
     for (int i = 0; i < m_num_used_layers; ++i) {
-        funcs[i]->deleteBody();
+        ll.delete_func_body (funcs[i]);
     }
 
     // Free the exec and module to reclaim all the memory.  This definitely
     // saves memory, and has almost no effect on runtime.
-    delete m_llvm_exec;
-    m_llvm_exec = NULL;
+    ll.execengine (NULL);
 
     // N.B. Destroying the EE should have destroyed the module as well.
-    m_llvm_module = NULL;
+    ll.module (NULL);
 
     m_stat_llvm_jit_time += timer.lap();
 

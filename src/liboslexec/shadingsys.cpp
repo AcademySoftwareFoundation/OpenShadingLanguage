@@ -36,7 +36,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "genclosure.h"
-#include "llvm_headers.h"
 #include "backendllvm.h"
 
 #include <OpenImageIO/strutil.h>
@@ -178,7 +177,6 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
 
 
 PerThreadInfo::PerThreadInfo ()
-    : llvm_context(NULL), llvm_jitmm(NULL)
 {
 }
 
@@ -186,10 +184,6 @@ PerThreadInfo::PerThreadInfo ()
 
 PerThreadInfo::~PerThreadInfo ()
 {
-    delete llvm_context;
-    // N.B. Do NOT delete the jitmm -- another thread may need the code!
-    // Don't worry, we stashed a pointer in the shadingsys.
-
     while (! context_pool.empty())
         delete pop_context ();
 }
@@ -367,7 +361,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         ShadingSystem::attribute ("options", options);
 
     setup_op_descriptors ();
-    SetupLLVM ();
+    LLVM_Util::SetupLLVM ();
 }
 
 
@@ -1057,14 +1051,7 @@ ShadingSystemImpl::getstats (int level) const
     out << "        Instance param values: " << m_stat_mem_inst_paramvals.memstat() << '\n';
     out << "        Instance connections:  " << m_stat_mem_inst_connections.memstat() << '\n';
 
-    size_t jitmem = 0;
-    for (size_t i = 0;  i < m_llvm_jitmm_hold.size();  ++i) {
-        llvm::JITMemoryManager *mm = m_llvm_jitmm_hold[i].get();
-        if (mm)
-            jitmem += mm->GetDefaultCodeSlabSize() * mm->GetNumCodeSlabs()
-                    + mm->GetDefaultDataSlabSize() * mm->GetNumDataSlabs()
-                    + mm->GetDefaultStubSlabSize() * mm->GetNumStubSlabs();
-    }
+    size_t jitmem = LLVM_Util::total_jit_memory_held();
     out << "    LLVM JIT memory: " << Strutil::memformat(jitmem) << '\n';
 
     return out.str();

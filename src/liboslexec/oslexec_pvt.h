@@ -88,8 +88,6 @@ struct PerThreadInfo
     ShadingContext *pop_context ();  ///< Get the pool top and then pop
 
     std::stack<ShadingContext *> context_pool;
-    llvm::LLVMContext *llvm_context;
-    llvm::JITMemoryManager *llvm_jitmm;
 };
 
 namespace pvt {
@@ -803,10 +801,6 @@ public:
     /// Is the named symbol among the renderer outputs?
     bool is_renderer_output (ustring name) const;
 
-    std::vector<shared_ptr<llvm::JITMemoryManager> >& llvm_jitmm_hold () {
-        return m_llvm_jitmm_hold;
-    }
-
 private:
     void printstats () const;
 
@@ -978,9 +972,6 @@ private:
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;
     spin_mutex m_groups_to_compile_mutex;
-
-    // Can't throw away jitmm's until we're totally done
-    std::vector<shared_ptr<llvm::JITMemoryManager> > m_llvm_jitmm_hold;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;

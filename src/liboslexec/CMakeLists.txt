@@ -12,6 +12,7 @@ SET ( liboslexec_srcs
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
+          backendllvm.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
     )
 
@@ -134,3 +135,8 @@ add_executable (accum_test accum_test.cpp)
 target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
 link_ilmbase (accum_test)
 add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")
+
+add_executable (llvmutil_test llvmutil_test.cpp)
+target_link_libraries ( llvmutil_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES} )
+link_ilmbase (llvmutil_test)
+add_test (unit_llvmutil "${CMAKE_BINARY_DIR}/src/liboslexec/llvmutil_test")

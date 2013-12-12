@@ -362,8 +362,6 @@ public:
 
     llvm::Function *layer_func () const { return ll.current_function(); }
 
-    void llvm_setup_optimization_passes ();
-
     LLVM_Util ll;
 
 private:

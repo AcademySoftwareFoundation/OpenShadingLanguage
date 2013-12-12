@@ -53,17 +53,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
-namespace llvm {
-  class ExecutionEngine;
-  class Function;
-  class FunctionPassManager;
-  class LLVMContext;
-  class Linker;
-  class Module;
-  class PassManager;
-  class JITMemoryManager;
-}
-
 using OIIO::atomic_int;
 using OIIO::atomic_ll;
 using OIIO::RefCnt;

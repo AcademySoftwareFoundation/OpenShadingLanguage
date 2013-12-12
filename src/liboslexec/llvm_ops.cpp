@@ -1775,7 +1775,7 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
 
 
 // vals points to the data of a float-, int-, or string-based symbol.
-// string (ncomps == aggregate*arraylen).  We want to check
+// (described by typedesc).  We want to check
 // vals[firstcheck..firstcheck+nchecks-1] for floats that are NaN , or
 // ints that are -MAXINT, or strings that are "!!!uninitialized!!!"
 // which would indicate that the value is uninitialized if
@@ -1789,7 +1789,6 @@ osl_uninit_check (long long typedesc_, void *vals_,
                   void *symbolname, int firstcheck, int nchecks)
 {
     TypeDesc typedesc = TYPEDESC(typedesc_);
-    int ncomps = typedesc.aggregate * typedesc.numelements();
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     bool uninit = false;
     if (typedesc.basetype == TypeDesc::FLOAT) {
@@ -1820,7 +1819,6 @@ osl_uninit_check (long long typedesc_, void *vals_,
         ctx->shadingsys().error ("Detected possible use of uninitialized value in %s at %s:%d",
                                  USTR(symbolname).c_str(),
                                  USTR(sourcefile).c_str(), sourceline);
-//        ASSERT(0);
     }
 }
 

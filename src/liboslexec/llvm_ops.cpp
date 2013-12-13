@@ -718,14 +718,14 @@ osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
         return true;
     }
     if (USTR(from) == Strings::shader) {
-        ctx->renderer()->get_matrix (*r, sg->shader2common, sg->time);
+        sg->renderer->get_matrix (*r, sg->shader2common, sg->time);
         return true;
     }
     if (USTR(from) == Strings::object) {
-        ctx->renderer()->get_matrix (*r, sg->object2common, sg->time);
+        sg->renderer->get_matrix (*r, sg->object2common, sg->time);
         return true;
     }
-    bool ok = ctx->renderer()->get_matrix (*r, USTR(from), sg->time);
+    bool ok = sg->renderer->get_matrix (*r, USTR(from), sg->time);
     if (! ok) {
         r->makeIdentity();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -745,14 +745,14 @@ osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
         return true;
     }
     if (USTR(to) == Strings::shader) {
-        ctx->renderer()->get_inverse_matrix (*r, sg->shader2common, sg->time);
+        sg->renderer->get_inverse_matrix (*r, sg->shader2common, sg->time);
         return true;
     }
     if (USTR(to) == Strings::object) {
-        ctx->renderer()->get_inverse_matrix (*r, sg->object2common, sg->time);
+        sg->renderer->get_inverse_matrix (*r, sg->object2common, sg->time);
         return true;
     }
-    bool ok = ctx->renderer()->get_inverse_matrix (*r, USTR(to), sg->time);
+    bool ok = sg->renderer->get_inverse_matrix (*r, USTR(to), sg->time);
     if (! ok) {
         r->makeIdentity ();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -847,7 +847,7 @@ osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
-    RendererServices *rend = ctx->renderer();
+    RendererServices *rend = sg->renderer;
     if (rend->transform_points (sg, USTR(from), USTR(to), sg->time,
                                 (const Vec3 *)Pin, (Vec3 *)Pout, 1,
                                 (TypeDesc::VECSEMANTICS)vectype)) {
@@ -1271,15 +1271,14 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              void *result, void *dresultdx, void *dresultdy)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
     TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans;
     float dresultds[3], dresultdt[3];
     opt->dresultds = dresultdx ? dresultds : NULL;
     opt->dresultdt = dresultdy ? dresultdt : NULL;
 
-    bool ok = renderer->texture (USTR(name), *opt, sg, s, t,
-                                 dsdx, dtdx, dsdy, dtdy, (float *)result);
+    bool ok = sg->renderer->texture (USTR(name), *opt, sg, s, t,
+                                     dsdx, dtdx, dsdy, dtdy, (float *)result);
 
     // Correct our st texture space gradients into xy-space gradients
     if (dresultdx)
@@ -1298,15 +1297,14 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
              void *alpha, void *dalphadx, void *dalphady)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
     TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans + 1;
     float local_result[4], dresultds[4], dresultdt[4];
     opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
     opt->dresultdt = (dresultdy || dalphady) ? dresultdt : NULL;
 
-    bool ok = renderer->texture (USTR(name), *opt, sg, s, t,
-                                 dsdx, dtdx, dsdy, dtdy, local_result);
+    bool ok = sg->renderer->texture (USTR(name), *opt, sg, s, t,
+                                     dsdx, dtdx, dsdy, dtdy, local_result);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -1339,7 +1337,6 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
     const Vec3 &dPdy (*(Vec3 *)dPdy_);
     const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
     TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans;
     float dresultds[3], dresultdt[3], dresultdr[3];
@@ -1347,8 +1344,8 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
     opt->dresultdt = dresultdy ? dresultdt : NULL;
     opt->dresultdr = dresultdz ? dresultdr : NULL;
 
-    bool ok = renderer->texture3d (USTR(name), *opt, sg, P,
-                                   dPdx, dPdy, dPdz, (float *)result);
+    bool ok = sg->renderer->texture3d (USTR(name), *opt, sg, P,
+                                       dPdx, dPdy, dPdz, (float *)result);
 
     // Correct our str texture space gradients into xyz-space gradients
     if (dresultdx)
@@ -1377,7 +1374,6 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
     const Vec3 &dPdy (*(Vec3 *)dPdy_);
     const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
     TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans + 1;
     float local_result[4], dresultds[4], dresultdt[4], dresultdr[4];
@@ -1385,8 +1381,8 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
     opt->dresultdt = (dresultdy || dalphady) ? dresultdt : NULL;
     opt->dresultdr = (dresultdz || dalphadz) ? dresultdr : NULL;
 
-    bool ok = renderer->texture3d (USTR(name), *opt, sg, P,
-                                   dPdx, dPdy, dPdz, (float *)local_result);
+    bool ok = sg->renderer->texture3d (USTR(name), *opt, sg, P,
+                                       dPdx, dPdy, dPdz, (float *)local_result);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -1424,7 +1420,6 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
     const Vec3 &dRdx (*(Vec3 *)dRdx_);
     const Vec3 &dRdy (*(Vec3 *)dRdy_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
     TextureOpt *opt = (TextureOpt *)opt_;
     opt->nchannels = chans + (alpha ? 1 : 0);
     float dresultds[4], dresultdt[4];
@@ -1432,8 +1427,8 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
     opt->dresultdt = dresultdy ? dresultdt : NULL;
     float local_result[4];
 
-    bool ok = renderer->environment (USTR(name), *opt, sg, R,
-                                     dRdx, dRdy, (float *)local_result);
+    bool ok = sg->renderer->environment (USTR(name), *opt, sg, R,
+                                         dRdx, dRdy, (float *)local_result);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -1475,13 +1470,12 @@ OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_,
     typedesc.aggregate = aggregate;
 
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
 
     const ustring &filename  = USTR(fin_);
     const ustring &dataname  = USTR(dnam_);
 
-    return renderer->get_texture_info (filename, 0 /*FIXME-ptex*/,
-                                       dataname, typedesc, data);
+    return sg->renderer->get_texture_info (filename, 0 /*FIXME-ptex*/,
+                                           dataname, typedesc, data);
 }
 
 
@@ -1575,7 +1569,6 @@ osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
            void *Dir_, void *dDirdx_, void *dDirdy_)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
     RendererServices::TraceOpt *opt = (RendererServices::TraceOpt *)opt_;
     static const Vec3 Zero (0.0f, 0.0f, 0.0f);
     const Vec3 *Pos = (Vec3 *)Pos_;
@@ -1584,8 +1577,8 @@ osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
     const Vec3 *Dir = (Vec3 *)Dir_;
     const Vec3 *dDirdx = dDirdx_ ? (Vec3 *)dDirdx_ : &Zero;
     const Vec3 *dDirdy = dDirdy_ ? (Vec3 *)dDirdy_ : &Zero;
-    return renderer->trace (*opt, sg, *Pos, *dPosdx, *dPosdy,
-                            *Dir, *dDirdx, *dDirdy);
+    return sg->renderer->trace (*opt, sg, *Pos, *dPosdx, *dPosdy,
+                                *Dir, *dDirdx, *dDirdy);
 }
 
 
@@ -1716,10 +1709,8 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int has_derivs, void *result)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices *renderer (sg->context->renderer());
-
-    return renderer->get_userdata (has_derivs, USTR(name), TYPEDESC(type),
-                                   sg->renderstate, result);
+    return sg->renderer->get_userdata (has_derivs, USTR(name), TYPEDESC(type),
+                                       sg->renderstate, result);
 }
 
 

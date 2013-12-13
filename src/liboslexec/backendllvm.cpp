@@ -138,7 +138,7 @@ BackendLLVM::ShaderGlobalNameToIndex (ustring name)
         Strings::u, Strings::v, Strings::dPdu, Strings::dPdv,
         Strings::time, Strings::dtime, Strings::dPdtime, Strings::Ps,
         ustring("renderstate"), ustring("tracedata"), ustring("objdata"),
-        ustring("shadingcontext"),
+        ustring("shadingcontext"), ustring("renderer"),
         ustring("object2common"), ustring("shader2common"),
         Strings::Ci,
         ustring("surfacearea"), ustring("raytype"),

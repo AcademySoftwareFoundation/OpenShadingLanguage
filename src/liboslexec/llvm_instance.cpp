@@ -288,8 +288,6 @@ static const char *llvm_helper_function_table[] = {
     "osl_split", "isXsii",
 
 #ifdef OSL_LLVM_NO_BITCODE
-    "osl_assert_nonnull", "xXs",
-
     UNARY_OP_IMPL(sin),
     UNARY_OP_IMPL(cos),
     UNARY_OP_IMPL(tan),
@@ -535,6 +533,7 @@ BackendLLVM::llvm_type_sg ()
     sg_types.push_back(vp);                 // opaque tracedata*
     sg_types.push_back(vp);                 // opaque objdata*
     sg_types.push_back(vp);                 // ShadingContext*
+    sg_types.push_back(vp);                 // RendererServices*
     sg_types.push_back(vp);                 // object2common
     sg_types.push_back(vp);                 // shader2common
     sg_types.push_back(vp);                 // Ci

@@ -114,6 +114,7 @@ ShadingContext::execute (ShaderUse use, ShaderGroup &sgroup,
 
     if (run) {
         ssg.context = this;
+        ssg.renderer = renderer();
         ssg.Ci = NULL;
         RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
         DASSERT (run_func);

@@ -33,6 +33,7 @@ OSL_NAMESPACE_ENTER
 
 struct ClosureColor;
 class ShadingContext;
+class RendererServices;
 
 
 
@@ -69,6 +70,7 @@ struct ShaderGlobals {
     void* objdata;                   /**< Opaque pointer to object data */
     ShadingContext* context;         /**< ShadingContext (this will be set by
                                           OSL itself) */
+    RendererServices* renderer;      /**< Ptr to the RendererServices object */                                        
     TransformationPtr object2common; /**< Object->common xform */
     TransformationPtr shader2common; /**< Shader->common xform */
     ClosureColor *Ci;                /**< Output closure (should be initialized

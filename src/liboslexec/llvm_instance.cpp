@@ -714,8 +714,9 @@ RuntimeOptimizer::llvm_assign_initial_value (const Symbol& sym)
         llvm_assign_zero (sym);
         return;  // we're done, the parts below are just for params
     }
-    ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
-                "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
+    assert(sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam);
+    // ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
+    //             "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
 
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.

@@ -41,6 +41,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <pugixml.hpp>
 #else
 # include <OpenImageIO/pugixml.hpp>
+  #ifndef USING_OIIO_PUGI
+  #define USING_OIIO_PUGI 1
+  #endif
 #endif
 
 #include "oslexec_pvt.h"

@@ -50,7 +50,7 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-#ifdef USING_OIIO_PUGI
+#ifndef USE_EXTERNAL_PUGIXML
 namespace pugi = OIIO::pugi;
 #endif
 

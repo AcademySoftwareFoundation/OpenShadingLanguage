@@ -337,7 +337,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_pow_vvf", "xXXf",
     "osl_pow_dvdvdf", "xXXX",
     "osl_pow_dvvdf", "xXXX",
-    "osl_pow_dvdvf", "xXXX",
+    "osl_pow_dvdvf", "xXXf",
 
     UNARY_OP_IMPL(sqrt),
     UNARY_OP_IMPL(inversesqrt),
@@ -351,7 +351,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_trunc_ff", "ff",
     "osl_trunc_vv", "xXX",
     "osl_sign_ff", "ff",
-    "osl_sign_vv", "XX",
+    "osl_sign_vv", "xXX",
     "osl_step_fff", "fff",
     "osl_step_vvv", "xXXX",
 
@@ -429,7 +429,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_texture_set_rwrap", "xXs",
     "osl_texture_set_swrap_code", "xXi",
     "osl_texture_set_twrap_code", "xXi",
-    "osl_texture_set_rwrap_code", "xXs",
+    "osl_texture_set_rwrap_code", "xXi",
     "osl_texture_set_sblur", "xXf",
     "osl_texture_set_tblur", "xXf",
     "osl_texture_set_rblur", "xXf",

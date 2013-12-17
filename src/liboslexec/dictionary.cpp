@@ -41,9 +41,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <pugixml.hpp>
 #else
 # include <OpenImageIO/pugixml.hpp>
-  #ifndef USING_OIIO_PUGI
-  #define USING_OIIO_PUGI 1
-  #endif
 #endif
 
 #include "oslexec_pvt.h"
@@ -53,7 +50,7 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-#ifdef USING_OIIO_PUGI
+#ifndef USE_EXTERNAL_PUGIXML
 namespace pugi = OIIO::pugi;
 #endif
 

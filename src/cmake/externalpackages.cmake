@@ -37,7 +37,6 @@ endif ()
 find_package (IlmBase REQUIRED)
 
 include_directories ("${ILMBASE_INCLUDE_DIR}")
-include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
 
 macro (LINK_ILMBASE target)
     target_link_libraries (${target} ${ILMBASE_LIBRARIES})

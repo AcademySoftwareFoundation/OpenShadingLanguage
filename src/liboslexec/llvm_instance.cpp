@@ -234,7 +234,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_error", "xXs*",
     "osl_warning", "xXs*",
     "osl_incr_layers_executed", "xX",
-#if 1
+
     NOISE_IMPL(cellnoise),
     NOISE_DERIV_IMPL(cellnoise),
     NOISE_IMPL(noise),
@@ -261,7 +261,6 @@ static const char *llvm_helper_function_table[] = {
     "osl_noiseparams_set_direction", "xXv",
     "osl_noiseparams_set_bandwidth", "xXf",
     "osl_noiseparams_set_impulses", "xXf",
-#endif
 
     "osl_spline_fff", "xXXXXi",
     "osl_spline_dfdfdf", "xXXXXi",
@@ -287,7 +286,6 @@ static const char *llvm_helper_function_table[] = {
     "osl_luminance_dfdv", "xXXX",
     "osl_split", "isXsii",
 
-#ifdef OSL_LLVM_NO_BITCODE
     UNARY_OP_IMPL(sin),
     UNARY_OP_IMPL(cos),
     UNARY_OP_IMPL(tan),
@@ -459,7 +457,6 @@ static const char *llvm_helper_function_table[] = {
     "osl_range_check", "iiiXXi",
     "osl_naninf_check", "xiXiXXiXii",
     "osl_uninit_check", "xLXXXiXii",
-#endif // OSL_LLVM_NO_BITCODE
 
     NULL
 };

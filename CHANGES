@@ -1,3 +1,21 @@
+Release 1.4.1 - 19 Dec 2013 (compared to 1.4.0)
+-----------------------------------------------
+* Guard matrix*point transformations against possible division by zero.
+* Fix subtle bug with splines taking arrays, where the number of knots
+  passed was less than the full length of the array, and the knots had
+  derivatives -- the derivatives would be looked up from the wrong spot
+  in the array (and could read uninitialized portions of the array).
+* testshade/testrender - Fix timer call that wasn't correctly reporting
+  execution time versus total time.
+* Fix incorrect function declarations for the no-bitcode case (only
+  affected Windows or if a site purposely built without precompiled
+  bitcode for llvm_ops.cpp).
+* Build: more robust detection of clang, for older cmake versions.
+* Build: handle 3-part version numbers for LLVM installations.
+* Build: Fix USE_EXTERNAL_PUGIXML versus USING_OIIO_PUGI issue.
+
+
+
 Release 1.4.0 - 25 November 2013 (compared to 1.3)
 --------------------------------------------------
 

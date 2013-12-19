@@ -262,18 +262,18 @@ static const char *llvm_helper_function_table[] = {
     "osl_noiseparams_set_bandwidth", "xXf",
     "osl_noiseparams_set_impulses", "xXf",
 
-    "osl_spline_fff", "xXXXXi",
-    "osl_spline_dfdfdf", "xXXXXi",
-    "osl_spline_dfdff", "xXXXXi",
-    "osl_spline_dffdf", "xXXXXi",
-    "osl_spline_vfv", "xXXXXi",
-    "osl_spline_dvdfdv", "xXXXXi",
-    "osl_spline_dvdfv", "xXXXXi",
-    "osl_spline_dvfdv", "xXXXXi",
-    "osl_splineinverse_fff", "xXXXXi",
-    "osl_splineinverse_dfdfdf", "xXXXXi",
-    "osl_splineinverse_dfdff", "xXXXXi",
-    "osl_splineinverse_dffdf", "xXXXXi",
+    "osl_spline_fff", "xXXXXii",
+    "osl_spline_dfdfdf", "xXXXXii",
+    "osl_spline_dfdff", "xXXXXii",
+    "osl_spline_dffdf", "xXXXXii",
+    "osl_spline_vfv", "xXXXXii",
+    "osl_spline_dvdfdv", "xXXXXii",
+    "osl_spline_dvdfv", "xXXXXii",
+    "osl_spline_dvfdv", "xXXXXii",
+    "osl_splineinverse_fff", "xXXXXii",
+    "osl_splineinverse_dfdfdf", "xXXXXii",
+    "osl_splineinverse_dfdff", "xXXXXii",
+    "osl_splineinverse_dffdf", "xXXXXii",
     "osl_setmessage", "xXsLXisi",
     "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud_search", "iXsXfiiXXii*",
@@ -455,7 +455,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_raytype_bit", "iXi",
     "osl_bind_interpolated_param", "iXXLiX",
     "osl_range_check", "iiiXXi",
-    "osl_naninf_check", "xiXiXXiXii",
+    "osl_naninf_check", "xiXiXXiXiiX",
     "osl_uninit_check", "xLXXXiXii",
 
     NULL
@@ -829,9 +829,10 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
                                 ll.constant(op.sourceline()),
                                 ll.constant(sym.name()),
                                 offset,
-                                ncheck
+                                ncheck,
+                                ll.constant(op.opname())
                               };
-        ll.call_function ("osl_naninf_check", args, 9);
+        ll.call_function ("osl_naninf_check", args, 10);
     }
 }
 
@@ -1020,9 +1021,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                      ll.constant((int)s.has_derivs()), sg_void_ptr(), 
                      ll.constant(ustring(inst()->shadername())),
                      ll.constant(0), ll.constant(s.name()),
-                     ll.constant(0), ll.constant(ncomps)
+                     ll.constant(0), ll.constant(ncomps),
+                     ll.constant("<none>")
                 };
-                ll.call_function ("osl_naninf_check", args, 9);
+                ll.call_function ("osl_naninf_check", args, 10);
             }
         }
     }

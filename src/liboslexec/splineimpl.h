@@ -94,15 +94,6 @@ inline float Clamp(float x, float minv, float maxv) {
 
 
 
-// Eliminate the derivatives of a number
-template<class T> inline T removeDerivatives (const T x)         { return x;       }
-template<class T> inline T removeDerivatives (const Dual2<T> &x) { return x.val(); }
-
-// Simple templated "copy" function
-template <class T> inline void assignment(T &a, T &b)        { a = b;       }
-template <class T> inline void assignment(T &a, Dual2<T> &b) { a = b.val(); }
-
-
 
 struct SplineBasis {
    ustring  basis_name;

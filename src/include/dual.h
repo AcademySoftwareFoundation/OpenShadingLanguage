@@ -312,6 +312,24 @@ inline bool operator>= (const Dual2<T> &a, const Dual2<T> &b) {
 
 
 
+// Eliminate the derivatives of a number
+template<class T> inline T removeDerivatives (const T x)         { return x;       }
+template<class T> inline T removeDerivatives (const Dual2<T> &x) { return x.val(); }
+
+// Get the x derivative (or 0 for a non-Dual)
+template<class T> inline T getXDerivative (const T x)         { return T(0);   }
+template<class T> inline T getXDerivative (const Dual2<T> &x) { return x.dx(); }
+
+// Get the y derivative (or 0 for a non-Dual)
+template<class T> inline T getYDerivative (const T x)         { return T(0);   }
+template<class T> inline T getYDerivative (const Dual2<T> &x) { return x.dy(); }
+
+// Simple templated "copy" function
+template <class T> inline void assignment(T &a, T &b)        { a = b;       }
+template <class T> inline void assignment(T &a, Dual2<T> &b) { a = b.val(); }
+
+
+
 // f(x) = cos(x), f'(x) = -sin(x)
 template<class T>
 inline Dual2<T> cos (const Dual2<T> &a)

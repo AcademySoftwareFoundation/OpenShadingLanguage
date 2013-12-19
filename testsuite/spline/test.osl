@@ -1,4 +1,6 @@
-shader test(output color Cspline = 0, output color DxCspline = 0, output float Fspline = 0, output float DxFspline = 0, output float NumKnots = 0)
+shader test (output color Cspline = 0, output color DxCspline = 0,
+             output float Fspline = 0, output float DxFspline = 0,
+             output float NumKnots = 0)
 {
    string bases[5] = { "catmull-rom", "bezier", "bspline", "hermite", "linear" };
    color  colors[5] = { color(1,0,0),
@@ -52,4 +54,21 @@ shader test(output color Cspline = 0, output color DxCspline = 0, output float F
 
    NumKnots   = spline("linear", u, 4, fltknots);
    
+    {
+        // Regression test for a bug involving splines on arrays, where
+        // the number of knots is less than the length of the whole array,
+        // and the knots have derivatives -- prior to fixing the bug, the
+        // derivatives were accessed with the wrong offset (assuming that
+        // array length == num_knots).  Bug fixed 19-Dec-2013.
+        color knots[16];
+        for (int i = 0; i < 4; ++i)
+            knots[i] = color (i/3, i/3, i/3);
+        for (int i = 4; i < arraylength(knots); ++i)
+            knots[i] = color(u*1.0e9, u*1.0e9, u*1.0e9);
+        color c = spline ("linear", u, 4, knots);
+        if (! (c[0] < 2.0 && c[1] < 2.0 && c[2] < 2.0 &&
+               Dx(c[0]) < 2.0 && Dx(c[1]) < 2.0 && Dx(c[2]) < 2.0 &&
+               Dy(c[0]) < 2.0 && Dy(c[1]) < 2.0 && Dy(c[2]) < 2.0))
+            printf ("Hey, found a bad value!\n");
+    }
 }

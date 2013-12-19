@@ -21,6 +21,10 @@ ShadingSystem API changes and new options (for renderer writers):
   And ShadingAttribStateRef replaced by ShaderGroupRef. (1.5.1)
 * ShaderGroupBegin returns the ShaderGroupRef for the group, there is
   no need to call state() to get the group reference. (1.5.1)
+* Split the definition of ShaderGlobals into its own header file,
+  shaderglobals.h. (1.5.1)
+* Added a RendererServices pointer to ShaderGlobals, to eliminate a
+  bunch of pointless indirection during shader execution. (1.5.1)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
@@ -29,20 +33,60 @@ Performance improvements:
 
 Bug fixes:
 * testshade/testrender timer didn't properly break out execution time
-  from setup time. (1.5.1)
+  from setup time. (1.4.1/1.5.1)
+* Guard matrix*point transformations against possible division by zero.
+  (1.4.1/1.5.1)
+* Fix subtle bug with splines taking arrays, where the number of knots
+  passed was less than the full length of the array, and the knots had
+  derivatives -- the derivatives would be looked up from the wrong spot
+  in the array (and could read uninitialized portions of the array).
+  (1.4.1/1.5.1)
+* Fix incorrect function declarations for the no-bitcode case (only
+  affected Windows or if a site purposely built without precompiled
+  bitcode for llvm_ops.cpp). (1.4.1/1.5.1)
 
 Under the hood:
 * Internals refactor that separates the runtime optimization from the
   LLVM generation and JIT. (1.5.1)
 * Removed legacy built-in closures that weren't actually used. (1.5.1)
+* Split all the direct calls to LLVM API into a separate LLVM_Util
+  class, which has no other OSL dependencies and may be used from other
+  apps to simpilfy use of LLVM to JIT code dynamically. (1.5.1)
 
 Build & test system improvements and developer goodies:
 * testshade consolidates --iparam, --fparam, --vparam, --sparam into
   just --param that figures out the types (or could be explicitly
   told. (1.5.1)
+* More robust detection of clang, for older cmake versions.
+  (1.4.1/1.5.1)
+* Handle 3-part version numbers for LLVM installations. (1.4.1/1.5.1)
+* Fix USE_EXTERNAL_PUGIXML versus USING_OIIO_PUGI issue. (1.4.1/1.5.1)
+* Remove all ehader include guards, switch to '#pragma once' (1.5.1)
+* Adjust build to account for new library names in OpenEXR 2.1. (1.5.1)
+* Make sure we include all OpenEXR and Ilmbase headers with <OpenEXR/foo.h>
+  and remove the addition of OpenEXR sub-folder from system search paths.
+  (1.5.1)
 
 Documentation:
 
+
+
+
+Release 1.4.1 - 19 Dec 2013 (compared to 1.4.0)
+-----------------------------------------------
+* Guard matrix*point transformations against possible division by zero.
+* Fix subtle bug with splines taking arrays, where the number of knots
+  passed was less than the full length of the array, and the knots had
+  derivatives -- the derivatives would be looked up from the wrong spot
+  in the array (and could read uninitialized portions of the array).
+* testshade/testrender - Fix timer call that wasn't correctly reporting
+  execution time versus total time.
+* Fix incorrect function declarations for the no-bitcode case (only
+  affected Windows or if a site purposely built without precompiled
+  bitcode for llvm_ops.cpp).
+* Build: more robust detection of clang, for older cmake versions.
+* Build: handle 3-part version numbers for LLVM installations.
+* Build: Fix USE_EXTERNAL_PUGIXML versus USING_OIIO_PUGI issue.
 
 
 Release 1.4.0 - 12 November 2013 (compared to 1.3)

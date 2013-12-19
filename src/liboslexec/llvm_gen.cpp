@@ -2906,6 +2906,7 @@ LLVMGEN (llvm_gen_spline)
         args.push_back (rop.llvm_load_value (Knot_count));
     else
         args.push_back (rop.llvm_constant ((int)Knots.typespec().arraylength()));
+    args.push_back (rop.llvm_constant ((int)Knots.typespec().arraylength()));
     rop.llvm_call_function (name.c_str(), &args[0], args.size());
 
     if (Result.has_derivs() && !result_derivs)

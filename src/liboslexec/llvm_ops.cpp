@@ -1753,7 +1753,8 @@ osl_range_check (int indexvalue, int length,
 OSL_SHADEOP void
 osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
                   void *sg, const void *sourcefile, int sourceline,
-                  void *symbolname, int firstcheck, int nchecks)
+                  void *symbolname, int firstcheck, int nchecks,
+                  const void *opname)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     const float *vals = (const float *)vals_;
@@ -1761,11 +1762,12 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
         for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
             int i = d*ncomps + c;
             if (! isfinite(vals[i])) {
-                ctx->shadingsys().error ("Detected %g value in %s%s at %s:%d",
+                ctx->shadingsys().error ("Detected %g value in %s%s at %s:%d (op %s)",
                                          vals[i],
                                          d > 0 ? "the derivatives of " : "",
                                          USTR(symbolname).c_str(),
-                                         USTR(sourcefile).c_str(), sourceline);
+                                         USTR(sourcefile).c_str(), sourceline,
+                                         USTR(opname).c_str());
                 return;
             }
         }

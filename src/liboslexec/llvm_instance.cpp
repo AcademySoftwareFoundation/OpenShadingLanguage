@@ -275,18 +275,18 @@ static const char *llvm_helper_function_table[] = {
     "osl_noiseparams_set_impulses", "xXf",
 #endif
 
-    "osl_spline_fff", "xXXXXi",
-    "osl_spline_dfdfdf", "xXXXXi",
-    "osl_spline_dfdff", "xXXXXi",
-    "osl_spline_dffdf", "xXXXXi",
-    "osl_spline_vfv", "xXXXXi",
-    "osl_spline_dvdfdv", "xXXXXi",
-    "osl_spline_dvdfv", "xXXXXi",
-    "osl_spline_dvfdv", "xXXXXi",
-    "osl_splineinverse_fff", "xXXXXi",
-    "osl_splineinverse_dfdfdf", "xXXXXi",
-    "osl_splineinverse_dfdff", "xXXXXi",
-    "osl_splineinverse_dffdf", "xXXXXi",
+    "osl_spline_fff", "xXXXXii",
+    "osl_spline_dfdfdf", "xXXXXii",
+    "osl_spline_dfdff", "xXXXXii",
+    "osl_spline_dffdf", "xXXXXii",
+    "osl_spline_vfv", "xXXXXii",
+    "osl_spline_dvdfdv", "xXXXXii",
+    "osl_spline_dvdfv", "xXXXXii",
+    "osl_spline_dvfdv", "xXXXXii",
+    "osl_splineinverse_fff", "xXXXXii",
+    "osl_splineinverse_dfdfdf", "xXXXXii",
+    "osl_splineinverse_dfdff", "xXXXXii",
+    "osl_splineinverse_dffdf", "xXXXXii",
     "osl_setmessage", "xXsLXisi",
     "osl_getmessage", "iXssLXiisi",
     "osl_pointcloud_search", "iXsXfiiXXii*",
@@ -471,7 +471,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_raytype_bit", "iXi",
     "osl_bind_interpolated_param", "iXXLiX",
     "osl_range_check", "iiiXXi",
-    "osl_naninf_check", "xiXiXXiXii",
+    "osl_naninf_check", "xiXiXXiXiiX",
     "osl_uninit_check", "xLXXXiXii",
 #endif // OSL_LLVM_NO_BITCODE
 
@@ -815,9 +815,10 @@ RuntimeOptimizer::llvm_generate_debugnan (const Opcode &op)
                                 llvm_constant(op.sourceline()),
                                 llvm_constant(sym.name()),
                                 offset,
-                                ncheck
+                                ncheck,
+                                llvm_constant(op.opname())
                               };
-        llvm_call_function ("osl_naninf_check", args, 9);
+        llvm_call_function ("osl_naninf_check", args, 10);
     }
 }
 
@@ -1007,9 +1008,10 @@ RuntimeOptimizer::build_llvm_instance (bool groupentry)
                      llvm_constant((int)s.has_derivs()), sg_void_ptr(), 
                      llvm_constant(ustring(inst()->shadername())),
                      llvm_constant(0), llvm_constant(s.name()),
-                     llvm_constant(0), llvm_constant(ncomps)
+                     llvm_constant(0), llvm_constant(ncomps),
+                     llvm_constant("<none>")
                 };
-                llvm_call_function ("osl_naninf_check", args, 9);
+                llvm_call_function ("osl_naninf_check", args, 10);
             }
         }
     }

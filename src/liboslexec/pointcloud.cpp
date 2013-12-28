@@ -33,7 +33,6 @@ using namespace OSL::pvt;
 #if USE_PARTIO
 #include <Partio.h>
 #include <boost/unordered_map.hpp>
-#include <boost/shared_ptr.hpp>
 #endif
 
 
@@ -48,7 +47,7 @@ public:
     ~PointCloud ();
     static PointCloud *get (ustring filename, bool read=true);
 
-    typedef boost::unordered_map<ustring, boost::shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
+    typedef boost::unordered_map<ustring, shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
     // N.B./FIXME(C++11): shared_ptr is probably overkill, but
     // scoped_ptr is not copyable and therefore can't be used in
     // standard containers.  When C++11 is uniquitous, unique_ptr is the
@@ -63,7 +62,7 @@ public:
 };
 
 
-typedef boost::unordered_map<ustring, boost::shared_ptr<PointCloud>, ustringHash> PointCloudMap;
+typedef boost::unordered_map<ustring, shared_ptr<PointCloud>, ustringHash> PointCloudMap;
 // See above note about shared_ptr vs unique_ptr.
 static PointCloudMap pointclouds;
 static spin_mutex pointcloudmap_mutex;
@@ -193,10 +192,20 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
     if (! filename)
         return 0;
     PointCloud *pc = PointCloud::get(filename);
+    if (pc == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        return 0;
+    }
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
-    if (cloud == NULL) // The file failed to load
+    if (cloud == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
         return 0;
+    }
+
+    // Early exit if the pointcloud contains no particles.
+    if (cloud->numParticles() == 0)
+       return 0;
 
     // If we need derivs of the distances, we'll need access to the 
     // found point's positions.
@@ -280,10 +289,16 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
         return 1;  // always succeed if not asking for any data
 
     PointCloud *pc = PointCloud::get(filename);
+    if (pc == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        return 0;
+    }
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
-    if (cloud == NULL) // The file failed to load
+    if (cloud == NULL) { // The file failed to load
+        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
         return 0;
+    }
 
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();

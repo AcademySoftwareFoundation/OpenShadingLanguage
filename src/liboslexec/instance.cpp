@@ -227,10 +227,19 @@ ShaderInstance::parameters (const ParamValueList &params)
                 continue;
             }
 
+            // Lock the param against geometric primitive overrides if the
+            // master thinks it was so locked, AND the Parameter() call
+            // didn't specify lockgeom=false (which would be indicated by
+            // the parameter's interpolation being non-CONSTANT).
+            bool lockgeom = (sm->lockgeom() &&
+                             p.interp() == ParamValue::INTERP_CONSTANT);
+            so->lockgeom (lockgeom);
+
             // If the instance value is the same as the master's default,
             // just skip the parameter, let it "keep" the default.
             void *defaultdata = m_master->param_default_storage(i);
-            if (memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
+            if (lockgeom && 
+                  memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
                 continue;
 
             so->valuesource (Symbol::InstanceVal);
@@ -316,6 +325,7 @@ ShaderInstance::copy_code_from_master ()
                 si->data (param_storage(i));
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
+                si->lockgeom (m_instoverrides[i].lockgeom());
             }
         }
     }
@@ -341,7 +351,7 @@ ShaderInstance::print ()
     out << "  symbols:\n";
     for (size_t i = 0;  i < m_instsymbols.size();  ++i) {
         const Symbol &s (*symbol(i));
-        s.print (out);
+        s.print (out, 256);
     }
 #if 0
     out << "  int consts:\n    ";
@@ -369,7 +379,7 @@ ShaderInstance::print ()
             out << " " << s->name();
             if (s->symtype() == SymTypeConst) {
                 out << " (";
-                s->print_vals(out);
+                s->print_vals(out,16);
                 out << ")";
             }
             if (op.argread(a))
@@ -388,7 +398,8 @@ ShaderInstance::print ()
         size_t slash = filename.find_last_of ("/");
         if (slash != std::string::npos)
             filename.erase (0, slash+1);
-        out << "  (" << filename << ":" << op.sourceline() << ")";
+        if (filename.length())
+            out << "  (" << filename << ":" << op.sourceline() << ")";
         out << "\n";
     }
     return out.str ();
@@ -555,17 +566,24 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 }
 
 
+}; // namespace pvt
 
-ShaderGroup::ShaderGroup ()
-  : m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
+
+
+ShaderGroup::ShaderGroup (const char *name)
+  : m_name(name),
+    m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
+    m_optimized(0), m_does_nothing(false)
 {
     m_executions = 0;
 }
 
 
 
-ShaderGroup::ShaderGroup (const ShaderGroup &g)
-  : m_layers(g.m_layers), m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
+ShaderGroup::ShaderGroup (const ShaderGroup &g, const char *name)
+  : m_name(name), m_layers(g.m_layers),
+    m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
+    m_optimized(0), m_does_nothing(false)
 {
     m_executions = 0;
 }
@@ -589,5 +607,4 @@ ShaderGroup::~ShaderGroup ()
 }
 
 
-}; // namespace pvt
 OSL_NAMESPACE_EXIT

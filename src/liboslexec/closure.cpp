@@ -42,62 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_NAMESPACE_ENTER
 
-
-std::ostream &
-operator<< (std::ostream &out, const ClosurePrimitive &prim)
-{
-    // http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.11
-    prim.print_on(out);
-    return out;
-}
-
-/*
-void
-ClosureColor::flatten (ClosureColor *closure, const Color3 &w, ShadingSystemImpl *ss)
-{
-    ClosureComponent *comp;
-
-    if (closure == NULL)
-        return;
-
-    switch (closure->type) {
-        case ClosureColor::CLOSURE_MUL:
-            flatten((ClosureColor *)((ClosureMul *)closure)->closure, ((ClosureMul *)closure)->weight * w, ss);
-            break;
-        case ClosureColor::CLOSURE_ADD:
-            flatten((ClosureColor *)((ClosureAdd *)closure)->closureA, w, ss);
-            flatten((ClosureColor *)((ClosureAdd *)closure)->closureB, w, ss);
-            break;
-        case ClosureColor::CLOSURE_COMPONENT:
-            comp = (ClosureComponent *)closure;
-            comp->weight *= w;
-            if (comp->weight[0] != 0.0f || comp->weight[1] != 0.0f || comp->weight[2] != 0.0f)
-            {
-                for (int i = 0; i < ncomponents(); ++i)
-                {
-                    ClosureComponent *existing = m_components[i];
-                    if (existing->id != comp->id) continue;
-                    const ClosureRegistry::ClosureEntry *closure = ss->find_closure(comp->id);
-                    DASSERT(closure != NULL);
-                    CompareClosureFunc compare = closure->compare;
-                    if (compare ? compare(comp->id, comp->mem, existing->mem) : !memcmp(comp->mem, existing->mem, closure->struct_size))
-                    {
-                        existing->weight += comp->weight;
-                        comp = NULL;
-                        break;
-                    }
-                }
-                if (comp)
-                    push_component(comp);
-            }
-            break;
-    }
-}
-*/
-
-
-
-
 const ustring Labels::NONE       = ustring(NULL);
 const ustring Labels::CAMERA     = ustring("C");
 const ustring Labels::LIGHT      = ustring("L");
@@ -142,7 +86,7 @@ print_component_value(std::ostream &out, ShadingSystemImpl *ss,
 static void
 print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemImpl *ss, const Color3 &weight)
 {
-    out << "(" << weight[0] << ", " << weight[1] << ", " << weight[2] << ") * ";
+    out << "(" << weight[0]*comp->w[0] << ", " << weight[1]*comp->w[1] << ", " << weight[2]*comp->w[2] << ") * ";
     const ClosureRegistry::ClosureEntry *clentry = ss->find_closure(comp->id);
     ASSERT(clentry);
     out << clentry->name.c_str() << " (";
@@ -205,16 +149,16 @@ print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl
 
 
 
-} // namespace pvt
-
-
-
 void
 print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss)
 {
     bool first = true;
     print_closure(out, closure, ss, Color3(1, 1, 1), first);
 }
+
+
+
+} // namespace pvt
 
 
 

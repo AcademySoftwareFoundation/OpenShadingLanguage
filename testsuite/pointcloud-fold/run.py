@@ -1,3 +1,3 @@
 #!/usr/bin/python 
 
-command += testshade("-fparam radius 1000 rdcloud")
+command += testshade("-param radius 1000.0 rdcloud")

@@ -291,6 +291,10 @@ NOISE_IMPL (noise, Noise)
 NOISE_IMPL_DERIV (noise, Noise)
 NOISE_IMPL (snoise, SNoise)
 NOISE_IMPL_DERIV (snoise, SNoise)
+NOISE_IMPL (simplexnoise, SimplexNoise)
+NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
+NOISE_IMPL (usimplexnoise, USimplexNoise)
+NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
 
 
@@ -627,6 +631,12 @@ struct GenericNoise {
         } else if (name == Strings::perlin || name == Strings::snoise) {
             SNoise snoise;
             snoise(result, s);
+        } else if (name == Strings::simplexnoise || name == Strings::simplex) {
+            SimplexNoise simplexnoise;
+            simplexnoise(result, s);
+        } else if (name == Strings::usimplexnoise || name == Strings::usimplex) {
+            USimplexNoise usimplexnoise;
+            usimplexnoise(result, s);
         } else if (name == Strings::cell) {
             CellNoise cellnoise;
             cellnoise(result.val(), s.val());
@@ -649,6 +659,12 @@ struct GenericNoise {
         } else if (name == Strings::perlin || name == Strings::snoise) {
             SNoise snoise;
             snoise(result, s, t);
+        } else if (name == Strings::simplexnoise || name == Strings::simplex) {
+            SimplexNoise simplexnoise;
+            simplexnoise(result, s, t);
+        } else if (name == Strings::usimplexnoise || name == Strings::usimplex) {
+            USimplexNoise usimplexnoise;
+            usimplexnoise(result, s, t);
         } else if (name == Strings::cell) {
             CellNoise cellnoise;
             cellnoise(result.val(), s.val(), t.val());

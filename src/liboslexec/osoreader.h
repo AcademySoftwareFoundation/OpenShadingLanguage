@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_OSOREADER_H
-#define OSL_OSOREADER_H
+#pragma once
 
 #include "osl_pvt.h"
 
@@ -89,9 +88,18 @@ public:
     ///
     virtual void symdefault (const char *def) { }
 
+    /// Return true for parsers whose only purpose is to read the header up
+    /// to params, to stop parsing as soon as we start encountering temps in
+    /// the symbol table.
+    virtual bool stop_parsing_at_temp_symbols () { return false; }
+
     /// Add a hint.
     ///
     virtual void hint (const char *hintstring) { }
+
+    /// Return true if this parser cares about the code, false if parsing
+    /// of oso may terminate once the symbol table has been parsed.
+    virtual bool parse_code_section () { return true; }
 
     /// New code section marker designating subsequent instructions.
     ///
@@ -142,5 +150,3 @@ private:
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_OSOREADER_H */

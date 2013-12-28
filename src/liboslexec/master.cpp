@@ -134,7 +134,8 @@ ShaderMaster::resolve_syms ()
         // Fix up the size of the symbol's data (for one point, not 
         // counting derivatives).
         if (s.typespec().is_closure()) {
-            s.size (sizeof (ClosureColor *)); // heap stores ptrs to closures
+            int alen = std::max (1, s.typespec().arraylength());
+            s.size (alen * sizeof (ClosureColor *)); // heap stores ptrs to closures
         } else if (s.typespec().is_structure()) {
             // structs are just placeholders, their fields are separate
             // symbols that hold the real data.

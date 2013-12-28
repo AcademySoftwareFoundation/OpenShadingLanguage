@@ -37,8 +37,7 @@ Sony Pictures Imageworks terms, above.
 */
 
 
-#ifndef OSLQUERY_H
-#define OSLQUERY_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -136,5 +135,3 @@ private:
 
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLQUERY_H */

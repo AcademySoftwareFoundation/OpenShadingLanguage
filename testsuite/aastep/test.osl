@@ -1,0 +1,14 @@
+shader
+test (output color Cout = 0)
+{
+    color white = 0.9, blue = color(0.05,0.05,0.9);
+    if (u < 0.5) {
+        // Left half -- step (should look jaggy)
+        float x = u - v/4;
+        Cout = mix (white, blue, step (0, x));
+    } else {
+        // Right half -- aastep (should look smooth)
+        float x = u - 0.5 - v/4;
+        Cout = mix (white, blue, aastep (0, x));
+    }
+}

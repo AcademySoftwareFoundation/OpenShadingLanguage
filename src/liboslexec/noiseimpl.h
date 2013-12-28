@@ -26,10 +26,14 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#pragma once
+
 #include <limits>
 
 #include "dual.h"
+#include "dual_vec.h"
 #include "oslexec_pvt.h"
+#include <OpenImageIO/hash.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -41,6 +45,16 @@ typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
                                  const float *period, NoiseParams *params);
 typedef void (*NoiseImplFunc)(float *out, const float *in,
                               const float *period, NoiseParams *params);
+
+float simplexnoise1 (float x, int seed=0, float *dnoise_dx=NULL);
+float simplexnoise2 (float x, float y, int seed=0,
+                     float *dnoise_dx=NULL, float *dnoise_dy=NULL);
+float simplexnoise3 (float x, float y, float z, int seed=0,
+                     float *dnoise_dx=NULL, float *dnoise_dy=NULL,
+                     float *dnoise_dz=NULL);
+float simplexnoise4 (float x, float y, float z, float w, int seed=0,
+                     float *dnoise_dx=NULL, float *dnoise_dy=NULL,
+                     float *dnoise_dz=NULL, float *dnoise_dw=NULL);
 
 
 namespace {
@@ -1190,6 +1204,248 @@ struct PeriodicSNoise {
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         perlin(result, h, px, py, pz, t);
+    }
+};
+
+
+
+struct SimplexNoise {
+    SimplexNoise () { }
+
+    inline void operator() (float &result, float x) const {
+        result = simplexnoise1 (x);
+    }
+
+    inline void operator() (float &result, float x, float y) const {
+        result = simplexnoise2 (x, y);
+    }
+
+    inline void operator() (float &result, const Vec3 &p) const {
+        result = simplexnoise3 (p.x, p.y, p.z);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t) const {
+        result = simplexnoise4 (p.x, p.y, p.z, t);
+    }
+
+    inline void operator() (Vec3 &result, float x) const {
+        result[0] = simplexnoise1 (x, 0);
+        result[1] = simplexnoise1 (x, 1);
+        result[2] = simplexnoise1 (x, 2);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y) const {
+        result[0] = simplexnoise2 (x, y, 0);
+        result[1] = simplexnoise2 (x, y, 1);
+        result[2] = simplexnoise2 (x, y, 2);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p) const {
+        result[0] = simplexnoise3 (p.x, p.y, p.z, 0);
+        result[1] = simplexnoise3 (p.x, p.y, p.z, 1);
+        result[2] = simplexnoise3 (p.x, p.y, p.z, 2);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result[0] = simplexnoise4 (p.x, p.y, p.z, t, 0);
+        result[1] = simplexnoise4 (p.x, p.y, p.z, t, 1);
+        result[2] = simplexnoise4 (p.x, p.y, p.z, t, 2);
+    }
+
+
+    // dual versions
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            int seed=0) const {
+        float r, dndx;
+        r = simplexnoise1 (x.val(), seed, &dndx);
+        result.set (r, dndx * x.dx(), dndx * x.dy());
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            const Dual2<float> &y, int seed=0) const {
+        float r, dndx, dndy;
+        r = simplexnoise2 (x.val(), y.val(), seed, &dndx, &dndy);
+        result.set (r, dndx * x.dx() + dndy * y.dx(),
+                       dndx * x.dy() + dndy * y.dy());
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            int seed=0) const {
+        float r, dndx, dndy, dndz;
+        r = simplexnoise3 (p.val()[0], p.val()[1], p.val()[2],
+                           seed, &dndx, &dndy, &dndz);
+        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2],
+                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2]);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t, int seed=0) const {
+        float r, dndx, dndy, dndz, dndt;
+        r = simplexnoise4 (p.val()[0], p.val()[1], p.val()[2], t.val(),
+                           seed, &dndx, &dndy, &dndz, &dndt);
+        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2] + dndt * t.dx(),
+                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2] + dndt * t.dy());
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, x, 0);
+        (*this)(r1, x, 1);
+        (*this)(r2, x, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, x, y, 0);
+        (*this)(r1, x, y, 1);
+        (*this)(r2, x, y, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, p, 0);
+        (*this)(r1, p, 1);
+        (*this)(r2, p, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, p, t, 0);
+        (*this)(r1, p, t, 1);
+        (*this)(r2, p, t, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+};
+
+
+
+// Unsigned simplex noise
+struct USimplexNoise {
+    USimplexNoise () { }
+
+    inline void operator() (float &result, float x) const {
+        result = 0.5f * (simplexnoise1 (x) + 1.0f);
+    }
+
+    inline void operator() (float &result, float x, float y) const {
+        result = 0.5f * (simplexnoise2 (x, y) + 1.0f);
+    }
+
+    inline void operator() (float &result, const Vec3 &p) const {
+        result = 0.5f * (simplexnoise3 (p.x, p.y, p.z) + 1.0f);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t) const {
+        result = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t) + 1.0f);
+    }
+
+    inline void operator() (Vec3 &result, float x) const {
+        result[0] = 0.5f * (simplexnoise1 (x, 0) + 1.0f);
+        result[1] = 0.5f * (simplexnoise1 (x, 1) + 1.0f);
+        result[2] = 0.5f * (simplexnoise1 (x, 2) + 1.0f);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y) const {
+        result[0] = 0.5f * (simplexnoise2 (x, y, 0) + 1.0f);
+        result[1] = 0.5f * (simplexnoise2 (x, y, 1) + 1.0f);
+        result[2] = 0.5f * (simplexnoise2 (x, y, 2) + 1.0f);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p) const {
+        result[0] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 0) + 1.0f);
+        result[1] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 1) + 1.0f);
+        result[2] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 2) + 1.0f);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result[0] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 0) + 1.0f);
+        result[1] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 1) + 1.0f);
+        result[2] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 2) + 1.0f);
+    }
+
+    // dual versions
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            int seed=0) const {
+        float r, dndx;
+        r = simplexnoise1 (x.val(), seed, &dndx);
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        result.set (r, dndx * x.dx(), dndx * x.dy());
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            const Dual2<float> &y, int seed=0) const {
+        float r, dndx, dndy;
+        r = simplexnoise2 (x.val(), y.val(), seed, &dndx, &dndy);
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        result.set (r, dndx * x.dx() + dndy * y.dx(),
+                       dndx * x.dy() + dndy * y.dy());
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            int seed=0) const {
+        float r, dndx, dndy, dndz;
+        r = simplexnoise3 (p.val()[0], p.val()[1], p.val()[2],
+                           seed, &dndx, &dndy, &dndz);
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        dndz *= 0.5f;
+        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2],
+                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2]);
+    }
+
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t, int seed=0) const {
+        float r, dndx, dndy, dndz, dndt;
+        r = simplexnoise4 (p.val()[0], p.val()[1], p.val()[2], t.val(),
+                           seed, &dndx, &dndy, &dndz, &dndt);
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        dndz *= 0.5f;
+        dndt *= 0.5f;
+        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2] + dndt * t.dx(),
+                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2] + dndt * t.dy());
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, x, 0);
+        (*this)(r1, x, 1);
+        (*this)(r2, x, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, x, y, 0);
+        (*this)(r1, x, y, 1);
+        (*this)(r2, x, y, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, p, 0);
+        (*this)(r1, p, 1);
+        (*this)(r2, p, 2);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        Dual2<float> r0, r1, r2;
+        (*this)(r0, p, t, 0);
+        (*this)(r1, p, t, 1);
+        (*this)(r2, p, t, 2);
+        result = make_Vec3 (r0, r1, r2);
     }
 };
 

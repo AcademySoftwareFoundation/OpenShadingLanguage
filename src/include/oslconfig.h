@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCONFIG_H
-#define OSLCONFIG_H
+#pragma once
 
 /////////////////////////////////////////////////////////////////////////
 /// \file
@@ -35,6 +34,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// principle, be redefined if you are using OSL in some particular
 /// renderer that wanted things a different way.
 /////////////////////////////////////////////////////////////////////////
+
+// Test if we are using C++11
+#if (__cplusplus >= 201103L)
+#define OSL_USING_CPLUSPLUS11 1
+#endif
 
 // Symbol export defines
 #include "export.h"
@@ -50,6 +54,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
+
+// Sort out smart pointers
+#ifdef OSL_USING_CPLUSPLUS11
+# include <memory>
+#else
+# include <boost/shared_ptr.hpp>
+#endif
 
 // Extensions to Imath
 #include "matrix22.h"
@@ -96,20 +107,12 @@ using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
 
+// Sort out smart pointers
+#ifdef OSL_USING_CPLUSPLUS11
+  using std::shared_ptr;
+#else
+  using boost::shared_ptr;
+#endif
 
-
-
-// These symbols define whether the shading system uses runflags, point
-// indices, or spans.  Exactly one should be set to 1!  
-// N.B. Spans not fully supported currently.
-#define USE_RUNFLAGS   0
-#define USE_RUNINDICES 0
-#define USE_RUNSPANS   1
-
-
-// Temporary measure to identify the branch with LLVM support.  Sorry.
-#define LLVM_SUPPORT   1
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCONFIG_H */

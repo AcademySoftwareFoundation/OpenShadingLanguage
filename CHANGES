@@ -1,3 +1,242 @@
+Release 1.5 -- in progress (compared to 1.4)
+--------------------------------------------
+Language, standard libary, and compiler changes (for shader writers):
+
+ShadingSystem API changes and new options (for renderer writers):
+* ShadingSystem::Parameter() has a new variety that can set lockgeom=0
+  for a particular parameter at runtime, even if it was not declared
+  this way in the shader's metadata.  This allows an app to effectively
+  say "I intend to vary this shader's parameter value, don't optimize as
+  if it were a a constant." (1.5.1)
+* New ShadingSystem::ReParameter() lets you change the instance value of
+  a shader parameter after the shader group has already been declared
+  (but only if the shader has not yet been optimized, OR if the
+  parameter was declared with lockgeom=0). This, in combination with the
+  new SS::Parameter() variety, lets an app select a parameter for
+  variation, compile the shader network, and then continuously modify
+  the value and re-render without needing to redeclare and recompile the
+  shader group (though at a slightly higher execution cost than if the
+  parameter were fully optimized. (1.5.1)
+* ShadingAttribState has been simlified and replaced with ShaderGroup.
+  And ShadingAttribStateRef replaced by ShaderGroupRef. (1.5.1)
+* ShaderGroupBegin returns the ShaderGroupRef for the group, there is
+  no need to call state() to get the group reference. (1.5.1)
+
+Performance improvements:
+* Dramatically speed up LLVM optimization & JIT of small shaders --
+  reducing the per-shader-network compile overhead of small shaders
+  from 0.1-0.2s to less than 0.01s per shader group. (1.5.1)
+
+Bug fixes:
+* testshade/testrender timer didn't properly break out execution time
+  from setup time. (1.5.1)
+
+Under the hood:
+* Internals refactor that separates the runtime optimization from the
+  LLVM generation and JIT. (1.5.1)
+* Removed legacy built-in closures that weren't actually used. (1.5.1)
+
+Build & test system improvements and developer goodies:
+* testshade consolidates --iparam, --fparam, --vparam, --sparam into
+  just --param that figures out the types (or could be explicitly
+  told. (1.5.1)
+
+Documentation:
+
+
+
+Release 1.4.0 - 12 November 2013 (compared to 1.3)
+--------------------------------------------------
+
+Language, standard libary, and compiler changes (for shader writers):
+
+* Simplex noise: new noise varieties "simplex" and "usimplex" are 
+  faster than Perlin noise (and MUCH faster for the 4-D variety),
+  but has a somewhat different appearance.  Judge for yourself, use
+  whichever noise suits your purpose.
+* oslc now catches mismatches between the format string and the types
+  of arguments to format(), printf(), fprintf(), warning(), and error().
+* oslc now gives a compile error when trying to use a function as
+  if it were an ordinary variable. (1.3.2)
+* Improvement to oslc function type checking -- allow more nuanced
+  matching of polymorphism based on return types.  First we check for
+  identical return types, then we test allowing non-identical spatial
+  triples to match, then finally we allow any return type to match.
+* New ShadingSystem attribute "debug_uninit", which when set to nonzero
+  tries to detect use of uninitialized variables at runtime.  (Off by
+  default because it's very expensive, just use if you are debugging.)
+* Implemented the OSL aastep() function, which was always described in
+  the docs but never implemented.
+* The texture lookup functions all take new optional parameters,
+  "missingtexture", (color), "missingalpha", (float), which when supplied
+  will substitute that color and alpha for missing or broken textures,
+  rather than treating it as an error condition.
+* New gettextureinfo() queries: "datawindow", "displaywindow" (both take
+  an int[4] as destination argument).
+
+ShadingSystem API changes and new options (for renderer writers):
+
+* New ShadingSystem attribute "renderer_outputs" enumerates the renderer
+  outputs (AOVs) explicitly, so that elision of unused outputs can be done
+  with full understanding of which params will or will not be sued.
+  Beware: if you enable "opt_elide_unconnected_outputs", you MUST pass
+  "renderer_outputs" or your AOVs may be eliminated!
+
+Performance improvements:
+
+* "Middleman" optimization notices when you have 3 layers A,B,C with
+  connections A.Aout -> B.Bin and B.Bout -> C.Cin, an Bout is simply
+  copied unconditionally from Bin.  In this case, Aout is connected
+  directly to Cin, potentially leading to further optimizations, including
+  layer B getting culled entirely.
+* Layer-to-layer global propagation: Notice cases where an upstream
+  output is guaranteed to be aassigned a global variable (such as N or u)
+  and then alias the downstream parameter to that global (eliminating
+  the connection and possibly culling the upstream layer entirely).
+* Improve constant propagation from layer to layer (it used to do so only
+  if the output of the earlier layer was never used in the upstream layer;
+  but actually it's ok for it to be read, as long as it's not rewritten).
+* Runtime constant-folding of cellnoise() calls.
+* Local variables that are arrays initialized with float, int, or string
+  constants have been greatly optimized.  If that's the only time anything
+  is written into the array, it will be turned into a true static constant
+  with no per-shader-invocation initialization or allocation costs.
+  Thus, it is no longer expensive to use a large array of constants as a
+  table... it may look like a per-shade cost to set up the array, but by
+  the time the optimizer gets done with it, it is not.
+* Improved runtime constant-folding of max/min (now works for the integer
+  case, as well as previously working for the float-based types).
+* Runtime constant-folding of cos, sin, acos, asin, normalize, inversesqrt,
+  exp, exp2, expm1, log, log2, log10, logb, erf, erfc, radians, degrees.
+* Optimization that speeds up certain closure manipulations and can
+  cut overhead especially for relatively simple shaders.
+* New peephole optimizations for two common patterns: 
+  (1) add A B C ; sub D A C => [add A B C;] assign D B
+  and the same if the order of add & sub are switched.
+  (2) OP A B... ; assign A C => OP C B...  as long as A is not subsequently
+  used and OP fully overwrites A and writes to no other variables.
+* Constant folding of Dx, Dy, Dz, area, and filterwidth, when passed a
+  constant (the deriv will be 0 in that case).
+* Substantial multithread speedups by eliminating testing of some shared
+  variables.
+* Constant folding of add & sub for the mixed float/triple cases.
+* Speed up closure construction by combining the closure primitive with
+  its (nearly inevitable) multiplication by weight, into a single internal
+  operation.
+* The OSLQuery library has been sped up by 20x when querying the parameters
+  of large shaders.
+
+Bug fixes:
+
+* Fix 'debugnan' tendency to give false positives for certain assignments
+  to arrays and multi-component variables (colors, points, etc.).
+* The integer versions of min(), max(), and clamp() were not working
+  properly. (1.3.1)
+* fmod(triple,triple,float) was not working properly in Windows. (1.3.2)
+* Avoid incorrect heap addressing when retrieving a symbol's address. (1.3.2)
+* Fix for a bug where an early 'return' from a shader could lead to
+  output parameters not being properly copied to the inputs of their
+  downstream connections. (1.3.2)
+* Fix bug where filterwidth() didn't properly mark itself as needing
+  derivatives of its argument. (1.3.2)
+* Bug fix: Was not properly initializing the default values of output
+  params if they were written but never subsequently read.
+* Better error handling for missing pointclouds.
+* Fixed improper initialization of arrays of closures.
+* Fixed constant folding bug for the split() function.
+* Fixed constant folding bug for pow(x,2.0).
+
+Under the hood:
+
+* Eliminate use of custom DEBUG preprocessor symbol in favor of the more
+  standard NDEBUG (beware: its sense is reversed).
+* All references to and vestiges of TBB have been removed.
+
+Build & test system improvements and developer goodies:
+
+* testshade: --options lets you set arbitrary options to the ShadingSystem
+  for test runs.
+* Added CMake option 'ENABLERTTI' that enables use of RTTI for sites that
+  must link against an RTTI-enabled LLVM (the default is to assume LLVM
+  is built without RTTI, so we don't use it either). (1.3.1)
+* Fix some ambiguity about which variety of shared_ptr we are using -- 
+  this could produce problems in apps that include the OSL headers but also
+  use different shared_ptr varieties.
+* Fix a variety of build issues and warnings under Windows.
+* Work around CMake bug where on some platforms, CMake doesn't define the
+  'NDEBUG' when making the 'RelWithDebInfo' target (which is sometimes
+  used for profiling). (1.3.1)
+* Add Make/CMake option 'USE_EXTERNAL_PUGIXML' which if set to nonzero
+  will find and use a system-installed PugiXML rather than assuming that
+  it's included in libOpenImageIO.  When used, it will also use the
+  environment variable PUGIXML_HOME (if set) as a hint for where to find
+  it, in case it's not in a usual system library directory. (1.3.1)
+* Nicer debug printing (for developers) when an op doesn't have an
+  associated source line. (1.3.2)
+* Reorder include directories for building LLVM bitcode so that the
+  openimageio, ilmbase and boost directories are ahead of any system
+  directories given by llvm-config --cxxflags.  This avoids the LLVM
+  bitcode getting compiled against different library versions than the
+  rest of the code if multiple versions are installed.
+* Have debug_groupname and debug_layername apply to LLVM debugging info
+  as well.
+* Support for LLVM 3.3.
+* Fix compiler warnings for clang 3.3 and libc++.
+* CMake files now more carefully quote assembled file paths to more
+  gracefully handle paths with spaces in them.
+* CMakeLists.txt has been moved to the top level (not in src/) to conform
+  to the usual CMake conventions.
+
+Documentation:
+
+* Eliminate references to OSL random() function; it was never
+  implemented and nobody seemed to miss it or have a compelling use
+  case. (1.3.1)
+
+
+
+
+Release 1.3.3 - 11 July 2013 (compared to 1.3.2)
+------------------------------------------------
+* Fix bug in the implementation of filterwidth() when passed a constant
+  (for which no derivative could be taken).
+* Changes to support LLVM 3.3.
+
+
+Release 1.3.2 - 19 Jun 2013 (compared to 1.3.1)
+-----------------------------------------------
+* fmod(triple,triple,float) was not working properly in Windows.
+* Nicer debug printing (for developers) when an op doesn't have an
+  associated source line.
+* Avoid incorrect heap addressing when retrieving a symbol's address.
+* oslc new gives a compile error when trying to use a function as
+  if it were an ordinary variable.
+* Fix for a bug where an early 'return' from a shader could lead to
+  output parameters not being properly copied to the inputs of their
+  downstream connections.
+* Fix bug where filterwidth() didn't properly mark itself as needing
+  derivatives of its argument.
+
+
+Release 1.3.1 - 15 May 2013 (compared to 1.3.0)
+-----------------------------------------------
+* The integer versions of min(), max(), and clamp() were not working
+  properly.
+* Added CMake option 'ENABLERTTI' that enables use of RTTI for sites that
+  must link against an RTTI-enabled LLVM (the default is to assume LLVM
+  is built without RTTI, so we don't use it either).
+* Work around CMake bug where on some platforms, CMake doesn't define the
+  'NDEBUG' when making the 'RelWithDebInfo' target (which is sometimes
+  used for profiling).
+* Docs: Eliminated discussion of random(), which was never implemented
+  and we can't think of a good use case.
+* Add Make/CMake option 'USE_EXTERNAL_PUGIXML' which if set to nonzero
+  will find and use a system-installed PugiXML rather than assuming that
+  it's included in libOpenImageIO.  When used, it will also use the
+  environment variable PUGIXML_HOME (if set) as a hint for where to find
+  it, in case it's not in a usual system library directory.
+
+
 Release 1.3.0 - 14 Feb 2013 (compared to 1.2)
 ----------------------------------------------
 

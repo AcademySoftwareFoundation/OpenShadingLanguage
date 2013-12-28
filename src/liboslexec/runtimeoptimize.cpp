@@ -54,6 +54,7 @@ static ustring u_nop    ("nop"),
                u_continue ("continue"),
                u_return ("return"),
                u_useparam ("useparam"),
+               u_closure ("closure"),
                u_pointcloud_write ("pointcloud_write"),
                u_isconnected ("isconnected"),
                u_setmessage ("setmessage"),
@@ -82,12 +83,28 @@ void erase_if (Container &c, const Predicate &p)
 
 
 
-RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
+OSOProcessorBase::OSOProcessorBase (ShadingSystemImpl &shadingsys,
                                     ShaderGroup &group, ShadingContext *ctx)
     : m_shadingsys(shadingsys),
-      m_thread(shadingsys.get_perthread_info()),
+      m_group(group),
       m_context(ctx),
       m_debug(shadingsys.debug()),
+      m_inst(NULL)
+{
+    set_debug ();
+}
+
+
+
+OSOProcessorBase::~OSOProcessorBase ()
+{
+}
+
+
+
+RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
+                                    ShaderGroup &group, ShadingContext *ctx)
+    : OSOProcessorBase(shadingsys, group, ctx),
       m_optimize(shadingsys.optimize()),
       m_opt_simplify_param(shadingsys.m_opt_simplify_param),
       m_opt_constant_fold(shadingsys.m_opt_constant_fold),
@@ -99,29 +116,29 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
       m_opt_middleman(shadingsys.m_opt_middleman),
-      m_group(group),
-      m_inst(NULL), m_pass(0),
+      m_pass(0),
       m_next_newconst(0), m_next_newtemp(0),
-      m_stat_opt_locking_time(0), m_stat_specialization_time(0),
-      m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
-      m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
-      m_stat_llvm_jit_time(0),
-      m_llvm_context(NULL), m_llvm_module(NULL),
-      m_llvm_exec(NULL), m_builder(NULL),
-      m_llvm_passes(NULL), m_llvm_func_passes(NULL)
+      m_stat_opt_locking_time(0), m_stat_specialization_time(0)
 {
-    set_debug ();
     memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
-    m_shaderglobals.context = m_context;
+    m_shaderglobals.context = shadingcontext();
 }
 
 
 
 RuntimeOptimizer::~RuntimeOptimizer ()
 {
-    delete m_builder;
-    delete m_llvm_passes;
-    delete m_llvm_func_passes;
+}
+
+
+
+void
+OSOProcessorBase::set_inst (int newlayer)
+{
+    m_layer = newlayer;
+    m_inst = group()[m_layer];
+    ASSERT (m_inst != NULL);
+    set_debug ();
 }
 
 
@@ -129,10 +146,7 @@ RuntimeOptimizer::~RuntimeOptimizer ()
 void
 RuntimeOptimizer::set_inst (int newlayer)
 {
-    m_layer = newlayer;
-    m_inst = m_group[m_layer];
-    ASSERT (m_inst != NULL);
-    set_debug ();
+    OSOProcessorBase::set_inst (newlayer);
     m_all_consts.clear ();
     m_symbol_aliases.clear ();
     m_block_aliases.clear ();
@@ -142,14 +156,36 @@ RuntimeOptimizer::set_inst (int newlayer)
 
 
 void
-RuntimeOptimizer::set_debug ()
+OSOProcessorBase::set_debug ()
 {
     // start with the shading system's idea of debugging level
     m_debug = shadingsys().debug();
 
-    if (shadingsys().m_debug_groupname &&
-        shadingsys().m_debug_groupname != m_group.name()) {
+    // Force debugging off if a specific group was selected for debug
+    // and we're not it.
+    if (shadingsys().debug_groupname() &&
+        shadingsys().debug_groupname() != group().name()) {
         m_debug = 0;
+    }
+    // Force debugging off if a specific instance was selected for debug
+    // and we're not currently examining it.
+    if (inst() && shadingsys().debug_layername() &&
+        shadingsys().debug_layername() != inst()->layername()) {
+        m_debug = 0;
+    }
+}
+
+
+
+void
+RuntimeOptimizer::set_debug ()
+{
+    OSOProcessorBase::set_debug ();
+
+    // If a specific group is isolated for debugging and  the
+    // 'optimize_dondebug' flag is on, fully optimize all other groups.
+    if (shadingsys().debug_groupname() &&
+        shadingsys().debug_groupname() != group().name()) {
         if (shadingsys().m_optimize_nondebug) {
             // Debugging trick: if user said to only debug one group, turn
             // on full optimization for all others!  This prevents
@@ -167,11 +203,6 @@ RuntimeOptimizer::set_debug ()
             m_opt_mix = true;
             m_opt_middleman = true;
         }
-    }
-    // if user said to only debug one layer, turn off debug if not it
-    if (inst() && shadingsys().m_debug_layername &&
-        shadingsys().m_debug_layername != inst()->layername()) {
-        m_debug = 0;
     }
 }
 
@@ -314,6 +345,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
 void
 RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 {
+    // We don't know the op num here, so we subtract the pointers
     int opnum = &op - &(inst()->ops()[0]);
     if (debug() > 1)
         std::cout << "turned op " << opnum
@@ -327,8 +359,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
     op.argread (1, true);
     op.argwrite (1, false);
     // Need to make sure the symbol we're assigning is marked as read
-    // for this op.  Unfortunately, mark_rw takes the op number, we just
-    // have the pointer, so we subtract to get it.
+    // for this op.
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     Symbol *arg = opargsym (op, 1);
     arg->mark_rw (opnum, true, false);
@@ -650,6 +681,36 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
 
 
 
+bool
+OSOProcessorBase::is_zero (const Symbol &A)
+{
+    if (! A.is_constant())
+        return false;
+    const TypeSpec &Atype (A.typespec());
+    static Vec3 Vzero (0, 0, 0);
+    return (Atype.is_float() && *(const float *)A.data() == 0) ||
+        (Atype.is_int() && *(const int *)A.data() == 0) ||
+        (Atype.is_triple() && *(const Vec3 *)A.data() == Vzero);
+}
+
+
+
+bool
+OSOProcessorBase::is_one (const Symbol &A)
+{
+    if (! A.is_constant())
+        return false;
+    const TypeSpec &Atype (A.typespec());
+    static Vec3 Vone (1, 1, 1);
+    static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    return (Atype.is_float() && *(const float *)A.data() == 1) ||
+        (Atype.is_int() && *(const int *)A.data() == 1) ||
+        (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
+        (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
+}
+
+
+
 void
 RuntimeOptimizer::register_message (ustring name)
 {
@@ -742,7 +803,7 @@ RuntimeOptimizer::simplify_params ()
                     // srcsym is the earlier group's output param, which
                     // is connected as the input to the param we're
                     // examining.
-                    ShaderInstance *uplayer = m_group[c.srclayer];
+                    ShaderInstance *uplayer = group()[c.srclayer];
                     Symbol *srcsym = uplayer->symbol(c.src.param);
                     if (!srcsym->lockgeom())
                         continue; // Not if it can be overridden by geometry
@@ -828,13 +889,8 @@ RuntimeOptimizer::find_params_holding_globals ()
 
 
 
-/// Set up m_in_conditional[] to be true for all ops that are inside of
-/// conditionals, false for all unconditionally-executed ops, m_in_loop[]
-/// to be true for all ops that are inside a loop, and m_first_return
-/// to be the op number of the first return/exit statement (or code.size()
-/// if there is no return/exit statement).
 void
-RuntimeOptimizer::find_conditionals ()
+OSOProcessorBase::find_conditionals ()
 {
     OpcodeVec &code (inst()->ops());
 
@@ -861,13 +917,8 @@ RuntimeOptimizer::find_conditionals ()
 
 
 
-/// Identify basic blocks by assigning a basic block ID for each
-/// instruction.  Within any basic bock, there are no jumps in or out.
-/// Also note which instructions are inside conditional states.
-/// If do_llvm is true, also construct the m_bb_map that maps opcodes
-/// beginning BB's to llvm::BasicBlock records.
 void
-RuntimeOptimizer::find_basic_blocks (bool do_llvm)
+OSOProcessorBase::find_basic_blocks ()
 {
     OpcodeVec &code (inst()->ops());
 
@@ -885,7 +936,7 @@ RuntimeOptimizer::find_basic_blocks (bool do_llvm)
     }
 
     // Main code starts a basic block
-    block_begin[inst()->m_maincodebegin] = true;
+    block_begin[inst()->maincodebegin()] = true;
 
     for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
         Opcode &op (code[opnum]);
@@ -1004,7 +1055,7 @@ RuntimeOptimizer::is_simple_assign (Opcode &op)
     // Simple only if arg0 is the only write, and is write only.
     if (op.argwrite_bits() != 1 || op.argread(0))
         return false;
-    const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
+    const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
     if (!opd || !opd->simple_assign)
         return false;   // reject all other known non-simple assignments
     // Make sure the result isn't also read
@@ -1034,15 +1085,6 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 
 
 bool
-RuntimeOptimizer::is_renderer_output (ustring name) const
-{
-    const std::vector<ustring> &aovs (shadingsys().m_renderer_outputs);
-    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
-}
-
-
-
-bool
 RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 {
     // Try to figure out if this symbol is completely unused after this
@@ -1059,7 +1101,7 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
             return false;   // Asked not do do this optimization
         if (A->connected_down())
             return false;   // Connected to something downstream
-        if (is_renderer_output (A->name()))
+        if (shadingsys().is_renderer_output (A->name()))
             return false;   // This is a renderer output -- don't cull it
     }
 
@@ -1342,7 +1384,7 @@ public:
                 return false;   // Asked not to do this optimization
             if (sym.connected_down())
                 return false;   // Connected to something downstream
-            if (m_rop.is_renderer_output (sym.name()))
+            if (m_rop.shadingsys().is_renderer_output (sym.name()))
                 return false;   // This is a renderer output
             return (sym.lastuse() < sym.initend());
         }
@@ -1456,6 +1498,112 @@ RuntimeOptimizer::peephole2 (int opnum)
         return 2;
     }
 
+    // Look for add of a value then subtract of the same value
+    //     add a b c     or:    sub a b c
+    //     sub d a c            add d a c
+    // the second instruction should be changed to
+    //     assign d b
+    // and furthermore, if the only use of a is on these two lines or
+    // if a == d, then the first instruction can be changed to a 'nop'.
+    // Careful, "only used on these two lines" can be tricky if 'a' is a
+    // global or output parameter, which are used after the shader finishes!
+    if (((op.opname() == u_add && next.opname() == u_sub) ||
+         (op.opname() == u_sub && next.opname() == u_add)) &&
+        opargsym(op,0) == opargsym(next,1) &&
+        opargsym(op,2) == opargsym(next,2) &&
+        opargsym(op,0) != opargsym(next,2) /* a != c */) {
+        Symbol *a = opargsym(op,0);
+        Symbol *d = opargsym(next,0);
+        turn_into_assign (next, oparg(op,1)/*b*/, "simplify add/sub pair");
+        if ((a->firstuse() >= opnum && a->lastuse() <= op2num &&
+             ((a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam)))
+            || a == d) {
+            turn_into_nop (op, "simplify add/sub pair");
+            return 2;
+        }
+        else
+            return 1;
+    }
+
+    // Look for simple functions followed by an assignment:
+    //    OP a b...
+    //    assign c a
+    // If OP is "simple" (completely overwrites its first argument, only
+    // reads the rest), and a and c are the same type, and a is never
+    // used again, then we can replace those two instructions with:
+    //    OP c b...
+    // Careful, "never used again" can be tricky if 'a' is a global or
+    // output parameter, which are used after the shader finishes!
+    if (next.opname() == u_assign && 
+        op.nargs() >= 1 && opargsym(op,0) == opargsym(next,1) &&
+        is_simple_assign(op)) {
+        Symbol *a = opargsym(op,0);
+        Symbol *c = opargsym(next,0);
+        if (a->firstuse() >= opnum && a->lastuse() <= op2num &&
+              (a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam) &&
+              equivalent (a->typespec(), c->typespec())) {
+            inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
+            c->mark_rw (opnum, false, true);
+            // Any time we write to a variable that wasn't written to at
+            // this op previously, we need to block_unalias it, or it
+            // can dealias to the wrong thing when examining subsequent
+            // instructions.
+            block_unalias (oparg(op,0));  // clear any aliases
+            turn_into_nop (next, "daisy-chain op and assignment");
+            return 2;
+        }
+    }
+
+    // Convert this combination
+    //     closure A name arg...
+    //     mul B A weight
+    // into
+    //     closure B C name arg...
+    // That is, collapse a creation and immediate scale of a closure into
+    // a single closure-with-scale constructor. (Valid if A is not used
+    // elsewhere.)  Further refinement: if weight = 1, no need to do
+    // the scale, and if weight == 0, eliminate the work entirely.
+    // We only do this optimization on pass > 1, to give a fair chance
+    // for other optimizations to be able to turn the weight into a
+    // constant before we do this one (since if it's 1 or 0, we can
+    // simplify further).
+    if (op.opname() == u_closure && next.opname() == u_mul
+          && optimization_pass() > 1) {
+        Symbol *a = opargsym(op,0);
+        Symbol *name = opargsym(op,1);
+        Symbol *aa = opargsym(next,1);
+        Symbol *weight = opargsym(next,2);
+        int weightarg = 2;
+        if (weight->typespec().is_closure()) {  // opposite order
+            std::swap (aa, weight);
+            weightarg = 1;
+        }
+        if (name->typespec().is_string() &&
+            a->firstuse() >= opnum && a->lastuse() <= op2num &&
+            a == aa && weight->typespec().is_triple()) {
+            if (is_zero(*weight)) {
+                turn_into_nop (op, "zero-weighted closure");
+                turn_into_assign (next, add_constant(0.0f),
+                                  "zero-weighted closure");
+                return 1;
+            }
+            // FIXME - handle weight being a float as well
+            std::vector<int> newargs;
+            newargs.push_back (oparg(next,0)); // B
+            if (! is_one(*weight))
+                newargs.push_back (oparg(next,weightarg)); // weight
+            for (int i = 1;  i < op.nargs();  ++i)
+                newargs.push_back (oparg(op,i));
+            turn_into_nop (op, "combine closure+mul");
+            turn_into_nop (next, "combine closure+mul");
+            insert_code (opnum, u_closure, newargs, true, 1);
+            if (debug() > 1)
+                std::cout << "op " << opnum << "-" << (op2num) 
+                          << " combined closure+mul\n";            
+            return 1;
+        }
+    }
+
     // No changes
     return 0;
 }
@@ -1470,9 +1618,9 @@ RuntimeOptimizer::mark_outgoing_connections ()
     inst()->outgoing_connections (false);
     FOREACH_PARAM (Symbol &s, inst())
         s.connected_down (false);
-    for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
-        BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
-            if (c.srclayer == m_layer) {
+    for (int lay = layer()+1;  lay < group().nlayers();  ++lay) {
+        BOOST_FOREACH (Connection &c, group()[lay]->m_connections)
+            if (c.srclayer == layer()) {
                 inst()->symbol(c.src.param)->connected_down (true);
                 inst()->outgoing_connections (true);
             }
@@ -1745,7 +1893,7 @@ RuntimeOptimizer::optimize_instance ()
             // For various ops that we know how to effectively
             // constant-fold, dispatch to the appropriate routine.
             if (optimize() >= 2 && m_opt_constant_fold) {
-                const OpDescriptor *opd = m_shadingsys.op_descriptor (op.opname());
+                const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
                 if (opd && opd->folder) {
                     size_t old_num_ops = inst()->ops().size();
                     changed += (*opd->folder) (*this, opnum);
@@ -1799,6 +1947,12 @@ RuntimeOptimizer::optimize_instance ()
                 // have performed all the other transformations that may
                 // turn this op into an assignment.
                 changed += constfold_assign (*this, opnum);
+                if (op.opname() != u_assign) {
+                    // The const fold has changed the assignment to something
+                    // other than assign (presumably nop), so skip the other
+                    // assignment transformations below.
+                    continue;
+                }
 
                 if ((A->is_constant() || A->lastwrite() < opnum) &&
                     equivalent(R->typespec(), A->typespec())) {
@@ -1837,11 +1991,13 @@ RuntimeOptimizer::optimize_instance ()
                     // Just an assignment to itself -- turn into NOP!
                     turn_into_nop (op, "self-assignment");
                     ++changed;
+                    continue;
                 } else if (R_local_or_tmp && R->lastread() < opnum
                            && ! m_in_loop[opnum]) {
                     // Don't bother assigning if we never read it again
                     turn_into_nop (op, "symbol never read again");
                     ++changed;
+                    continue;
                 }
             }
 
@@ -2292,9 +2448,9 @@ RuntimeOptimizer::collapse_syms ()
     // that aren't needed downstream can be removed.
     FOREACH_PARAM (Symbol &s, inst())
         s.connected_down (false);
-    for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
-        BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
-            if (c.srclayer == m_layer)
+    for (int lay = layer()+1;  lay < group().nlayers();  ++lay) {
+        BOOST_FOREACH (Connection &c, group()[lay]->m_connections)
+            if (c.srclayer == layer())
                 inst()->symbol(c.src.param)->connected_down (true);
     }
 
@@ -2326,9 +2482,9 @@ RuntimeOptimizer::collapse_syms ()
         c.dst.param = symbol_remap[c.dst.param];
 
     // Fix downstream connections that reference us
-    for (int lay = m_layer+1;  lay < m_group.nlayers();  ++lay) {
-        BOOST_FOREACH (Connection &c, m_group[lay]->m_connections)
-            if (c.srclayer == m_layer)
+    for (int lay = layer()+1;  lay < group().nlayers();  ++lay) {
+        BOOST_FOREACH (Connection &c, group()[lay]->m_connections)
+            if (c.srclayer == layer())
                 c.src.param = symbol_remap[c.src.param];
     }
 
@@ -2430,19 +2586,15 @@ RuntimeOptimizer::collapse_ops ()
 
 
 void
-RuntimeOptimizer::optimize_group ()
+RuntimeOptimizer::run ()
 {
     Timer rop_timer;
+    int nlayers = (int) group().nlayers ();
     if (debug())
-        m_shadingsys.info ("About to optimize shader group %s:",
-                           m_group.name().c_str());
-    int nlayers = (int) m_group.nlayers ();
+        shadingsys().info ("About to optimize shader group %s (%d layers):",
+                           group().name().c_str(), nlayers);
 
     m_params_holding_globals.resize (nlayers);
-
-    // If no closures were provided, register the builtin ones
-    if (m_shadingsys.m_closure_registry.empty())
-        m_shadingsys.register_builtin_closures();
 
     // Optimize each layer, from first to last
     size_t old_nsyms = 0, old_nops = 0;
@@ -2450,7 +2602,7 @@ RuntimeOptimizer::optimize_group ()
         set_inst (layer);
         if (inst()->unused())
             continue;
-        m_inst->copy_code_from_master ();
+        inst()->copy_code_from_master ();
         if (debug() && optimize() >= 1) {
             std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 
@@ -2493,7 +2645,7 @@ RuntimeOptimizer::optimize_group ()
         // upstream connections as also needing derivatives.
         BOOST_FOREACH (Connection &c, inst()->m_connections) {
             if (inst()->symbol(c.dst.param)->has_derivs()) {
-                Symbol *source = m_group[c.srclayer]->symbol(c.src.param);
+                Symbol *source = group()[c.srclayer]->symbol(c.src.param);
                 if (! source->typespec().is_closure_based() &&
                     source->typespec().elementtype().is_floatbased()) {
                     source->has_derivs (true);
@@ -2535,294 +2687,24 @@ RuntimeOptimizer::optimize_group ()
     }
 
     m_stat_specialization_time = rop_timer();
-
-    Timer timer;
-    build_llvm_group ();
-    m_stat_total_llvm_time = timer();
-
-    // Once we're generated the IR, we really don't need the ops and args,
-    // and we only need the syms that include the params.
-    off_t symmem = 0;
-    size_t connectionmem = 0;
-    for (int layer = 0;  layer < nlayers;  ++layer) {
-        set_inst (layer);
-        // We no longer needs ops and args -- create empty vectors and
-        // swap with the ones in the instance.
-        OpcodeVec noops;
-        std::swap (inst()->ops(), noops);
-        std::vector<int> noargs;
-        std::swap (inst()->args(), noargs);
-
-        if (inst()->unused()) {
-            // If we'll never use the layer, we don't need the syms at all
-            SymbolVec nosyms;
-            std::swap (inst()->symbols(), nosyms);
-            symmem += vectorbytes(nosyms);
-            // also don't need the connection info any more
-            connectionmem += (off_t) inst()->clear_connections ();
-        }
-    }
     {
         // adjust memory stats
         ShadingSystemImpl &ss (shadingsys());
         spin_lock lock (ss.m_stat_mutex);
-        ss.m_stat_mem_inst_syms -= symmem;
-        ss.m_stat_mem_inst_connections -= connectionmem;
-        ss.m_stat_mem_inst -= symmem + connectionmem;
-        ss.m_stat_memory -= symmem + connectionmem;
         ss.m_stat_preopt_syms += old_nsyms;
         ss.m_stat_preopt_ops += old_nops;
         ss.m_stat_postopt_syms += new_nsyms;
         ss.m_stat_postopt_ops += new_nops;
-        ss.m_stat_max_llvm_local_mem = std::max (ss.m_stat_max_llvm_local_mem,
-                                                  m_llvm_local_mem);
     }
-
-    if (m_shadingsys.m_compile_report) {
-        if (m_group.name()) {
-            m_shadingsys.info ("Optimized shader group %s:", m_group.name().c_str());
-            m_shadingsys.info ("    New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-              new_nsyms, old_nsyms,
+    if (shadingsys().m_compile_report) {
+        shadingsys().info ("Optimized shader group %s:",
+                           group().name() ? group().name().c_str() : "");
+        shadingsys().info (" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+              m_stat_specialization_time, new_nsyms, old_nsyms,
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
               new_nops, old_nops,
               100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
-        } else {
-            m_shadingsys.info ("Optimized shader group: New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
-              new_nsyms, old_nsyms,
-              100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
-              new_nops, old_nops,
-              100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
-        }
-        m_shadingsys.info ("    (%1.2fs = %1.2f spc, %1.2f lllock, %1.2f llset, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
-                           m_stat_total_llvm_time+m_stat_specialization_time,
-                           m_stat_specialization_time, 
-                           m_stat_opt_locking_time, m_stat_llvm_setup_time,
-                           m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
-                           m_stat_llvm_jit_time,
-                           m_llvm_local_mem/1024);
     }
-}
-
-
-
-void
-ShadingSystemImpl::optimize_group (ShadingAttribState &attribstate, 
-                                   ShaderGroup &group)
-{
-    Timer timer;
-    lock_guard lock (group.m_mutex);
-    if (group.optimized()) {
-        // The group was somehow optimized by another thread between the
-        // time we checked group.optimized() and now that we have the lock.
-        // Nothing to do but record how long we waited for the lock.
-        spin_lock stat_lock (m_stat_mutex);
-        double t = timer();
-        m_stat_optimization_time += t;
-        m_stat_opt_locking_time += t;
-        return;
-    }
-
-    if (m_only_groupname && m_only_groupname != group.name()) {
-        // For debugging purposes, we are requested to compile only one
-        // shader group, and this is not it.  Mark it as does_nothing,
-        // and also as optimized so nobody locks on it again, and record
-        // how long we waited for the lock.
-        group.does_nothing (true);
-        group.m_optimized = true;
-        spin_lock stat_lock (m_stat_mutex);
-        double t = timer();
-        m_stat_optimization_time += t;
-        m_stat_opt_locking_time += t;
-        return;
-    }
-
-    double locking_time = timer();
-
-    ShadingContext *ctx = get_context ();
-    RuntimeOptimizer rop (*this, group, ctx);
-    rop.optimize_group ();
-    release_context (ctx);
-
-    attribstate.changed_shaders ();
-    group.m_optimized = true;
-    spin_lock stat_lock (m_stat_mutex);
-    m_stat_optimization_time += timer();
-    m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
-    m_stat_specialization_time += rop.m_stat_specialization_time;
-    m_stat_total_llvm_time += rop.m_stat_total_llvm_time;
-    m_stat_llvm_setup_time += rop.m_stat_llvm_setup_time;
-    m_stat_llvm_irgen_time += rop.m_stat_llvm_irgen_time;
-    m_stat_llvm_opt_time += rop.m_stat_llvm_opt_time;
-    m_stat_llvm_jit_time += rop.m_stat_llvm_jit_time;
-    m_stat_groups_compiled += 1;
-    m_stat_instances_compiled += group.nlayers();
-}
-
-
-
-static void optimize_all_groups_wrapper (ShadingSystemImpl *ss)
-{
-    ss->optimize_all_groups (1);
-}
-
-
-
-void
-ShadingSystemImpl::optimize_all_groups (int nthreads)
-{
-    if (! m_greedyjit) {
-        // No greedy JIT, just free any groups we've recorded
-        spin_lock lock (m_groups_to_compile_mutex);
-        m_groups_to_compile.clear ();
-        m_groups_to_compile_count = 0;
-        return;
-    }
-
-    // Spawn a bunch of threads to do this in parallel -- just call this
-    // routine again (with threads=1) for each thread.
-    if (nthreads < 1)  // threads <= 0 means use all hardware available
-        nthreads = std::min ((int)boost::thread::hardware_concurrency(),
-                             (int)m_groups_to_compile_count);
-    if (nthreads > 1) {
-        if (m_threads_currently_compiling)
-            return;   // never mind, somebody else spawned the JIT threads
-        boost::thread_group threads;
-        m_threads_currently_compiling += nthreads;
-        for (int t = 0;  t < nthreads;  ++t)
-            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this));
-        threads.join_all ();
-        m_threads_currently_compiling -= nthreads;
-        return;
-    }
-
-    // And here's the single thread case
-    while (m_groups_to_compile_count) {
-        ShadingAttribStateRef sas;
-        {
-            spin_lock lock (m_groups_to_compile_mutex);
-            if (m_groups_to_compile.size() == 0)
-                return;  // Nothing left to compile
-            sas = m_groups_to_compile.back ();
-            m_groups_to_compile.pop_back ();
-        }
-        --m_groups_to_compile_count;
-        if (! sas.unique()) {   // don't compile if nobody recorded it but us
-            ShaderGroup &sgroup (sas->shadergroup (ShadUseSurface));
-                optimize_group (*sas, sgroup);
-        }
-    }
-}
-
-
-
-int
-ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
-{
-    // Look through the shader group for pairs of nodes/layers that
-    // actually do exactly the same thing, and eliminate one of the
-    // rundantant shaders, carefully rewiring all its outgoing
-    // connections to later layers to refer to the one we keep.
-    //
-    // It turns out that in practice, it's not uncommon to have
-    // duplicate nodes.  For example, some materials are "layered" --
-    // like a character skin shader that has separate sub-networks for
-    // skin, oil, wetness, and so on -- and those different sub-nets
-    // often reference the same texture maps or noise functions by
-    // repetition.  Yes, ideally, the redundancies would be eliminated
-    // before they were fed to the renderer, but in practice that's hard
-    // and for many scenes we get substantial savings of time (mostly
-    // because of reduced texture calls) and instance memory by finding
-    // these redundancies automatically.  The amount of savings is quite
-    // scene dependent, as well as probably very dependent on the
-    // general shading and lookdev approach of the studio.  But it was
-    // very helpful for us in many cases.
-    //
-    // The basic loop below looks very inefficient, O(n^2) in number of
-    // instances in the group. But it's really not -- a few seconds (sum
-    // of all threads) for even our very complex scenes. This is because
-    // most potential pairs have a very fast rejection case if they are
-    // not using the same master.  Since there's no appreciable cost to
-    // the brute force approach, it seems silly to have a complex scheme
-    // to try to reduce the number of pairings.
-
-    if (! m_opt_merge_instances)
-        return 0;
-
-    Timer timer;                // Time we spend looking for and doing merges
-    int merges = 0;             // number of merges we do
-    size_t connectionmem = 0;   // Connection memory we free
-    int nlayers = group.nlayers();
-
-    // Loop over all layers...
-    for (int a = 0;  a < nlayers;  ++a) {
-        if (group[a]->unused())    // Don't merge a layer that's not used
-            continue;
-        // Check all later layers...
-        for (int b = a+1;  b < nlayers;  ++b) {
-            if (group[b]->unused())    // Don't merge a layer that's not used
-                continue;
-
-            // Now we have two used layers, a and b, to examine.
-            // See if they are mergeable (identical).  All the heavy
-            // lifting is done by ShaderInstance::mergeable().
-            if (! group[a]->mergeable (*group[b], group))
-                continue;
-
-            // The two nodes a and b are mergeable, so merge them.
-            ShaderInstance *A = group[a];
-            ShaderInstance *B = group[b];
-            ++merges;
-
-            // We'll keep A, get rid of B.  For all layers later than B,
-            // check its incoming connections and replace all references
-            // to B with references to A.
-            for (int j = b+1;  j < nlayers;  ++j) {
-                ShaderInstance *inst = group[j];
-                if (inst->unused())  // don't bother if it's unused
-                    continue;
-                for (int c = 0, ce = inst->nconnections();  c < ce;  ++c) {
-                    Connection &con = inst->connection(c);
-                    if (con.srclayer == b) {
-                        con.srclayer = a;
-                        if (B->symbols().size()) {
-                            ASSERT (A->symbol(con.src.param)->name() ==
-                                    B->symbol(con.src.param)->name());
-                        }
-                    }
-                }
-            }
-
-            // Mark parameters of B as no longer connected
-            for (int p = B->firstparam();  p < B->lastparam();  ++p) {
-                if (B->symbols().size())
-                    B->symbol(p)->connected_down(false);
-                if (B->m_instoverrides.size())
-                    B->instoverride(p)->connected_down(false);
-            }
-            // B won't be used, so mark it as having no outgoing
-            // connections and clear its incoming connections (which are
-            // no longer used).
-            B->outgoing_connections (false);
-            B->run_lazily (true);
-            connectionmem += B->clear_connections ();
-            ASSERT (B->unused());
-        }
-    }
-
-    {
-        // Adjust stats
-        spin_lock lock (m_stat_mutex);
-        m_stat_mem_inst_connections -= connectionmem;
-        m_stat_mem_inst -= connectionmem;
-        m_stat_memory -= connectionmem;
-        if (post_opt)
-            m_stat_merged_inst_opt += merges;
-        else
-            m_stat_merged_inst += merges;
-        m_stat_inst_merge_time += timer();
-    }
-
-    return merges;
 }
 
 

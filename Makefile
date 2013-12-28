@@ -44,10 +44,6 @@ MY_CMAKE_FLAGS += -DVERBOSE:BOOL=1
 TEST_FLAGS += -V
 endif
 
-ifneq (${USE_TBB},)
-MY_CMAKE_FLAGS += -DUSE_TBB:BOOL=${USE_TBB}
-endif
-
 ifneq (${LLVM_DIRECTORY},)
 MY_CMAKE_FLAGS += -DLLVM_DIRECTORY:STRING=${LLVM_DIRECTORY}
 endif
@@ -85,7 +81,7 @@ MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
 endif
 
 ifneq (${USE_PARTIO},)
-MY_CMAKE_FLAGS += -DUSE_PARTIO:BOOL=${USE_BOOST_WAVE}
+MY_CMAKE_FLAGS += -DUSE_PARTIO:BOOL=${USE_PARTIO}
 endif
 
 ifneq (${PARTIO_HOME},)
@@ -98,6 +94,14 @@ endif
 
 ifneq (${BUILDSTATIC},)
 MY_CMAKE_FLAGS += -DBUILDSTATIC:BOOL=${BUILDSTATIC}
+endif
+
+ifneq (${USE_EXTERNAL_PUGIXML},)
+MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
+endif
+
+ifneq (${USE_LIBCPP},)
+MY_CMAKE_FLAGS += -DOSL_USE_LIBCPP:BOOL=${USE_LIBCPP}
 endif
 
 ifdef DEBUG
@@ -162,7 +166,7 @@ cmakesetup:
 		cd ${build_dir} ; \
 		cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/${dist_dir} \
 			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
-			../../src ; \
+			../.. ; \
 	 fi)
 
 # 'make cmake' does a basic build (after first setting it up)
@@ -238,7 +242,6 @@ help:
 	@echo "  make VERBOSE=1 ...          Show all compilation commands"
 	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
 	@echo "  make OSL_SITE=xx            Use custom site build mods"
-	@echo "  make USE_TBB=0 ...          Don't use TBB"
 	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
 	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
 	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"
@@ -251,4 +254,6 @@ help:
 	@echo "  make PARTIO_HOME=...        Use Partio from the given location"
 	@echo "  make STOP_ON_WARNING=0      Do not stop building if compiler warns"
 	@echo "  make BUILDSTATIC=1 ...      Build static library instead of shared"
+	@echo "  make USE_EXTERNAL_PUGIXML=1 Use the system PugiXML, not the one in OIIO"
+	@echo "  make USE_LIBCPP=1           Use libc++"
 	@echo ""

@@ -147,6 +147,8 @@ symbols_opt
 codemarker
         : CODE IDENTIFIER ENDOFLINE
                 {
+                    if (! OSOReader::osoreader->parse_code_section())
+                        YYACCEPT;
                     OSOReader::osoreader->codemarker ($2);
                 }
         ;
@@ -181,6 +183,9 @@ symbols
 symbol
         : SYMTYPE typespec arraylen_opt IDENTIFIER 
                 {
+                    if ((SymType)$1 == SymTypeTemp &&
+                        OSOReader::osoreader->stop_parsing_at_temp_symbols())
+                        YYACCEPT;
                     TypeSpec typespec = current_typespec;
                     if ($3)
                         typespec.make_array ($3);

@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef GENCLOSURE_H
-#define GENCLOSURE_H
+#pragma once
 
 #include <OpenImageIO/ustring.h>
 #include "oslconfig.h"
@@ -84,17 +83,4 @@ struct ClosureParam {
 
 #define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), NULL, 0 }
 
-
-// Not meant to be public, but there's no better place at the moment.
-// FIXME someday.
-#define CLOSURE_PREPARE(name, classname)    \
-void name(RendererServices *, int id, void *data) \
-{                                                 \
-    memset(data, 0, sizeof(classname));           \
-    new (data) classname();                       \
-}
-
-
 OSL_NAMESPACE_EXIT
-
-#endif /* OSLCLOSURE_H */

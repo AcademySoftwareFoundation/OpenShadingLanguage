@@ -134,12 +134,15 @@ normal mod (normal a, float  b) { return a - b*floor(a/b); }
 color  mod (color  a, float  b) { return a - b*floor(a/b); }
 float  mod (float  a, float  b) { return a - b*floor(a/b); }
 PERCOMP2 (min)
+int min (int a, int b) BUILTIN;
 PERCOMP2 (max)
+int max (int a, int b) BUILTIN;
 normal clamp (normal x, normal minval, normal maxval) { return max(min(x,maxval),minval); }
 vector clamp (vector x, vector minval, vector maxval) { return max(min(x,maxval),minval); }
 point  clamp (point x, point minval, point maxval) { return max(min(x,maxval),minval); }
 color  clamp (color x, color minval, color maxval) { return max(min(x,maxval),minval); }
 float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+int    clamp (int x, int minval, int maxval) { return max(min(x,maxval),minval); }
 #if 0
 normal mix (normal x, normal y, normal a) { return x*(1-a) + y*a; }
 normal mix (normal x, normal y, float  a) { return x*(1-a) + y*a; }
@@ -409,12 +412,26 @@ matrix transpose (matrix m) BUILTIN;
 
 // Pattern generation
 
-float step (float edge, float x) BUILTIN;
 color step (color edge, color x) BUILTIN;
 point step (point edge, point x) BUILTIN;
 vector step (vector edge, vector x) BUILTIN;
 normal step (normal edge, normal x) BUILTIN;
+float step (float edge, float x) BUILTIN;
 float smoothstep (float edge0, float edge1, float x) BUILTIN;
+
+float aastep (float edge, float s, float dedge, float ds) {
+    // Box filtered AA step
+    float width = fabs(dedge) + fabs(ds);
+    float halfwidth = 0.5*width;
+    float e1 = edge-halfwidth;
+    return (s <= e1) ? 0.0 : ((s >= (edge+halfwidth)) ? 1.0 : (s-e1)/width);
+}
+float aastep (float edge, float s, float ds) {
+    return aastep (edge, s, filterwidth(edge), ds);
+}
+float aastep (float edge, float s) {
+    return aastep (edge, s, filterwidth(edge), filterwidth(s));
+}
 
 
 // Derivatives and area operators

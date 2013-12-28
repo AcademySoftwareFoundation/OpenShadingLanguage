@@ -43,8 +43,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec.h"
 #include "simplerend.h"
 using namespace OSL;
-
-
+using OIIO::TypeDesc;
+using OIIO::ParamValue;
+using OIIO::ParamValueList;
 
 static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
@@ -60,16 +61,13 @@ static bool stats = false;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
+static bool debug_uninit = false;
 static int xres = 1, yres = 1;
 static std::string layername;
 static std::vector<std::string> connections;
-static std::vector<std::string> iparams, fparams, vparams, sparams;
-static float fparamdata[1000];   // bet that's big enough
-static int fparamindex = 0;
-static int iparamdata[1000];
-static int iparamindex = 0;
-static ustring sparamdata[1000];
-static int sparamindex = 0;
+static ParamValueList params;
+static ParamValueList reparams;
+static std::string reparam_layer;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
@@ -82,31 +80,10 @@ static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static void
 inject_params ()
 {
-    for (size_t p = 0;  p < fparams.size();  p += 2) {
-        fparamdata[fparamindex] = atof (fparams[p+1].c_str());
-        shadingsys->Parameter (fparams[p].c_str(), TypeDesc::TypeFloat,
-                               &fparamdata[fparamindex]);
-        fparamindex += 1;
-    }
-    for (size_t p = 0;  p < iparams.size();  p += 2) {
-        iparamdata[iparamindex] = atoi (iparams[p+1].c_str());
-        shadingsys->Parameter (iparams[p].c_str(), TypeDesc::TypeInt,
-                               &iparamdata[iparamindex]);
-        iparamindex += 1;
-    }
-    for (size_t p = 0;  p < vparams.size();  p += 4) {
-        fparamdata[fparamindex+0] = atof (vparams[p+1].c_str());
-        fparamdata[fparamindex+1] = atof (vparams[p+2].c_str());
-        fparamdata[fparamindex+2] = atof (vparams[p+3].c_str());
-        shadingsys->Parameter (vparams[p].c_str(), TypeDesc::TypeVector,
-                               &fparamdata[fparamindex]);
-        fparamindex += 3;
-    }
-    for (size_t p = 0;  p < sparams.size();  p += 2) {
-        sparamdata[sparamindex] = ustring (sparams[p+1]);
-        shadingsys->Parameter (sparams[p].c_str(), TypeDesc::TypeString,
-                               &sparamdata[sparamindex]);
-        sparamindex += 1;
+    for (size_t p = 0;  p < params.size();  ++p) {
+        const ParamValue &pv (params[p]);
+        shadingsys->Parameter (pv.name().c_str(), pv.type(), pv.data(),
+                               pv.interp() == ParamValue::INTERP_CONSTANT);
     }
 }
 
@@ -122,7 +99,8 @@ add_shader (int argc, const char *argv[])
     else if (O0 || O1 || O2)
         shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
     shadingsys->attribute ("lockgeom", 1);
-    shadingsys->attribute ("debugnan", debugnan);
+    shadingsys->attribute ("debug_nan", debugnan);
+    shadingsys->attribute ("debug_uninit", debug_uninit);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
@@ -132,12 +110,110 @@ add_shader (int argc, const char *argv[])
                             layername.length() ? layername.c_str() : NULL);
 
         layername.clear ();
-        iparams.clear ();
-        fparams.clear ();
-        vparams.clear ();
-        sparams.clear ();
+        params.clear ();
     }
     return 0;
+}
+
+
+
+static void
+action_param (int argc, const char *argv[])
+{
+    std::string command = argv[0];
+    bool use_reparam = false;
+    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
+        OIIO::Strutil::istarts_with(command, "-reparam"))
+        use_reparam = true;
+    ParamValueList &params (use_reparam ? reparams : (::params));
+
+    std::string paramname = argv[1];
+    std::string stringval = argv[2];
+    TypeDesc type = TypeDesc::UNKNOWN;
+    bool unlockgeom = false;
+    float f[16];
+
+    size_t pos;
+    while ((pos = command.find_first_of(":")) != std::string::npos) {
+        command = command.substr (pos+1, std::string::npos);
+        std::vector<std::string> splits;
+        OIIO::Strutil::split (command, splits, ":", 1);
+        if (splits.size() < 1) {}
+        else if (OIIO::Strutil::istarts_with(splits[0],"type="))
+            type.fromstring (splits[0].c_str()+5);
+        else if (OIIO::Strutil::istarts_with(splits[0],"lockgeom="))
+            unlockgeom = (strtol (splits[0].c_str()+9, NULL, 10) == 0);
+    }
+
+    // If it is or might be a matrix, look for 16 comma-separated floats
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeMatrix)
+        && sscanf (stringval.c_str(),
+                   "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
+                   &f[0], &f[1], &f[2], &f[3],
+                   &f[4], &f[5], &f[6], &f[7], &f[8], &f[9], &f[10], &f[11],
+                   &f[12], &f[13], &f[14], &f[15]) == 16) {
+        params.push_back (ParamValue());
+        params.back().init (paramname, TypeDesc::TypeMatrix, 1, f);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+    // If it is or might be a vector type, look for 3 comma-separated floats
+    if ((type == TypeDesc::UNKNOWN || equivalent(type,TypeDesc::TypeVector))
+        && sscanf (stringval.c_str(), "%g, %g, %g", &f[0], &f[1], &f[2]) == 3) {
+        if (type == TypeDesc::UNKNOWN)
+            type = TypeDesc::TypeVector;
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, f);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+    // If it is or might be an int, look for an int that takes up the whole
+    // string.
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeInt)) {
+        char *endptr = NULL;
+        int ival = strtol(stringval.c_str(),&endptr,10);
+        if (endptr && *endptr == 0) {
+            params.push_back (ParamValue());
+            params.back().init (paramname, TypeDesc::TypeInt, 1, &ival);
+            if (unlockgeom)
+                params.back().interp (ParamValue::INTERP_VERTEX);
+            return;
+        }
+    }
+    // If it is or might be an float, look for a float that takes up the
+    // whole string.
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeFloat)) {
+        char *endptr = NULL;
+        float fval = (float) strtod(stringval.c_str(),&endptr);
+        if (endptr && *endptr == 0) {
+            params.push_back (ParamValue());
+            params.back().init (paramname, TypeDesc::TypeFloat, 1, &fval);
+            if (unlockgeom)
+                params.back().interp (ParamValue::INTERP_VERTEX);
+            return;
+        }
+    }
+
+    // All remaining cases -- it's a string
+    const char *s = stringval.c_str();
+    params.push_back (ParamValue());
+    params.back().init (paramname, TypeDesc::TypeString, 1, &s);
+    if (unlockgeom)
+        params.back().interp (ParamValue::INTERP_VERTEX);
+}
+
+
+
+// reparam -- just set reparam_layer and then let action_param do all the
+// hard work.
+static void
+action_reparam (int argc, const char *argv[])
+{
+    reparam_layer = argv[1];
+    const char *newargv[] = { argv[0], argv[2], argv[3] };
+    action_param (3, newargv);
 }
 
 
@@ -160,28 +236,21 @@ getargs (int argc, const char *argv[])
                 "-od %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
                 "--layer %s", &layername, "Set next layer name",
-                "--fparam %L %L",
-                        &fparams, &fparams,
-                        "Add a float param (args: name value)",
-                "--iparam %L %L",
-                        &iparams, &iparams,
-                        "Add an integer param (args: name value)",
-                "--vparam %L %L %L %L",
-                        &vparams, &vparams, &vparams, &vparams,
-                        "Add a vector or color param (args: name x y z)",
-                "--sparam %L %L",
-                        &sparams, &sparams,
-                        "Add a string param (args: name value)",
+                "--param %@ %s %s", &action_param, NULL, NULL,
+                        "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
+                "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
+                        "Change a parameter (args: layername paramname value) (options: type=%s)",
                 "--raytype %s", &raytype, "Set the raytype",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
-                "--debugnan", &debugnan, "Turn on 'debugnan' mode",
+                "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
+                "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
                 "--options %s", &extraoptions, "Set extra OSL options",
 //                "-v", &verbose, "Verbose output",
                 NULL);
@@ -303,7 +372,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 
 static void
 setup_output_images (ShadingSystem *shadingsys,
-                     ShadingAttribStateRef &shaderstate)
+                     ShaderGroupRef &shadergroup)
 {
     // Tell the shading system which outputs we want
     if (outputvars.size()) {
@@ -324,7 +393,7 @@ setup_output_images (ShadingSystem *shadingsys,
     // to actually run the shader.
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
-    shadingsys->execute (*ctx, *shaderstate, sg, false);
+    shadingsys->execute (*ctx, *shadergroup, sg, false);
 
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
@@ -430,6 +499,7 @@ test_shade (int argc, const char *argv[])
     // the TextureSystem (that just makes 'create' make its own TS), and
     // an error handler.
     shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
+    register_closures(shadingsys);
 
     // Remember that each shader parameter may optionally have a
     // metadata hint [[int lockgeom=...]], where 0 indicates that the
@@ -457,7 +527,7 @@ test_shade (int argc, const char *argv[])
     // 
     // A shader group declaration typically looks like this:
     //
-    //   ss->ShaderGroupBegin ();
+    //   ShaderGroupRef shadergroup = ss->ShaderGroupBegin ();
     //   ss->Parameter ("paramname", TypeDesc paramtype, void *value);
     //      ... and so on for all the other parameters of...
     //   ss->Shader ("shadertype", "shadername", "layername");
@@ -467,8 +537,6 @@ test_shade (int argc, const char *argv[])
     //   ss->ConnectShaders ("layer1", "param1", "layer2", "param2");
     //   ... and other connections ...
     //   ss->ShaderGroupEnd ();
-    //   // and now grab an opaque reference to that shader group:
-    //   ShadingAttribStateRef shaderstate = s->state ();
     // 
     // It looks so simple, and it really is, except that the way this
     // testshade program works is that all the Parameter() and Shader()
@@ -476,8 +544,9 @@ test_shade (int argc, const char *argv[])
     // line arguments, whereas the connections accumulate and have
     // to be processed at the end.  Bear with us.
     
-    // Start the shader group.
-    shadingsys->ShaderGroupBegin ();
+    // Start the shader group and grab a reference to it.
+    ShaderGroupRef shadergroup = shadingsys->ShaderGroupBegin ();
+
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
     getargs (argc, argv);
@@ -499,8 +568,6 @@ test_shade (int argc, const char *argv[])
     // End the group
     shadingsys->ShaderGroupEnd ();
 
-    // Now we should have a valid shading state, to get a reference to it.
-    ShadingAttribStateRef shaderstate = shadingsys->state ();
     if (outputfiles.size() != 0)
         std::cout << "\n";
 
@@ -512,14 +579,12 @@ test_shade (int argc, const char *argv[])
     setup_transformations (rend, Mshad, Mobj);
 
     // Set up the image outputs requested on the command line
-    setup_output_images (shadingsys, shaderstate);
+    setup_output_images (shadingsys, shadergroup);
 
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
 
     double setuptime = timer.lap ();
-
-    std::vector<float> pixel;
 
     // Optional: high-performance apps may request this thread-specific
     // pointer in order to save a bit of time on each shade.  Just like
@@ -564,7 +629,7 @@ test_shade (int argc, const char *argv[])
                 setup_shaderglobals (shaderglobals, shadingsys, x, y);
 
                 // Actually run the shader for this point
-                shadingsys->execute (*ctx, *shaderstate, shaderglobals);
+                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
 
                 // Save all the designated outputs.  But only do so if we
                 // are on the last iteration requested, so that if we are
@@ -573,6 +638,16 @@ test_shade (int argc, const char *argv[])
                 if (iter == (iters - 1)) {
                     save_outputs (shadingsys, ctx, x, y);
                 }
+            }
+        }
+
+        // If any reparam was requested, do it now
+        if (reparams.size() && reparam_layer.size()) {
+            for (size_t p = 0;  p < reparams.size();  ++p) {
+                const ParamValue &pv (reparams[p]);
+                shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),
+                                         pv.name().c_str(), pv.type(),
+                                         pv.data());
             }
         }
     }
@@ -600,7 +675,7 @@ test_shade (int argc, const char *argv[])
 
     // Print some debugging info
     if (debug || stats) {
-        double runtime = timer();
+        double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";

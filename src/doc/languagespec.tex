@@ -14,17 +14,16 @@
 %\usepackage{apalike}
 \usepackage{pslatex}
 \usepackage{techref}
-\usepackage{epsfig}
+%\usepackage{epsfig}
 \usepackage{verbatim}
 \usepackage{moreverb}
 \usepackage{graphicx}
 \usepackage{xspace}
-\usepackage{multicol}
-\usepackage{color}
+%\usepackage{multicol}
+%\usepackage{color}
 \usepackage{html}
-\usepackage{version}
+%\usepackage{version}
 \usepackage{makeidx}
-%\usepackage{showidx}
 \usepackage[chapter]{algorithm}
 \floatname{algorithm}{Listing}
 
@@ -44,7 +43,7 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{1.4}
+\def\versionnumber{1.5}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
@@ -62,8 +61,8 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 28 Jan, 2013 \\
-~ %(with corrections, 22 Feb, 2012)
+\date{{\large Date: 12 Nov, 2013 \\
+~ (with corrections, 15 Nov 2013)
 }
 \bigskip
 \bigskip
@@ -388,8 +387,6 @@ other open source packages:
 {\cf http://openimageio.org}
 \item Ilmbase \copyright\ 2006, Industrial Light \& Magic.
 {\cf http://www.openexr.com}
-\item Thread Building Blocks (TBB), \copyright\ 2005--2008 Intel Corporation.\\
-{\cf http://www.threadingbuildingblocks.org/}
 \item Boost \copyright\ various authors.  {\cf http://www.boost.org}
 \item LLVM \copyright\ 2003-2010 University of Illinois at
   Urbana-Champaign. {\cf http://llvm.org}
@@ -3343,9 +3340,23 @@ large-scale average is 0.5, and its values are evenly distributed over
 $[0,1]$.
 \apiend
 
+\apiitem{"simplex"}
+\vspace{12pt}
+\NEW % 1.4
+A signed simplex noise with an output range of $[-1,1]$,
+approximate average value of $0$.
+\apiend
+
+\apiitem{"usimplex"}
+\vspace{12pt}
+\NEW % 1.4
+An unsigned simplex noise with an output range of $[0,1]$,
+approximate average value of $0.5$.
+\apiend
+
 \apiitem{"gabor"}
 \vspace{12pt}
-\NEW A band-limited, filtered, sparse convolution noise based on the
+A band-limited, filtered, sparse convolution noise based on the
 Gabor impulse function (see Lagae et al., SIGGRAPH 2012).  Our Gabor
 noise is designed to have somewhat similar frequency content and range
 as Perlin noise (range $[-1,1]$, approximately large-scale average of
@@ -3483,33 +3494,22 @@ The old {\cf cellnoise(...coords...)} function is equivalent to
 \apiitem{\emph{type} {\ce hash} (float u) \\
 \emph{type} {\ce hash} (float u, float v) \\
 \emph{type} {\ce hash} (point p) \\
-\emph{type} {\ce hash} (point p, float t)}
+\emph{type} {\ce hash} (point p, float t) \\
+\emph{type} {\ce hash} (int i) \\
+\emph{type} {\ce hash} (string s)}
 \indexapi{hash()}
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
-4-D coordinates.  The return values will be evenly distributed on
-$[0,1]$ and be completely repeatable when passed the same coordinates
-again, yet will be uncorrellated to hashes of any other positions
-(including nearby points).  This is like having a random value indexed
-spatially, but that will be repeatable from frame to frame of an
+4-D coordinates, integer, or string.  The return values will be evenly
+distributed on $[0,1]$ and be completely repeatable when passed the same
+coordinates again, yet will be uncorrellated to hashes of any other
+positions (including nearby points).  This is like having a random value
+indexed spatially, but that will be repeatable from frame to frame of an
 animation (provided its input is \emph{precisely} identical).
 
 The return \emph{type} may be any of \float, \color, \point, \vector, or
 \normal, depending on the type of the variable the result is assigned to
 (or based on an explicit type cast).  For multi-component return types
 (e.g., \point), each component is an uncorrelated \float\ {\cf hash}
-function.
-\apiend
-
-\apiitem{\emph{type} {\ce random} ()}
-\indexapi{random()}
-Returns a pseudorandom value uniformly distributed on $[0,1]$.  Use with
-extreme caution --- the results are not necessarily repeatable from
-frame to frame.
-
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ {\cf random()}
 function.
 \apiend
 
@@ -3612,28 +3612,13 @@ taking into account surface orientation.
 
 \apiitem{float {\ce aastep} (float edge, float s) \\
 float {\ce aastep} (float edge, float s, float ds) \\
-float {\ce aastep} (float edge, float s, float dedge, float ds)
-\smallskip \\
-float {\ce aastep} (float edge, float s, string filter) \\
-float {\ce aastep} (float edge, float s, float ds, string filter) \\
-float {\ce aastep} (float edge, float s, float dedge, float ds, string filter)}
+float {\ce aastep} (float edge, float s, float dedge, float ds)}
 \indexapi{aastep()}
 Computes an antialiased step function, similar to {\cf step(edge,s)} but
 filtering the edge to take into account how rapidly {\cf s} and {\cf edge}
 are changing over the surface.  If the differentials {\cf ds} and/or
 {\cf dedge} are not passed explicitly, they will be automatically 
-computed (using {\cf aastep()}).
-
-The optional {\cf filter} parameter specifies which filter should be
-used: \qkw{catmull-rom}, \qkw{box}, \qkw{triangle}, or \qkw{gaussian}.
-If no {\cf filter} parameter is supplied, a Catmull-Rom filter will be
-used.
-
-%\begin{annotate}
-%\QUESTION This is similar to RenderMan's ``filterstep'', but not quite.
-%Is it better to call it ``filterstep'' even if it doesn't exactly match,
-%or should we stick to the changed name to match the changed functionality?
-%\end{annotate}
+computed (using {\cf filterwidth()}).
 \apiend
 
 
@@ -3684,14 +3669,13 @@ positions.
 Much as in C, {\cf printf()} takes a format string {\cf fmt} and an
 argument list, and prints the resulting formatted string to the console.
 
-Where the {\cf fmt} contains the characters {\cf \%d}, {\cf \%i}, {\cf \%f},
-{\cf \%g}, and {\cf \%s}, {\cf printf} will substitute arguments, in
-order.  The {\cf \%d} and {\cf \%i} arguments expect an {\cf int}
-argument; {\cf \%f} and {\cf \%g} expect a \float, \color, point-like,
-or \matrix argument (for multi-component types such as \color, the
-format will be applied to each of the components); and {\cf \%s} expects
-a {\cf string} argument.  In addition, {\cf \%d} and {\cf \%i} will also
-print \float's, truncating and printing them as if they were integers.
+Where the {\cf fmt} contains a format string similar to {\cf printf} in
+the C language. The {\cf \%d}, {\cf \%i}, {\cf \%o}, and {\cf \%x}
+arguments expect an {\cf int} argument.  The {\cf \%f}, {\cf \%g}, and
+{\cf \%e} expect a \float, \color, point-like, or \matrix argument (for
+multi-component types such as \color, the format will be applied to each
+of the components).  The {\cf \%s} expects a {\cf string} or 
+{\cf closure} argument.
 
 All of the substition commands follow the usual C/C++ formatting rules,
 so format commands such as {\cf "\%6.2f"}, etc., should work as
@@ -3918,8 +3902,19 @@ within a multi-image texture file (default: subimage 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested,
+but not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -4010,8 +4005,19 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested,
+but not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -4081,8 +4087,19 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are not present in the texture
-file (default: 0).
+The value to return for any channels that are requested, but 
+not present in the texture file (default: 0).
+\apiend
+\vspace{-16pt}
+
+\NEW
+\apiitem{"missingcolor", <color>, "missingalpha", <float>}
+\vspace{12pt}
+If present, supplies a missing color (and alpha value) that will
+be used for missing or broken textures -- \emph{instead of} treating
+it as an error.  If you want a missing or broken texture to be reported
+as an error, you must not supply the optional \qkw{missingcolor}
+parameter.
 \apiend
 \vspace{-16pt}
 
@@ -4139,13 +4156,27 @@ one of: \qkw{Plain Texture}, \qkw{Shadow}, \qkw{Environment},
 specifically distinguishes between the different types of shadows and
 environment maps.  \\[0.75ex]
 
-\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
-transforms points from \commonspace to the \cameraspace from which the
-texture was created. \\[0.75ex]
+\qkw{datawindow} & {\cf int[]} &
+Returns the pixel data window of the image.  The argument is an {\cf int}
+array either of length 4 or 6, in which will be placed the (xmin, ymin,
+xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
+(N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
+they will be 0). \\[0.75ex]
 
-{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
-matrix that transforms points from \commonspace to a 2D coordinate
-system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
+\qkw{displaywindow} & {\cf int[]} &
+Returns the display (a.k.a.\ full) window of the image.  The argument is an {\cf int}
+array either of length 4 or 6, in which will be placed the (xmin, ymin,
+xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
+(N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
+they will be 0). \\[0.75ex]
+
+%\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
+%transforms points from \commonspace to the \cameraspace from which the
+%texture was created. \\[0.75ex]
+%
+%{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
+%matrix that transforms points from \commonspace to a 2D coordinate
+%system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
 
 \emph{anything else} & \emph{any} & Searches for matching name and
 type in the metadata or other header information of the texture file.
@@ -4157,17 +4188,20 @@ type in the metadata or other header information of the texture file.
 
 \newpage
 \apiitem{int {\ce pointcloud_search} (string ptcname, point pos, float radius,\\
-\bigspc\bigspc      int maxpoints, int sort,
+\bigspc\bigspc      int maxpoints, [int sort,]
                        string attr, Type data[],\\
 \bigspc\bigspc         ..., string attrN, Type dataN[] )}
 \indexapi{pointcloud_search}
 
-Search the named point cloud for points within {\cf radius} of {\cf pos},
+Search the named point cloud for the {\cf maxpoints} closest points to
+{\cf pos} within the given {\cf radius},
 returning the values of any named attributes of those points in the the
-given {\cf data} arrays.  If {\cf sort} is nonzero, The ordering of the points
-found will be sorted by distance from {\cf pos}, from closest to farthest; if
-{\cf sort} is 0, the results are not guaranteed to be sorted (searching may
-be faster for some implementations when sorted results are not
+given {\cf data} arrays.  If the optional {\cf sort} parameter is present
+and is nonzero, the ordering of the points
+found will be sorted by distance from {\cf pos}, from closest to farthest;
+otherwise, the results are guaranteed to be the {\cf maxpoints} closest
+to {\cf pos}, but not necessarily softed by distance (this may be
+faster for some implementations than when sorted results are
 required).  The return value is the number of points returned, ranging
 from 0 (nothing found in the neighborhood) to the lesser of {\cf maxpoints}
 and the actual lengths of the arrays (the arrays will never be written

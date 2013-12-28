@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLEXEC_PVT_H
-#define OSLEXEC_PVT_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -38,10 +37,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/regex_fwd.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/intrusive_ptr.hpp>
 
-#include "OpenImageIO/ustring.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/paramlist.h"
+#include <OpenImageIO/ustring.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/paramlist.h>
+#include <OpenImageIO/refcnt.h>
 
 #include "oslexec.h"
 #include "oslclosure.h"
@@ -51,17 +52,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OSL;
 using namespace OSL::pvt;
-
-namespace llvm {
-  class ExecutionEngine;
-  class Function;
-  class FunctionPassManager;
-  class LLVMContext;
-  class Linker;
-  class Module;
-  class PassManager;
-  class JITMemoryManager;
-}
 
 using OIIO::atomic_int;
 using OIIO::atomic_ll;
@@ -87,22 +77,19 @@ struct PerThreadInfo
     ShadingContext *pop_context ();  ///< Get the pool top and then pop
 
     std::stack<ShadingContext *> context_pool;
-    llvm::LLVMContext *llvm_context;
-    llvm::JITMemoryManager *llvm_jitmm;
 };
-
-
 
 namespace pvt {
 
 // forward definitions
 class ShadingSystemImpl;
 class ShaderInstance;
-class ShaderGroup;
 typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
+class BackendLLVM;
 
+void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
@@ -112,7 +99,7 @@ typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
-typedef bool (*OpLLVMGen) (RuntimeOptimizer &rop, int opnum);
+typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
 
 struct OpDescriptor {
     ustring name;           // name of op
@@ -249,7 +236,7 @@ inline void stlfree (T &v)
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
-    typedef intrusive_ptr<ShaderMaster> ref;
+    typedef boost::intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
     ~ShaderMaster ();
 
@@ -479,7 +466,7 @@ public:
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
-            return std::pair<Symbol*,Symbol*> (NULL, NULL);
+            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
         else
             return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
                                                &i->m_instsymbols[0] + i->lastparam());
@@ -487,7 +474,7 @@ public:
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
         if (i->firstparam() == i->lastparam())
-            return std::pair<const Symbol*,const Symbol*> (NULL, NULL);
+            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
         else
             return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
                                                            &i->m_instsymbols[0] + i->lastparam());
@@ -526,16 +513,20 @@ public:
     struct SymOverrideInfo {
         char m_valuesource;
         bool m_connected_down;
+        bool m_lockgeom;
 
         SymOverrideInfo () : m_valuesource(Symbol::DefaultVal),
-                             m_connected_down(false) { }
+                             m_connected_down(false), m_lockgeom(true) { }
         void valuesource (Symbol::ValueSource v) { m_valuesource = v; }
         Symbol::ValueSource valuesource () const { return (Symbol::ValueSource) m_valuesource; }
         const char *valuesourcename () const { return Symbol::valuesourcename(valuesource()); }
         bool connected_down () const { return m_connected_down; }
         void connected_down (bool c) { m_connected_down = c; }
+        bool lockgeom () const { return m_lockgeom; }
+        void lockgeom (bool l) { m_lockgeom = l; }
         friend bool equivalent (const SymOverrideInfo &a, const SymOverrideInfo &b) {
-            return a.valuesource() == b.valuesource();
+            return a.valuesource() == b.valuesource() &&
+                   a.lockgeom() == b.lockgeom();
         }
     };
     typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
@@ -581,79 +572,6 @@ private:
 
 
 
-/// A ShaderGroup consists of one or more layers (each of which is a
-/// ShaderInstance), and the connections among them.
-class ShaderGroup {
-public:
-    ShaderGroup ();
-    ShaderGroup (const ShaderGroup &g);
-    ~ShaderGroup ();
-
-    /// Clear the layers
-    ///
-    void clear () { m_layers.clear ();  m_optimized = 0;  m_executions = 0; }
-
-    /// Append a new shader instance on to the end of this group
-    ///
-    void append (ShaderInstanceRef newlayer) {
-        ASSERT (! m_optimized && "should not append to optimized group");
-        m_layers.push_back (newlayer);
-    }
-
-    /// How many layers are in this group?
-    ///
-    int nlayers () const { return (int) m_layers.size(); }
-
-    /// Array indexing returns the i-th layer of the group
-    ///
-    ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
-
-    int optimized () const { return m_optimized; }
-    void optimized (int opt) { m_optimized = opt; }
-
-    size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
-    void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
-
-    RunLLVMGroupFunc llvm_compiled_version() const {
-        return m_llvm_compiled_version;
-    }
-    void llvm_compiled_version (RunLLVMGroupFunc func) {
-        m_llvm_compiled_version = func;
-    }
-
-    /// Is this shader group equivalent to ret void?
-    bool does_nothing() const {
-        return m_does_nothing;
-    }
-    void does_nothing(bool new_val) {
-        m_does_nothing = new_val;
-    }
-
-    long long int executions () const { return m_executions; }
-
-    void start_running () {
-#ifndef NDEBUG
-       m_executions++;
-#endif
-    }
-
-    void name (ustring name) { m_name = name; }
-    ustring name () const { return m_name; }
-
-private:
-    ustring m_name;
-    std::vector<ShaderInstanceRef> m_layers;
-    RunLLVMGroupFunc m_llvm_compiled_version;
-    size_t m_llvm_groupdata_size;
-    volatile int m_optimized;        ///< Is it already optimized?
-    bool m_does_nothing;             ///< Is the shading group just func() { return; }
-    atomic_ll m_executions;          ///< Number of times the group executed
-    mutex m_mutex;                   ///< Thread-safe optimization
-    friend class ShadingSystemImpl;
-};
-
-
-
 class ClosureRegistry {
 public:
 
@@ -675,11 +593,10 @@ public:
         // Creation callbacks
         PrepareClosureFunc        prepare;
         SetupClosureFunc          setup;
-        CompareClosureFunc        compare;
     };
 
     void register_closure (const char *name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
 
     const ClosureEntry *get_entry (ustring name) const;
     const ClosureEntry *get_entry (int id) const {
@@ -701,7 +618,7 @@ private:
 
 
 
-class OSLEXECPUBLIC ShadingSystemImpl : public ShadingSystem
+class ShadingSystemImpl : public ShadingSystem
 {
 public:
     ShadingSystemImpl (RendererServices *renderer=NULL,
@@ -715,18 +632,19 @@ public:
     virtual bool LoadMemoryCompiledShader (const char *shadername,
                                    const char *buffer);
     virtual bool Parameter (const char *name, TypeDesc t, const void *val);
+    virtual bool Parameter (const char *name, TypeDesc t, const void *val,
+                            bool lockgeom);
     virtual bool Shader (const char *shaderusage,
                          const char *shadername=NULL,
                          const char *layername=NULL);
-    virtual bool ShaderGroupBegin (const char *groupname=NULL);
+    virtual ShaderGroupRef ShaderGroupBegin (const char *groupname=NULL);
     virtual bool ShaderGroupEnd (void);
     virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
                                  const char *dstlayer, const char *dstparam);
-    virtual ShadingAttribStateRef state ();
-    virtual void clear_state ();
-
-//    virtual void RunShaders (ShadingAttribStateRef &attribstate,
-//                             ShaderUse use);
+    virtual ShaderGroupRef state ();
+    virtual bool ReParameter (ShaderGroup &group,
+                              const char *layername, const char *paramname,
+                              TypeDesc type, const void *val);
 
     /// Internal error reporting routine, with printf-like arguments.
     ///
@@ -762,7 +680,7 @@ public:
 
     virtual void release_context (ShadingContext *ctx);
 
-    virtual bool execute (ShadingContext &ctx, ShadingAttribState &sas,
+    virtual bool execute (ShadingContext &ctx, ShaderGroup &group,
                           ShaderGlobals &ssg, bool run=true);
 
     virtual const void* get_symbol (ShadingContext &ctx, ustring name,
@@ -783,6 +701,7 @@ public:
     TextureSystem *texturesys () const { return m_texturesys; }
 
     bool debug_nan () const { return m_debugnan; }
+    bool debug_uninit () const { return m_debug_uninit; }
     bool lockgeom_default () const { return m_lockgeom_default; }
     bool strict_messages() const { return m_strict_messages; }
     bool range_checking() const { return m_range_checking; }
@@ -792,8 +711,12 @@ public:
     int llvm_debug () const { return m_llvm_debug; }
     bool fold_getattribute () { return m_opt_fold_getattribute; }
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
+    bool countlayerexecs() const { return m_countlayerexecs; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
+
+    ustring debug_groupname() const { return m_debug_groupname; }
+    ustring debug_layername() const { return m_debug_layername; }
 
     /// Look within the group for separate nodes that are actually
     /// duplicates of each other and combine them.  Return the number of
@@ -803,14 +726,19 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShadingAttribState &attribstate, ShaderGroup &group);
+    void optimize_group (ShaderGroup &group);
+
+    /// After doing all optimization and code JIT, we can clean up by
+    /// deleting the instances' code and arguments, and paring their
+    /// symbol tables down to just parameters.
+    void group_post_jit_cleanup (ShaderGroup &group);
 
     int *alloc_int_constants (size_t n) { return m_int_pool.alloc (n); }
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
     virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup, CompareClosureFunc compare);
+                                  PrepareClosureFunc prepare, SetupClosureFunc setup);
     virtual bool query_closure(const char **name, int *id,
                                const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
@@ -858,6 +786,9 @@ public:
     }
 
     void pointcloud_stats (int search, int get, int results, int writes=0);
+
+    /// Is the named symbol among the renderer outputs?
+    bool is_renderer_output (ustring name) const;
 
 private:
     void printstats () const;
@@ -915,6 +846,7 @@ private:
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
+    bool m_debug_uninit;                  ///< Find use of uninitialized vars?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     bool m_strict_messages;               ///< Strict checking of message passing usage?
     bool m_range_checking;                ///< Range check arrays & components?
@@ -963,9 +895,8 @@ private:
     // State
     bool m_in_group;                      ///< Are we specifying a group?
     ShaderUse m_group_use;                ///< Use of group
-    ustring m_group_name;                 ///< Name of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values
-    ShadingAttribStateRef m_curattrib;    ///< Current shading attribute state
+    ShaderGroupRef m_curgroup;            ///< Current shading attribute state
     mutable mutex m_mutex;                ///< Thread safety
     mutable thread_specific_ptr<PerThreadInfo> m_perthread_info;
 
@@ -1026,20 +957,16 @@ private:
 
     spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
-    std::vector<ShadingAttribStateRef> m_groups_to_compile;
+    std::vector<ShaderGroupRef> m_groups_to_compile;
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;
     spin_mutex m_groups_to_compile_mutex;
-
-    // LLVM stuff
-    spin_mutex m_llvm_mutex;
-    // Can't throw away jitmm's until we're totally done
-    std::vector<shared_ptr<llvm::JITMemoryManager> > m_llvm_jitmm_hold;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
+    friend class BackendLLVM;
 };
 
 
@@ -1059,10 +986,12 @@ public:
     }
 
     char * alloc(size_t size, size_t alignment=1) {
+        // Alignment must be power of two
+        DASSERT ((alignment & (alignment - 1)) == 0);
         // Fail if beyond allocation limits or senseless alignment
-        if (size > BlockSize || (size % alignment) != 0)
+        if (size > BlockSize || (size & (alignment - 1)) != 0)
             return NULL;
-        m_block_offset -= (m_block_offset % alignment); // Fix up alignment
+        m_block_offset -= (m_block_offset & (alignment - 1)); // Fix up alignment
         if (size <= m_block_offset) {
             // Enough space in current block
             m_block_offset -= size;
@@ -1139,6 +1068,79 @@ private:
 
 
 
+/// A ShaderGroup consists of one or more layers (each of which is a
+/// ShaderInstance), and the connections among them.
+class ShaderGroup {
+public:
+    ShaderGroup (const char *name);
+    ShaderGroup (const ShaderGroup &g, const char *name);
+    ~ShaderGroup ();
+
+    /// Clear the layers
+    ///
+    void clear () { m_layers.clear ();  m_optimized = 0;  m_executions = 0; }
+
+    /// Append a new shader instance on to the end of this group
+    ///
+    void append (ShaderInstanceRef newlayer) {
+        ASSERT (! m_optimized && "should not append to optimized group");
+        m_layers.push_back (newlayer);
+    }
+
+    /// How many layers are in this group?
+    ///
+    int nlayers () const { return (int) m_layers.size(); }
+
+    /// Array indexing returns the i-th layer of the group
+    ///
+    ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
+
+    int optimized () const { return m_optimized; }
+    void optimized (int opt) { m_optimized = opt; }
+
+    size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
+    void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
+
+    RunLLVMGroupFunc llvm_compiled_version() const {
+        return m_llvm_compiled_version;
+    }
+    void llvm_compiled_version (RunLLVMGroupFunc func) {
+        m_llvm_compiled_version = func;
+    }
+
+    /// Is this shader group equivalent to ret void?
+    bool does_nothing() const {
+        return m_does_nothing;
+    }
+    void does_nothing(bool new_val) {
+        m_does_nothing = new_val;
+    }
+
+    long long int executions () const { return m_executions; }
+
+    void start_running () {
+#ifndef NDEBUG
+       m_executions++;
+#endif
+    }
+
+    void name (ustring name) { m_name = name; }
+    ustring name () const { return m_name; }
+
+private:
+    ustring m_name;
+    std::vector<ShaderInstanceRef> m_layers;
+    RunLLVMGroupFunc m_llvm_compiled_version;
+    size_t m_llvm_groupdata_size;
+    volatile int m_optimized;        ///< Is it already optimized?
+    bool m_does_nothing;             ///< Is the shading group just func() { return; }
+    atomic_ll m_executions;          ///< Number of times the group executed
+    mutex m_mutex;                   ///< Thread-safe optimization
+    friend class OSL::pvt::ShadingSystemImpl;
+};
+
+
+
 /// The full context for executing a shader group.
 ///
 class OSLEXECPUBLIC ShadingContext {
@@ -1159,7 +1161,7 @@ public:
     /// preparation, but don't actually run the shader.  Return true if
     /// the shader executed, false if it did not (including if the
     /// shader itself was empty).
-    bool execute (ShaderUse use, ShadingAttribState &sas,
+    bool execute (ShaderUse use, ShaderGroup &sas,
                   ShaderGlobals &ssg, bool run=true);
 
     /// Return the current shader use being executed.
@@ -1174,6 +1176,22 @@ public:
         comp->id = id;
         comp->size = prim_size;
         comp->nattrs = nattrs;
+        comp->w[0] = 1.0f;
+        comp->w[1] = 1.0f;
+        comp->w[2] = 1.0f;
+        return comp;
+    }
+
+    ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs, const Color3 &w) {
+        // Allocate the component and the mul back to back
+        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
+                                                 + sizeof(ClosureComponent::Attr) * nattrs;
+        ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed);
+        comp->type = ClosureColor::COMPONENT;
+        comp->id = id;
+        comp->size = prim_size;
+        comp->nattrs = nattrs;
+        comp->w = w;
         return comp;
     }
 
@@ -1218,7 +1236,7 @@ public:
 
     /// Return a pointer to the shading attribs for this context.
     ///
-    ShadingAttribState *attribs () { return m_attribs; }
+    ShaderGroup *attribs () { return m_attribs; }
 
     /// Return a reference to the MessageList containing messages.
     ///
@@ -1240,7 +1258,7 @@ public:
 
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
-    bool prepare_execution (ShaderUse use, ShadingAttribState &sas);
+    bool prepare_execution (ShaderUse use, ShaderGroup &sas);
 
     bool osl_get_attribute (void *renderstate, void *objdata, int dest_derivs,
                             ustring obj_name, ustring attr_name,
@@ -1280,7 +1298,7 @@ private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
-    ShadingAttribState *m_attribs;      ///< Ptr to shading attrib state
+    ShaderGroup *m_attribs;      ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
     int m_curuse;                       ///< Current use that we're running
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
@@ -1311,28 +1329,6 @@ private:
 
 
 
-class ShadingAttribState
-{
-public:
-    ShadingAttribState () { }
-
-    ~ShadingAttribState () { }
-
-    /// Return a reference to the shader group for a particular use
-    ///
-    ShaderGroup & shadergroup (ShaderUse use) {
-        return m_shaders[(int)use];
-    }
-
-    /// Called when the shaders of the attrib state change (invalidate LLVM ?)
-    void changed_shaders () { }
-
-private:
-    OSL::pvt::ShaderGroup m_shaders[OSL::pvt::ShadUseLast];
-};
-
-
-
 namespace Strings {
     extern OSLEXECPUBLIC ustring camera, common, object, shader, screen, NDC;
     extern OSLEXECPUBLIC ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
@@ -1350,9 +1346,12 @@ namespace Strings {
     extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
     extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern OSLEXECPUBLIC ustring simplex, usimplex, simplexnoise, usimplexnoise;
     extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
     extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
     extern OSLEXECPUBLIC ustring subimage, subimagename;
+    extern OSLEXECPUBLIC ustring missingcolor, missingalpha;
+    extern OSLEXECPUBLIC ustring uninitialized_string;
 }; // namespace Strings
 
 
@@ -1390,6 +1389,116 @@ struct NoiseParams {
 };
 
 
-OSL_NAMESPACE_EXIT
 
-#endif /* OSLEXEC_PVT_H */
+
+namespace pvt {
+
+/// Base class for objects that examine compiled shader groups (oso).
+/// This includes optimization passes, "back end" code generators, etc.
+/// The base class holds common data structures and methods that all
+/// such processors will need.
+class OSOProcessorBase {
+public:
+    OSOProcessorBase (ShadingSystemImpl &shadingsys, ShaderGroup &group,
+                      ShadingContext *context);
+
+    virtual ~OSOProcessorBase ();
+
+    /// Do its thing.
+    virtual void run () { }
+
+    /// Return a reference to the shader group being optimized.
+    ShaderGroup &group () const { return m_group; }
+
+    /// Return a reference to the shading system.
+    ShadingSystemImpl &shadingsys () const { return m_shadingsys; }
+
+    /// Return a reference to the texture system.
+    TextureSystem *texturesys () const { return shadingsys().texturesys(); }
+
+    /// Return a reference to the RendererServices.
+    RendererServices *renderer () const { return shadingsys().renderer(); }
+
+    /// Retrieve the dummy shading context.
+    ShadingContext *shadingcontext () const { return m_context; }
+
+    /// Re-set what debugging level we ought to be at.
+    virtual void set_debug ();
+
+    /// What debug level are we at?
+    int debug() const { return m_debug; }
+
+    /// Set which instance (layer within the group) we are currently
+    /// examining.  This lets you walk through the layers in turn.
+    virtual void set_inst (int layer);
+
+    /// Return the layer number that we currently examining.
+    int layer () const { return m_layer; }
+
+    /// Return a pointer to the currently-examining instance within the
+    /// group.
+    ShaderInstance *inst () const { return m_inst; }
+
+    /// Return a reference to a particular indexed op in the current inst
+    Opcode &op (int opnum) { return inst()->ops()[opnum]; }
+
+    /// Return a pointer to a particular indexed symbol in the current inst
+    Symbol *symbol (int symnum) { return inst()->symbol(symnum); }
+
+    /// Return the symbol index of the symbol that is the argnum-th argument
+    /// to the given op in the current instance.
+    int oparg (const Opcode &op, int argnum) const {
+        return inst()->arg (op.firstarg()+argnum);
+    }
+
+    /// Return the ptr to the symbol that is the argnum-th argument to the
+    /// given op in the current instance.
+    Symbol *opargsym (const Opcode &op, int argnum) {
+        return (argnum < op.nargs()) ?
+                    inst()->argsymbol (op.firstarg()+argnum) : NULL;
+    }
+
+    /// Is the symbol a constant whose value is 0?
+    static bool is_zero (const Symbol &A);
+
+    /// Is the symbol a constant whose value is 1?
+    static bool is_one (const Symbol &A);
+
+    /// Set up m_in_conditional[] to be true for all ops that are inside of
+    /// conditionals, false for all unconditionally-executed ops,
+    /// m_in_loop[] to be true for all ops that are inside a loop, and
+    /// m_first_return to be the op number of the first return/exit
+    /// statement (or code.size() if there is no return/exit statement).
+    void find_conditionals ();
+
+    /// Identify basic blocks by assigning a basic block ID for each
+    /// instruction.  Within any basic bock, there are no jumps in or out.
+    /// Also note which instructions are inside conditional states.
+    void find_basic_blocks ();
+
+    /// Will the op executed for-sure unconditionally every time the
+    /// shader is run?  (Not inside a loop or conditional or after a
+    /// possible early exit from the shader.)
+    bool op_is_unconditionally_executed (int opnum) const {
+        return !m_in_conditional[opnum] && opnum < m_first_return;
+    }
+
+protected:
+    ShadingSystemImpl &m_shadingsys;  ///< Backpointer to shading system
+    ShaderGroup &m_group;             ///< Group we're processing
+    ShadingContext *m_context;        ///< Shading context
+    int m_debug;                      ///< Current debug level
+
+    // All below is just for the one inst we're optimizing at the moment:
+    ShaderInstance *m_inst;           ///< Instance we're optimizing
+    int m_layer;                      ///< Layer we're optimizing
+    std::vector<int> m_bblockids;       ///< Basic block IDs for each op
+    std::vector<char> m_in_conditional; ///< Whether each op is in a cond
+    std::vector<char> m_in_loop;        ///< Whether each op is in a loop
+    int m_first_return;                 ///< Op number of first return or exit
+};
+
+}; // namespace pvt
+
+
+OSL_NAMESPACE_EXIT

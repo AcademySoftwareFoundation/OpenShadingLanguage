@@ -44,6 +44,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <llvm/IR/IRBuilder.h>
 # include <llvm/IR/DataLayout.h>
 # include <llvm/Linker.h>
+# if OSL_LLVM_VERSION >= 34
+#   include <llvm/IR/LegacyPassManager.h>
+# else
+#   include <llvm/PassManager.h>
+# endif
 
 #else /* older releases */
 
@@ -61,13 +66,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #   include <llvm/Support/IRBuilder.h>
 #   include <llvm/Target/TargetData.h>
 # endif
+# include <llvm/PassManager.h>
 
 #endif
 
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
-#include <llvm/PassManager.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/ExecutionEngine/JITMemoryManager.h>
@@ -175,6 +180,7 @@ public:
     virtual void deallocateFunctionBody(void *Body) {
         // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
     }
+#if OSL_LLVM_VERSION <= 33
     virtual uint8_t* startExceptionTable(const llvm::Function* F,
                                          uintptr_t &ActualSize) {
         return mm->startExceptionTable (F, ActualSize);
@@ -186,6 +192,7 @@ public:
     virtual void deallocateExceptionTable(void *ET) {
         // DON'T DEALLOCATE mm->deallocateExceptionTable(ET);
     }
+#endif
     virtual bool CheckInvariants(std::string &s) {
         return mm->CheckInvariants(s);
     }
@@ -201,7 +208,41 @@ public:
     virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
     virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
     virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
-#if OSL_LLVM_VERSION >= 31
+
+#if OSL_LLVM_VERSION >= 34
+
+    virtual void *getPointerToNamedFunction(const std::string &Name,
+                                            bool AbortOnFailure = true) {
+        return mm->getPointerToNamedFunction (Name, AbortOnFailure);
+    }
+    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                             unsigned SectionID, llvm::StringRef SectionName) {
+        return mm->allocateCodeSection(Size, Alignment, SectionID, SectionName);
+    }
+    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                             unsigned SectionID, llvm::StringRef SectionName,
+                             bool IsReadOnly) {
+        return mm->allocateDataSection(Size, Alignment, SectionID,
+                                       SectionName, IsReadOnly);
+    }
+    virtual void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+        mm->registerEHFrames (Addr, LoadAddr, Size);
+    }
+    virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+        mm->deregisterEHFrames(Addr, LoadAddr, Size);
+    }
+    virtual uint64_t getSymbolAddress(const std::string &Name) {
+        return mm->getSymbolAddress (Name);
+    }
+    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::ObjectImage *oi) {
+        mm->notifyObjectLoaded (EE, oi);
+    }
+    virtual bool finalizeMemory(std::string *ErrMsg = 0) {
+        return mm->finalizeMemory (ErrMsg);
+    }
+
+#elif OSL_LLVM_VERSION == 33
+
     virtual void *getPointerToNamedFunction(const std::string &Name,
                                             bool AbortOnFailure = true) {
         return mm->getPointerToNamedFunction (Name, AbortOnFailure);
@@ -210,7 +251,6 @@ public:
                                          unsigned SectionID) {
         return mm->allocateCodeSection(Size, Alignment, SectionID);
     }
-#if OSL_LLVM_VERSION >= 33
     virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
                                          unsigned SectionID, bool IsReadOnly) {
         return mm->allocateDataSection(Size, Alignment, SectionID, IsReadOnly);
@@ -218,12 +258,22 @@ public:
     virtual bool applyPermissions(std::string *ErrMsg = 0) {
         return mm->applyPermissions(ErrMsg);
     }
-#else
+
+#elif OSL_LLVM_VERSION == 32 || OSL_LLVM_VERSION == 31
+
+    virtual void *getPointerToNamedFunction(const std::string &Name,
+                                            bool AbortOnFailure = true) {
+        return mm->getPointerToNamedFunction (Name, AbortOnFailure);
+    }
+    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID) {
+        return mm->allocateCodeSection(Size, Alignment, SectionID);
+    }
     virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
                                          unsigned SectionID) {
         return mm->allocateDataSection(Size, Alignment, SectionID);
     }
-#endif
+
 #endif
 };
 
@@ -234,7 +284,7 @@ LLVM_Util::LLVM_Util ()
     : m_thread(NULL), m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
-      m_llvm_passes(NULL), m_llvm_func_passes(NULL),
+      m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
       m_llvm_exec(NULL)
 {
     SetupLLVM ();
@@ -289,7 +339,7 @@ LLVM_Util::LLVM_Util ()
 LLVM_Util::~LLVM_Util ()
 {
     execengine (NULL);
-    delete m_llvm_passes;
+    delete m_llvm_module_passes;
     delete m_llvm_func_passes;
     delete m_builder;
     module (NULL);
@@ -306,8 +356,12 @@ LLVM_Util::SetupLLVM ()
         return;
     // Some global LLVM initialization for the first thread that
     // gets here.
-    // info ("Setting up LLVM");
+
+#if OSL_LLVM_VERSION <= 33
+    // Starting with LLVM 3.4, the pretty stack trace was opt-in rather
+    // than opt-out, and the following variable was removed.
     llvm::DisablePrettyStackTrace = true;
+#endif
     llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
     llvm::InitializeNativeTarget();
     setup_done = true;
@@ -408,29 +462,42 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
 void
 LLVM_Util::setup_optimization_passes (int optlevel)
 {
-    ASSERT (m_llvm_passes == NULL && m_llvm_func_passes == NULL);
+    ASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
 
     // Specify per-function passes
     //
-    m_llvm_func_passes = new llvm::FunctionPassManager(module());
-    llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
-#if OSL_LLVM_VERSION >= 32
+#if OSL_LLVM_VERSION >= 34
+    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
+    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
     fpm.add (new llvm::DataLayout(module()));
 #else
+    m_llvm_func_passes = new llvm::FunctionPassManager(module());
+    llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
+# if OSL_LLVM_VERSION >= 32
+    fpm.add (new llvm::DataLayout(module()));
+# else
     fpm.add (new llvm::TargetData(module()));
+# endif
 #endif
 
     // Specify module-wide (interprocedural optimization) passes
     //
-    m_llvm_passes = new llvm::PassManager;
-    llvm::PassManager &passes (*m_llvm_passes);
-#if OSL_LLVM_VERSION >= 32
-    passes.add (new llvm::DataLayout(module()));
+#if OSL_LLVM_VERSION >= 34
+    m_llvm_module_passes = new llvm::legacy::PassManager;
+    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
+    mpm.add (new llvm::DataLayout(module()));
 #else
-    passes.add (new llvm::TargetData(module()));
+    m_llvm_module_passes = new llvm::PassManager;
+    llvm::PassManager &mpm (*m_llvm_module_passes);
+#if OSL_LLVM_VERSION >= 32
+    mpm.add (new llvm::DataLayout(module()));
+#else
+    mpm.add (new llvm::TargetData(module()));
+#endif
 #endif
 
     if (optlevel >= 1 && optlevel <= 3) {
+#if OSL_LLVM_VERSION <= 34
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
         // same set of optimizations as clang -O1, -O2, -O3
         llvm::PassManagerBuilder builder;
@@ -438,42 +505,40 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         builder.Inliner = llvm::createFunctionInliningPass();
         // builder.DisableUnrollLoops = true;
         builder.populateFunctionPassManager (fpm);
-        builder.populateModulePassManager (passes);
-        // Skip this for now, investigate later.  FIXME.
-        //    builder.populateLTOPassManager (passes, true /* internalize */,
-        //                                    true /* inline once again */);
-        builder.populateModulePassManager (passes);
+        builder.populateModulePassManager (mpm);
+#endif
+
     } else {
         // LLVM 2.x, or unknown choices for llvm_optimize: use the same basic
         // set of passes that we always have.
 
         // Always add verifier?
-        passes.add (llvm::createVerifierPass());
+        mpm.add (llvm::createVerifierPass());
         // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-        passes.add (llvm::createCFGSimplificationPass());
+        mpm.add (llvm::createCFGSimplificationPass());
         // Change memory references to registers
-        //  passes.add (llvm::createPromoteMemoryToRegisterPass());
-        passes.add (llvm::createScalarReplAggregatesPass());
+        //  mpm.add (llvm::createPromoteMemoryToRegisterPass());
+        mpm.add (llvm::createScalarReplAggregatesPass());
         // Combine instructions where possible -- peephole opts & bit-twiddling
-        passes.add (llvm::createInstructionCombiningPass());
+        mpm.add (llvm::createInstructionCombiningPass());
         // Inline small functions
-        passes.add (llvm::createFunctionInliningPass());  // 250?
+        mpm.add (llvm::createFunctionInliningPass());  // 250?
         // Eliminate early returns
-        passes.add (llvm::createUnifyFunctionExitNodesPass());
+        mpm.add (llvm::createUnifyFunctionExitNodesPass());
         // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
-        passes.add (llvm::createReassociatePass());
+        mpm.add (llvm::createReassociatePass());
         // Eliminate common sub-expressions
-        passes.add (llvm::createGVNPass());
+        mpm.add (llvm::createGVNPass());
         // Constant propagation with SCCP
-        passes.add (llvm::createSCCPPass());
+        mpm.add (llvm::createSCCPPass());
         // More dead code elimination
-        passes.add (llvm::createAggressiveDCEPass());
+        mpm.add (llvm::createAggressiveDCEPass());
         // Combine instructions where possible -- peephole opts & bit-twiddling
-        passes.add (llvm::createInstructionCombiningPass());
+        mpm.add (llvm::createInstructionCombiningPass());
         // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-        passes.add (llvm::createCFGSimplificationPass());
+        mpm.add (llvm::createCFGSimplificationPass());
         // Try to make stuff into registers one last time.
-        passes.add (llvm::createPromoteMemoryToRegisterPass());
+        mpm.add (llvm::createPromoteMemoryToRegisterPass());
     }
 }
 
@@ -482,7 +547,11 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 void
 LLVM_Util::do_optimize ()
 {
-    m_llvm_passes->run (*module());
+#if OSL_LLVM_VERSION >= 34
+    m_llvm_module_passes->run (*module());
+#else
+    m_llvm_module_passes->run (*module());
+#endif
 }
 
 

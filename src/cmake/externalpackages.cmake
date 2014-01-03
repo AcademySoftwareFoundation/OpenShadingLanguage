@@ -173,9 +173,9 @@ endif()
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION}
                PATHS ${LLVM_LIB_DIR})
+message (STATUS "LLVM version  = ${LLVM_VERSION}")
+message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
 if (VERBOSE)
-    message (STATUS "LLVM version  = ${LLVM_VERSION}")
-    message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
     message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
     message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
     message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")

@@ -291,7 +291,6 @@ endmacro ()
 
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
-#TESTSUITE ( oslc-empty )
 TESTSUITE ( aastep arithmetic array array-derivs array-range
             blackbody blendmath breakcont
             bug-locallifetime bug-outputinit bug-peep
@@ -310,6 +309,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             oslc-err-arrayindex oslc-err-closuremul
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-paramdefault
+            oslc-variadic-macro
             pointcloud pointcloud-fold
             raytype reparam
             render-background render-bumptest

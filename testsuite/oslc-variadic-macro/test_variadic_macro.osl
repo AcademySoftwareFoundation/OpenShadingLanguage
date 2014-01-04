@@ -1,0 +1,7 @@
+#define TESTMACRO(...) printf ("%f %f\n", __VA_ARGS__)
+
+
+shader test_variadic_macro ()
+{
+    TESTMACRO(u, v);
+}

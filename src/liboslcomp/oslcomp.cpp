@@ -171,6 +171,11 @@ preprocess (const std::string &filename,
         // Setup wave context
         context_type ctx (instring.begin(), instring.end(), filename.c_str());
 
+        // Turn on support of variadic macros, e.g. #define FOO(...) __VA_ARGS__
+        boost::wave::language_support lang = boost::wave::language_support (
+                ctx.get_language() | boost::wave::support_option_variadics);
+        ctx.set_language (lang);
+
         for (size_t i = 0; i < defines.size(); ++i) {
             if (defines[i][1] == 'D')
                 ctx.add_macro_definition (defines[i].c_str()+2);

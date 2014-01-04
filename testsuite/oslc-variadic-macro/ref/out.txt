@@ -1,0 +1,2 @@
+Compiled test_variadic_macro.osl -> test_variadic_macro.oso
+Compiled test_variadic_macro.osl -> test_variadic_macro.oso

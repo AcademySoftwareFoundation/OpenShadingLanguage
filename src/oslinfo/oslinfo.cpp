@@ -158,7 +158,7 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
             break;
         std::string typestring;
         if (p->isstruct)
-            typestring = "struct";
+            typestring = "struct " + p->structname;
         else
             typestring = p->type.c_str();
         if (verbose) {

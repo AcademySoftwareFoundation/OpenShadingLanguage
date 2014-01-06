@@ -240,6 +240,14 @@ OSOReaderQuery::hint (const char *hintstring)
         }
         return;
     }
+    if (m_reading_param && ! strncmp (hintstring, "%struct{", 8)) {
+        hintstring += 8;
+        if (*hintstring == '\"')  // skip quote
+            ++hintstring;
+        OSLQuery::Parameter &param (m_query.m_params[m_query.nparams()-1]);
+        param.structname = readuntil (&hintstring, '\"', '}');
+        return;
+    }
     // std::cerr << "Hint '" << hintstring << "'\n";
 }
 

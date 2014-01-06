@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                             OSL_LIBRARY_VERSION_PATCH, \
                             OSL_LIBRARY_VERSION_RELEASE_TYPE)
 #define OSL_INTRO_STRING "OpenShadingLanguage " OSL_LIBRARY_VERSION_STRING
-#define OSL_COPYRIGHT_STRING "(c) Copyright 2009-2012 Sony Pictures Imageworks, et al. All rights reserved."
+#define OSL_COPYRIGHT_STRING "(c) Copyright 2009-2014 Sony Pictures Imageworks, et al. All rights reserved."
 
 
 // Version numbers for the compiled shader format.  The major number

@@ -1574,9 +1574,9 @@ ASTfunction_call::codegen (Symbol *dest)
         for (int i = 0;  a;  a = a->nextptr(), form = form->nextptr(), ++i) {
             ASTvariable_declaration *f = (ASTvariable_declaration *) form;
             const TypeSpec &ftype (f->sym()->typespec());
-            // If the formal parameter is a struct, we also need to alias
-            // each of the fields
             if (ftype.is_structure() || ftype.is_structure_array()) {
+                // If the formal parameter is a struct, we also need to
+                // alias each of the fields
                 if (a->nodetype() == variable_ref_node) {
                     // Passed a variable that is a struct ; make the struct
                     // fields of the formal param alias to the struct fields
@@ -1603,9 +1603,8 @@ ASTfunction_call::codegen (Symbol *dest)
                 } else {
                     ASSERT (0 && "unhandled structure designation");
                 }
-            } else {
-                f->sym()->alias (argdest[i]);
             }
+            f->sym()->alias (argdest[i]);
         }
 
         // Return statements inside the middle of a function (not the

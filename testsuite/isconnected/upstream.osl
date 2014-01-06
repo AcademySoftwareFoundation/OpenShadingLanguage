@@ -1,4 +1,8 @@
-shader upstream (output float out = 0)
+#include "mystruct.h"
+
+shader upstream (output float out = 0, output MyStruct struct1 = {0,0})
 {
     out = 1;
+    struct1.x = 3;
+    struct1.y = 4;
 }

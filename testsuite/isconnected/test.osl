@@ -1,11 +1,24 @@
+#include "mystruct.h"
+
 void status (float variable, string name)
 {
     printf ("%s %s connected\n", name, isconnected(variable) ? "is" : "is not");
 }
 
 
-shader test (float a = 0, float b = 0)
+void status (MyStruct variable, string name)
+{
+    printf ("%s %s connected\n", name, isconnected(variable) ? "is" : "is not");
+    status (variable.x, concat(name, ".x"));
+}
+
+
+shader test (float a = 0, float b = 0,
+             MyStruct mystruct1 = {0,0},
+             MyStruct mystruct2 = {0,0})
 {
     status (a, "a");
     status (b, "b");
+    status (mystruct1, "mystruct1");
+    status (mystruct2, "mystruct2");
 }

@@ -2080,6 +2080,19 @@ RuntimeOptimizer::resolve_isconnected ()
         if (op.opname() == u_isconnected) {
             inst()->make_symbol_room (1);
             SymbolPtr s = inst()->argsymbol (op.firstarg() + 1);
+            while (const StructSpec *structspec = s->typespec().structspec()) {
+                // How to deal with structures -- just change the reference
+                // to the first field in the struct.
+                // FIXME -- if we ever allow separate layer connection of
+                // individual struct members, this will need something more
+                // sophisticated.
+                ASSERT (structspec && structspec->numfields() >= 1);
+                std::string fieldname = (s->name().string() + "." +
+                                         structspec->field(0).name.string());
+                int fieldsymid = inst()->findparam (ustring(fieldname));
+                ASSERT (fieldsymid >= 0);
+                s = inst()->symbol(fieldsymid);
+            }
             if (s->connected())
                 turn_into_assign_one (op, "resolve isconnected() [1]");
             else

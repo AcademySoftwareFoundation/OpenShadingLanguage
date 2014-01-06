@@ -1,6 +1,11 @@
 Compiled test.osl -> test.oso
 Compiled upstream.osl -> upstream.oso
 Connect upstream.out to downstream.a
+Connect upstream.struct1 to downstream.mystruct1
 a is connected
 b is not connected
+mystruct1 is connected
+mystruct1.x is connected
+mystruct2 is not connected
+mystruct2.x is not connected
 

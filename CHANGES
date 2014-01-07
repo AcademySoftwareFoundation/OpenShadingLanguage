@@ -24,7 +24,12 @@ ShadingSystem API changes and new options (for renderer writers):
 * Split the definition of ShaderGlobals into its own header file,
   shaderglobals.h. (1.5.1)
 * Added a RendererServices pointer to ShaderGlobals, to eliminate a
-  bunch of pointless indirection during shader execution. (1.5.1)
+  bunch of pointless indirection during shader execution. (1.5.2)
+* Split the definition of ShaderGlobals into a separate shaderglobals.h
+  file. (1.5.1)
+* OSLQuery::Parameter has a new 'structname' field, that for struct
+  parameters reveals the name of the structure type. The oslinfo utility
+  has also been updated to print this information. (1.5.4)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
@@ -40,10 +45,13 @@ Bug fixes:
   passed was less than the full length of the array, and the knots had
   derivatives -- the derivatives would be looked up from the wrong spot
   in the array (and could read uninitialized portions of the array).
-  (1.4.1/1.5.1)
+  (1.4.1/1.5.3)
 * Fix incorrect function declarations for the no-bitcode case (only
   affected Windows or if a site purposely built without precompiled
-  bitcode for llvm_ops.cpp). (1.4.1/1.5.1)
+  bitcode for llvm_ops.cpp). (1.4.1/1.5.3)
+* When using Boost Wave for oslc's preprocessor, fixed it so that
+  variadic macros work. (1.5.4)
+* Ensure that isconnected() works for struct parameters. (1.5.4)
 
 Under the hood:
 * Internals refactor that separates the runtime optimization from the
@@ -60,11 +68,13 @@ Build & test system improvements and developer goodies:
 * More robust detection of clang, for older cmake versions.
   (1.4.1/1.5.1)
 * Handle 3-part version numbers for LLVM installations. (1.4.1/1.5.1)
-* Fix USE_EXTERNAL_PUGIXML versus USING_OIIO_PUGI issue. (1.4.1/1.5.1)
-* Remove all ehader include guards, switch to '#pragma once' (1.5.1)
-* Adjust build to account for new library names in OpenEXR 2.1. (1.5.1)
+* Fix USE_EXTERNAL_PUGIXML versus USING_OIIO_PUGI issue. (1.4.1/1.5.3)
+* Remove all ehader include guards, switch to '#pragma once' (1.5.2)
+* Adjust build to account for new library names in OpenEXR 2.1. (1.5.3)
 * Make sure we include all OpenEXR and Ilmbase headers with <OpenEXR/foo.h>
   and remove the addition of OpenEXR sub-folder from system search paths.
+  (1.5.1)
+* Better detection of LLVM version number from the LLVM installation.
   (1.5.1)
 
 Documentation:

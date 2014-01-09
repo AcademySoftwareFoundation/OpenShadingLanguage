@@ -563,7 +563,8 @@ RuntimeOptimizer::llvm_type_groupdata ()
             if (ts.is_structure())  // skip the struct symbol itself
                 continue;
             int arraylen = std::max (1, sym.typespec().arraylength());
-            int n = arraylen * (sym.has_derivs() ? 3 : 1);
+            int deriv_mult = sym.has_derivs() ? 3 : 1;
+            int n = arraylen * deriv_mult;
             ts.make_array (n);
             fields.push_back (llvm_type (ts));
 
@@ -578,7 +579,7 @@ RuntimeOptimizer::llvm_type_groupdata ()
                           << " " << ts.c_str() << ", field " << order 
                           << ", offset " << offset << std::endl;
             sym.dataoffset ((int)offset);
-            offset += n * int(sym.size());
+            offset += int(sym.size()) * deriv_mult;
 
             m_param_order_map[&sym] = order;
             ++order;

@@ -1,0 +1,8 @@
+shader endRGB(    
+    float Cin[3] = { 0.0, 0.0, 0.0 },  
+    output color Cfinal = 0.25 )
+{
+    Cfinal[0] = Cin[0];
+    Cfinal[1] = Cin[1];
+    Cfinal[2] = Cin[2];
+}

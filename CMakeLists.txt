@@ -294,6 +294,7 @@ endmacro ()
 #TESTSUITE ( oslc-empty )
 TESTSUITE ( aastep arithmetic array array-derivs array-range
             blackbody blendmath breakcont
+            bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-peep
             cellnoise closure color comparison
             component-range const-array-params debugnan debug-uninit

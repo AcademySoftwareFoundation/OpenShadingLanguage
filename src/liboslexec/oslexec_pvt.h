@@ -1161,12 +1161,7 @@ public:
     /// preparation, but don't actually run the shader.  Return true if
     /// the shader executed, false if it did not (including if the
     /// shader itself was empty).
-    bool execute (ShaderUse use, ShaderGroup &sas,
-                  ShaderGlobals &ssg, bool run=true);
-
-    /// Return the current shader use being executed.
-    ///
-    ShaderUse use () const { return (ShaderUse) m_curuse; }
+    bool execute (ShaderGroup &sas, ShaderGlobals &ssg, bool run=true);
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs) {
         size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
@@ -1224,7 +1219,7 @@ public:
     /// shaders of the given use, with priority given to
     /// later laters over earlier layers (if they name the same symbol).
     /// Return NULL if no such symbol is found.
-    Symbol * symbol (ShaderUse use, ustring name);
+    Symbol * symbol (ustring name);
 
     /// Return a pointer to where the symbol's data lives.
     void *symbol_data (Symbol &sym);
@@ -1286,21 +1281,13 @@ public:
 
 private:
 
-    /// Execute the llvm-compiled shaders for the given use (for example,
-    /// ShadUseSurface).  The context must already be bound.  If
-    /// runflags are not supplied, they will be auto-generated with all
-    /// points turned on.
-    void execute_llvm (ShaderUse use, Runflag *rf=NULL,
-                       int *ind=NULL, int nind=0);
-
     void free_dict_resources ();
 
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
-    ShaderGroup *m_attribs;      ///< Ptr to shading attrib state
+    ShaderGroup *m_attribs;             ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
-    int m_curuse;                       ///< Current use that we're running
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard

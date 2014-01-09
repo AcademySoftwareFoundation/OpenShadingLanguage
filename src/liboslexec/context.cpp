@@ -67,11 +67,8 @@ ShadingContext::~ShadingContext ()
 
 
 bool
-ShadingContext::execute (ShaderUse use, ShaderGroup &sgroup,
-                         ShaderGlobals &ssg, bool run)
+ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 {
-    DASSERT (use == ShadUseSurface);  // FIXME
-    m_curuse = use;
     m_attribs = &sgroup;
 
     // Optimize if we haven't already
@@ -127,7 +124,7 @@ ShadingContext::execute (ShaderUse use, ShaderGroup &sgroup,
 
 
 Symbol *
-ShadingContext::symbol (ShaderUse use, ustring name)
+ShadingContext::symbol (ustring name)
 {
     ShaderGroup &sgroup (*attribs());
     int nlayers = sgroup.nlayers ();

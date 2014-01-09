@@ -1,0 +1,9 @@
+shader textureRGB( 
+    output float Cout[3] = { 0.0, 0.0, 0.0 },
+    string filename="../common/textures/mandrill.tif")
+{       
+    color tmpCd= (color) texture (filename, u, v );
+    Cout[0] = tmpCd[0];
+    Cout[1] = tmpCd[1];
+    Cout[2] = tmpCd[2];
+}

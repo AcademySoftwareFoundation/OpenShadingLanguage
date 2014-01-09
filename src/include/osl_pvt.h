@@ -80,22 +80,6 @@ ShaderUse shaderuse_from_name (const char *name);
 
 
 
-/// Data type for flags that indicate on a point-by-point basis whether
-/// we want computations to be performed.
-typedef unsigned char Runflag;
-
-/// Pre-defined values for Runflag's.
-///
-enum RunflagVal { RunflagOff = 0, RunflagOn = 1 };
-
-/// Data type for indices that indicate on which shading points we want
-/// computations to be performed.
-typedef int RunIndex;
-
-
-
-
-
 /// Kinds of symbols
 ///
 enum SymType {

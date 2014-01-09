@@ -1396,7 +1396,7 @@ bool
 ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
                             ShaderGlobals &ssg, bool run)
 {
-    return ctx.execute (ShadUseSurface, group, ssg, run);
+    return ctx.execute (group, ssg, run);
 }
 
 
@@ -1405,7 +1405,7 @@ const void *
 ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring name,
                                TypeDesc &type)
 {
-    Symbol *sym = ctx.symbol (ShadUseSurface, name);
+    Symbol *sym = ctx.symbol (name);
     if (sym) {
         type = sym->typespec().simpletype();
         return ctx.symbol_data (*sym);

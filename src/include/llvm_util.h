@@ -42,18 +42,25 @@ namespace llvm {
   class ConstantFolder;
   class ExecutionEngine;
   class Function;
-  class FunctionPassManager;
   class FunctionType;
   class JITMemoryManager;
   class Linker;
   class LLVMContext;
   class Module;
-  class PassManager;
   class PointerType;
   class Type;
   class Value;
   template<bool preserveNames, typename T, typename Inserter> class IRBuilder;
   template<bool preserveNames> class IRBuilderDefaultInserter;
+#if OSL_LLVM_VERSION >= 34
+  namespace legacy {
+    class FunctionPassManager;
+    class PassManager;
+  }
+#else
+  class FunctionPassManager;
+  class PassManager;
+#endif
 }
 
 
@@ -473,8 +480,13 @@ private:
     IRBuilder *m_builder;
     OSL_Dummy_JITMemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
-    llvm::PassManager *m_llvm_passes;
+#if OSL_LLVM_VERSION >= 34
+    llvm::legacy::PassManager *m_llvm_module_passes;
+    llvm::legacy::FunctionPassManager *m_llvm_func_passes;
+#else
+    llvm::PassManager *m_llvm_module_passes;
     llvm::FunctionPassManager *m_llvm_func_passes;
+#endif
     llvm::ExecutionEngine *m_llvm_exec;
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break

@@ -189,9 +189,9 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
                  std::cout << "\t\tUnknown default value\n";
             else std::cout << "nodefault\n";
         }
-        else if (p->type.basetype == PT_STRING)
+        else if (p->type.basetype == TypeDesc::STRING)
             print_default_string_vals (p, verbose);
-        else if (p->type.basetype == PT_INT)
+        else if (p->type.basetype == TypeDesc::INT)
             print_default_int_vals (p, verbose);
         else
             print_default_float_vals (p, verbose);

@@ -353,6 +353,6 @@ OSL::pvt::osolextype (int lex)
     case STRINGTYPE : return TypeDesc::TypeString;
     case VECTORTYPE : return TypeDesc::TypeVector;
     case VOIDTYPE   : return TypeDesc::NONE;
-    default: return PT_UNKNOWN;
+    default: return TypeDesc::UNKNOWN;
     }
 }

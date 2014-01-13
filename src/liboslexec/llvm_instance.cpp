@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/strutil.h>
 
 #include "llvm_headers.h"
 
@@ -477,6 +479,49 @@ static const char *llvm_helper_function_table[] = {
 
     NULL
 };
+
+
+
+#ifdef OSL_SPI
+static void
+check_cwd (ShadingSystemImpl &shadingsys)
+{
+    std::string err;
+    char pathname[1024] = { "" };
+    if (! getcwd (pathname, sizeof(pathname)-1)) {
+        int e = errno;
+        err += Strutil::format ("Failed getcwd(), errno is %d: %s\n",
+                                errno, pathname);
+        if (e == EACCES || e == ENOENT) {
+            err += "Read/search permission problem or dir does not exist.\n";
+            const char *pwdenv = getenv ("PWD");
+            if (! pwdenv) {
+                err += "$PWD is not even found in the environment.\n";
+            } else {
+                err += Strutil::format ("$PWD is \"%s\"\n", pwdenv);
+                err += Strutil::format ("That %s.\n",
+                          OIIO::Filesystem::exists(pwdenv) ? "exists" : "does NOT exist");
+                err += Strutil::format ("That %s a directory.\n",
+                          OIIO::Filesystem::is_directory(pwdenv) ? "is" : "is NOT");
+                std::vector<std::string> pieces;
+                Strutil::split (pwdenv, pieces, "/");
+                std::string p;
+                for (size_t i = 0;  i < pieces.size();  ++i) {
+                    if (! pieces[i].size())
+                        continue;
+                    p += "/";
+                    p += pieces[i];
+                    err += Strutil::format ("  %s : %s and is%s a directory.\n", p,
+                        OIIO::Filesystem::exists(p) ? "exists" : "does NOT exist",
+                        OIIO::Filesystem::is_directory(p) ? "" : " NOT");
+                }
+            }
+        }
+    }
+    if (err.size())
+        shadingsys.error (err);
+}
+#endif
 
 
 
@@ -1190,6 +1235,12 @@ RuntimeOptimizer::build_llvm_group ()
     {
     static spin_mutex mutex;
     OIIO::spin_lock lock (mutex);
+#endif
+
+#ifdef OSL_SPI
+    // Temporary (I hope) check to diagnose an intermittent failure of
+    // getcwd inside LLVM. Oy.
+    check_cwd (shadingsys());
 #endif
 
     if (! m_thread->llvm_context)

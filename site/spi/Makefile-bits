@@ -3,6 +3,8 @@
 OSL_NAMESPACE ?= 'OSL_Arnold'
 OPENIMAGEIO_NAMESPACE ?= 'OpenImageIO_Arnold'
 
+MY_CMAKE_FLAGS += "-DEXTRA_CPP_DEFINITIONS=\"-DOSL_SPI=1\""
+
 ifeq (${platform}, macosx)
     MY_CMAKE_FLAGS += \
         -DBUILD_WITH_INSTALL_RPATH=1 \

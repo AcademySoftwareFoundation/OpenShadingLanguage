@@ -377,7 +377,7 @@ OSLCompilerImpl::compile (const std::string &filename,
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
-                defines.push_back(options[i].substr(2));
+                defines.push_back(options[i]);
             else if (options[i].c_str()[1] == 'I')
                 includepaths.push_back(options[i].substr(2));
 #else

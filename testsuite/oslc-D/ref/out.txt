@@ -1,0 +1,4 @@
+Compiled test.osl -> test.oso
+Compiled test.osl -> test.oso
+foo is 42
+

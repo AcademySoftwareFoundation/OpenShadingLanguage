@@ -30,6 +30,9 @@ ShadingSystem API changes and new options (for renderer writers):
 * OSLQuery::Parameter has a new 'structname' field, that for struct
   parameters reveals the name of the structure type. The oslinfo utility
   has also been updated to print this information. (1.5.4)
+* RendererServices::get_texture_info method parameters have changed, now
+  includes an additional ShaderGlobals* parameter (as did all the other
+  texture functions already). (1.5.5)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
@@ -52,6 +55,9 @@ Bug fixes:
 * When using Boost Wave for oslc's preprocessor, fixed it so that
   variadic macros work. (1.5.4)
 * Ensure that isconnected() works for struct parameters. (1.5.4)
+* Fix incorrect data layout in heap for certain array parameters. (1.5.5)
+* oslc -D and -U did not work properly when OSL was built against
+  Boost Wave as the C preprocessor. (1.5.5)
 
 Under the hood:
 * Internals refactor that separates the runtime optimization from the
@@ -60,8 +66,15 @@ Under the hood:
 * Split all the direct calls to LLVM API into a separate LLVM_Util
   class, which has no other OSL dependencies and may be used from other
   apps to simpilfy use of LLVM to JIT code dynamically. (1.5.1)
+* Stop using deprecated TypeDesc #defines. (1.5.4)
+* A shader's printf, warning, and error output is now buffered so that
+  all the "console" output from a shader invocation will appear
+  contiguous in a log, rather than possibly line-by-line interspersed
+  with the output of another shader invocation running concurrently in a
+  different thread (1.5.5).
 
 Build & test system improvements and developer goodies:
+* Make OSL work with LLVM 3.4 (1.5.4)
 * testshade consolidates --iparam, --fparam, --vparam, --sparam into
   just --param that figures out the types (or could be explicitly
   told. (1.5.1)

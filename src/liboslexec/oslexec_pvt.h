@@ -882,7 +882,8 @@ private:
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     ustring m_colorspace;                 ///< What RGB colors mean
     int m_max_local_mem_KB;               ///< Local storage can a shader use
-    bool m_compile_report;
+    bool m_compile_report;                ///< Print compilation report?
+    bool m_buffer_printf;                 ///< Buffer/batch printf output?
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
@@ -1279,6 +1280,24 @@ public:
         }
     }
 
+    // Record an error (or warning, printf, etc.)
+    void record_error (ErrorHandler::ErrCode code, const std::string &text) const;
+    // Process all the recorded errors, warnings, printfs
+    void process_errors () const;
+
+    TINYFORMAT_WRAP_FORMAT (void, error, const,
+                            std::ostringstream msg;, msg,
+                            record_error(ErrorHandler::EH_ERROR, msg.str());)
+    TINYFORMAT_WRAP_FORMAT (void, warning, const,
+                            std::ostringstream msg;, msg,
+                            record_error(ErrorHandler::EH_WARNING, msg.str());)
+    TINYFORMAT_WRAP_FORMAT (void, info, const,
+                            std::ostringstream msg;, msg,
+                            record_error(ErrorHandler::EH_INFO, msg.str());)
+    TINYFORMAT_WRAP_FORMAT (void, message, const,
+                            std::ostringstream msg;, msg,
+                            record_error(ErrorHandler::EH_MESSAGE, msg.str());)
+
 private:
 
     void free_dict_resources ();
@@ -1310,6 +1329,10 @@ private:
     static const int FAILED_ATTRIBS = 16;
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
     int m_next_failed_attrib;
+
+    // Buffering of error messages and printfs
+    typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
+    mutable std::vector<ErrorItem> m_buffered_errors;
 };
 
 

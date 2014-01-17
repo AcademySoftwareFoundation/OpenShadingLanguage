@@ -2604,7 +2604,7 @@ RuntimeOptimizer::run ()
     Timer rop_timer;
     int nlayers = (int) group().nlayers ();
     if (debug())
-        shadingsys().info ("About to optimize shader group %s (%d layers):",
+        shadingcontext()->info ("About to optimize shader group %s (%d layers):",
                            group().name().c_str(), nlayers);
 
     m_params_holding_globals.resize (nlayers);
@@ -2710,9 +2710,9 @@ RuntimeOptimizer::run ()
         ss.m_stat_postopt_ops += new_nops;
     }
     if (shadingsys().m_compile_report) {
-        shadingsys().info ("Optimized shader group %s:",
+        shadingcontext()->info ("Optimized shader group %s:",
                            group().name() ? group().name().c_str() : "");
-        shadingsys().info (" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+        shadingcontext()->info (" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
               m_stat_specialization_time, new_nsyms, old_nsyms,
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
               new_nops, old_nops,

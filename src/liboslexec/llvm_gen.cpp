@@ -227,7 +227,7 @@ LLVMGEN (llvm_gen_printf)
 
     std::vector<llvm::Value*> call_args;
     if (!format_sym.is_constant()) {
-        rop.shadingsys().warning ("%s must currently have constant format\n",
+        rop.shadingcontext()->warning ("%s must currently have constant format\n",
                                   op.opname().c_str());
         return false;
     }
@@ -264,7 +264,7 @@ LLVMGEN (llvm_gen_printf)
                 ++format;
             char formatchar = *format++;  // Also eat the format char
             if (arg >= op.nargs()) {
-                rop.shadingsys().error ("Mismatch between format string and arguments (%s:%d)",
+                rop.shadingcontext()->error ("Mismatch between format string and arguments (%s:%d)",
                                         op.sourcefile().c_str(), op.sourceline());
                 return false;
             }
@@ -910,7 +910,7 @@ LLVMGEN (llvm_gen_unary_op)
             result = rop.ll.op_not (src_val);
         } else {
             // Don't know how to handle this.
-            rop.shadingsys().error ("Don't know how to handle op '%s', eliding the store\n", opname.c_str());
+            rop.shadingcontext()->error ("Don't know how to handle op '%s', eliding the store\n", opname.c_str());
         }
 
         // Store the result
@@ -928,7 +928,7 @@ LLVMGEN (llvm_gen_unary_op)
 
         if (dst_derivs) {
             // mul results in <a * b, a * b_dx + b * a_dx, a * b_dy + b * a_dy>
-            rop.shadingsys().info ("punting on derivatives for now\n");
+            rop.shadingcontext()->info ("punting on derivatives for now\n");
             // FIXME!!
         }
     }
@@ -2063,7 +2063,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                                     opt, rop.ll.constant(nchans), val);
 
         } else {
-            rop.shadingsys().error ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
+            rop.shadingcontext()->error ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
                                     tex3d ? "3d" : "",
                                     name.c_str(), valtype.c_str(),
                                     op.sourcefile().c_str(), op.sourceline());
@@ -2296,7 +2296,7 @@ llvm_gen_trace_options (BackendLLVM &rop, int opnum,
         } else if (name == ktraceset && valtype == TypeDesc::STRING) {
             rop.ll.call_function ("osl_trace_set_traceset", opt, val);
         } else {
-            rop.shadingsys().error ("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
+            rop.shadingcontext()->error ("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
                                     name.c_str(), valtype.c_str(),
                                     op.sourcefile().c_str(), op.sourceline());
         }
@@ -2406,7 +2406,7 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
                                     rop.llvm_load_value (Val, 0, NULL, 0,
                                                          TypeDesc::TypeFloat));
         } else {
-            rop.shadingsys().error ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
+            rop.shadingcontext()->error ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
                                     op.opname().c_str(),
                                     name.c_str(), valtype.c_str(),
                                     op.sourcefile().c_str(), op.sourceline());
@@ -2503,7 +2503,7 @@ LLVMGEN (llvm_gen_noise)
         derivs = true;
         name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
-        rop.shadingsys().error ("%snoise type \"%s\" is unknown, called from (%s:%d)",
+        rop.shadingcontext()->error ("%snoise type \"%s\" is unknown, called from (%s:%d)",
                                 (periodic ? "periodic " : ""), name.c_str(),
                                 op.sourcefile().c_str(), op.sourceline());
         return false;
@@ -2915,7 +2915,7 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
                 legal = true;
         }
         if (!legal) {
-            rop.shadingsys().warning("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->warning("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
             continue;
         }
 
@@ -2947,7 +2947,7 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.shadingsys().error ("Closure '%s' is not supported by the current renderer, called from (%s:%d)",
+        rop.shadingcontext()->error ("Closure '%s' is not supported by the current renderer, called from (%s:%d)",
                                 closure_name.c_str(), op.sourcefile().c_str(), op.sourceline());
         return false;
     }
@@ -3014,7 +3014,7 @@ LLVMGEN (llvm_gen_closure)
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                              4 /* use 4 byte alignment for now */);
         } else {
-            rop.shadingsys().error ("Incompatible formal argument %d to '%s' closure. Prototypes don't match renderer registry.",
+            rop.shadingcontext()->error ("Incompatible formal argument %d to '%s' closure. Prototypes don't match renderer registry.",
                                     carg + 1, closure_name.c_str());
         }
     }

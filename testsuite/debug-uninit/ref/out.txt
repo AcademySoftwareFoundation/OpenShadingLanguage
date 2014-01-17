@@ -4,4 +4,4 @@ ERROR: Detected possible use of uninitialized value in i_uninit at test.osl:10
 Output Cout to Cout.tif
 ERROR: Detected possible use of uninitialized value in f_uninit at test.osl:10
 ERROR: Detected possible use of uninitialized value in s_uninit at test.osl:11
-[RendererServices::texture] ImageInput::create() called with no filename
+ERROR: [RendererServices::texture] ImageInput::create() called with no filename

@@ -8,7 +8,7 @@ Executing...
 ../common/textures/grid.tx displaywindow: 0 0 1023 1023
 ../common/textures/grid.tx datetime: 2009:09:12  0:53:24 (1)
 ../common/textures/grid.tx foobar: not found (0)
-[RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
 
 Invalid image file "badfile"
 badfile data: not found (0)
@@ -23,7 +23,7 @@ win.exr textureformat: Plain Texture (1)
 win.exr datawindow: 10 20 109 69
 win.exr displaywindow: 0 0 299 199
 win.exr foobar: not found (0)
-[RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
 
 Invalid image file "badfile"
 badfile data: not found (0)

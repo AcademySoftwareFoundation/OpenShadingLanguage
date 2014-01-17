@@ -193,13 +193,13 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
         return 0;
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_search: could not open \"%s\"", filename.c_str());
         return 0;
     }
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
     if (cloud == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_search: could not open \"%s\"", filename.c_str());
         return 0;
     }
 
@@ -290,20 +290,20 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_get: could not open \"%s\"", filename.c_str());
         return 0;
     }
     spin_lock lock (pc->m_mutex);
     Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
     if (cloud == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_get: could not open \"%s\"", filename.c_str());
         return 0;
     }
 
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();
     if (! attr) {
-        sg->context->shadingsys().error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
+        sg->context->error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
         return 0;
     }
 
@@ -327,7 +327,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     // Finally check for some equivalent types like float3 and vector
     if (!compatiblePartioType(attr, attr_partio_type)) {
-        sg->context->shadingsys().error ("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
+        sg->context->error ("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
                     attr_name.c_str(), partioTypeString(attr), attr->count,
                     element_type.c_str(), filename.c_str());
         return 0;

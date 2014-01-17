@@ -274,6 +274,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_colorspace("Rec709"),
       m_max_local_mem_KB(1024),
       m_compile_report(false),
+      m_buffer_printf(true),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
@@ -650,6 +651,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
     ATTR_SET ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET ("compile_report", int, m_compile_report);
+    ATTR_SET ("buffer_printf", int, m_buffer_printf);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -747,6 +749,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_DECODE ("compile_report", int, m_compile_report);
+    ATTR_DECODE ("buffer_printf", int, m_buffer_printf);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
@@ -898,6 +901,7 @@ ShadingSystemImpl::warning (const std::string &msg)
 void
 ShadingSystemImpl::info (const std::string &msg)
 {
+    lock_guard guard (m_errmutex);
     m_err->info (msg);
 }
 
@@ -906,6 +910,7 @@ ShadingSystemImpl::info (const std::string &msg)
 void
 ShadingSystemImpl::message (const std::string &msg)
 {
+    lock_guard guard (m_errmutex);
     m_err->message (msg);
 }
 
@@ -1291,8 +1296,8 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
     srcinst->outgoing_connections (true);
 
     if (debug())
-        m_err->message ("ConnectShaders %s %s -> %s %s\n",
-                        srclayer, srcparam, dstlayer, dstparam);
+        message ("ConnectShaders %s %s -> %s %s\n",
+                 srclayer, srcparam, dstlayer, dstparam);
 
     return true;
 }
@@ -1387,6 +1392,7 @@ ShadingSystemImpl::get_context (PerThreadInfo *threadinfo)
 void
 ShadingSystemImpl::release_context (ShadingContext *ctx)
 {
+    ctx->process_errors ();
     ctx->thread_info()->context_pool.push (ctx);
 }
 

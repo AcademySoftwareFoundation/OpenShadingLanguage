@@ -42,6 +42,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_NAMESPACE_ENTER
 
+static mutex buffered_errors_mutex;
+
 
 
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
@@ -57,6 +59,7 @@ ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
 
 ShadingContext::~ShadingContext ()
 {
+    process_errors ();
     m_shadingsys.m_stat_contexts -= 1;
     for (RegexMap::iterator it = m_regex_map.begin(); it != m_regex_map.end(); ++it) {
       delete it->second;
@@ -92,8 +95,8 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     size_t heap_size_needed = sgroup.llvm_groupdata_size();
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
-            shadingsys().info ("  ShadingContext %p growing heap to %llu",
-                               this, (unsigned long long) heap_size_needed);
+            info ("  ShadingContext %p growing heap to %llu",
+                  this, (unsigned long long) heap_size_needed);
         m_heap.resize (heap_size_needed);
     }
     // Zero out the heap memory we will be using
@@ -118,7 +121,60 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
         DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
         run_func (&ssg, &m_heap[0]);
     }
+
+    // Process any queued up error messages, warnings, printfs from shaders
+    process_errors ();
+
     return true;
+}
+
+
+
+void
+ShadingContext::record_error (ErrorHandler::ErrCode code,
+                              const std::string &text) const
+{
+    m_buffered_errors.push_back (ErrorItem(code,text));
+    // If we aren't buffering, just process immediately
+    if (! shadingsys().m_buffer_printf)
+        process_errors ();
+}
+
+
+
+void
+ShadingContext::process_errors () const
+{
+    size_t nerrors = m_buffered_errors.size();
+    if (! nerrors)
+        return;
+
+    // Use a mutex to make sure output from different threads stays
+    // together, at least for one shader invocation, rather than being
+    // interleaved with other threads.
+    lock_guard lock (buffered_errors_mutex);
+
+    for (size_t i = 0;  i < nerrors;  ++i) {
+        switch (m_buffered_errors[i].first) {
+        case ErrorHandler::EH_MESSAGE :
+        case ErrorHandler::EH_DEBUG :
+           shadingsys().message (m_buffered_errors[i].second);
+            break;
+        case ErrorHandler::EH_INFO :
+            shadingsys().info (m_buffered_errors[i].second);
+            break;
+        case ErrorHandler::EH_WARNING :
+            shadingsys().warning (m_buffered_errors[i].second);
+            break;
+        case ErrorHandler::EH_ERROR :
+        case ErrorHandler::EH_SEVERE :
+            shadingsys().error (m_buffered_errors[i].second);
+            break;
+        default:
+            break;
+        }
+    }
+    m_buffered_errors.clear();
 }
 
 

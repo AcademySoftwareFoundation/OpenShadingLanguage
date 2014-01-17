@@ -730,7 +730,7 @@ osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
         r->makeIdentity();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->shadingsys().error ("Unknown transformation \"%s\"", from);
+            ctx->error ("Unknown transformation \"%s\"", from);
     }
     return ok;
 }
@@ -757,7 +757,7 @@ osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
         r->makeIdentity ();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->shadingsys().error ("Unknown transformation \"%s\"", to);
+            ctx->error ("Unknown transformation \"%s\"", to);
     }
     return ok;
 }
@@ -772,7 +772,7 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
     else {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->shadingsys().error ("Unknown transformation \"%s\"", from);
+            ctx->error ("Unknown transformation \"%s\"", from);
     }
     return ok;
 }
@@ -1474,7 +1474,7 @@ OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_,
     const ustring &filename  = USTR(fin_);
     const ustring &dataname  = USTR(dnam_);
 
-    return sg->renderer->get_texture_info (filename, 0 /*FIXME-ptex*/,
+    return sg->renderer->get_texture_info (sg, filename, 0 /*FIXME-ptex*/,
                                            dataname, typedesc, data);
 }
 
@@ -1721,7 +1721,7 @@ osl_range_check (int indexvalue, int length,
 {
     if (indexvalue < 0 || indexvalue >= length) {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        ctx->shadingsys().error ("Index [%d] out of range [0..%d]: %s:%d",
+        ctx->error ("Index [%d] out of range [0..%d]: %s:%d",
                                  indexvalue, length-1,
                                  USTR(sourcefile).c_str(), sourceline);
         if (indexvalue >= length)
@@ -1753,7 +1753,7 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
         for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
             int i = d*ncomps + c;
             if (! isfinite(vals[i])) {
-                ctx->shadingsys().error ("Detected %g value in %s%s at %s:%d (op %s)",
+                ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
                                          vals[i],
                                          d > 0 ? "the derivatives of " : "",
                                          USTR(symbolname).c_str(),
@@ -1809,7 +1809,7 @@ osl_uninit_check (long long typedesc_, void *vals_,
             }
     }
     if (uninit) {
-        ctx->shadingsys().error ("Detected possible use of uninitialized value in %s at %s:%d",
+        ctx->error ("Detected possible use of uninitialized value in %s at %s:%d",
                                  USTR(symbolname).c_str(),
                                  USTR(sourcefile).c_str(), sourceline);
     }

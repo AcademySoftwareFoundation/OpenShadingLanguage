@@ -180,7 +180,7 @@ BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
     std::string mangled_name = dealiased->mangled();
     AllocationMap::iterator map_iter = named_values().find (mangled_name);
     if (map_iter == named_values().end()) {
-        shadingsys().error ("Couldn't find symbol '%s' (unmangled = '%s'). Did you forget to allocate it?",
+        shadingcontext()->error ("Couldn't find symbol '%s' (unmangled = '%s'). Did you forget to allocate it?",
                             mangled_name.c_str(), dealiased->name().c_str());
         return 0;
     }

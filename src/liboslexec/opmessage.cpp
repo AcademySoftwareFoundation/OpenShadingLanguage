@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "oslexec_pvt.h"
+#include "shaderglobals.h"
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -73,7 +74,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
         if (m->name == name) {
             // message already exists?
             if (m->has_data())
-                sg->context->shadingsys().error(
+                sg->context->error(
                    "message \"%s\" already exists (created here: %s:%d)"
                    " cannot set again from %s:%d",
                    name.c_str(),
@@ -82,7 +83,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
                    sourcefile.c_str(),
                    sourceline);
             else // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
-               sg->context->shadingsys().error(
+               sg->context->error(
                    "message \"%s\" was queried before being set (queried here: %s:%d)"
                    " setting it now (%s:%d) would lead to inconsistent results",
                    name.c_str(),
@@ -127,7 +128,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
         if (m->name == name) {
             if (m->type != type) {
                 // found message, but types don't match
-                sg->context->shadingsys().error(
+                sg->context->error(
                     "type mismatch for message \"%s\" (%s as %s here: %s:%d)"
                     " cannot fetch as %s from %s:%d",
                     name.c_str(),
@@ -146,7 +147,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
             }
             if (m->layeridx > layeridx) {
                 // found message, but was set by a layer deeper than the one querying the message
-                sg->context->shadingsys().error(
+                sg->context->error(
                     "message \"%s\" was set by layer #%d (%s:%d)"
                     " but is being queried by layer #%d (%s:%d)"
                     " - messages may only be transfered from nodes "

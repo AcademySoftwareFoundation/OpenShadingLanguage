@@ -645,7 +645,7 @@ struct GenericNoise {
             GaborNoise gnoise;
             gnoise (name, result, s, sg, opt);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 
@@ -673,7 +673,7 @@ struct GenericNoise {
             GaborNoise gnoise;
             gnoise (name, result, s, t, sg, opt);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 };
@@ -707,7 +707,7 @@ struct GenericPNoise {
             GaborPNoise gnoise;
             gnoise (name, result, s, sp, sg, opt);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 
@@ -730,7 +730,7 @@ struct GenericPNoise {
             GaborPNoise gnoise;
             gnoise (name, result, s, t, sp, tp, sg, opt);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 };

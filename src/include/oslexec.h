@@ -91,6 +91,9 @@ public:
     ///                              every shader compiled (0).
     ///    int max_warnings_per_thread  Number of warning calls that should be
     ///                              processed per thread (100).
+    ///    int buffer_printf      Buffer printf output from shaders and
+    ///                              output atomically, to prevent threads
+    ///                              from interleaving lines. (1)
     /// 2. Attributes that should be set by applications/renderers that
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")
@@ -548,7 +551,8 @@ public:
     /// and the data has been put in *data.  Return false if the texture
     /// doesn't exist, doesn't have the requested data, if the data
     /// doesn't match the type requested. or some other failure.
-    virtual bool get_texture_info (ustring filename, int subimage,
+    virtual bool get_texture_info (ShaderGlobals *sg,
+                                   ustring filename, int subimage,
                                    ustring dataname, TypeDesc datatype,
                                    void *data);
 

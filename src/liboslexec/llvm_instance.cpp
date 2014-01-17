@@ -963,7 +963,8 @@ BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                    op.opname() == op_end) {
             // Skip this op, it does nothing...
         } else {
-            shadingsys().error ("LLVMOSL: Unsupported op %s in layer %s\n", op.opname().c_str(), inst()->layername().c_str());
+            shadingcontext()->error ("LLVMOSL: Unsupported op %s in layer %s\n",
+                                     op.opname(), inst()->layername());
             return false;
         }
 
@@ -1218,13 +1219,13 @@ BackendLLVM::run ()
     ll.module (ll.module_from_bitcode (osl_llvm_compiled_ops_block,
                                        osl_llvm_compiled_ops_size, &err));
     if (err.length())
-        shadingsys().error ("ParseBitcodeFile returned '%s'\n", err.c_str());
+        shadingcontext()->error ("ParseBitcodeFile returned '%s'\n", err.c_str());
     ASSERT (ll.module());
 #endif
 
     // Create the ExecutionEngine
     if (! ll.make_jit_execengine (&err)) {
-        shadingsys().error ("Failed to create engine: %s\n", err.c_str());
+        shadingcontext()->error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
         return;
     }
@@ -1266,7 +1267,7 @@ BackendLLVM::run ()
 
     if (shadingsys().m_max_local_mem_KB &&
         m_llvm_local_mem/1024 > shadingsys().m_max_local_mem_KB) {
-        shadingsys().error ("Shader group \"%s\" needs too much local storage: %d KB",
+        shadingcontext()->error ("Shader group \"%s\" needs too much local storage: %d KB",
                             group().name().c_str(), m_llvm_local_mem/1024);
     }
 
@@ -1319,9 +1320,9 @@ BackendLLVM::run ()
     m_stat_total_llvm_time = timer();
 
     if (shadingsys().m_compile_report) {
-        shadingsys().info ("JITed shader group %s:",
+        shadingcontext()->info ("JITed shader group %s:",
                            group().name() ? group().name().c_str() : "");
-        shadingsys().info ("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
+        shadingcontext()->info ("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
                            m_stat_total_llvm_time, 
                            m_stat_llvm_setup_time,
                            m_stat_llvm_irgen_time, m_stat_llvm_opt_time,

@@ -120,9 +120,7 @@ RendererServices::texture (ustring filename, TextureOpt &options,
     {
         std::string err = texturesys()->geterror();
         if (err.size()) {
-            std::cerr << "[RendererServices::texture] " << err.c_str();
-            if (err[err.size()-1] != '\n')
-                std::cerr << "\n";
+            sg->context->error ("[RendererServices::texture] %s", err);
         }
     }
     return status;
@@ -142,9 +140,7 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
     {
         std::string err = texturesys()->geterror();
         if (err.size()) {
-            std::cerr << "[RendererServices::texture3d] " << err.c_str();
-            if (err[err.size()-1] != '\n')
-                std::cerr << "\n";
+            sg->context->error ("[RendererServices::texture3d] %s", err);
         }
     }
     return status;
@@ -161,9 +157,7 @@ RendererServices::environment (ustring filename, TextureOpt &options,
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {
-            std::cerr << "[RendererServices::environment] " << err.c_str();
-            if (err[err.size()-1] != '\n')
-                std::cerr << "\n";
+            sg->context->error ("[RendererServices::environment] %s", err);
         }
     }
     return status;
@@ -172,7 +166,8 @@ RendererServices::environment (ustring filename, TextureOpt &options,
 
     
 bool
-RendererServices::get_texture_info (ustring filename, int subimage,
+RendererServices::get_texture_info (ShaderGlobals *sg,
+                                    ustring filename, int subimage,
                                     ustring dataname,
                                     TypeDesc datatype, void *data)
 {
@@ -181,9 +176,7 @@ RendererServices::get_texture_info (ustring filename, int subimage,
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {
-            std::cerr << "[RendererServices::get_texture_info] " << err.c_str();
-            if (err[err.size()-1] != '\n')
-                std::cerr << "\n";
+            sg->context->error ("[RendererServices::get_texture_info] %s", err);
         }
     }
     return status;

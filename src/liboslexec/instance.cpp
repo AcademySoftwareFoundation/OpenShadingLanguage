@@ -51,7 +51,7 @@ using OIIO::ParamValueList;
 
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
-                                const char *layername) 
+                                string_view layername)
     : m_master(master),
       //DON'T COPY  m_instsymbols(m_master->m_symbols),
       //DON'T COPY  m_instops(m_master->m_ops), m_instargs(m_master->m_args),
@@ -570,7 +570,7 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
 
 
-ShaderGroup::ShaderGroup (const char *name)
+ShaderGroup::ShaderGroup (string_view name)
   : m_name(name),
     m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
     m_optimized(0), m_does_nothing(false)
@@ -580,7 +580,7 @@ ShaderGroup::ShaderGroup (const char *name)
 
 
 
-ShaderGroup::ShaderGroup (const ShaderGroup &g, const char *name)
+ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
   : m_name(name), m_layers(g.m_layers),
     m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
     m_optimized(0), m_does_nothing(false)

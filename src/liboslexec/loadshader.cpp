@@ -517,9 +517,9 @@ OSOReaderToMaster::instruction_end ()
 
 
 ShaderMaster::ref
-ShadingSystemImpl::loadshader (const char *cname)
+ShadingSystemImpl::loadshader (string_view cname)
 {
-    if (! cname || ! cname[0]) {
+    if (! cname.size()) {
         error ("Attempt to load shader with empty name \"\".");
         return NULL;
     }
@@ -566,14 +566,14 @@ ShadingSystemImpl::loadshader (const char *cname)
 
 
 bool
-ShadingSystemImpl::LoadMemoryCompiledShader (const char *shadername,
-                                             const char *buffer)
+ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
+                                             string_view buffer)
 {
-    if (! shadername || ! shadername[0]) {
+    if (! shadername.size()) {
         error ("Attempt to load shader with empty name \"\".");
         return false;
     }
-    if (! buffer || ! buffer[0]) {
+    if (! buffer.size()) {
         error ("Attempt to load shader \"%s\" with empty OSO data.", shadername);
         return false;
     }

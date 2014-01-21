@@ -604,7 +604,7 @@ ShadingSystemImpl::~ShadingSystemImpl ()
 
 
 bool
-ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
+ShadingSystemImpl::attribute (string_view name, TypeDesc type,
                               const void *val)
 {
 #define ATTR_SET(_name,_ctype,_dst)                                     \
@@ -699,7 +699,7 @@ ShadingSystemImpl::attribute (const std::string &name, TypeDesc type,
 
 
 bool
-ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
+ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
                                  void *val)
 {
 #define ATTR_DECODE(_name,_ctype,_src)                                  \
@@ -820,55 +820,7 @@ ShadingSystemImpl::getattribute (const std::string &name, TypeDesc type,
 
 
 void
-ShadingSystemImpl::error (const char *format, ...)
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string msg = Strutil::vformat (format, ap);
-    error (msg);
-    va_end (ap);
-}
-
-
-
-void
-ShadingSystemImpl::warning (const char *format, ...)
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string msg = Strutil::vformat (format, ap);
-    warning (msg);
-    va_end (ap);
-}
-
-
-
-void
-ShadingSystemImpl::info (const char *format, ...)
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string msg = Strutil::vformat (format, ap);
-    info (msg);
-    va_end (ap);
-}
-
-
-
-void
-ShadingSystemImpl::message (const char *format, ...)
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string msg = Strutil::vformat (format, ap);
-    message (msg);
-    va_end (ap);
-}
-
-
-
-void
-ShadingSystemImpl::error (const std::string &msg)
+ShadingSystemImpl::error (const std::string &msg) const
 {
     lock_guard guard (m_errmutex);
     int n = 0;
@@ -886,7 +838,7 @@ ShadingSystemImpl::error (const std::string &msg)
 
 
 void
-ShadingSystemImpl::warning (const std::string &msg)
+ShadingSystemImpl::warning (const std::string &msg) const
 {
     lock_guard guard (m_errmutex);
     int n = 0;
@@ -904,7 +856,7 @@ ShadingSystemImpl::warning (const std::string &msg)
 
 
 void
-ShadingSystemImpl::info (const std::string &msg)
+ShadingSystemImpl::info (const std::string &msg) const
 {
     lock_guard guard (m_errmutex);
     m_err->info (msg);
@@ -913,7 +865,7 @@ ShadingSystemImpl::info (const std::string &msg)
 
 
 void
-ShadingSystemImpl::message (const std::string &msg)
+ShadingSystemImpl::message (const std::string &msg) const
 {
     lock_guard guard (m_errmutex);
     m_err->message (msg);
@@ -1080,7 +1032,7 @@ ShadingSystemImpl::printstats () const
 
 
 bool
-ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val,
+ShadingSystemImpl::Parameter (string_view name, TypeDesc t, const void *val,
                               bool lockgeom)
 {
     // We work very hard not to do extra copies of the data.  First,
@@ -1098,7 +1050,7 @@ ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val,
 
 
 bool
-ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
+ShadingSystemImpl::Parameter (string_view name, TypeDesc t, const void *val)
 {
     return Parameter (name, t, val, true);
 }
@@ -1106,7 +1058,7 @@ ShadingSystemImpl::Parameter (const char *name, TypeDesc t, const void *val)
 
 
 ShaderGroupRef
-ShadingSystemImpl::ShaderGroupBegin (const char *groupname)
+ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
 {
     if (m_in_group) {
         error ("Nested ShaderGroupBegin() calls");
@@ -1178,9 +1130,9 @@ ShadingSystemImpl::ShaderGroupEnd (void)
 
 
 bool
-ShadingSystemImpl::Shader (const char *shaderusage,
-                           const char *shadername,
-                           const char *layername)
+ShadingSystemImpl::Shader (string_view shaderusage,
+                           string_view shadername,
+                           string_view layername)
 {
     // Make sure we have a current attrib state
     if (! m_curgroup)
@@ -1228,8 +1180,8 @@ ShadingSystemImpl::Shader (const char *shaderusage,
 
 
 bool
-ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
-                                   const char *dstlayer, const char *dstparam)
+ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
+                                   string_view dstlayer, string_view dstparam)
 {
     // Basic sanity checks -- make sure it's a legal time to call
     // ConnectShaders, and that the layer and parameter names are not empty.
@@ -1237,11 +1189,11 @@ ShadingSystemImpl::ConnectShaders (const char *srclayer, const char *srcparam,
         error ("ConnectShaders can only be called within ShaderGroupBegin/End");
         return false;
     }
-    if (!srclayer || !srclayer[0] || !srcparam || !srcparam[0]) {
+    if (! srclayer.size() || ! srcparam.size()) {
         error ("ConnectShaders: badly formed source layer/parameter");
         return false;
     }
-    if (!dstlayer || !dstlayer[0] || !dstparam || !dstparam[0]) {
+    if (! dstlayer.size() || ! dstparam.size()) {
         error ("ConnectShaders: badly formed destination layer/parameter");
         return false;
     }
@@ -1324,8 +1276,8 @@ ShadingSystemImpl::state ()
 
 
 bool
-ShadingSystemImpl::ReParameter (ShaderGroup &group, const char *layername_,
-                                const char *paramname,
+ShadingSystemImpl::ReParameter (ShaderGroup &group, string_view layername_,
+                                string_view paramname,
                                 TypeDesc type, const void *val)
 {
     // Find the named layer
@@ -1447,16 +1399,17 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
 
 
 ConnectedParam
-ShadingSystemImpl::decode_connected_param (const char *connectionname,
-                                   const char *layername, ShaderInstance *inst)
+ShadingSystemImpl::decode_connected_param (string_view connectionname,
+                                   string_view layername, ShaderInstance *inst)
 {
     ConnectedParam c;  // initializes to "invalid"
 
     // Look for a bracket in the "parameter name"
-    const char *bracket = strchr (connectionname, '[');
+    size_t bracketpos = connectionname.find ('[');
+    const char *bracket = bracketpos == string_view::npos ? NULL
+                                   : connectionname.data()+bracketpos;
     // Grab just the part of the param name up to the bracket
-    ustring param (connectionname, 0,
-                   bracket ? size_t(bracket-connectionname) : ustring::npos);
+    ustring param (connectionname, 0, bracketpos);
 
     // Search for the param with that name, fail if not found
     c.param = inst->findsymbol (param);

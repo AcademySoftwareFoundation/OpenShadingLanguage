@@ -140,49 +140,46 @@ public:
     ///                              designated as the debug shaders.
     ///    string only_groupname  Compile only this one group (skip all others)
     ///
-    virtual bool attribute (const std::string &name, TypeDesc type,
+    virtual bool attribute (string_view name, TypeDesc type,
                             const void *val) = 0;
     // Shortcuts for common types
-    bool attribute (const std::string &name, int val) {
+    bool attribute (string_view name, int val) {
         return attribute (name, TypeDesc::INT, &val);
     }
-    bool attribute (const std::string &name, float val) {
+    bool attribute (string_view name, float val) {
         return attribute (name, TypeDesc::FLOAT, &val);
     }
-    bool attribute (const std::string &name, double val) {
+    bool attribute (string_view name, double val) {
         float f = (float) val;
         return attribute (name, TypeDesc::FLOAT, &f);
     }
-    bool attribute (const std::string &name, const char *val) {
-        return attribute (name, TypeDesc::STRING, &val);
-    }
-    bool attribute (const std::string &name, const std::string &val) {
+    bool attribute (string_view name, string_view val) {
         const char *s = val.c_str();
         return attribute (name, TypeDesc::STRING, &s);
     }
 
     /// Get the named attribute, store it in value.
     ///
-    virtual bool getattribute (const std::string &name, TypeDesc type,
+    virtual bool getattribute (string_view name, TypeDesc type,
                                void *val) = 0;
     // Shortcuts for common types
-    bool getattribute (const std::string &name, int &val) {
+    bool getattribute (string_view name, int &val) {
         return getattribute (name, TypeDesc::INT, &val);
     }
-    bool getattribute (const std::string &name, float &val) {
+    bool getattribute (string_view name, float &val) {
         return getattribute (name, TypeDesc::FLOAT, &val);
     }
-    bool getattribute (const std::string &name, double &val) {
+    bool getattribute (string_view name, double &val) {
         float f;
         bool ok = getattribute (name, TypeDesc::FLOAT, &f);
         if (ok)
             val = f;
         return ok;
     }
-    bool getattribute (const std::string &name, char **val) {
+    bool getattribute (string_view name, char **val) {
         return getattribute (name, TypeDesc::STRING, val);
     }
-    bool getattribute (const std::string &name, std::string &val) {
+    bool getattribute (string_view name, std::string &val) {
         const char *s = NULL;
         bool ok = getattribute (name, TypeDesc::STRING, &s);
         if (ok)
@@ -192,8 +189,8 @@ public:
 
     /// Load compiled shader (oso) from a memory buffer, overriding
     /// shader lookups in the shader search path
-    virtual bool LoadMemoryCompiledShader (const char *shadername,
-                                           const char *buffer)=0;
+    virtual bool LoadMemoryCompiledShader (string_view shadername,
+                                           string_view buffer)=0;
 
     // The basic sequence for declaring a shader group looks like this:
     // ShadingSystem *ss = ...;
@@ -215,7 +212,7 @@ public:
 
     /// Signal the start of a new shader group.  The return value is a
     /// reference-counted opaque handle to the ShaderGroup.
-    virtual ShaderGroupRef ShaderGroupBegin (const char *groupname=NULL) = 0;
+    virtual ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view()) = 0;
 
     /// Signal the end of a new shader group.
     ///
@@ -223,7 +220,7 @@ public:
 
     /// Set a parameter of the next shader.
     ///
-    virtual bool Parameter (const char *name, TypeDesc t, const void *val)
+    virtual bool Parameter (string_view name, TypeDesc t, const void *val)
         { return true; }
 
     /// Set a parameter of the next shader, and override the 'lockgeom'
@@ -232,35 +229,21 @@ public:
     /// should NOT be considered locked against changes by the geometry,
     /// and therefore the shader should not optimize assuming that the
     /// instance value (the 'val' specified by this call) is a constant.
-    virtual bool Parameter (const char *name, TypeDesc t, const void *val,
+    virtual bool Parameter (string_view name, TypeDesc t, const void *val,
                             bool lockgeom)
         { return true; }
-#if 0
-    virtual bool Parameter (const char *name, int val) {
-        Parameter (name, TypeDesc::IntType, &val);
-    }
-    virtual bool Parameter (const char *name, float val) {
-        Parameter (name, TypeDesc::FloatType, &val);
-    }
-    virtual bool Parameter (const char *name, double val) {}
-    virtual bool Parameter (const char *name, const char *val) {}
-    virtual bool Parameter (const char *name, const std::string &val) {}
-    virtual bool Parameter (const char *name, TypeDesc t, const int *val) {}
-    virtual bool Parameter (const char *name, TypeDesc t, const float *val) {}
-    virtual bool Parameter (const char *name, TypeDesc t, const char **val) {}
-#endif
 
     /// Create a new shader instance, either replacing the one for the
     /// specified usage (if not within a group) or appending to the
     /// current group (if a group has been started).
-    virtual bool Shader (const char *shaderusage,
-                         const char *shadername=NULL,
-                         const char *layername=NULL) = 0;
+    virtual bool Shader (string_view shaderusage,
+                         string_view shadername = string_view(),
+                         string_view layername = string_view()) = 0;
 
     /// Connect two shaders within the current group
     ///
-    virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
-                                 const char *dstlayer, const char *dstparam)=0;
+    virtual bool ConnectShaders (string_view srclayer, string_view srcparam,
+                                 string_view dstlayer, string_view dstparam)=0;
 
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.
@@ -275,7 +258,7 @@ public:
     /// geometric primitive).  This call gives you a way of changing the
     /// instance value, even if it's not a geometric override.
     virtual bool ReParameter (ShaderGroup &group,
-                              const char *layername, const char *paramname,
+                              string_view layername, string_view paramname,
                               TypeDesc type, const void *val)
         { return false; }
 

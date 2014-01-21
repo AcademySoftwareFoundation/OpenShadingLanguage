@@ -354,7 +354,7 @@ typedef std::vector<Connection> ConnectionVec;
 class ShaderInstance {
 public:
     typedef ShaderInstanceRef ref;
-    ShaderInstance (ShaderMaster::ref master, const char *layername="");
+    ShaderInstance (ShaderMaster::ref master, string_view layername = string_view());
     ~ShaderInstance ();
 
     /// Return the layer name of this instance
@@ -626,51 +626,49 @@ public:
                        ErrorHandler *err=NULL);
     virtual ~ShadingSystemImpl ();
 
-    virtual bool attribute (const std::string &name, TypeDesc type, const void *val);
-    virtual bool getattribute (const std::string &name, TypeDesc type, void *val);
+    virtual bool attribute (string_view name, TypeDesc type, const void *val);
+    virtual bool getattribute (string_view name, TypeDesc type, void *val);
 
-    virtual bool LoadMemoryCompiledShader (const char *shadername,
-                                   const char *buffer);
-    virtual bool Parameter (const char *name, TypeDesc t, const void *val);
-    virtual bool Parameter (const char *name, TypeDesc t, const void *val,
+    virtual bool LoadMemoryCompiledShader (string_view shadername,
+                                           string_view buffer);
+    virtual bool Parameter (string_view name, TypeDesc t, const void *val);
+    virtual bool Parameter (string_view name, TypeDesc t, const void *val,
                             bool lockgeom);
-    virtual bool Shader (const char *shaderusage,
-                         const char *shadername=NULL,
-                         const char *layername=NULL);
-    virtual ShaderGroupRef ShaderGroupBegin (const char *groupname=NULL);
+    virtual bool Shader (string_view shaderusage,
+                         string_view shadername = string_view(),
+                         string_view layername = string_view());
+    virtual ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
     virtual bool ShaderGroupEnd (void);
-    virtual bool ConnectShaders (const char *srclayer, const char *srcparam,
-                                 const char *dstlayer, const char *dstparam);
+    virtual bool ConnectShaders (string_view srclayer, string_view srcparam,
+                                 string_view dstlayer, string_view dstparam);
     virtual ShaderGroupRef state ();
     virtual bool ReParameter (ShaderGroup &group,
-                              const char *layername, const char *paramname,
+                              string_view layername, string_view paramname,
                               TypeDesc type, const void *val);
 
-    /// Internal error reporting routine, with printf-like arguments.
-    ///
-    void error (const char *message, ...);
-    /// Internal warning reporting routine, with printf-like arguments.
-    ///
-    void warning (const char *message, ...);
-    /// Internal info printing routine, with printf-like arguments.
-    ///
-    void info (const char *message, ...);
-    /// Internal message printing routine, with printf-like arguments.
-    ///
-    void message (const char *message, ...);
+    // Internal error, warning, info, and message reporting routines that
+    // take printf-like arguments.  Based on Tinyformat.
+    TINYFORMAT_WRAP_FORMAT (void, error, const,
+                            std::ostringstream msg;, msg, error(msg.str());)
+    TINYFORMAT_WRAP_FORMAT (void, warning, const,
+                            std::ostringstream msg;, msg, warning(msg.str());)
+    TINYFORMAT_WRAP_FORMAT (void, info, const,
+                            std::ostringstream msg;, msg, info(msg.str());)
+    TINYFORMAT_WRAP_FORMAT (void, message, const,
+                            std::ostringstream msg;, msg, message(msg.str());)
 
     /// Error reporting routines that take a pre-formatted string only.
     ///
-    void error (const std::string &message);
-    void warning (const std::string &message);
-    void info (const std::string &message);
-    void message (const std::string &message);
+    void error (const std::string &message) const;
+    void warning (const std::string &message) const;
+    void info (const std::string &message) const;
+    void message (const std::string &message) const;
 
     virtual std::string getstats (int level=1) const;
 
     ErrorHandler &errhandler () const { return *m_err; }
 
-    ShaderMaster::ref loadshader (const char *name);
+    ShaderMaster::ref loadshader (string_view name);
 
     virtual PerThreadInfo * create_thread_info();
 
@@ -803,8 +801,8 @@ private:
     /// ConnectedParam descriptor.  This routine is strictly a helper for
     /// ConnectShaders, and will issue error messages on its behalf.
     /// The return value will not be valid() if there is an error.
-    ConnectedParam decode_connected_param (const char *connectionname,
-                               const char *layername, ShaderInstance *inst);
+    ConnectedParam decode_connected_param (string_view connectionname,
+                               string_view layername, ShaderInstance *inst);
 
     /// Get the per-thread info, create it if necessary.
     ///
@@ -827,7 +825,7 @@ private:
     TextureSystem *m_texturesys;          ///< Texture system
 
     ErrorHandler *m_err;                  ///< Error handler
-    std::list<std::string> m_errseen, m_warnseen;
+    mutable std::list<std::string> m_errseen, m_warnseen;
     static const int m_errseenmax = 32;
     mutable mutex m_errmutex;
 
@@ -1073,8 +1071,8 @@ private:
 /// ShaderInstance), and the connections among them.
 class ShaderGroup {
 public:
-    ShaderGroup (const char *name);
-    ShaderGroup (const ShaderGroup &g, const char *name);
+    ShaderGroup (string_view name);
+    ShaderGroup (const ShaderGroup &g, string_view name);
     ~ShaderGroup ();
 
     /// Clear the layers

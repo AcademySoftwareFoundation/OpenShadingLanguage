@@ -872,7 +872,8 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
 Symbol *
 ASTvariable_declaration::codegen_struct_initializers (ref init)
 {
-    if (! init->next() && init->typespec() == m_typespec) {
+    if (! init->next() && init->typespec() == m_typespec &&
+            init->nodetype() != compound_initializer_node) {
         // Special case: just one initializer, it's a whole struct of
         // the right type.
         Symbol *initsym = init->codegen (m_sym);

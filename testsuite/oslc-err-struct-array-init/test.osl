@@ -1,0 +1,14 @@
+
+struct mystruct{
+    float f[4];
+};
+
+
+
+shader test (output mystruct Out  = { {1.0, 2.0, 3.0, 4.0} } )
+{
+    printf ("Out is %g %g %g %g\n", Out.f[0], Out.f[1], Out.f[2], Out.f[3]);
+}
+
+
+

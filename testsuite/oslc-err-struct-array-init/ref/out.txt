@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+Out is 1 2 3 4
+

@@ -405,6 +405,8 @@ static const char *llvm_helper_function_table[] = {
     "osl_strlen_is", "is",
     "osl_startswith_iss", "iss",
     "osl_endswith_iss", "iss",
+    "osl_stoi_is", "is",
+    "osl_stof_fs", "fs",
     "osl_substr_ssii", "ssii",
     "osl_regex_impl", "iXsXisi",
 

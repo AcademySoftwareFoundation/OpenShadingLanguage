@@ -402,6 +402,13 @@ ShadingSystemImpl::set_colorspace (ustring colorspace)
             m_RGB2XYZ = m_XYZ2RGB.inverse();
             m_luminance_scale = Color3 (m_RGB2XYZ[0][1], m_RGB2XYZ[1][1], m_RGB2XYZ[2][1]);
 
+            // Mathematical imprecision can lead to the luminance scale not
+            // quite summing to 1.0.  If it's very close, adjust to make it
+            // exact.
+            float ll = (1.0f - m_luminance_scale[0] - m_luminance_scale[1]);
+            if (fabsf(ll - m_luminance_scale[2]) < 0.001f)
+                m_luminance_scale[2] = ll;
+
             // Precompute a table of blackbody values
             m_blackbody_table.clear ();
             float lastT = 0;

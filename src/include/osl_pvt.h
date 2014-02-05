@@ -32,12 +32,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/dassert.h"
 
+#ifndef OSL_USING_CPLUSPLUS11
 #include <boost/tr1/memory.hpp>
-using std::tr1::shared_ptr;
-
+#endif
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
+
+using std::tr1::shared_ptr;
 
 class ASTNode;
 class StructSpec;

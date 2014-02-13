@@ -80,16 +80,16 @@ class OSL_Dummy_JITMemoryManager;
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util ();
+    LLVM_Util (int debuglevel=0);
     ~LLVM_Util ();
 
     struct PerThreadInfo;
     typedef llvm::IRBuilder<true,llvm::ConstantFolder,
                             llvm::IRBuilderDefaultInserter<true> > IRBuilder;
 
-    /// Set up LLVM -- make sure we have a Context, Module, ExecutionEngine,
-    /// retained JITMemoryManager, etc.
-    static void SetupLLVM ();
+    /// Set debug level
+    void debug (int d) { m_debug = d; }
+    int debug () const { return m_debug; }
 
     /// Return a reference to the current context.
     llvm::LLVMContext &context () const { return *m_llvm_context; }
@@ -109,9 +109,10 @@ public:
     llvm::Module *new_module (const char *id = "default");
 
     /// Create a new module, populated with functions from the buffer
-    /// bitcode[0..size-1].  If err is not NULL, error messages will be
-    /// stored there.
+    /// bitcode[0..size-1].  The name identifies the buffer.  If err is not
+    /// NULL, error messages will be stored there.
     llvm::Module *module_from_bitcode (const char *bitcode, size_t size,
+                                       const std::string &name=std::string(),
                                        std::string *err=NULL);
 
     /// Create a new function (that will later be populated with
@@ -474,6 +475,10 @@ private:
         return (llvm::JITMemoryManager *)m_llvm_jitmm;
     }
 
+    void SetupLLVM ();
+
+
+    int m_debug;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;

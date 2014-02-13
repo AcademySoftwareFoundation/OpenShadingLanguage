@@ -103,6 +103,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           "-I${OPENIMAGEIO_INCLUDES}"
           "-I${ILMBASE_INCLUDE_DIR}"
           "-I${Boost_INCLUDE_DIRS}"
+          -DOSL_COMPILING_TO_BITCODE=1
           -O3 -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
       COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}
@@ -132,7 +133,7 @@ TARGET_LINK_LIBRARIES ( oslexec
                         ${OPENIMAGEIO_LIBRARY} ${PUGIXML_LIBRARIES}
                         ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
-                        ${LLVM_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
+                        ${LLVM_LIBRARY} ${LLVM_MCJIT_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
 ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map")
 LINK_ILMBASE ( oslexec )
 

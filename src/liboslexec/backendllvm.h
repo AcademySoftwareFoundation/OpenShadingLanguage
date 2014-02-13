@@ -55,6 +55,8 @@ public:
 
     virtual ~BackendLLVM ();
 
+    virtual void set_inst (int layer);
+
     /// Create an llvm function for the whole shader group, JIT it,
     /// and store the llvm::Function* handle to it with the ShaderGroup.
     virtual void run ();

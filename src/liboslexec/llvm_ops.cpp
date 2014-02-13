@@ -91,16 +91,14 @@ examples), as you are just coding in C++, but there are some rules:
 */
 
 
-#include <string>
-#include <cstdio>
+#include <iostream>
 
 #include "oslconfig.h"
-#include "oslexec_pvt.h"
+#include "rendererservices.h"
+#include "shaderglobals.h"
 #include "dual.h"
 using namespace OSL;
-using namespace OSL::pvt;
 
-#include <dual.h>
 #include <dual_vec.h>
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
@@ -133,6 +131,12 @@ using OIIO::log2f;
 #endif
 #endif
 
+
+#ifdef OSL_COMPILING_TO_BITCODE
+void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
+#endif
+
+
 // Handy re-casting macros
 #define USTR(cstr) (*((ustring *)&cstr))
 #define MAT(m) (*(Matrix44 *)m)
@@ -144,14 +148,72 @@ using OIIO::log2f;
 #define TYPEDESC(x) (*(TypeDesc *)&x)
 
 
-OSL_SHADEOP void
-osl_assert_nonnull (void *x, const char *msg)
+#ifndef OSL_SHADEOP
+#define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
+#endif
+
+
+OSL_NAMESPACE_ENTER
+namespace Strings {
+    extern OSLEXECPUBLIC ustring camera, common, object, shader, screen, NDC;
+    extern OSLEXECPUBLIC ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
+    extern OSLEXECPUBLIC ustring null, default_;
+    extern OSLEXECPUBLIC ustring label;
+    extern OSLEXECPUBLIC ustring sidedness, front, back, both;
+    extern OSLEXECPUBLIC ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
+    extern OSLEXECPUBLIC ustring Ci;
+    extern OSLEXECPUBLIC ustring width, swidth, twidth, rwidth;
+    extern OSLEXECPUBLIC ustring blur, sblur, tblur, rblur;
+    extern OSLEXECPUBLIC ustring wrap, swrap, twrap, rwrap;
+    extern OSLEXECPUBLIC ustring black, clamp, periodic, mirror;
+    extern OSLEXECPUBLIC ustring firstchannel, fill, alpha;
+    extern OSLEXECPUBLIC ustring interp, closest, linear, cubic, smartcubic;
+    extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
+    extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern OSLEXECPUBLIC ustring simplex, usimplex, simplexnoise, usimplexnoise;
+    extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
+    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
+    extern OSLEXECPUBLIC ustring subimage, subimagename;
+    extern OSLEXECPUBLIC ustring missingcolor, missingalpha;
+    extern OSLEXECPUBLIC ustring uninitialized_string;
+}; // namespace Strings
+
+
+inline int
+tex_interp_to_code (ustring modename)
 {
-    if (!x && msg)
-        printf ("found null %s\n", msg);
-    ASSERT (x && "should be non-null");
+    int mode = -1;
+    if (modename == Strings::smartcubic)
+        mode = TextureOpt::InterpSmartBicubic;
+    else if (modename == Strings::linear)
+        mode = TextureOpt::InterpBilinear;
+    else if (modename == Strings::cubic)
+        mode = TextureOpt::InterpBicubic;
+    else if (modename == Strings::closest)
+        mode = TextureOpt::InterpClosest;
+    return mode;
 }
 
+
+
+// Layout of structure we use to pass noise parameters
+struct NoiseParams {
+    int anisotropic;
+    int do_filter;
+    Vec3 direction;
+    float bandwidth;
+    float impulses;
+
+    NoiseParams ()
+        : anisotropic(0), do_filter(true), direction(1.0f,0.0f,0.0f),
+          bandwidth(1.0f), impulses(16.0f)
+    {
+    }
+};
+
+
+OSL_NAMESPACE_EXIT
 
 
 #define MAKE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
@@ -708,74 +770,10 @@ osl_div_m_ff (void *r, float a, float b)
     MAT(r) = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
 }
 
-bool
-osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
-{
-    ShadingContext *ctx = (ShadingContext *)sg->context;
-    if (USTR(from) == Strings::common ||
-            USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-        r->makeIdentity ();
-        return true;
-    }
-    if (USTR(from) == Strings::shader) {
-        sg->renderer->get_matrix (*r, sg->shader2common, sg->time);
-        return true;
-    }
-    if (USTR(from) == Strings::object) {
-        sg->renderer->get_matrix (*r, sg->object2common, sg->time);
-        return true;
-    }
-    bool ok = sg->renderer->get_matrix (*r, USTR(from), sg->time);
-    if (! ok) {
-        r->makeIdentity();
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", from);
-    }
-    return ok;
-}
+OSL_SHADEOP bool osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from);
+OSL_SHADEOP bool osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to);
+OSL_SHADEOP int osl_prepend_matrix_from (void *sg, void *r, const char *from);
 
-bool
-osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
-{
-    ShadingContext *ctx = (ShadingContext *)sg->context;
-    if (USTR(to) == Strings::common ||
-            USTR(to) == ctx->shadingsys().commonspace_synonym()) {
-        r->makeIdentity ();
-        return true;
-    }
-    if (USTR(to) == Strings::shader) {
-        sg->renderer->get_inverse_matrix (*r, sg->shader2common, sg->time);
-        return true;
-    }
-    if (USTR(to) == Strings::object) {
-        sg->renderer->get_inverse_matrix (*r, sg->object2common, sg->time);
-        return true;
-    }
-    bool ok = sg->renderer->get_inverse_matrix (*r, USTR(to), sg->time);
-    if (! ok) {
-        r->makeIdentity ();
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", to);
-    }
-    return ok;
-}
-
-OSL_SHADEOP int
-osl_prepend_matrix_from (void *sg, void *r, const char *from)
-{
-    Matrix44 m;
-    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
-    if (ok)
-        MAT(r) = m * MAT(r);
-    else {
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", from);
-    }
-    return ok;
-}
 
 OSL_SHADEOP int
 osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
@@ -846,7 +844,6 @@ osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
                                 int vectype)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    ShadingContext *ctx = (ShadingContext *)sg->context;
     RendererServices *rend = sg->renderer;
     if (rend->transform_points (sg, USTR(from), USTR(to), sg->time,
                                 (const Vec3 *)Pin, (Vec3 *)Pout, 1,
@@ -1031,17 +1028,6 @@ osl_normalize_dvdv (void *result, void *a)
 {
     DVEC(result) = normalize(DVEC(a));
 }
-
-
-
-OSL_SHADEOP void
-osl_prepend_color_from (void *sg, void *c_, const char *from)
-{
-    ShadingContext *ctx (((ShaderGlobals *)sg)->context);
-    Color3 &c (COL(c_));
-    c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
-}
-
 
 
 
@@ -1583,28 +1569,6 @@ osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
 
 
 
-OSL_SHADEOP int osl_get_attribute(void *sg_,
-                             int   dest_derivs,
-                             void *obj_name_,
-                             void *attr_name_,
-                             int   array_lookup,
-                             int   index,
-                             const void *attr_type,
-                             void *attr_dest)
-{
-    ShaderGlobals *sg   = (ShaderGlobals *)sg_;
-    const ustring &obj_name  = USTR(obj_name_);
-    const ustring &attr_name = USTR(attr_name_);
-
-    return sg->context->osl_get_attribute (sg->renderstate, sg->objdata,
-                                           dest_derivs, obj_name, attr_name,
-                                           array_lookup, index,
-                                           *(const TypeDesc *)attr_type,
-                                           attr_dest);
-}
-
-
-
 inline Vec3 calculatenormal(void *P_, bool flipHandedness)
 {
     Dual2<Vec3> &tmpP (DVEC(P_));
@@ -1652,43 +1616,7 @@ OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
 
 
 
-OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return sg->context->dict_find (nodeID, USTR(query));
-}
 
-
-OSL_SHADEOP int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return sg->context->dict_find (USTR(dictionary), USTR(query));
-}
-
-
-OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return sg->context->dict_next (nodeID);
-}
-
-
-OSL_SHADEOP int osl_dict_value (void *sg_, int nodeID, void *attribname,
-                               long long type, void *data)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return sg->context->dict_value (nodeID, USTR(attribname), TYPEDESC(type), data);
-}
-
-
-
-// Asked if the raytype is a name we can't know until mid-shader.
-OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    int bit = sg->context->shadingsys().raytype_bit (USTR(name));
-    return (sg->raytype & bit) != 0;
-}
 
 // Asked if the raytype includes a bit pattern.
 OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
@@ -1715,105 +1643,6 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
 
 
 
-OSL_SHADEOP int
-osl_range_check (int indexvalue, int length,
-                 void *sg, const void *sourcefile, int sourceline)
-{
-    if (indexvalue < 0 || indexvalue >= length) {
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        ctx->error ("Index [%d] out of range [0..%d]: %s:%d",
-                                 indexvalue, length-1,
-                                 USTR(sourcefile).c_str(), sourceline);
-        if (indexvalue >= length)
-            indexvalue = length-1;
-        else
-            indexvalue = 0;
-    }
-    return indexvalue;
-}
-
-
-
-// vals points to a symbol with a total of ncomps floats (ncomps ==
-// aggregate*arraylen).  If has_derivs is true, it's actually 3 times
-// that length, the main values then the derivatives.  We want to check
-// for nans in vals[firstcheck..firstcheck+nchecks-1], and also in the
-// derivatives if present.  Note that if firstcheck==0 and nchecks==ncomps,
-// we are checking the entire contents of the symbol.  More restrictive
-// firstcheck,nchecks are used to check just one element of an array.
-OSL_SHADEOP void
-osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
-                  void *sg, const void *sourcefile, int sourceline,
-                  void *symbolname, int firstcheck, int nchecks,
-                  const void *opname)
-{
-    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-    const float *vals = (const float *)vals_;
-    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
-        for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
-            int i = d*ncomps + c;
-            if (! isfinite(vals[i])) {
-                ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
-                                         vals[i],
-                                         d > 0 ? "the derivatives of " : "",
-                                         USTR(symbolname).c_str(),
-                                         USTR(sourcefile).c_str(), sourceline,
-                                         USTR(opname).c_str());
-                return;
-            }
-        }
-    }
-}
-
-
-
-// vals points to the data of a float-, int-, or string-based symbol.
-// (described by typedesc).  We want to check
-// vals[firstcheck..firstcheck+nchecks-1] for floats that are NaN , or
-// ints that are -MAXINT, or strings that are "!!!uninitialized!!!"
-// which would indicate that the value is uninitialized if
-// 'debug_uninit' is turned on.  Note that if firstcheck==0 and
-// nchecks==ncomps, we are checking the entire contents of the symbol.
-// More restrictive firstcheck,nchecks are used to check just one
-// element of an array.
-OSL_SHADEOP void
-osl_uninit_check (long long typedesc_, void *vals_,
-                  void *sg, const void *sourcefile, int sourceline,
-                  void *symbolname, int firstcheck, int nchecks)
-{
-    TypeDesc typedesc = TYPEDESC(typedesc_);
-    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-    bool uninit = false;
-    if (typedesc.basetype == TypeDesc::FLOAT) {
-        float *vals = (float *)vals_;
-        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
-            if (!isfinite(vals[c])) {
-                uninit = true;
-                vals[c] = 0;
-            }
-    }
-    if (typedesc.basetype == TypeDesc::INT) {
-        int *vals = (int *)vals_;
-        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
-            if (vals[c] == std::numeric_limits<int>::min()) {
-                uninit = true;
-                vals[c] = 0;
-            }
-    }
-    if (typedesc.basetype == TypeDesc::STRING) {
-        ustring *vals = (ustring *)vals_;
-        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
-            if (vals[c] == Strings::uninitialized_string) {
-                uninit = true;
-                vals[c] = ustring();
-            }
-    }
-    if (uninit) {
-        ctx->error ("Detected possible use of uninitialized value in %s at %s:%d",
-                                 USTR(symbolname).c_str(),
-                                 USTR(sourcefile).c_str(), sourceline);
-    }
-}
 
 
 

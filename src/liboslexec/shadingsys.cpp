@@ -44,6 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/optparser.h>
+#include <OpenImageIO/fmath.h>
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -362,7 +363,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         ShadingSystem::attribute ("options", options);
 
     setup_op_descriptors ();
-    LLVM_Util::SetupLLVM ();
 }
 
 
@@ -1845,6 +1845,215 @@ const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)con
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
+
+#define USTR(cstr) (*((ustring *)&cstr))
+#define TYPEDESC(x) (*(TypeDesc *)&x)
+#define MAT(m) (*(Matrix44 *)m)
+
+OSL_SHADEOP bool
+osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
+{
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    if (USTR(from) == Strings::common ||
+            USTR(from) == ctx->shadingsys().commonspace_synonym()) {
+        r->makeIdentity ();
+        return true;
+    }
+    if (USTR(from) == Strings::shader) {
+        ctx->renderer()->get_matrix (*r, sg->shader2common, sg->time);
+        return true;
+    }
+    if (USTR(from) == Strings::object) {
+        ctx->renderer()->get_matrix (*r, sg->object2common, sg->time);
+        return true;
+    }
+    bool ok = ctx->renderer()->get_matrix (*r, USTR(from), sg->time);
+    if (! ok) {
+        r->makeIdentity();
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        if (ctx->shadingsys().unknown_coordsys_error())
+            ctx->error ("Unknown transformation \"%s\"", from);
+    }
+    return ok;
+}
+
+
+OSL_SHADEOP bool
+osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
+{
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    if (USTR(to) == Strings::common ||
+            USTR(to) == ctx->shadingsys().commonspace_synonym()) {
+        r->makeIdentity ();
+        return true;
+    }
+    if (USTR(to) == Strings::shader) {
+        ctx->renderer()->get_inverse_matrix (*r, sg->shader2common, sg->time);
+        return true;
+    }
+    if (USTR(to) == Strings::object) {
+        ctx->renderer()->get_inverse_matrix (*r, sg->object2common, sg->time);
+        return true;
+    }
+    bool ok = ctx->renderer()->get_inverse_matrix (*r, USTR(to), sg->time);
+    if (! ok) {
+        r->makeIdentity ();
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        if (ctx->shadingsys().unknown_coordsys_error())
+            ctx->error ("Unknown transformation \"%s\"", to);
+    }
+    return ok;
+}
+
+
+OSL_SHADEOP int
+osl_prepend_matrix_from (void *sg, void *r, const char *from)
+{
+    Matrix44 m;
+    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
+    if (ok)
+        MAT(r) = m * MAT(r);
+    else {
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        if (ctx->shadingsys().unknown_coordsys_error())
+            ctx->error ("Unknown transformation \"%s\"", from);
+    }
+    return ok;
+}
+
+
+#ifndef _MSC_VER
+using OIIO::isfinite;
+#endif
+
+// vals points to a symbol with a total of ncomps floats (ncomps ==
+// aggregate*arraylen).  If has_derivs is true, it's actually 3 times
+// that length, the main values then the derivatives.  We want to check
+// for nans in vals[firstcheck..firstcheck+nchecks-1], and also in the
+// derivatives if present.  Note that if firstcheck==0 and nchecks==ncomps,
+// we are checking the entire contents of the symbol.  More restrictive
+// firstcheck,nchecks are used to check just one element of an array.
+OSL_SHADEOP void
+osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
+                  void *sg, const void *sourcefile, int sourceline,
+                  void *symbolname, int firstcheck, int nchecks,
+                  const void *opname)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+    const float *vals = (const float *)vals_;
+    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
+        for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
+            int i = d*ncomps + c;
+            if (! isfinite(vals[i])) {
+                ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
+                            vals[i], d > 0 ? "the derivatives of " : "",
+                            USTR(symbolname), USTR(sourcefile), sourceline,
+                            USTR(opname));
+                return;
+            }
+        }
+    }
+}
+
+
+
+// vals points to the data of a float-, int-, or string-based symbol.
+// (described by typedesc).  We want to check
+// vals[firstcheck..firstcheck+nchecks-1] for floats that are NaN , or
+// ints that are -MAXINT, or strings that are "!!!uninitialized!!!"
+// which would indicate that the value is uninitialized if
+// 'debug_uninit' is turned on.  Note that if firstcheck==0 and
+// nchecks==ncomps, we are checking the entire contents of the symbol.
+// More restrictive firstcheck,nchecks are used to check just one
+// element of an array.
+OSL_SHADEOP void
+osl_uninit_check (long long typedesc_, void *vals_,
+                  void *sg, const void *sourcefile, int sourceline,
+                  void *symbolname, int firstcheck, int nchecks)
+{
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+    bool uninit = false;
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float *vals = (float *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (!isfinite(vals[c])) {
+                uninit = true;
+                vals[c] = 0;
+            }
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int *vals = (int *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (vals[c] == std::numeric_limits<int>::min()) {
+                uninit = true;
+                vals[c] = 0;
+            }
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring *vals = (ustring *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (vals[c] == Strings::uninitialized_string) {
+                uninit = true;
+                vals[c] = ustring();
+            }
+    }
+    if (uninit) {
+        ctx->error ("Detected possible use of uninitialized value in %s at %s:%d",
+                    USTR(symbolname), USTR(sourcefile), sourceline);
+    }
+}
+
+
+
+OSL_SHADEOP int
+osl_range_check (int indexvalue, int length,
+                 void *sg, const void *sourcefile, int sourceline)
+{
+    if (indexvalue < 0 || indexvalue >= length) {
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
+        ctx->error ("Index [%d] out of range [0..%d]: %s:%d",
+                    indexvalue, length-1, USTR(sourcefile), sourceline);
+        if (indexvalue >= length)
+            indexvalue = length-1;
+        else
+            indexvalue = 0;
+    }
+    return indexvalue;
+}
+
+
+
+// Asked if the raytype is a name we can't know until mid-shader.
+OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    int bit = sg->context->shadingsys().raytype_bit (USTR(name));
+    return (sg->raytype & bit) != 0;
+}
+
+
+OSL_SHADEOP int osl_get_attribute(void *sg_,
+                             int   dest_derivs,
+                             void *obj_name_,
+                             void *attr_name_,
+                             int   array_lookup,
+                             int   index,
+                             const void *attr_type,
+                             void *attr_dest)
+{
+    ShaderGlobals *sg   = (ShaderGlobals *)sg_;
+    const ustring &obj_name  = USTR(obj_name_);
+    const ustring &attr_name = USTR(attr_name_);
+
+    return sg->context->osl_get_attribute (sg->renderstate, sg->objdata,
+                                           dest_derivs, obj_name, attr_name,
+                                           array_lookup, index,
+                                           *(const TypeDesc *)attr_type,
+                                           attr_dest);
+}
+
+
 
 
 #ifndef OSL_STATIC_LIBRARY

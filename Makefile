@@ -104,6 +104,10 @@ ifneq (${USE_LIBCPP},)
 MY_CMAKE_FLAGS += -DOSL_USE_LIBCPP:BOOL=${USE_LIBCPP}
 endif
 
+ifneq (${USE_MCJIT},)
+MY_CMAKE_FLAGS += -DUSE_MCJIT:BOOL=${USE_MCJIT}
+endif
+
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -256,4 +260,5 @@ help:
 	@echo "  make BUILDSTATIC=1 ...      Build static library instead of shared"
 	@echo "  make USE_EXTERNAL_PUGIXML=1 Use the system PugiXML, not the one in OIIO"
 	@echo "  make USE_LIBCPP=1           Use libc++"
+	@echo "  make USE_MCJIT=1            Use LLVM MCJIT (default: use old JIT)"
 	@echo ""

@@ -156,6 +156,7 @@ else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
+set (USE_MCJIT OFF CACHE BOOL "Use LLVM MCJIT (if no, then use old JIT)")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -171,6 +172,10 @@ endif()
 
 if (USE_BOOST_WAVE)
     add_definitions ("-DUSE_BOOST_WAVE")
+endif ()
+
+if (USE_MCJIT)
+    add_definitions ("-DUSE_MCJIT=1")
 endif ()
 
 if (CMAKE_COMPILER_IS_CLANG AND OSL_USE_LIBCPP)

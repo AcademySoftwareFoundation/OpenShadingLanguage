@@ -519,5 +519,16 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
 
 
 
+#define USTR(cstr) (*((ustring *)&cstr))
+
+OSL_SHADEOP void
+osl_prepend_color_from (void *sg, void *c_, const char *from)
+{
+    ShadingContext *ctx (((ShaderGlobals *)sg)->context);
+    Color3 &c (*(Color3*)c_);
+    c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
+}
+
+
 } // namespace pvt
 OSL_NAMESPACE_EXIT

@@ -175,6 +175,9 @@ find_library ( LLVM_LIBRARY
                PATHS ${LLVM_LIB_DIR})
 message (STATUS "LLVM version  = ${LLVM_VERSION}")
 message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
+find_library ( LLVM_MCJIT_LIBRARY
+               NAMES LLVMMCJIT
+               PATHS ${LLVM_LIB_DIR})
 if (VERBOSE)
     message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
     message (STATUS "LLVM library  = ${LLVM_LIBRARY}")

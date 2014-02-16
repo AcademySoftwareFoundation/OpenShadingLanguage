@@ -32,6 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslconfig.h"
 #include "llvm_util.h"
 
+#ifndef USE_MCJIT
+#define USE_MCJIT 0
+#endif
 
 #if OSL_LLVM_VERSION >= 33
 
@@ -49,6 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # else
 #   include <llvm/PassManager.h>
 # endif
+# include <llvm/Support/TargetRegistry.h>
 
 #else /* older releases */
 
@@ -74,7 +78,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
-#include <llvm/ExecutionEngine/JIT.h>
+#if USE_MCJIT
+# include <llvm/ExecutionEngine/MCJIT.h>
+# include <llvm/ExecutionEngine/JIT.h>
+#else
+# include <llvm/ExecutionEngine/JIT.h>
+#endif
 #include <llvm/ExecutionEngine/JITMemoryManager.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
@@ -280,8 +289,9 @@ public:
 
 
 
-LLVM_Util::LLVM_Util ()
-    : m_thread(NULL), m_llvm_context(NULL), m_llvm_module(NULL),
+LLVM_Util::LLVM_Util (int debuglevel)
+    : m_debug(debuglevel), m_thread(NULL),
+      m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
@@ -363,7 +373,27 @@ LLVM_Util::SetupLLVM ()
     llvm::DisablePrettyStackTrace = true;
 #endif
     llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
+
+#if USE_MCJIT
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
+    llvm::InitializeAllAsmParsers();
+    llvm::InitializeAllDisassemblers();
+#else
     llvm::InitializeNativeTarget();
+#endif
+
+    if (debug()) {
+        for (llvm::TargetRegistry::iterator t = llvm::TargetRegistry::begin();
+             t != llvm::TargetRegistry::end();  ++t) {
+            std::cout << "Target: '" << t->getName() << "' "
+                      << t->getShortDescription() << "\n";
+        }
+        std::cout << "\n";
+    }
+
     setup_done = true;
 }
 
@@ -379,20 +409,30 @@ LLVM_Util::new_module (const char *id)
 
 llvm::Module *
 LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
-                                std::string *err)
+                                const std::string &name, std::string *err)
 {
     if (err)
         err->clear();
+    llvm::MemoryBuffer* buf =
+        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
+
     // Load the LLVM bitcode and parse it into a Module
-    llvm::MemoryBuffer* buf = llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size));
-    // Load the LLVM bitcode and parse it into a Module
-#if 0 /* Parse the whole thing now */
-    llvm::Module *m = llvm::ParseBitcodeFile (buf, context(), &err);
+#if USE_MCJIT /* Parse the whole thing now */
+    // FIXME!! Using MCJIT should not require unconditionally parsing the
+    // bitcode. But for now, when using getLazyBitcodeModule to lazily
+    // deserialize the bitcode, MCJIT is unable to find the called functions
+    // due to disagreement about whether a leading "_" is part of the symbol
+    // name.
+    llvm::Module *m = llvm::ParseBitcodeFile (buf, context(), err);
     delete buf;
-#else /* Create a lazily deserialized IR module */
+#else
+    // Create a lazily deserialized IR module
     llvm::Module *m = llvm::getLazyBitcodeModule (buf, context(), err);
     // don't delete buf, the module has taken ownership of it
 #endif
+    // Debugging: print all functions in the module
+    // for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
+    //     std::cout << "  found " << i->getName().data() << "\n";
     return m;
 }
 
@@ -424,9 +464,20 @@ LLVM_Util::make_jit_execengine (std::string *err)
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
+#if OSL_LLVM_VERSION >= 33
+    m_llvm_exec = llvm::EngineBuilder(module())
+                            .setEngineKind(llvm::EngineKind::JIT)
+                            .setErrorStr(err)
+                            .setJITMemoryManager(jitmm())
+                            .setOptLevel(llvm::CodeGenOpt::Default)
+                            .setUseMCJIT(USE_MCJIT)
+                            .create();
+#else
     m_llvm_exec = llvm::ExecutionEngine::createJIT (module(), err,
                                     jitmm(), llvm::CodeGenOpt::Default,
                                     /*AllocateGVsWithCode*/ false);
+#endif
+
     // N.B. createJIT will take ownership of the the JITMemoryManager!
 
     if (! m_llvm_exec)
@@ -454,7 +505,14 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
-    return execengine()->getPointerToFunction (func);
+    llvm::ExecutionEngine *exec = execengine();
+#if OSL_LLVM_VERSION >= 33
+    if (USE_MCJIT)
+        exec->finalizeObject ();
+#endif
+    void *f = exec->getPointerToFunction (func);
+    ASSERT (f && "could not getPointerToFunction");
+    return f;
 }
 
 

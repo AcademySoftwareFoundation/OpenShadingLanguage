@@ -509,7 +509,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP2(strtof,stof, generic,             stof,          true);
     OP2(strtoi,stoi, generic,             stoi,          true);
     OP (sub,         sub,                 sub,           true);
-    OP (substr,      generic,             none,          true);
+    OP (substr,      generic,             substr,        true);
     OP (surfacearea, get_simple_SG_field, none,          true);
     OP (tan,         generic,             none,          true);
     OP (tanh,        generic,             none,          true);

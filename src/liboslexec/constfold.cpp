@@ -964,6 +964,28 @@ DECLFOLDER(constfold_format)
 
 
 
+DECLFOLDER(constfold_substr)
+{
+    // Try to turn R=substr(s,start,len) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &S (*rop.opargsym (op, 1));
+    Symbol &Start (*rop.opargsym (op, 2));
+    Symbol &Len (*rop.opargsym (op, 3));
+    if (S.is_constant() && Start.is_constant() && Len.is_constant()) {
+        ASSERT (S.typespec().is_string() && Start.typespec().is_int() &&
+                Len.typespec().is_int());
+        ustring s = *(ustring *)S.data();
+        int start = *(int *)Start.data();
+        int len = *(int *)Len.data();
+        int cind = rop.add_constant (s.substr(start,len));
+        rop.turn_into_assign (op, cind, "const fold");
+        return 1;
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_regex_search)
 {
     // Try to turn R=regex_search(subj,reg) into R=C

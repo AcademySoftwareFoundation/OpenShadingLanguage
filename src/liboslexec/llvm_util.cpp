@@ -818,6 +818,33 @@ LLVM_Util::type_function_ptr (llvm::Type *rettype,
 
 
 
+std::string
+LLVM_Util::llvm_typename (llvm::Type *type) const
+{
+    std::string s;
+    llvm::raw_string_ostream stream (s);
+    stream << (*type);
+    return stream.str();
+}
+
+
+
+llvm::Type *
+LLVM_Util::llvm_typeof (llvm::Value *val) const
+{
+    return val->getType();
+}
+
+
+
+std::string
+LLVM_Util::llvm_typenameof (llvm::Value *val) const
+{
+    return llvm_typename (llvm_typeof (val));
+}
+
+
+
 llvm::Value *
 LLVM_Util::constant (float f)
 {
@@ -1153,6 +1180,14 @@ llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
 {
     return builder().CreateGEP (ptr, elem);
+}
+
+
+
+llvm::Value *
+LLVM_Util::GEP (llvm::Value *ptr, int elem)
+{
+    return builder().CreateConstGEP1_32 (ptr, elem);
 }
 
 

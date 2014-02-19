@@ -977,7 +977,13 @@ DECLFOLDER(constfold_substr)
         ustring s = *(ustring *)S.data();
         int start = *(int *)Start.data();
         int len = *(int *)Len.data();
-        int cind = rop.add_constant (s.substr(start,len));
+        int slen = s.length();
+        int b = start;
+        if (b < 0)
+            b += slen;
+        b = Imath::clamp (b, 0, slen);
+        ustring r (s, b, Imath::clamp (len, 0, slen));
+        int cind = rop.add_constant (r);
         rop.turn_into_assign (op, cind, "const fold");
         return 1;
     }

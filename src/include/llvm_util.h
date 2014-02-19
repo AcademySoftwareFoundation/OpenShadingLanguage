@@ -267,6 +267,15 @@ public:
                                           const std::vector<llvm::Type*> &params,
                                           bool varargs=false);
 
+    /// Return the human-readable name of the type of the llvm type.
+    std::string llvm_typename (llvm::Type *type) const;
+
+    /// Return the llvm::Type of the llvm value.
+    llvm::Type *llvm_typeof (llvm::Value *val) const;
+
+    /// Return the human-readable name of the type of the llvm value.
+    std::string llvm_typenameof (llvm::Value *val) const;
+
     /// Return an llvm::Value holding the given floating point constant.
     llvm::Value *constant (float f);
 
@@ -296,17 +305,26 @@ public:
     /// representation of a TypeDesc.
     llvm::Value *constant (const OIIO::TypeDesc &type);
 
+    /// Return an llvm::Value for a void* variable with value NULL.
     llvm::Value *void_ptr_null ();
 
+    /// Cast the pointer variable specified by val to the kind of pointer
+    /// described by type (as an llvm pointer type).
     llvm::Value *ptr_cast (llvm::Value* val, llvm::Type *type);
     llvm::Value *ptr_cast (llvm::Value* val, llvm::PointerType *type) {
         return ptr_cast (val, (llvm::Type *)type);
     }
 
+    /// Cast the pointer variable specified by val to a pointer to the type
+    /// described by type (as an llvm data type).
     llvm::Value *ptr_to_cast (llvm::Value* val, llvm::Type *type);
 
+    /// Cast the pointer variable specified by val to a pointer to the given
+    /// data type, return the llvm::Value of the new pointer.
     llvm::Value *ptr_cast (llvm::Value* val, const OIIO::TypeDesc &type);
 
+    /// Cast the pointer variable specified by val to a pointer of type
+    /// void* return the llvm::Value of the new pointer.
     llvm::Value *void_ptr (llvm::Value* val);
 
     /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
@@ -404,6 +422,10 @@ public:
     /// llvm::Value, which can be generated from either a constant or a
     /// runtime-computed integer element index.
     llvm::Value *GEP (llvm::Value *ptr, llvm::Value *elem);
+
+    /// Generate a GEP (get element pointer) with an integer element
+    /// offset.
+    llvm::Value *GEP (llvm::Value *ptr, int elem);
 
     /// Generate a GEP (get element pointer) with two integer element
     /// offsets.  This is just a special (and common) case of GEP where

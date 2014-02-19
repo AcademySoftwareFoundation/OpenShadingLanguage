@@ -247,16 +247,26 @@ BackendLLVM::ShaderGlobalNameToIndex (ustring name)
 
 
 llvm::Value *
+BackendLLVM::llvm_global_symbol_ptr (ustring name)
+{
+    // Special case for globals -- they live in the ShaderGlobals struct,
+    // we use the name of the global to find the index of the field within
+    // the ShaderGlobals struct.
+    int sg_index = ShaderGlobalNameToIndex (name);
+    ASSERT (sg_index >= 0);
+    return ll.void_ptr (ll.GEP (sg_ptr(), 0, sg_index));
+}
+
+
+
+llvm::Value *
 BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
 {
     Symbol* dealiased = sym.dealias();
 
     if (sym.symtype() == SymTypeGlobal) {
-        // Special case for globals -- they live in the shader globals struct
-        int sg_index = ShaderGlobalNameToIndex (sym.name());
-        ASSERT (sg_index >= 0);
-        llvm::Value *result = ll.GEP (sg_ptr(), 0, sg_index);
-        // No derivs?  We're one indirection too few?
+        llvm::Value *result = llvm_global_symbol_ptr (sym.name());
+        ASSERT (result);
         result = ll.ptr_to_cast (result, llvm_type(sym.typespec().elementtype()));
         return result;
     }
@@ -265,7 +275,6 @@ BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
         // Special case for params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
         llvm::Value *result = ll.GEP (groupdata_ptr(), 0, fieldnum);
-        // No derivs?  We're one indirection too few?
         result = ll.ptr_to_cast (result, llvm_type(sym.typespec().elementtype()));
         return result;
     }

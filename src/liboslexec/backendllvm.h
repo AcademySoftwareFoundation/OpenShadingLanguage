@@ -202,11 +202,21 @@ public:
                               const std::string &name="");
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
-    /// start of that symbol (first element, first component, and just the
-    /// plain value if it has derivatives).
+    /// address of the start of that symbol (first element, first component,
+    /// and just the plain value if it has derivatives).  This is retrieved
+    /// from the allocation map if already there; and if not yet in the
+    /// map, the symbol is alloca'd and placed in the map.
     llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
 
+    /// Retrieve an llvm::Value that is a pointer holding the start address
+    /// of the specified symbol. This always works for globals and params;
+    /// for stack variables (locals/temps) is succeeds only if the symbol is
+    /// already in the allocation table (will fail otherwise). This method
+    /// is not designed to retrieve constants.
     llvm::Value *getLLVMSymbolBase (const Symbol &sym);
+
+    /// Retrieve the named global ("P", "N", etc.).
+    llvm::Value *llvm_global_symbol_ptr (ustring name);
 
     /// Test whether val is nonzero, return the llvm::Value* that's the
     /// result of a CreateICmpNE or CreateFCmpUNE (depending on the

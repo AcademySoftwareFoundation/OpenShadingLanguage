@@ -1140,6 +1140,14 @@ osl_texture_set_rwrap (void *opt, const char *x)
 }
 
 OSL_SHADEOP void
+osl_texture_set_stwrap (void *opt, const char *x)
+{
+    TextureOpt::Wrap code = TextureOpt::decode_wrapmode(USTR(x));
+    ((TextureOpt *)opt)->swrap = code;
+    ((TextureOpt *)opt)->twrap = code;
+}
+
+OSL_SHADEOP void
 osl_texture_set_swrap_code (void *opt, int mode)
 {
     ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
@@ -1155,6 +1163,13 @@ OSL_SHADEOP void
 osl_texture_set_rwrap_code (void *opt, int mode)
 {
     ((TextureOpt *)opt)->rwrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_stwrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
 }
 
 OSL_SHADEOP void
@@ -1176,6 +1191,13 @@ osl_texture_set_rblur (void *opt, float x)
 }
 
 OSL_SHADEOP void
+osl_texture_set_stblur (void *opt, float x)
+{
+    ((TextureOpt *)opt)->sblur = x;
+    ((TextureOpt *)opt)->tblur = x;
+}
+
+OSL_SHADEOP void
 osl_texture_set_swidth (void *opt, float x)
 {
     ((TextureOpt *)opt)->swidth = x;
@@ -1194,6 +1216,13 @@ osl_texture_set_rwidth (void *opt, float x)
 }
 
 OSL_SHADEOP void
+osl_texture_set_stwidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->swidth = x;
+    ((TextureOpt *)opt)->twidth = x;
+}
+
+OSL_SHADEOP void
 osl_texture_set_fill (void *opt, float x)
 {
     ((TextureOpt *)opt)->fill = x;
@@ -1206,7 +1235,7 @@ osl_texture_set_time (void *opt, float x)
 }
 
 OSL_SHADEOP void
-osl_texture_set_interp_name (void *opt, const char *modename)
+osl_texture_set_interp (void *opt, const char *modename)
 {
     int mode = tex_interp_to_code (USTR(modename));
     if (mode >= 0)

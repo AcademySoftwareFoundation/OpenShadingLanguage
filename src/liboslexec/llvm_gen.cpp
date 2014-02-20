@@ -1917,6 +1917,12 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
     opt = rop.ll.void_ptr (opt);
     rop.ll.call_function ("osl_texture_clear", opt);
     llvm::Value* missingcolor = NULL;
+    TextureOpt optdefaults;  // So we can check the defaults
+    bool swidth_set = false, twidth_set = false, rwidth_set = false;
+    bool sblur_set = false, tblur_set = false, rblur_set = false;
+    bool swrap_set = false, twrap_set = false, rwrap_set = false;
+    bool firstchannel_set = false, fill_set = false, interp_set = false;
+    bool time_set = false, subimage_set = false;
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -1925,119 +1931,130 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                 "optional texture token must be a string");
         ASSERT (a+1 < op.nargs() && "malformed argument list for texture");
         ustring name = *(ustring *)Name.data();
-
         ++a;  // advance to next argument
-        Symbol &Val (*rop.opargsym(op,a));
-        TypeDesc valtype = Val.typespec().simpletype ();
-        
+
         if (! name)    // skip empty string param name
             continue;
-        llvm::Value *val = rop.llvm_load_value (Val);
 
-        // If certain float-expecting options were passed an int, do the
-        // conversion automatically.
-        if (valtype == TypeDesc::INT &&
-            (name == Strings::width || name == Strings::swidth ||
-             name == Strings::twidth || name == Strings::rwidth ||
-             name == Strings::blur || name == Strings::sblur ||
-             name == Strings::tblur || name == Strings::rblur)) {
-            val = rop.ll.op_int_to_float (val);
-            valtype = TypeDesc::FLOAT;
+        Symbol &Val (*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+        const int *ival = Val.typespec().is_int() ? (const int *)Val.data() : NULL;
+        const float *fval = Val.typespec().is_float() ? (const float *)Val.data() : NULL;
+
+#define PARAM_INT(paramname)                                            \
+        if (name == Strings::paramname && valtype == TypeDesc::INT)   { \
+            if (! paramname##_set &&                                    \
+                ival && *ival == optdefaults.paramname)                 \
+                continue;     /* default constant */                    \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            rop.ll.call_function ("osl_texture_set_" #paramname, opt, val); \
+            paramname##_set = true;                                     \
+            continue;                                                   \
         }
 
-        if (name == Strings::width && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_swidth", opt, val);
-            rop.ll.call_function ("osl_texture_set_twidth", opt, val);
-            if (tex3d)
-                rop.ll.call_function ("osl_texture_set_rwidth", opt, val);
-        } else if (name == Strings::swidth && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_swidth", opt, val);
-        } else if (name == Strings::twidth && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_twidth", opt, val);
-        } else if (name == Strings::rwidth && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_rwidth", opt, val);
+#define PARAM_FLOAT(paramname)                                          \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
+            if (! paramname##_set &&                                    \
+                ((ival && *ival == optdefaults.paramname) ||            \
+                 (fval && *fval == optdefaults.paramname)))             \
+                continue;     /* default constant */                    \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            if (valtype == TypeDesc::INT)                               \
+                val = rop.ll.op_int_to_float (val);                     \
+            rop.ll.call_function ("osl_texture_set_" #paramname, opt, val); \
+            paramname##_set = true;                                     \
+            continue;                                                   \
+        }
 
-        } else if (name == Strings::blur && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_sblur", opt, val);
-            rop.ll.call_function ("osl_texture_set_tblur", opt, val);
-            if (tex3d)
-                rop.ll.call_function ("osl_texture_set_rblur",opt, val);
-        } else if (name == Strings::sblur && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_sblur", opt, val);
-        } else if (name == Strings::tblur && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_tblur", opt, val);
-        } else if (name == Strings::rblur && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_rblur", opt, val);
+#define PARAM_FLOAT_STR(paramname)                                      \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
+            if (! s##paramname##_set && ! t##paramname##_set &&         \
+                ! r##paramname##_set &&                                 \
+                ((ival && *ival == optdefaults.s##paramname) ||         \
+                 (fval && *fval == optdefaults.s##paramname)))          \
+                continue;     /* default constant */                    \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            if (valtype == TypeDesc::INT)                               \
+                val = rop.ll.op_int_to_float (val);                     \
+            rop.ll.call_function ("osl_texture_set_st" #paramname, opt, val); \
+            if (tex3d)                                                  \
+                rop.ll.call_function ("osl_texture_set_r" #paramname, opt, val); \
+            s##paramname##_set = true;                                  \
+            t##paramname##_set = true;                                  \
+            r##paramname##_set = true;                                  \
+            continue;                                                   \
+        }
 
-        } else if (name == Strings::wrap && valtype == TypeDesc::STRING) {
+#define PARAM_STRING_CODE(paramname,decoder)                             \
+        if (name == Strings::paramname && valtype == TypeDesc::STRING) { \
+            if (Val.is_constant()) {                                    \
+                int code = decoder (*(ustring *)Val.data());            \
+                llvm::Value *val = rop.ll.constant (code);              \
+                rop.ll.call_function ("osl_texture_set_" #paramname "_code", opt, val); \
+            } else {                                                    \
+                llvm::Value *val = rop.llvm_load_value (Val);           \
+                rop.ll.call_function ("osl_texture_set_" #paramname, opt, val); \
+            }                                                           \
+            paramname##_set = true;                                     \
+            continue;                                                   \
+        }
+
+        PARAM_FLOAT_STR (width)
+        PARAM_FLOAT (swidth)
+        PARAM_FLOAT (twidth)
+        PARAM_FLOAT (rwidth)
+        PARAM_FLOAT_STR (blur)
+        PARAM_FLOAT (sblur)
+        PARAM_FLOAT (tblur)
+        PARAM_FLOAT (rblur)
+
+        if (name == Strings::wrap && valtype == TypeDesc::STRING) {
             if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
-                val = rop.ll.constant (mode);
-                rop.ll.call_function ("osl_texture_set_swrap_code", opt, val);
-                rop.ll.call_function ("osl_texture_set_twrap_code", opt, val);
+                int mode = TextureOpt::decode_wrapmode (*(ustring *)Val.data());
+                llvm::Value *val = rop.ll.constant (mode);
+                rop.ll.call_function ("osl_texture_set_stwrap_code", opt, val);
                 if (tex3d)
                     rop.ll.call_function ("osl_texture_set_rwrap_code", opt, val);
             } else {
-                rop.ll.call_function ("osl_texture_set_swrap", opt, val);
-                rop.ll.call_function ("osl_texture_set_twrap", opt, val);
+                llvm::Value *val = rop.llvm_load_value (Val);
+                rop.ll.call_function ("osl_texture_set_stwrap", opt, val);
                 if (tex3d)
                     rop.ll.call_function ("osl_texture_set_rwrap", opt, val);
             }
-        } else if (name == Strings::swrap && valtype == TypeDesc::STRING) {
-            if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
-                val = rop.ll.constant (mode);
-                rop.ll.call_function ("osl_texture_set_swrap_code", opt, val);
-            } else 
-                rop.ll.call_function ("osl_texture_set_swrap", opt, val);
-        } else if (name == Strings::twrap && valtype == TypeDesc::STRING) {
-            if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
-                val = rop.ll.constant (mode);
-                rop.ll.call_function ("osl_texture_set_twrap_code", opt, val);
-            } else
-                rop.ll.call_function ("osl_texture_set_twrap", opt, val);
-        } else if (name == Strings::rwrap && valtype == TypeDesc::STRING) {
-            if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode (*(char **)Val.data());
-                val = rop.ll.constant (mode);
-                rop.ll.call_function ("osl_texture_set_rwrap_code", opt, val);
-            } else
-                rop.ll.call_function ("osl_texture_set_rwrap", opt, val);
+            swrap_set = twrap_set = rwrap_set = true;
+            continue;
+        }
+        PARAM_STRING_CODE(swrap, TextureOpt::decode_wrapmode)
+        PARAM_STRING_CODE(twrap, TextureOpt::decode_wrapmode)
+        PARAM_STRING_CODE(rwrap, TextureOpt::decode_wrapmode)
 
-        } else if (name == Strings::firstchannel && valtype == TypeDesc::INT) {
-            rop.ll.call_function ("osl_texture_set_firstchannel", opt, val);
-        } else if (name == Strings::fill && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_fill", opt, val);
-        } else if (name == Strings::time && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_texture_set_time", opt, val);
+        PARAM_FLOAT (fill)
+        PARAM_FLOAT (time)
+        PARAM_INT (firstchannel)
+        PARAM_INT (subimage)
 
-        } else if (name == Strings::interp && valtype == TypeDesc::STRING) {
-            // Try to decode the interp name string into an integer mode,
-            // so it doesn't have to happen at runtime.
-            int mode = -1;
-            if (Val.is_constant())
-                mode = tex_interp_to_code (*(ustring *)Val.data());
-            if (mode >= 0)
-                rop.ll.call_function ("osl_texture_set_interp_code", opt,
-                                        rop.ll.constant(mode));
-            else
-                rop.ll.call_function ("osl_texture_set_interp_name", opt, val);
-
-        } else if (name == Strings::subimage && valtype == TypeDesc::INT) {
-            rop.ll.call_function ("osl_texture_set_subimage", opt, val);
-        } else if (name == Strings::subimage && valtype == TypeDesc::STRING) {
+        if (name == Strings::subimage && valtype == TypeDesc::STRING) {
+            llvm::Value *val = rop.llvm_load_value (Val);
             rop.ll.call_function ("osl_texture_set_subimagename", opt, val);
+            subimage_set = true;
+            continue;
+        }
 
-        } else if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
+        PARAM_STRING_CODE (interp, tex_interp_to_code)
+
+        if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);
             if (Val.has_derivs()) {
                 dalphadx = rop.llvm_get_pointer (Val, 1);
                 dalphady = rop.llvm_get_pointer (Val, 2);
                 // NO z derivs!  dalphadz = rop.llvm_get_pointer (Val, 3);
             }
+            continue;
 
-        } else if (name == Strings::missingcolor &&
+        }
+        if (name == Strings::missingcolor &&
                    equivalent(valtype,TypeDesc::TypeColor)) {
             if (! missingcolor) {
                 // If not already done, allocate enough storage for the
@@ -2049,8 +2066,9 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
             }
             rop.ll.op_memcpy (rop.ll.void_ptr(missingcolor),
                               rop.llvm_void_ptr(Val), (int)sizeof(Color3));
-        } else if (name == Strings::missingalpha &&
-                   valtype == TypeDesc::FLOAT) {
+            continue;
+        }
+        if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
             if (! missingcolor) {
                 // If not already done, allocate enough storage for the
                 // missingcolor value (4 floats), and call the special 
@@ -2059,15 +2077,30 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                 rop.ll.call_function ("osl_texture_set_missingcolor_arena",
                                       opt, missingcolor);
             }
+            llvm::Value *val = rop.llvm_load_value (Val);
             rop.ll.call_function ("osl_texture_set_missingcolor_alpha",
                                     opt, rop.ll.constant(nchans), val);
+            continue;
 
-        } else {
-            rop.shadingcontext()->error ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
-                                    tex3d ? "3d" : "",
-                                    name.c_str(), valtype.c_str(),
-                                    op.sourcefile().c_str(), op.sourceline());
         }
+        rop.shadingcontext()->error ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
+                                     tex3d ? "3d" : "",
+                                     name.c_str(), valtype.c_str(),
+                                     op.sourcefile().c_str(), op.sourceline());
+#undef PARAM_INT
+#undef PARAM_FLOAT
+#undef PARAM_FLOAT_STR
+#undef PARAM_STRING_CODE
+
+#if 0
+        // Helps me find any constant optional params that aren't elided
+        if (Name.is_constant() && Val.is_constant()) {
+            std::cout << "! texture constant optional arg '" << name << "'\n";
+            if (Val.typespec().is_float()) std::cout << "\tf " << *(float *)Val.data() << "\n";
+            if (Val.typespec().is_int()) std::cout << "\ti " << *(int *)Val.data() << "\n";
+            if (Val.typespec().is_string()) std::cout << "\t" << *(ustring *)Val.data() << "\n";
+        }
+#endif
     }
 
     return opt;

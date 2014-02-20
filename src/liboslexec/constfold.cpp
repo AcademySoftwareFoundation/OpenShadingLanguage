@@ -1785,41 +1785,53 @@ DECLFOLDER(constfold_texture)
         Symbol &Name = *rop.opargsym (op, i);
         Symbol &Value = *rop.opargsym (op, i+1);
         DASSERT (Name.typespec().is_string());
-        if (Name.is_constant()) {
+        if (Name.is_constant() && Value.is_constant()) {
             ustring name = *(ustring *)Name.data();
             bool elide = false;
-            void *value = Value.is_constant() ? Value.data() : NULL;
+            void *value = Value.data();
             TypeDesc valuetype = Value.typespec().simpletype();
 
 // Keep from repeating the same tedious code for {s,t,r, }{width,blur,wrap}
 #define CHECK(field,ctype,osltype)                              \
             if (name == Strings::field && ! field##_set) {      \
-                if (value && osltype == TypeDesc::FLOAT &&      \
-                    valuetype == TypeDesc::INT &&               \
-                    *(int *)value == opt.field)                 \
+                if (valuetype == osltype &&                     \
+                         *(ctype *)value == opt.field)          \
                     elide = true;                               \
-                else if (value && valuetype == osltype &&       \
-                      *(ctype *)value == opt.field)             \
+                else if (osltype == TypeDesc::FLOAT &&          \
+                         valuetype == TypeDesc::INT &&          \
+                         *(int *)value == opt.field)            \
                     elide = true;                               \
                 else                                            \
                     field##_set = true;                         \
             }
-#define CHECK_str(field,ctype,osltype)                                  \
-            CHECK (s##field,ctype,osltype)                              \
-            else CHECK (t##field,ctype,osltype)                         \
-            else CHECK (r##field,ctype,osltype)                         \
-            else if (name == Strings::field && !s##field##_set &&       \
-                     ! t##field##_set && ! r##field##_set &&            \
-                     valuetype == osltype) {                            \
-                ctype *v = (ctype *)value;                              \
-                if (v && *v == opt.s##field && *v == opt.t##field       \
-                    && *v == opt.r##field)                              \
-                    elide = true;                                       \
-                else {                                                  \
-                    s##field##_set = true;                              \
-                    t##field##_set = true;                              \
-                    r##field##_set = true;                              \
-                }                                                       \
+#define CHECK_str(field,ctype,osltype)                              \
+            CHECK (s##field,ctype,osltype)                          \
+            else CHECK (t##field,ctype,osltype)                     \
+            else CHECK (r##field,ctype,osltype)                     \
+            else if (name == Strings::field && !s##field##_set &&   \
+                     ! t##field##_set && ! r##field##_set) {        \
+                if (valuetype == osltype) {                         \
+                    ctype *v = (ctype *)value;                      \
+                    if (*v == opt.s##field && *v == opt.t##field    \
+                        && *v == opt.r##field)                      \
+                        elide = true;                               \
+                    else {                                          \
+                        s##field##_set = true;                      \
+                        t##field##_set = true;                      \
+                        r##field##_set = true;                      \
+                    }                                               \
+                } else if (osltype == TypeDesc::FLOAT &&            \
+                           valuetype == TypeDesc::INT) {            \
+                    int *v = (int *)value;                          \
+                    if (*v == opt.s##field && *v == opt.t##field    \
+                        && *v == opt.r##field)                      \
+                        elide = true;                               \
+                    else {                                          \
+                        s##field##_set = true;                      \
+                        t##field##_set = true;                      \
+                        r##field##_set = true;                      \
+                    }                                               \
+                }                                                   \
             }
 
 #ifdef __clang__

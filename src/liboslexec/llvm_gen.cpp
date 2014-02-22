@@ -1991,8 +1991,10 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
         if (name == Strings::paramname && valtype == TypeDesc::STRING) { \
             if (Val.is_constant()) {                                    \
                 int code = decoder (*(ustring *)Val.data());            \
-                llvm::Value *val = rop.ll.constant (code);              \
-                rop.ll.call_function ("osl_texture_set_" #paramname "_code", opt, val); \
+                if (code >= 0) {                                        \
+                    llvm::Value *val = rop.ll.constant (code);          \
+                    rop.ll.call_function ("osl_texture_set_" #paramname "_code", opt, val); \
+                }                                                       \
             } else {                                                    \
                 llvm::Value *val = rop.llvm_load_value (Val);           \
                 rop.ll.call_function ("osl_texture_set_" #paramname, opt, val); \

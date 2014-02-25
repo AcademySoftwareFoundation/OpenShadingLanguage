@@ -198,7 +198,7 @@ private:
 /// are unique), there's a hash_map of symbols.  There's also a stack
 /// of such maps representing the current scope hierarchy, so a symbol
 /// search proceeds from innermost scope (top of stack) to outermost
-/// (bottom of stack).  
+/// (bottom of stack).
 ///
 class SymbolTable {
 public:
@@ -230,7 +230,7 @@ public:
     /// return it, otherwise return NULL.
     Symbol * clash (ustring name) const;
 
-    /// Insert the symbol into the current inner scope.  
+    /// Insert the symbol into the current inner scope.
     ///
     void insert (Symbol *sym);
 

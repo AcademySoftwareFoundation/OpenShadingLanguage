@@ -145,7 +145,7 @@ Symbol::print_vals (std::ostream &out, int maxvals) const
             out << (j ? " " : "") << ((int *)data())[j];
     } else if (t.basetype == TypeDesc::STRING) {
         for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << "\"" 
+            out << (j ? " " : "") << "\""
                 << Strutil::escape_chars(((ustring *)data())[j].string())
                 << "\"";
     }
@@ -162,8 +162,8 @@ Symbol::print (std::ostream &out, int maxvals) const
     out << Symbol::symtype_shortname(symtype())
         << " " << typespec().string() << " " << name();
     if (everused())
-        out << " (used " << firstuse() << ' ' << lastuse() 
-            << " read " << firstread() << ' ' << lastread() 
+        out << " (used " << firstuse() << ' ' << lastuse()
+            << " read " << firstread() << ' ' << lastread()
             << " write " << firstwrite() << ' ' << lastwrite();
     else
         out << " (unused";
@@ -236,7 +236,7 @@ SymbolTable::find_exact (ustring mangled_name) const
 
 
 
-Symbol * 
+Symbol *
 SymbolTable::clash (ustring name) const
 {
     Symbol *s = find (name);
@@ -329,12 +329,12 @@ SymbolTable::print ()
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();
             if (s->scope())
-                std::cout << " (" << s->name() 
+                std::cout << " (" << s->name()
                           << " in scope " << s->scope() << ")";
             std::cout << " :\n";
             for (size_t i = 0;  i < s->numfields();  ++i) {
                 const StructSpec::FieldSpec & f (s->field(i));
-                std::cout << "\t" << f.name << " : " 
+                std::cout << "\t" << f.name << " : "
                           << f.type.string() << "\n";
             }
             ++structid;
@@ -354,7 +354,7 @@ SymbolTable::print ()
             std::cout << s->typespec().string();
         }
         if (s->scope())
-            std::cout << " (" << s->name() << " in scope " 
+            std::cout << " (" << s->name() << " in scope "
                       << s->scope() << ")";
         if (s->is_function()) {
             const FunctionSymbol *f = (const FunctionSymbol *) s;

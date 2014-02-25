@@ -68,16 +68,16 @@ public:
         conditional_statement_node,
         loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
-        assign_expression_node, ternary_expression_node, 
+        assign_expression_node, ternary_expression_node,
         typecast_expression_node, type_constructor_node,
         function_call_node,
         literal_node,
         _last_node
     };
 
-    enum Operator { Nothing=0, Decr, Incr, 
+    enum Operator { Nothing=0, Decr, Incr,
                     Assign, Mul, Div, Add, Sub, Mod,
-                    Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual, 
+                    Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual,
                     BitAnd, BitOr, Xor, Compl,
                     And, Or, Not, ShiftLeft, ShiftRight };
 
@@ -123,7 +123,7 @@ public:
     /// type" may be passed down, conveying any requirements or
     /// coercion.  The default (base class) implementation just type
     /// checks all the child nodes and makes this node's type be the
-    /// expected if it is unknown, but doens't change it if it's not
+    /// expected if it is unknown, but doesn't change it if it's not
     /// unknown.
     virtual TypeSpec typecheck (TypeSpec expected = TypeSpec());
 
@@ -156,7 +156,7 @@ public:
     }
 
     /// Append a new node (specified by a reference-counted pointer)
-    /// onto the end of the sequence that *this belongs to.  Return an
+    /// onto the end of the sequence that *this belongs to.  Return a
     /// reference-counted pointer to *this.
     ref append (ref &x) { append (x.get()); return this; }
 
@@ -206,8 +206,8 @@ protected:
             n->print (out, indentlevel);
     }
 
-    /// A is the head of a list of nodes, traverse the list and call
-    /// the print() method for each node in the list.
+    /// A is the head of a list of nodes, traverse the list and compute
+    /// the length of the list.
     static size_t listlength (const ref &A) {
         size_t len = 0;
         for (const ASTNode *n = A.get();  n;  n = n->nextptr())
@@ -244,7 +244,7 @@ protected:
             return ref();
         }
     }
-        
+
     /// Return the number of child nodes.
     ///
     size_t nchildren () const { return m_children.size(); }
@@ -286,7 +286,7 @@ protected:
 
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
-    int emitcode (const char *opname, Symbol *arg0=NULL, 
+    int emitcode (const char *opname, Symbol *arg0=NULL,
                   Symbol *arg1=NULL, Symbol *arg2=NULL, Symbol *arg3=NULL);
 
     /// Emit a single IR opcode -- append one op to the list of
@@ -323,7 +323,7 @@ class ASTshader_declaration : public ASTNode
 {
 public:
     ASTshader_declaration (OSLCompilerImpl *comp, int stype, ustring name,
-                           ASTNode *form, ASTNode *stmts, ASTNode *meta) 
+                           ASTNode *form, ASTNode *stmts, ASTNode *meta)
         : ASTNode (shader_declaration_node, comp, stype, meta, form, stmts),
           m_shadername(name)
     { }
@@ -402,7 +402,7 @@ public:
     bool is_output () const { return m_isoutput; }
 
     /// For shader params, generate the string that gives the
-    /// intialization of literal values and place it in 'out'.
+    /// initialization of literal values and place it in 'out'.
     /// Return whether the full initialization is comprised only of
     /// literals (and no init ops are needed).
     bool param_default_literals (const Symbol *sym, std::string &out);
@@ -423,7 +423,7 @@ private:
     void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
 
     // Helper for param_default_literals: generate the string that gives
-    // the intialization of the literal value (and/or the default, if
+    // the initialization of the literal value (and/or the default, if
     // init==NULL) and append it to 'out'.  Return whether the full
     // initialization is comprised only of literals (no init ops needed).
     bool param_one_default_literal (const Symbol *sym, ASTNode *init,
@@ -565,7 +565,7 @@ class ASTconditional_statement : public ASTNode
 public:
     ASTconditional_statement (OSLCompilerImpl *comp, ASTNode *cond,
                               ASTNode *truestmt, ASTNode *falsestmt=NULL)
-        : ASTNode (conditional_statement_node, comp, 0, 
+        : ASTNode (conditional_statement_node, comp, 0,
                    cond, truestmt, falsestmt)
     { }
 
@@ -832,7 +832,7 @@ private:
                                  bool equivreturn);
 
     /// Handle all the special cases for built-ins.  This includes
-    /// irregular patterns of which args are read vs written, special 
+    /// irregular patterns of which args are read vs written, special
     /// checks for printf- and texture-like, etc.
     void typecheck_builtin_specialcase ();
 

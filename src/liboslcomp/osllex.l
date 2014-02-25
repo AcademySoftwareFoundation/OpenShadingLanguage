@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ************************************************************/
 
 
-/* Option 'noyywrap' indicates that when EOF is hit, yyin does not 
+/* Option 'noyywrap' indicates that when EOF is hit, yyin does not
  * automatically reset to another file.
  */
 %option noyywrap
@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %option prefix="osl"
 
 
- /* Define regular expression macros 
+ /* Define regular expression macros
   ************************************************/
 
  /* white space, not counting newline */
@@ -59,7 +59,7 @@ DIGIT           [0-9]
  /* Integer literal */
 INTEGER         {DIGIT}+
  /* floating point literal (E, FLT1, FLT2, FLT3 are just helpers)
-  * NB: we don't allow leading +/- due to ambiguity between 
+  * NB: we don't allow leading +/- due to ambiguity between
   * whether "a-0.5" is really "a -0.5" or "a - 0.5".  Resolve this
   * in the grammar.
   */
@@ -290,7 +290,7 @@ preprocess (const char *yytext)
                 // error output match the standard cpp.
                 if (filename.find (oslcompiler->cwd()) == 0) {
                     filename.erase (0, oslcompiler->cwd().size());
-                    if (filename.size() && 
+                    if (filename.size() &&
                         (filename[0] == '/' || filename[0] == '\\'))
                         filename.erase (0, 1);
                 }

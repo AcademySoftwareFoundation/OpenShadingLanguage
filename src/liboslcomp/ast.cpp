@@ -137,10 +137,10 @@ ASTNode::warning (const char *format, ...)
 
 
 void
-ASTNode::print (std::ostream &out, int indentlevel) const 
+ASTNode::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() << " : " 
+    out << "(" << nodetypename() << " : "
         << "    (type: " << typespec().string() << ") "
         << (opname() ? opname() : "") << "\n";
     printchildren (out, indentlevel);
@@ -151,7 +151,7 @@ ASTNode::print (std::ostream &out, int indentlevel) const
 
 
 void
-ASTNode::printchildren (std::ostream &out, int indentlevel) const 
+ASTNode::printchildren (std::ostream &out, int indentlevel) const
 {
     for (size_t i = 0;  i < m_children.size();  ++i) {
         if (! child(i))
@@ -192,7 +192,7 @@ void
 ASTshader_declaration::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() << " " << shadertypename() 
+    out << "(" << nodetypename() << " " << shadertypename()
               << " \"" << m_shadername << "\"\n";
     printchildren (out, indentlevel);
     indent (out, indentlevel);
@@ -294,7 +294,7 @@ ASTfunction_declaration::print (std::ostream &out, int indentlevel) const
     indent (out, indentlevel);
     out << nodetypename() << " " << m_sym->mangled();
     if (m_sym->scope())
-        out << " (" << m_sym->name() 
+        out << " (" << m_sym->name()
                   << " in scope " << m_sym->scope() << ")";
     out << "\n";
     printchildren (out, indentlevel);
@@ -308,7 +308,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   bool isparam, bool ismeta,
                                                   bool isoutput, bool initlist)
     : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
-      m_name(name), m_sym(NULL), 
+      m_name(name), m_sym(NULL),
       m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
       m_initlist(initlist)
 {
@@ -370,12 +370,12 @@ void
 ASTvariable_declaration::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() << " " 
-              << m_sym->typespec().string() << " " 
+    out << "(" << nodetypename() << " "
+              << m_sym->typespec().string() << " "
               << m_sym->mangled();
 #if 0
     if (m_sym->scope())
-        out << " (" << m_sym->name() 
+        out << " (" << m_sym->name()
                   << " in scope " << m_sym->scope() << ")";
 #endif
     out << "\n";
@@ -410,7 +410,7 @@ ASTvariable_ref::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
     out << "(" << nodetypename() << " (type: "
-        << (m_sym ? m_sym->typespec().string() : "unknown") << ") " 
+        << (m_sym ? m_sym->typespec().string() : "unknown") << ") "
         << (m_sym ? m_sym->mangled() : m_name.string()) << ")\n";
     DASSERT (nchildren() == 0);
 }
@@ -919,11 +919,11 @@ ASTfunction_call::opname () const
 
 
 void
-ASTfunction_call::print (std::ostream &out, int indentlevel) const 
+ASTfunction_call::print (std::ostream &out, int indentlevel) const
 {
     ASTNode::print (out, indentlevel);
 #if 0
-    if (is_user_function()) { 
+    if (is_user_function()) {
         out << "\n";
         user_function()->print (out, indentlevel+1);
         out << "\n";

@@ -213,7 +213,7 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
 }
 
 
- 
+
 TypeSpec
 ASTvariable_ref::typecheck (TypeSpec expected)
 {
@@ -222,7 +222,7 @@ ASTvariable_ref::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTpreincdec::typecheck (TypeSpec expected)
 {
@@ -233,7 +233,7 @@ ASTpreincdec::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTpostincdec::typecheck (TypeSpec expected)
 {
@@ -246,7 +246,7 @@ ASTpostincdec::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTindex::typecheck (TypeSpec expected)
 {
@@ -297,7 +297,7 @@ ASTindex::typecheck (TypeSpec expected)
     // Make sure the indices (children 1+) are integers
     for (size_t c = 1;  c < nchildren();  ++c)
         if (! child(c)->typespec().is_int())
-            error ("%s index must be an integer, not a %s", 
+            error ("%s index must be an integer, not a %s",
                    indextype, type_c_str(index()->typespec()));
 
     // If the thing we're indexing is an lvalue, so is the indexed element
@@ -462,7 +462,7 @@ ASTreturn_statement::typecheck (TypeSpec expected)
         }
         myfunc->encountered_return ();
     } else {
-        // We're not part of any user function, so this 'return' must 
+        // We're not part of any user function, so this 'return' must
         // be from the main shader body.  That's fine (it's equivalent
         // to calling exit()), but it can't return a value.
         if (expr())
@@ -608,10 +608,10 @@ ASTbinary_expression::typecheck (TypeSpec expected)
 
     case Equal :
     case NotEqual :
-        // Any equivalent types can be compared with == and !=, also a 
+        // Any equivalent types can be compared with == and !=, also a
         // float or int can be compared to any other numeric type.
         // Result is always an int.
-        if (equivalent (l, r) || 
+        if (equivalent (l, r) ||
               (l.is_numeric() && r.is_int_or_float()) ||
               (l.is_int_or_float() && r.is_numeric()))
             return m_typespec = TypeDesc::TypeInt;
@@ -748,7 +748,7 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     }
 
     // If we made it this far, no match could be found.
-    std::string err = Strutil::format ("Cannot construct %s (", 
+    std::string err = Strutil::format ("Cannot construct %s (",
                                        type_c_str(typespec()));
     for (ref a = args();  a;  a = a->next()) {
         err += a->typespec().string();
@@ -800,7 +800,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
         int advance;
         TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
         formals += advance;
-        // std::cerr << "\targ is " << argtype.string() 
+        // std::cerr << "\targ is " << argtype.string()
         //           << ", formal is " << formaltype.string() << "\n";
         if (argtype == formaltype)
             continue;   // ok, move on to next arg
@@ -815,7 +815,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
         // anything that gets this far we don't consider a match
         return false;
     }
-    if (*formals && *formals != '*' && *formals != '.') 
+    if (*formals && *formals != '*' && *formals != '.')
         return false;  // Non-*, non-... formals expected, no more actuals
 
     return true;  // Is this safe?
@@ -1219,7 +1219,7 @@ static const char * builtin_func_args [] = {
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dz", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,
-    "environment", "fsv.", "fsvvv.","csv.", "csvvv.", 
+    "environment", "fsv.", "fsvvv.","csv.", "csvvv.",
                "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,
     "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
@@ -1249,9 +1249,9 @@ static const char * builtin_func_args [] = {
     "splineinverse", "fsff[]", "fsfif[]", NULL,
     "split", "iss[]si", "iss[]s", "iss[]", "!rw", NULL,
     "surfacearea", "f", NULL,
-    "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
+    "texture", "fsff.", "fsffffff.","csff.", "csffffff.",
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
-    "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
+    "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.",
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
     "warning", "xs*", "!printf", NULL,   // FIXME -- further checking
@@ -1381,7 +1381,7 @@ OSLCompilerImpl::typelist_from_code (const char *code) const
             ret += "...";
         } else if (*code == '?') {
             ret += "<any>";
-        } else {            
+        } else {
             TypeSpec t = type_from_code (code, &advance);
             ret += type_c_str(t);
         }

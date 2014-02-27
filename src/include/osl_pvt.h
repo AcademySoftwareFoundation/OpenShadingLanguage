@@ -32,9 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OpenImageIO/dassert.h"
 
-#include <boost/tr1/memory.hpp>
-using std::tr1::shared_ptr;
-
 
 OSL_NAMESPACE_ENTER
 namespace pvt {

@@ -684,6 +684,7 @@ test_shade (int argc, const char *argv[])
     }
 
     // We're done with the shading system now, destroy it
+    shadergroup.reset ();  // Must release this before destroying shadingsys
     ShadingSystem::destroy (shadingsys);
 
     return EXIT_SUCCESS;

@@ -656,6 +656,7 @@ int main (int argc, const char *argv[]) {
     }
 
     // We're done with the shading system now, destroy it
+    shaders.clear ();  // Must release the group refs first
     ShadingSystem::destroy (shadingsys);
 
     return EXIT_SUCCESS;

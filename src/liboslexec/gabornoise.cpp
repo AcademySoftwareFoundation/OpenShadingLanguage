@@ -30,8 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "noiseimpl.h"
-#include "dual_vec.h"
-#include "Imathx.h"
+#include "OSL/dual_vec.h"
+#include "OSL/Imathx.h"
 
 #include <OpenImageIO/fmath.h>
 

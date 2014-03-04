@@ -28,9 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "oslconfig.h"
+#include "OSL/oslconfig.h"
 
-#include "OpenImageIO/dassert.h"
+#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER

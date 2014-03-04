@@ -26,10 +26,10 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "accum.h"
+#include "OSL/accum.h"
+#include "OSL/oslclosure.h"
 #include "lpeparse.h"
-#include "oslclosure.h"
-#include "OpenImageIO/dassert.h"
+#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER

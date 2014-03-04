@@ -29,10 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <boost/intrusive_ptr.hpp>
-#include "OpenImageIO/refcnt.h"
+#include <OpenImageIO/refcnt.h>
 
-#include "oslconfig.h"
-#include "oslcomp.h"
+#include "OSL/oslcomp.h"
 #include "symtab.h"
 
 

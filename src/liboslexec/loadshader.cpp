@@ -36,11 +36,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/algorithm/string.hpp>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/timer.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/timer.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/filesystem.h>
 
 
 

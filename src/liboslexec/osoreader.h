@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "osl_pvt.h"
 
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/thread.h>
 
 
 

@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 
-#include "oslexec.h"
+#include "OSL/oslexec.h"
 
 OSL_NAMESPACE_ENTER
 

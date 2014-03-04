@@ -43,7 +43,7 @@ Sony Pictures Imageworks terms, above.
 
 #include <OpenImageIO/strutil.h>
 
-#include "oslquery.h"
+#include "OSL/oslquery.h"
 using namespace OSL;
 
 

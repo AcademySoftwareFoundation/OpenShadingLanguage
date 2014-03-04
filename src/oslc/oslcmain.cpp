@@ -35,8 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/scoped_ptr.hpp>
 
-#include "oslcomp.h"
-#include "oslexec.h"
+#include "OSL/oslcomp.h"
+#include "OSL/oslexec.h"
 using namespace OSL;
 
 

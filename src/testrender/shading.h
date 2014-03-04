@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dual_vec.h"
-#include "oslclosure.h" // TODO: fwd declare ClosureColor  instead?
-#include "oslexec.h"    // TODO: fwd declare ShaderGlobals instead?
-#include "oslconfig.h"
+#include "OSL/dual_vec.h"
+#include "OSL/oslexec.h"
+#include "OSL/oslclosure.h"
+#include "OSL/oslconfig.h"
 
 
 OSL_NAMESPACE_ENTER

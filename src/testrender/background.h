@@ -1,7 +1,7 @@
 #pragma once
 
-#include "dual_vec.h"
-#include "oslconfig.h"
+#include "OSL/dual_vec.h"
+#include "OSL/oslconfig.h"
 #include <algorithm> // upper_bound
 
 OSL_NAMESPACE_ENTER

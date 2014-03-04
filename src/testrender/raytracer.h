@@ -2,8 +2,8 @@
 
 #include <OpenImageIO/fmath.h>
 
-#include "dual_vec.h"
-#include "oslconfig.h"
+#include "OSL/dual_vec.h"
+#include "OSL/oslconfig.h"
 #include <vector>
 
 OSL_NAMESPACE_ENTER

@@ -99,7 +99,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           ${LLVM_COMPILE_FLAGS}
           "-I${CMAKE_CURRENT_SOURCE_DIR}"
           "-I${CMAKE_SOURCE_DIR}/src/include"
-          "-I${CMAKE_BINARY_DIR}/include"
+          "-I${CMAKE_BINARY_DIR}/include/OSL"
           "-I${OPENIMAGEIO_INCLUDES}"
           "-I${ILMBASE_INCLUDE_DIR}"
           "-I${Boost_INCLUDE_DIRS}"

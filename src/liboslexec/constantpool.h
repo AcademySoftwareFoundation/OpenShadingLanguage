@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <boost/foreach.hpp>
 
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/thread.h>
 
 using namespace OSL;
 using namespace OSL::pvt;

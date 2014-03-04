@@ -29,8 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/thread.h>
 
-#include "oslconfig.h"
-#include "llvm_util.h"
+#include "OSL/oslconfig.h"
+#include "OSL/llvm_util.h"
 
 #ifndef USE_MCJIT
 #define USE_MCJIT 0

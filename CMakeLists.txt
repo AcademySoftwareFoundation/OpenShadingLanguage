@@ -194,7 +194,7 @@ include (externalpackages)
 include (flexbison)
 include_directories (
       "${CMAKE_SOURCE_DIR}/src/include"
-      "${CMAKE_BINARY_DIR}/include"
+      "${CMAKE_BINARY_DIR}/include/OSL"
       "${OPENIMAGEIO_INCLUDES}"
   )
 

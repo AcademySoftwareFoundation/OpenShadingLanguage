@@ -33,9 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
 
-#include "oslconfig.h"
-#include "oslclosure.h"
-#include "genclosure.h"
+#include "OSL/oslconfig.h"
+#include "OSL/oslclosure.h"
+#include "OSL/genclosure.h"
 #include "oslexec_pvt.h"
 
 

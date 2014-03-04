@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslexec_pvt.h"
-#include "genclosure.h"
+#include "OSL/genclosure.h"
 
 
 OSL_NAMESPACE_ENTER

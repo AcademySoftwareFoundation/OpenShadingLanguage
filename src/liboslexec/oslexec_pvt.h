@@ -44,8 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
 
-#include "oslexec.h"
-#include "oslclosure.h"
+#include "OSL/oslexec.h"
+#include "OSL/oslclosure.h"
 #include "osl_pvt.h"
 #include "constantpool.h"
 

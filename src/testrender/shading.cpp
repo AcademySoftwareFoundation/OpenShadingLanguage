@@ -1,6 +1,6 @@
 #include "shading.h"
 #include "sampling.h"
-#include "genclosure.h"
+#include "OSL/genclosure.h"
 #include "optics.h"
 
 using namespace OSL;

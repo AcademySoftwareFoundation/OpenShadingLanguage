@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/thread.hpp>
 #include <boost/ref.hpp>
 
-#include "oslexec.h"
+#include "OSL/oslexec.h"
 #include "simplerend.h"
 #include "raytracer.h"
 #include "background.h"

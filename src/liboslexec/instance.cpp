@@ -33,8 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/strutil.h"
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/strutil.h>
 
 #include "oslexec_pvt.h"
 

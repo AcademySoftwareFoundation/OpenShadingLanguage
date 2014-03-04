@@ -33,8 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/unordered_map.hpp>
 
-#include "OpenImageIO/typedesc.h"
-#include "OpenImageIO/ustring.h"
+#include <OpenImageIO/typedesc.h>
+#include <OpenImageIO/ustring.h>
 
 #include "osl_pvt.h"
 

@@ -34,9 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/filesystem.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/filesystem.h>
 
 #include <boost/algorithm/string.hpp>
 

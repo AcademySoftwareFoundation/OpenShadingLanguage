@@ -93,13 +93,13 @@ examples), as you are just coding in C++, but there are some rules:
 
 #include <iostream>
 
-#include "oslconfig.h"
-#include "rendererservices.h"
-#include "shaderglobals.h"
-#include "dual.h"
+#include "OSL/oslconfig.h"
+#include "OSL/rendererservices.h"
+#include "OSL/shaderglobals.h"
+#include "OSL/dual.h"
+#include "OSL/dual_vec.h"
 using namespace OSL;
 
-#include <dual_vec.h>
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
 

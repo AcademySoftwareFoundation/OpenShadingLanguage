@@ -29,7 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/dassert.h>
-#include "llvm_util.h"
+#include "OSL/llvm_util.h"
 
 
 

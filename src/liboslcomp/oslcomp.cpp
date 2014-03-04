@@ -40,11 +40,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslcomp_pvt.h"
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/sysutil.h"
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/filesystem.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>

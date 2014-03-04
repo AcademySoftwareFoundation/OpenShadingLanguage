@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
-#include "oslconfig.h"
+#include "OSL/oslconfig.h"
 
 
 OSL_NAMESPACE_ENTER

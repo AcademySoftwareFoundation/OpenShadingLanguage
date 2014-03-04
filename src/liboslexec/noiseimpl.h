@@ -30,8 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <limits>
 
-#include "dual.h"
-#include "dual_vec.h"
+#include "OSL/dual.h"
+#include "OSL/dual_vec.h"
 #include "oslexec_pvt.h"
 #include <OpenImageIO/hash.h>
 

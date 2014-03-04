@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#include "oslexec.h"
+#include "OSL/oslexec.h"
 #include "simplerend.h"
 using namespace OSL;
 

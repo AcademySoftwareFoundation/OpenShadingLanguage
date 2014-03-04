@@ -1,6 +1,6 @@
 #pragma once
 
-#include "oslconfig.h"
+#include "OSL/oslconfig.h"
 #include <OpenImageIO/fmath.h>
 #include <algorithm>
 #include <cmath>

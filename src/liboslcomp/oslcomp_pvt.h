@@ -33,11 +33,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <map>
 
-#include "oslconfig.h"
-#include "oslcomp.h"
+#include "OSL/oslcomp.h"
 #include "ast.h"
 #include "symtab.h"
-#include "genclosure.h"
+#include "OSL/genclosure.h"
 
 
 class oslFlexLexer;

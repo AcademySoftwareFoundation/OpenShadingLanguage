@@ -27,8 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "lpeparse.h"
-#include "oslclosure.h"
-#include "OpenImageIO/dassert.h"
+#include "OSL/oslclosure.h"
+#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER

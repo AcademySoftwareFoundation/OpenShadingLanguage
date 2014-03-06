@@ -88,6 +88,10 @@ public:
     ///
     virtual void symdefault (const char *def) { }
 
+    /// Called when we're done with all information related to a parameter
+    /// symbol.
+    virtual void parameter_done () { }
+
     /// Return true for parsers whose only purpose is to read the header up
     /// to params, to stop parsing as soon as we start encountering temps in
     /// the symbol table.

@@ -114,6 +114,7 @@ public:
     virtual void symdefault (int def);
     virtual void symdefault (float def);
     virtual void symdefault (const char *def);
+    virtual void parameter_done ();
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
     virtual bool parse_code_section () { return false; }
@@ -190,6 +191,27 @@ OSOReaderQuery::symdefault (const char *def)
         p.sdefault.push_back (std::string(def));
         p.validdefault = true;
     }
+}
+
+
+
+void
+OSOReaderQuery::parameter_done ()
+{
+    m_reading_param = false;
+
+    // Make sure all value defaults have the right number of elements in
+    // case they were only partially initialized.
+    OSLQuery::Parameter &p (m_query.m_params.back());
+    int nvalues = p.type.numelements() * p.type.aggregate;
+    if (p.type.basetype == TypeDesc::INT)
+        p.idefault.resize (nvalues, 0);
+    else if (p.type.basetype == TypeDesc::FLOAT)
+        p.fdefault.resize (nvalues, 0);
+    else if (p.type.basetype == TypeDesc::STRING)
+        p.sdefault.resize (nvalues, std::string());
+    if (p.spacename.size())
+        p.spacename.resize (p.type.numelements(), std::string());
 }
 
 

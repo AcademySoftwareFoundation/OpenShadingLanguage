@@ -476,17 +476,16 @@ ASTreturn_statement::typecheck (TypeSpec expected)
 TypeSpec
 ASTunary_expression::typecheck (TypeSpec expected)
 {
-    // FIXME - closures
     typecheck_children (expected);
     TypeSpec t = expr()->typespec();
-    if (t.is_structure()) {
+    if (t.is_structure() || t.is_array()) {
         error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
         return TypeSpec ();
     }
     switch (m_op) {
     case Sub :
     case Add :
-        if (t.is_string()) {
+        if (! (t.is_closure() || t.is_numeric())) {
             error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
             return TypeSpec ();
         }

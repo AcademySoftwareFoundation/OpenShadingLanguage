@@ -1280,7 +1280,12 @@ ASTunary_expression::codegen (Symbol *dest)
     if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
         dest = m_compiler->make_temporary (typespec());
 
-    // FIXME -- what about coerced types, do we need a temp and copy here?
+    // Negation of closures: turn into multiplication by -1.0
+    if (esym->typespec().is_closure()) {
+        ASSERT (m_op == Sub);
+        emitcode ("mul", dest, esym, m_compiler->make_constant (-1.0f));
+        return dest;
+    }
 
     // Generate the opcode
     emitcode (opword(), dest, esym);

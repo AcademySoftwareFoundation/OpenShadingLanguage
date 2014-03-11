@@ -33,11 +33,16 @@ ShadingSystem API changes and new options (for renderer writers):
 * RendererServices::get_texture_info method parameters have changed, now
   includes an additional ShaderGlobals* parameter (as did all the other
   texture functions already). (1.5.5)
+* Split RendererServices definition into separate rendererservices.h. (1.5.6)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
   reducing the per-shader-network compile overhead of small shaders
   from 0.1-0.2s to less than 0.01s per shader group. (1.5.1)
+* Runtime constant folding of substr(). (1.5.6)
+* Improved code generation for texture calls, removing redundant setting
+  of optional texture parameters when they don't change from the default
+  values. (1.5.6)
 
 Bug fixes:
 * testshade/testrender timer didn't properly break out execution time
@@ -55,9 +60,19 @@ Bug fixes:
 * When using Boost Wave for oslc's preprocessor, fixed it so that
   variadic macros work. (1.5.4)
 * Ensure that isconnected() works for struct parameters. (1.5.4)
-* Fix incorrect data layout in heap for certain array parameters. (1.5.5)
+* Fix incorrect data layout in heap for certain array parameters.
+  (1.5.5/1.4.2)
 * oslc -D and -U did not work properly when OSL was built against
-  Boost Wave as the C preprocessor. (1.5.5)
+  Boost Wave as the C preprocessor. (1.5.5/1.4.2)
+* oslc bug fix for innitializing array elements inside a parameter that's a
+  struct. (1.5.6)
+* Implementation of the luminance() function has been improved to
+  guarantee that all the components sum to exactly 1.0. (1.5.6)
+* OSLQuery: for array parameters whose source code only specify default
+  values for partially initializing the array, nonetheless make the
+  default vectors be the correct length for the array (with zeroes for
+  array elements without explicit initialization). (1.5.6)
+* oslc: negating closures resulted in hitting an assertion. (1.5.6)
 
 Under the hood:
 * Internals refactor that separates the runtime optimization from the
@@ -75,6 +90,9 @@ Under the hood:
 
 Build & test system improvements and developer goodies:
 * Make OSL work with LLVM 3.4 (1.5.4)
+* New llvm_util.h contains an LLVM_Util standalone utility class that can
+  be used from any app as a simplified wrapper for LLVM code generation
+  and JIT. (1.5.1)
 * testshade consolidates --iparam, --fparam, --vparam, --sparam into
   just --param that figures out the types (or could be explicitly
   told. (1.5.1)
@@ -89,6 +107,12 @@ Build & test system improvements and developer goodies:
   (1.5.1)
 * Better detection of LLVM version number from the LLVM installation.
   (1.5.1)
+* Support for using LLVM's "MCJIT" instead of "old JIT" (controlled by
+  using the optional 'make USE_MCJIT=1'). This is mostly experimental,
+  and not recommended since performance of old JIT is still much better
+  than MCJIT. (1.5.6)
+* Moved the source of all public header files to src/include/OSL, to more
+  closely mimic the install file layout. (1.5.6)
 
 Documentation:
 

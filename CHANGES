@@ -1,3 +1,13 @@
+Release 1.4.2 - 11 Mar 2013 (compared to 1.4.1)
+-----------------------------------------------
+* Bug with data layout for array parameters on the heap, could lead to
+  connected array parameters not being copied properly.
+* oslc: when compiling with Boost::Wave for the preprocessor, we were
+  not properly passing the -D and -U command line arguments.
+* oslc: negating closures resulted in hitting an assertion.
+
+
+
 Release 1.4.1 - 19 Dec 2013 (compared to 1.4.0)
 -----------------------------------------------
 * Guard matrix*point transformations against possible division by zero.

@@ -331,7 +331,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     }
 #endif
 
-    // If client didn't supply a texture system, create a new one
+    // If client didn't supply a texture system, use the one already held
+    // by the renderer (if it returns one).
+    if (! m_texturesys)
+        m_texturesys = renderer->texturesys();
+
+    // If we still don't have a texture system, create a new one
     if (! m_texturesys) {
         m_texturesys = TextureSystem::create (true /* shared */);
         ASSERT (m_texturesys);

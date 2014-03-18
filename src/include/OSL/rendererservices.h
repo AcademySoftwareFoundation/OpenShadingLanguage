@@ -286,6 +286,9 @@ public:
                              TypeDesc type, void *val, bool derivatives) {
         return false;
     }
+
+    /// Return a pointer to the texture system (if available).
+    virtual TextureSystem *texturesys () const;
 };
 
 

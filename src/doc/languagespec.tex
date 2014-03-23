@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 12 Nov, 2013 \\
-~ (with corrections, 15 Jan 2014)
+~ (with corrections, 23 Mar 2014)
 }
 \bigskip
 \bigskip
@@ -4116,7 +4116,7 @@ and has a parameter that matches the name and type specified, its value
 will be stored in \emph{destination} and {\cf gettextureinfo} will
 return {\cf 1}.  If the file is not found, or doesn't have a matching
 parameter (including if the type does not match), \emph{destination}
-will not be modified and {\cf getattribute} will return {\cf 0}.  Valid
+will not be modified and {\cf gettextureinfo} will return {\cf 0}.  Valid
 parameters recognized are listed below:
 
 \smallskip
@@ -4658,7 +4658,8 @@ If an object is explicitly named, that is the only place that will be
 searched (\qkw{global} means the global scene-wide attributes).  For the
 forms of the function with no object name, or if the object name is the
 empty string \qkw{}, the renderer will first search
-per-object attributes on the current object, then if not found it will search
+per-object attributes on the current object (or interpolated variables
+with that name attached to the object), then if not found it will search
 searching global scene-wide attributes.  
 
 If the attribute is found and can be converted to the type of

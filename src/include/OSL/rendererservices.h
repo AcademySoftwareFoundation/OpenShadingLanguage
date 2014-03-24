@@ -57,7 +57,7 @@ typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
 /// renderer may provide callback to the ShadingSystem.
 class OSLEXECPUBLIC RendererServices {
 public:
-    RendererServices () { }
+    RendererServices (TextureSystem *texsys=NULL);
     virtual ~RendererServices () { }
 
     /// Get the 4x4 matrix that transforms by the specified

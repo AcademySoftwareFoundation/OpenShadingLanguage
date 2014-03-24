@@ -45,7 +45,7 @@ OSL_NAMESPACE_ENTER
 
 
 namespace {
-static TextureSystem *texturesys = NULL;
+static TextureSystem *texturesys_ = NULL;
 static spin_mutex texturesys_mutex;
 }
 
@@ -56,16 +56,24 @@ RendererServices::RendererServices (TextureSystem *texsys)
     // Ensure thread safety while checking if we already have a
     // TextureSystem.
     OIIO::spin_lock lock (texturesys_mutex);
-    if (! texturesys) {
+    if (! texturesys_) {
         if (texsys) {// caller provided a texture system
-            texturesys = texsys;
+            texturesys_ = texsys;
         } else { // Need to create a new texture system
-            texturesys = TextureSystem::create (true /* shared */);
+            texturesys_ = TextureSystem::create (true /* shared */);
             // Make some good guesses about default options
-            texturesys->attribute ("automip",  1);
-            texturesys->attribute ("autotile", 64);
+            texturesys_->attribute ("automip",  1);
+            texturesys_->attribute ("autotile", 64);
         }
     }
+}
+
+
+
+TextureSystem *
+RendererServices::texturesys () const
+{
+    return texturesys_;
 }
 
 
@@ -122,10 +130,10 @@ RendererServices::texture (ustring filename, TextureOpt &options,
                            float s, float t, float dsdx, float dtdx,
                            float dsdy, float dtdy, float *result)
 {
-    bool status = texturesys->texture (filename, options, s, t,
-                                       dsdx, dtdx, dsdy, dtdy, result);
+    bool status =  texturesys()->texture (filename, options, s, t,
+                                          dsdx, dtdx, dsdy, dtdy, result);
     if (!status) {
-        std::string err = texturesys->geterror();
+        std::string err = texturesys()->geterror();
         if (err.size()) {
             sg->context->error ("[RendererServices::texture] %s", err);
         }
@@ -141,10 +149,10 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
                              const Vec3 &dPdx, const Vec3 &dPdy,
                              const Vec3 &dPdz, float *result)
 {
-    bool status = texturesys->texture3d (filename, options, P, dPdx, dPdy, dPdz,
+    bool status = texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
                                             result);
     if (!status) {
-        std::string err = texturesys->geterror();
+        std::string err = texturesys()->geterror();
         if (err.size()) {
             sg->context->error ("[RendererServices::texture3d] %s", err);
         }
@@ -159,9 +167,9 @@ RendererServices::environment (ustring filename, TextureOpt &options,
                                ShaderGlobals *sg, const Vec3 &R,
                                const Vec3 &dRdx, const Vec3 &dRdy, float *result)
 {
-    bool status = texturesys->environment (filename, options, R, dRdx, dRdy, result);
+    bool status = texturesys()->environment (filename, options, R, dRdx, dRdy, result);
     if (!status) {
-        std::string err = texturesys->geterror();
+        std::string err = texturesys()->geterror();
         if (err.size()) {
             sg->context->error ("[RendererServices::environment] %s", err);
         }
@@ -177,10 +185,10 @@ RendererServices::get_texture_info (ShaderGlobals *sg,
                                     ustring dataname,
                                     TypeDesc datatype, void *data)
 {
-    bool status = texturesys->get_texture_info (filename, subimage, dataname,
-                                                datatype, data);
+    bool status = texturesys()->get_texture_info (filename, subimage, dataname,
+                                                   datatype, data);
     if (!status) {
-        std::string err = texturesys->geterror();
+        std::string err = texturesys()->geterror();
         if (err.size()) {
             sg->context->error ("[RendererServices::get_texture_info] %s", err);
         }

@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 
 import os
 import glob
@@ -43,6 +43,11 @@ tmpdir = os.path.abspath (tmpdir)
 refdir = "ref/"
 parent = "../../../../../"
 
+if (os.getenv('OPENIMAGEIOHOME', "") == ""):
+    # If OPENIMAGEIOHOME is undefined or has value "", look into /usr, in
+    # the case we have a standard Unix packaged installation
+    os.environ['OPENIMAGEIOHOME'] = "/usr"
+
 command = ""
 outputs = [ "out.txt" ]    # default
 failureok = 0
@@ -72,7 +77,7 @@ def text_diff (fromfile, tofile, diff_file=None):
     except:
         print ("Unexpected error:", sys.exc_info()[0])
         return -1
-        
+
     diff = difflib.unified_diff(fromlines, tolines, fromfile, tofile,
                                 fromdate, todate)
     # Diff is a generator, but since we need a way to tell if it is
@@ -181,7 +186,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             if extension == ".tif" or extension == ".exr" :
                 # images -- use idiff
                 cmpcommand = (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "idiff")
-                              + " -fail 0" 
+                              + " -fail 0"
                               + " -failpercent " + str(failpercent)
                               + " -hardfail " + str(failthresh)
                               + " -warn " + str(2*failthresh)
@@ -197,7 +202,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
                 print ("PASS: " + out + " matches " + testfile)
                 ok = 1
                 break      # we're done
-        
+
         if ok == 0:
             err = 1
             print "NO MATCH for " + out
@@ -211,7 +216,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
 
 
 #
-# Read the individual run.py file for this test, which will define 
+# Read the individual run.py file for this test, which will define
 # command and outputs.
 #
 if os.path.exists("run.py") :

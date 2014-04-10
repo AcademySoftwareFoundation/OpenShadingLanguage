@@ -269,7 +269,7 @@ ubersurface
             if(Roughness <= 0.005) {
 	        specularClosure = reflection(Nshading, eta);
             } else {
-        	specularClosure = microfacet_beckmann(Nshading, Roughness, eta);
+        	specularClosure = microfacet("beckmann", Nshading, Roughness, eta, 0);
 	    }
 
     	    color specularTexture = color(1);
@@ -297,7 +297,7 @@ ubersurface
 	    if(Roughness <= 0.005) {
                 refractionClosure = refraction(Nshading, eta, "absorption", Absorption_Color);
     	    } else {
-                refractionClosure = microfacet_beckmann_refraction(Nshading, Roughness, eta, "absorption", Absorption_Color);
+                refractionClosure = microfacet("beckmann", Nshading, vector(0), Roughness, Roughness,  eta, 1, "absorption", Absorption_Color);
             }
 
 	    color refractionTexture = color(1);

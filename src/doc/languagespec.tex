@@ -4411,30 +4411,39 @@ implemented as follows:
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce microfacet_beckmann} (normal N, float roughness,
-  float eta)}
-\indexapi{microfacet_beckmann()}
+\apiitem{\colorclosure\ {\ce microfacet} (string distribution, normal N, vector
+U, float xalpha, float yalpha, float eta, int refract)}
+\indexapi{microfacet()}
 
-Returns a \colorclosure that represents specular reflectance of the
-surface using a Beckmann microfacet BRDF (as described in Walter et al., 
-``Microfacet Models for Refraction through Rough Surfaces,''
-Eurographics Symposium on Rendering, 2007).
-The {\cf roughness} controls how rough the microstructure of the surface
-is.  The {\cf eta} parameter is the index of refraction of the material.
+Returns a \colorclosure that represents scattering on the
+surface using some microfacet distribution such as "beckmann" or "ggx" (as
+described in Walter et al., ``Microfacet Models for Refraction through Rough
+Surfaces,'' Eurographics Symposium on Rendering, 2007).
+Both {\cf xalpha} and {\cf yalpha} control how rough the microstructure of the
+surface is, possibly in an anisotropic way if they are different. In the
+anisotropic case {\cf U} must be a vector orthogonal to {\cf N} to specify the
+direction.  These values are expected to be the alpha values of the distribution
+as it appears in the literature, not a universal roughness measure.
+The {\cf eta} parameter is the index of refraction of the material, and
+{\cf refract} is a boolean flag to make the BSDF refractive instead of
+reflective. The implementation must not rely on {\cf U} when the roughness is
+isotropic or the given vector is zero.
+
+The list of supported distributions will change from renderer to renderer, and
+also the behavior when an unsupported distribution is requested. It is up to the
+implementation to issue an error or to default to a supported one. Also it is
+expected that the alias "default" must work as a distribution in any renderer.
 
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce microfacet_ggx} (normal N, float roughness,
-  float eta)}
-\indexapi{microfacet_ggx()}
+\apiitem{\colorclosure\ {\ce microfacet} (string distribution, normal N,
+float alpha, float eta, int refract)}
+\indexapi{microfacet()}
 
-Returns a \colorclosure that represents specular reflectance of the
-surface using the ``GGX'' microfacet BRDF described in Walter et al., 
-``Microfacet Models for Refraction through Rough Surfaces,''
-Eurographics Symposium on Rendering, 2007.
-The {\cf roughness} controls how rough the microstructure of the surface
-is.  The {\cf eta} parameter is the index of refraction of the material.
+Returns a \colorclosure that represents scattering on the
+surface using some microfacet distribution. A simplified isotropic version of
+the previous function.
 
 \apiend
 
@@ -4477,34 +4486,6 @@ implemented as follows:
     fresnel (I, N, eta, Kr, Kt, R, T);
     return Kt * raytrace (T);
 \end{code}
-\apiend
-
-
-\apiitem{\colorclosure\ {\ce microfacet_beckmann_refraction} (normal N,
-\\ \bigspc\bigspc\bigspc  float roughness, float eta)}
-\indexapi{microfacet_beckmann_refraction()}
-
-Returns a \colorclosure that represents refraction of the surface using
-the ``Beckmann'' microfacet BRDF, and is coordinated so that it is
-energy-balanced with the corresponding {\cf microfacet_beckmann}.  The
-{\cf roughness} parameter controls how rough the microstructure of the
-surface is.  The {\cf eta} parameter is the index of refraction of the
-material.
-
-\apiend
-
-
-\apiitem{\colorclosure\ {\ce microfacet_ggx_refraction} (normal N,
-\\ \bigspc\bigspc\bigspc  float roughness, float eta)}
-\indexapi{microfacet_ggx_refraction()}
-
-Returns a \colorclosure that represents refraction of the
-surface using the ``GGX'' microfacet BRDF, and is coordinated
-so that it is energy-balanced with the corresponding {\cf microfacet_ggx}.
-The {\cf roughness} parameter controls how rough the microstructure of
-the surface is.  The {\cf eta} parameter is the index of refraction of
-the material.
-
 \apiend
 
 

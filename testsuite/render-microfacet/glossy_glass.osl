@@ -1,14 +1,22 @@
-shader glossy_glass (float Kr = 1, color Cs = 1, float roughness = 0.01)
+shader glossy_glass (float Kr = 1, color Cs = 1, float xalpha = 0.01,
+                     float yalpha = 0.01)
 {
+    vector U;
+    if (abs(N[0]) > 0.01)
+        U = vector(N[2], 0, -N[0]);
+    else
+        U = vector(0, -N[2], N[1]);
+    U = normalize(U);
+
     float eta = 1.5;
     if (backfacing())
     {
-        Ci  = (Kr * Cs) * microfacet_beckmann_refraction(N, roughness, 1.0 / eta);
-        Ci += (Kr * Cs) * microfacet_beckmann(N, roughness, 1.0 / eta);
+        Ci  = (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, 1.0 / eta, 1);
+        Ci += (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, 1.0 / eta, 0);
     }
     else
     {
-        Ci  = (Kr * Cs) * microfacet_beckmann_refraction(N, roughness, eta);
-        Ci += (Kr * Cs) * microfacet_beckmann(N, roughness, eta);        
+        Ci  = (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, eta, 1);
+        Ci += (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, eta, 0);
     }
 }

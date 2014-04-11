@@ -16,10 +16,7 @@ enum ClosureIDs {
     TRANSLUCENT_ID,
     PHONG_ID,
     WARD_ID,
-    MICROFACET_GGX_ID,
-    MICROFACET_GGX_REFR_ID,
-    MICROFACET_BECKMANN_ID,
-    MICROFACET_BECKMANN_REFR_ID,
+    MICROFACET_ID,
     REFLECTION_ID,
     FRESNEL_REFLECTION_ID,
     REFRACTION_ID,
@@ -35,7 +32,7 @@ struct PhongParams      { Vec3 N; float exponent; };
 struct WardParams       { Vec3 N, T; float ax, ay; };
 struct ReflectionParams { Vec3 N; float eta; };
 struct RefractionParams { Vec3 N; float eta; };
-struct MicrofacetParams { Vec3 N; float alpha, eta; };
+struct MicrofacetParams { ustring dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
 
 } // anonymous namespace
 
@@ -67,24 +64,13 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
                                                   CLOSURE_FLOAT_PARAM (WardParams, ax),
                                                   CLOSURE_FLOAT_PARAM (WardParams, ay),
                                                   CLOSURE_FINISH_PARAM(WardParams) } },
-        { "microfacet_ggx", MICROFACET_GGX_ID,  { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
+        { "microfacet", MICROFACET_ID,          { CLOSURE_STRING_PARAM(MicrofacetParams, dist),
+                                                  CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
+                                                  CLOSURE_VECTOR_PARAM(MicrofacetParams, U),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, xalpha),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, yalpha),
                                                   CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
-                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
-        { "microfacet_ggx_refraction", MICROFACET_GGX_REFR_ID,
-                                                { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
-                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
-        { "microfacet_beckmann", MICROFACET_BECKMANN_ID,
-                                                { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
-                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
-        { "microfacet_beckmann_refraction", MICROFACET_BECKMANN_REFR_ID,
-                                                { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
+                                                  CLOSURE_INT_PARAM   (MicrofacetParams, refract),
                                                   CLOSURE_FINISH_PARAM(MicrofacetParams) } },
         { "reflection" , REFLECTION_ID,         { CLOSURE_VECTOR_PARAM(ReflectionParams, N),
                                                   CLOSURE_FINISH_PARAM(ReflectionParams) } },
@@ -295,26 +281,72 @@ struct Ward : public BSDF, WardParams {
     }
 };
 
+/* The anisotropic variant of GGX and Beckmann comes from
+ * Eric Heitz Understanding the Masking-Shadowing Function in
+ * Microfacet-Based BRDFs, section 5.4.
+ */
 struct GGXDist {
-    GGXDist(float alpha) : alpha2(alpha * alpha) {}
+    GGXDist(float ax, float ay) : ax(ax), ay(ay), ax2(ax * ax), ay2(ay * ay) {}
 
-    float D(float cosThetaM) const {
-        // eq. 33: calculate D(m) with m=Hr:
+    float D(const Vec3 &M) const {
+        float cosThetaM = M.z;
         float cosThetaM2 = cosThetaM * cosThetaM;
-        float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
         float cosThetaM4 = cosThetaM2 * cosThetaM2;
-        return alpha2 / (float(M_PI) * cosThetaM4 * (alpha2 + tanThetaM2) * (alpha2 + tanThetaM2));
+        if (ax != ay) {
+            float sinThetaM = sqrtf (std::max (1.0f - cosThetaM2, 0.0f));
+            float invSinThetaM = sinThetaM > 0.0f ? 1.0f / sinThetaM : 0.0f;
+            float cosPhi2 = M.x * invSinThetaM;
+            float sinPhi2 = M.y * invSinThetaM;
+            cosPhi2 *= cosPhi2;
+            sinPhi2 *= sinPhi2;
+            float tanThetaM2 = (sinThetaM * sinThetaM) / cosThetaM2;
+            float tmp = 1 + tanThetaM2 * (cosPhi2 / ax2 + sinPhi2 / ay2);
+
+            return 1.0f / (float(M_PI) * ax * ay * cosThetaM4 * tmp * tmp);
+        }
+        // eq. 33: calculate D(m) with m=Hr:
+        float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
+        return ax2 / (float(M_PI) * cosThetaM4 * (ax2 + tanThetaM2) * (ax2 + tanThetaM2));
     }
-    float G(float cosNx) const {
+    float G(const Vec3 &w) const {
+        float cosTheta = fabsf(w.z);
+        if (ax != ay) {
+            float sinTheta = sqrtf (std::max (1.0f - cosTheta * cosTheta, 0.0f));
+            float cosPhi2 = w.x / sinTheta;
+            float sinPhi2 = w.y / sinTheta;
+            cosPhi2 *= cosPhi2;
+            sinPhi2 *= sinPhi2;
+
+            float alpha = sqrtf(cosPhi2 * ax2 + sinPhi2 * ay2);
+            float a = cosTheta / (alpha * sinTheta);
+            float Lambda = (-1 + sqrtf(1 + 1 / (a * a))) * 0.5f;
+            return 1.0f / (1 + Lambda);
+        }
         // eq. 34: calculate G
-        return 2 / (1 + sqrtf(1 + alpha2 * (1 - cosNx * cosNx) / (cosNx * cosNx)));
+        return 2 / (1 + sqrtf(1 + ax2 * (1 - cosTheta * cosTheta) / (cosTheta * cosTheta)));
     }
     Vec3 sample(float rx, float ry) const {
+        if (ax != ay)
+        {
+            float cosPhi = cosf(2 * float(M_PI) * rx) * ax;
+            float sinPhi = sinf(2 * float(M_PI) * rx) * ay;
+            float invnorm = 1.0f / sqrtf(cosPhi * cosPhi + sinPhi * sinPhi);
+            cosPhi *= invnorm;
+            sinPhi *= invnorm;
+
+            float C = (cosPhi / ax) * (cosPhi / ax) +
+                      (sinPhi / ay) * (sinPhi / ay);
+            float tanTheta2 = ry / ((1 - ry) * C);
+            float cosTheta  = 1 / sqrtf(1 + tanTheta2);
+            float sinTheta  = cosTheta * sqrtf(tanTheta2);
+
+            return Vec3(cosPhi * sinTheta, sinPhi * sinTheta, cosTheta);
+        }
         // generate a random microfacet normal m
         // eq. 35,36:
         // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
         //                  and sin(atan(x)) == x/sqrt(1+x^2)
-        float tanThetaM2 = alpha2 * rx / (1 - rx);
+        float tanThetaM2 = ax2 * rx / (1 - rx);
         float cosThetaM  = 1 / sqrtf(1 + tanThetaM2);
         float sinThetaM  = cosThetaM * sqrtf(tanThetaM2);
         float phiM = 2 * float(M_PI) * ry;
@@ -323,27 +355,70 @@ struct GGXDist {
                     cosThetaM);
     }
 private:
-    float alpha2;
+    float ax, ay, ax2, ay2;
 };
 
 struct BeckmannDist {
-    BeckmannDist(float alpha) : alpha2(alpha * alpha) {}
-    float D(float cosThetaM) const {
+    BeckmannDist(float ax, float ay) : ax(ax), ay(ay), ax2(ax * ax), ay2(ay * ay) {}
+
+    float D(const Vec3 &M) const {
+        float cosThetaM = M.z;
         float cosThetaM2 = cosThetaM * cosThetaM;
-        float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
         float cosThetaM4 = cosThetaM2 * cosThetaM2;
-        return expf(-tanThetaM2 / alpha2) / (float(M_PI) * alpha2 *  cosThetaM4);
+        float tanThetaM2 = (1 - cosThetaM2) / cosThetaM2;
+        if (ax != ay) {
+            float sinThetaM = sqrtf (std::max(1.0f - cosThetaM2, 0.0f));
+            float invSinThetaM = sinThetaM > 0.0f ? 1.0f / sinThetaM : 0.0f;
+            float cosPhi2 = M.x * invSinThetaM;
+            float sinPhi2 = M.y * invSinThetaM;
+            cosPhi2 *= cosPhi2;
+            sinPhi2 *= sinPhi2;
+
+            return expf(-tanThetaM2 * (cosPhi2 / ax2 + sinPhi2 / ay2)) /
+                   (float(M_PI) * ax * ay * cosThetaM4);
+        }
+        return expf(-tanThetaM2 / ax2) / (float(M_PI) * ax2 *  cosThetaM4);
     }
-    float G(float cosNx) const {
+    float G(const Vec3 &w) const {
+        float cosTheta = fabsf(w.z);
+        if (ax != ay) {
+            static const float SQRT_PI = sqrtf(float(M_PI));
+            float sinTheta = sqrtf (std::max (1 - cosTheta * cosTheta, 0.0f));
+            float cosPhi2 = w.x / sinTheta;
+            float sinPhi2 = w.y / sinTheta;
+            cosPhi2 *= cosPhi2;
+            sinPhi2 *= sinPhi2;
+
+            float alpha = sqrtf(cosPhi2 * ax2 + sinPhi2 * ay2);
+            float a = cosTheta / (alpha * sinTheta);
+            float Lambda = (erff(a) - 1) * 0.5f + expf(-(a * a)) /
+                                                       (2 * a * SQRT_PI);
+            return 1.0f / (1 + Lambda);
+        }
         // eq. 26, 27: calculate G
-        float ax = 1 / sqrtf(alpha2 * (1 - cosNx * cosNx) / (cosNx * cosNx));
-        return ax < 1.6f ? (3.535f * ax + 2.181f * ax * ax) / (1 + 2.276f * ax + 2.577f * ax * ax) : 1.0f;
+        float a = 1 / sqrtf(ax2 * (1 - cosTheta * cosTheta) / (cosTheta * cosTheta));
+        return a < 1.6f ? (3.535f * a + 2.181f * a * a) / (1 + 2.276f * a + 2.577f * a * a) : 1.0f;
     }
     Vec3 sample(float rx, float ry) const {
+        if (ax != ay) {
+            float cosPhi = cosf(2 * float(M_PI) * rx) * ax;
+            float sinPhi = sinf(2 * float(M_PI) * rx) * ay;
+            float invnorm = 1.0f / sqrtf(cosPhi * cosPhi + sinPhi * sinPhi);
+            cosPhi *= invnorm;
+            sinPhi *= invnorm;
+
+            float C = (cosPhi / ax) * (cosPhi / ax) +
+                      (sinPhi / ay) * (sinPhi / ay);
+            float tanTheta2 = -logf(1 - ry) / C;
+            float cosTheta  = 1 / sqrtf(1 + tanTheta2);
+            float sinTheta  = cosTheta * sqrtf(tanTheta2);
+
+            return Vec3(cosPhi * sinTheta, sinPhi * sinTheta, cosTheta);
+        }
         // eq. 35,36:
         // we take advantage of cos(atan(x)) == 1/sqrt(1+x^2)
         //                  and sin(atan(x)) == x/sqrt(1+x^2)
-        float tanThetaM = sqrtf(-alpha2 * logf(1 - rx));
+        float tanThetaM = sqrtf(-ax2 * logf(1 - rx));
         float cosThetaM = 1 / sqrtf(1 + tanThetaM * tanThetaM);
         float sinThetaM = cosThetaM * tanThetaM;
         float phiM = 2 * float(M_PI) * ry;
@@ -352,12 +427,14 @@ struct BeckmannDist {
                     cosThetaM);
     }
 private:
-    float alpha2;
+    float ax, ay, ax2, ay2;
 };
 
 template <typename Distribution, int Refract>
 struct Microfacet : public BSDF, MicrofacetParams {
-    Microfacet(const MicrofacetParams& params) : BSDF(false), MicrofacetParams(params), dist(params.alpha) {}
+    Microfacet(const MicrofacetParams& params) : BSDF(false),
+        MicrofacetParams(params), dist(params.xalpha, params.yalpha),
+        tf(U == Vec3(0) || xalpha == yalpha ? TangentFrame(N) : TangentFrame(N, U)) { }
     virtual float albedo(const ShaderGlobals& sg) const {
         float fr = fresnel_dielectric(-N.dot(sg.I), eta);
         return Refract ? 1 - fr : fr;
@@ -373,9 +450,9 @@ struct Microfacet : public BSDF, MicrofacetParams {
                 Vec3 Hr = (wi + wo).normalize();
                 // eq. 20: (F*G*D)/(4*in*on)
                 float cosThetaM = N.dot(Hr);
-                float Dr = dist.D(cosThetaM);
+                float Dr = dist.D(tf.tolocal(Hr));
                 // eq. 34: now calculate G1(i,m) and G1(o,m)
-                float Gr = dist.G(cosNO) * dist.G(cosNI);
+                float Gr = dist.G(tf.tolocal(wo)) * dist.G(tf.tolocal(wi));
                 // fresnel term between outgoing direction and microfacet
                 float cosHO = Hr.dot(wo);
                 float Fr = fresnel_dielectric(cosHO, eta);
@@ -407,9 +484,9 @@ struct Microfacet : public BSDF, MicrofacetParams {
                   float cosThetaM = N.dot(Ht);
                   if (cosThetaM <= 0.0f)
                      return 0;
-                  float Dt = dist.D(cosThetaM);
+                  float Dt = dist.D(tf.tolocal(Ht));
                   // eq. 34: now calculate G1(i,m) and G1(o,m)
-                  float Gt = dist.G(cosNO) * dist.G(cosNI);
+                  float Gt = dist.G(tf.tolocal(wo)) * dist.G(tf.tolocal(wi));
                   // probability
                   float invHt2 = 1 / ht.dot(ht);
                   pdf = Dt * cosThetaM * (fabsf(cosHI) * (eta * eta)) * invHt2;
@@ -422,9 +499,8 @@ struct Microfacet : public BSDF, MicrofacetParams {
 
     virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
         // generate a random microfacet normal m
-        TangentFrame tf(N);
         Vec3 m = dist.sample(rx, ry);
-        m = tf.get(m.x, m.y, m.z);
+        m = tf.toworld(m);
         if (!Refract) {
             Vec3 wo = -sg.I;
             float cosMO = m.dot(wo);
@@ -437,10 +513,10 @@ struct Microfacet : public BSDF, MicrofacetParams {
            }
         } else {
             float Ft = fresnel_refraction (sg.I, m, eta, wi);
-            if (Ft > 0) { // FIXME: find bug for refractive eval
-                //float e = eval(sg, wi.val(), invpdf);
-                //invpdf = 1 / invpdf; // eval returned pdf, invert it
-                //return e * invpdf; // FIXME: simplify math here
+            if (Ft > 0) {
+                float e = eval(sg, wi.val(), invpdf);
+                invpdf = 1 / invpdf; // eval returned pdf, invert it
+                return e * invpdf; // FIXME: simplify math here
                 return invpdf = 1;
             }
         }
@@ -449,6 +525,7 @@ struct Microfacet : public BSDF, MicrofacetParams {
 
 private:
     Distribution dist;
+    TangentFrame tf;
 };
 
 typedef Microfacet<GGXDist, 0> MicrofacetGGXRefl;
@@ -511,6 +588,9 @@ struct Transparent : public BSDF {
 
 // recursively walk through the closure tree, creating bsdfs as we go
 void process_closure (ShadingResult& result, const ClosureColor* closure, const Color3& w, bool light_only) {
+   static const ustring u_ggx("ggx");
+   static const ustring u_beckmann("beckmann");
+   static const ustring u_default("default");
    if (!closure)
        return;
    switch (closure->type) {
@@ -537,10 +617,20 @@ void process_closure (ShadingResult& result, const ClosureColor* closure, const 
                    case TRANSLUCENT_ID:        ok = result.bsdf.add_bsdf<Diffuse<1>, DiffuseParams   >(cw, *(const DiffuseParams*   ) comp->data()); break;
                    case PHONG_ID:              ok = result.bsdf.add_bsdf<Phong     , PhongParams     >(cw, *(const PhongParams*     ) comp->data()); break;
                    case WARD_ID:               ok = result.bsdf.add_bsdf<Ward      , WardParams      >(cw, *(const WardParams*      ) comp->data()); break;
-                   case MICROFACET_GGX_ID:           ok = result.bsdf.add_bsdf<MicrofacetGGXRefl     , MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                   case MICROFACET_GGX_REFR_ID:      ok = result.bsdf.add_bsdf<MicrofacetGGXRefr     , MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                   case MICROFACET_BECKMANN_ID:      ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                   case MICROFACET_BECKMANN_REFR_ID: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                   case MICROFACET_ID:
+                       if (((const MicrofacetParams*) comp->data())->dist == u_ggx) {
+                           if (((const MicrofacetParams*) comp->data())->refract)
+                               ok = result.bsdf.add_bsdf<MicrofacetGGXRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
+                           else
+                               ok = result.bsdf.add_bsdf<MicrofacetGGXRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
+                       } else if (((const MicrofacetParams*) comp->data())->dist == u_beckmann ||
+                                  ((const MicrofacetParams*) comp->data())->dist == u_default) {
+                           if (((const MicrofacetParams*) comp->data())->refract)
+                               ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
+                           else
+                               ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
+                       }
+                       break;
                    case REFLECTION_ID:
                    case FRESNEL_REFLECTION_ID: ok = result.bsdf.add_bsdf<Reflection, ReflectionParams>(cw, *(const ReflectionParams*) comp->data()); break;
                    case REFRACTION_ID:         ok = result.bsdf.add_bsdf<Refraction, RefractionParams>(cw, *(const RefractionParams*) comp->data()); break;

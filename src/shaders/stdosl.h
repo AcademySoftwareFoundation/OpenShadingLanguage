@@ -481,6 +481,13 @@ closure color microfacet_ggx(normal N, float ag, float eta) BUILTIN;
 closure color microfacet_ggx_refraction(normal N, float ag, float eta) BUILTIN;
 closure color microfacet_beckmann(normal N, float ab, float eta) BUILTIN;
 closure color microfacet_beckmann_refraction(normal N, float ab, float eta) BUILTIN;
+closure color microfacet(string distribution, normal N, vector U, float xalpha,
+                         float yalpha, float eta, int refract) BUILTIN;
+closure color microfacet(string distribution, normal N, float alpha, float eta,
+                         int refr)
+{
+    return microfacet(distribution, N, vector(0), alpha, alpha, eta, refr);
+}
 closure color ward(normal N, vector T,float ax, float ay) BUILTIN;
 closure color phong(normal N, float exponent) BUILTIN;
 closure color phong_ramp(normal N, float exponent, color colors[8]) BUILTIN;

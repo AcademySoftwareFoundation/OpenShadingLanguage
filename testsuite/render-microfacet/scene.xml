@@ -21,17 +21,17 @@
 
 
    <ShaderGroup>
-      <Parameter roughness="float 0.1" />
+      <Parameter xalpha="float 0.1" yalpha="float 0.02" />
       <Shader name="glossy_glass" layer="layer1" />
    </ShaderGroup>
    <Sphere center="-60,30,120"        radius="30" />
    <ShaderGroup>
-      <Parameter roughness="float 0.05" />
+      <Parameter xalpha="float 0.05" yalpha="float 0.05" />
       <Shader name="glossy_glass" layer="layer1" />
    </ShaderGroup>
    <Sphere center="  0,30,120"        radius="30" />
    <ShaderGroup>
-      <Parameter roughness="float 0.001" />
+      <Parameter xalpha="float 0.001" xalpha="float 0.001" />
       <Shader name="glossy_glass" layer="layer1" />
    </ShaderGroup>
    <Sphere center=" 60,30,120"        radius="30" />

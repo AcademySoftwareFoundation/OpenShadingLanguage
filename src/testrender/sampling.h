@@ -62,6 +62,13 @@ struct TangentFrame {
     float gety(const Vec3& a) const { return a.dot(v); }
     float getz(const Vec3& a) const { return a.dot(w); }
 
+    Vec3 tolocal(const Vec3 &a) const {
+      return Vec3(a.dot(u), a.dot(v), a.dot(w));
+    }
+    Vec3 toworld(const Vec3 &a) const {
+      return get(a.x, a.y, a.z);
+    }
+
 private:
     Vec3 u, v, w;
 };

@@ -1,6 +1,16 @@
 Release 1.5 -- in progress (compared to 1.4)
 --------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
+* New closure function for microfacet BSDFs:
+    closure color microfacet (string distribution, normal N,
+                              float alpha, float eta, int refract)
+    closure color microfacet (string distribution, normal N, vector U,
+                          float xalpha, float yalpha, float eta, int refract)
+  These replace the growing zoo of microfacet_blah functions (using
+  different distribution values such as "beckmann" or "ggx", as well as
+  selecting refraction when refract!=0). The old varieties are now considered
+  deprecated and will eventually be removed (but will alow back-compatibility
+  of compiled oso files).
 
 ShadingSystem API changes and new options (for renderer writers):
 * ShadingSystem::Parameter() has a new variety that can set lockgeom=0
@@ -34,6 +44,8 @@ ShadingSystem API changes and new options (for renderer writers):
   includes an additional ShaderGlobals* parameter (as did all the other
   texture functions already). (1.5.5)
 * Split RendererServices definition into separate rendererservices.h. (1.5.6)
+* Add RendererServices::texturesys() that returns a pointer to the
+  RS's TextureSystem. (1.5.6)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
@@ -43,6 +55,9 @@ Performance improvements:
 * Improved code generation for texture calls, removing redundant setting
   of optional texture parameters when they don't change from the default
   values. (1.5.6)
+* Remove lock from RendererServices texture calls that would create a big
+  thread botteneck (but only for renderers that used the RS base class
+  texture calls; those that overrode them would not notice). (1.5.6)
 
 Bug fixes:
 * testshade/testrender timer didn't properly break out execution time

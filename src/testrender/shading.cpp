@@ -467,9 +467,8 @@ struct Microfacet : public BSDF, MicrofacetParams {
             }
         } else {
            Vec3 ht, Ht;
-           float cosNO, cosNI;
+           float cosNO;
            if (wi.dot(wo) <= 0 && (cosNO = N.dot(wo)) > 0.0f) {
-               cosNI = N.dot(wi);
                // compute half-vector of the refraction (eq. 16)
                ht = -(eta * wi + wo);
                if (eta < 1.0f)

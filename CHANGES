@@ -128,6 +128,7 @@ Build & test system improvements and developer goodies:
   than MCJIT. (1.5.6)
 * Moved the source of all public header files to src/include/OSL, to more
   closely mimic the install file layout. (1.5.6)
+* Fixes for compilation warnings with newer gcc. (1.5.7) (#351)
 
 Documentation:
 

@@ -1987,10 +1987,12 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
             continue;                                                   \
         }
 
-#define PARAM_STRING_CODE(paramname,decoder)                             \
+#define PARAM_STRING_CODE(paramname,decoder,fieldname)                  \
         if (name == Strings::paramname && valtype == TypeDesc::STRING) { \
             if (Val.is_constant()) {                                    \
                 int code = decoder (*(ustring *)Val.data());            \
+                if (! paramname##_set && code == optdefaults.fieldname) \
+                    continue;                                           \
                 if (code >= 0) {                                        \
                     llvm::Value *val = rop.ll.constant (code);          \
                     rop.ll.call_function ("osl_texture_set_" #paramname "_code", opt, val); \
@@ -2028,9 +2030,9 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
             swrap_set = twrap_set = rwrap_set = true;
             continue;
         }
-        PARAM_STRING_CODE(swrap, TextureOpt::decode_wrapmode)
-        PARAM_STRING_CODE(twrap, TextureOpt::decode_wrapmode)
-        PARAM_STRING_CODE(rwrap, TextureOpt::decode_wrapmode)
+        PARAM_STRING_CODE(swrap, TextureOpt::decode_wrapmode, swrap)
+        PARAM_STRING_CODE(twrap, TextureOpt::decode_wrapmode, twrap)
+        PARAM_STRING_CODE(rwrap, TextureOpt::decode_wrapmode, rwrap)
 
         PARAM_FLOAT (fill)
         PARAM_FLOAT (time)
@@ -2044,7 +2046,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
             continue;
         }
 
-        PARAM_STRING_CODE (interp, tex_interp_to_code)
+        PARAM_STRING_CODE (interp, tex_interp_to_code, interpmode)
 
         if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);

@@ -1190,7 +1190,7 @@ BackendLLVM::run ()
     if (shadingsys().m_max_local_mem_KB &&
         m_llvm_local_mem/1024 > shadingsys().m_max_local_mem_KB) {
         shadingcontext()->error ("Shader group \"%s\" needs too much local storage: %d KB",
-                            group().name().c_str(), m_llvm_local_mem/1024);
+                                 group().name(), m_llvm_local_mem/1024);
     }
 
     // Optimize the LLVM IR unless it's just a ret void group (1 layer,
@@ -1242,8 +1242,7 @@ BackendLLVM::run ()
     m_stat_total_llvm_time = timer();
 
     if (shadingsys().m_compile_report) {
-        shadingcontext()->info ("JITed shader group %s:",
-                           group().name() ? group().name().c_str() : "");
+        shadingcontext()->info ("JITed shader group %s:", group().name());
         shadingcontext()->info ("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
                            m_stat_total_llvm_time, 
                            m_stat_llvm_setup_time,

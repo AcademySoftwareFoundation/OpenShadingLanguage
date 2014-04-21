@@ -1076,7 +1076,8 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
             turn_into_nop (uselessop,
-                           debug() > 1 ? Strutil::format("remove stale value assignment to %s, reassigned on op %d", opargsym(uselessop,0)->name().c_str(), opnum).c_str() : "");
+                           debug() > 1 ? Strutil::format("remove stale value assignment to %s, reassigned on op %d",
+                                                         opargsym(uselessop,0)->name(), opnum).c_str() : "");
         }
     }
     m_stale_syms[sym] = opnum;
@@ -2605,7 +2606,7 @@ RuntimeOptimizer::run ()
     int nlayers = (int) group().nlayers ();
     if (debug())
         shadingcontext()->info ("About to optimize shader group %s (%d layers):",
-                           group().name().c_str(), nlayers);
+                           group().name(), nlayers);
 
     m_params_holding_globals.resize (nlayers);
 
@@ -2710,8 +2711,7 @@ RuntimeOptimizer::run ()
         ss.m_stat_postopt_ops += new_nops;
     }
     if (shadingsys().m_compile_report) {
-        shadingcontext()->info ("Optimized shader group %s:",
-                           group().name() ? group().name().c_str() : "");
+        shadingcontext()->info ("Optimized shader group %s:", group().name());
         shadingcontext()->info (" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
               m_stat_specialization_time, new_nsyms, old_nsyms,
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),

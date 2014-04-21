@@ -1026,6 +1026,23 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
         return true;
     }
 
+    // turn 'R_matrix = A_float_const' into a matrix const assignment
+    if (A->typespec().is_float() && R->typespec().is_matrix()) {
+        float f = *(float *)A->data();
+        Matrix44 result (f, 0, 0, 0, 0, f, 0, 0, 0, 0, f, 0, 0, 0, 0, f);
+        int cind = add_constant (R->typespec(), &result);
+        turn_into_assign (op, cind, "coerce to correct type");
+        return true;
+    }
+    // turn 'R_matrix = A_int_const' into a matrix const assignment
+    if (A->typespec().is_int() && R->typespec().is_matrix()) {
+        float f = *(int *)A->data();
+        Matrix44 result (f, 0, 0, 0, 0, f, 0, 0, 0, 0, f, 0, 0, 0, 0, f);
+        int cind = add_constant (R->typespec(), &result);
+        turn_into_assign (op, cind, "coerce to correct type");
+        return true;
+    }
+
     return false;
 }
 
@@ -1075,7 +1092,8 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
         std::map<int,int>::iterator i = m_stale_syms.find(sym);
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
-            turn_into_nop (uselessop,
+            if (uselessop.opname() != u_nop)
+                turn_into_nop (uselessop,
                            debug() > 1 ? Strutil::format("remove stale value assignment to %s, reassigned on op %d",
                                                          opargsym(uselessop,0)->name(), opnum).c_str() : "");
         }

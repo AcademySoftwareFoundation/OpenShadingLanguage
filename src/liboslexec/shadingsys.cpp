@@ -467,7 +467,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (luminance,   luminance,           none,          true);
     OP (matrix,      matrix,              matrix,        true);
     OP (max,         minmax,              max,           true);
-    OP (mxcompassign, mxcompassign,       none,          false);
+    OP (mxcompassign, mxcompassign,       mxcompassign,  false);
     OP (mxcompref,   mxcompref,           none,          true);
     OP (min,         minmax,              min,           true);
     OP (mix,         mix,                 mix,           true);

@@ -1,7 +1,7 @@
 ###########################################################################
 # Find libraries
 
-setup_path (THIRD_PARTY_TOOLS_HOME 
+setup_path (THIRD_PARTY_TOOLS_HOME
             "unknown"
             "Location of third party libraries in the external project")
 
@@ -23,7 +23,7 @@ if (THIRD_PARTY_TOOLS_HOME AND EXISTS "${THIRD_PARTY_TOOLS_HOME}")
 endif ()
 
 
-setup_string (SPECIAL_COMPILE_FLAGS "" 
+setup_string (SPECIAL_COMPILE_FLAGS ""
                "Custom compilation flags")
 if (SPECIAL_COMPILE_FLAGS)
     add_definitions (${SPECIAL_COMPILE_FLAGS})
@@ -52,8 +52,8 @@ endmacro ()
 message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 
 if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
-  set (Boost_ADDITIONAL_VERSIONS "1.54" "1.53" "1.52" "1.51" "1.50"
-                                 "1.49" "1.48" "1.47" "1.46" "1.45" "1.44" 
+  set (Boost_ADDITIONAL_VERSIONS "1.55" "1.54" "1.53" "1.52" "1.51" "1.50"
+                                 "1.49" "1.48" "1.47" "1.46" "1.45" "1.44"
                                  "1.43" "1.43.0" "1.42" "1.42.0")
 endif ()
 if (LINKSTATIC)
@@ -70,7 +70,7 @@ else ()
         list (APPEND Boost_COMPONENTS wave)
     endif ()
 
-    find_package (Boost 1.42 REQUIRED 
+    find_package (Boost 1.42 REQUIRED
                   COMPONENTS ${Boost_COMPONENTS}
                  )
 endif ()

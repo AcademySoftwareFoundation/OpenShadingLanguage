@@ -722,16 +722,18 @@ DECLFOLDER(constfold_compassign)
     // and that will show up as a block alias.
     int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
     Symbol *AA = rop.inst()->symbol(Aalias);
+    // N.B. symbol returns NULL if Aalias is < 0
+    if (!AA || !AA->is_constant())
+        return 0;
+
+    // Try to simplify A[I]=C if we already know the old value of A as a
+    // constant. We can turn it into A[I] = N, where N is the old A but with
+    // the Ith component set to C. If it turns out that the old A[I] == C,
+    // and thus the assignment doesn't change A's value, we can eliminate
+    // the assignment entirely.
     Symbol *I (rop.inst()->argsymbol(op.firstarg()+1));
     Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
-    // N.B. symbol returns NULL if Aalias is < 0
-
-    // Try to turn A[I]=C into nop if A[I] already is C
-    // The optimization we are making here is that if the current (at
-    // this point in this block) value of A is known (revealed by A's
-    // block alias, AA, being a constant), and we are assigning the same
-    // value it already has, then this is a nop.
-    if (I->is_constant() && C->is_constant() && AA && AA->is_constant()) {
+    if (I->is_constant() && C->is_constant()) {
         ASSERT (AA->typespec().is_triple() &&
                 (C->typespec().is_float() || C->typespec().is_int()));
         int index = *(int *)I->data();
@@ -747,11 +749,80 @@ DECLFOLDER(constfold_compassign)
         float c = C->typespec().is_int() ? *(int *)C->data()
                                          : *(float *)C->data();
         if (aa[index] == c) {
+            // If the component assignment doesn't change that component,
+            // just omit the op entirely.
             rop.turn_into_nop (op, "useless compassign");
             return 1;
         }
-        // FIXME -- we can take this one step further, by giving A a new
-        // alias that is the modified constant.
+        // If the previous value of the triple was a constant, and we're
+        // assigning a new constant to one component (and the index is
+        // also a constant), just turn it into an assignment of a new
+        // constant triple.
+        Vec3 newval (aa[0], aa[1], aa[2]);
+        newval[index] = c;
+        int cind = rop.add_constant (AA->typespec(), &newval);
+        rop.turn_into_assign (op, cind, "fold compassign");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_mxcompassign)
+{
+    // Matrix component assignment
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    // Symbol *A (rop.inst()->argsymbol(op.firstarg()+0));
+    // We are obviously not assigning to a constant, but it could be
+    // that at this point in our current block, the value of A is known,
+    // and that will show up as a block alias.
+    int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
+    Symbol *AA = rop.inst()->symbol(Aalias);
+    // N.B. symbol returns NULL if Aalias is < 0
+    if (!AA || !AA->is_constant())
+        return 0;
+
+    // Try to simplify A[J,I]=C if we already know the old value of A as a
+    // constant. We can turn it into A[J,I] = N, where N is the old A but with
+    // the designated component set to C. If it turns out that the old
+    // A[J,I] == C, and thus the assignment doesn't change A's value, we can
+    // eliminate the assignment entirely.
+    Symbol *J (rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol *I (rop.inst()->argsymbol(op.firstarg()+2));
+    Symbol *C (rop.inst()->argsymbol(op.firstarg()+3));
+    if (I->is_constant() && J->is_constant() && C->is_constant()) {
+        ASSERT (AA->typespec().is_matrix() &&
+                (C->typespec().is_float() || C->typespec().is_int()));
+        int jndex = *(int *)J->data();
+        int index = *(int *)I->data();
+        if (index < 0 || index >= 3 || jndex < 0 || jndex >= 3) {
+            // We are indexing a const matrix out of range.  But this
+            // isn't necessarily a reportable error, because it may be a
+            // code path that will never be taken.  Punt -- don't
+            // optimize this op, leave it to the execute-time range
+            // check to catch, if indeed it is a problem.
+            return 0;
+        }
+        Matrix44 *aa = (Matrix44 *)AA->data();
+        float c = C->typespec().is_int() ? *(int *)C->data()
+                                         : *(float *)C->data();
+        if ((*aa)[jndex][index] == c) {
+            // If the component assignment doesn't change that component,
+            // just omit the op entirely.
+            rop.turn_into_nop (op, "useless mxcompassign");
+            return 1;
+        }
+        // If the previous value of the matrix was a constant, and we're
+        // assigning a new constant to one component (and the index is
+        // also a constant), just turn it into an assignment of a new
+        // constant triple.
+        Matrix44 newval = *aa;
+        newval[jndex][index] = c;
+        int cind = rop.add_constant (AA->typespec(), &newval);
+        rop.turn_into_assign (op, cind, "fold mxcompassign");
+        return 1;
     }
     return 0;
 }

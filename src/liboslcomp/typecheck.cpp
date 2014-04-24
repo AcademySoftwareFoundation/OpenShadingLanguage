@@ -1228,7 +1228,6 @@ static const char * builtin_func_args [] = {
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
-    "hash", NOISE_ARGS, NULL,
     "isconnected", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,
     "pnoise", PGNOISE_ARGS, PNOISE_ARGS, "!deriv", NULL,
@@ -1238,7 +1237,6 @@ static const char * builtin_func_args [] = {
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
-//    "raylevel", "i", NULL,
     "regex_match", "iss", "isi[]s", NULL,
     "regex_search", "iss", "isi[]s", NULL,
     "setmessage", "xs?", "xs?[]", NULL,

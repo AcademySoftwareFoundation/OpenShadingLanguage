@@ -972,9 +972,8 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
     if (sym->symtype() == SymTypeParam && 
         (opnum < sym->initbegin() || opnum >= sym->initend())) {
         error (op.sourcefile(), op.sourceline(),
-               "Cannot write to input parameter '%s'",
-               sym->name().c_str());
-        error (op.sourcefile(), op.sourceline(), "  (op %d)", opnum);
+               "Cannot write to input parameter '%s' (op %d)",
+               sym->name().c_str(), opnum);
     }
 
     // FIXME -- check for writing to globals.  But it's tricky, depends on

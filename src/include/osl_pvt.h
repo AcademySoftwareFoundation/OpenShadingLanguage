@@ -469,7 +469,7 @@ public:
 
     /// The symbol's (unmangled) name, guaranteed unique only within the
     /// symbol's declaration scope.
-    const ustring &name () const { return m_name; }
+    ustring name () const { return m_name; }
 
     /// The symbol's name, mangled to incorporate the scope so it will be
     /// a globally unique name.

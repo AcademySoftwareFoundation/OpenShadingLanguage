@@ -106,6 +106,7 @@ using OIIO::ErrorHandler;
 using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
+using OIIO::string_view;
 
 // Sort out smart pointers
 #ifdef OSL_USING_CPLUSPLUS11

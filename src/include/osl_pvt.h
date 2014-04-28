@@ -55,7 +55,7 @@ const char *shadertypename (ShaderType s);
 
 /// Convert a ShaderType to a human-readable name ("surface", etc.)
 ///
-ShaderType shadertype_from_name (const char *name);
+ShaderType shadertype_from_name (string_view name);
 
 
 
@@ -73,7 +73,7 @@ const char *shaderusename (ShaderUse s);
 
 /// Convert a ShaderUse to a human-readable name ("surface", etc.)
 ///
-ShaderUse shaderuse_from_name (const char *name);
+ShaderUse shaderuse_from_name (string_view name);
 
 
 

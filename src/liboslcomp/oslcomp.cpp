@@ -64,7 +64,39 @@ OSL_NAMESPACE_ENTER
 OSLCompiler *
 OSLCompiler::create ()
 {
-    return new pvt::OSLCompilerImpl;
+    return new OSLCompiler;
+}
+
+
+
+OSLCompiler::OSLCompiler ()
+    : m_impl(new pvt::OSLCompilerImpl)
+{
+}
+
+
+
+OSLCompiler::~OSLCompiler ()
+{
+    delete m_impl;
+}
+
+
+
+bool
+OSLCompiler::compile (string_view filename,
+                      const std::vector<string_view> &options,
+                      string_view stdoslpath)
+{
+    return m_impl->compile (filename, options, stdoslpath);
+}
+
+
+
+string_view
+OSLCompiler::output_filename () const
+{
+    return m_impl->output_filename();
 }
 
 
@@ -301,9 +333,9 @@ preprocess (const std::string &filename,
 
 
 bool
-OSLCompilerImpl::compile (const std::string &filename,
-                          const std::vector<std::string> &options,
-                          const std::string &stdoslpath)
+OSLCompilerImpl::compile (string_view filename,
+                          const std::vector<string_view> &options,
+                          string_view stdoslpath)
 {
     if (! OIIO::Filesystem::exists (filename)) {
         error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());

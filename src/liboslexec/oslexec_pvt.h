@@ -617,7 +617,7 @@ public:
         SetupClosureFunc          setup;
     };
 
-    void register_closure (const char *name, int id, const ClosureParam *params,
+    void register_closure (string_view name, int id, const ClosureParam *params,
                            PrepareClosureFunc prepare, SetupClosureFunc setup);
 
     const ClosureEntry *get_entry (ustring name) const;
@@ -640,34 +640,34 @@ private:
 
 
 
-class ShadingSystemImpl : public ShadingSystem
+class ShadingSystemImpl
 {
 public:
     ShadingSystemImpl (RendererServices *renderer=NULL,
                        TextureSystem *texturesystem=NULL,
                        ErrorHandler *err=NULL);
-    virtual ~ShadingSystemImpl ();
+    ~ShadingSystemImpl ();
 
-    virtual bool attribute (string_view name, TypeDesc type, const void *val);
-    virtual bool getattribute (string_view name, TypeDesc type, void *val);
-    virtual bool getattribute (ShaderGroup *group, string_view name,
-                               TypeDesc type, void *val);
-    virtual bool LoadMemoryCompiledShader (string_view shadername,
-                                           string_view buffer);
-    virtual bool Parameter (string_view name, TypeDesc t, const void *val);
-    virtual bool Parameter (string_view name, TypeDesc t, const void *val,
-                            bool lockgeom);
-    virtual bool Shader (string_view shaderusage,
-                         string_view shadername = string_view(),
-                         string_view layername = string_view());
-    virtual ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
-    virtual bool ShaderGroupEnd (void);
-    virtual bool ConnectShaders (string_view srclayer, string_view srcparam,
-                                 string_view dstlayer, string_view dstparam);
-    virtual ShaderGroupRef state ();
-    virtual bool ReParameter (ShaderGroup &group,
-                              string_view layername, string_view paramname,
-                              TypeDesc type, const void *val);
+    bool attribute (string_view name, TypeDesc type, const void *val);
+    bool getattribute (string_view name, TypeDesc type, void *val);
+    bool getattribute (ShaderGroup *group, string_view name,
+                       TypeDesc type, void *val);
+    bool LoadMemoryCompiledShader (string_view shadername,
+                                   string_view buffer);
+    bool Parameter (string_view name, TypeDesc t, const void *val);
+    bool Parameter (string_view name, TypeDesc t, const void *val,
+                    bool lockgeom);
+    bool Shader (string_view shaderusage,
+                 string_view shadername = string_view(),
+                 string_view layername = string_view());
+    ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
+    bool ShaderGroupEnd (void);
+    bool ConnectShaders (string_view srclayer, string_view srcparam,
+                         string_view dstlayer, string_view dstparam);
+    ShaderGroupRef state ();
+    bool ReParameter (ShaderGroup &group,
+                      string_view layername, string_view paramname,
+                      TypeDesc type, const void *val);
 
     // Internal error, warning, info, and message reporting routines that
     // take printf-like arguments.  Based on Tinyformat.
@@ -687,27 +687,27 @@ public:
     void info (const std::string &message) const;
     void message (const std::string &message) const;
 
-    virtual std::string getstats (int level=1) const;
+    std::string getstats (int level=1) const;
 
     ErrorHandler &errhandler () const { return *m_err; }
 
     ShaderMaster::ref loadshader (string_view name);
 
-    virtual PerThreadInfo * create_thread_info();
+    PerThreadInfo * create_thread_info();
 
-    virtual void destroy_thread_info (PerThreadInfo *threadinfo);
+    void destroy_thread_info (PerThreadInfo *threadinfo);
 
-    virtual ShadingContext *get_context (PerThreadInfo *threadinfo = NULL);
+    ShadingContext *get_context (PerThreadInfo *threadinfo = NULL);
 
-    virtual void release_context (ShadingContext *ctx);
+    void release_context (ShadingContext *ctx);
 
-    virtual bool execute (ShadingContext &ctx, ShaderGroup &group,
-                          ShaderGlobals &ssg, bool run=true);
+    bool execute (ShadingContext &ctx, ShaderGroup &group,
+                  ShaderGlobals &ssg, bool run=true);
 
-    virtual const void* get_symbol (ShadingContext &ctx, ustring name,
-                                    TypeDesc &type);
+    const void* get_symbol (ShadingContext &ctx, ustring name,
+                            TypeDesc &type);
 
-    void operator delete (void *todel) { ::delete ((char *)todel); }
+//    void operator delete (void *todel) { ::delete ((char *)todel); }
 
     /// Is the shading system in debug mode, and if so, how verbose?
     ///
@@ -758,10 +758,10 @@ public:
     float *alloc_float_constants (size_t n) { return m_float_pool.alloc (n); }
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup);
-    virtual bool query_closure(const char **name, int *id,
-                               const ClosureParam **params);
+    void register_closure (string_view name, int id, const ClosureParam *params,
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
+    bool query_closure (const char **name, int *id,
+                        const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
         return m_closure_registry.get_entry(name);
     }
@@ -790,9 +790,9 @@ public:
     /// Set the current color space.
     bool set_colorspace (ustring colorspace);
 
-    virtual int raytype_bit (ustring name);
+    int raytype_bit (ustring name);
 
-    virtual void optimize_all_groups (int nthreads=0);
+    void optimize_all_groups (int nthreads=0);
 
     typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 

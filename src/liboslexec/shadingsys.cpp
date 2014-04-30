@@ -63,19 +63,7 @@ ShadingSystem::create (RendererServices *renderer,
                        TextureSystem *texturesystem,
                        ErrorHandler *err)
 {
-    // If client didn't supply an error handler, just use the default
-    // one that echoes to the terminal.
-    if (! err) {
-        err = & ErrorHandler::default_handler ();
-        ASSERT (err != NULL && "Can't create default ErrorHandler");
-    }
-
-    // Doesn't need a shared cache
-    ShadingSystemImpl *ts = new ShadingSystemImpl (renderer, texturesystem, err);
-#ifndef NDEBUG
-    err->info ("creating new ShadingSystem %p", (void *)ts);
-#endif
-    return ts;
+    return new ShadingSystem (renderer, texturesystem, err);
 }
 
 
@@ -83,20 +71,229 @@ ShadingSystem::create (RendererServices *renderer,
 void
 ShadingSystem::destroy (ShadingSystem *x)
 {
-    delete (ShadingSystemImpl *) x;
+    delete x;
 }
 
 
 
-ShadingSystem::ShadingSystem ()
+ShadingSystem::ShadingSystem (RendererServices *renderer,
+                              TextureSystem *texturesystem,
+                              ErrorHandler *err)
+    : m_impl (NULL)
 {
+    if (! err) {
+        err = & ErrorHandler::default_handler ();
+        ASSERT (err != NULL && "Can't create default ErrorHandler");
+    }
+    m_impl = new ShadingSystemImpl (renderer, texturesystem, err);
+#ifndef NDEBUG
+    err->info ("creating new ShadingSystem %p", (void *)this);
+#endif
 }
 
 
 
 ShadingSystem::~ShadingSystem ()
 {
+    delete m_impl;
 }
+
+
+
+bool
+ShadingSystem::attribute (string_view name, TypeDesc type, const void *val)
+{
+    return m_impl->attribute (name, type, val);
+}
+
+
+
+bool
+ShadingSystem::getattribute (string_view name, TypeDesc type, void *val)
+{
+    return m_impl->getattribute (name, type, val);
+}
+
+
+
+bool
+ShadingSystem::getattribute (ShaderGroup *group, string_view name,
+                             TypeDesc type, void *val)
+{
+    return m_impl->getattribute (group, name, type, val);
+}
+
+
+
+bool
+ShadingSystem::LoadMemoryCompiledShader (string_view shadername,
+                                         string_view buffer)
+{
+    return m_impl->LoadMemoryCompiledShader (shadername, buffer);
+}
+
+
+
+ShaderGroupRef
+ShadingSystem::ShaderGroupBegin (string_view groupname)
+{
+    return m_impl->ShaderGroupBegin (groupname);
+}
+
+
+
+bool
+ShadingSystem::ShaderGroupEnd (void)
+{
+    return m_impl->ShaderGroupEnd();
+}
+
+
+
+bool
+ShadingSystem::Parameter (string_view name, TypeDesc t, const void *val)
+{
+    return m_impl->Parameter (name, t, val);
+}
+
+
+
+bool
+ShadingSystem::Parameter (string_view name, TypeDesc t, const void *val,
+                          bool lockgeom)
+{
+    return m_impl->Parameter (name, t, val, lockgeom);
+}
+
+
+
+bool
+ShadingSystem::Shader (string_view shaderusage, string_view shadername,
+                       string_view layername)
+{
+    return m_impl->Shader (shaderusage, shadername, layername);
+}
+
+
+
+bool
+ShadingSystem::ConnectShaders (string_view srclayer, string_view srcparam,
+                               string_view dstlayer, string_view dstparam)
+{
+    return m_impl->ConnectShaders (srclayer, srcparam, dstlayer, dstparam);
+}
+
+
+
+ShaderGroupRef
+ShadingSystem::state ()
+{
+    return m_impl->state();
+}
+
+
+
+bool
+ShadingSystem::ReParameter (ShaderGroup &group, string_view layername,
+                            string_view paramname, TypeDesc type,
+                            const void *val)
+{
+    return m_impl->ReParameter (group, layername, paramname, type, val);
+}
+
+
+
+PerThreadInfo *
+ShadingSystem::create_thread_info ()
+{
+    return m_impl->create_thread_info();
+}
+
+
+
+void
+ShadingSystem::destroy_thread_info (PerThreadInfo *threadinfo)
+{
+    return m_impl->destroy_thread_info (threadinfo);
+}
+
+
+
+ShadingContext *
+ShadingSystem::get_context (PerThreadInfo *threadinfo)
+{
+    return m_impl->get_context (threadinfo);
+}
+
+
+
+void
+ShadingSystem::release_context (ShadingContext *ctx)
+{
+    return m_impl->release_context (ctx);
+}
+
+
+
+bool
+ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &sas,
+                        ShaderGlobals &ssg, bool run)
+{
+    return m_impl->execute (ctx, sas, ssg, run);
+}
+
+
+
+const void*
+ShadingSystem::get_symbol (ShadingContext &ctx, ustring name, TypeDesc &type)
+{
+    return m_impl->get_symbol (ctx, name, type);
+}
+
+
+
+std::string
+ShadingSystem::getstats (int level) const
+{
+    return m_impl->getstats (level);
+}
+
+
+
+void
+ShadingSystem::register_closure (string_view name, int id,
+                                 const ClosureParam *params,
+                                 PrepareClosureFunc prepare,
+                                 SetupClosureFunc setup)
+{
+    return m_impl->register_closure (name, id, params, prepare, setup);
+}
+
+
+
+bool
+ShadingSystem::query_closure (const char **name, int *id,
+                              const ClosureParam **params)
+{
+    return m_impl->query_closure (name, id, params);
+}
+
+
+
+int
+ShadingSystem::raytype_bit (ustring name)
+{
+    return m_impl->raytype_bit (name);
+}
+
+
+
+void
+ShadingSystem::optimize_all_groups (int nthreads)
+{
+    return m_impl->optimize_all_groups (nthreads);
+}
+
 
 
 
@@ -365,7 +562,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     // Allow environment variable to override default options
     const char *options = getenv ("OSL_OPTIONS");
     if (options)
-        ShadingSystem::attribute ("options", options);
+        attribute ("options", TypeDesc::STRING, &options);
 
     setup_op_descriptors ();
 }
@@ -552,8 +749,10 @@ ShadingSystemImpl::setup_op_descriptors ()
 
 
 void
-ShadingSystemImpl::register_closure(const char *name, int id, const ClosureParam *params,
-                                    PrepareClosureFunc prepare, SetupClosureFunc setup)
+ShadingSystemImpl::register_closure (string_view name, int id,
+                                     const ClosureParam *params,
+                                     PrepareClosureFunc prepare,
+                                     SetupClosureFunc setup)
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
         if (params[i].key == NULL && params[i].type.size() != (size_t)params[i].field_size) {
@@ -1838,8 +2037,11 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
 
 
 
-void ClosureRegistry::register_closure(const char *name, int id, const ClosureParam *params,
-                                       PrepareClosureFunc prepare, SetupClosureFunc setup)
+void
+ClosureRegistry::register_closure (string_view name, int id,
+                                   const ClosureParam *params,
+                                   PrepareClosureFunc prepare,
+                                   SetupClosureFunc setup)
 {
     if (m_closure_table.size() <= (size_t)id)
         m_closure_table.resize(id + 1);
@@ -1868,7 +2070,8 @@ void ClosureRegistry::register_closure(const char *name, int id, const ClosurePa
 
 
 
-const ClosureRegistry::ClosureEntry *ClosureRegistry::get_entry(ustring name)const
+const ClosureRegistry::ClosureEntry *
+ClosureRegistry::get_entry(ustring name) const
 {
     std::map<ustring, int>::const_iterator i = m_closure_name_to_id.find(name);
     if (i != m_closure_name_to_id.end())

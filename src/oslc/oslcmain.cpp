@@ -67,7 +67,7 @@ usage ()
 int
 main (int argc, const char *argv[])
 {
-    std::vector <std::string> args;
+    std::vector<string_view> args;
     bool quiet = false;
     if (argc <= 1) {
         usage ();
@@ -99,12 +99,12 @@ main (int argc, const char *argv[])
             args.push_back (argv[a]);
         }
         else {
-            boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());
-            bool ok = compiler->compile (argv[a], args);
+            OSLCompiler compiler;
+            bool ok = compiler.compile (argv[a], args);
             if (ok) {
                 if (!quiet)
                     std::cout << "Compiled " << argv[a] << " -> " 
-                              << compiler->output_filename() << "\n";
+                              << compiler.output_filename() << "\n";
             } else {
                 std::cout << "FAILED " << argv[a] << "\n";
                 return EXIT_FAILURE;

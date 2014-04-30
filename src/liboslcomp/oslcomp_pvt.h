@@ -59,16 +59,16 @@ typedef std::map<const Symbol *, SymPtrSet> SymDependencyMap;
 
 
 
-class OSLCompilerImpl : public OSL::OSLCompiler {
+class OSLCompilerImpl {
 public:
     OSLCompilerImpl ();
-    virtual ~OSLCompilerImpl ();
+    ~OSLCompilerImpl ();
 
     /// Fully compile a shader located in 'filename', with the command-line
     /// options ("-I" and the like) in the options vector.
-    virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options,
-                          const std::string &stdoslpath = "");
+    bool compile (string_view filename,
+                  const std::vector<string_view> &options,
+                  string_view stdoslpath);
 
     /// The name of the file we're currently parsing
     ///
@@ -220,7 +220,7 @@ public:
     void add_struct_fields (StructSpec *structspec, ustring basename,
                             SymType symtype, int arraylen, ASTNode *node=NULL);
 
-    std::string output_filename () const { return m_output_filename; }
+    string_view output_filename () const { return m_output_filename; }
 
     /// Push the designated function on the stack, to keep track of
     /// nesting and so recursed methods can query which is the current

@@ -52,14 +52,17 @@ ShadingSystem API changes and new options (for renderer writers):
   previously took a std::string& or a const char*. (1.5.7)
 * New ShadingSystem::getattribute variety that takes a ShaderGroup* as a
   first argument, allows queries for various information pertaining to a
-  particular group. (1.5.7)
+  particular group. (#362) (1.5.8)
 * ShadingSystem::getattribute(group,...) allows queries that retrieve
   all the names and types of userdata the compiled group may need
   ("num_userdata", "userdata_names", "userdata_types"), as well as the
   names of all textures it might access and whether it's possible that
   it will try to acccess textures whose names are not known without
   executing the shader ("num_textures_needed", "textures_needed",
-  "unknown_textures_needed"). (1.5.7)
+  "unknown_textures_needed"). (#362) (1.5.8)
+* De-virtualized OSLCompiler and ShadingSystem classes -- it is now safe to
+  construct them in the usual way, the create() and destroy() functions for
+  them are optional/deprecated. (#363) (1.5.8)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
@@ -118,6 +121,10 @@ Under the hood:
   contiguous in a log, rather than possibly line-by-line interspersed
   with the output of another shader invocation running concurrently in a
   different thread (1.5.5).
+* By de-virtualizing OSLCompiler and ShadingSystem classes, we make it
+  much easier in the future to change both these classes (at least, adding
+  new methods) and changing the Impl internals, without breaking link
+  compatibility within release branches. (#363) (1.5.8)
 
 Build & test system improvements and developer goodies:
 * Make OSL work with LLVM 3.4 (1.5.4)

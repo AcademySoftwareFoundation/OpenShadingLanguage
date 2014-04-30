@@ -33,22 +33,32 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 
+namespace pvt {
+    class OSLCompilerImpl;
+}
+
+
+
 class OSLCOMPPUBLIC OSLCompiler {
 public:
+    /// DEPRECATED -- it's ok to directly construct an OSLCompiler now.
     static OSLCompiler *create ();
 
-    OSLCompiler (void) { }
-    virtual ~OSLCompiler (void) { }
+    OSLCompiler ();
+    ~OSLCompiler ();
 
     /// Compile the given file, using the list of command-line options.
     /// Return true if ok, false if the compile failed.
-    virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options,
-                          const std::string &stdoslpath = "") = 0;
+    bool compile (string_view filename,
+                  const std::vector<string_view> &options,
+                  string_view stdoslpath = string_view());
 
     /// Return the name of our compiled output (must be called after
     /// compile()).
-    virtual std::string output_filename () const = 0;
+    string_view output_filename () const;
+
+private:
+    pvt::OSLCompilerImpl *m_impl;
 };
 
 

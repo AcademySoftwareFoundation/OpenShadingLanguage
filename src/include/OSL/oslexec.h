@@ -60,19 +60,25 @@ typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
 typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
 
 
+namespace pvt {
+    class ShadingSystemImpl;
+}
+
+
+
 class OSLEXECPUBLIC ShadingSystem
 {
-protected:
-    /// ShadingSystem is an abstract class, its constructor is protected
-    /// so that ordinary users can't make an instance, but instead are
-    /// forced to request one via ShadingSystem::create().
-    ShadingSystem ();
-    virtual ~ShadingSystem ();
-
 public:
+    ShadingSystem (RendererServices *renderer=NULL,
+                   TextureSystem *texturesystem=NULL,
+                   ErrorHandler *err=NULL);
+    ~ShadingSystem ();
+
+    /// DEPRECATED -- it's ok now to just construct a ShadingSystem.
     static ShadingSystem *create (RendererServices *renderer=NULL,
                                   TextureSystem *texturesystem=NULL,
                                   ErrorHandler *err=NULL);
+    /// DEPRECATED -- it's ok now to just destroy a ShadingSystem.
     static void destroy (ShadingSystem *x);
 
     /// Set an attribute controlling the shading system.  Return true
@@ -140,8 +146,8 @@ public:
     ///                              designated as the debug shaders.
     ///    string only_groupname  Compile only this one group (skip all others)
     ///
-    virtual bool attribute (string_view name, TypeDesc type,
-                            const void *val) = 0;
+    bool attribute (string_view name, TypeDesc type, const void *val);
+
     // Shortcuts for common types
     bool attribute (string_view name, int val) {
         return attribute (name, TypeDesc::INT, &val);
@@ -160,8 +166,8 @@ public:
 
     /// Get the named attribute, store it in value.
     ///
-    virtual bool getattribute (string_view name, TypeDesc type,
-                               void *val) = 0;
+    bool getattribute (string_view name, TypeDesc type, void *val);
+
     // Shortcuts for common types
     bool getattribute (string_view name, int &val) {
         return getattribute (name, TypeDesc::INT, &val);
@@ -207,8 +213,8 @@ public:
     ///                                 order as userdata_names). They are
     ///                                 retrieved by asking for uint64's,
     ///                                 which are the same size as TypeDesc.
-    virtual bool getattribute (ShaderGroup *group, string_view name,
-                               TypeDesc type, void *val) = 0;
+    bool getattribute (ShaderGroup *group, string_view name,
+                       TypeDesc type, void *val);
     // Shortcuts for common types
     bool getattribute (ShaderGroup *group, string_view name, int &val) {
         return getattribute (group, name, TypeDesc::INT, &val);
@@ -237,8 +243,8 @@ public:
 
     /// Load compiled shader (oso) from a memory buffer, overriding
     /// shader lookups in the shader search path
-    virtual bool LoadMemoryCompiledShader (string_view shadername,
-                                           string_view buffer)=0;
+    bool LoadMemoryCompiledShader (string_view shadername,
+                                   string_view buffer);
 
     // The basic sequence for declaring a shader group looks like this:
     // ShadingSystem *ss = ...;
@@ -260,16 +266,15 @@ public:
 
     /// Signal the start of a new shader group.  The return value is a
     /// reference-counted opaque handle to the ShaderGroup.
-    virtual ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view()) = 0;
+    ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
 
     /// Signal the end of a new shader group.
     ///
-    virtual bool ShaderGroupEnd (void) = 0;
+    bool ShaderGroupEnd (void);
 
     /// Set a parameter of the next shader.
     ///
-    virtual bool Parameter (string_view name, TypeDesc t, const void *val)
-        { return true; }
+    bool Parameter (string_view name, TypeDesc t, const void *val);
 
     /// Set a parameter of the next shader, and override the 'lockgeom'
     /// metadata for that parameter (despite how it may have been set in
@@ -277,26 +282,25 @@ public:
     /// should NOT be considered locked against changes by the geometry,
     /// and therefore the shader should not optimize assuming that the
     /// instance value (the 'val' specified by this call) is a constant.
-    virtual bool Parameter (string_view name, TypeDesc t, const void *val,
-                            bool lockgeom)
-        { return true; }
+    bool Parameter (string_view name, TypeDesc t, const void *val,
+                    bool lockgeom);
 
     /// Create a new shader instance, either replacing the one for the
     /// specified usage (if not within a group) or appending to the
     /// current group (if a group has been started).
-    virtual bool Shader (string_view shaderusage,
-                         string_view shadername = string_view(),
-                         string_view layername = string_view()) = 0;
+    bool Shader (string_view shaderusage,
+                 string_view shadername = string_view(),
+                 string_view layername = string_view());
 
     /// Connect two shaders within the current group
     ///
-    virtual bool ConnectShaders (string_view srclayer, string_view srcparam,
-                                 string_view dstlayer, string_view dstparam)=0;
+    bool ConnectShaders (string_view srclayer, string_view srcparam,
+                         string_view dstlayer, string_view dstparam);
 
     /// Return a reference-counted (but opaque) reference to the current
     /// shading attribute state maintained by the ShadingSystem.
     /// DEPRECATED -- instead, retrive via ShaderGroupBegin().
-    virtual ShaderGroupRef state () = 0;
+    ShaderGroupRef state ();
 
     /// Replace a parameter value in a previously-declared shader group.
     /// This is meant to called after the ShaderGroupBegin/End, but will
@@ -305,10 +309,9 @@ public:
     /// indicates that it's a parameter that may be overridden by the
     /// geometric primitive).  This call gives you a way of changing the
     /// instance value, even if it's not a geometric override.
-    virtual bool ReParameter (ShaderGroup &group,
-                              string_view layername, string_view paramname,
-                              TypeDesc type, const void *val)
-        { return false; }
+    bool ReParameter (ShaderGroup &group,
+                      string_view layername, string_view paramname,
+                      TypeDesc type, const void *val);
 
     /// Optional: create the per-thread data needed for shader
     /// execution.  Doing this and passing it to get_context speeds is a
@@ -316,11 +319,11 @@ public:
     /// lookup on its own, but if you do it, it's important for the app
     /// to use one and only one PerThreadInfo per renderer thread, and
     /// destroy it with destroy_thread_info when the thread terminates.
-    virtual PerThreadInfo * create_thread_info() = 0;
+    PerThreadInfo * create_thread_info();
 
     /// Destroy a PerThreadInfo that was allocated by
     /// create_thread_info().
-    virtual void destroy_thread_info (PerThreadInfo *threadinfo) = 0;
+    void destroy_thread_info (PerThreadInfo *threadinfo);
 
     /// Get a ShadingContext that we can use.  The context is specific
     /// to the renderer thread.  The 'threadinfo' parameter should be a
@@ -329,11 +332,11 @@ public:
     /// lookup automatically (and at some additional cost).  The context
     /// can be used to shade many points; a typical usage is to allocate
     /// just one context per thread and use it for the whole run.
-    virtual ShadingContext *get_context (PerThreadInfo *threadinfo=NULL) = 0;
+    ShadingContext *get_context (PerThreadInfo *threadinfo=NULL);
 
     /// Return a ShadingContext to the pool.
     ///
-    virtual void release_context (ShadingContext *ctx) = 0;
+    void release_context (ShadingContext *ctx);
 
     /// Execute the shader bound to context ctx, with the given
     /// ShaderGroup (that specifies the shader group to run) and
@@ -342,8 +345,8 @@ public:
     /// run the shader.  Return true if the shader executed (or could
     /// have executed, if 'run' had been true), false the shader turned
     /// out to be empty.
-    virtual bool execute (ShadingContext &ctx, ShaderGroup &sas,
-                          ShaderGlobals &ssg, bool run=true) = 0;
+    bool execute (ShadingContext &ctx, ShaderGroup &sas,
+                  ShaderGlobals &ssg, bool run=true);
 
     /// Get a raw pointer to a named symbol (such as you'd need to pull
     /// out the value of an output parameter).  ctx is the shading
@@ -351,32 +354,32 @@ public:
     /// symbol.  If found, get_symbol will return the pointer to the
     /// symbol's data, and type will get the symbol's type.  If the
     /// symbol is not found, get_symbol will return NULL.
-    virtual const void* get_symbol (ShadingContext &ctx, ustring name,
-                                    TypeDesc &type) = 0;
+    const void* get_symbol (ShadingContext &ctx, ustring name,
+                            TypeDesc &type);
 
     /// Return the statistics output as a huge string.
     ///
-    virtual std::string getstats (int level=1) const = 0;
+    std::string getstats (int level=1) const;
 
-    virtual void register_closure(const char *name, int id, const ClosureParam *params,
-                                  PrepareClosureFunc prepare, SetupClosureFunc setup) = 0;
+    void register_closure (string_view name, int id, const ClosureParam *params,
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
     /// Query either by name or id an existing closure. If name is non
     /// NULL it will use it for the search, otherwise id would be used
     /// and the name will be placed in name if successful. Also return
     /// pointer to the params array in the last argument. All args are
     /// optional but at least one of name or id must non NULL.
-    virtual bool query_closure(const char **name, int *id,
-                               const ClosureParam **params) = 0;
+    bool query_closure (const char **name, int *id,
+                        const ClosureParam **params);
 
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves
     /// data passed in via attribute("raytypes")).
-    virtual int raytype_bit (ustring name) = 0;
+    int raytype_bit (ustring name);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the
     /// specified number of threads (0 means use all available HW cores).
-    virtual void optimize_all_groups (int nthreads=0) = 0;
+    void optimize_all_groups (int nthreads=0);
 
     /// Helper function -- copy or convert a source value (described by
     /// srctype) to destination (described by dsttype).  The function
@@ -406,9 +409,7 @@ public:
                                const void *src, TypeDesc srctype);
 
 private:
-    // Make delete private and unimplemented in order to prevent apps
-    // from calling it.  Instead, they should call ShadingSystem::destroy().
-    void operator delete (void *todel) { }
+    pvt::ShadingSystemImpl *m_impl;
 };
 
 

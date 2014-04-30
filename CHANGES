@@ -50,6 +50,16 @@ ShadingSystem API changes and new options (for renderer writers):
   RS's TextureSystem. (1.5.6)
 * Use OIIO's new string_view for many public API input parameters that
   previously took a std::string& or a const char*. (1.5.7)
+* New ShadingSystem::getattribute variety that takes a ShaderGroup* as a
+  first argument, allows queries for various information pertaining to a
+  particular group. (1.5.7)
+* ShadingSystem::getattribute(group,...) allows queries that retrieve
+  all the names and types of userdata the compiled group may need
+  ("num_userdata", "userdata_names", "userdata_types"), as well as the
+  names of all textures it might access and whether it's possible that
+  it will try to acccess textures whose names are not known without
+  executing the shader ("num_textures_needed", "textures_needed",
+  "unknown_textures_needed"). (1.5.7)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --

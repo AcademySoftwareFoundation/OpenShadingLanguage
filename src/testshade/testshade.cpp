@@ -33,6 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <cmath>
 
+#include <boost/foreach.hpp>
+
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
@@ -93,6 +95,7 @@ static int
 add_shader (int argc, const char *argv[])
 {
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug|debug2);
     const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
     if (opt_env)
         shadingsys->attribute ("optimize", atoi(opt_env));
@@ -489,6 +492,42 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 
 
 
+static void
+test_group_attributes (ShaderGroup *group)
+{
+    int nt = 0;
+    if (shadingsys->getattribute (group, "num_textures_needed", nt)) {
+        std::cout << "Need " << nt << " textures:\n";
+        std::vector<ustring> tex (nt);
+        if (nt) {
+            shadingsys->getattribute (group, "textures_needed",
+                                      TypeDesc(TypeDesc::STRING,nt), &tex[0]);
+            BOOST_FOREACH (OIIO::ustring t, tex)
+                std::cout << "    " << t << "\n";
+        }
+        int unk = 0;
+        shadingsys->getattribute (group, "unknown_textures_needed", unk);
+        if (unk)
+            std::cout << "    and unknown textures\n";
+    }
+    int nuser = 0;
+    if (shadingsys->getattribute (group, "num_userdata", nuser)) {
+        std::cout << "Need " << nuser << " user data items:\n";
+        std::vector<ustring> user (nuser);
+        std::vector<TypeDesc> types (nuser);
+        if (nuser) {
+            shadingsys->getattribute (group, "userdata_names",
+                                      TypeDesc(TypeDesc::STRING,nuser), &user[0]);
+            shadingsys->getattribute (group, "userdata_types",
+                                      TypeDesc(TypeDesc::UINT64,nuser), &types[0]);
+            for (int i = 0; i < nuser; ++i)
+                std::cout << "    " << user[i] << ' ' << types[i] << "\n";
+        }
+    }
+}
+
+
+
 extern "C" int
 test_shade (int argc, const char *argv[])
 {
@@ -580,6 +619,9 @@ test_shade (int argc, const char *argv[])
 
     // Set up the image outputs requested on the command line
     setup_output_images (shadingsys, shadergroup);
+
+    if (debug)
+        test_group_attributes (shadergroup.get());
 
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;

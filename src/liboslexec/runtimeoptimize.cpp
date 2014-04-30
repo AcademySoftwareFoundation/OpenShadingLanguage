@@ -2718,6 +2718,37 @@ RuntimeOptimizer::run ()
         new_nops += inst()->ops().size();
     }
 
+    m_unknown_textures_needed = false;
+    m_textures_needed.clear();
+    m_userdata_needed.clear();
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        set_inst (layer);
+        if (inst()->unused())
+            continue;  // no need to print or gather stats for unused layers
+        // Find interpolated parameters
+        FOREACH_PARAM (const Symbol &s, inst()) {
+            if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+                && ! s.lockgeom()) {
+                m_userdata_needed.insert (NameAndTypeDesc(s.name(), s.typespec().simpletype()));
+            }
+        }
+        BOOST_FOREACH (const Opcode &op, inst()->ops()) {
+            const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
+            ASSERT (opd);
+            if (opd->flags & OpDescriptor::Tex) {
+                // for all the texture ops, arg 1 is the texture name
+                Symbol *sym = opargsym (op, 1);
+                ASSERT (sym && sym->typespec().is_string());
+                if (sym->is_constant()) {
+                    ustring texname = *(ustring *)sym->data();
+                    m_textures_needed.insert (texname);
+                } else {
+                    m_unknown_textures_needed = true;
+                }
+            }
+        }
+    }
+
     m_stat_specialization_time = rop_timer();
     {
         // adjust memory stats
@@ -2735,6 +2766,18 @@ RuntimeOptimizer::run ()
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
               new_nops, old_nops,
               100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+        if (m_textures_needed.size()) {
+            shadingcontext()->info ("Group needs textures:");
+            BOOST_FOREACH (ustring f, m_textures_needed)
+                shadingcontext()->info ("    %s", f);
+            if (m_unknown_textures_needed)
+                shadingcontext()->info ("    Also may construct texture names on the fly.");
+        }
+        if (m_userdata_needed.size()) {
+            shadingcontext()->info ("Group potentially needs userdata:");
+            BOOST_FOREACH (NameAndTypeDesc f, m_userdata_needed)
+                shadingcontext()->info ("    %s %s", f.first, f.second);
+        }
     }
 }
 

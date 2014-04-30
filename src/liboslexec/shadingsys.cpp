@@ -375,164 +375,167 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
-#define OP2(alias,name,ll,f,simp)                                        \
+#define OP2(alias,name,ll,fold,simp,flag)                                \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
-    extern int  constfold_##f (RuntimeOptimizer &rop, int opnum);        \
+    extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
-                                                   constfold_##f, simp);
-#define OP(name,ll,f,simp) OP2(name,name,ll,f,simp)
+                                                  constfold_##fold, simp, flag);
+#define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
+#define TEX OpDescriptor::Tex
 
-    // name          llvmgen              folder         simple
-    OP (aassign,     aassign,             none,          false);
-    OP (abs,         generic,             abs,           true);
-    OP (acos,        generic,             acos,          true);
-    OP (add,         add,                 add,           true);
-    OP (and,         andor,               and,           true);
-    OP (area,        area,                deriv,         true);
-    OP (aref,        aref,                aref,          true);
-    OP (arraycopy,   arraycopy,           none,          false);
-    OP (arraylength, arraylength,         arraylength,   true);
-    OP (asin,        generic,             asin,          true);
-    OP (assign,      assign,              none,          true);
-    OP (atan,        generic,             none,          true);
-    OP (atan2,       generic,             none,          true);
-    OP (backfacing,  get_simple_SG_field, none,          true);
-    OP (bitand,      bitwise_binary_op,   none,          true);
-    OP (bitor,       bitwise_binary_op,   none,          true);
-    OP (blackbody,   blackbody,           none,          true);
-    OP (break,       loopmod_op,          none,          false);
-    OP (calculatenormal, calculatenormal, none,          true);
-    OP (ceil,        generic,             ceil,          true);
-    OP (cellnoise,   noise,               noise,         true);
-    OP (clamp,       clamp,               clamp,         true);
-    OP (closure,     closure,             none,          true);
-    OP (color,       construct_color,     triple,        true);
-    OP (compassign,  compassign,          compassign,    false);
-    OP (compl,       unary_op,            none,          true);
-    OP (compref,     compref,             compref,       true);
-    OP (concat,      generic,             concat,        true);
-    OP (continue,    loopmod_op,          none,          false);
-    OP (cos,         generic,             cos,           true);
-    OP (cosh,        generic,             none,          true);
-    OP (cross,       generic,             none,          true);
-    OP (degrees,     generic,             degrees,       true);
-    OP (determinant, generic,             none,          true);
-    OP (dict_find,   dict_find,           none,          false);
-    OP (dict_next,   dict_next,           none,          false);
-    OP (dict_value,  dict_value,          none,          false);
-    OP (distance,    generic,             none,          true);
-    OP (div,         div,                 div,           true);
-    OP (dot,         generic,             dot,           true);
-    OP (Dx,          DxDy,                deriv,         true);
-    OP (Dy,          DxDy,                deriv,         true);
-    OP (Dz,          Dz,                  deriv,         true);
-    OP (dowhile,     loop_op,             none,          false);
-    OP (end,         end,                 none,          false);
-    OP (endswith,    generic,             endswith,      true);
-    OP (environment, environment,         none,          true);
-    OP (eq,          compare_op,          eq,            true);
-    OP (erf,         generic,             erf,           true);
-    OP (erfc,        generic,             erfc,          true);
-    OP (error,       printf,              none,          false);
-    OP (exit,        return,              none,          false);
-    OP (exp,         generic,             exp,           true);
-    OP (exp2,        generic,             exp2,          true);
-    OP (expm1,       generic,             expm1,         true);
-    OP (fabs,        generic,             abs,           true);
-    OP (filterwidth, filterwidth,         deriv,         true);
-    OP (floor,       generic,             floor,         true);
-    OP (fmod,        modulus,             none,          true);
-    OP (for,         loop_op,             none,          false);
-    OP (format,      printf,              format,        true);
-    OP (functioncall, functioncall,       functioncall,  false);
-    OP (ge,          compare_op,          ge,            true);
-    OP (getattribute, getattribute,       getattribute,  false);
-    OP (getmatrix,   getmatrix,           getmatrix,     false);
-    OP (getmessage,  getmessage,          getmessage,    false);
-    OP (gettextureinfo, gettextureinfo,   gettextureinfo,false);
-    OP (gt,          compare_op,          gt,            true);
-    OP (if,          if,                  if,            false);
-    OP (inversesqrt, generic,             inversesqrt,   true);
-    OP (isconnected, generic,             none,          true);
-    OP (isfinite,    generic,             none,          true);
-    OP (isinf,       generic,             none,          true);
-    OP (isnan,       generic,             none,          true);
-    OP (le,          compare_op,          le,            true);
-    OP (length,      generic,             none,          true);
-    OP (log,         generic,             log,           true);
-    OP (log10,       generic,             log10,         true);
-    OP (log2,        generic,             log2,          true);
-    OP (logb,        generic,             logb,          true);
-    OP (lt,          compare_op,          lt,            true);
-    OP (luminance,   luminance,           none,          true);
-    OP (matrix,      matrix,              matrix,        true);
-    OP (max,         minmax,              max,           true);
-    OP (mxcompassign, mxcompassign,       mxcompassign,  false);
-    OP (mxcompref,   mxcompref,           none,          true);
-    OP (min,         minmax,              min,           true);
-    OP (mix,         mix,                 mix,           true);
-    OP (mod,         modulus,             none,          true);
-    OP (mul,         mul,                 mul,           true);
-    OP (neg,         neg,                 neg,           true);
-    OP (neq,         compare_op,          neq,           true);
-    OP (noise,       noise,               noise,         true);
-    OP (normal,      construct_triple,    triple,        true);
-    OP (normalize,   generic,             normalize,     true);
-    OP (or,          andor,               or,            true);
-    OP (pnoise,      noise,               noise,         true);
-    OP (point,       construct_triple,    triple,        true);
-    OP (pointcloud_search, pointcloud_search, pointcloud_search, false);
-    OP (pointcloud_get, pointcloud_get,   pointcloud_get,false);
-    OP (pointcloud_write, pointcloud_write, none,        false);
-    OP (pow,         generic,             pow,           true);
-    OP (printf,      printf,              none,          false);
-    OP (psnoise,     noise,               noise,         true);
-    OP (radians,     generic,             radians,       true);
-    OP (raytype,     raytype,             none,          true);
-    OP (regex_match, regex,               none,          false);
-    OP (regex_search, regex,              regex_search,  false);
-    OP (return,      return,              none,          false);
-    OP (round,       generic,             none,          true);
-    OP (setmessage,  setmessage,          setmessage,    false);
-    OP (shl,         bitwise_binary_op,   none,          true);
-    OP (shr,         bitwise_binary_op,   none,          true);
-    OP (sign,        generic,             none,          true);
-    OP (sin,         generic,             sin,           true);
-    OP (sincos,      sincos,              none,          false);
-    OP (sinh,        generic,             none,          true);
-    OP (smoothstep,  generic,             none,          true);
-    OP (snoise,      noise,               noise,         true);
-    OP (spline,      spline,              none,          true);
-    OP (splineinverse, spline,            none,          true);
-    OP (split,       split,               split,         false);
-    OP (sqrt,        generic,             sqrt,          true);
-    OP (startswith,  generic,             none,          true);
-    OP (step,        generic,             none,          true);
-    OP (stof,        generic,             stof,          true);
-    OP (stoi,        generic,             stoi,          true);
-    OP (strlen,      generic,             strlen,        true);
-    OP2(strtof,stof, generic,             stof,          true);
-    OP2(strtoi,stoi, generic,             stoi,          true);
-    OP (sub,         sub,                 sub,           true);
-    OP (substr,      generic,             substr,        true);
-    OP (surfacearea, get_simple_SG_field, none,          true);
-    OP (tan,         generic,             none,          true);
-    OP (tanh,        generic,             none,          true);
-    OP (texture,     texture,             texture,       true);
-    OP (texture3d,   texture3d,           none,          true);
-    OP (trace,       trace,               none,          false);
-    OP (transform,   transform,           transform,     true);
-    OP (transformn,  transform,           transform,     true);
-    OP (transformv,  transform,           transform,     true);
-    OP (transpose,   generic,             none,          true);
-    OP (trunc,       generic,             none,          true);
-    OP (useparam,    useparam,            useparam,      false);
-    OP (vector,      construct_triple,    triple,        true);
-    OP (warning,     printf,              warning,       false);
-    OP (wavelength_color, blackbody,      none,          true);
-    OP (while,       loop_op,             none,          false);
-    OP (xor,         bitwise_binary_op,   none,          true);
+    // name          llvmgen              folder         simple     flags
+    OP (aassign,     aassign,             none,          false,     0);
+    OP (abs,         generic,             abs,           true,      0);
+    OP (acos,        generic,             acos,          true,      0);
+    OP (add,         add,                 add,           true,      0);
+    OP (and,         andor,               and,           true,      0);
+    OP (area,        area,                deriv,         true,      0);
+    OP (aref,        aref,                aref,          true,      0);
+    OP (arraycopy,   arraycopy,           none,          false,     0);
+    OP (arraylength, arraylength,         arraylength,   true,      0);
+    OP (asin,        generic,             asin,          true,      0);
+    OP (assign,      assign,              none,          true,      0);
+    OP (atan,        generic,             none,          true,      0);
+    OP (atan2,       generic,             none,          true,      0);
+    OP (backfacing,  get_simple_SG_field, none,          true,      0);
+    OP (bitand,      bitwise_binary_op,   none,          true,      0);
+    OP (bitor,       bitwise_binary_op,   none,          true,      0);
+    OP (blackbody,   blackbody,           none,          true,      0);
+    OP (break,       loopmod_op,          none,          false,     0);
+    OP (calculatenormal, calculatenormal, none,          true,      0);
+    OP (ceil,        generic,             ceil,          true,      0);
+    OP (cellnoise,   noise,               noise,         true,      0);
+    OP (clamp,       clamp,               clamp,         true,      0);
+    OP (closure,     closure,             none,          true,      0);
+    OP (color,       construct_color,     triple,        true,      0);
+    OP (compassign,  compassign,          compassign,    false,     0);
+    OP (compl,       unary_op,            none,          true,      0);
+    OP (compref,     compref,             compref,       true,      0);
+    OP (concat,      generic,             concat,        true,      0);
+    OP (continue,    loopmod_op,          none,          false,     0);
+    OP (cos,         generic,             cos,           true,      0);
+    OP (cosh,        generic,             none,          true,      0);
+    OP (cross,       generic,             none,          true,      0);
+    OP (degrees,     generic,             degrees,       true,      0);
+    OP (determinant, generic,             none,          true,      0);
+    OP (dict_find,   dict_find,           none,          false,     0);
+    OP (dict_next,   dict_next,           none,          false,     0);
+    OP (dict_value,  dict_value,          none,          false,     0);
+    OP (distance,    generic,             none,          true,      0);
+    OP (div,         div,                 div,           true,      0);
+    OP (dot,         generic,             dot,           true,      0);
+    OP (Dx,          DxDy,                deriv,         true,      0);
+    OP (Dy,          DxDy,                deriv,         true,      0);
+    OP (Dz,          Dz,                  deriv,         true,      0);
+    OP (dowhile,     loop_op,             none,          false,     0);
+    OP (end,         end,                 none,          false,     0);
+    OP (endswith,    generic,             endswith,      true,      0);
+    OP (environment, environment,         none,          true,      TEX);
+    OP (eq,          compare_op,          eq,            true,      0);
+    OP (erf,         generic,             erf,           true,      0);
+    OP (erfc,        generic,             erfc,          true,      0);
+    OP (error,       printf,              none,          false,     0);
+    OP (exit,        return,              none,          false,     0);
+    OP (exp,         generic,             exp,           true,      0);
+    OP (exp2,        generic,             exp2,          true,      0);
+    OP (expm1,       generic,             expm1,         true,      0);
+    OP (fabs,        generic,             abs,           true,      0);
+    OP (filterwidth, filterwidth,         deriv,         true,      0);
+    OP (floor,       generic,             floor,         true,      0);
+    OP (fmod,        modulus,             none,          true,      0);
+    OP (for,         loop_op,             none,          false,     0);
+    OP (format,      printf,              format,        true,      0);
+    OP (functioncall, functioncall,       functioncall,  false,     0);
+    OP (ge,          compare_op,          ge,            true,      0);
+    OP (getattribute, getattribute,       getattribute,  false,     0);
+    OP (getmatrix,   getmatrix,           getmatrix,     false,     0);
+    OP (getmessage,  getmessage,          getmessage,    false,     0);
+    OP (gettextureinfo, gettextureinfo,   gettextureinfo,false,     TEX);
+    OP (gt,          compare_op,          gt,            true,      0);
+    OP (if,          if,                  if,            false,     0);
+    OP (inversesqrt, generic,             inversesqrt,   true,      0);
+    OP (isconnected, generic,             none,          true,      0);
+    OP (isfinite,    generic,             none,          true,      0);
+    OP (isinf,       generic,             none,          true,      0);
+    OP (isnan,       generic,             none,          true,      0);
+    OP (le,          compare_op,          le,            true,      0);
+    OP (length,      generic,             none,          true,      0);
+    OP (log,         generic,             log,           true,      0);
+    OP (log10,       generic,             log10,         true,      0);
+    OP (log2,        generic,             log2,          true,      0);
+    OP (logb,        generic,             logb,          true,      0);
+    OP (lt,          compare_op,          lt,            true,      0);
+    OP (luminance,   luminance,           none,          true,      0);
+    OP (matrix,      matrix,              matrix,        true,      0);
+    OP (max,         minmax,              max,           true,      0);
+    OP (mxcompassign, mxcompassign,       mxcompassign,  false,     0);
+    OP (mxcompref,   mxcompref,           none,          true,      0);
+    OP (min,         minmax,              min,           true,      0);
+    OP (mix,         mix,                 mix,           true,      0);
+    OP (mod,         modulus,             none,          true,      0);
+    OP (mul,         mul,                 mul,           true,      0);
+    OP (neg,         neg,                 neg,           true,      0);
+    OP (neq,         compare_op,          neq,           true,      0);
+    OP (noise,       noise,               noise,         true,      0);
+    OP (normal,      construct_triple,    triple,        true,      0);
+    OP (normalize,   generic,             normalize,     true,      0);
+    OP (or,          andor,               or,            true,      0);
+    OP (pnoise,      noise,               noise,         true,      0);
+    OP (point,       construct_triple,    triple,        true,      0);
+    OP (pointcloud_search, pointcloud_search, pointcloud_search,
+                                                         false,     TEX);
+    OP (pointcloud_get, pointcloud_get,   pointcloud_get,false,     TEX);
+    OP (pointcloud_write, pointcloud_write, none,        false,     0);
+    OP (pow,         generic,             pow,           true,      0);
+    OP (printf,      printf,              none,          false,     0);
+    OP (psnoise,     noise,               noise,         true,      0);
+    OP (radians,     generic,             radians,       true,      0);
+    OP (raytype,     raytype,             none,          true,      0);
+    OP (regex_match, regex,               none,          false,     0);
+    OP (regex_search, regex,              regex_search,  false,     0);
+    OP (return,      return,              none,          false,     0);
+    OP (round,       generic,             none,          true,      0);
+    OP (setmessage,  setmessage,          setmessage,    false,     0);
+    OP (shl,         bitwise_binary_op,   none,          true,      0);
+    OP (shr,         bitwise_binary_op,   none,          true,      0);
+    OP (sign,        generic,             none,          true,      0);
+    OP (sin,         generic,             sin,           true,      0);
+    OP (sincos,      sincos,              none,          false,     0);
+    OP (sinh,        generic,             none,          true,      0);
+    OP (smoothstep,  generic,             none,          true,      0);
+    OP (snoise,      noise,               noise,         true,      0);
+    OP (spline,      spline,              none,          true,      0);
+    OP (splineinverse, spline,            none,          true,      0);
+    OP (split,       split,               split,         false,     0);
+    OP (sqrt,        generic,             sqrt,          true,      0);
+    OP (startswith,  generic,             none,          true,      0);
+    OP (step,        generic,             none,          true,      0);
+    OP (stof,        generic,             stof,          true,      0);
+    OP (stoi,        generic,             stoi,          true,      0);
+    OP (strlen,      generic,             strlen,        true,      0);
+    OP2(strtof,stof, generic,             stof,          true,      0);
+    OP2(strtoi,stoi, generic,             stoi,          true,      0);
+    OP (sub,         sub,                 sub,           true,      0);
+    OP (substr,      generic,             substr,        true,      0);
+    OP (surfacearea, get_simple_SG_field, none,          true,      0);
+    OP (tan,         generic,             none,          true,      0);
+    OP (tanh,        generic,             none,          true,      0);
+    OP (texture,     texture,             texture,       true,      TEX);
+    OP (texture3d,   texture3d,           none,          true,      TEX);
+    OP (trace,       trace,               none,          false,     0);
+    OP (transform,   transform,           transform,     true,      0);
+    OP (transformn,  transform,           transform,     true,      0);
+    OP (transformv,  transform,           transform,     true,      0);
+    OP (transpose,   generic,             none,          true,      0);
+    OP (trunc,       generic,             none,          true,      0);
+    OP (useparam,    useparam,            useparam,      false,     0);
+    OP (vector,      construct_triple,    triple,        true,      0);
+    OP (warning,     printf,              warning,       false,     0);
+    OP (wavelength_color, blackbody,      none,          true,      0);
+    OP (while,       loop_op,             none,          false,     0);
+    OP (xor,         bitwise_binary_op,   none,          true,      0);
 #undef OP
+#undef TEX
 }
 
 
@@ -815,6 +818,77 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     return false;
 #undef ATTR_DECODE
 #undef ATTR_DECODE_STRING
+}
+
+
+
+bool
+ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
+                                 TypeDesc type, void *val)
+{
+    if (! group)
+        return false;
+    if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_textures_needed.size();
+        return true;
+    }
+    if (name == "textures_needed" && type.basetype == TypeDesc::STRING) {
+        if (! group->optimized())
+            optimize_group (*group);
+        int n = (int)group->m_textures_needed.size();
+        if (n <= type.numelements()) {
+            for (int i = 0; i < n; ++i)
+                ((ustring *)val)[i] = group->m_textures_needed[i];
+            for (int i = n, e = type.numelements(); i < e; ++i)
+                ((ustring *)val)[i] = ustring();
+            return true;
+        }
+        return false; // not enough room in the array
+    }
+    if (name == "unknown_textures_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_unknown_textures_needed;
+        return true;
+    }
+    if (name == "num_userdata" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_userdata_needed.size();
+        return true;
+    }
+    if (name == "userdata_names" && type.basetype == TypeDesc::STRING) {
+        if (! group->optimized())
+            optimize_group (*group);
+        int n = (int)group->m_userdata_needed.size();
+        if (n <= type.numelements()) {
+            for (int i = 0; i < n; ++i)
+                ((ustring *)val)[i] = group->m_userdata_needed[i].first;
+            for (int i = n, e = type.numelements(); i < e; ++i)
+                ((ustring *)val)[i] = ustring();
+            return true;
+        }
+        return false; // not enough room in the array
+    }
+    if (name == "userdata_types" && type.basetype == TypeDesc::UINT64) {
+        // TypeDesc is engineered to be 64 bits. Retrieve the types by
+        // requesting it as if it were an array of uint64_t. Sorry.
+        ASSERT (sizeof(TypeDesc) == sizeof(uint64_t));
+        if (! group->optimized())
+            optimize_group (*group);
+        int n = (int)group->m_userdata_needed.size();
+        if (n <= type.numelements()) {
+            for (int i = 0; i < n; ++i)
+                ((TypeDesc *)val)[i] = group->m_userdata_needed[i].second;
+            for (int i = n, e = type.numelements(); i < e; ++i)
+                ((TypeDesc *)val)[i] = TypeDesc();
+            return true;
+        }
+        return false; // not enough room in the array
+    }
+    return false;
 }
 
 
@@ -1565,6 +1639,13 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
     ShadingContext *ctx = get_context ();
     RuntimeOptimizer rop (*this, group, ctx);
     rop.run ();
+
+    // Copy some info recorted by the RuntimeOptimizer into the group
+    group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
+    BOOST_FOREACH (ustring f, rop.m_textures_needed)
+        group.m_textures_needed.push_back (f);
+    BOOST_FOREACH (const NameAndTypeDesc& n, rop.m_userdata_needed)
+        group.m_userdata_needed.push_back (n);
 
     BackendLLVM lljitter (*this, group, ctx);
     lljitter.run ();

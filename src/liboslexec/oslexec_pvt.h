@@ -107,15 +107,37 @@ struct OpDescriptor {
     OpFolder folder;        // constant-folding routine
     bool simple_assign;     // wholy overwites arg0, no other writes,
                             //     no side effects
+    int flags;              // other flags
     OpDescriptor () { }
-    OpDescriptor (const char *n, OpLLVMGen ll, OpFolder f=NULL,
-                  bool simple=false)
-        : name(n), llvmgen(ll), folder(f), simple_assign(simple)
+    OpDescriptor (const char *n, OpLLVMGen ll, OpFolder fold=NULL,
+                  bool simple=false, int flags=0)
+        : name(n), llvmgen(ll), folder(fold), simple_assign(simple), flags(flags)
     {}
+
+    enum FlagValues { None=0, Tex=1 };
 };
 
 
 
+typedef std::pair<ustring,TypeDesc> NameAndTypeDesc;
+
+#if OPENIMAGEIO_VERSION < 10406
+struct NameAndTypeDesc_less {
+    bool operator() (const NameAndTypeDesc &a, const NameAndTypeDesc &b) const {
+        if (a.first != b.first)
+            return a.first < b.first;
+        if (a.second.basetype != b.second.basetype)
+            return a.second.basetype < b.second.basetype;
+        if (a.second.aggregate != b.second.aggregate)
+            return a.second.aggregate < b.second.aggregate;
+        if (a.second.arraylen != b.second.arraylen)
+            return a.second.arraylen < b.second.arraylen;
+        if (a.second.vecsemantics != b.second.vecsemantics)
+            return a.second.vecsemantics < b.second.vecsemantics;
+        return false;  // they are equal
+    }
+};
+#endif
 
 
 // Prefix for OSL shade up declarations, so LLVM can find them
@@ -628,7 +650,8 @@ public:
 
     virtual bool attribute (string_view name, TypeDesc type, const void *val);
     virtual bool getattribute (string_view name, TypeDesc type, void *val);
-
+    virtual bool getattribute (ShaderGroup *group, string_view name,
+                               TypeDesc type, void *val);
     virtual bool LoadMemoryCompiledShader (string_view shadername,
                                            string_view buffer);
     virtual bool Parameter (string_view name, TypeDesc t, const void *val);
@@ -1127,14 +1150,20 @@ public:
     ustring name () const { return m_name; }
 
 private:
-    ustring m_name;
-    std::vector<ShaderInstanceRef> m_layers;
-    RunLLVMGroupFunc m_llvm_compiled_version;
-    size_t m_llvm_groupdata_size;
+    // Put all the things that are read-only (after optimization) and
+    // needed on every shade execution at the front of the struct, as much
+    // together on one cache line as possible.
     volatile int m_optimized;        ///< Is it already optimized?
     bool m_does_nothing;             ///< Is the shading group just func() { return; }
-    atomic_ll m_executions;          ///< Number of times the group executed
+    size_t m_llvm_groupdata_size;    ///< Heap size needed for its groupdata
+    RunLLVMGroupFunc m_llvm_compiled_version;
+    std::vector<ShaderInstanceRef> m_layers;
+    ustring m_name;
     mutex m_mutex;                   ///< Thread-safe optimization
+    std::vector<ustring> m_textures_needed;
+    bool m_unknown_textures_needed;
+    std::vector<NameAndTypeDesc> m_userdata_needed;
+    atomic_ll m_executions;          ///< Number of times the group executed
     friend class OSL::pvt::ShadingSystemImpl;
 };
 

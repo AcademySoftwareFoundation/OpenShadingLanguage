@@ -571,9 +571,10 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
 
 ShaderGroup::ShaderGroup (string_view name)
-  : m_name(name),
-    m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
-    m_optimized(0), m_does_nothing(false)
+  : m_optimized(0), m_does_nothing(false),
+    m_llvm_groupdata_size(0),
+    m_llvm_compiled_version(NULL),
+    m_name(name)
 {
     m_executions = 0;
 }
@@ -581,9 +582,11 @@ ShaderGroup::ShaderGroup (string_view name)
 
 
 ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
-  : m_name(name), m_layers(g.m_layers),
-    m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0),
-    m_optimized(0), m_does_nothing(false)
+  : m_optimized(0), m_does_nothing(false),
+    m_llvm_groupdata_size(0),
+    m_llvm_compiled_version(NULL),
+    m_layers(g.m_layers),
+    m_name(name)
 {
     m_executions = 0;
 }

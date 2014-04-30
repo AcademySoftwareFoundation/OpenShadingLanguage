@@ -187,6 +187,54 @@ public:
         return ok;
     }
 
+    /// Get the named attribute about a particular shader group, store it
+    /// in value.  Attributes that are currently documented include:
+    ///   int num_textures_needed    The number of texture names that are
+    ///                                known to be potentially needed by the
+    ///                                group (after optimization).
+    ///   ustring textures_needed[]  The names of the textures known to be
+    ///                                needed. Must be of length at least as
+    ///                                long as num_textures_needed.
+    ///   int unknown_textures_needed  Nonzero if additional textures may be
+    ///                                needed, whose names can't be known
+    ///                                without actually running the shader.
+    ///   int num_userdata           The number of "user data" variables
+    ///                                retrieved by the shader.
+    ///   ustring userdata_names[]   The names of the user data that may be
+    ///                                retrieved. The array should be at
+    ///                                least as long as num_userdata.
+    ///   TypeDesc userdata_types[]  The types of the user data (in the same
+    ///                                 order as userdata_names). They are
+    ///                                 retrieved by asking for uint64's,
+    ///                                 which are the same size as TypeDesc.
+    virtual bool getattribute (ShaderGroup *group, string_view name,
+                               TypeDesc type, void *val) = 0;
+    // Shortcuts for common types
+    bool getattribute (ShaderGroup *group, string_view name, int &val) {
+        return getattribute (group, name, TypeDesc::INT, &val);
+    }
+    bool getattribute (ShaderGroup *group, string_view name, float &val) {
+        return getattribute (group, name, TypeDesc::FLOAT, &val);
+    }
+    bool getattribute (ShaderGroup *group, string_view name, double &val) {
+        float f;
+        bool ok = getattribute (group, name, TypeDesc::FLOAT, &f);
+        if (ok)
+            val = f;
+        return ok;
+    }
+    bool getattribute (ShaderGroup *group, string_view name, char **val) {
+        return getattribute (group, name, TypeDesc::STRING, val);
+    }
+    bool getattribute (ShaderGroup *group, string_view name, std::string &val) {
+        const char *s = NULL;
+        bool ok = getattribute (group, name, TypeDesc::STRING, &s);
+        if (ok)
+            val = s;
+        return ok;
+    }
+
+
     /// Load compiled shader (oso) from a memory buffer, overriding
     /// shader lookups in the shader search path
     virtual bool LoadMemoryCompiledShader (string_view shadername,

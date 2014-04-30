@@ -350,6 +350,13 @@ private:
     std::map<int,int> m_stale_syms;     ///< Stale symbols for this block
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
+    std::set<ustring> m_textures_needed;
+    bool m_unknown_textures_needed;
+#if OPENIMAGEIO_VERSION < 10406
+    std::set<NameAndTypeDesc,NameAndTypeDesc_less> m_userdata_needed;
+#else
+    std::set<NameAndTypeDesc> m_userdata_needed;
+#endif
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time
 

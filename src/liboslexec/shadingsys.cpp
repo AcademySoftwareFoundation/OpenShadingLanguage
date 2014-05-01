@@ -1033,18 +1033,12 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(int *)val = (int)group->m_textures_needed.size();
         return true;
     }
-    if (name == "textures_needed" && type.basetype == TypeDesc::STRING) {
+    if (name == "textures_needed" && type.basetype == TypeDesc::PTR) {
         if (! group->optimized())
             optimize_group (*group);
-        int n = (int)group->m_textures_needed.size();
-        if (n <= type.numelements()) {
-            for (int i = 0; i < n; ++i)
-                ((ustring *)val)[i] = group->m_textures_needed[i];
-            for (int i = n, e = type.numelements(); i < e; ++i)
-                ((ustring *)val)[i] = ustring();
-            return true;
-        }
-        return false; // not enough room in the array
+        size_t n = group->m_textures_needed.size();
+        *(ustring **)val = n ? &group->m_textures_needed[0] : NULL;
+        return true;
     }
     if (name == "unknown_textures_needed" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
@@ -1055,37 +1049,29 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
     if (name == "num_userdata" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
             optimize_group (*group);
-        *(int *)val = (int)group->m_userdata_needed.size();
+        *(int *)val = (int)group->m_userdata_names.size();
         return true;
     }
-    if (name == "userdata_names" && type.basetype == TypeDesc::STRING) {
+    if (name == "userdata_names" && type.basetype == TypeDesc::PTR) {
         if (! group->optimized())
             optimize_group (*group);
-        int n = (int)group->m_userdata_needed.size();
-        if (n <= type.numelements()) {
-            for (int i = 0; i < n; ++i)
-                ((ustring *)val)[i] = group->m_userdata_needed[i].first;
-            for (int i = n, e = type.numelements(); i < e; ++i)
-                ((ustring *)val)[i] = ustring();
-            return true;
-        }
-        return false; // not enough room in the array
+        size_t n = group->m_userdata_names.size();
+        *(ustring **)val = n ? &group->m_userdata_names[0] : NULL;
+        return true;
     }
-    if (name == "userdata_types" && type.basetype == TypeDesc::UINT64) {
-        // TypeDesc is engineered to be 64 bits. Retrieve the types by
-        // requesting it as if it were an array of uint64_t. Sorry.
-        ASSERT (sizeof(TypeDesc) == sizeof(uint64_t));
+    if (name == "userdata_types" && type.basetype == TypeDesc::PTR) {
         if (! group->optimized())
             optimize_group (*group);
-        int n = (int)group->m_userdata_needed.size();
-        if (n <= type.numelements()) {
-            for (int i = 0; i < n; ++i)
-                ((TypeDesc *)val)[i] = group->m_userdata_needed[i].second;
-            for (int i = n, e = type.numelements(); i < e; ++i)
-                ((TypeDesc *)val)[i] = TypeDesc();
-            return true;
-        }
-        return false; // not enough room in the array
+        size_t n = group->m_userdata_types.size();
+        *(TypeDesc **)val = n ? &group->m_userdata_types[0] : NULL;
+        return true;
+    }
+    if (name == "userdata_offsets" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_userdata_offsets.size();
+        *(int **)val = n ? &group->m_userdata_offsets[0] : NULL;
+        return true;
     }
     return false;
 }
@@ -1843,8 +1829,14 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
     group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
     BOOST_FOREACH (ustring f, rop.m_textures_needed)
         group.m_textures_needed.push_back (f);
-    BOOST_FOREACH (const NameAndTypeDesc& n, rop.m_userdata_needed)
-        group.m_userdata_needed.push_back (n);
+    size_t num_userdata = rop.m_userdata_needed.size();
+    group.m_userdata_names.reserve (num_userdata);
+    group.m_userdata_types.reserve (num_userdata);
+    group.m_userdata_offsets.resize (num_userdata, 0);
+    BOOST_FOREACH (const NameAndTypeDesc& n, rop.m_userdata_needed) {
+        group.m_userdata_names.push_back (n.first);
+        group.m_userdata_types.push_back (n.second);
+    }
 
     BackendLLVM lljitter (*this, group, ctx);
     lljitter.run ();

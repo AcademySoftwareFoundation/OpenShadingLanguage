@@ -498,31 +498,33 @@ test_group_attributes (ShaderGroup *group)
     int nt = 0;
     if (shadingsys->getattribute (group, "num_textures_needed", nt)) {
         std::cout << "Need " << nt << " textures:\n";
-        std::vector<ustring> tex (nt);
-        if (nt) {
-            shadingsys->getattribute (group, "textures_needed",
-                                      TypeDesc(TypeDesc::STRING,nt), &tex[0]);
-            BOOST_FOREACH (OIIO::ustring t, tex)
-                std::cout << "    " << t << "\n";
-        }
+        ustring *tex = NULL;
+        shadingsys->getattribute (group, "textures_needed",
+                                  TypeDesc::PTR, &tex);
+        for (int i = 0; i < nt; ++i)
+            std::cout << "    " << tex[i] << "\n";
         int unk = 0;
         shadingsys->getattribute (group, "unknown_textures_needed", unk);
         if (unk)
             std::cout << "    and unknown textures\n";
     }
     int nuser = 0;
-    if (shadingsys->getattribute (group, "num_userdata", nuser)) {
+    if (shadingsys->getattribute (group, "num_userdata", nuser) && nuser) {
         std::cout << "Need " << nuser << " user data items:\n";
-        std::vector<ustring> user (nuser);
-        std::vector<TypeDesc> types (nuser);
-        if (nuser) {
-            shadingsys->getattribute (group, "userdata_names",
-                                      TypeDesc(TypeDesc::STRING,nuser), &user[0]);
-            shadingsys->getattribute (group, "userdata_types",
-                                      TypeDesc(TypeDesc::UINT64,nuser), &types[0]);
-            for (int i = 0; i < nuser; ++i)
-                std::cout << "    " << user[i] << ' ' << types[i] << "\n";
-        }
+        ustring *userdata_names = NULL;
+        TypeDesc *userdata_types = NULL;
+        int *userdata_offsets = NULL;
+        shadingsys->getattribute (group, "userdata_names",
+                                  TypeDesc::PTR, &userdata_names);
+        shadingsys->getattribute (group, "userdata_types",
+                                  TypeDesc::PTR, &userdata_types);
+        shadingsys->getattribute (group, "userdata_offsets",
+                                  TypeDesc::PTR, &userdata_offsets);
+        DASSERT (userdata_names && userdata_types && userdata_offsets);
+        for (int i = 0; i < nuser; ++i)
+            std::cout << "    " << userdata_names[i] << ' '
+                      << userdata_types[i] << "  offset="
+                      << userdata_offsets[i] << "\n";
     }
 }
 

@@ -206,13 +206,13 @@ public:
     ///                                without actually running the shader.
     ///   int num_userdata           The number of "user data" variables
     ///                                retrieved by the shader.
-    ///   ustring userdata_names[]   The names of the user data that may be
-    ///                                retrieved. The array should be at
-    ///                                least as long as num_userdata.
-    ///   TypeDesc userdata_types[]  The types of the user data (in the same
-    ///                                 order as userdata_names). They are
-    ///                                 retrieved by asking for uint64's,
-    ///                                 which are the same size as TypeDesc.
+    ///   ptr userdata_names         Retrieves a pointer to the array of
+    ///                                ustring holding the userdata names.
+    ///   ptr userdata_types         Retrieves a pointer to the array of
+    ///                                 TypeDesc describing the userdata.
+    ///   ptr userdata_offsets       Retrieves a pointer to the array of
+    ///                                 int describing the userdata offsets
+    ///                                 within the heap.
     bool getattribute (ShaderGroup *group, string_view name,
                        TypeDesc type, void *val);
     // Shortcuts for common types

@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
+#include <OpenImageIO/imagebufalgo_util.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
@@ -65,6 +66,7 @@ static bool pixelcenters = false;
 static bool debugnan = false;
 static bool debug_uninit = false;
 static int xres = 1, yres = 1;
+static int num_threads = 0;
 static std::string layername;
 static std::vector<std::string> connections;
 static ParamValueList params;
@@ -230,6 +232,7 @@ getargs (int argc, const char *argv[])
                 "%*", add_shader, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
+                "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--stats", &stats, "Print run statistics",
@@ -530,6 +533,72 @@ test_group_attributes (ShaderGroup *group)
 
 
 
+static void
+shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
+{
+    // Optional: high-performance apps may request this thread-specific
+    // pointer in order to save a bit of time on each shade.  Just like
+    // the name implies, a multithreaded renderer would need to do this
+    // separately for each thread, and be careful to always use the same
+    // thread_info each time for that thread.
+    //
+    // There's nothing wrong with a simpler app just passing NULL for
+    // the thread_info; in such a case, the ShadingSystem will do the
+    // necessary calls to find the thread-specific pointer itself, but
+    // this will degrade performance just a bit.
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+
+    // Request a shading context so that we can execute the shader.
+    // We could get_context/release_constext for each shading point,
+    // but to save overhead, it's more efficient to reuse a context
+    // within a thread.
+    ShadingContext *ctx = shadingsys->get_context (thread_info);
+
+    // Set up shader globals and a little test grid of points to shade.
+    ShaderGlobals shaderglobals;
+
+    // Loop over all pixels in the image (in x and y)...
+    for (int y = roi.ybegin;  y < roi.yend;  ++y) {
+        for (int x = roi.xbegin;  x < roi.xend;  ++x) {
+            // In a real renderer, this is where you would figure
+            // out what object point is visible in this pixel (or
+            // this sample, for antialiasing).  Once determined,
+            // you'd set up a ShaderGlobals that contained the vital
+            // information about that point, such as its location,
+            // the normal there, the u and v coordinates on the
+            // surface, the transformation of that object, and so
+            // on.  
+            //
+            // This test app is not a real renderer, so we just
+            // set it up rigged to look like we're rendering a single
+            // quadrilateral that exactly fills the viewport, and that
+            // setup is done in the following function call:
+            setup_shaderglobals (shaderglobals, shadingsys, x, y);
+
+            // Actually run the shader for this point
+            shadingsys->execute (*ctx, *shadergroup, shaderglobals);
+
+            // Save all the designated outputs.  But only do so if we
+            // are on the last iteration requested, so that if we are
+            // doing a bunch of iterations for time trials, we only
+            // including the output pixel copying once in the timing.
+            if (save)
+                save_outputs (shadingsys, ctx, x, y);
+        }
+    }
+
+    // We're done shading with this context.
+    shadingsys->release_context (ctx);
+
+    // Now that we're done rendering, release the thread=specific
+    // pointer we saved.  A simple app could skip this; but if the app
+    // asks for it (as we have in this example), then it should also
+    // destroy it when done with it.
+    shadingsys->destroy_thread_info(thread_info);
+}
+
+
+
 extern "C" int
 test_shade (int argc, const char *argv[])
 {
@@ -539,7 +608,7 @@ test_shade (int argc, const char *argv[])
     // object that services callbacks from the shading system, NULL for
     // the TextureSystem (that just makes 'create' make its own TS), and
     // an error handler.
-    shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
+    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
     register_closures(shadingsys);
 
     // Remember that each shader parameter may optionally have a
@@ -625,65 +694,25 @@ test_shade (int argc, const char *argv[])
     if (debug)
         test_group_attributes (shadergroup.get());
 
-    // Set up shader globals and a little test grid of points to shade.
-    ShaderGlobals shaderglobals;
+    if (num_threads < 1)
+        num_threads = boost::thread::hardware_concurrency();
 
     double setuptime = timer.lap ();
-
-    // Optional: high-performance apps may request this thread-specific
-    // pointer in order to save a bit of time on each shade.  Just like
-    // the name implies, a multithreaded renderer would need to do this
-    // separately for each thread, and be careful to always use the same
-    // thread_info each time for that thread.
-    //
-    // There's nothing wrong with a simpler app just passing NULL for
-    // the thread_info; in such a case, the ShadingSystem will do the
-    // necessary calls to find the thread-specific pointer itself, but
-    // this will degrade performance just a bit.
-    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
-
-    // Request a shading context so that we can execute the shader.
-    // We could get_context/release_constext for each shading point,
-    // but to save overhead, it's more efficient to reuse a context
-    // within a thread.
-    ShadingContext *ctx = shadingsys->get_context (thread_info);
 
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
     // to accurately time for a single iteration
     for (int iter = 0;  iter < iters;  ++iter) {
+        OIIO::ROI roi (0, xres, 0, yres);
+        bool save = (iter == (iters-1));   // save on last iteration
 
-        // Loop over all pixels in the image (in x and y)...
-        for (int y = 0, n = 0;  y < yres;  ++y) {
-            for (int x = 0;  x < xres;  ++x, ++n) {
-
-                // In a real renderer, this is where you would figure
-                // out what object point is visible in this pixel (or
-                // this sample, for antialiasing).  Once determined,
-                // you'd set up a ShaderGlobals that contained the vital
-                // information about that point, such as its location,
-                // the normal there, the u and v coordinates on the
-                // surface, the transformation of that object, and so
-                // on.  
-                //
-                // This test app is not a real renderer, so we just
-                // set it up rigged to look like we're rendering a single
-                // quadrilateral that exactly fills the viewport, and that
-                // setup is done in the following function call:
-                setup_shaderglobals (shaderglobals, shadingsys, x, y);
-
-                // Actually run the shader for this point
-                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
-
-                // Save all the designated outputs.  But only do so if we
-                // are on the last iteration requested, so that if we are
-                // doing a bunch of iterations for time trials, we only
-                // including the output pixel copying once in the timing.
-                if (iter == (iters - 1)) {
-                    save_outputs (shadingsys, ctx, x, y);
-                }
-            }
-        }
+#if 0
+        shade_region (shadergroup.get(), roi, save);
+#else
+        OIIO::ImageBufAlgo::parallel_image (
+            boost::bind (shade_region, shadergroup.get(), _1, save),
+            roi, num_threads);
+#endif
 
         // If any reparam was requested, do it now
         if (reparams.size() && reparam_layer.size()) {
@@ -695,15 +724,6 @@ test_shade (int argc, const char *argv[])
             }
         }
     }
-
-    // We're done shading with this context.
-    shadingsys->release_context (ctx);
-
-    // Now that we're done rendering, release the thread=specific
-    // pointer we saved.  A simple app could skip this; but if the app
-    // asks for it (as we have in this example), then it should also
-    // destroy it when done with it.
-    shadingsys->destroy_thread_info(thread_info);
 
     if (outputfiles.size() == 0)
         std::cout << "\n";
@@ -729,7 +749,7 @@ test_shade (int argc, const char *argv[])
 
     // We're done with the shading system now, destroy it
     shadergroup.reset ();  // Must release this before destroying shadingsys
-    ShadingSystem::destroy (shadingsys);
+    delete shadingsys;
 
     return EXIT_SUCCESS;
 }

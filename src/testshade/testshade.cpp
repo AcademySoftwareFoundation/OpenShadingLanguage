@@ -745,6 +745,10 @@ test_shade (int argc, const char *argv[])
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
+        OIIO::TextureSystem *texturesys = shadingsys->texturesys();
+        if (texturesys)
+            std::cout << texturesys->getstats (5) << "\n";
+        std::cout << ustring::getstats() << "\n";
     }
 
     // We're done with the shading system now, destroy it

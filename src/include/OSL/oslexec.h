@@ -381,6 +381,12 @@ public:
     /// specified number of threads (0 means use all available HW cores).
     void optimize_all_groups (int nthreads=0);
 
+    /// Return a pointer to the TextureSystem being used.
+    TextureSystem * texturesys () const;
+
+    /// Return a pointer to the RendererServices being used.
+    RendererServices * renderer () const;
+
     /// Helper function -- copy or convert a source value (described by
     /// srctype) to destination (described by dsttype).  The function
     /// returns true upon success, or false if the types differ in a way

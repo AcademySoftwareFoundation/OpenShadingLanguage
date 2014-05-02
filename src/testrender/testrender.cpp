@@ -565,7 +565,7 @@ int main (int argc, const char *argv[]) {
     // object that services callbacks from the shading system, NULL for
     // the TextureSystem (which will create a default OIIO one), and
     // an error handler.
-    shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
+    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
 
     // Register the layout of all closures known to this renderer
     // Any closure used by the shader which is not registered, or
@@ -653,11 +653,15 @@ int main (int argc, const char *argv[]) {
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
+        OIIO::TextureSystem *texturesys = shadingsys->texturesys();
+        if (texturesys)
+            std::cout << texturesys->getstats (5) << "\n";
+        std::cout << ustring::getstats() << "\n";
     }
 
     // We're done with the shading system now, destroy it
     shaders.clear ();  // Must release the group refs first
-    ShadingSystem::destroy (shadingsys);
+    delete shadingsys;
 
     return EXIT_SUCCESS;
 }

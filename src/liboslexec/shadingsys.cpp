@@ -296,6 +296,22 @@ ShadingSystem::optimize_all_groups (int nthreads)
 
 
 
+TextureSystem *
+ShadingSystem::texturesys () const
+{
+    return m_impl->texturesys();
+}
+
+
+
+RendererServices *
+ShadingSystem::renderer () const
+{
+    return m_impl->renderer();
+}
+
+
+
 
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
 

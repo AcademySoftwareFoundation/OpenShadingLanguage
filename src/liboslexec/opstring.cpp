@@ -86,13 +86,27 @@ osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject_,
 }
 
 OSL_SHADEOP const char *
-osl_format (const char* format_str, ...)
+osl_format (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
     std::string s = Strutil::vformat (format_str, args);
     va_end (args);
+#if 1
+    // Optimization: creating a ustring is slow. It's actually slightly
+    // faster if the ShadingContext keeps track of the last ustring created
+    // by format, and we compare against that -- if it's a strcmp match, we
+    // already know the ustring without needing to actually construct the
+    // ustring or even query the table.
+    ustring last = sg->context->lastformat();
+    if (last && ! strcmp(s.c_str(), last.c_str()))
+        return last.c_str();
+    last = ustring(s);
+    sg->context->lastformat (last);
+    return last.c_str();
+#else
     return ustring(s).c_str();
+#endif
 }
 
 

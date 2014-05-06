@@ -1177,72 +1177,90 @@ DECLFOLDER(constfold_format)
     // Try to turn R=format(fmt,...) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &Format (*rop.opargsym(op, 1));
+    if (! Format.is_constant())
+        return 0;
     ustring fmt = *(ustring *)Format.data();
-    std::vector<void *> argptrs;
-    for (int i = 2;  i < op.nargs();  ++i) {
-        Symbol &S (*rop.opargsym(op, i));
-        if (! S.is_constant())
-            return 0;  // something non-constant
-        argptrs.push_back (S.data());
-    }
-    // If we made it this far, all args were constants, and the
-    // arg data pointers are in argptrs[].
 
-    // It's actually a HUGE pain to make this work generally, because
-    // the Strutil::vformat we use in the runtime implementation wants a
-    // va_list, but we just have raw pointers at this point.  No matter,
-    // let's just make it work for several simple common cases.
-    if (op.nargs() == 3) {
-        // result=format(fmt, one_argument)
-        Symbol &Val (*rop.opargsym(op, 2));
-        ustring result;
-        if (Val.typespec().is_string()) {   // "%s"
-            result = ustring::format (fmt.c_str(), *(ustring *)Val.data());
-        } else if (Val.typespec().is_int()) {  // "%d"
-            result = ustring::format (fmt.c_str(), *(int *)Val.data());
-        } else {
-            return 0;  // not a case we deal with
+    // split fmt into the prefix (the starting part of the string that we
+    // haven't yet processed) and the suffix (the ending part that we've
+    // fully processed).
+    std::string prefix = fmt.string();
+    std::string suffix;
+    int args_expanded = 0;
+
+    // While there is still a constant argument at the end of the arg list,
+    // peel it off and use it to rewrite the format string.
+    for (int argnum = op.nargs()-1; argnum >= 2; --argnum) {
+        Symbol &Arg (*rop.opargsym(op, argnum));
+        if (! Arg.is_constant())
+            break;   // no more constants
+
+        // find the last format specification
+        size_t pos = std::string::npos;
+        while (1) {
+            pos = prefix.find_last_of ('%', pos); // find at or before pos
+            if (pos == std::string::npos) {
+                // Fewer '%' tokens than arguments? Must be malformed. Punt.
+                return 0;
+            }
+            if (pos == 0 || prefix[pos-1] != '%') {
+                // we found the format specifier
+                break;
+            }
+            // False alarm! Beware of %% which is a literal % rather than a
+            // format specifier. Back up and try again.
+            if (pos >= 2)
+                pos -= 2;   // back up
+            else {
+                // This can only happen if the %% is at the start of the
+                // format string, but it shouldn't be since there are still
+                // args to process. Punt.
+                return 0;
+            }
         }
-        int cind = rop.add_constant (result);
-        rop.turn_into_assign (op, cind, "const fold");
-        return 1;
+        ASSERT (pos < prefix.length() && prefix[pos] == '%');
+
+        // cleave off the last format specification into mid
+        std::string mid = std::string (prefix, pos);
+        std::string formatted;
+        const TypeSpec &argtype = Arg.typespec();
+        if (argtype.is_int())
+            formatted = Strutil::format (mid.c_str(), *(int *)Arg.data());
+        else if (argtype.is_float())
+            formatted = Strutil::format (mid.c_str(), *(float *)Arg.data());
+        else if (argtype.is_triple())
+            formatted = Strutil::format (mid.c_str(), *(Vec3 *)Arg.data());
+        else if (argtype.is_matrix())
+            formatted = Strutil::format (mid.c_str(), *(Matrix44 *)Arg.data());
+        else if (argtype.is_string())
+            formatted = Strutil::format (mid.c_str(), *(ustring *)Arg.data());
+        else
+            break;   // something else we don't handle -- we're done
+
+        // We were able to format, so rejigger the strings.
+        prefix.erase (pos, std::string::npos);
+        suffix = formatted + suffix;
+        args_expanded += 1;
     }
-    if (op.nargs() == 4) {
-        // result=format(fmt, arg, arg)
-        Symbol &Val1 (*rop.opargsym(op, 2));
-        Symbol &Val2 (*rop.opargsym(op, 3));
-        ustring result;
-        if (Val1.typespec().is_string() && Val2.typespec().is_string()) {   // "%s%s
-            result = ustring::format (fmt.c_str(), *(ustring *)Val1.data(),
-                                      *(ustring *)Val2.data());
-        } else if (Val1.typespec().is_string() && Val2.typespec().is_int()) {   // "%s%d
-            result = ustring::format (fmt.c_str(), *(ustring *)Val1.data(),
-                                      *(int *)Val2.data());
-        } else if (Val1.typespec().is_int() && Val2.typespec().is_int()) {   // "%d%d
-            result = ustring::format (fmt.c_str(), *(int *)Val1.data(),
-                                      *(int *)Val2.data());
-        } else {
-            return 0;  // not a case we deal with
-        }
-        int cind = rop.add_constant (result);
-        rop.turn_into_assign (op, cind, "const fold");
+
+    // Rewrite the op
+    if (args_expanded == op.nargs()-2) {
+        // Special case -- completely expanded, replace with a string
+        // assignment
+        int cind = rop.add_constant (ustring(prefix + suffix));
+        rop.turn_into_assign (op, cind, "fully constant fold format()");
         return 1;
-    }
-    if (op.nargs() == 5) {
-        // result=format(fmt, arg, arg, arg)
-        Symbol &Val1 (*rop.opargsym(op, 2));
-        Symbol &Val2 (*rop.opargsym(op, 3));
-        Symbol &Val3 (*rop.opargsym(op, 4));
-        ustring result;
-        if (Val1.typespec().is_string() && Val2.typespec().is_int() &&
-            Val3.typespec().is_int()) {   // "%s%d%d
-            result = ustring::format (fmt.c_str(), *(ustring *)Val1.data(),
-                                      *(int *)Val2.data(), *(int *)Val3.data());
-        } else {
-            return 0;  // not a case we deal with
-        }
-        int cind = rop.add_constant (result);
-        rop.turn_into_assign (op, cind, "const fold");
+    } else if (args_expanded != 0) {
+        // Partially expanded -- rewrite the instruction. It's actually
+        // easier to turn this instruction into a nop and insert a new one.
+        // Grab the previous arguments, drop the ones we folded, and
+        // replace the format string with our new one.
+        int *argstart = &rop.inst()->args()[0] + op.firstarg();
+        std::vector<int> newargs (argstart, argstart + op.nargs() - args_expanded);
+        newargs[1] = rop.add_constant (ustring(prefix + suffix));
+        ustring opname = op.opname();
+        rop.turn_into_nop (op, "partial constant fold format()");
+        rop.insert_code (opnum, opname, newargs);
         return 1;
     }
 

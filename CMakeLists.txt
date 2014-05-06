@@ -301,7 +301,8 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-peep
             cellnoise closure color comparison
-            component-range const-array-params debugnan debug-uninit
+            component-range const-array-params const-array-fill
+            debugnan debug-uninit
             derivs derivs-muldiv-clobber error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
             geomath getsymbol-nonheap gettextureinfo hyperb

@@ -606,7 +606,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
 #define TEX OpDescriptor::Tex
 
     // name          llvmgen              folder         simple     flags
-    OP (aassign,     aassign,             none,          false,     0);
+    OP (aassign,     aassign,             aassign,       false,     0);
     OP (abs,         generic,             abs,           true,      0);
     OP (acos,        generic,             acos,          true,      0);
     OP (add,         add,                 add,           true,      0);

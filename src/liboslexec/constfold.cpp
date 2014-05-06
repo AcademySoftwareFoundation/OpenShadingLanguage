@@ -46,6 +46,9 @@ using namespace OSL::pvt;
 // names of ops we'll be using frequently
 static ustring u_nop    ("nop"),
                u_assign ("assign"),
+               u_aassign ("aassign"),
+               u_compassign ("compassign"),
+               u_mxcompassign ("mxcompassign"),
                u_add    ("add"),
                u_sub    ("sub"),
                u_mul    ("mul"),
@@ -712,30 +715,109 @@ DECLFOLDER(constfold_arraylength)
 
 
 
+DECLFOLDER(constfold_aassign)
+{
+    // Array assignment
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol *R (rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol *I (rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
+    if (! I->is_constant() || !C->is_constant())
+        return 0;  // not much we can do if not assigning constants
+    ASSERT (R->typespec().is_array() && I->typespec().is_int());
+
+    TypeSpec elemtype = R->typespec().elementtype();
+    if (elemtype.is_closure())
+        return 0;   // don't worry about closures
+    TypeDesc elemsimpletype = elemtype.simpletype();
+
+    // Look for patterns where all array elements are assigned in
+    // succession within the same block, in which case we can turn the
+    // result into a constant!
+    int len = R->typespec().arraylength();
+    if (len <= 0)
+        return 0;  // don't handle arrays of unknown length
+    int elemsize = (int)elemsimpletype.size();
+    std::vector<int> index_assigned (len, -1);
+    std::vector<char> filled_values (elemsize * len);  // constant storage
+    char *fill = (char *)&filled_values[0];
+    int num_assigned = 0;
+    int opindex = opnum;
+    int highestop = opindex;
+    for ( ; ; ) {
+        Opcode &opi (rop.inst()->ops()[opindex]);
+        if (opi.opname() != u_aassign)
+            break;   // not a successive aassign op
+        Symbol *Ri (rop.inst()->argsymbol(opi.firstarg()+0));
+        if (Ri != R)
+            break;   // not a compassign to the same variable
+        Symbol *Ii (rop.inst()->argsymbol(opi.firstarg()+1));
+        Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+2));
+        if (! Ii->is_constant() || !Ci->is_constant())
+            break;   // not assigning constants
+        int indexval = *(int *)Ii->data();
+        if (indexval < 0 || indexval >= len)
+            break;  // out of range index; let runtime deal with it
+        if (equivalent(elemtype, Ci->typespec())) {
+            // equivalent types
+            memcpy (fill + indexval*elemsize, Ci->data(), elemsize);
+        } else if (elemtype.is_float() && Ci->typespec().is_int()) {
+            // special case of float[i] = int
+            float c = Ci->typespec().is_int() ? *(int *)Ci->data()
+                                              : *(float *)Ci->data();
+            ((float *)fill)[indexval] = c;
+        } else {
+            break;   // a case we don't handle
+        }
+        if (index_assigned[indexval] < 0)
+            ++num_assigned;
+        index_assigned[indexval] = opindex;
+        highestop = opindex;
+        opindex = rop.next_block_instruction(opindex);
+        if (! opindex)
+            break;
+    }
+    if (num_assigned == len) {
+        // woo-hoo! we had a succession of constant aassign ops to the
+        // same variable, filling in all indices. Turn the whole shebang
+        // into a single assignment.
+        int cind = rop.add_constant (R->typespec(), fill);
+        rop.turn_into_assign (op, cind, "replaced element-by-element assignment");
+        rop.turn_into_nop (opnum+1, highestop+1, "replaced element-by-element assignment");
+        return highestop+1-opnum;
+    }
+
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_compassign)
 {
     // Component assignment
     Opcode &op (rop.inst()->ops()[opnum]);
-    // Symbol *A (rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol *R (rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol *I (rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
+    if (! I->is_constant() || !C->is_constant())
+        return 0;  // not much we can do if not assigning constants
+    ASSERT (R->typespec().is_triple() && I->typespec().is_int() &&
+            (C->typespec().is_float() || C->typespec().is_int()));
+
     // We are obviously not assigning to a constant, but it could be
     // that at this point in our current block, the value of A is known,
     // and that will show up as a block alias.
     int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
     Symbol *AA = rop.inst()->symbol(Aalias);
     // N.B. symbol returns NULL if Aalias is < 0
-    if (!AA || !AA->is_constant())
-        return 0;
 
     // Try to simplify A[I]=C if we already know the old value of A as a
     // constant. We can turn it into A[I] = N, where N is the old A but with
     // the Ith component set to C. If it turns out that the old A[I] == C,
     // and thus the assignment doesn't change A's value, we can eliminate
     // the assignment entirely.
-    Symbol *I (rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
-    if (I->is_constant() && C->is_constant()) {
-        ASSERT (AA->typespec().is_triple() &&
-                (C->typespec().is_float() || C->typespec().is_int()));
+    if (AA && AA->is_constant()) {
+        ASSERT (AA->typespec().is_triple());
         int index = *(int *)I->data();
         if (index < 0 || index >= 3) {
             // We are indexing a const triple out of range.  But this
@@ -764,6 +846,50 @@ DECLFOLDER(constfold_compassign)
         rop.turn_into_assign (op, cind, "fold compassign");
         return 1;
     }
+
+    // Look for patterns where all three components are assigned in
+    // succession within the same block, in which case we can turn the
+    // result into a constant!
+    int index_assigned[3] = { -1, -1, -1 };
+    float filled_values[3];
+    int num_assigned = 0;
+    int opindex = opnum;
+    int highestop = opindex;
+    for ( ; ; ) {
+        Opcode &opi (rop.inst()->ops()[opindex]);
+        if (opi.opname() != u_compassign)
+            break;   // not a successive compassign op
+        Symbol *Ri (rop.inst()->argsymbol(opi.firstarg()+0));
+        if (Ri != R)
+            break;   // not a compassign to the same variable
+        Symbol *Ii (rop.inst()->argsymbol(opi.firstarg()+1));
+        Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+2));
+        if (! Ii->is_constant() || !Ci->is_constant())
+            break;   // not assigning constants
+        int indexval = *(int *)Ii->data();
+        if (indexval < 0 || indexval >= 3)
+            break;  // out of range index; let runtime deal with it
+        float c = Ci->typespec().is_int() ? *(int *)Ci->data()
+                                          : *(float *)Ci->data();
+        filled_values[indexval] = c;
+        if (index_assigned[indexval] < 0)
+            ++num_assigned;
+        index_assigned[indexval] = opindex;
+        highestop = opindex;
+        opindex = rop.next_block_instruction(opindex);
+        if (! opindex)
+            break;
+    }
+    if (num_assigned == 3) {
+        // woo-hoo! we had a succession of constant compassign ops to the
+        // same variable, filling in all indices. Turn the whole shebang
+        // into a single assignment.
+        int cind = rop.add_constant (R->typespec(), filled_values);
+        rop.turn_into_assign (op, cind, "replaced element-by-element assignment");
+        rop.turn_into_nop (opnum+1, highestop+1, "replaced element-by-element assignment");
+        return highestop+1-opnum;
+    }
+
     return 0;
 }
 
@@ -773,28 +899,30 @@ DECLFOLDER(constfold_mxcompassign)
 {
     // Matrix component assignment
     Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol *R (rop.inst()->argsymbol(op.firstarg()+0));
+    Symbol *J (rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol *I (rop.inst()->argsymbol(op.firstarg()+2));
+    Symbol *C (rop.inst()->argsymbol(op.firstarg()+3));
+    if (! J->is_constant() || ! I->is_constant() || !C->is_constant())
+        return 0;  // not much we can do if not assigning constants
+    ASSERT (R->typespec().is_matrix() &&
+            J->typespec().is_int() && I->typespec().is_int() &&
+            (C->typespec().is_float() || C->typespec().is_int()));
 
-    // Symbol *A (rop.inst()->argsymbol(op.firstarg()+0));
     // We are obviously not assigning to a constant, but it could be
     // that at this point in our current block, the value of A is known,
     // and that will show up as a block alias.
     int Aalias = rop.block_alias (rop.inst()->arg(op.firstarg()+0));
     Symbol *AA = rop.inst()->symbol(Aalias);
     // N.B. symbol returns NULL if Aalias is < 0
-    if (!AA || !AA->is_constant())
-        return 0;
 
     // Try to simplify A[J,I]=C if we already know the old value of A as a
     // constant. We can turn it into A[J,I] = N, where N is the old A but with
     // the designated component set to C. If it turns out that the old
     // A[J,I] == C, and thus the assignment doesn't change A's value, we can
     // eliminate the assignment entirely.
-    Symbol *J (rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol *I (rop.inst()->argsymbol(op.firstarg()+2));
-    Symbol *C (rop.inst()->argsymbol(op.firstarg()+3));
-    if (I->is_constant() && J->is_constant() && C->is_constant()) {
-        ASSERT (AA->typespec().is_matrix() &&
-                (C->typespec().is_float() || C->typespec().is_int()));
+    if (AA && AA->is_constant()) {
+        ASSERT (AA->typespec().is_matrix());
         int jndex = *(int *)J->data();
         int index = *(int *)I->data();
         if (index < 0 || index >= 3 || jndex < 0 || jndex >= 3) {
@@ -824,6 +952,53 @@ DECLFOLDER(constfold_mxcompassign)
         rop.turn_into_assign (op, cind, "fold mxcompassign");
         return 1;
     }
+
+    // Look for patterns where all 16 components are assigned in
+    // succession within the same block, in which case we can turn the
+    // result into a constant!
+    int index_assigned[4][4] = { {-1, -1, -1, -1}, {-1, -1, -1, -1}, 
+                                 {-1, -1, -1, -1}, {-1, -1, -1, -1} };
+    float filled_values[4][4];
+    int num_assigned = 0;
+    int opindex = opnum;
+    int highestop = opindex;
+    for ( ; ; ) {
+        Opcode &opi (rop.inst()->ops()[opindex]);
+        if (opi.opname() != u_mxcompassign)
+            break;   // not a successive mxcompassign op
+        Symbol *Ri (rop.inst()->argsymbol(opi.firstarg()+0));
+        if (Ri != R)
+            break;   // not a mxcompassign to the same variable
+        Symbol *Ji (rop.inst()->argsymbol(opi.firstarg()+1));
+        Symbol *Ii (rop.inst()->argsymbol(opi.firstarg()+2));
+        Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+3));
+        if (! Ji->is_constant() || ! Ii->is_constant() || !Ci->is_constant())
+            break;   // not assigning constants
+        int jndexval = *(int *)Ji->data();
+        int indexval = *(int *)Ii->data();
+        if (jndexval < 0 || jndexval >= 4 || indexval < 0 || indexval >= 4)
+            break;  // out of range index; let runtime deal with it
+        float c = Ci->typespec().is_int() ? *(int *)Ci->data()
+                                          : *(float *)Ci->data();
+        filled_values[jndexval][indexval] = c;
+        if (index_assigned[jndexval][indexval] < 0)
+            ++num_assigned;
+        index_assigned[jndexval][indexval] = opindex;
+        highestop = opindex;
+        opindex = rop.next_block_instruction(opindex);
+        if (! opindex)
+            break;
+    }
+    if (num_assigned == 16) {
+        // woo-hoo! we had a succession of constant mxcompassign ops to the
+        // same variable, filling in all indices. Turn the whole shebang
+        // into a single assignment.
+        int cind = rop.add_constant (R->typespec(), filled_values);
+        rop.turn_into_assign (op, cind, "replaced element-by-element assignment");
+        rop.turn_into_nop (opnum+1, highestop+1, "replaced element-by-element assignment");
+        return highestop+1-opnum;
+    }
+
     return 0;
 }
 

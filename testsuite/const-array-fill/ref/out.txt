@@ -1,0 +1,8 @@
+Compiled test.osl -> test.oso
+C = 0 1 2
+m = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+ia[] = 0 1 2 42
+fa[] = 0 1 2 3.14
+pa[] = [1 2 3] [3.14 42 -1]
+sa[] = Hello world foo!
+

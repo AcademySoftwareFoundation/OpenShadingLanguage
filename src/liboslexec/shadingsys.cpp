@@ -109,6 +109,15 @@ ShadingSystem::attribute (string_view name, TypeDesc type, const void *val)
 
 
 bool
+ShadingSystem::attribute (ShaderGroup *group, string_view name,
+                          TypeDesc type, const void *val)
+{
+    return m_impl->attribute (group, name, type, val);
+}
+
+
+
+bool
 ShadingSystem::getattribute (string_view name, TypeDesc type, void *val)
 {
     return m_impl->getattribute (name, type, val);
@@ -1033,6 +1042,16 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     return false;
 #undef ATTR_DECODE
 #undef ATTR_DECODE_STRING
+}
+
+
+
+bool
+ShadingSystemImpl::attribute (ShaderGroup *group, string_view name,
+                              TypeDesc type, const void *val)
+{
+    // No current group attributes to set
+    return false;
 }
 
 

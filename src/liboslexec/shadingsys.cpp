@@ -1171,11 +1171,33 @@ ShadingSystemImpl::getstats (int level) const
     if (level <= 0)
         return "";
     std::ostringstream out;
-    out << "OSL ShadingSystem statistics (" << (void*)this << ")\n";
+    out << "OSL ShadingSystem statistics (" << (void*)this;
+    out << ") ver " << OSL_LIBRARY_VERSION_STRING << "\n";
     if (m_stat_shaders_requested == 0) {
         out << "  No shaders requested\n";
         return out.str();
     }
+
+    std::string opt;
+#define BOOLOPT(name) if (m_##name) opt += #name " "
+#define INTOPT(name) opt += Strutil::format(#name "=%d ", m_##name)
+    INTOPT (optimize);
+    INTOPT (llvm_optimize);
+    INTOPT (debug);
+    INTOPT (llvm_debug);
+    BOOLOPT (lazylayers);
+    BOOLOPT (lazyglobals);
+    BOOLOPT (clearmemory);
+    BOOLOPT (debugnan);
+    BOOLOPT (debug_uninit);
+    BOOLOPT (lockgeom_default);
+    BOOLOPT (range_checking);
+    BOOLOPT (greedyjit);
+    BOOLOPT (countlayerexecs);
+#undef BOOLOPT
+#undef INTOPT
+    out << "  Options:  " << Strutil::wordwrap(opt, 75, 12) << "\n";
+
     out << "  Shaders:\n";
     out << "    Requested: " << m_stat_shaders_requested << "\n";
     out << "    Loaded:    " << m_stat_shaders_loaded << "\n";

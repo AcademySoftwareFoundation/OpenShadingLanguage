@@ -164,6 +164,28 @@ public:
         return attribute (name, TypeDesc::STRING, &s);
     }
 
+
+    /// Set an attribute for a specific shader group.  Return true if the
+    /// name and type were recognized and the attrib was set. Documented
+    /// attributes are as follows:
+    /// None. This is a placeholder for future functionality.
+    bool attribute (ShaderGroup *group, string_view name,
+                    TypeDesc type, const void *val);
+    bool attribute (ShaderGroup *group, string_view name, int val) {
+        return attribute (group, name, TypeDesc::INT, &val);
+    }
+    bool attribute (ShaderGroup *group, string_view name, float val) {
+        return attribute (group, name, TypeDesc::FLOAT, &val);
+    }
+    bool attribute (ShaderGroup *group, string_view name, double val) {
+        float f = (float) val;
+        return attribute (group, name, TypeDesc::FLOAT, &f);
+    }
+    bool attribute (ShaderGroup *group, string_view name, string_view val) {
+        const char *s = val.c_str();
+        return attribute (group, name, TypeDesc::STRING, &s);
+    }
+
     /// Get the named attribute, store it in value.
     ///
     bool getattribute (string_view name, TypeDesc type, void *val);

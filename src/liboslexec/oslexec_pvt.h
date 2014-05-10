@@ -1283,6 +1283,9 @@ public:
     /// attribname is "", return the value of the node itself.
     int dict_value (int nodeID, ustring attribname, TypeDesc type, void *data);
 
+    ustring lastformat () const { return m_lastformat; }
+    void lastformat (ustring f) { m_lastformat = f;}
+
     /// Various setup of the context done by execute().  Return true if
     /// the function should be executed, otherwise false.
     bool prepare_execution (ShaderUse use, ShaderGroup &sas);
@@ -1338,6 +1341,7 @@ private:
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     ShaderGroup *m_attribs;             ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
+    ustring m_lastformat;               ///< ustring of last format()
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard

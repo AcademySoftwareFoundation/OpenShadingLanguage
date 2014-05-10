@@ -234,7 +234,7 @@ LLVMGEN (llvm_gen_printf)
 
     // For some ops, we push the shader globals pointer
     if (op.opname() == op_printf || op.opname() == op_error ||
-            op.opname() == op_warning)
+            op.opname() == op_warning || op.opname() == op_format)
         call_args.push_back (rop.sg_void_ptr());
 
     // We're going to need to adjust the format string as we go, but I'd

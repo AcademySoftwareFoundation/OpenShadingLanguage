@@ -1353,7 +1353,7 @@ ShadingSystemImpl::Parameter (string_view name, TypeDesc t, const void *val,
 {
     // We work very hard not to do extra copies of the data.  First,
     // grow the pending list by one (empty) slot...
-    m_pending_params.resize (m_pending_params.size() + 1);
+    m_pending_params.grow();
     // ...then initialize it in place
     m_pending_params.back().init (name, t, 1, val);
     // If we have a possible geometric override (lockgeom=false), set the

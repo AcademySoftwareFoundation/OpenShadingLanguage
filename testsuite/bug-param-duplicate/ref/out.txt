@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+myparam = 1
+

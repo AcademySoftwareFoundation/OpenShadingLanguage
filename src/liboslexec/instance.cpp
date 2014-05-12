@@ -206,11 +206,12 @@ ShaderInstance::parameters (const ParamValueList &params)
     }
 
     BOOST_FOREACH (const ParamValue &p, params) {
-        if (shadingsys().debug())
-            shadingsys().info (" PARAMETER %s %s",
-                               p.name().c_str(), p.type().c_str());
+        if (p.name().size() == 0)
+            continue;   // skip empty names
         int i = findparam (p.name());
         if (i >= 0) {
+            if (shadingsys().debug())
+                shadingsys().info (" PARAMETER %s %s", p.name(), p.type());
             const Symbol *sm = master()->symbol(i);
             SymOverrideInfo *so = &m_instoverrides[i];
             TypeSpec t = sm->typespec();
@@ -239,8 +240,12 @@ ShaderInstance::parameters (const ParamValueList &params)
             // just skip the parameter, let it "keep" the default.
             void *defaultdata = m_master->param_default_storage(i);
             if (lockgeom && 
-                  memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
+                  memcmp (defaultdata, p.data(), t.simpletype().size()) == 0) {
+                // Must reset valuesource to default, in case the parameter
+                // was set already, and now is being changed back to default.
+                so->valuesource (Symbol::DefaultVal);
                 continue;
+            }
 
             so->valuesource (Symbol::InstanceVal);
             void *data = param_storage(i);

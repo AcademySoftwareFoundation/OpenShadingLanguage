@@ -107,6 +107,8 @@ Bug fixes:
   default vectors be the correct length for the array (with zeroes for
   array elements without explicit initialization). (1.5.6)
 * oslc: negating closures resulted in hitting an assertion. (1.5.6)
+* ShadingSystem - bug fix when Parameter() sets the same parameter twice
+  for the same instance, the second time back to the default value. (1.5.8)
 
 Under the hood:
 * Internals refactor that separates the runtime optimization from the

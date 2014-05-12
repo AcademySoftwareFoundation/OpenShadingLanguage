@@ -299,7 +299,7 @@ endmacro ()
 TESTSUITE ( aastep arithmetic array array-derivs array-range
             blackbody blendmath breakcont
             bug-array-heapoffsets
-            bug-locallifetime bug-outputinit bug-peep
+            bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
             cellnoise closure color comparison
             component-range const-array-params const-array-fill
             debugnan debug-uninit

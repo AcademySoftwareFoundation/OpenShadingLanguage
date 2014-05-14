@@ -244,6 +244,8 @@ ShaderInstance::parameters (const ParamValueList &params)
                 // Must reset valuesource to default, in case the parameter
                 // was set already, and now is being changed back to default.
                 so->valuesource (Symbol::DefaultVal);
+                void *data = param_storage(i);
+                memcpy (data, p.data(), t.simpletype().size()); // clobber old value
                 continue;
             }
 

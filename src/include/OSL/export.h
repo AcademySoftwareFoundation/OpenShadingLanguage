@@ -77,7 +77,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   #endif
   #define OSL_LLVM_EXPORT __declspec(dllexport)
 #else
-  #if __GNUC__ >= 4
+  #if (10000*__GNUC__ + 100*__GNUC_MINOR__ + __GNUC_PATCHLEVEL__) > 40102
     #define OSL_DLL_IMPORT __attribute__ ((visibility ("default")))
     #define OSL_DLL_EXPORT __attribute__ ((visibility ("default")))
     #define OSL_DLL_LOCAL  __attribute__ ((visibility ("hidden")))

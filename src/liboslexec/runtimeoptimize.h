@@ -352,11 +352,7 @@ private:
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::set<ustring> m_textures_needed;
     bool m_unknown_textures_needed;
-#if OPENIMAGEIO_VERSION < 10406
-    std::set<NameAndTypeDesc,NameAndTypeDesc_less> m_userdata_needed;
-#else
-    std::set<NameAndTypeDesc> m_userdata_needed;
-#endif
+    std::set<UserDataNeeded> m_userdata_needed;
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time
 

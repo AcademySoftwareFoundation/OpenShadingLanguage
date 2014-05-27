@@ -591,6 +591,7 @@ int main (int argc, const char *argv[]) {
 
     // Setup common attributes
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug|debug2);
     const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
     if (opt_env)
         shadingsys->attribute ("optimize", atoi(opt_env));

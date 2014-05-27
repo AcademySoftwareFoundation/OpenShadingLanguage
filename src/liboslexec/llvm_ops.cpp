@@ -1663,11 +1663,28 @@ OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
 
 OSL_SHADEOP int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,
-                             int has_derivs, void *result)
+                             int userdata_has_derivs, void *userdata_data,
+                             int symbol_has_derivs, void *symbol_data,
+                             int symbol_data_size,
+                             char *userdata_initialized, int userdata_index)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return sg->renderer->get_userdata (has_derivs, USTR(name), TYPEDESC(type),
-                                       sg->renderstate, result);
+    char status = *userdata_initialized;
+    if (status == 0) {
+        // First time retrieving this userdata
+        ShaderGlobals *sg = (ShaderGlobals *)sg_;
+        bool ok = sg->renderer->get_userdata (userdata_has_derivs, USTR(name),
+                                              TYPEDESC(type),
+                                              sg->renderstate, userdata_data);
+        // printf ("Binding %s %s : index %d, ok = %d\n", name,
+        //         TYPEDESC(type).c_str(),userdata_index, ok);
+        *userdata_initialized = status = 1 + ok;  // 1 = not found, 2 = found
+    }
+    if (status == 2) {
+        // If userdata was present, copy it to the shader variable
+        memcpy (symbol_data, userdata_data, symbol_data_size);
+        return 1;
+    }
+    return 0;  // no such user data
 }
 
 

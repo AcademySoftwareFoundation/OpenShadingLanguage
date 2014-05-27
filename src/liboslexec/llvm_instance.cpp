@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/fmath.h>
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
@@ -47,8 +48,15 @@ Schematically, we want to create code that resembles the following:
 
     // Assume 2 layers. 
     struct GroupData_1 {
-        // Array of ints telling if we have already run each layer
-        int layer_run[nlayers];
+        // Array telling if we have already run each layer
+        char layer_run[nlayers];
+        // Array telling if we have already initialized each
+        // needed user data (0 = haven't checked, 1 = checked and there
+        // was no userdata, 2 = checked and there was userdata)
+        char userdata_initialized[num_userdata];
+        // All the user data slots, in order
+        float userdata_s;
+        float userdata_t;
         // For each layer in the group, we declare all shader params
         // whose values are not known -- they have init ops, or are
         // interpolated from the geom, or are connected to other layers.
@@ -59,11 +67,6 @@ Schematically, we want to create code that resembles the following:
     // Name of layer entry is $layer_ID
     void $layer_0 (ShaderGlobals *sg, GroupData_1 *group)
     {
-        // Only run if not already done.  Then mark as run.
-        if (group->layer_run[0])
-            return;
-        group->layer_run[0] = 1;
-
         // Declare locals, temps, constants, params with known values.
         // Make them all look like stack memory locations:
         float *x = alloca (sizeof(float));
@@ -76,11 +79,12 @@ Schematically, we want to create code that resembles the following:
 
     void $layer_1 (ShaderGlobals *sg, GroupData_1 *group)
     {
-        if (group->layer_run[1])
-            return;
-        group->layer_run[1] = 1;
-        // ...
-        $layer_0 (sg, group);    // because we need its outputs
+        // Because we need the outputs of layer 0 now, we call it if it
+        // hasn't already run:
+        if (! group->layer_run[0]) {
+            group->layer_run[0] = 1;
+            $layer_0 (sg, group);    // because we need its outputs
+        }
         *y = sg->u * group->$param_1_bar;
     }
 
@@ -88,7 +92,11 @@ Schematically, we want to create code that resembles the following:
     {
         group->layer_run[...] = 0;
         // Run just the unconditional layers
-        $layer_1 (sg, group);
+
+        if (! group->layer_run[1]) {
+            group->layer_run[1] = 1;
+            $layer_1 (sg, group);
+        }
     }
 
 */
@@ -461,7 +469,7 @@ static const char *llvm_helper_function_table[] = {
     "osl_dict_value", "iXiXLX",
     "osl_raytype_name", "iXX",
     "osl_raytype_bit", "iXi",
-    "osl_bind_interpolated_param", "iXXLiX",
+    "osl_bind_interpolated_param", "iXXLiXiXiXi",
     "osl_range_check", "iiiXXi",
     "osl_naninf_check", "xiXiXXiXiiX",
     "osl_uninit_check", "xLXXXiXii",
@@ -533,20 +541,57 @@ BackendLLVM::llvm_type_groupdata ()
         return m_llvm_type_groupdata;
 
     std::vector<llvm::Type*> fields;
+    int offset = 0;
+    int order = 0;
+
+    if (llvm_debug() >= 2)
+        std::cout << "Group param struct:\n";
 
     // First, add the array that tells if each layer has run.  But only make
     // slots for the layers that may be called/used.
+    if (llvm_debug() >= 2)
+        std::cout << "  layers run flags: " << m_num_used_layers
+                  << " at offset " << offset << "\n";
     int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
     fields.push_back (ll.type_array (ll.type_bool(), sz));
-    size_t offset = sz * sizeof(bool);
+    offset += sz * sizeof(bool);
+    ++order;
+
+    // Now add the array that tells which userdata have been initialized,
+    // and the space for the userdata values.
+    int nuserdata = (int) group().m_userdata_names.size();
+    if (nuserdata) {
+        if (llvm_debug() >= 2)
+            std::cout << "  userdata initialized flags: " << nuserdata
+                      << " at offset " << offset << ", field " << order << "\n";
+        ustring *names = & group().m_userdata_names[0];
+        TypeDesc *types = & group().m_userdata_types[0];
+        int *offsets = & group().m_userdata_offsets[0];
+        int sz = (nuserdata + 3) & (~3);
+        fields.push_back (ll.type_array (ll.type_bool(), sz));
+        offset += nuserdata * sizeof(bool);
+        ++order;
+        for (int i = 0; i < nuserdata; ++i) {
+            TypeDesc type = types[i];
+            int n = type.numelements() * 3;   // always make deriv room
+            type.arraylen = n;
+            fields.push_back (llvm_type (type));
+            // Alignment
+            int align = type.basesize();
+            offset = OIIO::round_to_multiple_of_pow2 (offset, align);
+            if (llvm_debug() >= 2)
+                std::cout << "  userdata " << names[i] << ' ' << type
+                          << ", field " << order << ", offset " << offset << "\n";
+            offsets[i] = offset;
+            offset += int(type.size());
+            ++order;
+        }
+    }
 
     // For each layer in the group, add entries for all params that are
     // connected or interpolated, and output params.  Also mark those
     // symbols with their offset within the group struct.
-    if (llvm_debug() >= 2)
-        std::cout << "Group param struct:\n";
     m_param_order_map.clear ();
-    int order = 1;
     for (int layer = 0;  layer < group().nlayers();  ++layer) {
         ShaderInstance *inst = group()[layer];
         if (inst->unused())
@@ -579,6 +624,9 @@ BackendLLVM::llvm_type_groupdata ()
         }
     }
     group().llvm_groupdata_size (offset);
+    if (llvm_debug() >= 2)
+        std::cout << " Group struct had " << order << " fields, total size "
+                  << offset << "\n\n";
 
     std::string groupdataname = Strutil::format("Groupdata_%llu",
                                                 (long long unsigned int)group().name().hash());
@@ -711,6 +759,48 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
     ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
                 "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
 
+    // Handle interpolated params by calling osl_bind_interpolated_param,
+    // which will check if userdata is already retrieved, if not it will
+    // call RendererServices::get_userdata to retrived it. In either case,
+    // it will return 1 if it put the userdata in the right spot (either
+    // retrieved de novo or copied from a previous retrieval), or 0 if no
+    // such userdata was available.
+    llvm::BasicBlock *after_userdata_block = NULL;
+    if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
+        int userdata_index = -1;
+        ustring symname = sym.name();
+        TypeDesc type = sym.typespec().simpletype();
+        for (int i = 0, e = (int)group().m_userdata_names.size(); i < e; ++i) {
+            if (symname == group().m_userdata_names[i] &&
+                    equivalent (type, group().m_userdata_types[i])) {
+                userdata_index = i;
+                break;
+            }
+        }
+        ASSERT (userdata_index >= 0);
+        std::vector<llvm::Value*> args;
+        args.push_back (sg_void_ptr());
+        args.push_back (ll.constant (symname));
+        args.push_back (ll.constant (type));
+        args.push_back (ll.constant ((int) group().m_userdata_derivs[userdata_index]));
+        args.push_back (groupdata_field_ptr (2 + userdata_index)); // userdata data ptr
+        args.push_back (ll.constant ((int) sym.has_derivs()));
+        args.push_back (llvm_void_ptr (sym));
+        args.push_back (ll.constant (sym.derivsize()));
+        args.push_back (ll.void_ptr (userdata_initialized_ref(userdata_index)));
+        args.push_back (ll.constant (userdata_index));
+        llvm::Value *got_userdata =
+            ll.call_function ("osl_bind_interpolated_param",
+                              &args[0], args.size());
+        // We will enclose the subsequent initialization of default values
+        // or init ops in an "if" so that the extra copies or code don't
+        // happen if the userdata was retrieved.
+        llvm::BasicBlock *no_userdata_block = ll.new_basic_block ("no_userdata");
+        after_userdata_block = ll.new_basic_block ();
+        llvm::Value *cond_val = ll.op_eq (got_userdata, ll.constant(0));
+        ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
+    }
+
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.
         build_llvm_code (sym.initbegin(), sym.initend());
@@ -746,21 +836,10 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
             llvm_zero_derivs (sym);
     }
 
-    // Handle interpolated params.
-    // FIXME -- really, we shouldn't assign defaults or run init ops if
-    // the values are interpolated.  The perf hit is probably small, since
-    // there are so few interpolated params, but we should come back and
-    // fix this later.
-    if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam)
-        && ! sym.lockgeom()) {
-        std::vector<llvm::Value*> args;
-        args.push_back (sg_void_ptr());
-        args.push_back (ll.constant (sym.name()));
-        args.push_back (ll.constant (sym.typespec().simpletype()));
-        args.push_back (ll.constant ((int) sym.has_derivs()));
-        args.push_back (llvm_void_ptr (sym));
-        ll.call_function ("osl_bind_interpolated_param",
-                          &args[0], args.size());                            
+    if (after_userdata_block) {
+        // If we enclosed the default initialization in an "if", jump to the
+        // next basic block now.
+        ll.op_branch (after_userdata_block);
     }
 }
 
@@ -933,13 +1012,18 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
 
     if (groupentry) {
+        // If this is the group entry point, clear all the "layer_run" and
+        // "userdata_initialized" flags.
         if (m_num_used_layers > 1) {
-            // If this is the group entry point, clear all the "layer
-            // executed" bits.  If it's not the group entry (but rather is
-            // an upstream node), then set its bit!
             int sz = (m_num_used_layers + 3) & (~3);  // round up to 32 bits
-            ll.op_memset (ll.void_ptr(layer_run_ptr(0)), 0, sz, 4 /*align*/);
+            ll.op_memset (ll.void_ptr(layer_run_ref(0)), 0, sz, 4 /*align*/);
         }
+        int num_userdata = (int) group().m_userdata_names.size();
+        if (num_userdata) {
+            int sz = (num_userdata + 3) & (~3);  // round up to 32 bits
+            ll.op_memset (ll.void_ptr(userdata_initialized_ref(0)), 0, sz, 4 /*align*/);
+        }
+
         // Group entries also need to allot space for ALL layers' params
         // that are closures (to avoid weird order of layer eval problems).
         for (int i = 0;  i < group().nlayers();  ++i) {

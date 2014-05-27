@@ -119,25 +119,32 @@ struct OpDescriptor {
 
 
 
-typedef std::pair<ustring,TypeDesc> NameAndTypeDesc;
+// Struct to hold records about what user data a group needs
+struct UserDataNeeded {
+    ustring name;
+    TypeDesc type;
+    bool derivs;
 
-#if OPENIMAGEIO_VERSION < 10406
-struct NameAndTypeDesc_less {
-    bool operator() (const NameAndTypeDesc &a, const NameAndTypeDesc &b) const {
-        if (a.first != b.first)
-            return a.first < b.first;
-        if (a.second.basetype != b.second.basetype)
-            return a.second.basetype < b.second.basetype;
-        if (a.second.aggregate != b.second.aggregate)
-            return a.second.aggregate < b.second.aggregate;
-        if (a.second.arraylen != b.second.arraylen)
-            return a.second.arraylen < b.second.arraylen;
-        if (a.second.vecsemantics != b.second.vecsemantics)
-            return a.second.vecsemantics < b.second.vecsemantics;
+    UserDataNeeded (ustring name, TypeDesc type, bool derivs=false)
+        : name(name), type(type), derivs(derivs) {}
+    friend bool operator< (const UserDataNeeded &a, const UserDataNeeded &b) {
+        if (a.name != b.name)
+            return a.name < b.name;
+        if (a.type.basetype != b.type.basetype)
+            return a.type.basetype < b.type.basetype;
+        if (a.type.aggregate != b.type.aggregate)
+            return a.type.aggregate < b.type.aggregate;
+        if (a.type.arraylen != b.type.arraylen)
+            return a.type.arraylen < b.type.arraylen;
+        // Ignore vector semantics
+        // if (a.type.vecsemantics != b.type.vecsemantics)
+        //     return a.type.vecsemantics < b.type.vecsemantics;
+        // Do not sort based on derivs
         return false;  // they are equal
     }
 };
-#endif
+
+
 
 
 // Prefix for OSL shade up declarations, so LLVM can find them
@@ -1167,8 +1174,10 @@ private:
     std::vector<ustring> m_userdata_names;
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;
+    std::vector<char> m_userdata_derivs;
     atomic_ll m_executions;          ///< Number of times the group executed
     friend class OSL::pvt::ShadingSystemImpl;
+    friend class OSL::pvt::BackendLLVM;
 };
 
 

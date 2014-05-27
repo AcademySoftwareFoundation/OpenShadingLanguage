@@ -2729,7 +2729,15 @@ RuntimeOptimizer::run ()
         FOREACH_PARAM (const Symbol &s, inst()) {
             if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
                 && ! s.lockgeom()) {
-                m_userdata_needed.insert (NameAndTypeDesc(s.name(), s.typespec().simpletype()));
+                UserDataNeeded udn (s.name(), s.typespec().simpletype(), s.has_derivs());
+                std::set<UserDataNeeded>::iterator found;
+                found = m_userdata_needed.find (udn);
+                if (found == m_userdata_needed.end())
+                    m_userdata_needed.insert (udn);
+                else if (udn.derivs && ! found->derivs) {
+                    m_userdata_needed.erase (found);
+                    m_userdata_needed.insert (udn);
+                }
             }
         }
         BOOST_FOREACH (const Opcode &op, inst()->ops()) {
@@ -2775,8 +2783,9 @@ RuntimeOptimizer::run ()
         }
         if (m_userdata_needed.size()) {
             shadingcontext()->info ("Group potentially needs userdata:");
-            BOOST_FOREACH (NameAndTypeDesc f, m_userdata_needed)
-                shadingcontext()->info ("    %s %s", f.first, f.second);
+            BOOST_FOREACH (UserDataNeeded f, m_userdata_needed)
+                shadingcontext()->info ("    %s %s %s", f.name, f.type,
+                                        f.derivs ? "(derivs)" : "");
         }
     }
 }

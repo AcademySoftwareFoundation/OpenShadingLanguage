@@ -126,7 +126,7 @@ BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 
     ShaderInstance *parent = group()[layer];
     llvm::Value *trueval = ll.constant_bool(true);
-    llvm::Value *layerfield = layer_run_ptr(layer_remap(layer));
+    llvm::Value *layerfield = layer_run_ref(layer_remap(layer));
     llvm::BasicBlock *then_block = NULL, *after_block = NULL;
     if (! unconditional) {
         llvm::Value *executed = ll.op_load (layerfield);

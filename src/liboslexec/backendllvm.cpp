@@ -274,9 +274,7 @@ BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Special case for params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
-        llvm::Value *result = ll.GEP (groupdata_ptr(), 0, fieldnum);
-        result = ll.ptr_to_cast (result, llvm_type(sym.typespec().elementtype()));
-        return result;
+        return groupdata_field_ptr (fieldnum, sym.typespec().elementtype().simpletype());
     }
 
     std::string mangled_name = dealiased->mangled();
@@ -639,10 +637,38 @@ BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
 
 
 llvm::Value *
-BackendLLVM::layer_run_ptr (int layer)
+BackendLLVM::groupdata_field_ref (int fieldnum)
 {
-    llvm::Value *layer_run = ll.GEP (groupdata_ptr(), 0, 0);
+    return ll.GEP (groupdata_ptr(), 0, fieldnum);
+}
+
+
+llvm::Value *
+BackendLLVM::groupdata_field_ptr (int fieldnum, TypeDesc type)
+{
+    llvm::Value *result = ll.void_ptr (groupdata_field_ref (fieldnum));
+    if (type != TypeDesc::UNKNOWN)
+        result = ll.ptr_to_cast (result, llvm_type(type));
+    return result;
+}
+
+
+llvm::Value *
+BackendLLVM::layer_run_ref (int layer)
+{
+    int fieldnum = 0; // field 0 is the layer_run array
+    llvm::Value *layer_run = groupdata_field_ref (fieldnum);
     return ll.GEP (layer_run, 0, layer);
+}
+
+
+
+llvm::Value *
+BackendLLVM::userdata_initialized_ref (int userdata_index)
+{
+    int fieldnum = 1; // field 1 is the userdata_initialized array
+    llvm::Value *userdata_initiazlied = groupdata_field_ref (fieldnum);
+    return ll.GEP (userdata_initiazlied, 0, userdata_index);
 }
 
 

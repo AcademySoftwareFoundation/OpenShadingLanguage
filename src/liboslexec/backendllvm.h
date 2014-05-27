@@ -272,7 +272,7 @@ public:
     /// data that holds all the shader params.
     llvm::Type *llvm_type_groupdata_ptr ();
 
-    /// Return the ShaderGlobals pointer.
+    /// Return the group data pointer.
     ///
     llvm::Value *groupdata_ptr () const { return m_llvm_groupdata_ptr; }
 
@@ -282,9 +282,21 @@ public:
         return ll.void_ptr (m_llvm_groupdata_ptr);
     }
 
-    /// Return a ref to where the "layer_run" flag is stored for the
-    /// named layer.
-    llvm::Value *layer_run_ptr (int layer);
+    /// Return a reference to the specified field within the group data.
+    llvm::Value *groupdata_field_ref (int fieldnum);
+
+    /// Return a pointer to the specified field within the group data,
+    /// optionally cast to pointer to a particular data type.
+    llvm::Value *groupdata_field_ptr (int fieldnum,
+                                      TypeDesc type = TypeDesc::UNKNOWN);
+
+    /// Return a ref to the bool where the "layer_run" flag is stored for
+    /// the specified layer.
+    llvm::Value *layer_run_ref (int layer);
+
+    /// Return a ref to the bool where the "userdata_initialized" flag is
+    /// stored for the specified userdata index.
+    llvm::Value *userdata_initialized_ref (int userdata_index=0);
 
     /// Generate LLVM code to zero out the variable (including derivs)
     ///

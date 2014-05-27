@@ -1108,6 +1108,13 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(int **)val = n ? &group->m_userdata_offsets[0] : NULL;
         return true;
     }
+    if (name == "userdata_derivs" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_userdata_derivs.size();
+        *(char **)val = n ? &group->m_userdata_derivs[0] : NULL;
+        return true;
+    }
     return false;
 }
 
@@ -1890,9 +1897,11 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
     group.m_userdata_names.reserve (num_userdata);
     group.m_userdata_types.reserve (num_userdata);
     group.m_userdata_offsets.resize (num_userdata, 0);
-    BOOST_FOREACH (const NameAndTypeDesc& n, rop.m_userdata_needed) {
-        group.m_userdata_names.push_back (n.first);
-        group.m_userdata_types.push_back (n.second);
+    group.m_userdata_derivs.reserve (num_userdata);
+    BOOST_FOREACH (const UserDataNeeded& n, rop.m_userdata_needed) {
+        group.m_userdata_names.push_back (n.name);
+        group.m_userdata_types.push_back (n.type);
+        group.m_userdata_derivs.push_back (n.derivs);
     }
 
     BackendLLVM lljitter (*this, group, ctx);

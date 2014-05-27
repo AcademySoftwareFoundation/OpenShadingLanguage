@@ -517,17 +517,21 @@ test_group_attributes (ShaderGroup *group)
         ustring *userdata_names = NULL;
         TypeDesc *userdata_types = NULL;
         int *userdata_offsets = NULL;
+        bool *userdata_derivs = NULL;
         shadingsys->getattribute (group, "userdata_names",
                                   TypeDesc::PTR, &userdata_names);
         shadingsys->getattribute (group, "userdata_types",
                                   TypeDesc::PTR, &userdata_types);
         shadingsys->getattribute (group, "userdata_offsets",
                                   TypeDesc::PTR, &userdata_offsets);
+        shadingsys->getattribute (group, "userdata_derivs",
+                                  TypeDesc::PTR, &userdata_derivs);
         DASSERT (userdata_names && userdata_types && userdata_offsets);
         for (int i = 0; i < nuser; ++i)
             std::cout << "    " << userdata_names[i] << ' '
                       << userdata_types[i] << "  offset="
-                      << userdata_offsets[i] << "\n";
+                      << userdata_offsets[i] << " deriv="
+                      << userdata_derivs[i] << "\n";
     }
 }
 

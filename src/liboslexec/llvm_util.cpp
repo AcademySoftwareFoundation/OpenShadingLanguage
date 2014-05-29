@@ -1064,20 +1064,20 @@ LLVM_Util::mark_fast_func_call (llvm::Value *funccall)
 
 
 void
-LLVM_Util::op_branch (llvm::BasicBlock *dest)
+LLVM_Util::op_branch (llvm::BasicBlock *block)
 {
-    builder().CreateBr (dest);
-    set_insert_point (dest);
+    builder().CreateBr (block);
+    set_insert_point (block);
 }
 
 
 
 void
-LLVM_Util::op_branch (llvm::Value *cond, llvm::BasicBlock *dest,
-                      llvm::BasicBlock *otherdest)
+LLVM_Util::op_branch (llvm::Value *cond, llvm::BasicBlock *trueblock,
+                      llvm::BasicBlock *falseblock)
 {
-    builder().CreateCondBr (cond, dest, otherdest);
-    set_insert_point (dest);
+    builder().CreateCondBr (cond, trueblock, falseblock);
+    set_insert_point (trueblock);
 }
 
 

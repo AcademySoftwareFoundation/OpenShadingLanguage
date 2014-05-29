@@ -388,15 +388,15 @@ public:
     /// from a void function.
     void op_return (llvm::Value *retval=NULL);
 
-    /// Create a branch instruction to dest and establish that as the as the
-    /// new code insertion point.
-    void op_branch (llvm::BasicBlock *dest);
+    /// Create a branch instruction to block and establish that as the as
+    /// the new code insertion point.
+    void op_branch (llvm::BasicBlock *block);
 
-    /// Create a conditional branch instruction to dest if cond is true, to
-    /// otherdest if cond is false, and establish dest as the new insertion
-    /// point).
-    void op_branch (llvm::Value *cond, llvm::BasicBlock *dest,
-                    llvm::BasicBlock *otherdest);
+    /// Create a conditional branch instruction to trueblock if cond is
+    /// true, to falseblock if cond is false, and establish trueblock as the
+    /// new insertion point).
+    void op_branch (llvm::Value *cond, llvm::BasicBlock *trueblock,
+                    llvm::BasicBlock *falseblock);
 
     /// Generate code for a memset.
     void op_memset (llvm::Value *ptr, int val, int len, int align=1);

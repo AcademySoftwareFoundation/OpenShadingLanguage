@@ -178,6 +178,9 @@ public:
     /// Retrieve a callable pointer to the JITed version of a function.
     void *getPointerToFunction (llvm::Function *func);
 
+    /// Wrap ExecutionEngine::InstallLazyFunctionCreator.
+    void InstallLazyFunctionCreator (void* (*P)(const std::string &));
+
     /// Setup LLVM optimization passes.
     void setup_optimization_passes (int optlevel);
 

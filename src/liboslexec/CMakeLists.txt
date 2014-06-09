@@ -134,7 +134,7 @@ TARGET_LINK_LIBRARIES ( oslexec
                         ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
                         ${LLVM_LIBRARY} ${LLVM_MCJIT_LIBRARY} ${EXTRA_OSLEXEC_LIBRARIES})
-ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslcexec.map")
+ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslexec.map")
 LINK_ILMBASE ( oslexec )
 
 if (BUILDSTATIC)

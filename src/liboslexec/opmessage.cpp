@@ -49,11 +49,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opmessage_cpp_dummy = 1;
-
-
 
 #define USTR(cstr) (*((ustring *)&cstr))
 

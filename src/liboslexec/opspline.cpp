@@ -92,12 +92,6 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opspline_cpp_dummy = 1;
-
-
-
 const Spline::SplineBasis *Spline::getSplineBasis(const ustring &basis_name)
 {
     int basis_type = -1;

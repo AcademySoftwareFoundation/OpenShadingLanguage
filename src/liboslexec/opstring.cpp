@@ -49,11 +49,6 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opstring_cpp_dummy = 1;
-
-
 // Heavy lifting of OSL regex operations.
 OSL_SHADEOP int
 osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject_,

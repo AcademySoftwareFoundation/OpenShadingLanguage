@@ -127,21 +127,6 @@ static ustring op_compassign("compassign");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 
-// Trickery to force linkage of files when building static libraries.
-extern int opclosure_cpp_dummy, opcolor_cpp_dummy;
-extern int opmessage_cpp_dummy, opnoise_cpp_dummy;
-extern int opspline_cpp_dummy, opstring_cpp_dummy;
-#ifdef OSL_LLVM_NO_BITCODE
-extern int llvm_ops_cpp_dummy;
-#endif
-int *force_osl_op_linkage[] = {
-    &opclosure_cpp_dummy, &opcolor_cpp_dummy, &opmessage_cpp_dummy,
-    &opnoise_cpp_dummy, &opspline_cpp_dummy,  &opstring_cpp_dummy,
-#ifdef OSL_LLVM_NO_BITCODE
-    &llvm_ops_cpp_dummy
-#endif
-};
-
 
 struct HelperFuncRecord {
     const char *argtypes;
@@ -165,7 +150,6 @@ initialize_llvm_helper_function_map ()
     spin_lock lock (llvm_helper_function_map_mutex);
     if (llvm_helper_function_map_initialized())
         return;
-    opnoise_cpp_dummy = 1;
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name);
 #include "builtindecl.h"

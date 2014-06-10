@@ -49,10 +49,6 @@ using OIIO::expm1;
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opcolor_cpp_dummy = 1;
-
 
 namespace {
 

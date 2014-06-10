@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 
+#include <boost/unordered_map.hpp>
+
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/filesystem.h>
@@ -37,6 +39,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "backendllvm.h"
+
+// Create extrenal declarations for all built-in funcs we may call from LLVM
+#define DECL(name,signature) extern "C" void name();
+#include "builtindecl.h"
+#undef DECL
+
 
 /*
 This whole file is concerned with taking our post-optimized OSO
@@ -135,347 +143,47 @@ int *force_osl_op_linkage[] = {
 };
 
 
-#define NOISE_IMPL(name)                        \
-    "osl_" #name "_ff",  "ff",                  \
-    "osl_" #name "_fff", "fff",                 \
-    "osl_" #name "_fv",  "fv",                  \
-    "osl_" #name "_fvf", "fvf",                 \
-    "osl_" #name "_vf",  "xvf",                 \
-    "osl_" #name "_vff", "xvff",                \
-    "osl_" #name "_vv",  "xvv",                 \
-    "osl_" #name "_vvf", "xvvf"
-
-#define NOISE_DERIV_IMPL(name)                  \
-    "osl_" #name "_dfdf",   "xXX",              \
-    "osl_" #name "_dfdff",  "xXXf",             \
-    "osl_" #name "_dffdf",  "xXfX",             \
-    "osl_" #name "_dfdfdf", "xXXX",             \
-    "osl_" #name "_dfdv",   "xXv",              \
-    "osl_" #name "_dfdvf",  "xXvf",             \
-    "osl_" #name "_dfvdf",  "xXvX",             \
-    "osl_" #name "_dfdvdf", "xXvX",             \
-    "osl_" #name "_dvdf",   "xvX",              \
-    "osl_" #name "_dvdff",  "xvXf",             \
-    "osl_" #name "_dvfdf",  "xvfX",             \
-    "osl_" #name "_dvdfdf", "xvXX",             \
-    "osl_" #name "_dvdv",   "xvv",              \
-    "osl_" #name "_dvdvf",  "xvvf",             \
-    "osl_" #name "_dvvdf",  "xvvX",             \
-    "osl_" #name "_dvdvdf", "xvvX"
-
-#define GENERIC_NOISE_DERIV_IMPL(name)          \
-    "osl_" #name "_dfdf",   "xsXXXX",           \
-    "osl_" #name "_dfdfdf", "xsXXXXX",          \
-    "osl_" #name "_dfdv",   "xsXXXX",           \
-    "osl_" #name "_dfdvdf", "xsXXXXX",          \
-    "osl_" #name "_dvdf",   "xsXXXX",           \
-    "osl_" #name "_dvdfdf", "xsXXXXX",          \
-    "osl_" #name "_dvdv",   "xsXXXX",           \
-    "osl_" #name "_dvdvdf", "xsXXXXX"
-
-#define PNOISE_IMPL(name)                       \
-    "osl_" #name "_fff",   "fff",               \
-    "osl_" #name "_fffff", "fffff",             \
-    "osl_" #name "_fvv",   "fvv",               \
-    "osl_" #name "_fvfvf", "fvfvf",             \
-    "osl_" #name "_vff",   "xvff",              \
-    "osl_" #name "_vffff", "xvffff",            \
-    "osl_" #name "_vvv",   "xvvv",              \
-    "osl_" #name "_vvfvf", "xvvfvf"
-
-#define PNOISE_DERIV_IMPL(name)                 \
-    "osl_" #name "_dfdff",    "xXXf",           \
-    "osl_" #name "_dfdffff",  "xXXfff",         \
-    "osl_" #name "_dffdfff",  "xXfXff",         \
-    "osl_" #name "_dfdfdfff", "xXXXff",         \
-    "osl_" #name "_dfdvv",    "xXXv",           \
-    "osl_" #name "_dfdvfvf",  "xXvfvf",         \
-    "osl_" #name "_dfvdfvf",  "xXvXvf",         \
-    "osl_" #name "_dfdvdfvf", "xXvXvf",         \
-    "osl_" #name "_dvdff",    "xvXf",           \
-    "osl_" #name "_dvdffff",  "xvXfff",         \
-    "osl_" #name "_dvfdfff",  "xvfXff",         \
-    "osl_" #name "_dvdfdfff", "xvXXff",         \
-    "osl_" #name "_dvdvv",    "xvvv",           \
-    "osl_" #name "_dvdvfvf",  "xvvfvf",         \
-    "osl_" #name "_dvvdfvf",  "xvvXvf",         \
-    "osl_" #name "_dvdvdfvf", "xvvXvf"
-
-#define GENERIC_PNOISE_DERIV_IMPL(name)         \
-    "osl_" #name "_dfdff",    "xsXXfXX",        \
-    "osl_" #name "_dfdfdfff", "xsXXXffXX",      \
-    "osl_" #name "_dfdvv",    "xsXXvXX",        \
-    "osl_" #name "_dfdvdfvf", "xsXvXvfXX",      \
-    "osl_" #name "_dvdff",    "xsvXfXX",        \
-    "osl_" #name "_dvdfdfff", "xsvXXffXX",      \
-    "osl_" #name "_dvdvv",    "xsvvvXX",        \
-    "osl_" #name "_dvdvdfvf", "xsvvXvfXX"
-
-#define UNARY_OP_IMPL(name)                     \
-    "osl_" #name "_ff",   "ff",                 \
-    "osl_" #name "_dfdf", "xXX",                \
-    "osl_" #name "_vv",   "xXX",                \
-    "osl_" #name "_dvdv", "xXX"
-
-#define BINARY_OP_IMPL(name)                    \
-    "osl_" #name "_fff",    "fff",              \
-    "osl_" #name "_dfdfdf", "xXXX",             \
-    "osl_" #name "_dffdf",  "xXfX",             \
-    "osl_" #name "_dfdff",  "xXXf",             \
-    "osl_" #name "_vvv",    "xXXX",             \
-    "osl_" #name "_dvdvdv", "xXXX",             \
-    "osl_" #name "_dvvdv",  "xXXX",             \
-    "osl_" #name "_dvdvv",  "xXXX"
-
-/// Table of all functions that we may call from the LLVM-compiled code.
-/// Alternating name and argument list, much like we use in oslc's type
-/// checking.  Note that nothing that's compiled into llvm_ops.cpp ought
-/// to need a declaration here.
-static const char *llvm_helper_function_table[] = {
-    // TODO: remove these
-    "osl_add_closure_closure", "CXCC",
-    "osl_mul_closure_float", "CXCf",
-    "osl_mul_closure_color", "CXCc",
-    "osl_allocate_closure_component", "CXiii",
-    "osl_allocate_weighted_closure_component", "CXiiiX",
-    "osl_closure_to_string", "sXC",
-    "osl_format", "ss*",
-    "osl_printf", "xXs*",
-    "osl_error", "xXs*",
-    "osl_warning", "xXs*",
-    "osl_incr_layers_executed", "xX",
-
-    NOISE_IMPL(cellnoise),
-    NOISE_DERIV_IMPL(cellnoise),
-    NOISE_IMPL(noise),
-    NOISE_DERIV_IMPL(noise),
-    NOISE_IMPL(snoise),
-    NOISE_DERIV_IMPL(snoise),
-    NOISE_IMPL(simplexnoise),
-    NOISE_DERIV_IMPL(simplexnoise),
-    NOISE_IMPL(usimplexnoise),
-    NOISE_DERIV_IMPL(usimplexnoise),
-    GENERIC_NOISE_DERIV_IMPL(gabornoise),
-    GENERIC_NOISE_DERIV_IMPL(genericnoise),
-    PNOISE_IMPL(pcellnoise),
-    PNOISE_DERIV_IMPL(pcellnoise),
-    PNOISE_IMPL(pnoise),
-    PNOISE_DERIV_IMPL(pnoise),
-    PNOISE_IMPL(psnoise),
-    PNOISE_DERIV_IMPL(psnoise),
-    GENERIC_PNOISE_DERIV_IMPL(gaborpnoise),
-    GENERIC_PNOISE_DERIV_IMPL(genericpnoise),
-    "osl_noiseparams_clear", "xX",
-    "osl_noiseparams_set_anisotropic", "xXi",
-    "osl_noiseparams_set_do_filter", "xXi",
-    "osl_noiseparams_set_direction", "xXv",
-    "osl_noiseparams_set_bandwidth", "xXf",
-    "osl_noiseparams_set_impulses", "xXf",
-
-    "osl_spline_fff", "xXXXXii",
-    "osl_spline_dfdfdf", "xXXXXii",
-    "osl_spline_dfdff", "xXXXXii",
-    "osl_spline_dffdf", "xXXXXii",
-    "osl_spline_vfv", "xXXXXii",
-    "osl_spline_dvdfdv", "xXXXXii",
-    "osl_spline_dvdfv", "xXXXXii",
-    "osl_spline_dvfdv", "xXXXXii",
-    "osl_splineinverse_fff", "xXXXXii",
-    "osl_splineinverse_dfdfdf", "xXXXXii",
-    "osl_splineinverse_dfdff", "xXXXXii",
-    "osl_splineinverse_dffdf", "xXXXXii",
-    "osl_setmessage", "xXsLXisi",
-    "osl_getmessage", "iXssLXiisi",
-    "osl_pointcloud_search", "iXsXfiiXXii*",
-    "osl_pointcloud_get", "iXsXisLX",
-    "osl_pointcloud_write", "iXsXiXXX",
-    "osl_pointcloud_write_helper", "xXXXisLX",
-    "osl_blackbody_vf", "xXXf",
-    "osl_wavelength_color_vf", "xXXf",
-    "osl_luminance_fv", "xXXX",
-    "osl_luminance_dfdv", "xXXX",
-    "osl_split", "isXsii",
-
-    UNARY_OP_IMPL(sin),
-    UNARY_OP_IMPL(cos),
-    UNARY_OP_IMPL(tan),
-
-    UNARY_OP_IMPL(asin),
-    UNARY_OP_IMPL(acos),
-    UNARY_OP_IMPL(atan),
-    BINARY_OP_IMPL(atan2),
-    UNARY_OP_IMPL(sinh),
-    UNARY_OP_IMPL(cosh),
-    UNARY_OP_IMPL(tanh),
-
-    "osl_sincos_fff", "xfXX",
-    "osl_sincos_dfdff", "xXXX",
-    "osl_sincos_dffdf", "xXXX",
-    "osl_sincos_dfdfdf", "xXXX",
-    "osl_sincos_vvv", "xXXX",
-    "osl_sincos_dvdvv", "xXXX",
-    "osl_sincos_dvvdv", "xXXX",
-    "osl_sincos_dvdvdv", "xXXX",
-
-    UNARY_OP_IMPL(log),
-    UNARY_OP_IMPL(log2),
-    UNARY_OP_IMPL(log10),
-    UNARY_OP_IMPL(logb),
-    UNARY_OP_IMPL(exp),
-    UNARY_OP_IMPL(exp2),
-    UNARY_OP_IMPL(expm1),
-    BINARY_OP_IMPL(pow),
-    UNARY_OP_IMPL(erf),
-    UNARY_OP_IMPL(erfc),
-
-    "osl_pow_vvf", "xXXf",
-    "osl_pow_dvdvdf", "xXXX",
-    "osl_pow_dvvdf", "xXXX",
-    "osl_pow_dvdvf", "xXXf",
-
-    UNARY_OP_IMPL(sqrt),
-    UNARY_OP_IMPL(inversesqrt),
-
-    "osl_floor_ff", "ff",
-    "osl_floor_vv", "xXX",
-    "osl_ceil_ff", "ff",
-    "osl_ceil_vv", "xXX",
-    "osl_round_ff", "ff",
-    "osl_round_vv", "xXX",
-    "osl_trunc_ff", "ff",
-    "osl_trunc_vv", "xXX",
-    "osl_sign_ff", "ff",
-    "osl_sign_vv", "xXX",
-    "osl_step_fff", "fff",
-    "osl_step_vvv", "xXXX",
-
-    "osl_isnan_if", "if",
-    "osl_isinf_if", "if",
-    "osl_isfinite_if", "if",
-    "osl_abs_ii", "ii",
-    "osl_fabs_ii", "ii",
-
-    UNARY_OP_IMPL(abs),
-    UNARY_OP_IMPL(fabs),
-
-    BINARY_OP_IMPL(fmod),
-
-    "osl_smoothstep_ffff", "ffff",
-    "osl_smoothstep_dfffdf", "xXffX",
-    "osl_smoothstep_dffdff", "xXfXf",
-    "osl_smoothstep_dffdfdf", "xXfXX",
-    "osl_smoothstep_dfdfff", "xXXff",
-    "osl_smoothstep_dfdffdf", "xXXfX",
-    "osl_smoothstep_dfdfdff", "xXXXf",
-    "osl_smoothstep_dfdfdfdf", "xXXXX",
-
-    "osl_transform_vmv", "xXXX",
-    "osl_transform_dvmdv", "xXXX",
-    "osl_transformv_vmv", "xXXX",
-    "osl_transformv_dvmdv", "xXXX",
-    "osl_transformn_vmv", "xXXX",
-    "osl_transformn_dvmdv", "xXXX",
-
-    "osl_transform_triple", "iXXiXiXXi",
-    "osl_transform_triple_nonlinear", "iXXiXiXXi",
-
-    "osl_mul_mm", "xXXX",
-    "osl_mul_mf", "xXXf",
-    "osl_mul_m_ff", "xXff",
-    "osl_div_mm", "xXXX",
-    "osl_div_mf", "xXXf",
-    "osl_div_fm", "xXfX",
-    "osl_div_m_ff", "xXff",
-    "osl_prepend_matrix_from", "iXXs",
-    "osl_get_from_to_matrix", "iXXss",
-    "osl_transpose_mm", "xXX",
-    "osl_determinant_fm", "fX",
-
-    "osl_dot_fvv", "fXX",
-    "osl_dot_dfdvdv", "xXXX",
-    "osl_dot_dfdvv", "xXXX",
-    "osl_dot_dfvdv", "xXXX",
-    "osl_cross_vvv", "xXXX",
-    "osl_cross_dvdvdv", "xXXX",
-    "osl_cross_dvdvv", "xXXX",
-    "osl_cross_dvvdv", "xXXX",
-    "osl_length_fv", "fX",
-    "osl_length_dfdv", "xXX",
-    "osl_distance_fvv", "fXX",
-    "osl_distance_dfdvdv", "xXXX",
-    "osl_distance_dfdvv", "xXXX",
-    "osl_distance_dfvdv", "xXXX",
-    "osl_normalize_vv", "xXX",
-    "osl_normalize_dvdv", "xXX",
-    "osl_prepend_color_from", "xXXs",
-
-    "osl_concat_sss", "sss",
-    "osl_strlen_is", "is",
-    "osl_startswith_iss", "iss",
-    "osl_endswith_iss", "iss",
-    "osl_stoi_is", "is",
-    "osl_stof_fs", "fs",
-    "osl_substr_ssii", "ssii",
-    "osl_regex_impl", "iXsXisi",
-
-    "osl_texture_clear", "xX",
-    "osl_texture_set_firstchannel", "xXi",
-    "osl_texture_set_swrap", "xXs",
-    "osl_texture_set_twrap", "xXs",
-    "osl_texture_set_rwrap", "xXs",
-    "osl_texture_set_stwrap", "xXs",
-    "osl_texture_set_swrap_code", "xXi",
-    "osl_texture_set_twrap_code", "xXi",
-    "osl_texture_set_rwrap_code", "xXi",
-    "osl_texture_set_stwrap_code", "xXi",
-    "osl_texture_set_sblur", "xXf",
-    "osl_texture_set_tblur", "xXf",
-    "osl_texture_set_rblur", "xXf",
-    "osl_texture_set_stblur", "xXf",
-    "osl_texture_set_swidth", "xXf",
-    "osl_texture_set_twidth", "xXf",
-    "osl_texture_set_rwidth", "xXf",
-    "osl_texture_set_stwidth", "xXf",
-    "osl_texture_set_fill", "xXf",
-    "osl_texture_set_time", "xXf",
-    "osl_texture_set_interp", "xXs",
-    "osl_texture_set_interp_code", "xXi",
-    "osl_texture_set_subimage", "xXi",
-    "osl_texture_set_subimagename", "xXs",
-    "osl_texture_set_missingcolor_arena", "xXX",
-    "osl_texture_set_missingcolor_alpha", "xXif",
-    "osl_texture", "iXsXffffffiXXX",
-    "osl_texture_alpha", "iXsXffffffiXXXXXX",
-    "osl_texture3d", "iXsXXXXXiXXXX",
-    "osl_texture3d_alpha", "iXsXXXXXiXXXXXXXX",
-    "osl_environment", "iXsXXXXiXXXXXX",
-    "osl_get_textureinfo", "iXXXiiiX",
-
-    "osl_trace_clear", "xX",
-    "osl_trace_set_mindist", "xXf",
-    "osl_trace_set_maxdist", "xXf",
-    "osl_trace_set_shade", "xXi",
-    "osl_trace_set_traceset", "xXs",
-    "osl_trace", "iXXXXXXXX",
-
-    "osl_get_attribute", "iXiXXiiXX",
-    "osl_calculatenormal", "xXXX",
-    "osl_area", "fX",
-    "osl_filterwidth_fdf", "fX",
-    "osl_filterwidth_vdv", "xXX",
-    "osl_dict_find_iis", "iXiX",
-    "osl_dict_find_iss", "iXXX",
-    "osl_dict_next", "iXi",
-    "osl_dict_value", "iXiXLX",
-    "osl_raytype_name", "iXX",
-    "osl_raytype_bit", "iXi",
-    "osl_bind_interpolated_param", "iXXLiXiXiXi",
-    "osl_range_check", "iiiXXi",
-    "osl_naninf_check", "xiXiXXiXiiX",
-    "osl_uninit_check", "xLXXXiXii",
-
-    NULL
+struct HelperFuncRecord {
+    const char *argtypes;
+    void (*function)();
+    HelperFuncRecord (const char *argtypes=NULL, void (*function)()=NULL)
+        : argtypes(argtypes), function(function) {}
 };
+
+typedef boost::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
+HelperFuncMap llvm_helper_function_map;
+atomic_int llvm_helper_function_map_initialized (0);
+spin_mutex llvm_helper_function_map_mutex;
+
+
+
+static void
+initialize_llvm_helper_function_map ()
+{
+    if (llvm_helper_function_map_initialized)
+        return;  // already done
+    spin_lock lock (llvm_helper_function_map_mutex);
+    if (llvm_helper_function_map_initialized())
+        return;
+    opnoise_cpp_dummy = 1;
+#define DECL(name,signature) \
+    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name);
+#include "builtindecl.h"
+#undef DECL
+
+    llvm_helper_function_map_initialized = 1;
+}
+
+
+
+void *
+helper_function_lookup (const std::string &name)
+{
+    HelperFuncMap::const_iterator i = llvm_helper_function_map.find (name);
+    if (i == llvm_helper_function_map.end())
+        return NULL;
+    return (void *) i->second.function;
+}
 
 
 
@@ -1001,7 +709,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 
     // Set up a new IR builder
     ll.new_builder (entry_bb);
-#if 0 /* helpful for debuggin */
+#if 0 /* helpful for debugging */
     if (llvm_debug() && groupentry)
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
     if (llvm_debug())
@@ -1166,10 +874,14 @@ BackendLLVM::initialize_llvm_group ()
     m_llvm_type_closure_component = NULL;
     m_llvm_type_closure_component_attr = NULL;
 
-    for (int i = 0;  llvm_helper_function_table[i];  i += 2) {
-        const char *funcname = llvm_helper_function_table[i];
+    initialize_llvm_helper_function_map();
+    ll.InstallLazyFunctionCreator (helper_function_lookup);
+
+    for (HelperFuncMap::iterator i = llvm_helper_function_map.begin(),
+         e = llvm_helper_function_map.end(); i != e; ++i) {
+        const char *funcname = i->first.c_str();
         bool varargs = false;
-        const char *types = llvm_helper_function_table[i+1];
+        const char *types = i->second.argtypes;
         int advance;
         TypeSpec rettype = OSLCompilerImpl::type_from_code (types, &advance);
         types += advance;

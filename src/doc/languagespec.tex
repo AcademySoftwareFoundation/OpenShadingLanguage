@@ -2878,16 +2878,16 @@ Absolute value of $x$.  (The two functions are synonyms.)
 Returns 1 if $x>0$, -1 if $x<0$, 0 if $x=0$.
 \apiend
 
-\apiitem{\emph{type} {\ce floor} (float x) \\
+\apiitem{\emph{type} {\ce floor} (\emph{type} x) \\
 \emph{type} {\ce ceil} (\emph{type} x) \\
 \emph{type} {\ce round} (\emph{type} x) \\
 \emph{type} {\ce trunc} (\emph{type} x) }
 \indexapi{floor()} \indexapi{ceil()} \indexapi{round()} \indexapi{trunc()}
 
-Various rouinding methods: {\cf floor} returns the highest integer less
-than or equal to $x$; {\cf ceil} returns the lowest integer greater than
+Various rouinding methods: {\cf floor} returns the largest integer less
+than or equal to $x$; {\cf ceil} returns the smallest integer greater than
 or equal to $x$; {\cf round} returns the closest integer to $x$, in
-either direction; and {\cf trunc} returns the integer part of $x$
+either direction; and {\cf trunc} returns the integral part of $x$
 (equivalent to {\cf floor} if $x>0$ and {\cf ceil} if $x<0$).
 \apiend
 

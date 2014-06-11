@@ -518,6 +518,15 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
 
 
 void
+LLVM_Util::InstallLazyFunctionCreator (void* (*P)(const std::string &))
+{
+    llvm::ExecutionEngine *exec = execengine();
+    exec->InstallLazyFunctionCreator (P);
+}
+
+
+
+void
 LLVM_Util::setup_optimization_passes (int optlevel)
 {
     ASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);

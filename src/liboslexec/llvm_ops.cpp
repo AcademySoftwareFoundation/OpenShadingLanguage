@@ -1687,19 +1687,3 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
     return 0;  // no such user data
 }
 
-
-
-
-
-
-#ifdef OSL_LLVM_NO_BITCODE
-OSL_NAMESPACE_ENTER
-namespace pvt {
-
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int llvm_ops_cpp_dummy = 1;
-
-} // end namespace pvt
-OSL_NAMESPACE_EXIT
-#endif

@@ -1,6 +1,3 @@
-// TODO: build this declaration into the core
-closure color oren_nayar(normal N, float sigma) [[ int builtin = 1 ]];
-
 surface rough_matte(
     float Kd = 1,
     float sigma = 0.1,

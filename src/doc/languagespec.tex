@@ -603,12 +603,12 @@ For example, a surface shader may compute its result like this:
 
 \begin{code}
     color paint = texture ("file.tx", u, v);
-    Ci = paint * lambert (N);
+    Ci = paint * diffuse (N);
 \end{code}
 
 \noindent In this example, the variable {\cf paint} will take on a
 specific numeric value (by looking up from a texture map).  But the {\cf
-  lambert()} function returns a \colorclosure, not a definite numeric
+  diffuse()} function returns a \colorclosure, not a definite numeric
 \color.  The output variable {\cf Ci} that represents the appearance of
 the surface is also a \colorclosure, whose numeric value is not known
 yet, except that it will be the product of {\cf paint} and a Lambertian
@@ -4317,14 +4317,14 @@ values indicate a smoother surface).
 \apiend
 
 
-\apiitem{\colorclosure\ {\ce orennayar} (normal N, float roughness)}
-\indexapi{orennayar()}
+\apiitem{\colorclosure\ {\ce oren_nayar} (normal N, float sigma)}
+\indexapi{oren_nayar()}
 
 Returns a \colorclosure that represents the diffuse reflectance of a
 rough surface, implementing the Oren-Nayar reflectance formula.  The
-\emph{roughness} parameter indicates how smooth or rough the
+\emph{sigma} parameter indicates how smooth or rough the
 microstructure of the material is, with 0 being perfectly smooth and
-giving an appearance identical to {\cf lambert()}.
+giving an appearance identical to {\cf diffuse()}.
 
 The Oren-Nayar reflection model is described in  M.\ Oren and S.\ K.\
 Nayar, ``Generalization of Lambert's Reflectance Model,'' Proceedings of
@@ -4335,13 +4335,13 @@ Like all \closurecolors, the return ``value'' is symbolic and is may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
 fact that the shader cannot examine the numeric values of the
-\colorclosure, you may program \emph{as if} {\cf orennayar()} was
+\colorclosure, you may program \emph{as if} {\cf oren_nayar()} was
 implemented as follows:
 
 \begin{code}
     normal Nf = faceforward (normalize(N), I);
     vector V = -normalize(I);
-    float sigma2 = roughness * roughness;
+    float sigma2 = sigma * sigma;
     float A = 1 - 0.5 * sigma2 / (sigma2 + 0.33);
     float B = 0.45 * sigma2 / (sigma2 + 0.09);
     float  theta_r = acos (dot (V, Nf));         // Angle between V and N

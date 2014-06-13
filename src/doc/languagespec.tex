@@ -4788,6 +4788,13 @@ OSL, but is expected to include at a minimum \qkw{camera},
 exception that camera rays should be of class \qkw{camera} and no other.
 \apiend
 
+\apiitem{int {\ce backfacing} ()}
+\indexapi{backfacing()}
+Returns 1 if the surface is being sampled as if ``seen'' from the back
+of the surface (or the ``inside'' of a closed object). Returns 0 if seen
+from the ``front'' or the ``outside'' of a closed object.
+\apiend
+
 \apiitem{int {\ce isconnected} (\emph{type} parameter)}
 \indexapi{isconnected()}
 Returns {\cf 1} if the argument is a shader parameter and is connected

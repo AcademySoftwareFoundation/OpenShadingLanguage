@@ -503,6 +503,11 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
                     continue;
                 return false;
             }
+            // But still, if they differ in their lockgeom'edness, we can't
+            // merge the instances.
+            if (m_instoverrides[i].lockgeom() != b.m_instoverrides[i].lockgeom()) {
+                return false;
+            }
         }
     }
 

@@ -1279,9 +1279,12 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         int cind = inst()->args()[op.firstarg()+1];
         global_alias (inst()->args()[op.firstarg()], cind);
 
-        // If it's also never read before this assignment, just replace its
-        // default value entirely and get rid of the assignment.
-        if (R->firstread() > opnum) {
+        // If it's also never read before this assignment and isn't a
+        // designated renderer output (which we obviously must write!), just
+        // replace its default value entirely and get rid of the assignment.
+        if (R->firstread() > opnum &&
+                ! shadingsys().is_renderer_output (R->name()) &&
+                m_opt_elide_unconnected_outputs) {
             make_param_use_instanceval (R, "- written once, with a constant, before any reads");
             replace_param_value (R, A->data(), A->typespec());
             turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
@@ -1291,7 +1294,8 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 
     // If the output param will neither be read later in the shader nor
     // connected to a downstream layer, then we don't really need this
-    // assignment at all.
+    // assignment at all. Note that unread_after() does take into
+    // consideration whether it's a renderer output.
     if (unread_after(R,opnum)) {
         turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
         return true;

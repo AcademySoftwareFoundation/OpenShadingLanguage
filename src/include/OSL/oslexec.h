@@ -290,6 +290,18 @@ public:
     /// reference-counted opaque handle to the ShaderGroup.
     ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
 
+    /// Alternate way to specify a shader group. The group specification
+    /// syntax looks like this: (as a string, all whitespace is equivalent):
+    ///     param <typename> <paramname> <value>... [[hints]] ;
+    ///     shader <shadername> <layername> ;
+    ///     connect <layername>.<paramname> <layername>.<paramname> ;
+    /// For the sake of easy assembling on command lines, a comma ',' may
+    /// substitute for the semicolon as a separator, and the last separator
+    /// before the end of the string is optional.
+    ShaderGroupRef ShaderGroupBegin (string_view groupname,
+                                     string_view shaderusage,
+                                     string_view groupspec = string_view());
+
     /// Signal the end of a new shader group.
     ///
     bool ShaderGroupEnd (void);

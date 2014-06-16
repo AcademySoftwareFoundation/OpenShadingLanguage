@@ -22,7 +22,7 @@ ifeq ($(SP_OS), spinux1)
     platform=spinux1
     # put any gcc-4.4/spinux1 specific stuff here
     ifeq (${LLVM_DIRECTORY},)
-	LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.4
+	LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.4.1
     endif
 
     ifneq (,$(wildcard /usr/include/OpenEXR2))
@@ -42,6 +42,7 @@ ifeq ($(SP_OS), spinux1)
         -DLLVM_CUSTOM=1 \
 	-DLLVM_STATIC=1 \
 	-DEXTRA_OSLEXEC_LIBRARIES="/usr/lib64/libpthread.so" \
+	-DEXTRA_OSLEXEC_LIBRARIES="/usr/lib64/libcurses.so" \
         -DLLVM_VERSION=${LLVM_VERSION} \
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
 

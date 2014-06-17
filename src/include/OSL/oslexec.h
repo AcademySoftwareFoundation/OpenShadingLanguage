@@ -235,6 +235,8 @@ public:
     ///   ptr userdata_offsets       Retrieves a pointer to the array of
     ///                                 int describing the userdata offsets
     ///                                 within the heap.
+    ///   ustring pickle             Retrieves a serialized representation
+    ///                                 of the shader group declaration.
     bool getattribute (ShaderGroup *group, string_view name,
                        TypeDesc type, void *val);
     // Shortcuts for common types

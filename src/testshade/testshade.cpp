@@ -700,6 +700,12 @@ test_shade (int argc, const char *argv[])
     // End the group
     shadingsys->ShaderGroupEnd ();
 
+    if (verbose) {
+        std::string pickle;
+        shadingsys->getattribute (shadergroup.get(), "pickle", pickle);
+        std::cout << "Shader group:\n---\n" << pickle << "\n---\n";
+    }
+
     if (outputfiles.size() != 0)
         std::cout << "\n";
 

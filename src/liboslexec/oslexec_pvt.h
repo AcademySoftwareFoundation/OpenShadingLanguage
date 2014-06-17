@@ -588,6 +588,7 @@ private:
 
     friend class ShadingSystemImpl;
     friend class RuntimeOptimizer;
+    friend class OSL::ShaderGroup;
 };
 
 
@@ -832,6 +833,9 @@ public:
 
     /// Is the named symbol among the renderer outputs?
     bool is_renderer_output (ustring name) const;
+
+    /// Serialize/pickle a group description into text.
+    std::string serialize_group (ShaderGroup *group);
 
 private:
     void printstats () const;
@@ -1171,6 +1175,8 @@ public:
     void name (ustring name) { m_name = name; }
     ustring name () const { return m_name; }
 
+    std::string serialize () const;
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1181,7 +1187,7 @@ private:
     RunLLVMGroupFunc m_llvm_compiled_version;
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
-    mutex m_mutex;                   ///< Thread-safe optimization
+    mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
     bool m_unknown_textures_needed;
     std::vector<ustring> m_userdata_names;

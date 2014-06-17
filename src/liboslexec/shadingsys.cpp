@@ -1124,6 +1124,10 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(char **)val = n ? &group->m_userdata_derivs[0] : NULL;
         return true;
     }
+    if (name == "pickle" && type == TypeDesc::STRING) {
+        *(ustring *)val = ustring(group->serialize());
+        return true;
+    }
     return false;
 }
 
@@ -1808,6 +1812,14 @@ ShadingSystemImpl::state ()
         ++m_groups_to_compile_count;
     }
     return m_curgroup;
+}
+
+
+
+std::string
+ShadingSystemImpl::serialize_group (ShaderGroup *group)
+{
+    return group->serialize ();
 }
 
 

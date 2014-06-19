@@ -67,6 +67,8 @@ static bool debugnan = false;
 static bool debug_uninit = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
+static std::string groupname;
+static std::string groupspec;
 static std::string layername;
 static std::vector<std::string> connections;
 static ParamValueList params;
@@ -79,6 +81,8 @@ static std::string extraoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
+static ShaderGroupRef shadergroup;
+static std::string archivegroup;
 
 
 static void
@@ -224,6 +228,18 @@ action_reparam (int argc, const char *argv[])
 
 
 static void
+action_groupspec (int argc, const char *argv[])
+{
+    shadingsys->ShaderGroupEnd ();
+    if (verbose)
+        std::cout << "Processing group specification:\n---\n"
+                  << argv[1] << "\n---\n";
+    shadergroup = shadingsys->ShaderGroupBegin (groupname, "surface", argv[1]);
+}
+
+
+
+static void
 getargs (int argc, const char *argv[])
 {
     static bool help = false;
@@ -241,6 +257,7 @@ getargs (int argc, const char *argv[])
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
+                "--groupname %s", &groupname, "Set shader group name",
                 "--layer %s", &layername, "Set next layer name",
                 "--param %@ %s %s", &action_param, NULL, NULL,
                         "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
@@ -249,6 +266,10 @@ getargs (int argc, const char *argv[])
                     "Connect fromlayer fromoutput tolayer toinput",
                 "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
                         "Change a parameter (args: layername paramname value) (options: type=%s)",
+                "--group %@ %s", &action_groupspec, &groupspec,
+                        "Specify a full group command",
+                "--archivegroup %s", &archivegroup,
+                        "Archive the group to a given filename",
                 "--raytype %s", &raytype, "Set the raytype",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
@@ -260,7 +281,7 @@ getargs (int argc, const char *argv[])
                 "--options %s", &extraoptions, "Set extra OSL options",
 //                "-v", &verbose, "Verbose output",
                 NULL);
-    if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
+    if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage ();
         exit (EXIT_FAILURE);
@@ -659,7 +680,7 @@ test_shade (int argc, const char *argv[])
     // to be processed at the end.  Bear with us.
     
     // Start the shader group and grab a reference to it.
-    ShaderGroupRef shadergroup = shadingsys->ShaderGroupBegin ();
+    shadergroup = shadingsys->ShaderGroupBegin ();
 
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
@@ -681,6 +702,14 @@ test_shade (int argc, const char *argv[])
 
     // End the group
     shadingsys->ShaderGroupEnd ();
+
+    if (verbose) {
+        std::string pickle;
+        shadingsys->getattribute (shadergroup.get(), "pickle", pickle);
+        std::cout << "Shader group:\n---\n" << pickle << "\n---\n";
+    }
+    if (archivegroup.size())
+        shadingsys->archive_shadergroup (shadergroup.get(), archivegroup);
 
     if (outputfiles.size() != 0)
         std::cout << "\n";

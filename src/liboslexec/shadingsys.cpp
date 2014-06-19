@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 #include <fstream>
+#include <cstdlib>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -147,6 +148,15 @@ ShaderGroupRef
 ShadingSystem::ShaderGroupBegin (string_view groupname)
 {
     return m_impl->ShaderGroupBegin (groupname);
+}
+
+
+
+ShaderGroupRef
+ShadingSystem::ShaderGroupBegin (string_view groupname, string_view usage,
+                                 string_view groupspec)
+{
+    return m_impl->ShaderGroupBegin (groupname, usage, groupspec);
 }
 
 
@@ -319,6 +329,13 @@ ShadingSystem::renderer () const
     return m_impl->renderer();
 }
 
+
+
+bool
+ShadingSystem::archive_shadergroup (ShaderGroup *group, string_view filename)
+{
+    return m_impl->archive_shadergroup (group, filename);
+}
 
 
 
@@ -889,6 +906,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
     ATTR_SET_STRING ("opt_layername", m_opt_layername);
     ATTR_SET_STRING ("only_groupname", m_only_groupname);
+    ATTR_SET_STRING ("archive_groupname", m_archive_groupname);
+    ATTR_SET_STRING ("archive_filename", m_archive_filename);
 
     // cases for special handling
     if (name == "searchpath:shader" && type == TypeDesc::STRING) {
@@ -979,6 +998,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE_STRING ("debug_layername", m_debug_layername);
     ATTR_DECODE_STRING ("opt_layername", m_opt_layername);
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
+    ATTR_DECODE_STRING ("archive_groupname", m_archive_groupname);
+    ATTR_DECODE_STRING ("archive_filename", m_archive_filename);
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_DECODE ("compile_report", int, m_compile_report);
     ATTR_DECODE ("buffer_printf", int, m_buffer_printf);
@@ -1113,6 +1134,10 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
             optimize_group (*group);
         size_t n = group->m_userdata_derivs.size();
         *(char **)val = n ? &group->m_userdata_derivs[0] : NULL;
+        return true;
+    }
+    if (name == "pickle" && type == TypeDesc::STRING) {
+        *(ustring *)val = ustring(group->serialize());
         return true;
     }
     return false;
@@ -1447,6 +1472,13 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     m_in_group = false;
     m_group_use = ShadUseUnknown;
 
+    ustring groupname = m_curgroup->name();
+    if (groupname.size() && groupname == m_archive_groupname) {
+        std::string filename = m_archive_filename.string();
+        if (! filename.size())
+            filename = OIIO::Filesystem::filename (groupname.string()) + ".tar.gz";
+        archive_shadergroup (m_curgroup.get(), filename);
+    }
     return true;
 }
 
@@ -1585,6 +1617,210 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
 
 
 ShaderGroupRef
+ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
+                                     string_view usage,
+                                     string_view groupspec)
+{
+    ShaderGroupRef g = ShaderGroupBegin (groupname);
+    bool err = false;
+    std::string errdesc;
+    std::vector<int> intvals;
+    std::vector<float> floatvals;
+    std::vector<ustring> stringvals;
+    string_view p = groupspec;   // parse view
+    // std::cout << "!!!!!\n---\n" << groupspec << "\n---\n\n";
+    while (p.size()) {
+        Strutil::skip_whitespace (p);
+        if (! p.size())
+            break;
+        string_view keyword = Strutil::parse_word (p);
+
+        if (keyword == "shader") {
+            string_view shadername = Strutil::parse_identifier (p);
+            string_view layername = Strutil::parse_identifier (p);
+            Shader (usage, shadername, layername);
+            Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
+            Strutil::skip_whitespace (p);
+            continue;
+        }
+
+        if (keyword == "connect") {
+            string_view lay1 = Strutil::parse_identifier (p);
+            Strutil::parse_char (p, '.');
+            string_view param1 = Strutil::parse_identifier (p);
+            string_view lay2 = Strutil::parse_identifier (p);
+            Strutil::parse_char (p, '.');
+            string_view param2 = Strutil::parse_identifier (p);
+            ConnectShaders (lay1, param1, lay2, param2);
+            Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
+            Strutil::skip_whitespace (p);
+            continue;
+        }
+
+        // Remaining case -- it should be declaring a parameter.
+        string_view typestring;
+        if (keyword == "param") {
+            typestring = Strutil::parse_word (p);
+        } else if (TypeDesc(keyword.str().c_str()) != TypeDesc::UNKNOWN) {
+            // compatibility: let the 'param' keyword be optional, if it's
+            // obvious that it's a type name.
+            typestring = keyword;
+        } else {
+            err = true;
+            errdesc = Strutil::format ("Unknown statement (expected 'param', "
+                                       "'shader', or 'connect'): \"%s\"",
+                                       keyword);
+            break;
+        }
+        TypeDesc type;
+        if (typestring == "int")
+            type = TypeDesc::TypeInt;
+        else if (typestring == "float")
+            type = TypeDesc::TypeFloat;
+        else if (typestring == "color")
+            type = TypeDesc::TypeColor;
+        else if (typestring == "point")
+            type = TypeDesc::TypePoint;
+        else if (typestring == "vector")
+            type = TypeDesc::TypeVector;
+        else if (typestring == "normal")
+            type = TypeDesc::TypeNormal;
+        else if (typestring == "matrix")
+            type = TypeDesc::TypeMatrix;
+        else if (typestring == "string")
+            type = TypeDesc::TypeString;
+        else {
+            err = true;
+            errdesc = Strutil::format ("Unknown type: %s", typestring);
+            break;  // error
+        }
+        if (Strutil::parse_char (p, '[')) {
+            int arraylen;
+            Strutil::parse_int (p, arraylen);
+            Strutil::parse_char (p, ']');
+            type.arraylen = arraylen;
+        }
+        std::string paramname_string;
+        while (1) {
+            paramname_string += Strutil::parse_identifier (p);
+            Strutil::skip_whitespace (p);
+            if (Strutil::parse_char (p, '.')) {
+                paramname_string += ".";
+            } else {
+                break;
+            }
+        }
+        string_view paramname (paramname_string);
+        int lockgeom = true;
+        int nvals = type.numelements() * type.aggregate;
+        if (type.basetype == TypeDesc::INT) {
+            intvals.clear ();
+            intvals.resize (nvals, 0);
+            for (int i = 0; i < nvals; ++i) {
+                if (! Strutil::parse_int (p, intvals[i]))
+                    break;
+            }
+            Parameter (paramname, type, &intvals[0], lockgeom);
+        } else if (type.basetype == TypeDesc::FLOAT) {
+            floatvals.clear ();
+            floatvals.resize (nvals, 0.0f);
+            for (int i = 0; i < nvals; ++i) {
+                if (! Strutil::parse_float (p, floatvals[i]))
+                    break;
+            }
+            Parameter (paramname, type, &floatvals[0], lockgeom);
+        } else if (type.basetype == TypeDesc::STRING) {
+            stringvals.clear ();
+            stringvals.resize (nvals);
+            for (int i = 0; i < nvals; ++i) {
+                string_view s;
+                Strutil::skip_whitespace (p);
+                if (p.size() && p[0] == '\"') {
+                    if (! Strutil::parse_string (p, s))
+                        break;
+                }
+                else {
+                    s = Strutil::parse_until (p, " \t\r\n;");
+                    if (s.size() == 0)
+                        break;
+                }
+                stringvals[i] = ustring(s);
+            }
+            Parameter (paramname, type, &stringvals[0], lockgeom);
+        }
+
+        if (Strutil::parse_prefix (p, "[[")) {  // hints
+            do {
+                Strutil::skip_whitespace (p);
+                string_view hint_typename = Strutil::parse_word (p);
+                string_view hint_name = Strutil::parse_identifier (p);
+                TypeDesc hint_type (hint_typename.str().c_str());
+                if (! hint_name.size() || hint_type == TypeDesc::UNKNOWN) {
+                    err = true;
+                    errdesc = "malformed hint";
+                    break;
+                }
+                if (! Strutil::parse_char (p, '=')) {
+                    err = true;
+                    errdesc = "hint expected value";
+                    break;
+                }
+                if (hint_name == "lockgeom" && hint_type == TypeDesc::INT) {
+                    if (! Strutil::parse_int (p, lockgeom)) {
+                        err = true;
+                        errdesc = Strutil::format ("hint %s expected int value", hint_name);
+                        break;
+                    }
+                } else {
+                    err = true;
+                    errdesc = Strutil::format ("unknown hint '%s %s'",
+                                               hint_type, hint_name);
+                    break;
+                }
+            } while (Strutil::parse_char (p, ','));
+            if (err)
+                break;
+            if (! Strutil::parse_prefix (p, "]]")) {
+                err = true;
+                errdesc = "malformed hint";
+                break;
+            }
+        }
+
+        if (type.basetype == TypeDesc::INT) {
+            Parameter (paramname, type, &intvals[0], lockgeom);
+        } else if (type.basetype == TypeDesc::FLOAT) {
+            Parameter (paramname, type, &floatvals[0], lockgeom);
+        } else if (type.basetype == TypeDesc::STRING) {
+            Parameter (paramname, type, &stringvals[0], lockgeom);
+        }
+
+        Strutil::skip_whitespace (p);
+        if (! p.size())
+            break;
+
+        if (Strutil::parse_char (p, ';') || Strutil::parse_char (p, ','))
+            continue;  // next command
+
+        Strutil::parse_until_char (p, ';');
+        if (! Strutil::parse_char (p, ';')) {
+            err = true;
+            errdesc = "semicolon expected";
+        }
+    }
+
+    if (err) {
+        error ("ShaderGroupBegin: error parsing group description: %s",
+               errdesc);
+        return ShaderGroupRef();
+    }
+
+    return g;
+}
+
+
+
+ShaderGroupRef
 ShadingSystemImpl::state ()
 {
     {
@@ -1594,6 +1830,14 @@ ShadingSystemImpl::state ()
         ++m_groups_to_compile_count;
     }
     return m_curgroup;
+}
+
+
+
+std::string
+ShadingSystemImpl::serialize_group (ShaderGroup *group)
+{
+    return group->serialize ();
 }
 
 
@@ -2091,6 +2335,89 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     }
 
     return merges;
+}
+
+
+
+bool
+ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename)
+{
+    std::string filename_base = OIIO::Filesystem::filename(filename);
+    std::string extension;
+    for (std::string e = OIIO::Filesystem::extension(filename);
+         e.size() && filename.size();
+         e = OIIO::Filesystem::extension(filename)) {
+        extension = e + extension;
+        filename.remove_suffix (e.size());
+    }
+    if (extension.size() < 2 || extension[0] != '.') {
+        error ("archive_shadergroup: invalid filename \"%s\"", filename);
+        return false;
+    }
+    filename_base.erase (filename_base.size() - extension.size());
+
+    std::string pattern = OIIO::Filesystem::temp_directory_path() + "OSL-%%%%-%%%%";
+    if (! pattern.size()) {
+        error ("archive_shadergroup: Could not find a temp directory");
+        return false;
+    }
+    std::string tmpdir = OIIO::Filesystem::unique_path(pattern);
+    if (! pattern.size()) {
+        error ("archive_shadergroup: Could not find a temp filename");
+        return false;
+    }
+    std::string errmessage;
+    bool dir_ok = OIIO::Filesystem::create_directory (tmpdir, errmessage);
+    if (! dir_ok) {
+        error ("archive_shadergroup: Could not create temp directory: %s",
+               errmessage);
+        return false;
+    }
+
+    bool ok = true;
+    std::string groupfilename = tmpdir + "/shadergroup";
+    std::ofstream groupfile (groupfilename.c_str());
+    if (groupfile.good()) {
+        groupfile << group->serialize();
+        groupfile.close ();
+    } else {
+        error ("archive_shadergroup: Could not open shadergroup file");
+        ok = false;
+    }
+
+    std::string filename_list = "shadergroup";
+    {
+        boost::lock_guard<ShaderGroup> lock (*group);
+        for (int i = 0, nl = group->nlayers(); i < nl; ++i) {
+            std::string osofile = (*group)[i]->master()->osofilename();
+            std::string osoname = OIIO::Filesystem::filename (osofile);
+            std::string localfile = tmpdir + "/" + osoname;
+            OIIO::Filesystem::copy (osofile, localfile);
+            filename_list += " " + osoname;
+        }
+    }
+
+    if (extension == ".tar" || extension == ".tar.gz" || extension == ".tgz") {
+        std::string z = Strutil::ends_with (extension, "gz") ? "-z" : "";
+        std::string cmd = Strutil::format ("tar -c %s -C %s -f %s%s %s",
+                                           z, tmpdir, filename, extension,
+                                           filename_list);
+        // std::cout << "Command =\n" << cmd << "\n";
+        system (cmd.c_str());
+    } else if (extension == ".zip") {
+        std::string cmd = Strutil::format ("zip -q %s%s %s",
+                                           filename, extension,
+                                           filename_list);
+        // std::cout << "Command =\n" << cmd << "\n";
+        system (cmd.c_str());
+    } else {
+        error ("archive_shadergroup: no archiving/compressing command");
+        ok = false;
+    }
+
+    OIIO::Filesystem::remove_all (tmpdir);
+
+    return ok;
 }
 
 

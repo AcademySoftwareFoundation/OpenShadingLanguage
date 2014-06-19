@@ -122,7 +122,9 @@ public:
     ///                              that don't specify it (0).  Lockgeom
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
-    ///    int countlayerexecs    Add extra code to count total layers run
+    ///    int countlayerexecs    Add extra code to count total layers run.
+    ///    string archive_groupname  Name of a group to pickle and archive.
+    ///    string archive_filename   Name of file to save the group archive.
     /// 3. Attributes that that are intended for developers debugging
     /// liboslexec itself:
     /// These attributes may be helpful for liboslexec developers or
@@ -235,6 +237,8 @@ public:
     ///   ptr userdata_offsets       Retrieves a pointer to the array of
     ///                                 int describing the userdata offsets
     ///                                 within the heap.
+    ///   ustring pickle             Retrieves a serialized representation
+    ///                                 of the shader group declaration.
     bool getattribute (ShaderGroup *group, string_view name,
                        TypeDesc type, void *val);
     // Shortcuts for common types
@@ -289,6 +293,18 @@ public:
     /// Signal the start of a new shader group.  The return value is a
     /// reference-counted opaque handle to the ShaderGroup.
     ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
+
+    /// Alternate way to specify a shader group. The group specification
+    /// syntax looks like this: (as a string, all whitespace is equivalent):
+    ///     param <typename> <paramname> <value>... [[hints]] ;
+    ///     shader <shadername> <layername> ;
+    ///     connect <layername>.<paramname> <layername>.<paramname> ;
+    /// For the sake of easy assembling on command lines, a comma ',' may
+    /// substitute for the semicolon as a separator, and the last separator
+    /// before the end of the string is optional.
+    ShaderGroupRef ShaderGroupBegin (string_view groupname,
+                                     string_view shaderusage,
+                                     string_view groupspec = string_view());
 
     /// Signal the end of a new shader group.
     ///
@@ -408,6 +424,10 @@ public:
 
     /// Return a pointer to the RendererServices being used.
     RendererServices * renderer () const;
+
+    /// Archive the entire shader group so that it can be reconstituted
+    /// later.
+    bool archive_shadergroup (ShaderGroup *group, string_view filename);
 
     /// Helper function -- copy or convert a source value (described by
     /// srctype) to destination (described by dsttype).  The function

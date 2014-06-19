@@ -122,7 +122,9 @@ public:
     ///                              that don't specify it (0).  Lockgeom
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
-    ///    int countlayerexecs    Add extra code to count total layers run
+    ///    int countlayerexecs    Add extra code to count total layers run.
+    ///    string archive_groupname  Name of a group to pickle and archive.
+    ///    string archive_filename   Name of file to save the group archive.
     /// 3. Attributes that that are intended for developers debugging
     /// liboslexec itself:
     /// These attributes may be helpful for liboslexec developers or
@@ -422,6 +424,10 @@ public:
 
     /// Return a pointer to the RendererServices being used.
     RendererServices * renderer () const;
+
+    /// Archive the entire shader group so that it can be reconstituted
+    /// later.
+    bool archive_shadergroup (ShaderGroup *group, string_view filename);
 
     /// Helper function -- copy or convert a source value (described by
     /// srctype) to destination (described by dsttype).  The function

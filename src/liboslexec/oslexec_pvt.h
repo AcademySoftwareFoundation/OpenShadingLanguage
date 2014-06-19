@@ -300,6 +300,8 @@ public:
     ///
     const std::string &shadername () const { return m_shadername; }
 
+    const std::string &osofilename () const { return m_osofilename; }
+
     /// Where is the location that holds the parameter's default value?
     void *param_default_storage (int index);
     const void *param_default_storage (int index) const;
@@ -837,6 +839,10 @@ public:
     /// Serialize/pickle a group description into text.
     std::string serialize_group (ShaderGroup *group);
 
+    /// Serialize the entire group, including oso files, into a compressed
+    /// archive.
+    bool archive_shadergroup (ShaderGroup *group, string_view filename);
+
 private:
     void printstats () const;
 
@@ -922,6 +928,8 @@ private:
     ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_opt_layername;              ///< Name of sole layer to optimize
     ustring m_only_groupname;             ///< Name of sole group to compile
+    ustring m_archive_groupname;          ///< Name of group to pickle/archive
+    ustring m_archive_filename;           ///< Name of filename for group archive
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
@@ -1176,6 +1184,9 @@ public:
     ustring name () const { return m_name; }
 
     std::string serialize () const;
+
+    void lock () const { m_mutex.lock(); }
+    void unlock () const { m_mutex.unlock(); }
 
 private:
     // Put all the things that are read-only (after optimization) and

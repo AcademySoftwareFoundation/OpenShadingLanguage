@@ -656,6 +656,16 @@ public:
     ~ShadingSystemImpl ();
 
     bool attribute (string_view name, TypeDesc type, const void *val);
+    bool attribute (string_view name, int val) {
+        return attribute (name, TypeDesc::INT, &val);
+    }
+    bool attribute (string_view name, float val) {
+        return attribute (name, TypeDesc::FLOAT, &val);
+    }
+    bool attribute (string_view name, string_view val) {
+        const char *s = val.c_str();
+        return attribute (name, TypeDesc::STRING, &s);
+    }
     bool attribute (ShaderGroup *group, string_view name,
                     TypeDesc type, const void *val);
     bool getattribute (string_view name, TypeDesc type, void *val);

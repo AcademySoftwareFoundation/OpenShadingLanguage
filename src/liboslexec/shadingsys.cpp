@@ -846,7 +846,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     }
 
     if (name == "options" && type == TypeDesc::STRING) {
-        return OIIO::optparser (*(ShadingSystem *)this, *(const char **)val);
+        return OIIO::optparser (*this, *(const char **)val);
     }
 
     lock_guard guard (m_mutex);  // Thread safety

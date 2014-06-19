@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 #include <fstream>
+#include <cstdlib>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -328,6 +329,13 @@ ShadingSystem::renderer () const
     return m_impl->renderer();
 }
 
+
+
+bool
+ShadingSystem::archive_shadergroup (ShaderGroup *group, string_view filename)
+{
+    return m_impl->archive_shadergroup (group, filename);
+}
 
 
 
@@ -898,6 +906,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
     ATTR_SET_STRING ("opt_layername", m_opt_layername);
     ATTR_SET_STRING ("only_groupname", m_only_groupname);
+    ATTR_SET_STRING ("archive_groupname", m_archive_groupname);
+    ATTR_SET_STRING ("archive_filename", m_archive_filename);
 
     // cases for special handling
     if (name == "searchpath:shader" && type == TypeDesc::STRING) {
@@ -988,6 +998,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE_STRING ("debug_layername", m_debug_layername);
     ATTR_DECODE_STRING ("opt_layername", m_opt_layername);
     ATTR_DECODE_STRING ("only_groupname", m_only_groupname);
+    ATTR_DECODE_STRING ("archive_groupname", m_archive_groupname);
+    ATTR_DECODE_STRING ("archive_filename", m_archive_filename);
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_DECODE ("compile_report", int, m_compile_report);
     ATTR_DECODE ("buffer_printf", int, m_buffer_printf);
@@ -1460,6 +1472,13 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     m_in_group = false;
     m_group_use = ShadUseUnknown;
 
+    ustring groupname = m_curgroup->name();
+    if (groupname.size() && groupname == m_archive_groupname) {
+        std::string filename = m_archive_filename.string();
+        if (! filename.size())
+            filename = OIIO::Filesystem::filename (groupname.string()) + ".tar.gz";
+        archive_shadergroup (m_curgroup.get(), filename);
+    }
     return true;
 }
 
@@ -2317,6 +2336,89 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     }
 
     return merges;
+}
+
+
+
+bool
+ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename)
+{
+    std::string filename_base = OIIO::Filesystem::filename(filename);
+    std::string extension;
+    for (std::string e = OIIO::Filesystem::extension(filename);
+         e.size() && filename.size();
+         e = OIIO::Filesystem::extension(filename)) {
+        extension = e + extension;
+        filename.remove_suffix (e.size());
+    }
+    if (extension.size() < 2 || extension[0] != '.') {
+        error ("archive_shadergroup: invalid filename \"%s\"", filename);
+        return false;
+    }
+    filename_base.erase (filename_base.size() - extension.size());
+
+    std::string pattern = OIIO::Filesystem::temp_directory_path() + "OSL-%%%%-%%%%";
+    if (! pattern.size()) {
+        error ("archive_shadergroup: Could not find a temp directory");
+        return false;
+    }
+    std::string tmpdir = OIIO::Filesystem::unique_path(pattern);
+    if (! pattern.size()) {
+        error ("archive_shadergroup: Could not find a temp filename");
+        return false;
+    }
+    std::string errmessage;
+    bool dir_ok = OIIO::Filesystem::create_directory (tmpdir, errmessage);
+    if (! dir_ok) {
+        error ("archive_shadergroup: Could not create temp directory: %s",
+               errmessage);
+        return false;
+    }
+
+    bool ok = true;
+    std::string groupfilename = tmpdir + "/shadergroup";
+    std::ofstream groupfile (groupfilename.c_str());
+    if (groupfile.good()) {
+        groupfile << group->serialize();
+        groupfile.close ();
+    } else {
+        error ("archive_shadergroup: Could not open shadergroup file");
+        ok = false;
+    }
+
+    std::string filename_list = "shadergroup";
+    {
+        boost::lock_guard<ShaderGroup> lock (*group);
+        for (int i = 0, nl = group->nlayers(); i < nl; ++i) {
+            std::string osofile = (*group)[i]->master()->osofilename();
+            std::string osoname = OIIO::Filesystem::filename (osofile);
+            std::string localfile = tmpdir + "/" + osoname;
+            OIIO::Filesystem::copy (osofile, localfile);
+            filename_list += " " + osoname;
+        }
+    }
+
+    if (extension == ".tar" || extension == ".tar.gz" || extension == ".tgz") {
+        std::string z = Strutil::ends_with (extension, "gz") ? "-z" : "";
+        std::string cmd = Strutil::format ("tar -c %s -C %s -f %s%s %s",
+                                           z, tmpdir, filename, extension,
+                                           filename_list);
+        // std::cout << "Command =\n" << cmd << "\n";
+        system (cmd.c_str());
+    } else if (extension == ".zip") {
+        std::string cmd = Strutil::format ("zip -q %s%s %s",
+                                           filename, extension,
+                                           filename_list);
+        // std::cout << "Command =\n" << cmd << "\n";
+        system (cmd.c_str());
+    } else {
+        error ("archive_shadergroup: no archiving/compressing command");
+        ok = false;
+    }
+
+    OIIO::Filesystem::remove_all (tmpdir);
+
+    return ok;
 }
 
 

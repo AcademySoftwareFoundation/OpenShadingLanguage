@@ -82,6 +82,7 @@ static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static ShaderGroupRef shadergroup;
+static std::string archivegroup;
 
 
 static void
@@ -267,6 +268,8 @@ getargs (int argc, const char *argv[])
                         "Change a parameter (args: layername paramname value) (options: type=%s)",
                 "--group %@ %s", &action_groupspec, &groupspec,
                         "Specify a full group command",
+                "--archivegroup %s", &archivegroup,
+                        "Archive the group to a given filename",
                 "--raytype %s", &raytype, "Set the raytype",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
@@ -705,6 +708,8 @@ test_shade (int argc, const char *argv[])
         shadingsys->getattribute (shadergroup.get(), "pickle", pickle);
         std::cout << "Shader group:\n---\n" << pickle << "\n---\n";
     }
+    if (archivegroup.size())
+        shadingsys->archive_shadergroup (shadergroup.get(), archivegroup);
 
     if (outputfiles.size() != 0)
         std::cout << "\n";

@@ -118,6 +118,10 @@ if (CMAKE_COMPILER_IS_CLANG)
     add_definitions ("-Wno-null-conversion")
 endif ()
 
+if (CMAKE_COMPILER_IS_GNUCC)
+    add_definitions ("-Wno-error=strict-overflow")
+endif ()
+
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     if (HIDE_SYMBOLS AND NOT DEBUGMODE)
         # Turn default symbol visibility to hidden

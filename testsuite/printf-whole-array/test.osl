@@ -1,0 +1,11 @@
+shader test (
+    int iarray[5] = {1,2,3,4,5},
+    string sarray[5] = {"a", "b", "c", "d", "e"},
+    float farray[5] = {1,2,3,4,5}
+    )
+{
+    printf ("iarray = %i\n", iarray);
+    printf ("sarray = %s\n", sarray);
+    printf ("farray = %f\n", farray);
+}
+

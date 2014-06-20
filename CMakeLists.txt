@@ -324,6 +324,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             oslc-err-struct-array-init
             oslc-variadic-macro
             pointcloud pointcloud-fold
+            printf-whole-array
             raytype reparam
             render-background render-bumptest
             render-cornell render-furnace-diffuse

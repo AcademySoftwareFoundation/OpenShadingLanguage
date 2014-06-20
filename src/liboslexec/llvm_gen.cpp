@@ -308,7 +308,7 @@ LLVMGEN (llvm_gen_printf)
                     s += ourformat;
 
                     llvm::Value* loaded = rop.llvm_load_value (sym, 0, arrind, c);
-                    if (sym.typespec().is_floatbased()) {
+                    if (simpletype.basetype == TypeDesc::FLOAT) {
                         // C varargs convention upconverts float->double.
                         loaded = rop.ll.op_float_to_double(loaded);
                     }

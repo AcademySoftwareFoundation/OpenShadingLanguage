@@ -154,43 +154,24 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 
 
 OSL_NAMESPACE_ENTER
-namespace Strings {
-    extern OSLEXECPUBLIC ustring camera, common, object, shader, screen, NDC;
-    extern OSLEXECPUBLIC ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
-    extern OSLEXECPUBLIC ustring null, default_;
-    extern OSLEXECPUBLIC ustring label;
-    extern OSLEXECPUBLIC ustring sidedness, front, back, both;
-    extern OSLEXECPUBLIC ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
-    extern OSLEXECPUBLIC ustring Ci;
-    extern OSLEXECPUBLIC ustring width, swidth, twidth, rwidth;
-    extern OSLEXECPUBLIC ustring blur, sblur, tblur, rblur;
-    extern OSLEXECPUBLIC ustring wrap, swrap, twrap, rwrap;
-    extern OSLEXECPUBLIC ustring black, clamp, periodic, mirror;
-    extern OSLEXECPUBLIC ustring firstchannel, fill, alpha;
-    extern OSLEXECPUBLIC ustring interp, closest, linear, cubic, smartcubic;
-    extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
-    extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
-    extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern OSLEXECPUBLIC ustring simplex, usimplex, simplexnoise, usimplexnoise;
-    extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
-    extern OSLEXECPUBLIC ustring subimage, subimagename;
-    extern OSLEXECPUBLIC ustring missingcolor, missingalpha;
-    extern OSLEXECPUBLIC ustring uninitialized_string;
-}; // namespace Strings
 
 
 inline int
 tex_interp_to_code (ustring modename)
 {
+    static ustring u_linear ("linear");
+    static ustring u_smartcubic ("smartcubic");
+    static ustring u_cubic ("cubic");
+    static ustring u_closest ("closest");
+
     int mode = -1;
-    if (modename == Strings::smartcubic)
+    if (modename == u_smartcubic)
         mode = TextureOpt::InterpSmartBicubic;
-    else if (modename == Strings::linear)
+    else if (modename == u_linear)
         mode = TextureOpt::InterpBilinear;
-    else if (modename == Strings::cubic)
+    else if (modename == u_cubic)
         mode = TextureOpt::InterpBicubic;
-    else if (modename == Strings::closest)
+    else if (modename == u_closest)
         mode = TextureOpt::InterpClosest;
     return mode;
 }
@@ -792,13 +773,14 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
                       void *from, void *to, int vectype)
 {
+    static ustring u_common ("common");
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Matrix44 M;
     bool ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
-    if (USTR(from) == Strings::common)
+    if (USTR(from) == u_common)
         ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
-    else if (USTR(to) == Strings::common)
+    else if (USTR(to) == u_common)
         ok = osl_get_matrix (sg, &M, (const char *)from);
     else
         ok = osl_get_from_to_matrix (sg, &M, (const char *)from,

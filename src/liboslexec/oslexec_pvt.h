@@ -1410,28 +1410,28 @@ private:
 
 
 namespace Strings {
-    extern OSLEXECPUBLIC ustring camera, common, object, shader, screen, NDC;
-    extern OSLEXECPUBLIC ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
-    extern OSLEXECPUBLIC ustring null, default_;
-    extern OSLEXECPUBLIC ustring label;
-    extern OSLEXECPUBLIC ustring sidedness, front, back, both;
-    extern OSLEXECPUBLIC ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
-    extern OSLEXECPUBLIC ustring Ci;
-    extern OSLEXECPUBLIC ustring width, swidth, twidth, rwidth;
-    extern OSLEXECPUBLIC ustring blur, sblur, tblur, rblur;
-    extern OSLEXECPUBLIC ustring wrap, swrap, twrap, rwrap;
-    extern OSLEXECPUBLIC ustring black, clamp, periodic, mirror;
-    extern OSLEXECPUBLIC ustring firstchannel, fill, alpha;
-    extern OSLEXECPUBLIC ustring interp, closest, linear, cubic, smartcubic;
-    extern OSLEXECPUBLIC ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
-    extern OSLEXECPUBLIC ustring cell, cellnoise, pcellnoise;
-    extern OSLEXECPUBLIC ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern OSLEXECPUBLIC ustring simplex, usimplex, simplexnoise, usimplexnoise;
-    extern OSLEXECPUBLIC ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern OSLEXECPUBLIC ustring op_dowhile, op_for, op_while, op_exit;
-    extern OSLEXECPUBLIC ustring subimage, subimagename;
-    extern OSLEXECPUBLIC ustring missingcolor, missingalpha;
-    extern OSLEXECPUBLIC ustring uninitialized_string;
+    extern ustring camera, common, object, shader, screen, NDC;
+    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
+    extern ustring null, default_;
+    extern ustring label;
+    extern ustring sidedness, front, back, both;
+    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
+    extern ustring Ci;
+    extern ustring width, swidth, twidth, rwidth;
+    extern ustring blur, sblur, tblur, rblur;
+    extern ustring wrap, swrap, twrap, rwrap;
+    extern ustring black, clamp, periodic, mirror;
+    extern ustring firstchannel, fill, alpha;
+    extern ustring interp, closest, linear, cubic, smartcubic;
+    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern ustring cell, cellnoise, pcellnoise;
+    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
+    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
+    extern ustring op_dowhile, op_for, op_while, op_exit;
+    extern ustring subimage, subimagename;
+    extern ustring missingcolor, missingalpha;
+    extern ustring uninitialized_string;
 }; // namespace Strings
 
 

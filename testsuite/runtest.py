@@ -123,7 +123,11 @@ def oiiotool (args) :
 # Construct a command that run testshade with the specified arguments,
 # appending output to the file "out.txt".
 def testshade (args) :
-    return (osl_app("testshade") + args + " >> out.txt 2>&1 ;\n")
+    if os.environ.__contains__('OSL_TESTSHADE_NAME') :
+        testshadename = os.environ['OSL_TESTSHADE_NAME'] + " "
+    else :
+        testshadename = osl_app("testshade")
+    return (testshadename + args + " >> out.txt 2>&1 ;\n")
 
 
 # Construct a command that run testrender with the specified arguments,

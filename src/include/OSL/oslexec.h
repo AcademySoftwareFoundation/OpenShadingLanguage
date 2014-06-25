@@ -170,7 +170,10 @@ public:
     /// Set an attribute for a specific shader group.  Return true if the
     /// name and type were recognized and the attrib was set. Documented
     /// attributes are as follows:
-    /// None. This is a placeholder for future functionality.
+    ///    string[] renderer_outputs   Array of names of renderer outputs
+    ///                                (AOVs) specific to this shader group
+    ///                                that should not be optimized away.
+    ///
     bool attribute (ShaderGroup *group, string_view name,
                     TypeDesc type, const void *val);
     bool attribute (ShaderGroup *group, string_view name, int val) {

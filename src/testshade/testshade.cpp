@@ -65,6 +65,7 @@ static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
 static bool debug_uninit = false;
+static bool use_group_outputs = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -279,6 +280,7 @@ getargs (int argc, const char *argv[])
                 "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
                 "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
                 "--options %s", &extraoptions, "Set extra OSL options",
+                "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
@@ -406,9 +408,12 @@ setup_output_images (ShadingSystem *shadingsys,
         std::vector<const char *> aovnames (outputvars.size());
         for (size_t i = 0; i < outputvars.size(); ++i)
             aovnames[i] = outputvars[i].c_str();
-        shadingsys->attribute ("renderer_outputs",
+        shadingsys->attribute (use_group_outputs ? shadergroup.get() : NULL,
+                               "renderer_outputs",
                                TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
                                &aovnames[0]);
+        if (use_group_outputs)
+            std::cout << "Marking group outputs, not global renderer outputs.\n";
     }
 
     if (extraoptions.size())

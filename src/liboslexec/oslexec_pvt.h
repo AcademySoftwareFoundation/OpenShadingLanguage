@@ -834,7 +834,7 @@ public:
     void pointcloud_stats (int search, int get, int results, int writes=0);
 
     /// Is the named symbol among the renderer outputs?
-    bool is_renderer_output (ustring name) const;
+    bool is_renderer_output (ustring name, ShaderGroup *group) const;
 
     /// Serialize/pickle a group description into text.
     std::string serialize_group (ShaderGroup *group);
@@ -1205,6 +1205,7 @@ private:
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;
     std::vector<char> m_userdata_derivs;
+    std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     atomic_ll m_executions;          ///< Number of times the group executed
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

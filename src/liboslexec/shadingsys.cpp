@@ -1072,6 +1072,14 @@ ShadingSystemImpl::attribute (ShaderGroup *group, string_view name,
                               TypeDesc type, const void *val)
 {
     // No current group attributes to set
+    if (! group)
+        return attribute (name, type, val);
+    if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
+        group->m_renderer_outputs.clear ();
+        for (size_t i = 0;  i < type.numelements();  ++i)
+            group->m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
+        return true;
+    }
     return false;
 }
 
@@ -2054,8 +2062,13 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 bool
-ShadingSystemImpl::is_renderer_output (ustring name) const
+ShadingSystemImpl::is_renderer_output (ustring name, ShaderGroup *group) const
 {
+    if (group) {
+        const std::vector<ustring> &aovs (group->m_renderer_outputs);
+        if (std::find (aovs.begin(), aovs.end(), name) != aovs.end())
+            return true;
+    }
     const std::vector<ustring> &aovs (m_renderer_outputs);
     return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
 }

@@ -622,4 +622,73 @@ ShaderGroup::~ShaderGroup ()
 }
 
 
+
+std::string
+ShaderGroup::serialize () const
+{
+    std::ostringstream out;
+    lock_guard lock (m_mutex);
+    for (int i = 0, nl = nlayers(); i < nl; ++i) {
+        const ShaderInstance *inst = m_layers[i].get();
+
+        bool dstsyms_exist = inst->symbols().size();
+        for (int p = 0;  p <= inst->lastparam(); ++p) {
+            const Symbol *s = dstsyms_exist ? inst->symbol(p) : inst->mastersymbol(p);
+            ASSERT (s);
+            if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
+                continue;
+            Symbol::ValueSource vs = dstsyms_exist ? s->valuesource()
+                                                   : inst->instoverride(p)->valuesource();
+            if (vs == Symbol::InstanceVal) {
+                TypeDesc type = s->typespec().simpletype();
+                out << "param " << type << ' ' << s->name();
+                int offset = s->dataoffset();
+                int nvals = type.numelements() * type.aggregate;
+                if (type.basetype == TypeDesc::INT) {
+                    const int *vals = &inst->m_iparams[offset];
+                    for (int i = 0; i < nvals; ++i)
+                        out << ' ' << vals[i];
+                } else if (type.basetype == TypeDesc::FLOAT) {
+                    const float *vals = &inst->m_fparams[offset];
+                    for (int i = 0; i < nvals; ++i)
+                        out << ' ' << vals[i];
+                } else if (type.basetype == TypeDesc::STRING) {
+                    const ustring *vals = &inst->m_sparams[offset];
+                    for (int i = 0; i < nvals; ++i)
+                        out << ' ' << '\"' << Strutil::escape_chars(vals[i]) << '\"';
+                } else {
+                    ASSERT (0 && "unknown type for serialization");
+                }
+                bool lockgeom = dstsyms_exist ? s->lockgeom()
+                                              : inst->instoverride(p)->lockgeom();
+                if (! lockgeom)
+                    out << Strutil::format (" [[int lockgeom=%d]]", lockgeom);
+                out << " ;\n";
+            }
+        }
+        out << "shader " << inst->shadername() << ' ' << inst->layername() << " ;\n";
+        for (int c = 0, nc = inst->nconnections(); c < nc; ++c) {
+            const Connection &con (inst->connection(c));
+            ASSERT (con.srclayer >= 0);
+            const ShaderInstance *srclayer = m_layers[con.srclayer].get();
+            ASSERT (srclayer);
+            ustring srclayername = srclayer->layername();
+            ASSERT (con.src.param >= 0 && con.dst.param >= 0);
+            bool srcsyms_exist = srclayer->symbols().size();
+            ustring srcparam = srcsyms_exist ? srclayer->symbol(con.src.param)->name()
+                                             : srclayer->mastersymbol(con.src.param)->name();
+            ustring dstparam = dstsyms_exist ? inst->symbol(con.dst.param)->name()
+                                             : inst->mastersymbol(con.dst.param)->name();
+            // FIXME: Assertions to be sure we don't yet support individual
+            // channel or array element connections. Fix eventually.
+            ASSERT (con.src.arrayindex == -1 && con.src.channel == -1);
+            ASSERT (con.dst.arrayindex == -1 && con.dst.channel == -1);
+            out << "connect " <<  srclayername << '.' << srcparam << ' '
+                << inst->layername() << '.' << dstparam << " ;\n";
+        }
+    }
+    return out.str();
+}
+
+
 OSL_NAMESPACE_EXIT

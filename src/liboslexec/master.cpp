@@ -210,7 +210,7 @@ ShaderMaster::print ()
 {
     std::stringstream out;
     out << "Shader " << m_shadername << " type=" 
-              << shadertypename(m_shadertype) << "\n";
+              << shadertypename() << "\n";
     out << "  path = " << m_osofilename << "\n";
     out << "  symbols:\n";
     for (size_t i = 0;  i < m_symbols.size();  ++i) {

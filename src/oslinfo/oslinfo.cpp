@@ -139,7 +139,7 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
 {
     OSLQuery g;
     g.open (name, path);
-    std::string e = g.error();
+    std::string e = g.geterror();
     if (! e.empty()) {
         std::cout << "ERROR opening shader \"" << name << "\" (" << e << ")\n";
         return;

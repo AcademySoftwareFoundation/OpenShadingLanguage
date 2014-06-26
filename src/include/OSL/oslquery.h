@@ -46,6 +46,8 @@ Sony Pictures Imageworks terms, above.
 
 OSL_NAMESPACE_ENTER
 
+class ShaderGroup;    // opaque class for now
+
 namespace pvt {
     class OSOReaderQuery;   // Just so OSLQuery can friend OSLReaderQuery
 };
@@ -64,6 +66,7 @@ public:
         bool varlenarray;                ///< is it a varying-length array?
         bool isstruct;                   ///< is it a structure?
         bool isclosure;                  ///< is it a closure?
+        void *data;                      ///< pointer to data
         std::vector<int> idefault;       ///< default int values
         std::vector<float> fdefault;     ///< default float values
         std::vector<std::string> sdefault;   ///< default string values
@@ -74,7 +77,7 @@ public:
         std::vector<Parameter> metadata; ///< Meta-data about the param
         Parameter ()
             : isoutput(false), validdefault(false), varlenarray(false),
-              isstruct(false), isclosure(false)
+              isstruct(false), isclosure(false), data(NULL)
         { }
     };
 
@@ -87,9 +90,15 @@ public:
     bool open (const std::string &shadername,
                const std::string &searchpath=std::string());
 
+    /// Meant to be called at runtime from an app with a full ShadingSystem,
+    /// fill out an OSLQuery structure for the given layer of the group.
+    /// This is much faster than using open() to read it from an oso file on
+    /// disk.
+    bool init (const ShaderGroup *group, int layernum);
+
     /// Return the shader type: "surface", "displacement", "volume",
     /// "light", or "shader" (for generic shaders).
-    const std::string &shadertype (void) const { return m_shadertype; }
+    const std::string &shadertype (void) const { return m_shadertypename; }
 
     /// Get the name of the shader.
     ///
@@ -119,19 +128,33 @@ public:
 
     /// Return error string, empty if there was no error, and reset the
     /// error string.
-    std::string error (void) {
+    std::string geterror (bool clear_error = true) {
         std::string e = m_error;
-        m_error.clear ();
+        if (clear_error)
+            m_error.clear ();
         return e;
     }
 
+    /// DEPRECATED(1.5) -- included for back compatibility
+    std::string error (void) { return geterror(); }
+
 private:
     std::string m_shadername;          ///< Name of shader
-    std::string m_shadertype;          ///< Type of shader
-    std::string m_error;               ///< Error message
+    std::string m_shadertypename;      ///< Type of shader
+    mutable std::string m_error;       ///< Error message
     std::vector<Parameter> m_params;   ///< Params to the shader
     std::vector<Parameter> m_meta;     ///< Meta-data about the shader
     friend class pvt::OSOReaderQuery;
+
+    /// Internal error reporting routine, with printf-like arguments.
+    /// void error (const char *message, ...) const
+    TINYFORMAT_WRAP_FORMAT (void, error, const,
+        std::ostringstream msg;, msg, append_error(msg.str());)
+    void append_error (string_view message) const {
+        if (m_error.size())
+            m_error += '\n';
+        m_error += message;
+    }
 };
 
 

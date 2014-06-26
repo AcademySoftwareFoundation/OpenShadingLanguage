@@ -131,7 +131,7 @@ void
 OSOReaderQuery::shader (const char *shadertype, const char *name)
 {
     m_query.m_shadername = name;
-    m_query.m_shadertype = shadertype;
+    m_query.m_shadertypename = shadertype;
 }
 
 
@@ -204,12 +204,18 @@ OSOReaderQuery::parameter_done ()
     // case they were only partially initialized.
     OSLQuery::Parameter &p (m_query.m_params.back());
     int nvalues = p.type.numelements() * p.type.aggregate;
-    if (p.type.basetype == TypeDesc::INT)
+    if (p.type.basetype == TypeDesc::INT) {
         p.idefault.resize (nvalues, 0);
-    else if (p.type.basetype == TypeDesc::FLOAT)
+        p.data = &p.idefault[0];
+    }
+    else if (p.type.basetype == TypeDesc::FLOAT) {
         p.fdefault.resize (nvalues, 0);
-    else if (p.type.basetype == TypeDesc::STRING)
+        p.data = &p.fdefault[0];
+    }
+    else if (p.type.basetype == TypeDesc::STRING) {
         p.sdefault.resize (nvalues, std::string());
+        p.data = &p.sdefault[0];
+    }
     if (p.spacename.size())
         p.spacename.resize (p.type.numelements(), std::string());
 }
@@ -317,7 +323,7 @@ OSLQuery::open (const std::string &shadername,
         filename = Filesystem::searchpath_find (filename, dirs);
     }
     if (filename.empty()) {
-        m_error = std::string("File \"") + shadername + "\" could not be found";
+        error ("File \"%s\" could not be found.", shadername);
         return false;
     }
 

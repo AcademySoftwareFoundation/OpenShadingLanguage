@@ -51,7 +51,7 @@ enum ShaderType {
 
 /// Convert a ShaderType to a human-readable name ("surface", etc.)
 ///
-const char *shadertypename (ShaderType s);
+string_view shadertypename (ShaderType s);
 
 /// Convert a ShaderType to a human-readable name ("surface", etc.)
 ///

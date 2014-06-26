@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-command += testshade('-v -group "' +
+command += testshade('-v --oslquery -group "' +
                          'shader a alayer, \n' +
                          'shader b blayer, \n' +
                          'connect alayer.f_out blayer.f_in, \n' +

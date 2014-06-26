@@ -854,19 +854,6 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 
 
 
-void
-OSLCompilerImpl::oso (const char *fmt, ...) const
-{
-    // FIXME -- might be nice to let this save to a memory buffer, not
-    // just a file.
-    va_list arg_ptr;
-    va_start (arg_ptr, fmt);
-    vfprintf (m_osofile, fmt, arg_ptr);
-    va_end (arg_ptr);
-}
-
-
-
 std::string
 OSLCompilerImpl::retrieve_source (ustring filename, int line)
 {

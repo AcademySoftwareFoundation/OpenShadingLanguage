@@ -712,6 +712,20 @@ test_shade (int argc, const char *argv[])
         std::string pickle;
         shadingsys->getattribute (shadergroup.get(), "pickle", pickle);
         std::cout << "Shader group:\n---\n" << pickle << "\n---\n";
+        std::cout << "\n";
+        ustring groupname;
+        shadingsys->getattribute (shadergroup.get(), "groupname", groupname);
+        std::cout << "Shader group \"" << groupname << "\" layers are:\n";
+        int num_layers = 0;
+        shadingsys->getattribute (shadergroup.get(), "num_layers", num_layers);
+        if (num_layers > 0) {
+            std::vector<const char *> layers (num_layers, NULL);
+            shadingsys->getattribute (shadergroup.get(), "layer_names",
+                                      TypeDesc(TypeDesc::STRING, num_layers),
+                                      &layers[0]);
+            for (int i = 0; i < num_layers; ++i)
+                std::cout << "    " << (layers[i] ? layers[i] : "<unnamed>") << "\n";
+        }
     }
     if (archivegroup.size())
         shadingsys->archive_shadergroup (shadergroup.get(), archivegroup);

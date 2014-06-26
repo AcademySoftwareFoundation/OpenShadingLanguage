@@ -1091,6 +1091,21 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
 {
     if (! group)
         return false;
+    if (name == "groupname" && type == TypeDesc::TypeString) {
+        *(ustring *)val = group->name();
+        return true;
+    }
+    if (name == "num_layers" && type == TypeDesc::TypeInt) {
+        *(int *)val = group->nlayers();
+        return true;
+    }
+    if (name == "layer_names" && type.basetype == TypeDesc::STRING) {
+        m_renderer_outputs.clear ();
+        size_t n = std::min (type.numelements(), (size_t)group->nlayers());
+        for (size_t i = 0;  i < n;  ++i)
+            ((ustring *)val)[i] = (*group)[i]->layername();
+        return true;
+    }
     if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
             optimize_group (*group);

@@ -49,10 +49,10 @@ ShadingSystem API changes and new options (for renderer writers):
 * Add RendererServices::texturesys() that returns a pointer to the
   RS's TextureSystem. (1.5.6)
 * Use OIIO's new string_view for many public API input parameters that
-  previously took a std::string& or a const char*. (1.5.7)
-* New ShadingSystem::getattribute variety that takes a ShaderGroup* as a
-  first argument, allows queries for various information pertaining to a
-  particular group. (#362) (1.5.8)
+  previously took a std::string& or a const char*. (1.5.7) (#361)
+* New ShadingSystem::getattribute() and attribute() varieties that takes
+  a ShaderGroup* as a first argument, allows setting and retrieval of
+  attributes pertaining to a specific shader group. (#362, #368) (1.5.8)
 * ShadingSystem::getattribute(group,...) allows queries that retrieve
   all the names and types of userdata the compiled group may need
   ("num_userdata", "userdata_names", "userdata_types"), as well as the
@@ -63,6 +63,35 @@ ShadingSystem API changes and new options (for renderer writers):
 * De-virtualized OSLCompiler and ShadingSystem classes -- it is now safe to
   construct them in the usual way, the create() and destroy() functions for
   them are optional/deprecated. (#363) (1.5.8)
+* ShadingSystem methods renderer() and texturesys() retrieve the
+  RendererServices and TextureSystem, respectively. (1.5.8)
+* ShadingSystem statistics output now prints the version and major
+  runtime options. (1.5.8) (#369)
+* New ShaderGroupBegin() variant takes a text description of a shader group.
+  (3.5.8) (#379) For example:
+     ShaderGroupBegin ("groupname", "surface",
+                          "param float fin 3.14; " /*concatenate string*/
+                          "shader a alayer;"
+                          "shader b blayer;"
+                          "connect alayer.f_out blayer.f_in;");
+* Retrieving the group attribute "pickle" (as a string) gives you the
+  serialized description of the shader group in the same format that is
+  accepted by ShaderGroupBegin(). (1.5.8) (#381)
+* Attributes "archive_groupname" and "archive_filename", when set, will
+  cause the named group to be fully archived into a .tar, .tar.gz, or .zip
+  file containing the serialized description of the group, and all .oso files
+  needed to reconstruct it. This is great for shipping debugging or
+  performance benchmark cases to the developers! It's also a good way to
+  "extract" a shader network from the midst of a complex renderer and then
+  be able to reconstitute it inside a debugging test harness like testshade.
+  (1.5.8) (#381) For more detail and explanation, please see
+  https://github.com/imageworks/OpenShadingLanguage/pull/381
+* Group-wise attribute "renderer_outputs" (array of strings) lets you
+  specify different renderer outputs for each shader group in addition
+  to the ShadingSystem-wide "renderer_outputs" that apply to all groups.
+  Remember that naming the renderer outputs prevents those from being
+  optimized away if they are not connected to downstream
+  shaders. (1.5.8) (#386)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --
@@ -77,6 +106,15 @@ Performance improvements:
   texture calls; those that overrode them would not notice). (1.5.6)
 * Constant folding of certain assignments to individual components or
   array elements. (#356) (1.5.7)
+* Much more complete constant-folding of format(). (1.5.8) (#366)
+* Enhanced simplification of component and array assignment, when
+  multiple assignments actually fill out the entire array or aggregate.
+  For example: 'color C; C[0] = 3.14; C[1] = 0; C[2] = 42.0;'
+  Now it recognizes that all components are assigned and will replace
+  the whole thing (and subsequent uses of C) with a constant
+  color. (1.5.8) (#367)
+* Eliminate redundant retrieval of userdata within a shading
+  network. (1.5.8) (#373)
 
 Bug fixes:
 * testshade/testrender timer didn't properly break out execution time
@@ -108,7 +146,16 @@ Bug fixes:
   array elements without explicit initialization). (1.5.6)
 * oslc: negating closures resulted in hitting an assertion. (1.5.6)
 * ShadingSystem - bug fix when Parameter() sets the same parameter twice
-  for the same instance, the second time back to the default value. (1.5.8)
+  for the same instance, the second time back to the default
+  value. (1.5.8) (#370)
+* Fix debug printing crash when group name was not set. (1.5.7)
+* Bug fix with runtime optimization instance merging -- differing
+  "lockgeom" status of parameters should invalidate the merge. (1.5.8) (#378)
+* Runtime optimizer bug fix: output parameter assignment elision was
+  overly aggressive when the output parameter in question was a renderer
+  output (and therefore should not be elided). (1.5.8) (#378)
+* Fix printf("%f",whole_float_array) to work properly. (1.5.8) (#382)
+* oslc improperly allowed ONE too many initializers for arrays. (1.5.8) (#383)
 
 Under the hood:
 * Internals refactor that separates the runtime optimization from the
@@ -127,6 +174,8 @@ Under the hood:
   much easier in the future to change both these classes (at least, adding
   new methods) and changing the Impl internals, without breaking link
   compatibility within release branches. (#363) (1.5.8)
+* Eliminate the need for a special dlopen when using OSL from within
+  a DSO/DLL plugin of another app. (1.5.8) (#374, #384)
 
 Build & test system improvements and developer goodies:
 * Make OSL work with LLVM 3.4 (1.5.4)
@@ -150,13 +199,21 @@ Build & test system improvements and developer goodies:
 * Support for using LLVM's "MCJIT" instead of "old JIT" (controlled by
   using the optional 'make USE_MCJIT=1'). This is mostly experimental,
   and not recommended since performance of old JIT is still much better
-  than MCJIT. (1.5.6)
+  than MCJIT. (1.5.6) Fixes in (1.5.8) (#385)
 * Moved the source of all public header files to src/include/OSL, to more
   closely mimic the install file layout. (1.5.6)
 * Fixes for compilation warnings with newer gcc. (1.5.7) (#351)
 * Fixes for IlmBase 2.1 build breakages. (#354) (1.5.7)
+* Make testshade multithreaded, so it's always exercising the thread
+  safety of the shading system. (1.5.8) (#365)
+* Compatibility with cmake 3.0. (1.5.8) (#377)
+* Fix warnings with some gcc versions. (1.5.8)
 
 Documentation:
+* Clarified docs about floor(). (1.5.8)
+* Clarified that oren_nayar() is the name of the function, not
+  orennayar (it was not consistent). (1.5.8) (#375)
+* backfacing() was previously left out of the docs. (1.5.8) (#376)
 
 
 

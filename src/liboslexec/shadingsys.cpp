@@ -2553,7 +2553,7 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
             if (StructSpec *ss = ts.structspec()) {
                 p.structname = ss->name().string();
                 for (size_t i = 0, e = ss->numfields();  i < e;  ++i)
-                    p.fields.push_back (ss->field(i).name.string());
+                    p.fields.push_back (ss->field(i).name);
             } else {
                 p.structname.clear();
             }

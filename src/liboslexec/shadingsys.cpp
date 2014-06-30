@@ -1645,7 +1645,8 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
 
         if (keyword == "shader") {
             string_view shadername = Strutil::parse_identifier (p);
-            string_view layername = Strutil::parse_identifier (p);
+            Strutil::skip_whitespace (p);
+            string_view layername = Strutil::parse_until (p, " \t\r\n,;");
             Shader (usage, shadername, layername);
             Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
             Strutil::skip_whitespace (p);
@@ -1653,10 +1654,12 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         }
 
         if (keyword == "connect") {
-            string_view lay1 = Strutil::parse_identifier (p);
+            Strutil::skip_whitespace (p);
+            string_view lay1 = Strutil::parse_until (p, " \t\r\n.");
             Strutil::parse_char (p, '.');
             string_view param1 = Strutil::parse_identifier (p);
-            string_view lay2 = Strutil::parse_identifier (p);
+            Strutil::skip_whitespace (p);
+            string_view lay2 = Strutil::parse_until (p, " \t\r\n.");
             Strutil::parse_char (p, '.');
             string_view param2 = Strutil::parse_identifier (p);
             ConnectShaders (lay1, param1, lay2, param2);
@@ -1741,12 +1744,14 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             stringvals.clear ();
             stringvals.resize (nvals);
             for (int i = 0; i < nvals; ++i) {
+                std::string unescaped;
                 string_view s;
                 Strutil::skip_whitespace (p);
                 if (p.size() && p[0] == '\"') {
                     if (! Strutil::parse_string (p, s))
                         break;
-                    s = Strutil::unescape_chars (s);
+                    unescaped = Strutil::unescape_chars (s);
+                    s = unescaped;
                 }
                 else {
                     s = Strutil::parse_until (p, " \t\r\n;");

@@ -1641,6 +1641,8 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         Strutil::skip_whitespace (p);
         if (! p.size())
             break;
+        while (Strutil::parse_char (p, ';'))  // skip blank statements
+            ;
         string_view keyword = Strutil::parse_word (p);
 
         if (keyword == "shader") {

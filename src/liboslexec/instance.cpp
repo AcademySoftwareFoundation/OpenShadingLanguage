@@ -632,7 +632,7 @@ ShaderGroup::serialize () const
         const ShaderInstance *inst = m_layers[i].get();
 
         bool dstsyms_exist = inst->symbols().size();
-        for (int p = 0;  p <= inst->lastparam(); ++p) {
+        for (int p = 0;  p < inst->lastparam(); ++p) {
             const Symbol *s = dstsyms_exist ? inst->symbol(p) : inst->mastersymbol(p);
             ASSERT (s);
             if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
@@ -657,7 +657,8 @@ ShaderGroup::serialize () const
                     for (int i = 0; i < nvals; ++i)
                         out << ' ' << '\"' << Strutil::escape_chars(vals[i]) << '\"';
                 } else {
-                    ASSERT (0 && "unknown type for serialization");
+                    ASSERT_MSG (0, "unknown type for serialization: %s (%s)",
+                                   type.c_str(), s->typespec().c_str());
                 }
                 bool lockgeom = dstsyms_exist ? s->lockgeom()
                                               : inst->instoverride(p)->lockgeom();

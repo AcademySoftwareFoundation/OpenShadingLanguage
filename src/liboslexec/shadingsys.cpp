@@ -1659,11 +1659,11 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             Strutil::skip_whitespace (p);
             string_view lay1 = Strutil::parse_until (p, " \t\r\n.");
             Strutil::parse_char (p, '.');
-            string_view param1 = Strutil::parse_identifier (p);
+            string_view param1 = Strutil::parse_until (p, " \t\r\n,;");
             Strutil::skip_whitespace (p);
             string_view lay2 = Strutil::parse_until (p, " \t\r\n.");
             Strutil::parse_char (p, '.');
-            string_view param2 = Strutil::parse_identifier (p);
+            string_view param2 = Strutil::parse_until (p, " \t\r\n,;");
             ConnectShaders (lay1, param1, lay2, param2);
             Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
             Strutil::skip_whitespace (p);

@@ -648,8 +648,11 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
                           bool varargs)
 {
     llvm::FunctionType *functype = type_function (rettype, params, varargs);
-    llvm::Function *func = llvm::cast<llvm::Function>(
-        module()->getOrInsertFunction (name, functype));
+    llvm::Constant *c = module()->getOrInsertFunction (name, functype);
+    ASSERT (c && "getOrInsertFunction returned NULL");
+    ASSERT_MSG (llvm::isa<llvm::Function>(c),
+                "Declaration for %s is wrong, LLVM had to make a cast", name.c_str());
+    llvm::Function *func = llvm::cast<llvm::Function>(c);
     if (fastcall)
         func->setCallingConv(llvm::CallingConv::Fast);
     return func;

@@ -51,13 +51,14 @@ namespace pvt {
 
 // Heavy lifting of OSL regex operations.
 OSL_SHADEOP int
-osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject_,
-                 int *results, int nresults, ustring pattern,
+osl_regex_impl2 (void *ctx_, const char *subject_,
+                 void *results, int nresults, const char *pattern,
                  int fullmatch)
 {
-    const std::string &subject (subject_.string());
+    ShadingContext *ctx = (ShadingContext *)ctx_;
+    const std::string &subject (USTR(subject_).string());
     boost::match_results<std::string::const_iterator> mresults;
-    const boost::regex &regex (ctx->find_regex (pattern));
+    const boost::regex &regex (ctx->find_regex (USTR(pattern)));
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
         int res = fullmatch ? boost::regex_match (subject, mresults, regex)
@@ -70,7 +71,7 @@ osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject_,
                 else
                     m[r] = mresults[r/2].second - start;
             } else {
-                m[r] = pattern.length();
+                m[r] = USTR(pattern).length();
             }
         }
         return res;

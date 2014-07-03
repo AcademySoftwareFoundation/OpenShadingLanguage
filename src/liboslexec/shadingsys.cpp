@@ -2498,26 +2498,27 @@ OSL_NAMESPACE_EXIT
 #define TYPEDESC(x) (*(TypeDesc *)&x)
 #define MAT(m) (*(Matrix44 *)m)
 
-OSL_SHADEOP bool
-osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
+OSL_SHADEOP int
+osl_get_matrix (void *sg_, void *r, const char *from)
 {
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
     if (USTR(from) == Strings::common ||
             USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-        r->makeIdentity ();
+        MAT(r).makeIdentity ();
         return true;
     }
     if (USTR(from) == Strings::shader) {
-        ctx->renderer()->get_matrix (*r, sg->shader2common, sg->time);
+        ctx->renderer()->get_matrix (MAT(r), sg->shader2common, sg->time);
         return true;
     }
     if (USTR(from) == Strings::object) {
-        ctx->renderer()->get_matrix (*r, sg->object2common, sg->time);
+        ctx->renderer()->get_matrix (MAT(r), sg->object2common, sg->time);
         return true;
     }
-    bool ok = ctx->renderer()->get_matrix (*r, USTR(from), sg->time);
+    int ok = ctx->renderer()->get_matrix (MAT(r), USTR(from), sg->time);
     if (! ok) {
-        r->makeIdentity();
+        MAT(r).makeIdentity();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
             ctx->error ("Unknown transformation \"%s\"", from);
@@ -2526,26 +2527,27 @@ osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from)
 }
 
 
-OSL_SHADEOP bool
-osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to)
+OSL_SHADEOP int
+osl_get_inverse_matrix (void *sg_, void *r, const char *to)
 {
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
     if (USTR(to) == Strings::common ||
             USTR(to) == ctx->shadingsys().commonspace_synonym()) {
-        r->makeIdentity ();
+        MAT(r).makeIdentity ();
         return true;
     }
     if (USTR(to) == Strings::shader) {
-        ctx->renderer()->get_inverse_matrix (*r, sg->shader2common, sg->time);
+        ctx->renderer()->get_inverse_matrix (MAT(r), sg->shader2common, sg->time);
         return true;
     }
     if (USTR(to) == Strings::object) {
-        ctx->renderer()->get_inverse_matrix (*r, sg->object2common, sg->time);
+        ctx->renderer()->get_inverse_matrix (MAT(r), sg->object2common, sg->time);
         return true;
     }
-    bool ok = ctx->renderer()->get_inverse_matrix (*r, USTR(to), sg->time);
+    int ok = ctx->renderer()->get_inverse_matrix (MAT(r), USTR(to), sg->time);
     if (! ok) {
-        r->makeIdentity ();
+        MAT(r).makeIdentity ();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
             ctx->error ("Unknown transformation \"%s\"", to);

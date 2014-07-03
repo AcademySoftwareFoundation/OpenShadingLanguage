@@ -751,8 +751,8 @@ osl_div_m_ff (void *r, float a, float b)
     MAT(r) = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
 }
 
-OSL_SHADEOP bool osl_get_matrix (ShaderGlobals *sg, Matrix44 *r, const char *from);
-OSL_SHADEOP bool osl_get_inverse_matrix (ShaderGlobals *sg, Matrix44 *r, const char *to);
+OSL_SHADEOP int osl_get_matrix (void *sg, void *r, const char *from);
+OSL_SHADEOP int osl_get_inverse_matrix (void *sg, void *r, const char *to);
 OSL_SHADEOP int osl_prepend_matrix_from (void *sg, void *r, const char *from);
 
 
@@ -760,7 +760,7 @@ OSL_SHADEOP int
 osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 {
     Matrix44 Mfrom, Mto;
-    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &Mfrom, from);
+    int ok = osl_get_matrix ((ShaderGlobals *)sg, &Mfrom, from);
     ok &= osl_get_inverse_matrix ((ShaderGlobals *)sg, &Mto, to);
     MAT(r) = Mfrom * Mto;
     return ok;
@@ -776,7 +776,7 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     static ustring u_common ("common");
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Matrix44 M;
-    bool ok;
+    int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
     if (USTR(from) == u_common)
         ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
@@ -1068,17 +1068,16 @@ osl_substr_ssii (const char *s, int start, int length)
 }
 
 OSL_SHADEOP int
-osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
+osl_regex_impl (void *sg_, const char *subject, void *results, int nresults,
                 const char *pattern, int fullmatch)
 {
-    extern int osl_regex_impl2 (OSL::ShadingContext *ctx, ustring subject,
-                               int *results, int nresults, ustring pattern,
+    extern int osl_regex_impl2 (void *ctx, const char *subject,
+                               void *results, int nresults, const char *pattern,
                                int fullmatch);
 
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return osl_regex_impl2 (sg->context, USTR(subject_),
-                            (int *)results, nresults,
-                            USTR(pattern), fullmatch);
+    return osl_regex_impl2 (sg->context, subject, results, nresults,
+                            pattern, fullmatch);
 }
 
 

@@ -627,6 +627,7 @@ std::string
 ShaderGroup::serialize () const
 {
     std::ostringstream out;
+    out.precision (9);
     lock_guard lock (m_mutex);
     for (int i = 0, nl = nlayers(); i < nl; ++i) {
         const ShaderInstance *inst = m_layers[i].get();

@@ -44,6 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 
 #include "OSL/oslexec.h"
+#include "OSL/oslquery.h"
 #include "simplerend.h"
 using namespace OSL;
 using OIIO::TypeDesc;
@@ -66,6 +67,7 @@ static bool pixelcenters = false;
 static bool debugnan = false;
 static bool debug_uninit = false;
 static bool use_group_outputs = false;
+static bool do_oslquery = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -281,6 +283,7 @@ getargs (int argc, const char *argv[])
                 "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
                 "--options %s", &extraoptions, "Set extra OSL options",
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
+                "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
@@ -708,10 +711,35 @@ test_shade (int argc, const char *argv[])
     // End the group
     shadingsys->ShaderGroupEnd ();
 
-    if (verbose) {
+    if (verbose || do_oslquery) {
         std::string pickle;
         shadingsys->getattribute (shadergroup.get(), "pickle", pickle);
         std::cout << "Shader group:\n---\n" << pickle << "\n---\n";
+        std::cout << "\n";
+        ustring groupname;
+        shadingsys->getattribute (shadergroup.get(), "groupname", groupname);
+        std::cout << "Shader group \"" << groupname << "\" layers are:\n";
+        int num_layers = 0;
+        shadingsys->getattribute (shadergroup.get(), "num_layers", num_layers);
+        if (num_layers > 0) {
+            std::vector<const char *> layers (num_layers, NULL);
+            shadingsys->getattribute (shadergroup.get(), "layer_names",
+                                      TypeDesc(TypeDesc::STRING, num_layers),
+                                      &layers[0]);
+            for (int i = 0; i < num_layers; ++i) {
+                std::cout << "    " << (layers[i] ? layers[i] : "<unnamed>") << "\n";
+                if (do_oslquery) {
+                    OSLQuery q;
+                    q.init (shadergroup.get(), i);
+                    for (size_t p = 0;  p < q.nparams(); ++p) {
+                        const OSLQuery::Parameter *param = q.getparam(p);
+                        std::cout << "\t" << (param->isoutput ? "output "  : "")
+                                  << param->type << ' ' << param->name << "\n";
+                    }
+                }
+            }
+        }
+        std::cout << "\n";
     }
     if (archivegroup.size())
         shadingsys->archive_shadergroup (shadergroup.get(), archivegroup);

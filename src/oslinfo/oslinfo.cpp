@@ -139,7 +139,7 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
 {
     OSLQuery g;
     g.open (name, path);
-    std::string e = g.error();
+    std::string e = g.geterror();
     if (! e.empty()) {
         std::cout << "ERROR opening shader \"" << name << "\" (" << e << ")\n";
         return;
@@ -158,7 +158,7 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
             break;
         std::string typestring;
         if (p->isstruct)
-            typestring = "struct " + p->structname;
+            typestring = "struct " + p->structname.string();
         else
             typestring = p->type.c_str();
         if (verbose) {
@@ -175,7 +175,7 @@ oslinfo (const std::string &name, const std::string &path, bool verbose)
             for (size_t f = 0;  f < p->fields.size();  ++f) {
                 if (f)
                     std::cout << ", ";
-                std::string fieldname = p->name + '.' + p->fields[f];
+                std::string fieldname = p->name.string() + '.' + p->fields[f].string();
                 const OSLQuery::Parameter *field = g.getparam (fieldname);
                 if (field)
                     std::cout << field->type.c_str() << ' ' << p->fields[f];

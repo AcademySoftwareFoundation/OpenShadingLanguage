@@ -302,9 +302,14 @@ public:
 
     const std::string &osofilename () const { return m_osofilename; }
 
+    ShaderType shadertype () const { return m_shadertype; }
+    string_view shadertypename () const { return OSL::pvt::shadertypename(m_shadertype); }
+
     /// Where is the location that holds the parameter's default value?
     void *param_default_storage (int index);
     const void *param_default_storage (int index) const;
+
+    int num_params () const { return m_lastparam - m_firstparam; }
 
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Back-ptr to the shading system

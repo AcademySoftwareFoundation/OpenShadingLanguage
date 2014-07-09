@@ -212,6 +212,9 @@ public:
     bool getattribute (string_view name, char **val) {
         return getattribute (name, TypeDesc::STRING, val);
     }
+    bool getattribute (string_view name, ustring &val) {
+        return getattribute (name, TypeDesc::STRING, (char **)&val);
+    }
     bool getattribute (string_view name, std::string &val) {
         const char *s = NULL;
         bool ok = getattribute (name, TypeDesc::STRING, &s);
@@ -222,6 +225,9 @@ public:
 
     /// Get the named attribute about a particular shader group, store it
     /// in value.  Attributes that are currently documented include:
+    ///   string groupname           The name of the shader group.
+    ///   int num_layers             The number of layers in the group.
+    ///   string[] layer_names       The names of the layers in the group.
     ///   int num_textures_needed    The number of texture names that are
     ///                                known to be potentially needed by the
     ///                                group (after optimization).
@@ -260,6 +266,9 @@ public:
     }
     bool getattribute (ShaderGroup *group, string_view name, char **val) {
         return getattribute (group, name, TypeDesc::STRING, val);
+    }
+    bool getattribute (ShaderGroup *group, string_view name, ustring &val) {
+        return getattribute (group, name, TypeDesc::STRING, (char **)&val);
     }
     bool getattribute (ShaderGroup *group, string_view name, std::string &val) {
         const char *s = NULL;

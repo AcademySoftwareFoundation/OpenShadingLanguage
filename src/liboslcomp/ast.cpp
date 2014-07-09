@@ -201,7 +201,7 @@ ASTshader_declaration::print (std::ostream &out, int indentlevel) const
 
 
 
-const char *
+string_view
 ASTshader_declaration::shadertypename () const
 {
     return OSL::pvt::shadertypename ((ShaderType)m_op);

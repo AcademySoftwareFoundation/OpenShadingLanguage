@@ -131,7 +131,7 @@ void
 OSOReaderQuery::shader (const char *shadertype, const char *name)
 {
     m_query.m_shadername = name;
-    m_query.m_shadertype = shadertype;
+    m_query.m_shadertypename = shadertype;
 }
 
 
@@ -188,7 +188,7 @@ OSOReaderQuery::symdefault (const char *def)
 {
     if (m_reading_param && m_query.nparams() > 0) {
         OSLQuery::Parameter &p (m_query.m_params[m_query.nparams()-1]);
-        p.sdefault.push_back (std::string(def));
+        p.sdefault.push_back (ustring(def));
         p.validdefault = true;
     }
 }
@@ -204,14 +204,20 @@ OSOReaderQuery::parameter_done ()
     // case they were only partially initialized.
     OSLQuery::Parameter &p (m_query.m_params.back());
     int nvalues = p.type.numelements() * p.type.aggregate;
-    if (p.type.basetype == TypeDesc::INT)
+    if (p.type.basetype == TypeDesc::INT) {
         p.idefault.resize (nvalues, 0);
-    else if (p.type.basetype == TypeDesc::FLOAT)
+        p.data = &p.idefault[0];
+    }
+    else if (p.type.basetype == TypeDesc::FLOAT) {
         p.fdefault.resize (nvalues, 0);
-    else if (p.type.basetype == TypeDesc::STRING)
-        p.sdefault.resize (nvalues, std::string());
+        p.data = &p.fdefault[0];
+    }
+    else if (p.type.basetype == TypeDesc::STRING) {
+        p.sdefault.resize (nvalues, ustring());
+        p.data = &p.sdefault[0];
+    }
     if (p.spacename.size())
-        p.spacename.resize (p.type.numelements(), std::string());
+        p.spacename.resize (p.type.numelements(), ustring());
 }
 
 
@@ -233,7 +239,7 @@ OSOReaderQuery::hint (const char *hintstring)
                 ++hintstring;
             while (hintstring[0] == '\"') {
                 ++hintstring;
-                p.sdefault.push_back (readuntil (&hintstring, '\"'));
+                p.sdefault.push_back (ustring (readuntil (&hintstring, '\"')));
             }
         } else if (p.type.basetype == TypeDesc::INT) {
             while (*hintstring == ' ')
@@ -257,8 +263,7 @@ OSOReaderQuery::hint (const char *hintstring)
         hintstring += 14;
         OSLQuery::Parameter &param (m_query.m_params[m_query.nparams()-1]);
         while (*hintstring) {
-            std::string afield = readuntil (&hintstring, ',', '}');
-            param.fields.push_back (afield);
+            param.fields.push_back (ustring (readuntil (&hintstring, ',', '}')));
         }
         return;
     }
@@ -300,8 +305,8 @@ OSLQuery::~OSLQuery ()
 
 
 bool
-OSLQuery::open (const std::string &shadername,
-                const std::string &searchpath)
+OSLQuery::open (string_view shadername,
+                string_view searchpath)
 {
     OSOReaderQuery oso (*this);
     std::string filename = shadername;
@@ -317,7 +322,7 @@ OSLQuery::open (const std::string &shadername,
         filename = Filesystem::searchpath_find (filename, dirs);
     }
     if (filename.empty()) {
-        m_error = std::string("File \"") + shadername + "\" could not be found";
+        error ("File \"%s\" could not be found.", shadername);
         return false;
     }
 

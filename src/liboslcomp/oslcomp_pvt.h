@@ -296,7 +296,9 @@ private:
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
-    void oso (const char *fmt, ...) const;
+    // void oso (const char *fmt, ...) const;
+    TINYFORMAT_WRAP_FORMAT (void, oso, const,
+        std::ostringstream buf;, buf, fputs(buf.str().c_str(), m_osofile);)
 
     void track_variable_lifetimes () {
         track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());

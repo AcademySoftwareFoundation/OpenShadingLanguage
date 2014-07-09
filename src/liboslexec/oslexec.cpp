@@ -44,7 +44,7 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-const char *
+string_view
 shadertypename (ShaderType s)
 {
     switch (s) {

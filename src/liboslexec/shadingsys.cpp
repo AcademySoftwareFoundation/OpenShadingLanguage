@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "OSL/genclosure.h"
 #include "backendllvm.h"
+#include "OSL/oslquery.h"
 
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
@@ -1091,6 +1092,21 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
 {
     if (! group)
         return false;
+    if (name == "groupname" && type == TypeDesc::TypeString) {
+        *(ustring *)val = group->name();
+        return true;
+    }
+    if (name == "num_layers" && type == TypeDesc::TypeInt) {
+        *(int *)val = group->nlayers();
+        return true;
+    }
+    if (name == "layer_names" && type.basetype == TypeDesc::STRING) {
+        m_renderer_outputs.clear ();
+        size_t n = std::min (type.numelements(), (size_t)group->nlayers());
+        for (size_t i = 0;  i < n;  ++i)
+            ((ustring *)val)[i] = (*group)[i]->layername();
+        return true;
+    }
     if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
             optimize_group (*group);
@@ -2493,6 +2509,65 @@ ClosureRegistry::get_entry(ustring name) const
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
+
+
+
+bool
+OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
+{
+    geterror();   // clear the error, we're newly initializing
+    if (! group) {
+        error ("No group pointer supplied.");
+        return false;
+    }
+    if (layernum < 0 || layernum >= group->nlayers()) {
+        error ("Invalid layer number %d (valid indices: 0-%d).",
+               layernum, group->nlayers()-1);
+        return false;
+    }
+
+    const ShaderMaster *master = (*group)[layernum]->master();
+    m_shadername = master->shadername();
+    m_shadertypename = master->shadertypename();
+    m_params.clear();
+    if (int nparams = master->num_params()) {
+        m_params.resize (nparams);
+        for (int i = 0;  i < nparams;  ++i) {
+            const Symbol *sym = master->symbol (i);
+            Parameter &p (m_params[i]);
+            p.name = sym->name().string();
+            const TypeSpec &ts (sym->typespec());
+            p.type = ts.simpletype();
+            p.isoutput = (sym->symtype() == SymTypeOutputParam);
+            p.varlenarray = (p.type.arraylen < 0);
+            p.isstruct = ts.is_structure() || ts.is_structure_array();
+            p.isclosure = ts.is_closure_based();
+            p.data = sym->data();
+            // In this mode, we don't fill in idefault, fdefault, sdefault,
+            // or spacename.
+            p.idefault.clear();
+            p.fdefault.clear();
+            p.sdefault.clear();
+            p.spacename.clear();
+            p.fields.clear();  // don't bother filling this out
+            if (StructSpec *ss = ts.structspec()) {
+                p.structname = ss->name().string();
+                for (size_t i = 0, e = ss->numfields();  i < e;  ++i)
+                    p.fields.push_back (ss->field(i).name);
+            } else {
+                p.structname.clear();
+            }
+            p.metadata.clear();   // FIXME?
+            p.validdefault = (p.data != NULL);
+        }
+    }
+
+    m_meta.clear();   // no metadata available at this point
+
+    return false;
+}
+
+
 
 #define USTR(cstr) (*((ustring *)&cstr))
 #define TYPEDESC(x) (*(TypeDesc *)&x)

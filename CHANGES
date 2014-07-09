@@ -92,6 +92,18 @@ ShadingSystem API changes and new options (for renderer writers):
   Remember that naming the renderer outputs prevents those from being
   optimized away if they are not connected to downstream
   shaders. (1.5.8) (#386)
+* New group attribute queries: "groupname", "num_layers", "layer_names"
+  allow you to ask for the name of the group, how many layers there are,
+  and the names of all the layers.
+* OSLQuery now may be initialized by a ShaderGroup*, which allows an
+  app with a live shading system to query information about shaders
+  much more efficiently than reloading and parsing the .oso file from
+  disk. #387 (1.5.8)
+* OSLQuery API has replaced most of its std::string parameters and members
+  with string_view and ustring, to speed it up and eliminate lots of small
+  allocations. This may introduce some small source incompatibilities with
+  the old OSLQuery, but they should be very easy to fix in your code.
+  #387 (1.5.8)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --

@@ -1,4 +1,4 @@
-Release 1.5 -- in progress (compared to 1.4)
+Release 1.5 -- Release candidate July 9, 2014 (compared to 1.4)
 --------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * New closure function for microfacet BSDFs:
@@ -14,96 +14,102 @@ Language, standard libary, and compiler changes (for shader writers):
 * Remove documentation about unimplemented hash() function -- it was never
   implemented, and we can't figure out what it's good for. (#359) (1.5.7)
 
-ShadingSystem API changes and new options (for renderer writers):
-* ShadingSystem::Parameter() has a new variety that can set lockgeom=0
-  for a particular parameter at runtime, even if it was not declared
-  this way in the shader's metadata.  This allows an app to effectively
-  say "I intend to vary this shader's parameter value, don't optimize as
-  if it were a a constant." (1.5.1)
-* New ShadingSystem::ReParameter() lets you change the instance value of
-  a shader parameter after the shader group has already been declared
-  (but only if the shader has not yet been optimized, OR if the
-  parameter was declared with lockgeom=0). This, in combination with the
-  new SS::Parameter() variety, lets an app select a parameter for
-  variation, compile the shader network, and then continuously modify
-  the value and re-render without needing to redeclare and recompile the
-  shader group (though at a slightly higher execution cost than if the
-  parameter were fully optimized. (1.5.1)
-* ShadingAttribState has been simlified and replaced with ShaderGroup.
-  And ShadingAttribStateRef replaced by ShaderGroupRef. (1.5.1)
-* ShaderGroupBegin returns the ShaderGroupRef for the group, there is
-  no need to call state() to get the group reference. (1.5.1)
-* Split the definition of ShaderGlobals into its own header file,
-  shaderglobals.h. (1.5.1)
-* Added a RendererServices pointer to ShaderGlobals, to eliminate a
-  bunch of pointless indirection during shader execution. (1.5.2)
-* Split the definition of ShaderGlobals into a separate shaderglobals.h
-  file. (1.5.1)
-* OSLQuery::Parameter has a new 'structname' field, that for struct
-  parameters reveals the name of the structure type. The oslinfo utility
-  has also been updated to print this information. (1.5.4)
-* RendererServices::get_texture_info method parameters have changed, now
-  includes an additional ShaderGlobals* parameter (as did all the other
-  texture functions already). (1.5.5)
-* Split RendererServices definition into separate rendererservices.h. (1.5.6)
-* Add RendererServices::texturesys() that returns a pointer to the
-  RS's TextureSystem. (1.5.6)
-* Use OIIO's new string_view for many public API input parameters that
-  previously took a std::string& or a const char*. (1.5.7) (#361)
-* New ShadingSystem::getattribute() and attribute() varieties that takes
-  a ShaderGroup* as a first argument, allows setting and retrieval of
-  attributes pertaining to a specific shader group. (#362, #368) (1.5.8)
-* ShadingSystem::getattribute(group,...) allows queries that retrieve
-  all the names and types of userdata the compiled group may need
-  ("num_userdata", "userdata_names", "userdata_types"), as well as the
-  names of all textures it might access and whether it's possible that
-  it will try to acccess textures whose names are not known without
-  executing the shader ("num_textures_needed", "textures_needed",
-  "unknown_textures_needed"). (#362) (1.5.8)
-* De-virtualized OSLCompiler and ShadingSystem classes -- it is now safe to
-  construct them in the usual way, the create() and destroy() functions for
-  them are optional/deprecated. (#363) (1.5.8)
-* ShadingSystem methods renderer() and texturesys() retrieve the
-  RendererServices and TextureSystem, respectively. (1.5.8)
-* ShadingSystem statistics output now prints the version and major
-  runtime options. (1.5.8) (#369)
-* New ShaderGroupBegin() variant takes a text description of a shader group.
-  (3.5.8) (#379) For example:
-     ShaderGroupBegin ("groupname", "surface",
-                          "param float fin 3.14; " /*concatenate string*/
-                          "shader a alayer;"
-                          "shader b blayer;"
-                          "connect alayer.f_out blayer.f_in;");
-* Retrieving the group attribute "pickle" (as a string) gives you the
-  serialized description of the shader group in the same format that is
-  accepted by ShaderGroupBegin(). (1.5.8) (#381)
-* Attributes "archive_groupname" and "archive_filename", when set, will
-  cause the named group to be fully archived into a .tar, .tar.gz, or .zip
-  file containing the serialized description of the group, and all .oso files
-  needed to reconstruct it. This is great for shipping debugging or
-  performance benchmark cases to the developers! It's also a good way to
-  "extract" a shader network from the midst of a complex renderer and then
-  be able to reconstitute it inside a debugging test harness like testshade.
-  (1.5.8) (#381) For more detail and explanation, please see
-  https://github.com/imageworks/OpenShadingLanguage/pull/381
-* Group-wise attribute "renderer_outputs" (array of strings) lets you
-  specify different renderer outputs for each shader group in addition
-  to the ShadingSystem-wide "renderer_outputs" that apply to all groups.
-  Remember that naming the renderer outputs prevents those from being
-  optimized away if they are not connected to downstream
-  shaders. (1.5.8) (#386)
-* New group attribute queries: "groupname", "num_layers", "layer_names"
-  allow you to ask for the name of the group, how many layers there are,
-  and the names of all the layers.
-* OSLQuery now may be initialized by a ShaderGroup*, which allows an
-  app with a live shading system to query information about shaders
-  much more efficiently than reloading and parsing the .oso file from
-  disk. #387 (1.5.8)
-* OSLQuery API has replaced most of its std::string parameters and members
-  with string_view and ustring, to speed it up and eliminate lots of small
-  allocations. This may introduce some small source incompatibilities with
-  the old OSLQuery, but they should be very easy to fix in your code.
-  #387 (1.5.8)
+API changes, new options, new ShadingSystem features (for renderer writers):
+* ShadingSystem API changes:
+   * ShadingSystem::Parameter() has a new variety that can set lockgeom=0
+     for a particular parameter at runtime, even if it was not declared
+     this way in the shader's metadata.  This allows an app to effectively
+     say "I intend to vary this shader's parameter value, don't optimize as
+     if it were a a constant." (1.5.1)
+   * New ShadingSystem::ReParameter() lets you change the instance value of
+     a shader parameter after the shader group has already been declared
+     (but only if the shader has not yet been optimized, OR if the
+     parameter was declared with lockgeom=0). This, in combination with the
+     new SS::Parameter() variety, lets an app select a parameter for
+     variation, compile the shader network, and then continuously modify
+     the value and re-render without needing to redeclare and recompile the
+     shader group (though at a slightly higher execution cost than if the
+     parameter were fully optimized. (1.5.1)
+   * ShadingAttribState has been simlified and replaced with ShaderGroup.
+     And ShadingAttribStateRef replaced by ShaderGroupRef. (1.5.1)
+   * ShaderGroupBegin returns the ShaderGroupRef for the group, there is
+     no need to call state() to get the group reference. (1.5.1)
+   * New ShadingSystem::getattribute() and attribute() varieties that takes
+     a ShaderGroup* as a first argument, allows setting and retrieval of
+     attributes pertaining to a specific shader group. (#362, #368) (1.5.8)
+     SEE SECTION BELOW ON GROUP-SPECIFIC ATTRIBUTES
+   * New ShaderGroupBegin() variant takes a text description of a shader
+     group. (3.5.8) (#379) For example:
+        ShaderGroupBegin ("groupname", "surface",
+                             "param float fin 3.14; " /*concatenate string*/
+                             "shader a alayer;"
+                             "shader b blayer;"
+                             "connect alayer.f_out blayer.f_in;");
+   * ShadingSystem methods renderer() and texturesys() retrieve the
+     RendererServices and TextureSystem, respectively. (1.5.8)
+   * ShadingSystem statistics output now prints the version and major
+     runtime options. (1.5.8) (#369)
+* New/changed ShadingSystem global attributes:
+   * Attributes "archive_groupname" and "archive_filename", when set, will
+     cause the named group to be fully archived into a .tar, .tar.gz, or
+     .zip file containing the serialized description of the group, and all
+     .oso files needed to reconstruct it. This is great for shipping
+     debugging or performance benchmark cases to the developers! It's also
+     a good way to "extract" a shader network from the midst of a complex
+     renderer and then be able to reconstitute it inside a debugging test
+     harness like testshade. (1.5.8) (#381) For more detail and explanation,
+     please see https://github.com/imageworks/OpenShadingLanguage/pull/381
+* New per-ShaderGroup attributes:
+   * ShadingSystem::getattribute(group,...) allows queries that retrieve
+     all the names and types of userdata the compiled group may need
+     ("num_userdata", "userdata_names", "userdata_types"), as well as the
+     names of all textures it might access and whether it's possible that
+     it will try to acccess textures whose names are not known without
+     executing the shader ("num_textures_needed", "textures_needed",
+     "unknown_textures_needed"). (#362) (1.5.8)
+   * Retrieving the group attribute "pickle" (as a string) gives you the
+     serialized description of the shader group in the same format that is
+     accepted by ShaderGroupBegin(). (1.5.8) (#381)
+   * Group-wise attribute "renderer_outputs" (array of strings) lets you
+     specify different renderer outputs for each shader group in addition
+     to the ShadingSystem-wide "renderer_outputs" that apply to all groups.
+     Remember that naming the renderer outputs prevents those from being
+     optimized away if they are not connected to downstream
+     shaders. (1.5.8) (#386)
+   * New group attribute queries: "groupname", "num_layers", "layer_names"
+     allow you to ask for the name of the group, how many layers there are,
+     and the names of all the layers.
+* ShaderGlobals changes:
+   * Added a RendererServices pointer to ShaderGlobals, to eliminate a
+     bunch of pointless indirection during shader execution. (1.5.2)
+   * Split the definition of ShaderGlobals into its own header file,
+     shaderglobals.h. (1.5.1)
+* RendererServices changes:
+   * RendererServices::get_texture_info method parameters have changed, now
+     includes an additional ShaderGlobals* parameter (as did all the other
+     texture functions already). (1.5.5)
+   * Split RendererServices definition into separate rendererservices.h. (1.5.6)
+   * Add RendererServices::texturesys() that returns a pointer to the
+     RS's TextureSystem. (1.5.6)
+* OSLQuery changes:
+   * OSLQuery::Parameter has a new 'structname' field, that for struct
+     parameters reveals the name of the structure type. The oslinfo utility
+     has also been updated to print this information. (1.5.4)
+   * OSLQuery now may be initialized by a ShaderGroup*, which allows an
+     app with a live shading system to query information about shaders
+     much more efficiently than reloading and parsing the .oso file from
+     disk. #387 (1.5.8)
+   * OSLQuery API has replaced most of its std::string parameters and
+     members with string_view and ustring, to speed it up and eliminate
+     lots of small allocations. This may introduce some small source
+     incompatibilities with the old OSLQuery, but they should be very
+     easy to fix in your code.  #387 (1.5.8)
+* Miscellaneous/general:
+   * Use OIIO's new string_view for many public API input parameters that
+     previously took a std::string& or a const char*. (1.5.7) (#361)
+   * De-virtualized OSLCompiler and ShadingSystem classes -- it is now safe to
+     construct them in the usual way, the create() and destroy() functions for
+     them are optional/deprecated. (#363) (1.5.8)
 
 Performance improvements:
 * Dramatically speed up LLVM optimization & JIT of small shaders --

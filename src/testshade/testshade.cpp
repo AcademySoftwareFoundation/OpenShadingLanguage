@@ -694,6 +694,11 @@ test_shade (int argc, const char *argv[])
     // instances and their parameters for the group.
     getargs (argc, argv);
 
+    if (! shadergroup) {
+        std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";
+        return EXIT_FAILURE;
+    }
+
     // Now set up the connections
     for (size_t i = 0;  i < connections.size();  i += 4) {
         if (i+3 < connections.size()) {

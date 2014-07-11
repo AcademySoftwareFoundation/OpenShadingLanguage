@@ -61,7 +61,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 9 Jul, 2014 \\
+\date{{\large Date: 14 Jul, 2014 \\
 %~ (with corrections, 23 Mar 2014)
 }
 \bigskip
@@ -4667,7 +4667,41 @@ case, \emph{name} must be an array attribute, the type of
 \emph{destination} must be the type of the array element (not the type
 of the whole array), and the value of \emph{arrayindex} must be a valid
 index given the array's size.
+
+Tables giving ``standardized'' names for different kinds of attributes may
+be found below. All renderers are expected to use the same names for these
+attributes, but are free to choose any names for additional attributes they
+wish to make queryable.
 \apiend
+
+\begin{table}[htbp]
+\caption{Names of standard camera attributes that may be retrieved.
+If the {\cf getattribute()} function specifies an {\cf objectname} parameter
+and it is the name of a valid camera, the value specific to that camera
+is retrieved. If no specific camera is named, the global or default
+camera is implied.
+}\label{tab:cameraattributes}
+\begin{tabular}{|p{1.8in}|p{0.6in}|p{2.8in}|}
+\hline
+{\bf Name} & {\bf Type} & {\bf Description} \\
+\hline
+{\cf "camera:resolution"}     & {\cf int[2]}    & Image resolution. \\
+{\cf "camera:pixelaspect"}    & {\cf float}     & Pixel aspect ratio. \\
+{\cf "camera:projection"}     & {\cf string}    & Projection type (e.g.,
+            \qkw{perspective}, \qkw{orthographic}, etc.)  \\
+{\cf "camera:fov"}            & {\cf float}     & Field of fiew. \\
+{\cf "camera:clip_near"}      & {\cf float}     & Near clip distance. \\
+{\cf "camera:clip_far"}       & {\cf float}     & Far clip distance. \\
+{\cf "camera:clip"}           & {\cf float[2]}  & Near and far clip distances. \\
+{\cf "camera:shutter_open"}   & {\cf float}     & Shutter open time. \\
+{\cf "camera:shutter_close"}  & {\cf float}     & Shutter close time. \\
+{\cf "camera:shutter"}        & {\cf float[2]}  & Shutter open and close times. \\
+{\cf "camera:screen_window"}  & {\cf float[4]}  & Screen window (xmin, ymin, xmax, ymax). \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
 
 \apiitem{void {\ce setmessage} (string name, output \emph{type} value)}
 \indexapi{setmessage()}

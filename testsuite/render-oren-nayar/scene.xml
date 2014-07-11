@@ -2,41 +2,38 @@
    <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
 
    <ShaderGroup>
-      <Parameter scale_s="float 20" />
-      <Parameter scale_t="float 20" />
-      <Parameter Ca="color 0.1 0.1 0.1" />
-      <Parameter Cb="color 0.5 0.5 0.5" />
-      <Shader name="checkerboard" layer="tex" />
-      <Shader name="matte" layer="layer1" />      
-      <ConnectShaders srclayer="tex" srcparam="Cout" dstlayer="layer1" dstparam="Cs" />
+      param float scale_s 20;
+      param float scale_t 20;
+      param color Ca 0.1 0.1 0.1;
+      param color Cb 0.5 0.5 0.5;
+      shader checkerboard tex;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
    </ShaderGroup>
    <Quad corner="-200,0,0" edge_x="400,0,0" edge_y="0,400,0" /> <!-- Back -->
    <Quad corner="-200,0,0" edge_x="0,0,400" edge_y="400,0,0" /> <!-- Botm -->
 
 
    <ShaderGroup>
-      <Parameter sigma="float 0.0" />
-      <Parameter Cs="color 0.7 0.2 0.2" />
-      <Shader name="rough_matte" layer="layer1" />
+      float sigma 0.0;
+      color Cs 0.7 0.2 0.2;
+      shader rough_matte layer1;
    </ShaderGroup>
    <Sphere center="-60,30,120"        radius="30" />
    <ShaderGroup>
-      <Parameter sigma="float 0.3" />
-      <Parameter Cs="color 0.2 0.7 0.2" />
-      <Shader name="rough_matte" layer="layer1" />
+      float sigma 0.3;
+      color Cs 0.2 0.7 0.2;
+      shader rough_matte layer1;
    </ShaderGroup>
    <Sphere center="  0,30,120"        radius="30" />
-      <ShaderGroup>
-      <Parameter sigma="float 0.6" />
-      <Parameter Cs="color 0.2 0.2 0.7" />
-      <Shader name="rough_matte" layer="layer1" />
+   <ShaderGroup>
+      float sigma 0.6;
+      color Cs 0.2 0.2 0.7;
+      shader rough_matte layer1;
    </ShaderGroup>
    <Sphere center=" 60,30,120"        radius="30" />
 
-   <ShaderGroup>
-      <Parameter power="float 160000" />
-      <Shader name="emitter" layer="layer1" />
-   </ShaderGroup>
+   <ShaderGroup>float power 160000; shader emitter layer1;</ShaderGroup>
    <Sphere center="-120, 130, 250" radius="1" is_light="yes" /> <!--Lite -->
    
 </World>

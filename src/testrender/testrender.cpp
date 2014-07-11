@@ -298,7 +298,17 @@ void parse_scene() {
                 backgroundResolution = strtoint(res_attr.value());
             backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
-            ShaderGroupRef group = shadingsys->ShaderGroupBegin();
+            ShaderGroupRef group;
+            pugi::xml_attribute name_attr = node.attribute("name");
+            std::string name = name_attr? name_attr.value() : "";
+            pugi::xml_attribute type_attr = node.attribute("type");
+            std::string shadertype = type_attr ? type_attr.value() : "surface";
+            pugi::xml_attribute commands_attr = node.attribute("commands");
+            std::string commands = commands_attr ? commands_attr.value() : node.text().get();
+            if (commands.size())
+                group = shadingsys->ShaderGroupBegin (name, shadertype, commands);
+            else
+                group = shadingsys->ShaderGroupBegin();
             ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
             for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
                 if (strcmp(gnode.name(), "Parameter") == 0) {

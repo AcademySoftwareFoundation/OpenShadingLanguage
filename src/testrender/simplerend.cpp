@@ -31,15 +31,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simplerend.h"
 using namespace OSL;
 
-#ifdef OSL_NAMESPACE
-namespace OSL_NAMESPACE {
-#endif
-
-namespace OSL {
+OSL_NAMESPACE_ENTER
 
 static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
+static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
+static TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
+static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
+
 
 
 
@@ -48,6 +48,19 @@ SimpleRenderer::SimpleRenderer ()
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
+
+    // Set up getters
+    m_attr_getters[ustring("camera:resolution")] = &SimpleRenderer::get_camera_resolution;
+    m_attr_getters[ustring("camera:projection")] = &SimpleRenderer::get_camera_projection;
+    m_attr_getters[ustring("camera:pixelaspect")] = &SimpleRenderer::get_camera_pixelaspect;
+    m_attr_getters[ustring("camera:screen_window")] = &SimpleRenderer::get_camera_screen_window;
+    m_attr_getters[ustring("camera:fov")] = &SimpleRenderer::get_camera_fov;
+    m_attr_getters[ustring("camera:clip")] = &SimpleRenderer::get_camera_clip;
+    m_attr_getters[ustring("camera:clip_near")] = &SimpleRenderer::get_camera_clip_near;
+    m_attr_getters[ustring("camera:clip_far")] = &SimpleRenderer::get_camera_clip_far;
+    m_attr_getters[ustring("camera:shutter")] = &SimpleRenderer::get_camera_shutter;
+    m_attr_getters[ustring("camera:shutter_open")] = &SimpleRenderer::get_camera_shutter_open;
+    m_attr_getters[ustring("camera:shutter_close")] = &SimpleRenderer::get_camera_shutter_close;
 }
 
 
@@ -61,8 +74,15 @@ SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
     m_world_to_camera = world_to_camera;
     m_projection = projection;
     m_fov = hfov;
+    m_pixelaspect = 1.0f; // hard-coded
     m_hither = hither;
     m_yon = yon;
+    m_shutter[0] = 0.0f; m_shutter[1] = 1.0f;  // hard-coded
+    float frame_aspect = float(xres)/float(yres) * m_pixelaspect;
+    m_screen_window[0] = -frame_aspect;
+    m_screen_window[1] = -1.0f;
+    m_screen_window[2] =  frame_aspect;
+    m_screen_window[3] =  1.0f;
     m_xres = xres;
     m_yres = yres;
 }
@@ -73,7 +93,10 @@ bool
 SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
                             float time)
 {
-    return get_matrix(result, xform);
+    // SimpleRenderer doesn't understand motion blur and transformations
+    // are just simple 4x4 matrices.
+    result = *reinterpret_cast<const Matrix44*>(xform);
+    return true;
 }
 
 
@@ -81,7 +104,13 @@ SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
 bool
 SimpleRenderer::get_matrix (Matrix44 &result, ustring from, float time)
 {
-    return get_matrix(result, from);
+    TransformMap::const_iterator found = m_named_xforms.find (from);
+    if (found != m_named_xforms.end()) {
+        result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
@@ -174,26 +203,41 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
     m_named_xforms[ustring(name)] = M;
 }
 
+
+
 bool
 SimpleRenderer::get_array_attribute (void *renderstate, bool derivatives, ustring object,
                                      TypeDesc type, ustring name,
                                      int index, void *val)
 {
+    AttrGetterMap::const_iterator g = m_attr_getters.find (name);
+    if (g != m_attr_getters.end()) {
+        AttrGetter getter = g->second;
+        return (this->*(getter)) (renderstate, derivatives, object, type, name, val);
+    }
+
     return false;
 }
+
+
 
 bool
 SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring object,
                                TypeDesc type, ustring name, void *val)
 {
-    return false;
+    return get_array_attribute (renderstate, derivatives, object,
+                                type, name, -1, val);
 }
+
+
 
 bool
 SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type, void *renderstate, void *val)
 {
     return false;
 }
+
+
 
 bool
 SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
@@ -202,8 +246,165 @@ SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
 }
 
 
-};  // namespace OSL
 
-#ifdef OSL_NAMESPACE
-}; // end namespace OSL_NAMESPACE
-#endif
+bool
+SimpleRenderer::get_camera_resolution (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeIntArray2) {
+        ((int *)val)[0] = m_xres;
+        ((int *)val)[1] = m_yres;
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_projection (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeString) {
+        ((ustring *)val)[0] = m_projection;
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_fov (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    // N.B. in a real rederer, this may be time-dependent
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_fov;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_pixelaspect (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_pixelaspect;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_clip (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeFloatArray2) {
+        ((float *)val)[0] = m_hither;
+        ((float *)val)[1] = m_yon;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_clip_near (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_hither;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_clip_far (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_yon;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+
+bool
+SimpleRenderer::get_camera_shutter (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeFloatArray2) {
+        ((float *)val)[0] = m_shutter[0];
+        ((float *)val)[1] = m_shutter[1];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_shutter_open (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_shutter[0];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_shutter_close (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_shutter[1];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_screen_window (void *renderstate, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    // N.B. in a real rederer, this may be time-dependent
+    if (type == TypeFloatArray4) {
+        ((float *)val)[0] = m_screen_window[0];
+        ((float *)val)[1] = m_screen_window[1];
+        ((float *)val)[2] = m_screen_window[2];
+        ((float *)val)[3] = m_screen_window[3];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+
+OSL_NAMESPACE_EXIT

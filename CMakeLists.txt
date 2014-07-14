@@ -309,7 +309,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             debugnan debug-uninit
             derivs derivs-muldiv-clobber error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
-            geomath getsymbol-nonheap gettextureinfo
+            geomath getattribute-camera getsymbol-nonheap gettextureinfo
             group-outputs groupstring
             hyperb ieee_fp if incdec initops intbits isconnected
             layers layers-Ciassign layers-lazy

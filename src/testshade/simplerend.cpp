@@ -45,10 +45,7 @@ enum ClosureIDs {
     TRANSLUCENT_ID,
     PHONG_ID,
     WARD_ID,
-    MICROFACET_GGX_ID,
-    MICROFACET_GGX_REFR_ID,
-    MICROFACET_BECKMANN_ID,
-    MICROFACET_BECKMANN_REFR_ID,
+    MICROFACET_ID,
     REFLECTION_ID,
     FRESNEL_REFLECTION_ID,
     REFRACTION_ID,
@@ -66,7 +63,7 @@ struct PhongParams      { Vec3 N; float exponent; };
 struct WardParams       { Vec3 N, T; float ax, ay; };
 struct ReflectionParams { Vec3 N; float eta; };
 struct RefractionParams { Vec3 N; float eta; };
-struct MicrofacetParams { Vec3 N; float alpha, eta; };
+struct MicrofacetParams { ustring dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
 struct DebugParams      { ustring tag; };
 
 } // anonymous namespace
@@ -106,24 +103,13 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
                                                   CLOSURE_FLOAT_PARAM (WardParams, ax),
                                                   CLOSURE_FLOAT_PARAM (WardParams, ay),
                                                   CLOSURE_FINISH_PARAM(WardParams) } },
-        { "microfacet_ggx", MICROFACET_GGX_ID,  { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
+        { "microfacet", MICROFACET_ID,          { CLOSURE_STRING_PARAM(MicrofacetParams, dist),
+                                                  CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
+                                                  CLOSURE_VECTOR_PARAM(MicrofacetParams, U),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, xalpha),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, yalpha),
                                                   CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
-                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
-        { "microfacet_ggx_refraction", MICROFACET_GGX_REFR_ID,
-                                                { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
-                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
-        { "microfacet_beckmann", MICROFACET_BECKMANN_ID,
-                                                { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
-                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
-        { "microfacet_beckmann_refraction", MICROFACET_BECKMANN_REFR_ID,
-                                                { CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, alpha),
-                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
+                                                  CLOSURE_INT_PARAM   (MicrofacetParams, refract),
                                                   CLOSURE_FINISH_PARAM(MicrofacetParams) } },
         { "reflection" , REFLECTION_ID,         { CLOSURE_VECTOR_PARAM(ReflectionParams, N),
                                                   CLOSURE_FINISH_PARAM(ReflectionParams) } },
@@ -182,7 +168,7 @@ SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
-    result = *(OSL::Matrix44 *)xform;
+    result = *reinterpret_cast<const Matrix44*>(xform);
     return true;
 }
 
@@ -236,7 +222,6 @@ SimpleRenderer::get_inverse_matrix (Matrix44 &result, ustring to, float time)
         Matrix44 M = m_world_to_camera;
         if (to == u_screen || to == u_NDC || to == u_raster) {
             float depthrange = (double)m_yon-(double)m_hither;
-            static ustring u_perspective("perspective");
             if (m_projection == u_perspective) {
                 float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
                 Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,

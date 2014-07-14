@@ -34,18 +34,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_NAMESPACE_ENTER
 
-class SimpleRenderer : public RendererServices {
+class SimpleRenderer : public RendererServices
+{
 public:
+    // Just use 4x4 matrix for transformations
+    typedef Matrix44 Transformation;
+
     SimpleRenderer ();
     ~SimpleRenderer () { }
 
-    // required methods:
     virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
                              float time);
     virtual bool get_matrix (Matrix44 &result, ustring from, float time);
+
     virtual bool get_matrix (Matrix44 &result, TransformationPtr xform);
     virtual bool get_matrix (Matrix44 &result, ustring from);
     virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
+
+    void name_transform (const char *name, const Transformation &xform);
 
     virtual bool get_array_attribute (void *renderstate, bool derivatives, 
                                       ustring object, TypeDesc type, ustring name,
@@ -56,15 +62,18 @@ public:
                                void *renderstate, void *val);
     virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
 
-    // implementation specific method to setup internals:
-    void name_transform (const char *name, const Matrix44& xform);
-    void camera_params (const Matrix44& world_to_camera, float hfov, int xres, int yres);
+    // Super simple camera and display parameters.  Many options not
+    // available, no motion blur, etc.
+    void camera_params (const Matrix44 &world_to_camera, ustring projection,
+                        float hfov, float hither, float yon,
+                        int xres, int yres);
                         
 private:
-    typedef std::map <ustring, Matrix44> TransformMap;
+    typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;
     TransformMap m_named_xforms;
     Matrix44 m_world_to_camera;
-    float m_fov;
+    ustring m_projection;
+    float m_fov, m_hither, m_yon;
     int m_xres, m_yres;
 };
 

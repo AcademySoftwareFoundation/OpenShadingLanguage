@@ -80,6 +80,4 @@ private:
     int m_xres, m_yres;
 };
 
-
-
 OSL_NAMESPACE_EXIT

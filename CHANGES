@@ -13,6 +13,10 @@ Language, standard libary, and compiler changes (for shader writers):
   of compiled oso files).
 * Remove documentation about unimplemented hash() function -- it was never
   implemented, and we can't figure out what it's good for. (#359) (1.5.7)
+* Documented the specific names that should be used with getattribute() to
+  retrieve common camera parameters. We should expect these to be the same
+  for all renderers (though individual renderers may also support additional
+  attribute queries). #393 (1.5.9)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API changes:

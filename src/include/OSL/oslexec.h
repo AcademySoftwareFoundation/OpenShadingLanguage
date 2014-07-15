@@ -148,6 +148,9 @@ public:
     ///                              designated as the debug shaders.
     ///    string only_groupname  Compile only this one group (skip all others)
     ///
+    /// Note: the attributes referred to as "string" are actually on the app
+    /// side as ustring or const char* (they have the same data layout), NOT
+    /// std::string!
     bool attribute (string_view name, TypeDesc type, const void *val);
 
     // Shortcuts for common types
@@ -231,7 +234,7 @@ public:
     ///   int num_textures_needed    The number of texture names that are
     ///                                known to be potentially needed by the
     ///                                group (after optimization).
-    ///   ustring textures_needed[]  The names of the textures known to be
+    ///   string textures_needed[]   The names of the textures known to be
     ///                                needed. Must be of length at least as
     ///                                long as num_textures_needed.
     ///   int unknown_textures_needed  Nonzero if additional textures may be
@@ -246,8 +249,11 @@ public:
     ///   ptr userdata_offsets       Retrieves a pointer to the array of
     ///                                 int describing the userdata offsets
     ///                                 within the heap.
-    ///   ustring pickle             Retrieves a serialized representation
+    ///   string pickle              Retrieves a serialized representation
     ///                                 of the shader group declaration.
+    /// Note: the attributes referred to as "string" are actually on the app
+    /// side as ustring or const char* (they have the same data layout), NOT
+    /// std::string!
     bool getattribute (ShaderGroup *group, string_view name,
                        TypeDesc type, void *val);
     // Shortcuts for common types

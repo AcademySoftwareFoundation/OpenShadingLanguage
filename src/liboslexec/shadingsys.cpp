@@ -1842,8 +1842,19 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
     }
 
     if (err) {
-        error ("ShaderGroupBegin: error parsing group description: %s",
-               errdesc);
+        if (! groupname.size())
+            groupname = "<unknown>";
+        size_t offset = p.data() - groupspec.data();
+        size_t begin_stmt = std::min (groupspec.find_last_of (';', offset),
+                                      groupspec.find_last_of (',', offset));
+        size_t end_stmt = groupspec.find_first_of (';', begin_stmt+1);
+        string_view statement = groupspec.substr (begin_stmt+1, end_stmt-begin_stmt);
+        error ("ShaderGroupBegin: error parsing group description: %s\n"
+               "        group: \"%s\"\n"
+               "        problem might be here: %s\n",
+               errdesc, groupname, statement);
+        if (debug())
+            info ("Broken group was:\n---%s\n---\n", groupspec);
         return ShaderGroupRef();
     }
 

@@ -1,5 +1,5 @@
-Release 1.5 -- Release candidate July 9, 2014 (compared to 1.4)
---------------------------------------------
+Release 1.5 -- Release candidate July 15, 2014 (compared to 1.4)
+----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * New closure function for microfacet BSDFs:
     closure color microfacet (string distribution, normal N,
@@ -230,12 +230,19 @@ Build & test system improvements and developer goodies:
   safety of the shading system. (1.5.8) (#365)
 * Compatibility with cmake 3.0. (1.5.8) (#377)
 * Fix warnings with some gcc versions. (1.5.8)
+* Make testrender accept the new shadergroup syntax. (1.5.9)
+* Make testrender & testshade support all the standard camera getattribute
+  queries. (1.5.9)
 
 Documentation:
 * Clarified docs about floor(). (1.5.8)
 * Clarified that oren_nayar() is the name of the function, not
   orennayar (it was not consistent). (1.5.8) (#375)
 * backfacing() was previously left out of the docs. (1.5.8) (#376)
+* Documented the specific names that should be used with getattribute() to
+  retrieve common camera parameters. We should expect these to be the same
+  for all renderers (though individual renderers may also support additional
+  attribute queries). #393 (1.5.9)
 
 
 

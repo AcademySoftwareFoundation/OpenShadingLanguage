@@ -36,6 +36,7 @@ OSL_NAMESPACE_ENTER
 static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
+static ustring u_s("s"), u_t("t");
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
@@ -216,6 +217,11 @@ SimpleRenderer::get_array_attribute (void *renderstate, bool derivatives, ustrin
         return (this->*(getter)) (renderstate, derivatives, object, type, name, val);
     }
 
+    // If no named attribute was found, allow userdata to bind to the
+    // attribute request.
+    if (object.empty() && index == -1)
+        return get_userdata (derivatives, name, type, renderstate, val);
+
     return false;
 }
 
@@ -232,8 +238,36 @@ SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring obje
 
 
 bool
-SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type, void *renderstate, void *val)
+SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
+                              void *renderstate, void *val)
 {
+    // Just to illustrate how this works, respect s and t userdata, filled
+    // in with the uv coordinates.  In a real renderer, it would probably
+    // look up something specific to the primitive, rather than have hard-
+    // coded names.
+
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals. That wouldn't necessarily be the case with all
+    // renderer implementations, so watch out.
+    ShaderGlobals *sg = reinterpret_cast<ShaderGlobals *>(renderstate);
+
+    if (name == u_s && type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = sg->u;
+        if (derivatives) {
+            ((float *)val)[1] = sg->dudx;
+            ((float *)val)[2] = sg->dudy;
+        }
+        return true;
+    }
+    if (name == u_t && type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = sg->v;
+        if (derivatives) {
+            ((float *)val)[1] = sg->dvdx;
+            ((float *)val)[2] = sg->dvdy;
+        }
+        return true;
+    }
+
     return false;
 }
 

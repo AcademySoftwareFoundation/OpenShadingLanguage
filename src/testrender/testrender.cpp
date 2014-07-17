@@ -380,6 +380,10 @@ void globals_from_hit(ShaderGlobals& sg, const Ray& r, const Dual2<float>& t, in
         sg.Ng = -sg.Ng;
     }
     sg.flipHandedness = flip;
+
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    sg.renderstate = &sg;
 }
 
 Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {

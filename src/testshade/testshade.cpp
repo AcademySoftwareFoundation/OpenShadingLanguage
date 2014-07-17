@@ -350,6 +350,10 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     // Just zero the whole thing out to start
     memset(&sg, 0, sizeof(ShaderGlobals));
 
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    sg.renderstate = &sg;
+
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
     sg.shader2common = OSL::TransformationPtr (&Mshad);

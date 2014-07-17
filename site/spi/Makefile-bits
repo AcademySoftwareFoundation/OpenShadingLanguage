@@ -67,8 +67,10 @@ ifeq ($(SP_OS), spinux1)
 	BOOSTVERS=1.51
     endif
     BOOSTVERS_SUFFIX = -${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
+    CONSTRUCTED_BOOSTVERS = ${shell echo ${BOOSTVERS} | sed "s/\\./0/"}00
     MY_CMAKE_FLAGS += \
 	-DBOOST_CUSTOM=1 \
+    -DBoost_VERSION=${CONSTRUCTED_BOOSTVERS} \
 	-DBoost_INCLUDE_DIRS=/usr/include/boost_${BOOSTVERS} \
 	-DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS} \
 	-DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERS}/libboost_filesystem-gcc44-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_filesystem-gcc44-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_regex-gcc44-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_system-gcc44-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_thread-gcc44-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERS}/libboost_wave-gcc44-mt${BOOSTVERS_SUFFIX}.so" \

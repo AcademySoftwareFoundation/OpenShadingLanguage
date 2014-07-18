@@ -311,14 +311,14 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
 
 
 bool
-SimpleRenderer::get_array_attribute (void *renderstate, bool derivatives, ustring object,
+SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                      TypeDesc type, ustring name,
                                      int index, void *val)
 {
     AttrGetterMap::const_iterator g = m_attr_getters.find (name);
     if (g != m_attr_getters.end()) {
         AttrGetter getter = g->second;
-        return (this->*(getter)) (renderstate, derivatives, object, type, name, val);
+        return (this->*(getter)) (sg, derivatives, object, type, name, val);
     }
 
     // In order to test getattribute(), respond positively to
@@ -332,7 +332,7 @@ SimpleRenderer::get_array_attribute (void *renderstate, bool derivatives, ustrin
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
-        return get_userdata (derivatives, name, type, renderstate, val);
+        return get_userdata (derivatives, name, type, sg, val);
 
     return false;
 }
@@ -340,10 +340,10 @@ SimpleRenderer::get_array_attribute (void *renderstate, bool derivatives, ustrin
 
 
 bool
-SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring object,
+SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                TypeDesc type, ustring name, void *val)
 {
-    return get_array_attribute (renderstate, derivatives, object,
+    return get_array_attribute (sg, derivatives, object,
                                 type, name, -1, val);
 }
 
@@ -351,17 +351,12 @@ SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring obje
 
 bool
 SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
-                              void *renderstate, void *val)
+                              ShaderGlobals *sg, void *val)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably
     // look up something specific to the primitive, rather than have hard-
     // coded names.
-
-    // In our SimpleRenderer, the "renderstate" itself just a pointer to
-    // the ShaderGlobals. That wouldn't necessarily be the case with all
-    // renderer implementations, so watch out.
-    ShaderGlobals *sg = reinterpret_cast<ShaderGlobals *>(renderstate);
 
     if (name == u_s && type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = sg->u;
@@ -386,7 +381,7 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 
 
 bool
-SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
+SimpleRenderer::has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg)
 {
     return false;
 }
@@ -394,7 +389,7 @@ SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
 
 
 bool
-SimpleRenderer::get_camera_resolution (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeIntArray2) {
@@ -407,7 +402,7 @@ SimpleRenderer::get_camera_resolution (void *renderstate, bool derivs, ustring o
 
 
 bool
-SimpleRenderer::get_camera_projection (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeString) {
@@ -419,7 +414,7 @@ SimpleRenderer::get_camera_projection (void *renderstate, bool derivs, ustring o
 
 
 bool
-SimpleRenderer::get_camera_fov (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     // N.B. in a real rederer, this may be time-dependent
@@ -434,7 +429,7 @@ SimpleRenderer::get_camera_fov (void *renderstate, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_pixelaspect (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -448,7 +443,7 @@ SimpleRenderer::get_camera_pixelaspect (void *renderstate, bool derivs, ustring 
 
 
 bool
-SimpleRenderer::get_camera_clip (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeFloatArray2) {
@@ -463,7 +458,7 @@ SimpleRenderer::get_camera_clip (void *renderstate, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_clip_near (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -477,7 +472,7 @@ SimpleRenderer::get_camera_clip_near (void *renderstate, bool derivs, ustring ob
 
 
 bool
-SimpleRenderer::get_camera_clip_far (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -492,7 +487,7 @@ SimpleRenderer::get_camera_clip_far (void *renderstate, bool derivs, ustring obj
 
 
 bool
-SimpleRenderer::get_camera_shutter (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeFloatArray2) {
@@ -507,7 +502,7 @@ SimpleRenderer::get_camera_shutter (void *renderstate, bool derivs, ustring obje
 
 
 bool
-SimpleRenderer::get_camera_shutter_open (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -521,7 +516,7 @@ SimpleRenderer::get_camera_shutter_open (void *renderstate, bool derivs, ustring
 
 
 bool
-SimpleRenderer::get_camera_shutter_close (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -535,7 +530,7 @@ SimpleRenderer::get_camera_shutter_close (void *renderstate, bool derivs, ustrin
 
 
 bool
-SimpleRenderer::get_camera_screen_window (void *renderstate, bool derivs, ustring object,
+SimpleRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     // N.B. in a real rederer, this may be time-dependent

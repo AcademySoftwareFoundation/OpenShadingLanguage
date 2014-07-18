@@ -60,14 +60,14 @@ public:
 
     void name_transform (const char *name, const Transformation &xform);
 
-    virtual bool get_array_attribute (void *renderstate, bool derivatives, 
+    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives, 
                                       ustring object, TypeDesc type, ustring name,
                                       int index, void *val );
-    virtual bool get_attribute (void *renderstate, bool derivatives, ustring object,
+    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
-                               void *renderstate, void *val);
-    virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
+                               ShaderGlobals *sg, void *val);
+    virtual bool has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg);
 
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
@@ -93,34 +93,34 @@ private:
     // imagine this to be fairly quick, but for a performance-critical
     // renderer, we would encourage benchmarking various methods and
     // alternate data structures.
-    typedef bool (SimpleRenderer::*AttrGetter)(void *renderstate, bool derivs,
+    typedef bool (SimpleRenderer::*AttrGetter)(ShaderGlobals *sg, bool derivs,
                                                ustring object, TypeDesc type,
                                                ustring name, void *val);
     typedef boost::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;
     AttrGetterMap m_attr_getters;
 
     // Attribute getters
-    bool get_camera_resolution (void *renderstate, bool derivs, ustring object,
+    bool get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_projection (void *renderstate, bool derivs, ustring object,
+    bool get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_fov (void *renderstate, bool derivs, ustring object,
+    bool get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_pixelaspect (void *renderstate, bool derivs, ustring object,
+    bool get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_clip (void *renderstate, bool derivs, ustring object,
+    bool get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_clip_near (void *renderstate, bool derivs, ustring object,
+    bool get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_clip_far (void *renderstate, bool derivs, ustring object,
+    bool get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_shutter (void *renderstate, bool derivs, ustring object,
+    bool get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_shutter_open (void *renderstate, bool derivs, ustring object,
+    bool get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_shutter_close (void *renderstate, bool derivs, ustring object,
+    bool get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
-    bool get_camera_screen_window (void *renderstate, bool derivs, ustring object,
+    bool get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
 
 };

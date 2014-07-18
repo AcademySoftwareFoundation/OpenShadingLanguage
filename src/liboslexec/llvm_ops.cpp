@@ -1655,7 +1655,7 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
         bool ok = sg->renderer->get_userdata (userdata_has_derivs, USTR(name),
                                               TYPEDESC(type),
-                                              sg->renderstate, userdata_data);
+                                              sg, userdata_data);
         // printf ("Binding %s %s : index %d, ok = %d\n", name,
         //         TYPEDESC(type).c_str(),userdata_index, ok);
         *userdata_initialized = status = 1 + ok;  // 1 = not found, 2 = found

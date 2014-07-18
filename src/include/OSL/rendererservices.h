@@ -157,19 +157,19 @@ public:
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene".
     ///
-    /// Note to renderers: if renderstate is NULL, that means
+    /// Note to renderers: if sg is NULL, that means
     /// get_attribute is being called speculatively by the runtime
     /// optimizer, and it doesn't know which object the shader will be
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
-    virtual bool get_attribute (void *renderstate, bool derivatives,
+    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives,
                                 ustring object, TypeDesc type, ustring name,
                                 void *val ) = 0;
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute (void *renderstate, bool derivatives,
+    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
                                       ustring object, TypeDesc type,
                                       ustring name, int index, void *val ) = 0;
 
@@ -178,10 +178,10 @@ public:
     /// as well. Return false if no user-data with the given name and type was
     /// found.
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
-                               void *renderstate, void *val) = 0;
+                               ShaderGlobals *sg, void *val) = 0;
 
     /// Does the current object have the named user-data associated with it?
-    virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate) = 0;
+    virtual bool has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg) = 0;
 
     /// Filtered 2D texture lookup for a single point.
     ///

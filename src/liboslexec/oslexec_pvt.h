@@ -1332,7 +1332,7 @@ public:
     /// the function should be executed, otherwise false.
     bool prepare_execution (ShaderUse use, ShaderGroup &sas);
 
-    bool osl_get_attribute (void *renderstate, void *objdata, int dest_derivs,
+    bool osl_get_attribute (ShaderGlobals *sg, void *objdata, int dest_derivs,
                             ustring obj_name, ustring attr_name,
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);

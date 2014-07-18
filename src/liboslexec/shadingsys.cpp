@@ -2782,7 +2782,7 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
     const ustring &obj_name  = USTR(obj_name_);
     const ustring &attr_name = USTR(attr_name_);
 
-    return sg->context->osl_get_attribute (sg->renderstate, sg->objdata,
+    return sg->context->osl_get_attribute (sg, sg->objdata,
                                            dest_derivs, obj_name, attr_name,
                                            array_lookup, index,
                                            *(const TypeDesc *)attr_type,

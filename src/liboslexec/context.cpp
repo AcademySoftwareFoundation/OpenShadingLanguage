@@ -236,7 +236,7 @@ ShadingContext::find_regex (ustring r)
 
 
 bool
-ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
+ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
                                    int dest_derivs,
                                    ustring obj_name, ustring attr_name,
                                    int array_lookup, int index,
@@ -267,11 +267,11 @@ ShadingContext::osl_get_attribute (void *renderstate, void *objdata,
     }
 
     if (array_lookup)
-        ok = renderer()->get_array_attribute (renderstate, dest_derivs,
+        ok = renderer()->get_array_attribute (sg, dest_derivs,
                                               obj_name, attr_type,
                                               attr_name, index, attr_dest);
     else
-        ok = renderer()->get_attribute (renderstate, dest_derivs,
+        ok = renderer()->get_attribute (sg, dest_derivs,
                                         obj_name, attr_type,
                                         attr_name, attr_dest);
     if (!ok) {

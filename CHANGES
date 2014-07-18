@@ -95,6 +95,16 @@ API changes, new options, new ShadingSystem features (for renderer writers):
    * Split RendererServices definition into separate rendererservices.h. (1.5.6)
    * Add RendererServices::texturesys() that returns a pointer to the
      RS's TextureSystem. (1.5.6)
+   * Add a ShaderGlobals* parameter to the various get_matrix and
+     get_inverse_matrix methods. This makes it easier for renderers that
+     might need the ShaderGlobals (or access to the void* renderstate
+     contained therein) to look up matrices, especially if the renderer
+     supports different per-primitive transformation name bindings.
+     #396 (1.5.10)
+   * Change the last 4 RenderServices methods that took a void* renderstate
+     to instead take a ShaderGlobals *. It's more general, since the SG
+     does itself contain the renderstate pointer, and some implementations
+     or features might need the other contents of the SG. #396 (1.5.10)
 * OSLQuery changes:
    * OSLQuery::Parameter has a new 'structname' field, that for struct
      parameters reveals the name of the structure type. The oslinfo utility
@@ -233,6 +243,11 @@ Build & test system improvements and developer goodies:
 * Make testrender accept the new shadergroup syntax. (1.5.9)
 * Make testrender & testshade support all the standard camera getattribute
   queries. (1.5.9)
+* testshade/testrender: have get_attribute fall back on get_userdata,
+  and have get_userdata bind "s" and "t" to make it easy to test
+  shader that rely on userdata. #395 (1.5.10)
+* Fixes for Boost 1.55 + Linux combination, where it needed -lrt on the
+  link line. #394 (1.5.10)
 
 Documentation:
 * Clarified docs about floor(). (1.5.8)
@@ -243,6 +258,9 @@ Documentation:
   retrieve common camera parameters. We should expect these to be the same
   for all renderers (though individual renderers may also support additional
   attribute queries). #393 (1.5.9)
+* Clarify that we intend for getattribute() to be able to retrieve
+  "userdata" (aka primitive variables) if no attribute is found with the
+  matching name. #395 (1.5.10)
 
 
 

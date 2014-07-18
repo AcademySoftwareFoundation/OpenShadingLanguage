@@ -1743,11 +1743,11 @@ DECLFOLDER(constfold_matrix)
         if (from == Strings::common || from == commonsyn)
             Mfrom.makeIdentity ();
         else
-            ok &= rs->get_matrix (Mfrom, from);
+            ok &= rs->get_matrix (rop.shaderglobals(), Mfrom, from);
         if (to == Strings::common || to == commonsyn)
             Mto.makeIdentity ();
         else
-            ok &= rs->get_inverse_matrix (Mto, to);
+            ok &= rs->get_inverse_matrix (rop.shaderglobals(), Mto, to);
         if (ok) {
             // The from-to matrix is known and not time-varying, so just
             // turn it into a constant rather than calling getmatrix at
@@ -1796,11 +1796,11 @@ DECLFOLDER(constfold_getmatrix)
     if (from == Strings::common || from == commonsyn)
         Mfrom.makeIdentity ();
     else
-        ok &= rs->get_matrix (Mfrom, from);
+        ok &= rs->get_matrix (rop.shaderglobals(), Mfrom, from);
     if (to == Strings::common || to == commonsyn)
         Mto.makeIdentity ();
     else
-        ok &= rs->get_inverse_matrix (Mto, to);
+        ok &= rs->get_inverse_matrix (rop.shaderglobals(), Mto, to);
     if (ok) {
         // The from-to matrix is known and not time-varying, so just
         // turn it into a constant rather than calling getmatrix at

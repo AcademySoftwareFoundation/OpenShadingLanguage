@@ -190,7 +190,8 @@ SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            TransformationPtr xform,
                             float time)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
@@ -202,7 +203,8 @@ SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, ustring from, float time)
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            ustring from, float time)
 {
     TransformMap::const_iterator found = m_named_xforms.find (from);
     if (found != m_named_xforms.end()) {
@@ -216,7 +218,8 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from, float time)
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform)
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            TransformationPtr xform)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
@@ -227,7 +230,8 @@ SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform)
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            ustring from)
 {
     // SimpleRenderer doesn't understand motion blur, so we never fail
     // on account of time-varying transformations.
@@ -243,7 +247,8 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
 
 
 bool
-SimpleRenderer::get_inverse_matrix (Matrix44 &result, ustring to, float time)
+SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                    ustring to, float time)
 {
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
         Matrix44 M = m_world_to_camera;

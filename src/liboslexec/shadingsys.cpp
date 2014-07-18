@@ -2595,14 +2595,14 @@ osl_get_matrix (void *sg_, void *r, const char *from)
         return true;
     }
     if (USTR(from) == Strings::shader) {
-        ctx->renderer()->get_matrix (MAT(r), sg->shader2common, sg->time);
+        ctx->renderer()->get_matrix (sg, MAT(r), sg->shader2common, sg->time);
         return true;
     }
     if (USTR(from) == Strings::object) {
-        ctx->renderer()->get_matrix (MAT(r), sg->object2common, sg->time);
+        ctx->renderer()->get_matrix (sg, MAT(r), sg->object2common, sg->time);
         return true;
     }
-    int ok = ctx->renderer()->get_matrix (MAT(r), USTR(from), sg->time);
+    int ok = ctx->renderer()->get_matrix (sg, MAT(r), USTR(from), sg->time);
     if (! ok) {
         MAT(r).makeIdentity();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -2624,14 +2624,14 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
         return true;
     }
     if (USTR(to) == Strings::shader) {
-        ctx->renderer()->get_inverse_matrix (MAT(r), sg->shader2common, sg->time);
+        ctx->renderer()->get_inverse_matrix (sg, MAT(r), sg->shader2common, sg->time);
         return true;
     }
     if (USTR(to) == Strings::object) {
-        ctx->renderer()->get_inverse_matrix (MAT(r), sg->object2common, sg->time);
+        ctx->renderer()->get_inverse_matrix (sg, MAT(r), sg->object2common, sg->time);
         return true;
     }
-    int ok = ctx->renderer()->get_inverse_matrix (MAT(r), USTR(to), sg->time);
+    int ok = ctx->renderer()->get_inverse_matrix (sg, MAT(r), USTR(to), sg->time);
     if (! ok) {
         MAT(r).makeIdentity ();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;

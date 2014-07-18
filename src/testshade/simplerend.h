@@ -46,13 +46,17 @@ public:
     SimpleRenderer ();
     ~SimpleRenderer () { }
 
-    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             TransformationPtr xform,
                              float time);
-    virtual bool get_matrix (Matrix44 &result, ustring from, float time);
-
-    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform);
-    virtual bool get_matrix (Matrix44 &result, ustring from);
-    virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             ustring from, float time);
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             TransformationPtr xform);
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             ustring from);
+    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                     ustring to, float time);
 
     void name_transform (const char *name, const Transformation &xform);
 

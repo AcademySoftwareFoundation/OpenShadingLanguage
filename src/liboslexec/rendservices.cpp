@@ -79,10 +79,10 @@ RendererServices::texturesys () const
 
 
 bool
-RendererServices::get_inverse_matrix (Matrix44 &result,
+RendererServices::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                       TransformationPtr xform, float time)
 {
-    bool ok = get_matrix (result, xform, time);
+    bool ok = get_matrix (sg, result, xform, time);
     if (ok)
         result.invert ();
     return ok;
@@ -91,9 +91,10 @@ RendererServices::get_inverse_matrix (Matrix44 &result,
 
 
 bool
-RendererServices::get_inverse_matrix (Matrix44 &result, TransformationPtr xform)
+RendererServices::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                      TransformationPtr xform)
 {
-    bool ok = get_matrix (result, xform);
+    bool ok = get_matrix (sg, result, xform);
     if (ok)
         result.invert ();
     return ok;
@@ -102,9 +103,10 @@ RendererServices::get_inverse_matrix (Matrix44 &result, TransformationPtr xform)
 
 
 bool
-RendererServices::get_inverse_matrix (Matrix44 &result, ustring to, float time)
+RendererServices::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                      ustring to, float time)
 {
-    bool ok = get_matrix (result, to, time);
+    bool ok = get_matrix (sg, result, to, time);
     if (ok)
         result.invert ();
     return ok;
@@ -113,9 +115,10 @@ RendererServices::get_inverse_matrix (Matrix44 &result, ustring to, float time)
 
 
 bool
-RendererServices::get_inverse_matrix (Matrix44 &result, ustring to)
+RendererServices::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                      ustring to)
 {
-    bool ok = get_matrix (result, to);
+    bool ok = get_matrix (sg, result, to);
     if (ok)
         result.invert ();
     return ok;

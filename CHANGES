@@ -5,7 +5,9 @@ Release 1.6 -- in development (compared to 1.5)
 Language, standard libary, and compiler changes (for shader writers):
 API changes, new options, new ShadingSystem features (for renderer writers):
 Performance improvements:
-Bug fixes:
+Bug fixes and other improvements:
+* oslinfo --param lets you ask for information on just one parameter of
+  a shader. #397 (1.6.0)
 Under the hood:
 Build & test system improvements and developer goodies:
 Documentation:

@@ -420,11 +420,14 @@ public:
 
     /// Number of fields in the struct.
     ///
-    size_t numfields () const { return m_fields.size(); }
+    int numfields () const { return (int)m_fields.size(); }
 
     /// Return a reference to an individual FieldSpec for one field
     /// of the struct, indexed numerically (starting with 0).
-    const FieldSpec & field (size_t i) const { return m_fields[i]; }
+    const FieldSpec & field (int i) const { return m_fields[i]; }
+
+    /// Look up the named field, return its index, or -1 if not found.
+    int lookup_field (ustring name) const;
 
 private:
     ustring m_name;                    ///< Structure name (unmangled)

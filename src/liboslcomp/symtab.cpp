@@ -107,6 +107,17 @@ StructSpec::mangled () const
 
 
 
+int
+StructSpec::lookup_field (ustring name) const
+{
+    for (int i = 0, e = numfields();  i < e;  ++i)
+        if (field(i).name == name)
+            return i;
+    return -1;
+}
+
+
+
 const char *
 Symbol::valuesourcename (ValueSource v)
 {

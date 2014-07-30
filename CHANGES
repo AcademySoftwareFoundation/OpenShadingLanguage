@@ -8,6 +8,8 @@ Performance improvements:
 Bug fixes and other improvements:
 * oslinfo --param lets you ask for information on just one parameter of
   a shader. #397 (1.6.0)
+* oslc now properly catches and issues error messages if you define a struct
+  with duplicate field names. #398 (1.6.0)
 Under the hood:
 Build & test system improvements and developer goodies:
 Documentation:

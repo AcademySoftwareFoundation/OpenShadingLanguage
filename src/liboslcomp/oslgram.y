@@ -387,20 +387,36 @@ typed_field_list
 typed_field
         : IDENTIFIER
                 {
+                    ustring name ($1);
                     TypeSpec t = oslcompiler->current_typespec();
-                    oslcompiler->symtab().add_struct_field (t, ustring($1));
+                    StructSpec *s = oslcompiler->symtab().current_struct();
+                    if (s->lookup_field (name) >= 0)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Field \"%s\" already exists in struct \"%s\"",
+                                            name.c_str(), s->name().c_str());
+                    else
+                        oslcompiler->symtab().add_struct_field (t, name);
                     $$ = 0;
                 }
         | IDENTIFIER arrayspec
                 {
                     // Grab the current declaration type, modify it to be array
+                    ustring name ($1);
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if (t.arraylength() < 1)
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
-                                            "Invalid array length for %s", $1);
-                    oslcompiler->symtab().add_struct_field (t, ustring($1));
+                                            "Invalid array length for %s", name.c_str());
+                    StructSpec *s = oslcompiler->symtab().current_struct();
+                    if (s->lookup_field (name) >= 0)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Field \"%s\" already exists in struct \"%s\"",
+                                            name.c_str(), s->name().c_str());
+                    else
+                        oslcompiler->symtab().add_struct_field (t, name);
                     $$ = 0;
                 }
         ;

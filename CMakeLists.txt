@@ -322,7 +322,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             oslc-err-arrayindex oslc-err-closuremul
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-paramdefault
-            oslc-err-struct-array-init
+            oslc-err-struct-array-init oslc-err-struct-dup
             oslc-variadic-macro
             pointcloud pointcloud-fold
             printf-whole-array

@@ -25,9 +25,11 @@ language specification was developed with input by other visual effects
 and animation studios who also wish to use it.
 
 OSL is robust and production-proven, and was the exclusive shading
-system for big VFX films such as "Men in Black 3: and "The Amazing
-Spider-Man," animated features such as "Hotel Transylvania", and several
-other films currently in production.
+system for work on big VFX films such as "Men in Black 3", "The Amazing
+Spider-Man," "Oz the Great and Powerful," and "Edge of Tomorrow," as
+well as animated features such as "Hotel Transylvania" and "Cloudy With
+a Chance of Meatballs 2", and many other films completed or currently in
+production.
 
 The OSL code is distributed under the "New BSD" license (see the
 "LICENSE" file that comes with the distribution), and the documentation
@@ -218,15 +220,28 @@ Current state of the project and road map
 -----------------------------------------
 
 At Sony Pictures Imageworks, we are exclusively using OSL in our
-proprietary renderer, "Arnold."  Completed productions that used 100%
-OSL for their shading include Men in Black 3, The Amazing Spider-Man,
-and Hotel Transylvania, and other unreleased shows that are still in
-production.  Our shader-writing team works entirely in OSL, all
-productions use OSL, and we've even removed all the code from the
-renderer that allows people to write the old-style "C" shaders.  At the
-time we removed the old shader facility, the OSL shaders were
-consistently outperforming their equivalent old compiled C shaders in
-the old system.
+proprietary renderer, "Arnold."  Completed productions that used OSL for
+shading have included:
+
+    Men in Black 3
+    The Amazing Spider-Man
+    Hotel Transylvania
+    Oz the Great and Powerful
+    Smurfs 2
+    Cloudy With a Chance of Meatballs 2
+    Amazing Spider-Man 2
+    Edge of Tomorrow
+    Blended
+    22 Jump Street
+    Guardians of the Galaxy
+    The Interview
+
+And more are currently in production. Our shader-writing team works
+entirely in OSL, all productions use OSL, and we've even removed all the
+code from the renderer that allows people to write the old-style "C"
+shaders.  At the time we removed the old shader facility, the OSL
+shaders were consistently outperforming their equivalent old compiled C
+shaders in the old system.
 
 In the longer term, there are a number of projects we hope to get to
 leading to a 2.x or 3.x cut of the language and library.  Among our

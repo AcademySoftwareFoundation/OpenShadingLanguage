@@ -14,7 +14,7 @@ Documentation:
 
 
 
-Release 1.5 -- Release candidate July 15, 2014 (compared to 1.4)
+Release 1.5 -- Release candidate July 30, 2014 (compared to 1.4)
 ----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * New closure function for microfacet BSDFs:

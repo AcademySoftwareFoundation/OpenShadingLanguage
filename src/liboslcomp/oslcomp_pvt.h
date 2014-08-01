@@ -107,7 +107,7 @@ public:
     bool error_encountered () const { return m_err; }
 
     /// Has a shader already been defined?
-    bool shader_is_defined () const { return m_shader; }
+    bool shader_is_defined () const { return (bool)m_shader; }
 
     /// Define the shader we're compiling with the given AST root.
     ///

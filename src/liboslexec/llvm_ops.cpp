@@ -105,9 +105,12 @@ using namespace OSL;
 
 using OIIO::safe_asinf;
 using OIIO::safe_acosf;
-using OIIO::isinf;
 
-#ifdef _WIN32
+#if defined(_MSC_VER) && _MSC_VER < 1700
+using OIIO::isinf;
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::roundf;
 using OIIO::truncf;
 using OIIO::expm1f;

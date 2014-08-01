@@ -16,6 +16,12 @@ Documentation:
 
 
 
+Release 1.5.11 -- ?? (compared to 1.5.10)
+-----------------------------------------
+* Windows compilations fixes for very MSVC 2013.
+
+
+
 Release 1.5 -- Release candidate July 30, 2014 (compared to 1.4)
 ----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):

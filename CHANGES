@@ -255,6 +255,8 @@ Build & test system improvements and developer goodies:
   shader that rely on userdata. #395 (1.5.10)
 * Fixes for Boost 1.55 + Linux combination, where it needed -lrt on the
   link line. #394 (1.5.10)
+* Windows build fix for compiling shaders finding the right oslc.exe.
+  #399 (1.5.11)
 
 Documentation:
 * Clarified docs about floor(). (1.5.8)

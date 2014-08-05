@@ -3,6 +3,13 @@ add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stdosl.h"
     MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
+if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
+    # Work around visual studio outputting oslc.exe in a subfolder
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/../oslc/${CMAKE_BUILD_TYPE}/oslc.exe" "${CMAKE_CURRENT_BINARY_DIR}/../oslc/"
+        DEPENDS oslc)
+endif ()
+
 macro (osl_compile oslsrc objlist headers)
     # message (STATUS "OSL_COMPILE src=${oslsrc}")
     # message (STATUS "  src ${CMAKE_CURRENT_SOURCE_DIR}")

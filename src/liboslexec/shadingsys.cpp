@@ -2658,9 +2658,6 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
 }
 
 
-#ifndef _MSC_VER
-using OIIO::isfinite;
-#endif
 
 // vals points to a symbol with a total of ncomps floats (ncomps ==
 // aggregate*arraylen).  If has_derivs is true, it's actually 3 times

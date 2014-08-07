@@ -121,11 +121,6 @@ using OIIO::logbf;
 using OIIO::exp2f;
 #endif
 
-#ifndef _MSC_VER
-using OIIO::isnan;
-using OIIO::isfinite;
-#endif
-
 #if defined(__FreeBSD__)
 #include <sys/param.h>
 #if __FreeBSD_version < 803000

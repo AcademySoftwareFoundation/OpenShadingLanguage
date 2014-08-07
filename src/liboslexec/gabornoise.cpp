@@ -35,9 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/fmath.h>
 
-#ifndef _MSC_VER
-using OIIO::isfinite;
-#endif
 
 OSL_NAMESPACE_ENTER
 

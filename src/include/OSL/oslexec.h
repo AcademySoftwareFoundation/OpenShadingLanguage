@@ -234,9 +234,9 @@ public:
     ///   int num_textures_needed    The number of texture names that are
     ///                                known to be potentially needed by the
     ///                                group (after optimization).
-    ///   string textures_needed[]   The names of the textures known to be
-    ///                                needed. Must be of length at least as
-    ///                                long as num_textures_needed.
+    ///   ptr textures_needed        Retrieves a pointer to the ustring array
+    ///                                containing all textures known to be
+    ///                                needed.
     ///   int unknown_textures_needed  Nonzero if additional textures may be
     ///                                needed, whose names can't be known
     ///                                without actually running the shader.

@@ -1205,12 +1205,14 @@ private:
     ustring m_name;
     mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
-    bool m_unknown_textures_needed;
+    std::vector<ustring> m_closures_needed;
     std::vector<ustring> m_userdata_names;
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;
     std::vector<char> m_userdata_derivs;
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
+    bool m_unknown_textures_needed;
+    bool m_unknown_closures_needed;
     atomic_ll m_executions;          ///< Number of times the group executed
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

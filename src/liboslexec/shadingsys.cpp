@@ -1126,6 +1126,27 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(int *)val = (int)group->m_unknown_textures_needed;
         return true;
     }
+
+    if (name == "num_closures_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_closures_needed.size();
+        return true;
+    }
+    if (name == "closures_needed" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_closures_needed.size();
+        *(ustring **)val = n ? &group->m_closures_needed[0] : NULL;
+        return true;
+    }
+    if (name == "unknown_closures_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_unknown_closures_needed;
+        return true;
+    }
+
     if (name == "num_userdata" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
             optimize_group (*group);
@@ -2185,6 +2206,9 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
     group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
     BOOST_FOREACH (ustring f, rop.m_textures_needed)
         group.m_textures_needed.push_back (f);
+    group.m_unknown_closures_needed = rop.m_unknown_closures_needed;
+    BOOST_FOREACH (ustring f, rop.m_closures_needed)
+        group.m_closures_needed.push_back (f);
     size_t num_userdata = rop.m_userdata_needed.size();
     group.m_userdata_names.reserve (num_userdata);
     group.m_userdata_types.reserve (num_userdata);

@@ -2723,7 +2723,9 @@ RuntimeOptimizer::run ()
     }
 
     m_unknown_textures_needed = false;
+    m_unknown_closures_needed = false;
     m_textures_needed.clear();
+    m_closures_needed.clear();
     m_userdata_needed.clear();
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
@@ -2756,6 +2758,19 @@ RuntimeOptimizer::run ()
                     m_textures_needed.insert (texname);
                 } else {
                     m_unknown_textures_needed = true;
+                }
+            }
+            if (op.opname() == u_closure) {
+                // It's either 'closure result weight name' or 'closure result name'
+                Symbol *sym = opargsym (op, 1); // arg 1 is the closure name
+                if (sym && !sym->typespec().is_string())
+                    sym = opargsym (op, 2);
+                ASSERT (sym && sym->typespec().is_string());
+                if (sym->is_constant()) {
+                    ustring closurename = *(ustring *)sym->data();
+                    m_closures_needed.insert (closurename);
+                } else {
+                    m_unknown_closures_needed = true;
                 }
             }
         }

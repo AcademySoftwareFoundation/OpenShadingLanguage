@@ -544,6 +544,19 @@ test_group_attributes (ShaderGroup *group)
         if (unk)
             std::cout << "    and unknown textures\n";
     }
+    int nclosures = 0;
+    if (shadingsys->getattribute (group, "num_closures_needed", nclosures)) {
+        std::cout << "Need " << nclosures << " closures:\n";
+        ustring *closures = NULL;
+        shadingsys->getattribute (group, "closures_needed",
+                                  TypeDesc::PTR, &closures);
+        for (int i = 0; i < nclosures; ++i)
+            std::cout << "    " << closures[i] << "\n";
+        int unk = 0;
+        shadingsys->getattribute (group, "unknown_closures_needed", unk);
+        if (unk)
+            std::cout << "    and unknown closures\n";
+    }
     int nuser = 0;
     if (shadingsys->getattribute (group, "num_userdata", nuser) && nuser) {
         std::cout << "Need " << nuser << " user data items:\n";

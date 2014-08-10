@@ -5,6 +5,13 @@ Release 1.6 -- in development (compared to 1.5)
 Language, standard libary, and compiler changes (for shader writers):
 
 API changes, new options, new ShadingSystem features (for renderer writers):
+* New per-ShaderGroup attributes:
+   * You can retrieve information about all closures that an optimized group
+     might create using new queries "num_closures_needed", "closures_needed",
+     "unknown_closures_needed". This could be useful for renderers by, for
+     example, noticing that a material can't possibly call the "transparent"
+     closure, and thus concluding that it must be opaque everywhere and thus
+     shadow rays need not execute shaders to determine opacity. (#400) (1.6.0)
 
 Performance improvements:
 

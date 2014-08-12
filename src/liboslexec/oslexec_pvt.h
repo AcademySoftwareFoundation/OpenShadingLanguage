@@ -516,6 +516,21 @@ public:
                                                            &i->m_instsymbols[0] + i->lastparam());
     }
 
+    friend std::pair<Symbol *,Symbol *> sym_range (ShaderInstance *i) {
+        if (i->m_instsymbols.size() == 0)
+            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
+        else
+            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0],
+                                               &i->m_instsymbols[i->m_instsymbols.size()]);
+    }
+    friend std::pair<const Symbol *,const Symbol *> sym_range (const ShaderInstance *i) {
+        if (i->m_instsymbols.size() == 0)
+            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
+        else
+            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0],
+                                               &i->m_instsymbols[i->m_instsymbols.size()]);
+    }
+
     int Psym () const { return m_Psym; }
     int Nsym () const { return m_Nsym; }
 
@@ -606,6 +621,9 @@ private:
 ///
 #define FOREACH_PARAM(symboldecl,inst) \
     BOOST_FOREACH (symboldecl, param_range(inst))
+
+#define FOREACH_SYM(symboldecl,inst) \
+    BOOST_FOREACH (symboldecl, sym_range(inst))
 
 
 
@@ -1206,6 +1224,7 @@ private:
     mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
     std::vector<ustring> m_closures_needed;
+    std::vector<ustring> m_globals_needed;
     std::vector<ustring> m_userdata_names;
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;

@@ -2726,13 +2726,14 @@ RuntimeOptimizer::run ()
     m_unknown_closures_needed = false;
     m_textures_needed.clear();
     m_closures_needed.clear();
+    m_globals_needed.clear();
     m_userdata_needed.clear();
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         if (inst()->unused())
             continue;  // no need to print or gather stats for unused layers
         // Find interpolated parameters
-        FOREACH_PARAM (const Symbol &s, inst()) {
+        FOREACH_SYM (const Symbol &s, inst()) {
             if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
                 && ! s.lockgeom()) {
                 UserDataNeeded udn (s.name(), s.typespec().simpletype(), s.has_derivs());
@@ -2744,6 +2745,9 @@ RuntimeOptimizer::run ()
                     m_userdata_needed.erase (found);
                     m_userdata_needed.insert (udn);
                 }
+            }
+            if (s.symtype() == SymTypeGlobal) {
+                m_globals_needed.insert (s.name());
             }
         }
         BOOST_FOREACH (const Opcode &op, inst()->ops()) {

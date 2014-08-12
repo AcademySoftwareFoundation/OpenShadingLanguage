@@ -247,6 +247,9 @@ public:
     ///   int unknown_closures_needed  Nonzero if additional closures may be
     ///                                needed, whose names can't be known
     ///                                without actually running the shader.
+    ///   int num_globals_needed     The number of named globals needed.
+    ///   ptr globals_needed         Retrieves a pointer to the ustring array
+    ///                                containing all globals needed.
     ///   int num_userdata           The number of "user data" variables
     ///                                retrieved by the shader.
     ///   ptr userdata_names         Retrieves a pointer to the array of

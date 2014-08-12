@@ -1147,6 +1147,20 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         return true;
     }
 
+    if (name == "num_globals_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_globals_needed.size();
+        return true;
+    }
+    if (name == "globals_needed" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_globals_needed.size();
+        *(ustring **)val = n ? &group->m_globals_needed[0] : NULL;
+        return true;
+    }
+
     if (name == "num_userdata" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
             optimize_group (*group);
@@ -2209,6 +2223,8 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
     group.m_unknown_closures_needed = rop.m_unknown_closures_needed;
     BOOST_FOREACH (ustring f, rop.m_closures_needed)
         group.m_closures_needed.push_back (f);
+    BOOST_FOREACH (ustring f, rop.m_globals_needed)
+        group.m_globals_needed.push_back (f);
     size_t num_userdata = rop.m_userdata_needed.size();
     group.m_userdata_names.reserve (num_userdata);
     group.m_userdata_types.reserve (num_userdata);

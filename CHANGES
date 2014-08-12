@@ -12,6 +12,11 @@ API changes, new options, new ShadingSystem features (for renderer writers):
      example, noticing that a material can't possibly call the "transparent"
      closure, and thus concluding that it must be opaque everywhere and thus
      shadow rays need not execute shaders to determine opacity. (#400) (1.6.0)
+   * You can retrieve information about all "globals" (P, N, etc.) that an
+     optimized group needs using new queries "num_globals_needed" and
+     "globals_needed". This could be useful for renderers for which
+     computing those globals is very expensive; examining which are truly
+     needed and only computing those. (#401) (1.6.0)
 
 Performance improvements:
 

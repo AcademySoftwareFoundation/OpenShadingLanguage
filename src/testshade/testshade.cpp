@@ -557,6 +557,15 @@ test_group_attributes (ShaderGroup *group)
         if (unk)
             std::cout << "    and unknown closures\n";
     }
+    int nglobals = 0;
+    if (shadingsys->getattribute (group, "num_globals_needed", nglobals)) {
+        std::cout << "Need " << nglobals << " globals:\n";
+        ustring *globals = NULL;
+        shadingsys->getattribute (group, "globals_needed",
+                                  TypeDesc::PTR, &globals);
+        for (int i = 0; i < nglobals; ++i)
+            std::cout << "    " << globals[i] << "\n";
+    }
     int nuser = 0;
     if (shadingsys->getattribute (group, "num_userdata", nuser) && nuser) {
         std::cout << "Need " << nuser << " user data items:\n";

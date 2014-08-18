@@ -1161,7 +1161,7 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
     // For all else, check if it's either never read at all in this
     // layer or it's only read earlier and we're not part of a loop
-    return !A->everread() || (A->lastread() < opnum && !m_in_loop[opnum]);
+    return !A->everread() || (A->lastread() <= opnum && !m_in_loop[opnum]);
 }
 
 

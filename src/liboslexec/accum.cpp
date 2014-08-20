@@ -82,7 +82,7 @@ AccumRule *
 AccumAutomata::addRule(const char *pattern, int outidx, bool toalpha)
 {
     // First parse the lpexp and see if it fails
-    Parser parser;
+    Parser parser(&m_user_events, &m_user_scatterings);
     LPexp *e = parser.parse(pattern);
     if (parser.error()) {
         std::cerr << "[pathexp] Parse error" << parser.getErrorMsg() << " at char " << parser.getErrorPos() << std::endl;

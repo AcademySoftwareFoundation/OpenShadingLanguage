@@ -124,7 +124,8 @@ int main()
     const int transpshadow = 6;
     const int reflections  = 7;
     const int nocaustic    = 8;
-    const int naovs        = 9;
+    const int custom       = 9;
+    const int naovs        = 10;
 
     // The actual test cases. Each one is a list of ray hits with some labels.
     // We use 1 char labels for convenience. They will be converted to ustrings
@@ -141,6 +142,7 @@ int main()
                               { { "C_", "RD1", "RD", "L_", NULL },             { beauty, diffuse, diffuse2_3, object_1, nocaustic, END_AOV } },
                               { { "C_", "RS",  "RD", "RG", "L_", NULL },       { END_AOV } },
                               { { "C_", "RS",  "RD", "L_", NULL },             { beauty, specular, reflections, nocaustic, END_AOV } },
+                              { { "C_", "RD",  "RY", "RD", "U_", NULL },       { custom, END_AOV } },
                               { { NULL }, { END_AOV } } };
 
     // Create our fake testing AOV's
@@ -151,6 +153,9 @@ int main()
     // Create the automata and add the rules
     AccumAutomata automata;
 
+    automata.addEventType(ustring("U"));
+    automata.addScatteringType(ustring("Y"));
+
     ASSERT(automata.addRule("C[SG]*D*L",        beauty));
     ASSERT(automata.addRule("C[SG]*D{2,3}L",    diffuse2_3));
     ASSERT(automata.addRule("C[SG]*D*<L.'3'>",  light3));
@@ -160,6 +165,7 @@ int main()
     ASSERT(automata.addRule("CD+<Ts>L",         transpshadow));
     ASSERT(automata.addRule("C<R[^D]>+D*L",     reflections));
     ASSERT(automata.addRule("C([SG]*D){1,2}L",  nocaustic));
+    ASSERT(automata.addRule("CDY+U",            custom));
 
     automata.compile();
 

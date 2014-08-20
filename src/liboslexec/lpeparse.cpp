@@ -37,7 +37,8 @@ OSL_NAMESPACE_ENTER
 
 static ustring udot(".");
 
-Parser::Parser()
+Parser::Parser(const std::vector<ustring> *user_events,
+               const std::vector<ustring> *user_scatterings)
 {
     m_ingroup = false;
     m_error = "";
@@ -69,8 +70,20 @@ Parser::Parser()
     m_basic_labels.insert(Labels::STOP);
 
     m_minus_stop.insert(Labels::STOP);
-}
 
+    if (user_events)
+      for (int i = 0; i < user_events->size(); ++i)
+      {
+          m_label_position[(*user_events)[i]] = 0;
+          m_basic_labels.insert((*user_events)[i]);
+      }
+   if (user_scatterings)
+      for (int i = 0; i < user_scatterings->size(); ++i)
+      {
+          m_label_position[(*user_scatterings)[i]] = 1;
+          m_basic_labels.insert((*user_scatterings)[i]);
+      }
+}
 
 
 LPexp *

@@ -130,6 +130,11 @@ class OSLEXECPUBLIC AccumAutomata
 
         ~AccumAutomata();
 
+        /// Support the given symbol as event tag on lpe expressions
+        void addEventType(ustring symbol) { m_user_events.push_back(symbol); };
+        /// Support the given symbol as scattering tag on lpe expressions
+        void addScatteringType(ustring symbol) { m_user_scatterings.push_back(symbol); };
+
         /// Add a single rule for rendering outputs
         ///
         ///    \param pattern         The light path expression to be mapped to the new rule
@@ -163,6 +168,10 @@ class OSLEXECPUBLIC AccumAutomata
         DfOptimizedAutomata      m_dfoptautomata;
         // List of rules linked as void * from the automata's states
         std::list<AccumRule>     m_accumrules;
+        // Custom symbols to support on expressions as events
+        std::vector<ustring>     m_user_events;
+        // Custom symbols to support on expressions as scattering
+        std::vector<ustring>     m_user_scatterings;
 };
 
 

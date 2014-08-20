@@ -61,7 +61,8 @@ class Parser
 {
     public:
 
-        Parser();
+        Parser(const std::vector<ustring> *user_events = NULL,
+               const std::vector<ustring> *user_scatterings = NULL);
 
         /// Parse a string and return the resulting light path expression tree or NULL if failed
         LPexp *parse(const char *text);

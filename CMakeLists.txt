@@ -109,6 +109,9 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
     # include_directories(SYSTEM...) when using clang or gcc.
     set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
+    
+    ## this allows native instructions to be used for sqrtf instead of a function call
+    add_definitions ("-fno-math-errno")
 endif ()
 
 if (CMAKE_COMPILER_IS_CLANG)

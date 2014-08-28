@@ -12,7 +12,7 @@
 .PHONY: all debug profile clean realclean nuke doxygen
 
 working_dir	:= ${shell pwd}
-INSTALLDIR=${working_dir}
+INSTALLDIR	=${working_dir}
 
 # Figure out which architecture we're on
 include ${working_dir}/src/make/detectplatform.mk
@@ -27,7 +27,7 @@ ifdef PROFILE
 endif
 
 MY_MAKE_FLAGS ?=
-MY_CMAKE_FLAGS ?= -g3
+MY_CMAKE_FLAGS ?= -g3 -DSELF_CONTAINED_INSTALL_TREE:BOOL=TRUE
 
 # Site-specific build instructions
 ifndef OSL_SITE
@@ -38,6 +38,18 @@ ifneq (${shell echo ${OSL_SITE} | grep imageworks},)
 include ${working_dir}/site/spi/Makefile-bits
 endif
 
+# Set up variables holding the names of platform-dependent directories --
+# set these after evaluating site-specific instructions
+top_build_dir := build
+build_dir     := ${top_build_dir}/${platform}${variant}
+top_dist_dir  := dist
+dist_dir      := ${top_dist_dir}/${platform}${variant}
+
+$(info dist_dir = ${dist_dir})
+$(info INSTALLDIR = ${INSTALLDIR})
+
+
+VERBOSE := ${SHOWCOMMANDS}
 ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
 MY_CMAKE_FLAGS += -DVERBOSE:BOOL=1
@@ -88,6 +100,10 @@ ifneq (${PARTIO_HOME},)
 MY_CMAKE_FLAGS += -DPARTIO_HOME:BOOL=${PARTIO_HOME} -DUSE_PARTIO:BOOL=1
 endif
 
+ifneq (${BOOST_HOME},)
+MY_CMAKE_FLAGS += -DBOOST_ROOT:STRING=${BOOST_HOME}
+endif
+
 ifneq (${STOP_ON_WARNING},)
 MY_CMAKE_FLAGS += -DSTOP_ON_WARNING:BOOL=${STOP_ON_WARNING}
 endif
@@ -96,12 +112,12 @@ ifneq (${BUILDSTATIC},)
 MY_CMAKE_FLAGS += -DBUILDSTATIC:BOOL=${BUILDSTATIC}
 endif
 
-ifneq (${USE_EXTERNAL_PUGIXML},)
-MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
+ifneq (${LINKSTATIC},)
+MY_CMAKE_FLAGS += -DLINKSTATIC:BOOL=${LINKSTATIC}
 endif
 
-ifneq (${USE_LIBCPP},)
-MY_CMAKE_FLAGS += -DOSL_USE_LIBCPP:BOOL=${USE_LIBCPP}
+ifneq (${USE_EXTERNAL_PUGIXML},)
+MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
 endif
 
 ifneq (${USE_MCJIT},)
@@ -117,10 +133,22 @@ MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
 endif
 
 ifneq (${MYCC},)
-MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER:STRING=${MYCC}
+MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER:STRING="${MYCC}"
 endif
 ifneq (${MYCXX},)
-MY_CMAKE_FLAGS += -DCMAKE_CXX_COMPILER:STRING=${MYCXX}
+MY_CMAKE_FLAGS += -DCMAKE_CXX_COMPILER:STRING="${MYCXX}"
+endif
+
+ifneq (${USE_CPP11},)
+MY_CMAKE_FLAGS += -DUSE_CPP11:BOOL=${USE_CPP11}
+endif
+
+ifneq (${USE_LIBCPLUSPLUS},)
+MY_CMAKE_FLAGS += -DUSE_LIBCPLUSPLUS:BOOL=${USE_LIBCPLUSPLUS}
+endif
+
+ifneq (${EXTRA_CPP_ARGS},)
+MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS:STRING="${EXTRA_CPP_ARGS}"
 endif
 
 ifneq (${TEST},)
@@ -129,18 +157,6 @@ endif
 
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
-
-
-# Set up variables holding the names of platform-dependent directories --
-# set these after evaluating site-specific instructions
-top_build_dir := build
-build_dir     := ${top_build_dir}/${platform}${variant}
-top_dist_dir  := dist
-dist_dir      := ${top_dist_dir}/${platform}${variant}
-
-$(info dist_dir = ${dist_dir})
-$(info INSTALLDIR = ${INSTALLDIR})
-
 
 #########################################################################
 
@@ -177,9 +193,10 @@ cmakesetup:
 cmake: cmakesetup
 	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} )
 
-# 'make cmakeinstall' builds everthing and installs it in 'dist'
+# 'make cmakeinstall' builds everthing and installs it in 'dist'.
+# Suppress pointless output from docs installation.
 cmakeinstall: cmake
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install )
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\).*doc/html' )
 
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
@@ -243,22 +260,32 @@ help:
 	@echo "  make doxygen      Build the Doxygen docs in ${top_build_dir}/doxygen"
 	@echo ""
 	@echo "Helpful modifiers:"
-	@echo "  make VERBOSE=1 ...          Show all compilation commands"
-	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
-	@echo "  make OSL_SITE=xx            Use custom site build mods"
-	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
-	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
-	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"
-	@echo "  make LLVM_STATIC=1          Use static LLVM libraries"
-	@echo "  make USE_LLVM_BITCODE=0     Don't generate embedded LLVM bitcode"
-	@echo "  make NAMESPACE=name         Wrap OSL APIs in another namespace"
-	@echo "  make HIDE_SYMBOLS=1         Hide symbols not in the public API"
-	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"
-	@echo "  make ILMBASE_HOME=path ...  Custom Ilmbase installation"
-	@echo "  make PARTIO_HOME=...        Use Partio from the given location"
-	@echo "  make STOP_ON_WARNING=0      Do not stop building if compiler warns"
-	@echo "  make BUILDSTATIC=1 ...      Build static library instead of shared"
-	@echo "  make USE_EXTERNAL_PUGIXML=1 Use the system PugiXML, not the one in OIIO"
-	@echo "  make USE_LIBCPP=1           Use libc++"
-	@echo "  make USE_MCJIT=1            Use LLVM MCJIT (default: use old JIT)"
+	@echo "  C++ compiler and build process:"
+	@echo "      VERBOSE=1                Show all compilation commands"
+	@echo "      STOP_ON_WARNING=0        Do not stop building if compiler warns"
+	@echo "      OSL_SITE=xx              Use custom site build mods"
+	@echo "      MYCC=xx MYCXX=yy         Use custom compilers"
+	@echo "      USE_CPP11=1              Compile in C++11 mode"
+	@echo "      USE_LIBCPLUSPLUS=1       Use clang libc++"
+	@echo "      EXTRA_CPP_ARGS=          Additional args to the C++ command"
+	@echo "  Linking and libraries:"
+	@echo "      HIDE_SYMBOLS=1           Hide symbols not in the public API"
+	@echo "      BUILDSTATIC=1            Build static library instead of shared"
+	@echo "      LINKSTATIC=1             Link with static external libraries when possible"
+	@echo "  Finding and Using Dependencies:"
+	@echo "      BOOST_HOME=path          Custom Boost installation"
+	@echo "      USE_BOOST_WAVE=1         Use Boost 'wave' insted of cpp"
+	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
+	@echo "      PARTIO_HOME=             Use Partio from the given location"
+	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"
+	@echo "  LLVM-related options:"
+	@echo "      LLVM_VERSION=3.4         Specify which LLVM version to use"
+	@echo "      LLVM_DIRECTORY=xx        Specify where LLVM lives"
+	@echo "      LLVM_NAMESPACE=xx        Specify custom LLVM namespace"
+	@echo "      LLVM_STATIC=1            Use static LLVM libraries"
+	@echo "      USE_LLVM_BITCODE=0       Don't generate embedded LLVM bitcode"
+	@echo "      USE_MCJIT=1              Use LLVM MCJIT (default: use old JIT)"
+	@echo "  OSL build-time options:"
+	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
 	@echo ""
+

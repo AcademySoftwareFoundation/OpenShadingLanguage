@@ -110,7 +110,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # include_directories(SYSTEM...) when using clang or gcc.
     set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
     
-    ## this allows native instructions to be used for sqrtf instead of a function call
+    # this allows native instructions to be used for sqrtf instead of a function call
     add_definitions ("-fno-math-errno")
 endif ()
 
@@ -140,9 +140,8 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
 endif ()
 
 # Try to detect if this is an OSX distro new enough that the system library
-# is libc++, in which case we should force use of Boost Wave (because that
-# avoids a nonstandard g++ extension in the other code path).
-if (EXISTS "/usr/lib/libc++.dylib" OR OSL_USE_LIBCPP)
+# is libc++.
+if (EXISTS "/usr/lib/libc++.dylib")
     set (OSL_SYSTEM_HAS_LIBCPP ON)
 endif ()
 
@@ -157,13 +156,16 @@ if (WIN32)
 else ()
     set (USE_LLVM_BITCODE ON CACHE BOOL "Generated embedded LLVM bitcode")
 endif ()
-if (WIN32 OR OSL_SYSTEM_HAS_LIBCPP)
+set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
+set (USE_MCJIT OFF CACHE BOOL "Use LLVM MCJIT (if no, then use old JIT)")
+set (USE_CPP11 OFF CACHE BOOL "Compile in C++11 mode")
+set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
+set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
+if (WIN32 OR OSL_SYSTEM_HAS_LIBCPP OR USE_LIBCPLUSPLUS OR USE_CPP11)
     set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
 else ()
     set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
 endif ()
-set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
-set (USE_MCJIT OFF CACHE BOOL "Use LLVM MCJIT (if no, then use old JIT)")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -173,10 +175,6 @@ if (USE_EXTERNAL_PUGIXML)
     add_definitions ("-DUSE_EXTERNAL_PUGIXML")
 endif ()
 
-if (EXTRA_CPP_DEFINITIONS)
-    add_definitions ("${EXTRA_CPP_DEFINITIONS}")
-endif()
-
 if (USE_BOOST_WAVE)
     add_definitions ("-DUSE_BOOST_WAVE")
 endif ()
@@ -185,7 +183,21 @@ if (USE_MCJIT)
     add_definitions ("-DUSE_MCJIT=1")
 endif ()
 
-if (CMAKE_COMPILER_IS_CLANG AND OSL_USE_LIBCPP)
+if (EXTRA_CPP_ARGS)
+    message (STATUS "Extra C++ args: ${EXTRA_CPP_ARGS}")
+    add_definitions ("${EXTRA_CPP_ARGS}")
+endif()
+
+if (USE_CPP11)
+    message (STATUS "Building for C++11")
+    add_definitions ("-std=c++11")
+    if (CMAKE_COMPILER_IS_CLANG)
+        # C++11 doesn't like 'register' keyword, which is in Qt headers
+        add_definitions ("-Wno-deprecated-register")
+    endif ()
+endif ()
+
+if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
     message (STATUS "Using libc++")
     add_definitions ("-stdlib=libc++")
 endif ()
@@ -205,6 +217,7 @@ include_directories (
       "${OPENIMAGEIO_INCLUDES}"
   )
 
+# Set the default namespace
 if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
 endif ()

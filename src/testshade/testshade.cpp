@@ -80,6 +80,7 @@ static std::string reparam_layer;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
+static int raytype_bit = 0;
 static std::string extraoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
@@ -301,6 +302,7 @@ getargs (int argc, const char *argv[])
 
     if (debug || verbose)
         errhandler.verbosity (ErrorHandler::VERBOSE);
+    raytype_bit = shadingsys->raytype_bit (ustring (raytype));
 }
 
 
@@ -363,7 +365,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     sg.object2common = OSL::TransformationPtr (&Mobj);
 
     // Just make it look like all shades are the result of 'raytype' rays.
-    sg.raytype = shadingsys->raytype_bit (ustring(raytype));
+    sg.raytype = raytype_bit;
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set

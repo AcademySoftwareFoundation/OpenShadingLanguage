@@ -102,6 +102,9 @@ using namespace OSL;
 
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
+#if OIIO_VERSION >= 10505
+#  include <OpenImageIO/simd.h>
+#endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1700
 using OIIO::isinf;
@@ -1242,25 +1245,36 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy, int chans,
              void *result, void *dresultdx, void *dresultdy)
 {
+    DASSERT ((dresultdx == NULL) == (dresultdy == NULL));
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
-    opt->nchannels = chans;
-    float dresultds[3], dresultdt[3];
-    opt->dresultds = dresultdx ? dresultds : NULL;
-    opt->dresultdt = dresultdy ? dresultdt : NULL;
-
+    // It's actually faster to ask for 4 channels (even if we need fewer)
+    // and ensure that they're being put in aligned memory.
+    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+    bool derivs = (dresultdx != NULL);
     bool ok = sg->renderer->texture (USTR(name), *opt, sg, s, t,
-                                     dsdx, dtdx, dsdy, dtdy, (float *)result);
+                                     dsdx, dtdx, dsdy, dtdy,
+                                     4, (float *)&result_simd,
+                                     derivs ? (float *)&dresultds_simd : NULL,
+                                     derivs ? (float *)&dresultdt_simd : NULL);
 
     // Correct our st texture space gradients into xy-space gradients
-    if (dresultdx)
+    if (derivs) {
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultds[i] * dsdx + dresultdt[i] * dtdx;
-    if (dresultdy)
+            ((float *)dresultdx)[i] = dresultdx_simd[i];
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultds[i] * dsdy + dresultdt[i] * dtdy;
+            ((float *)dresultdy)[i] = dresultdy_simd[i];
+    }
+    ((float *)result)[0] = result_simd[0];
+    if (chans == 3) {
+        ((float *)result)[1] = result_simd[1];
+        ((float *)result)[2] = result_simd[2];
+    }
     return ok;
 }
+
 
 OSL_SHADEOP int
 osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
@@ -1270,29 +1284,33 @@ osl_texture_alpha (void *sg_, const char *name, void *opt_, float s, float t,
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
-    opt->nchannels = chans + 1;
-    float local_result[4], dresultds[4], dresultdt[4];
-    opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
-    opt->dresultdt = (dresultdy || dalphady) ? dresultdt : NULL;
-
+    bool derivs = (dresultdx != NULL);
+    // It's actually faster to ask for 4 channels (even if we need fewer)
+    // and ensure that they're being put in aligned memory.
+    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
     bool ok = sg->renderer->texture (USTR(name), *opt, sg, s, t,
-                                     dsdx, dtdx, dsdy, dtdy, local_result);
+                                     dsdx, dtdx, dsdy, dtdy, 4,
+                                     (float *)&result_simd,
+                                     derivs ? (float *)&dresultds_simd : NULL,
+                                     derivs ? (float *)&dresultdt_simd : NULL);
 
     for (int i = 0;  i < chans;  ++i)
-        ((float *)result)[i] = local_result[i];
-    ((float *)alpha)[0] = local_result[chans];
+        ((float *)result)[i] = result_simd[i];
+    ((float *)alpha)[0] = result_simd[chans];
 
     // Correct our st texture space gradients into xy-space gradients
-    if (dresultdx)
+    if (derivs) {
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultds[i] * dsdx + dresultdt[i] * dtdx;
-    if (dresultdy)
+            ((float *)dresultdx)[i] = dresultdx_simd[i];
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultds[i] * dsdy + dresultdt[i] * dtdy;
-    if (dalphadx)
-        ((float *)dalphadx)[0] = dresultds[chans] * dsdx + dresultdt[chans] * dtdx;
-    if (dalphady)
-        ((float *)dalphady)[0] = dresultds[chans] * dsdy + dresultdt[chans] * dtdy;
+            ((float *)dresultdy)[i] = dresultdy_simd[i];
+        if (dalphadx) {
+            ((float *)dalphadx)[0] = dresultdx_simd[chans];
+            ((float *)dalphady)[0] = dresultdy_simd[chans];
+        }
+    }
 
     return ok;
 }
@@ -1310,25 +1328,31 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
     const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
-    opt->nchannels = chans;
-    float dresultds[3], dresultdt[3], dresultdr[3];
-    opt->dresultds = dresultdx ? dresultds : NULL;
-    opt->dresultdt = dresultdy ? dresultdt : NULL;
-    opt->dresultdr = dresultdz ? dresultdr : NULL;
-
+    bool derivs = (dresultdx != NULL);
+    // It's actually faster to ask for 4 channels (even if we need fewer)
+    // and ensure that they're being put in aligned memory.
+    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
     bool ok = sg->renderer->texture3d (USTR(name), *opt, sg, P,
-                                       dPdx, dPdy, dPdz, (float *)result);
+                                       dPdx, dPdy, dPdz,
+                                       4, (float *)&result_simd,
+                                       derivs ? (float *)&dresultds_simd : NULL,
+                                       derivs ? (float *)&dresultdt_simd : NULL,
+                                       derivs ? (float *)&dresultdr_simd : NULL);
 
     // Correct our str texture space gradients into xyz-space gradients
-    if (dresultdx)
+    for (int i = 0;  i < chans;  ++i)
+        ((float *)result)[i] = result_simd[i];
+    if (derivs) {
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx[0] + dresultdt_simd * dPdx[1] + dresultdr_simd * dPdx[2];
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy[0] + dresultdt_simd * dPdy[1] + dresultdr_simd * dPdy[2];
+        OIIO::simd::float4 dresultdz_simd = dresultds_simd * dPdz[0] + dresultdt_simd * dPdz[1] + dresultdr_simd * dPdz[2];
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultds[i] * dPdx[0] + dresultdt[i] * dPdx[1] + dresultdr[i] * dPdx[2];
-    if (dresultdy)
+            ((float *)dresultdx)[i] = dresultdx_simd[i];
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultds[i] * dPdy[0] + dresultdt[i] * dPdy[1] + dresultdr[i] * dPdy[2];
-    if (dresultdz)
+            ((float *)dresultdy)[i] = dresultdy_simd[i];
         for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdz)[i] = dresultds[i] * dPdz[0] + dresultdt[i] * dPdz[1] + dresultdr[i] * dPdz[2];
+            ((float *)dresultdz)[i] = dresultdz_simd[i];
+    }
     return ok;
 }
 
@@ -1347,36 +1371,40 @@ osl_texture3d_alpha (void *sg_, const char *name, void *opt_, void *P_,
     const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
-    opt->nchannels = chans + 1;
-    float local_result[4], dresultds[4], dresultdt[4], dresultdr[4];
-    opt->dresultds = (dresultdx || dalphadx) ? dresultds : NULL;
-    opt->dresultdt = (dresultdy || dalphady) ? dresultdt : NULL;
-    opt->dresultdr = (dresultdz || dalphadz) ? dresultdr : NULL;
-
+    bool derivs = (dresultdx != NULL || dalphadx != NULL);
+    // It's actually faster to ask for 4 channels (even if we need fewer)
+    // and ensure that they're being put in aligned memory.
+    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
     bool ok = sg->renderer->texture3d (USTR(name), *opt, sg, P,
-                                       dPdx, dPdy, dPdz, (float *)local_result);
+                                       dPdx, dPdy, dPdz,
+                                       4, (float *)&result_simd,
+                                       derivs ? (float *)&dresultds_simd : NULL,
+                                       derivs ? (float *)&dresultdt_simd : NULL,
+                                       derivs ? (float *)&dresultdr_simd : NULL);
 
     for (int i = 0;  i < chans;  ++i)
-        ((float *)result)[i] = local_result[i];
-    ((float *)alpha)[0] = local_result[chans];
+        ((float *)result)[i] = result_simd[i];
+    ((float *)alpha)[0] = result_simd[chans];
 
     // Correct our str texture space gradients into xyz-space gradients
-    if (dresultdx)
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultds[i] * dPdx[0] + dresultdt[i] * dPdx[1] + dresultdr[i] * dPdx[2];
-    if (dresultdy)
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultds[i] * dPdy[0] + dresultdt[i] * dPdy[1] + dresultdr[i] * dPdy[2];
-    if (dresultdz)
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdz)[i] = dresultds[i] * dPdz[0] + dresultdt[i] * dPdz[1] + dresultdr[i] * dPdz[2];
-    if (dalphadx)
-        ((float *)dalphadx)[0] = dresultds[chans] * dPdx[0] + dresultdt[chans] * dPdx[1] + dresultdr[chans] * dPdx[2];
-    if (dalphady)
-        ((float *)dalphady)[0] = dresultds[chans] * dPdy[0] + dresultdt[chans] * dPdy[1] + dresultdr[chans] * dPdy[2];
-    if (dalphadz)
-        ((float *)dalphadz)[0] = dresultds[chans] * dPdz[0] + dresultdt[chans] * dPdz[1] + dresultdr[chans] * dPdz[2];
-
+    if (derivs) {
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx[0] + dresultdt_simd * dPdx[1] + dresultdr_simd * dPdx[2];
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy[0] + dresultdt_simd * dPdy[1] + dresultdr_simd * dPdy[2];
+        OIIO::simd::float4 dresultdz_simd = dresultds_simd * dPdz[0] + dresultdt_simd * dPdz[1] + dresultdr_simd * dPdz[2];
+        if (dresultdx) {
+            for (int i = 0;  i < chans;  ++i)
+                ((float *)dresultdx)[i] = dresultdx_simd[i];
+            for (int i = 0;  i < chans;  ++i)
+                ((float *)dresultdy)[i] = dresultdy_simd[i];
+            for (int i = 0;  i < chans;  ++i)
+                ((float *)dresultdz)[i] = dresultdz_simd[i];
+        }
+        if (dalphadx) {
+            ((float *)dalphadx)[0] = dresultdx_simd[chans];
+            ((float *)dalphady)[0] = dresultdy_simd[chans];
+            ((float *)dalphadz)[0] = dresultdz_simd[chans];
+        }
+    }
     return ok;
 }
 
@@ -1393,14 +1421,12 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
     const Vec3 &dRdy (*(Vec3 *)dRdy_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
-    opt->nchannels = chans + (alpha ? 1 : 0);
-    float dresultds[4], dresultdt[4];
-    opt->dresultds = dresultdx ? dresultds : NULL;
-    opt->dresultdt = dresultdy ? dresultdt : NULL;
-    float local_result[4];
-
+    // It's actually faster to ask for 4 channels (even if we need fewer)
+    // and ensure that they're being put in aligned memory.
+    OIIO::simd::float4 local_result;
     bool ok = sg->renderer->environment (USTR(name), *opt, sg, R,
-                                         dRdx, dRdy, (float *)local_result);
+                                         dRdx, dRdy, 4,
+                                         (float *)&local_result, NULL, NULL);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -1412,11 +1438,12 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
     // tricky because we (this function you're reading) don't know which
     // projection is used to generate st from R.  Ugh.  Sweep under the
     // rug for a day when somebody is really asking for it.
-    if (dresultdx)
-        ((float *)dresultdx)[0] = 0.0f;
-    if (dresultdy)
-        ((float *)dresultdy)[0] = 0.0f;
-
+    if (dresultdx) {
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdx)[i] = 0.0f;
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdy)[i] = 0.0f;
+    }
     if (alpha) {
         ((float *)alpha)[0] = local_result[chans];
         // Zero out the alpha derivatives, for the same reason as above.

@@ -131,10 +131,12 @@ bool
 RendererServices::texture (ustring filename, TextureOpt &options,
                            ShaderGlobals *sg,
                            float s, float t, float dsdx, float dtdx,
-                           float dsdy, float dtdy, float *result)
+                           float dsdy, float dtdy, int nchannels,
+                           float *result, float *dresultds, float *dresultdt)
 {
-    bool status =  texturesys()->texture (filename, options, s, t,
-                                          dsdx, dtdx, dsdy, dtdy, result);
+    bool status = texturesys()->texture (filename, options, s, t,
+                                         dsdx, dtdx, dsdy, dtdy,
+                                         nchannels, result, dresultds, dresultdt);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {
@@ -150,10 +152,12 @@ bool
 RendererServices::texture3d (ustring filename, TextureOpt &options,
                              ShaderGlobals *sg, const Vec3 &P,
                              const Vec3 &dPdx, const Vec3 &dPdy,
-                             const Vec3 &dPdz, float *result)
+                             const Vec3 &dPdz, int nchannels, float *result,
+                             float *dresultds, float *dresultdt, float *dresultdr)
 {
     bool status = texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
-                                            result);
+                                           nchannels, result,
+                                           dresultds, dresultdt, dresultdr);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {
@@ -168,9 +172,12 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
 bool
 RendererServices::environment (ustring filename, TextureOpt &options,
                                ShaderGlobals *sg, const Vec3 &R,
-                               const Vec3 &dRdx, const Vec3 &dRdy, float *result)
+                               const Vec3 &dRdx, const Vec3 &dRdy,
+                               int nchannels, float *result,
+                               float *dresultds, float *dresultdt)
 {
-    bool status = texturesys()->environment (filename, options, R, dRdx, dRdy, result);
+    bool status = texturesys()->environment (filename, options, R, dRdx, dRdy,
+                                             nchannels, result, dresultds, dresultdt);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size()) {

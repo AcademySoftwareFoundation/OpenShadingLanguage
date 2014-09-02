@@ -197,7 +197,8 @@ public:
     virtual bool texture (ustring filename, TextureOpt &options,
                           ShaderGlobals *sg,
                           float s, float t, float dsdx, float dtdx,
-                          float dsdy, float dtdy, float *result);
+                          float dsdy, float dtdy, int nchannels,
+                          float *result, float *dresultds, float *dresultdt);
 
     /// Filtered 3D texture lookup for a single point.
     ///
@@ -212,7 +213,9 @@ public:
     virtual bool texture3d (ustring filename, TextureOpt &options,
                             ShaderGlobals *sg, const Vec3 &P,
                             const Vec3 &dPdx, const Vec3 &dPdy,
-                            const Vec3 &dPdz, float *result);
+                            const Vec3 &dPdz, int nchannels,
+                            float *result, float *dresultds,
+                            float *dresultdt, float *dresultdr);
 
     /// Filtered environment lookup for a single point.
     ///
@@ -223,7 +226,9 @@ public:
     /// return false.
     virtual bool environment (ustring filename, TextureOpt &options,
                               ShaderGlobals *sg, const Vec3 &R,
-                              const Vec3 &dRdx, const Vec3 &dRdy, float *result);
+                              const Vec3 &dRdx, const Vec3 &dRdy,
+                              int nchannels, float *result,
+                              float *dresultds, float *dresultdt);
 
     /// Get information about the given texture.  Return true if found
     /// and the data has been put in *data.  Return false if the texture

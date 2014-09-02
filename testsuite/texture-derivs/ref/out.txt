@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+
+Output Cout to out.tif
+Output dx to dx.tif
+Output dy to dy.tif

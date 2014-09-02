@@ -1,0 +1,11 @@
+shader
+test (string filename = "ramp.exr",
+      float scale = 1,
+      output color Cout = 0,
+      output color dx = 0,
+      output color dy = 0)
+{
+    Cout = (color) texture (filename, u, v);
+    dx = Dx (Cout) * scale;
+    dy = Dy (Cout) * scale;
+}

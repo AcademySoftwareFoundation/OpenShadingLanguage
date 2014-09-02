@@ -155,6 +155,10 @@ ifneq (${EXTRA_CPP_ARGS},)
 MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS:STRING="${EXTRA_CPP_ARGS}"
 endif
 
+ifneq (${USE_SIMD},)
+MY_CMAKE_FLAGS += -DUSE_SIMD:STRING="${USE_SIMD}"
+endif
+
 ifneq (${TEST},)
 TEST_FLAGS += -R ${TEST}
 endif
@@ -292,5 +296,7 @@ help:
 	@echo "  OSL build-time options:"
 	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
+	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
+	@echo "                                    sse4.1, sse4.2)"
 	@echo ""
 

@@ -2709,14 +2709,14 @@ RuntimeOptimizer::run ()
         if (optimize() >= 1) {
             collapse_syms ();
             collapse_ops ();
-            if (debug()) {
-                track_variable_lifetimes ();
-                std::cout << "After optimizing layer " << layer << " " 
-                          << inst()->layername() << " (" << inst()->id()
-                          << "): \n" << inst()->print() 
-                          << "\n--------------------------------\n\n";
-                std::cout.flush ();
-            }
+        }
+        if (debug()) {
+            track_variable_lifetimes ();
+            std::cout << "After optimizing layer " << layer << " " 
+                      << inst()->layername() << " (" << inst()->id()
+                      << "): \n" << inst()->print() 
+                      << "\n--------------------------------\n\n";
+            std::cout.flush ();
         }
         new_nsyms += inst()->symbols().size();
         new_nops += inst()->ops().size();

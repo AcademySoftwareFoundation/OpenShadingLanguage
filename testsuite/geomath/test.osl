@@ -98,7 +98,7 @@ test ()
               n1/n2, sin2/sin1);
         float Kr, Kt;
         vector fR, fT;
-        fresnel(vI, vN, eta, Kr, Kt, fT, fT);
+        fresnel(vI, vN, eta, Kr, Kt, fR, fT);
         printf ("   fresnel() -> Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt,
                 pretty(fR), pretty(fT)); 
         cos_incid_angle = dot(vI,vN);

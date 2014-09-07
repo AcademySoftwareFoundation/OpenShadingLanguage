@@ -101,7 +101,7 @@ equivalent (const StructSpec *a, const StructSpec *b)
     ASSERT (a && b);
     if (a->numfields() != b->numfields())
         return false;
-    for (size_t i = 0;  i < a->numfields();  ++i)
+    for (size_t i = 0;  i < (size_t)a->numfields();  ++i)
         if (! equivalent (a->field(i).type, b->field(i).type))
             return false;
     return true;

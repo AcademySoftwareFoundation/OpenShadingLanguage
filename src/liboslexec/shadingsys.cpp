@@ -1612,7 +1612,7 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
         // as connections between their respective fields.
         StructSpec *srcstruct = srccon.type.structspec();
         StructSpec *dststruct = dstcon.type.structspec();
-        for (size_t i = 0;  i < srcstruct->numfields();  ++i) {
+        for (size_t i = 0;  i < (size_t)srcstruct->numfields();  ++i) {
             std::string s = Strutil::format("%s.%s", srcparam, srcstruct->field(i).name.c_str());
             std::string d = Strutil::format("%s.%s", dstparam, dststruct->field(i).name.c_str());
             ConnectShaders (srclayer, s.c_str(), dstlayer, d.c_str());

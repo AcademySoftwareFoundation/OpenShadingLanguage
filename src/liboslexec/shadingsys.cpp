@@ -1612,7 +1612,7 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
         // as connections between their respective fields.
         StructSpec *srcstruct = srccon.type.structspec();
         StructSpec *dststruct = dstcon.type.structspec();
-        for (size_t i = 0;  i < srcstruct->numfields();  ++i) {
+        for (size_t i = 0;  i < (size_t)srcstruct->numfields();  ++i) {
             std::string s = Strutil::format("%s.%s", srcparam, srcstruct->field(i).name.c_str());
             std::string d = Strutil::format("%s.%s", dstparam, dststruct->field(i).name.c_str());
             ConnectShaders (srclayer, s.c_str(), dstlayer, d.c_str());
@@ -2677,7 +2677,7 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
     for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
         for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
             int i = d*ncomps + c;
-            if (! isfinite(vals[i])) {
+            if (! OpenImageIO::isfinite(vals[i])) {
                 ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
                             vals[i], d > 0 ? "the derivatives of " : "",
                             USTR(symbolname), USTR(sourcefile), sourceline,
@@ -2710,7 +2710,7 @@ osl_uninit_check (long long typedesc_, void *vals_,
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;
         for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
-            if (!isfinite(vals[c])) {
+            if (!OpenImageIO::isfinite(vals[c])) {
                 uninit = true;
                 vals[c] = 0;
             }

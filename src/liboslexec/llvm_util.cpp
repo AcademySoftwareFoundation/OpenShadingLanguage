@@ -46,7 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <llvm/IR/LLVMContext.h>
 # include <llvm/IR/IRBuilder.h>
 # include <llvm/IR/DataLayout.h>
+# if OSL_LLVM_VERSION >= 35
+# include <llvm/Linker/Linker.h>
+# include <llvm/Support/FileSystem.h>
+# else
 # include <llvm/Linker.h>
+# endif
 # if OSL_LLVM_VERSION >= 34
 #   include <llvm/IR/LegacyPassManager.h>
 # else
@@ -88,7 +93,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/PrettyStackTrace.h>
+#if OSL_LLVM_VERSION >= 35
+#include <llvm/IR/Verifier.h>
+#else
 #include <llvm/Analysis/Verifier.h>
+#endif
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
@@ -372,7 +381,12 @@ LLVM_Util::SetupLLVM ()
     // than opt-out, and the following variable was removed.
     llvm::DisablePrettyStackTrace = true;
 #endif
-    llvm::llvm_start_multithreaded ();  // enable it to be thread-safe
+
+#if OSL_LLVM_VERSION < 35
+    // enable it to be thread-safe
+    llvm::llvm_start_multithreaded ();
+#endif
+// new versions (>=3.5)don't need this anymore
 
 #if USE_MCJIT
     llvm::InitializeAllTargets();
@@ -427,8 +441,12 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     delete buf;
 #else
     // Create a lazily deserialized IR module
+# if OSL_LLVM_VERSION >= 35
+    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context()).get();
+# else
     llvm::Module *m = llvm::getLazyBitcodeModule (buf, context(), err);
     // don't delete buf, the module has taken ownership of it
+# endif
 #endif
     // Debugging: print all functions in the module
     // for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
@@ -536,7 +554,11 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 #if OSL_LLVM_VERSION >= 34
     m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
     llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
+# if OSL_LLVM_VERSION >= 35
+    fpm.add (new llvm::DataLayoutPass(module()));
+# else
     fpm.add (new llvm::DataLayout(module()));
+# endif
 #else
     m_llvm_func_passes = new llvm::FunctionPassManager(module());
     llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
@@ -552,7 +574,11 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 #if OSL_LLVM_VERSION >= 34
     m_llvm_module_passes = new llvm::legacy::PassManager;
     llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
+# if OSL_LLVM_VERSION >= 35
+    mpm.add (new llvm::DataLayoutPass(module()));
+# else
     mpm.add (new llvm::DataLayout(module()));
+# endif
 #else
     m_llvm_module_passes = new llvm::PassManager;
     llvm::PassManager &mpm (*m_llvm_module_passes);
@@ -1471,7 +1497,11 @@ void
 LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
 {
     std::string local_error;
+#if OSL_LLVM_VERSION >= 35
+    llvm::raw_fd_ostream out (filename, err ? *err : local_error, llvm::sys::fs::F_None);
+#else
     llvm::raw_fd_ostream out (filename, err ? *err : local_error);
+#endif
     llvm::WriteBitcodeToFile (module(), out);
 }
 

@@ -114,7 +114,11 @@ struct GaborParams {
         bandwidth(Imath::clamp(opt.bandwidth,0.01f,100.0f)),
         periodic(false)
     {
-        float TWO_to_bandwidth = powf (2.0f, bandwidth);
+#if OSL_FAST_MATH
+        float TWO_to_bandwidth = fast_exp2f(bandwidth);
+#else
+        float TWO_to_bandwidth = exp2f(bandwidth);
+#endif
         static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
         a = Gabor_Frequency * ((TWO_to_bandwidth - 1.0) / (TWO_to_bandwidth + 1.0)) * SQRT_PI_OVER_LN2;
         // Calculate the maximum radius from which we consider the kernel
@@ -212,14 +216,22 @@ gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
         float cos_omega_p = lerp(-1.0f, 1.0f, rng());
         float sin_omega_p = sqrtf (std::max (0.0f, 1.0f - cos_omega_p*cos_omega_p));
         float sin_omega_t, cos_omega_t;
+#if OSL_FAST_MATH
+        fast_sincosf (omega_t, &sin_omega_t, &cos_omega_t);
+#else
         OIIO::sincos (omega_t, &sin_omega_t, &cos_omega_t);
+#endif
         omega = Vec3 (cos_omega_t*sin_omega_p, sin_omega_t*sin_omega_p, cos_omega_p).normalized();
     } else {
         // otherwise hybrid
         float omega_r = gp.omega.length();
         float omega_t =  float(M_TWO_PI) * rng();
         float sin_omega_t, cos_omega_t;
+#if OSL_FAST_MATH
+        fast_sincosf (omega_t, &sin_omega_t, &cos_omega_t);
+#else
         OIIO::sincos (omega_t, &sin_omega_t, &cos_omega_t);
+#endif
         omega = omega_r * Vec3(cos_omega_t, sin_omega_t, 0.0f);
     }
     phi = float(M_TWO_PI) * rng();

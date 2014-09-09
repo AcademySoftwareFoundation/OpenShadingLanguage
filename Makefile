@@ -84,6 +84,10 @@ ifneq (${HIDE_SYMBOLS},)
 MY_CMAKE_FLAGS += -DHIDE_SYMBOLS:BOOL=${HIDE_SYMBOLS}
 endif
 
+ifneq (${USE_FAST_MATH},)
+MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=${USE_FAST_MATH}
+endif
+
 ifneq (${USE_BOOST_WAVE},)
 MY_CMAKE_FLAGS += -DUSE_BOOST_WAVE:BOOL=${USE_BOOST_WAVE}
 endif
@@ -287,5 +291,6 @@ help:
 	@echo "      USE_MCJIT=1              Use LLVM MCJIT (default: use old JIT)"
 	@echo "  OSL build-time options:"
 	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
+	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo ""
 

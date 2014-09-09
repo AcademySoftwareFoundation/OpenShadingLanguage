@@ -29,6 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include "oslversion.h"
+#include "fastmath.h"
+#include <OpenImageIO/fmath.h>
 OSL_NAMESPACE_ENTER
 
 
@@ -335,9 +337,15 @@ template<class T>
 inline Dual2<T> cos (const Dual2<T> &a)
 {
     T sina, cosa;
-    sina = std::sin (a.val());
-    cosa = std::cos (a.val());
+    OIIO::sincos(a.val(), &sina, &cosa);
     return Dual2<T> (cosa, -sina * a.dx(), -sina * a.dy());
+}
+
+inline Dual2<float> fast_cos(const Dual2<float> &a)
+{
+    float sina, cosa;
+    fast_sincosf(a.val(), &sina, &cosa);
+    return Dual2<float> (cosa, -sina * a.dx(), -sina * a.dy());
 }
 
 // f(x) = sin(x),  f'(x) = cos(x)
@@ -345,106 +353,144 @@ template<class T>
 inline Dual2<T> sin (const Dual2<T> &a)
 {
     T sina, cosa;
-    sina = std::sin (a.val());
-    cosa = std::cos (a.val());
+    OIIO::sincos(a.val(), &sina, &cosa);
     return Dual2<T> (sina, cosa * a.dx(), cosa * a.dy());
+}
+
+inline Dual2<float> fast_sin(const Dual2<float> &a)
+{
+    float sina, cosa;
+    fast_sincosf(a.val(), &sina, &cosa);
+    return Dual2<float> (sina, cosa * a.dx(), cosa * a.dy());
 }
 
 // f(x) = tan(x), f'(x) = sec^2(x)
 template<class T>
 inline Dual2<T> tan (const Dual2<T> &a)
 {
-   T tana, cosa, sec2a;
-   tana  = std::tan (a.val());
-   cosa  = std::cos (a.val());
-   sec2a = T(1)/(cosa*cosa);
-   return Dual2<T> (tana, sec2a * a.dx(), sec2a * a.dy());
+    T tana  = std::tan (a.val());
+    T cosa  = std::cos (a.val());
+    T sec2a = T(1)/(cosa*cosa);
+    return Dual2<T> (tana, sec2a * a.dx(), sec2a * a.dy());
+}
+
+inline Dual2<float> fast_tan(const Dual2<float> &a)
+{
+    float tana  = fast_tanf(a.val());
+    float cosa  = fast_cosf(a.val());
+    float sec2a = 1 / (cosa * cosa);
+    return Dual2<float> (tana, sec2a * a.dx(), sec2a * a.dy());
 }
 
 // f(x) = cosh(x), f'(x) = sinh(x)
 template<class T>
 inline Dual2<T> cosh (const Dual2<T> &a)
 {
-   T cosha, sinha;
-   cosha = std::cosh(a.val());
-   sinha = std::sinh(a.val());
-   return Dual2<T> (cosha, sinha * a.dx(), sinha * a.dy());
+    T cosha = std::cosh(a.val());
+    T sinha = std::sinh(a.val());
+    return Dual2<T> (cosha, sinha * a.dx(), sinha * a.dy());
 }
+
+inline Dual2<float> fast_cosh(const Dual2<float> &a)
+{
+    float cosha = fast_coshf(a.val());
+    float sinha = fast_sinhf(a.val());
+    return Dual2<float> (cosha, sinha * a.dx(), sinha * a.dy());
+}
+
 
 // f(x) = sinh(x), f'(x) = cosh(x)
 template<class T>
 inline Dual2<T> sinh (const Dual2<T> &a)
 {
-   T cosha, sinha;
-   cosha = std::cosh(a.val());
-   sinha = std::sinh(a.val());
-   return Dual2<T> (sinha, cosha * a.dx(), cosha * a.dy());
+    T cosha = std::cosh(a.val());
+    T sinha = std::sinh(a.val());
+    return Dual2<T> (sinha, cosha * a.dx(), cosha * a.dy());
+}
+
+inline Dual2<float> fast_sinh(const Dual2<float> &a)
+{
+    float cosha = fast_coshf(a.val());
+    float sinha = fast_sinhf(a.val());
+    return Dual2<float> (sinha, cosha * a.dx(), cosha * a.dy());
 }
 
 // f(x) = tanh(x), f'(x) = sech^2(x)
 template<class T>
 inline Dual2<T> tanh (const Dual2<T> &a)
 {
-   T cosha, tanha, sech2a;
-   tanha = std::tanh(a.val());
-   cosha = std::cosh(a.val());
-   sech2a = T(1)/(cosha*cosha);
-   return Dual2<T> (tanha, sech2a * a.dx(), sech2a * a.dy());
+    T tanha = std::tanh(a.val());
+    T cosha = std::cosh(a.val());
+    T sech2a = T(1)/(cosha*cosha);
+    return Dual2<T> (tanha, sech2a * a.dx(), sech2a * a.dy());
+}
+
+inline Dual2<float> fast_tanh(const Dual2<float> &a)
+{
+    float tanha = fast_tanhf(a.val());
+    float cosha = fast_coshf(a.val());
+    float sech2a = 1 / (cosha * cosha);
+    return Dual2<float> (tanha, sech2a * a.dx(), sech2a * a.dy());
 }
 
 // f(x) = acos(x), f'(x) = -1/(sqrt(1 - x^2))
 template<class T>
-inline Dual2<T> acos (const Dual2<T> &a)
+inline Dual2<T> safe_acos (const Dual2<T> &a)
 {
-   if (a.val() >= T(1)) 
-      return Dual2<T> (T(0), T(0), T(0));
-   if (a.val() <= T(-1)) 
-      return Dual2<T> (T(M_PI), T(0), T(0));
+    if (a.val() >= T(1))
+        return Dual2<T> (T(0), T(0), T(0));
+    if (a.val() <= T(-1))
+        return Dual2<T> (T(M_PI), T(0), T(0));
+    T arccosa = std::acos (a.val());
+    T denom   = -T(1) / std::sqrt (T(1) - a.val()*a.val());
+    return Dual2<T> (arccosa, denom * a.dx(), denom * a.dy());
+}
 
-   T arccosa, denom;
-   arccosa = std::acos (a.val());
-   denom   = -T(1) / std::sqrt (T(1) - a.val()*a.val());
-
-   return Dual2<T> (arccosa, denom * a.dx(), denom * a.dy());
+inline Dual2<float> fast_acos(const Dual2<float> &a)
+{
+    float arccosa = fast_acosf(a.val());
+    float denom   = fabsf(a.val()) < 1.0f ? -1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
+    return Dual2<float> (arccosa, denom * a.dx(), denom * a.dy());
 }
 
 // f(x) = asin(x), f'(x) = 1/(sqrt(1 - x^2))
 template<class T>
-inline Dual2<T> asin (const Dual2<T> &a)
+inline Dual2<T> safe_asin (const Dual2<T> &a)
 {
-   if (a.val() >= T(1)) 
-      return Dual2<T> (T(M_PI/2), T(0), T(0));
-   if (a.val() <= T(-1)) 
-      return Dual2<T> (T(-M_PI/2), T(0), T(0));
+    if (a.val() >= T(1))
+        return Dual2<T> (T(M_PI/2), T(0), T(0));
+    if (a.val() <= T(-1))
+        return Dual2<T> (T(-M_PI/2), T(0), T(0));
 
-   T arcsina, denom;
-   arcsina = std::asin (a.val());
-   denom   = T(1) / std::sqrt (T(1) - a.val()*a.val());
-
-   return Dual2<T> (arcsina, denom * a.dx(), denom * a.dy());
+    T arcsina = std::asin (a.val());
+    T denom   = T(1) / std::sqrt (T(1) - a.val()*a.val());
+    return Dual2<T> (arcsina, denom * a.dx(), denom * a.dy());
 }
+
+inline Dual2<float> fast_asin(const Dual2<float> &a)
+{
+    float arcsina = fast_asinf(a.val());
+    float denom   = fabsf(a.val()) < 1.0f ? 1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
+    return Dual2<float> (arcsina, denom * a.dx(), denom * a.dy());
+}
+
 
 // f(x) = atan(x), f'(x) = 1/(1 + x^2)
 template<class T>
 inline Dual2<T> atan (const Dual2<T> &a)
 {
-   T arctana, denom;
-   arctana = std::atan (a.val());
-   denom   = T(1) / (T(1) + a.val()*a.val());
-
-   return Dual2<T> (arctana, denom * a.dx(), denom * a.dy());
+    T arctana = std::atan (a.val());
+    T denom   = T(1) / (T(1) + a.val()*a.val());
+    return Dual2<T> (arctana, denom * a.dx(), denom * a.dy());
 }
 
+inline Dual2<float> fast_atan(const Dual2<float> &a)
+{
+    float arctana = fast_atanf(a.val());
+    float denom   = 1.0f / (1.0f + a.val() * a.val());
+    return Dual2<float> (arctana, denom * a.dx(), denom * a.dy());
 
-/// Make a simple way to extract the value of a dual<T> and a regular T with
-/// uniform syntax.
-template<class T>
-inline T value (const Dual2<T> &f) { return f.val(); }
-
-template<class T>
-inline T value (const T &f) { return f; }
-
-
+}
 
 // f(x,x) = atan2(y,x); f'(x) =  y x' / (x^2 + y^2),
 //                      f'(y) = -x y' / (x^2 + y^2)
@@ -453,14 +499,18 @@ inline T value (const T &f) { return f; }
 template<class T>
 inline Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 {
-   if (y.val() == T(0) && x.val() == T(0))
-      return Dual2<T> (T(0), T(0), T(0));
+    T atan2xy = std::atan2 (y.val(), x.val());
+    T denom = (x.val() == T(0) && y.val() == T(0)) ? T(0) : T(1) / (x.val()*x.val() + y.val()*y.val());
+    return Dual2<T> ( atan2xy, (y.val()*x.dx() - x.val()*y.dx())*denom,
+                               (y.val()*x.dy() - x.val()*y.dy())*denom );
+}
 
-   T atan2xy;
-   atan2xy = std::atan2 (y.val(), x.val());
-   T denom = T(1) / (x.val()*x.val() + y.val()*y.val());
-   return Dual2<T> ( atan2xy, (y.val()*x.dx() - x.val()*y.dx())*denom,
-                              (y.val()*x.dy() - x.val()*y.dy())*denom );
+inline Dual2<float> fast_atan2(const Dual2<float> &y, const Dual2<float> &x)
+{
+    float atan2xy = fast_atan2f(y.val(), x.val());
+    float denom = (x.val() == 0 && y.val() == 0) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
+    return Dual2<float> ( atan2xy, (y.val()*x.dx() - x.val()*y.dx())*denom,
+                                   (y.val()*x.dy() - x.val()*y.dy())*denom );
 }
 
 
@@ -471,239 +521,193 @@ inline Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 //   (from http://en.wikipedia.org/wiki/Automatic_differentiation)
 // so, pow(u,v) = < u^v, vu^(v-1) u' + log(u)u^v v' >
 template<class T>
-inline Dual2<T> pow (const Dual2<T> &u, const Dual2<T> &v)
-{
-    if (v.val() == T(0))
-        return Dual2<T> ( T(1) );    // u^0 == 1
-    if (u.val() == T(0))
-        return Dual2<T> ( T(0) );    // 0^v == 0
-    if (u.val() < T(0)) {
-        if (truncf(v.val()) != v.val())
-            return T(0);  // return 0 rather than imaginary
-        // The function is not continuous in v, so assume v's derivs zero.
-        // This gets rid of the log(u), which makes life easier.
-        T powuvm1 = std::pow (u.val(), v.val()-T(1)); // u^(v-1)
-        T powuv   = powuvm1 * u.val();  // u^v
-        return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx(),
-                          v.val()*powuvm1 * u.dy() );
-    }
-    // Full case of pow(u,v) well-defined
-    T powuvm1 = std::pow (u.val(), v.val()-T(1)); // u^(v-1)
-    T powuv   = powuvm1 * u.val();  // u^v
-    T logu    = std::log (u.val());
-    return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
-                      v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
-}
-
-
-
-/// A version of pow that is robust to overflow and domain errors.
-///
-inline float
-safe_pow (float x, float y)
-{
-    // Quick return for x==0, including returning 0 (rather than Inf) when
-    // y is negative.
-    if (x == 0.0f)
-        return y == 0.0f ? 1.0f : 0.0f;
-    // Return 0 rather than NaNs for domain errors where x<0 and y not int
-    if (x < 0.0f && floorf(y) != y)
-        return 0.0f;
-    // Ask for standard pow()
-    float r = std::pow (x, y);
-    // Clamp to avoid Inf values.  We purposely clamp at considerably
-    // less than FLOAT_MAX (but still bigger than anyone is likely to
-    // need) so that subsequent additions or multiplications are less
-    // likely to overflow and end up with an Inf right afterwards.
-    const float big = 1e30;
-    if (r < -big)
-        return -big;
-    if (r > big)
-        return big;
-    return r;
-}
-
-
-
-template<class T>
 inline Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
 {
-    if (v.val() == T(0))
-        return Dual2<T> ( T(1) );    // u^0 == 1
-    if (u.val() == T(0))
-        return Dual2<T> ( T(0) );    // 0^v == 0
-    if (u.val() < T(0)) {
-        if (truncf(v.val()) != v.val())
-            return T(0);  // return 0 rather than imaginary
-        // The function is not continuous in v, so assume v's derivs zero.
-        // This gets rid of the log(u), which makes life easier.
-        T powuvm1 = safe_pow (u.val(), v.val()-T(1));  // u^(v-1)
-        T powuv   = powuvm1 * u.val();   // u^v
-        return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx(),
-                          v.val()*powuvm1 * u.dy() );
-    }
-    // Full case of pow(u,v) well-defined 
-    T powuvm1 = safe_pow (u.val(), v.val()-T(1));  // u^(v-1)
-    T powuv   = powuvm1 * u.val();   // u^v
-    T logu    = std::log (u.val());
+    // NOTE: this function won't return exactly the same as pow(x,y) because we
+    // use the identity u^v=u * u^(v-1) which does not hold in all cases for our
+    // "safe" variant (nor does it hold in general in floating point arithmetic).
+    T powuvm1 = safe_pow(u.val(), v.val() - T(1));
+    T powuv   = powuvm1 * u.val();
+    T logu    = u.val() > 0 ? safe_log(u.val()) : T(0);
     return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
-                      v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
+                             v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
 }
 
+inline Dual2<float> fast_safe_pow(const Dual2<float> &u, const Dual2<float> &v)
+{
+    // NOTE: same issue as above (fast_safe_pow does even more clamping)
+    float powuvm1 = fast_safe_powf(u.val(), v.val() - 1.0f);
+    float powuv   = powuvm1 * u.val();
+    float logu    = u.val() > 0 ? fast_logf(u.val()) : 0.0f;
+    return Dual2<float> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
+                                 v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
+
+}
 
 // f(x) = log(a), f'(x) = 1/x
 // (log base e)
 template<class T>
-inline Dual2<T> log (const Dual2<T> &a)
+inline Dual2<T> safe_log (const Dual2<T> &a)
 {
-   // do we want to print an error message?
-   if (a.val() <= T(0))
-      return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
-
-   T loga, inv_a;
-   loga  = std::log (a.val());
-   inv_a = T(1)/a.val();
-
-   return Dual2<T> (loga, inv_a * a.dx(), inv_a * a.dy());
+    T loga = safe_log(a.val());
+    T inva = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / a.val();
+    return Dual2<T> (loga, inva * a.dx(), inva * a.dy());
 }
 
-// f(x) = log(a)/log(b)  -- leverage Dual2<T>log() and Dua2<T>operator/()
-// (log base e)
-template<class T>
-inline Dual2<T> log (const Dual2<T> &a, const Dual2<T> &b)
+inline Dual2<float> fast_log(const Dual2<float> &a)
 {
-   // do we want to print an error message?
-   if (a.val() <= T(0) || b.val() <= T(0) || b.val() == T(1)) {
-      if (b.val() == T(1))
-         return Dual2<T> (T(std::numeric_limits<T>::max()), T(0), T(0));
-      else
-         return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
-   }
-
-   Dual2<T> loga, logb;
-   loga  = log (a);
-   logb  = log (b);
-
-   return loga/logb;
+    float loga = fast_logf(a.val());
+    float inva = a.val() < std::numeric_limits<float>::min() ? 0.0f : 1.0f / a.val();
+    return Dual2<float> (loga, inva * a.dx(), inva * a.dy());
 }
 
 // f(x) = log2(x), f'(x) = 1/(x*log2)
 // (log base 2)
 template<class T>
-inline Dual2<T> log2 (const Dual2<T> &a)
+inline Dual2<T> safe_log2 (const Dual2<T> &a)
 {
-   // do we want to print an error message?
-   if (a.val() <= T(0))
-      return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+    T loga = safe_log2(a.val());
+    T inva = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / (a.val() * T(M_LN2));
+    return Dual2<T> (loga, inva * a.dx(), inva * a.dy());
+}
 
-   T log2, log2a, inv_a_log2;
-
-   log2       = std::log (T(2));
-   log2a      = std::log (a.val()) / log2;
-   inv_a_log2 = T(1)/(a.val() * log2);
-
-   return Dual2<T> (log2a, inv_a_log2 * a.dx(), inv_a_log2 * a.dy());
+inline Dual2<float> fast_log2(const Dual2<float> &a)
+{
+    float loga = fast_log2f(a.val());
+    float aln2 = a.val() * float(M_LN2);
+    float inva = aln2 < std::numeric_limits<float>::min() ? 0.0f : 1.0f / aln2;
+    return Dual2<float> (loga, inva * a.dx(), inva * a.dy());
 }
 
 // f(x) = log10(x), f'(x) = 1/(x*log10)
 // (log base 10)
 template<class T>
-inline Dual2<T> log10 (const Dual2<T> &a)
+inline Dual2<T> safe_log10 (const Dual2<T> &a)
 {
-   // do we want to print an error message?
-   if (a.val() <= T(0))
-      return Dual2<T> (T(-std::numeric_limits<T>::max()), T(0), T(0));
+    T loga = safe_log10(a.val());
+    T inva = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / (a.val() * T(M_LN10));
+    return Dual2<T> (loga, inva * a.dx(), inva * a.dy());
+}
 
-   T log10, log10a, inv_a_log10;
-   log10       = std::log (T(10));
-   log10a      = std::log10 (a.val());
-   inv_a_log10 = T(1)/(a.val() * log10);
-
-   return Dual2<T> (log10a, inv_a_log10 * a.dx(), inv_a_log10 * a.dy());
+inline Dual2<float> fast_log10(const Dual2<float> &a)
+{
+    float loga  = fast_log10f(a.val());
+    float aln10 = a.val() * float(M_LN10);
+    float inva  = aln10 < std::numeric_limits<float>::min() ? 0.0f : 1.0f / aln10;
+    return Dual2<float> (loga, inva * a.dx(), inva * a.dy());
 }
 
 // f(x) = e^x, f'(x) = e^x
 template<class T>
 inline Dual2<T> exp (const Dual2<T> &a)
 {
-   T expa;
-   expa  = std::exp (a.val());
+    T expa = std::exp(a.val());
+    return Dual2<T> (expa, expa * a.dx(), expa * a.dy());
+}
 
-   return Dual2<T> (expa, expa * a.dx(), expa * a.dy());
+inline Dual2<float> fast_exp(const Dual2<float> &a)
+{
+    float expa = fast_expf(a.val());
+    return Dual2<float> (expa, expa * a.dx(), expa * a.dy());
 }
 
 // f(x) = 2^x, f'(x) = (2^x)*log(2)
 template<class T>
 inline Dual2<T> exp2 (const Dual2<T> &a)
 {
-   T exp2a, ln2;
-   exp2a  = std::pow (T(2), a.val());
-   ln2    = std::log (T(2));
-
-   return Dual2<T> (exp2a, exp2a*ln2*a.dx(), exp2a*ln2*a.dy());
+    // FIXME: std::exp2 is only available in C++11
+    T exp2a = exp2f(float(a.val()));
+    return Dual2<T> (exp2a, exp2a*T(M_LN2)*a.dx(), exp2a*T(M_LN2)*a.dy());
 }
+
+inline Dual2<float> fast_exp2(const Dual2<float> &a)
+{
+    float exp2a = fast_exp2f(float(a.val()));
+    return Dual2<float> (exp2a, exp2a*float(M_LN2)*a.dx(), exp2a*float(M_LN2)*a.dy());
+}
+
 
 // f(x) = e^x - 1, f'(x) = e^x
 template<class T>
 inline Dual2<T> expm1 (const Dual2<T> &a)
 {
-   float expm1a, expa;
-   expm1a = expm1f (a.val());
-   expa   = std::exp (a.val());
+    // FIXME: std::expm1 is only available in C++11
+    T expm1a = expm1f(float(a.val())); // float version!
+    T expa   = std::exp  (a.val());
+    return Dual2<T> (expm1a, expa * a.dx(), expa * a.dy());
+}
 
-   return Dual2<T> (expm1a, expa * a.dx(), expa * a.dy());
+inline Dual2<float> fast_expm1(const Dual2<float> &a)
+{
+    float expm1a = fast_expm1f(a.val());
+    float expa   = fast_expf  (a.val());
+    return Dual2<float> (expm1a, expa * a.dx(), expa * a.dy());
 }
 
 // f(x) = erf(x), f'(x) = (2e^(-x^2))/sqrt(pi)
 template<class T>
 inline Dual2<T> erf (const Dual2<T> &a)
 {
-   T erfa, derfadx;
-   erfa    = erff (a.val()); // float version!
-   derfadx = T(2)*std::exp(-a.val()*a.val())/std::sqrt(T(M_PI));
+    // FIXME: std::erf is only defined in C++11
+    T erfa = erff (float(a.val())); // float version!
+    T two_over_sqrt_pi = T(1.128379167095512573896158903);
+    T derfadx = std::exp (-a.val() * a.val()) * two_over_sqrt_pi;
+    return Dual2<T> (erfa, derfadx * a.dx(), derfadx * a.dy());
+}
 
-   return Dual2<T> (erfa, derfadx * a.dx(), derfadx * a.dy());
+inline Dual2<float> fast_erf(const Dual2<float> &a)
+{
+    float erfa = fast_erff (float(a.val())); // float version!
+    float two_over_sqrt_pi = 1.128379167095512573896158903f;
+    float derfadx = fast_expf(-a.val() * a.val()) * two_over_sqrt_pi;
+    return Dual2<float> (erfa, derfadx * a.dx(), derfadx * a.dy());
 }
 
 // f(x) = erfc(x), f'(x) = -(2e^(-x^2))/sqrt(pi)
 template<class T>
 inline Dual2<T> erfc (const Dual2<T> &a)
 {
-   T erfca, derfcadx;
-   erfca    = erfcf (a.val()); // float version!
-   derfcadx = -T(2)*std::exp(-a.val()*a.val())/std::sqrt(T(M_PI));
-
-   return Dual2<T> (erfca, derfcadx * a.dx(), derfcadx * a.dy());
+    // FIXME: std::erfc is only defined in C++11
+    T erfca = erfcf (float(a.val())); // float version!
+    T two_over_sqrt_pi = -T(1.128379167095512573896158903);
+    T derfcadx = std::exp (-a.val() * a.val()) * two_over_sqrt_pi;
+    return Dual2<T> (erfca, derfcadx * a.dx(), derfcadx * a.dy());
 }
+
+inline Dual2<float> fast_erfc(const Dual2<float> &a)
+{
+    float erfa = fast_erfcf (float(a.val())); // float version!
+    float two_over_sqrt_pi = -1.128379167095512573896158903f;
+    float derfadx = fast_expf(-a.val() * a.val()) * two_over_sqrt_pi;
+    return Dual2<float> (erfa, derfadx * a.dx(), derfadx * a.dy());
+}
+
 
 // f(x) = sqrt(x), f'(x) = 1/(2*sqrt(x))
 template<class T>
 inline Dual2<T> sqrt (const Dual2<T> &a)
 {
-   // do we want to print an error message?
-   if (a.val() <= T(0))
-      return Dual2<T> (T(0), T(0), T(0));
+    if (a.val() <= T(0))
+        return Dual2<T> (T(0), T(0), T(0));
 
-   T sqrta, inv_2sqrta;
-   sqrta      = std::sqrt(a.val());
-   inv_2sqrta = T(1)/(T(2)*sqrta);
+    T sqrta      = std::sqrt(a.val());
+    T inv_2sqrta = T(1) / (T(2) * sqrta);
 
-   return Dual2<T> (sqrta, inv_2sqrta * a.dx(), inv_2sqrta * a.dy());
+    return Dual2<T> (sqrta, inv_2sqrta * a.dx(), inv_2sqrta * a.dy());
 }
 
 // f(x) = 1/sqrt(x), f'(x) = -1/(2*x^(3/2))
 template<class T>
 inline Dual2<T> inversesqrt (const Dual2<T> &a)
 {
-   // do we want to print an error message?
-   if (a.val() <= T(0))
-      return Dual2<T> (T(0), T(0), T(0));
+    // do we want to print an error message?
+    if (a.val() <= T(0))
+        return Dual2<T> (T(0), T(0), T(0));
 
-   T sqrta, inv_neg2asqrta;
-   sqrta          = std::sqrt(a.val());
-   inv_neg2asqrta = -T(1)/(T(2)*a.val()*sqrta);
+    T sqrta          = std::sqrt(a.val());
+    T inv_neg2asqrta = -T(1)/(T(2)*a.val()*sqrta);
 
-   return Dual2<T> (T(1)/sqrta, inv_neg2asqrta * a.dx(), inv_neg2asqrta * a.dy());
+    return Dual2<T> (T(1)/sqrta, inv_neg2asqrta * a.dx(), inv_neg2asqrta * a.dy());
 }
 
 // (fx) = x*(1-a) + y*a, f'(x) = (1-a)x' + (y - x)*a' + a*y'
@@ -714,34 +718,6 @@ inline Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
 
    return Dual2<T> (mixval, (T(1) - a.val())*x.dx() + (y.val() - x.val())*a.dx() + a.val()*y.dx(),
                             (T(1) - a.val())*x.dy() + (y.val() - x.val())*a.dy() + a.val()*y.dy());
-}
-
-// f(x) = sqrt(x*x + y*y), f'(x) = (x x' + y y')/sqrt(x*x + y*y)
-template<class T>
-inline Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y)
-{
-   if (x.val() == T(0) && y.val() == T(0))
-      return Dual2<T> (T(0), T(0), T(0));
-
-   T hypotxy =  std::sqrt(x.val()*x.val() + y.val()*y.val());
-   T denom = T(1) / hypotxy;
-
-   return Dual2<T> (hypotxy, (x.val()*x.dx() + y.val()*y.dx()) * denom,
-                             (x.val()*x.dy() + y.val()*y.dy()) * denom);
-}
-
-// f(x) = sqrt(x*x + y*y + z*z), f'(x) = (x x' + y y' + z z')/sqrt(x*x + y*y + z*z)
-template<class T>
-inline Dual2<T> dual_hypot (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &z)
-{
-   if (x.val() == T(0) && y.val() == T(0) && z.val() == T(0))
-      return Dual2<T> (T(0), T(0), T(0));
-
-   T hypotxyz =  std::sqrt(x.val()*x.val() + y.val()*y.val() + z.val()*z.val());
-   T denom = T(1) / hypotxyz;
-
-   return Dual2<T> (hypotxyz, (x.val()*x.dx() + y.val()*y.dx() + z.val()*z.dx()) * denom,
-                              (x.val()*x.dy() + y.val()*y.dy() + z.val()*z.dy()) * denom);
 }
 
 template<class T>

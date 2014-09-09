@@ -103,9 +103,6 @@ using namespace OSL;
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
 
-using OIIO::safe_asinf;
-using OIIO::safe_acosf;
-
 #if defined(_MSC_VER) && _MSC_VER < 1700
 using OIIO::isinf;
 #endif
@@ -113,12 +110,6 @@ using OIIO::isinf;
 #if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::roundf;
 using OIIO::truncf;
-using OIIO::expm1f;
-using OIIO::erff;
-using OIIO::erfcf;
-using OIIO::log2f;
-using OIIO::logbf;
-using OIIO::exp2f;
 #endif
 
 #if defined(__FreeBSD__)
@@ -331,21 +322,37 @@ OSL_SHADEOP void osl_##name##_dvdvf (void *r_, void *a_, float b_)      \
 }
 
 
-
-MAKE_UNARY_PERCOMPONENT_OP (sin, sinf, sin)
-MAKE_UNARY_PERCOMPONENT_OP (cos, cosf, cos)
-MAKE_UNARY_PERCOMPONENT_OP (tan, tanf, tan)
-MAKE_UNARY_PERCOMPONENT_OP (asin, safe_asinf, asin)
-MAKE_UNARY_PERCOMPONENT_OP (acos, safe_acosf, acos)
-MAKE_UNARY_PERCOMPONENT_OP (atan, std::atan, atan)
-MAKE_BINARY_PERCOMPONENT_OP (atan2, std::atan2, atan2)
-MAKE_UNARY_PERCOMPONENT_OP (sinh, std::sinh, sinh)
-MAKE_UNARY_PERCOMPONENT_OP (cosh, std::cosh, cosh)
-MAKE_UNARY_PERCOMPONENT_OP (tanh, std::tanh, tanh)
+#if OSL_FAST_MATH
+MAKE_UNARY_PERCOMPONENT_OP (sin  , fast_sinf  , fast_sin )
+MAKE_UNARY_PERCOMPONENT_OP (cos  , fast_cosf  , fast_cos )
+MAKE_UNARY_PERCOMPONENT_OP (tan  , fast_tanf  , fast_tan )
+MAKE_UNARY_PERCOMPONENT_OP (asin , fast_asinf , fast_asin)
+MAKE_UNARY_PERCOMPONENT_OP (acos , fast_acosf , fast_acos)
+MAKE_UNARY_PERCOMPONENT_OP (atan , fast_atanf , fast_atan)
+MAKE_BINARY_PERCOMPONENT_OP(atan2, fast_atan2f, fast_atan2)
+MAKE_UNARY_PERCOMPONENT_OP (sinh , fast_sinhf , fast_sinh)
+MAKE_UNARY_PERCOMPONENT_OP (cosh , fast_coshf , fast_cosh)
+MAKE_UNARY_PERCOMPONENT_OP (tanh , fast_tanhf , fast_tanh)
+#else
+MAKE_UNARY_PERCOMPONENT_OP (sin  , sinf      , sin  )
+MAKE_UNARY_PERCOMPONENT_OP (cos  , cosf      , cos  )
+MAKE_UNARY_PERCOMPONENT_OP (tan  , tanf      , tan  )
+MAKE_UNARY_PERCOMPONENT_OP (asin , safe_asin , safe_asin )
+MAKE_UNARY_PERCOMPONENT_OP (acos , safe_acos , safe_acos )
+MAKE_UNARY_PERCOMPONENT_OP (atan , atanf     , atan )
+MAKE_BINARY_PERCOMPONENT_OP(atan2, atan2f    , atan2)
+MAKE_UNARY_PERCOMPONENT_OP (sinh , sinhf     , sinh )
+MAKE_UNARY_PERCOMPONENT_OP (cosh , coshf     , cosh )
+MAKE_UNARY_PERCOMPONENT_OP (tanh , tanhf     , tanh )
+#endif
 
 OSL_SHADEOP void osl_sincos_fff(float x, void *s_, void *c_)
 {
+#if OSL_FAST_MATH
+    fast_sincosf(x, (float *)s_, (float *)c_);
+#else
     OIIO::sincos(x, (float *)s_, (float *)c_);
+#endif
 }
 
 OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
@@ -355,7 +362,12 @@ OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
     float        &cosine = *(float *)c_;
 
     float s_f, c_f;
+#if OSL_FAST_MATH
+    fast_sincosf(x.val(), &s_f, &c_f);
+#else
     OIIO::sincos(x.val(), &s_f, &c_f);
+#endif
+
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
     cosine = c_f;
@@ -368,7 +380,11 @@ OSL_SHADEOP void osl_sincos_dffdf(void *x_, void *s_, void *c_)
     Dual2<float> &cosine = DFLOAT(c_);
 
     float s_f, c_f;
+#if OSL_FAST_MATH
+    fast_sincosf(x.val(), &s_f, &c_f);
+#else
     OIIO::sincos(x.val(), &s_f, &c_f);
+#endif
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = s_f;
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
@@ -381,7 +397,11 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
     Dual2<float> &cosine = DFLOAT(c_);
 
     float s_f, c_f;
+#if OSL_FAST_MATH
+    fast_sincosf(x.val(), &s_f, &c_f);
+#else
     OIIO::sincos(x.val(), &s_f, &c_f);
+#endif
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
@@ -401,7 +421,11 @@ OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
+#if OSL_FAST_MATH
+        fast_sincosf(x.val()[i], &s_f, &c_f);
+#else
         OIIO::sincos(x.val()[i], &s_f, &c_f);
+#endif
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
         sine.val()[i] = s_f; sine.dx()[i] =  c_f * xdx; sine.dy()[i] =  c_f * xdy;
         cosine[i] = c_f;
@@ -416,7 +440,11 @@ OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
+#if OSL_FAST_MATH
+        fast_sincosf(x.val()[i], &s_f, &c_f);
+#else
         OIIO::sincos(x.val()[i], &s_f, &c_f);
+#endif
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
         sine[i] = s_f;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
@@ -431,98 +459,48 @@ OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
+#if OSL_FAST_MATH
+        fast_sincosf(x.val()[i], &s_f, &c_f);
+#else
         OIIO::sincos(x.val()[i], &s_f, &c_f);
+#endif
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
           sine.val()[i] = s_f;   sine.dx()[i] =  c_f * xdx;   sine.dy()[i] =  c_f * xdy;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
     }
 }
 
-
-
-inline float safe_log (float f) {
-    if (f <= 0.0f)
-        return -std::numeric_limits<float>::max();
-    else
-        return std::log (f);
-}
-
-inline float safe_log2(float x) {
-    if (x <= 0.0f)
-        return -std::numeric_limits<float>::max();
-    else
-        return log2f(x);
-}
-
-inline float safe_log10(float x) {
-    if (x <= 0.0f)
-        return -std::numeric_limits<float>::max();
-    else
-        return log10f(x);
-}
-
-inline float safe_logb (float f) {
-    if (f == 0.0f) {
-        // m_exec->error ("attempted to compute logb(%g)", f);
-        return -std::numeric_limits<float>::max();
-    } else {
-        return logbf (f);
-    }
-}
-
-inline Dual2<float> logb (const Dual2<float> &f) {
-    // FIXME - punt on derivs
-    return Dual2<float> (safe_logb(f.val()), 0.0, 0.0);
-}
-
-inline float fast_expf(float x) {
-#if defined(__GNU_LIBRARY__) && defined(__GLIBC__ ) && defined(__GLIBC_MINOR__) && __GLIBC__  <= 2 &&  __GLIBC_MINOR__ < 16
-   /// On Linux platforms using glibc < 2.16, the implementation of expf is unreasonably slow
-   /// It is much faster to use the double version instead and cast back to floats
-   return static_cast<float>(std::exp(static_cast<double>(x)));
+#if OSL_FAST_MATH
+MAKE_UNARY_PERCOMPONENT_OP     (log        , fast_logf       , fast_log)
+MAKE_UNARY_PERCOMPONENT_OP     (log2       , fast_log2f      , fast_log2)
+MAKE_UNARY_PERCOMPONENT_OP     (log10      , fast_log10f     , fast_log10)
+MAKE_UNARY_PERCOMPONENT_OP     (exp        , fast_expf       , fast_exp)
+MAKE_UNARY_PERCOMPONENT_OP     (exp2       , fast_exp2f      , fast_exp2)
+MAKE_UNARY_PERCOMPONENT_OP     (expm1      , fast_expm1f     , fast_expm1)
+MAKE_BINARY_PERCOMPONENT_OP    (pow        , fast_safe_powf  , fast_safe_pow)
+MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , fast_safe_powf  , fast_safe_pow)
+MAKE_UNARY_PERCOMPONENT_OP     (erf        , fast_erff       , erf)
+MAKE_UNARY_PERCOMPONENT_OP     (erfc       , fast_erfcf      , erfc)
 #else
-   return std::exp(x);
+MAKE_UNARY_PERCOMPONENT_OP     (log        , safe_log        , safe_log)
+MAKE_UNARY_PERCOMPONENT_OP     (log2       , safe_log2       , safe_log2)
+MAKE_UNARY_PERCOMPONENT_OP     (log10      , safe_log10      , safe_log10)
+MAKE_UNARY_PERCOMPONENT_OP     (exp        , expf            , exp)
+MAKE_UNARY_PERCOMPONENT_OP     (exp2       , exp2f           , exp2)
+MAKE_UNARY_PERCOMPONENT_OP     (expm1      , expm1f          , expm1)
+MAKE_BINARY_PERCOMPONENT_OP    (pow        , safe_pow        , safe_pow)
+MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , safe_pow        , safe_pow)
+MAKE_UNARY_PERCOMPONENT_OP     (erf        , erff            , erf)
+MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf           , erfc)
 #endif
+MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , safe_sqrt       , sqrt)
+MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, safe_inversesqrt, inversesqrt)
+
+OSL_SHADEOP float osl_logb_ff (float x) { return fast_logbf(x); }
+OSL_SHADEOP void osl_logb_vv (void *r, void *x_) {
+    const Vec3 &x (VEC(x_));
+    VEC(r).setValue (fast_logbf(x[0]), fast_logbf(x[1]), fast_logbf(x[2]));
 }
-
-inline Dual2<float> fast_expf(const Dual2<float>& a) {
-   float expa = fast_expf(a.val());
-   return Dual2<float> (expa, expa * a.dx(), expa * a.dy());
-
-}
-
-
-MAKE_UNARY_PERCOMPONENT_OP (log, safe_log, log)
-MAKE_UNARY_PERCOMPONENT_OP (log2, safe_log2, log2)
-MAKE_UNARY_PERCOMPONENT_OP (log10, safe_log10, log10)
-MAKE_UNARY_PERCOMPONENT_OP (logb, safe_logb, logb)
-MAKE_UNARY_PERCOMPONENT_OP (exp, fast_expf, fast_expf)
-MAKE_UNARY_PERCOMPONENT_OP (exp2, exp2f, exp2)
-MAKE_UNARY_PERCOMPONENT_OP (expm1, expm1f, expm1)
-MAKE_BINARY_PERCOMPONENT_OP (pow, safe_pow, pow)
-MAKE_BINARY_PERCOMPONENT_VF_OP (pow, safe_pow, pow)
-MAKE_UNARY_PERCOMPONENT_OP (erf, erff, erf)
-MAKE_UNARY_PERCOMPONENT_OP (erfc, erfcf, erfc)
-
-
-inline float safe_sqrt (float f) {
-    if (f <= 0.0f) {
-        return 0.0f;
-    } else {
-        return std::sqrt (f);
-    }
-}
-
-inline float safe_inversesqrt (float f) {
-    if (f <= 0.0f) {
-        return 0.0f;
-    } else {
-        return 1.0f/sqrtf (f);
-    }
-}
-
-MAKE_UNARY_PERCOMPONENT_OP (sqrt, safe_sqrt, sqrt)
-MAKE_UNARY_PERCOMPONENT_OP (inversesqrt, safe_inversesqrt, inversesqrt)
 
 OSL_SHADEOP float osl_floor_ff (float x) { return floorf(x); }
 OSL_SHADEOP void osl_floor_vv (void *r, void *x_) {

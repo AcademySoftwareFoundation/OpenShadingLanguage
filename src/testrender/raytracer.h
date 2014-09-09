@@ -96,7 +96,7 @@ struct Sphere : public Primitive {
         Dual2<float> ny(n.val().y, n.dx().y, n.dy().y);
         Dual2<float> nz(n.val().z, n.dx().z, n.dy().z);
         Dual2<float> u = (atan2(nx, nz) + Dual2<float>(M_PI)) * 0.5f * float(M_1_PI);
-        Dual2<float> v = acos(ny) * float(M_1_PI);
+        Dual2<float> v = safe_acos(ny) * float(M_1_PI);
         float xz2 = nx.val() * nx.val() + nz.val() * nz.val();
         if (xz2 > 0) {
             const float PI = float(M_PI);

@@ -47,7 +47,7 @@ command = ""
 outputs = [ "out.txt" ]    # default
 failureok = 0
 failthresh = 0.004
-failpercent = 0.02
+failpercent = 0.03
 
 #print ("srcdir = " + srcdir)
 #print ("tmpdir = " + tmpdir)

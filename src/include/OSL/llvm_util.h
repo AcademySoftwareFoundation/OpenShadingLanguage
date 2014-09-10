@@ -31,6 +31,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "export.h"
 #include "oslversion.h"
 
+#if OSL_LLVM_VERSION >= 35
+#include <llvm/Support/ErrorOr.h>
+#endif
+
 #include <vector>
 
 #ifdef LLVM_NAMESPACE
@@ -111,7 +115,8 @@ public:
     /// Create a new module, populated with functions from the buffer
     /// bitcode[0..size-1].  The name identifies the buffer.  If err is not
     /// NULL, error messages will be stored there.
-    llvm::Module *module_from_bitcode (const char *bitcode, size_t size,
+    llvm::Module *
+    module_from_bitcode (const char *bitcode, size_t size,
                                        const std::string &name=std::string(),
                                        std::string *err=NULL);
 

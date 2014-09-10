@@ -72,13 +72,13 @@ Parser::Parser(const std::vector<ustring> *user_events,
     m_minus_stop.insert(Labels::STOP);
 
     if (user_events)
-      for (int i = 0; i < user_events->size(); ++i)
+      for (size_t i = 0; i < user_events->size(); ++i)
       {
           m_label_position[(*user_events)[i]] = 0;
           m_basic_labels.insert((*user_events)[i]);
       }
    if (user_scatterings)
-      for (int i = 0; i < user_scatterings->size(); ++i)
+      for (size_t i = 0; i < user_scatterings->size(); ++i)
       {
           m_label_position[(*user_scatterings)[i]] = 1;
           m_basic_labels.insert((*user_scatterings)[i]);

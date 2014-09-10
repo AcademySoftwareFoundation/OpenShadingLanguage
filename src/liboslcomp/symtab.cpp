@@ -343,7 +343,7 @@ SymbolTable::print ()
                 std::cout << " (" << s->name()
                           << " in scope " << s->scope() << ")";
             std::cout << " :\n";
-            for (size_t i = 0;  i < s->numfields();  ++i) {
+            for (size_t i = 0;  i < (size_t)s->numfields();  ++i) {
                 const StructSpec::FieldSpec & f (s->field(i));
                 std::cout << "\t" << f.name << " : "
                           << f.type.string() << "\n";

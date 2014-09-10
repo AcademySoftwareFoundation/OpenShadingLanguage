@@ -25,12 +25,26 @@ Bug fixes and other improvements:
   a shader. #397 (1.6.0)
 * oslc now properly catches and issues error messages if you define a struct
   with duplicate field names. #398 (1.6.0)
+* Some math speedups (especially those involving sqrt). (1.6.0)
+* Change many transcendental functions (sin, cos, exp, etc) to use
+  approximations that are must faster than the 100% correct versions in
+  libm. The new ones may differ from the old in the last decimal place,
+  which is probably undesirable if programming ICBM guidance systems,
+  but seems fine for rendering when the result is many times faster to
+  evaluate those functions. You can turn it back to the fully precise and
+  slow way by building with OSL_FAST_MATH=0. #413 (1.6.0)
 
 Under the hood:
 
 Build & test system improvements and developer goodies:
 * Windows build fix for compiling shaders finding the right oslc.exe.
   #399 (1.6.0/1.5.11)
+* Fix thread contention issue in testshade that was making benchmarks
+  inaccurate. $407 (1.6.0)
+* Build scripts better help messages. (1.6.0)
+* Changes to build correctly against LLVM 3.5, though please note that
+  using LLVM 3.5 seems to require C++11. If you have C++98 toolchain, then
+  please continue using LLVM 3.4. #412 (1.6.0)
 
 Documentation:
 

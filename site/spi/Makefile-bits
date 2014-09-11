@@ -14,6 +14,8 @@ ifeq (${platform}, macosx)
 	    -DCMAKE_C_COMPILER=clang \
 	    -DCMAKE_CXX_COMPILER=clang++
     endif
+    # All our Mac laptops seem to be at least SSE 4.2
+    USE_SIMD = sse4.2
 endif
 
 
@@ -62,6 +64,9 @@ ifeq ($(SP_OS), spinux1)
          -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.0-test/bin/gcc \
          -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.0-test/bin/g++
     endif
+
+    # Our minimal architecture for workstations and farm supports SSE 4.1
+    USE_SIMD = sse4.1
 
     ifneq (${SPCOMP2_USE_BOOSTVERS}, 1)
 	BOOSTVERS=1.51

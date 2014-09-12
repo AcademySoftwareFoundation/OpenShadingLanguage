@@ -326,16 +326,16 @@ OSL_SHADEOP void osl_##name##_dvdvf (void *r_, void *a_, float b_)      \
 
 
 #if OSL_FAST_MATH
-MAKE_UNARY_PERCOMPONENT_OP (sin  , fast_sinf  , fast_sin )
-MAKE_UNARY_PERCOMPONENT_OP (cos  , fast_cosf  , fast_cos )
-MAKE_UNARY_PERCOMPONENT_OP (tan  , fast_tanf  , fast_tan )
-MAKE_UNARY_PERCOMPONENT_OP (asin , fast_asinf , fast_asin)
-MAKE_UNARY_PERCOMPONENT_OP (acos , fast_acosf , fast_acos)
-MAKE_UNARY_PERCOMPONENT_OP (atan , fast_atanf , fast_atan)
-MAKE_BINARY_PERCOMPONENT_OP(atan2, fast_atan2f, fast_atan2)
-MAKE_UNARY_PERCOMPONENT_OP (sinh , fast_sinhf , fast_sinh)
-MAKE_UNARY_PERCOMPONENT_OP (cosh , fast_coshf , fast_cosh)
-MAKE_UNARY_PERCOMPONENT_OP (tanh , fast_tanhf , fast_tanh)
+MAKE_UNARY_PERCOMPONENT_OP (sin  , OIIO::fast_sin  , fast_sin )
+MAKE_UNARY_PERCOMPONENT_OP (cos  , OIIO::fast_cos  , fast_cos )
+MAKE_UNARY_PERCOMPONENT_OP (tan  , OIIO::fast_tan  , fast_tan )
+MAKE_UNARY_PERCOMPONENT_OP (asin , OIIO::fast_asin , fast_asin)
+MAKE_UNARY_PERCOMPONENT_OP (acos , OIIO::fast_acos , fast_acos)
+MAKE_UNARY_PERCOMPONENT_OP (atan , OIIO::fast_atan , fast_atan)
+MAKE_BINARY_PERCOMPONENT_OP(atan2, OIIO::fast_atan2, fast_atan2)
+MAKE_UNARY_PERCOMPONENT_OP (sinh , OIIO::fast_sinh , fast_sinh)
+MAKE_UNARY_PERCOMPONENT_OP (cosh , OIIO::fast_cosh , fast_cosh)
+MAKE_UNARY_PERCOMPONENT_OP (tanh , OIIO::fast_tanh , fast_tanh)
 #else
 MAKE_UNARY_PERCOMPONENT_OP (sin  , sinf      , sin  )
 MAKE_UNARY_PERCOMPONENT_OP (cos  , cosf      , cos  )
@@ -352,7 +352,7 @@ MAKE_UNARY_PERCOMPONENT_OP (tanh , tanhf     , tanh )
 OSL_SHADEOP void osl_sincos_fff(float x, void *s_, void *c_)
 {
 #if OSL_FAST_MATH
-    fast_sincosf(x, (float *)s_, (float *)c_);
+    OIIO::fast_sincos(x, (float *)s_, (float *)c_);
 #else
     OIIO::sincos(x, (float *)s_, (float *)c_);
 #endif
@@ -366,7 +366,7 @@ OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
 
     float s_f, c_f;
 #if OSL_FAST_MATH
-    fast_sincosf(x.val(), &s_f, &c_f);
+    OIIO::fast_sincos(x.val(), &s_f, &c_f);
 #else
     OIIO::sincos(x.val(), &s_f, &c_f);
 #endif
@@ -384,7 +384,7 @@ OSL_SHADEOP void osl_sincos_dffdf(void *x_, void *s_, void *c_)
 
     float s_f, c_f;
 #if OSL_FAST_MATH
-    fast_sincosf(x.val(), &s_f, &c_f);
+    OIIO::fast_sincos(x.val(), &s_f, &c_f);
 #else
     OIIO::sincos(x.val(), &s_f, &c_f);
 #endif
@@ -401,7 +401,7 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 
     float s_f, c_f;
 #if OSL_FAST_MATH
-    fast_sincosf(x.val(), &s_f, &c_f);
+    OIIO::fast_sincos(x.val(), &s_f, &c_f);
 #else
     OIIO::sincos(x.val(), &s_f, &c_f);
 #endif
@@ -425,7 +425,7 @@ OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
 #if OSL_FAST_MATH
-        fast_sincosf(x.val()[i], &s_f, &c_f);
+        OIIO::fast_sincos(x.val()[i], &s_f, &c_f);
 #else
         OIIO::sincos(x.val()[i], &s_f, &c_f);
 #endif
@@ -444,7 +444,7 @@ OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
 #if OSL_FAST_MATH
-        fast_sincosf(x.val()[i], &s_f, &c_f);
+        OIIO::fast_sincos(x.val()[i], &s_f, &c_f);
 #else
         OIIO::sincos(x.val()[i], &s_f, &c_f);
 #endif
@@ -463,7 +463,7 @@ OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
 #if OSL_FAST_MATH
-        fast_sincosf(x.val()[i], &s_f, &c_f);
+        OIIO::fast_sincos(x.val()[i], &s_f, &c_f);
 #else
         OIIO::sincos(x.val()[i], &s_f, &c_f);
 #endif
@@ -474,35 +474,35 @@ OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
 }
 
 #if OSL_FAST_MATH
-MAKE_UNARY_PERCOMPONENT_OP     (log        , fast_logf       , fast_log)
-MAKE_UNARY_PERCOMPONENT_OP     (log2       , fast_log2f      , fast_log2)
-MAKE_UNARY_PERCOMPONENT_OP     (log10      , fast_log10f     , fast_log10)
-MAKE_UNARY_PERCOMPONENT_OP     (exp        , fast_expf       , fast_exp)
-MAKE_UNARY_PERCOMPONENT_OP     (exp2       , fast_exp2f      , fast_exp2)
-MAKE_UNARY_PERCOMPONENT_OP     (expm1      , fast_expm1f     , fast_expm1)
-MAKE_BINARY_PERCOMPONENT_OP    (pow        , fast_safe_powf  , fast_safe_pow)
-MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , fast_safe_powf  , fast_safe_pow)
-MAKE_UNARY_PERCOMPONENT_OP     (erf        , fast_erff       , erf)
-MAKE_UNARY_PERCOMPONENT_OP     (erfc       , fast_erfcf      , erfc)
+MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::fast_log       , fast_log)
+MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::fast_log2      , fast_log2)
+MAKE_UNARY_PERCOMPONENT_OP     (log10      , OIIO::fast_log10     , fast_log10)
+MAKE_UNARY_PERCOMPONENT_OP     (exp        , OIIO::fast_exp       , fast_exp)
+MAKE_UNARY_PERCOMPONENT_OP     (exp2       , OIIO::fast_exp2      , fast_exp2)
+MAKE_UNARY_PERCOMPONENT_OP     (expm1      , OIIO::fast_expm1     , fast_expm1)
+MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
+MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
+MAKE_UNARY_PERCOMPONENT_OP     (erf        , OIIO::fast_erf       , erf)
+MAKE_UNARY_PERCOMPONENT_OP     (erfc       , OIIO::fast_erfc      , erfc)
 #else
-MAKE_UNARY_PERCOMPONENT_OP     (log        , safe_log        , safe_log)
-MAKE_UNARY_PERCOMPONENT_OP     (log2       , safe_log2       , safe_log2)
-MAKE_UNARY_PERCOMPONENT_OP     (log10      , safe_log10      , safe_log10)
-MAKE_UNARY_PERCOMPONENT_OP     (exp        , expf            , exp)
-MAKE_UNARY_PERCOMPONENT_OP     (exp2       , exp2f           , exp2)
-MAKE_UNARY_PERCOMPONENT_OP     (expm1      , expm1f          , expm1)
-MAKE_BINARY_PERCOMPONENT_OP    (pow        , safe_pow        , safe_pow)
-MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , safe_pow        , safe_pow)
-MAKE_UNARY_PERCOMPONENT_OP     (erf        , erff            , erf)
-MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf           , erfc)
+MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::safe_log       , safe_log)
+MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::safe_log2      , safe_log2)
+MAKE_UNARY_PERCOMPONENT_OP     (log10      , OIIO::safe_log10     , safe_log10)
+MAKE_UNARY_PERCOMPONENT_OP     (exp        , expf                 , exp)
+MAKE_UNARY_PERCOMPONENT_OP     (exp2       , exp2f                , exp2)
+MAKE_UNARY_PERCOMPONENT_OP     (expm1      , expm1f               , expm1)
+MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::safe_pow       , safe_pow)
+MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::safe_pow       , safe_pow)
+MAKE_UNARY_PERCOMPONENT_OP     (erf        , erff                 , erf)
+MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf                , erfc)
 #endif
-MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , safe_sqrt       , sqrt)
-MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, safe_inversesqrt, inversesqrt)
+MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , OIIO::safe_sqrt      , sqrt)
+MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, OIIO::safe_inversesqrt, inversesqrt)
 
-OSL_SHADEOP float osl_logb_ff (float x) { return fast_logbf(x); }
+OSL_SHADEOP float osl_logb_ff (float x) { return OIIO::fast_logb(x); }
 OSL_SHADEOP void osl_logb_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (fast_logbf(x[0]), fast_logbf(x[1]), fast_logbf(x[2]));
+    VEC(r).setValue (OIIO::fast_logb(x[0]), OIIO::fast_logb(x[1]), OIIO::fast_logb(x[2]));
 }
 
 OSL_SHADEOP float osl_floor_ff (float x) { return floorf(x); }

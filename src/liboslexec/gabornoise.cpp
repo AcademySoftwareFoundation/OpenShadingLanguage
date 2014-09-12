@@ -115,7 +115,7 @@ struct GaborParams {
         periodic(false)
     {
 #if OSL_FAST_MATH
-        float TWO_to_bandwidth = fast_exp2f(bandwidth);
+        float TWO_to_bandwidth = OIIO::fast_exp2(bandwidth);
 #else
         float TWO_to_bandwidth = exp2f(bandwidth);
 #endif
@@ -217,7 +217,7 @@ gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
         float sin_omega_p = sqrtf (std::max (0.0f, 1.0f - cos_omega_p*cos_omega_p));
         float sin_omega_t, cos_omega_t;
 #if OSL_FAST_MATH
-        fast_sincosf (omega_t, &sin_omega_t, &cos_omega_t);
+        OIIO::fast_sincos (omega_t, &sin_omega_t, &cos_omega_t);
 #else
         OIIO::sincos (omega_t, &sin_omega_t, &cos_omega_t);
 #endif
@@ -228,7 +228,7 @@ gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
         float omega_t =  float(M_TWO_PI) * rng();
         float sin_omega_t, cos_omega_t;
 #if OSL_FAST_MATH
-        fast_sincosf (omega_t, &sin_omega_t, &cos_omega_t);
+        OIIO::fast_sincos (omega_t, &sin_omega_t, &cos_omega_t);
 #else
         OIIO::sincos (omega_t, &sin_omega_t, &cos_omega_t);
 #endif

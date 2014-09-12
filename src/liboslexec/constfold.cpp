@@ -1591,37 +1591,37 @@ DECLFOLDER(constfold_ ## name)                                          \
 
 
 
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sqrt   , safe_sqrt)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (inversesqrt, safe_inversesqrt)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sqrt   , OIIO::safe_sqrt)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (inversesqrt, OIIO::safe_inversesqrt)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (degrees, OIIO::degrees)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (radians, OIIO::radians)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (floor  , floorf)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (ceil   , ceilf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (erf    , fast_erff)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (erfc   , fast_erfcf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (logb   , fast_logbf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (erf    , OIIO::fast_erf)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (erfc   , OIIO::fast_erfc)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (logb   , OIIO::fast_logb)
 #if OSL_FAST_MATH
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cos    , fast_cosf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sin    , fast_sinf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (acos   , fast_acosf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (asin   , fast_asinf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp    , fast_expf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp2   , fast_exp2f)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (expm1  , fast_expm1f)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log    , fast_logf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10  , fast_log10f)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2   , fast_log2f)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cos    , OIIO::fast_cos)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sin    , OIIO::fast_sin)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (acos   , OIIO::fast_acos)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (asin   , OIIO::fast_asin)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp    , OIIO::fast_exp)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp2   , OIIO::fast_exp2)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (expm1  , OIIO::fast_expm1)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log    , OIIO::fast_log)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10  , OIIO::fast_log10)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2   , OIIO::fast_log2)
 #else
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cos    , cosf)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sin    , sinf)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (acos   , safe_acos)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (asin   , safe_asin)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (acos   , OIIO::safe_acos)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (asin   , OIIO::safe_asin)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp    , expf)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (exp2   , exp2f)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (expm1  , expm1f)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log    , safe_log)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10  , safe_log10)
-AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2   , safe_log2)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log    , OIIO::safe_log)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10  , OIIO::safe_log10)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2   , OIIO::safe_log2)
 #endif
 
 DECLFOLDER(constfold_pow)
@@ -1654,9 +1654,9 @@ DECLFOLDER(constfold_pow)
         float result[3];
         for (int i = 0;  i < ncomps;  ++i)
 #if OSL_FAST_MATH
-            result[i] = fast_safe_powf (x[i], y);
+            result[i] = OIIO::fast_safe_pow (x[i], y);
 #else
-            result[i] = safe_pow (x[i], y);
+            result[i] = OIIO::safe_pow (x[i], y);
 #endif
         int cind = rop.add_constant (X.typespec(), &result);
         rop.turn_into_assign (op, cind, "const fold");

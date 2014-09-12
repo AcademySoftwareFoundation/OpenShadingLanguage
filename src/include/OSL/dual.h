@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include "oslversion.h"
-#include "fastmath.h"
 #include <OpenImageIO/fmath.h>
 OSL_NAMESPACE_ENTER
 
@@ -344,7 +343,7 @@ inline Dual2<T> cos (const Dual2<T> &a)
 inline Dual2<float> fast_cos(const Dual2<float> &a)
 {
     float sina, cosa;
-    fast_sincosf(a.val(), &sina, &cosa);
+    OIIO::fast_sincos (a.val(), &sina, &cosa);
     return Dual2<float> (cosa, -sina * a.dx(), -sina * a.dy());
 }
 
@@ -360,7 +359,7 @@ inline Dual2<T> sin (const Dual2<T> &a)
 inline Dual2<float> fast_sin(const Dual2<float> &a)
 {
     float sina, cosa;
-    fast_sincosf(a.val(), &sina, &cosa);
+    OIIO::fast_sincos (a.val(), &sina, &cosa);
     return Dual2<float> (sina, cosa * a.dx(), cosa * a.dy());
 }
 
@@ -376,8 +375,8 @@ inline Dual2<T> tan (const Dual2<T> &a)
 
 inline Dual2<float> fast_tan(const Dual2<float> &a)
 {
-    float tana  = fast_tanf(a.val());
-    float cosa  = fast_cosf(a.val());
+    float tana  = OIIO::fast_tan (a.val());
+    float cosa  = OIIO::fast_cos (a.val());
     float sec2a = 1 / (cosa * cosa);
     return Dual2<float> (tana, sec2a * a.dx(), sec2a * a.dy());
 }
@@ -393,8 +392,8 @@ inline Dual2<T> cosh (const Dual2<T> &a)
 
 inline Dual2<float> fast_cosh(const Dual2<float> &a)
 {
-    float cosha = fast_coshf(a.val());
-    float sinha = fast_sinhf(a.val());
+    float cosha = OIIO::fast_cosh(a.val());
+    float sinha = OIIO::fast_sinh(a.val());
     return Dual2<float> (cosha, sinha * a.dx(), sinha * a.dy());
 }
 
@@ -410,8 +409,8 @@ inline Dual2<T> sinh (const Dual2<T> &a)
 
 inline Dual2<float> fast_sinh(const Dual2<float> &a)
 {
-    float cosha = fast_coshf(a.val());
-    float sinha = fast_sinhf(a.val());
+    float cosha = OIIO::fast_cosh(a.val());
+    float sinha = OIIO::fast_sinh(a.val());
     return Dual2<float> (sinha, cosha * a.dx(), cosha * a.dy());
 }
 
@@ -427,8 +426,8 @@ inline Dual2<T> tanh (const Dual2<T> &a)
 
 inline Dual2<float> fast_tanh(const Dual2<float> &a)
 {
-    float tanha = fast_tanhf(a.val());
-    float cosha = fast_coshf(a.val());
+    float tanha = OIIO::fast_tanh(a.val());
+    float cosha = OIIO::fast_cosh(a.val());
     float sech2a = 1 / (cosha * cosha);
     return Dual2<float> (tanha, sech2a * a.dx(), sech2a * a.dy());
 }
@@ -448,7 +447,7 @@ inline Dual2<T> safe_acos (const Dual2<T> &a)
 
 inline Dual2<float> fast_acos(const Dual2<float> &a)
 {
-    float arccosa = fast_acosf(a.val());
+    float arccosa = OIIO::fast_acos(a.val());
     float denom   = fabsf(a.val()) < 1.0f ? -1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
     return Dual2<float> (arccosa, denom * a.dx(), denom * a.dy());
 }
@@ -469,7 +468,7 @@ inline Dual2<T> safe_asin (const Dual2<T> &a)
 
 inline Dual2<float> fast_asin(const Dual2<float> &a)
 {
-    float arcsina = fast_asinf(a.val());
+    float arcsina = OIIO::fast_asin(a.val());
     float denom   = fabsf(a.val()) < 1.0f ? 1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
     return Dual2<float> (arcsina, denom * a.dx(), denom * a.dy());
 }
@@ -486,7 +485,7 @@ inline Dual2<T> atan (const Dual2<T> &a)
 
 inline Dual2<float> fast_atan(const Dual2<float> &a)
 {
-    float arctana = fast_atanf(a.val());
+    float arctana = OIIO::fast_atan(a.val());
     float denom   = 1.0f / (1.0f + a.val() * a.val());
     return Dual2<float> (arctana, denom * a.dx(), denom * a.dy());
 
@@ -507,7 +506,7 @@ inline Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 
 inline Dual2<float> fast_atan2(const Dual2<float> &y, const Dual2<float> &x)
 {
-    float atan2xy = fast_atan2f(y.val(), x.val());
+    float atan2xy = OIIO::fast_atan2(y.val(), x.val());
     float denom = (x.val() == 0 && y.val() == 0) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
     return Dual2<float> ( atan2xy, (y.val()*x.dx() - x.val()*y.dx())*denom,
                                    (y.val()*x.dy() - x.val()*y.dy())*denom );
@@ -536,9 +535,9 @@ inline Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
 inline Dual2<float> fast_safe_pow(const Dual2<float> &u, const Dual2<float> &v)
 {
     // NOTE: same issue as above (fast_safe_pow does even more clamping)
-    float powuvm1 = fast_safe_powf(u.val(), v.val() - 1.0f);
+    float powuvm1 = OIIO::fast_safe_pow (u.val(), v.val() - 1.0f);
     float powuv   = powuvm1 * u.val();
-    float logu    = u.val() > 0 ? fast_logf(u.val()) : 0.0f;
+    float logu    = u.val() > 0 ? OIIO::fast_log(u.val()) : 0.0f;
     return Dual2<float> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
                                  v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
 
@@ -556,7 +555,7 @@ inline Dual2<T> safe_log (const Dual2<T> &a)
 
 inline Dual2<float> fast_log(const Dual2<float> &a)
 {
-    float loga = fast_logf(a.val());
+    float loga = OIIO::fast_log(a.val());
     float inva = a.val() < std::numeric_limits<float>::min() ? 0.0f : 1.0f / a.val();
     return Dual2<float> (loga, inva * a.dx(), inva * a.dy());
 }
@@ -573,7 +572,7 @@ inline Dual2<T> safe_log2 (const Dual2<T> &a)
 
 inline Dual2<float> fast_log2(const Dual2<float> &a)
 {
-    float loga = fast_log2f(a.val());
+    float loga = OIIO::fast_log2(a.val());
     float aln2 = a.val() * float(M_LN2);
     float inva = aln2 < std::numeric_limits<float>::min() ? 0.0f : 1.0f / aln2;
     return Dual2<float> (loga, inva * a.dx(), inva * a.dy());
@@ -591,7 +590,7 @@ inline Dual2<T> safe_log10 (const Dual2<T> &a)
 
 inline Dual2<float> fast_log10(const Dual2<float> &a)
 {
-    float loga  = fast_log10f(a.val());
+    float loga  = OIIO::fast_log10(a.val());
     float aln10 = a.val() * float(M_LN10);
     float inva  = aln10 < std::numeric_limits<float>::min() ? 0.0f : 1.0f / aln10;
     return Dual2<float> (loga, inva * a.dx(), inva * a.dy());
@@ -607,7 +606,7 @@ inline Dual2<T> exp (const Dual2<T> &a)
 
 inline Dual2<float> fast_exp(const Dual2<float> &a)
 {
-    float expa = fast_expf(a.val());
+    float expa = OIIO::fast_exp(a.val());
     return Dual2<float> (expa, expa * a.dx(), expa * a.dy());
 }
 
@@ -622,7 +621,7 @@ inline Dual2<T> exp2 (const Dual2<T> &a)
 
 inline Dual2<float> fast_exp2(const Dual2<float> &a)
 {
-    float exp2a = fast_exp2f(float(a.val()));
+    float exp2a = OIIO::fast_exp2(float(a.val()));
     return Dual2<float> (exp2a, exp2a*float(M_LN2)*a.dx(), exp2a*float(M_LN2)*a.dy());
 }
 
@@ -639,8 +638,8 @@ inline Dual2<T> expm1 (const Dual2<T> &a)
 
 inline Dual2<float> fast_expm1(const Dual2<float> &a)
 {
-    float expm1a = fast_expm1f(a.val());
-    float expa   = fast_expf  (a.val());
+    float expm1a = OIIO::fast_expm1(a.val());
+    float expa   = OIIO::fast_exp  (a.val());
     return Dual2<float> (expm1a, expa * a.dx(), expa * a.dy());
 }
 
@@ -657,9 +656,9 @@ inline Dual2<T> erf (const Dual2<T> &a)
 
 inline Dual2<float> fast_erf(const Dual2<float> &a)
 {
-    float erfa = fast_erff (float(a.val())); // float version!
+    float erfa = OIIO::fast_erf (float(a.val())); // float version!
     float two_over_sqrt_pi = 1.128379167095512573896158903f;
-    float derfadx = fast_expf(-a.val() * a.val()) * two_over_sqrt_pi;
+    float derfadx = OIIO::fast_exp(-a.val() * a.val()) * two_over_sqrt_pi;
     return Dual2<float> (erfa, derfadx * a.dx(), derfadx * a.dy());
 }
 
@@ -676,9 +675,9 @@ inline Dual2<T> erfc (const Dual2<T> &a)
 
 inline Dual2<float> fast_erfc(const Dual2<float> &a)
 {
-    float erfa = fast_erfcf (float(a.val())); // float version!
+    float erfa = OIIO::fast_erfc (float(a.val())); // float version!
     float two_over_sqrt_pi = -1.128379167095512573896158903f;
-    float derfadx = fast_expf(-a.val() * a.val()) * two_over_sqrt_pi;
+    float derfadx = OIIO::fast_exp(-a.val() * a.val()) * two_over_sqrt_pi;
     return Dual2<float> (erfa, derfadx * a.dx(), derfadx * a.dy());
 }
 

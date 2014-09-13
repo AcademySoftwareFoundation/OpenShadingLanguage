@@ -213,7 +213,7 @@ gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
     } else if (gp.anisotropic == 0 /* isotropic */) {
         float omega_t = float (M_TWO_PI) * rng();
         // float omega_p = acosf(lerp(-1.0f, 1.0f, rng()));
-        float cos_omega_p = lerp(-1.0f, 1.0f, rng());
+        float cos_omega_p = OIIO::lerp(-1.0f, 1.0f, rng());
         float sin_omega_p = sqrtf (std::max (0.0f, 1.0f - cos_omega_p*cos_omega_p));
         float sin_omega_t, cos_omega_t;
 #if OSL_FAST_MATH

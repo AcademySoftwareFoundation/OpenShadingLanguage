@@ -60,6 +60,9 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     foreach (def ${CURRENT_DEFINITIONS})
         set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
     endforeach()
+    if (USE_SIMD)
+    	set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-m${USE_SIMD}")
+    endif ()
 
     # Figure out what program we will use to make the bitcode.
     if (NOT LLVM_BC_GENERATOR)

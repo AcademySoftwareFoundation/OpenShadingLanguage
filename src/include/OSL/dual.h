@@ -57,7 +57,7 @@ public:
 
     /// Construct a Dual from just a real value (derivs set to 0)
     ///
-    Dual2 (const T &x) : m_val(x), m_dx(T(0)), m_dy(T(0)) { }
+    Dual2 (const T &x) : m_val(x), m_dx(T(0.0)), m_dy(T(0.0)) { }
 
     template <class F>
     Dual2 (const Dual2<F> &x) : m_val(T(x.val())), m_dx(T(x.dx())), m_dy(T(x.dy())) { }
@@ -239,6 +239,12 @@ template<class T>
 inline Dual2<T> operator* (const T &b, const Dual2<T> &a)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
+}
+
+template<class T, class S>
+inline Dual2<T> operator* (const S &b, const Dual2<T> &a)
+{
+    return Dual2<T> (a.val()*T(b), a.dx()*T(b), a.dy()*T(b));
 }
 
 

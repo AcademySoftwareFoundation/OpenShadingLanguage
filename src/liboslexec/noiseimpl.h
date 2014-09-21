@@ -34,11 +34,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/dual_vec.h"
 #include "oslexec_pvt.h"
 #include <OpenImageIO/hash.h>
+#include <OpenImageIO/simd.h>
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
-
+using namespace OIIO::simd;
+using namespace OIIO::bjhash;
 
 typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
                                  int indim, const float *in,
@@ -59,16 +61,66 @@ float simplexnoise4 (float x, float y, float z, float w, int seed=0,
 
 namespace {
 
-/// return the greatest integer <= x
+// return the greatest integer <= x
 inline int quick_floor (float x) {
     return (int) x - ((x < 0) ? 1 : 0);
 }
 
-/// convert a 32 bit integer into a floating point number in [0,1]
+// return the greatest integer <= x, for 4 values at once
+OIIO_FORCEINLINE int4 quick_floor (float4 x) {
+#if 0
+    // Even on SSE 4.1, this is actually very slightly slower!
+    // Continue to test on future architectures.
+    return floori(x);
+#else
+    int4 b (x);  // truncates
+    int4 isneg = bitcast_to_int4 (x < float4::Zero());
+    return b + isneg;
+    // Trick here (thanks, Cycles, for letting me spy on your code): the
+    // comparison will return (int)-1 for components that are less than
+    // zero, and adding that is the same as subtracting one!
+#endif
+}
+
+// convert a 32 bit integer into a floating point number in [0,1]
 inline float bits_to_01 (unsigned int bits) {
     // divide by 2^32-1
     return bits * (1.0f / std::numeric_limits<unsigned int>::max());
 }
+
+
+// Circular bit rotate by k bits, for 4 values at once.
+OIIO_FORCEINLINE int4
+rotl32 (int4 x, const unsigned int k) {
+    return (x<<k) | srl(x,32-k);
+}
+
+// Perform a bjmix (see OpenImageIO/hash.h) on 4 sets of values at once.
+OIIO_FORCEINLINE void
+bjmix (int4 &a, int4 &b, int4 &c)
+{
+    a -= c;  a ^= rotl32(c, 4);  c += b;
+    b -= a;  b ^= rotl32(a, 6);  a += c;
+    c -= b;  c ^= rotl32(b, 8);  b += a;
+    a -= c;  a ^= rotl32(c,16);  c += b;
+    b -= a;  b ^= rotl32(a,19);  a += c;
+    c -= b;  c ^= rotl32(b, 4);  b += a;
+}
+
+// Perform a bjfinal (see OpenImageIO/hash.h) on 4 sets of values at once.
+OIIO_FORCEINLINE int4
+bjfinal (int4 a, int4 b, int4 c)
+{
+    c ^= b; c -= rotl32(b,14);
+    a ^= c; a -= rotl32(c,11);
+    b ^= a; b -= rotl32(a,25);
+    c ^= b; c -= rotl32(b,16);
+    a ^= c; a -= rotl32(c,4);
+    b ^= a; b -= rotl32(a,14);
+    c ^= b; c -= rotl32(b,24);
+    return c;
+}
+
 
 /// hash an array of N 32 bit values into a pseudo-random value
 /// based on my favorite hash: http://burtleburtle.net/bob/c/lookup3.c
@@ -76,27 +128,6 @@ inline float bits_to_01 (unsigned int bits) {
 template <int N>
 inline unsigned int
 inthash (const unsigned int k[N]) {
-    // define some handy macros
-#define rot(x,k) (((x)<<(k)) | ((x)>>(32-(k))))
-#define mix(a,b,c) \
-{ \
-    a -= c;  a ^= rot(c, 4);  c += b; \
-    b -= a;  b ^= rot(a, 6);  a += c; \
-    c -= b;  c ^= rot(b, 8);  b += a; \
-    a -= c;  a ^= rot(c,16);  c += b; \
-    b -= a;  b ^= rot(a,19);  a += c; \
-    c -= b;  c ^= rot(b, 4);  b += a; \
-}
-#define final(a,b,c) \
-{ \
-    c ^= b; c -= rot(b,14); \
-    a ^= c; a -= rot(c,11); \
-    b ^= a; b -= rot(a,25); \
-    c ^= b; c -= rot(b,16); \
-    a ^= c; a -= rot(c,4);  \
-    b ^= a; b -= rot(a,14); \
-    c ^= b; c -= rot(b,24); \
-}
     // now hash the data!
     unsigned int a, b, c, len = N;
     a = b = c = 0xdeadbeef + (len << 2) + 13;
@@ -104,7 +135,7 @@ inthash (const unsigned int k[N]) {
         a += k[0];
         b += k[1];
         c += k[2];
-        mix(a, b, c);
+        OIIO::bjhash::bjmix(a, b, c);
         len -= 3;
         k += 3;
     }
@@ -112,16 +143,36 @@ inthash (const unsigned int k[N]) {
         case 3 : c += k[2];
         case 2 : b += k[1];
         case 1 : a += k[0];
-        final(a, b, c);
+        c = OIIO::bjhash::bjfinal(a, b, c);
         case 0:
             break;
     }
     return c;
-    // macros not needed anymore
-#undef rot
-#undef mix
-#undef final
 }
+
+
+// Do four 2D hashes simultaneously.
+inline int4
+inthash_simd (int4 key_x, int4 key_y)
+{
+    const int len = 2;
+    const int seed (0xdeadbeef + (len << 2) + 13);
+    int4 a = seed+key_x, b = seed+key_y, c = seed;
+    return bjfinal (a, b, c);
+}
+
+
+// Do four 3D hashes simultaneously.
+inline int4
+inthash_simd (int4 key_x, int4 key_y, int4 key_z)
+{
+    const int len = 3;
+    const int seed (0xdeadbeef + (len << 2) + 13);
+    int4 a = seed+key_x, b = seed+key_y, c = seed+key_z;
+    return bjfinal (a, b, c);
+}
+
+
 
 struct CellNoise {
     CellNoise () { }
@@ -298,12 +349,135 @@ private:
 };
 
 
-// helper functions for perlin noise 
+
+
+// Define select(bool,truevalue,falsevalue) template that works for a
+// variety of types that we can use for both scalars and vectors. Because ?:
+// won't work properly in template code with vector ops.
+template <typename B, typename F>
+OIIO_FORCEINLINE F select (B b, const F& t, const F& f) { return b ? t : f; }
+
+template <> OIIO_FORCEINLINE int4 select (mask4 b, const int4& t, const int4& f) {
+    return blend (f, t, b);
+}
+
+template <> OIIO_FORCEINLINE float4 select (mask4 b, const float4& t, const float4& f) {
+    return blend (f, t, b);
+}
+
+template <> OIIO_FORCEINLINE float4 select (int4 b, const float4& t, const float4& f) {
+    return blend (f, t, mask4(b));
+}
+
+template <> OIIO_FORCEINLINE Dual2<float4>
+select (mask4 b, const Dual2<float4>& t, const Dual2<float4>& f) {
+    return Dual2<float4> (blend (f.val(), t.val(), b),
+                          blend (f.dx(),  t.dx(),  b),
+                          blend (f.dy(),  t.dy(),  b));
+}
+
+template <>
+OIIO_FORCEINLINE Dual2<float4> select (int4 b, const Dual2<float4>& t, const Dual2<float4>& f) {
+    return select (mask4(b), t, f);
+}
+
+
+
+// Define negate_if(value,bool) that will work for both scalars and vectors,
+// as well as Dual2's of both.
+template<typename FLOAT, typename BOOL>
+OIIO_FORCEINLINE FLOAT negate_if (FLOAT val, BOOL b) {
+    return b ? -val : val;
+}
+
+template<> OIIO_FORCEINLINE float4 negate_if (float4 val, int4 b) {
+    // Special case negate_if for SIMD -- can do it with bit tricks, no branches
+    int4 highbit (0x80000000);
+    return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, mask4(b))));
+}
+
+// Special case negate_if for SIMD -- can do it with bit tricks, no branches
+template<> OIIO_FORCEINLINE Dual2<float4> negate_if (Dual2<float4> val, int4 b)
+{
+    return Dual2<float4> (negate_if (val.val(), b),
+                          negate_if (val.dx(),  b),
+                          negate_if (val.dy(),  b));
+}
+
+
+// Define shuffle<> template that works with Dual2<float4> analogously to
+// how it works for float4.
+template<int i0, int i1, int i2, int i3>
+OIIO_FORCEINLINE Dual2<float4> shuffle (Dual2<float4> a)
+{
+    return Dual2<float4> (shuffle<i0,i1,i2,i3>(a.val()),
+                          shuffle<i0,i1,i2,i3>(a.dx()),
+                          shuffle<i0,i1,i2,i3>(a.dy()));
+}
+
+template<int i>
+OIIO_FORCEINLINE Dual2<float4> shuffle (Dual2<float4> a)
+{
+    return Dual2<float4> (shuffle<i>(a.val()),
+                          shuffle<i>(a.dx()),
+                          shuffle<i>(a.dy()));
+}
+
+// Define extract<> that works with Dual2<float4> analogously to how it
+// works for float4.
+template<int i>
+OIIO_FORCEINLINE Dual2<float> extract (Dual2<float4> a)
+{
+    return Dual2<float> (extract<i>(a.val()),
+                         extract<i>(a.dx()),
+                         extract<i>(a.dy()));
+}
+
+
+
+// Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
+// packed into a float4. We assume T is float and VECTYPE is float4,
+// but it also works if T is Dual2<float> and VECTYPE is Dual2<float4>.
+template<typename T, typename VECTYPE>
+OIIO_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
+    VECTYPE xx = OIIO::lerp (abcd, shuffle<1,1,3,3>(abcd), u);
+    return extract<0>(OIIO::lerp (xx,shuffle<2>(xx), v));
+}
+
+// Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
+// packed into a float4 and uv are already packed into the first two
+// elements of a float4. We assume VECTYPE is float4, but it also works if
+// VECTYPE is Dual2<float4>.
+OIIO_FORCEINLINE Dual2<float> bilerp (Dual2<float4> abcd, Dual2<float4> uv) {
+    Dual2<float4> xx = OIIO::lerp (abcd, shuffle<1,1,3,3>(abcd), shuffle<0>(uv));
+    return extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uv)));
+}
+
+
+// Equivalent to OIIO::trilerp (a, b, c, d, e, f, g, h, u, v, w), but if
+// abcd and efgh are already packed into float4's and uvw are packed into
+// the first 3 elements of a float4.
+OIIO_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const float4& uvw) {
+    // Interpolate along z axis by w
+    float4 xy = OIIO::lerp (abcd, efgh, shuffle<2>(uvw));
+    // Interpolate along x axis by u
+    float4 xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
+    // interpolate along y axis by v
+    return extract<0>(OIIO::lerp (xx, shuffle<2>(xx), shuffle<1>(uvw)));
+}
+
+
 
 // always return a value inside [0,b) - even for negative numbers
 inline int imod(int a, int b) {
     a %= b;
     return a < 0 ? a + b : a;
+}
+
+// imod four values at once
+inline int4 imod(int4 a, int b) {
+    a %= b;
+    return a + select(a < 0, int4(b), int4::Zero());
 }
 
 // floorfrac return quick_floor as well as the fractional remainder
@@ -314,52 +488,41 @@ inline float floorfrac(float x, int* i) {
     return x - *i;
 }
 
+// floorfrac with derivs
 inline Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
     float frac = floorfrac(x.val(), i);
     // slope of x is not affected by this operation
     return Dual2<float>(frac, x.dx(), x.dy());
 }
 
+// floatfrac for four sets of values at once.
+inline float4 floorfrac(float4 x, int4 * i) {
+#if 0
+    float4 thefloor = floor(x);
+    *i = int4(thefloor);
+    return x-thefloor;
+#else
+    int4 thefloor = quick_floor (x);
+    *i = thefloor;
+    return x - float4(thefloor);
+#endif
+}
+
+// floorfrac with derivs, computed on 4 values at once.
+inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
+    float4 frac = floorfrac(x.val(), i);
+    // slope of x is not affected by this operation
+    return Dual2<float4>(frac, x.dx(), x.dy());
+}
+
+
+// Perline 'fade' function. Can be overloaded for float, Dual2, as well
+// as float4 / Dual2<float4>.
 template <typename T>
 inline T fade (const T &t) { 
-   return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f); 
+   return t * t * t * (t * (t * T(6.0f) - T(15.0f)) + T(10.0f));
 }
 
-
-// lerp implementation, a few obstacles prevent us from using Imath::lerp():
-//   * Original perlin code was written assuming lerp(t,a,b) which is different
-//     from Imath::lerp(a,b,t)
-//   * Imath version uses 1-t internally which doesn't work for duals. We need
-//     to use (1.0f-t) for the templated operator-() to get chosen
-//   * This call recieves some arguments which are not handled trivially by
-//     templated overloads such as lerp(Dual2<float>, Vec3, Vec3)
-
-float lerp(float t, float a, float b) {
-    return (1.0f - t) * a + t * b;
-}
-
-Vec3 lerp(float t, Vec3 a, Vec3 b) {
-    return (1.0f - t) * a + t * b;
-}
-
-Dual2<float> lerp(const Dual2<float> &t, const Dual2<float> &a, const Dual2<float> &b) {
-    return (1.0f - t) * a + t * b;
-}
-
-Dual2<Vec3> lerp(const Dual2<float> &t, const Dual2<Vec3> &a, const Dual2<Vec3> &b) {
-    Dual2<float> ax(a.val().x, a.dx().x, a.dy().x);
-    Dual2<float> ay(a.val().y, a.dx().y, a.dy().y);
-    Dual2<float> az(a.val().z, a.dx().z, a.dy().z);
-    Dual2<float> bx(b.val().x, b.dx().x, b.dy().x);
-    Dual2<float> by(b.val().y, b.dx().y, b.dy().y);
-    Dual2<float> bz(b.val().z, b.dx().z, b.dy().z);
-    Dual2<float> lerpx = (1.0f - t) * ax + t * bx;
-    Dual2<float> lerpy = (1.0f - t) * ay + t * by;
-    Dual2<float> lerpz = (1.0f - t) * az + t * bz;
-    return Dual2<Vec3>(Vec3(lerpx.val(), lerpy.val(), lerpz.val()),
-                       Vec3(lerpx.dx() , lerpy.dx() , lerpz.dx() ),
-                       Vec3(lerpx.dy() , lerpy.dy() , lerpz.dy() ));
-}
 
 
 // 1,2,3 and 4 dimensional gradient functions - perform a dot product against a
@@ -380,33 +543,33 @@ inline T grad (int hash, const T &x) {
     return g * x;           // dot-product
 }
 
-template <typename T>
-inline T grad (int hash, const T &x, const T &y) {
+template <typename I, typename T>
+inline T grad (I hash, const T &x, const T &y) {
     // 8 possible directions (+-1,+-2) and (+-2,+-1)
-    int h = hash & 7;
-    T u = h<4 ? x : y;
-    T v = h<4 ? y : x;
+    I h = hash & 7;
+    T u = select (h<4, x, y);
+    T v = 2.0f * select (h<4, y, x);
     // compute the dot product with (x,y).
-    return ((h&1) ? -u : u) + ((h&2) ? -2.0f * v : 2.0f * v);
+    return negate_if(u, h&1) + negate_if(v, h&2);
 }
 
-template <typename T>
-inline T grad (int hash, const T &x, const T &y, const T &z) {
+template <typename I, typename T>
+inline T grad (I hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
-    int h = hash & 15;
-    T u = h<8 ? x : y;
-    T v = h<4 ? y : h==12||h==14 ? x : z;
-    return ((h&1) ? -u : u) + ((h&2) ? -v : v);
+    I h = hash & 15;
+    T u = select (h<8, x, y);
+    T v = select (h<4, y, select (h==I(12)|h==I(14), x, z));
+    return negate_if(u,h&1) + negate_if(v,h&2);
 }
 
 template <typename T>
 inline T grad (int hash, const T &x, const T &y, const T &z, const T &w) {
     // use vectors pointing to the edges of the hypercube
     int h = hash & 31;
-    T u = h<24 ? x : y;
-    T v = h<16 ? y : z;
-    T s = h<8  ? z : w;
-    return ((h&1)? -u : u) + ((h&2)? -v : v) + ((h&4)? -s : s);
+    T u = select (h<24, x, y);
+    T v = select (h<16, y, z);
+    T s = select (h<8 , z, w);
+    return negate_if(u,h&1) + negate_if(v,h&2) + negate_if(s,h&4);
 }
 
 typedef Imath::Vec3<int> Vec3i;
@@ -421,9 +584,7 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
     Dual2<float> rx = grad (hash.x, x);
     Dual2<float> ry = grad (hash.y, x);
     Dual2<float> rz = grad (hash.z, x);
-    return Dual2<Vec3> (Vec3(rx.val(), ry.val(), rz.val()),
-                        Vec3(rx.dx() , ry.dx() , rz.dx() ),
-                        Vec3(rx.dy() , ry.dy() , rz.dy() ));
+    return make_Vec3 (rx, ry, rz);
 }
 
 
@@ -437,9 +598,7 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y) {
     Dual2<float> rx = grad (hash.x, x, y);
     Dual2<float> ry = grad (hash.y, x, y);
     Dual2<float> rz = grad (hash.z, x, y);
-    return Dual2<Vec3> (Vec3(rx.val(), ry.val(), rz.val()),
-                        Vec3(rx.dx() , ry.dx() , rz.dx() ),
-                        Vec3(rx.dy() , ry.dy() , rz.dy() ));
+    return make_Vec3 (rx, ry, rz);
 }
 
 inline Vec3 grad (const Vec3i &hash, float x, float y, float z) {
@@ -452,9 +611,7 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual
     Dual2<float> rx = grad (hash.x, x, y, z);
     Dual2<float> ry = grad (hash.y, x, y, z);
     Dual2<float> rz = grad (hash.z, x, y, z);
-    return Dual2<Vec3> (Vec3(rx.val(), ry.val(), rz.val()),
-                        Vec3(rx.dx() , ry.dx() , rz.dx() ),
-                        Vec3(rx.dy() , ry.dy() , rz.dy() ));
+    return make_Vec3 (rx, ry, rz);
 }
 
 inline Vec3 grad (const Vec3i &hash, float x, float y, float z, float w) {
@@ -467,9 +624,7 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual
     Dual2<float> rx = grad (hash.x, x, y, z, w);
     Dual2<float> ry = grad (hash.y, x, y, z, w);
     Dual2<float> rz = grad (hash.z, x, y, z, w);
-    return Dual2<Vec3> (Vec3(rx.val(), ry.val(), rz.val()),
-                        Vec3(rx.dx() , ry.dx() , rz.dx() ),
-                        Vec3(rx.dy() , ry.dy() , rz.dy() ));
+    return make_Vec3 (rx, ry, rz);
 }
 
 template <typename T>
@@ -481,101 +636,7 @@ inline T scale3 (const T &result) { return 0.9820f * result; }
 template <typename T>
 inline T scale4 (const T &result) { return 0.8344f * result; }
 
-template <typename T>
-inline Dual2<T> scale1 (const Dual2<T> &result) {
-    return Dual2<T> (scale1 (result.val()), scale1 (result.dx()), scale1 (result.dy()));
-}
-template <typename T>
-inline Dual2<T> scale2 (const Dual2<T> &result) {
-    return Dual2<T> (scale2 (result.val()), scale2 (result.dx()), scale2 (result.dy()));
-}
-template <typename T>
-inline Dual2<T> scale3 (const Dual2<T> &result) {
-    return Dual2<T> (scale3 (result.val()), scale3 (result.dx()), scale3 (result.dy()));
-}
-template <typename T>
-inline Dual2<T> scale4 (const Dual2<T> &result) {
-    return Dual2<T> (scale4 (result.val()), scale4 (result.dx()), scale4 (result.dy()));
-}
 
-
-template <typename V, typename H, typename T>
-inline void perlin (V& result, H& hash, const T &x) {
-    int X; T fx = floorfrac(x, &X);
-    T u = fade(fx);
-
-    result = lerp (u, grad (hash (X  ), fx     ),
-                      grad (hash (X+1), fx-1.0f));
-    result = scale1 (result);
-}
-
-template <typename V, typename H, typename T>
-inline void perlin (V &result, const H &hash, const T &x, const T &y) {
-    int X; T fx = floorfrac(x, &X);
-    int Y; T fy = floorfrac(y, &Y);
-
-    T u = fade(fx);
-    T v = fade(fy);
-
-    result = lerp (v, lerp (u, grad (hash (X  , Y  ), fx     , fy     ),
-                               grad (hash (X+1, Y  ), fx-1.0f, fy     )),
-                      lerp (u, grad (hash (X  , Y+1), fx     , fy-1.0f),
-                               grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f)));
-    result = scale2 (result);
-}
-
-
-template <typename V, typename H, typename T>
-inline void perlin (V &result, const H &hash, const T &x, const T &y, const T &z) {
-    int X; T fx = floorfrac(x, &X);
-    int Y; T fy = floorfrac(y, &Y);
-    int Z; T fz = floorfrac(z, &Z);
-
-    T u = fade(fx);
-    T v = fade(fy);
-    T w = fade(fz);
-
-    result = lerp (w, lerp (v, lerp (u, grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
-                                        grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      )),
-                               lerp (u, grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
-                                        grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ))),
-                      lerp (v, lerp (u, grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f ),
-                                        grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f )),
-                               lerp (u, grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
-                                        grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ))));
-    result = scale3 (result);
-}
-
-template <typename V, typename H, typename T>
-inline void perlin (V &result, const H &hash, const T &x, const T &y, const T &z, const T &w) {
-    int X; T fx = floorfrac(x, &X);
-    int Y; T fy = floorfrac(y, &Y);
-    int Z; T fz = floorfrac(z, &Z);
-    int W; T fw = floorfrac(w, &W);
-
-    T u = fade(fx);
-    T v = fade(fy);
-    T t = fade(fz);
-    T s = fade(fw);
-
-    result = lerp (s, lerp (t, lerp (v, lerp (u, grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
-                                                 grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     )),
-                                        lerp (u, grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
-                                                 grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ))),
-                               lerp (v, lerp (u, grad (hash (X  , Y  , Z+1, W  ), fx     , fy     , fz-1.0f, fw     ),
-                                                 grad (hash (X+1, Y  , Z+1, W  ), fx-1.0f, fy     , fz-1.0f, fw     )),
-                                        lerp (u, grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
-                                                 grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     )))),
-                      lerp (t, lerp (v, lerp (u, grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
-                                                 grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f)),
-                                        lerp (u, grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
-                                                 grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f))),
-                               lerp (v, lerp (u, grad (hash (X  , Y  , Z+1, W+1), fx     , fy     , fz-1.0f, fw-1.0f),
-                                                 grad (hash (X+1, Y  , Z+1, W+1), fx-1.0f, fy     , fz-1.0f, fw-1.0f)),
-                                        lerp (u, grad (hash (X  , Y+1, Z+1, W+1), fx     , fy-1.0f, fz-1.0f, fw-1.0f),
-                                                 grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f)))));
-    result = scale4 (result);
-}
 
 struct HashScalar {
     int operator() (int x) const {
@@ -607,6 +668,17 @@ struct HashScalar {
         iv[3] = w;
         return inthash<4> (iv);
     }
+
+    // 4 2D hashes at once!
+    OIIO_FORCEINLINE int4 operator() (int4 x, int4 y) const {
+        return inthash_simd (x, y);
+    }
+
+    // 4 3D hashes at once!
+    OIIO_FORCEINLINE int4 operator() (int4 x, int4 y, int4 z) const {
+        return inthash_simd (x, y, z);
+    }
+
 };
 
 struct HashVector {
@@ -646,11 +718,28 @@ struct HashVector {
         unsigned int h = inthash<N> (k);
         // we only need the low-order bits to be random, so split out
         // the 32 bit result into 3 parts for each channel
-        result.x = (h      ) & 0xFF;  
+        result.x = (h      ) & 0xFF;
         result.y = (h >> 8 ) & 0xFF;
         result.z = (h >> 16) & 0xFF;
         return result;
     }
+
+    // Vector hash of 4 3D points at once
+    OIIO_FORCEINLINE void operator() (int4 *result, int4 x, int4 y) const {
+        int4 h = inthash_simd (x, y);
+        result[0] = (h        ) & 0xFF;
+        result[1] = (srl(h,8 )) & 0xFF;
+        result[2] = (srl(h,16)) & 0xFF;
+    }
+
+    // Vector hash of 4 3D points at once
+    OIIO_FORCEINLINE void operator() (int4 *result, int4 x, int4 y, int4 z) const {
+        int4 h = inthash_simd (x, y, z);
+        result[0] = (h        ) & 0xFF;
+        result[1] = (srl(h,8 )) & 0xFF;
+        result[2] = (srl(h,16)) & 0xFF;
+    }
+
 };
 
 struct HashScalarPeriodic {
@@ -704,6 +793,17 @@ struct HashScalarPeriodic {
         iv[3] = imod (w, m_pw);
         return inthash<4> (iv);
     }
+
+    // 4 2D hashes at once!
+    int4 operator() (int4 x, int4 y) const {
+        return inthash_simd (imod(x,m_px), imod(y,m_py));
+    }
+
+    // 4 3D hashes at once!
+    int4 operator() (int4 x, int4 y, int4 z) const {
+        return inthash_simd (imod(x,m_px), imod(y,m_py), imod(z,m_pz));
+    }
+
 };
 
 struct HashVectorPeriodic {
@@ -770,7 +870,568 @@ struct HashVectorPeriodic {
         result.z = (h >> 16) & 0xFF;
         return result;
     }
+
+    // Vector hash of 4 3D points at once
+    void operator() (int4 *result, int4 x, int4 y) const {
+        int4 h = inthash_simd (imod(x,m_px), imod(y,m_py));
+        result[0] = (h        ) & 0xFF;
+        result[1] = (srl(h,8 )) & 0xFF;
+        result[2] = (srl(h,16)) & 0xFF;
+    }
+
+    // Vector hash of 4 3D points at once
+    void operator() (int4 *result, int4 x, int4 y, int4 z) const {
+        int4 h = inthash_simd (imod(x,m_px), imod(y,m_py), imod(z,m_pz));
+        result[0] = (h        ) & 0xFF;
+        result[1] = (srl(h,8 )) & 0xFF;
+        result[2] = (srl(h,16)) & 0xFF;
+    }
 };
+
+
+
+template <typename V, typename H, typename T>
+inline void perlin (V& result, H& hash, const T &x) {
+    int X; T fx = floorfrac(x, &X);
+    T u = fade(fx);
+
+    result = OIIO::lerp(grad (hash (X  ), fx     ),
+                        grad (hash (X+1), fx-1.0f), u);
+    result = scale1 (result);
+}
+
+
+template <typename H>
+inline void perlin (float &result, const H &hash, const float &x, const float &y)
+{
+    // result = 0.0f; return;
+#if OIIO_SIMD
+    int4 XY;
+    float4 fxy = floorfrac (float4(x,y,0.0f), &XY);
+    float4 uv = fade(fxy);  // Note: will be (fade(fx), fade(fy), 0, 0)
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously.
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XY) + int4(i0101);
+    int4 cornery = shuffle<1>(XY) + int4(i0011);
+    int4 corner_hash = hash (cornerx, cornery);
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxy) - float4(f0101);
+    float4 remaindery = shuffle<1>(fxy) - float4(f0011);
+    float4 corner_grad = grad (corner_hash, remainderx, remaindery);
+    result = scale2 (bilerp (corner_grad, uv[0], uv[1]));
+
+#else
+    // ORIGINAL, non-SIMD
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+
+    float u = fade(fx);
+    float v = fade(fy);
+
+    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+                           grad (hash (X+1, Y  ), fx-1.0f, fy     ),
+                           grad (hash (X  , Y+1), fx     , fy-1.0f),
+                           grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
+    result = scale2 (result);
+#endif
+}
+
+
+template <typename H>
+inline void perlin (float &result, const H &hash,
+                    const float &x, const float &y, const float &z)
+{
+#if OIIO_SIMD
+    // result = 0; return;
+#if 0
+    // You'd think it would be faster to do the floorfrac in parallel, but
+    // according to my timings, it is not. I don't understand exactly why.
+    int4 XYZ;
+    float4 fxyz = floorfrac (float4(x,y,z), &XYZ);
+    float4 uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XYZ) + int4(i0101);
+    int4 cornery = shuffle<1>(XYZ) + int4(i0011);
+    int4 cornerz = shuffle<2>(XYZ);
+#else
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    float4 fxyz (fx, fy, fz); // = floorfrac (xyz, &XYZ);
+    float4 uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
+    int4 cornery = Y + int4(i0011);
+    int4 cornerz = Z;
+#endif
+    int4 corner_hash_z0 = hash (cornerx, cornery, cornerz);
+    int4 corner_hash_z1 = hash (cornerx, cornery, cornerz+1);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyz) - float4(f0101);
+    float4 remaindery = shuffle<1>(fxyz) - float4(f0011);
+    float4 remainderz = shuffle<2>(fxyz);
+    float4 corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz);
+    float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-1.0f);
+
+    result = scale3 (trilerp (corner_grad_z0, corner_grad_z1, uvw));
+
+#else
+    // ORIGINAL -- non-SIMD
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    float u = fade(fx);
+    float v = fade(fy);
+    float w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
+                            u, v, w);
+    result = scale3 (result);
+#endif
+}
+
+
+
+template <typename H>
+inline void perlin (Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y)
+{
+#if OIIO_SIMD
+    // result = 0; return;
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    Dual2<float4> fxy (float4(fx.val(), fy.val(), 0.0f),
+                       float4(fx.dx(), fy.dx(), 0.0f),
+                       float4(fx.dy(), fy.dy(), 0.0f));
+    Dual2<float4> uv = fade (fxy);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously.
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + int4(i0101);
+    int4 cornery = Y + int4(i0011);
+    int4 corner_hash = hash (cornerx, cornery);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxy) - float4(f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxy) - float4(f0011);
+    Dual2<float4> corner_grad = grad (corner_hash, remainderx, remaindery);
+
+    result = scale2 (bilerp (corner_grad, uv));
+#else
+    // Non-SIMD case
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    Dual2<float> u = fade(fx);
+    Dual2<float> v = fade(fy);
+    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+                           grad (hash (X+1, Y  ), fx-1.0f, fy     ),
+                           grad (hash (X  , Y+1), fx     , fy-1.0f),
+                           grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
+    result = scale2 (result);
+#endif
+}
+
+
+
+
+template <typename H>
+inline void perlin (Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
+#if OIIO_SIMD
+    // result = 0; return;
+
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    int Z; Dual2<float> fz = floorfrac(z, &Z);
+    Dual2<float4> fxyz (float4(fx.val(), fy.val(), fz.val()),
+                        float4(fx.dx(), fy.dx(), fz.dx()),
+                        float4(fx.dy(), fy.dy(), fz.dy()));
+    Dual2<float4> uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
+    int4 cornery = Y + int4(i0011);
+    int4 cornerz = Z;
+    int4 corner_hash_z0 = hash (cornerx, cornery, cornerz);
+    int4 corner_hash_z1 = hash (cornerx, cornery, cornerz+1);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxyz) - float4(f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxyz) - float4(f0011);
+    Dual2<float4> remainderz = shuffle<2>(fxyz);
+
+    Dual2<float4> corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz);
+    Dual2<float4> corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-float4::One());
+
+    // Interpolate along the z axis first
+    Dual2<float4> xy = OIIO::lerp (corner_grad_z0, corner_grad_z1, shuffle<2>(uvw));
+    // Interpolate along x axis
+    Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
+    // interpolate along y axis
+    result = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
+
+#else
+    // Non-SIMD case
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    int Z; Dual2<float> fz = floorfrac(z, &Z);
+    Dual2<float> u = fade(fx);
+    Dual2<float> v = fade(fy);
+    Dual2<float> w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
+                            u, v, w);
+    result = scale3 (result);
+#endif
+}
+
+
+
+
+template <typename H>
+inline void perlin (Vec3 &result, const H &hash,
+                    const float &x, const float &y)
+{
+#if OIIO_SIMD
+    // result.setValue(0,0,0); return;
+    int4 XYZ;
+    float4 fxyz = floorfrac (float4(x,y,0), &XYZ);
+    float4 uv = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    int4 cornerx = shuffle<0>(XYZ) + int4(0,1,0,1);
+    int4 cornery = shuffle<1>(XYZ) + int4(0,0,1,1);
+
+    // We actually derive 3 hashes (one for each output dimension) for each
+    // corner.
+    int4 corner_hash[3];
+    hash (corner_hash, cornerx, cornery);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyz) - float4(f0101);
+    float4 remaindery = shuffle<1>(fxyz) - float4(f0011);
+    for (int i = 0; i < 3; ++i) {
+        float4 corner_grad = grad (corner_hash[i], remainderx, remaindery);
+        // Do the bilinear interpolation with SIMD. Here's the fastest way
+        // I've found to do it.
+        float4 xx = OIIO::lerp (corner_grad, shuffle<1,1,3,3>(corner_grad), uv[0]);
+        result[i] = scale2 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), uv[1])));
+    }
+#else
+    // Non-SIMD case
+    typedef float T;
+    int X; T fx = floorfrac(x, &X);
+    int Y; T fy = floorfrac(y, &Y);
+    T u = fade(fx);
+    T v = fade(fy);
+    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+                           grad (hash (X+1, Y  ), fx-1.0f, fy     ),
+                           grad (hash (X  , Y+1), fx     , fy-1.0f),
+                           grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
+    result = scale2 (result);
+#endif
+}
+
+
+
+template <typename H>
+inline void perlin (Vec3 &result, const H &hash,
+                    const float &x, const float &y, const float &z)
+{
+#if OIIO_SIMD
+    // result.setValue(0,0,0); return;
+#if 0
+    // You'd think it would be faster to do the floorfrac in parallel, but
+    // according to my timings, it is not. Come back and understand why.
+    int4 XYZ;
+    float4 fxyz = floorfrac (float4(x,y,z), &XYZ);
+    float4 uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    int4 cornerx = shuffle<0>(XYZ) + int4(0,1,0,1);
+    int4 cornery = shuffle<1>(XYZ) + int4(0,0,1,1);
+    int4 cornerz = shuffle<2>(XYZ);
+#else
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    float4 fxyz (fx, fy, fz); // = floorfrac (xyz, &XYZ);
+    float4 uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
+    int4 cornery = Y + int4(i0011);
+    int4 cornerz = Z;
+#endif
+
+    // We actually derive 3 hashes (one for each output dimension) for each
+    // corner.
+    int4 corner_hash_z0[3], corner_hash_z1[3];
+    hash (corner_hash_z0, cornerx, cornery, cornerz);
+    hash (corner_hash_z1, cornerx, cornery, cornerz+1);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyz) - float4(f0101);
+    float4 remaindery = shuffle<1>(fxyz) - float4(f0011);
+    float4 remainderz0 = shuffle<2>(fxyz);
+    float4 remainderz1 = shuffle<2>(fxyz) - 1.0f;
+    for (int i = 0; i < 3; ++i) {
+        float4 corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz0);
+        float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz1);
+
+        // Interpolate along the z axis first
+        float4 xy = OIIO::lerp (corner_grad_z0, corner_grad_z1, shuffle<2>(uvw));
+        // Interpolate along x axis
+        float4 xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
+        // interpolate along y axis
+        result[i] = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
+    }
+#else
+    // ORIGINAL -- non-SIMD
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    float u = fade(fx);
+    float v = fade(fy);
+    float w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f ),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f ),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
+                            u, v, w);
+    result = scale3 (result);
+#endif
+}
+
+
+
+template <typename H>
+inline void perlin (Dual2<Vec3> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y)
+{
+    // result = Vec3(0,0,0); return;
+#if OIIO_SIMD
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    Dual2<float4> fxyz (float4(fx.val(), fy.val(), 0.0f),
+                        float4(fx.dx(),  fy.dx(),  0.0f),
+                        float4(fx.dy(),  fy.dy(),  0.0f));
+    Dual2<float4> uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
+    int4 cornery = Y + int4(i0011);
+
+    // We actually derive 3 hashes (one for each output dimension) for each
+    // corner.
+    int4 corner_hash[3];
+    hash (corner_hash, cornerx, cornery);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxyz) - float4(f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxyz) - float4(f0011);
+    Dual2<float> r[3];
+    for (int i = 0; i < 3; ++i) {
+        Dual2<float4> corner_grad = grad (corner_hash[i], remainderx, remaindery);
+        // Interpolate along x axis
+        Dual2<float4> xx = OIIO::lerp (corner_grad, shuffle<1,1,3,3>(corner_grad), shuffle<0>(uvw));
+        // interpolate along y axis
+        r[i] = scale2 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
+    }
+    result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
+                Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
+                Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
+
+#else
+    // ORIGINAL -- non-SIMD
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    Dual2<float> u = fade(fx);
+    Dual2<float> v = fade(fy);
+    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+                           grad (hash (X+1, Y  ), fx-1.0f, fy     ),
+                           grad (hash (X  , Y+1), fx     , fy-1.0f),
+                           grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f),
+                           u, v);
+    result = scale2 (result);
+#endif
+}
+
+
+
+template <typename H>
+inline void perlin (Dual2<Vec3> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
+    // result = Vec3(0,0,0); return;
+#if OIIO_SIMD
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    int Z; Dual2<float> fz = floorfrac(z, &Z);
+    Dual2<float4> fxyz (float4(fx.val(), fy.val(), fz.val()),
+                        float4(fx.dx(),  fy.dx(),  fz.dx()),
+                        float4(fx.dy(),  fy.dy(),  fz.dy()));
+    Dual2<float4> uvw = fade (fxyz);
+
+    // We parallelize primarily by computing the hashes and gradients at the
+    // integer lattice corners simultaneously. We need 8 total (for 3D), so
+    // we do two sets of 4. (Future opportunity to do all 8 simultaneously
+    // with AVX.)
+    static const int i0101[4] = {0,1,0,1};
+    static const int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
+    int4 cornery = Y + int4(i0011);
+    int4 cornerz = Z;
+
+    // We actually derive 3 hashes (one for each output dimension) for each
+    // corner.
+    int4 corner_hash_z0[3], corner_hash_z1[3];
+    hash (corner_hash_z0, cornerx, cornery, cornerz);
+    hash (corner_hash_z1, cornerx, cornery, cornerz+1);
+
+    static const float f0101[4] = {0,1,0,1};
+    static const float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxyz) - float4(f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxyz) - float4(f0011);
+    Dual2<float4> remainderz0 = shuffle<2>(fxyz);
+    Dual2<float4> remainderz1 = shuffle<2>(fxyz) - float4(1.0f);
+    Dual2<float> r[3];
+    for (int i = 0; i < 3; ++i) {
+        Dual2<float4> corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz0);
+        Dual2<float4> corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz1);
+
+        // Interpolate along the z axis first
+        Dual2<float4> xy = OIIO::lerp (corner_grad_z0, corner_grad_z1, shuffle<2>(uvw));
+        // Interpolate along x axis
+        Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
+        // interpolate along y axis
+        r[i] = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
+    }
+    result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
+                Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
+                Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
+
+#else
+    // ORIGINAL -- non-SIMD
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    int Z; Dual2<float> fz = floorfrac(z, &Z);
+    Dual2<float> u = fade(fx);
+    Dual2<float> v = fade(fy);
+    Dual2<float> w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f ),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f ),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
+                            u, v, w);
+    result = scale3 (result);
+#endif
+}
+
+
+template <typename V, typename H, typename T>
+inline void perlin (V &result, const H &hash, const T &x, const T &y, const T &z, const T &w) {
+    int X; T fx = floorfrac(x, &X);
+    int Y; T fy = floorfrac(y, &Y);
+    int Z; T fz = floorfrac(z, &Z);
+    int W; T fw = floorfrac(w, &W);
+
+    T u = fade(fx);
+    T v = fade(fy);
+    T t = fade(fz);
+    T s = fade(fw);
+
+    result = OIIO::lerp (
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+                              grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
+                              grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
+                              grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
+                              grad (hash (X  , Y  , Z+1, W  ), fx     , fy     , fz-1.0f, fw     ),
+                              grad (hash (X+1, Y  , Z+1, W  ), fx-1.0f, fy     , fz-1.0f, fw     ),
+                              grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
+                              grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
+                              u, v, t),
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+                              grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
+                              grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
+                              grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
+                              grad (hash (X  , Y  , Z+1, W+1), fx     , fy     , fz-1.0f, fw-1.0f),
+                              grad (hash (X+1, Y  , Z+1, W+1), fx-1.0f, fy     , fz-1.0f, fw-1.0f),
+                              grad (hash (X  , Y+1, Z+1, W+1), fx     , fy-1.0f, fz-1.0f, fw-1.0f),
+                              grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
+                              u, v, t),
+               s);
+    result = scale4 (result);
+}
+
+
 
 struct Noise {
     Noise () { }

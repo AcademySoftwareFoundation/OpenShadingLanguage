@@ -3,6 +3,9 @@ Changes:
 Release 1.6 -- in development (compared to 1.5)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
+* The "gabor" varieties of noise were found to have a serious mathematical
+  bug, which after fixing results in a change to the pattern. We are hoping
+  that they were rarely used, but beware a change in appearance. (1.6.1)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New per-ShaderGroup attributes:

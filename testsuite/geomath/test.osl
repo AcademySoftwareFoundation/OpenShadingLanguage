@@ -13,9 +13,9 @@ test ()
         vector vI = vector(1,-2,0);
         vI = normalize(vI);
         vector vN = vector(0, 1, 0);
-        printf ("   reflect (%g, %g) =  %g\n", vI, vN, reflect (vI, vN));
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, pretty(reflect (vI, vN)));
         vN = vector(-1, 0, 0);
-        printf ("   reflect (%g, %g) =  %g\n", vI, vN, reflect (vI, vN));
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, pretty(reflect (vI, vN)));
 
         // test total internal reflection (going from greater to lesser IOR)
         printf (" testing total-internal reflection:\n");
@@ -25,7 +25,8 @@ test ()
         vI = vector(1,-1,0);
         vI = normalize(vI);
         vN = vector(0,1,0);
-        printf ("   refract (%g, %g, %g) =  %g\n", vI, vN, eta, refract (vI, vN, eta));
+        printf ("   refract (%g, %g, %g) =  %g\n",
+                vI, vN, eta, pretty(refract (vI, vN, eta)));
         float Kr, Kt;
         vector fR, fT;
         fresnel(vI, vN, eta, Kr, Kt, fR, fT);
@@ -78,7 +79,7 @@ test ()
         vI = normalize(vI);
         vector vN = vector(v, 1, 0);
         vN = normalize(vN);
-        printf ("   reflect (%g, %g) =  %g\n", vI, vN, reflect (vI, vN));
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, pretty(reflect (vI, vN)));
 
         float n1 = 1.0;
         float n2 = 1.33;

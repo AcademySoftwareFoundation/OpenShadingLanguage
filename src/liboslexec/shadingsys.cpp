@@ -500,6 +500,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_range_checking(true), m_unknown_coordsys_error(true),
       m_greedyjit(false), m_countlayerexecs(false),
       m_max_warnings_per_thread(100),
+      m_profile(0),
       m_optimize(2),
       m_opt_simplify_param(true), m_opt_constant_fold(true),
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
@@ -553,6 +554,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_pointcloud_gets = 0;
     m_stat_pointcloud_writes = 0;
     m_stat_layers_executed = 0;
+    m_stat_total_shading_time_ticks = 0;
 
     m_groups_to_compile_count = 0;
     m_threads_currently_compiling = 0;
@@ -877,6 +879,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("debugnan", int, m_debugnan);  // back-compatible alias
     ATTR_SET ("debug_uninit", int, m_debug_uninit);
     ATTR_SET ("lockgeom", int, m_lockgeom_default);
+    ATTR_SET ("profile", int, m_profile);
     ATTR_SET ("optimize", int, m_optimize);
     ATTR_SET ("opt_simplify_param", int, m_opt_simplify_param);
     ATTR_SET ("opt_constant_fold", int, m_opt_constant_fold);
@@ -970,6 +973,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("debugnan", int, m_debugnan);  // back-compatible alias
     ATTR_DECODE ("debug_uninit", int, m_debug_uninit);
     ATTR_DECODE ("lockgeom", int, m_lockgeom_default);
+    ATTR_DECODE ("profile", int, m_profile);
     ATTR_DECODE ("optimize", int, m_optimize);
     ATTR_DECODE ("opt_simplify_param", int, m_opt_simplify_param);
     ATTR_DECODE ("opt_constant_fold", int, m_opt_constant_fold);
@@ -1275,6 +1279,17 @@ ShadingSystemImpl::pointcloud_stats (int search, int get, int results,
 
 
 
+namespace {
+typedef std::pair<ustring,long long> GroupTimeVal;
+struct group_time_compare { // So looking forward to C++11 lambdas!
+    bool operator() (const GroupTimeVal &a, const GroupTimeVal &b) {
+        return a.second > b.second;
+    }
+};
+}
+
+
+
 std::string
 ShadingSystemImpl::getstats (int level) const
 {
@@ -1423,6 +1438,43 @@ ShadingSystemImpl::getstats (int level) const
     size_t jitmem = LLVM_Util::total_jit_memory_held();
     out << "    LLVM JIT memory: " << Strutil::memformat(jitmem) << '\n';
 
+    if (m_profile) {
+        out << "  Execution profile:\n";
+        out << "    Total shader execution time: "
+            << Strutil::timeintervalformat(OIIO::Timer::seconds(m_stat_total_shading_time_ticks), 2)
+            << " (sum of all threads)\n";
+        // Account for times of any groups that haven't yet been destroyed
+        {
+            spin_lock lock (m_all_shader_groups_mutex);
+            for (size_t i = 0, e = m_all_shader_groups.size(); i < e; ++i) {
+                if (ShaderGroupRef g = m_all_shader_groups[i].lock()) {
+                    long long ticks = g->m_stat_total_shading_time_ticks;
+                    m_group_profile_times[g->name()] += ticks;
+                    g->m_stat_total_shading_time_ticks -= ticks;
+                }
+            }
+        }
+        {
+            spin_lock lock (m_stat_mutex);
+            std::vector<GroupTimeVal> grouptimes;
+            for (std::map<ustring,long long>::const_iterator m = m_group_profile_times.begin();
+                 m != m_group_profile_times.end(); ++m) {
+                grouptimes.push_back (GroupTimeVal(m->first, m->second));
+            }
+            std::sort (grouptimes.begin(), grouptimes.end(), group_time_compare());
+            if (grouptimes.size() > 5)
+                grouptimes.resize (5);
+            if (grouptimes.size())
+                out << "    Most expensive shader groups:\n";
+            for (std::vector<GroupTimeVal>::const_iterator i = grouptimes.begin();
+                     i != grouptimes.end(); ++i) {
+                out << "      " << Strutil::timeintervalformat(OIIO::Timer::seconds(i->second),2) 
+                    << ' ' << (i->first.size() ? i->first.c_str() : "<unnamed group>") << "\n";
+            }
+        }
+
+    }
+
     return out.str();
 }
 
@@ -1522,9 +1574,9 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     }
 
     {
-        // Record the group for later greedy JITing
-        spin_lock lock (m_groups_to_compile_mutex);
-        m_groups_to_compile.push_back (m_curgroup);
+        // Record the group in the SS's census of all extant groups
+        spin_lock lock (m_all_shader_groups_mutex);
+        m_all_shader_groups.push_back (m_curgroup);
         ++m_groups_to_compile_count;
     }
 
@@ -1903,8 +1955,8 @@ ShadingSystemImpl::state ()
 {
     {
         // Record the state for later greedy JITing
-        spin_lock lock (m_groups_to_compile_mutex);
-        m_groups_to_compile.push_back (m_curgroup);
+        spin_lock lock (m_all_shader_groups_mutex);
+        m_all_shader_groups.push_back (m_curgroup);
         ++m_groups_to_compile_count;
     }
     return m_curgroup;
@@ -2257,28 +2309,21 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
                                           lljitter.m_llvm_local_mem);
     m_stat_groups_compiled += 1;
     m_stat_instances_compiled += group.nlayers();
+    m_groups_to_compile_count -= 1;
 }
 
 
 
-static void optimize_all_groups_wrapper (ShadingSystemImpl *ss)
+static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
 {
-    ss->optimize_all_groups (1);
+    ss->optimize_all_groups (1, mythread, totalthreads);
 }
 
 
 
 void
-ShadingSystemImpl::optimize_all_groups (int nthreads)
+ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthreads)
 {
-    if (! m_greedyjit) {
-        // No greedy JIT, just free any groups we've recorded
-        spin_lock lock (m_groups_to_compile_mutex);
-        m_groups_to_compile.clear ();
-        m_groups_to_compile_count = 0;
-        return;
-    }
-
     // Spawn a bunch of threads to do this in parallel -- just call this
     // routine again (with threads=1) for each thread.
     if (nthreads < 1)  // threads <= 0 means use all hardware available
@@ -2290,25 +2335,28 @@ ShadingSystemImpl::optimize_all_groups (int nthreads)
         boost::thread_group threads;
         m_threads_currently_compiling += nthreads;
         for (int t = 0;  t < nthreads;  ++t)
-            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this));
+            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this, t, nthreads));
         threads.join_all ();
         m_threads_currently_compiling -= nthreads;
         return;
     }
 
     // And here's the single thread case
-    while (m_groups_to_compile_count) {
-        ShaderGroupRef group;
-        {
-            spin_lock lock (m_groups_to_compile_mutex);
-            if (m_groups_to_compile.size() == 0)
-                return;  // Nothing left to compile
-            group = m_groups_to_compile.back ();
-            m_groups_to_compile.pop_back ();
-        }
-        --m_groups_to_compile_count;
-        if (! group.unique()) {   // don't compile if nobody recorded it but us
-            optimize_group (*group);
+    size_t ngroups = 0;
+    {
+        spin_lock lock (m_all_shader_groups_mutex);
+        ngroups = m_all_shader_groups.size();
+    }
+    for (size_t i = 0;  i < ngroups;  ++i) {
+        // Assign to threads based on mod of totalthreads
+        if ((i % totalthreads) == mythread) {
+            ShaderGroupRef group;
+            {
+                spin_lock lock (m_all_shader_groups_mutex);
+                group = m_all_shader_groups[i].lock();
+            }
+            if (group)
+                optimize_group (*group);
         }
     }
 }

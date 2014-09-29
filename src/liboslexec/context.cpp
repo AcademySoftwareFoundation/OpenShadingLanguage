@@ -91,6 +91,9 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
        return false;
     }
 
+    int profile = shadingsys().m_profile;
+    OIIO::Timer timer (profile);
+
     // Allocate enough space on the heap
     size_t heap_size_needed = sgroup.llvm_groupdata_size();
     if (heap_size_needed > m_heap.size()) {
@@ -124,6 +127,12 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 
     // Process any queued up error messages, warnings, printfs from shaders
     process_errors ();
+
+    if (profile) {
+        long long ticks = timer.ticks();
+        shadingsys().m_stat_total_shading_time_ticks += ticks;
+        sgroup.m_stat_total_shading_time_ticks += ticks;
+    }
 
     return true;
 }

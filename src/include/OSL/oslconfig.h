@@ -111,8 +111,10 @@ using OIIO::string_view;
 // Sort out smart pointers
 #ifdef OSL_USING_CPLUSPLUS11
   using std::shared_ptr;
+  using std::weak_ptr;
 #else
   using boost::shared_ptr;
+  using boost::weak_ptr;
 #endif
 
 

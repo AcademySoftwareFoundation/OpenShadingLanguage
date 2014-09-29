@@ -8,6 +8,12 @@ Language, standard libary, and compiler changes (for shader writers):
   that they were rarely used, but beware a change in appearance. (1.6.1)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
+* New ShadingSystem attribute int "profile", if set to 1, will include
+  in the runtime statistics output a measure of how much total time was
+  spent executing shaders, as well as the identities and times of the 5
+  shader groups that spent the most time executing.  Note that this
+  option is 0 (off) by default, since turning it on can add
+  significantly to total runtime for some scenes.  #418 (1.6.2)
 * New per-ShaderGroup attributes:
    * You can retrieve information about all closures that an optimized group
      might create using new queries "num_closures_needed", "closures_needed",

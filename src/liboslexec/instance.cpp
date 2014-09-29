@@ -589,6 +589,7 @@ ShaderGroup::ShaderGroup (string_view name)
     m_name(name)
 {
     m_executions = 0;
+    m_stat_total_shading_time_ticks = 0;
 }
 
 
@@ -601,6 +602,7 @@ ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
     m_name(name)
 {
     m_executions = 0;
+    m_stat_total_shading_time_ticks = 0;
 }
 
 

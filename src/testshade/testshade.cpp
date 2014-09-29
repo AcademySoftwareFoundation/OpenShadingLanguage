@@ -62,6 +62,7 @@ static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool stats = false;
+static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
@@ -256,6 +257,7 @@ getargs (int argc, const char *argv[])
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--stats", &stats, "Print run statistics",
+                "--profile", &profile, "Print profile information",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
@@ -670,6 +672,11 @@ test_shade (int argc, const char *argv[])
     // the TextureSystem (that just makes 'create' make its own TS), and
     // an error handler.
     shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
+
+    // Register the layout of all closures known to this renderer
+    // Any closure used by the shader which is not registered, or
+    // registered with a different number of arguments will lead
+    // to a runtime error.
     register_closures(shadingsys);
 
     // Remember that each shader parameter may optionally have a
@@ -792,6 +799,8 @@ test_shade (int argc, const char *argv[])
 
     if (debug)
         test_group_attributes (shadergroup.get());
+    if (profile)
+        shadingsys->attribute ("profile", 1);
 
     if (num_threads < 1)
         num_threads = boost::thread::hardware_concurrency();
@@ -837,7 +846,7 @@ test_shade (int argc, const char *argv[])
     }
 
     // Print some debugging info
-    if (debug || stats) {
+    if (debug || stats || profile) {
         double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";

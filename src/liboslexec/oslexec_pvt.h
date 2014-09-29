@@ -840,7 +840,7 @@ public:
 
     int raytype_bit (ustring name);
 
-    void optimize_all_groups (int nthreads=0);
+    void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
 
     typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 
@@ -930,6 +930,7 @@ private:
     bool m_greedyjit;                     ///< JIT as much as we can?
     bool m_countlayerexecs;               ///< Count number of layer execs?
     int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
+    int m_profile;                        ///< Level of profiling of shader execution
     int m_optimize;                       ///< Runtime optimization level
     bool m_opt_simplify_param;            ///< Turn instance params into const?
     bool m_opt_constant_fold;             ///< Allow constant folding?
@@ -1019,6 +1020,7 @@ private:
     long long m_stat_pointcloud_gets;
     long long m_stat_pointcloud_writes;
     atomic_ll m_stat_layers_executed;     ///< Total layers executed
+    atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
 
     int m_stat_max_llvm_local_mem;        ///< Stat: max LLVM local mem
     PeakCounter<off_t> m_stat_memory;     ///< Stat: all shading system memory
@@ -1034,12 +1036,14 @@ private:
     PeakCounter<off_t> m_stat_mem_inst_paramvals;
     PeakCounter<off_t> m_stat_mem_inst_connections;
 
-    spin_mutex m_stat_mutex;              ///< Mutex for non-atomic stats
+    mutable spin_mutex m_stat_mutex;     ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
-    std::vector<ShaderGroupRef> m_groups_to_compile;
+    std::vector<weak_ptr<ShaderGroup> > m_all_shader_groups;
+    mutable spin_mutex m_all_shader_groups_mutex;
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;
-    spin_mutex m_groups_to_compile_mutex;
+    mutable std::map<ustring,long long> m_group_profile_times;
+    // N.B. group_profile_times is protected by m_stat_mutex.
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;
@@ -1233,8 +1237,11 @@ private:
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
     atomic_ll m_executions;          ///< Number of times the group executed
+    atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
+
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;
+    friend class ShadingContext;
 };
 
 

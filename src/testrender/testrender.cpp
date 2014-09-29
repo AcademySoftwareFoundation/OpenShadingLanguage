@@ -66,6 +66,7 @@ bool debug = false;
 bool debug2 = false;
 bool verbose = false;
 bool stats = false;
+bool profile = false;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
 int xres = 640, yres = 480, aa = 1, max_bounces = 1000000, rr_depth = 5;
@@ -102,6 +103,7 @@ void getargs(int argc, const char *argv[])
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--stats", &stats, "Print run statistics",
+                "--profile", &profile, "Print profile information",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -606,6 +608,7 @@ int main (int argc, const char *argv[]) {
     // Setup common attributes
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
+    shadingsys->attribute("profile", 1);
     const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
     if (opt_env)
         shadingsys->attribute ("optimize", atoi(opt_env));
@@ -661,7 +664,7 @@ int main (int argc, const char *argv[]) {
     delete out;
 
     // Print some debugging info
-    if (debug || stats) {
+    if (debug || stats || profile) {
         double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";

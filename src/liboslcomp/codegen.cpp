@@ -605,8 +605,7 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
 
 bool
 ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
-                                                    ASTNode *init,
-                                                    std::string &out)
+               ASTNode *init, std::string &out, const std::string &sep) const
 {
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
@@ -623,27 +622,27 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
         completed = false;
     } else if (type.is_int()) {
         if (islit && lit->typespec().is_int())
-            out += Strutil::format ("%d ", lit->intval());
+            out += Strutil::format ("%d", lit->intval());
         else {
-            out += "0 ";  // FIXME?
+            out += "0";  // FIXME?
             completed = false;
         }
     } else if (type.is_float()) {
         if (islit && lit->typespec().is_int())
-            out += Strutil::format ("%d ", lit->intval());
+            out += Strutil::format ("%d", lit->intval());
         else if (islit && lit->typespec().is_float())
-            out += Strutil::format ("%.8g ", lit->floatval());
+            out += Strutil::format ("%.8g", lit->floatval());
         else {
-            out += "0 ";  // FIXME?
+            out += "0";  // FIXME?
             completed = false;
         }
     } else if (type.is_triple()) {
         if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
-            out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
+            out += Strutil::format ("%.8g%s%.8g%s%.8g", f, sep, f, sep, f);
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
-            out += Strutil::format ("%.8g %.8g %.8g ", f, f, f);
+            out += Strutil::format ("%.8g%s%.8g%s%.8g", f, sep, f, sep, f);
         } else if (init && init->typespec() == type &&
                    init->nodetype() == ASTNode::type_constructor_node) {
             ASTtype_constructor *ctr = (ASTtype_constructor *) init;
@@ -662,20 +661,24 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
                 }
             }
             if (nargs == 1)
-                out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[0], f[0]);
+                out += Strutil::format ("%.8g%s%.8g%s%.8g", f[0], sep, f[0], sep, f[0]);
             else
-                out += Strutil::format ("%.8g %.8g %.8g ", f[0], f[1], f[2]);
+                out += Strutil::format ("%.8g%s%.8g%s%.8g", f[0], sep, f[1], sep, f[2]);
         } else {
-            out += "0 0 0 ";
+            out += Strutil::format ("0%s0%s0", sep, sep);
             completed = false;
         }
     } else if (type.is_matrix()) {
         if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
-            out += Strutil::format ("%.8g 0 0 0  0 %.8g 0 0  0 0 %.8g 0  0 0 0 %.8g ", f, f, f, f);
+            for (int c = 0; c < 16; ++c)
+               out += Strutil::format ("%.8g%s", (c/4)==(c%4) ? f : 0.0f,
+                                       c<15 ? sep.c_str() : "");
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
-            out += Strutil::format ("%.8g 0 0 0  0 %.8g 0 0  0 0 %.8g 0  0 0 0 %.8g ", f, f, f, f);
+            for (int c = 0; c < 16; ++c)
+               out += Strutil::format ("%.8g%s", (c/4)==(c%4) ? f : 0.0f,
+                                       c<15 ? sep.c_str() : "");
         } else if (init && init->typespec() == type &&
                    init->nodetype() == ASTNode::type_constructor_node) {
             ASTtype_constructor *ctr = (ASTtype_constructor *) init;
@@ -695,23 +698,24 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
                     completed = false;
                 }
             }
-            if (nargs == 1)
-                out += Strutil::format ("%.8g 0 0 0  0 %.8g 0 0  0 0 %.8g 0  0 0 0 %.8g ",
-                                        f[0], f[0], f[0], f[0]);
-            else
-                out += Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g ",
-                                        f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7])
-                     + Strutil::format ("%.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g",
-                                        f[8], f[9], f[10], f[11], f[12], f[13], f[14], f[15]);
+            if (nargs == 1) {
+                for (int c = 0; c < 16; ++c)
+                   out += Strutil::format ("%.8g%s", (c/4)==(c%4) ? f[0] : 0.0f,
+                                           c<15 ? sep.c_str() : "");
+            } else {
+                for (int c = 0; c < 16; ++c)
+                    out += Strutil::format ("%.8g%s", f[c], c<15 ? sep.c_str() : "");
+            }
         } else {
-            out += "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+            for (int c = 0; c < 16; ++c)
+                out += Strutil::format ("0%s", c<15 ? sep.c_str() : "");
             completed = false;
         }
     } else if (type.is_string()) {
         if (islit && lit->typespec().is_string())
-            out += Strutil::format ("\"%s\" ", lit->strval());
+            out += Strutil::format ("\"%s\"", Strutil::escape_chars(lit->strval()));
         else {
-            out += "\"\" ";  // FIXME?
+            out += "\"\"";  // FIXME?
             completed = false;
         }
     }
@@ -724,7 +728,8 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
 
 
 bool
-ASTvariable_declaration::param_default_literals (const Symbol *sym, std::string &out)
+ASTvariable_declaration::param_default_literals (const Symbol *sym,
+                             std::string &out, const std::string &separator) const
 {
     out.clear ();
 
@@ -736,8 +741,12 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym, std::string 
         if (init->nodetype() == compound_initializer_node)
             init = ((ASTcompound_initializer *)init.get())->initlist();
         bool completed = true;  // have we output the full initialization?
-        for (ASTNode::ref i = init;  i;  i = i->next())
-            completed &= param_one_default_literal (sym, i.get(), out);
+        int i = 0;
+        for (ASTNode::ref n = init;  n;  n = n->next(), ++i) {
+            if (i)
+                out += separator;
+            completed &= param_one_default_literal (sym, n.get(), out, separator);
+        }
         return completed;
     }
 

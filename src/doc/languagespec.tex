@@ -1108,8 +1108,9 @@ have an on/off checkbox, is intended to be a filename, etc.
 Metadata is specified inside double brackets {\cf [[} and {\cf ]]}
 enclosing a comma-separated list of metadata items.  Each metadatum
 looks like a parameter declaration --- having a data type, name, and
-initializer.  However, metadata may only be simple types (not arrays,
-structs, or closures) and their value initializers must be numeric or
+initializer.  However, metadata may only be simple types or arrays
+of simple types (not structs or closures)
+and their value initializers must be numeric or
 string constants (not computed expressions).
 
 Metadata about the shader as a whole is placed between the shader name

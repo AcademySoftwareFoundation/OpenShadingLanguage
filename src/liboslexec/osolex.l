@@ -74,7 +74,7 @@ IDENT           ({ALPHA}|[_$])({ALPHA}|{DIGIT}|[_$\.])*
  /* C preprocessor (cpp) directives */
 COMMENT         \#[^\n]*\n
  /* Hints */
-HINTPATTERN     \%{IDENT}(\{([^\}\\"]|{STR})*\})?
+HINTPATTERN     \%{IDENT}
 
 
  /* Note for lex newbies: the following '%{ .. %}' section contains literal

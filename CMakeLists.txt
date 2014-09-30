@@ -365,6 +365,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             oslc-err-noreturn oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-variadic-macro
+            oslinfo-metadata
             pointcloud pointcloud-fold
             printf-whole-array
             raytype reparam

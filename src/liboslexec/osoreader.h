@@ -137,6 +137,9 @@ public:
     /// be called by the lexer.
     int lineno () const { return m_lineno; }
 
+    /// Return a reference to the error handler
+    ErrorHandler& errhandler () { return m_err; }
+
     /// Pointer to the one and only lexer in effect.  This is 'public',
     /// but NOBODY should modify this except for this class and the
     /// lexer internals.

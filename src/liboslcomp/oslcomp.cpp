@@ -134,7 +134,7 @@ OSLCompilerImpl::~OSLCompilerImpl ()
 
 
 void
-OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
+OSLCompilerImpl::error (ustring filename, int line, const char *format, ...) const
 {
     va_list ap;
     va_start (ap, format);
@@ -152,7 +152,7 @@ OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
 
 
 void
-OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
+OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...) const
 {
     va_list ap;
     va_start (ap, format);
@@ -547,23 +547,16 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
     Symbol *metasym = metavar->sym();
     ASSERT (metasym);
     TypeSpec ts = metasym->typespec();
-    oso ("%%meta{%s,%s,", ts.string().c_str(), metasym->name().c_str());
-    const ASTNode *init = metavar->init().get();
-    ASSERT (init);
-    if (ts.is_string() && init->nodetype() == ASTNode::literal_node)
-        oso ("\"%s\"", ((const ASTliteral *)init)->strval());
-    else if (ts.is_int() && init->nodetype() == ASTNode::literal_node)
-        oso ("%d", ((const ASTliteral *)init)->intval());
-    else if (ts.is_float() && init->nodetype() == ASTNode::literal_node)
-        oso ("%.8g", ((const ASTliteral *)init)->floatval());
-    // FIXME -- what about type constructors?
-    else {
-        std::cout << "Error, don't know how to print metadata " 
-                  << ts.string() << " with node type " 
-                  << init->nodetypename() << "\n";
-        ASSERT (0);  // FIXME
+    std::string pdl;
+    bool ok = metavar->param_default_literals (metasym, pdl, ",");
+    if (ok) {
+        oso ("%%meta{%s,%s,%s} ", ts.string().c_str(), metasym->name(), pdl);
+    } else {
+        error (metanode->sourcefile(), metanode->sourceline(),
+               "Don't know how to print metadata %s (%s) with node type %s",
+               metasym->name().c_str(), ts.string().c_str(),
+               metavar->init()->nodetypename());
     }
-    oso ("} ");
 }
 
 

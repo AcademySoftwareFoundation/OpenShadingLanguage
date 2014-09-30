@@ -6,6 +6,9 @@ Language, standard libary, and compiler changes (for shader writers):
 * The "gabor" varieties of noise were found to have a serious mathematical
   bug, which after fixing results in a change to the pattern. We are hoping
   that they were rarely used, but beware a change in appearance. (1.6.1)
+* We have clarified that shader metadata may be arrays (still not structs
+  or closures) and fixed the implementation to support this (in addition
+  to several other ways that metadata was brittle). (1.6.2)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem attribute int "profile", if set to 1, will include

@@ -404,7 +404,8 @@ public:
     /// initialization of literal values and place it in 'out'.
     /// Return whether the full initialization is comprised only of
     /// literals (and no init ops are needed).
-    bool param_default_literals (const Symbol *sym, std::string &out);
+    bool param_default_literals (const Symbol *sym, std::string &out,
+                                 const std::string &separator=" ") const;
 
     // Special code generation for structure initializers
     Symbol *codegen_struct_initializers (ref init);
@@ -426,7 +427,7 @@ private:
     // init==NULL) and append it to 'out'.  Return whether the full
     // initialization is comprised only of literals (no init ops needed).
     bool param_one_default_literal (const Symbol *sym, ASTNode *init,
-                                    std::string &out);
+                      std::string &out, const std::string &separator=" ") const;
 
     ustring m_name;     ///< Name of the symbol (unmangled)
     Symbol *m_sym;      ///< Ptr to the symbol this declares

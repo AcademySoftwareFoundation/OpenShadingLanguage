@@ -37,67 +37,14 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/strutil.h>
 namespace Filesystem = OIIO::Filesystem;
+namespace Strutil = OIIO::Strutil;
+using OIIO::string_view;
 
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-
-
-// ptr is a pointer to a char pointer.  Read chars from *ptr until you
-// hit the end of the string, or the next char is one of stop1 or stop2.
-// At that point, return what we hit, and also update *ptr to then point
-// to the next character following the stop character.
-static std::string
-readuntil (const char **ptr, char stop1, char stop2=-1)
-{
-    std::string s;
-    while (**ptr == ' ')
-        ++(*ptr);
-    while (**ptr && **ptr != stop1 && **ptr != stop2) {
-        s += (**ptr);
-        ++(*ptr);
-    }
-    if (**ptr == stop1 || **ptr == stop2)
-        ++(*ptr);
-    while (**ptr == ' ')
-        ++(*ptr);
-    return s;
-}
-
-
-
-static TypeDesc
-string_to_type (const char *s)
-{
-    TypeDesc t;
-    std::string tname = readuntil (&s, ' ');
-    if (tname == "int")
-        t = TypeDesc::TypeInt;
-    if (tname == "float")
-        t = TypeDesc::TypeFloat;
-    if (tname == "color")
-        t = TypeDesc::TypeColor;
-    if (tname == "point")
-        t = TypeDesc::TypePoint;
-    if (tname == "vector")
-        t = TypeDesc::TypeVector;
-    if (tname == "normal")
-        t = TypeDesc::TypeNormal;
-    if (tname == "matrix")
-        t = TypeDesc::TypeMatrix;
-    if (tname == "string")
-        t = TypeDesc::TypeString;
-    if (*s == '[') {
-        ++s;
-        if (*s == ']')
-            t.arraylen = -1;
-        else
-            t.arraylen = atoi (s);
-    }
-    return t;
-}
-
 
 
 // Custom subclass of OSOReader that just reads the .oso file and fills
@@ -223,56 +170,67 @@ OSOReaderQuery::parameter_done ()
 
 
 void
-OSOReaderQuery::hint (const char *hintstring)
+OSOReaderQuery::hint (const char *h)
 {
-    if (m_reading_param && ! strncmp (hintstring, "%meta{", 6)) {
-        hintstring += 6;
+    string_view hintstring (h);
+    if (! Strutil::parse_char (hintstring, '%'))
+        return;
+    if (m_reading_param && Strutil::parse_prefix(hintstring, "meta{")) {
         // std::cerr << "  Metadata '" << hintstring << "'\n";
-        std::string type = readuntil (&hintstring, ',', '}');
-        std::string name = readuntil (&hintstring, ',', '}');
+        Strutil::skip_whitespace (hintstring);
+        std::string type = Strutil::parse_until (hintstring, ",}");
+        Strutil::parse_char (hintstring, ',');
+        std::string name = Strutil::parse_until (hintstring, ",}");
+        Strutil::parse_char (hintstring, ',');
         // std::cerr << "    " << name << " : " << type << "\n";
         OSLQuery::Parameter p;
         p.name = name;
-        p.type = string_to_type (type.c_str());
+        p.type = TypeDesc (type.c_str());
         if (p.type.basetype == TypeDesc::STRING) {
-            while (*hintstring == ' ')
-                ++hintstring;
-            while (hintstring[0] == '\"') {
-                ++hintstring;
-                p.sdefault.push_back (ustring (readuntil (&hintstring, '\"')));
+            string_view val;
+            while (Strutil::parse_string (hintstring, val)) {
+                p.sdefault.push_back (ustring(val));
+                if (Strutil::parse_char (hintstring, '}'))
+                    break;
+                Strutil::parse_char (hintstring, ',');
             }
         } else if (p.type.basetype == TypeDesc::INT) {
-            while (*hintstring == ' ')
-                ++hintstring;
-            while (*hintstring && *hintstring != '}') {
-                p.idefault.push_back (atoi (hintstring));
-                readuntil (&hintstring, ',', '}');
+            int val;
+            while (Strutil::parse_int (hintstring, val)) {
+                p.idefault.push_back (val);
+                Strutil::parse_char (hintstring, ',');
             }
         } else if (p.type.basetype == TypeDesc::FLOAT) {
-            while (*hintstring == ' ')
-                ++hintstring;
-            while (*hintstring && *hintstring != '}') {
-                p.fdefault.push_back (atof (hintstring));
-                readuntil (&hintstring, ',', '}');
+            float val;
+            while (Strutil::parse_float (hintstring, val)) {
+                p.fdefault.push_back (val);
+                Strutil::parse_char (hintstring, ',');
             }
         }
+        Strutil::parse_char (hintstring, '}');
         m_query.m_params[m_query.nparams()-1].metadata.push_back (p);
         return;
     }
-    if (m_reading_param && ! strncmp (hintstring, "%structfields{", 14)) {
-        hintstring += 14;
+    if (m_reading_param && Strutil::parse_prefix(hintstring, "structfields{")) {
         OSLQuery::Parameter &param (m_query.m_params[m_query.nparams()-1]);
-        while (*hintstring) {
-            param.fields.push_back (ustring (readuntil (&hintstring, ',', '}')));
+        string_view ident;
+        while (1) {
+            string_view ident = Strutil::parse_identifier (hintstring);
+            if (ident.length()) {
+                param.fields.push_back (ustring(ident));
+                Strutil::parse_char (hintstring, ',');
+            } else {
+                break;
+            }
         }
+        Strutil::parse_char (hintstring, '}');
         return;
     }
-    if (m_reading_param && ! strncmp (hintstring, "%struct{", 8)) {
-        hintstring += 8;
-        if (*hintstring == '\"')  // skip quote
-            ++hintstring;
-        OSLQuery::Parameter &param (m_query.m_params[m_query.nparams()-1]);
-        param.structname = readuntil (&hintstring, '\"', '}');
+    if (m_reading_param && Strutil::parse_prefix(hintstring, "struct{")) {
+        string_view str;
+        Strutil::parse_string (hintstring, str);
+        m_query.m_params[m_query.nparams()-1].structname = str;
+        Strutil::parse_char (hintstring, '}');
         return;
     }
     // std::cerr << "Hint '" << hintstring << "'\n";

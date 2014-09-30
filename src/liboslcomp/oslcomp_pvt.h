@@ -96,11 +96,11 @@ public:
 
     /// Error reporting
     ///
-    void error (ustring filename, int line, const char *format, ...);
+    void error (ustring filename, int line, const char *format, ...) const;
 
     /// Warning reporting
     ///
-    void warning (ustring filename, int line, const char *format, ...);
+    void warning (ustring filename, int line, const char *format, ...) const;
 
     /// Have we hit an error?
     ///
@@ -359,7 +359,7 @@ private:
     std::string m_main_filename; ///< Main input filename
     std::string m_cwd;        ///< Current working directory
     ASTNode::ref m_shader;    ///< The shader's syntax tree
-    bool m_err;               ///< Has an error occurred?
+    mutable bool m_err;       ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status

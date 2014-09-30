@@ -2752,7 +2752,8 @@ RuntimeOptimizer::run ()
         }
         BOOST_FOREACH (const Opcode &op, inst()->ops()) {
             const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
-            ASSERT (opd);
+            if (! opd)
+                continue;
             if (opd->flags & OpDescriptor::Tex) {
                 // for all the texture ops, arg 1 is the texture name
                 Symbol *sym = opargsym (op, 1);

@@ -813,6 +813,9 @@ public:
     ///
     unsigned int argtakesderivs_all () const { return m_argtakesderivs; }
 
+    /// Replace the m_argtakesderivs entirely. Use with caution!
+    void argtakesderivs_all (unsigned int newval) { m_argtakesderivs = newval; }
+
     /// Are two opcodes identical enough to merge their instances?  Note
     /// that this isn't a true 'equal', we don't compare fields that
     /// won't matter for that purpose.

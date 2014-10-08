@@ -2403,11 +2403,6 @@ DECLFOLDER(constfold_noise)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    // Take an early out if any args are not constant (other than the result)
-    for (int i = 1; i < op.nargs(); ++i)
-        if (! rop.opargsym(op,i)->is_constant())
-            return 0;
-
     // Decode some info about which noise function we're dealing with
 //    bool periodic = (op.opname() == Strings::pnoise);
     int arg = 0;   // Next arg to read
@@ -2424,9 +2419,21 @@ DECLFOLDER(constfold_noise)
         name = op.opname();
     }
 
+    // Noise with name that is not a constant at osl-compile-time was marked
+    // as taking the derivs of its coordinate arguments. If at this point we
+    // can determine that the name is known and not "gabor", when we can
+    // turn its derivative taking off.
+    if (op.argtakesderivs_all() &&  name.length() && name != "gabor")
+        op.argtakesderivs_all(0);
+
     // Early out: for now, we only fold cell noise
     if (name != u_cellnoise && name != u_cell)
         return 0;
+
+    // Take an early out if any args are not constant (other than the result)
+    for (int i = 1; i < op.nargs(); ++i)
+        if (! rop.opargsym(op,i)->is_constant())
+            return 0;
 
     // Extract the constant input coordinates
     float input[4];

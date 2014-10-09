@@ -32,10 +32,12 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 
 Performance improvements:
 * Many noise() varieties have been sped up significantly on
-  architectures with SIMD vector instructions (such as SSE). We're
-  seeing 2x-3x improvement for noise(point), depending on the specific
-  variety.  Higher speedups when returning vectors rather than scalars;
-  higher speedups when supplying derivatives as well. #415 (1.6.1)
+  architectures with SIMD vector instructions (such as SSE). Higher
+  speedups when returning vectors rather than scalars; higher speedups
+  when supplying derivatives as well, higher speedups the higher the
+  dimensionality of the domain. We're seeing 2x-3x improvement for
+  noise(point), depending on the specific variety, 3x-4x speedup for 4D
+  noise varieties. #415 #422 (1.6.1, 1.6.2)
 * Change many transcendental functions (sin, cos, exp, etc) to use
   approximations that are must faster than the 100% correct versions in
   libm. The new ones may differ from the old in the last decimal place,

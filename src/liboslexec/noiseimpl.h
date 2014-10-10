@@ -156,8 +156,9 @@ inline int4
 inthash_simd (int4 key_x, int4 key_y)
 {
     const int len = 2;
-    const int seed (0xdeadbeef + (len << 2) + 13);
-    int4 a = seed+key_x, b = seed+key_y, c = seed;
+    const int seed_ = (0xdeadbeef + (len << 2) + 13);
+    static const OIIO_SIMD4_ALIGN int seed[4] = { seed_,seed_,seed_,seed_};
+    int4 a = (*(int4*)&seed)+key_x, b = (*(int4*)&seed)+key_y, c = (*(int4*)&seed);
     return bjfinal (a, b, c);
 }
 
@@ -167,8 +168,9 @@ inline int4
 inthash_simd (int4 key_x, int4 key_y, int4 key_z)
 {
     const int len = 3;
-    const int seed (0xdeadbeef + (len << 2) + 13);
-    int4 a = seed+key_x, b = seed+key_y, c = seed+key_z;
+    const int seed_ = (0xdeadbeef + (len << 2) + 13);
+    static const OIIO_SIMD4_ALIGN int seed[4] = { seed_,seed_,seed_,seed_};
+    int4 a = (*(int4*)&seed)+key_x, b = (*(int4*)&seed)+key_y, c = (*(int4*)&seed)+key_z;
     return bjfinal (a, b, c);
 }
 
@@ -179,8 +181,9 @@ inline int4
 inthash_simd (int4 key_x, int4 key_y, int4 key_z, int4 key_w)
 {
     const int len = 4;
-    const int seed (0xdeadbeef + (len << 2) + 13);
-    int4 a = seed+key_x, b = seed+key_y, c = seed+key_z;
+    const int seed_ = (0xdeadbeef + (len << 2) + 13);
+    static const OIIO_SIMD4_ALIGN int seed[4] = { seed_,seed_,seed_,seed_};
+    int4 a = (*(int4*)&seed)+key_x, b = (*(int4*)&seed)+key_y, c = (*(int4*)&seed)+key_z;
     bjmix (a, b, c);
     a += key_w;
     return bjfinal(a, b, c);
@@ -952,15 +955,15 @@ inline void perlin (float &result, const H &hash, const float &x, const float &y
 
     // We parallelize primarily by computing the hashes and gradients at the
     // integer lattice corners simultaneously.
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XY) + int4(i0101);
-    int4 cornery = shuffle<1>(XY) + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XY) + (*(int4*)i0101);
+    int4 cornery = shuffle<1>(XY) + (*(int4*)i0011);
     int4 corner_hash = hash (cornerx, cornery);
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxy) - float4(f0101);
-    float4 remaindery = shuffle<1>(fxy) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxy) - (*(float4*)f0101);
+    float4 remaindery = shuffle<1>(fxy) - (*(float4*)f0011);
     float4 corner_grad = grad (corner_hash, remainderx, remaindery);
     result = scale2 (bilerp (corner_grad, uv[0], uv[1]));
 
@@ -998,10 +1001,10 @@ inline void perlin (float &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XYZ) + int4(i0101);
-    int4 cornery = shuffle<1>(XYZ) + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XYZ) + (*(int4*)i0101);
+    int4 cornery = shuffle<1>(XYZ) + (*(int4*)i0011);
     int4 cornerz = shuffle<2>(XYZ);
 #else
     int X; float fx = floorfrac(x, &X);
@@ -1014,22 +1017,22 @@ inline void perlin (float &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 cornerz = Z;
 #endif
     int4 corner_hash_z0 = hash (cornerx, cornery, cornerz);
-    int4 corner_hash_z1 = hash (cornerx, cornery, cornerz+1);
+    int4 corner_hash_z1 = hash (cornerx, cornery, cornerz+int4::One());
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyz) - float4(f0101);
-    float4 remaindery = shuffle<1>(fxyz) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
+    float4 remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
     float4 remainderz = shuffle<2>(fxyz);
     float4 corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz);
-    float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-1.0f);
+    float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-float4::One());
 
     result = scale3 (trilerp (corner_grad_z0, corner_grad_z1, uvw));
 
@@ -1071,30 +1074,30 @@ inline void perlin (float &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XYZW) + int4(i0101);
-    int4 cornery = shuffle<1>(XYZW) + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XYZW) + (*(int4*)i0101);
+    int4 cornery = shuffle<1>(XYZW) + (*(int4*)i0011);
     int4 cornerz = shuffle<2>(XYZW);
-    int4 cornerz1 = cornerz + 1;
+    int4 cornerz1 = cornerz + int4::One();
     int4 cornerw = shuffle<3>(XYZW);
 
     int4 corner_hash_z0 = hash (cornerx, cornery, cornerz,  cornerw);
     int4 corner_hash_z1 = hash (cornerx, cornery, cornerz1, cornerw);
-    int4 cornerw1 = cornerw + 1;
+    int4 cornerw1 = cornerw + int4::One();
     int4 corner_hash_z2 = hash (cornerx, cornery, cornerz,  cornerw1);
     int4 corner_hash_z3 = hash (cornerx, cornery, cornerz1, cornerw1);
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyzw) - float4(f0101);
-    float4 remaindery = shuffle<1>(fxyzw) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyzw) - (*(float4*)f0101);
+    float4 remaindery = shuffle<1>(fxyzw) - (*(float4*)f0011);
     float4 remainderz = shuffle<2>(fxyzw);
-    float4 remainderz1 = remainderz - 1.0f;
+    float4 remainderz1 = remainderz - float4::One();
     float4 remainderw = shuffle<3>(fxyzw);
     float4 corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz,  remainderw);
     float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz1, remainderw);
-    float4 remainderw1 = remainderw - 1.0f;
+    float4 remainderw1 = remainderw - float4::One();
     float4 corner_grad_z2 = grad (corner_hash_z2, remainderx, remaindery, remainderz,  remainderw1);
     float4 corner_grad_z3 = grad (corner_hash_z3, remainderx, remaindery, remainderz1, remainderw1);
 
@@ -1155,16 +1158,16 @@ inline void perlin (Dual2<float> &result, const H &hash,
 
     // We parallelize primarily by computing the hashes and gradients at the
     // integer lattice corners simultaneously.
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 corner_hash = hash (cornerx, cornery);
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    Dual2<float4> remainderx = shuffle<0>(fxy) - float4(f0101);
-    Dual2<float4> remaindery = shuffle<1>(fxy) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxy) - (*(float4*)f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxy) - (*(float4*)f0011);
     Dual2<float4> corner_grad = grad (corner_hash, remainderx, remaindery);
 
     result = scale2 (bilerp (corner_grad, uv));
@@ -1204,18 +1207,18 @@ inline void perlin (Dual2<float> &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 cornerz = Z;
     int4 corner_hash_z0 = hash (cornerx, cornery, cornerz);
-    int4 corner_hash_z1 = hash (cornerx, cornery, cornerz+1);
+    int4 corner_hash_z1 = hash (cornerx, cornery, cornerz+int4::One());
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    Dual2<float4> remainderx = shuffle<0>(fxyz) - float4(f0101);
-    Dual2<float4> remaindery = shuffle<1>(fxyz) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
     Dual2<float4> remainderz = shuffle<2>(fxyz);
 
     Dual2<float4> corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz);
@@ -1273,10 +1276,10 @@ inline void perlin (Dual2<float> &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 cornerz = Z;
     int4 cornerz1 = Z + int4::One();
     int4 cornerw = W;
@@ -1286,10 +1289,10 @@ inline void perlin (Dual2<float> &result, const H &hash,
     int4 corner_hash_z2 = hash (cornerx, cornery, cornerz,  cornerw1);
     int4 corner_hash_z3 = hash (cornerx, cornery, cornerz1, cornerw1);
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    Dual2<float4> remainderx  = shuffle<0>(fxyzw) - float4(f0101);
-    Dual2<float4> remaindery  = shuffle<1>(fxyzw) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx  = shuffle<0>(fxyzw) - (*(float4*)f0101);
+    Dual2<float4> remaindery  = shuffle<1>(fxyzw) - (*(float4*)f0011);
     Dual2<float4> remainderz  = shuffle<2>(fxyzw);
     Dual2<float4> remainderz1 = remainderz - float4::One();
     Dual2<float4> remainderw  = shuffle<3>(fxyzw);
@@ -1362,18 +1365,20 @@ inline void perlin (Vec3 &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    int4 cornerx = shuffle<0>(XYZ) + int4(0,1,0,1);
-    int4 cornery = shuffle<1>(XYZ) + int4(0,0,1,1);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XYZ) + (*(int4*)i0101);
+    int4 cornery = shuffle<1>(XYZ) + (*(int4*)i0011);
 
     // We actually derive 3 hashes (one for each output dimension) for each
     // corner.
     int4 corner_hash[3];
     hash (corner_hash, cornerx, cornery);
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyz) - float4(f0101);
-    float4 remaindery = shuffle<1>(fxyz) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
+    float4 remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad = grad (corner_hash[i], remainderx, remaindery);
         // Do the bilinear interpolation with SIMD. Here's the fastest way
@@ -1429,10 +1434,10 @@ inline void perlin (Vec3 &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 cornerz = Z;
 #endif
 
@@ -1440,14 +1445,14 @@ inline void perlin (Vec3 &result, const H &hash,
     // corner.
     int4 corner_hash_z0[3], corner_hash_z1[3];
     hash (corner_hash_z0, cornerx, cornery, cornerz);
-    hash (corner_hash_z1, cornerx, cornery, cornerz+1);
+    hash (corner_hash_z1, cornerx, cornery, cornerz+int4::One());
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyz) - float4(f0101);
-    float4 remaindery = shuffle<1>(fxyz) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
+    float4 remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
     float4 remainderz0 = shuffle<2>(fxyz);
-    float4 remainderz1 = shuffle<2>(fxyz) - 1.0f;
+    float4 remainderz1 = shuffle<2>(fxyz) - float4::One();
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz0);
         float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz1);
@@ -1497,10 +1502,10 @@ inline void perlin (Vec3 &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XYZW) + int4(i0101);
-    int4 cornery = shuffle<1>(XYZW) + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = shuffle<0>(XYZW) + (*(int4*)i0101);
+    int4 cornery = shuffle<1>(XYZW) + (*(int4*)i0011);
     int4 cornerz = shuffle<2>(XYZW);
     int4 cornerw = shuffle<3>(XYZW);
 
@@ -1509,23 +1514,23 @@ inline void perlin (Vec3 &result, const H &hash,
     int4 corner_hash_z0[3], corner_hash_z1[3];
     int4 corner_hash_z2[3], corner_hash_z3[3];
     hash (corner_hash_z0, cornerx, cornery, cornerz, cornerw);
-    hash (corner_hash_z1, cornerx, cornery, cornerz+1, cornerw);
-    hash (corner_hash_z2, cornerx, cornery, cornerz, cornerw+1);
-    hash (corner_hash_z3, cornerx, cornery, cornerz+1, cornerw+1);
+    hash (corner_hash_z1, cornerx, cornery, cornerz+int4::One(), cornerw);
+    hash (corner_hash_z2, cornerx, cornery, cornerz, cornerw+int4::One());
+    hash (corner_hash_z3, cornerx, cornery, cornerz+int4::One(), cornerw+int4::One());
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyzw) - float4(f0101);
-    float4 remaindery = shuffle<1>(fxyzw) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    float4 remainderx = shuffle<0>(fxyzw) - (*(float4*)f0101);
+    float4 remaindery = shuffle<1>(fxyzw) - (*(float4*)f0011);
     float4 remainderz = shuffle<2>(fxyzw);
     float4 remainderw = shuffle<3>(fxyzw);
 //    float4 remainderz0 = shuffle<2>(fxyz);
 //    float4 remainderz1 = shuffle<2>(fxyz) - 1.0f;
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz, remainderw);
-        float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz-1.0f, remainderw);
-        float4 corner_grad_z2 = grad (corner_hash_z2[i], remainderx, remaindery, remainderz, remainderw-1.0f);
-        float4 corner_grad_z3 = grad (corner_hash_z3[i], remainderx, remaindery, remainderz-1.0f, remainderw-1.0f);
+        float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz-float4::One(), remainderw);
+        float4 corner_grad_z2 = grad (corner_hash_z2[i], remainderx, remaindery, remainderz, remainderw-float4::One());
+        float4 corner_grad_z3 = grad (corner_hash_z3[i], remainderx, remaindery, remainderz-float4::One(), remainderw-float4::One());
         result[i] = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                         trilerp (corner_grad_z2, corner_grad_z3, uvts),
                                         extract<3>(uvts)));
@@ -1585,20 +1590,20 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
 
     // We actually derive 3 hashes (one for each output dimension) for each
     // corner.
     int4 corner_hash[3];
     hash (corner_hash, cornerx, cornery);
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    Dual2<float4> remainderx = shuffle<0>(fxyz) - float4(f0101);
-    Dual2<float4> remaindery = shuffle<1>(fxyz) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
     Dual2<float> r[3];
     for (int i = 0; i < 3; ++i) {
         Dual2<float4> corner_grad = grad (corner_hash[i], remainderx, remaindery);
@@ -1646,24 +1651,24 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 cornerz = Z;
 
     // We actually derive 3 hashes (one for each output dimension) for each
     // corner.
     int4 corner_hash_z0[3], corner_hash_z1[3];
     hash (corner_hash_z0, cornerx, cornery, cornerz);
-    hash (corner_hash_z1, cornerx, cornery, cornerz+1);
+    hash (corner_hash_z1, cornerx, cornery, cornerz+int4::One());
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    Dual2<float4> remainderx = shuffle<0>(fxyz) - float4(f0101);
-    Dual2<float4> remaindery = shuffle<1>(fxyz) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
+    Dual2<float4> remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
     Dual2<float4> remainderz0 = shuffle<2>(fxyz);
-    Dual2<float4> remainderz1 = shuffle<2>(fxyz) - float4(1.0f);
+    Dual2<float4> remainderz1 = shuffle<2>(fxyz) - float4::One();
     Dual2<float> r[3];
     for (int i = 0; i < 3; ++i) {
         Dual2<float4> corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz0);
@@ -1724,10 +1729,10 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     // integer lattice corners simultaneously. We need 8 total (for 3D), so
     // we do two sets of 4. (Future opportunity to do all 8 simultaneously
     // with AVX.)
-    static const int i0101[4] = {0,1,0,1};
-    static const int i0011[4] = {0,0,1,1};
-    int4 cornerx = X + int4(i0101); //int4(0,1,0,1);
-    int4 cornery = Y + int4(i0011);
+    static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
+    int4 cornerx = X + (*(int4*)i0101);
+    int4 cornery = Y + (*(int4*)i0011);
     int4 cornerz = Z;
     int4 cornerz1 = Z + int4::One();
     int4 cornerw = W;
@@ -1741,10 +1746,10 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     hash (corner_hash_z2, cornerx, cornery, cornerz,  cornerw1);
     hash (corner_hash_z3, cornerx, cornery, cornerz1, cornerw1);
 
-    static const float f0101[4] = {0,1,0,1};
-    static const float f0011[4] = {0,0,1,1};
-    Dual2<float4> remainderx  = shuffle<0>(fxyzw) - float4(f0101);
-    Dual2<float4> remaindery  = shuffle<1>(fxyzw) - float4(f0011);
+    static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
+    static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
+    Dual2<float4> remainderx  = shuffle<0>(fxyzw) - (*(float4*)f0101);
+    Dual2<float4> remaindery  = shuffle<1>(fxyzw) - (*(float4*)f0011);
     Dual2<float4> remainderz  = shuffle<2>(fxyzw);
     Dual2<float4> remainderz1 = remainderz - float4::One();
     Dual2<float4> remainderw  = shuffle<3>(fxyzw);

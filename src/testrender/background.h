@@ -50,7 +50,7 @@ struct Background {
 
     Vec3 eval(const Vec3& dir, float& pdf) const {
         // map from sphere to unit-square
-        float u = atan2f(dir.y, dir.x) * float(M_1_PI * 0.5f);
+        float u = OIIO::fast_atan2(dir.y, dir.x) * float(M_1_PI * 0.5f);
         if (u < 0) u++;
         float v = (1 - dir.z) * 0.5f;
         // retrieve nearest neighbor
@@ -79,10 +79,12 @@ private:
         Dual2<float> u = Dual2<float>(x, 1, 0) * invres;
         Dual2<float> v = Dual2<float>(y, 0, 1) * invres;
         Dual2<float> theta   = u * float(2 * M_PI);
+        Dual2<float> st, ct;
+        fast_sincos(theta, &st, &ct);
         Dual2<float> cos_phi = 1.0f - 2.0f * v;
         Dual2<float> sin_phi = sqrt(1.0f - cos_phi * cos_phi);
-        return make_Vec3(sin_phi * cos(theta),
-                         sin_phi * sin(theta),
+        return make_Vec3(sin_phi * ct,
+                         sin_phi * st,
                          cos_phi);
     }
 
@@ -101,7 +103,8 @@ private:
             *pdf = data[*idx] - data[*idx - 1];
             scaled_sample = (x - data[*idx - 1]) / (data[*idx] - data[*idx - 1]);
         }
-        return scaled_sample;
+        // keep result in [0,1)
+        return std::min(scaled_sample, 0.99999994f);
     }
 
     Vec3*  values;  // actual map

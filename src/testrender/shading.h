@@ -57,6 +57,7 @@ struct CompositeBSDF {
         for (int i = 0; i < num_bsdfs; i++) {
             if (rx < (pdfs[i] + accum)) {
                 rx = (rx - accum) / pdfs[i];
+                rx = std::min(rx, 0.99999994f); // keep result in [0,1)
                 Color3 result = weights[i] * bsdfs[i]->sample(sg, rx, ry, wi, invpdf);
                 invpdf /= pdfs[i];
                 // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction

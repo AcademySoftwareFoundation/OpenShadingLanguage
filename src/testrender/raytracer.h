@@ -34,7 +34,7 @@ struct Camera {
         eye(eye),
         dir(dir.normalize()),
         invw(1.0f / w), invh(1.0f / h) {
-        float k = tanf(fov * float(M_PI / 360));
+        float k = OIIO::fast_tan(fov * float(M_PI / 360));
         Vec3 right = dir.cross(up).normalize();
         cx = right * (w * k / h);
         cy = (cx.cross(dir)).normalize() * k;
@@ -130,11 +130,13 @@ struct Sphere : public Primitive {
         float cos_a = 1 - xi + xi * cmax;
         float sin_a = sqrtf(1 - cos_a * cos_a);
         float phi = TWOPI * yi;
+        float sp, cp;
+        OIIO::fast_sincos(phi, &sp, &cp);
         Vec3 sw = (c - x).normalize(), su, sv;
         ortho(sw, su, sv);
         invpdf = TWOPI * (1 - cmax);
-        return (su * (cosf(phi) * sin_a) +
-                sv * (sinf(phi) * sin_a) +
+        return (su * (cp * sin_a) +
+                sv * (sp * sin_a) +
                 sw * cos_a).normalize();
     }
 

@@ -369,6 +369,23 @@ inline Dual2<float> fast_sin(const Dual2<float> &a)
     return Dual2<float> (sina, cosa * a.dx(), cosa * a.dy());
 }
 
+template <class T>
+inline void sincos(const Dual2<T> &a, Dual2<T> *sine, Dual2<T> *cosine)
+{
+	T sina, cosa;
+	OIIO::sincos(a.val(), &sina, &cosa);
+	*cosine = Dual2<T> (cosa, -sina * a.dx(), -sina * a.dy());
+	  *sine = Dual2<T> (sina,  cosa * a.dx(),  cosa * a.dy());
+}
+
+inline void fast_sincos(const Dual2<float> &a, Dual2<float> *sine, Dual2<float> *cosine)
+{
+	float sina, cosa;
+	OIIO::fast_sincos(a.val(), &sina, &cosa);
+	*cosine = Dual2<float> (cosa, -sina * a.dx(), -sina * a.dy());
+	  *sine = Dual2<float> (sina,  cosa * a.dx(),  cosa * a.dy());
+}
+
 // f(x) = tan(x), f'(x) = sec^2(x)
 template<class T>
 inline Dual2<T> tan (const Dual2<T> &a)

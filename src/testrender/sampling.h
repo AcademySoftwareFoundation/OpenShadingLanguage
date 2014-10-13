@@ -2,41 +2,11 @@
 
 #include "OSL/oslconfig.h"
 #include <OpenImageIO/fmath.h>
+#include <OpenImageIO/hash.h>
 #include <algorithm>
 #include <cmath>
 
 OSL_NAMESPACE_ENTER
-
-/// Tiny random number generator
-/// http://burtleburtle.net/bob/rand/smallprng.html
-struct Rng {
-  Rng(int s) {
-      a = 0xF1EA5EED;
-      b = c = d = s;
-      // do 20 rounds to mix up the initial state
-      for (s = 20; s--; (void)(float)*this);
-  }
-
-  operator float() {
-      // mix internal state
-      unsigned int e;
-      e = a - ((b << 27) | (b >>  5));
-      a = b ^ ((c << 17) | (c >> 15));
-      b = c + d;
-      c = d + e;
-      d = e + a;
-      // convert "d" to a float in the range [0,1)
-      union {
-          float f;
-          unsigned int i;
-      } x;
-      x.i = 0x3F800000 | (0x3F7FFFFF & d);
-      return x.f - 1.0f;
-  }
-
-private:
-  unsigned int a, b, c, d;
-};
 
 struct TangentFrame {
     // build frame from unit normal
@@ -92,7 +62,7 @@ struct Sampling {
             r = 0;
             phi = 0;
         }
-        OIIO::sincos(phi, &x, &y);
+        OIIO::fast_sincos(phi, &x, &y);
         x *= r;
         y *= r;
     }
@@ -105,5 +75,117 @@ struct Sampling {
         invpdf = float(M_PI) / cos_theta;
     }
 };
+
+// Simple deep stratified sampling using randomly shuffled LP points.
+// There are better ways to apply such constructions, but this is
+// reasonably compact and better than pure monte carlo sampling.
+struct Sampler {
+	Sampler(int px, int py, int si, int AA) : px(px), py(py), si(si), AA(AA), depth(0) {}
+
+	Vec2 get() {
+	    const uint32_t scramble_x = depth ? scramble(px, py, depth + 0) : 0;
+	    const uint32_t scramble_y = depth ? scramble(px, py, depth + 1) : 0;
+	    const uint32_t sample_idx = depth ? cmj_permute(si, AA * AA,
+	    									scramble(px, py, depth + 2)) : si;
+	    depth += 4; // advance depth for next call
+	    // fetch offset of scrambled LP pattern over the frame
+	    const int sx = sample_idx % AA;
+	    const int sy = sample_idx / AA;
+	    const uint32_t ex = (px * AA + sx) & 65535;
+	    const uint32_t ey = (py * AA + sy) & 65535;
+	    const uint32_t upper = (ex ^ (scramble_x >> 16)) << 16;
+	    const uint32_t lpUpper = ri_LP(upper) ^ scramble_y;
+	    const uint32_t delta = (ey << 16) ^ (lpUpper & 0xFFFF0000u);
+	    const uint32_t lower = ri_LP_inv(delta);
+	    const uint32_t index = upper | lower;
+	    const uint32_t x = index ^ scramble_x;
+	    const uint32_t y = lpUpper ^ delta;
+	    const float jx = (x - (ex << 16)) * (1 / 65536.0f);
+	    const float jy = (y - (ey << 16)) * (1 / 65536.0f);
+	    return Vec2((sx + jx) / AA, (sy + jy) / AA);
+	}
+
+private:
+	int px, py, si, AA, depth;
+
+	static inline uint32_t cmj_permute(uint32_t i, uint32_t l, uint32_t p) {
+		// in-place permuation generator
+		// "Correlated Multi-Jittered Sampling" by "Andrew Kensler"
+	    uint32_t w = l - 1;
+	    if ((l & w) == 0) {
+	        /* l is a power of two (fast) */
+	        i ^= p;
+	        i *= 0xe170893d;
+	        i ^= p >> 16;
+	        i ^= (i & w) >> 4;
+	        i ^= p >> 8;
+	        i *= 0x0929eb3f;
+	        i ^= p >> 23;
+	        i ^= (i & w) >> 1;
+	        i *= 1 | p >> 27;
+	        i *= 0x6935fa69;
+	        i ^= (i & w) >> 11;
+	        i *= 0x74dcb303;
+	        i ^= (i & w) >> 2;
+	        i *= 0x9e501cc3;
+	        i ^= (i & w) >> 2;
+	        i *= 0xc860a3df;
+	        i &= w;
+	        i ^= i >> 5;
+	        return (i + p) & w;
+	    } else {
+	        /* l is not a power of two (slow) */
+	        w |= w >> 1;
+	        w |= w >> 2;
+	        w |= w >> 4;
+	        w |= w >> 8;
+	        w |= w >> 16;
+	        do {
+	            i ^= p;
+	            i *= 0xe170893d;
+	            i ^= p >> 16;
+	            i ^= (i & w) >> 4;
+	            i ^= p >> 8;
+	            i *= 0x0929eb3f;
+	            i ^= p >> 23;
+	            i ^= (i & w) >> 1;
+	            i *= 1 | p >> 27;
+	            i *= 0x6935fa69;
+	            i ^= (i & w) >> 11;
+	            i *= 0x74dcb303;
+	            i ^= (i & w) >> 2;
+	            i *= 0x9e501cc3;
+	            i ^= (i & w) >> 2;
+	            i *= 0xc860a3df;
+	            i &= w;
+	            i ^= i >> 5;
+	        } while (i >= l);
+	        return (i + p) % l;
+	    }
+	}
+
+	static inline uint32_t ri_LP(uint32_t i) {
+	    uint32_t r = 0;
+	    for (uint32_t v = 1U << 31; i; i >>= 1, v |= v >> 1)
+	        if (i & 1)
+	            r ^= v;
+	    return r;
+	}
+
+	static inline uint32_t ri_LP_inv(uint32_t i) {
+	    uint32_t r = 0;
+	    for (uint32_t v = 3U << 30; i; i >>= 1, v >>= 1)
+	        if (i & 1)
+	            r ^= v;
+	    return r;
+	}
+
+	static inline uint32_t scramble(uint32_t a, uint32_t b, uint32_t c) {
+	    const int len = 3;
+	    const int seed = (0xdeadbeef + (len << 2) + 13);
+	    return OIIO::bjhash::bjfinal(a + seed, b + seed, c + seed);
+	}
+};
+
 
 OSL_NAMESPACE_EXIT

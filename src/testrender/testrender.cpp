@@ -404,7 +404,7 @@ float mis_weight(float invpdf, float otherpdf) {
     return 1 / (1 + otherpdf * otherpdf * invpdf * invpdf);
 }
 
-Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
+Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx) {
     Ray r = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
@@ -457,8 +457,9 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
         result.bsdf.prepare(sg, path_weight, b >= rr_depth);
 
         // get two random numbers
-        float xi = rand;
-        float yi = rand;
+        Vec2 s = sampler.get();
+        float xi = s.x;
+        float yi = s.y;
 
         // trace one ray to the background
         if (backgroundResolution > 0) {
@@ -517,22 +518,21 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
     return path_radiance;
 }
 
-Color3 antialias_pixel(int x, int y, Rng& rand, ShadingContext* ctx) {
+Color3 antialias_pixel(int x, int y, ShadingContext* ctx) {
     Color3 result(0, 0, 0);
-    float invaa = 1.0f / aa;
-    for (int ay = 0; ay < aa; ay++) {
-        for (int ax = 0; ax < aa; ax++) {
+    for (int ay = 0, si = 0; ay < aa; ay++) {
+        for (int ax = 0; ax < aa; ax++, si++) {
+        	Sampler sampler(x, y, si, aa);
             // jitter pixel coordinate [0,1)^2
-            float jx = (ax + rand) * invaa;
-            float jy = (ay + rand) * invaa;
+        	Vec2 j = sampler.get();
             // warp distribution to approximate a tent filter [-1,+1)^2
-            jx *= 2; jx = jx < 1 ? sqrtf(jx) - 1 : 1 - sqrtf(2 - jx);
-            jy *= 2; jy = jy < 1 ? sqrtf(jy) - 1 : 1 - sqrtf(2 - jy);
+            j.x *= 2; j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
+            j.y *= 2; j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
             // trace eye ray (apply jitter from center of the pixel)
-            result += subpixel_radiance(x + 0.5f + jx, y + 0.5f + jy, rand, ctx);
+            result += subpixel_radiance(x + 0.5f + j.x, y + 0.5f + j.y, sampler, ctx);
         }
     }
-    return result * (invaa * invaa);
+    return result / float(aa * aa);
 }
 
 void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
@@ -556,10 +556,8 @@ void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
 
     int y;
     while (counter.getnext(y)) {
-        for (int x = 0, i = xres * y;  x < xres;  ++x, ++i) {
-            Rng rand(i);
-            pixels[i] = antialias_pixel(x, y, rand, ctx);
-        }
+        for (int x = 0, i = xres * y;  x < xres;  ++x, ++i)
+            pixels[i] = antialias_pixel(x, y, ctx);
     }
     // We're done shading with this context.
     shadingsys->release_context (ctx);

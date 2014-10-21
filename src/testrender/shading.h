@@ -59,7 +59,6 @@ struct CompositeBSDF {
                 rx = (rx - accum) / pdfs[i];
                 rx = std::min(rx, 0.99999994f); // keep result in [0,1)
                 Color3 result = weights[i] * bsdfs[i]->sample(sg, rx, ry, wi, invpdf);
-                invpdf /= pdfs[i];
                 // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
                 Color3 other_result(0, 0, 0);
                 float other_pdfs = 0;
@@ -70,7 +69,7 @@ struct CompositeBSDF {
                     other_pdfs += pdfs[j] * bsdf_pdf;
                 }
                 // combine the result of the other bsdfs by MIS
-                float d = 1 / (1 + invpdf * other_pdfs);
+                float d = 1 / (pdfs[i] + invpdf * other_pdfs);
                 result += invpdf * other_result;
                 invpdf *= d;
                 return result * d;

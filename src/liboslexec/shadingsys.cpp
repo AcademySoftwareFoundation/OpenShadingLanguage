@@ -505,7 +505,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
-      m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(true),
+      m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(1),
       m_opt_fold_getattribute(true),
       m_opt_middleman(true),
       m_optimize_nondebug(false),
@@ -1483,7 +1483,10 @@ ShadingSystemImpl::ShaderGroupEnd (void)
             }
         }
 
-        merge_instances (*m_curgroup);
+        // Merge instances now if they really want it bad, otherwise wait
+        // until we optimize the group.
+        if (m_opt_merge_instances >= 2)
+            merge_instances (*m_curgroup);
     }
 
     {

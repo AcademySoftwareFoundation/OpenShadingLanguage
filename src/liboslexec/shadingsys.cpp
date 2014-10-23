@@ -1547,28 +1547,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
             ShaderInstance *inst = (*m_curgroup)[layer];
             if (! inst)
                 continue;
-            if (m_lazylayers) {
-                // lazylayers option turned on: unconditionally run shaders
-                // with no outgoing connections ("root" nodes, including the
-                // last in the group) or shaders that alter global variables
-                // (unless 'lazyglobals' is turned on).
-                if (m_lazyglobals)
-                    inst->run_lazily (inst->outgoing_connections());
-                else
-                    inst->run_lazily (inst->outgoing_connections() &&
-                                      ! inst->writes_globals());
-#if 0
-                // Suggested warning below... but are there use cases where
-                // people want these to run (because they will extract the
-                // results they want from output params)?
-                if (! inst->outgoing_connections() && ! inst->writes_globals())
-                    warning ("Layer \"%s\" (shader %s) will run even though it appears to have no used results",
-                             inst->layername().c_str(), inst->shadername().c_str());
-#endif
-            } else {
-                // lazylayers option turned off: never run lazily
-                inst->run_lazily (false);
-            }
+            inst->compute_run_lazily ();
         }
 
         // Merge instances now if they really want it bad, otherwise wait
@@ -1693,6 +1672,8 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     ConnectedParam srccon = decode_connected_param(srcparam, srclayer, srcinst);
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
     if (! (srccon.valid() && dstcon.valid())) {
+        error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection",
+               srccon.type, srcparam, dstcon.type, dstparam);
         return false;
     }
 
@@ -1704,9 +1685,9 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
         StructSpec *srcstruct = srccon.type.structspec();
         StructSpec *dststruct = dstcon.type.structspec();
         for (size_t i = 0;  i < (size_t)srcstruct->numfields();  ++i) {
-            std::string s = Strutil::format("%s.%s", srcparam, srcstruct->field(i).name.c_str());
-            std::string d = Strutil::format("%s.%s", dstparam, dststruct->field(i).name.c_str());
-            ConnectShaders (srclayer, s.c_str(), dstlayer, d.c_str());
+            std::string s = Strutil::format("%s.%s", srcparam, srcstruct->field(i).name);
+            std::string d = Strutil::format("%s.%s", dstparam, dststruct->field(i).name);
+            ConnectShaders (srclayer, s, dstlayer, d);
         }
         return true;
     }

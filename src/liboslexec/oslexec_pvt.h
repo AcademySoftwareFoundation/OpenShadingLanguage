@@ -522,6 +522,9 @@ public:
     bool run_lazily () const { return m_run_lazily; }
     void run_lazily (bool lazy) { m_run_lazily = lazy; }
 
+    /// Figure out whether the instance runs lazily, set m_run_lazily.
+    void compute_run_lazily ();
+
     /// Does this instance have any outgoing connections?
     ///
     bool outgoing_connections () const { return m_outgoing_connections; }

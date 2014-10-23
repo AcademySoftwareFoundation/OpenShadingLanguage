@@ -2713,11 +2713,14 @@ RuntimeOptimizer::run ()
             collapse_syms ();
             collapse_ops ();
         }
-        if (debug()) {
+        inst()->compute_run_lazily ();
+        if (debug() && !inst()->unused()) {
             track_variable_lifetimes ();
             std::cout << "After optimizing layer " << layer << " " 
-                      << inst()->layername() << " (" << inst()->id()
-                      << "): \n" << inst()->print() 
+                      << inst()->layername() << " (" << inst()->id() << ") :\n"
+                      << " connections in=" << inst()->nconnections()
+                      << " out? " << (inst()->outgoing_connections()?'y':'n')
+                      << "\n" << inst()->print() 
                       << "\n--------------------------------\n\n";
             std::cout.flush ();
         }

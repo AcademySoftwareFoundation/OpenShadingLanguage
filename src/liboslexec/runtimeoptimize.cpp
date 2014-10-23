@@ -2630,6 +2630,9 @@ RuntimeOptimizer::run ()
         shadingcontext()->info ("About to optimize shader group %s (%d layers):",
                            group().name(), nlayers);
 
+    if (shadingsys().m_opt_merge_instances == 1)
+        shadingsys().merge_instances (group());
+
     m_params_holding_globals.resize (nlayers);
 
     // Optimize each layer, from first to last
@@ -2710,11 +2713,14 @@ RuntimeOptimizer::run ()
             collapse_syms ();
             collapse_ops ();
         }
-        if (debug()) {
+        inst()->compute_run_lazily ();
+        if (debug() && !inst()->unused()) {
             track_variable_lifetimes ();
             std::cout << "After optimizing layer " << layer << " " 
-                      << inst()->layername() << " (" << inst()->id()
-                      << "): \n" << inst()->print() 
+                      << inst()->layername() << " (" << inst()->id() << ") :\n"
+                      << " connections in=" << inst()->nconnections()
+                      << " out? " << (inst()->outgoing_connections()?'y':'n')
+                      << "\n" << inst()->print() 
                       << "\n--------------------------------\n\n";
             std::cout.flush ();
         }

@@ -414,6 +414,34 @@ ShaderInstance::print ()
 
 
 
+void
+ShaderInstance::compute_run_lazily ()
+{
+    if (shadingsys().m_lazylayers) {
+        // lazylayers option turned on: unconditionally run shaders with no
+        // outgoing connections ("root" nodes, including the last in the
+        // group) or shaders that alter global variables (unless
+        // 'lazyglobals' is turned on).
+        if (shadingsys().m_lazyglobals)
+            run_lazily (outgoing_connections());
+        else
+            run_lazily (outgoing_connections() && ! writes_globals());
+#if 0
+        // Suggested warning below... but are there use cases where people
+        // want these to run (because they will extract the results they
+        // want from output params)?
+        if (! outgoing_connections() && ! writes_globals())
+            shadingsys().warning ("Layer \"%s\" (shader %s) will run even though it appears to have no used results",
+                     layername(), shadername());
+#endif
+    } else {
+        // lazylayers option turned off: never run lazily
+        run_lazily (false);
+    }
+}
+
+
+
 // Are the two vectors equivalent(a[i],b[i]) in each of their members?
 template<class T>
 inline bool

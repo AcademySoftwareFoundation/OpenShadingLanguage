@@ -79,6 +79,36 @@ struct PerThreadInfo
     std::stack<ShadingContext *> context_pool;
 };
 
+
+
+namespace Strings {
+    extern ustring camera, common, object, shader, screen, NDC;
+    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
+    extern ustring null, default_;
+    extern ustring label;
+    extern ustring sidedness, front, back, both;
+    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
+    extern ustring Ci;
+    extern ustring width, swidth, twidth, rwidth;
+    extern ustring blur, sblur, tblur, rblur;
+    extern ustring wrap, swrap, twrap, rwrap;
+    extern ustring black, clamp, periodic, mirror;
+    extern ustring firstchannel, fill, alpha;
+    extern ustring interp, closest, linear, cubic, smartcubic;
+    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern ustring cell, cellnoise, pcellnoise;
+    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
+    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
+    extern ustring op_dowhile, op_for, op_while, op_exit;
+    extern ustring subimage, subimagename;
+    extern ustring missingcolor, missingalpha;
+    extern ustring end;
+    extern ustring uninitialized_string;
+}; // namespace Strings
+
+
+
 namespace pvt {
 
 // forward definitions
@@ -354,6 +384,10 @@ struct ConnectedParam {
         return param == p.param && arrayindex == p.arrayindex &&
             channel == p.channel && type == p.type;
     }
+    bool operator!= (const ConnectedParam &p) const {
+        return param != p.param || arrayindex != p.arrayindex ||
+            channel != p.channel || type != p.type;
+    }
 
     // Is it a complete connection, not partial?
     bool is_complete () const {
@@ -376,6 +410,9 @@ struct Connection {
     { }
     bool operator== (const Connection &c) const {
         return srclayer == c.srclayer && src == c.src && dst == c.dst;
+    }
+    bool operator!= (const Connection &c) const {
+        return srclayer != c.srclayer || src != c.src || dst != c.dst;
     }
 };
 
@@ -485,6 +522,9 @@ public:
     bool run_lazily () const { return m_run_lazily; }
     void run_lazily (bool lazy) { m_run_lazily = lazy; }
 
+    /// Figure out whether the instance runs lazily, set m_run_lazily.
+    void compute_run_lazily ();
+
     /// Does this instance have any outgoing connections?
     ///
     bool outgoing_connections () const { return m_outgoing_connections; }
@@ -554,6 +594,14 @@ public:
     /// Does it appear that the layer is completely unused?
     ///
     bool unused () const { return run_lazily() && ! outgoing_connections(); }
+
+    /// Is the instance reduced to nothing but an 'end' instruction and no
+    /// symbols?
+    bool empty_instance () const {
+        return (symbols().size() == 0 &&
+                (ops().size() == 0 ||
+                 (ops().size() == 1 && ops()[0].opname() == Strings::end)));
+    }
 
     /// Make our own version of the code and args from the master.
     ///
@@ -941,7 +989,7 @@ private:
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Special 'mix' optimizations
-    bool m_opt_merge_instances;           ///< Merge identical instances?
+    char m_opt_merge_instances;           ///< Merge identical instances?
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
@@ -1439,34 +1487,6 @@ private:
     mutable std::vector<ErrorItem> m_buffered_errors;
 };
 
-
-
-
-
-namespace Strings {
-    extern ustring camera, common, object, shader, screen, NDC;
-    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
-    extern ustring null, default_;
-    extern ustring label;
-    extern ustring sidedness, front, back, both;
-    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
-    extern ustring Ci;
-    extern ustring width, swidth, twidth, rwidth;
-    extern ustring blur, sblur, tblur, rblur;
-    extern ustring wrap, swrap, twrap, rwrap;
-    extern ustring black, clamp, periodic, mirror;
-    extern ustring firstchannel, fill, alpha;
-    extern ustring interp, closest, linear, cubic, smartcubic;
-    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
-    extern ustring cell, cellnoise, pcellnoise;
-    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
-    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern ustring op_dowhile, op_for, op_while, op_exit;
-    extern ustring subimage, subimagename;
-    extern ustring missingcolor, missingalpha;
-    extern ustring uninitialized_string;
-}; // namespace Strings
 
 
 

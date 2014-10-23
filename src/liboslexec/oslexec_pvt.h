@@ -354,6 +354,10 @@ struct ConnectedParam {
         return param == p.param && arrayindex == p.arrayindex &&
             channel == p.channel && type == p.type;
     }
+    bool operator!= (const ConnectedParam &p) const {
+        return param != p.param || arrayindex != p.arrayindex ||
+            channel != p.channel || type != p.type;
+    }
 
     // Is it a complete connection, not partial?
     bool is_complete () const {
@@ -376,6 +380,9 @@ struct Connection {
     { }
     bool operator== (const Connection &c) const {
         return srclayer == c.srclayer && src == c.src && dst == c.dst;
+    }
+    bool operator!= (const Connection &c) const {
+        return srclayer != c.srclayer || src != c.src || dst != c.dst;
     }
 };
 

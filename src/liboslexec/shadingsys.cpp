@@ -481,6 +481,7 @@ ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
 ustring op_exit("exit");
 ustring subimage("subimage"), subimagename("subimagename");
 ustring missingcolor("missingcolor"), missingalpha("missingalpha");
+ustring end("end");
 ustring uninitialized_string("!!!uninitialized!!!");
 };
 

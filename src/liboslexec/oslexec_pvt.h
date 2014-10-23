@@ -79,6 +79,36 @@ struct PerThreadInfo
     std::stack<ShadingContext *> context_pool;
 };
 
+
+
+namespace Strings {
+    extern ustring camera, common, object, shader, screen, NDC;
+    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
+    extern ustring null, default_;
+    extern ustring label;
+    extern ustring sidedness, front, back, both;
+    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
+    extern ustring Ci;
+    extern ustring width, swidth, twidth, rwidth;
+    extern ustring blur, sblur, tblur, rblur;
+    extern ustring wrap, swrap, twrap, rwrap;
+    extern ustring black, clamp, periodic, mirror;
+    extern ustring firstchannel, fill, alpha;
+    extern ustring interp, closest, linear, cubic, smartcubic;
+    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
+    extern ustring cell, cellnoise, pcellnoise;
+    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
+    extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
+    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
+    extern ustring op_dowhile, op_for, op_while, op_exit;
+    extern ustring subimage, subimagename;
+    extern ustring missingcolor, missingalpha;
+    extern ustring end;
+    extern ustring uninitialized_string;
+}; // namespace Strings
+
+
+
 namespace pvt {
 
 // forward definitions
@@ -561,6 +591,14 @@ public:
     /// Does it appear that the layer is completely unused?
     ///
     bool unused () const { return run_lazily() && ! outgoing_connections(); }
+
+    /// Is the instance reduced to nothing but an 'end' instruction and no
+    /// symbols?
+    bool empty_instance () const {
+        return (symbols().size() == 0 &&
+                (ops().size() == 0 ||
+                 (ops().size() == 1 && ops()[0].opname() == Strings::end)));
+    }
 
     /// Make our own version of the code and args from the master.
     ///
@@ -1446,34 +1484,6 @@ private:
     mutable std::vector<ErrorItem> m_buffered_errors;
 };
 
-
-
-
-
-namespace Strings {
-    extern ustring camera, common, object, shader, screen, NDC;
-    extern ustring rgb, RGB, hsv, hsl, YIQ, XYZ, xyz, xyY;
-    extern ustring null, default_;
-    extern ustring label;
-    extern ustring sidedness, front, back, both;
-    extern ustring P, I, N, Ng, dPdu, dPdv, u, v, time, dtime, dPdtime, Ps;
-    extern ustring Ci;
-    extern ustring width, swidth, twidth, rwidth;
-    extern ustring blur, sblur, tblur, rblur;
-    extern ustring wrap, swrap, twrap, rwrap;
-    extern ustring black, clamp, periodic, mirror;
-    extern ustring firstchannel, fill, alpha;
-    extern ustring interp, closest, linear, cubic, smartcubic;
-    extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
-    extern ustring cell, cellnoise, pcellnoise;
-    extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
-    extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
-    extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
-    extern ustring op_dowhile, op_for, op_while, op_exit;
-    extern ustring subimage, subimagename;
-    extern ustring missingcolor, missingalpha;
-    extern ustring uninitialized_string;
-}; // namespace Strings
 
 
 

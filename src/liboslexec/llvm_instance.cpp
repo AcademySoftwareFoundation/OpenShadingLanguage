@@ -720,7 +720,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // that are closures (to avoid weird order of layer eval problems).
         for (int i = 0;  i < group().nlayers();  ++i) {
             ShaderInstance *gi = group()[i];
-            if (gi->unused())
+            if (gi->unused() || gi->empty_instance())
                 continue;
             FOREACH_PARAM (Symbol &sym, gi) {
                if (sym.typespec().is_closure_based()) {
@@ -943,14 +943,15 @@ BackendLLVM::run ()
     int nlayers = group().nlayers();
     m_layer_remap.resize (nlayers);
     m_num_used_layers = 0;
-    for (int layer = 0;  layer < group().nlayers();  ++layer) {
+    for (int layer = 0;  layer < nlayers;  ++layer) {
         bool lastlayer = (layer == (nlayers-1));
-        if (! group()[layer]->unused() || lastlayer)
+        if (lastlayer ||
+            (! group()[layer]->unused() && !group()[layer]->empty_instance()))
             m_layer_remap[layer] = m_num_used_layers++;
         else
             m_layer_remap[layer] = -1;
     }
-    shadingsys().m_stat_empty_instances += group().nlayers()-m_num_used_layers;
+    shadingsys().m_stat_empty_instances += nlayers - m_num_used_layers;
 
     initialize_llvm_group ();
 

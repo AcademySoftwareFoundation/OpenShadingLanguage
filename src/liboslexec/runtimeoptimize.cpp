@@ -2630,6 +2630,9 @@ RuntimeOptimizer::run ()
         shadingcontext()->info ("About to optimize shader group %s (%d layers):",
                            group().name(), nlayers);
 
+    if (shadingsys().m_opt_merge_instances == 1)
+        shadingsys().merge_instances (group());
+
     m_params_holding_globals.resize (nlayers);
 
     // Optimize each layer, from first to last

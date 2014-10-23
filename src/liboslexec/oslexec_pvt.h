@@ -941,7 +941,7 @@ private:
     bool m_opt_coalesce_temps;            ///< Coalesce temporary variables?
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Special 'mix' optimizations
-    bool m_opt_merge_instances;           ///< Merge identical instances?
+    char m_opt_merge_instances;           ///< Merge identical instances?
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!

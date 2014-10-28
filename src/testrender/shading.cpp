@@ -647,7 +647,7 @@ void process_closure (ShadingResult& result, const ClosureColor* closure, const 
            const ClosureComponent* comp = (const ClosureComponent*) closure;
            Color3 cw = w * comp->w;
            if (comp->id == EMISSION_ID)
-               result.Le += float(M_1_PI) * cw;
+               result.Le += cw;
            else if (!light_only) {
                bool ok = false;
                switch (comp->id) {

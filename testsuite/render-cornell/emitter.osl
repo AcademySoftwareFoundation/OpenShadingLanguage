@@ -47,5 +47,5 @@ emitter
     // (which may be changed to affect shadow softness without altering
     // overall illumination).  N.B.: The total power is BEFORE Cs
     // filters the color!
-    Ci = (power / surfacearea()) * Cs * emission();
+    Ci = (power / (M_PI * surfacearea())) * Cs * emission();
 }

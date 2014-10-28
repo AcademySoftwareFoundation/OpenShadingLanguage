@@ -3181,9 +3181,9 @@ implemented per the ITU-R standard as $0.2126 R + 0.7152 G + 0.0722 B$.
 
 The {\cf blackbody()} function returns the blackbody emission (the
 incandescent glow of warm bodies) expected from a material of the given
-temperature in Kelvin, in units of $W/m^2$.  These are the appropriate
-units to multiply by {\cf emission()} to have a physically-correct
-result.
+temperature in Kelvin, in units of $W/m^2$. Note that {\cf emission()} has units
+of radiance, so will require a scaling factor of $1/\pi$ on surfaces, and
+$1/4\pi$ on volumes to convert to $W/m^2/sr$.
 \apiend
 
 \apiitem{color {\ce wavelength_color} (float wavelength_nm)}
@@ -4578,16 +4578,14 @@ normal. When called in the context of a volume shader group, it implies
 that light is emitted evenly in all directions around the point being
 shaded.
 
-The emission closure returns a radiance value (e.g.,
-$\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$) that, integrated
-over all angles, yields a power density of 1.0 (e.g.,
-$\mathrm{W}\cdot\mathrm{m}^{-2}$). This may be multiplied by a scalar to
-adjust the desired power density of your light.
+The weight of the emission closure has units of radiance (e.g.,
+$\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$). This means that a surface
+directly seen by the camera will directly reproduce the closure weight in the
+final pixel, regardless of being a surface or a volume.
 
 For surface emission, If you divide {\cf emission()} by 
-{\cf surfacearea()}, then you can easily specify the total emissive
-power of the light (e.g., $\mathrm{W}$), regardless of its physical
-size.
+{\cf surfacearea() * M_PI}, then you can easily specify the total emissive
+power of the light (e.g., $\mathrm{W}$), regardless of its physical size.
 \apiend
 
 

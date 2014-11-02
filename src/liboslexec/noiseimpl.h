@@ -575,7 +575,7 @@ inline T grad (I hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
     I h = hash & 15;
     T u = select (h<8, x, y);
-    T v = select (h<4, y, select (h==I(12)|h==I(14), x, z));
+    T v = select (h<4, y, select ((h==I(12))|(h==I(14)), x, z));
     return negate_if(u,h&1) + negate_if(v,h&2);
 }
 

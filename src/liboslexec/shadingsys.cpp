@@ -2334,7 +2334,7 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
     }
     for (size_t i = 0;  i < ngroups;  ++i) {
         // Assign to threads based on mod of totalthreads
-        if ((i % totalthreads) == mythread) {
+        if ((i % totalthreads) == (unsigned)mythread) {
             ShaderGroupRef group;
             {
                 spin_lock lock (m_all_shader_groups_mutex);

@@ -542,8 +542,8 @@ OSL_SHADEOP void osl_step_vvv (void *result, void *edge, void *x) {
 
 }
 
-OSL_SHADEOP int osl_isnan_if (float f) { return isnan (f); }
-OSL_SHADEOP int osl_isinf_if (float f) { return isinf (f); }
+OSL_SHADEOP int osl_isnan_if (float f) { return OIIO::isnan (f); }
+OSL_SHADEOP int osl_isinf_if (float f) { return OIIO::isinf (f); }
 OSL_SHADEOP int osl_isfinite_if (float f) { return OIIO::isfinite (f); }
 
 

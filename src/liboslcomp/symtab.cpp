@@ -188,6 +188,8 @@ Symbol::print (std::ostream &out, int maxvals) const
             out << " down-connected";
         if (!connected() && !connected_down())
             out << " unconnected";
+        if (renderer_output())
+            out << " renderer-output";
         if (symtype() == SymTypeParam && ! lockgeom())
             out << " lockgeom=0";
     }

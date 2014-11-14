@@ -1120,7 +1120,7 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
             return false;   // Asked not do do this optimization
         if (A->connected_down())
             return false;   // Connected to something downstream
-        if (shadingsys().is_renderer_output (A->name(), &group()))
+        if (A->renderer_output())
             return false;   // This is a renderer output -- don't cull it
     }
 
@@ -1282,8 +1282,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // If it's also never read before this assignment and isn't a
         // designated renderer output (which we obviously must write!), just
         // replace its default value entirely and get rid of the assignment.
-        if (R->firstread() > opnum &&
-                ! shadingsys().is_renderer_output (R->name(), &group()) &&
+        if (R->firstread() > opnum && ! R->renderer_output() &&
                 m_opt_elide_unconnected_outputs) {
             make_param_use_instanceval (R, "- written once, with a constant, before any reads");
             replace_param_value (R, A->data(), A->typespec());
@@ -1407,7 +1406,7 @@ public:
                 return false;   // Asked not to do this optimization
             if (sym.connected_down())
                 return false;   // Connected to something downstream
-            if (m_rop.shadingsys().is_renderer_output (sym.name(), &m_rop.group()))
+            if (sym.renderer_output())
                 return false;   // This is a renderer output
             return (sym.lastuse() < sym.initend());
         }
@@ -2641,7 +2640,7 @@ RuntimeOptimizer::run ()
         set_inst (layer);
         if (inst()->unused())
             continue;
-        inst()->copy_code_from_master ();
+        inst()->copy_code_from_master (group());
         if (debug() && optimize() >= 1) {
             std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 

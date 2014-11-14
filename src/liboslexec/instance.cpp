@@ -308,7 +308,7 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
 
 
 void
-ShaderInstance::copy_code_from_master ()
+ShaderInstance::copy_code_from_master (ShaderGroup &group)
 {
     ASSERT (m_instops.empty() && m_instargs.empty());
     // reserve with enough room for a few insertions
@@ -323,17 +323,20 @@ ShaderInstance::copy_code_from_master ()
     m_instsymbols = m_master->m_symbols;
 
     // Copy the instance override data
+    // Also set the renderer_output flags where needed.
     ASSERT (m_instoverrides.size() == (size_t)std::max(0,lastparam()));
     ASSERT (m_instsymbols.size() >= (size_t)std::max(0,lastparam()));
     if (m_instoverrides.size()) {
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
+            Symbol *si = &m_instsymbols[i];
             if (m_instoverrides[i].valuesource() != Symbol::DefaultVal) {
-                Symbol *si = &m_instsymbols[i];
                 si->data (param_storage(i));
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
                 si->lockgeom (m_instoverrides[i].lockgeom());
             }
+            if (shadingsys().is_renderer_output (layername(), si->name(), &group))
+                si->renderer_output (true);
         }
     }
     off_t symmem = vectorbytes(m_instsymbols) - vectorbytes(m_instoverrides);

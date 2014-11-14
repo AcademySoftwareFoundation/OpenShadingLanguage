@@ -605,7 +605,7 @@ public:
 
     /// Make our own version of the code and args from the master.
     ///
-    void copy_code_from_master ();
+    void copy_code_from_master (ShaderGroup &group);
 
     /// Small data structure to hold just the symbol info that the
     /// instance overrides from the master copy.
@@ -905,7 +905,8 @@ public:
     void pointcloud_stats (int search, int get, int results, int writes=0);
 
     /// Is the named symbol among the renderer outputs?
-    bool is_renderer_output (ustring name, ShaderGroup *group) const;
+    bool is_renderer_output (ustring layername, ustring paramname,
+                             ShaderGroup *group) const;
 
     /// Serialize/pickle a group description into text.
     std::string serialize_group (ShaderGroup *group);

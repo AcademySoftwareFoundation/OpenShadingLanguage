@@ -786,7 +786,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
             continue;
         // Skip if it's never read and isn't connected
         if (! s.everread() && ! s.connected_down() && ! s.connected()
-              && ! shadingsys().is_renderer_output(s.name(), &group()))
+              && ! s.renderer_output())
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);

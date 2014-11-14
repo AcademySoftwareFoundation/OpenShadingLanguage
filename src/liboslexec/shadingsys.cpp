@@ -2168,15 +2168,20 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 bool
-ShadingSystemImpl::is_renderer_output (ustring name, ShaderGroup *group) const
+ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
+                                       ShaderGroup *group) const
 {
     if (group) {
         const std::vector<ustring> &aovs (group->m_renderer_outputs);
-        if (std::find (aovs.begin(), aovs.end(), name) != aovs.end())
+        if (std::find (aovs.begin(), aovs.end(), paramname) != aovs.end())
+            return true;
+        // Try "layer.name"
+        ustring name2 = ustring::format ("%s.%s", layername, paramname);
+        if (std::find (aovs.begin(), aovs.end(), name2) != aovs.end())
             return true;
     }
     const std::vector<ustring> &aovs (m_renderer_outputs);
-    return std::find (aovs.begin(), aovs.end(), name) != aovs.end();
+    return std::find (aovs.begin(), aovs.end(), paramname) != aovs.end();
 }
 
 

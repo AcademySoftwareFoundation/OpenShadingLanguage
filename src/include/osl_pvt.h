@@ -447,7 +447,7 @@ public:
           m_name(name), m_typespec(datatype), m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
-          m_initialized(false), m_lockgeom(false),
+          m_initialized(false), m_lockgeom(false), m_renderer_output(false),
           m_valuesource(DefaultVal), m_free_data(false), m_fieldid(-1),
           m_scope(0), m_dataoffset(-1),
           m_node(declaration_node), m_alias(NULL),
@@ -630,6 +630,9 @@ public:
     bool lockgeom () const { return m_lockgeom; }
     void lockgeom (bool lock) { m_lockgeom = lock; }
 
+    bool renderer_output () const { return m_renderer_output; }
+    void renderer_output (bool v) { m_renderer_output = v; }
+
     bool is_constant () const { return symtype() == SymTypeConst; }
 
     /// Stream output
@@ -647,6 +650,7 @@ protected:
     unsigned m_connected_down:1;///< Connected to a later/downtream layer
     unsigned m_initialized:1;   ///< If a param, has it been initialized?
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
+    unsigned m_renderer_output:1; ///< Is this sym a renderer output?
     char m_valuesource;         ///< Where did the value come from?
     bool m_free_data;           ///< Free m_data upon destruction?
     short m_fieldid;            ///< Struct field of this var (or -1)

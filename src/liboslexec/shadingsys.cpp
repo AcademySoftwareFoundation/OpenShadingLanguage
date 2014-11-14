@@ -2387,13 +2387,15 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     int nlayers = group.nlayers();
 
     // Loop over all layers...
-    for (int a = 0;  a < nlayers;  ++a) {
+    for (int a = 0;  a < nlayers-1;  ++a) {
         if (group[a]->unused())    // Don't merge a layer that's not used
             continue;
         // Check all later layers...
         for (int b = a+1;  b < nlayers;  ++b) {
             if (group[b]->unused())    // Don't merge a layer that's not used
                 continue;
+            if (b == nlayers-1)   // Don't merge the last layer -- causes
+                continue;         // many tears because it's the group entry
 
             // Now we have two used layers, a and b, to examine.
             // See if they are mergeable (identical).  All the heavy

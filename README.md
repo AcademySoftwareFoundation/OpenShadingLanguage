@@ -325,9 +325,10 @@ The main developers of OSL are (in order of joining the project):
 
 Additionally, many others have contributed fixes and other small
 changes: Shane Ambler, Martijn Berger, Matthaus G. Chajdas, Thomas
-Dinges, Sven-Hendrik Haase, Ronan Keryell, Bastien Montagne, Erich
-Ocean, Mikko Ohtamaa, Alex Schworer, Alexander von Knorring. (Listed
-alphabetically; if we've left anybody out, please let us know.)
+Dinges, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, Ronan Keryell,
+Bastien Montagne, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Alexander
+von Knorring. (Listed alphabetically; if we've left anybody out, please
+let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

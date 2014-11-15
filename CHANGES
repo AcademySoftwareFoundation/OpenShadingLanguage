@@ -9,6 +9,10 @@ Language, standard libary, and compiler changes (for shader writers):
 * We have clarified that shader metadata may be arrays (still not structs
   or closures) and fixed the implementation to support this (in addition
   to several other ways that metadata was brittle). (1.6.2)
+* Spec clarification: emission() has units of radiance, so a surface
+  directly seen by the camera will directly reproduce the closure weight
+  in the final pixel, regardless of it being a surface or volume. Thus,
+  you don't need to weight it by PI. #427 (1.6.2)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem attribute int "profile", if set to 1, will include
@@ -29,6 +33,10 @@ API changes, new options, new ShadingSystem features (for renderer writers):
      "globals_needed". This could be useful for renderers for which
      computing those globals is very expensive; examining which are truly
      needed and only computing those. (#401) (1.6.0)
+* It is now possible to specify per-group "renderer_outputs" in the form
+  "layername.paramname", thus designating a parameter of a specific layer
+  as a render output that should be preserved, but excluding identically
+  named output variables in other layers. #430 (1.6.2)
 
 Performance improvements:
 * Many noise() varieties have been sped up significantly on
@@ -37,7 +45,7 @@ Performance improvements:
   when supplying derivatives as well, higher speedups the higher the
   dimensionality of the domain. We're seeing 2x-3x improvement for
   noise(point), depending on the specific variety, 3x-4x speedup for 4D
-  noise varieties. #415 #422 (1.6.1, 1.6.2)
+  noise varieties. #415 #422 #423 (1.6.1, 1.6.2)
 * Change many transcendental functions (sin, cos, exp, etc) to use
   approximations that are must faster than the 100% correct versions in
   libm. The new ones may differ from the old in the last decimal place,
@@ -52,6 +60,11 @@ Bug fixes and other improvements:
 * oslc now properly catches and issues error messages if you define a struct
   with duplicate field names. #398 (1.6.0)
 * Some math speedups (especially those involving sqrt). (1.6.0)
+* Improved detection of shader groups that optimize away to nothing. (1.6.2)
+* Fix of possible (but never reported) bug with instancing merging.
+  #431 (1.6.2)
+* Fix incorrect oslc code generation when assigining an element of an
+  array-of-structs to another element of array-of-structs. #432 (1.6.2)
 
 Under the hood:
 
@@ -64,9 +77,14 @@ Build & test system improvements and developer goodies:
 * Changes to build correctly against LLVM 3.5, though please note that
   using LLVM 3.5 seems to require C++11. If you have C++98 toolchain, then
   please continue using LLVM 3.4. #412 (1.6.0)
+* testrender improvements: update the microfacet models to the latest
+  improved visible normal sampling technique of d'Eon & Heitz, stratified
+  sampling, simplification of Oren-Nayar, and speed improvements.
+  #425 (1.6.2)
 
 Documentation:
-
+* Short chapter added to spec describing the syntax of our serialization
+  protocol.
 
 
 

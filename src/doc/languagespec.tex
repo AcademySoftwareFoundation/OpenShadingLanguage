@@ -61,8 +61,8 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 14 Jul, 2014 \\
-~ (with corrections, 2 Oct 2014)
+\date{{\large Date: 14 Nov, 2014 \\
+%~ (with corrections, 2 Oct 2014)
 }
 \bigskip
 \bigskip
@@ -516,6 +516,26 @@ it might be done.}:
     ConnectShaders ("gam2", "Cout", "wood1", "grain")
     ShaderGroupEnd ()
 \end{code}
+
+\noindent Or, expressed as serialized text (as detailed in
+Appendix~\ref{chap:serialize}):
+
+\begin{code}
+    param string name "rings.tx" ;
+    shader "texturemap" "tex1" ;
+    param string name "grain.tx" ;
+    shader "texturemap" "tex2" ;
+    param float gam 2.2 ;
+    shader "gamma" "gam1" ;
+    param float gam 1.0 ;
+    shader "gamma" "gam2" ;
+    shader "wood" "wood1" ;
+    connect tex1.Cout gam1.Cin ;
+    connect tex2.Cout gam2.Cin ;
+    connect gam1.Cout wood1.rings ;
+    connect gam2.Cout wood1.grain ;
+\end{code}
+
 
 
 \subsection*{Geometric primitives}
@@ -5195,6 +5215,106 @@ nothing (empty, no token).
 \end{grammar}
 
 
+\chapter{Describing shader groups}
+\label{chap:describingshadergroups}
+\label{sec:serialize}
+
+Below, we propose a simple grammar giving a standard way to serialize (i.e.,
+express as text) a full shader group, including instance values and
+connectivity of the shader layers. There are only three
+statements/operations: set an instance value, make a shader instance, and
+connect two instances.
+
+\apiitem{{\ce param} {\rm \emph{type} \emph{paramname} \emph{value...}} {\ce ;} \\
+{\ce param} {\rm \emph{type} \emph{paramname} \emph{value...}} {\ce [[}{\rm\emph{metadata...}}{\ce ]] ;} }
+
+Declare an instance value of a shader parameter to be applied to the next
+{\cf shader} statement. We refer to the parameter values set, which have
+not yet had their shader declared, as \emph{pending parameters}.
+
+The \emph{paramname} is the name of the parameter whose instance values are
+being specified.
+
+The \emph{type} is one of the basic numeric or
+string data types described in Chapter~\ref{chap:types} ({\cf int}, {\cf
+float}, {\cf color}, {\cf point}, {\cf vector}, {\cf normal}, {\cf matrix},
+or {\cf string}), or an array thereof (indicated by the usual notation of
+{\cf [{\rm\emph{size}}]}). The \emph{type} must match the declared type
+of the parameter in the shader.
+
+The actual values are listed individually, with multiple values (in the
+case of an array or an aggregate such as a \color) simply separated by
+whitespace. If fewer values are supplied than the total number of array
+elements or aggregate components, the remainder will be understood to be
+filled with 0 values. String values must be enclosed in double quotes
+({\cf "like this"}).
+
+The {\cf param} statement is terminated by a semicolon ({\cf ;}).
+
+Optionally, metadata hints may be supplied enclosed by double brackets,
+immediately before the semicolon.
+\apiend
+
+
+\apiitem{{\ce shader} {\rm \emph{shadername} \emph{layername}} {\ce ;}}
+Declares a shader instance, which will receive any pending parameters that
+were declared since the previous {\cf shader} statement (and in the process,
+clear the list of pending parameters).
+
+The {\cf shadername} is an identifier that specifies the name of the shader
+to use as the master for this instance. The {\cf layername} is an identifier
+that names the layer (e.g., to subsequently specify it as a source or
+destination for connections).
+
+The {\cf shader} statement is terminated by a semicolon ({\cf ;}).
+\apiend
+
+
+\apiitem{{\ce connect} {\rm \emph{source_layername}{\ce .}\emph{paramname} ~
+                        \emph{destination_layername}{\ce .}\emph{paramname}} {\ce ;}}
+
+Establish a connection between an output parameter of a source layer and an
+input parameter of a destination layer, both of which have been previously
+declared within this group. The source layer must have preceded the
+destination layer when they were declared, and the parameters must exist and
+be of a compatible type so that it is meaningful to establish a connection
+(for example, you may connect a \color to a \color, but you may not connect
+a \color to a \matrix).
+
+If the named parameters are structures, the two structures must have
+identical data layout, and establishing the connection will connect each
+corresponding data member.  It is also possible to make a connection of just
+a single member of a structure by using the usual ``dot'' syntax, for
+example, for layers {\cf A} and {\cf B}, \qkw{connect A.c.x B.y} might
+connect A's parameter {\cf c}, member {\cf x}, to B's parameter {\cf y} (the
+types of {\cf c.x} in A and {\cf y} in B must match).
+
+The {\cf connect} statement is terminated by a semicolon ({\cf ;}).
+\apiend
+
+\subsection*{Example}
+
+\begin{tabular}{p{3.25in} p{2.5in}}
+    {\cf param string name "rings.tx" ; } &  \emph{set pending `name'} \\
+    {\cf param float scale 3.5 ; } &  \emph{set pending `scale'} \\
+    {\cf shader "texturemap" "tex1" ; } & \emph{tex1 layer, picks up `name', `scale'} \\
+    {\cf param string name "grain.tx" ; } & \\
+    {\cf shader "texturemap" "tex2" ; } & \emph{} \\
+    {\cf param float gam 2.2 ; } & \emph{} \\
+    {\cf shader "gamma" "gam1" ; } & \emph{} \\
+    {\cf param float gam 1.0 ; } & \emph{} \\
+    {\cf shader "gamma" "gam2" ; } & \emph{} \\
+    {\cf param color woodcolor 0.42 0.38 0.22 ; } & \emph{example of a color param} \\
+    {\cf shader "wood" "wood1" ; } & \emph{} \\
+    {\cf connect tex1.Cout gam1.Cin ; } & \emph{connect tex1's Cout to gam1's Cin} \\
+    {\cf connect tex2.Cout gam2.Cin ; } & \emph{} \\
+    {\cf connect gam1.Cout wood1.rings ; } & \emph{} \\
+    {\cf connect gam2.Cout wood1.grain ; } & \emph{} \\
+\end{tabular}
+
+
+\begin{comment}
+
 \chapter{Example Shaders}
 \label{chap:exampleshaders}
 
@@ -5203,6 +5323,8 @@ Sorry, I haven't done this yet.  Eventually, this chapter will have
 several simple (but useful and fully functional) shaders to illustrate
 how all these concepts fit together.
 \end{annotate}
+
+\end{comment}
 
 
 \begin{comment}

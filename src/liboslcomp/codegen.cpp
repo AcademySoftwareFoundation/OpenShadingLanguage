@@ -469,10 +469,7 @@ ASTassign_expression::codegen (Symbol *dest)
     if (var()->nodetype() == index_node) {
         // Assigning to an individual component or array element
         index = (ASTindex *) var().get();
-        if (typespec().is_structure())
-            dest = var()->codegen();  // for structs, we'll need this
-        else
-            dest = NULL;
+        dest = NULL;
     } else if (var()->nodetype() == structselect_node) {
         dest = var()->codegen();
     } else {

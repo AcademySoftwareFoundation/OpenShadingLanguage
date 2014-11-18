@@ -233,6 +233,11 @@ OSOReaderQuery::hint (const char *h)
         Strutil::parse_char (hintstring, '}');
         return;
     }
+    if (m_reading_param && Strutil::parse_prefix(hintstring, "initexpr")) {
+        m_query.m_params[m_query.nparams()-1].validdefault = false;
+        return;
+    }
+
     // std::cerr << "Hint '" << hintstring << "'\n";
 }
 

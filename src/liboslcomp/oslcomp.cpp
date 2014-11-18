@@ -629,17 +629,14 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
     }
 
     // %read and %write give the range of ops over which a symbol is used.
-    if (hints++ == 0)
-        oso ("\t");
-    oso (" %%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
+    oso ("%c%%read{%d,%d} %%write{%d,%d}", hints++ ? ' ' : '\t',
+         sym->firstread(), sym->lastread(),
          sym->firstwrite(), sym->lastwrite());
 
     // %struct, %structfields, and %structfieldtypes document the
     // definition of a structure and which other symbols comprise the
     // individual fields.
     if (sym->typespec().is_structure()) {
-        if (hints++ == 0)
-            oso ("\t");
         const StructSpec *structspec (sym->typespec().structspec());
         std::string fieldlist, signature;
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
@@ -648,27 +645,29 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
             fieldlist += structspec->field(i).name.string();
             signature += code_from_type (structspec->field(i).type);
         }
-        oso (" %%struct{\"%s\"} %%structfields{%s} %%structfieldtypes{\"%s\"} %%structnfields{%d}",
+        oso ("%c%%struct{\"%s\"} %%structfields{%s} %%structfieldtypes{\"%s\"} %%structnfields{%d}",
+             hints++ ? ' ' : '\t',
              structspec->mangled().c_str(), fieldlist.c_str(),
              signature.c_str(), structspec->numfields());
     }
     // %mystruct and %mystructfield document the symbols holding structure
     // fields, linking them back to the structures they are part of.
     if (sym->fieldid() >= 0) {
-        if (hints++ == 0)
-            oso ("\t");
         ASTvariable_declaration *vd = (ASTvariable_declaration *) sym->node();
         if (vd)
-            oso (" %%mystruct{%s} %%mystructfield{%d}",
+            oso ("%c%%mystruct{%s} %%mystructfield{%d}", hints++ ? ' ' : '\t',
                  vd->sym()->mangled().c_str(), sym->fieldid());
     }
 
     // %derivs hint marks symbols that need to carry derivatives
-    if (sym->has_derivs()) {
-        if (hints++ == 0)
-            oso ("\t");
-        oso (" %%derivs");
-    }
+    if (sym->has_derivs())
+        oso ("%c%%derivs", hints++ ? ' ' : '\t');
+
+    // %initexpr hint marks parameters whose default is the result of code
+    // that must be executed (an expression, like =noise(P) or =u), rather
+    // than a true default value that is statically known (like =3.14).
+    if (isparam && sym->has_init_ops())
+        oso ("%c%%initexpr", hints++ ? ' ' : '\t');
 
 #if 0 // this is recomputed by the runtime optimizer, no need to bloat the .oso with these
 

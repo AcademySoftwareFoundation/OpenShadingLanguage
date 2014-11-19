@@ -1705,9 +1705,9 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     srcinst->instoverride(srccon.param)->connected_down (true);
     srcinst->outgoing_connections (true);
 
-    if (debug())
-        message ("ConnectShaders %s %s -> %s %s\n",
-                 srclayer, srcparam, dstlayer, dstparam);
+    // if (debug())
+    //     message ("ConnectShaders %s %s -> %s %s\n",
+    //              srclayer, srcparam, dstlayer, dstparam);
 
     return true;
 }

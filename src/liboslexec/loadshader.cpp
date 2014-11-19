@@ -528,8 +528,8 @@ ShadingSystemImpl::loadshader (string_view cname)
     lock_guard guard (m_mutex);  // Thread safety
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
     if (found != m_shader_masters.end()) {
-        if (debug())
-            info ("Found %s in shader_masters", name.c_str());
+        // if (debug())
+        //     info ("Found %s in shader_masters", name.c_str());
         // Already loaded this shader, return its reference
         return (*found).second;
     }
@@ -551,11 +551,11 @@ ShadingSystemImpl::loadshader (string_view cname)
         info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(timer(), 2).c_str());
         ASSERT (r);
         r->resolve_syms ();
-        if (m_debug) {
-            std::string s = r->print ();
-            if (s.length())
-                info ("%s", s.c_str());
-        }
+        // if (debug()) {
+        //     std::string s = r->print ();
+        //     if (s.length())
+        //         info ("%s", s.c_str());
+        // }
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }
@@ -598,11 +598,11 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
         info ("Loaded \"%s\" (took %s)", shadername, Strutil::timeintervalformat(timer(), 2).c_str());
         ASSERT (r);
         r->resolve_syms ();
-        if (m_debug) {
-            std::string s = r->print ();
-            if (s.length())
-                info ("%s", s.c_str());
-        }
+        // if (debug()) {
+        //     std::string s = r->print ();
+        //     if (s.length())
+        //         info ("%s", s.c_str());
+        // }
     } else {
         error ("Unable to parse preloaded shader \"%s\"", shadername);
     }

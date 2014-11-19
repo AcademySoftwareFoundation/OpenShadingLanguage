@@ -210,8 +210,8 @@ ShaderInstance::parameters (const ParamValueList &params)
             continue;   // skip empty names
         int i = findparam (p.name());
         if (i >= 0) {
-            if (shadingsys().debug())
-                shadingsys().info (" PARAMETER %s %s", p.name(), p.type());
+            // if (shadingsys().debug())
+            //     shadingsys().info (" PARAMETER %s %s", p.name(), p.type());
             const Symbol *sm = master()->symbol(i);
             SymOverrideInfo *so = &m_instoverrides[i];
             TypeSpec t = sm->typespec();
@@ -252,10 +252,10 @@ ShaderInstance::parameters (const ParamValueList &params)
             so->valuesource (Symbol::InstanceVal);
             void *data = param_storage(i);
             memcpy (data, p.data(), t.simpletype().size());
-            if (shadingsys().debug())
-                shadingsys().info ("    sym %s offset %llu address %p",
-                        sm->name().c_str(),
-                        (unsigned long long)sm->dataoffset(), data);
+            // if (shadingsys().debug())
+            //     shadingsys().info ("    sym %s offset %llu address %p",
+            //             sm->name().c_str(),
+            //             (unsigned long long)sm->dataoffset(), data);
         }
         else {
             shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name().c_str());

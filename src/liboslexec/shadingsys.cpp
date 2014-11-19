@@ -1309,6 +1309,7 @@ ShadingSystemImpl::getstats (int level) const
     std::string opt;
 #define BOOLOPT(name) if (m_##name) opt += #name " "
 #define INTOPT(name) opt += Strutil::format(#name "=%d ", m_##name)
+#define STROPT(name) if (m_##name.size()) opt += Strutil::format(#name "=\"%s\" ", m_##name)
     INTOPT (optimize);
     INTOPT (llvm_optimize);
     INTOPT (debug);
@@ -1322,6 +1323,10 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (range_checking);
     BOOLOPT (greedyjit);
     BOOLOPT (countlayerexecs);
+    STROPT (debug_groupname);
+    STROPT (debug_layername);
+    STROPT (archive_groupname);
+    STROPT (archive_filename);
 #undef BOOLOPT
 #undef INTOPT
     out << "  Options:  " << Strutil::wordwrap(opt, 75, 12) << "\n";

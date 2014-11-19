@@ -161,18 +161,20 @@ OSOProcessorBase::set_debug ()
     // start with the shading system's idea of debugging level
     m_debug = shadingsys().debug();
 
+    // If either group or layer was specified for debug, surely they want
+    // debugging turned on.
+    if (shadingsys().debug_groupname() || shadingsys().debug_layername())
+        m_debug = std::max (m_debug, 1);
+
     // Force debugging off if a specific group was selected for debug
-    // and we're not it.
-    if (shadingsys().debug_groupname() &&
-        shadingsys().debug_groupname() != group().name()) {
+    // and we're not it, or a specific layer was selected for debug and
+    // we're not it.
+    bool wronggroup = (shadingsys().debug_groupname() && 
+                       shadingsys().debug_groupname() != group().name());
+    bool wronglayer = (shadingsys().debug_layername() && inst() &&
+                       shadingsys().debug_layername() != inst()->layername());
+    if (wronggroup || wronglayer)
         m_debug = 0;
-    }
-    // Force debugging off if a specific instance was selected for debug
-    // and we're not currently examining it.
-    if (inst() && shadingsys().debug_layername() &&
-        shadingsys().debug_layername() != inst()->layername()) {
-        m_debug = 0;
-    }
 }
 
 

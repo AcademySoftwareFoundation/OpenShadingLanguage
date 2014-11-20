@@ -198,26 +198,28 @@ OSOReaderQuery::symdefault (const char *def)
 void
 OSOReaderQuery::parameter_done ()
 {
-    m_reading_param = false;
+    if (m_reading_param && m_query.nparams() > 0) {
+       // Make sure all value defaults have the right number of elements in
+       // case they were only partially initialized.
+       OSLQuery::Parameter &p (m_query.m_params.back());
+       int nvalues = p.type.numelements() * p.type.aggregate;
+       if (p.type.basetype == TypeDesc::INT) {
+           p.idefault.resize (nvalues, 0);
+           p.data = &p.idefault[0];
+       }
+       else if (p.type.basetype == TypeDesc::FLOAT) {
+           p.fdefault.resize (nvalues, 0);
+           p.data = &p.fdefault[0];
+       }
+       else if (p.type.basetype == TypeDesc::STRING) {
+           p.sdefault.resize (nvalues, ustring());
+           p.data = &p.sdefault[0];
+       }
+       if (p.spacename.size())
+           p.spacename.resize (p.type.numelements(), ustring());
+    }
 
-    // Make sure all value defaults have the right number of elements in
-    // case they were only partially initialized.
-    OSLQuery::Parameter &p (m_query.m_params.back());
-    int nvalues = p.type.numelements() * p.type.aggregate;
-    if (p.type.basetype == TypeDesc::INT) {
-        p.idefault.resize (nvalues, 0);
-        p.data = &p.idefault[0];
-    }
-    else if (p.type.basetype == TypeDesc::FLOAT) {
-        p.fdefault.resize (nvalues, 0);
-        p.data = &p.fdefault[0];
-    }
-    else if (p.type.basetype == TypeDesc::STRING) {
-        p.sdefault.resize (nvalues, ustring());
-        p.data = &p.sdefault[0];
-    }
-    if (p.spacename.size())
-        p.spacename.resize (p.type.numelements(), ustring());
+    m_reading_param = false;
 }
 
 

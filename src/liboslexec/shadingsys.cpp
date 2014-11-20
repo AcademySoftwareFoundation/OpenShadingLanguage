@@ -2533,13 +2533,20 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
                                            z, tmpdir, filename, extension,
                                            filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
-        system (cmd.c_str());
+        if (system (cmd.c_str()) != 0) {
+            error ("archive_shadergroup: executing tar command failed");
+            ok = false;
+        }
+
     } else if (extension == ".zip") {
         std::string cmd = Strutil::format ("zip -q %s%s %s",
                                            filename, extension,
                                            filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
-        system (cmd.c_str());
+        if (system (cmd.c_str()) != 0) {
+            error ("archive_shadergroup: executing zip command failed");
+            ok = false;
+        }
     } else {
         error ("archive_shadergroup: no archiving/compressing command");
         ok = false;

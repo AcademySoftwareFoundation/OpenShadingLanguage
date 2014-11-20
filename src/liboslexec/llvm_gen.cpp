@@ -61,6 +61,7 @@ static ustring op_ge("ge");
 static ustring op_gt("gt");
 static ustring op_if("if");
 static ustring op_le("le");
+static ustring op_logb("logb");
 static ustring op_lt("lt");
 static ustring op_min("min");
 static ustring op_neq("neq");
@@ -1691,7 +1692,8 @@ LLVMGEN (llvm_gen_generic)
 
     // Special cases: functions that have no derivs -- suppress them
     if (any_deriv_args)
-        if (op.opname() == op_floor || op.opname() == op_ceil ||
+        if (op.opname() == op_logb  ||
+            op.opname() == op_floor || op.opname() == op_ceil ||
             op.opname() == op_round || op.opname() == op_step ||
             op.opname() == op_trunc || 
             op.opname() == op_sign)

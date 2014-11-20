@@ -234,7 +234,6 @@ DECL (osl_sincos_dvdvdv, "xXXX")
 UNARY_OP_IMPL(log)
 UNARY_OP_IMPL(log2)
 UNARY_OP_IMPL(log10)
-UNARY_OP_IMPL(logb)
 UNARY_OP_IMPL(exp)
 UNARY_OP_IMPL(exp2)
 UNARY_OP_IMPL(expm1)
@@ -249,6 +248,9 @@ DECL (osl_pow_dvdvf, "xXXf")
 
 UNARY_OP_IMPL(sqrt)
 UNARY_OP_IMPL(inversesqrt)
+
+DECL (osl_logb_ff, "ff")
+DECL (osl_logb_vv, "xXX")
 
 DECL (osl_floor_ff, "ff")
 DECL (osl_floor_vv, "xXX")

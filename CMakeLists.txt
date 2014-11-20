@@ -325,8 +325,10 @@ macro ( TESTSUITE )
             message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
         endif ()
 
-        # Run the test unoptimized
-        if (NOT _testname MATCHES "^render")
+        # Run the test unoptimized, unless it's a "render_*" or "oslinfo_*"
+        # test, which we don't bother testing unoptimized.
+        if (NOT _testname MATCHES "^render" AND
+            NOT _testname MATCHES "^oslinfo")
           set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
           add_test ( NAME ${_testname}
                      COMMAND env ${_env} ${_runtest} )
@@ -365,7 +367,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             oslc-err-noreturn oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-variadic-macro
-            oslinfo-metadata
+            oslinfo-metadata oslinfo-noparams
             pointcloud pointcloud-fold
             printf-whole-array
             raytype reparam

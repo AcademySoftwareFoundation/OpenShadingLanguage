@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/imagebufalgo_util.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/timer.h>
 
 #include "OSL/oslexec.h"
@@ -236,10 +237,25 @@ static void
 action_groupspec (int argc, const char *argv[])
 {
     shadingsys->ShaderGroupEnd ();
+    std::string groupspec (argv[1]);
+    if (OIIO::Filesystem::exists (groupspec)) {
+        // If it names a file, use the contents of the file as the group
+        // specification.
+        std::ifstream in;
+        OIIO::Filesystem::open (in, groupspec);
+        groupspec.clear();
+        while (in.good()) {
+            std::string line;
+            std::getline (in, line);
+            groupspec += line + "\n";
+        }
+        in.close ();
+    }
     if (verbose)
         std::cout << "Processing group specification:\n---\n"
-                  << argv[1] << "\n---\n";
-    shadergroup = shadingsys->ShaderGroupBegin (groupname, "surface", argv[1]);
+                  << groupspec << "\n---\n";
+    add_shader (0, NULL);  // becuase this is what sets the options
+    shadergroup = shadingsys->ShaderGroupBegin (groupname, "surface", groupspec);
 }
 
 

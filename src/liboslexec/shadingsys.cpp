@@ -2491,7 +2491,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
     }
     filename_base.erase (filename_base.size() - extension.size());
 
-    std::string pattern = OIIO::Filesystem::temp_directory_path() + "OSL-%%%%-%%%%";
+    std::string pattern = OIIO::Filesystem::temp_directory_path() + "/OSL-%%%%-%%%%";
     if (! pattern.size()) {
         error ("archive_shadergroup: Could not find a temp directory");
         return false;
@@ -2504,8 +2504,8 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
     std::string errmessage;
     bool dir_ok = OIIO::Filesystem::create_directory (tmpdir, errmessage);
     if (! dir_ok) {
-        error ("archive_shadergroup: Could not create temp directory: %s",
-               errmessage);
+        error ("archive_shadergroup: Could not create temp directory %s (%s)",
+               tmpdir, errmessage);
         return false;
     }
 
@@ -2523,12 +2523,16 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
     std::string filename_list = "shadergroup";
     {
         boost::lock_guard<ShaderGroup> lock (*group);
+        std::set<std::string> entries;   // to avoid duplicates
         for (int i = 0, nl = group->nlayers(); i < nl; ++i) {
             std::string osofile = (*group)[i]->master()->osofilename();
             std::string osoname = OIIO::Filesystem::filename (osofile);
-            std::string localfile = tmpdir + "/" + osoname;
-            OIIO::Filesystem::copy (osofile, localfile);
-            filename_list += " " + osoname;
+            if (entries.find(osoname) == entries.end()) {
+                entries.insert (osoname);
+                std::string localfile = tmpdir + "/" + osoname;
+                OIIO::Filesystem::copy (osofile, localfile);
+                filename_list += " " + osoname;
+            }
         }
     }
 

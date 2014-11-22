@@ -90,17 +90,17 @@ public:
     /// Turn the op into a simple assignment of the new symbol index to the
     /// previous first argument of the op.  That is, changes "OP arg0 arg1..."
     /// into "assign arg0 newarg".
-    void turn_into_assign (Opcode &op, int newarg, const char *why=NULL);
+    void turn_into_assign (Opcode &op, int newarg, string_view why=NULL);
 
     /// Turn the op into a simple assignment of zero to the previous
     /// first argument of the op.  That is, changes "OP arg0 arg1 ..."
     /// into "assign arg0 zero".
-    void turn_into_assign_zero (Opcode &op, const char *why=NULL);
+    void turn_into_assign_zero (Opcode &op, string_view why=NULL);
 
     /// Turn the op into a simple assignment of one to the previous
     /// first argument of the op.  That is, changes "OP arg0 arg1 ..."
     /// into "assign arg0 one".
-    void turn_into_assign_one (Opcode &op, const char *why=NULL);
+    void turn_into_assign_one (Opcode &op, string_view why=NULL);
 
     /// Turn the op into a new simple unary or binary op with arguments
     /// newarg1 and newarg2.  If newarg2 < 0, then it's a unary op,
@@ -108,15 +108,15 @@ public:
     /// as always.  The original arg list must have at least as many
     /// operands as the new one, since no new arg space is allocated.
     void turn_into_new_op (Opcode &op, ustring newop, int newarg1,
-                           int newarg2, const char *why=NULL);
+                           int newarg2, string_view why=NULL);
 
     /// Turn the op into a no-op.  Return 1 if it changed, 0 if it was
     /// already a nop.
-    int turn_into_nop (Opcode &op, const char *why=NULL);
+    int turn_into_nop (Opcode &op, string_view why=NULL);
 
     /// Turn the whole range [begin,end) into no-ops.  Return the number
     /// of instructions that were altered.
-    int turn_into_nop (int begin, int end, const char *why=NULL);
+    int turn_into_nop (int begin, int end, string_view why=NULL);
 
     void simplify_params ();
 
@@ -124,7 +124,7 @@ public:
 
     bool coerce_assigned_constant (Opcode &op);
 
-    void make_param_use_instanceval (Symbol *R, const char *why=NULL);
+    void make_param_use_instanceval (Symbol *R, string_view why=NULL);
 
     /// Return the index of the symbol ultimately de-aliases to (it may be
     /// itself, if it doesn't alias to anything else).  Local block aliases

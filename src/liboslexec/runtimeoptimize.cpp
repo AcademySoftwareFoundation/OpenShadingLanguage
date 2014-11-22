@@ -318,7 +318,7 @@ RuntimeOptimizer::add_global (ustring name, const TypeSpec &type)
 
 void
 RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
-                                    int newarg2, const char *why)
+                                    int newarg2, string_view why)
 {
     int opnum = &op - &(inst()->ops()[0]);
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
@@ -327,7 +327,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
                   << " from " << op.opname() << " to "
                   << newop << ' ' << inst()->symbol(newarg1)->name() << ' '
                   << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
-                  << (why ? " : " : "") << (why ? why : "") << "\n";
+                  << (why.size() ? " : " : "") << why << "\n";
     op.reset (newop, newarg2<0 ? 2 : 3);
     op.argwriteonly (0);
     inst()->args()[op.firstarg()+1] = newarg1;
@@ -345,7 +345,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
 
 
 void
-RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
+RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, string_view why)
 {
     // We don't know the op num here, so we subtract the pointers
     int opnum = &op - &(inst()->ops()[0]);
@@ -354,7 +354,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
                   << " from " << op.opname() << " to "
                   << opargsym(op,0)->name() << " = " 
                   << inst()->symbol(newarg)->name()
-                  << (why ? " : " : "") << (why ? why : "") << "\n";
+                  << (why.size() ? " : " : "") << why << "\n";
     op.reset (u_assign, 2);
     inst()->args()[op.firstarg()+1] = newarg;
     op.argwriteonly (0);
@@ -371,7 +371,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, const char *why)
 
 // Turn the current op into a simple assignment to zero (of the first arg).
 void
-RuntimeOptimizer::turn_into_assign_zero (Opcode &op, const char *why)
+RuntimeOptimizer::turn_into_assign_zero (Opcode &op, string_view why)
 {
     static float zero[16] = { 0, 0, 0, 0,  0, 0, 0, 0,
                               0, 0, 0, 0,  0, 0, 0, 0 };
@@ -384,7 +384,7 @@ RuntimeOptimizer::turn_into_assign_zero (Opcode &op, const char *why)
 
 // Turn the current op into a simple assignment to one (of the first arg).
 void
-RuntimeOptimizer::turn_into_assign_one (Opcode &op, const char *why)
+RuntimeOptimizer::turn_into_assign_one (Opcode &op, string_view why)
 {
     Symbol &R (*(inst()->argsymbol(op.firstarg()+0)));
     if (R.typespec().is_int()) {
@@ -403,13 +403,13 @@ RuntimeOptimizer::turn_into_assign_one (Opcode &op, const char *why)
 
 // Turn the op into a no-op
 int
-RuntimeOptimizer::turn_into_nop (Opcode &op, const char *why)
+RuntimeOptimizer::turn_into_nop (Opcode &op, string_view why)
 {
     if (op.opname() != u_nop) {
         if (debug() > 1)
             std::cout << "turned op " << (&op - &(inst()->ops()[0]))
                       << " from " << op.opname() << " to nop"
-                      << (why ? " : " : "") << (why ? why : "") << "\n";
+                      << (why.size() ? " : " : "") << why << "\n";
         op.reset (u_nop, 0);
         return 1;
     }
@@ -419,7 +419,7 @@ RuntimeOptimizer::turn_into_nop (Opcode &op, const char *why)
 
 
 int
-RuntimeOptimizer::turn_into_nop (int begin, int end, const char *why)
+RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
 {
     int changed = 0;
     for (int i = begin;  i != end;  ++i) {
@@ -431,7 +431,7 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, const char *why)
     }
     if (debug() > 1 && changed)
         std::cout << "turned ops " << begin << "-" << (end-1) << " into nop"
-                  << (why ? " : " : "") << (why ? why : "") << "\n";
+                  << (why.size() ? " : " : "") << why << "\n";
     return changed;
 }
 
@@ -1213,12 +1213,12 @@ private:
 /// no longer need; turn it into a a plain old instance-value
 /// parameter.
 void
-RuntimeOptimizer::make_param_use_instanceval (Symbol *R, const char *why)
+RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
 {
     if (debug() > 1)
         std::cout << "Turning " << R->valuesourcename() << ' ' 
                   << R->name() << " into an instance value "
-                  << (why ? why : "") << "\n";
+                  << why << "\n";
 
     // Mark its source as the instance value, not connected
     R->valuesource (Symbol::InstanceVal);

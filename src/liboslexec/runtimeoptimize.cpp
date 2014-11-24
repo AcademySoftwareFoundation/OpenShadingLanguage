@@ -118,7 +118,8 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_middleman(shadingsys.m_opt_middleman),
       m_pass(0),
       m_next_newconst(0), m_next_newtemp(0),
-      m_stat_opt_locking_time(0), m_stat_specialization_time(0)
+      m_stat_opt_locking_time(0), m_stat_specialization_time(0),
+      m_stop_optimizing(false)
 {
     memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
     m_shaderglobals.context = shadingcontext();
@@ -1841,6 +1842,9 @@ RuntimeOptimizer::optimize_instance ()
         if (m_pass != 0 && inst()->unused())
             break;
 
+        if (m_stop_optimizing)
+            break;
+
         // Track basic blocks and conditional states
         find_conditionals ();
         find_basic_blocks ();
@@ -1862,6 +1866,9 @@ RuntimeOptimizer::optimize_instance ()
         size_t num_ops = inst()->ops().size();
         int skipops = 0;   // extra inserted ops to skip over
         for (int opnum = 0;  opnum < (int)num_ops;  opnum += 1) {
+            if (m_stop_optimizing)
+                break;
+
             // Before getting a reference to this op, be sure that a space
             // is reserved at the end in case a folding routine inserts an
             // op.  That ensures that the reference won't be invalid.
@@ -2027,6 +2034,8 @@ RuntimeOptimizer::optimize_instance ()
 
             if (optimize() >= 2 && m_opt_elide_useless_ops)
                 changed += useless_op_elision (op, opnum);
+            if (m_stop_optimizing)
+                break;
 
             // Peephole optimization involving pair of instructions
             if (optimize() >= 2 && m_opt_peephole)

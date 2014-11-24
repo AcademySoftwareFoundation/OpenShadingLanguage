@@ -358,6 +358,7 @@ private:
     std::set<UserDataNeeded> m_userdata_needed;
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time
+    bool m_stop_optimizing;           ///< for debugging
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage

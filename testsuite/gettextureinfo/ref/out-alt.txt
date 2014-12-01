@@ -6,9 +6,15 @@ Executing...
 ../common/textures/grid.tx textureformat: Plain Texture (1)
 ../common/textures/grid.tx datawindow: 0 0 1023 1023
 ../common/textures/grid.tx displaywindow: 0 0 1023 1023
-../common/textures/grid.tx datetime: 2009:09:12  0:53:24 (1)
+../common/textures/grid.tx datetime: 2014:11:29 23:20:23 (1)
+../common/textures/grid.tx averagecolor: 0.608983 0.608434 0.608728
+../common/textures/grid.tx averagealpha: 1
+../common/textures/grid.tx unknown constantcolor
+../common/textures/grid.tx unknown constantalpha
 ../common/textures/grid.tx foobar: not found (0)
-ERROR: [RendererServices::get_texture_info] Invalid image file "badfile"
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+Invalid image file "badfile"
 badfile data: not found (0)
 ../common/textures/grid.tx exists? 1 (return 1)
 badfile3 exists? 0 (return 1)
@@ -20,9 +26,34 @@ win.exr texturetype: Plain Texture (1)
 win.exr textureformat: Plain Texture (1)
 win.exr datawindow: 10 20 109 69
 win.exr displaywindow: 0 0 299 199
+win.exr averagecolor: 0 0 0
+win.exr unknown averagealpha
+win.exr unknown constantcolor
+win.exr unknown constantalpha
 win.exr foobar: not found (0)
-ERROR: [RendererServices::get_texture_info] Invalid image file "badfile"
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+Invalid image file "badfile"
 badfile data: not found (0)
 win.exr exists? 1 (return 1)
+badfile3 exists? 0 (return 1)
+
+Executing...
+green.tx resolution: 128 128 (1)
+green.tx channels: 4 (1)
+green.tx texturetype: Plain Texture (1)
+green.tx textureformat: Plain Texture (1)
+green.tx datawindow: 0 0 127 127
+green.tx displaywindow: 0 0 127 127
+green.tx averagecolor: 0.101961 0.501961 0.101961
+green.tx averagealpha: 1
+green.tx constantcolor: 0.101961 0.501961 0.101961
+green.tx constantalpha: 1
+green.tx foobar: not found (0)
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+Invalid image file "badfile"
+badfile data: not found (0)
+green.tx exists? 1 (return 1)
 badfile3 exists? 0 (return 1)
 

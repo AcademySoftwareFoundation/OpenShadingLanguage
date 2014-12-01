@@ -120,6 +120,13 @@ def oiiotool (args) :
             " " + args + " >> out.txt 2>&1 ;\n")
 
 
+# Construct a command that runs maketx, appending console output
+# to the file "out.txt".
+def maketx (args) :
+    return (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "maketx") +
+            " " + args + " >> out.txt 2>&1 ;\n")
+
+
 # Construct a command that run testshade with the specified arguments,
 # appending output to the file "out.txt".
 def testshade (args) :

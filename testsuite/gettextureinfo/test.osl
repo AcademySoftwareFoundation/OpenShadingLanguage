@@ -37,6 +37,30 @@ test (string filename = "../common/textures/grid.tx",
     if (date)
         printf ("%s datetime: %s (%d)\n", filename, datetime, r);
 
+    // Test average and constant retrieval
+    color avgcolor;
+    float avgalpha;
+    r = gettextureinfo (filename, "averagecolor", avgcolor);
+    if (r)
+        printf ("%s averagecolor: %g\n", filename, avgcolor);
+    else
+        printf ("%s unknown averagecolor\n", filename);
+    r = gettextureinfo (filename, "averagealpha", avgalpha);
+    if (r)
+        printf ("%s averagealpha: %g\n", filename, avgalpha);
+    else
+        printf ("%s unknown averagealpha\n", filename);
+    r = gettextureinfo (filename, "constantcolor", avgcolor);
+    if (r)
+        printf ("%s constantcolor: %g\n", filename, avgcolor);
+    else
+        printf ("%s unknown constantcolor\n", filename);
+    r = gettextureinfo (filename, "constantalpha", avgalpha);
+    if (r)
+        printf ("%s constantalpha: %g\n", filename, avgalpha);
+    else
+        printf ("%s unknown constantalpha\n", filename);
+
     // Test failure of unfound info name
     string foobar = "not found";
     r = gettextureinfo (filename, "foobar", foobar);
@@ -64,7 +88,7 @@ test (string filename = "../common/textures/grid.tx",
         printf ("%s exists? %d (return %d)\n", filename, e, r);
     }
 
-    // Test existence of a monexistant file
+    // Test existence of a nonexistant file
     {
         int e;
         string badfile = "badfile3";

@@ -1360,9 +1360,10 @@ DECLFOLDER(constfold_clamp)
 DECLFOLDER(constfold_mix)
 {
     // Try to turn R=mix(a,b,x) into
-    //   R = c             if all are constant
-    //   R = A             if x is constant and x == 0
-    //   R = B             if x is constant and x == 1
+    //   R = c             if a,b,x are all are constant
+    //   R = a             if x is constant and x == 0
+    //   R = b             if x is constant and x == 1
+    //   R = a             if a and b are the same (even if not constant)
     //
     Opcode &op (rop.inst()->ops()[opnum]);
     int Rind = rop.oparg(op,0);
@@ -1410,7 +1411,8 @@ DECLFOLDER(constfold_mix)
 
     if (rop.is_zero(A) &&
         (! B.connected() || !rop.opt_mix() || rop.optimization_pass() > 2)) {
-        // mix(0,b,x) == b*x, but only do this if b is not connected
+        // mix(0,b,x) == b*x, but only do this if b is not connected.
+        // Because if b is connected, it may pull on something expensive.
         rop.turn_into_new_op (op, u_mul, Bind, Xind, "const fold");
         return 1;
     }
@@ -1420,6 +1422,11 @@ DECLFOLDER(constfold_mix)
         // mix(a,0,x) == (1-x)*a, but only do this if b is not connected
     }
 #endif
+
+    // mix (a, a, x) is a, regardless of x and even if none are constants
+    if (Aind == Bind) {
+        rop.turn_into_assign (op, Aind, "const fold: mix(a,a,x) -> a");
+    }
 
     // Special sauce: mix(a,b,x) is implemented as a*(1-x)+b*x.  But
     // consider cases where x is not constant (thus not foldable), but

@@ -61,7 +61,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 14 Nov, 2014 \\
+\date{{\large Date: 3 Dec, 2014 \\
 %~ (with corrections, 2 Oct 2014)
 }
 \bigskip
@@ -3363,14 +3363,12 @@ $[0,1]$.
 
 \apiitem{"simplex"}
 \vspace{12pt}
-\NEW % 1.4
 A signed simplex noise with an output range of $[-1,1]$,
 approximate average value of $0$.
 \apiend
 
 \apiitem{"usimplex"}
 \vspace{12pt}
-\NEW % 1.4
 An unsigned simplex noise with an output range of $[0,1]$,
 approximate average value of $0.5$.
 \apiend
@@ -3921,7 +3919,6 @@ but not present in the texture file (default: 0).
 \apiend
 \vspace{-16pt}
 
-\NEW
 \apiitem{"missingcolor", <color>, "missingalpha", <float>}
 \vspace{12pt}
 If present, supplies a missing color (and alpha value) that will
@@ -4024,7 +4021,6 @@ but not present in the texture file (default: 0).
 \apiend
 \vspace{-16pt}
 
-\NEW
 \apiitem{"missingcolor", <color>, "missingalpha", <float>}
 \vspace{12pt}
 If present, supplies a missing color (and alpha value) that will
@@ -4106,7 +4102,6 @@ not present in the texture file (default: 0).
 \apiend
 \vspace{-16pt}
 
-\NEW
 \apiitem{"missingcolor", <color>, "missingalpha", <float>}
 \vspace{12pt}
 If present, supplies a missing color (and alpha value) that will
@@ -4191,6 +4186,13 @@ they will be 0). \\[0.75ex]
 %{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
 %matrix that transforms points from \commonspace to a 2D coordinate
 %system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
+
+\qkw{averagecolor} & {\cf color} &
+\NEW  % 1.6
+Retrieves the average color (first three channels) of the texture. \\[0.75ex]
+
+\qkw{averagealpha} & {\cf float} &
+Retrieves the average alpha (the channel with \qkw{A} name) of the texture. \\[0.75ex]
 
 \emph{anything else} & \emph{any} & Searches for matching name and
 type in the metadata or other header information of the texture file.

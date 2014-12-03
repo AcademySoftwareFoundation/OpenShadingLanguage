@@ -1672,7 +1672,7 @@ DECLFOLDER(constfold_pow)
     if (Y.is_constant() && Y.typespec().is_float() &&
             *(const float *)Y.data() == 2.0f) {
         // Turn x^2 into x*x, even if x is not constant
-        static ustring kmul("pow(x,2) => x*x");
+        static ustring kmul("mul");
         op.reset (kmul, 3);
         rop.inst()->args()[op.firstarg()+2] = rop.inst()->args()[op.firstarg()+1];
         return 1;

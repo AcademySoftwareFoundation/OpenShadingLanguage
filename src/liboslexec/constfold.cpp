@@ -1797,28 +1797,23 @@ DECLFOLDER(constfold_getmatrix)
     ustring from = *(ustring *)From.data();
     ustring to = *(ustring *)To.data();
     ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
-    if (from == to || (from == Strings::common && to == commonsyn) ||
-        (from == commonsyn && to == Strings::common)) {
-        static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-        int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
-        rop.turn_into_assign (op, cind, "getmatrix identity matrix");
-        return 1;
-    }
+
     // Shader and object spaces will vary from execution to execution,
     // so we can't optimize those away.
     if (from == Strings::shader || from == Strings::object ||
         to == Strings::shader || to == Strings::object)
         return 0;
+
     // But whatever spaces are left *may* be optimizable if they are
     // not time-varying.
     RendererServices *rs = rop.shadingsys().renderer();
     Matrix44 Mfrom, Mto;
     bool ok = true;
-    if (from == Strings::common || from == commonsyn)
+    if (from == Strings::common || from == commonsyn || from == to)
         Mfrom.makeIdentity ();
     else
         ok &= rs->get_matrix (rop.shaderglobals(), Mfrom, from);
-    if (to == Strings::common || to == commonsyn)
+    if (to == Strings::common || to == commonsyn || from == to)
         Mto.makeIdentity ();
     else
         ok &= rs->get_inverse_matrix (rop.shaderglobals(), Mto, to);

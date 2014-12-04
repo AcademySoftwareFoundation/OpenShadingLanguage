@@ -103,8 +103,8 @@ inject_params ()
 
 
 
-static int
-add_shader (int argc, const char *argv[])
+static void
+set_shadingsys_options ()
 {
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
@@ -116,6 +116,14 @@ add_shader (int argc, const char *argv[])
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
+}
+
+
+
+static int
+add_shader (int argc, const char *argv[])
+{
+    set_shadingsys_options ();
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
@@ -250,11 +258,11 @@ action_groupspec (int argc, const char *argv[])
             groupspec += line + "\n";
         }
         in.close ();
+        set_shadingsys_options ();
     }
     if (verbose)
         std::cout << "Processing group specification:\n---\n"
                   << groupspec << "\n---\n";
-    add_shader (0, NULL);  // becuase this is what sets the options
     shadergroup = shadingsys->ShaderGroupBegin (groupname, "surface", groupspec);
 }
 

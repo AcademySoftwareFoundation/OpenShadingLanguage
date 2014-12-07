@@ -206,6 +206,7 @@ DECL (osl_range_check, "iiiXXi")
 DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXii")
 DECL (osl_get_attribute, "iXiXXiiXX")
+DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 
 
 // The following are defined inside llvm_ops.cpp. Only include these
@@ -383,7 +384,6 @@ DECL (osl_area, "fX")
 DECL (osl_filterwidth_fdf, "fX")
 DECL (osl_filterwidth_vdv, "xXX")
 DECL (osl_raytype_bit, "iXi")
-DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 #endif
 
 

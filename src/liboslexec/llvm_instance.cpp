@@ -484,6 +484,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         llvm::Value *got_userdata =
             ll.call_function ("osl_bind_interpolated_param",
                               &args[0], args.size());
+        // FIXME -- check for NaNs here
+
         // We will enclose the subsequent initialization of default values
         // or init ops in an "if" so that the extra copies or code don't
         // happen if the userdata was retrieved.
@@ -787,6 +789,13 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // Skip if it's never read and isn't connected
         if (! s.everread() && ! s.connected_down() && ! s.connected()
               && ! s.renderer_output())
+            continue;
+        // Skip if it's an interpolated (userdata) parameter and we're
+        // initializing them lazily.
+        if (s.symtype() == SymTypeParam
+                && ! s.lockgeom() && ! s.typespec().is_closure()
+                && ! s.connected() && ! s.connected_down()
+                && shadingsys().lazy_userdata())
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);

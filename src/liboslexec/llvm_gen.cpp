@@ -208,6 +208,14 @@ LLVMGEN (llvm_gen_useparam)
         Symbol& sym = *rop.opargsym (op, i);
         int symindex = rop.inst()->arg (op.firstarg()+i);
         rop.llvm_run_connected_layers (sym, symindex, opnum, &already_run);
+        // If it's an interpolated (userdata) parameter and we're
+        // initializing them lazily, now we have to do it.
+        if (sym.symtype() == SymTypeParam
+                && ! sym.lockgeom() && ! sym.typespec().is_closure()
+                && ! sym.connected() && ! sym.connected_down()
+                && rop.shadingsys().lazy_userdata()) {
+            rop.llvm_assign_initial_value (sym);
+        }
     }
     return true;
 }

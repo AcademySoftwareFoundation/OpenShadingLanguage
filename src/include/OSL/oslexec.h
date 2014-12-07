@@ -116,6 +116,7 @@ public:
     ///                              outputs are first needed (1)
     ///    int lazyglobals        Run layers lazily even if they write to
     ///                              globals (0)
+    ///    int lazy_userdata      Retrieve userdata lazily (0).
     ///    int greedyjit          Optimize and compile all shaders up front,
     ///                              versus only as needed (0).
     ///    int lockgeom           Default 'lockgeom' value for shader params

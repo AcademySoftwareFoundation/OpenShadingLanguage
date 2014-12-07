@@ -496,7 +496,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
-      m_lazyglobals (false),
+      m_lazyglobals (false), m_lazy_userdata(false),
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
@@ -549,6 +549,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
     m_stat_getattribute_calls = 0;
+    m_stat_get_userdata_calls = 0;
     m_stat_pointcloud_searches = 0;
     m_stat_pointcloud_searches_total_results = 0;
     m_stat_pointcloud_max_results = 0;
@@ -877,6 +878,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("debug", int, m_debug);
     ATTR_SET ("lazylayers", int, m_lazylayers);
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
+    ATTR_SET ("lazy_userdata", int, m_lazy_userdata);
     ATTR_SET ("clearmemory", int, m_clearmemory);
     ATTR_SET ("debug_nan", int, m_debugnan);
     ATTR_SET ("debugnan", int, m_debugnan);  // back-compatible alias
@@ -971,6 +973,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("statistics:level", int, m_statslevel);
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
+    ATTR_DECODE ("lazy_userdata", int, m_lazy_userdata);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
     ATTR_DECODE ("debug_nan", int, m_debugnan);
     ATTR_DECODE ("debugnan", int, m_debugnan);  // back-compatible alias
@@ -1039,6 +1042,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:llvm_jit_time", float, m_stat_llvm_jit_time);
     ATTR_DECODE ("stat:inst_merge_time", float, m_stat_inst_merge_time);
     ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
+    ATTR_DECODE ("stat:get_userdata_calls", long long, m_stat_get_userdata_calls);
     ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
     ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
     ATTR_DECODE ("stat:pointcloud_writes", long long, m_stat_pointcloud_writes);
@@ -1316,6 +1320,7 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (llvm_debug);
     BOOLOPT (lazylayers);
     BOOLOPT (lazyglobals);
+    BOOLOPT (lazy_userdata);
     BOOLOPT (clearmemory);
     BOOLOPT (debugnan);
     BOOLOPT (debug_uninit);
@@ -1420,6 +1425,7 @@ ShadingSystemImpl::getstats (int level) const
         out << "     (fail time "
             << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
     }
+    out << "  Number of get_userdata calls: " << m_stat_get_userdata_calls << "\n";
     if (m_stat_pointcloud_searches || m_stat_pointcloud_writes) {
         out << "  Pointcloud operations:\n";
         out << "    pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";
@@ -2884,6 +2890,35 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
                                            array_lookup, index,
                                            *(const TypeDesc *)attr_type,
                                            attr_dest);
+}
+
+
+
+OSL_SHADEOP int
+osl_bind_interpolated_param (void *sg_, const void *name, long long type,
+                             int userdata_has_derivs, void *userdata_data,
+                             int symbol_has_derivs, void *symbol_data,
+                             int symbol_data_size,
+                             char *userdata_initialized, int userdata_index)
+{
+    char status = *userdata_initialized;
+    if (status == 0) {
+        // First time retrieving this userdata
+        ShaderGlobals *sg = (ShaderGlobals *)sg_;
+        bool ok = sg->renderer->get_userdata (userdata_has_derivs, USTR(name),
+                                              TYPEDESC(type),
+                                              sg, userdata_data);
+        // printf ("Binding %s %s : index %d, ok = %d\n", name,
+        //         TYPEDESC(type).c_str(),userdata_index, ok);
+        *userdata_initialized = status = 1 + ok;  // 1 = not found, 2 = found
+        sg->context->incr_get_userdata_calls ();
+    }
+    if (status == 2) {
+        // If userdata was present, copy it to the shader variable
+        memcpy (symbol_data, userdata_data, symbol_data_size);
+        return 1;
+    }
+    return 0;  // no such user data
 }
 
 

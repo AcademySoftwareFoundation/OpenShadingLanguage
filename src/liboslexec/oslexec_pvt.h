@@ -833,6 +833,7 @@ public:
     bool fold_getattribute () { return m_opt_fold_getattribute; }
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
     bool countlayerexecs() const { return m_countlayerexecs; }
+    bool lazy_userdata () const { return m_lazy_userdata; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
@@ -974,6 +975,7 @@ private:
     int m_statslevel;                     ///< Statistics level
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
+    bool m_lazy_userdata;                 ///< Retrieve userdata lazily?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_debug_uninit;                  ///< Find use of uninitialized vars?
@@ -1067,6 +1069,7 @@ private:
     double m_stat_getattribute_time;      ///< Stat: time spent in getattribute
     double m_stat_getattribute_fail_time; ///< Stat: time spent in getattribute
     atomic_ll m_stat_getattribute_calls;  ///< Stat: Number of getattribute
+    atomic_ll m_stat_get_userdata_calls;  ///< Stat: # of get_userdata calls
     long long m_stat_pointcloud_searches;
     long long m_stat_pointcloud_searches_total_results;
     int m_stat_pointcloud_max_results;
@@ -1438,7 +1441,22 @@ public:
         return m_scratch_pool.alloc (size, align);
     }
 
-    void incr_layers_executed () { shadingsys().m_stat_layers_executed += 1; }
+    void incr_layers_executed () { ++m_stat_layers_executed; }
+
+    void incr_get_userdata_calls () { ++m_stat_get_userdata_calls; }
+
+    // Clear the stats we record per-execution in this context (unlocked)
+    void clear_runtime_stats () {
+        m_stat_get_userdata_calls = 0;
+        m_stat_layers_executed = 0;
+    }
+
+    // Transfer the per-execution stats from this context to the shading
+    // system.
+    void record_runtime_stats () {
+        shadingsys().m_stat_get_userdata_calls += m_stat_get_userdata_calls;
+        shadingsys().m_stat_layers_executed += m_stat_layers_executed;
+    }
 
     bool allow_warnings() {
         if (m_max_warnings > 0) {
@@ -1482,6 +1500,8 @@ private:
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
     int m_max_warnings;                 ///< To avoid processing too many warnings
+    int m_stat_get_userdata_calls;      ///< Number of calls to get_userdata
+    int m_stat_layers_executed;         ///< Number of layers executed
 
     SimplePool<20 * 1024> m_closure_pool;
     SimplePool<64*1024> m_scratch_pool;

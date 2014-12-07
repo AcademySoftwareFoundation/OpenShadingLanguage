@@ -115,6 +115,9 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     // Clear miscellaneous scratch space
     m_scratch_pool.clear ();
 
+    // Zero out stats for this execution
+    clear_runtime_stats ();
+
     if (run) {
         ssg.context = this;
         ssg.renderer = renderer();
@@ -128,6 +131,7 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     // Process any queued up error messages, warnings, printfs from shaders
     process_errors ();
 
+    record_runtime_stats ();   // Transfer runtime stats to the shadingsys
     if (profile) {
         long long ticks = timer.ticks();
         shadingsys().m_stat_total_shading_time_ticks += ticks;

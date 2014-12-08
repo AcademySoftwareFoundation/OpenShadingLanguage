@@ -1921,11 +1921,8 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
                           llvm::Value* &dalphady)
 {
-    // Reserve space for the TextureOpt, with alignment
-    int tosize = OIIO::round_to_multiple ((int)sizeof(TextureOpt), (int)sizeof(char*));
-    llvm::Value* opt = rop.ll.op_alloca (rop.ll.type_void_ptr(), tosize);
-    opt = rop.ll.void_ptr (opt);
-    rop.ll.call_function ("osl_texture_clear", opt);
+    llvm::Value* opt = rop.ll.call_function ("osl_get_texture_options",
+                                             rop.sg_void_ptr());
     llvm::Value* missingcolor = NULL;
     TextureOpt optdefaults;  // So we can check the defaults
     bool swidth_set = false, twidth_set = false, rwidth_set = false;
@@ -2313,12 +2310,8 @@ static llvm::Value *
 llvm_gen_trace_options (BackendLLVM &rop, int opnum,
                         int first_optional_arg)
 {
-    // Reserve space for the TraceOpt, with alignment
-    int tosize = OIIO::round_to_multiple ((int)sizeof(RendererServices::TraceOpt), (int)sizeof(char*));
-    llvm::Value* opt = rop.ll.op_alloca (rop.ll.type_void_ptr(), tosize);
-    opt = rop.ll.void_ptr (opt);
-    rop.ll.call_function ("osl_trace_clear", opt);
-
+    llvm::Value* opt = rop.ll.call_function ("osl_get_trace_options",
+                                             rop.sg_void_ptr());
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));
@@ -2412,12 +2405,8 @@ static llvm::Value *
 llvm_gen_noise_options (BackendLLVM &rop, int opnum,
                         int first_optional_arg)
 {
-    // Reserve space for the NoiseParams, with alignment
-    int optsize = OIIO::round_to_multiple ((int)sizeof(NoiseParams), (int)sizeof(char*));
-    llvm::Value* opt = rop.ll.op_alloca (rop.ll.type_void_ptr(), optsize);
-    opt = rop.ll.void_ptr (opt);
-    rop.ll.call_function ("osl_noiseparams_clear", opt);
-
+    llvm::Value* opt = rop.ll.call_function ("osl_get_noise_options",
+                                             rop.sg_void_ptr());
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));

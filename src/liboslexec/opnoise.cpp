@@ -735,6 +735,18 @@ struct GenericPNoise {
 PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
 
 
+// Utility: retrieve a pointer to the ShadingContext's noise params
+// struct, also re-initialize its contents.
+OSL_SHADEOP void *
+osl_get_noise_options (void *sg_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices::NoiseOpt *opt = sg->context->noise_options_ptr ();
+    new (opt) RendererServices::NoiseOpt;
+    return opt;
+}
+
+
 } // namespace pvt
 OSL_NAMESPACE_EXIT
 

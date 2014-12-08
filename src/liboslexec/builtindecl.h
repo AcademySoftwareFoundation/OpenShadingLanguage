@@ -207,6 +207,9 @@ DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXii")
 DECL (osl_get_attribute, "iXiXXiiXX")
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
+DECL (osl_get_texture_options, "XX");
+DECL (osl_get_noise_options, "XX");
+DECL (osl_get_trace_options, "XX");
 
 
 // The following are defined inside llvm_ops.cpp. Only include these
@@ -332,14 +335,12 @@ DECL (osl_stof_fs, "fs")
 DECL (osl_substr_ssii, "ssii")
 DECL (osl_regex_impl, "iXsXisi")
 
-DECL (osl_noiseparams_clear, "xX")
 DECL (osl_noiseparams_set_anisotropic, "xXi")
 DECL (osl_noiseparams_set_do_filter, "xXi")
 DECL (osl_noiseparams_set_direction, "xXv")
 DECL (osl_noiseparams_set_bandwidth, "xXf")
 DECL (osl_noiseparams_set_impulses, "xXf")
 
-DECL (osl_texture_clear, "xX")
 DECL (osl_texture_set_firstchannel, "xXi")
 DECL (osl_texture_set_swrap, "xXs")
 DECL (osl_texture_set_twrap, "xXs")
@@ -372,7 +373,6 @@ DECL (osl_texture3d_alpha, "iXsXXXXXiXXXXXXXX")
 DECL (osl_environment, "iXsXXXXiXXXXXX")
 DECL (osl_get_textureinfo, "iXXXiiiX")
 
-DECL (osl_trace_clear, "xX")
 DECL (osl_trace_set_mindist, "xXf")
 DECL (osl_trace_set_maxdist, "xXf")
 DECL (osl_trace_set_shade, "xXi")

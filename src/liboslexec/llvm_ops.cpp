@@ -170,22 +170,6 @@ tex_interp_to_code (ustring modename)
 
 
 
-// Layout of structure we use to pass noise parameters
-struct NoiseParams {
-    int anisotropic;
-    int do_filter;
-    Vec3 direction;
-    float bandwidth;
-    float impulses;
-
-    NoiseParams ()
-        : anisotropic(0), do_filter(true), direction(1.0f,0.0f,0.0f),
-          bandwidth(1.0f), impulses(16.0f)
-    {
-    }
-};
-
-
 OSL_NAMESPACE_EXIT
 
 
@@ -1067,14 +1051,6 @@ osl_regex_impl (void *sg_, const char *subject, void *results, int nresults,
  */
 
 OSL_SHADEOP void
-osl_texture_clear (void *opt)
-{
-    // Use "placement new" to clear the texture options
-    new (opt) TextureOpt;
-}
-
-
-OSL_SHADEOP void
 osl_texture_set_firstchannel (void *opt, int x)
 {
     ((TextureOpt *)opt)->firstchannel = x;
@@ -1479,20 +1455,10 @@ OSL_SHADEOP int osl_get_textureinfo(void *sg_,    void *fin_,
 
 
 
-// Noise helper functions
-OSL_SHADEOP void
-osl_noiseparams_clear (void *opt)
-{
-    // Use "placement new" to clear the noise options
-    new (opt) NoiseParams;
-}
-
-
-
 OSL_SHADEOP void
 osl_noiseparams_set_anisotropic (void *opt, int a)
 {
-    ((NoiseParams *)opt)->anisotropic = a;
+    ((RendererServices::NoiseOpt *)opt)->anisotropic = a;
 }
 
 
@@ -1500,7 +1466,7 @@ osl_noiseparams_set_anisotropic (void *opt, int a)
 OSL_SHADEOP void
 osl_noiseparams_set_do_filter (void *opt, int a)
 {
-    ((NoiseParams *)opt)->do_filter = a;
+    ((RendererServices::NoiseOpt *)opt)->do_filter = a;
 }
 
 
@@ -1508,7 +1474,7 @@ osl_noiseparams_set_do_filter (void *opt, int a)
 OSL_SHADEOP void
 osl_noiseparams_set_direction (void *opt, void *dir)
 {
-    ((NoiseParams *)opt)->direction = VEC(dir);
+    ((RendererServices::NoiseOpt *)opt)->direction = VEC(dir);
 }
 
 
@@ -1516,7 +1482,7 @@ osl_noiseparams_set_direction (void *opt, void *dir)
 OSL_SHADEOP void
 osl_noiseparams_set_bandwidth (void *opt, float b)
 {
-    ((NoiseParams *)opt)->bandwidth = b;
+    ((RendererServices::NoiseOpt *)opt)->bandwidth = b;
 }
 
 
@@ -1524,18 +1490,12 @@ osl_noiseparams_set_bandwidth (void *opt, float b)
 OSL_SHADEOP void
 osl_noiseparams_set_impulses (void *opt, float i)
 {
-    ((NoiseParams *)opt)->impulses = i;
+    ((RendererServices::NoiseOpt *)opt)->impulses = i;
 }
 
 
 
 // Trace
-
-OSL_SHADEOP void
-osl_trace_clear (void *opt)
-{
-    new ((RendererServices::TraceOpt *)opt) RendererServices::TraceOpt;
-}
 
 OSL_SHADEOP void
 osl_trace_set_mindist (void *opt, float x)

@@ -300,6 +300,18 @@ public:
 
     /// Return a pointer to the texture system (if available).
     virtual TextureSystem *texturesys () const;
+
+    /// Options we use for noise calls.
+    struct NoiseOpt {
+        int anisotropic;
+        int do_filter;
+        Vec3 direction;
+        float bandwidth;
+        float impulses;
+        NoiseOpt () : anisotropic(0), do_filter(true),
+            direction(1.0f,0.0f,0.0f), bandwidth(1.0f), impulses(16.0f) { }
+    };
+
 };
 
 

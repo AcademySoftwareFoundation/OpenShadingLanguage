@@ -113,8 +113,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
     static ustring ktrace ("trace");
     if (source == ktrace) {
         // Source types where we need to ask the renderer
-        RendererServices *renderer = sg->context->renderer();
-        return renderer->getmessage (sg, source, name, type, val, derivs);
+        return sg->renderer->getmessage (sg, source, name, type, val, derivs);
     }
 
     MessageList &messages (sg->context->messages());

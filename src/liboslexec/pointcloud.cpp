@@ -446,9 +446,9 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
     else
         indices = (size_t *)alloca (sizeof(size_t) * max_points);
 
-    int count = sg->context->renderer()->pointcloud_search (sg, USTR(filename),
-                               *((Vec3 *)center), radius, max_points, sort,
-                               indices, (float *)out_distances, derivs_offset);
+    int count = sg->renderer->pointcloud_search (sg, USTR(filename),
+                                                 *((Vec3 *)center), radius, max_points, sort,
+                                                 indices, (float *)out_distances, derivs_offset);
     va_list args;
     va_start (args, nattrs);
     for (int i = 0; i < nattrs; i++)
@@ -456,8 +456,8 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
         ustring  attr_name = USTR (va_arg (args, const char *));
         TypeDesc attr_type = TYPEDESC (va_arg (args, long long));
         void     *out_data = va_arg (args, void*);
-        sg->context->renderer()->pointcloud_get (sg, USTR(filename), indices,
-                                        count, attr_name, attr_type, out_data);
+        sg->renderer->pointcloud_get (sg, USTR(filename), indices,
+                                      count, attr_name, attr_type, out_data);
     }
     va_end (args);
 
@@ -484,8 +484,8 @@ osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, i
 
     sg->context->shadingsys().pointcloud_stats (0, 1, 0);
 
-    return sg->context->renderer()->pointcloud_get (sg, USTR(filename), (size_t *)indices, count, USTR(attr_name),
-                                                    TYPEDESC(attr_type), out_data);
+    return sg->renderer->pointcloud_get (sg, USTR(filename), (size_t *)indices, count, USTR(attr_name),
+                                         TYPEDESC(attr_type), out_data);
 
 }
 
@@ -508,10 +508,9 @@ osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
                       int nattribs, const ustring *names,
                       const TypeDesc *types, const void **values)
 {
-    RendererServices *renderer (sg->context->renderer());
     sg->context->shadingsys().pointcloud_stats (0, 0, 0, 1);
-    return renderer->pointcloud_write (sg, USTR(filename), *pos,
-                                       nattribs, names, types, values);
+    return sg->renderer->pointcloud_write (sg, USTR(filename), *pos,
+                                           nattribs, names, types, values);
 }
 
 

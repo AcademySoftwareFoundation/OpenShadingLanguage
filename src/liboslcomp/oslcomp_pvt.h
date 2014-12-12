@@ -61,14 +61,19 @@ typedef std::map<const Symbol *, SymPtrSet> SymDependencyMap;
 
 class OSLCompilerImpl {
 public:
-    OSLCompilerImpl ();
+    OSLCompilerImpl (ErrorHandler *errhandler);
     ~OSLCompilerImpl ();
 
     /// Fully compile a shader located in 'filename', with the command-line
     /// options ("-I" and the like) in the options vector.
     bool compile (string_view filename,
-                  const std::vector<string_view> &options,
+                  const std::vector<std::string> &options,
                   string_view stdoslpath);
+
+    bool compile_buffer (string_view sourcecode,
+                         std::string &osobuffer,
+                         const std::vector<std::string> &options,
+                         string_view stdoslpath);
 
     /// The name of the file we're currently parsing
     ///
@@ -94,6 +99,8 @@ public:
     ///
     oslFlexLexer *lexer() const { return m_lexer; }
 
+    ErrorHandler &errhandler () const { return *m_errhandler; }
+
     /// Error reporting
     ///
     void error (ustring filename, int line, const char *format, ...) const;
@@ -105,6 +112,25 @@ public:
     /// Have we hit an error?
     ///
     bool error_encountered () const { return m_err; }
+
+    /// Look at the compile options, setting defines, includepaths, and
+    /// a variety of other private options.
+    void read_compile_options (const std::vector<std::string> &options,
+                               std::vector<std::string> &defines,
+                               std::vector<std::string> &includepaths);
+
+    bool preprocess_file (const std::string &filename,
+                          const std::string &stdoslpath,
+                          const std::vector<std::string> &defines,
+                          const std::vector<std::string> &includepaths,
+                          std::string &result);
+
+    bool preprocess_buffer (const std::string &buffer,
+                            const std::string &filename,
+                            const std::string &stdoslpath,
+                            const std::vector<std::string> &defines,
+                            const std::vector<std::string> &includepaths,
+                            std::string &result);
 
     /// Has a shader already been defined?
     bool shader_is_defined () const { return (bool)m_shader; }
@@ -297,8 +323,7 @@ private:
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
     // void oso (const char *fmt, ...) const;
-    TINYFORMAT_WRAP_FORMAT (void, oso, const,
-        std::ostringstream buf;, buf, fputs(buf.str().c_str(), m_osofile);)
+    TINYFORMAT_WRAP_FORMAT (void, oso, const, , (*m_osofile), )
 
     void track_variable_lifetimes () {
         track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());
@@ -359,6 +384,7 @@ private:
     std::string m_main_filename; ///< Main input filename
     std::string m_cwd;        ///< Current working directory
     ASTNode::ref m_shader;    ///< The shader's syntax tree
+    ErrorHandler *m_errhandler; ///< Error handler
     mutable bool m_err;       ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
@@ -366,13 +392,14 @@ private:
     bool m_verbose;           ///< Verbose mode
     bool m_quiet;             ///< Quiet mode
     bool m_debug;             ///< Debug mode
+    bool m_preprocess_only;   ///< Preprocess only?
     int m_optimizelevel;      ///< Optimization level
     OpcodeVec m_ircode;       ///< Generated IR code
     SymbolPtrVec m_opargs;    ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
-    FILE *m_osofile;          ///< Open .oso file for output
+    std::ostream *m_osofile;  ///< Open .oso stream for output
     FILE *m_sourcefile;       ///< Open file handle for retrieve_source
     ustring m_last_sourcefile;///< Last filename for retrieve_source
     int m_last_sourceline;    ///< Last line read for retrieve_source

@@ -49,6 +49,8 @@ failureok = 0
 failthresh = 0.004
 failpercent = 0.03
 
+compile_osl_files = True
+
 #print ("srcdir = " + srcdir)
 #print ("tmpdir = " + tmpdir)
 #print ("path = " + path)
@@ -234,12 +236,13 @@ if os.path.exists("run.py") :
 
 # Force any local shaders to compile automatically, prepending the
 # compilation onto whatever else the individual run.py file requested.
-compiles = ""
-oslfiles = glob.glob ("*.osl")
-oslfiles.sort() ## sort the shaders to compile so that they always compile in the same order
-for testfile in oslfiles :
-    compiles += oslc (testfile)
-command = compiles + command
+if compile_osl_files :
+    compiles = ""
+    oslfiles = glob.glob ("*.osl")
+    oslfiles.sort() ## sort the shaders to compile so that they always compile in the same order
+    for testfile in oslfiles :
+        compiles += oslc (testfile)
+    command = compiles + command
 
 # If either out.exr or out.tif is in the reference directory but somehow
 # is not in the outputs list, put it there anyway!

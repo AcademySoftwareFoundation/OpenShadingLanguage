@@ -167,11 +167,6 @@ set (USE_CPP11 OFF CACHE BOOL "Compile in C++11 mode")
 set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
-if (WIN32 OR OSL_SYSTEM_HAS_LIBCPP OR USE_LIBCPLUSPLUS OR USE_CPP11)
-    set (USE_BOOST_WAVE ON CACHE BOOL "Use Boost Wave as preprocessor")
-else ()
-    set (USE_BOOST_WAVE OFF CACHE BOOL "Use Boost Wave as preprocessor")
-endif ()
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -179,10 +174,6 @@ endif ()
 
 if (USE_EXTERNAL_PUGIXML)
     add_definitions ("-DUSE_EXTERNAL_PUGIXML")
-endif ()
-
-if (USE_BOOST_WAVE)
-    add_definitions ("-DUSE_BOOST_WAVE")
 endif ()
 
 if (USE_MCJIT)
@@ -348,6 +339,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
             cellnoise closure color comparison
+            compile-buffer
             component-range const-array-params const-array-fill
             debugnan debug-uninit
             derivs derivs-muldiv-clobber error-dupes exit exponential

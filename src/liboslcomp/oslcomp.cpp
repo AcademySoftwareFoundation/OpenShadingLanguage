@@ -32,9 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include <cstdio>
 #include <streambuf>
-#if defined(__GNUC__) && !defined(_LIBCPP_VERSION) && !defined(USE_BOOST_WAVE)
-# include <ext/stdio_filebuf.h>
-#endif
 #include <cstdio>
 #include <cerrno>
 
@@ -45,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/thread.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -52,26 +50,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define yyFlexLexer oslFlexLexer
 #include "FlexLexer.h"
 
-#ifdef USE_BOOST_WAVE
 #include <boost/wave.hpp>
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
-#endif
+
 
 OSL_NAMESPACE_ENTER
 
 
-OSLCompiler *
-OSLCompiler::create ()
+OSLCompiler::OSLCompiler (ErrorHandler *errhandler)
 {
-    return new OSLCompiler;
-}
-
-
-
-OSLCompiler::OSLCompiler ()
-    : m_impl(new pvt::OSLCompilerImpl)
-{
+    m_impl = new pvt::OSLCompilerImpl (errhandler);
 }
 
 
@@ -85,10 +74,21 @@ OSLCompiler::~OSLCompiler ()
 
 bool
 OSLCompiler::compile (string_view filename,
-                      const std::vector<string_view> &options,
+                      const std::vector<std::string> &options,
                       string_view stdoslpath)
 {
     return m_impl->compile (filename, options, stdoslpath);
+}
+
+
+
+bool
+OSLCompiler::compile_buffer (string_view sourcecode,
+                             std::string &osobuffer,
+                             const std::vector<std::string> &options,
+                             string_view stdoslpath)
+{
+    return m_impl->compile_buffer (sourcecode, osobuffer, options, stdoslpath);
 }
 
 
@@ -106,11 +106,15 @@ namespace pvt {   // OSL::pvt
 
 OSLCompilerImpl *oslcompiler = NULL;
 
+OIIO::mutex oslcompiler_mutex;
 
-OSLCompilerImpl::OSLCompilerImpl ()
-    : m_lexer(NULL), m_err(false), m_symtab(*this),
+
+
+OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
+    : m_lexer(NULL), m_errhandler(errhandler), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
-      m_verbose(false), m_quiet(false), m_debug(false), m_optimizelevel(1),
+      m_verbose(false), m_quiet(false), m_debug(false),
+      m_preprocess_only(false), m_optimizelevel(1),
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
@@ -140,10 +144,10 @@ OSLCompilerImpl::error (ustring filename, int line, const char *format, ...) con
     va_start (ap, format);
     std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "syntax error";
     if (filename.c_str())
-        fprintf (stderr, "%s:%d: error: %s\n", 
-                 filename.c_str(), line, errmsg.c_str());
+        m_errhandler->error ("%s:%d: error: %s",
+                             filename.c_str(), line, errmsg.c_str());
     else
-        fprintf (stderr, "error: %s\n", errmsg.c_str());
+        m_errhandler->error ("error: %s", errmsg.c_str());
 
     va_end (ap);
     m_err = true;
@@ -157,45 +161,60 @@ OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...) c
     va_list ap;
     va_start (ap, format);
     std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "";
-    fprintf (stderr, "%s:%d: warning: %s\n", 
-             filename.c_str(), line, errmsg.c_str());
+    if (filename.c_str())
+        m_errhandler->error ("%s:%d: warning: %s",
+                             filename.c_str(), line, errmsg.c_str());
+    else
+        m_errhandler->error ("warning: %s", errmsg.c_str());
     va_end (ap);
 }
 
 
-#ifdef USE_BOOST_WAVE
 
-static bool
-preprocess (const std::string &filename,
-            const std::string &stdinclude,
-            const std::vector<std::string> &defines,
-            const std::vector<std::string> &includepaths,
-            std::string &result)
+bool
+OSLCompilerImpl::preprocess_file (const std::string &filename,
+                                  const std::string &stdoslpath,
+                                  const std::vector<std::string> &defines,
+                                  const std::vector<std::string> &includepaths,
+                                  std::string &result)
+{
+    // Read file contents into a string
+    std::ifstream instream (filename.c_str());
+    if (! instream.is_open()) {
+        error (ustring(filename), 0, "Could not open \"%s\"\n", filename.c_str());
+        return false;
+    }
+
+    instream.unsetf (std::ios::skipws);
+    std::string instring (std::istreambuf_iterator<char>(instream.rdbuf()),
+                          std::istreambuf_iterator<char>());
+    instream.close ();
+
+    return preprocess_buffer (instring, filename, stdoslpath, defines,
+                              includepaths, result);
+}
+
+
+
+bool
+OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
+                                    const std::string &filename,
+                                    const std::string &stdoslpath,
+                                    const std::vector<std::string> &defines,
+                                    const std::vector<std::string> &includepaths,
+                                    std::string &result)
 {
     std::ostringstream ss;
     boost::wave::util::file_position_type current_position;
 
+    std::string instring;
+    if (!stdoslpath.empty())
+        instring = OIIO::Strutil::format("#include \"%s\"\n", stdoslpath.c_str());
+    else
+        instring = "\n";
+    instring += buffer;
+
     try {
-        // Read file contents into a string
-        std::ifstream instream (filename.c_str());
-        if (! instream.is_open()) {
-            std::cerr << "Could not open '" << filename << "'\n";
-            return false;
-        }
-
-        instream.unsetf (std::ios::skipws);
-        std::string instring;
-
-        if (!stdinclude.empty())
-            instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude.c_str());
-        else
-            instring = "\n";
-
-        instring += std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
-                                 std::istreambuf_iterator<char>());
-
-        instream.close ();
-
         typedef boost::wave::cpplexer::lex_token<> token_type;
         typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
         typedef boost::wave::context<std::string::iterator, lex_iterator_type> context_type;
@@ -247,21 +266,20 @@ preprocess (const std::string &filename,
             ss << "\n";
         }
         else {
-            std::cerr << e.file_name()
-                << "(" << e.line_no() << "): " << e.description() << "\n";
+            error (ustring(e.file_name()), e.line_no(), "%s\n", e.description());
             return false;
         }
     } catch (std::exception const& e) {
         // STL exception
-        std::cerr << current_position.get_file()
-            << "(" << current_position.get_line() << "): "
-            << "exception caught: " << e.what() << "\n";
+        error (ustring(current_position.get_file().c_str()),
+               current_position.get_line(),
+               "preprocessor exception caught: %s\n", e.what());
         return false;
     } catch (...) {
         // Other exception
-        std::cerr << current_position.get_file()
-            << "(" << current_position.get_line() << "): "
-            << "unexpected exception caught." << "\n";
+        error (ustring(current_position.get_file().c_str()),
+               current_position.get_line(),
+               "unexpected exception caught\n");
         return false;
     }
 
@@ -270,125 +288,15 @@ preprocess (const std::string &filename,
     return true;
 }
 
-#else
 
-static bool
-preprocess (const std::string &filename,
-            const std::string &stdinclude,
-            const std::string &options,
-            std::string &result)
+
+void
+OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
+                                       std::vector<std::string> &defines,
+                                       std::vector<std::string> &includepaths)
 {
-#ifdef _MSC_VER
-#define popen _popen
-#define pclose _pclose
-#endif
-
-    std::string cppcommand = "/usr/bin/cpp";
-#ifdef __APPLE__
-    // Default /usr/bin/cpp on pre-Lion Apple is very bare bones,
-    // doesn't seem to support all the preprocessor directives (like #
-    // and ##), but the explicit gcc 4.2 one does.
-    if (OIIO::Filesystem::exists ("/usr/bin/cpp-4.2"))
-        cppcommand = "/usr/bin/cpp-4.2";
-#endif
-
-    cppcommand += std::string (" -xc -nostdinc ");
-    cppcommand += options;
-
-    if (! stdinclude.empty())
-        cppcommand += std::string("-include \"") + stdinclude + "\" ";
-
-    cppcommand += "\"";
-    cppcommand += filename;
-    cppcommand += "\" ";
-
-    // std::cout << "cpp command:\n>" << cppcommand << "<\n";
-    FILE *cpppipe = popen (cppcommand.c_str(), "r");
-
-#if defined(__GNUC__) && !defined(_LIBCPP_VERSION)
-    __gnu_cxx::stdio_filebuf<char> fb (cpppipe, std::ios::in);
-#else
-    std::filebuf fb (cpppipe);
-#endif
-
-    if (! cpppipe || ! fb.is_open()) {
-        // File didn't open
-        std::cerr << "Could not run '" << cppcommand.c_str() << "'\n";
-        return false;
-    } else {
-        std::istream in (&fb);
-
-        std::ostringstream ss;
-        ss << in.rdbuf();
-        result = ss.str();
-
-        fb.close ();
-    }
-
-    // Test for error in exit status
-    return (pclose(cpppipe) == 0);
-}
-
-#endif
-
-
-bool
-OSLCompilerImpl::compile (string_view filename,
-                          const std::vector<string_view> &options,
-                          string_view stdoslpath)
-{
-    if (! OIIO::Filesystem::exists (filename)) {
-        error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
-        return false;
-    }
-
-    std::string stdinclude;
-
-#ifdef USE_BOOST_WAVE
-    std::vector<std::string> defines;
-    std::vector<std::string> includepaths;
-#else
-    std::string cppoptions;
-#endif
-
-    m_cwd = boost::filesystem::initial_path().string();
-    m_main_filename = filename;
-
-    // Determine where the installed shader include directory is, and
-    // look for ../shaders/stdosl.h and force it to include.
-    if (stdoslpath.empty()) {
-        std::string program = OIIO::Sysutil::this_program_path ();
-        if (program.size()) {
-            boost::filesystem::path path (program);  // our program
-            path = path.parent_path ();  // now the bin dir of our program
-            path = path.parent_path ();  // now the parent dir
-            path = path / "shaders";
-            bool found = false;
-            if (OIIO::Filesystem::exists (path.string())) {
-#ifdef USE_BOOST_WAVE
-                includepaths.push_back(path.string());
-#else
-                // pass along to cpp
-                cppoptions += "\"-I";
-                cppoptions += path.string();
-                cppoptions += "\" ";
-#endif
-                path = path / "stdosl.h";
-                if (OIIO::Filesystem::exists (path.string())) {
-                    stdinclude = path.string();
-                    found = true;
-                }
-            }
-            if (! found)
-                warning (ustring(filename), 0, "Unable to find \"%s\"",
-                         path.string().c_str());
-        }
-    }
-    else
-        stdinclude = stdoslpath;
-
     m_output_filename.clear ();
-    bool preprocess_only = false;
+    m_preprocess_only = false;
     for (size_t i = 0;  i < options.size();  ++i) {
         if (options[i] == "-v") {
             // verbose mode
@@ -400,7 +308,7 @@ OSLCompilerImpl::compile (string_view filename,
             // debug mode
             m_debug = true;
         } else if (options[i] == "-E") {
-            preprocess_only = true;
+            m_preprocess_only = true;
         } else if (options[i] == "-o" && i < options.size()-1) {
             ++i;
             m_output_filename = options[i];
@@ -410,42 +318,74 @@ OSLCompilerImpl::compile (string_view filename,
             m_optimizelevel = 1;
         } else if (options[i] == "-O2") {
             m_optimizelevel = 2;
-#ifdef USE_BOOST_WAVE
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
                 defines.push_back(options[i]);
             else if (options[i].c_str()[1] == 'I')
                 includepaths.push_back(options[i].substr(2));
-#else
-        } else {
-            // something meant for the cpp command
-            cppoptions += "\"";
-            cppoptions += options[i];
-            cppoptions += "\" ";
-#endif
         }
     }
+}
+
+
+
+bool
+OSLCompilerImpl::compile (string_view filename,
+                          const std::vector<std::string> &options,
+                          string_view stdoslpath)
+{
+    if (! OIIO::Filesystem::exists (filename)) {
+        error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
+        return false;
+    }
+
+    m_cwd = boost::filesystem::initial_path().string();
+    m_main_filename = filename;
+
+    // Determine where the installed shader include directory is, and
+    // look for ../shaders/stdosl.h and force it to include.
+    if (stdoslpath.empty()) {
+        // look in $OSLHOME/shaders
+        const char *OSLHOME = getenv ("OSLHOME");
+        if (OSLHOME && OSLHOME[0]) {
+            boost::filesystem::path path = boost::filesystem::path(OSLHOME) / "shaders";
+            if (OIIO::Filesystem::exists (path.string())) {
+                path = path / "stdosl.h";
+                if (OIIO::Filesystem::exists (path.string()))
+                    stdoslpath = ustring(path.string());
+            }
+        }
+    }
+    if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
+        warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+
+    std::vector<std::string> defines;
+    std::vector<std::string> includepaths;
+    read_compile_options (options, defines, includepaths);
 
     std::string preprocess_result;
-
-#ifdef USE_BOOST_WAVE
-    if (! preprocess(filename, stdinclude, defines, includepaths, preprocess_result)) {
-#else
-    if (! preprocess(filename, stdinclude, cppoptions, preprocess_result)) {
-#endif
+    if (! preprocess_file (filename, stdoslpath,
+                           defines, includepaths, preprocess_result)) {
         return false;
-    } else if (preprocess_only) {
+    } else if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
         std::istringstream in (preprocess_result);
         oslcompiler = this;
 
         // Create a lexer, parse the file, delete the lexer
-        m_lexer = new oslFlexLexer (&in);
-        oslparse ();
-        bool parseerr = error_encountered();
-        delete m_lexer;
+        ASSERT (m_lexer == NULL);
+        bool parseerr = false;
+        {
+            // Thread safety with the lexer/parser
+            OIIO::lock_guard lock (oslcompiler_mutex);
+            m_lexer = new oslFlexLexer (&in);
+            oslparse ();
+            parseerr = error_encountered();
+            delete m_lexer;
+        }
+        m_lexer = NULL;
 
         if (! parseerr) {
             if (shader())
@@ -474,7 +414,117 @@ OSLCompilerImpl::compile (string_view filename,
         if (! error_encountered()) {
             if (m_output_filename.size() == 0)
                 m_output_filename = default_output_filename ();
+
+            std::ofstream oso_output (m_output_filename.c_str());
+            if (! oso_output.good()) {
+                error (ustring(), 0, "Could not open \"%s\"",
+                       m_output_filename.c_str());
+                return false;
+            }
+            ASSERT (m_osofile == NULL);
+            m_osofile = &oso_output;
+
             write_oso_file (m_output_filename);
+            ASSERT (m_osofile == NULL);
+        }
+
+        oslcompiler = NULL;
+    }
+
+    return ! error_encountered();
+}
+
+
+
+bool
+OSLCompilerImpl::compile_buffer (string_view sourcecode,
+                                 std::string &osobuffer,
+                                 const std::vector<std::string> &options,
+                                 string_view stdoslpath)
+{
+    string_view filename ("<buffer>");
+
+    m_cwd = boost::filesystem::initial_path().string();
+    m_main_filename = filename;
+
+    // Determine where the installed shader include directory is, and
+    // look for ../shaders/stdosl.h and force it to include.
+    if (stdoslpath.empty()) {
+        // look in $OSLHOME/shaders
+        const char *OSLHOME = getenv ("OSLHOME");
+        if (OSLHOME && OSLHOME[0]) {
+            boost::filesystem::path path = boost::filesystem::path(OSLHOME) / "shaders";
+            if (OIIO::Filesystem::exists (path.string())) {
+                path = path / "stdosl.h";
+                if (OIIO::Filesystem::exists (path.string()))
+                    stdoslpath = ustring(path.string());
+            }
+        }
+    }
+    if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
+        warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+
+    std::vector<std::string> defines;
+    std::vector<std::string> includepaths;
+    read_compile_options (options, defines, includepaths);
+
+    std::string preprocess_result;
+    if (! preprocess_buffer (sourcecode, filename, stdoslpath,
+                             defines, includepaths, preprocess_result)) {
+        return false;
+    } else if (m_preprocess_only) {
+        std::cout << preprocess_result;
+    } else {
+        std::istringstream in (preprocess_result);
+        oslcompiler = this;
+
+        // Create a lexer, parse the file, delete the lexer
+        ASSERT (m_lexer == NULL);
+        bool parseerr = false;
+        {
+            // Thread safety with the lexer/parser
+            OIIO::lock_guard lock (oslcompiler_mutex);
+            m_lexer = new oslFlexLexer (&in);
+            oslparse ();
+            parseerr = error_encountered();
+            delete m_lexer;
+        }
+        m_lexer = NULL;
+
+        if (! parseerr) {
+            if (shader())
+                shader()->typecheck ();
+            else
+                error (ustring(), 0, "No shader function defined");
+        }
+
+        // Print the parse tree if there were no errors
+        if (m_debug) {
+            symtab().print ();
+            if (shader())
+                shader()->print (std::cout);
+        }
+
+        if (! error_encountered()) {
+            shader()->codegen ();
+//            add_useparam ();
+            track_variable_dependencies ();
+            track_variable_lifetimes ();
+            check_for_illegal_writes ();
+//            if (m_optimizelevel >= 1)
+//                coalesce_temporaries ();
+        }
+ 
+        if (! error_encountered()) {
+            m_output_filename = "<buffer>";
+
+            std::ostringstream oso_output;
+            ASSERT (m_osofile == NULL);
+            m_osofile = &oso_output;
+
+            write_oso_file (m_output_filename);
+            osobuffer = oso_output.str();
+            ASSERT (m_osofile == NULL);
         }
 
         oslcompiler = NULL;
@@ -710,14 +760,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 void
 OSLCompilerImpl::write_oso_file (const std::string &outfilename)
 {
-    ASSERT (m_osofile == NULL);
-    m_osofile = fopen (outfilename.c_str(), "w");
-    if (! m_osofile) {
-        error (ustring(), 0, "Could not open \"%s\"", outfilename.c_str());
-        return;
-    }
-
-    // FIXME -- remove the hard-coded version!
+    ASSERT (m_osofile != NULL && m_osofile->good());
     oso ("OpenShadingLanguage %d.%02d\n",
          OSO_FILE_VERSION_MAJOR, OSO_FILE_VERSION_MINOR);
     oso ("# Compiled by oslc %s\n", OSL_LIBRARY_VERSION_STRING);
@@ -839,8 +882,6 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         oso ("code %s\n", main_method_name().c_str());
 
     oso ("\tend\n");
-
-    fclose (m_osofile);
     m_osofile = NULL;
 }
 

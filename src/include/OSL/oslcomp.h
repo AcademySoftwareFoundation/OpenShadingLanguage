@@ -44,14 +44,21 @@ public:
     /// DEPRECATED -- it's ok to directly construct an OSLCompiler now.
     static OSLCompiler *create ();
 
-    OSLCompiler ();
+    OSLCompiler (ErrorHandler *errhandler=NULL);
     ~OSLCompiler ();
 
     /// Compile the given file, using the list of command-line options.
     /// Return true if ok, false if the compile failed.
     bool compile (string_view filename,
-                  const std::vector<string_view> &options,
+                  const std::vector<std::string> &options,
                   string_view stdoslpath = string_view());
+
+    /// Compile the given source code buffer, using the list of command-line
+    /// options, placing the resulting "oso" in osobuffer. Return true if
+    /// ok, false if the compile failed.
+    bool compile_buffer (string_view sourcecode, std::string &osobuffer,
+                         const std::vector<std::string> &options,
+                         string_view stdoslpath = string_view());
 
     /// Return the name of our compiled output (must be called after
     /// compile()).

@@ -30,8 +30,10 @@ endif ()
 include_directories ( "${CMAKE_SOURCE_DIR}/src/liboslcomp" )
 
 FILE ( GLOB exec_headers "*.h" )
+FILE ( GLOB compiler_headers "../liboslcomp/*.h" )
 
 FLEX_BISON ( osolex.l osogram.y oso liboslexec_srcs exec_headers )
+FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl liboslexec_srcs compiler_headers )
 
 SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 

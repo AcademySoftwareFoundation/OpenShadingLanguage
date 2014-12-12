@@ -88,10 +88,6 @@ ifneq (${USE_FAST_MATH},)
 MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=${USE_FAST_MATH}
 endif
 
-ifneq (${USE_BOOST_WAVE},)
-MY_CMAKE_FLAGS += -DUSE_BOOST_WAVE:BOOL=${USE_BOOST_WAVE}
-endif
-
 ifneq (${ILMBASE_HOME},)
 MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
 endif
@@ -282,7 +278,6 @@ help:
 	@echo "      LINKSTATIC=1             Link with static external libraries when possible"
 	@echo "  Finding and Using Dependencies:"
 	@echo "      BOOST_HOME=path          Custom Boost installation"
-	@echo "      USE_BOOST_WAVE=1         Use Boost 'wave' insted of cpp"
 	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
 	@echo "      PARTIO_HOME=             Use Partio from the given location"
 	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"

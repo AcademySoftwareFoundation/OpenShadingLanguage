@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 
 #include "OSL/oslexec.h"
+#include "OSL/oslcomp.h"
 #include "OSL/oslquery.h"
 #include "simplerend.h"
 using namespace OSL;
@@ -70,6 +71,7 @@ static bool debugnan = false;
 static bool debug_uninit = false;
 static bool use_group_outputs = false;
 static bool do_oslquery = false;
+static bool inbuffer = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -120,18 +122,71 @@ set_shadingsys_options ()
 
 
 
+/// Read the entire contents of the named file and place it in str,
+/// returning true on success, false on failure.
+inline bool
+read_text_file (string_view filename, std::string &str)
+{
+    std::ifstream in (filename.c_str(), std::ios::in | std::ios::binary);
+    if (in) {
+        std::ostringstream contents;
+        contents << in.rdbuf();
+        in.close ();
+        str = contents.str();
+        return true;
+    }
+    return false;
+}
+
+
+
+static void
+shader_from_buffers (std::string shadername)
+{
+    std::string oslfilename = shadername;
+    if (! OIIO::Strutil::ends_with (oslfilename, ".osl"))
+        oslfilename += ".osl";
+    std::string sourcecode;
+    if (! read_text_file (oslfilename, sourcecode)) {
+        std::cerr << "Could not open \"" << oslfilename << "\"\n";
+        exit (EXIT_FAILURE);
+    }
+    // std::cout << "source was\n---\n" << sourcecode << "---\n\n";
+    std::string osobuffer;
+    OSLCompiler compiler;
+    std::vector<std::string> options;
+
+    if (! compiler.compile_buffer (sourcecode, osobuffer, options)) {
+        std::cerr << "Could not compile \"" << oslfilename << "\"\n";
+        exit (EXIT_FAILURE);
+    }
+    // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
+
+    if (! shadingsys->LoadMemoryCompiledShader (shadername, osobuffer)) {
+        std::cerr << "Could not load compiled buffer from \""
+                  << shadername << "\"\n";
+        exit (EXIT_FAILURE);
+    }
+    // std::cout << "Read and compiled " << shadername << "\n";
+}
+
+
+
 static int
 add_shader (int argc, const char *argv[])
 {
+    ASSERT (argc == 1);
+    string_view shadername (argv[0]);
+
     set_shadingsys_options ();
+
+    if (inbuffer)  // Request to exercise the buffer-based API calls
+        shader_from_buffers (shadername);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
-
-        shadernames.push_back (argv[i]);
-        shadingsys->Shader ("surface", argv[i],
-                            layername.length() ? layername.c_str() : NULL);
-
+        shadernames.push_back (shadername);
+        shadingsys->Shader ("surface", shadername, layername);
         layername.clear ();
         params.clear ();
     }
@@ -311,6 +366,7 @@ getargs (int argc, const char *argv[])
                 "--options %s", &extraoptions, "Set extra OSL options",
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
                 "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
+                "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
 //                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {

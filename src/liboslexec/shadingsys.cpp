@@ -2947,15 +2947,3 @@ osl_get_trace_options (void *sg_)
     return opt;
 }
 
-
-
-#ifndef OSL_STATIC_LIBRARY
-// Symbols needed to resolve some linkage issues because we pull some
-// components in from liboslcomp.
-int oslparse() { return 0; }
-class oslFlexLexer {
-public:
-    oslFlexLexer (std::istream *in, std::ostream *out);
-};
-oslFlexLexer::oslFlexLexer (std::istream *in, std::ostream *out) { }
-#endif

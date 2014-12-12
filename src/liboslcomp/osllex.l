@@ -295,7 +295,6 @@ preprocess (const char *yytext)
                         filename.erase (0, 1);
                 }
 	        oslcompiler->filename (ustring (filename));
-#ifdef USE_BOOST_WAVE
                 // Spooky workaround for Boost Wave bug: force_include
                 // is broken and doesn't give us the right lines/files, so
                 // instead we forcefully insert a '#include "stdosl.h"' into
@@ -304,7 +303,6 @@ preprocess (const char *yytext)
                 // So we fix it here, ugh.
                 if (filename == oslcompiler->main_filename())
                     --line;
-#endif
             }
             oslcompiler->lineno (line);
 	} else {

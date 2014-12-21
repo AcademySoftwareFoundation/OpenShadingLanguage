@@ -428,17 +428,17 @@ template<> OIIO_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, c
 template<int i0, int i1, int i2, int i3>
 OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 {
-    return Dual2<float4> (shuffle<i0,i1,i2,i3>(a.val()),
-                          shuffle<i0,i1,i2,i3>(a.dx()),
-                          shuffle<i0,i1,i2,i3>(a.dy()));
+    return Dual2<float4> (OIIO::simd::shuffle<i0,i1,i2,i3>(a.val()),
+                          OIIO::simd::shuffle<i0,i1,i2,i3>(a.dx()),
+                          OIIO::simd::shuffle<i0,i1,i2,i3>(a.dy()));
 }
 
 template<int i>
 OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 {
-    return Dual2<float4> (shuffle<i>(a.val()),
-                          shuffle<i>(a.dx()),
-                          shuffle<i>(a.dy()));
+    return Dual2<float4> (OIIO::simd::shuffle<i>(a.val()),
+                          OIIO::simd::shuffle<i>(a.dx()),
+                          OIIO::simd::shuffle<i>(a.dy()));
 }
 
 // Define extract<> that works with Dual2<float4> analogously to how it
@@ -446,9 +446,9 @@ OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 template<int i>
 OIIO_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 {
-    return Dual2<float> (extract<i>(a.val()),
-                         extract<i>(a.dx()),
-                         extract<i>(a.dy()));
+    return Dual2<float> (OIIO::simd::extract<i>(a.val()),
+                         OIIO::simd::extract<i>(a.dx()),
+                         OIIO::simd::extract<i>(a.dy()));
 }
 
 
@@ -458,8 +458,8 @@ OIIO_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 // but it also works if T is Dual2<float> and VECTYPE is Dual2<float4>.
 template<typename T, typename VECTYPE>
 OIIO_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
-    VECTYPE xx = OIIO::lerp (abcd, shuffle<1,1,3,3>(abcd), u);
-    return extract<0>(OIIO::lerp (xx,shuffle<2>(xx), v));
+    VECTYPE xx = OIIO::lerp (abcd, OIIO::simd::shuffle<1,1,3,3>(abcd), u);
+    return OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), v));
 }
 
 // Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
@@ -477,11 +477,11 @@ OIIO_FORCEINLINE Dual2<float> bilerp (const Dual2<float4>& abcd, const Dual2<flo
 // the first 3 elements of a float4.
 OIIO_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const float4& uvw) {
     // Interpolate along z axis by w
-    float4 xy = OIIO::lerp (abcd, efgh, shuffle<2>(uvw));
+    float4 xy = OIIO::lerp (abcd, efgh, OIIO::simd::shuffle<2>(uvw));
     // Interpolate along x axis by u
-    float4 xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
+    float4 xx = OIIO::lerp (xy, OIIO::simd::shuffle<1,1,3,3>(xy), OIIO::simd::shuffle<0>(uvw));
     // interpolate along y axis by v
-    return extract<0>(OIIO::lerp (xx, shuffle<2>(xx), shuffle<1>(uvw)));
+    return OIIO::simd::extract<0>(OIIO::lerp (xx, OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw)));
 }
 
 
@@ -958,13 +958,13 @@ inline void perlin (float &result, const H &hash, const float &x, const float &y
     // integer lattice corners simultaneously.
     static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XY) + (*(int4*)i0101);
-    int4 cornery = shuffle<1>(XY) + (*(int4*)i0011);
+    int4 cornerx = OIIO::simd::shuffle<0>(XY) + (*(int4*)i0101);
+    int4 cornery = OIIO::simd::shuffle<1>(XY) + (*(int4*)i0011);
     int4 corner_hash = hash (cornerx, cornery);
     static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxy) - (*(float4*)f0101);
-    float4 remaindery = shuffle<1>(fxy) - (*(float4*)f0011);
+    float4 remainderx = OIIO::simd::shuffle<0>(fxy) - (*(float4*)f0101);
+    float4 remaindery = OIIO::simd::shuffle<1>(fxy) - (*(float4*)f0011);
     float4 corner_grad = grad (corner_hash, remainderx, remaindery);
     result = scale2 (bilerp (corner_grad, uv[0], uv[1]));
 
@@ -1029,9 +1029,9 @@ inline void perlin (float &result, const H &hash,
 
     static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
-    float4 remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
-    float4 remainderz = shuffle<2>(fxyz);
+    float4 remainderx = OIIO::simd::shuffle<0>(fxyz) - (*(float4*)f0101);
+    float4 remaindery = OIIO::simd::shuffle<1>(fxyz) - (*(float4*)f0011);
+    float4 remainderz = OIIO::simd::shuffle<2>(fxyz);
     float4 corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz);
     float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-float4::One());
 
@@ -1077,11 +1077,11 @@ inline void perlin (float &result, const H &hash,
     // with AVX.)
     static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XYZW) + (*(int4*)i0101);
-    int4 cornery = shuffle<1>(XYZW) + (*(int4*)i0011);
-    int4 cornerz = shuffle<2>(XYZW);
+    int4 cornerx = OIIO::simd::shuffle<0>(XYZW) + (*(int4*)i0101);
+    int4 cornery = OIIO::simd::shuffle<1>(XYZW) + (*(int4*)i0011);
+    int4 cornerz = OIIO::simd::shuffle<2>(XYZW);
     int4 cornerz1 = cornerz + int4::One();
-    int4 cornerw = shuffle<3>(XYZW);
+    int4 cornerw = OIIO::simd::shuffle<3>(XYZW);
 
     int4 corner_hash_z0 = hash (cornerx, cornery, cornerz,  cornerw);
     int4 corner_hash_z1 = hash (cornerx, cornery, cornerz1, cornerw);
@@ -1091,11 +1091,11 @@ inline void perlin (float &result, const H &hash,
 
     static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyzw) - (*(float4*)f0101);
-    float4 remaindery = shuffle<1>(fxyzw) - (*(float4*)f0011);
-    float4 remainderz = shuffle<2>(fxyzw);
+    float4 remainderx = OIIO::simd::shuffle<0>(fxyzw) - (*(float4*)f0101);
+    float4 remaindery = OIIO::simd::shuffle<1>(fxyzw) - (*(float4*)f0011);
+    float4 remainderz = OIIO::simd::shuffle<2>(fxyzw);
     float4 remainderz1 = remainderz - float4::One();
-    float4 remainderw = shuffle<3>(fxyzw);
+    float4 remainderw = OIIO::simd::shuffle<3>(fxyzw);
     float4 corner_grad_z0 = grad (corner_hash_z0, remainderx, remaindery, remainderz,  remainderw);
     float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz1, remainderw);
     float4 remainderw1 = remainderw - float4::One();
@@ -1104,7 +1104,7 @@ inline void perlin (float &result, const H &hash,
 
     result = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                  trilerp (corner_grad_z2, corner_grad_z3, uvts),
-                                 extract<3>(uvts)));
+                                 OIIO::simd::extract<3>(uvts)));
 
 #else
     // ORIGINAL -- non-SIMD
@@ -1368,8 +1368,8 @@ inline void perlin (Vec3 &result, const H &hash,
     // with AVX.)
     static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XYZ) + (*(int4*)i0101);
-    int4 cornery = shuffle<1>(XYZ) + (*(int4*)i0011);
+    int4 cornerx = OIIO::simd::shuffle<0>(XYZ) + (*(int4*)i0101);
+    int4 cornery = OIIO::simd::shuffle<1>(XYZ) + (*(int4*)i0011);
 
     // We actually derive 3 hashes (one for each output dimension) for each
     // corner.
@@ -1378,14 +1378,14 @@ inline void perlin (Vec3 &result, const H &hash,
 
     static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
-    float4 remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
+    float4 remainderx = OIIO::simd::shuffle<0>(fxyz) - (*(float4*)f0101);
+    float4 remaindery = OIIO::simd::shuffle<1>(fxyz) - (*(float4*)f0011);
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad = grad (corner_hash[i], remainderx, remaindery);
         // Do the bilinear interpolation with SIMD. Here's the fastest way
         // I've found to do it.
-        float4 xx = OIIO::lerp (corner_grad, shuffle<1,1,3,3>(corner_grad), uv[0]);
-        result[i] = scale2 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), uv[1])));
+        float4 xx = OIIO::lerp (corner_grad, OIIO::simd::shuffle<1,1,3,3>(corner_grad), uv[0]);
+        result[i] = scale2 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), uv[1])));
     }
 #else
     // Non-SIMD case
@@ -1450,20 +1450,20 @@ inline void perlin (Vec3 &result, const H &hash,
 
     static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyz) - (*(float4*)f0101);
-    float4 remaindery = shuffle<1>(fxyz) - (*(float4*)f0011);
-    float4 remainderz0 = shuffle<2>(fxyz);
-    float4 remainderz1 = shuffle<2>(fxyz) - float4::One();
+    float4 remainderx = OIIO::simd::shuffle<0>(fxyz) - (*(float4*)f0101);
+    float4 remaindery = OIIO::simd::shuffle<1>(fxyz) - (*(float4*)f0011);
+    float4 remainderz0 = OIIO::simd::shuffle<2>(fxyz);
+    float4 remainderz1 = OIIO::simd::shuffle<2>(fxyz) - float4::One();
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz0);
         float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz1);
 
         // Interpolate along the z axis first
-        float4 xy = OIIO::lerp (corner_grad_z0, corner_grad_z1, shuffle<2>(uvw));
+        float4 xy = OIIO::lerp (corner_grad_z0, corner_grad_z1, OIIO::simd::shuffle<2>(uvw));
         // Interpolate along x axis
-        float4 xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
+        float4 xx = OIIO::lerp (xy, OIIO::simd::shuffle<1,1,3,3>(xy), OIIO::simd::shuffle<0>(uvw));
         // interpolate along y axis
-        result[i] = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
+        result[i] = scale3 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw))));
     }
 #else
     // ORIGINAL -- non-SIMD
@@ -1505,10 +1505,10 @@ inline void perlin (Vec3 &result, const H &hash,
     // with AVX.)
     static const OIIO_SIMD4_ALIGN int i0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN int i0011[4] = {0,0,1,1};
-    int4 cornerx = shuffle<0>(XYZW) + (*(int4*)i0101);
-    int4 cornery = shuffle<1>(XYZW) + (*(int4*)i0011);
-    int4 cornerz = shuffle<2>(XYZW);
-    int4 cornerw = shuffle<3>(XYZW);
+    int4 cornerx = OIIO::simd::shuffle<0>(XYZW) + (*(int4*)i0101);
+    int4 cornery = OIIO::simd::shuffle<1>(XYZW) + (*(int4*)i0011);
+    int4 cornerz = OIIO::simd::shuffle<2>(XYZW);
+    int4 cornerw = OIIO::simd::shuffle<3>(XYZW);
 
     // We actually derive 3 hashes (one for each output dimension) for each
     // corner.
@@ -1521,10 +1521,10 @@ inline void perlin (Vec3 &result, const H &hash,
 
     static const OIIO_SIMD4_ALIGN float f0101[4] = {0,1,0,1};
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
-    float4 remainderx = shuffle<0>(fxyzw) - (*(float4*)f0101);
-    float4 remaindery = shuffle<1>(fxyzw) - (*(float4*)f0011);
-    float4 remainderz = shuffle<2>(fxyzw);
-    float4 remainderw = shuffle<3>(fxyzw);
+    float4 remainderx = OIIO::simd::shuffle<0>(fxyzw) - (*(float4*)f0101);
+    float4 remaindery = OIIO::simd::shuffle<1>(fxyzw) - (*(float4*)f0011);
+    float4 remainderz = OIIO::simd::shuffle<2>(fxyzw);
+    float4 remainderw = OIIO::simd::shuffle<3>(fxyzw);
 //    float4 remainderz0 = shuffle<2>(fxyz);
 //    float4 remainderz1 = shuffle<2>(fxyz) - 1.0f;
     for (int i = 0; i < 3; ++i) {
@@ -1534,7 +1534,7 @@ inline void perlin (Vec3 &result, const H &hash,
         float4 corner_grad_z3 = grad (corner_hash_z3[i], remainderx, remaindery, remainderz-float4::One(), remainderw-float4::One());
         result[i] = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                         trilerp (corner_grad_z2, corner_grad_z3, uvts),
-                                        extract<3>(uvts)));
+                                        OIIO::simd::extract<3>(uvts)));
     }
 #else
     // ORIGINAL -- non-SIMD

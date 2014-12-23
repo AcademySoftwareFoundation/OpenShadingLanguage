@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+shader "test"
+    "myparam" "int"
+		Default value: 0
+myparam = 0
+

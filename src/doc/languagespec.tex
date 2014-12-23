@@ -61,7 +61,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 9 Jan, 2015 \\
+\date{{\large Date: 27 Jan, 2015 \\
 %~ (with corrections, 2 Oct 2014)
 }
 \bigskip
@@ -130,7 +130,7 @@ documentation are:
 
 \vspace*{0.2in}
 
-Copyright (c) 2009-2014 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2015 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 \vspace{0.5in}
@@ -807,8 +807,8 @@ The following are \emph{keywords} that have special meaning in
 
 \begin{quote} {\cf
 
-break closure color continue do else emit float for if illuminance
-illuminate int matrix normal output point public return string struct
+and break closure color continue do else emit float for if illuminance
+illuminate int matrix normal not or output point public return string struct
 vector void while
 
 }
@@ -1511,6 +1511,11 @@ nonzero, otherwise 0) \\[0.5ex]
 nonzero, otherwise 0) \\[0.5ex]
 \hline
 \end{tabular}
+
+\medskip
+
+\noindent Note that the {\cf not}, {\cf and}, and {\cf or} keywords are
+synonyms for {\cf !}, {\cf \&\&}, and {\cf ||}, respectively.
 
 
 
@@ -2405,6 +2410,9 @@ are implemented as \inttype values, 0 if false and 1 if true.
 \hspace{0.5in}  \emph{expr1} {\cf \&\&} \emph{expr2}
 
 \hspace{0.5in}    \emph{expr1} {\cf ||} \emph{expr2}
+
+\noindent Note that the {\cf not}, {\cf and}, and {\cf or} keywords are
+synonyms for {\cf !}, {\cf \&\&}, and {\cf ||}, respectively.
 
 For the logical operators, numeric expressions (\inttype or \float) are
 considered \emph{true} if nonzero, \emph{false} if zero.
@@ -4147,7 +4155,7 @@ parameters recognized are listed below:
 and is an texture format that \product can read, or 0 if the file
 does not exist, or could not be properly read as a texture. Note that unlike
 all other queries, this query will ``succeed'' (return {\cf 1}) if the
-file does not exist.
+file does not exist. \\[0.75ex]
 
 \qkw{resolution} & {\cf int[2]} & The resolution ($x$ and $y$) of the
 highest MIPmap level stored in the texture map. \\[0.75ex]
@@ -5207,10 +5215,10 @@ nothing (empty, no token).
 \alt "&"
 \alt "^"
 \alt "|"
-\alt "&&" 
-\alt "||" 
+\alt "&&" | "and"
+\alt "||" | "or"
 
-<unary-op> ::= "-" | "!" | "~"
+<unary-op> ::= "-" | "~" | "!" | "not"
 
 <incdec-op> ::= "++" | "--"
 

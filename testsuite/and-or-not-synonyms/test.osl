@@ -1,0 +1,12 @@
+shader test 
+(
+    int myparam = 0 
+    )
+{
+    if (
+            !myparam || (myparam > 0 && myparam < 0.5) or
+            (not myparam and myparam > 10))
+    {
+        printf ("myparam = %d\n", myparam);
+    }
+}

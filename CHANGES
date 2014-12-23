@@ -17,7 +17,9 @@ Language, standard libary, and compiler changes (for shader writers):
   C-like languages. #451 (1.6.2)
 * The "and", "or", and "not" keywords are synonyms for the &&, ||, and !
   operators, respectively. (If this seems strange, note that this is
-  true of C++ as well.) (1.6.2)
+  true of C++ as well.) #446 (1.6.2)
+* oslc will now silently ignore trailing commas in function or shader
+  parameter lists and metadata lists. #447 (1.6.2)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem attribute int "profile", if set to 1, will include

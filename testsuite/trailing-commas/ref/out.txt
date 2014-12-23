@@ -1,0 +1,10 @@
+Compiled test.osl -> test.oso
+shader "test"
+		metadata: string help = "This is shader metadata"
+    "myparam" "int"
+		Default value: 0
+		metadata: int foo = 1
+		metadata: string mymetadata = "blah{}blah"
+		metadata: int bar = 5
+myparam = 0
+

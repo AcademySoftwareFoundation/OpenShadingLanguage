@@ -375,7 +375,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             texture-missingcolor texture-simple
             texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap
-            transform transformc trig typecast
+            trailing-commas transform transformc trig typecast
             unknown-instruction vecctr vector
             wavelength_color xml )
 

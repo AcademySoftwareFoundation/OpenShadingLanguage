@@ -137,7 +137,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %left <i> SHL_OP SHR_OP
 %left <i> '+' '-'
 %left <i> '*' '/' '%'
-%right <i> UMINUS_PREC '!' '~'
+%right <i> UMINUS_PREC NOT_OP '~'
 %right <i> INCREMENT DECREMENT
 %left <i> '(' ')'
 %left <i> '[' ']'
@@ -867,7 +867,7 @@ binary_expression
 unary_op
         : '-'                           { $$ = ASTNode::Sub; }
         | '+'                           { $$ = ASTNode::Add; }
-        | '!'                           { $$ = ASTNode::Not; }
+        | NOT_OP                        { $$ = ASTNode::Not; }
         | '~'                           { $$ = ASTNode::Compl; }
         ;
 

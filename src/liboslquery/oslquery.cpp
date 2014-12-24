@@ -277,7 +277,7 @@ OSLQuery::open (string_view shadername,
     std::string filename = shadername;
 
     // Add file extension if not already there
-    if (Filesystem::file_extension (filename) != std::string("oso"))
+    if (Filesystem::extension (filename) != std::string(".oso"))
         filename += ".oso";
 
     // Apply search paths

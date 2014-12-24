@@ -919,7 +919,7 @@ test_shade (int argc, const char *argv[])
     // Write the output images to disk
     for (size_t i = 0;  i < outputimgs.size();  ++i) {
         if (outputimgs[i]) {
-            outputimgs[i]->save();
+            outputimgs[i]->write (outputimgs[i]->name());
             delete outputimgs[i];
             outputimgs[i] = NULL;
         }

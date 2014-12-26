@@ -1,8 +1,17 @@
 
-Release 1.5.12 -- ?? 2014 (compared to 1.5.11)
+Release 1.5.12 -- 26 Dec 2014 (compared to 1.5.11)
 --------------------------------------------------
-
-
+* Build fixes for 32 bit machines.
+* Documentation fix: surfacearea() should return float, not int.
+* Bug fix: Delay instance merging from ShaderGroupEnd until optimize
+  time, it messed with the serialization.
+* Build fixes for recent OIIO changes.
+* Fix OSLQuery crash when reading .oso file of a compiled shader that had
+  local variables but no parameters.
+* Catch serialization errors resulting from failed system() calls to
+  zip/tar the archive.
+* Fix logb() incorrectly declaring derivative functions (it has no derivs).
+* Change a couple long-deprecated OIIO calls to modern versions.
 
 
 Release 1.5.11 -- 22 Sep 2014 (compared to 1.5.10)

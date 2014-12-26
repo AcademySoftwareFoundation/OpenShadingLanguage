@@ -37,6 +37,19 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   "layername.paramname", thus designating a parameter of a specific layer
   as a render output that should be preserved, but excluding identically
   named output variables in other layers. #430 (1.6.2)
+* New ShadingSystem runtime option int "lazy_userdata", when set to
+  nonzero, causes userdata to be interpolated lazily (on demand) rather
+  than at the beginning of a shader that needs it. For some renderer
+  implementations, this may be a performance improvement. #441 (1.6.2)
+* New OSLCompiler::compile_buffer() method compiles OSL source in a
+  string into oso stored in a string. When combined with ShadingSystem::
+  LoadMemoryCompiledShader, this allows an application to go straight from
+  osl source code to executing shader without writing disk file or launching
+  a shell to invoke oslc. #444 (1.6.2)
+* OSLQuery: in the OSLQuery::Parameter structure, the 'validdefault' field
+  now reliably is true for a valid default value, false if no default value
+  could be statically determined (for example, if the param default is
+  the result of code that must run at runtime). (1.6.2)
 
 Performance improvements:
 * Many noise() varieties have been sped up significantly on
@@ -53,6 +66,8 @@ Performance improvements:
   but seems fine for rendering when the result is many times faster to
   evaluate those functions. You can turn it back to the fully precise and
   slow way by building with OSL_FAST_MATH=0. #413 (1.6.0)
+* New runtime optimization of mix(a,a,x) -> a (even if none of them are
+  constant). #438 (1.6.2)
 
 Bug fixes and other improvements:
 * oslinfo --param lets you ask for information on just one parameter of
@@ -65,8 +80,26 @@ Bug fixes and other improvements:
   #431 (1.6.2)
 * Fix incorrect oslc code generation when assigining an element of an
   array-of-structs to another element of array-of-structs. #432 (1.6.2)
+* Bug fix in code generation of constant folding of getmatrix() calls
+  (never reported symptomatic). #440 (1.6.2)
+* Fixes to constuction of temporary filename used for group serialization
+  archive. (1.6.2)
+* Internals fix: logb() incorrectly declaring derivative functions (it
+  has no derivs). #437 (1.5.12/1.6.2)
+* Catch serialization errors resulting from failed system() calls to
+  zip/tar the archive. #436 (1.5.12/1.6.2)
+* Bug fix: Delay instance merging from ShaderGroupEnd until optimize
+  time, it messed with the serialization. #426 (1.5.12/1.6.2)
+* Fix OSLQuery crash when reading .oso file of a compiled shader that had
+  local variables but no parameters. #435 (1.5.12/1.6.2)
 
 Under the hood:
+* Change a couple long-deprecated OIIO calls to modern versions.
+  #448 (1.5.12/1.6.2)
+* Change runtime code generation, putting TextureOptions, NoiseParams,
+  TraceOptions in the ShadingContext, which avoided a dynamic alloca
+  which was tickling an LLVM code generation bug. #442 (1.5.12/1.6.2)
+* Allow memory-aligned closure component classes. (1.6.2)
 
 Build & test system improvements and developer goodies:
 * Windows build fix for compiling shaders finding the right oslc.exe.
@@ -81,13 +114,31 @@ Build & test system improvements and developer goodies:
   improved visible normal sampling technique of d'Eon & Heitz, stratified
   sampling, simplification of Oren-Nayar, and speed improvements.
   #425 (1.6.2)
+* Build fixes for recent OIIO changes. (1.5.12/1.6.2)
+* testshade -group now accepts the name of a file containing the serialized
+  group. #439 (1.6.2)
 
 Documentation:
 * Short chapter added to spec describing the syntax of our serialization
   protocol.
+* Documentation fix: surfacearea() should return float, not int. (1.5.12)
 
 
 
+
+Release 1.5.12 -- 26 Dec 2014 (compared to 1.5.11)
+--------------------------------------------------
+* Build fixes for 32 bit machines.
+* Documentation fix: surfacearea() should return float, not int.
+* Bug fix: Delay instance merging from ShaderGroupEnd until optimize
+  time, it messed with the serialization.
+* Build fixes for recent OIIO changes.
+* Fix OSLQuery crash when reading .oso file of a compiled shader that had
+  local variables but no parameters.
+* Catch serialization errors resulting from failed system() calls to
+  zip/tar the archive.
+* Fix logb() incorrectly declaring derivative functions (it has no derivs).
+* Change a couple long-deprecated OIIO calls to modern versions.
 
 Release 1.5.11 -- 22 Sep 2014 (compared to 1.5.10)
 --------------------------------------------------

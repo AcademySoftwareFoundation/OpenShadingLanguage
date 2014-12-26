@@ -4143,6 +4143,9 @@ parameters recognized are listed below:
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
 
+\qkw{exists} & {\cf int} & Returns 1 if the texture file exists and can
+be opened properly as an image, otherwise 0. \\[0.75ex]
+
 \qkw{resolution} & {\cf int[2]} & The resolution ($x$ and $y$) of the
 highest MIPmap level stored in the texture map. \\[0.75ex]
 
@@ -4157,6 +4160,9 @@ map. \\[0.75ex]
 \qkw{type} & {\cf string} & Returns the semantic type of the texture,
 one of: \qkw{Plain Texture}, \qkw{Shadow}, \qkw{Environment},
 \qkw{Volume Texture}. \\[0.75ex]
+
+\qkw{subimages} & {\cf int} & Returns the number of subimages in the
+texture file. \\[0.75ex]
 
 \qkw{textureformat} & {\cf string} & Returns the texture format, one of:
 \qkw{Plain Texture}, \qkw{Shadow}, \qkw{CubeFace Shadow}, \qkw{Volume

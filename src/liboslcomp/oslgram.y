@@ -867,6 +867,7 @@ binary_expression
 unary_op
         : '-'                           { $$ = ASTNode::Sub; }
         | '+'                           { $$ = ASTNode::Add; }
+        | '!'                           { $$ = ASTNode::Not; }
         | NOT_OP                        { $$ = ASTNode::Not; }
         | '~'                           { $$ = ASTNode::Compl; }
         ;

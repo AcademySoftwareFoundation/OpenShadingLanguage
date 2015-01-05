@@ -225,7 +225,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                 continue;
             // check type of parameter and matching symbol
             if (t.simpletype() != p.type()) {
-                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", sm->name().c_str(), t.c_str(), p.type().c_str());
+                shadingsys().warning ("attempting to set parameter with wrong type: %s (expected '%s', received '%s')", sm->name().c_str(), t.c_str(), p.type().c_str());
                 continue;
             }
 

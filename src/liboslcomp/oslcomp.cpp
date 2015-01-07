@@ -340,6 +340,8 @@ OSLCompilerImpl::compile (string_view filename,
         return false;
     }
 
+    std::vector<std::string> defines;
+    std::vector<std::string> includepaths;
     m_cwd = boost::filesystem::initial_path().string();
     m_main_filename = filename;
 
@@ -359,9 +361,11 @@ OSLCompilerImpl::compile (string_view filename,
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
         warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+    else {
+        // Add the directory of stdosl.h to the include paths
+        includepaths.push_back (OIIO::Filesystem::parent_path (stdoslpath));
+    }
 
-    std::vector<std::string> defines;
-    std::vector<std::string> includepaths;
     read_compile_options (options, defines, includepaths);
 
     std::string preprocess_result;

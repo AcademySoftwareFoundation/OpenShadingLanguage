@@ -80,7 +80,6 @@ stdoslpath ()
         path = path.parent_path ();  // now the parent dir
         path = path / "shaders";
         if (OIIO::Filesystem::exists (path.string())) {
-            // includepaths.push_back(path.string());
             path = path / "stdosl.h";
             if (OIIO::Filesystem::exists (path.string()))
                 return path.string();

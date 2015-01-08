@@ -4139,7 +4139,7 @@ parameters recognized are listed below:
 
 \smallskip
 
-\begin{tabular}{p{1.2in} p{0.5in} p{3.2in}} 
+\begin{tabular}{p{1.2in} p{0.5in} p{3.3in}}
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
 
@@ -4185,6 +4185,12 @@ xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
 (N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
 they will be 0). \\[0.75ex]
 
+\noindent ...continued...
+\end{tabular}
+
+\begin{tabular}{p{1.2in} p{0.5in} p{3.3in}}
+{\bf Name} & {\bf Type} & {\bf Description} \\
+\hline
 \qkw{worldtocamera} & \matrix & If the texture is a rendered image,
 retrieves the world-to-camera 3D transformation matrix that was used when it
 was created.\\[0.75ex]
@@ -4194,7 +4200,6 @@ retrieves the matrix that projected points from world space into a 2D screen
 coordinate system where $x$ and $y$ range from $-1$ to $+1$. \\[0.75ex]
 
 \qkw{averagecolor} & {\cf color} &
-\NEW  % 1.6
 Retrieves the average color (first three channels) of the texture. \\[0.75ex]
 
 \qkw{averagealpha} & {\cf float} &
@@ -4443,7 +4448,7 @@ implemented as follows:
 
 
 \apiitem{\colorclosure\ {\ce microfacet} (string distribution, normal N, vector
-U, float xalpha, float yalpha, float eta, int refract)}
+U, \\ \bigspc\bigspc float xalpha, float yalpha, float eta, int refract)}
 \indexapi{microfacet()}
 
 Returns a \colorclosure that represents scattering on the
@@ -4469,7 +4474,7 @@ expected that the alias "default" must work as a distribution in any renderer.
 
 
 \apiitem{\colorclosure\ {\ce microfacet} (string distribution, normal N,
-float alpha, float eta, int refract)}
+\\ \bigspc\bigspc float alpha, float eta, int refract)}
 \indexapi{microfacet()}
 
 Returns a \colorclosure that represents scattering on the

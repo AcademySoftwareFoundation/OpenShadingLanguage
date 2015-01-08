@@ -55,13 +55,13 @@ Language Specification
 %\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2014 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2015 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 3 Dec, 2014 \\
+\date{{\large Date: 7 Jan, 2015 \\
 %~ (with corrections, 2 Oct 2014)
 }
 \bigskip
@@ -4185,13 +4185,13 @@ xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
 (N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
 they will be 0). \\[0.75ex]
 
-%\qkw{viewingmatrix} & \matrix & (Shadow maps only) The matrix that
-%transforms points from \commonspace to the \cameraspace from which the
-%texture was created. \\[0.75ex]
-%
-%{\small \qkw{projectionmatrix}} & \matrix & (Shadow maps only) The
-%matrix that transforms points from \commonspace to a 2D coordinate
-%system where $x$ and $y$ range from -1 to 1.  \\[0.75ex]
+\qkw{worldtocamera} & \matrix & If the texture is a rendered image,
+retrieves the world-to-camera 3D transformation matrix that was used when it
+was created.\\[0.75ex]
+
+\qkw{worldtoscreen} & \matrix & If the texture is a rendered image,
+retrieves the matrix that projected points from world space into a 2D screen
+coordinate system where $x$ and $y$ range from $-1$ to $+1$. \\[0.75ex]
 
 \qkw{averagecolor} & {\cf color} &
 \NEW  % 1.6

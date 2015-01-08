@@ -122,6 +122,10 @@ Documentation:
 * Short chapter added to spec describing the syntax of our serialization
   protocol.
 * Documentation fix: surfacearea() should return float, not int. (1.5.12)
+* Clarified that the way to use gettextureinfo() to retrieve matrices from
+  textures created from rendered images (or shadow maps) is with the tags
+  "worldtocamera" (for the world-to-3D-camera) and "worldtoscreen" (for
+  the world-to-2D-projection that runs -1 to +1 in x and y).
 
 
 

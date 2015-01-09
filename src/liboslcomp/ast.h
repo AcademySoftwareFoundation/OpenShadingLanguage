@@ -68,6 +68,7 @@ public:
         loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
         assign_expression_node, ternary_expression_node,
+        comma_operator_node,
         typecast_expression_node, type_constructor_node,
         function_call_node,
         literal_node,
@@ -275,9 +276,9 @@ protected:
     bool check_arglist (const char *funcname, ref arg,
                         const char *formals, bool coerce=false);
 
-    /// Follow a list of nodes, generating code for each in turn.
-    ///
-    static void codegen_list (ref node);
+    /// Follow a list of nodes, generating code for each in turn, and return
+    /// the Symbol* for the last thing generated.
+    static Symbol * codegen_list (ref node, Symbol *dest = NULL);
 
     /// Generate code for all the children of this node.
     ///
@@ -750,6 +751,24 @@ public:
     ref trueexpr () const { return child (1); }
     ref falseexpr () const { return child (2); }
 };
+
+
+
+class ASTcomma_operator : public ASTNode
+{
+public:
+    ASTcomma_operator (OSLCompilerImpl *comp, ASTNode *exprlist)
+        : ASTNode (comma_operator_node, comp, Nothing, exprlist)
+    { }
+
+    const char *nodetypename () const { return "comma_operator"; }
+    const char *childname (size_t i) const { return "expression_list"; }
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
+
+    ref expr () const { return child (0); }
+};
+
 
 
 

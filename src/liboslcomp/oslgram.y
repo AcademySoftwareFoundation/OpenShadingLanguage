@@ -114,7 +114,8 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> conditional_statement loop_statement loopmod_statement
 %type <n> return_statement
 %type <n> for_init_statement
-%type <n> expression_list expression_opt expression
+%type <n> expression compound_expression
+%type <n> expression_list expression_opt compound_expression_opt
 %type <n> id_or_field variable_lvalue variable_ref 
 %type <i> unary_op incdec_op incdec_op_opt
 %type <n> type_constructor function_call function_args_opt function_args
@@ -517,8 +518,6 @@ shadertype
                         $$ = ShadTypeDisplacement;
                     else if (! strcmp ($1, "volume"))
                         $$ = ShadTypeVolume;
-                    // else if (! strcmp ($1, "light"))
-                    //    $$ = ShadTypeLight;
                     else {
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
@@ -600,7 +599,7 @@ statement
         | loopmod_statement
         | return_statement
         | local_declaration
-        | expression ';'
+        | compound_expression ';'
         | ';'                           { $$ = 0; }
         ;
 
@@ -617,12 +616,12 @@ scoped_statements
         ;
 
 conditional_statement
-        : IF_TOKEN '(' expression ')' statement
+        : IF_TOKEN '(' compound_expression ')' statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5);
                     $$->sourceline (@1.first_line);
                 }
-        | IF_TOKEN '(' expression ')' statement ELSE statement
+        | IF_TOKEN '(' compound_expression ')' statement ELSE statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
                     $$->sourceline (@1.first_line);
@@ -630,14 +629,14 @@ conditional_statement
         ;
 
 loop_statement
-        : WHILE '(' expression ')' statement
+        : WHILE '(' compound_expression ')' statement
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopWhile,
                                                 NULL, $3, NULL, $5);
                     $$->sourceline (@1.first_line);
                 }
-        | DO statement WHILE '(' expression ')' ';'
+        | DO statement WHILE '(' compound_expression ')' ';'
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopDo,
@@ -648,7 +647,7 @@ loop_statement
                 {
                     oslcompiler->symtab().push (); // new declaration scope
                 }
-          for_init_statement expression_opt ';' expression_opt ')' statement
+          for_init_statement compound_expression_opt ';' compound_expression_opt ')' statement
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopFor,
@@ -691,6 +690,18 @@ expression_opt
         | /* empty */                   { $$ = 0; }
         ;
 
+compound_expression_opt
+        : compound_expression
+        | /* empty */                   { $$ = 0; }
+        ;
+
+compound_expression
+        : expression
+        | expression ',' compound_expression
+                {
+                    $$ = new ASTcomma_operator (oslcompiler, concat ($1, $3));
+                }
+
 expression
         : INT_LITERAL           { $$ = new ASTliteral (oslcompiler, $1); }
         | FLOAT_LITERAL         { $$ = new ASTliteral (oslcompiler, $1); }
@@ -715,7 +726,7 @@ expression
                         $$ = new ASTunary_expression (oslcompiler, $1, $2);
                     }
                 }
-        | '(' expression ')'                    { $$ = $2; }
+        | '(' compound_expression ')'           { $$ = $2; }
         | function_call
         | assign_expression
         | ternary_expression
@@ -892,7 +903,7 @@ function_args_opt
 
 function_args
         : expression
-        | function_args ',' expression          { $$ = concat ($1, $3); }
+        | function_args ',' expression     { $$ = concat ($1, $3); }
         ;
 
 assign_expression

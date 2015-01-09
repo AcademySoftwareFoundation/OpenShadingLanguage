@@ -347,13 +347,16 @@ ASTNode::codegen_children ()
 
 
 
-void
-ASTNode::codegen_list (ref node)
+Symbol *
+ASTNode::codegen_list (ref node, Symbol *dest)
 {
+    Symbol *sym = NULL;
     while (node) {
-        node->codegen ();
+        bool last = (node->nextptr() == NULL);
+        sym = node->codegen (last ? dest : NULL);
         node = node->next ();
     }
+    return sym;
 }
 
 
@@ -1423,6 +1426,16 @@ ASTternary_expression::codegen (Symbol *dest)
     m_compiler->ircode(ifop).set_jump (falselabel, donelabel);
 
     return dest;
+}
+
+
+
+Symbol *
+ASTcomma_operator::codegen (Symbol *dest)
+{
+    return codegen_list (expr(), dest);
+    // N.B. codegen_list already returns the type of the LAST node in
+    // the list, just like the comma operator is supposed to do.
 }
 
 

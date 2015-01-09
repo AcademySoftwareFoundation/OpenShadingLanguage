@@ -13,6 +13,8 @@ Language, standard libary, and compiler changes (for shader writers):
   directly seen by the camera will directly reproduce the closure weight
   in the final pixel, regardless of it being a surface or volume. Thus,
   you don't need to weight it by PI. #427 (1.6.2)
+* The "comma operator" now works in the way you would expect in other
+  C-like languages. #451 (1.6.2)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem attribute int "profile", if set to 1, will include

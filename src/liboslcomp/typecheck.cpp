@@ -690,6 +690,16 @@ ASTternary_expression::typecheck (TypeSpec expected)
 
 
 TypeSpec
+ASTcomma_operator::typecheck (TypeSpec expected)
+{
+    return m_typespec = typecheck_list (expr(), expected);
+    // N.B. typecheck_list already returns the type of the LAST node in
+    // the list, just like the comma operator is supposed to do.
+}
+
+
+
+TypeSpec
 ASTtypecast_expression::typecheck (TypeSpec expected)
 {
     // FIXME - closures

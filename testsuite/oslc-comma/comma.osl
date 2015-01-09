@@ -1,0 +1,32 @@
+// Test the comma operator in for statements
+
+shader comma ()
+{
+    // First, test the "common case" of a for loop with multiple 
+    // variables updated
+    float sum = 0, amp = 0.5, freq = 1;
+    for (int i = 0; i < 4; i++, amp *= 0.5, freq *= 2)
+        sum += amp * snoise(P * freq);
+    printf ("for loop: amp = %g, freq = %g, sum = %g\n", amp, freq, sum);
+
+    // test comma-separated assignment statements
+    int a = 1, b = 0;
+    int lo, hi;
+    if (a < b)
+        lo = a, hi = b;
+    else
+        hi = a, lo = b;
+    printf ("Lo = %d, hi = %d   (expect: 0,1)\n", lo, hi);
+
+    // Test the return value of a commma expression
+    float x = 3.14;
+    int y = 5;
+    int z = (x, y);
+    printf ("z = %d  (expect: 5)\n", z);
+
+    // Test proper associativity involving assignments
+    int i, j;
+    i = 1, 2, 3;
+    j = 4, 5, 6;
+    printf ("i = %d, j = %d   (expect: 1,4 NOT 3,6)\n", i, j);
+}

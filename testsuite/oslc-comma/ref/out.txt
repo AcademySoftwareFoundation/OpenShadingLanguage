@@ -1,0 +1,6 @@
+Compiled comma.osl -> comma.oso
+for loop: amp = 0.03125, freq = 16, sum = 0
+Lo = 0, hi = 1   (expect: 0,1)
+z = 5  (expect: 5)
+i = 1, j = 4   (expect: 1,4 NOT 3,6)
+

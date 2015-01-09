@@ -61,7 +61,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 7 Jan, 2015 \\
+\date{{\large Date: 9 Jan, 2015 \\
 %~ (with corrections, 2 Oct 2014)
 }
 \bigskip
@@ -5052,9 +5052,7 @@ nothing (empty, no token).
     <shadertype> <identifier> <metadata-block-opt> 
     "(" <shader-formal-params-opt> ")" "{" <statement-list> "}"
 
-<shadertype> ::= "displacement" | "imager" | "integrator" | 
-    "shader" | "surface" | "volume"
-% "light"
+<shadertype> ::= "displacement" |  "shader" | "surface" | "volume"
 
 <shader-formal-params> ::= <shader-formal-param> \{ "," <shader-formal-param> \}
 
@@ -5138,7 +5136,7 @@ nothing (empty, no token).
 <statement-list> ::= <statement> \{ <statement> \}
 
 <statement> ::= 
-<expression-opt> ";"
+<compound-expression-opt> ";"
 \alt <scoped-statements>
 \alt <local-declaration>
 \alt <conditional-statement>
@@ -5149,12 +5147,13 @@ nothing (empty, no token).
 
 <scoped-statements> ::= "{" <statement-list-opt> "}"
 
-<conditional-statement> ::= \spc \\ "if" "(" <expression> ")" <statement>
-\alt "if" "(" <expression> ")" <statement> "else" <statement>
+<conditional-statement> ::= \spc \\ "if" "(" <compound-expression> ")" <statement>
+\alt "if" "(" <compound-expression> ")" <statement> "else" <statement>
 
-<loop-statement> ::= \spc \\ "while" "(" <expression> ")" <statement>
-\alt "do" <statement> "while" "(" <expression> ")" ";"
-\alt "for" "(" <for-init-statement-opt>  <expression-opt> ";" <expression-opt> ")" <statement>
+<loop-statement> ::= \spc \\ "while" "(" <compound-expression> ")" <statement>
+\alt "do" <statement> "while" "(" <compound-expression> ")" ";"
+\alt "for" "(" <for-init-statement-opt>  <compound-expression-opt> ";" 
+                <compound-expression-opt> ")" <statement>
 
 <for-init-statement> ::= \spc \\ <expression-opt> ";"
 \alt <variable-declaration>
@@ -5182,12 +5181,14 @@ nothing (empty, no token).
 \alt <incdec-op> <variable-ref>
 \alt <expression> <binary-op> <expression>
 \alt <unary-op> <expression>
-\alt "(" <expression> ")"
+\alt "(" <compound-expression> ")"
 \alt <function-call>
 \alt <assign-expression>
 \alt <ternary-expression>
 \alt <typecast-expression>
 \alt <variable-ref>
+
+<compound-expression> ::= <expression> \{ "," <expression> \}
 
 <variable-lvalue> ::= <identifier> <array-deref-opt> <component-deref-opt>
 \alt <variable_lvalue> "[" <expression> "]"

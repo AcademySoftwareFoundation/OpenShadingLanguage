@@ -534,10 +534,10 @@ ASTassign_expression::codegen (Symbol *dest)
 
 
 void
-ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
-                                             ustring dstsym, ustring srcsym,
-                                             Symbol *arrayindex,
-                                             bool copywholearrays, int intindex)
+ASTNode::codegen_assign_struct (StructSpec *structspec,
+                                ustring dstsym, ustring srcsym,
+                                Symbol *arrayindex,
+                                bool copywholearrays, int intindex)
 {
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         const TypeSpec &fieldtype (structspec->field(i).type);
@@ -545,9 +545,9 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             // struct within struct -- recurse
             ustring fieldname (structspec->field(i).name);
             codegen_assign_struct (fieldtype.structspec(),
-                                   ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str()),
-                                   ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str()),
-                                   arrayindex, copywholearrays, intindex);
+                                   ustring::format ("%s.%s", dstsym, fieldname),
+                                   ustring::format ("%s.%s", srcsym, fieldname),
+                                   arrayindex, copywholearrays, 0);
             continue;
         }
 
@@ -555,8 +555,8 @@ ASTassign_expression::codegen_assign_struct (StructSpec *structspec,
             // struct array within struct -- loop over indices and recurse
             ASSERT (! arrayindex && "two levels of arrays not allowed");
             ustring fieldname (structspec->field(i).name);
-            ustring dstfield = ustring::format ("%s.%s", dstsym.c_str(), fieldname.c_str());
-            ustring srcfield = ustring::format ("%s.%s", srcsym.c_str(), fieldname.c_str());
+            ustring dstfield = ustring::format ("%s.%s", dstsym, fieldname);
+            ustring srcfield = ustring::format ("%s.%s", srcsym, fieldname);
             for (int i = 0;  i < fieldtype.arraylength();  ++i) {
                 codegen_assign_struct (fieldtype.structspec(),
                                        dstfield, srcfield,
@@ -888,12 +888,8 @@ ASTvariable_declaration::codegen_struct_initializers (ref init)
         Symbol *initsym = init->codegen (m_sym);
         if (initsym != m_sym) {
             StructSpec *structspec (m_typespec.structspec());
-            for (int i = 0;  i < (int)structspec->numfields();  ++i) {
-                Symbol *symfield, *initfield;
-                m_compiler->struct_field_pair (m_sym, initsym, i,
-                                               symfield, initfield);
-                emitcode ("assign", symfield, initfield);
-            }
+            codegen_assign_struct (structspec, ustring(m_sym->mangled()),
+                                   ustring(initsym->mangled()), NULL, true, 0);
         }
         return m_sym;
     }

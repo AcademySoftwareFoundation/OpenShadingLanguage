@@ -1,0 +1,22 @@
+struct InnerStruct {
+    float a;
+};
+
+
+struct OuterStruct {
+    int b;
+    InnerStruct in;
+};
+
+
+shader
+test (output color Cout = 0)
+{
+    OuterStruct x;
+    x.b = 42;
+    x.in.a = 3.14;
+
+    // Here is the variable declaration and initialization we are testing
+    OuterStruct y = x;
+    printf ("y = { %d, %g }\n", y.b, y.in.a);
+}

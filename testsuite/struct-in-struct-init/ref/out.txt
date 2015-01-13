@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+y = { 42, 3.14 }
+

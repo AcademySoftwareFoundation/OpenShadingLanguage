@@ -368,7 +368,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture
-            struct-err struct-layers struct-with-array 
+            struct-err struct-in-struct-init struct-layers struct-with-array 
             struct-within-struct ternary
             texture-alpha texture-blur texture-derivs texture-field3d
             texture-firstchannel texture-interp 

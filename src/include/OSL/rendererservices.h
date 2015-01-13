@@ -234,6 +234,10 @@ public:
     /// and the data has been put in *data.  Return false if the texture
     /// doesn't exist, doesn't have the requested data, if the data
     /// doesn't match the type requested. or some other failure.
+    ///
+    /// Note to renderers: if sg is NULL, that means get_texture_info is
+    /// being called speculatively by the runtime optimizer, and it doesn't
+    /// know which object the shader will be run on.
     virtual bool get_texture_info (ShaderGlobals *sg,
                                    ustring filename, int subimage,
                                    ustring dataname, TypeDesc datatype,

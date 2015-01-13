@@ -2034,8 +2034,8 @@ DECLFOLDER(constfold_gettextureinfo)
         void *mydata = alloca (t.size ());
         // FIXME(ptex) -- exclude folding of ptex, since these things
         // can vary per face.
-        int result = rop.texturesys()->get_texture_info (filename, 0,
-                                                         dataname, t, mydata);
+        int result = rop.renderer()->get_texture_info (NULL, filename, 0,
+                                                       dataname, t, mydata);
         // Now we turn
         //       gettextureinfo result filename dataname data
         // into this for success:

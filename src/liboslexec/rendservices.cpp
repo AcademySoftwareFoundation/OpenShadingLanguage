@@ -139,7 +139,7 @@ RendererServices::texture (ustring filename, TextureOpt &options,
                                          nchannels, result, dresultds, dresultdt);
     if (!status) {
         std::string err = texturesys()->geterror();
-        if (err.size()) {
+        if (err.size() && sg) {
             sg->context->error ("[RendererServices::texture] %s", err);
         }
     }
@@ -160,7 +160,7 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
                                            dresultds, dresultdt, dresultdr);
     if (!status) {
         std::string err = texturesys()->geterror();
-        if (err.size()) {
+        if (err.size() && sg) {
             sg->context->error ("[RendererServices::texture3d] %s", err);
         }
     }
@@ -180,7 +180,7 @@ RendererServices::environment (ustring filename, TextureOpt &options,
                                              nchannels, result, dresultds, dresultdt);
     if (!status) {
         std::string err = texturesys()->geterror();
-        if (err.size()) {
+        if (err.size() && sg) {
             sg->context->error ("[RendererServices::environment] %s", err);
         }
     }
@@ -199,7 +199,7 @@ RendererServices::get_texture_info (ShaderGlobals *sg,
                                                    datatype, data);
     if (!status) {
         std::string err = texturesys()->geterror();
-        if (err.size()) {
+        if (err.size() && sg) {
             sg->context->error ("[RendererServices::get_texture_info] %s", err);
         }
     }

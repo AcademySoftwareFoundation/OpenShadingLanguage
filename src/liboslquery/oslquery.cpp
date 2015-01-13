@@ -177,7 +177,7 @@ OSOReaderQuery::hint (const char *h)
     string_view hintstring (h);
     if (! Strutil::parse_char (hintstring, '%'))
         return;
-    if (m_reading_param && Strutil::parse_prefix(hintstring, "meta{")) {
+    if (Strutil::parse_prefix(hintstring, "meta{")) {
         // std::cerr << "  Metadata '" << hintstring << "'\n";
         Strutil::skip_whitespace (hintstring);
         std::string type = Strutil::parse_until (hintstring, ",}");
@@ -210,7 +210,10 @@ OSOReaderQuery::hint (const char *h)
             }
         }
         Strutil::parse_char (hintstring, '}');
-        m_query.m_params[m_query.nparams()-1].metadata.push_back (p);
+        if (m_reading_param) // Parameter metadata
+            m_query.m_params[m_query.nparams()-1].metadata.push_back (p);
+        else // global shader metadata
+            m_query.m_meta.push_back (p);
         return;
     }
     if (m_reading_param && Strutil::parse_prefix(hintstring, "structfields{")) {

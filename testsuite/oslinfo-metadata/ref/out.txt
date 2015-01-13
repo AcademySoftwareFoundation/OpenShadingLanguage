@@ -1,5 +1,6 @@
 Compiled metadata.osl -> metadata.oso
 surface "metadata"
+		metadata: string description = "everything is awesome"
     "myparam1" "int"
 		Default value: 1
 		metadata: int i = 0

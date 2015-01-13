@@ -773,7 +773,13 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
     oso ("%s %s", shaderdecl->shadertypename(), 
          shaderdecl->shadername().c_str());
 
-    // FIXME -- output global hints and metadata
+    // output global hints and metadata
+    int hints = 0;
+    for (ASTNode::ref m = shaderdecl->metadata();  m;  m = m->next()) {
+        if (hints++ == 0)
+            oso ("\t");
+        write_oso_metadata (m.get());
+    }
 
     oso ("\n");
 

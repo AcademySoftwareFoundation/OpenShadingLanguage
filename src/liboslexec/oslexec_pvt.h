@@ -533,6 +533,11 @@ public:
     ///
     void outgoing_connections (bool out) { m_outgoing_connections = out; }
 
+    /// Does this instance have any renderer outputs?
+    bool renderer_outputs () const { return m_renderer_outputs; }
+    /// Set whether this instance has renderer outputs
+    void renderer_outputs (bool out) { m_renderer_outputs = out; }
+
     int maincodebegin () const { return m_maincodebegin; }
     int maincodeend () const { return m_maincodeend; }
 
@@ -594,7 +599,8 @@ public:
 
     /// Does it appear that the layer is completely unused?
     ///
-    bool unused () const { return run_lazily() && ! outgoing_connections(); }
+    bool unused () const { return run_lazily() && ! outgoing_connections()
+                                               && ! renderer_outputs(); }
 
     /// Is the instance reduced to nothing but an 'end' instruction and no
     /// symbols?
@@ -652,6 +658,7 @@ private:
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
+    bool m_renderer_outputs;            ///< Any outputs params render outputs?
     ConnectionVec m_connections;        ///< Connected input params
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range

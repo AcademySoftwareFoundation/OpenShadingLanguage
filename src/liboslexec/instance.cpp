@@ -58,6 +58,7 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
       m_layername(layername),
       m_writes_globals(false), m_run_lazily(false),
       m_outgoing_connections(false),
+      m_renderer_outputs(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
       m_maincodebegin(m_master->m_maincodebegin),
       m_maincodeend(m_master->m_maincodeend)
@@ -335,8 +336,10 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
                 si->connected_down (m_instoverrides[i].connected_down());
                 si->lockgeom (m_instoverrides[i].lockgeom());
             }
-            if (shadingsys().is_renderer_output (layername(), si->name(), &group))
+            if (shadingsys().is_renderer_output (layername(), si->name(), &group)) {
                 si->renderer_output (true);
+                renderer_outputs (true);
+            }
         }
     }
     off_t symmem = vectorbytes(m_instsymbols) - vectorbytes(m_instoverrides);
@@ -426,9 +429,10 @@ ShaderInstance::compute_run_lazily ()
         // group) or shaders that alter global variables (unless
         // 'lazyglobals' is turned on).
         if (shadingsys().m_lazyglobals)
-            run_lazily (outgoing_connections());
+            run_lazily (outgoing_connections() && ! renderer_outputs());
         else
-            run_lazily (outgoing_connections() && ! writes_globals());
+            run_lazily (outgoing_connections() && ! writes_globals()
+                                               && ! renderer_outputs());
 #if 0
         // Suggested warning below... but are there use cases where people
         // want these to run (because they will extract the results they

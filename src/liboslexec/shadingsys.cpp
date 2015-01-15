@@ -2396,7 +2396,7 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     // the brute force approach, it seems silly to have a complex scheme
     // to try to reduce the number of pairings.
 
-    if (! m_opt_merge_instances)
+    if (! m_opt_merge_instances || optimize() < 1)
         return 0;
 
     OIIO::Timer timer;          // Time we spend looking for and doing merges

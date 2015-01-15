@@ -347,7 +347,7 @@ TESTSUITE ( aastep arithmetic array array-derivs array-range
             geomath getattribute-camera getsymbol-nonheap gettextureinfo
             group-outputs groupstring
             hyperb ieee_fp if incdec initops intbits isconnected
-            layers layers-Ciassign layers-lazy
+            layers layers-Ciassign layers-lazy layers-repeatedoutputs
             logic loop matrix message metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter

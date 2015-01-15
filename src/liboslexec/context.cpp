@@ -193,15 +193,18 @@ ShadingContext::process_errors () const
 
 
 Symbol *
-ShadingContext::symbol (ustring name)
+ShadingContext::symbol (ustring layername, ustring symbolname)
 {
     ShaderGroup &sgroup (*attribs());
     int nlayers = sgroup.nlayers ();
     if (sgroup.llvm_compiled_version()) {
         for (int layer = nlayers-1;  layer >= 0;  --layer) {
-            int symidx = sgroup[layer]->findsymbol (name);
+            ShaderInstance *inst (sgroup[layer]);
+            if (layername.size() && layername != inst->layername())
+                continue;  // They asked for a specific layer and this isn't it
+            int symidx = inst->findsymbol (symbolname);
             if (symidx >= 0)
-                return sgroup[layer]->symbol (symidx);
+                return inst->symbol (symidx);
         }
     }
     return NULL;

@@ -811,8 +811,8 @@ public:
     bool execute (ShadingContext &ctx, ShaderGroup &group,
                   ShaderGlobals &ssg, bool run=true);
 
-    const void* get_symbol (ShadingContext &ctx, ustring name,
-                            TypeDesc &type);
+    const void* get_symbol (ShadingContext &ctx, ustring layername,
+                            ustring symbolname, TypeDesc &type);
 
 //    void operator delete (void *todel) { ::delete ((char *)todel); }
 
@@ -1397,11 +1397,13 @@ public:
     }
 
 
-    /// Find the named symbol in the (already-executed!) stack of
-    /// shaders of the given use, with priority given to
-    /// later laters over earlier layers (if they name the same symbol).
-    /// Return NULL if no such symbol is found.
-    Symbol * symbol (ustring name);
+    /// Find the named symbol in the (already-executed!) stack of shaders of
+    /// the given use. If a layer is given, search just that layer. If no
+    /// layer is specified, priority is given to later laters over earlier
+    /// layers (if they name the same symbol). Return NULL if no such symbol
+    /// is found.
+    Symbol * symbol (ustring layername, ustring symbolname);
+    Symbol * symbol (ustring symbolname) { return symbol (ustring(), symbolname); }
 
     /// Return a pointer to where the symbol's data lives.
     void *symbol_data (Symbol &sym);

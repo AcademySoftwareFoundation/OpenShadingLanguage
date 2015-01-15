@@ -497,8 +497,15 @@ setup_output_images (ShadingSystem *shadingsys,
     // Tell the shading system which outputs we want
     if (outputvars.size()) {
         std::vector<const char *> aovnames (outputvars.size());
-        for (size_t i = 0; i < outputvars.size(); ++i)
-            aovnames[i] = outputvars[i].c_str();
+        for (size_t i = 0; i < outputvars.size(); ++i) {
+            ustring varname (outputvars[i]);
+            aovnames[i] = varname.c_str();
+            size_t dot = varname.find('.');
+            if (dot != ustring::npos) {
+                // If the name contains a dot, it's intended to be layer.symbol
+                varname = ustring (varname, dot+1);
+            }
+        }
         shadingsys->attribute (use_group_outputs ? shadergroup.get() : NULL,
                                "renderer_outputs",
                                TypeDesc(TypeDesc::STRING,(int)aovnames.size()),

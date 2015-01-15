@@ -265,9 +265,26 @@ ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &sas,
 
 
 const void*
-ShadingSystem::get_symbol (ShadingContext &ctx, ustring name, TypeDesc &type)
+ShadingSystem::get_symbol (ShadingContext &ctx, ustring layername,
+                           ustring symbolname, TypeDesc &type)
 {
-    return m_impl->get_symbol (ctx, name, type);
+    return m_impl->get_symbol (ctx, layername, symbolname, type);
+}
+
+
+
+const void*
+ShadingSystem::get_symbol (ShadingContext &ctx,
+                           ustring symbolname, TypeDesc &type)
+{
+    ustring layername;
+    size_t dot = symbolname.find('.');
+    if (dot != ustring::npos) {
+        // If the name contains a dot, it's intended to be layer.symbol
+        layername = ustring (symbolname, 0, dot);
+        symbolname = ustring (symbolname, dot+1);
+    }
+    return m_impl->get_symbol (ctx, layername, symbolname, type);
 }
 
 
@@ -2060,10 +2077,10 @@ ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
 
 
 const void *
-ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring name,
-                               TypeDesc &type)
+ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring layername,
+                               ustring symbolname, TypeDesc &type)
 {
-    Symbol *sym = ctx.symbol (name);
+    Symbol *sym = ctx.symbol (layername, symbolname);
     if (sym) {
         type = sym->typespec().simpletype();
         return ctx.symbol_data (*sym);

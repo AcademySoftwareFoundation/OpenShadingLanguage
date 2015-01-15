@@ -421,7 +421,15 @@ public:
     /// symbol.  If found, get_symbol will return the pointer to the
     /// symbol's data, and type will get the symbol's type.  If the
     /// symbol is not found, get_symbol will return NULL.
-    const void* get_symbol (ShadingContext &ctx, ustring name,
+    /// If you give just a symbol name, it will search for the symbol in all
+    /// layers, last-to-first. If a specific layer is named, it will search
+    /// only that layer. You can specify a layer either by naming it
+    /// separately, or by concatenating "layername.symbolname", but note
+    /// that the latter will involve string manipulation inside get_symbol
+    /// and is much more expensive than specifying them separately.
+    const void* get_symbol (ShadingContext &ctx, ustring layername,
+                            ustring symbolname, TypeDesc &type);
+    const void* get_symbol (ShadingContext &ctx, ustring symbolname,
                             TypeDesc &type);
 
     /// Return the statistics output as a huge string.

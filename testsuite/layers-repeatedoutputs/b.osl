@@ -1,0 +1,8 @@
+shader b (float f_in = 41,
+          color c_in = 42,
+          output color c_out = 0
+    )
+{
+    // printf ("b: f_in = %g, c_in = %g\n", f_in, c_in);
+    c_out = color(1,0,0);
+}

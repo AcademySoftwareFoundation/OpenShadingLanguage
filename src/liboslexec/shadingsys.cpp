@@ -2194,7 +2194,12 @@ ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
             return true;
     }
     const std::vector<ustring> &aovs (m_renderer_outputs);
-    return std::find (aovs.begin(), aovs.end(), paramname) != aovs.end();
+    if (std::find (aovs.begin(), aovs.end(), paramname) != aovs.end())
+        return true;
+    ustring name2 = ustring::format ("%s.%s", layername, paramname);
+    if (std::find (aovs.begin(), aovs.end(), name2) != aovs.end())
+        return true;
+    return false;
 }
 
 

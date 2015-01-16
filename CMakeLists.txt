@@ -352,7 +352,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             group-outputs groupstring
             hyperb ieee_fp if incdec initops intbits isconnected
             layers layers-Ciassign layers-lazy layers-repeatedoutputs
-            logic loop matrix message metadata-braces miscmath missing-shader
+            logic loop matrix message mergeinstances-nouserdata
+            metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-uperlin noise-simplex noise-usimplex

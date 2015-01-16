@@ -515,8 +515,13 @@ public:
     int id () const { return m_id; }
 
     /// Does this instance potentially write to any global vars?
-    ///
     bool writes_globals () const { return m_writes_globals; }
+    void writes_globals (bool val) { m_writes_globals = val; }
+
+    /// Does this instance potentially read userdata to initialize any of
+    /// its parameters?
+    bool userdata_params () const { return m_userdata_params; }
+    void userdata_params (bool val) { m_userdata_params = val; }
 
     /// Should this instance only be run lazily (i.e., not
     /// unconditionally)?
@@ -611,8 +616,11 @@ public:
     }
 
     /// Make our own version of the code and args from the master.
-    ///
     void copy_code_from_master (ShaderGroup &group);
+
+    /// Check the params to re-assess writes_globals and userdata_params.
+    /// Sorry, can't think of a short name that isn't too cryptic.
+    void evaluate_writes_globals_and_userdata_params ();
 
     /// Small data structure to hold just the symbol info that the
     /// instance overrides from the master copy.
@@ -628,6 +636,7 @@ public:
         const char *valuesourcename () const { return Symbol::valuesourcename(valuesource()); }
         bool connected_down () const { return m_connected_down; }
         void connected_down (bool c) { m_connected_down = c; }
+        bool connected () const { return valuesource() == Symbol::ConnectedVal; }
         bool lockgeom () const { return m_lockgeom; }
         void lockgeom (bool l) { m_lockgeom = l; }
         friend bool equivalent (const SymOverrideInfo &a, const SymOverrideInfo &b) {
@@ -656,6 +665,7 @@ private:
     std::vector<ustring> m_sparams;     ///< string param values
     int m_id;                           ///< Unique ID for the instance
     bool m_writes_globals;              ///< Do I have side effects?
+    bool m_userdata_params;             ///< Might I read userdata for params?
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
     bool m_renderer_outputs;            ///< Any outputs params render outputs?
@@ -1005,6 +1015,7 @@ private:
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Special 'mix' optimizations
     char m_opt_merge_instances;           ///< Merge identical instances?
+    bool m_opt_merge_instances_with_userdata; ///< Merge identical instances if they have userdata?
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!

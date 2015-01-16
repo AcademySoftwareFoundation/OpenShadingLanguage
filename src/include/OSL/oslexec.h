@@ -138,7 +138,8 @@ public:
     ///         opt_simplify_param, opt_constant_fold, opt_stale_assign,
     ///         opt_elide_useless_ops, opt_elide_unconnected_outputs,
     ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
-    ///         opt_merge_instances, opt_fold_getattribute
+    ///         opt_merge_instances, opt_merge_instance_with_userdata,
+    ///         opt_fold_getattribute
     ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
     ///    int llvm_debug         Set LLVM extra debug level (0)
     ///    int max_local_mem_KB   Error if shader group needs more than this

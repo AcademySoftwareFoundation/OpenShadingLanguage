@@ -525,7 +525,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_stale_assign(true), m_opt_elide_useless_ops(true),
       m_opt_elide_unconnected_outputs(true),
       m_opt_peephole(true), m_opt_coalesce_temps(true),
-      m_opt_assign(true), m_opt_mix(true), m_opt_merge_instances(1),
+      m_opt_assign(true), m_opt_mix(true),
+      m_opt_merge_instances(1), m_opt_merge_instances_with_userdata(true),
       m_opt_fold_getattribute(true),
       m_opt_middleman(true),
       m_optimize_nondebug(false),
@@ -913,6 +914,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("opt_assign", int, m_opt_assign);
     ATTR_SET ("opt_mix", int, m_opt_mix);
     ATTR_SET ("opt_merge_instances", int, m_opt_merge_instances);
+    ATTR_SET ("opt_merge_instances_with_userdata", int, m_opt_merge_instances_with_userdata);
     ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
@@ -1008,6 +1010,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("opt_assign", int, m_opt_assign);
     ATTR_DECODE ("opt_mix", int, m_opt_mix);
     ATTR_DECODE ("opt_merge_instances", int, m_opt_merge_instances);
+    ATTR_DECODE ("opt_merge_instances_with_userdata", int, m_opt_merge_instances_with_userdata);
     ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
@@ -1345,6 +1348,19 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (range_checking);
     BOOLOPT (greedyjit);
     BOOLOPT (countlayerexecs);
+    BOOLOPT (opt_simplify_param);
+    BOOLOPT (opt_constant_fold);
+    BOOLOPT (opt_stale_assign);
+    BOOLOPT (opt_elide_useless_ops);
+    BOOLOPT (opt_elide_unconnected_outputs);
+    BOOLOPT (opt_peephole);
+    BOOLOPT (opt_coalesce_temps);
+    BOOLOPT (opt_assign);
+    BOOLOPT (opt_mix);
+    INTOPT  (opt_merge_instances);
+    BOOLOPT (opt_merge_instances_with_userdata);
+    BOOLOPT (opt_fold_getattribute);
+    BOOLOPT (opt_middleman);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);
@@ -2425,6 +2441,12 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     int merges = 0;             // number of merges we do
     size_t connectionmem = 0;   // Connection memory we free
     int nlayers = group.nlayers();
+
+    // Need to quickly make sure userdata_params is up to date before any
+    // mergeability tests.
+    for (int layer = 0;  layer < nlayers;  ++layer)
+        if (! group[layer]->unused())
+            group[layer]->evaluate_writes_globals_and_userdata_params ();
 
     // Loop over all layers...
     for (int a = 0;  a < nlayers-1;  ++a) {

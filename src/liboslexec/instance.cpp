@@ -206,6 +206,10 @@ ShaderInstance::parameters (const ParamValueList &params)
         ss.m_stat_memory += (symmem+parammem);
     }
 
+    // Set the initial lockgeom on the instoverrides, based on the master.
+    for (int i = 0, e = (int)m_instoverrides.size(); i < e; ++i)
+        m_instoverrides[i].lockgeom (master()->symbol(i)->lockgeom());
+
     BOOST_FOREACH (const ParamValue &p, params) {
         if (p.name().size() == 0)
             continue;   // skip empty names
@@ -309,6 +313,36 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
 
 
 void
+ShaderInstance::evaluate_writes_globals_and_userdata_params ()
+{
+    writes_globals (false);
+    userdata_params (false);
+    BOOST_FOREACH (Symbol &s, symbols()) {
+        if (s.symtype() == SymTypeGlobal && s.everwritten())
+            writes_globals (true);
+        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            && ! s.lockgeom() && ! s.connected())
+            userdata_params (true);
+        if (s.symtype() == SymTypeTemp) // Once we hit a temp, we'll never
+            break;                      // see another global or param.
+    }
+
+    // In case this method is called before the Symbol vector is copied
+    // (i.e. before copy_code_from_master is called), try to set
+    // userdata_params as accurately as we can based on what we know from
+    // the symbol overrides. This is very important to get instance merging
+    // working correctly.
+    int p = 0;
+    BOOST_FOREACH (SymOverrideInfo &s, m_instoverrides) {
+        if (! s.lockgeom())
+            userdata_params (true);
+        ++p;
+    }
+}
+
+
+
+void
 ShaderInstance::copy_code_from_master (ShaderGroup &group)
 {
     ASSERT (m_instops.empty() && m_instargs.empty());
@@ -342,6 +376,7 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
             }
         }
     }
+    evaluate_writes_globals_and_userdata_params ();
     off_t symmem = vectorbytes(m_instsymbols) - vectorbytes(m_instoverrides);
     SymOverrideInfoVec().swap (m_instoverrides);  // free it
 
@@ -572,6 +607,13 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
         return false;
     }
     if (m_connections != b.m_connections) {
+        return false;
+    }
+
+    // Make sure system didn't ask for instances that query userdata to be
+    // immune from instance merging.
+    if (! shadingsys().m_opt_merge_instances_with_userdata
+        && userdata_params()) {
         return false;
     }
 

@@ -1,0 +1,5 @@
+shader a (float x = 1 [[ int lockgeom=0 ]], output color Cout = 0)
+{
+    Cout = x*noise(P);
+    printf ("a: %g\n", Cout);
+}

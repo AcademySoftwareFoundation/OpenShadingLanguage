@@ -1,0 +1,9 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect a1.Cout to b.C1
+Connect a2.Cout to b.C2
+
+Output b.Cout to out.exr
+a: 0.5 0.193125 0.37725
+a: 0.5 0.193125 0.37725
+b: 1 0.38625 0.7545

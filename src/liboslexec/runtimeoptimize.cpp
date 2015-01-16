@@ -2466,6 +2466,11 @@ RuntimeOptimizer::coalesce_temporaries ()
 void
 RuntimeOptimizer::post_optimize_instance ()
 {
+    inst()->evaluate_writes_globals_and_userdata_params ();
+
+    if (inst()->unused())
+        return;    // skip the expensive stuff if we're not used anyway
+
     SymbolPtrVec allsymptrs;
     allsymptrs.reserve (inst()->symbols().size());
     BOOST_FOREACH (Symbol &s, inst()->symbols())
@@ -2706,8 +2711,7 @@ RuntimeOptimizer::run ()
     // Post-opt cleanup: add useparam, coalesce temporaries, etc.
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
-        if (! inst()->unused())
-            post_optimize_instance ();
+        post_optimize_instance ();
     }
 
     // Last chance to eliminate duplicate instances
@@ -2730,6 +2734,8 @@ RuntimeOptimizer::run ()
                       << inst()->layername() << " (" << inst()->id() << ") :\n"
                       << " connections in=" << inst()->nconnections()
                       << " out? " << (inst()->outgoing_connections()?'y':'n')
+                      << (inst()->writes_globals() ? " writes_globals" : "")
+                      << (inst()->userdata_params() ? " userdata_params" : "")
                       << "\n" << inst()->print() 
                       << "\n--------------------------------\n\n";
             std::cout.flush ();

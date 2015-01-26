@@ -4143,8 +4143,11 @@ parameters recognized are listed below:
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
 
-\qkw{exists} & {\cf int} & Returns 1 if the texture file exists and can
-be opened properly as an image, otherwise 0. \\[0.75ex]
+\qkw{exists} & {\cf int} & Result is 1 if the file exists
+and is an texture format that \product can read, or 0 if the file
+does not exist, or could not be properly read as a texture. Note that unlike
+all other queries, this query will ``succeed'' (return {\cf 1}) if the
+file does not exist.
 
 \qkw{resolution} & {\cf int[2]} & The resolution ($x$ and $y$) of the
 highest MIPmap level stored in the texture map. \\[0.75ex]

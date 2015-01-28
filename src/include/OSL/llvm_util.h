@@ -292,17 +292,15 @@ public:
     /// Change the name so it doesn't get mixed up with int.
     llvm::Value *constant_bool (bool b);
 
-    /// Return a constant void pointer to the given address
-    llvm::Value *constant_ptr (void *p, llvm::PointerType *type);
+    /// Return a constant void pointer to the given constant address.
+    /// If the type specified is NULL, it will make a 'void *'.
+    llvm::Value *constant_ptr (void *p, llvm::PointerType *type=NULL);
 
     /// Return an llvm::Value holding the given string constant.
     llvm::Value *constant (OIIO::ustring s);
     llvm::Value *constant (const char *s) {
         return constant(OIIO::ustring(s));
     }
-
-    /// Return an llvm::Value holding the given pointer constant.
-    llvm::Value *constant_ptr (void *p);
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.

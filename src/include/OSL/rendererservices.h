@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 class RendererServices;
+class ShadingContext;
 struct ShaderGlobals;
 
 
@@ -57,6 +58,10 @@ typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
 /// renderer may provide callback to the ShadingSystem.
 class OSLEXECPUBLIC RendererServices {
 public:
+    typedef TextureSystem::TextureHandle TextureHandle;
+    typedef TextureSystem::Perthread TexturePerthread;
+
+
     RendererServices (TextureSystem *texsys=NULL);
     virtual ~RendererServices () { }
 
@@ -196,6 +201,19 @@ public:
     /// Does the current object have the named user-data associated with it?
     virtual bool has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg) = 0;
 
+    /// Given the name of a texture, return an opaque handle that can be
+    /// used with texture calls to avoid the name lookups.
+    virtual TextureHandle * get_texture_handle (ustring filename);
+
+    /// Return true if the texture handle (previously returned by
+    /// get_texture_handle()) is a valid texture that can be subsequently
+    /// read or sampled.
+    virtual bool good (TextureHandle *texture_handle);
+
+    /// Return a thread-specific opaque pointer to the texture system.
+    /// Knowing the context may help this go faster.
+    virtual TexturePerthread * get_texture_perthread (ShadingContext *context=NULL);
+
     /// Filtered 2D texture lookup for a single point.
     ///
     /// s,t are the texture coordinates; dsdx, dtdx, dsdy, and dtdy are
@@ -209,6 +227,12 @@ public:
     /// return false.
     virtual bool texture (ustring filename, TextureOpt &options,
                           ShaderGlobals *sg,
+                          float s, float t, float dsdx, float dtdx,
+                          float dsdy, float dtdy, int nchannels,
+                          float *result, float *dresultds, float *dresultdt);
+    virtual bool texture (TextureHandle *texture_handle,
+                          TexturePerthread *texture_thread_info,
+                          TextureOpt &options, ShaderGlobals *sg,
                           float s, float t, float dsdx, float dtdx,
                           float dsdy, float dtdy, int nchannels,
                           float *result, float *dresultds, float *dresultdt);
@@ -229,6 +253,13 @@ public:
                             const Vec3 &dPdz, int nchannels,
                             float *result, float *dresultds,
                             float *dresultdt, float *dresultdr);
+    virtual bool texture3d (TextureHandle *texture_handle,
+                            TexturePerthread *texture_thread_info,
+                            TextureOpt &options, ShaderGlobals *sg,
+                            const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
+                            const Vec3 &dPdz, int nchannels,
+                            float *result, float *dresultds,
+                            float *dresultdt, float *dresultdr);
 
     /// Filtered environment lookup for a single point.
     ///
@@ -242,6 +273,12 @@ public:
                               const Vec3 &dRdx, const Vec3 &dRdy,
                               int nchannels, float *result,
                               float *dresultds, float *dresultdt);
+    virtual bool environment (TextureHandle *texture_handle,
+                              TexturePerthread *texture_thread_info,
+                              TextureOpt &options, ShaderGlobals *sg,
+                              const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
+                              int nchannels, float *result,
+                              float *dresultds, float *dresultdt);
 
     /// Get information about the given texture.  Return true if found
     /// and the data has been put in *data.  Return false if the texture
@@ -253,6 +290,11 @@ public:
     /// know which object the shader will be run on.
     virtual bool get_texture_info (ShaderGlobals *sg,
                                    ustring filename, int subimage,
+                                   ustring dataname, TypeDesc datatype,
+                                   void *data);
+    virtual bool get_texture_info (ShaderGlobals *sg,
+                                   TextureHandle *texture_handle,
+                                   int subimage,
                                    ustring dataname, TypeDesc datatype,
                                    void *data);
 

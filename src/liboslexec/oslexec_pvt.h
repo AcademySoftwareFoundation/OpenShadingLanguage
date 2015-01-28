@@ -847,7 +847,8 @@ public:
     int optimize () const { return m_optimize; }
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
-    bool fold_getattribute () { return m_opt_fold_getattribute; }
+    bool fold_getattribute () const { return m_opt_fold_getattribute; }
+    bool opt_texture_handle () const { return m_opt_texture_handle; }
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata () const { return m_lazy_userdata; }
@@ -1018,6 +1019,7 @@ private:
     bool m_opt_merge_instances_with_userdata; ///< Merge identical instances if they have userdata?
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
     bool m_opt_middleman;                 ///< Middle-man optimization?
+    bool m_opt_texture_handle;            ///< Use texture handles?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output
@@ -1334,7 +1336,7 @@ private:
 ///
 class OSLEXECPUBLIC ShadingContext {
 public:
-    ShadingContext (ShadingSystemImpl &shadingsys, PerThreadInfo *threadinfo);
+    ShadingContext (ShadingSystemImpl &shadingsys, PerThreadInfo *threadinfo=NULL);
     ~ShadingContext ();
 
     /// Return a reference to the shading system for this context.
@@ -1455,7 +1457,9 @@ public:
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
 
-    PerThreadInfo *thread_info () { return m_threadinfo; }
+    PerThreadInfo *thread_info () const { return m_threadinfo; }
+
+    TextureSystem::Perthread *texture_thread_info () const { return m_texture_thread_info; }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }
 
@@ -1520,6 +1524,7 @@ private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
+    TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_attribs;             ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;

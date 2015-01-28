@@ -53,6 +53,7 @@ ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
 {
     m_shadingsys.m_stat_contexts += 1;
     m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
+    m_texture_thread_info = shadingsys.texturesys()->get_perthread_info ();
 }
 
 
@@ -72,6 +73,7 @@ ShadingContext::~ShadingContext ()
 bool
 ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 {
+    m_texture_thread_info = m_shadingsys.texturesys()->get_perthread_info ();
     m_attribs = &sgroup;
 
     // Optimize if we haven't already

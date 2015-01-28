@@ -920,6 +920,8 @@ LLVM_Util::constant_bool (bool i)
 llvm::Value *
 LLVM_Util::constant_ptr (void *p, llvm::PointerType *type)
 {
+    if (! type)
+        type = type_void_ptr();
     return builder().CreateIntToPtr (constant (size_t (p)), type, "const pointer");
 }
 
@@ -934,19 +936,6 @@ LLVM_Util::constant (ustring s)
                                llvm::APInt(bits,size_t(s.c_str()), true));
     // Then cast the int to a char*.
     return builder().CreateIntToPtr (str, type_string(), "ustring constant");
-}
-
-
-
-llvm::Value *
-LLVM_Util::constant_ptr (void *p)
-{
-    // Create a const size_t with the address
-    size_t bits = sizeof(size_t)*8;
-    llvm::Value *str = llvm::ConstantInt::get (context(),
-                               llvm::APInt(bits,size_t(p), true));
-    // Then cast the size_t to a char*.
-    return builder().CreateIntToPtr (str, type_void_ptr());
 }
 
 

@@ -2148,7 +2148,16 @@ LLVMGEN (llvm_gen_texture)
     // explicit args like texture coordinates.
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_load_value (Filename));
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+        if (! rop.renderer()->good (texture_handle))
+            texture_handle = NULL;
+    }
+    if (texture_handle)
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+    else
+        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (opt);
     args.push_back (rop.llvm_load_value (S));
     args.push_back (rop.llvm_load_value (T));
@@ -2168,11 +2177,12 @@ LLVMGEN (llvm_gen_texture)
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 1)));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 2)));
-    if (alpha) {
-        args.push_back (rop.ll.void_ptr (alpha));
+    if (alpha || texture_handle) {
+        args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
         args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
         args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
-        rop.ll.call_function ("osl_texture_alpha", &args[0], (int)args.size());
+        rop.ll.call_function (texture_handle ? "osl_texture_handle" : "osl_texture_alpha",
+                              &args[0], (int)args.size());
     } else {
         rop.ll.call_function ("osl_texture", &args[0], (int)args.size());
     }
@@ -2208,7 +2218,16 @@ LLVMGEN (llvm_gen_texture3d)
     // explicit args like texture coordinates.
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_load_value (Filename));
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+        if (! rop.renderer()->good (texture_handle))
+            texture_handle = NULL;
+    }
+    if (texture_handle)
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+    else
+        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (opt);
     args.push_back (rop.llvm_void_ptr (P));
     if (user_derivs) {
@@ -2236,12 +2255,13 @@ LLVMGEN (llvm_gen_texture3d)
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 1)));
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 2)));
     args.push_back (rop.ll.void_ptr_null());  // no dresultdz for now
-    if (alpha) {
-        args.push_back (rop.ll.void_ptr (alpha));
-        args.push_back (dalphadx ? rop.ll.void_ptr (dalphadx) : rop.ll.void_ptr_null());
-        args.push_back (dalphady ? rop.ll.void_ptr (dalphady) : rop.ll.void_ptr_null());
+    if (alpha || texture_handle) {
+        args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
+        args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
+        args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
         args.push_back (rop.ll.void_ptr_null());  // No dalphadz for now
-        rop.ll.call_function ("osl_texture3d_alpha", &args[0], (int)args.size());
+        rop.ll.call_function (texture_handle ? "osl_texture3d_handle" : "osl_texture3d_alpha",
+                              &args[0], (int)args.size());
     } else {
         rop.ll.call_function ("osl_texture3d", &args[0], (int)args.size());
     }
@@ -2276,7 +2296,16 @@ LLVMGEN (llvm_gen_environment)
     // explicit args like texture coordinates.
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_load_value (Filename));
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+        if (! rop.renderer()->good (texture_handle))
+            texture_handle = NULL;
+    }
+    if (texture_handle)
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+    else
+        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (opt);
     args.push_back (rop.llvm_void_ptr (R));
     if (user_derivs) {
@@ -2300,7 +2329,8 @@ LLVMGEN (llvm_gen_environment)
         args.push_back (rop.ll.void_ptr_null());
         args.push_back (rop.ll.void_ptr_null());
     }
-    rop.ll.call_function ("osl_environment", &args[0], (int)args.size());
+    rop.ll.call_function (texture_handle ? "osl_environment_handle" : "osl_environment",
+                          &args[0], (int)args.size());
     return true;
 }
 
@@ -2692,7 +2722,16 @@ LLVMGEN (llvm_gen_gettextureinfo)
     std::vector<llvm::Value *> args;
 
     args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_load_value (Filename));
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+        if (! rop.renderer()->good (texture_handle))
+            texture_handle = NULL;
+    }
+    if (texture_handle)
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+    else
+        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.llvm_load_value (Dataname));
     // this is passes a TypeDesc to an LLVM op-code
     args.push_back (rop.ll.constant((int) Data.typespec().simpletype().basetype));
@@ -2701,7 +2740,8 @@ LLVMGEN (llvm_gen_gettextureinfo)
     // destination
     args.push_back (rop.llvm_void_ptr (Data));
 
-    llvm::Value *r = rop.ll.call_function ("osl_get_textureinfo", &args[0], args.size());
+    llvm::Value *r = rop.ll.call_function (texture_handle ? "osl_get_textureinfo_handle" : "osl_get_textureinfo",
+                                           &args[0], args.size());
     rop.llvm_store_value (r, Result);
     /* Do not leave derivs uninitialized */
     if (Data.has_derivs())

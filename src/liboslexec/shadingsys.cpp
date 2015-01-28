@@ -537,7 +537,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_assign(true), m_opt_mix(true),
       m_opt_merge_instances(1), m_opt_merge_instances_with_userdata(true),
       m_opt_fold_getattribute(true),
-      m_opt_middleman(true),
+      m_opt_middleman(true), m_opt_texture_handle(false),
       m_optimize_nondebug(false),
       m_llvm_optimize(0),
       m_debug(0), m_llvm_debug(0),
@@ -926,6 +926,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("opt_merge_instances_with_userdata", int, m_opt_merge_instances_with_userdata);
     ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_SET ("opt_middleman", int, m_opt_middleman);
+    ATTR_SET ("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -1022,6 +1023,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("opt_merge_instances_with_userdata", int, m_opt_merge_instances_with_userdata);
     ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
+    ATTR_DECODE ("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);
@@ -1370,6 +1372,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (opt_merge_instances_with_userdata);
     BOOLOPT (opt_fold_getattribute);
     BOOLOPT (opt_middleman);
+    BOOLOPT (opt_texture_handle);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);
@@ -2055,9 +2058,8 @@ ShadingSystemImpl::ReParameter (ShaderGroup &group, string_view layername_,
 PerThreadInfo *
 ShadingSystemImpl::create_thread_info()
 {
-    return new PerThreadInfo();
+    return new PerThreadInfo;
 }
-
 
 
 

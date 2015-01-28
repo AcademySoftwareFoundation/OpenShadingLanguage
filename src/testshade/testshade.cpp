@@ -740,7 +740,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
     // We're done shading with this context.
     shadingsys->release_context (ctx);
 
-    // Now that we're done rendering, release the thread=specific
+    // Now that we're done rendering, release the thread-specific
     // pointer we saved.  A simple app could skip this; but if the app
     // asks for it (as we have in this example), then it should also
     // destroy it when done with it.

@@ -196,6 +196,10 @@ shader_formal_params
                 {
                     $$ = concat ($1, $3);
                 }
+        | shader_formal_params ','
+                {
+                    $$ = $1;
+                }
         ;
 
 shader_formal_param
@@ -255,6 +259,10 @@ metadata_block_opt
 metadata
         : metadatum
         | metadata ',' metadatum        { $$ = concat ($1, $3); }
+        | metadata ','                  
+                { 
+                    $$ = $1; 
+                }
         ;
 
 metadatum
@@ -319,6 +327,10 @@ function_formal_params
         | function_formal_params ',' function_formal_param
                 {
                     $$ = concat ($1, $3);
+                }
+        | function_formal_params ','
+                {
+                    $$ = $1;
                 }
         ;
 

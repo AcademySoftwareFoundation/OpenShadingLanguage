@@ -67,7 +67,7 @@ inline int quick_floor (float x) {
 }
 
 // return the greatest integer <= x, for 4 values at once
-OIIO_FORCEINLINE int4 quick_floor (float4 x) {
+OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
 #if 0
     // Even on SSE 4.1, this is actually very slightly slower!
     // Continue to test on future architectures.
@@ -91,7 +91,7 @@ inline float bits_to_01 (unsigned int bits) {
 
 // Circular bit rotate by k bits, for 4 values at once.
 OIIO_FORCEINLINE int4
-rotl32 (int4 x, const unsigned int k) {
+rotl32 (const int4& x, const unsigned int k) {
     return (x<<k) | srl(x,32-k);
 }
 
@@ -109,8 +109,9 @@ bjmix (int4 &a, int4 &b, int4 &c)
 
 // Perform a bjfinal (see OpenImageIO/hash.h) on 4 sets of values at once.
 OIIO_FORCEINLINE int4
-bjfinal (int4 a, int4 b, int4 c)
+bjfinal (const int4& a_, const int4& b_, const int4& c_)
 {
+	int4 a(a_), b(b_), c(c_);
     c ^= b; c -= rotl32(b,14);
     a ^= c; a -= rotl32(c,11);
     b ^= a; b -= rotl32(a,25);
@@ -153,7 +154,7 @@ inthash (const unsigned int k[N]) {
 
 // Do four 2D hashes simultaneously.
 inline int4
-inthash_simd (int4 key_x, int4 key_y)
+inthash_simd (const int4& key_x, const int4& key_y)
 {
     const int len = 2;
     const int seed_ = (0xdeadbeef + (len << 2) + 13);
@@ -165,7 +166,7 @@ inthash_simd (int4 key_x, int4 key_y)
 
 // Do four 3D hashes simultaneously.
 inline int4
-inthash_simd (int4 key_x, int4 key_y, int4 key_z)
+inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z)
 {
     const int len = 3;
     const int seed_ = (0xdeadbeef + (len << 2) + 13);
@@ -178,7 +179,7 @@ inthash_simd (int4 key_x, int4 key_y, int4 key_z)
 
 // Do four 3D hashes simultaneously.
 inline int4
-inthash_simd (int4 key_x, int4 key_y, int4 key_z, int4 key_w)
+inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z, const int4& key_w)
 {
     const int len = 4;
     const int seed_ = (0xdeadbeef + (len << 2) + 13);
@@ -372,29 +373,29 @@ private:
 // variety of types that we can use for both scalars and vectors. Because ?:
 // won't work properly in template code with vector ops.
 template <typename B, typename F>
-OIIO_FORCEINLINE F select (B b, const F& t, const F& f) { return b ? t : f; }
+OIIO_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
 
-template <> OIIO_FORCEINLINE int4 select (mask4 b, const int4& t, const int4& f) {
+template <> OIIO_FORCEINLINE int4 select (const mask4& b, const int4& t, const int4& f) {
     return blend (f, t, b);
 }
 
-template <> OIIO_FORCEINLINE float4 select (mask4 b, const float4& t, const float4& f) {
+template <> OIIO_FORCEINLINE float4 select (const mask4& b, const float4& t, const float4& f) {
     return blend (f, t, b);
 }
 
-template <> OIIO_FORCEINLINE float4 select (int4 b, const float4& t, const float4& f) {
+template <> OIIO_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
     return blend (f, t, mask4(b));
 }
 
 template <> OIIO_FORCEINLINE Dual2<float4>
-select (mask4 b, const Dual2<float4>& t, const Dual2<float4>& f) {
+select (const mask4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return Dual2<float4> (blend (f.val(), t.val(), b),
                           blend (f.dx(),  t.dx(),  b),
                           blend (f.dy(),  t.dy(),  b));
 }
 
 template <>
-OIIO_FORCEINLINE Dual2<float4> select (int4 b, const Dual2<float4>& t, const Dual2<float4>& f) {
+OIIO_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return select (mask4(b), t, f);
 }
 
@@ -403,18 +404,18 @@ OIIO_FORCEINLINE Dual2<float4> select (int4 b, const Dual2<float4>& t, const Dua
 // Define negate_if(value,bool) that will work for both scalars and vectors,
 // as well as Dual2's of both.
 template<typename FLOAT, typename BOOL>
-OIIO_FORCEINLINE FLOAT negate_if (FLOAT val, BOOL b) {
+OIIO_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
     return b ? -val : val;
 }
 
-template<> OIIO_FORCEINLINE float4 negate_if (float4 val, int4 b) {
+template<> OIIO_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
     // Special case negate_if for SIMD -- can do it with bit tricks, no branches
     int4 highbit (0x80000000);
     return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, mask4(b))));
 }
 
 // Special case negate_if for SIMD -- can do it with bit tricks, no branches
-template<> OIIO_FORCEINLINE Dual2<float4> negate_if (Dual2<float4> val, int4 b)
+template<> OIIO_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, const int4& b)
 {
     return Dual2<float4> (negate_if (val.val(), b),
                           negate_if (val.dx(),  b),
@@ -425,7 +426,7 @@ template<> OIIO_FORCEINLINE Dual2<float4> negate_if (Dual2<float4> val, int4 b)
 // Define shuffle<> template that works with Dual2<float4> analogously to
 // how it works for float4.
 template<int i0, int i1, int i2, int i3>
-OIIO_FORCEINLINE Dual2<float4> shuffle (Dual2<float4> a)
+OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 {
     return Dual2<float4> (shuffle<i0,i1,i2,i3>(a.val()),
                           shuffle<i0,i1,i2,i3>(a.dx()),
@@ -433,7 +434,7 @@ OIIO_FORCEINLINE Dual2<float4> shuffle (Dual2<float4> a)
 }
 
 template<int i>
-OIIO_FORCEINLINE Dual2<float4> shuffle (Dual2<float4> a)
+OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 {
     return Dual2<float4> (shuffle<i>(a.val()),
                           shuffle<i>(a.dx()),
@@ -443,7 +444,7 @@ OIIO_FORCEINLINE Dual2<float4> shuffle (Dual2<float4> a)
 // Define extract<> that works with Dual2<float4> analogously to how it
 // works for float4.
 template<int i>
-OIIO_FORCEINLINE Dual2<float> extract (Dual2<float4> a)
+OIIO_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 {
     return Dual2<float> (extract<i>(a.val()),
                          extract<i>(a.dx()),
@@ -465,7 +466,7 @@ OIIO_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
 // packed into a float4 and uv are already packed into the first two
 // elements of a float4. We assume VECTYPE is float4, but it also works if
 // VECTYPE is Dual2<float4>.
-OIIO_FORCEINLINE Dual2<float> bilerp (Dual2<float4> abcd, Dual2<float4> uv) {
+OIIO_FORCEINLINE Dual2<float> bilerp (const Dual2<float4>& abcd, const Dual2<float4>& uv) {
     Dual2<float4> xx = OIIO::lerp (abcd, shuffle<1,1,3,3>(abcd), shuffle<0>(uv));
     return extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uv)));
 }
@@ -492,9 +493,9 @@ inline int imod(int a, int b) {
 }
 
 // imod four values at once
-inline int4 imod(int4 a, int b) {
-    a %= b;
-    return a + select(a < 0, int4(b), int4::Zero());
+inline int4 imod(const int4& a, int b) {
+    int4 c = a % b;
+    return c + select(c < 0, int4(b), int4::Zero());
 }
 
 // floorfrac return quick_floor as well as the fractional remainder
@@ -513,7 +514,7 @@ inline Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
 }
 
 // floatfrac for four sets of values at once.
-inline float4 floorfrac(float4 x, int4 * i) {
+inline float4 floorfrac(const float4& x, int4 * i) {
 #if 0
     float4 thefloor = floor(x);
     *i = int4(thefloor);
@@ -533,7 +534,7 @@ inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
 }
 
 
-// Perline 'fade' function. Can be overloaded for float, Dual2, as well
+// Perlin 'fade' function. Can be overloaded for float, Dual2, as well
 // as float4 / Dual2<float4>.
 template <typename T>
 inline T fade (const T &t) { 
@@ -687,17 +688,17 @@ struct HashScalar {
     }
 
     // 4 2D hashes at once!
-    OIIO_FORCEINLINE int4 operator() (int4 x, int4 y) const {
+    OIIO_FORCEINLINE int4 operator() (const int4& x, const int4& y) const {
         return inthash_simd (x, y);
     }
 
     // 4 3D hashes at once!
-    OIIO_FORCEINLINE int4 operator() (int4 x, int4 y, int4 z) const {
+    OIIO_FORCEINLINE int4 operator() (const int4& x, const int4& y, const int4& z) const {
         return inthash_simd (x, y, z);
     }
 
     // 4 3D hashes at once!
-    OIIO_FORCEINLINE int4 operator() (int4 x, int4 y, int4 z, int4 w) const {
+    OIIO_FORCEINLINE int4 operator() (const int4& x, const int4& y, const int4& z, const int4& w) const {
         return inthash_simd (x, y, z, w);
     }
 
@@ -747,7 +748,7 @@ struct HashVector {
     }
 
     // Vector hash of 4 3D points at once
-    OIIO_FORCEINLINE void operator() (int4 *result, int4 x, int4 y) const {
+    OIIO_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y) const {
         int4 h = inthash_simd (x, y);
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -755,7 +756,7 @@ struct HashVector {
     }
 
     // Vector hash of 4 3D points at once
-    OIIO_FORCEINLINE void operator() (int4 *result, int4 x, int4 y, int4 z) const {
+    OIIO_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y, const int4& z) const {
         int4 h = inthash_simd (x, y, z);
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -763,7 +764,7 @@ struct HashVector {
     }
 
     // Vector hash of 4 3D points at once
-    OIIO_FORCEINLINE void operator() (int4 *result, int4 x, int4 y, int4 z, int4 w) const {
+    OIIO_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y, const int4& z, const int4& w) const {
         int4 h = inthash_simd (x, y, z, w);
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -825,17 +826,17 @@ struct HashScalarPeriodic {
     }
 
     // 4 2D hashes at once!
-    int4 operator() (int4 x, int4 y) const {
+    int4 operator() (const int4& x, const int4& y) const {
         return inthash_simd (imod(x,m_px), imod(y,m_py));
     }
 
     // 4 3D hashes at once!
-    int4 operator() (int4 x, int4 y, int4 z) const {
+    int4 operator() (const int4& x, const int4& y, const int4& z) const {
         return inthash_simd (imod(x,m_px), imod(y,m_py), imod(z,m_pz));
     }
 
     // 4 4D hashes at once
-    int4 operator() (int4 x, int4 y, int4 z, int4 w) const {
+    int4 operator() (const int4& x, const int4& y, const int4& z, const int4& w) const {
         return inthash_simd (imod(x,m_px), imod(y,m_py), imod(z,m_pz), imod(w,m_pw));
     }
 
@@ -907,7 +908,7 @@ struct HashVectorPeriodic {
     }
 
     // Vector hash of 4 3D points at once
-    void operator() (int4 *result, int4 x, int4 y) const {
+    void operator() (int4 *result, const int4& x, const int4& y) const {
         int4 h = inthash_simd (imod(x,m_px), imod(y,m_py));
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -915,7 +916,7 @@ struct HashVectorPeriodic {
     }
 
     // Vector hash of 4 3D points at once
-    void operator() (int4 *result, int4 x, int4 y, int4 z) const {
+    void operator() (int4 *result, const int4& x, const int4& y, const int4& z) const {
         int4 h = inthash_simd (imod(x,m_px), imod(y,m_py), imod(z,m_pz));
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -923,7 +924,7 @@ struct HashVectorPeriodic {
     }
 
     // Vector hash of 4 4D points at once
-    void operator() (int4 *result, int4 x, int4 y, int4 z, int4 w) const {
+    void operator() (int4 *result, const int4& x, const int4& y, const int4& z, const int4& w) const {
         int4 h = inthash_simd (imod(x,m_px), imod(y,m_py), imod(z,m_pz), imod(w,m_pw));
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;

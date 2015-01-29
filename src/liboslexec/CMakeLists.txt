@@ -27,6 +27,13 @@ if (NOT BUILDSTATIC)
         )
 endif ()
 
+# oslquery symbols used in oslexec
+if (NOT BUILDSTATIC)
+    LIST(APPEND liboslexec_srcs
+        ../liboslquery/oslquery.cpp
+        )
+endif ()
+
 include_directories ( "${CMAKE_SOURCE_DIR}/src/liboslcomp" )
 
 FILE ( GLOB exec_headers "*.h" )

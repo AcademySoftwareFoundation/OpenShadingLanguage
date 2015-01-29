@@ -113,6 +113,8 @@ using OIIO::isinf;
 #if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::roundf;
 using OIIO::truncf;
+using OIIO::erff;
+using OIIO::erfcf;
 #endif
 
 #if defined(__FreeBSD__)

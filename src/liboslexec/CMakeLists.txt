@@ -149,11 +149,7 @@ TARGET_LINK_LIBRARIES ( oslexec
 ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslexec.map")
 LINK_ILMBASE ( oslexec )
 
-if (BUILDSTATIC)
-    INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
-else ()
-    INSTALL ( TARGETS oslexec LIBRARY DESTINATION lib )
-endif ()
+INSTALL ( TARGETS oslexec RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
 
 # Unit tests
 add_executable (accum_test accum_test.cpp)

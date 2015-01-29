@@ -18,7 +18,7 @@ SET_TARGET_PROPERTIES (libtestshade PROPERTIES PREFIX "")
 if (BUILDSTATIC)
     INSTALL ( TARGETS libtestshade LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
 else ()
-    INSTALL (TARGETS libtestshade LIBRARY DESTINATION lib )
+    INSTALL (TARGETS libtestshade LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
 endif ()
 
 # The 'testshade_dso' executable

@@ -258,6 +258,10 @@ if (MSVC)
     add_definitions (-D_CRT_SECURE_NO_WARNINGS)
     add_definitions (-D_CRT_NONSTDC_NO_WARNINGS)
     add_definitions (-D_SCL_SECURE_NO_WARNINGS)
+    if(NOT LINKSTATIC)
+        add_definitions (-DBOOST_ALL_DYN_LINK)
+        add_definitions (-DOPENEXR_DLL)
+    endif ()
 endif (MSVC)
 
 

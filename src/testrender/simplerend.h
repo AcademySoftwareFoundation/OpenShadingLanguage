@@ -43,6 +43,7 @@ public:
     SimpleRenderer ();
     ~SimpleRenderer () { }
 
+    virtual int supports (string_view feature) const;
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
                              TransformationPtr xform,
                              float time);

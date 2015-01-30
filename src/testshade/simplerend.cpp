@@ -165,6 +165,14 @@ SimpleRenderer::SimpleRenderer ()
 
 
 
+int
+SimpleRenderer::supports (string_view feature) const
+{
+    return false;
+}
+
+
+
 void
 SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
                                ustring projection, float hfov,

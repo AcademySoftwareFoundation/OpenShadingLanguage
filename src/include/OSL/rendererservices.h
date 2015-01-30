@@ -60,6 +60,19 @@ public:
     RendererServices (TextureSystem *texsys=NULL);
     virtual ~RendererServices () { }
 
+    /// Given the name of a 'feature', return whether this RendererServices
+    /// supports it. Feature names include:
+    ///    <none>
+    ///
+    /// This allows some customization of JIT generated code based on the
+    /// facilities and features of a particular renderer. It also allows
+    /// future expansion of RendererServices methods (with trivial default
+    /// implementations) without requiring every renderer implementation to
+    /// support it, as long as the OSL runtime only uses that feature if the
+    /// supports("feature") says it's present, thus preserving source
+    /// compatibility.
+    virtual int supports (string_view feature) const { return false; }
+
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false
     /// on error.

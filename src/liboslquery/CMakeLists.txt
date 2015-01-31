@@ -1,5 +1,6 @@
 SET ( liboslquery_srcs oslquery.cpp ../liboslexec/osoreader.cpp
-      ../liboslexec/typespec.cpp )
+      ../liboslexec/oslexec.cpp ../liboslexec/typespec.cpp )
+
 FILE ( GLOB compiler_headers "../liboslexec/*.h" )
 INCLUDE_DIRECTORIES ( ../liboslexec )
 

@@ -15,11 +15,7 @@ endif ()
 TARGET_LINK_LIBRARIES (libtestshade oslexec oslcomp oslquery ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} )
 SET_TARGET_PROPERTIES (libtestshade PROPERTIES PREFIX "")
 
-if (BUILDSTATIC)
-    INSTALL ( TARGETS libtestshade LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
-else ()
-    INSTALL (TARGETS libtestshade LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
-endif ()
+INSTALL ( TARGETS libtestshade RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
 
 # The 'testshade_dso' executable
 ADD_EXECUTABLE ( testshade_dso testshade_dso.cpp )

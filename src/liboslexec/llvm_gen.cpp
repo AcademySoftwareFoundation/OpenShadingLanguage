@@ -2703,6 +2703,9 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
     llvm::Value *r = rop.ll.call_function ("osl_get_textureinfo", &args[0], args.size());
     rop.llvm_store_value (r, Result);
+    /* Do not leave derivs uninitialized */
+    if (Data.has_derivs())
+        rop.llvm_zero_derivs (Data);
 
     return true;
 }

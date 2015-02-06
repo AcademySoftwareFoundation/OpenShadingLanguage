@@ -749,7 +749,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 
 
 
-extern "C" int
+extern "C" OSL_DLL_EXPORT int
 test_shade (int argc, const char *argv[])
 {
     OIIO::Timer timer;

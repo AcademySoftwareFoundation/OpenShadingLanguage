@@ -562,7 +562,7 @@ inline T grad (int hash, const T &x) {
 }
 
 template <typename I, typename T>
-inline T grad (I hash, const T &x, const T &y) {
+inline T grad (const I &hash, const T &x, const T &y) {
     // 8 possible directions (+-1,+-2) and (+-2,+-1)
     I h = hash & 7;
     T u = select (h<4, x, y);
@@ -572,7 +572,7 @@ inline T grad (I hash, const T &x, const T &y) {
 }
 
 template <typename I, typename T>
-inline T grad (I hash, const T &x, const T &y, const T &z) {
+inline T grad (const I &hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
     I h = hash & 15;
     T u = select (h<8, x, y);
@@ -581,7 +581,7 @@ inline T grad (I hash, const T &x, const T &y, const T &z) {
 }
 
 template <typename I, typename T>
-inline T grad (I hash, const T &x, const T &y, const T &z, const T &w) {
+inline T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
     // use vectors pointing to the edges of the hypercube
     I h = hash & 31;
     T u = select (h<24, x, y);

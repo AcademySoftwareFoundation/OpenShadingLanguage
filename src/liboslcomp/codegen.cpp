@@ -649,6 +649,10 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
             ASTNode::ref val = ctr->args();
             float f[3];
             int nargs = 0;
+			if (val.get() && val->nodetype() == ASTNode::literal_node && val->typespec().is_string()) {
+				val = val->next();
+				completed = false;
+			}
             for (int c = 0;  c < 3;  ++c) {
                 if (val.get())
                     ++nargs;

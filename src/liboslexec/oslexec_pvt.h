@@ -720,7 +720,7 @@ public:
 
     void register_closure (string_view name, int id, const ClosureParam *params,
                            PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignmen = 1);
+                           int alignment = 1);
 
     const ClosureEntry *get_entry (ustring name) const;
     const ClosureEntry *get_entry (int id) const {

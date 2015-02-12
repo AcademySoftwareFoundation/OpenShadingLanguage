@@ -357,6 +357,14 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
             "should not have copied m_instsymbols yet");
     m_instsymbols = m_master->m_symbols;
 
+    // Handle connections to globals
+    for (int c = 0;  c < nconnections();  ++c) {
+        const Connection &con (connection (c));
+        Symbol *dstsym (symbol (con.dst.param));
+        if (dstsym->symtype() == SymTypeGlobal)
+			dstsym->valuesource (Symbol::ConnectedVal);
+	}
+
     // Copy the instance override data
     // Also set the renderer_output flags where needed.
     ASSERT (m_instoverrides.size() == (size_t)std::max(0,lastparam()));

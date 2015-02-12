@@ -1745,8 +1745,10 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     }
 
     dstinst->add_connection (srcinstindex, srccon, dstcon);
-    dstinst->instoverride(dstcon.param)->valuesource (Symbol::ConnectedVal);
-    srcinst->instoverride(srccon.param)->connected_down (true);
+    if (dstcon.param < dstinst->lastparam())
+        dstinst->instoverride(dstcon.param)->valuesource (Symbol::ConnectedVal);
+    if (srccon.param < srcinst->lastparam())
+        srcinst->instoverride(srccon.param)->connected_down (true);
     srcinst->outgoing_connections (true);
 
     // if (debug())

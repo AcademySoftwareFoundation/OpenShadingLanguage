@@ -256,10 +256,19 @@ ShadingSystem::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &sas,
+ShadingSystem::execute (ShadingContext *ctx, ShaderGroup &sas,
                         ShaderGlobals &ssg, bool run)
 {
     return m_impl->execute (ctx, sas, ssg, run);
+}
+
+
+
+bool
+ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &sas,
+                        ShaderGlobals &ssg, bool run)
+{
+    return m_impl->execute (&ctx, sas, ssg, run);
 }
 
 
@@ -2084,10 +2093,18 @@ ShadingSystemImpl::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
+ShadingSystemImpl::execute (ShadingContext *ctx, ShaderGroup &group,
                             ShaderGlobals &ssg, bool run)
 {
-    return ctx.execute (group, ssg, run);
+    bool free_context = false;
+    if (! ctx) {
+        ctx = get_context();
+        free_context = true;
+    }
+    bool result = ctx->execute (group, ssg, run);
+    if (free_context)
+        release_context (ctx);
+    return result;
 }
 
 

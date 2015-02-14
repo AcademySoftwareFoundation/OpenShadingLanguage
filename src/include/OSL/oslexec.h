@@ -412,9 +412,13 @@ public:
     /// 'run' is false, do all the usual preparation, but don't actually
     /// run the shader.  Return true if the shader executed (or could
     /// have executed, if 'run' had been true), false the shader turned
-    /// out to be empty.
-    bool execute (ShadingContext &ctx, ShaderGroup &sas,
+    /// out to be empty. If ctx is NULL, then execute will request one
+    /// (based on the running thread) on its own and then return it when
+    /// it's done.
+    bool execute (ShadingContext *ctx, ShaderGroup &sas,
                   ShaderGlobals &ssg, bool run=true);
+    bool execute (ShadingContext &ctx, ShaderGroup &sas,
+                  ShaderGlobals &ssg, bool run=true); // DEPRECATED (1.6)
 
     /// Get a raw pointer to a named symbol (such as you'd need to pull
     /// out the value of an output parameter).  ctx is the shading

@@ -818,7 +818,7 @@ public:
 
     void release_context (ShadingContext *ctx);
 
-    bool execute (ShadingContext &ctx, ShaderGroup &group,
+    bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &ssg, bool run=true);
 
     const void* get_symbol (ShadingContext &ctx, ustring layername,

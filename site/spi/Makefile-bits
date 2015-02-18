@@ -76,11 +76,11 @@ ifeq ($(SP_OS), spinux1)
     # Our minimal architecture for workstations and farm supports SSE 4.1
     USE_SIMD = sse4.1
 
-    ifneq (,$(wildcard /usr/include/OpenEXR220))
+    ifneq (,$(wildcard /usr/include/OpenEXR2))
         MY_CMAKE_FLAGS += \
 	  -DILMBASE_CUSTOM=1 \
-	  -DILMBASE_CUSTOM_INCLUDE_DIR=/usr/include/OpenEXR220 \
-          -DILMBASE_CUSTOM_LIB_DIR=/usr/lib64/OpenEXR220 \
+	  -DILMBASE_CUSTOM_INCLUDE_DIR=/usr/include/OpenEXR2 \
+          -DILMBASE_CUSTOM_LIB_DIR=/usr/lib64/OpenEXR2 \
 	  -DILMBASE_CUSTOM_LIBRARIES="Imath Half IlmThread Iex"
     else
         MY_CMAKE_FLAGS += \
@@ -98,7 +98,7 @@ ifeq ($(SP_OS), spinux1)
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
 
     ifneq (${SPCOMP2_USE_BOOSTVERS}, 1)
-	BOOSTVERS=1.55
+	BOOSTVERS=1.51
     endif
     BOOSTVERS_SUFFIX = -${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
     CONSTRUCTED_BOOSTVERS = ${shell echo ${BOOSTVERS} | sed "s/\\./0/"}00

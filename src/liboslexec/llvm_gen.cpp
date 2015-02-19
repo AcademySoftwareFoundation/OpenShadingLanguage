@@ -2177,15 +2177,11 @@ LLVMGEN (llvm_gen_texture)
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 1)));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 2)));
-    if (alpha || texture_handle) {
-        args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
-        args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
-        args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
-        rop.ll.call_function (texture_handle ? "osl_texture_handle" : "osl_texture_alpha",
-                              &args[0], (int)args.size());
-    } else {
-        rop.ll.call_function ("osl_texture", &args[0], (int)args.size());
-    }
+    args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
+    rop.ll.call_function (texture_handle ? "osl_texture_handle" : "osl_texture",
+                          &args[0], (int)args.size());
     return true;
 }
 
@@ -2255,16 +2251,12 @@ LLVMGEN (llvm_gen_texture3d)
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 1)));
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 2)));
     args.push_back (rop.ll.void_ptr_null());  // no dresultdz for now
-    if (alpha || texture_handle) {
-        args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
-        args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
-        args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
-        args.push_back (rop.ll.void_ptr_null());  // No dalphadz for now
-        rop.ll.call_function (texture_handle ? "osl_texture3d_handle" : "osl_texture3d_alpha",
-                              &args[0], (int)args.size());
-    } else {
-        rop.ll.call_function ("osl_texture3d", &args[0], (int)args.size());
-    }
+    args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.void_ptr_null());  // No dalphadz for now
+    rop.ll.call_function (texture_handle ? "osl_texture3d_handle" : "osl_texture3d",
+                          &args[0], (int)args.size());
     return true;
 }
 

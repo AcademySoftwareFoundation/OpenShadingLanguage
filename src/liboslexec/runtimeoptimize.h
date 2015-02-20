@@ -60,6 +60,10 @@ public:
     /// instance variables and connections.
     void optimize_instance ();
 
+    /// One optimization pass over a range of instructions [begin, end).
+    /// Return the number of changes made.
+    int optimize_ops (int beginop, int endop);
+
     /// Post-optimization cleanup of a layer: add 'useparam' instructions,
     /// track variable lifetimes, coalesce temporaries.
     void post_optimize_instance ();

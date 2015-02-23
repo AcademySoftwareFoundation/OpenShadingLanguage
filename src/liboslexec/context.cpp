@@ -131,8 +131,8 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     // Process any queued up error messages, warnings, printfs from shaders
     process_errors ();
 
-    record_runtime_stats ();   // Transfer runtime stats to the shadingsys
     if (profile) {
+        record_runtime_stats ();   // Transfer runtime stats to the shadingsys
         long long ticks = timer.ticks();
         shadingsys().m_stat_total_shading_time_ticks += ticks;
         sgroup.m_stat_total_shading_time_ticks += ticks;

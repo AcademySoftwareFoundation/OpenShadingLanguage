@@ -42,8 +42,8 @@ struct ClosureParam {
     int         field_size;
 };
 
-#define reckless_offsetof(st, fld) (((char *)&(((st *)1)->fld)) - (char *)1)
-#define fieldsize(st, fld) sizeof (((st *)1)->fld)
+#define reckless_offsetof(st, fld) (((char *)&(((st *)16)->fld)) - (char *)16)
+#define fieldsize(st, fld) sizeof(((st *)0)->fld)
 
 #define CLOSURE_INT_PARAM(st, fld) \
     { TypeDesc::TypeInt, reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }

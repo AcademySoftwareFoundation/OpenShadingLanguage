@@ -1803,6 +1803,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
     size_t old_num_ops = num_ops;   // track when it changes
     for (int opnum = beginop;  opnum < endop;  opnum += 1) {
         ASSERT (old_num_ops == num_ops); // better not happen unknowingly
+        DASSERT (num_ops == inst()->ops().size());
         if (m_stop_optimizing)
             break;
         // Before getting a reference to this op, be sure that a space
@@ -1855,12 +1856,15 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
         if (optimize() >= 2 && m_opt_constant_fold) {
             const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
             if (opd && opd->folder) {
-                changed += (*opd->folder) (*this, opnum);
-                // Re-check num_ops in case the folder inserted something
-                num_ops = inst()->ops().size();
-                skipops = num_ops - old_num_ops;
-                endop += num_ops - old_num_ops; // adjust how far we loop
-                old_num_ops = num_ops;
+                int c = (*opd->folder) (*this, opnum);
+                if (c) {
+                    changed += c;
+                    // Re-check num_ops in case the folder inserted something
+                    num_ops = inst()->ops().size();
+                    skipops = num_ops - old_num_ops;
+                    endop += num_ops - old_num_ops; // adjust how far we loop
+                    old_num_ops = num_ops;
+                }
             }
         }
         // Clear local block aliases for any args that were written
@@ -1958,8 +1962,17 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
         if (m_stop_optimizing)
             break;
         // Peephole optimization involving pair of instructions
-        if (optimize() >= 2 && m_opt_peephole)
-            changed += peephole2 (opnum);
+        if (optimize() >= 2 && m_opt_peephole) {
+            int c = peephole2 (opnum);
+            if (c) {
+                changed += c;
+                // Re-check num_ops in case the folder inserted something
+                num_ops = inst()->ops().size();
+                // skipops = num_ops - old_num_ops;
+                endop += num_ops - old_num_ops; // adjust how far we loop
+                old_num_ops = num_ops;
+            }
+        }
     }
     return changed;
 }

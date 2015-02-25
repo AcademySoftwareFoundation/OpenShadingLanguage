@@ -20,6 +20,8 @@ Language, standard libary, and compiler changes (for shader writers):
   true of C++ as well.) #446 (1.6.2)
 * oslc will now silently ignore trailing commas in function or shader
   parameter lists and metadata lists. #447 (1.6.2)
+* oslc bug fixed in variable declaration + assignment of nested structs.
+  #453 (1.6.2)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem attribute int "profile", if set to 1, will include
@@ -57,7 +59,25 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   now reliably is true for a valid default value, false if no default value
   could be statically determined (for example, if the param default is
   the result of code that must run at runtime). (1.6.2)
-
+* Extend ShadingSystem::get_symbol() to retrieve the symbol from a
+  particular named layer (rather than always getting it from the last
+  layer in which the name is found). #458 (1.6.2)
+* New SS option "opt_merge_instances_with_userdata", which if set to 0 will
+  prevent instance merging for instances that access userdata. If you don't
+  know why you'd want this turned off, you don't want it turned off!
+  #459 (1.6.2)
+* New RendererServices::supports() function allows for future expansion
+  of querying (by the ShadingSystem) of features supported by a
+  particular renderer. #470 (1.6.2)
+* New ShadingSystem::execute() variety that takes a ShadingContext* rather
+  than a ShadingContext&. If you pass NULL for the context pointer, the
+  SS will automatically allocate (and eventually release) a context for
+  you. #471 (1.6.2)
+* New RendererServices API methods added that supply a handle-based
+  version of texture(), texture3d(), environment(), and get_texture_info(),
+  in addition to the existing name-based versions. Renderer implementations
+  will need to add these, if they overload the name-based ones. #472 (1.6.2)
+  
 Performance improvements:
 * Many noise() varieties have been sped up significantly on
   architectures with SIMD vector instructions (such as SSE). Higher
@@ -75,6 +95,13 @@ Performance improvements:
   slow way by building with OSL_FAST_MATH=0. #413 (1.6.0)
 * New runtime optimization of mix(a,a,x) -> a (even if none of them are
   constant). #438 (1.6.2)
+* Fix performance regression: avoid incrementing profile-related stats on
+  every execution if profiling is disabled. (1.6.2)
+* When the runtime optimizer can figure out which textures are being
+  called, it will retrieve the handle once and generate code for
+  handle-based RendererServices callbacks, rather than name-based
+  ones. This speeds up texture-heavy shading by 5-10% by eliminating the
+  need for the name-to-handle lookups for every texture call. #472 (1.6.2)
 
 Bug fixes and other improvements:
 * oslinfo --param lets you ask for information on just one parameter of
@@ -99,6 +126,16 @@ Bug fixes and other improvements:
   time, it messed with the serialization. #426 (1.5.12/1.6.2)
 * Fix OSLQuery crash when reading .oso file of a compiled shader that had
   local variables but no parameters. #435 (1.5.12/1.6.2)
+* Shader-wide metadata is now correctly output by oslc, and correctly
+  read by OSLQuery. #455 (1.6.2)
+* Only merge instances when optimize level >= 1. #456 (1.6.2)
+* Bug fix: runtime optimizer should not consider a layer unused if its
+  outputs are renderer outputs. Also fix subtle bug in detecting whether
+  an output param is a renderer output. #457 (1.6.2)
+* Clear derivatives properly in the implementaiton of gettextureinfo.
+  #463 (1.6.2)
+* Correct handling of point-like shader parameters defined with default
+  values that use the constructors that provide "space" names. #465 (1.6.2)
 
 Under the hood:
 * Change a couple long-deprecated OIIO calls to modern versions.
@@ -124,6 +161,7 @@ Build & test system improvements and developer goodies:
 * Build fixes for recent OIIO changes. (1.5.12/1.6.2)
 * testshade -group now accepts the name of a file containing the serialized
   group. #439 (1.6.2)
+* Various fixes for Windows and Visual Studio 2010. #461 #462 #464 (1.6.2)
 
 Documentation:
 * Short chapter added to spec describing the syntax of our serialization
@@ -133,6 +171,7 @@ Documentation:
   textures created from rendered images (or shadow maps) is with the tags
   "worldtocamera" (for the world-to-3D-camera) and "worldtoscreen" (for
   the world-to-2D-projection that runs -1 to +1 in x and y).
+* Clarified documentation on gettxtureinfo(file,"exists"). (1.6.2)
 
 
 

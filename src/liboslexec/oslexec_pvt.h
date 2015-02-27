@@ -1459,7 +1459,11 @@ public:
 
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 
-    TextureSystem::Perthread *texture_thread_info () const { return m_texture_thread_info; }
+    TextureSystem::Perthread *texture_thread_info () const {
+        if (! m_texture_thread_info)
+            m_texture_thread_info = shadingsys().texturesys()->get_perthread_info ();
+        return m_texture_thread_info;
+    }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }
 
@@ -1524,7 +1528,7 @@ private:
     ShadingSystemImpl &m_shadingsys;    ///< Backpointer to shadingsys
     RendererServices *m_renderer;       ///< Ptr to renderer services
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
-    TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
+    mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_attribs;             ///< Ptr to shading attrib state
     std::vector<char> m_heap;           ///< Heap memory
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;

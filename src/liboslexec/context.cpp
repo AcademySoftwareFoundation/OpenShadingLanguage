@@ -73,7 +73,6 @@ ShadingContext::~ShadingContext ()
 bool
 ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 {
-    m_texture_thread_info = NULL;
     m_attribs = &sgroup;
 
     // Optimize if we haven't already

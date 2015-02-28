@@ -240,9 +240,10 @@ ShadingSystem::destroy_thread_info (PerThreadInfo *threadinfo)
 
 
 ShadingContext *
-ShadingSystem::get_context (PerThreadInfo *threadinfo)
+ShadingSystem::get_context (PerThreadInfo *threadinfo,
+                            TextureSystem::Perthread *texture_threadinfo)
 {
-    return m_impl->get_context (threadinfo);
+    return m_impl->get_context (threadinfo, texture_threadinfo);
 }
 
 
@@ -2072,15 +2073,16 @@ ShadingSystemImpl::destroy_thread_info (PerThreadInfo *threadinfo)
 
 
 ShadingContext *
-ShadingSystemImpl::get_context (PerThreadInfo *threadinfo)
+ShadingSystemImpl::get_context (PerThreadInfo *threadinfo,
+                                TextureSystem::Perthread *texture_threadinfo)
 {
     if (! threadinfo)
         threadinfo = get_perthread_info ();
-    if (threadinfo->context_pool.empty()) {
-        return new ShadingContext (*this, threadinfo);
-    } else {
-        return threadinfo->pop_context ();
-    }
+    ShadingContext *ctx = threadinfo->context_pool.empty()
+                          ? new ShadingContext (*this, threadinfo)
+                          : threadinfo->pop_context ();
+    ctx->texture_thread_info (texture_threadinfo);
+    return ctx;
 }
 
 
@@ -2088,6 +2090,8 @@ ShadingSystemImpl::get_context (PerThreadInfo *threadinfo)
 void
 ShadingSystemImpl::release_context (ShadingContext *ctx)
 {
+    if (! ctx)
+        return;
     ctx->process_errors ();
     ctx->thread_info()->context_pool.push (ctx);
 }

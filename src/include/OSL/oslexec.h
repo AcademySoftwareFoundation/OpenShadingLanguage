@@ -400,7 +400,8 @@ public:
     /// lookup automatically (and at some additional cost).  The context
     /// can be used to shade many points; a typical usage is to allocate
     /// just one context per thread and use it for the whole run.
-    ShadingContext *get_context (PerThreadInfo *threadinfo=NULL);
+    ShadingContext *get_context (PerThreadInfo *threadinfo=NULL,
+                                 TextureSystem::Perthread *texture_threadinfo=NULL);
 
     /// Return a ShadingContext to the pool.
     ///

@@ -814,7 +814,8 @@ public:
 
     void destroy_thread_info (PerThreadInfo *threadinfo);
 
-    ShadingContext *get_context (PerThreadInfo *threadinfo = NULL);
+    ShadingContext *get_context (PerThreadInfo *threadinfo = NULL,
+                                 TextureSystem::Perthread *texture_threadinfo=NULL);
 
     void release_context (ShadingContext *ctx);
 
@@ -1463,6 +1464,10 @@ public:
         if (! m_texture_thread_info)
             m_texture_thread_info = shadingsys().texturesys()->get_perthread_info ();
         return m_texture_thread_info;
+    }
+
+    void texture_thread_info (TextureSystem::Perthread *t) {
+        m_texture_thread_info = t;
     }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }

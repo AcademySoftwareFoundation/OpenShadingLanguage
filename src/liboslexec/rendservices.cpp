@@ -159,27 +159,6 @@ RendererServices::get_texture_perthread (ShadingContext *context)
 
 
 bool
-RendererServices::texture (ustring filename, TextureOpt &options,
-                           ShaderGlobals *sg,
-                           float s, float t, float dsdx, float dtdx,
-                           float dsdy, float dtdy, int nchannels,
-                           float *result, float *dresultds, float *dresultdt)
-{
-    bool status = texturesys()->texture (filename, options, s, t,
-                                         dsdx, dtdx, dsdy, dtdy,
-                                         nchannels, result, dresultds, dresultdt);
-    if (!status) {
-        std::string err = texturesys()->geterror();
-        if (err.size() && sg) {
-            sg->context->error ("[RendererServices::texture] %s", err);
-        }
-    }
-    return status;
-}
-
-
-
-bool
 RendererServices::texture (ustring filename, TextureHandle *texture_handle,
                            TexturePerthread *texture_thread_info,
                            TextureOpt &options, ShaderGlobals *sg,
@@ -190,34 +169,19 @@ RendererServices::texture (ustring filename, TextureHandle *texture_handle,
     ShadingContext *context = sg->context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
-    bool status = texturesys()->texture (texture_handle, texture_thread_info,
-                                         options, s, t, dsdx, dtdx, dsdy, dtdy,
-                                         nchannels, result, dresultds, dresultdt);
+    bool status;
+    if (texture_handle)
+        status = status = texturesys()->texture (texture_handle, texture_thread_info,
+                                        options, s, t, dsdx, dtdx, dsdy, dtdy,
+                                        nchannels, result, dresultds, dresultdt);
+    else
+        status = texturesys()->texture (filename,
+                                        options, s, t, dsdx, dtdx, dsdy, dtdy,
+                                        nchannels, result, dresultds, dresultdt);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && sg) {
             context->error ("[RendererServices::texture] %s", err);
-        }
-    }
-    return status;
-}
-
-
-
-bool
-RendererServices::texture3d (ustring filename, TextureOpt &options,
-                             ShaderGlobals *sg, const Vec3 &P,
-                             const Vec3 &dPdx, const Vec3 &dPdy,
-                             const Vec3 &dPdz, int nchannels, float *result,
-                             float *dresultds, float *dresultdt, float *dresultdr)
-{
-    bool status = texturesys()->texture3d (filename, options, P, dPdx, dPdy, dPdz,
-                                           nchannels, result,
-                                           dresultds, dresultdt, dresultdr);
-    if (!status) {
-        std::string err = texturesys()->geterror();
-        if (err.size() && sg) {
-            sg->context->error ("[RendererServices::texture3d] %s", err);
         }
     }
     return status;
@@ -236,34 +200,21 @@ RendererServices::texture3d (ustring filename, TextureHandle *texture_handle,
     ShadingContext *context = sg->context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
-    bool status = texturesys()->texture3d (texture_handle, texture_thread_info,
-                                           options, P, dPdx, dPdy, dPdz,
-                                           nchannels, result,
-                                           dresultds, dresultdt, dresultdr);
+    bool status;
+    if (texture_handle)
+        status = texturesys()->texture3d (texture_handle, texture_thread_info,
+                                          options, P, dPdx, dPdy, dPdz,
+                                          nchannels, result,
+                                          dresultds, dresultdt, dresultdr);
+    else
+        status = texturesys()->texture3d (filename,
+                                          options, P, dPdx, dPdy, dPdz,
+                                          nchannels, result,
+                                          dresultds, dresultdt, dresultdr);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && sg) {
             sg->context->error ("[RendererServices::texture3d] %s", err);
-        }
-    }
-    return status;
-}
-
-
-
-bool
-RendererServices::environment (ustring filename, TextureOpt &options,
-                               ShaderGlobals *sg, const Vec3 &R,
-                               const Vec3 &dRdx, const Vec3 &dRdy,
-                               int nchannels, float *result,
-                               float *dresultds, float *dresultdt)
-{
-    bool status = texturesys()->environment (filename, options, R, dRdx, dRdy,
-                                             nchannels, result, dresultds, dresultdt);
-    if (!status) {
-        std::string err = texturesys()->geterror();
-        if (err.size() && sg) {
-            sg->context->error ("[RendererServices::environment] %s", err);
         }
     }
     return status;
@@ -282,9 +233,14 @@ RendererServices::environment (ustring filename, TextureHandle *texture_handle,
     ShadingContext *context = sg->context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
-    bool status = texturesys()->environment (texture_handle, texture_thread_info,
-                                             options, R, dRdx, dRdy,
-                                             nchannels, result, dresultds, dresultdt);
+    bool status;
+    if (texture_handle)
+        status = texturesys()->environment (texture_handle, texture_thread_info,
+                                            options, R, dRdx, dRdy,
+                                            nchannels, result, dresultds, dresultdt);
+    else
+        status = texturesys()->environment (filename, options, R, dRdx, dRdy,
+                                            nchannels, result, dresultds, dresultdt);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && sg) {
@@ -298,31 +254,19 @@ RendererServices::environment (ustring filename, TextureHandle *texture_handle,
 
 bool
 RendererServices::get_texture_info (ShaderGlobals *sg, ustring filename,
+                                    TextureHandle *texture_handle,
                                     int subimage, ustring dataname,
                                     TypeDesc datatype, void *data)
 {
-    bool status = texturesys()->get_texture_info (filename, subimage,
-                                                  dataname, datatype, data);
-    if (!status) {
-        std::string err = texturesys()->geterror();
-        if (err.size() && sg) {
-            sg->context->error ("[RendererServices::get_texture_info] %s", err);
-        }
-    }
-    return status;
-}
-
-
-
-bool
-RendererServices::get_texture_info (ShaderGlobals *sg,
-                                    ustring filename, TextureHandle *texture_handle,
-                                    int subimage, ustring dataname,
-                                    TypeDesc datatype, void *data)
-{
+    bool status;
 #if OIIO_VERSION >= 10602
-    bool status = texturesys()->get_texture_info (texture_handle, subimage,
-                                                  dataname, datatype, data);
+    if (texture_handle)
+        status = texturesys()->get_texture_info (texture_handle, subimage,
+                                                 dataname, datatype, data);
+    else
+#endif
+        status = texturesys()->get_texture_info (filename, subimage,
+                                                 dataname, datatype, data);
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && sg) {
@@ -330,9 +274,6 @@ RendererServices::get_texture_info (ShaderGlobals *sg,
         }
     }
     return status;
-#else
-    return false;    // This call is not supported for OIIO versions < 1.6.2
-#endif
 }
 
 

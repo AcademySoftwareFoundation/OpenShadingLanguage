@@ -223,13 +223,16 @@ public:
     /// pixels in screen space, adjacent samples in parameter space on a
     /// surface, etc.
     ///
+    /// The filename will always be passed, and it's ok for the renderer
+    /// implementation to use only that (and in fact should be prepared to
+    /// deal with texture_handle and texture_thread_info being NULL). But
+    /// sometimes OSL can figure out the texture handle or thread info also
+    /// and may pass them as non-NULL, in which case the renderer may (if it
+    /// can) use that extra information to perform a less expensive texture
+    /// lookup.
+    ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
-    virtual bool texture (ustring filename, TextureOpt &options,
-                          ShaderGlobals *sg,
-                          float s, float t, float dsdx, float dtdx,
-                          float dsdy, float dtdy, int nchannels,
-                          float *result, float *dresultds, float *dresultdt);
     virtual bool texture (ustring filename, TextureHandle *texture_handle,
                           TexturePerthread *texture_thread_info,
                           TextureOpt &options, ShaderGlobals *sg,
@@ -245,14 +248,16 @@ public:
     /// can be any imposed 3D coordinates, such as pixels in screen
     /// space and depth along the ray, etc.
     ///
+    /// The filename will always be passed, and it's ok for the renderer
+    /// implementation to use only that (and in fact should be prepared to
+    /// deal with texture_handle and texture_thread_info being NULL). But
+    /// sometimes OSL can figure out the texture handle or thread info also
+    /// and may pass them as non-NULL, in which case the renderer may (if it
+    /// can) use that extra information to perform a less expensive texture
+    /// lookup.
+    ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
-    virtual bool texture3d (ustring filename, TextureOpt &options,
-                            ShaderGlobals *sg, const Vec3 &P,
-                            const Vec3 &dPdx, const Vec3 &dPdy,
-                            const Vec3 &dPdz, int nchannels,
-                            float *result, float *dresultds,
-                            float *dresultdt, float *dresultdr);
     virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
                             TexturePerthread *texture_thread_info,
                             TextureOpt &options, ShaderGlobals *sg,
@@ -266,13 +271,16 @@ public:
     /// R is the directional texture coordinate; dRd[xy] are the
     /// differentials of R in canonical directions x, y.
     ///
+    /// The filename will always be passed, and it's ok for the renderer
+    /// implementation to use only that (and in fact should be prepared to
+    /// deal with texture_handle and texture_thread_info being NULL). But
+    /// sometimes OSL can figure out the texture handle or thread info also
+    /// and may pass them as non-NULL, in which case the renderer may (if it
+    /// can) use that extra information to perform a less expensive texture
+    /// lookup.
+    ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
-    virtual bool environment (ustring filename, TextureOpt &options,
-                              ShaderGlobals *sg, const Vec3 &R,
-                              const Vec3 &dRdx, const Vec3 &dRdy,
-                              int nchannels, float *result,
-                              float *dresultds, float *dresultdt);
     virtual bool environment (ustring filename, TextureHandle *texture_handle,
                               TexturePerthread *texture_thread_info,
                               TextureOpt &options, ShaderGlobals *sg,
@@ -285,15 +293,19 @@ public:
     /// doesn't exist, doesn't have the requested data, if the data
     /// doesn't match the type requested. or some other failure.
     ///
+    /// The filename will always be passed, and it's ok for the renderer
+    /// implementation to use only that (and in fact should be prepared to
+    /// deal with texture_handle and texture_thread_info being NULL). But
+    /// sometimes OSL can figure out the texture handle or thread info also
+    /// and may pass them as non-NULL, in which case the renderer may (if it
+    /// can) use that extra information to perform a less expensive texture
+    /// lookup.
+    ///
     /// Note to renderers: if sg is NULL, that means get_texture_info is
     /// being called speculatively by the runtime optimizer, and it doesn't
     /// know which object the shader will be run on.
-    virtual bool get_texture_info (ShaderGlobals *sg,
-                                   ustring filename, int subimage,
-                                   ustring dataname, TypeDesc datatype,
-                                   void *data);
-    virtual bool get_texture_info (ShaderGlobals *sg,
-                                   ustring filename, TextureHandle *texture_handle,
+    virtual bool get_texture_info (ShaderGlobals *sg, ustring filename,
+                                   TextureHandle *texture_handle,
                                    int subimage,
                                    ustring dataname, TypeDesc datatype,
                                    void *data);

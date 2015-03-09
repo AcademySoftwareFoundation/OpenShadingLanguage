@@ -611,8 +611,6 @@ int main (int argc, const char *argv[]) {
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
-    if (opt)
-        shadingsys->attribute ("opt_texture_handle", 1);
     shadingsys->attribute ("debugnan", debugnan);
 
     // Loads a scene, creating camera, geometry and assigning shaders

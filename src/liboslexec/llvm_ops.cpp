@@ -1261,7 +1261,8 @@ osl_texture (void *sg_, const char *name, void *opt_, float s, float t,
 
 
 OSL_SHADEOP int
-osl_texture_handle (void *sg_, void *handle, void *opt_, float s, float t,
+osl_texture_handle (void *sg_, const char *name, void *handle,
+                    void *opt_, float s, float t,
                     float dsdx, float dtdx, float dsdy, float dtdy,
                     int chans, void *result, void *dresultdx, void *dresultdy,
                     void *alpha, void *dalphadx, void *dalphady)
@@ -1272,7 +1273,8 @@ osl_texture_handle (void *sg_, void *handle, void *opt_, float s, float t,
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
-    bool ok = sg->renderer->texture ((TextureSystem::TextureHandle *)handle, NULL,
+    bool ok = sg->renderer->texture (USTR(name),
+                                     (TextureSystem::TextureHandle *)handle, NULL,
                                      *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
                                      (float *)&result_simd,
                                      derivs ? (float *)&dresultds_simd : NULL,
@@ -1355,7 +1357,8 @@ osl_texture3d (void *sg_, const char *name, void *opt_, void *P_,
 
 
 OSL_SHADEOP int
-osl_texture3d_handle (void *sg_, void *handle, void *opt_, void *P_,
+osl_texture3d_handle (void *sg_, const char *name, void *handle,
+                      void *opt_, void *P_,
                       void *dPdx_, void *dPdy_, void *dPdz_, int chans,
                       void *result, void *dresultdx,
                       void *dresultdy, void *dresultdz,
@@ -1372,7 +1375,8 @@ osl_texture3d_handle (void *sg_, void *handle, void *opt_, void *P_,
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
-    bool ok = sg->renderer->texture3d ((TextureSystem::TextureHandle *)handle, NULL,
+    bool ok = sg->renderer->texture3d (USTR(name),
+                                       (TextureSystem::TextureHandle *)handle, NULL,
                                        *opt, sg, P, dPdx, dPdy, dPdz,
                                        4, (float *)&result_simd,
                                        derivs ? (float *)&dresultds_simd : NULL,
@@ -1457,7 +1461,8 @@ osl_environment (void *sg_, const char *name, void *opt_, void *R_,
 
 
 OSL_SHADEOP int
-osl_environment_handle (void *sg_, void *handle, void *opt_, void *R_,
+osl_environment_handle (void *sg_, const char *name, void *handle,
+                        void *opt_, void *R_,
                         void *dRdx_, void *dRdy_, int chans,
                         void *result, void *dresultdx, void *dresultdy,
                         void *alpha, void *dalphadx, void *dalphady)
@@ -1470,7 +1475,8 @@ osl_environment_handle (void *sg_, void *handle, void *opt_, void *R_,
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 local_result;
-    bool ok = sg->renderer->environment ((TextureSystem::TextureHandle *)handle,
+    bool ok = sg->renderer->environment (USTR(name),
+                                         (TextureSystem::TextureHandle *)handle,
                                          NULL, *opt, sg, R, dRdx, dRdy, 4,
                                          (float *)&local_result, NULL, NULL);
 
@@ -1523,7 +1529,7 @@ OSL_SHADEOP int osl_get_textureinfo (void *sg_, const char *filename,
 
 
 OSL_SHADEOP int
-osl_get_textureinfo_handle (void *sg_, void *handle,
+osl_get_textureinfo_handle (void *sg_, const char *name, void *handle,
                             void *dataname,  int type,
                             int arraylen, int aggregate, void *data)
 {
@@ -1535,7 +1541,8 @@ osl_get_textureinfo_handle (void *sg_, void *handle,
 
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
 
-    return sg->renderer->get_texture_info (sg, (RendererServices::TextureHandle *)handle,
+    return sg->renderer->get_texture_info (sg, USTR(name),
+                                           (RendererServices::TextureHandle *)handle,
                                            0 /*FIXME-ptex*/,
                                            USTR(dataname), typedesc, data);
 }

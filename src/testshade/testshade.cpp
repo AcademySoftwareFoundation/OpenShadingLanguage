@@ -110,11 +110,12 @@ set_shadingsys_options ()
 {
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
-    const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
-    if (opt_env)
-        shadingsys->attribute ("optimize", atoi(opt_env));
-    else if (O0 || O1 || O2)
-        shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
+    int opt = O2 ? 2 : (O1 ? 1 : 0);
+    if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
+        opt = atoi(opt_env);
+    shadingsys->attribute ("optimize", opt);
+    if (opt)
+        shadingsys->attribute ("opt_texture_handle", 1);
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);

@@ -180,7 +180,7 @@ RendererServices::texture (ustring filename, TextureOpt &options,
 
 
 bool
-RendererServices::texture (TextureHandle *texture_handle,
+RendererServices::texture (ustring filename, TextureHandle *texture_handle,
                            TexturePerthread *texture_thread_info,
                            TextureOpt &options, ShaderGlobals *sg,
                            float s, float t, float dsdx, float dtdx,
@@ -226,7 +226,7 @@ RendererServices::texture3d (ustring filename, TextureOpt &options,
 
 
 bool
-RendererServices::texture3d (TextureHandle *texture_handle,
+RendererServices::texture3d (ustring filename, TextureHandle *texture_handle,
                              TexturePerthread *texture_thread_info,
                              TextureOpt &options, ShaderGlobals *sg,
                              const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
@@ -272,7 +272,7 @@ RendererServices::environment (ustring filename, TextureOpt &options,
 
 
 bool
-RendererServices::environment (TextureHandle *texture_handle,
+RendererServices::environment (ustring filename, TextureHandle *texture_handle,
                                TexturePerthread *texture_thread_info,
                                TextureOpt &options, ShaderGlobals *sg,
                                const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
@@ -316,7 +316,7 @@ RendererServices::get_texture_info (ShaderGlobals *sg, ustring filename,
 
 bool
 RendererServices::get_texture_info (ShaderGlobals *sg,
-                                    TextureHandle *texture_handle,
+                                    ustring filename, TextureHandle *texture_handle,
                                     int subimage, ustring dataname,
                                     TypeDesc datatype, void *data)
 {

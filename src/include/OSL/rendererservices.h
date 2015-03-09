@@ -230,7 +230,7 @@ public:
                           float s, float t, float dsdx, float dtdx,
                           float dsdy, float dtdy, int nchannels,
                           float *result, float *dresultds, float *dresultdt);
-    virtual bool texture (TextureHandle *texture_handle,
+    virtual bool texture (ustring filename, TextureHandle *texture_handle,
                           TexturePerthread *texture_thread_info,
                           TextureOpt &options, ShaderGlobals *sg,
                           float s, float t, float dsdx, float dtdx,
@@ -253,7 +253,7 @@ public:
                             const Vec3 &dPdz, int nchannels,
                             float *result, float *dresultds,
                             float *dresultdt, float *dresultdr);
-    virtual bool texture3d (TextureHandle *texture_handle,
+    virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
                             TexturePerthread *texture_thread_info,
                             TextureOpt &options, ShaderGlobals *sg,
                             const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
@@ -273,7 +273,7 @@ public:
                               const Vec3 &dRdx, const Vec3 &dRdy,
                               int nchannels, float *result,
                               float *dresultds, float *dresultdt);
-    virtual bool environment (TextureHandle *texture_handle,
+    virtual bool environment (ustring filename, TextureHandle *texture_handle,
                               TexturePerthread *texture_thread_info,
                               TextureOpt &options, ShaderGlobals *sg,
                               const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
@@ -293,7 +293,7 @@ public:
                                    ustring dataname, TypeDesc datatype,
                                    void *data);
     virtual bool get_texture_info (ShaderGlobals *sg,
-                                   TextureHandle *texture_handle,
+                                   ustring filename, TextureHandle *texture_handle,
                                    int subimage,
                                    ustring dataname, TypeDesc datatype,
                                    void *data);

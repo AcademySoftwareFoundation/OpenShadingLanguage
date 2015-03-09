@@ -2156,10 +2156,9 @@ LLVMGEN (llvm_gen_texture)
             texture_handle = NULL;
     }
 #endif
+    args.push_back (rop.llvm_load_value (Filename));
     if (texture_handle)
         args.push_back (rop.ll.constant_ptr (texture_handle));
-    else
-        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (opt);
     args.push_back (rop.llvm_load_value (S));
     args.push_back (rop.llvm_load_value (T));
@@ -2222,10 +2221,9 @@ LLVMGEN (llvm_gen_texture3d)
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
+    args.push_back (rop.llvm_load_value (Filename));
     if (texture_handle)
         args.push_back (rop.ll.constant_ptr (texture_handle));
-    else
-        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (opt);
     args.push_back (rop.llvm_void_ptr (P));
     if (user_derivs) {
@@ -2296,10 +2294,9 @@ LLVMGEN (llvm_gen_environment)
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
+    args.push_back (rop.llvm_load_value (Filename));
     if (texture_handle)
         args.push_back (rop.ll.constant_ptr (texture_handle));
-    else
-        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (opt);
     args.push_back (rop.llvm_void_ptr (R));
     if (user_derivs) {
@@ -2722,10 +2719,9 @@ LLVMGEN (llvm_gen_gettextureinfo)
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
+    args.push_back (rop.llvm_load_value (Filename));
     if (texture_handle)
         args.push_back (rop.ll.constant_ptr (texture_handle));
-    else
-        args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.llvm_load_value (Dataname));
     // this is passes a TypeDesc to an LLVM op-code
     args.push_back (rop.ll.constant((int) Data.typespec().simpletype().basetype));

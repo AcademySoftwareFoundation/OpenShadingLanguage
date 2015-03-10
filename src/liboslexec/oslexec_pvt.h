@@ -150,6 +150,16 @@ struct OpDescriptor {
 
 
 
+// Helper function to expand vec by 'size' elements, initializing them to 0.
+template<class T>
+inline void
+expand (std::vector<T> &vec, size_t size)
+{
+    vec.resize (vec.size() + size, T(0));
+}
+
+
+
 // Struct to hold records about what user data a group needs
 struct UserDataNeeded {
     ustring name;
@@ -625,12 +635,15 @@ public:
     /// Small data structure to hold just the symbol info that the
     /// instance overrides from the master copy.
     struct SymOverrideInfo {
-        char m_valuesource;
-        bool m_connected_down;
-        bool m_lockgeom;
+        // Using bit fields to keep the data in 8 bytes in total.
+        char m_valuesource:    3;
+        bool m_connected_down: 1;
+        bool m_lockgeom:       1;
+        int  m_arraylen:      27;
+        int  m_data_offset;
 
         SymOverrideInfo () : m_valuesource(Symbol::DefaultVal),
-                             m_connected_down(false), m_lockgeom(true) { }
+                             m_connected_down(false), m_lockgeom(true), m_arraylen(0), m_data_offset(0) { }
         void valuesource (Symbol::ValueSource v) { m_valuesource = v; }
         Symbol::ValueSource valuesource () const { return (Symbol::ValueSource) m_valuesource; }
         const char *valuesourcename () const { return Symbol::valuesourcename(valuesource()); }
@@ -639,9 +652,14 @@ public:
         bool connected () const { return valuesource() == Symbol::ConnectedVal; }
         bool lockgeom () const { return m_lockgeom; }
         void lockgeom (bool l) { m_lockgeom = l; }
+        int  arraylen () const { return m_arraylen; }
+        void arraylen (int s) { m_arraylen = s; }
+        int  dataoffset () const { return m_data_offset; }
+        void dataoffset (int o) { m_data_offset = o; }
         friend bool equivalent (const SymOverrideInfo &a, const SymOverrideInfo &b) {
             return a.valuesource() == b.valuesource() &&
-                   a.lockgeom() == b.lockgeom();
+                   a.lockgeom()    == b.lockgeom()    &&
+                   a.arraylen()    == b.arraylen();
         }
     };
     typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;

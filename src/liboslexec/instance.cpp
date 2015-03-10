@@ -169,16 +169,38 @@ const void *
 ShaderInstance::param_storage (int index) const
 {
     const Symbol *sym = m_instsymbols.size() ? symbol(index) : mastersymbol(index);
+
+    // Get the data offset. If there are instance overrides for symbols, check whether
+    // we are overriding the array size, otherwise just read the offset from the symbol.
+    int offset;
+    if (m_instoverrides.size() && m_instoverrides[index].arraylen())
+        offset = m_instoverrides[index].dataoffset();
+    else
+        offset = sym->dataoffset();
+
     TypeDesc t = sym->typespec().simpletype();
     if (t.basetype == TypeDesc::INT) {
-        return &m_iparams[sym->dataoffset()];
+        return &m_iparams[offset];
     } else if (t.basetype == TypeDesc::FLOAT) {
-        return &m_fparams[sym->dataoffset()];
+        return &m_fparams[offset];
     } else if (t.basetype == TypeDesc::STRING) {
-        return &m_sparams[sym->dataoffset()];
+        return &m_sparams[offset];
     } else {
         return NULL;
     }
+}
+
+
+
+// Can a parameter with type 'a' be bound to a value of type b.
+// This is true when they are identical types, but also when 'a' is an
+// array of unspecified length, while b is an array of the same type, with
+// definite length.
+inline bool compatible (const TypeDesc& a, const TypeDesc& b)
+{
+    return a.basetype == b.basetype && a.aggregate == b.aggregate &&
+           a.vecsemantics == b.vecsemantics &&
+           (a.arraylen == b.arraylen || (a.arraylen == -1 && b.arraylen > 0));
 }
 
 
@@ -228,7 +250,7 @@ ShaderInstance::parameters (const ParamValueList &params)
             if (t.is_structure())
                 continue;
             // check type of parameter and matching symbol
-            if (t.simpletype() != p.type()) {
+            if (!compatible(t.simpletype(), p.type())) {
                 shadingsys().warning ("attempting to set parameter with wrong type: %s (expected '%s', received '%s')", sm->name().c_str(), t.c_str(), p.type().c_str());
                 continue;
             }
@@ -241,21 +263,53 @@ ShaderInstance::parameters (const ParamValueList &params)
                              p.interp() == ParamValue::INTERP_CONSTANT);
             so->lockgeom (lockgeom);
 
-            // If the instance value is the same as the master's default,
-            // just skip the parameter, let it "keep" the default.
-            void *defaultdata = m_master->param_default_storage(i);
-            if (lockgeom && 
-                  memcmp (defaultdata, p.data(), t.simpletype().size()) == 0) {
-                // Must reset valuesource to default, in case the parameter
-                // was set already, and now is being changed back to default.
-                so->valuesource (Symbol::DefaultVal);
-                void *data = param_storage(i);
-                memcpy (data, p.data(), t.simpletype().size()); // clobber old value
-                continue;
+            // Todo: Should we check for default values in case of unsized array?
+            bool assignmentToUnsizedArray = t.arraylength() == -1 && p.type().arraylen > 0;
+            if (!assignmentToUnsizedArray) {
+                // If the instance value is the same as the master's default,
+                // just skip the parameter, let it "keep" the default.
+                void *defaultdata = m_master->param_default_storage(i);
+                if (lockgeom &&
+                      memcmp (defaultdata, p.data(), t.simpletype().size()) == 0) {
+                    // Must reset valuesource to default, in case the parameter
+                    // was set already, and now is being changed back to default.
+                    so->valuesource (Symbol::DefaultVal);
+                    void *data = param_storage(i);
+                    memcpy (data, p.data(), t.simpletype().size()); // clobber old value
+                    continue;
+                }
+            } else if (so->arraylen() != p.type().arraylen) {
+                so->arraylen(p.type().arraylen);
+                // Allocate space for the new param size
+
+                // Skip structs for now, they're just placeholders
+                if      (t.is_structure()) {
+                }
+                else if (t.simpletype().basetype == TypeDesc::FLOAT) {
+                    so->dataoffset((int) m_fparams.size());
+                    expand (m_fparams, p.type().size());
+                } else if (t.simpletype().basetype == TypeDesc::INT) {
+                    so->dataoffset((int) m_iparams.size());
+                    expand (m_iparams, p.type().size());
+                } else if (t.simpletype().basetype == TypeDesc::STRING) {
+                    so->dataoffset((int) m_sparams.size());
+                    expand (m_sparams, p.type().size());
+                } else if (t.is_closure()) {
+                    // Closures are pointers, so we allocate a string default taking
+                    // adventage of their default being NULL as well.
+                    so->dataoffset((int) m_sparams.size());
+                    expand (m_sparams, p.type().size());
+                } else {
+                    ASSERT (0 && "unexpected type");
+                }
+
+                // Todo: this is not taking into account interactive rendering editing
+                //       with different size... should we support that?
             }
 
             so->valuesource (Symbol::InstanceVal);
             void *data = param_storage(i);
+
             memcpy (data, p.data(), t.simpletype().size());
             // if (shadingsys().debug())
             //     shadingsys().info ("    sym %s offset %llu address %p",
@@ -297,6 +351,35 @@ void
 ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
                                 const ConnectedParam &dstcon)
 {
+    // specialize symbol in case of dstcon is an unsized array
+    if (dstcon.type.arraylength() == -1)
+    {
+        SymOverrideInfo *so = &m_instoverrides[dstcon.param];
+        so->arraylen(srccon.type.arraylength());
+
+        const TypeDesc& type = srccon.type.simpletype();
+        // Skip structs for now, they're just placeholders
+        /*if      (t.is_structure()) {
+        }
+        else*/ if (type.basetype == TypeDesc::FLOAT) {
+            so->dataoffset((int) m_fparams.size());
+            expand (m_fparams,type.size());
+        } else if (type.basetype == TypeDesc::INT) {
+            so->dataoffset((int) m_iparams.size());
+            expand (m_iparams, type.size());
+        } else if (type.basetype == TypeDesc::STRING) {
+            so->dataoffset((int) m_sparams.size());
+            expand (m_sparams, type.size());
+        }/* else if (t.is_closure()) {
+            // Closures are pointers, so we allocate a string default taking
+            // adventage of their default being NULL as well.
+            so->dataoffset((int) m_sparams.size());
+            expand (m_sparams, type.size());
+        }*/ else {
+            ASSERT (0 && "unexpected type");
+        }
+    }
+
     off_t oldmem = vectorbytes(m_connections);
     m_connections.push_back (Connection (srclayer, srccon, dstcon));
 
@@ -365,10 +448,12 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
             Symbol *si = &m_instsymbols[i];
             if (m_instoverrides[i].valuesource() != Symbol::DefaultVal) {
-                si->data (param_storage(i));
+                if (m_instoverrides[i].arraylen())
+                    si->arraylen (m_instoverrides[i].arraylen());
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
                 si->lockgeom (m_instoverrides[i].lockgeom());
+                si->data (param_storage(i));
             }
             if (shadingsys().is_renderer_output (layername(), si->name(), &group)) {
                 si->renderer_output (true);

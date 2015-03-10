@@ -401,12 +401,14 @@ LLVM_Util::SetupLLVM ()
 #endif
 
     if (debug()) {
+#if OSL_LLVM_VERSION >= 33
         for (llvm::TargetRegistry::iterator t = llvm::TargetRegistry::begin();
              t != llvm::TargetRegistry::end();  ++t) {
             std::cout << "Target: '" << t->getName() << "' "
                       << t->getShortDescription() << "\n";
         }
         std::cout << "\n";
+#endif
     }
 
     setup_done = true;
@@ -438,7 +440,15 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     // deserialize the bitcode, MCJIT is unable to find the called functions
     // due to disagreement about whether a leading "_" is part of the symbol
     // name.
+  #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile (buf, context());
+    if (std::error_code EC = ModuleOrErr.getError())
+        if (err)
+          *err = EC.message();
+    llvm::Module *m = ModuleOrErr.get();
+  #else
     llvm::Module *m = llvm::ParseBitcodeFile (buf, context(), err);
+  #endif
     delete buf;
 #else
     // Create a lazily deserialized IR module

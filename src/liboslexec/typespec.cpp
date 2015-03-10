@@ -113,9 +113,9 @@ bool
 equivalent (const TypeSpec &a, const TypeSpec &b)
 {
     return (a == b) || 
-        (a.is_vectriple_based() && b.is_vectriple_based() &&
+        (((a.is_vectriple_based() && b.is_vectriple_based()) || equivalent(a.m_simple, b.m_simple))  &&
          a.is_closure() == b.is_closure() &&
-         a.arraylength() == b.arraylength()) ||
+         (a.arraylength() == b.arraylength() || (a.arraylength() == -1 && b.arraylength() >0))) ||
         (a.is_structure() && b.is_structure() &&
          equivalent(a.structspec(), b.structspec()));
 }

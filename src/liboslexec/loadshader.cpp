@@ -140,16 +140,6 @@ OSOReaderToMaster::shader (const char *shadertype, const char *name)
 
 
 
-// Helper function to expand vec by 'size' elements, initializing them to 0.
-template<class T>
-inline void
-expand (std::vector<T> &vec, size_t size)
-{
-    vec.resize (vec.size() + size, T(0));
-}
-
-
-
 void
 OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 {

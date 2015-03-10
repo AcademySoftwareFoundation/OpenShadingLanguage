@@ -171,7 +171,7 @@ RendererServices::texture (ustring filename, TextureHandle *texture_handle,
         texture_thread_info = context->texture_thread_info();
     bool status;
     if (texture_handle)
-        status = status = texturesys()->texture (texture_handle, texture_thread_info,
+        status = texturesys()->texture (texture_handle, texture_thread_info,
                                         options, s, t, dsdx, dtdx, dsdy, dtdy,
                                         nchannels, result, dresultds, dresultdt);
     else

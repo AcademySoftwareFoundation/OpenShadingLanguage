@@ -77,6 +77,11 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   version of texture(), texture3d(), environment(), and get_texture_info(),
   in addition to the existing name-based versions. Renderer implementations
   will need to add these, if they overload the name-based ones. #472 (1.6.2)
+* RendererServices API methods for texture have been revised again, now
+  each variety takes a filename (will always be passed) and also a
+  TextureHandle* and TexturePerthread* (which may be NULL). Renderers
+  may use the name only if that's easiest, but also may use the handle when
+  supplied. #478 (1.6.3)
   
 Performance improvements:
 * Many noise() varieties have been sped up significantly on

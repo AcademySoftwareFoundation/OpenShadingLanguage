@@ -22,6 +22,10 @@ Language, standard libary, and compiler changes (for shader writers):
   parameter lists and metadata lists. #447 (1.6.2)
 * oslc bug fixed in variable declaration + assignment of nested structs.
   #453 (1.6.2)
+* It is now supported to have shader parameters that are arrays of
+  unspecified length (like 'float foo[] = {0}'). Their length will be
+  fixed when they are assigned an instance value of fixed length, or when
+  connected to another layer's output parameter of fixed length. #481 (1.6.4)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem attribute int "profile", if set to 1, will include

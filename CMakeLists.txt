@@ -381,7 +381,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap
             trailing-commas transform transformc trig typecast
-            unknown-instruction vecctr vector
+            unknown-instruction
+            vararray-connect vararray-param
+            vecctr vector
             wavelength_color xml )
 
 

@@ -235,6 +235,7 @@ simple_typename
 
 arraylen_opt
         : '[' INT_LITERAL ']'           { $$ = $2; }
+        | '[' ']'                       { $$ = -1; }
         | /* empty */                   { $$ = 0; }
         ;
 

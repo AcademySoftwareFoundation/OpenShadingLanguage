@@ -69,11 +69,12 @@ OSOReader::parse_file (const std::string &filename)
     osoreader = this;
     osolexer = new osoFlexLexer (&input);
     assert (osolexer);
-    bool ok = ! osoparse ();   // osoparse returns nonzero if error
+    int errcode = osoparse ();   // osoparse returns nonzero if error
+    bool ok = ! errcode;   // osoparse returns nonzero if error
     if (ok) {
 //        m_err.info ("Correctly parsed %s", filename.c_str());
     } else {
-        m_err.error ("Failed parse of %s", filename.c_str());
+        m_err.error ("Failed parse of %s (error code %d)", filename.c_str(), errcode);
     }
     delete osolexer;
     osolexer = NULL;

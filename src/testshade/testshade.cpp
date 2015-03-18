@@ -204,8 +204,8 @@ action_param (int argc, const char *argv[])
         use_reparam = true;
     ParamValueList &params (use_reparam ? reparams : (::params));
 
-    std::string paramname = argv[1];
-    std::string stringval = argv[2];
+    string_view paramname (argv[1]);
+    string_view stringval (argv[2]);
     TypeDesc type = TypeDesc::UNKNOWN;
     bool unlockgeom = false;
     float f[16];
@@ -271,6 +271,36 @@ action_param (int argc, const char *argv[])
                 params.back().interp (ParamValue::INTERP_VERTEX);
             return;
         }
+    }
+
+    // Catch-all for float types and arrays
+    if (type.basetype == TypeDesc::FLOAT) {
+        int n = type.aggregate * type.numelements();
+        std::vector<float> vals (n);
+        for (int i = 0;  i < n;  ++i) {
+            OIIO::Strutil::parse_float (stringval, vals[i]);
+            OIIO::Strutil::parse_char (stringval, ',');
+        }
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, &vals[0]);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+
+    // Catch-all for int types and arrays
+    if (type.basetype == TypeDesc::INT) {
+        int n = type.aggregate * type.numelements();
+        std::vector<int> vals (n);
+        for (int i = 0;  i < n;  ++i) {
+            OIIO::Strutil::parse_int (stringval, vals[i]);
+            OIIO::Strutil::parse_char (stringval, ',');
+        }
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, &vals[0]);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
     }
 
     // All remaining cases -- it's a string

@@ -134,7 +134,7 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
     // Loop over a list of initializers (it's just 1 if not an array)...
     for (int i = 0;  init;  init = init->next(), ++i) {
         // Check for too many initializers for an array
-        if (type.is_array() && (i+1) > type.arraylength()) {
+        if (type.is_array() && (i > type.arraylength() && type.arraylength() > -1)) {
             error ("Too many initializers for a '%s'", type_c_str(type));
             break;
         }

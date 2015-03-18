@@ -292,10 +292,9 @@ BackendLLVM::llvm_type_groupdata ()
             TypeSpec ts = sym.typespec();
             if (ts.is_structure())  // skip the struct symbol itself
                 continue;
-            int arraylen = std::max (1, sym.typespec().arraylength());
-            int deriv_mult = sym.has_derivs() ? 3 : 1;
-            int n = arraylen * deriv_mult;
-            ts.make_array (n);
+            const int arraylen = std::max (1, sym.typespec().arraylength());
+            const int derivSize = (sym.has_derivs() ? 3 : 1);
+            ts.make_array (arraylen * derivSize);
             fields.push_back (llvm_type (ts));
 
             // Alignment
@@ -307,9 +306,10 @@ BackendLLVM::llvm_type_groupdata ()
                 std::cout << "  " << inst->layername() 
                           << " (" << inst->id() << ") " << sym.mangled()
                           << " " << ts.c_str() << ", field " << order 
+                          << ", size " << derivSize * int(sym.size())
                           << ", offset " << offset << std::endl;
             sym.dataoffset ((int)offset);
-            offset += int(sym.size()) * deriv_mult;
+            offset += derivSize* int(sym.size());
 
             m_param_order_map[&sym] = order;
             ++order;
@@ -458,7 +458,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
     llvm::BasicBlock *after_userdata_block = NULL;
-    if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
+    if (! sym.lockgeom() && ! sym.typespec().is_closure() && ! (sym.symtype() == SymTypeOutputParam)) {
         int userdata_index = -1;
         ustring symname = sym.name();
         TypeDesc type = sym.typespec().simpletype();

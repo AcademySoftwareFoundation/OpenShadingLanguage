@@ -630,6 +630,12 @@ public:
     bool lockgeom () const { return m_lockgeom; }
     void lockgeom (bool lock) { m_lockgeom = lock; }
 
+    int  arraylen () const { return m_typespec.arraylength(); }
+    void arraylen (int len) {
+        m_typespec.make_array(len);
+        m_size = m_typespec.simpletype().size();
+    }
+
     bool renderer_output () const { return m_renderer_output; }
     void renderer_output (bool v) { m_renderer_output = v; }
 

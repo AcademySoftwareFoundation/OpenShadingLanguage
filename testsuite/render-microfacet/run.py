@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
 failthresh = 0.005
 failpercent = 0.1

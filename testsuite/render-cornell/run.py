@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
 failthresh = 0.005   # allow a little more LSB noise between platforms
 outputs = [ "out.exr" ]

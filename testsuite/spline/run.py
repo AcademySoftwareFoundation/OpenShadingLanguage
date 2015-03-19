@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
 command += testshade("-g 256 256 -od uint8 -o Cspline color.tif -o DxCspline dcolor.tif -o Fspline float.tif -o DxFspline dfloat.tif -o NumKnots numknots.tif test")
 

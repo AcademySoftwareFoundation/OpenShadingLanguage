@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
 command = oslc("../common/shaders/testpnoise.osl")
 command += testshade("-g 512 512 -od uint8 -o Cout out.tif -param noisename perlin testpnoise")

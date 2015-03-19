@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
 outputs = [ "out.exr" ]
 command = testrender("-r 256 256 -aa 4 bumptest.xml out.exr")

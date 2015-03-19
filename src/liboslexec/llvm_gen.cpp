@@ -3068,16 +3068,17 @@ LLVMGEN (llvm_gen_closure)
         ASSERT(p.offset < clentry->struct_size);
         Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
-        if (t.vecsemantics == TypeDesc::NORMAL || t.vecsemantics == TypeDesc::POINT)
-            t.vecsemantics = TypeDesc::VECTOR;
-        if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure() && t == p.type) {
+        if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
+            && equivalent(t,p.type)) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = rop.llvm_void_ptr (sym);
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                              4 /* use 4 byte alignment for now */);
         } else {
-            rop.shadingcontext()->error ("Incompatible formal argument %d to '%s' closure. Prototypes don't match renderer registry.",
-                                    carg + 1, closure_name.c_str());
+            rop.shadingcontext()->error ("Incompatible formal argument %d to '%s' closure (%s %s, expected %s). Prototypes don't match renderer registry (%s:%d).",
+                                         carg + 1, closure_name,
+                                         sym.typespec().c_str(), sym.name(), p.type,
+                                         op.sourcefile(), op.sourceline());
         }
     }
 

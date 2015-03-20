@@ -52,6 +52,8 @@ static ustring u_nop    ("nop"),
                u_add    ("add"),
                u_sub    ("sub"),
                u_mul    ("mul"),
+               u_sqrt   ("sqrt"),
+               u_inversesqrt ("inversesqrt"),
                u_if     ("if"),
                u_eq     ("eq"),
                u_return ("return");
@@ -1669,13 +1671,23 @@ DECLFOLDER(constfold_pow)
         rop.turn_into_assign (op, cind, "const fold pow");
         return 1;
     }
-    if (Y.is_constant() && Y.typespec().is_float() &&
-            *(const float *)Y.data() == 2.0f) {
-        // Turn x^2 into x*x, even if x is not constant
-        static ustring kmul("mul");
-        op.reset (kmul, 3);
-        rop.inst()->args()[op.firstarg()+2] = rop.inst()->args()[op.firstarg()+1];
-        return 1;
+
+    // A few special cases of constant y:
+    if (Y.is_constant() && Y.typespec().is_float()) {
+        int xarg = rop.inst()->args()[op.firstarg()+1];
+        float yval = *(const float *)Y.data();
+        if (yval == 2.0f) {
+            rop.turn_into_new_op (op, u_mul, xarg, xarg, "pow(x,2) => x*x");
+            return 1;
+        }
+        if (yval == 0.5f) {
+            rop.turn_into_new_op (op, u_sqrt, xarg, -1, "pow(x,0.5) => sqrt(x)");
+            return 1;
+        }
+        if (yval == -0.5f) {
+            rop.turn_into_new_op (op, u_inversesqrt, xarg, -1, "pow(x,-0.5) => inversesqrt(x)");
+            return 1;
+        }
     }
 
     return 0;

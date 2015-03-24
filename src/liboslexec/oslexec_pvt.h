@@ -1707,6 +1707,9 @@ public:
     /// Is the symbol a constant whose value is 1?
     static bool is_one (const Symbol &A);
 
+    /// For debugging, express A's constant value as a string.
+    static std::string const_value_as_string (const Symbol &A);
+
     /// Set up m_in_conditional[] to be true for all ops that are inside of
     /// conditionals, false for all unconditionally-executed ops,
     /// m_in_loop[] to be true for all ops that are inside a loop, and

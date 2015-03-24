@@ -714,6 +714,29 @@ OSOProcessorBase::is_one (const Symbol &A)
 
 
 
+std::string
+OSOProcessorBase::const_value_as_string (const Symbol &A)
+{
+    if (! A.is_constant())
+        return std::string();
+    TypeDesc type (A.typespec().simpletype());
+    int n = type.numelements() * type.aggregate;
+    std::ostringstream s;
+    if (type.basetype == TypeDesc::FLOAT) {
+        for (int i = 0; i < n; ++i)
+            s << (i ? "," : "") << ((const float *)A.data())[i];
+    } else if (type.basetype == TypeDesc::INT) {
+        for (int i = 0; i < n; ++i)
+            s << (i ? "," : "") << ((const int *)A.data())[i];
+    } else if (type.basetype == TypeDesc::STRING) {
+        for (int i = 0; i < n; ++i)
+            s << (i ? "," : "") << '\"' << ((const ustring *)A.data())[i] << '\"';
+    }
+    return s.str();
+}
+
+
+
 void
 RuntimeOptimizer::register_message (ustring name)
 {
@@ -1217,8 +1240,9 @@ void
 RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
 {
     if (debug() > 1)
-        std::cout << "Turning " << R->valuesourcename() << ' ' 
-                  << R->name() << " into an instance value "
+        std::cout << "Turning " << R->valuesourcename() << ' '
+                  << R->typespec().c_str() << ' ' << R->name()
+                  << " into an instance value "
                   << why << "\n";
 
     // Mark its source as the instance value, not connected
@@ -1266,28 +1290,29 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     if (R->symtype() != SymTypeOutputParam)
         return false;    // This logic is only about output params
 
-    /// Check for assignment of output params that are written only once
-    /// in the whole shader -- on this statement -- and assigned a
-    /// constant, and the assignment is unconditional.  In that case,
-    /// just alias it to the constant from here on out.
-    ///
-    /// Furthermore, if nobody READS the output param prior to this
-    /// assignment, let's just change its initial value to the constant
-    /// and get rid of the assignment altogether!
-    if (A->is_constant() && R->typespec() == A->typespec() &&
-            R->firstwrite() == opnum && R->lastwrite() == opnum &&
-            !m_in_conditional[opnum]) {
-        // It's assigned only once, and unconditionally assigned a
-        // constant -- alias it
+    // Check for assignment of output params that are written only once
+    // in the whole shader -- on this statement -- and assigned a
+    // constant, and the assignment is unconditional.  In that case,
+    // just alias it to the constant from here on out.
+    if (// R is being assigned a constant of the right type:
+        A->is_constant() && R->typespec() == A->typespec()
+        // and it's written only on this op, and unconditionally:
+        && R->firstwrite() == opnum && R->lastwrite() == opnum
+        && !m_in_conditional[opnum]
+        // and this is not a case of an init op for an output param that
+        // actually will get an instance value:
+        && ! (R->valuesource() == Symbol::InstanceVal &&
+              opnum < inst()->maincodebegin())
+        ) {
+        // Alias it to the constant it's being assigned
         int cind = inst()->args()[op.firstarg()+1];
         global_alias (inst()->args()[op.firstarg()], cind);
-
         // If it's also never read before this assignment and isn't a
         // designated renderer output (which we obviously must write!), just
         // replace its default value entirely and get rid of the assignment.
         if (R->firstread() > opnum && ! R->renderer_output() &&
                 m_opt_elide_unconnected_outputs) {
-            make_param_use_instanceval (R, "- written once, with a constant, before any reads");
+            make_param_use_instanceval (R, Strutil::format("- written once, with a constant (%s), before any reads", const_value_as_string(*A)));
             replace_param_value (R, A->data(), A->typespec());
             turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
             return true;

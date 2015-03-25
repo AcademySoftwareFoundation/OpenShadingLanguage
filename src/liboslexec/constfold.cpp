@@ -1415,7 +1415,7 @@ DECLFOLDER(constfold_mix)
         (! B.connected() || !rop.opt_mix() || rop.optimization_pass() > 2)) {
         // mix(0,b,x) == b*x, but only do this if b is not connected.
         // Because if b is connected, it may pull on something expensive.
-        rop.turn_into_new_op (op, u_mul, Bind, Xind, "mix(0,b,x) => b*x");
+        rop.turn_into_new_op (op, u_mul, Rind, Bind, Xind, "mix(0,b,x) => b*x");
         return 1;
     }
 #if 0
@@ -1674,18 +1674,22 @@ DECLFOLDER(constfold_pow)
 
     // A few special cases of constant y:
     if (Y.is_constant() && Y.typespec().is_float()) {
+        int resultarg = rop.inst()->args()[op.firstarg()+0];
         int xarg = rop.inst()->args()[op.firstarg()+1];
         float yval = *(const float *)Y.data();
         if (yval == 2.0f) {
-            rop.turn_into_new_op (op, u_mul, xarg, xarg, "pow(x,2) => x*x");
+            rop.turn_into_new_op (op, u_mul, resultarg, xarg, xarg,
+                                  "pow(x,2) => x*x");
             return 1;
         }
         if (yval == 0.5f) {
-            rop.turn_into_new_op (op, u_sqrt, xarg, -1, "pow(x,0.5) => sqrt(x)");
+            rop.turn_into_new_op (op, u_sqrt, resultarg, xarg, -1,
+                                  "pow(x,0.5) => sqrt(x)");
             return 1;
         }
         if (yval == -0.5f) {
-            rop.turn_into_new_op (op, u_inversesqrt, xarg, -1, "pow(x,-0.5) => inversesqrt(x)");
+            rop.turn_into_new_op (op, u_inversesqrt, resultarg, xarg, -1,
+                                  "pow(x,-0.5) => inversesqrt(x)");
             return 1;
         }
     }

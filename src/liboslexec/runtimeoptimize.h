@@ -107,12 +107,12 @@ public:
     void turn_into_assign_one (Opcode &op, string_view why=NULL);
 
     /// Turn the op into a new simple unary or binary op with arguments
-    /// newarg1 and newarg2.  If newarg2 < 0, then it's a unary op,
-    /// otherwise a binary op.  Argument 0 (the result) remains the same
-    /// as always.  The original arg list must have at least as many
-    /// operands as the new one, since no new arg space is allocated.
-    void turn_into_new_op (Opcode &op, ustring newop, int newarg1,
-                           int newarg2, string_view why=NULL);
+    /// newarg0 (the result, newarg1, and newarg2.  If newarg2 < 0, then
+    /// it's a unary op, otherwise a binary op.  The original arg list must
+    /// have at least as many operands as the new one, since no new arg
+    /// space is allocated.
+    void turn_into_new_op (Opcode &op, ustring newop, int newarg0,
+                           int newarg1, int newarg2, string_view why=NULL);
 
     /// Turn the op into a no-op.  Return 1 if it changed, 0 if it was
     /// already a nop.
@@ -323,6 +323,8 @@ public:
     // Maximum number of new constant symbols that a constant-folding
     // function is able to add.
     static const int max_new_consts_per_fold = 10;
+
+    void stop_optimizing () { m_stop_optimizing = true; }
 
 private:
     int m_optimize;                   ///< Current optimization level

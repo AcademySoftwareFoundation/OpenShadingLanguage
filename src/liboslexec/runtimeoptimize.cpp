@@ -318,27 +318,28 @@ RuntimeOptimizer::add_global (ustring name, const TypeSpec &type)
 
 
 void
-RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg1,
-                                    int newarg2, string_view why)
+RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg0,
+                                    int newarg1, int newarg2, string_view why)
 {
     int opnum = &op - &(inst()->ops()[0]);
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     if (debug() > 1)
         std::cout << "turned op " << opnum
                   << " from " << op.opname() << " to "
-                  << newop << ' ' << inst()->symbol(newarg1)->name() << ' '
+                  << newop << ' ' << inst()->symbol(newarg0)->name() << ' '
+                  << inst()->symbol(newarg1)->name() << ' '
                   << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
                   << (why.size() ? " : " : "") << why << "\n";
     op.reset (newop, newarg2<0 ? 2 : 3);
+    inst()->args()[op.firstarg()+0] = newarg0;
     op.argwriteonly (0);
+    opargsym(op, 0)->mark_rw (opnum, false, true);
     inst()->args()[op.firstarg()+1] = newarg1;
-    op.argread (1, true);
-    op.argwrite (1, false);
+    op.argreadonly (1);
     opargsym(op, 1)->mark_rw (opnum, true, false);
     if (newarg2 >= 0) {
         inst()->args()[op.firstarg()+2] = newarg2;
-        op.argread (2, true);
-        op.argwrite (2, false);
+        op.argreadonly (2);
         opargsym(op, 2)->mark_rw (opnum, true, false);
     }
 }

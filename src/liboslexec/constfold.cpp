@@ -1699,6 +1699,39 @@ DECLFOLDER(constfold_pow)
 
 
 
+DECLFOLDER(constfold_sincos)
+{
+    // Try to turn sincos(const_angle,s,c) into s=sin_a, c = cos_a
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+0));
+    if (A.is_constant()) {
+        int sinarg = rop.inst()->args()[op.firstarg()+1];
+        int cosarg = rop.inst()->args()[op.firstarg()+2];
+        float angle = *(const float *)A.data();
+        float s, c;
+#if OSL_FAST_MATH
+        OIIO::fast_sincos (angle, &s, &c);
+#else
+        OIIO::sincos (angle, &s, &c);
+#endif
+        // Turn this op into the sin assignment
+        rop.turn_into_new_op (op, u_assign, sinarg, rop.add_constant (s), -1,
+                              "const fold sincos");
+        // And insert a new op for the cos assignment
+        std::vector<int> args_to_add;
+        args_to_add.push_back (cosarg);
+        args_to_add.push_back (rop.add_constant (c));
+        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+        Opcode &newop (rop.inst()->ops()[opnum]);
+        newop.argwriteonly (0);
+        newop.argreadonly (1);
+        return 1;
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_normalize)
 {
     // Try to turn R=normalze(x) into R=C

@@ -773,7 +773,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (shr,         bitwise_binary_op,   none,          true,      0);
     OP (sign,        generic,             none,          true,      0);
     OP (sin,         generic,             sin,           true,      0);
-    OP (sincos,      sincos,              none,          false,     0);
+    OP (sincos,      sincos,              sincos,        false,     0);
     OP (sinh,        generic,             none,          true,      0);
     OP (smoothstep,  generic,             none,          true,      0);
     OP (snoise,      noise,               noise,         true,      0);

@@ -399,7 +399,11 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 OSL_SHADEOP void osl_sincos_vvv(void *x_, void *s_, void *c_)
 {
     for (int i = 0; i < 3; i++)
+#if OSL_FAST_MATH
+        OIIO::fast_sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
+#else
         OIIO::sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
+#endif
 }
 
 OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)

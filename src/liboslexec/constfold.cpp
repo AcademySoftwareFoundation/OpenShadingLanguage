@@ -1783,6 +1783,11 @@ DECLFOLDER(constfold_matrix)
     // Try to turn R=matrix(from,to) into R=const if it's an identity
     // transform or if the result is a non-time-varying matrix.
     Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    bool using_space = (nargs == 3 || nargs == 18);
+    // bool using_two_spaces = (nargs == 3 && rop.opargsym(op,2)->typespec().is_string());
+    int nfloats = nargs - 1 - (int)using_space;
+    ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
     if (op.nargs() == 3) {
         Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
         Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
@@ -1825,6 +1830,24 @@ DECLFOLDER(constfold_matrix)
             Matrix44 Mresult = Mfrom * Mto;
             int cind = rop.add_constant (TypeDesc::TypeMatrix, &Mresult);
             rop.turn_into_assign (op, cind, "const fold matrix");
+            return 1;
+        }
+    }
+    if (nfloats == 16 && ! using_space) {
+        bool all_const = true;
+        float M[16];
+        for (int i = 0; i < 16; ++i) {
+            Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+1+i));
+            if (Val.is_constant())
+                M[i] = *(const float *)Val.data();
+            else {
+                all_const = false;
+                break;
+            }
+        }
+        if (all_const) {
+            rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeMatrix, M),
+                                  "const fold matrix");
             return 1;
         }
     }

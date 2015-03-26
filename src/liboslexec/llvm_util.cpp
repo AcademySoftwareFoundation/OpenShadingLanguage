@@ -47,13 +47,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <llvm/IR/IRBuilder.h>
 # include <llvm/IR/DataLayout.h>
 # if OSL_LLVM_VERSION >= 35
-# include <llvm/Linker/Linker.h>
-# include <llvm/Support/FileSystem.h>
-# include <llvm/Support/ErrorOr.h>
+#   include <llvm/Linker/Linker.h>
+#   include <llvm/Support/FileSystem.h>
 # else
-# include <llvm/Linker.h>
+#   include <llvm/Linker.h>
 # endif
 # if OSL_LLVM_VERSION >= 34
+#   include <llvm/Support/ErrorOr.h>
 #   include <llvm/IR/LegacyPassManager.h>
 # else
 #   include <llvm/PassManager.h>
@@ -440,8 +440,8 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     // deserialize the bitcode, MCJIT is unable to find the called functions
     // due to disagreement about whether a leading "_" is part of the symbol
     // name.
-  #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile (buf, context());
+  #if OSL_LLVM_VERSION >= 35
+    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::ParseBitcodeFile (buf, context());
     if (std::error_code EC = ModuleOrErr.getError())
         if (err)
           *err = EC.message();

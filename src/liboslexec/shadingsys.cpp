@@ -527,7 +527,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (false), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
-      m_greedyjit(false), m_countlayerexecs(false),
+      m_greedyjit(false), m_llvm_mcjit(false), m_countlayerexecs(false),
       m_max_warnings_per_thread(100),
       m_profile(0),
       m_optimize(2),
@@ -935,6 +935,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET ("llvm_mcjit", int, m_llvm_mcjit);
     ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
     ATTR_SET ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
@@ -1033,6 +1034,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
+    ATTR_DECODE ("llvm_mcjit", int, m_llvm_mcjit);
     ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
     ATTR_DECODE ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
@@ -1359,6 +1361,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (lockgeom_default);
     BOOLOPT (range_checking);
     BOOLOPT (greedyjit);
+    BOOLOPT (llvm_mcjit);
     BOOLOPT (countlayerexecs);
     BOOLOPT (opt_simplify_param);
     BOOLOPT (opt_constant_fold);

@@ -161,7 +161,6 @@ else ()
     set (USE_LLVM_BITCODE ON CACHE BOOL "Generated embedded LLVM bitcode")
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
-set (USE_MCJIT OFF CACHE BOOL "Use LLVM MCJIT (if no, then use old JIT)")
 set (USE_FAST_MATH ON CACHE BOOL "Use fast math approximations (if no, then use system math library)")
 set (USE_CPP11 OFF CACHE BOOL "Compile in C++11 mode")
 set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
@@ -174,10 +173,6 @@ endif ()
 
 if (USE_EXTERNAL_PUGIXML)
     add_definitions ("-DUSE_EXTERNAL_PUGIXML")
-endif ()
-
-if (USE_MCJIT)
-    add_definitions ("-DUSE_MCJIT=1")
 endif ()
 
 if (USE_FAST_MATH)

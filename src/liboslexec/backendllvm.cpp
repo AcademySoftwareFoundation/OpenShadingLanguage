@@ -97,6 +97,9 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
     // getcwd inside LLVM. Oy.
     check_cwd (shadingsys);
 #endif
+    int mcjit = 0;
+    if (shadingsys.getattribute ("llvm_mcjit", TypeDesc::INT, &mcjit))
+        ll.mcjit (mcjit);
 }
 
 

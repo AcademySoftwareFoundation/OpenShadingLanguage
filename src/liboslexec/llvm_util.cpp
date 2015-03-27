@@ -33,7 +33,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/llvm_util.h"
 
 #ifndef USE_MCJIT
-#define USE_MCJIT 0
+  // MCJIT first appeared with LLVM 3.3
+# define USE_MCJIT (OSL_LLVM_VERSION>=33)
+#endif
+
+// MCJIT is mandatory for LLVM 3.6 and beyond, no more old JIT
+#define MCJIT_REQUIRED (USE_MCJIT >= 2 || OSL_LLVM_VERSION >= 36)
+
+#if MCJIT_REQUIRED
+# undef USE_MCJIT
+# define USE_MCJIT 2
 #endif
 
 #if OSL_LLVM_VERSION >= 33
@@ -86,10 +95,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/ExecutionEngine/GenericValue.h>
 #if USE_MCJIT
 # include <llvm/ExecutionEngine/MCJIT.h>
-# include <llvm/ExecutionEngine/JIT.h>
-#else
-# include <llvm/ExecutionEngine/JIT.h>
 #endif
+#include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/ExecutionEngine/JITMemoryManager.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
@@ -300,7 +307,7 @@ public:
 
 
 LLVM_Util::LLVM_Util (int debuglevel)
-    : m_debug(debuglevel), m_thread(NULL),
+    : m_debug(debuglevel), m_mcjit(MCJIT_REQUIRED), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
@@ -434,31 +441,39 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
         llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
 
     // Load the LLVM bitcode and parse it into a Module
+    llvm::Module *m = NULL;
+
 #if USE_MCJIT /* Parse the whole thing now */
-    // FIXME!! Using MCJIT should not require unconditionally parsing the
-    // bitcode. But for now, when using getLazyBitcodeModule to lazily
-    // deserialize the bitcode, MCJIT is unable to find the called functions
-    // due to disagreement about whether a leading "_" is part of the symbol
-    // name.
+    if (mcjit() || MCJIT_REQUIRED) {
+        // FIXME!! Using MCJIT should not require unconditionally parsing
+        // the bitcode. But for now, when using getLazyBitcodeModule to
+        // lazily deserialize the bitcode, MCJIT is unable to find the
+        // called functions due to disagreement about whether a leading "_"
+        // is part of the symbol name.
   #if OSL_LLVM_VERSION >= 35
-    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::ParseBitcodeFile (buf, context());
-    if (std::error_code EC = ModuleOrErr.getError())
-        if (err)
-          *err = EC.message();
-    llvm::Module *m = ModuleOrErr.get();
+        llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::ParseBitcodeFile (buf, context());
+        if (std::error_code EC = ModuleOrErr.getError())
+            if (err)
+              *err = EC.message();
+        m = ModuleOrErr.get();
   #else
-    llvm::Module *m = llvm::ParseBitcodeFile (buf, context(), err);
+        m = llvm::ParseBitcodeFile (buf, context(), err);
   #endif
-    delete buf;
-#else
-    // Create a lazily deserialized IR module
-# if OSL_LLVM_VERSION >= 35
-    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context()).get();
-# else
-    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context(), err);
-    // don't delete buf, the module has taken ownership of it
-# endif
+        delete buf;
+    }
+    else
 #endif
+    {
+        // Create a lazily deserialized IR module
+        // This can only be done for old JIT
+# if OSL_LLVM_VERSION >= 35
+        m = llvm::getLazyBitcodeModule (buf, context()).get();
+# else
+        m = llvm::getLazyBitcodeModule (buf, context(), err);
+# endif
+        // don't delete buf, the module has taken ownership of it
+    }
+
     // Debugging: print all functions in the module
     // for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
     //     std::cout << "  found " << i->getName().data() << "\n";
@@ -499,7 +514,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
                             .setErrorStr(err)
                             .setJITMemoryManager(jitmm())
                             .setOptLevel(llvm::CodeGenOpt::Default)
-                            .setUseMCJIT(USE_MCJIT)
+                            .setUseMCJIT(mcjit() || MCJIT_REQUIRED)
                             .create();
 #else
     m_llvm_exec = llvm::ExecutionEngine::createJIT (module(), err,

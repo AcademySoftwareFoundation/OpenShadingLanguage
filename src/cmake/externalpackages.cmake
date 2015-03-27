@@ -178,13 +178,9 @@ find_library ( LLVM_LIBRARY
 message (STATUS "LLVM version  = ${LLVM_VERSION}")
 message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
 
-if (USE_MCJIT)
-    find_library ( LLVM_MCJIT_LIBRARY
+find_library ( LLVM_MCJIT_LIBRARY
                    NAMES LLVMMCJIT
                    PATHS ${LLVM_LIB_DIR})
-else ()
-    set (LLVM_MCJIT_LIBRARY "")
-endif ()
 
 if (VERBOSE)
     message (STATUS "LLVM includes = ${LLVM_INCLUDES}")

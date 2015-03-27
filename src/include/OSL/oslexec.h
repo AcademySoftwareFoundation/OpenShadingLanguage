@@ -142,6 +142,7 @@ public:
     ///         opt_fold_getattribute, opt_middleman, opt_texture_handle
     ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
     ///    int llvm_debug         Set LLVM extra debug level (0)
+    ///    int llvm_mcjit         Use LLVM MCJIT if available (0).
     ///    int max_local_mem_KB   Error if shader group needs more than this
     ///                              much local storage to execute (1024K)
     ///    string debug_groupname Name of shader group -- debug only this one

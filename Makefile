@@ -120,10 +120,6 @@ ifneq (${USE_EXTERNAL_PUGIXML},)
 MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
 endif
 
-ifneq (${USE_MCJIT},)
-MY_CMAKE_FLAGS += -DUSE_MCJIT:BOOL=${USE_MCJIT}
-endif
-
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -287,7 +283,6 @@ help:
 	@echo "      LLVM_NAMESPACE=xx        Specify custom LLVM namespace"
 	@echo "      LLVM_STATIC=1            Use static LLVM libraries"
 	@echo "      USE_LLVM_BITCODE=0       Don't generate embedded LLVM bitcode"
-	@echo "      USE_MCJIT=1              Use LLVM MCJIT (default: use old JIT)"
 	@echo "  OSL build-time options:"
 	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"

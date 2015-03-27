@@ -2992,28 +2992,3 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
 }
 
 
-
-// Utility: retrieve a pointer to the ShadingContext's texture options
-// struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_texture_options (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    TextureOpt *opt = sg->context->texture_options_ptr ();
-    new (opt) TextureOpt;
-    return opt;
-}
-
-
-
-// Utility: retrieve a pointer to the ShadingContext's trace options
-// struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_trace_options (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices::TraceOpt *opt = sg->context->trace_options_ptr ();
-    new (opt) RendererServices::TraceOpt;
-    return opt;
-}
-

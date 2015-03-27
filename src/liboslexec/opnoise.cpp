@@ -91,11 +91,6 @@ void test_perlin(int d) {
  */
 
 #if 1
-// Handy re-casting macros
-#define VEC(v) (*(Vec3 *)v)
-#define DFLOAT(x) (*(Dual2<Float> *)x)
-#define DVEC(x) (*(Dual2<Vec3> *)x)
-#define USTR(cstr) (*((ustring *)&cstr))
 
 
 #define NOISE_IMPL(opname,implname)                                     \
@@ -745,6 +740,47 @@ osl_get_noise_options (void *sg_)
     new (opt) RendererServices::NoiseOpt;
     return opt;
 }
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_anisotropic (void *opt, int a)
+{
+    ((RendererServices::NoiseOpt *)opt)->anisotropic = a;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_do_filter (void *opt, int a)
+{
+    ((RendererServices::NoiseOpt *)opt)->do_filter = a;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_direction (void *opt, void *dir)
+{
+    ((RendererServices::NoiseOpt *)opt)->direction = VEC(dir);
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_bandwidth (void *opt, float b)
+{
+    ((RendererServices::NoiseOpt *)opt)->bandwidth = b;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_impulses (void *opt, float i)
+{
+    ((RendererServices::NoiseOpt *)opt)->impulses = i;
+}
+
 
 
 } // namespace pvt

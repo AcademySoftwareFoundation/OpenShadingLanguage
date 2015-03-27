@@ -49,14 +49,66 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-// Heavy lifting of OSL regex operations.
-OSL_SHADEOP int
-osl_regex_impl2 (void *ctx_, const char *subject_,
-                 void *results, int nresults, const char *pattern,
-                 int fullmatch)
+// Only define 2-arg version of concat, sort it out upstream
+OSL_SHADEOP const char *
+osl_concat_sss (const char *s, const char *t)
 {
-    ShadingContext *ctx = (ShadingContext *)ctx_;
-    const std::string &subject (USTR(subject_).string());
+    return ustring::format("%s%s", s, t).c_str();
+}
+
+OSL_SHADEOP int
+osl_strlen_is (const char *s)
+{
+    return (int) USTR(s).length();
+}
+
+OSL_SHADEOP int
+osl_startswith_iss (const char *s, const char *substr)
+{
+    return strncmp (s, substr, USTR(substr).length()) == 0;
+}
+
+OSL_SHADEOP int
+osl_endswith_iss (const char *s, const char *substr)
+{
+    size_t len = USTR(substr).length();
+    if (len > USTR(s).length())
+        return 0;
+    else
+        return strncmp (s+USTR(s).length()-len, substr, len) == 0;
+}
+
+OSL_SHADEOP int
+osl_stoi_is (const char *str)
+{
+    return strtol(str, NULL, 10);
+}
+
+OSL_SHADEOP float
+osl_stof_fs (const char *str)
+{
+    return (float)strtod(str, NULL);
+}
+
+OSL_SHADEOP const char *
+osl_substr_ssii (const char *s, int start, int length)
+{
+    int slen = (int) USTR(s).length();
+    int b = start;
+    if (b < 0)
+        b += slen;
+    b = Imath::clamp (b, 0, slen);
+    return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
+}
+
+
+OSL_SHADEOP int
+osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
+                const char *pattern, int fullmatch)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    ShadingContext *ctx = sg->context;
+    const std::string &subject (ustring::from_unique(subject_).string());
     boost::match_results<std::string::const_iterator> mresults;
     const boost::regex &regex (ctx->find_regex (USTR(pattern)));
     if (nresults > 0) {
@@ -80,6 +132,7 @@ osl_regex_impl2 (void *ctx_, const char *subject_,
                          : boost::regex_search (subject, regex);
     }
 }
+
 
 OSL_SHADEOP const char *
 osl_format (const char* format_str, ...)

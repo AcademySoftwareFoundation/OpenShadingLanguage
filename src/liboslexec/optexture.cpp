@@ -48,6 +48,138 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
+// Utility: retrieve a pointer to the ShadingContext's texture options
+// struct, also re-initialize its contents.
+OSL_SHADEOP void *
+osl_get_texture_options (void *sg_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    TextureOpt *opt = sg->context->texture_options_ptr ();
+    new (opt) TextureOpt;
+    return opt;
+}
+
+
+OSL_SHADEOP void
+osl_texture_set_firstchannel (void *opt, int x)
+{
+    ((TextureOpt *)opt)->firstchannel = x;
+}
+
+
+OSL_SHADEOP void
+osl_texture_set_swrap (void *opt, const char *x)
+{
+    ((TextureOpt *)opt)->swrap = TextureOpt::decode_wrapmode(USTR(x));
+}
+
+OSL_SHADEOP void
+osl_texture_set_twrap (void *opt, const char *x)
+{
+    ((TextureOpt *)opt)->twrap = TextureOpt::decode_wrapmode(USTR(x));
+}
+
+OSL_SHADEOP void
+osl_texture_set_rwrap (void *opt, const char *x)
+{
+    ((TextureOpt *)opt)->rwrap = TextureOpt::decode_wrapmode(USTR(x));
+}
+
+OSL_SHADEOP void
+osl_texture_set_stwrap (void *opt, const char *x)
+{
+    TextureOpt::Wrap code = TextureOpt::decode_wrapmode(USTR(x));
+    ((TextureOpt *)opt)->swrap = code;
+    ((TextureOpt *)opt)->twrap = code;
+}
+
+OSL_SHADEOP void
+osl_texture_set_swrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_twrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_rwrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->rwrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_stwrap_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_sblur (void *opt, float x)
+{
+    ((TextureOpt *)opt)->sblur = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_tblur (void *opt, float x)
+{
+    ((TextureOpt *)opt)->tblur = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_rblur (void *opt, float x)
+{
+    ((TextureOpt *)opt)->rblur = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_stblur (void *opt, float x)
+{
+    ((TextureOpt *)opt)->sblur = x;
+    ((TextureOpt *)opt)->tblur = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_swidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->swidth = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_twidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->twidth = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_rwidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->rwidth = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_stwidth (void *opt, float x)
+{
+    ((TextureOpt *)opt)->swidth = x;
+    ((TextureOpt *)opt)->twidth = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_fill (void *opt, float x)
+{
+    ((TextureOpt *)opt)->fill = x;
+}
+
+OSL_SHADEOP void
+osl_texture_set_time (void *opt, float x)
+{
+    ((TextureOpt *)opt)->time = x;
+}
+
 inline int
 tex_interp_to_code (ustring modename)
 {
@@ -68,14 +200,46 @@ tex_interp_to_code (ustring modename)
     return mode;
 }
 
-
-
 OSL_SHADEOP void
 osl_texture_set_interp (void *opt, const char *modename)
 {
     int mode = tex_interp_to_code (USTR(modename));
     if (mode >= 0)
         ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_interp_code (void *opt, int mode)
+{
+    ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
+}
+
+OSL_SHADEOP void
+osl_texture_set_subimage (void *opt, int subimage)
+{
+    ((TextureOpt *)opt)->subimage = subimage;
+}
+
+
+OSL_SHADEOP void
+osl_texture_set_subimagename (void *opt, const char *subimagename)
+{
+    ((TextureOpt *)opt)->subimagename = USTR(subimagename);
+}
+
+OSL_SHADEOP void
+osl_texture_set_missingcolor_arena (void *opt, const void *missing)
+{
+    ((TextureOpt *)opt)->missingcolor = (const float *)missing;
+}
+
+OSL_SHADEOP void
+osl_texture_set_missingcolor_alpha (void *opt, int alphaindex,
+                                    float missingalpha)
+{
+    float *m = (float *)((TextureOpt *)opt)->missingcolor;
+    if (m)
+        m[alphaindex] = missingalpha;
 }
 
 
@@ -247,6 +411,64 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
                                            (RendererServices::TextureHandle *)handle,
                                            0 /*FIXME-ptex*/,
                                            USTR(dataname), typedesc, data);
+}
+
+
+
+// Trace
+
+// Utility: retrieve a pointer to the ShadingContext's trace options
+// struct, also re-initialize its contents.
+OSL_SHADEOP void *
+osl_get_trace_options (void *sg_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices::TraceOpt *opt = sg->context->trace_options_ptr ();
+    new (opt) RendererServices::TraceOpt;
+    return opt;
+}
+
+OSL_SHADEOP void
+osl_trace_set_mindist (void *opt, float x)
+{
+    ((RendererServices::TraceOpt *)opt)->mindist = x;
+}
+
+OSL_SHADEOP void
+osl_trace_set_maxdist (void *opt, float x)
+{
+    ((RendererServices::TraceOpt *)opt)->maxdist = x;
+}
+
+OSL_SHADEOP void
+osl_trace_set_shade (void *opt, int x)
+{
+    ((RendererServices::TraceOpt *)opt)->shade = x;
+}
+
+
+OSL_SHADEOP void
+osl_trace_set_traceset (void *opt, const char *x)
+{
+    ((RendererServices::TraceOpt *)opt)->traceset = USTR(x);
+}
+
+
+OSL_SHADEOP int
+osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
+           void *Dir_, void *dDirdx_, void *dDirdy_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices::TraceOpt *opt = (RendererServices::TraceOpt *)opt_;
+    static const Vec3 Zero (0.0f, 0.0f, 0.0f);
+    const Vec3 *Pos = (Vec3 *)Pos_;
+    const Vec3 *dPosdx = dPosdx_ ? (Vec3 *)dPosdx_ : &Zero;
+    const Vec3 *dPosdy = dPosdy_ ? (Vec3 *)dPosdy_ : &Zero;
+    const Vec3 *Dir = (Vec3 *)Dir_;
+    const Vec3 *dDirdx = dDirdx_ ? (Vec3 *)dDirdx_ : &Zero;
+    const Vec3 *dDirdy = dDirdy_ ? (Vec3 *)dDirdy_ : &Zero;
+    return sg->renderer->trace (*opt, sg, *Pos, *dPosdx, *dPosdy,
+                                *Dir, *dDirdx, *dDirdy);
 }
 
 

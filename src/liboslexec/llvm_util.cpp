@@ -437,8 +437,14 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 {
     if (err)
         err->clear();
+
+#if OSL_LLVM_VERSION >= 36
+    llvm::MemoryBufferRef buf =
+        llvm::MemoryBufferRef(llvm::StringRef(bitcode, size), name));
+#else /* LLVM 3.5 or earlier */
     llvm::MemoryBuffer* buf =
         llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
+#endif
 
     // Load the LLVM bitcode and parse it into a Module
     llvm::Module *m = NULL;
@@ -459,7 +465,9 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
   #else
         m = llvm::ParseBitcodeFile (buf, context(), err);
   #endif
+  #if OSL_LLVM_VERSION < 36
         delete buf;
+  #endif
     }
     else
 #endif

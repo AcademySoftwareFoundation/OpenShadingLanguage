@@ -179,17 +179,29 @@ public:
     /// current one).
     void execengine (llvm::ExecutionEngine *exec);
 
-    /// Retrieve a callable pointer to the JITed version of a function.
-    void *getPointerToFunction (llvm::Function *func);
-
-    /// Wrap ExecutionEngine::InstallLazyFunctionCreator.
-    void InstallLazyFunctionCreator (void* (*P)(const std::string &));
+    /// Change symbols in the module that are marked as having external
+    /// linkage to an alternate linkage that allows them to be discarded if
+    /// not used within the module. Only do this for functions that start
+    /// with prefix, and that DON'T match anything in the two exceptions
+    /// lists.
+    void internalize_module_functions (const std::string &prefix,
+                                       const std::vector<std::string> &exceptions,
+                                       const std::vector<std::string> &moreexceptions);
 
     /// Setup LLVM optimization passes.
     void setup_optimization_passes (int optlevel);
 
     /// Run the optimization passes.
     void do_optimize ();
+
+    /// Retrieve a callable pointer to the JITed version of a function.
+    /// This will JIT the function if it hasn't already done so. Be sure
+    /// you have already called do_optimize() if you want optimization.
+    void *getPointerToFunction (llvm::Function *func);
+
+    /// Wrap ExecutionEngine::InstallLazyFunctionCreator.
+    void InstallLazyFunctionCreator (void* (*P)(const std::string &));
+
 
     /// Create a new LLVM basic block (for the current function) and return
     /// its handle.
@@ -493,6 +505,8 @@ public:
 
     /// Is the function empty, except for simply a ret statement?
     bool func_is_empty (llvm::Function *func);
+
+    std::string func_name (llvm::Function *f);
 
     static size_t total_jit_memory_held ();
 

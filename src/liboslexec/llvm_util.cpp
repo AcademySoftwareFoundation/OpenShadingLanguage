@@ -683,6 +683,73 @@ LLVM_Util::do_optimize ()
 
 
 
+void
+LLVM_Util::internalize_module_functions (const std::string &prefix,
+                                         const std::vector<std::string> &exceptions,
+                                         const std::vector<std::string> &moreexceptions)
+{
+    for (llvm::Module::iterator iter = module()->begin(); iter != module()->end(); iter++) {
+        llvm::Function *sym = (llvm::Function *)(iter);
+        std::string symname = sym->getName();
+        if (prefix.size() && ! OIIO::Strutil::starts_with(symname, prefix))
+            continue;
+        bool needed = false;
+        for (size_t i = 0, e = exceptions.size(); i < e; ++i)
+            if (sym->getName() == exceptions[i]) {
+                needed = true;
+                // std::cout << "    necessary LLVM module function "
+                //           << sym->getName().str() << "\n";
+                break;
+            }
+        for (size_t i = 0, e = moreexceptions.size(); i < e; ++i)
+            if (sym->getName() == moreexceptions[i]) {
+                needed = true;
+                // std::cout << "    necessary LLVM module function "
+                //           << sym->getName().str() << "\n";
+                break;
+            }
+        if (!needed) {
+            llvm::GlobalValue::LinkageTypes linkage = sym->getLinkage();
+            // std::cout << "    unnecessary LLVM module function "
+            //           << sym->getName().str() << " linkage " << int(linkage) << "\n";
+            if (linkage == llvm::GlobalValue::ExternalLinkage)
+                sym->setLinkage (llvm::GlobalValue::LinkOnceODRLinkage);
+            // ExternalLinkage means it's potentially externally callable,
+            // and so will definitely have code generated.
+            // LinkOnceODRLinkage keeps one copy so it can be inlined or
+            // called internally to the module, but allows it to be
+            // discarded otherwise.
+        }
+    }
+#if 0
+    // I don't think we need to worry about linkage of global symbols, but
+    // here is an example of how to iterate over the globals anyway.
+    for (llvm::Module::global_iterator iter = module()->global_begin(); iter != module()->global_end(); iter++) {
+        llvm::GlobalValue *sym = llvm::dyn_cast<llvm::GlobalValue>(iter);
+        if (!sym)
+            continue;
+        std::string symname = sym->getName();
+        if (prefix.size() && ! OIIO::Strutil::starts_with(symname, prefix))
+            continue;
+        bool needed = false;
+        for (size_t i = 0, e = exceptions.size(); i < e; ++i)
+            if (sym->getName() == exceptions[i]) {
+                needed = true;
+                break;
+            }
+        if (! needed) {
+            llvm::GlobalValue::LinkageTypes linkage = sym->getLinkage();
+            // std::cout << "    unnecessary LLVM global " << sym->getName().str()
+            //           << " linkage " << int(linkage) << "\n";
+            if (linkage == llvm::GlobalValue::ExternalLinkage)
+                f->setLinkage (llvm::GlobalValue::LinkOnceODRLinkage);
+        }
+    }
+#endif
+}
+
+
+
 llvm::Function *
 LLVM_Util::make_function (const std::string &name, bool fastcall,
                           llvm::Type *rettype,
@@ -1555,6 +1622,13 @@ LLVM_Util::func_is_empty (llvm::Function *func)
     return func->size() == 1 // func has just one basic block
         && func->front().size() == 1;  // the block has one instruction,
                                        ///   presumably the ret
+}
+
+
+std::string
+LLVM_Util::func_name (llvm::Function *func)
+{
+    return func->getName().str();
 }
 
 

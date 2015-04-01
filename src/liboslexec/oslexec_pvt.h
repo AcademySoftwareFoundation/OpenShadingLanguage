@@ -192,6 +192,17 @@ struct UserDataNeeded {
 #define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
 
 
+// Handy re-casting macros
+#define USTR(cstr) (*((ustring *)&cstr))
+#define MAT(m) (*(Matrix44 *)m)
+#define VEC(v) (*(Vec3 *)v)
+#define DFLOAT(x) (*(Dual2<Float> *)x)
+#define DVEC(x) (*(Dual2<Vec3> *)x)
+#define COL(x) (*(Color3 *)x)
+#define DCOL(x) (*(Dual2<Color3> *)x)
+#define TYPEDESC(x) (*(TypeDesc *)&x)
+
+
 
 /// Like an int (of type T), but also internally keeps track of the
 /// maximum value is has held, and the total "requested" deltas.

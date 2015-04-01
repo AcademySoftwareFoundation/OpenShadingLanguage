@@ -3,10 +3,9 @@ SET ( liboslexec_srcs
           dictionary.cpp
           context.cpp instance.cpp 
           loadshader.cpp master.cpp 
-          opcolor.cpp 
-          opmessage.cpp
+          opcolor.cpp opmatrix.cpp opmessage.cpp
           opnoise.cpp simplexnoise.cpp gabornoise.cpp
-          opspline.cpp opstring.cpp
+          opspline.cpp opstring.cpp optexture.cpp
           oslexec.cpp osoreader.cpp
           pointcloud.cpp rendservices.cpp 
           constfold.cpp runtimeoptimize.cpp typespec.cpp

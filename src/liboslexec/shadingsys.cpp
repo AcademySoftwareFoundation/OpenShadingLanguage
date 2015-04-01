@@ -2756,85 +2756,6 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 
 
 
-#define USTR(cstr) (*((ustring *)&cstr))
-#define TYPEDESC(x) (*(TypeDesc *)&x)
-#define MAT(m) (*(Matrix44 *)m)
-
-OSL_SHADEOP int
-osl_get_matrix (void *sg_, void *r, const char *from)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    ShadingContext *ctx = (ShadingContext *)sg->context;
-    if (USTR(from) == Strings::common ||
-            USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-        MAT(r).makeIdentity ();
-        return true;
-    }
-    if (USTR(from) == Strings::shader) {
-        ctx->renderer()->get_matrix (sg, MAT(r), sg->shader2common, sg->time);
-        return true;
-    }
-    if (USTR(from) == Strings::object) {
-        ctx->renderer()->get_matrix (sg, MAT(r), sg->object2common, sg->time);
-        return true;
-    }
-    int ok = ctx->renderer()->get_matrix (sg, MAT(r), USTR(from), sg->time);
-    if (! ok) {
-        MAT(r).makeIdentity();
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", from);
-    }
-    return ok;
-}
-
-
-OSL_SHADEOP int
-osl_get_inverse_matrix (void *sg_, void *r, const char *to)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    ShadingContext *ctx = (ShadingContext *)sg->context;
-    if (USTR(to) == Strings::common ||
-            USTR(to) == ctx->shadingsys().commonspace_synonym()) {
-        MAT(r).makeIdentity ();
-        return true;
-    }
-    if (USTR(to) == Strings::shader) {
-        ctx->renderer()->get_inverse_matrix (sg, MAT(r), sg->shader2common, sg->time);
-        return true;
-    }
-    if (USTR(to) == Strings::object) {
-        ctx->renderer()->get_inverse_matrix (sg, MAT(r), sg->object2common, sg->time);
-        return true;
-    }
-    int ok = ctx->renderer()->get_inverse_matrix (sg, MAT(r), USTR(to), sg->time);
-    if (! ok) {
-        MAT(r).makeIdentity ();
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", to);
-    }
-    return ok;
-}
-
-
-OSL_SHADEOP int
-osl_prepend_matrix_from (void *sg, void *r, const char *from)
-{
-    Matrix44 m;
-    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
-    if (ok)
-        MAT(r) = m * MAT(r);
-    else {
-        ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", from);
-    }
-    return ok;
-}
-
-
-
 // vals points to a symbol with a total of ncomps floats (ncomps ==
 // aggregate*arraylen).  If has_derivs is true, it's actually 3 times
 // that length, the main values then the derivatives.  We want to check
@@ -2991,29 +2912,4 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
     return 0;  // no such user data
 }
 
-
-
-// Utility: retrieve a pointer to the ShadingContext's texture options
-// struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_texture_options (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    TextureOpt *opt = sg->context->texture_options_ptr ();
-    new (opt) TextureOpt;
-    return opt;
-}
-
-
-
-// Utility: retrieve a pointer to the ShadingContext's trace options
-// struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_trace_options (void *sg_)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices::TraceOpt *opt = sg->context->trace_options_ptr ();
-    new (opt) RendererServices::TraceOpt;
-    return opt;
-}
 

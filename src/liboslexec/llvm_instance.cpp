@@ -139,6 +139,7 @@ typedef boost::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
 HelperFuncMap llvm_helper_function_map;
 atomic_int llvm_helper_function_map_initialized (0);
 spin_mutex llvm_helper_function_map_mutex;
+std::vector<std::string> external_function_names;
 
 
 
@@ -151,7 +152,8 @@ initialize_llvm_helper_function_map ()
     if (llvm_helper_function_map_initialized())
         return;
 #define DECL(name,signature) \
-    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name);
+    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
+    external_function_names.push_back (#name);
 #include "builtindecl.h"
 #undef DECL
 
@@ -982,6 +984,18 @@ BackendLLVM::run ()
         shadingcontext()->error ("Shader group \"%s\" needs too much local storage: %d KB",
                                  group().name(), m_llvm_local_mem/1024);
     }
+
+    // The module contains tons of "library" functions that our generated
+    // IR might call. But probably not. We don't want to incur the overhead
+    // of fully compiling those, so we tell LLVM_Util to turn them into
+    // non-externally-visible symbols (allowing them to be discarded if not
+    // used internal to the module). We need to make exceptions for our
+    // entry points, as well as for all the external functions that are
+    // just declarations (not definitions) in the module (which we have
+    // conveniently stashed in external_function_names).
+    std::vector<std::string> entry_functions;
+    entry_functions.push_back (ll.func_name(entry_func));
+    ll.internalize_module_functions ("osl_", external_function_names, entry_functions);
 
     // Optimize the LLVM IR unless it's just a ret void group (1 layer,
     // 1 BB, 1 inst == retvoid)

@@ -426,9 +426,6 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
 
 
 
-inline ustring USTR(const char *cstr) { return (*((const ustring *)&cstr)); }
-inline TypeDesc TYPEDESC(long long x) { return (*(const TypeDesc *)&x); }
-
 OSL_SHADEOP int
 osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
                        int max_points, int sort, void *out_indices, void *out_distances, int derivs_offset,
@@ -451,10 +448,10 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
                                                  indices, (float *)out_distances, derivs_offset);
     va_list args;
     va_start (args, nattrs);
-    for (int i = 0; i < nattrs; i++)
-    {  
-        ustring  attr_name = USTR (va_arg (args, const char *));
-        TypeDesc attr_type = TYPEDESC (va_arg (args, long long));
+    for (int i = 0; i < nattrs; i++) {
+        ustring  attr_name = ustring::from_unique ((const char *)va_arg (args, const char *));
+        long long lltype = va_arg (args, long long);
+        TypeDesc attr_type = TYPEDESC (lltype);
         void     *out_data = va_arg (args, void*);
         sg->renderer->pointcloud_get (sg, USTR(filename), indices,
                                       count, attr_name, attr_type, out_data);

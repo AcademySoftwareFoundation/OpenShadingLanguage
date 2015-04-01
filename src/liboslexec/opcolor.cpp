@@ -532,8 +532,6 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
 
 
 
-#define USTR(cstr) (*((ustring *)&cstr))
-
 OSL_SHADEOP void
 osl_prepend_color_from (void *sg, void *c_, const char *from)
 {

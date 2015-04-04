@@ -486,8 +486,18 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         llvm::Value *got_userdata =
             ll.call_function ("osl_bind_interpolated_param",
                               &args[0], args.size());
-        // FIXME -- check for NaNs here
-
+        if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
+            // check for NaN/Inf for float-based types
+            int ncomps = type.numelements() * type.aggregate;
+            llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(sym),
+                 ll.constant((int)sym.has_derivs()), sg_void_ptr(),
+                 ll.constant(ustring(inst()->shadername())),
+                 ll.constant(0), ll.constant(sym.name()),
+                 ll.constant(0), ll.constant(ncomps),
+                 ll.constant("<get_userdata>")
+            };
+            ll.call_function ("osl_naninf_check", args, 10);
+        }
         // We will enclose the subsequent initialization of default values
         // or init ops in an "if" so that the extra copies or code don't
         // happen if the userdata was retrieved.

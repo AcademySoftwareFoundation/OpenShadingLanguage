@@ -424,7 +424,7 @@ int
 RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
 {
     int changed = 0;
-    for (int i = begin;  i != end;  ++i) {
+    for (int i = begin;  i < end;  ++i) {
         Opcode &op (inst()->ops()[i]);
         if (op.opname() != u_nop) {
             op.reset (u_nop, 0);
@@ -783,10 +783,16 @@ RuntimeOptimizer::simplify_params ()
         if (s->typespec().is_structure() || s->typespec().is_closure_based())
             continue;  // We don't mess with struct placeholders or closures
 
-        if (s->valuesource() == Symbol::InstanceVal ||
-            (s->valuesource() == Symbol::DefaultVal && !s->has_init_ops())) {
-            // Instance value or a plain default value (no init ops) --
-            // turn it into a constant
+        if (s->valuesource() == Symbol::InstanceVal) {
+            // Instance value -- turn it into a constant and remove init ops
+            make_symbol_room (1);
+            s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
+            int cind = add_constant (s->typespec(), s->data());
+            global_alias (i, cind); // Alias this symbol to the new const
+            turn_into_nop (s->initbegin(), s->initend(),
+                           "instance value doesn't need init ops");
+        } else if (s->valuesource() == Symbol::DefaultVal && !s->has_init_ops()) {
+            // Plain default value without init ops -- turn it into a constant
             make_symbol_room (1);
             s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
             int cind = add_constant (s->typespec(), s->data());
@@ -825,6 +831,8 @@ RuntimeOptimizer::simplify_params ()
             // It's connected to an earlier layer.  If the output var of
             // the upstream shader is effectively constant or a global,
             // then so is this variable.
+            turn_into_nop (s->initbegin(), s->initend(),
+                           "connected value doesn't need init ops");
             BOOST_FOREACH (Connection &c, inst()->connections()) {
                 if (c.dst.param == i) {
                     // srcsym is the earlier group's output param, which

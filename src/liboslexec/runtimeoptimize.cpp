@@ -1297,13 +1297,14 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // just alias it to the constant from here on out.
     if (// R is being assigned a constant of the right type:
         A->is_constant() && R->typespec() == A->typespec()
+                // FIXME -- can this be equivalent() rather than == ?
         // and it's written only on this op, and unconditionally:
         && R->firstwrite() == opnum && R->lastwrite() == opnum
         && !m_in_conditional[opnum]
         // and this is not a case of an init op for an output param that
-        // actually will get an instance value:
-        && ! (R->valuesource() == Symbol::InstanceVal &&
-              opnum < inst()->maincodebegin())
+        // actually will get an instance value or a connection:
+        && ! ((R->valuesource() == Symbol::InstanceVal || R->connected())
+              && R->initbegin() <= opnum && R->initend() > opnum)
         ) {
         // Alias it to the constant it's being assigned
         int cind = inst()->args()[op.firstarg()+1];

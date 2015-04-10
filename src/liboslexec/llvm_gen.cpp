@@ -81,6 +81,7 @@ static ustring op_xor("xor");
 
 static ustring u_distance ("distance");
 static ustring u_index ("index");
+static ustring u__empty;  // empty/default ustring
 
 
 
@@ -2973,22 +2974,28 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
             const ClosureParam &param = clentry->params[clentry->nformal + t];
             // strcmp might be too much, we could precompute the ustring for the param,
             // but in this part of the code is not a big deal
-            if (param.type == ValueType && !strcmp(key->c_str(), param.key))
+            if (equivalent(param.type,ValueType) && !strcmp(key->c_str(), param.key))
                 legal = true;
         }
         if (!legal) {
             rop.shadingcontext()->warning("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
-            continue;
         }
 
-        llvm::Value *key_to     = rop.ll.GEP (attr_p, attr_i, 0);
-        llvm::Value *key_const  = rop.ll.constant_ptr(*((void **)key), rop.ll.type_string());
-        llvm::Value *value_to   = rop.ll.GEP (attr_p, attr_i, 1);
-        llvm::Value *value_from = rop.llvm_void_ptr (Value);
-        value_to = rop.ll.ptr_cast (value_to, rop.ll.type_void_ptr());
-
-        rop.ll.op_store (key_const, key_to);
-        rop.ll.op_memcpy (value_to, value_from, (int)ValueType.size(), 4);
+        // Store the keyword and copy the parameter value (or if there
+        // was no matching keyword, copy the empty string and zero out
+        // the value).
+        llvm::Value *key_to   = rop.ll.GEP (attr_p, attr_i, 0);
+        llvm::Value *value_to = rop.ll.void_ptr (rop.ll.GEP (attr_p, attr_i, 1));
+        if (legal) {
+            llvm::Value *key_const = rop.ll.constant_ptr(*((void **)key), rop.ll.type_string());
+            rop.ll.op_store (key_const, key_to);
+            llvm::Value *value_from = rop.llvm_void_ptr (Value);
+            rop.ll.op_memcpy (value_to, value_from, (int)ValueType.size(), 4);
+        } else {
+            llvm::Value *key_const = rop.ll.constant_ptr(*((void **)&u__empty), rop.ll.type_string());
+            rop.ll.op_store (key_const, key_to);
+            rop.ll.op_memset (value_to, 0, (int)ValueType.size(), 4);
+        }
     }
 }
 

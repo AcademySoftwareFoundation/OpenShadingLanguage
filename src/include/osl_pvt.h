@@ -617,6 +617,14 @@ public:
     bool everread () const  { return lastread() >= 0; }
     bool everwritten () const { return lastwrite() >= 0; }
     bool everused () const  { return everread() || everwritten(); }
+    // everused_in_group is an even more stringent test -- not only must
+    // the symbol not be used within the shader but it also must not be
+    // used elsewhere in the group, by being connected to something downstream
+    // or used as a renderer output.
+    bool everused_in_group () const {
+        return everused() || connected_down() || renderer_output();
+    }
+
     void set_read (int first, int last) {
         m_firstread = first;  m_lastread = last;
     }

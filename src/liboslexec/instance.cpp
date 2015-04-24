@@ -655,7 +655,8 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
             if (! (equivalent(m_instoverrides[i], b.m_instoverrides[i]))) {
                 const Symbol *sym = mastersymbol(i);  // remember, it's pre-opt
-                if (! sym->everused())
+                const Symbol *bsym = b.mastersymbol(i);
+                if (! sym->everused_in_group() && ! bsym->everused_in_group())
                     continue;
                 return false;
             }
@@ -670,10 +671,10 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
     // Make sure that the two nodes have the same parameter values.  If
     // the group has already been optimized, it's got an
     // instance-specific symbol table to check; but if it hasn't been
-    // optimized, we check the symbol table int he master.
+    // optimized, we check the symbol table in the master.
     for (int i = firstparam();  i < lastparam();  ++i) {
         const Symbol *sym = optimized ? symbol(i) : mastersymbol(i);
-        if (! sym->everused())
+        if (! sym->everused_in_group())
             continue;
         if (sym->typespec().is_closure())
             continue;   // Closures can't have instance override values

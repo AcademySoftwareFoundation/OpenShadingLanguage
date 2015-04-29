@@ -789,6 +789,22 @@ ShaderGroup::~ShaderGroup ()
 
 
 
+const Symbol *
+ShaderGroup::find_symbol (ustring layername, ustring symbolname) const
+{
+    for (int layer = nlayers()-1;  layer >= 0;  --layer) {
+        const ShaderInstance *inst (m_layers[layer].get());
+        if (layername.size() && layername != inst->layername())
+            continue;  // They asked for a specific layer and this isn't it
+        int symidx = inst->findsymbol (symbolname);
+        if (symidx >= 0)
+            return inst->symbol (symidx);
+    }
+    return NULL;
+}
+
+
+
 std::string
 ShaderGroup::serialize () const
 {

@@ -1332,6 +1332,10 @@ public:
     void lock () const { m_mutex.lock(); }
     void unlock () const { m_mutex.unlock(); }
 
+    // Retrieve the Symbol* by layer and symbol name. If the layer name is
+    // empty, go back-to-front.
+    const Symbol* find_symbol (ustring layername, ustring symbolname) const;
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1446,11 +1450,13 @@ public:
     /// layer is specified, priority is given to later laters over earlier
     /// layers (if they name the same symbol). Return NULL if no such symbol
     /// is found.
-    Symbol * symbol (ustring layername, ustring symbolname);
-    Symbol * symbol (ustring symbolname) { return symbol (ustring(), symbolname); }
+    const Symbol * symbol (ustring layername, ustring symbolname) const;
+    const Symbol * symbol (ustring symbolname) const {
+        return symbol (ustring(), symbolname);
+    }
 
     /// Return a pointer to where the symbol's data lives.
-    void *symbol_data (Symbol &sym);
+    const void *symbol_data (const Symbol &sym) const;
 
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we
@@ -1460,6 +1466,7 @@ public:
     /// Return a pointer to the shading attribs for this context.
     ///
     ShaderGroup *attribs () { return m_attribs; }
+    const ShaderGroup *attribs () const { return m_attribs; }
 
     /// Return a reference to the MessageList containing messages.
     ///

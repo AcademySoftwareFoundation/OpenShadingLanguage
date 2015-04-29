@@ -275,17 +275,23 @@ ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &sas,
 
 
 const void*
-ShadingSystem::get_symbol (ShadingContext &ctx, ustring layername,
-                           ustring symbolname, TypeDesc &type)
+ShadingSystem::get_symbol (const ShadingContext &ctx, ustring layername,
+                           ustring symbolname, TypeDesc &type) const
 {
-    return m_impl->get_symbol (ctx, layername, symbolname, type);
+    const ShaderSymbol *sym = find_symbol (*ctx.attribs(), layername,
+                                           symbolname);
+    if (sym) {
+        type = symbol_typedesc (sym);
+        return symbol_address (ctx, sym);
+    }
+    return NULL;
 }
 
 
 
 const void*
-ShadingSystem::get_symbol (ShadingContext &ctx,
-                           ustring symbolname, TypeDesc &type)
+ShadingSystem::get_symbol (const ShadingContext &ctx,
+                           ustring symbolname, TypeDesc &type) const
 {
     ustring layername;
     size_t dot = symbolname.find('.');
@@ -294,7 +300,50 @@ ShadingSystem::get_symbol (ShadingContext &ctx,
         layername = ustring (symbolname, 0, dot);
         symbolname = ustring (symbolname, dot+1);
     }
-    return m_impl->get_symbol (ctx, layername, symbolname, type);
+    return get_symbol (ctx, layername, symbolname, type);
+}
+
+
+
+const ShaderSymbol*
+ShadingSystem::find_symbol (const ShaderGroup &group, ustring layername,
+                            ustring symbolname) const
+{
+    if (! group.optimized())
+        return NULL;   // has to be post-optimized
+    return (const ShaderSymbol *) group.find_symbol (layername, symbolname);
+}
+
+
+
+const ShaderSymbol*
+ShadingSystem::find_symbol (const ShaderGroup &group, ustring symbolname) const
+{
+    ustring layername;
+    size_t dot = symbolname.find('.');
+    if (dot != ustring::npos) {
+        // If the name contains a dot, it's intended to be layer.symbol
+        layername = ustring (symbolname, 0, dot);
+        symbolname = ustring (symbolname, dot+1);
+    }
+    return find_symbol (group, layername, symbolname);
+}
+
+
+
+TypeDesc
+ShadingSystem::symbol_typedesc (const ShaderSymbol *sym) const
+{
+    return sym ? ((const Symbol *)sym)->typespec().simpletype() : TypeDesc();
+}
+
+
+
+const void*
+ShadingSystem::symbol_address (const ShadingContext &ctx,
+                               const ShaderSymbol *sym) const
+{
+    return ctx.symbol_data (*(const Symbol *)sym);
 }
 
 
@@ -2122,7 +2171,7 @@ const void *
 ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring layername,
                                ustring symbolname, TypeDesc &type)
 {
-    Symbol *sym = ctx.symbol (layername, symbolname);
+    const Symbol *sym = ctx.symbol (layername, symbolname);
     if (sym) {
         type = sym->typespec().simpletype();
         return ctx.symbol_data (*sym);

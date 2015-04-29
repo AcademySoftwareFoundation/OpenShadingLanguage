@@ -193,32 +193,20 @@ ShadingContext::process_errors () const
 
 
 
-Symbol *
-ShadingContext::symbol (ustring layername, ustring symbolname)
+const Symbol *
+ShadingContext::symbol (ustring layername, ustring symbolname) const
 {
-    ShaderGroup &sgroup (*attribs());
-    int nlayers = sgroup.nlayers ();
-    if (sgroup.llvm_compiled_version()) {
-        for (int layer = nlayers-1;  layer >= 0;  --layer) {
-            ShaderInstance *inst (sgroup[layer]);
-            if (layername.size() && layername != inst->layername())
-                continue;  // They asked for a specific layer and this isn't it
-            int symidx = inst->findsymbol (symbolname);
-            if (symidx >= 0)
-                return inst->symbol (symidx);
-        }
-    }
-    return NULL;
+    return attribs()->find_symbol (layername, symbolname);
 }
 
 
 
-void *
-ShadingContext::symbol_data (Symbol &sym)
+const void *
+ShadingContext::symbol_data (const Symbol &sym) const
 {
-    ShaderGroup &sgroup (*attribs());
-    if (! sgroup.llvm_compiled_version())
-        return NULL;   // can't retrieve symbol if we didn't JIT and runit
+    const ShaderGroup &sgroup (*attribs());
+    if (! sgroup.optimized())
+        return NULL;   // can't retrieve symbol if we didn't optimize it
 
     if (sym.dataoffset() >= 0 && (int)m_heap.size() > sym.dataoffset()) {
         // lives on the heap

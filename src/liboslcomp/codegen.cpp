@@ -301,7 +301,7 @@ ASTNode::coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat)
     if (acceptfloat && sym->typespec().is_float())
         return sym;
 
-    if (type.arraylength() == -1 && sym->typespec().is_array() &&
+    if (type.is_varlen_array() && sym->typespec().is_array() &&
         equivalent (sym->typespec().elementtype(), type.elementtype())) {
         // coercion not necessary to pass known length array to 
         // array parameter of unspecified length.

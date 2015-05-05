@@ -68,6 +68,7 @@ public:
     virtual void symdefault (int def);
     virtual void symdefault (float def);
     virtual void symdefault (const char *def);
+    virtual void parameter_done();
     virtual void hint (const char *hintstring);
     virtual void codemarker (const char *name);
     virtual void codeend ();
@@ -77,6 +78,10 @@ public:
     virtual void instruction_end ();
 
     ShaderMaster::ref master () const { return m_master; }
+
+    void addparamdefault(float def, size_t offset, const Symbol& sym);
+    void addparamdefault(int def, size_t offset, const Symbol& sym);
+    void addparamdefault(const char *def, size_t offset, const Symbol& sym);
 
 private:
     ShadingSystemImpl &m_shadingsys;  ///< Reference to the shading system
@@ -197,17 +202,45 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 
 
 void
+OSOReaderToMaster::addparamdefault(float def, size_t offset, const Symbol& sym)
+{
+  if (sym.typespec().is_varlen_array() && offset >= m_master->m_fdefaults.size())
+      m_master->m_fdefaults.push_back(def);
+  else
+      m_master->m_fdefaults[offset] = def;
+}
+
+void
+OSOReaderToMaster::addparamdefault(int def, size_t offset, const Symbol& sym)
+{
+  if (sym.typespec().is_varlen_array() && offset >= m_master->m_idefaults.size())
+      m_master->m_idefaults.push_back(def);
+  else
+      m_master->m_idefaults[offset] = def;
+}
+
+void
+OSOReaderToMaster::addparamdefault(const char *def, size_t offset, const Symbol& sym)
+{
+  if (sym.typespec().is_varlen_array() && offset >= m_master->m_sdefaults.size())
+      m_master->m_sdefaults.push_back(ustring(def));
+  else
+      m_master->m_sdefaults[offset] = ustring(def);
+}
+
+void
 OSOReaderToMaster::symdefault (int def)
 {
     ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
+
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fdefaults[offset] = (float)def;
+            addparamdefault((float)def, offset, sym);
         else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-            m_master->m_idefaults[offset] = def;
+            addparamdefault(def, offset, sym);
         else {
             ASSERT (0 && "unexpected type");
         }
@@ -233,7 +266,7 @@ OSOReaderToMaster::symdefault (float def)
     ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fdefaults[offset] = def;
+            addparamdefault(def, offset, sym);
         else {
             ASSERT (0 && "unexpected type");
         }
@@ -258,7 +291,7 @@ OSOReaderToMaster::symdefault (const char *def)
     ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-            m_master->m_sdefaults[offset] = ustring(def);
+            addparamdefault(def, offset, sym);
         else {
             ASSERTMSG (0, "unexpected type: %s (%s)",
                        sym.typespec().c_str(), sym.name().c_str());
@@ -273,6 +306,18 @@ OSOReaderToMaster::symdefault (const char *def)
     }
 }
 
+
+void
+OSOReaderToMaster::parameter_done ()
+{
+  ASSERT (m_master->m_symbols.size() && "parameter_done but no sym");
+  Symbol &sym (m_master->m_symbols.back());
+
+  // set length of unsized array parameters to -initLength
+  if (sym.symtype() == SymTypeParam && sym.typespec().is_varlen_array())
+      sym.arraylen(-m_sym_default_index / sym.typespec().aggregate());
+
+}
 
 
 inline bool

@@ -225,6 +225,11 @@ shader_formal_param
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($4);
+                    if ($1 && t.is_varlen_array()) {
+                        oslcompiler->error (oslcompiler->filename(),
+                                            @3.first_line,
+                                            "shader output parameter '%s' can't be unsized array", $3);
+                    }
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
                                                    ustring($3), $5, true,
@@ -460,7 +465,7 @@ def_expression
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
-                    if (t.arraylength() < 1)
+                    if ($2 < 1)
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
                                             "Invalid array length for %s", $1);

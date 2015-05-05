@@ -112,10 +112,18 @@ equivalent (const StructSpec *a, const StructSpec *b)
 bool
 equivalent (const TypeSpec &a, const TypeSpec &b)
 {
-    return (a == b) || 
+    // The two complex types are equivalent if...
+    return
+        // they are actually identical (duh)
+        (a == b) ||
+        // or if the underlying simple types are equivalent
         (((a.is_vectriple_based() && b.is_vectriple_based()) || equivalent(a.m_simple, b.m_simple))  &&
+         //     ... and either both or neither are closures
          a.is_closure() == b.is_closure() &&
-         (a.arraylength() == b.arraylength() || (a.arraylength() == -1 && b.arraylength() >0))) ||
+         //     ... and, if arrays, they are the same length, or both unsized,
+         //         or one is unsized and the other isn't
+         (a.m_simple.arraylen == b.m_simple.arraylen || a.is_unsized_array() != b.is_unsized_array())) ||
+        // or if they are structs, and the structs are equivalent
         (a.is_structure() && b.is_structure() &&
          equivalent(a.structspec(), b.structspec()));
 }

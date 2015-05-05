@@ -140,6 +140,8 @@ ShaderMaster::resolve_syms ()
             // structs are just placeholders, their fields are separate
             // symbols that hold the real data.
             s.size (0);
+        } else if (s.typespec().is_unsized_array()) {
+            s.size (0);
         } else {
             s.size (s.typespec().simpletype().size());
             // FIXME -- some day we may want special padding here, like

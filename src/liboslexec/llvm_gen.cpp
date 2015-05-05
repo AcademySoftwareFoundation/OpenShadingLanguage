@@ -1133,7 +1133,8 @@ LLVMGEN (llvm_gen_arraylength)
     Symbol& A = *rop.opargsym (op, 1);
     DASSERT (Result.typespec().is_int() && A.typespec().is_array());
 
-    int len = A.typespec().arraylength();
+    int len = A.typespec().is_unsized_array() ? A.initializers()
+                                              : A.typespec().arraylength();
     rop.llvm_store_value (rop.ll.constant(len), Result);
     return true;
 }

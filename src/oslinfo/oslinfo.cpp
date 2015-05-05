@@ -58,11 +58,16 @@ static std::string oneparam;
 static void
 print_default_string_vals (const OSLQuery::Parameter *p, bool verbose)
 {
+    size_t ne;
+    if (p->varlenarray || p->type.arraylen < 0)
+        ne = p->sdefault.size();
+    else
+        ne = p->type.numelements();
     if (verbose) {
-        for (size_t a = 0;  a < p->type.numelements();  ++a)
+        for (size_t a = 0;  a < ne;  ++a)
             std::cout << "\t\tDefault value: \"" << p->sdefault[a] << "\"\n";
     } else {
-        for (size_t a = 0;  a < p->type.numelements();  ++a)
+        for (size_t a = 0;  a < ne;  ++a)
             std::cout << "\"" << p->sdefault[a] << "\" ";
         std::cout << "\n";
     }
@@ -74,7 +79,11 @@ static void
 print_default_int_vals (const OSLQuery::Parameter *p, bool verbose)
 {
     size_t nf = p->type.aggregate;
-    size_t ne = p->type.numelements();
+    size_t ne;
+    if (p->varlenarray || p->type.arraylen < 0)
+        ne = p->idefault.size() / nf;
+    else
+        ne = p->type.numelements();
     if (verbose)
         std::cout << "\t\tDefault value:";
     if (p->type.arraylen || nf > 1)
@@ -94,7 +103,11 @@ static void
 print_default_float_vals (const OSLQuery::Parameter *p, bool verbose)
 {
     size_t nf = p->type.aggregate;
-    size_t ne = p->type.numelements();
+    size_t ne;
+    if (p->varlenarray || p->type.arraylen < 0)
+        ne = p->fdefault.size() / nf;
+    else
+        ne = p->type.numelements();
     if (verbose)
         std::cout << "\t\tDefault value:";
     if (p->type.arraylen || nf > 1)

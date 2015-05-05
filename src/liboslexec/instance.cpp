@@ -353,8 +353,7 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
                                 const ConnectedParam &dstcon)
 {
     // specialize symbol in case of dstcon is an unsized array
-    if (dstcon.type.arraylength() == -1)
-    {
+    if (dstcon.type.is_unsized_array()) {
         SymOverrideInfo *so = &m_instoverrides[dstcon.param];
         so->arraylen(srccon.type.arraylength());
 
@@ -448,7 +447,12 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
     if (m_instoverrides.size()) {
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
             Symbol *si = &m_instsymbols[i];
-            if (m_instoverrides[i].valuesource() != Symbol::DefaultVal) {
+            if (m_instoverrides[i].valuesource() == Symbol::DefaultVal) {
+                // Fix the length of any default-value variable length array
+                // parameters.
+                if (si->typespec().is_unsized_array())
+                    si->arraylen (si->initializers());
+            } else {
                 if (m_instoverrides[i].arraylen())
                     si->arraylen (m_instoverrides[i].arraylen());
                 si->valuesource (m_instoverrides[i].valuesource());

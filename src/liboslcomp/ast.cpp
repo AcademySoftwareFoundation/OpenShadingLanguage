@@ -342,8 +342,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (type.is_structure() || type.is_structure_array()) {
         ASSERT (! m_ismetadata);
         // Add the fields as individual declarations
-        m_compiler->add_struct_fields (type.structspec(), m_sym->name(),
-                                       symtype, type.arraylength(), this);
+        m_compiler->add_struct_fields (type.structspec(), m_sym->name(), symtype,
+                                       type.is_unsized_array() ? -1 : type.arraylength(),
+                                       this);
     }
 }
 

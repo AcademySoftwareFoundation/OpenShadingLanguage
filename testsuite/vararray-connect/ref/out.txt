@@ -6,5 +6,6 @@ a array length 4
   [1] = 2.2
   [2] = 2.3
   [3] = 2.4
-b array length -1
+b array length 1
+  [0] = 0
 

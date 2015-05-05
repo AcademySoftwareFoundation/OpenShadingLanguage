@@ -233,10 +233,15 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
 {
     int ind = find_constant (type, data);
     if (ind < 0) {
+        // support varlen arrays
+        TypeSpec newtype = type;
+        if (type.is_unsized_array())
+            newtype.make_array (datatype.numelements());
+
         Symbol newconst (ustring::format ("$newconst%d", m_next_newconst++),
-                         type, SymTypeConst);
+                         newtype, SymTypeConst);
         void *newdata;
-        TypeDesc t (type.simpletype());
+        TypeDesc t (newtype.simpletype());
         size_t n = t.aggregate * t.numelements();
         if (datatype == TypeDesc::UNKNOWN)
             datatype = t;
@@ -795,7 +800,7 @@ RuntimeOptimizer::simplify_params ()
             // Plain default value without init ops -- turn it into a constant
             make_symbol_room (1);
             s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
-            int cind = add_constant (s->typespec(), s->data());
+            int cind = add_constant (s->typespec(), s->data(), s->typespec().simpletype());
             global_alias (i, cind); // Alias this symbol to the new const
         } else if (s->valuesource() == Symbol::DefaultVal && s->has_init_ops()) {
             // Default val comes from init ops -- special cases?  Yes,

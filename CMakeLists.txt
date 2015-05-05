@@ -356,10 +356,10 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-comma oslc-D
             oslc-err-arrayindex oslc-err-closuremul
             oslc-err-format oslc-err-intoverflow
-            oslc-err-noreturn oslc-err-paramdefault
+            oslc-err-noreturn oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-variadic-macro
-            oslinfo-metadata oslinfo-noparams
+            oslinfo-arrayparams oslinfo-metadata oslinfo-noparams
             pointcloud pointcloud-fold
             printf-whole-array
             raytype reparam
@@ -377,7 +377,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             texture-width texture-withderivs texture-wrap
             trailing-commas transform transformc trig typecast
             unknown-instruction
-            vararray-connect vararray-param
+            vararray-connect vararray-default vararray-param
             vecctr vector
             wavelength_color xml )
 

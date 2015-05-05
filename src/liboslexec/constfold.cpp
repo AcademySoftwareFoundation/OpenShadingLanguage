@@ -706,7 +706,8 @@ DECLFOLDER(constfold_arraylength)
     ASSERT (R.typespec().is_int() && A.typespec().is_array());
 
     // Try to turn R=arraylength(A) into R=C if the array length is known
-    int len = A.typespec().arraylength();
+    int len = A.typespec().is_unsized_array() ? A.initializers()
+                                              : A.typespec().arraylength();
     if (len > 0) {
         int cind = rop.add_constant (TypeSpec(TypeDesc::INT), &len);
         rop.turn_into_assign (op, cind, "const fold arraylength");

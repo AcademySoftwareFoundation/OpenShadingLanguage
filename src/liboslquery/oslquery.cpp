@@ -52,7 +52,7 @@ namespace pvt {
 class OSOReaderQuery : public OSOReader
 {
 public:
-    OSOReaderQuery (OSLQuery &query) : m_query(query), m_reading_param(false)
+    OSOReaderQuery (OSLQuery &query) : m_query(query), m_reading_param(false), m_default_values(0)
     { }
     virtual ~OSOReaderQuery () { }
     virtual void version (const char *specid, int major, int minor) { }
@@ -70,6 +70,7 @@ public:
 private:
     OSLQuery &m_query;
     bool m_reading_param;     // Are we reading a param now?
+    int m_default_values;     // How many default values have we read?
 };
 
 
@@ -88,11 +89,12 @@ OSOReaderQuery::symbol (SymType symtype, TypeSpec typespec, const char *name)
 {
     if (symtype == SymTypeParam || symtype == SymTypeOutputParam) {
         m_reading_param = true;
+        m_default_values = 0;
         OSLQuery::Parameter p;
         p.name = name;
         p.type = typespec.simpletype();   // FIXME -- struct & closure
         p.isoutput = (symtype == SymTypeOutputParam);
-        p.varlenarray = (typespec.arraylength() < 0);
+        p.varlenarray = typespec.is_unsized_array();
         p.isstruct = typespec.is_structure();
         p.isclosure = typespec.is_closure();
         m_query.m_params.push_back (p);
@@ -113,6 +115,7 @@ OSOReaderQuery::symdefault (int def)
         else
             p.idefault.push_back (def);
         p.validdefault = true;
+        m_default_values++;
     }
 }
 
@@ -125,6 +128,7 @@ OSOReaderQuery::symdefault (float def)
         OSLQuery::Parameter &p (m_query.m_params[m_query.nparams()-1]);
         p.fdefault.push_back (def);
         p.validdefault = true;
+        m_default_values++;
     }
 }
 
@@ -137,6 +141,7 @@ OSOReaderQuery::symdefault (const char *def)
         OSLQuery::Parameter &p (m_query.m_params[m_query.nparams()-1]);
         p.sdefault.push_back (ustring(def));
         p.validdefault = true;
+        m_default_values++;
     }
 }
 
@@ -146,24 +151,28 @@ void
 OSOReaderQuery::parameter_done ()
 {
     if (m_reading_param && m_query.nparams() > 0) {
-       // Make sure all value defaults have the right number of elements in
-       // case they were only partially initialized.
-       OSLQuery::Parameter &p (m_query.m_params.back());
-       int nvalues = p.type.numelements() * p.type.aggregate;
-       if (p.type.basetype == TypeDesc::INT) {
-           p.idefault.resize (nvalues, 0);
-           p.data = &p.idefault[0];
-       }
-       else if (p.type.basetype == TypeDesc::FLOAT) {
-           p.fdefault.resize (nvalues, 0);
-           p.data = &p.fdefault[0];
-       }
-       else if (p.type.basetype == TypeDesc::STRING) {
-           p.sdefault.resize (nvalues, ustring());
-           p.data = &p.sdefault[0];
-       }
-       if (p.spacename.size())
-           p.spacename.resize (p.type.numelements(), ustring());
+        // Make sure all value defaults have the right number of elements in
+        // case they were only partially initialized.
+        OSLQuery::Parameter &p (m_query.m_params.back());
+        int nvalues;
+        if (p.varlenarray)
+            nvalues = m_default_values;
+        else
+            nvalues = p.type.numelements() * p.type.aggregate;
+        if (p.type.basetype == TypeDesc::INT) {
+            p.idefault.resize (nvalues, 0);
+            p.data = &p.idefault[0];
+        }
+        else if (p.type.basetype == TypeDesc::FLOAT) {
+            p.fdefault.resize (nvalues, 0);
+            p.data = &p.fdefault[0];
+        }
+        else if (p.type.basetype == TypeDesc::STRING) {
+            p.sdefault.resize (nvalues, ustring());
+            p.data = &p.sdefault[0];
+        }
+        if (p.spacename.size())
+            p.spacename.resize (p.type.numelements(), ustring());
     }
 
     m_reading_param = false;

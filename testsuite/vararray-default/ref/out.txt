@@ -1,0 +1,9 @@
+Compiled test.osl -> test.oso
+a array length 3
+  [0] = 0
+  [1] = 1
+  [2] = 2.3
+b array length 2
+  [0] = (9 9 9)
+  [1] = (1 2.3 4)
+

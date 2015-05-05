@@ -47,6 +47,7 @@ typedef ShaderGroupRef ShadingAttribStateRef; // DEPRECATED name
 struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
+class ShaderSymbol;
 
 
 
@@ -434,10 +435,42 @@ public:
     /// separately, or by concatenating "layername.symbolname", but note
     /// that the latter will involve string manipulation inside get_symbol
     /// and is much more expensive than specifying them separately.
-    const void* get_symbol (ShadingContext &ctx, ustring layername,
-                            ustring symbolname, TypeDesc &type);
-    const void* get_symbol (ShadingContext &ctx, ustring symbolname,
-                            TypeDesc &type);
+    ///
+    /// These are considered somewhat deprecated, in favor of using
+    /// find_symbol(), symbol_typedesc(), and symbol_address().
+    const void* get_symbol (const ShadingContext &ctx, ustring layername,
+                            ustring symbolname, TypeDesc &type) const;
+    const void* get_symbol (const ShadingContext &ctx, ustring symbolname,
+                            TypeDesc &type) const;
+
+    /// Search for an output symbol by name (and optionally, layer) within
+    /// the optimized shader group. If the symbol is found, return an opaque
+    /// identifying pointer to it, otherwise return NULL. This is somewhat
+    /// expensive because of the name-based search, but once done, you can
+    /// reuse the pointer to the symbol for the lifetime of the group.
+    ///
+    /// If you give just a symbol name, it will search for the symbol in all
+    /// layers, last-to-first. If a specific layer is named, it will search
+    /// only that layer. You can specify a layer either by naming it
+    /// separately, or by concatenating "layername.symbolname", but note
+    /// that the latter will involve string manipulation inside find_symbol
+    /// and is much more expensive than specifying them separately.
+    const ShaderSymbol* find_symbol (const ShaderGroup &group,
+                             ustring layername, ustring symbolname) const;
+    const ShaderSymbol* find_symbol (const ShaderGroup &group,
+                                     ustring symbolname) const;
+
+    /// Given an opaque ShaderSymbol*, return the TypeDesc describing it.
+    /// Note that a closure will end up with a TypeDesc::UNKNOWN value.
+    TypeDesc symbol_typedesc (const ShaderSymbol *sym) const;
+
+    /// Given a context (that has executed a shader) and an opaque
+    /// ShserSymbol*, return the actual memory address where the value of
+    /// the symbol resides within the heap memory of the context. This
+    /// is only valid for the shader execution that had happened immediately
+    /// prior for this context, but it is a very inexpensive operation.
+    const void* symbol_address (const ShadingContext &ctx,
+                                const ShaderSymbol *sym) const;
 
     /// Return the statistics output as a huge string.
     ///

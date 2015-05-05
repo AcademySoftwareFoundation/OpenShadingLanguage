@@ -1161,7 +1161,7 @@ RuntimeOptimizer::unread_after (const Symbol *A, int opnum)
 
     // For all else, check if it's either never read at all in this
     // layer or it's only read earlier and we're not part of a loop
-    return !A->everread() || (A->lastread() < opnum && !m_in_loop[opnum]);
+    return !A->everread() || (A->lastread() <= opnum && !m_in_loop[opnum]);
 }
 
 
@@ -1675,6 +1675,8 @@ RuntimeOptimizer::peephole2 (int opnum)
 void
 RuntimeOptimizer::mark_outgoing_connections ()
 {
+    ASSERT (! inst()->m_instoverrides.size() &&
+            "don't call this before copy_code_from_master");
     inst()->outgoing_connections (false);
     FOREACH_PARAM (Symbol &s, inst())
         s.connected_down (false);
@@ -2541,13 +2543,7 @@ RuntimeOptimizer::collapse_syms ()
 
     // Mark our params that feed to later layers, so that unused params
     // that aren't needed downstream can be removed.
-    FOREACH_PARAM (Symbol &s, inst())
-        s.connected_down (false);
-    for (int lay = layer()+1;  lay < group().nlayers();  ++lay) {
-        BOOST_FOREACH (Connection &c, group()[lay]->m_connections)
-            if (c.srclayer == layer())
-                inst()->symbol(c.src.param)->connected_down (true);
-    }
+    mark_outgoing_connections ();
 
     SymbolVec new_symbols;          // buffer for new symbol table
     std::vector<int> symbol_remap;  // mapping of old sym index to new
@@ -2689,6 +2685,14 @@ RuntimeOptimizer::run ()
         shadingcontext()->info ("About to optimize shader group %s (%d layers):",
                            group().name(), nlayers);
 
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        set_inst (layer);
+        if (inst()->unused())
+            continue;
+        // These need to happen before merge_instances
+        inst()->copy_code_from_master (group());
+        mark_outgoing_connections();
+    }
     if (shadingsys().m_opt_merge_instances == 1)
         shadingsys().merge_instances (group());
 
@@ -2700,7 +2704,6 @@ RuntimeOptimizer::run ()
         set_inst (layer);
         if (inst()->unused())
             continue;
-        inst()->copy_code_from_master (group());
         if (debug() && optimize() >= 1) {
             std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 

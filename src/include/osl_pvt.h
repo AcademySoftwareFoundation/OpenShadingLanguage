@@ -205,7 +205,15 @@ public:
 
     /// Returns the length of the array, or 0 if not an array.
     ///
-    int arraylength () const { return m_simple.arraylen; }
+    int arraylength () const { return abs(m_simple.arraylen); }
+
+    /// Is this a variable length array?
+    ///
+    bool is_varlen_array() const { return m_simple.arraylen < 0; }
+
+    /// Number of elements
+    ///
+    int numelements() const { return (m_simple.arraylen == 0) ? 1 : arraylength(); }
 
     /// Alter this typespec to make it into an array of the given length
     /// (including 0 -> make it not be an array).  The basic type (not

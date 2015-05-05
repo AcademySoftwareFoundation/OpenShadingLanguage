@@ -817,7 +817,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;
         // Allow a fixed-length array match to a formal array with
         // unspecified length, if the element types are the same.
-        if (formaltype.arraylength() < 0 && argtype.arraylength() &&
+        if (formaltype.is_varlen_array() && argtype.arraylength() &&
               formaltype.elementtype() == argtype.elementtype())
             continue;
 
@@ -1440,11 +1440,10 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
     }
 
     if (type.is_array()) {
-        int len = type.arraylength ();
-        if (len > 0)
-            out += Strutil::format ("[%d]", len);
-        else
+        if (type.is_varlen_array())
             out += "[]";
+        else
+            out += Strutil::format ("[%d]", type.arraylength());
     }
 
     return out;

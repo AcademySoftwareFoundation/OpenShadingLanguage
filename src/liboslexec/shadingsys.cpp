@@ -2237,7 +2237,7 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
 
     c.type = sym->typespec();
 
-    if (bracket && c.type.arraylength()) {
+    if (bracket && c.type.is_array()) {
         // There was at least one set of brackets that appears to be
         // selecting an array element.
         c.arrayindex = atoi (bracket+1);
@@ -2776,7 +2776,7 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
             const TypeSpec &ts (sym->typespec());
             p.type = ts.simpletype();
             p.isoutput = (sym->symtype() == SymTypeOutputParam);
-            p.varlenarray = (p.type.arraylen < 0);
+            p.varlenarray = ts.is_varlen_array();
             p.isstruct = ts.is_structure() || ts.is_structure_array();
             p.isclosure = ts.is_closure_based();
             p.data = sym->data();

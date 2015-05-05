@@ -49,17 +49,17 @@ TypeSpec::string () const
     std::string str;
     if (is_closure() || is_closure_array()) {
         str += "closure color";
-        if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-        else if (arraylength() < 0)
+        if (is_varlen_array())
             str += "[]";
+        else if (arraylength() > 0)
+            str += Strutil::format ("[%d]", arraylength());
     }
     else if (structure() > 0) {
         str += Strutil::format ("struct %d", structure());
-        if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-        else if (arraylength() < 0)
+        if (is_varlen_array())
             str += "[]";
+        else if (arraylength() > 0)
+            str += Strutil::format ("[%d]", arraylength());
     } else {
         str += simpletype().c_str();
     }

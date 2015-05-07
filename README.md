@@ -235,6 +235,9 @@ shading have included:
     22 Jump Street
     Guardians of the Galaxy
     The Interview
+    Fury
+    American Sniper
+    Pixels
 
 And more are currently in production. Our shader-writing team works
 entirely in OSL, all productions use OSL, and we've even removed all the
@@ -284,9 +287,6 @@ development avenues for OSL than we would be able to do alone.
 Contacts
 --------
 
-[OSL home page at SPI](http://opensource.imageworks.com/?p=osl)
-
-
 [OSL GitHub page](https://github.com/imageworks/OpenShadingLanguage)
 
 [Read or subscribe to the OSL development mail list](http://groups.google.com/group/osl-dev)
@@ -295,6 +295,8 @@ Email the lead architect:  lg AT imageworks DOT com
 
 [Most recent PDF of the OSL language specification](https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
 )
+
+[OSL home page at SPI](http://opensource.imageworks.com/?p=osl)
 
 [Sony Pictures Imageworks main open source page](http://opensource.imageworks.com)
 
@@ -305,35 +307,24 @@ sign [a Contributor License Agreement](http://opensource.imageworks.com/cla/).
 Credits
 -------
 
-The main developers of OSL are (in order of joining the project):
+The original designer and open source administrator of OSL is Larry Gritz.
 
-* Larry Gritz
+The main/early developers of OSL are (in order of joining the project):
+Larry Gritz, Cliff Stein, Chris Kulla, Alejandro Conty, Jay Reynolds,
+Solomon Boulos, Adam Martinez, Brecht Van Lommel.
 
-* Cliff Stein
-
-* Chris Kulla
-
-* Alejandro Conty
-
-* Jay Reynolds
-
-* Solomon Boulos
-
-* Adam Martinez
-
-* Brecht Van Lommel
-
-Additionally, many others have contributed fixes and other small
-changes: Shane Ambler, Martijn Berger, Matthaus G. Chajdas, Thomas
-Dinges, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, Ronan Keryell,
-Bastien Montagne, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Sergey
-Sharybin, Stephan Steinbach, Alexander von Knorring. (Listed
-alphabetically; if we've left anybody out, please let us know.)
+Additionally, many others have contributed features, bug fixes, and other
+small changes: Steve Agland, Shane Ambler, Martijn Berger, Nicholas Bishop,
+Matthaus G. Chajdas, Thomas Dinges, Henry Fousse, Syoyo Fujita, Derek Haase,
+Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Ronan Keryell, Max
+Liani, Bastien Montagne, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Sergey
+Sharybin, Stephan Steinbach, Esteban Tovagliari, Alexander von Knorring.
+(Listed alphabetically; if we've left anybody out, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
 wholeheartedly, and permitted us to release the source, especially Rob
-Bredow, Brian Keeney, Barbara Ford, and Rene Limberger.
+Bredow, Brian Keeney, Barbara Ford, Rene Limberger, and Erik Strauss.
 
 Huge thanks also go to the crack shading team at SPI, and the brave
 lookdev TDs and CG supes willing to use OSL on their shows.  They served

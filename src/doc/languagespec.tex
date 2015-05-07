@@ -61,7 +61,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 24 Feb, 2015 \\
+\date{{\large Date: 6 May, 2015 \\
 %~ (with corrections, 2 Oct 2014)
 }
 \bigskip
@@ -424,13 +424,13 @@ This chapter attempts to lay out the major concepts of \langname,
 define key nomenclature, and sketch out how individual shaders fit 
 together in the context of a renderer as a whole.
 
-\begin{annotate}
-Other than the background material of this chapter, the rest of this
-specification deals strictly with the language itself.  In the future, 
-there will be separate (shorter) documents explaining in detail the use
-of the language compiler, the renderer-side issues, the library and APIs
-for how a renderer actually causes shaders to be evaluated, and so on.
-\end{annotate}
+% \begin{annotate}
+% Other than the background material of this chapter, the rest of this
+% specification deals strictly with the language itself.  In the future,
+% there will be separate (shorter) documents explaining in detail the use
+% of the language compiler, the renderer-side issues, the library and APIs
+% for how a renderer actually causes shaders to be evaluated, and so on.
+% \end{annotate}
 
 \subsection*{A shader is code that performs a discrete task}
 
@@ -658,16 +658,16 @@ interesting things that a mere number cannot:
   closure (such as texture lookups, noise functions, etc.).
 \end{itemize}
 
-\begin{annotate}
-At present, we are assuming that the primitive closure functions (such
-as {\cf diffuse}, {\cf ward}, {\cf cooktorrance}, etc.) are all built
-into the renderer, or implemented as renderer plugins.  At a later time,
-possibly in a later draft or maybe not until a truly later version of
-the spec, we will fully spec it out so that closure primitive functions
-may be written in \langname.  But I fear that if we do it too soon,
-we'll screw it up.  But, yes, the eventual goal is for you to be able to
-write these primitive functions in the language itself.
-\end{annotate}
+% \begin{annotate}
+% At present, we are assuming that the primitive closure functions (such
+% as {\cf diffuse}, {\cf ward}, {\cf cooktorrance}, etc.) are all built
+% into the renderer, or implemented as renderer plugins.  At a later time,
+% possibly in a later draft or maybe not until a truly later version of
+% the spec, we will fully spec it out so that closure primitive functions
+% may be written in \langname.  But I fear that if we do it too soon,
+% we'll screw it up.  But, yes, the eventual goal is for you to be able to
+% write these primitive functions in the language itself.
+% \end{annotate}
 
 \subsection*{Integrators}
 
@@ -682,12 +682,12 @@ information, to yield the amount of light visible to the camera.
 
 \medskip
 
-\begin{annotate}
-At present, this document is written as if the integrators are built
-into the renderer itself (or implemented as renderer plug-ins).  At a
-later time, we intend to make it possible for integrators themselves
-to be written in \langname.
-\end{annotate}
+% \begin{annotate}
+% At present, this document is written as if the integrators are built
+% into the renderer itself (or implemented as renderer plug-ins).  At a
+% later time, we intend to make it possible for integrators themselves
+% to be written in \langname.
+% \end{annotate}
 
 \subsection*{Units}
 
@@ -1393,19 +1393,21 @@ optional-parameters {\rm \cf )} \\
 \end{quote}
 
 
-\begin{annotate}
-A given renderer will publish a list of public methods (names, arguments
-expected, and return value) that has particular meaning for that
-renderer.  For example, a renderer may honor a public method
-\begin{code}
-    public float maxdisplacement ()
-\end{code}
-\noindent that computes and returns the maximum distance 
-that a displacement shader will move any surface points.
+% \begin{annotate}
+% A given renderer will publish a list of public methods (names, arguments
+% expected, and return value) that has particular meaning for that
+% renderer.  For example, a renderer may honor a public method
+% \begin{code}
+%     public float maxdisplacement ()
+% \end{code}
+% \noindent that computes and returns the maximum distance
+% that a displacement shader will move any surface points.
 
-At some later point, this spec will recommend several ``standard''
-public methods that should be honored by most renderers.
-\end{annotate}
+% At some later point, this spec will recommend several ``standard''
+% public methods that should be honored by most renderers.
+% \end{annotate}
+
+
 
 \chapter{Data types}
 \label{chap:types}
@@ -4572,10 +4574,10 @@ as follows:
 Returns a \colorclosure that represents the amount of \emph{subsurface
 scattering} exhibited by the surface.
 
-\begin{annotate}
-We'll determine later what the arguments to {\cf subsurface} need to be.
-FIXME
-\end{annotate}
+% \begin{annotate}
+% We'll determine later what the arguments to {\cf subsurface} need to be.
+% FIXME
+% \end{annotate}
 \apiend
 \end{comment}
 
@@ -5343,11 +5345,11 @@ The {\cf connect} statement is terminated by a semicolon ({\cf ;}).
 \chapter{Example Shaders}
 \label{chap:exampleshaders}
 
-\begin{annotate}
-Sorry, I haven't done this yet.  Eventually, this chapter will have
-several simple (but useful and fully functional) shaders to illustrate
-how all these concepts fit together.
-\end{annotate}
+% \begin{annotate}
+% Sorry, I haven't done this yet.  Eventually, this chapter will have
+% several simple (but useful and fully functional) shaders to illustrate
+% how all these concepts fit together.
+% \end{annotate}
 
 \end{comment}
 

@@ -282,10 +282,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
             ASSERT (0 && "unsupported type for add_constant");
         }
         newconst.data (newdata);
-        ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
-                "we shouldn't have to realloc here");
-        ind = (int) inst()->symbols().size ();
-        inst()->symbols().push_back (newconst);
+        ind = add_symbol (newconst);
         m_all_consts.push_back (ind);
     }
     return ind;
@@ -296,12 +293,8 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
 int
 RuntimeOptimizer::add_temp (const TypeSpec &type)
 {
-    Symbol newtemp (ustring::format ("$opttemp%d", m_next_newtemp++),
-                    type, SymTypeTemp);
-    ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
-            "we shouldn't have to realloc here");
-    inst()->symbols().push_back (newtemp);
-    return (int) inst()->symbols().size()-1;
+    return add_symbol (Symbol (ustring::format ("$opttemp%d", m_next_newtemp++),
+                               type, SymTypeTemp));
 }
 
 
@@ -310,14 +303,26 @@ int
 RuntimeOptimizer::add_global (ustring name, const TypeSpec &type)
 {
     int index = inst()->findsymbol (name);
-    if (index < 0) {
-        Symbol newglobal (name, type, SymTypeGlobal);
-        ASSERT (inst()->symbols().capacity() > inst()->symbols().size() &&
-                "we shouldn't have to realloc here");
-        index = (int) inst()->symbols().size ();
-        inst()->symbols().push_back (newglobal);
-    }
+    if (index < 0)
+        index = add_symbol (Symbol (name, type, SymTypeGlobal));
     return index;
+}
+
+
+
+int
+RuntimeOptimizer::add_symbol (const Symbol &sym)
+{
+    size_t index = inst()->symbols().size ();
+    ASSERT (inst()->symbols().capacity() > index &&
+            "we shouldn't have to realloc here");
+    inst()->symbols().push_back (sym);
+    // Mark the symbol as always read.  Next time we recompute symbol
+    // lifetimes, it'll get the correct range for when it's read and
+    // written.  But for now, just make sure it doesn't accidentally
+    // look entirely unused.
+    inst()->symbols().back().mark_always_used ();
+    return (int) index;
 }
 
 

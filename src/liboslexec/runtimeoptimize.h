@@ -103,6 +103,11 @@ public:
     /// necessary, and returning its index.
     int add_global (ustring name, const TypeSpec &type);
 
+    /// Add a new symbol to the current instance's symbol list. Don't push
+    /// onto the symbol table yourself during optimization; this does some
+    /// other essential housekeeping.
+    int add_symbol (const Symbol &sym);
+
     /// Turn the op into a simple assignment of the new symbol index to the
     /// previous first argument of the op.  That is, changes "OP arg0 arg1..."
     /// into "assign arg0 newarg".

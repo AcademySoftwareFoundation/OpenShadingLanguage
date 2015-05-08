@@ -105,8 +105,11 @@ namespace pvt {   // OSL::pvt
 
 
 OSLCompilerImpl *oslcompiler = NULL;
-
 OIIO::mutex oslcompiler_mutex;
+
+static ustring op_for("for");
+static ustring op_while("while");
+static ustring op_dowhile("dowhile");
 
 
 
@@ -1073,81 +1076,67 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
     BOOST_FOREACH (Symbol *s, allsyms)
         s->clear_rw ();
 
-    static ustring op_for("for");
-    static ustring op_while("while");
-    static ustring op_dowhile("dowhile");
+    // Keep track of the nested loops we're inside. We track them by pairs
+    // of begin/end instruction numbers for that loop body, including
+    // conditional evaluation (skip the initialization). Note that the end
+    // is inclusive. We use this vector of ranges as a stack.
+    typedef std::pair<int,int> intpair;
+    std::vector<intpair> loop_bounds;
 
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
     BOOST_FOREACH (const Opcode &op, code) {
+        if (op.opname() == op_for || op.opname() == op_while ||
+                op.opname() == op_dowhile) {
+            // If this is a loop op, we need to mark its control variable
+            // (the only arg) as used for the duration of the loop!
+            ASSERT (op.nargs() == 1);  // loops should have just one arg
+            SymbolPtr s = opargs[op.firstarg()];
+            int loopcond = op.jump (0); // after initialization, before test
+            int loopend = op.farthest_jump() - 1;   // inclusive end
+            s->mark_rw (opnum+1, true, true);
+            s->mark_rw (loopend, true, true);
+            // Also push the loop bounds for this loop
+            loop_bounds.push_back (std::make_pair(loopcond, loopend));
+        }
+
         // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
             SymbolPtr s = opargs[op.firstarg()+a];
-            ASSERT (s->dealias() == s);
-            // s = s->dealias();   // Make sure it's de-aliased
+            ASSERT (s->dealias() == s);  // Make sure it's de-aliased
 
             // Mark that it's read and/or written for this op
             s->mark_rw (opnum, op.argread(a), op.argwrite(a));
-        }
 
-        // If this is a loop op, we need to mark its control variable
-        // (the only arg) as used for the duration of the loop!
-        if (op.opname() == op_for ||
-            op.opname() == op_while ||
-            op.opname() == op_dowhile) {
-            ASSERT (op.nargs() == 1);  // loops should have just one arg
-            SymbolPtr s = opargs[op.firstarg()];
-            s->mark_rw (opnum+1, true, true);
-            s->mark_rw (op.farthest_jump()-1, true, true);
-        }
-
-        ++opnum;
-    }
-
-
-    // Special cases: handle variables whose lifetimes cross the boundaries
-    // of a loop.
-    opnum = 0;
-    BOOST_FOREACH (const Opcode &op, code) {
-        if (op.opname() == op_for ||
-            op.opname() == op_while ||
-            op.opname() == op_dowhile) {
-            int loopcond = op.jump (0);  // after initialization, before test
-            int loopend = op.farthest_jump() - 1;
-            BOOST_FOREACH (Symbol *s, allsyms) {
-                // Temporaries referenced both inside AND outside a loop
-                // need their lifetimes extended to cover the entire
-                // loop so they aren't coalesced incorrectly.  The
-                // specific danger is for a function that contains a
-                // loop, and the function is passed an argument that is
-                // a temporary calculation.
-                if (s->symtype() == SymTypeTemp &&
-                    ((s->firstuse() < loopcond && s->lastuse() >= loopcond) ||
-                     (s->firstuse() < loopend && s->lastuse() >= loopend))) {
-                    s->mark_rw (opnum, true, true);
-                    s->mark_rw (loopend, true, true);
-                }
-
-                // Locals that are written within the loop should have
-                // their usage conservatively expanded to the whole
-                // loop.  This is not a worry for temps, because they
-                // CAN'T be read in the next iteration unless they were
-                // set before the loop, handled above.  Ideally, we
-                // could be less conservative if we knew that the
-                // variable in question was declared/scoped internal to
-                // the loop, in which case it can't carry values to the
-                // next iteration (FIXME).
-                if (s->symtype() == SymTypeLocal &&
-                      s->firstuse() < loopend && s->lastwrite() >= loopcond) {
-                    bool read = (s->lastread() >= loopcond);
-                    s->mark_rw (opnum, read, true);
-                    s->mark_rw (loopend, read, true);
+            // Locals that are written within a loop should have their usage
+            // conservatively expanded to the whole loop (for any of the
+            // nested loops we're part of). This is not a worry for temps,
+            // because they CAN'T be read in the next iteration unless they
+            // were set before the loop, handled above.  Ideally, we could
+            // be less conservative if we knew that the variable in question
+            // was declared/scoped internal to the loop, in which case it
+            // can't carry values to the next iteration (FIXME).
+            if (s->symtype() == SymTypeLocal) {
+                BOOST_FOREACH (intpair oprange, loop_bounds) {
+                    int loopcond = oprange.first;
+                    int loopend = oprange.second;
+                    if (s->firstuse() <= loopend && s->lastwrite() >= loopcond) {
+                        bool read = (s->lastread() >= loopcond);
+                        s->mark_rw (loopcond, read, true);
+                        s->mark_rw (loopend, read, true);
+                    }
                 }
             }
         }
-        ++opnum;
+
+        ++opnum;  // Advance to the next op index
+
+        // Pop any loop bounds for loops we've just exited
+        while (!loop_bounds.empty() && loop_bounds.back().second < opnum)
+            loop_bounds.pop_back ();
     }
 }
+
 
 
 // This has O(n^2) memory usage, so only for debugging

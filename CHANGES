@@ -127,6 +127,7 @@ Performance improvements:
   16 floats. #486 (1.6.4)
 * Improved optimizations -- caught some additional places where assignments
   could be found to be useless and eliminated. #403 (1.6.4)
+* Improved speed of runtime optimization for large shaders. #499 (1.6.5)
 
 Bug fixes and other improvements:
 * oslinfo --param lets you ask for information on just one parameter of

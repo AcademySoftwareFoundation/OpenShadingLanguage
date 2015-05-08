@@ -315,7 +315,7 @@ Solomon Boulos, Adam Martinez, Brecht Van Lommel.
 
 Additionally, many others have contributed features, bug fixes, and other
 small changes: Steve Agland, Shane Ambler, Martijn Berger, Nicholas Bishop,
-Matthaus G. Chajdas, Thomas Dinges, Henry Fousse, Syoyo Fujita, Derek Haase,
+Matthaus G. Chajdas, Thomas Dinges, Henri Fousse, Syoyo Fujita, Derek Haase,
 Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Ronan Keryell, Max
 Liani, Bastien Montagne, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Sergey
 Sharybin, Stephan Steinbach, Esteban Tovagliari, Alexander von Knorring.

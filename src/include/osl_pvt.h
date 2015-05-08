@@ -629,6 +629,18 @@ public:
         m_lastwrite  = std::max (m_lastwrite, lw);
     }
 
+    // Mark the symbol as always being read (and, if write==true, also
+    // that it's always written). Then is for when we don't know when
+    // it's read or written, but want to be sure it doesn't look unused.
+    void mark_always_used (bool write=false) {
+        m_firstread = 0;
+        m_lastread  = std::numeric_limits<int>::max();
+        if (write) {
+            m_firstwrite = 0;
+            m_lastwrite  = std::numeric_limits<int>::max();
+        }
+    }
+
     int firstread () const  { return m_firstread; }
     int lastread () const   { return m_lastread; }
     int firstwrite () const { return m_firstwrite; }

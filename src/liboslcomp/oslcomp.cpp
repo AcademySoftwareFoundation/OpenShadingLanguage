@@ -410,7 +410,6 @@ OSLCompilerImpl::compile (string_view filename,
 
         if (! error_encountered()) {
             shader()->codegen ();
-//            add_useparam ();
             track_variable_dependencies ();
             track_variable_lifetimes ();
             check_for_illegal_writes ();
@@ -514,7 +513,6 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 
         if (! error_encountered()) {
             shader()->codegen ();
-//            add_useparam ();
             track_variable_dependencies ();
             track_variable_lifetimes ();
             check_for_illegal_writes ();
@@ -1380,106 +1378,6 @@ OSLCompilerImpl::syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
                 if (std::find (wsyms->begin(), wsyms->end(), s) == wsyms->end())
                     wsyms->push_back (s);
         }
-    }
-}
-
-
-
-/// Add a 'useparam' before any op that reads parameters.  This is what
-/// tells the runtime that it needs to run the layer it came from, if
-/// not already done.
-void
-OSLCompilerImpl::add_useparam ()
-{
-    // Mark all symbols as un-initialized
-    BOOST_FOREACH (Symbol *s, symtab())
-        s->initialized (false);
-    // Figure out which statements are inside conditional states
-    std::vector<bool> in_conditional (m_ircode.size(), false);
-    for (size_t opnum = 0;  opnum < m_ircode.size();  ++opnum) {
-        // Find the farthest this instruction jumps to (-1 for instructions
-        // that don't jump)
-        int jumpend = m_ircode[opnum].farthest_jump();
-        // Mark all instructions from here to there as inside conditionals
-        for (int i = (int)opnum+1;  i < jumpend;  ++i)
-            in_conditional[i] = true;
-    }
-
-    // Take care of the output params right off the bat -- as soon as the
-    // shader starts running 'main'.
-    SymbolPtrVec outputparams;
-    BOOST_FOREACH (Symbol *s, symtab()) {
-        if (s->symtype() == SymTypeOutputParam) {
-            outputparams.push_back (s);
-            s->initialized (true);
-        }
-    }
-    if (outputparams.size()) {
-        int mainstart = m_main_method_start >= 0 ? m_main_method_start : next_op_label();
-        insert_useparam (mainstart, outputparams);
-        in_conditional.insert (in_conditional.begin()+mainstart, false);
-    }
-    
-    // Loop over all ops...
-    for (size_t opnum = 0;  opnum < m_ircode.size();  ++opnum) {
-        Opcode &op (m_ircode[opnum]);  // handy ref to the op
-        SymbolPtrVec params;           // list of params referenced by this op
-        // For each argument...
-        for (int a = 0;  a < op.nargs();  ++a) {
-            SymbolPtr s = m_opargs[op.firstarg()+a];
-            DASSERT (s->dealias() == s);
-            // If this arg is a param and is read, remember it
-            if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
-                continue;  // skip non-params
-            // skip if we've already 'usedparam'ed it unconditionally
-            if (s->initialized() && op.method() == main_method_name())
-                continue;
-            if (op.opname() == "useparam")
-                continue;  // skip useparam ops themselves, if we hit one
-            if (op.argread(a) || (op.argwrite(a) && op.method() != s->mangled())) {
-                //std::cerr << "used " << s->mangled() << " @ " << opnum << "\n";
-                // Don't add it more than once
-                if (std::find (params.begin(), params.end(), s) == params.end()) {
-                    params.push_back (s);
-                    // mark as already initialized unconditionally, if we do
-                    if (! in_conditional[opnum] && op.method() == main_method_name())
-                        s->initialized (true);
-                }
-            }
-        }
-
-        // If the arg we are examining read any params, insert a "useparam"
-        // op whose arguments are the list of params we are about to use.
-        if (params.size()) {
-            insert_useparam (opnum, params);
-            in_conditional.insert (in_conditional.begin()+opnum, false);
-            // Skip the op we just added
-            ++opnum;
-        }
-    }
-}
-
-
-
-/// Insert a 'useparam' instruction in front of instruction 'opnum', to
-/// reference the symbols in 'params'.
-void
-OSLCompilerImpl::insert_useparam (size_t opnum, SymbolPtrVec &params)
-{
-    insert_code (opnum, "useparam", params.size(), &(params[0]), NULL);
-    // All ops are "read"
-    m_ircode[opnum].argwrite (0, false);
-    m_ircode[opnum].argread (0, true);
-    if (opnum < m_ircode.size()-1) {
-        // We have no parse node, but we set the new instruction's
-        // "source" to the one of the statement right after.
-        m_ircode[opnum].source (m_ircode[opnum+1].sourcefile(),
-                                m_ircode[opnum+1].sourceline());
-        // Set the method id to the same as the statement right after
-        m_ircode[opnum].method (m_ircode[opnum+1].method());
-    } else {
-        // If there IS no "next" instruction, just call it main
-        m_ircode[opnum].method (main_method_name());
     }
 }
 

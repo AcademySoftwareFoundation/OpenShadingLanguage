@@ -307,9 +307,6 @@ public:
                                           const SymbolPtrVec &opargs,
                                           const SymbolPtrVec &allsyms);
     static void coalesce_temporaries (SymbolPtrVec &symtab);
-    static void insert_useparam (OpcodeVec &code, size_t opnum,
-                                 SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 
-                                 SymbolPtrVec &params);
 
     const std::string main_filename () const { return m_main_filename; }
     const std::string cwd () const { return m_cwd; }
@@ -330,8 +327,6 @@ private:
     }
 
     void track_variable_dependencies ();
-    void add_useparam ();
-    void insert_useparam (size_t opnum, SymbolPtrVec &params);
     void coalesce_temporaries () {
         coalesce_temporaries (m_symtab.allsyms());
     }

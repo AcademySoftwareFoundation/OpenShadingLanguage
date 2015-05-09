@@ -31,6 +31,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <map>
 
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 104900
+# include <boost/container/flat_map.hpp>
+# define USE_FLAT_MAP 1
+#endif
+
 #include "oslexec_pvt.h"
 using namespace OSL;
 using namespace OSL::pvt;
@@ -39,6 +45,12 @@ using namespace OSL::pvt;
 OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
+
+#if USE_FLAT_MAP
+typedef boost::container::flat_map<int,int> FastIntMap;
+#else
+typedef std::map<int,int> FastIntMap;
+#endif
 
 
 
@@ -137,7 +149,10 @@ public:
 
     /// Return the index of the symbol that 'symindex' aliases to, locally,
     /// or -1 if it has no block-local alias.
-    int block_alias (int symindex) const { return m_block_aliases[symindex]; }
+    int block_alias (int symindex) const {
+        FastIntMap::const_iterator i = m_block_aliases.find (symindex);
+        return (i == m_block_aliases.end()) ? -1 : i->second;
+    }
 
     /// Set the new block-local alias of 'symindex' to 'alias'.
     ///
@@ -148,7 +163,9 @@ public:
     /// Reset the block-local alias of 'symindex' so it doesn't alias to
     /// anything.
     void block_unalias (int symindex) {
-        m_block_aliases[symindex] = -1;
+        FastIntMap::iterator i = m_block_aliases.find (symindex);
+        if (i != m_block_aliases.end())
+            i->second = -1;
     }
 
     /// Clear local block aliases for any args that are written by this op.
@@ -162,7 +179,6 @@ public:
     /// block).
     void clear_block_aliases () {
         m_block_aliases.clear ();
-        m_block_aliases.resize (inst()->symbols().size(), -1);
     }
 
     /// Set the new global alias of 'symindex' to 'alias'.
@@ -350,10 +366,10 @@ private:
     std::vector<int> m_all_consts;    ///< All const symbol indices for inst
     int m_next_newconst;              ///< Unique ID for next new const we add
     int m_next_newtemp;               ///< Unique ID for next new temp we add
-    std::map<int,int> m_symbol_aliases; ///< Global symbol aliases
-    std::vector<int> m_block_aliases;   ///< Local block aliases
-    std::map<int,int> m_param_aliases;  ///< Params aliasing to params/globals
-    std::map<int,int> m_stale_syms;     ///< Stale symbols for this block
+    FastIntMap m_symbol_aliases;      ///< Global symbol aliases
+    FastIntMap m_block_aliases;         ///< Local block aliases
+    FastIntMap m_param_aliases;         ///< Params aliasing to params/globals
+    FastIntMap m_stale_syms;            ///< Stale symbols for this block
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
     std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
     std::set<ustring> m_textures_needed;

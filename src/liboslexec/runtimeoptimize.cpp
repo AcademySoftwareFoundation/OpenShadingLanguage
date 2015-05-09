@@ -1099,7 +1099,7 @@ RuntimeOptimizer::clear_stale_syms ()
 void
 RuntimeOptimizer::use_stale_sym (int sym)
 {
-    std::map<int,int>::iterator i = m_stale_syms.find(sym);
+    FastIntMap::iterator i = m_stale_syms.find(sym);
     if (i != m_stale_syms.end())
         m_stale_syms.erase (i);
 }
@@ -1129,7 +1129,7 @@ void
 RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
 {
     if (optimize() >= 2 && m_opt_stale_assign) {
-        std::map<int,int>::iterator i = m_stale_syms.find(sym);
+        FastIntMap::iterator i = m_stale_syms.find(sym);
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
             if (uselessop.opname() != u_nop)
@@ -1392,7 +1392,7 @@ RuntimeOptimizer::dealias_symbol (int symindex, int opnum)
             symindex = i;
             continue;
         }
-        std::map<int,int>::const_iterator found;
+        FastIntMap::const_iterator found;
         found = m_symbol_aliases.find (symindex);
         if (found != m_symbol_aliases.end()) {
             // permanent alias for the sym
@@ -1422,7 +1422,6 @@ void
 RuntimeOptimizer::make_symbol_room (int howmany)
 {
     inst()->make_symbol_room (howmany);
-    m_block_aliases.resize (inst()->symbols().size()+howmany, -1);
 }
 
 

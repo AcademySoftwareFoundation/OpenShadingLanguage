@@ -589,9 +589,15 @@ ShadingSystemImpl::loadshader (string_view cname)
     bool ok = oso.parse_file (filename);
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
+    double loadtime = timer();
+    {
+        spin_lock lock (m_stat_mutex);
+        m_stat_master_load_time += loadtime;
+    }
     if (ok) {
         ++m_stat_shaders_loaded;
-        info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(timer(), 2).c_str());
+        info ("Loaded \"%s\" (took %s)", filename.c_str(),
+              Strutil::timeintervalformat(loadtime, 2).c_str());
         ASSERT (r);
         r->resolve_syms ();
         // if (debug()) {
@@ -636,9 +642,15 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
     bool ok = reader.parse_memory (buffer);
     ShaderMaster::ref r = ok ? reader.master() : NULL;
     m_shader_masters[name] = r;
+    double loadtime = timer();
+    {
+        spin_lock lock (m_stat_mutex);
+        m_stat_master_load_time += loadtime;
+    }
     if (ok) {
         ++m_stat_shaders_loaded;
-        info ("Loaded \"%s\" (took %s)", shadername, Strutil::timeintervalformat(timer(), 2).c_str());
+        info ("Loaded \"%s\" (took %s)", shadername,
+              Strutil::timeintervalformat(loadtime, 2).c_str());
         ASSERT (r);
         r->resolve_syms ();
         // if (debug()) {

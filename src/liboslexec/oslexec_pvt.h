@@ -1108,6 +1108,7 @@ private:
     atomic_int m_stat_middlemen_eliminated; ///< Stat: middlemen eliminated
     atomic_int m_stat_const_connections;  ///< Stat: const connections elim'd
     atomic_int m_stat_global_connections; ///< Stat: global connections elim'd
+    double m_stat_master_load_time;       ///< Stat: time loading masters
     double m_stat_optimization_time;      ///< Stat: time spent optimizing
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   runtime specialization time

@@ -622,6 +622,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_middlemen_eliminated = 0;
     m_stat_const_connections = 0;
     m_stat_global_connections = 0;
+    m_stat_master_load_time = 0;
     m_stat_optimization_time = 0;
     m_stat_getattribute_time = 0;
     m_stat_getattribute_fail_time = 0;
@@ -1115,6 +1116,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:middlemen_eliminated", int, m_stat_middlemen_eliminated);
     ATTR_DECODE ("stat:const_connections", int, m_stat_const_connections);
     ATTR_DECODE ("stat:global_connections", int, m_stat_global_connections);
+    ATTR_DECODE ("stat:master_load_time", float, m_stat_master_load_time);
     ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
     ATTR_DECODE ("stat:opt_locking_time", float, m_stat_opt_locking_time);
     ATTR_DECODE ("stat:specialization_time", float, m_stat_specialization_time);
@@ -1439,6 +1441,8 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Loaded:    " << m_stat_shaders_loaded << "\n";
     out << "    Masters:   " << m_stat_shaders_loaded << "\n";
     out << "    Instances: " << m_stat_instances << "\n";
+    out << "  Time loading masters: "
+        << Strutil::timeintervalformat (m_stat_master_load_time, 2) << "\n";
     out << "  Shading groups:   " << m_stat_groups << "\n";
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
     float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);

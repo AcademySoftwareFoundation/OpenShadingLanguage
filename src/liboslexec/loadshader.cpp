@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/hash.h>
 
 
 
@@ -96,6 +97,8 @@ private:
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
     bool m_errors;                    ///< Did we hit any errors?
+    typedef boost::unordered_map<ustring,int,ustringHash> UstringIntMap;
+    UstringIntMap m_symmap;           ///< map sym name to index
 };
 
 
@@ -146,9 +149,10 @@ OSOReaderToMaster::shader (const char *shadertype, const char *name)
 
 
 void
-OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
+OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name_)
 {
-    Symbol sym (ustring(name), typespec, symtype);
+    ustring name(name_);
+    Symbol sym (name, typespec, symtype);
     TypeDesc t = typespec.simpletype();
     int nvals = t.aggregate * (t.is_unsized_array() ? 1 : t.numelements());
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
@@ -196,6 +200,7 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 #endif
     sym.lockgeom (m_shadingsys.lockgeom_default());
     m_master->m_symbols.push_back (sym);
+    m_symmap[name] = int(m_master->m_symbols.size()) - 1;
     // Start the index at which we add specified defaults
     m_sym_default_index = 0;
 }
@@ -525,15 +530,12 @@ void
 OSOReaderToMaster::instruction_arg (const char *name)
 {
     ustring argname (name);
-    for (size_t i = 0;  i < m_master->m_symbols.size();  ++i) {
-        if (m_master->m_symbols[i].name() == argname) {
-            m_master->m_args.push_back (i);
-            ++m_nargs;
-            return;
-        }
+    UstringIntMap::const_iterator found = m_symmap.find (argname);
+    if (found != m_symmap.end()) {
+        m_master->m_args.push_back (found->second);
+        ++m_nargs;
+        return;
     }
-    // ERROR! -- FIXME
-//    m_master->m_args.push_back (0);  // FIXME
     m_shadingsys.error ("Parsing shader %s: unknown arg %s",
                         m_master->shadername().c_str(), name);
     m_errors = true;

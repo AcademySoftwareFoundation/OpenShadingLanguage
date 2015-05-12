@@ -87,5 +87,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSL_NAMESPACE_EXIT };
 #endif
 
+/// OSL_BUILD_CPP11 will be 1 if this OSL was built using C++11
+#cmakedefine01 OSL_BUILD_CPP11
+/// OSL_BUILD_USELIBPLUSPLUS will be 1 if this OSL was built using libc++
+#cmakedefine01 OSL_BUILD_LIBCPLUSPLUS
 
 #endif /* OSLVERSION_H */

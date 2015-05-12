@@ -35,9 +35,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// renderer that wanted things a different way.
 /////////////////////////////////////////////////////////////////////////
 
-// Test if we are using C++11
+// Detect if we're C++11.
+//
+// Note: oslversion.h defined OSL_BUILD_CPP11 to be 1 if OSL was built
+// using C++11. In contrast, OSL_USING_CPP11 defined below will be 1 if
+// we're compiling C++11 RIGHT NOW. These two things may be the same when
+// compiling OSL, but they may not be the same if another packages is
+// compiling against OSL and using these headers (OSL may be C++11 but the
+// client package may be older, or vice versa -- use these two symbols to
+// differentiate these cases, when important).
 #if (__cplusplus >= 201103L)
-#define OSL_USING_CPLUSPLUS11 1
+#define OSL_USING_CPP11 1
+#define OSL_USING_CPLUSPLUS11 1 /* DEPRECATED */
 #endif
 
 // Symbol export defines
@@ -56,7 +65,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/ustring.h>
 
 // Sort out smart pointers
-#ifdef OSL_USING_CPLUSPLUS11
+#ifdef OSL_USING_CPP11
 # include <memory>
 #else
 # include <boost/shared_ptr.hpp>
@@ -109,7 +118,7 @@ using OIIO::ustringHash;
 using OIIO::string_view;
 
 // Sort out smart pointers
-#ifdef OSL_USING_CPLUSPLUS11
+#ifdef OSL_USING_CPP11
   using std::shared_ptr;
   using std::weak_ptr;
 #else

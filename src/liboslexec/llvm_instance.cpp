@@ -711,8 +711,8 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     if (llvm_debug() && groupentry)
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
     if (llvm_debug())
-        llvm_gen_debug_printf (Strutil::format("enter layer %s %s",
-                                  inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf (Strutil::format("enter layer %d %s %s",
+                               this->layer(), inst()->layername(), inst()->shadername()));
 #endif
     if (shadingsys().countlayerexecs())
         ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
@@ -850,8 +850,8 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // All done
 #if 0 /* helpful for debugging */
     if (llvm_debug())
-        llvm_gen_debug_printf (Strutil::format("exit layer %s %s",
-                                   inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf (Strutil::format("exit layer %d %s %s",
+                               this->layer(), inst()->layername(), inst()->shadername()));
 #endif
     ll.op_return();
 
@@ -964,11 +964,17 @@ BackendLLVM::run ()
     int nlayers = group().nlayers();
     m_layer_remap.resize (nlayers);
     m_num_used_layers = 0;
+    if (shadingsys().debug() >= 1)
+        std::cout << "\nLayers used:\n";
     for (int layer = 0;  layer < nlayers;  ++layer) {
         bool lastlayer = (layer == (nlayers-1));
         if (lastlayer ||
             (! group()[layer]->unused() && !group()[layer]->empty_instance()))
+        {
+            if (shadingsys().debug() >= 1)
+                std::cout << "  " << layer << "\n";
             m_layer_remap[layer] = m_num_used_layers++;
+        }
         else
             m_layer_remap[layer] = -1;
     }

@@ -482,7 +482,7 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
 
 
 std::string
-ShaderInstance::print ()
+ShaderInstance::print (const ShaderGroup &group)
 {
     std::stringstream out;
     out << "Shader " << shadername() << "\n";
@@ -540,6 +540,24 @@ ShaderInstance::print ()
             out << "  (" << filename << ":" << op.sourceline() << ")";
         out << "\n";
     }
+    if (nconnections()) {
+        out << "  connections upstream:\n";
+        for (int i = 0, e = nconnections(); i < e; ++i) {
+            const Connection &c (connection(i));
+            out << "    " << c.dst.type.c_str() << ' '
+                << symbol(c.dst.param)->name();
+            if (c.dst.arrayindex >= 0)
+                out << '[' << c.dst.arrayindex << ']';
+            out << " upconnected from layer " << c.srclayer << ' ';
+            const ShaderInstance *up = group[c.srclayer];
+            out << "(" << up->layername() << ") ";
+            out << "    " << c.src.type.c_str() << ' '
+                << up->symbol(c.src.param)->name();
+            if (c.src.arrayindex >= 0)
+                out << '[' << c.src.arrayindex << ']';
+            out << "\n";
+        }
+    }
     return out.str ();
 }
 
@@ -562,7 +580,8 @@ ShaderInstance::compute_run_lazily ()
         // Suggested warning below... but are there use cases where people
         // want these to run (because they will extract the results they
         // want from output params)?
-        if (! outgoing_connections() && ! writes_globals())
+        if (! outgoing_connections() && ! empty_instance() &&
+            ! writes_globals() && ! renderer_outputs())
             shadingsys().warning ("Layer \"%s\" (shader %s) will run even though it appears to have no used results",
                      layername(), shadername());
 #endif
@@ -704,7 +723,7 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
     // Make sure system didn't ask for instances that query userdata to be
     // immune from instance merging.
     if (! shadingsys().m_opt_merge_instances_with_userdata
-        && userdata_params()) {
+        && (userdata_params() || b.userdata_params())) {
         return false;
     }
 

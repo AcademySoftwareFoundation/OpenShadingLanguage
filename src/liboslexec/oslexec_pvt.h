@@ -617,7 +617,7 @@ public:
     const OpcodeVec & ops () const { return m_instops; }
     OpcodeVec & ops () { return m_instops; }
 
-    std::string print ();  // Debugging
+    std::string print (const ShaderGroup &group);  // Debugging
 
     SymbolVec &symbols () { return m_instsymbols; }
     const SymbolVec &symbols () const { return m_instsymbols; }
@@ -650,7 +650,7 @@ public:
     /// instance overrides from the master copy.
     struct SymOverrideInfo {
         // Using bit fields to keep the data in 8 bytes in total.
-        char m_valuesource:    3;
+        unsigned char m_valuesource: 3;
         bool m_connected_down: 1;
         bool m_lockgeom:       1;
         int  m_arraylen:      27;

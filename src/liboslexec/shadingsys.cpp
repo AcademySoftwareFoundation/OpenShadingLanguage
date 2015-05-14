@@ -2561,7 +2561,7 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
                     if (con.srclayer == b) {
                         con.srclayer = a;
                         A->outgoing_connections (true);
-                        if (B->symbols().size()) {
+                        if (A->symbols().size() && B->symbols().size()) {
                             ASSERT (A->symbol(con.src.param)->name() ==
                                     B->symbol(con.src.param)->name());
                         }

@@ -2712,7 +2712,7 @@ RuntimeOptimizer::run ()
             std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 
                       << inst()->layername() 
-                      << ", I get:\n" << inst()->print()
+                      << ", I get:\n" << inst()->print(group())
                       << "\n--------------------------------\n\n";
             std::cout.flush ();
         }
@@ -2787,7 +2787,11 @@ RuntimeOptimizer::run ()
                       << " out? " << (inst()->outgoing_connections()?'y':'n')
                       << (inst()->writes_globals() ? " writes_globals" : "")
                       << (inst()->userdata_params() ? " userdata_params" : "")
-                      << "\n" << inst()->print() 
+                      << (inst()->run_lazily() ? " run_lazily" : "")
+                      << (inst()->outgoing_connections() ? " outgoing_connections" : "")
+                      << (inst()->renderer_outputs() ? " renderer_outputs" : "")
+                      << (inst()->writes_globals() ? " writes_globals" : "")
+                      << "\n" << inst()->print(group()) 
                       << "\n--------------------------------\n\n";
             std::cout.flush ();
         }

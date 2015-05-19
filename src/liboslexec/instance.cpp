@@ -312,10 +312,10 @@ ShaderInstance::parameters (const ParamValueList &params)
     {
         // Adjust the stats
         ShadingSystemImpl &ss (shadingsys());
-        spin_lock lock (ss.m_stat_mutex);
         size_t symmem = vectorbytes(m_instoverrides);
         size_t parammem = (vectorbytes(m_iparams) + vectorbytes(m_fparams) +
                            vectorbytes(m_sparams));
+        spin_lock lock (ss.m_stat_mutex);
         ss.m_stat_mem_inst_syms += symmem;
         ss.m_stat_mem_inst_paramvals += parammem;
         ss.m_stat_mem_inst += (symmem+parammem);

@@ -1662,7 +1662,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
             ShaderInstance *inst = (*m_curgroup)[layer];
             if (! inst)
                 continue;
-            inst->compute_run_lazily ();
+            inst->compute_run_lazily (*m_curgroup);
         }
 
         // Merge instances now if they really want it bad, otherwise wait
@@ -2579,9 +2579,11 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
             // B won't be used, so mark it as having no outgoing
             // connections and clear its incoming connections (which are
             // no longer used).
+            ASSERT (B->merged_unused() == false);
             B->outgoing_connections (false);
             B->run_lazily (true);
             connectionmem += B->clear_connections ();
+            B->m_merged_unused = true;
             ASSERT (B->unused());
         }
     }

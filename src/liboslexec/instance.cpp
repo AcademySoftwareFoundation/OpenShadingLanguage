@@ -58,7 +58,7 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
       m_layername(layername),
       m_writes_globals(false), m_run_lazily(false),
       m_outgoing_connections(false),
-      m_renderer_outputs(false),
+      m_renderer_outputs(false), m_merged_unused(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
       m_maincodebegin(m_master->m_maincodebegin),
       m_maincodeend(m_master->m_maincodeend)
@@ -546,15 +546,20 @@ ShaderInstance::print ()
 
 
 void
-ShaderInstance::compute_run_lazily ()
+ShaderInstance::compute_run_lazily (const ShaderGroup &group)
 {
     if (shadingsys().m_lazylayers) {
         // lazylayers option turned on: unconditionally run shaders with no
         // outgoing connections ("root" nodes, including the last in the
         // group) or shaders that alter global variables (unless
         // 'lazyglobals' is turned on).
-        if (shadingsys().m_lazyglobals)
-            run_lazily (outgoing_connections() && ! renderer_outputs());
+        if (shadingsys().m_lazyglobals) {
+            if (group[group.nlayers()-1] == this)
+                run_lazily (false);  // force run of last group
+            else
+                run_lazily ((outgoing_connections() && ! renderer_outputs())
+                            || empty_instance() || merged_unused());
+        }
         else
             run_lazily (outgoing_connections() && ! writes_globals()
                                                && ! renderer_outputs());

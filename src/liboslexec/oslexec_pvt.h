@@ -550,7 +550,7 @@ public:
     void run_lazily (bool lazy) { m_run_lazily = lazy; }
 
     /// Figure out whether the instance runs lazily, set m_run_lazily.
-    void compute_run_lazily ();
+    void compute_run_lazily (const ShaderGroup &group);
 
     /// Does this instance have any outgoing connections?
     ///
@@ -564,6 +564,9 @@ public:
     /// Set whether this instance has renderer outputs
     void renderer_outputs (bool out) { m_renderer_outputs = out; }
 
+    /// Was this instance merged away and now no longer needed?
+    bool merged_unused () const { return m_merged_unused; }
+
     int maincodebegin () const { return m_maincodebegin; }
     int maincodeend () const { return m_maincodeend; }
 
@@ -573,7 +576,7 @@ public:
     /// Return a begin/end Symbol* pair for the set of param symbols
     /// that is suitable to pass as a range for BOOST_FOREACH.
     friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
-        if (i->firstparam() == i->lastparam())
+        if (i->m_instsymbols.size() == 0 || i->firstparam() == i->lastparam())
             return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
         else
             return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
@@ -581,7 +584,7 @@ public:
     }
 
     friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
-        if (i->firstparam() == i->lastparam())
+        if (i->m_instsymbols.size() == 0 || i->firstparam() == i->lastparam())
             return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
         else
             return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
@@ -698,6 +701,7 @@ private:
     bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
     bool m_renderer_outputs;            ///< Any outputs params render outputs?
+    bool m_merged_unused;               ///< Unused because of a merge
     ConnectionVec m_connections;        ///< Connected input params
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range

@@ -2778,7 +2778,7 @@ RuntimeOptimizer::run ()
             collapse_syms ();
             collapse_ops ();
         }
-        inst()->compute_run_lazily ();
+        inst()->compute_run_lazily (group());
         if (debug() && !inst()->unused()) {
             track_variable_lifetimes ();
             std::cout << "After optimizing layer " << layer << " " 

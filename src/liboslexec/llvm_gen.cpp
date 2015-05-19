@@ -167,6 +167,9 @@ BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
         const Connection &con (inst()->connection (c));
         // If the connection gives a value to this param
         if (con.dst.param == symindex) {
+            // already_run is a set of layers run for this particular op.
+            // Just so we don't stupidly do several consecutive checks on
+            // whether we ran this same layer. It's JUST for this op.
             if (already_run) {
                 if (already_run->count (con.srclayer))
                     continue;  // already ran that one on this op
@@ -174,16 +177,22 @@ BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
                     already_run->insert (con.srclayer);  // mark it
             }
 
-            if (m_layers_already_run.count (con.srclayer)) {
-                if (debug() > 1)
-                    std::cout << "At op " << opnum << ", skip running layer "
-                              << con.srclayer << ", it already ran" << std::endl;
-                continue;  // already unconditionally ran the layer
-            }
-
-            if (inmain && ! m_in_conditional[opnum]) {
-                // Unconditionally running -- mark so we don't do it again
-                m_layers_already_run.insert (con.srclayer);
+            if (inmain) {
+                // There is an instance-wide m_layers_already_run that tries
+                // to remember which earlier layers have unconditionally
+                // been run at any point in the execution of this layer. But
+                // only honor (and modify) that when in the main code
+                // section, not when in init ops, which are inherently
+                // conditional.
+                if (m_layers_already_run.count (con.srclayer)) {
+                    continue;  // already unconditionally ran the layer
+                }
+                if (! m_in_conditional[opnum]) {
+                    // Unconditionally running -- mark so we don't do it
+                    // again. If we're inside a conditional, don't mark
+                    // because it may not execute the conditional body.
+                    m_layers_already_run.insert (con.srclayer);
+                }
             }
 
             // If the earlier layer it comes from has not yet been

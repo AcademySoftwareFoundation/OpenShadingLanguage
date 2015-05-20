@@ -1,6 +1,6 @@
 Changes:
 
-Release 1.6 (1.6.4 - beta) -- 6 May 2015 (compared to 1.5)
+Release 1.6 (1.6.5 - beta) -- 20 May 2015 (compared to 1.5)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * It is now supported to have shader parameters that are arrays of
@@ -128,6 +128,11 @@ Performance improvements:
 * Improved optimizations -- caught some additional places where assignments
   could be found to be useless and eliminated. #403 (1.6.4)
 * Improved speed of runtime optimization for large shaders. #499 (1.6.5)
+* Improved threading performance by not locking during pointcloud_search
+  and pointcloud. (1.6.5)
+* Dramatic speedup of runtime optimization of large shaders (5x for
+  big shaders (1.6.5)
+* Speed up loading of large shaders from disk (1.6.5).
 
 Bug fixes and other improvements:
 * oslinfo --param lets you ask for information on just one parameter of
@@ -171,6 +176,8 @@ Bug fixes and other improvements:
   that was never used in the shader, but was connected downstream, and each
   of the two instances had a difference instance value for that parameter.
   #493 (1.6.4)
+* Fix critical bug that in very particular circumstances could result in
+  shader layers not executing when they should. (1.6.5)
 
 Under the hood:
 * Change a couple long-deprecated OIIO calls to modern versions.

@@ -43,6 +43,7 @@ Sony Pictures Imageworks terms, above.
 
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/argparse.h>
+#include <OpenImageIO/timer.h>
 
 #include "OSL/oslquery.h"
 using namespace OSL;
@@ -51,6 +52,7 @@ using namespace OSL;
 static std::string searchpath;
 static bool verbose = false;
 static bool help = false;
+static bool runstats = false;
 static std::string oneparam;
 
 
@@ -144,6 +146,7 @@ print_metadata (const OSLQuery::Parameter &m)
 static void
 oslinfo (const std::string &name)
 {
+    OIIO::Timer t(runstats);
     OSLQuery g;
     g.open (name, searchpath);
     std::string e = g.geterror();
@@ -151,6 +154,12 @@ oslinfo (const std::string &name)
         std::cout << "ERROR opening shader \"" << name << "\" (" << e << ")\n";
         return;
     }
+    if (runstats) {
+        // display timings in an easy to sort form
+        std::cout << t.stop() << " sec for " << name << "\n";
+        return; // don't show anything else, we are just benchmarking
+    }
+
     if (oneparam.empty()) {
         std::cout << g.shadertype() << " \"" << g.shadername() << "\"\n";
         if (verbose) {
@@ -235,6 +244,7 @@ main (int argc, char *argv[])
                 "-h", &help, "Print help message",
                 "--help", &help, "",
                 "-v", &verbose, "Verbose",
+                "--runstats", &runstats, "Benchmark shader loading time for queries",
                 "-p %s", &searchpath, "Set searchpath for shaders",
                 "--param %s", &oneparam, "Output information in just this parameter",
                 NULL);

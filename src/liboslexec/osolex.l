@@ -74,7 +74,8 @@ IDENT           ({ALPHA}|[_$])({ALPHA}|{DIGIT}|[_$\.])*
  /* C preprocessor (cpp) directives */
 COMMENT         \#[^\n]*\n
  /* Hints */
-HINTPATTERN     \%{IDENT}
+IDORLITERAL     {FLT}|{STR}|{INTEGER}|({IDENT}(\[{INTEGER}?\])?)
+HINTPATTERN     \%{IDENT}(\{({IDORLITERAL}(\,{IDORLITERAL})*)?\})?
 
 
  /* Note for lex newbies: the following '%{ .. %}' section contains literal
@@ -191,9 +192,7 @@ using namespace OSL::pvt;
                         }
 
 {STR}                   {
-                            // grab the material between the quotes
-                            std::string escaped (YYText(), 1, strlen(YYText())-2);
-                            ustring s (OIIO::Strutil::unescape_chars(escaped));
+                            ustring s (YYText(), YYLeng());
                             yylval.s = s.c_str();
                             // std::cerr << "lex string '" << yylval.s << "'\n";
                             return STRING_LITERAL;

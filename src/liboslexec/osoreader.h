@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osl_pvt.h"
 
 #include <OpenImageIO/thread.h>
+#include <OpenImageIO/string_view.h>
 
 
 
@@ -99,7 +100,7 @@ public:
 
     /// Add a hint.
     ///
-    virtual void hint (const char *hintstring) { }
+    virtual void hint (string_view hintstring) { }
 
     /// Return true if this parser cares about the code, false if parsing
     /// of oso may terminate once the symbol table has been parsed.

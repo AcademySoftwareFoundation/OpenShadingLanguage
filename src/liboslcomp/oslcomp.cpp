@@ -47,9 +47,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 
-#define yyFlexLexer oslFlexLexer
-#include "FlexLexer.h"
-
 #include <boost/wave.hpp>
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
@@ -105,7 +102,6 @@ namespace pvt {   // OSL::pvt
 
 
 OSLCompilerImpl *oslcompiler = NULL;
-OIIO::mutex oslcompiler_mutex;
 
 static ustring op_for("for");
 static ustring op_while("while");
@@ -114,7 +110,7 @@ static ustring op_dowhile("dowhile");
 
 
 OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
-    : m_lexer(NULL), m_errhandler(errhandler), m_err(false), m_symtab(*this),
+    : m_errhandler(errhandler), m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_quiet(false), m_debug(false),
       m_preprocess_only(false), m_optimizelevel(1),
@@ -378,22 +374,7 @@ OSLCompilerImpl::compile (string_view filename,
     } else if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
-        std::istringstream in (preprocess_result);
-        oslcompiler = this;
-
-        // Create a lexer, parse the file, delete the lexer
-        ASSERT (m_lexer == NULL);
-        bool parseerr = false;
-        {
-            // Thread safety with the lexer/parser
-            OIIO::lock_guard lock (oslcompiler_mutex);
-            m_lexer = new oslFlexLexer (&in);
-            oslparse ();
-            parseerr = error_encountered();
-            delete m_lexer;
-        }
-        m_lexer = NULL;
-
+        bool parseerr = osl_parse_buffer (preprocess_result);
         if (! parseerr) {
             if (shader())
                 shader()->typecheck ();
@@ -481,22 +462,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     } else if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
-        std::istringstream in (preprocess_result);
-        oslcompiler = this;
-
-        // Create a lexer, parse the file, delete the lexer
-        ASSERT (m_lexer == NULL);
-        bool parseerr = false;
-        {
-            // Thread safety with the lexer/parser
-            OIIO::lock_guard lock (oslcompiler_mutex);
-            m_lexer = new oslFlexLexer (&in);
-            oslparse ();
-            parseerr = error_encountered();
-            delete m_lexer;
-        }
-        m_lexer = NULL;
-
+        bool parseerr = osl_parse_buffer (preprocess_result);
         if (! parseerr) {
             if (shader())
                 shader()->typecheck ();

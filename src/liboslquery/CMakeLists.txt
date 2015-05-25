@@ -1,4 +1,4 @@
-SET ( liboslquery_srcs oslquery.cpp querystub.cpp ../liboslexec/osoreader.cpp
+SET ( liboslquery_srcs oslquery.cpp querystub.cpp 
       ../liboslexec/typespec.cpp )
 
 FILE ( GLOB compiler_headers "../liboslexec/*.h" )

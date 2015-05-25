@@ -42,15 +42,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osoreader.h"
 
 #undef yylex
-#define yyFlexLexer osoFlexLexer
-#include "FlexLexer.h"
+extern int osolex();
 
 using namespace OSL;
 using namespace OSL::pvt;
 
 void yyerror (const char *err);
 
-#define yylex OSOReader::osolexer->yylex
+#define yylex osolex
 #define reader OSOReader::reader
 
 static TypeSpec current_typespec;

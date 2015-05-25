@@ -40,12 +40,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * automatically reset to another file.
  */
 %option noyywrap
+%option nounput noinput
 
  /* Option 'prefix' creates a C++ lexer with the given prefix, so that
   * we can link with other flex-generated lexers in the same application
   * without name conflicts.
   */
 %option prefix="oso"
+
+ /* %option perf-report */
 
 
  /* Define regular expression macros 
@@ -173,33 +176,33 @@ using namespace OSL::pvt;
 
  /* Identifiers */
 {IDENT}	                {
-                            yylval.s = ustring(YYText()).c_str();
+                            yylval.s = ustring(yytext).c_str();
                             // std::cerr << "lex ident '" << yylval.s << "'\n";
                             return IDENTIFIER;
                         }
 
  /* Literal values */
 {INTEGER}               {
-                            yylval.i = atoi (YYText());
+                            yylval.i = atoi (yytext);
                             // std::cerr << "lex int " << yylval.i << "\n";
                             return INT_LITERAL;
                         }
 
 {FLT}                   {
-                            yylval.f = atof (YYText());
+                            yylval.f = atof (yytext);
                             // std::cerr << "lex float " << yylval.f << "\n";
                             return FLOAT_LITERAL;
                         }
 
 {STR}                   {
-                            ustring s (YYText(), YYLeng());
+                            ustring s (yytext, yyleng);
                             yylval.s = s.c_str();
                             // std::cerr << "lex string '" << yylval.s << "'\n";
                             return STRING_LITERAL;
                         }
 
 {HINTPATTERN}           {
-                            ustring s (YYText());
+                            ustring s (yytext);
                             yylval.s = s.c_str();
                             return HINT;
                         }
@@ -217,8 +220,72 @@ using namespace OSL::pvt;
                         }
 
  /* catch-all rule for any other single characters */
-.			{  return (yylval.i = *YYText()); }
+.			{  return (yylval.i = *yytext); }
 
 %%
 
 
+
+OSL_NAMESPACE_ENTER
+
+namespace pvt {   // OSL::pvt
+
+
+OSOReader * OSOReader::osoreader = NULL;
+static OIIO::mutex osoread_mutex;
+
+
+
+bool
+OSOReader::parse_file (const std::string &filename)
+{
+    // The lexer/parser isn't thread-safe, so make sure Only one thread
+    // can actually be reading a .oso file at a time.
+    OIIO::lock_guard guard (osoread_mutex);
+
+    osoin = fopen (filename.c_str(), "r");
+    if (! osoin) {
+        m_err.error ("File %s not found", filename.c_str());
+        return false;
+    }
+
+    osoreader = this;
+    oso_switch_to_buffer (oso_create_buffer (osoin, YY_BUF_SIZE));
+    int errcode = osoparse ();   // osoparse returns nonzero if error
+    bool ok = ! errcode;   // osoparse returns nonzero if error
+    if (ok) {
+//        m_err.info ("Correctly parsed %s", filename.c_str());
+    } else {
+        m_err.error ("Failed parse of %s (error code %d)", filename.c_str(), errcode);
+    }
+    oso_delete_buffer (YY_CURRENT_BUFFER);
+    fclose (osoin);
+
+    return ok;
+}
+
+
+bool
+OSOReader::parse_memory (const std::string &buffer)
+{
+    // The lexer/parser isn't thread-safe, so make sure Only one thread
+    // can actually be reading a .oso file at a time.
+    OIIO::lock_guard guard (osoread_mutex);
+
+    oso_switch_to_buffer (oso_scan_string (buffer.c_str()));
+    osoreader = this;
+    bool ok = ! osoparse ();   // osoparse returns nonzero if error
+    if (ok) {
+//        m_err.info ("Correctly parsed preloaded OSO code");
+    } else {
+        m_err.error ("Failed parse of preloaded OSO code");
+    }
+    oso_delete_buffer (YY_CURRENT_BUFFER);
+
+    return ok;
+}
+
+
+
+}; // namespace pvt
+OSL_NAMESPACE_EXIT

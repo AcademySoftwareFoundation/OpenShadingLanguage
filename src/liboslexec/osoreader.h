@@ -34,8 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/string_view.h>
 
 
-
-class osoFlexLexer;
 extern int osoparse ();
 
 
@@ -141,17 +139,11 @@ public:
     /// Return a reference to the error handler
     ErrorHandler& errhandler () { return m_err; }
 
-    /// Pointer to the one and only lexer in effect.  This is 'public',
-    /// but NOBODY should modify this except for this class and the
-    /// lexer internals.
-    static osoFlexLexer *osolexer;
-
     static OSOReader *osoreader;
 
 private:
     ErrorHandler &m_err;
     int m_lineno;
-    static OIIO::mutex m_osoread_mutex;
 };
 
 

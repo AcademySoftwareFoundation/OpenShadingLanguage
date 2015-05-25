@@ -39,7 +39,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/genclosure.h"
 
 
-class oslFlexLexer;
 extern int oslparse ();
 
 
@@ -75,6 +74,8 @@ public:
                          const std::vector<std::string> &options,
                          string_view stdoslpath);
 
+    bool osl_parse_buffer (const std::string &preprocessed_buffer);
+
     /// The name of the file we're currently parsing
     ///
     ustring filename () const { return m_filename; }
@@ -94,10 +95,6 @@ public:
     /// Increment the line count
     ///
     int incr_lineno () { return ++m_lineno; }
-
-    /// Return a pointer to the current lexer.
-    ///
-    oslFlexLexer *lexer() const { return m_lexer; }
 
     ErrorHandler &errhandler () const { return *m_errhandler; }
 
@@ -372,7 +369,6 @@ private:
     }
     std::string retrieve_source (ustring filename, int line);
 
-    oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing
     std::string m_output_filename; ///< Output filename

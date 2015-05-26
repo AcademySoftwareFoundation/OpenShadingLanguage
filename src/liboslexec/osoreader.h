@@ -31,10 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osl_pvt.h"
 
 #include <OpenImageIO/thread.h>
+#include <OpenImageIO/string_view.h>
 
 
-
-class osoFlexLexer;
 extern int osoparse ();
 
 
@@ -99,7 +98,7 @@ public:
 
     /// Add a hint.
     ///
-    virtual void hint (const char *hintstring) { }
+    virtual void hint (string_view hintstring) { }
 
     /// Return true if this parser cares about the code, false if parsing
     /// of oso may terminate once the symbol table has been parsed.
@@ -140,17 +139,11 @@ public:
     /// Return a reference to the error handler
     ErrorHandler& errhandler () { return m_err; }
 
-    /// Pointer to the one and only lexer in effect.  This is 'public',
-    /// but NOBODY should modify this except for this class and the
-    /// lexer internals.
-    static osoFlexLexer *osolexer;
-
     static OSOReader *osoreader;
 
 private:
     ErrorHandler &m_err;
     int m_lineno;
-    static OIIO::mutex m_osoread_mutex;
 };
 
 

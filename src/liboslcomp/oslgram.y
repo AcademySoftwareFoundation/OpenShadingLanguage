@@ -44,11 +44,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslcomp_pvt.h"
 
 #undef yylex
-#define yyFlexLexer oslFlexLexer
-#include "FlexLexer.h"
+#define yylex osllex
+extern int osllex();
 
 void yyerror (const char *err);
-#define yylex oslcompiler->lexer()->yylex
 
 using namespace OSL;
 using namespace OSL::pvt;

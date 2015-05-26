@@ -42,15 +42,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osoreader.h"
 
 #undef yylex
-#define yyFlexLexer osoFlexLexer
-#include "FlexLexer.h"
+extern int osolex();
 
 using namespace OSL;
 using namespace OSL::pvt;
 
 void yyerror (const char *err);
 
-#define yylex OSOReader::osolexer->yylex
+#define yylex osolex
 #define reader OSOReader::reader
 
 static TypeSpec current_typespec;
@@ -102,7 +101,6 @@ OSL_NAMESPACE_EXIT
 %type <i> arguments_opt arguments argument
 %type <i> jumptargets_opt jumptargets jumptarget
 %type <i> hints_opt hints hint
-%type <s> hintcontents hintcontents_opt hintcontents_item
 
 // Define the starting nonterminal
 %start oso_file
@@ -262,7 +260,16 @@ initial_value
                 }
         | STRING_LITERAL
                 {
-                    OSOReader::osoreader->symdefault ($1);
+                    string_view s ($1);
+                    // remove the quotes
+                    s.remove_prefix(1); s.remove_suffix(1);
+                    std::string unescaped;
+                    if (s.find('\\') != string_view::npos) {
+                        // Only make a new string if we must unescape
+                        unescaped = OIIO::Strutil::unescape_chars(s);
+                        s = string_view(unescaped);
+                    }
+                    OSOReader::osoreader->symdefault (s.c_str());
                     $$ = 0;
                 }
         ;
@@ -321,49 +328,13 @@ hints
         ;
 
 hint
-        : HINT hintcontents_opt
+        : HINT
                 {
-                    if ($2) {
-                        ustring h = ustring::format("%s{%s}", $1, $2);
-                        OSOReader::osoreader->hint (h.c_str());
-                    }
-                    else
-                        OSOReader::osoreader->hint ($1);
+                    OSOReader::osoreader->hint ($1);
+                    $$ = 0;
                 }
         ;
 
-hintcontents_opt
-        : '{' hintcontents '}'      { $$ = $2; }
-        | /* empty */               { $$ = NULL; }
-        ;
-
-hintcontents
-        : hintcontents_item
-        | hintcontents ',' hintcontents_item
-                {
-                    $$ = ustring::format("%s,%s", $1, $3).c_str();
-                }
-        | /* empty */    { $$ = ""; }
-        ;
-
-hintcontents_item
-        : INT_LITERAL       { $$ = ustring::format("%d", $1).c_str(); }
-        | FLOAT_LITERAL     { $$ = ustring::format("%.8f", $1).c_str(); }
-        | STRING_LITERAL
-            {
-                $$ = ustring::format("\"%s\"", OIIO::Strutil::escape_chars($1)).c_str();
-            }
-        | IDENTIFIER arraylen_opt
-            {
-                $$ = $2 ? ustring::format("%s[%d]", $1, $2).c_str() : $1;
-            }
-        | simple_typename arraylen_opt
-            {
-                TypeDesc t = osolextype ($1);
-                t.arraylen = $2;
-                $$ = t.c_str();
-            }
-        ;
 
 %%
 

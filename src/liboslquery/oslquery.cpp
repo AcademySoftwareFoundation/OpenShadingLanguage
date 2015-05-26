@@ -62,7 +62,7 @@ public:
     virtual void symdefault (float def);
     virtual void symdefault (const char *def);
     virtual void parameter_done ();
-    virtual void hint (const char *hintstring);
+    virtual void hint (string_view hintstring);
     virtual void codemarker (const char *name);
     virtual bool parse_code_section () { return false; }
     virtual bool stop_parsing_at_temp_symbols () { return true; }
@@ -181,9 +181,8 @@ OSOReaderQuery::parameter_done ()
 
 
 void
-OSOReaderQuery::hint (const char *h)
+OSOReaderQuery::hint (string_view hintstring)
 {
-    string_view hintstring (h);
     if (! Strutil::parse_char (hintstring, '%'))
         return;
     if (Strutil::parse_prefix(hintstring, "meta{")) {

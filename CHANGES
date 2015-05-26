@@ -215,6 +215,11 @@ Build & test system improvements and developer goodies:
   #487 #488 (1.6.4)
 * Fixes to work with LLVM 3.5 and 3.6, though 3.6 especially has not yet
   been very thoroughly tested for OSL. #487 (1.6.4)
+* C++11 support: the preprocessor symbol OSL_BUILD_CPP11 is set to 1 if
+  OSL was built with C++11 (or higher) support, and the separate
+  OSL_USING_CPP11 is set to 1 if C++11 is detected right now. (These can
+  be different from the point of view of an app using OSL headers.)
+  #508 (1.6.6RC1)
 
 Documentation:
 * Short chapter added to spec describing the syntax of our serialization

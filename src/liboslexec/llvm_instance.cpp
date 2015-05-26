@@ -126,6 +126,7 @@ static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
+static ustring op_useparam("useparam");
 
 
 struct HelperFuncRecord {
@@ -599,6 +600,13 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
 void
 BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
 {
+    if (op.opname() == op_useparam) {
+        // Don't check the args of a useparam before the op; they are by
+        // definition potentially net yet set before the useparam action
+        // itself puts values into them. Checking them for uninitialized
+        // values will result in false positives.
+        return;
+    }
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol &sym (*opargsym (op, i));
         if (! op.argread(i))
@@ -636,11 +644,16 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
                                 sg_void_ptr(), 
                                 ll.constant(op.sourcefile()),
                                 ll.constant(op.sourceline()),
+                                ll.constant(group().name()),
+                                ll.constant(layer()),
+                                ll.constant(inst()->layername()),
+                                ll.constant(int(&op - &inst()->ops()[0])),
+                                ll.constant(op.opname()),
                                 ll.constant(sym.name()),
                                 offset,
                                 ncheck
                               };
-        ll.call_function ("osl_uninit_check", args, 8);
+        ll.call_function ("osl_uninit_check", args, 13);
     }
 }
 

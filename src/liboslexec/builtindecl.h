@@ -210,7 +210,7 @@ DECL (osl_dict_value, "iXiXLX")
 DECL (osl_raytype_name, "iXX")
 DECL (osl_range_check, "iiiXXi")
 DECL (osl_naninf_check, "xiXiXXiXiiX")
-DECL (osl_uninit_check, "xLXXXiXii")
+DECL (osl_uninit_check, "xLXXXiXiXiXXii")
 DECL (osl_get_attribute, "iXiXXiiXX")
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 DECL (osl_get_texture_options, "XX");

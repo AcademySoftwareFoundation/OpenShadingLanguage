@@ -91,6 +91,9 @@ static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static ShaderGroupRef shadergroup;
 static std::string archivegroup;
+static int exprcount = 0;
+static bool shadingsys_options_set = false;
+
 
 
 static void
@@ -108,6 +111,8 @@ inject_params ()
 static void
 set_shadingsys_options ()
 {
+    if (shadingsys_options_set)
+        return;
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
     int opt = O2 ? 2 : (O1 ? 1 : 0);
@@ -117,6 +122,7 @@ set_shadingsys_options ()
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
+    shadingsys_options_set = true;
 }
 
 
@@ -140,6 +146,30 @@ read_text_file (string_view filename, std::string &str)
 
 
 static void
+compile_buffer (const std::string &sourcecode,
+                const std::string &shadername)
+{
+    // std::cout << "source was\n---\n" << sourcecode << "---\n\n";
+    std::string osobuffer;
+    OSLCompiler compiler;
+    std::vector<std::string> options;
+
+    if (! compiler.compile_buffer (sourcecode, osobuffer, options)) {
+        std::cerr << "Could not compile \"" << shadername << "\"\n";
+        exit (EXIT_FAILURE);
+    }
+    // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
+
+    if (! shadingsys->LoadMemoryCompiledShader (shadername, osobuffer)) {
+        std::cerr << "Could not load compiled buffer from \""
+                  << shadername << "\"\n";
+        exit (EXIT_FAILURE);
+    }
+}
+
+
+
+static void
 shader_from_buffers (std::string shadername)
 {
     std::string oslfilename = shadername;
@@ -150,22 +180,8 @@ shader_from_buffers (std::string shadername)
         std::cerr << "Could not open \"" << oslfilename << "\"\n";
         exit (EXIT_FAILURE);
     }
-    // std::cout << "source was\n---\n" << sourcecode << "---\n\n";
-    std::string osobuffer;
-    OSLCompiler compiler;
-    std::vector<std::string> options;
 
-    if (! compiler.compile_buffer (sourcecode, osobuffer, options)) {
-        std::cerr << "Could not compile \"" << oslfilename << "\"\n";
-        exit (EXIT_FAILURE);
-    }
-    // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
-
-    if (! shadingsys->LoadMemoryCompiledShader (shadername, osobuffer)) {
-        std::cerr << "Could not load compiled buffer from \""
-                  << shadername << "\"\n";
-        exit (EXIT_FAILURE);
-    }
+    compile_buffer (sourcecode, shadername);
     // std::cout << "Read and compiled " << shadername << "\n";
 }
 
@@ -190,6 +206,48 @@ add_shader (int argc, const char *argv[])
         params.clear ();
     }
     return 0;
+}
+
+
+
+// The --expr ARG command line option will take ARG that is a snipped of
+// OSL source code, embed it in some boilerplate shader wrapper, compile
+// it from memory, and run that in the same way that would have been done
+// if it were a compiled shader on disk. The boilerplate assumes that there
+// are two output parameters for the shader: color result, and float alpha.
+//
+// Example use:
+//   testshade -v -g 64 64 -o result out.exr -expr 'result=color(u,v,0);'
+//
+static void
+specify_expr (int argc, const char *argv[])
+{
+    ASSERT (argc == 2);
+    std::string shadername = OIIO::Strutil::format("expr_%d", exprcount++);
+    std::string sourcecode =
+        "shader " + shadername + " (\n"
+        "    float s = u [[ int lockgeom=0 ]],\n"
+        "    float t = v [[ int lockgeom=0 ]],\n"
+        "    output color result = 0,\n"
+        "    output float alpha = 1,\n"
+        "  )\n"
+        "{\n"
+        "    "
+        + std::string(argv[1]) + "\n" +
+        "}\n";
+    if (verbose)
+        std::cout << "Expression-based shader text is:\n---\n"
+                  << sourcecode << "---\n";
+
+    set_shadingsys_options ();
+
+    compile_buffer (sourcecode, shadername);
+
+    inject_params ();
+    shadernames.push_back (shadername);
+    shadingsys->Shader ("surface", shadername, layername);
+    layername.clear ();
+    params.clear ();
 }
 
 
@@ -396,7 +454,8 @@ getargs (int argc, const char *argv[])
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
                 "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
                 "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
-//                "-v", &verbose, "Verbose output",
+                "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
+                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
         std::cerr << ap.geterror() << std::endl;

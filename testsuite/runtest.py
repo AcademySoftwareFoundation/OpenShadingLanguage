@@ -50,6 +50,7 @@ failthresh = 0.004
 failpercent = 0.03
 
 compile_osl_files = True
+splitsymbol = ';'
 
 #print ("srcdir = " + srcdir)
 #print ("tmpdir = " + tmpdir)
@@ -174,7 +175,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             libOIIO_path = libOIIO_path + '\\' + options.devenv_config
         test_environ["PATH"] = libOIIO_path + ';' + test_environ["PATH"]
 
-    for sub_command in command.split(';'):
+    for sub_command in command.split(splitsymbol):
         cmdret = subprocess.call (sub_command, shell=True, env=test_environ)
         if cmdret != 0 and failureok == 0 :
             print "#### Error: this command failed: ", sub_command

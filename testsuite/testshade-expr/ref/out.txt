@@ -1,0 +1,23 @@
+Expression-based shader text is:
+---
+shader expr_0 (
+    float s = u [[ int lockgeom=0 ]],
+    float t = v [[ int lockgeom=0 ]],
+    output color result = 0,
+    output float alpha = 1,
+  )
+{
+    result=color(u,v,0);
+}
+---
+Shader group:
+---
+shader expr_0  ;
+
+---
+
+Shader group "" layers are:
+    
+
+
+Output result to out.tif

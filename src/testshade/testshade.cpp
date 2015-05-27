@@ -63,7 +63,7 @@ static std::string dataformatname = "";
 static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
-static bool stats = false;
+static bool runstats = false;
 static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
@@ -422,7 +422,8 @@ getargs (int argc, const char *argv[])
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
-                "--stats", &stats, "Print run statistics",
+                "--runstats", &runstats, "Print run statistics",
+                "--stats", &runstats, "",  // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
@@ -1021,7 +1022,7 @@ test_shade (int argc, const char *argv[])
     }
 
     // Print some debugging info
-    if (debug || stats || profile) {
+    if (debug || runstats || profile) {
         double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";

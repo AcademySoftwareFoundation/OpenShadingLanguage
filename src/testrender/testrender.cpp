@@ -65,7 +65,7 @@ ShadingSystem *shadingsys = NULL;
 bool debug = false;
 bool debug2 = false;
 bool verbose = false;
-bool stats = false;
+bool runstats = false;
 bool profile = false;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
@@ -102,7 +102,8 @@ void getargs(int argc, const char *argv[])
                 "-v", &verbose, "Verbose messages",
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
-                "--stats", &stats, "Print run statistics",
+                "--runstats", &runstats, "Print run statistics",
+                "--stats", &runstats, "", // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
@@ -661,7 +662,7 @@ int main (int argc, const char *argv[]) {
     delete out;
 
     // Print some debugging info
-    if (debug || stats || profile) {
+    if (debug || runstats || profile) {
         double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";

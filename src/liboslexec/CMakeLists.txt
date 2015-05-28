@@ -11,6 +11,7 @@ SET ( liboslexec_srcs
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
+          shadeimage.cpp
           backendllvm.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
     )

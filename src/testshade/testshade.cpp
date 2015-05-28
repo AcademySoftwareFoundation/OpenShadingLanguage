@@ -33,8 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <cmath>
 
-#include <boost/foreach.hpp>
-
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
@@ -72,6 +70,7 @@ static bool debug_uninit = false;
 static bool use_group_outputs = false;
 static bool do_oslquery = false;
 static bool inbuffer = false;
+static bool use_shade_image = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -455,6 +454,8 @@ getargs (int argc, const char *argv[])
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
                 "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
                 "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
+                "--shadeimage", &use_shade_image, "Use shade_image utility",
+                "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
                 "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
                 "-v", &verbose, "Verbose output",
                 NULL);
@@ -654,9 +655,15 @@ setup_output_images (ShadingSystem *shadingsys,
 
         // Make an ImageBuf of the right type and size to hold this
         // symbol's output, and initially clear it to all black pixels.
-        OIIO::ImageSpec spec (xres, yres, nchans, outtypebase);
+        OIIO::ImageSpec spec (xres, yres, nchans, TypeDesc::FLOAT);
         outputimgs[i] = new OIIO::ImageBuf(outputfiles[i], spec);
+        outputimgs[i]->set_write_format (outtypebase);
         OIIO::ImageBufAlgo::zero (*outputimgs[i]);
+    }
+
+    if (outputimgs.empty()) {
+        OIIO::ImageSpec spec (xres, yres, 3, TypeDesc::FLOAT);
+        outputimgs.push_back(new OIIO::ImageBuf(spec));
     }
 
     shadingsys->release_context (ctx);  // don't need this anymore for now
@@ -772,7 +779,7 @@ test_group_attributes (ShaderGroup *group)
 
 
 
-static void
+void
 shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 {
     // Optional: high-performance apps may request this thread-specific
@@ -988,15 +995,22 @@ test_shade (int argc, const char *argv[])
     // to accurately time for a single iteration
     for (int iter = 0;  iter < iters;  ++iter) {
         OIIO::ROI roi (0, xres, 0, yres);
-        bool save = (iter == (iters-1));   // save on last iteration
 
+        if (use_shade_image)
+            OSL::shade_image (*shadingsys, *shadergroup, NULL,
+                              *outputimgs[0], outputvarnames,
+                              pixelcenters ? ShadePixelCenters : ShadePixelGrid,
+                              roi, num_threads);
+        else {
+            bool save = (iter == (iters-1));   // save on last iteration
 #if 0
-        shade_region (shadergroup.get(), roi, save);
+            shade_region (shadergroup.get(), roi, save);
 #else
-        OIIO::ImageBufAlgo::parallel_image (
-            boost::bind (shade_region, shadergroup.get(), _1, save),
-            roi, num_threads);
+            OIIO::ImageBufAlgo::parallel_image (
+                    boost::bind (shade_region, shadergroup.get(), _1, save),
+                    roi, num_threads);
 #endif
+        }
 
         // If any reparam was requested, do it now
         if (reparams.size() && reparam_layer.size()) {

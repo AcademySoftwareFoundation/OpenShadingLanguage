@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
-
+#include <OpenImageIO/array_view.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -538,6 +538,45 @@ private:
     pvt::ShadingSystemImpl *m_impl;
 };
 
+
+
+#ifdef OPENIMAGEIO_IMAGEBUF_H
+// To keep from polluting all OSL clients with ImageBuf & ROI, only expose
+// the following declarations if they have included OpenImageIO/imagebuf.h.
+
+// enum describing where shades are located for shade_image().
+enum ShadeImageLocations {
+    ShadePixelCenters,   // locate shades at pixel centers: (i+0.5)/res
+    ShadePixelGrid       // locate shades at grid nodes: i/(res-1)
+};
+
+
+/// Utility to execute a shader group on each pixel in a rectangular region
+/// of an ImageBuf (which must already be allocated and which must have
+/// FLOAT pixels).  The output parameters to save are specified by an array
+/// of ustring values in 'outputs'. If there are multiple outputs, they will
+/// simply be concatenated channel by channel in the image.
+///
+/// The roi specifies the region of the ImageBuf to shade (defaulting to the
+/// whole thing), any pixels outside the roi will not be altered.
+///
+/// The 'defaultsg', if non-NULL, provides a template for the default
+/// ShaderGlobals to use for each point. If not provided, reasonable
+/// defaults will be chosen.
+///
+/// When shading, P will have the pixel lattice coordinates (i,j,k), and u
+/// and v will vary from 0->1 across the full (aka "display") window.
+/// Depending on the value of 'shadelocations', the shading locations
+/// themselves will either be at "pixel centers" (position (i+0.5)/res), or
+/// as if it were a grid that is shaded at exact endpoints (position
+/// i/(res+1)). In either case, derivatives will be set appropriately.
+bool shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
+                  const ShaderGlobals *defaultsg,
+                  OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
+                  ShadeImageLocations shadelocations = ShadePixelCenters,
+                  OIIO::ROI roi = OIIO::ROI(), int nthreads = 0);
+
+#endif
 
 
 OSL_NAMESPACE_EXIT

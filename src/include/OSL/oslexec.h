@@ -492,6 +492,9 @@ public:
     /// data passed in via attribute("raytypes")).
     int raytype_bit (ustring name);
 
+    /// Ensure that the group has been optimized and JITed.
+    void optimize_group (ShaderGroup *group);
+
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the
     /// specified number of threads (0 means use all available HW cores).

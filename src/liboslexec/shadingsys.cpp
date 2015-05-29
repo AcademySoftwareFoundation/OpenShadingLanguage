@@ -417,6 +417,15 @@ ShadingSystem::archive_shadergroup (ShaderGroup *group, string_view filename)
 
 
 
+void
+ShadingSystem::optimize_group (ShaderGroup *group)
+{
+    ASSERT (group);
+    m_impl->optimize_group (*group);
+}
+
+
+
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
 
 

@@ -100,7 +100,7 @@ inject_params ()
 {
     for (size_t p = 0;  p < params.size();  ++p) {
         const ParamValue &pv (params[p]);
-        shadingsys->Parameter (pv.name().c_str(), pv.type(), pv.data(),
+        shadingsys->Parameter (pv.name(), pv.type(), pv.data(),
                                pv.interp() == ParamValue::INTERP_CONSTANT);
     }
 }
@@ -390,15 +390,7 @@ action_groupspec (int argc, const char *argv[])
     if (OIIO::Filesystem::exists (groupspec)) {
         // If it names a file, use the contents of the file as the group
         // specification.
-        std::ifstream in;
-        OIIO::Filesystem::open (in, groupspec);
-        groupspec.clear();
-        while (in.good()) {
-            std::string line;
-            std::getline (in, line);
-            groupspec += line + "\n";
-        }
-        in.close ();
+        OIIO::Filesystem::read_text_file (groupspec, groupspec);
         set_shadingsys_options ();
     }
     if (verbose)

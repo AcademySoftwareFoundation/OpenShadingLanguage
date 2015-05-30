@@ -121,7 +121,7 @@ public:
     ///    int greedyjit          Optimize and compile all shaders up front,
     ///                              versus only as needed (0).
     ///    int lockgeom           Default 'lockgeom' value for shader params
-    ///                              that don't specify it (0).  Lockgeom
+    ///                              that don't specify it (1).  Lockgeom
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
     ///    int countlayerexecs    Add extra code to count total layers run.

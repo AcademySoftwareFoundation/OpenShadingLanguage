@@ -27,7 +27,9 @@ ifdef PROFILE
 endif
 
 MY_MAKE_FLAGS ?=
+MY_NINJA_FLAGS ?=
 MY_CMAKE_FLAGS ?= -g3 -DSELF_CONTAINED_INSTALL_TREE:BOOL=TRUE
+BUILDSENTINEL ?= Makefile
 
 # Site-specific build instructions
 ifndef OSL_SITE
@@ -53,6 +55,7 @@ VERBOSE := ${SHOWCOMMANDS}
 ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
 MY_CMAKE_FLAGS += -DVERBOSE:BOOL=1
+MY_NINJA_FLAGS += VERBOSE=${VERBOSE}
 TEST_FLAGS += -V
 endif
 
@@ -151,6 +154,11 @@ ifneq (${USE_SIMD},)
 MY_CMAKE_FLAGS += -DUSE_SIMD:STRING="${USE_SIMD}"
 endif
 
+ifeq (${USE_NINJA},1)
+MY_CMAKE_FLAGS += -G Ninja
+BUILDSENTINEL := build.ninja
+endif
+
 ifneq (${TEST},)
 TEST_FLAGS += -R ${TEST}
 endif
@@ -181,13 +189,36 @@ profile:
 # ${build_dir}/Makefile doesn't already exist, in which case we rely on the
 # cmake generated makefiles to regenerate themselves when necessary.
 cmakesetup:
-	@ (if [ ! -e ${build_dir}/Makefile ] ; then \
+	@ (if [ ! -e ${build_dir}/${BUILDSENTINEL} ] ; then \
 		cmake -E make_directory ${build_dir} ; \
 		cd ${build_dir} ; \
 		cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/${dist_dir} \
 			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
 			../.. ; \
 	 fi)
+
+ifeq (${USE_NINJA},1)
+
+# 'make cmake' does a basic build (after first setting it up)
+cmake: cmakesetup
+	( cd ${build_dir} ; ninja ${MY_NINJA_FLAGS} )
+
+# 'make cmakeinstall' builds everthing and installs it in 'dist'.
+# Suppress pointless output from docs installation.
+cmakeinstall: cmake
+	( cd ${build_dir} ; ninja ${MY_NINJA_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\).*doc/html' )
+
+# 'make package' builds everything and then makes an installable package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package: cmakeinstall
+	( cd ${build_dir} ; ninja ${MY_NINJA_FLAGS} package )
+
+# 'make package_source' makes an installable source package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package_source: cmakeinstall
+	( cd ${build_dir} ; ninja ${MY_NINJA_FLAGS} package_source )
+
+else
 
 # 'make cmake' does a basic build (after first setting it up)
 cmake: cmakesetup
@@ -197,6 +228,18 @@ cmake: cmakesetup
 # Suppress pointless output from docs installation.
 cmakeinstall: cmake
 	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\).*doc/html' )
+
+# 'make package' builds everything and then makes an installable package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package: cmakeinstall
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package )
+
+# 'make package_source' makes an installable source package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package_source: cmakeinstall
+	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package_source )
+
+endif
 
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
@@ -211,16 +254,6 @@ test: cmake
 testall: cmake
 	cmake -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
 	( cd ${build_dir} ; ctest --force-new-ctest-process ${TEST_FLAGS} )
-
-# 'make package' builds everything and then makes an installable package 
-# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package: cmakeinstall
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package )
-
-# 'make package_source' makes an installable source package 
-# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package_source: cmakeinstall
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package_source )
 
 #clean: testclean
 # 'make clean' clears out the build directory for this platform
@@ -268,6 +301,7 @@ help:
 	@echo "      USE_CPP11=1              Compile in C++11 mode"
 	@echo "      USE_LIBCPLUSPLUS=1       Use clang libc++"
 	@echo "      EXTRA_CPP_ARGS=          Additional args to the C++ command"
+	@echo "      USE_NINJA=1              Set up Ninja build (instead of make)"
 	@echo "  Linking and libraries:"
 	@echo "      HIDE_SYMBOLS=1           Hide symbols not in the public API"
 	@echo "      BUILDSTATIC=1            Build static library instead of shared"
@@ -287,6 +321,6 @@ help:
 	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
-	@echo "                                    sse4.1, sse4.2)"
+	@echo "                                    ssse3, sse4.1, sse4.2, f16c, comma-separated ok)"
 	@echo ""
 

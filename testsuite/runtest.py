@@ -103,6 +103,12 @@ def osl_app (app):
     return path + "/src/" + app + "/" + app + " "
 
 
+def oiio_app (app):
+    if os.environ.__contains__('OPENIMAGEIOHOME') :
+        return os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", app) + " "
+    else :
+        return app + " "
+
 
 # Construct a command that will compile the shader file, appending output to
 # the file "out.txt".
@@ -119,15 +125,13 @@ def oslinfo (args) :
 # Construct a command that runs oiiotool, appending console output
 # to the file "out.txt".
 def oiiotool (args) :
-    return (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "oiiotool") +
-            " " + args + " >> out.txt 2>&1 ;\n")
+    return (oiio_app("oiiotool") + args + " >> out.txt 2>&1 ;\n")
 
 
 # Construct a command that runs maketx, appending console output
 # to the file "out.txt".
 def maketx (args) :
-    return (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "maketx") +
-            " " + args + " >> out.txt 2>&1 ;\n")
+    return (oiio_app("maketx") + args + " >> out.txt 2>&1 ;\n")
 
 
 # Construct a command that run testshade with the specified arguments,

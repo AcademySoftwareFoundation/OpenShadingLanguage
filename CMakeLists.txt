@@ -143,6 +143,9 @@ if (CMAKE_COMPILER_IS_CLANG)
     add_definitions ("-Qunused-arguments -Wno-unknown-pragmas")
     # disable warning in flex-generated code
     add_definitions ("-Wno-null-conversion")
+    if (DEBUGMODE)
+        add_definitions ("-Wno-unused-function -Wno-unused-variable")
+    endif ()
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCC)

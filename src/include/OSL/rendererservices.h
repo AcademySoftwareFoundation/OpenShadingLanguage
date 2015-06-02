@@ -383,6 +383,8 @@ public:
             direction(1.0f,0.0f,0.0f), bandwidth(1.0f), impulses(16.0f) { }
     };
 
+protected:
+    TextureSystem *m_texturesys;   // A place to hold a TextureSystem
 };
 
 

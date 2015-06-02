@@ -44,35 +44,23 @@ using namespace OSL::pvt;
 OSL_NAMESPACE_ENTER
 
 
-namespace {
-static TextureSystem *texturesys_ = NULL;
-static spin_mutex texturesys_mutex;
-}
-
-
 
 RendererServices::RendererServices (TextureSystem *texsys)
+    : m_texturesys(texsys)
 {
-    // Ensure thread safety while checking if we already have a
-    // TextureSystem.
-    OIIO::spin_lock lock (texturesys_mutex);
-    if (! texturesys_) {
-        if (texsys) {// caller provided a texture system
-            texturesys_ = texsys;
-        } else { // Need to create a new texture system
+    if (! m_texturesys) {
 #if OSL_NO_DEFAULT_TEXTURESYSTEM
-            // This build option instructs OSL to never create a TextureSystem
-            // itself. (Most likely reason: this build of OSL is for a renderer
-            // that replaces OIIO's TextureSystem with its own, and therefore
-            // wouldn't want to accidentally make an OIIO one here.
-            ASSERT (0 && "RendererServices was not passed a working TextureSystem*");
+        // This build option instructs OSL to never create a TextureSystem
+        // itself. (Most likely reason: this build of OSL is for a renderer
+        // that replaces OIIO's TextureSystem with its own, and therefore
+        // wouldn't want to accidentally make an OIIO one here.
+        ASSERT (0 && "RendererServices was not passed a working TextureSystem*");
 #else
-            texturesys_ = TextureSystem::create (true /* shared */);
-            // Make some good guesses about default options
-            texturesys_->attribute ("automip",  1);
-            texturesys_->attribute ("autotile", 64);
+        m_texturesys = TextureSystem::create (true /* shared */);
+        // Make some good guesses about default options
+        m_texturesys->attribute ("automip",  1);
+        m_texturesys->attribute ("autotile", 64);
 #endif
-        }
     }
 }
 
@@ -81,7 +69,7 @@ RendererServices::RendererServices (TextureSystem *texsys)
 TextureSystem *
 RendererServices::texturesys () const
 {
-    return texturesys_;
+    return m_texturesys;
 }
 
 

@@ -5,6 +5,7 @@ OPENIMAGEIO_NAMESPACE ?= 'OpenImageIO_Arnold'
 
 MY_CMAKE_FLAGS += "-DEXTRA_CPP_DEFINITIONS=\"-DOSL_SPI=1\""
 
+## Generic OSX machines (including LG's laptop)
 ifeq (${platform}, macosx)
     MY_CMAKE_FLAGS += \
         -DBUILD_WITH_INSTALL_RPATH=1 \
@@ -19,9 +20,12 @@ ifeq (${platform}, macosx)
 endif
 
 
-
+## Spinux (current)
 ifeq ($(SP_OS), spinux1)
     platform=spinux1
+    USE_NINJA := 1
+    NINJA := /net/soft_scratch/apps/arnold/tools/spinux1/bin/ninja
+    CMAKE := /net/soft_scratch/apps/arnold/tools/spinux1/bin/cmake
 
     ## If not overridden, here is our preferred LLVM installation
     ## (may be changed as new versions are rolled out to the facility)
@@ -116,8 +120,12 @@ ifeq ($(SP_OS), spinux1)
 
 endif  # endif spinux1
 
+## Rhel7 (current)
 ifeq ($(SP_OS), rhel7)
     platform=rhel7
+    USE_NINJA := 1
+    NINJA := /net/soft_scratch/apps/arnold/tools/spinux1/bin/ninja
+    CMAKE := /net/soft_scratch/apps/arnold/tools/spinux1/bin/cmake
 
     ## If not overridden, here is our preferred LLVM installation
     ## (may be changed as new versions are rolled out to the facility)

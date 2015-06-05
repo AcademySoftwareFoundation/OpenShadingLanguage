@@ -37,6 +37,9 @@ $(info OSL_SITE = ${OSL_SITE})
 ifneq (${shell echo ${OSL_SITE} | grep imageworks},)
 include ${working_dir}/site/spi/Makefile-bits
 endif
+ifneq (${shell echo ${OSL_SITE} | grep pixar},)
+include ${working_dir}/site/pixar/Makefile-bits
+endif
 
 # Set up variables holding the names of platform-dependent directories --
 # set these after evaluating site-specific instructions

@@ -124,6 +124,11 @@ if (BUILDSTATIC)
     add_definitions ("-DOSL_STATIC_LIBRARY")
 endif()
 
+set (USE_fPIC OFF CACHE BOOL "Build with -fPIC")
+if (USE_fPIC)
+    add_definitions ("-fPIC")
+endif ()
+
 if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCC)
     # CMake doesn't automatically know what do do with
     # include_directories(SYSTEM...) when using clang or gcc.

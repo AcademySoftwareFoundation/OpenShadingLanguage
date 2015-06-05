@@ -26,6 +26,15 @@ include (FindPackageMessage)
 include (SelectLibraryConfigurations)
 
 
+if( ILMBASE_USE_STATIC_LIBS )
+  set( _ilmbase_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  if(WIN32)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  else()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a )
+  endif()
+endif()
+
 # Macro to assemble a helper state variable
 macro (SET_STATE_VAR varname)
   set (tmp_ilmbaselibs ${ILMBASE_CUSTOM_LIBRARIES})
@@ -63,8 +72,12 @@ endmacro ()
 # variable names to the specified list
 macro (PREFIX_FIND_LIB prefix libname libpath_var liblist_var cachelist_var)
   string (TOUPPER ${prefix}_${libname} tmp_prefix)
+  # Handle new library names for OpenEXR 2.1 build via cmake
+  string(REPLACE "." "_" _ILMBASE_VERSION ${ILMBASE_VERSION})
+  string(SUBSTRING ${_ILMBASE_VERSION} 0 3 _ILMBASE_VERSION )
+  
   find_library(${tmp_prefix}_LIBRARY_RELEASE
-    NAMES ${libname}
+    NAMES ${libname} ${libname}-${_ILMBASE_VERSION}
     HINTS ${${libpath_var}}
     PATH_SUFFIXES lib
     ${ILMBASE_FIND_OPTIONS}
@@ -118,6 +131,7 @@ set (IlmBase_generic_library_paths
   /usr/lib
   /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}
   /usr/local/lib
+  /usr/local/lib/${CMAKE_LIBRARY_ARCHITECTURE}
   /sw/lib
   /opt/local/lib)
 
@@ -152,7 +166,9 @@ if (ILMBASE_INCLUDE_DIR)
          REGEX "^[ \t]*#define[ \t]+ILMBASE_VERSION_STRING[ \t]+\"[.0-9]+\".*$")
 
     if(ILMBASE_BUILD_SPECIFICATION)
-      message(STATUS "${ILMBASE_BUILD_SPECIFICATION}")
+      if (NOT IlmBase_FIND_QUIETLY)
+        message(STATUS "${ILMBASE_BUILD_SPECIFICATION}")
+      endif ()
       string(REGEX REPLACE ".*#define[ \t]+ILMBASE_VERSION_STRING[ \t]+\"([.0-9]+)\".*"
              "\\1" XYZ ${ILMBASE_BUILD_SPECIFICATION})
       set("ILMBASE_VERSION" ${XYZ} CACHE STRING "Version of ILMBase lib")
@@ -220,13 +236,18 @@ if (ILMBASE_FOUND)
     list (APPEND ILMBASE_LIBRARIES ${${tmplib}})
   endforeach ()
   list (APPEND ILMBASE_LIBRARIES ${ILMBASE_PTHREADS})
-  if (VERBOSE)
+  if (NOT IlmBase_FIND_QUIETLY)
     FIND_PACKAGE_MESSAGE (ILMBASE
       "Found IlmBase: ${ILMBASE_LIBRARIES}"
       "[${ILMBASE_INCLUDE_DIR}][${ILMBASE_LIBRARIES}][${ILMBASE_CURRENT_STATE}]"
       )
   endif ()
 endif ()
+
+# Restore the original find library ordering
+if( ILMBASE_USE_STATIC_LIBS )
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${_ilmbase_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()
 
 # Unset the helper variables to avoid pollution
 unset (ILMBASE_CURRENT_STATE)

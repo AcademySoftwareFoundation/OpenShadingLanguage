@@ -10,7 +10,9 @@ if (NOT OPENIMAGEIOHOME)
 endif ()
 
 
-MESSAGE ( STATUS "OPENIMAGEIOHOME = ${OPENIMAGEIOHOME}" )
+if (NOT OpenImageIO_FIND_QUIETLY)
+    MESSAGE ( STATUS "OPENIMAGEIOHOME = ${OPENIMAGEIOHOME}" )
+endif ()
 
 find_library ( OPENIMAGEIO_LIBRARY
                NAMES OpenImageIO
@@ -23,12 +25,12 @@ find_path ( OPENIMAGEIO_INCLUDES
             PATH_SUFFIXES include )
 IF (OPENIMAGEIO_INCLUDES AND OPENIMAGEIO_LIBRARY )
     SET ( OPENIMAGEIO_FOUND TRUE )
-    if (VERBOSE)
+    if (NOT OpenImageIO_FIND_QUIETLY)
         MESSAGE ( STATUS "OpenImageIO includes = ${OPENIMAGEIO_INCLUDES}" )
         MESSAGE ( STATUS "OpenImageIO library = ${OPENIMAGEIO_LIBRARY}" )
     endif ()
 ELSE ()
-    MESSAGE ( STATUS "OpenImageIO not found" )
+    MESSAGE ( FATAL_ERROR "OpenImageIO not found" )
 ENDIF ()
 
 # end OpenImageIO setup

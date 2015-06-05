@@ -3,12 +3,12 @@
 OSL_NAMESPACE ?= 'OSL_Arnold'
 OPENIMAGEIO_NAMESPACE ?= 'OpenImageIO_Arnold'
 
-MY_CMAKE_FLAGS += "-DEXTRA_CPP_DEFINITIONS=\"-DOSL_SPI=1\""
+MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS="-DOSL_SPI=1"
 
 ## Generic OSX machines (including LG's laptop)
 ifeq (${platform}, macosx)
     MY_CMAKE_FLAGS += \
-        -DBUILD_WITH_INSTALL_RPATH=1 \
+        -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
         -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
     ifeq (${COMPILER}, clang)
 	MY_CMAKE_FLAGS += \
@@ -219,4 +219,6 @@ else
 endif
 
 
+ifneq (${VERBOSE},)
 $(info MY_CMAKE_FLAGS: $(MY_CMAKE_FLAGS))
+endif

@@ -14,8 +14,15 @@ cmake_minimum_required (VERSION 2.6)
 if (NOT CMAKE_VERSION VERSION_LESS 2.8.4)
     cmake_policy (SET CMP0017 NEW)
 endif ()
+if (NOT CMAKE_VERSION VERSION_LESS 3.2.2)
+    cmake_policy (SET CMP0042 OLD)
+    cmake_policy (SET CMP0046 OLD)
+endif ()
 set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
-message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
+
+if (VERBOSE)
+    message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
+endif ()
 message (STATUS "Project build dir = ${CMAKE_BINARY_DIR}")
 
 if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -45,24 +52,32 @@ if (CMAKE_COMPILER_IS_GNUCC)
     execute_process (COMMAND ${CMAKE_C_COMPILER} -dumpversion
                      OUTPUT_VARIABLE GCC_VERSION
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    message (STATUS "Using gcc ${GCC_VERSION} as the compiler")
+    if (VERBOSE)
+        message (STATUS "Using gcc ${GCC_VERSION} as the compiler")
+    endif ()
 endif ()
 message (STATUS "CMAKE_CXX_COMPILER is ${CMAKE_CXX_COMPILER}")
 message (STATUS "CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set (CMAKE_COMPILER_IS_CLANG 1)
-    message (STATUS "Using clang as the compiler")
+    if (VERBOSE)
+        message (STATUS "Using clang as the compiler")
+    endif ()
 endif ()
 # Second try: for earlier versions of CMake, the CMAKE_CXX_COMPILER_ID
 # appears to be unreliable and may say "GNU" despite using clang, so
 # directly match against the compiler name.
 if (CMAKE_CXX_COMPILER MATCHES "[Cc]lang")
     set (CMAKE_COMPILER_IS_CLANG 1)
-    message (STATUS "The compiler seems to be clang")
+    if (VERBOSE)
+        message (STATUS "The compiler seems to be clang")
+    endif ()
 endif ()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set (CMAKE_COMPILER_IS_INTEL 1)
-    message (STATUS "Using Intel as the compiler")
+    if (VERBOSE)
+        message (STATUS "Using Intel as the compiler")
+    endif ()
 endif ()
 
 ## turn on more detailed warnings and consider warnings as errors
@@ -149,6 +164,7 @@ if (EXISTS "/usr/lib/libc++.dylib")
     set (OSL_SYSTEM_HAS_LIBCPP ON)
 endif ()
 
+
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
 set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
@@ -205,11 +221,17 @@ if (NOT USE_SIMD STREQUAL "")
     if (USE_SIMD STREQUAL "0")
         add_definitions ("-DOIIO_NO_SSE=1")
     else ()
-        if (MSVC OR CMAKE_COMPILER_IS_INTEL)
-            add_definitions ("/arch:${USE_SIMD}")
-        else ()
-            add_definitions ("-m${USE_SIMD}")
-        endif ()
+        string (REPLACE "," ";" SIMD_FEATURE_LIST ${USE_SIMD})
+        foreach (feature ${SIMD_FEATURE_LIST})
+            if (VERBOSE)
+                message (STATUS "SIMD feature: ${feature}")
+            endif ()
+            if (MSVC OR CMAKE_COMPILER_IS_INTEL)
+                add_definitions ("/arch:${feature}")
+            else ()
+                add_definitions ("-m${feature}")
+            endif ()
+        endforeach()
     endif ()
 endif ()
 
@@ -219,8 +241,8 @@ set (CMAKE_MODULE_PATH
 
 include (util_macros)
 include (platform)
-include (oiio)
 include (externalpackages)
+include (oiio)
 include (flexbison)
 include_directories (
       "${CMAKE_SOURCE_DIR}/src/include"
@@ -233,6 +255,10 @@ if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
 endif ()
 
+if (APPLE)
+    set (MACOSX_RPATH ON)
+endif ()
+
 # use, i.e. don't skip the full RPATH for the build tree
 set (CMAKE_SKIP_BUILD_RPATH  FALSE)
 # when building, don't use the install RPATH already
@@ -242,7 +268,7 @@ set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 # add the automatically determined parts of the RPATH
 # which point to directories outside the build tree to the install RPATH
-set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set (CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 message (STATUS "CMAKE_INSTALL_RPATH = ${CMAKE_INSTALL_RPATH}")
 

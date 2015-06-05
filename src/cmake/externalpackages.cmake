@@ -1,6 +1,24 @@
 ###########################################################################
 # Find libraries
 
+# When not in VERBOSE mode, try to make things as quiet as possible
+if (NOT VERBOSE)
+    set (Bison_FIND_QUIETLY true)
+    set (Boost_FIND_QUIETLY true)
+    set (Flex_FIND_QUIETLY true)
+    set (IlmBase_FIND_QUIETLY true)
+    set (LLVM_FIND_QUIETLY true)
+    set (OpenImageIO_FIND_QUIETLY true)
+    set (Partio_FIND_QUIETLY true)
+    set (PkgConfig_FIND_QUIETLY true)
+    set (PugiXML_FIND_QUIETLY TRUE)
+    set (PythonInterp_FIND_QUIETLY true)
+    set (PythonLibs_FIND_QUIETLY true)
+    set (Threads_FIND_QUIETLY true)
+    set (ZLIB_FIND_QUIETLY true)
+endif ()
+
+
 setup_path (THIRD_PARTY_TOOLS_HOME
             "unknown"
             "Location of third party libraries in the external project")
@@ -49,7 +67,9 @@ endmacro ()
 ###########################################################################
 # Boost setup
 
-message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
+if (NOT Boost_FIND_QUIETLY)
+    message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
+endif ()
 
 if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
   set (Boost_ADDITIONAL_VERSIONS "1.57" "1.56"
@@ -77,7 +97,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND ${Boost_VERSION} GREATER 105499)
     list (APPEND Boost_LIBRARIES "rt")
 endif ()
 
-if (VERBOSE)
+if (NOT Boost_FIND_QUIETLY)
     message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
     message (STATUS "Boost found ${Boost_FOUND} ")
     message (STATUS "Boost version      ${Boost_VERSION}")
@@ -108,7 +128,7 @@ if (USE_PARTIO)
         set (PARTIO_FOUND TRUE)
         add_definitions ("-DUSE_PARTIO=1")
         include_directories ("${PARTIO_INCLUDE_DIR}")
-        if (VERBOSE)
+        if (NOT Partio_FIND_QUIETLY)
             message (STATUS "Partio include = ${PARTIO_INCLUDE_DIR}")
             message (STATUS "Partio library = ${PARTIO_LIBRARIES}")
         endif ()
@@ -175,14 +195,16 @@ endif()
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION}
                PATHS ${LLVM_LIB_DIR})
-message (STATUS "LLVM version  = ${LLVM_VERSION}")
-message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
+if (NOT LLVM_FIND_QUIETLY)
+    message (STATUS "LLVM version  = ${LLVM_VERSION}")
+    message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
+endif ()
 
 find_library ( LLVM_MCJIT_LIBRARY
                    NAMES LLVMMCJIT
                    PATHS ${LLVM_LIB_DIR})
 
-if (VERBOSE)
+if (NOT LLVM_FIND_QUIETLY)
     message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
     message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
     message (STATUS "LLVM MCJIT library  = ${LLVM_MCJIT_LIBRARY}")
@@ -208,7 +230,7 @@ if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
     string (REPLACE " " ";" LLVM_LIBRARY ${LLVM_LIBRARY})
   endif ()
-  if (VERBOSE)
+  if (NOT LLVM_FIND_QUIETLY)
       message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
       message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
   endif ()

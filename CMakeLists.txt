@@ -150,6 +150,7 @@ if (EXISTS "/usr/lib/libc++.dylib")
 endif ()
 
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
+set (OSL_BUILD_TESTS ON CACHE BOOL "Build the unit tests, testshade, testrender")
 set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
 set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
 set (USE_EXTERNAL_PUGIXML OFF CACHE BOOL
@@ -274,8 +275,11 @@ add_subdirectory (src/liboslexec)
 add_subdirectory (src/oslc)
 add_subdirectory (src/shaders)
 add_subdirectory (src/oslinfo)
+
+if (OSL_BUILD_TESTS)
 add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
+endif ()
 
 add_subdirectory (src/include)
 add_subdirectory (src/doc)
@@ -331,6 +335,7 @@ macro ( TESTSUITE )
     endforeach ()
 endmacro ()
 
+if (OSL_BUILD_TESTS)
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
 TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
@@ -380,6 +385,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             vararray-connect vararray-default vararray-param
             vecctr vector
             wavelength_color xml )
+endif ()
 
 
 

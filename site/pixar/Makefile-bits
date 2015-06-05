@@ -1,0 +1,28 @@
+# Pixar-specific settings
+
+ifneq (${VERBOSE},)
+$(info Including pixar/Makefile-bits)
+endif
+
+MY_CMAKE_FLAGS += -DUSE_fPIC:BOOL=1
+MY_CMAKE_FLAGS += -DENABLE_RTTI:BOOL=1
+MY_CMAKE_FLAGS += -DSTOP_ON_WARNING:BOOL=0
+MY_CMAKE_FLAGS += -DHIDE_SYMBOLS:BOOL=1
+MY_CMAKE_FLAGS += -DBUILDSTATIC:BOOL=1
+MY_CMAKE_FLAGS += -DLINKSTATIC:BOOL=1
+MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=1
+MY_CMAKE_FLAGS += -DILMBASE_LIB_AREA:STRING=${ILMBASE_HOME}/lib/linux-ix86-64/gcc4.1
+MY_CMAKE_FLAGS += -DILMBASE_CUSTOM:BOOL=True
+MY_CMAKE_FLAGS += -DILMBASE_CUSTOM_LIBRARIES:STRING="Half-fPIC Iex-fPIC IexMath-fPIC IlmThread-fPIC  Imath-fPIC"
+
+# Don't build testshade or testrender (mostly because they require the
+# image-handling parts of OIIO, which Pixar doesn't build)
+MY_CMAKE_FLAGS += -DOSL_BUILD_TESTS:BOOL=0
+
+# Don't let OSL create a default OIIO::TextureSystem. If the renderer
+# doesn't pass in whatever proxy it wants, it will assert.
+MY_CMAKE_FLAGS += -DOSL_NO_DEFAULT_TEXTURESYSTEM:BOOL=1
+
+ifneq (${VERBOSE},)
+$(info MY_CMAKE_FLAGS: $(MY_CMAKE_FLAGS))
+endif

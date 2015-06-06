@@ -172,6 +172,7 @@ set (OSL_BUILD_CPP11 OFF CACHE BOOL "Compile in C++11 mode")
 set (OSL_BUILD_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
+set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -185,6 +186,10 @@ if (USE_FAST_MATH)
 	add_definitions ("-DOSL_FAST_MATH=1")
 else ()
 	add_definitions ("-DOSL_FAST_MATH=0")
+endif ()
+
+if (OSL_NO_DEFAULT_TEXTURESYSTEM)
+    add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
 endif ()
 
 if (EXTRA_CPP_ARGS)

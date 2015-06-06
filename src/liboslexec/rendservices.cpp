@@ -60,10 +60,18 @@ RendererServices::RendererServices (TextureSystem *texsys)
         if (texsys) {// caller provided a texture system
             texturesys_ = texsys;
         } else { // Need to create a new texture system
+#if OSL_NO_DEFAULT_TEXTURESYSTEM
+            // This build option instructs OSL to never create a TextureSystem
+            // itself. (Most likely reason: this build of OSL is for a renderer
+            // that replaces OIIO's TextureSystem with its own, and therefore
+            // wouldn't want to accidentally make an OIIO one here.
+            ASSERT (0 && "RendererServices was not passed a working TextureSystem*");
+#else
             texturesys_ = TextureSystem::create (true /* shared */);
             // Make some good guesses about default options
             texturesys_->attribute ("automip",  1);
             texturesys_->attribute ("autotile", 64);
+#endif
         }
     }
 }

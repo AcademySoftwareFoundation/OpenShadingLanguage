@@ -661,11 +661,19 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 
     // If we still don't have a texture system, create a new one
     if (! m_texturesys) {
+#if OSL_NO_DEFAULT_TEXTURESYSTEM
+        // This build option instructs OSL to never create a TextureSystem
+        // itself. (Most likely reason: this build of OSL is for a renderer
+        // that replaces OIIO's TextureSystem with its own, and therefore
+        // wouldn't want to accidentally make an OIIO one here.
+        ASSERT (0 && "ShadingSystem was not passed a working TextureSystem*");
+#else
         m_texturesys = TextureSystem::create (true /* shared */);
         ASSERT (m_texturesys);
         // Make some good guesses about default options
         m_texturesys->attribute ("automip",  1);
         m_texturesys->attribute ("autotile", 64);
+#endif
     }
 
     // Alternate way of turning on LLVM debug mode (temporary/experimental)

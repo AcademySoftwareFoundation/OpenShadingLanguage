@@ -78,7 +78,15 @@ stdoslpath ()
         boost::filesystem::path path (program);  // our program
         path = path.parent_path ();  // now the bin dir of our program
         path = path.parent_path ();  // now the parent dir
-        path = path / "shaders";
+        boost::filesystem::path savepath = path;
+        // We search two spots: ../../lib/osl/include, and ../shaders
+        path = savepath / "lib" / "osl" / "include";
+        if (OIIO::Filesystem::exists (path.string())) {
+            path = path / "stdosl.h";
+            if (OIIO::Filesystem::exists (path.string()))
+                return path.string();
+        }
+        path = savepath / "shaders";
         if (OIIO::Filesystem::exists (path.string())) {
             path = path / "stdosl.h";
             if (OIIO::Filesystem::exists (path.string()))

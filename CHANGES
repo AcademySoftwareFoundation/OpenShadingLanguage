@@ -1,5 +1,9 @@
 Changes:
 
+Release 1.6.8 -- ?? 2015 (compared to 1.6.7)
+-----------------------------------------------
+
+
 Release 1.6.7 -- 11 Jun 2015 (compared to 1.6.6)
 -----------------------------------------------
 * CMake option OSL_BUILD_TESTS=0 turns off building of test programs,

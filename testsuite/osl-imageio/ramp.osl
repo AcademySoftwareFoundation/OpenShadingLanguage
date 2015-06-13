@@ -1,0 +1,13 @@
+shader ramp (
+    color topleft     = color(0,0,0),
+    color topright    = color(1,0,0),
+    color bottomleft  = color(0,1,0),
+    color bottomright = color(1,1,1),
+    output color result = 0,
+    output float alpha = 1
+    )
+{
+    result = topleft*(1-u)*(1-v) + topright*u*(1-v) +
+             bottomleft*(1-u)*v + bottomright*u*v;
+    // printf ("Hey, pixels %g %g: result=%g\n", P[0], P[1], result);
+}

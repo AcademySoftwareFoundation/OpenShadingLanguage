@@ -231,8 +231,8 @@ specify_expr (int argc, const char *argv[])
         "    output float alpha = 1,\n"
         "  )\n"
         "{\n"
-        "    "
-        + std::string(argv[1]) + "\n" +
+        "    " + std::string(argv[1]) + "\n"
+        "    ;\n"
         "}\n";
     if (verbose)
         std::cout << "Expression-based shader text is:\n---\n"

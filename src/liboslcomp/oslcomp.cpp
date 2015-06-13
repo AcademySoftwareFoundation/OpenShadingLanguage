@@ -110,7 +110,8 @@ static ustring op_dowhile("dowhile");
 
 
 OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
-    : m_errhandler(errhandler), m_err(false), m_symtab(*this),
+    : m_errhandler(errhandler ? errhandler : &ErrorHandler::default_handler()),
+      m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_quiet(false), m_debug(false),
       m_preprocess_only(false), m_optimizelevel(1),

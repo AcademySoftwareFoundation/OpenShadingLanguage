@@ -7,7 +7,8 @@ shader expr_0 (
     output float alpha = 1,
   )
 {
-    result=color(u,v,0);
+    result=color(u,v,0)
+    ;
 }
 ---
 Shader group:

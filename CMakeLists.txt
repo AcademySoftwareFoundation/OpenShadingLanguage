@@ -268,6 +268,59 @@ include_directories (
 if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
 endif ()
+message(STATUS "Setting Namespace to: ${OSL_NAMESPACE}")
+
+###########################################################################
+# Paths for install tree customization.  Note that relative paths are relative
+# to CMAKE_INSTALL_PREFIX.
+set (DEFAULT_BIN_INSTALL_DIR   "bin")
+set (DEFAULT_LIB_INSTALL_DIR   "lib")
+set (DEFAULT_INCLUDE_INSTALL_DIR "include/OSL")
+if (UNIX AND NOT SELF_CONTAINED_INSTALL_TREE)
+    # Try to be well-behaved and install into reasonable places according to
+    # the "standard" unix directory heirarchy
+    # TODO: Figure out how to get the correct python directory
+    set (DEFAULT_PYLIB_INSTALL_DIR "lib/python/site-packages")
+    set (DEFAULT_PYLIB3_INSTALL_DIR "lib/python3/site-packages")
+    set (DEFAULT_DOC_INSTALL_DIR "share/doc/OSL")
+    set (DEFAULT_MAN_INSTALL_DIR "share/man/man1")
+else ()
+    # Here is the "self-contained install tree" case: the expectation here is
+    # that everything OSL related will go into its own directory, not into
+    # some standard system heirarchy.
+    set (DEFAULT_PYLIB_INSTALL_DIR "python")
+    set (DEFAULT_PYLIB3_INSTALL_DIR "python3")
+    set (DEFAULT_DOC_INSTALL_DIR "doc")
+    set (DEFAULT_MAN_INSTALL_DIR "doc/man")
+endif ()
+if (EXEC_INSTALL_PREFIX)
+    # Tack on an extra prefix to support multi-arch builds.
+    set (DEFAULT_BIN_INSTALL_DIR   "${EXEC_INSTALL_PREFIX}/${DEFAULT_BIN_INSTALL_DIR}")
+    set (DEFAULT_LIB_INSTALL_DIR   "${EXEC_INSTALL_PREFIX}/${DEFAULT_LIB_INSTALL_DIR}")
+    set (DEFAULT_PYLIB_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/${DEFAULT_PYLIB_INSTALL_DIR}")
+    set (DEFAULT_PYLIB3_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/${DEFAULT_PYLIB3_INSTALL_DIR}")
+endif ()
+# Set up cmake cache variables corresponding to the defaults deduced above, so
+# that the user can override them as desired:
+set (BIN_INSTALL_DIR ${DEFAULT_BIN_INSTALL_DIR} CACHE STRING
+     "Install location for binaries (relative to CMAKE_INSTALL_PREFIX or absolute)")
+set (LIB_INSTALL_DIR ${DEFAULT_LIB_INSTALL_DIR} CACHE STRING
+     "Install location for libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
+set (PYLIB_INSTALL_DIR ${DEFAULT_PYLIB_INSTALL_DIR} CACHE STRING
+     "Install location for python libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
+set (PYLIB3_INSTALL_DIR ${DEFAULT_PYLIB3_INSTALL_DIR} CACHE STRING
+     "Install location for python3 libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
+set (INCLUDE_INSTALL_DIR ${DEFAULT_INCLUDE_INSTALL_DIR} CACHE STRING
+     "Install location of header files (relative to CMAKE_INSTALL_PREFIX or absolute)")
+set (DOC_INSTALL_DIR ${DEFAULT_DOC_INSTALL_DIR} CACHE STRING
+     "Install location for documentation (relative to CMAKE_INSTALL_PREFIX or absolute)")
+if (UNIX)
+    set (MAN_INSTALL_DIR ${DEFAULT_MAN_INSTALL_DIR} CACHE STRING
+         "Install location for manual pages (relative to CMAKE_INSTALL_PREFIX or absolute)")
+endif()
+set (PLUGIN_SEARCH_PATH "" CACHE STRING "Default plugin search path")
+set (INSTALL_DOCS ON CACHE BOOL "Install documentation")
+
 
 if (APPLE)
     set (MACOSX_RPATH ON)
@@ -319,6 +372,8 @@ if (OSL_BUILD_TESTS)
 add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
 endif ()
+
+add_subdirectory (src/osl.imageio)
 
 add_subdirectory (src/include)
 add_subdirectory (src/doc)
@@ -404,6 +459,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-variadic-macro
             oslinfo-arrayparams oslinfo-metadata oslinfo-noparams
+            osl-imageio
             pointcloud pointcloud-fold
             printf-whole-array
             raytype reparam

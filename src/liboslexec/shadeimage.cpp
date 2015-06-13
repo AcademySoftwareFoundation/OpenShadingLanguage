@@ -59,11 +59,15 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
              ShadeImageLocations shadelocations,
              OIIO::ROI roi, int nthreads)
 {
+    if (! roi.defined())
+        roi = buf.roi();
+    // std::cout << "shade_image " << roi << "\n";
     if (buf.spec().format != TypeDesc::FLOAT) {
         buf.error ("Cannot OSL::shade_image() into a %f buffer, float is required",
                    buf.spec().format);
         return false;
     }
+    shadingsys.optimize_group (&group);
 
     if (nthreads != 1 && roi.npixels() >= 64*64) {
         // Parallelize

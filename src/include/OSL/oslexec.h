@@ -573,11 +573,11 @@ enum ShadeImageLocations {
 /// themselves will either be at "pixel centers" (position (i+0.5)/res), or
 /// as if it were a grid that is shaded at exact endpoints (position
 /// i/(res+1)). In either case, derivatives will be set appropriately.
-bool shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
-                  const ShaderGlobals *defaultsg,
-                  OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
-                  ShadeImageLocations shadelocations = ShadePixelCenters,
-                  OIIO::ROI roi = OIIO::ROI(), int nthreads = 0);
+OSLEXECPUBLIC bool shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
+                                const ShaderGlobals *defaultsg,
+                                OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
+                                ShadeImageLocations shadelocations = ShadePixelCenters,
+                                OIIO::ROI roi = OIIO::ROI(), int nthreads = 0);
 
 #endif
 

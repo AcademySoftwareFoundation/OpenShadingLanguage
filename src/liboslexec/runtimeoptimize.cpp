@@ -335,11 +335,11 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg0,
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     if (debug() > 1)
         std::cout << "turned op " << opnum
-                  << " from " << op.opname() << " to "
+                  << " from '" << op_string(op) << "' to '"
                   << newop << ' ' << inst()->symbol(newarg0)->name() << ' '
                   << inst()->symbol(newarg1)->name() << ' '
                   << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
-                  << (why.size() ? " : " : "") << why << "\n";
+                  << (why.size() ? "' : " : "'") << why << "\n";
     op.reset (newop, newarg2<0 ? 2 : 3);
     inst()->args()[op.firstarg()+0] = newarg0;
     op.argwriteonly (0);
@@ -363,9 +363,9 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, string_view why)
     int opnum = &op - &(inst()->ops()[0]);
     if (debug() > 1)
         std::cout << "turned op " << opnum
-                  << " from " << op.opname() << " to "
+                  << " from '" << op_string(op) << "' to '"
                   << opargsym(op,0)->name() << " = " 
-                  << inst()->symbol(newarg)->name()
+                  << inst()->symbol(newarg)->name() << "'"
                   << (why.size() ? " : " : "") << why << "\n";
     op.reset (u_assign, 2);
     inst()->args()[op.firstarg()+1] = newarg;
@@ -420,7 +420,7 @@ RuntimeOptimizer::turn_into_nop (Opcode &op, string_view why)
     if (op.opname() != u_nop) {
         if (debug() > 1)
             std::cout << "turned op " << (&op - &(inst()->ops()[0]))
-                      << " from " << op.opname() << " to nop"
+                      << " from '" << op_string(op) << "' to 'nop'"
                       << (why.size() ? " : " : "") << why << "\n";
         op.reset (u_nop, 0);
         return 1;
@@ -442,7 +442,7 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
         }
     }
     if (debug() > 1 && changed)
-        std::cout << "turned ops " << begin << "-" << (end-1) << " into nop"
+        std::cout << "turned ops " << begin << "-" << (end-1) << " into 'nop'"
                   << (why.size() ? " : " : "") << why << "\n";
     return changed;
 }

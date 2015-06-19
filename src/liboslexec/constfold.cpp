@@ -1143,7 +1143,9 @@ DECLFOLDER(constfold_split)
         std::vector<int> args;
         args.push_back (resultsarg);
         args.push_back (cind);
-        rop.insert_code (opnum, u_assign, args, true, 1 /* relation */);
+        rop.insert_code (opnum, u_assign, args,
+                         RuntimeOptimizer::RecomputeRWRanges,
+                         RuntimeOptimizer::GroupWithNext);
         return 1;
     }
 
@@ -1457,13 +1459,15 @@ DECLFOLDER(constfold_mix)
             // just R=A and not have to access B
             int cond = rop.add_temp (TypeDesc::TypeInt);
             int fzero = rop.add_constant (0.0f);
-            rop.insert_code (opnum++, u_eq, 1 /*relation*/, cond, Xind, fzero);
+            rop.insert_code (opnum++, u_eq, RuntimeOptimizer::GroupWithNext,
+                             cond, Xind, fzero);
             if0op = opnum;
-            rop.insert_code (opnum++, u_if, 1 /*relation*/, cond);
+            rop.insert_code (opnum++, u_if, RuntimeOptimizer::GroupWithNext, cond);
             rop.op(if0op).argreadonly (0);
             rop.symbol(cond)->mark_rw (if0op, true, false);
             // Add the true (R=A) clause
-            rop.insert_code (opnum++, u_assign, 1 /*relation*/, Rind, Aind);
+            rop.insert_code (opnum++, u_assign,
+                             RuntimeOptimizer::GroupWithNext, Rind, Aind);
         }
         int if0op_false = opnum;  // Where we jump if the 'if x==0' is false
         if (A.connected()) {
@@ -1471,13 +1475,15 @@ DECLFOLDER(constfold_mix)
             // just R=B and not have to access A
             int cond = rop.add_temp (TypeDesc::TypeInt);
             int fone = rop.add_constant (1.0f);
-            rop.insert_code (opnum++, u_eq, 1 /*relation*/, cond, Xind, fone);
+            rop.insert_code (opnum++, u_eq, RuntimeOptimizer::GroupWithNext,
+                             cond, Xind, fone);
             if1op = opnum;
-            rop.insert_code (opnum++, u_if, 1 /*relation*/, cond);
+            rop.insert_code (opnum++, u_if, RuntimeOptimizer::GroupWithNext, cond);
             rop.op(if1op).argreadonly (0);
             rop.symbol(cond)->mark_rw (if1op, true, false);
             // Add the true (R=B) clause
-            rop.insert_code (opnum++, u_assign, 1 /*relation*/, Rind, Bind);
+            rop.insert_code (opnum++, u_assign, RuntimeOptimizer::GroupWithNext,
+                             Rind, Bind);
         }
         int if1op_false = opnum;  // Where we jump if the 'if x==1' is false
         // Add the (R=A*(1-X)+B*X) clause -- always need that
@@ -1485,10 +1491,14 @@ DECLFOLDER(constfold_mix)
         int temp1 = rop.add_temp (A.typespec());
         int temp2 = rop.add_temp (B.typespec());
         int fone = rop.add_constant (1.0f);
-        rop.insert_code (opnum++, u_sub, 1 /*relation*/, one_minus_x, fone, Xind);
-        rop.insert_code (opnum++, u_mul, 1 /*relation*/, temp1, Aind, one_minus_x);
-        rop.insert_code (opnum++, u_mul, 1 /*relation*/, temp2, Bind, Xind);
-        rop.insert_code (opnum++, u_add, 1 /*relation*/, Rind, temp1, temp2);
+        rop.insert_code (opnum++, u_sub, RuntimeOptimizer::GroupWithNext,
+                         one_minus_x, fone, Xind);
+        rop.insert_code (opnum++, u_mul, RuntimeOptimizer::GroupWithNext,
+                         temp1, Aind, one_minus_x);
+        rop.insert_code (opnum++, u_mul, RuntimeOptimizer::GroupWithNext,
+                         temp2, Bind, Xind);
+        rop.insert_code (opnum++, u_add, RuntimeOptimizer::GroupWithNext,
+                         Rind, temp1, temp2);
         // Now go back and patch the 'if' ops with the right jump addresses
         if (if0op >= 0)
             rop.op(if0op).set_jump (if0op_false, opnum);
@@ -1722,7 +1732,9 @@ DECLFOLDER(constfold_sincos)
         std::vector<int> args_to_add;
         args_to_add.push_back (cosarg);
         args_to_add.push_back (rop.add_constant (c));
-        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+        rop.insert_code (opnum, u_assign, args_to_add,
+                         RuntimeOptimizer::RecomputeRWRanges,
+                         RuntimeOptimizer::GroupWithNext);
         Opcode &newop (rop.inst()->ops()[opnum]);
         newop.argwriteonly (0);
         newop.argreadonly (1);
@@ -1909,7 +1921,9 @@ DECLFOLDER(constfold_getmatrix)
         std::vector<int> args_to_add;
         args_to_add.push_back (resultarg);
         args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+        rop.insert_code (opnum, u_assign, args_to_add,
+                         RuntimeOptimizer::RecomputeRWRanges,
+                         RuntimeOptimizer::GroupWithNext);
         Opcode &newop (rop.inst()->ops()[opnum]);
         newop.argwriteonly (0);
         newop.argread (1, true);
@@ -2076,7 +2090,9 @@ DECLFOLDER(constfold_getattribute)
         std::vector<int> args_to_add;
         args_to_add.push_back (oldresultarg);
         args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+        rop.insert_code (opnum, u_assign, args_to_add,
+                         RuntimeOptimizer::RecomputeRWRanges,
+                         RuntimeOptimizer::GroupWithNext);
         Opcode &newop (rop.inst()->ops()[opnum]);
         newop.argwriteonly (0);
         newop.argread (1, true);
@@ -2131,7 +2147,9 @@ DECLFOLDER(constfold_gettextureinfo)
             std::vector<int> args_to_add;
             args_to_add.push_back (oldresultarg);
             args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-            rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+            rop.insert_code (opnum, u_assign, args_to_add,
+                             RuntimeOptimizer::RecomputeRWRanges,
+                             RuntimeOptimizer::GroupWithNext);
             Opcode &newop (rop.inst()->ops()[opnum]);
             newop.argwriteonly (0);
             newop.argread (1, true);
@@ -2404,7 +2422,9 @@ DECLFOLDER(constfold_pointcloud_search)
         std::vector<int> args_to_add;
         args_to_add.push_back (value_args[i]);
         args_to_add.push_back (const_array_sym);
-        rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+        rop.insert_code (opnum, u_assign, args_to_add,
+                         RuntimeOptimizer::RecomputeRWRanges,
+                         RuntimeOptimizer::GroupWithNext);
     }
 
     // Query results all copied.  The only thing left to do is to assign
@@ -2412,7 +2432,9 @@ DECLFOLDER(constfold_pointcloud_search)
     std::vector<int> args_to_add;
     args_to_add.push_back (result_sym);
     args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
-    rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+    rop.insert_code (opnum, u_assign, args_to_add,
+                     RuntimeOptimizer::RecomputeRWRanges,
+                     RuntimeOptimizer::GroupWithNext);
 
     return 1;
 }
@@ -2468,7 +2490,9 @@ DECLFOLDER(constfold_pointcloud_get)
     std::vector<int> args_to_add;
     args_to_add.push_back (rop.oparg(op,5) /* Data symbol*/);
     args_to_add.push_back (const_array_sym);
-    rop.insert_code (opnum, u_assign, args_to_add, true, 1 /* relation */);
+    rop.insert_code (opnum, u_assign, args_to_add,
+                     RuntimeOptimizer::RecomputeRWRanges,
+                     RuntimeOptimizer::GroupWithNext);
     return 1;
 }
 

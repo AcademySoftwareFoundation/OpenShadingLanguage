@@ -29,7 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <map>
-#include <OpenImageIO/hash.h>
+#include <boost/unordered_map.hpp>
+#include <OpenImageIO/ustring.h>
 #include "OSL/oslexec.h"
 
 OSL_NAMESPACE_ENTER

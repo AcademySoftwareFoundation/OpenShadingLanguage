@@ -123,7 +123,7 @@ struct Sphere : public Primitive {
     }
 
     // return a direction towards a point on the sphere
-    Vec3 sample(const Vec3& x, float xi, float yi, float& invpdf) const {
+    Vec3 sample(const Vec3& x, float xi, float yi, float& pdf) const {
         const float TWOPI = float(2 * M_PI);
         float cmax2 = 1 - r2 / (c - x).length2();
         float cmax = cmax2>0 ? sqrtf(cmax2) : 0;
@@ -134,7 +134,7 @@ struct Sphere : public Primitive {
         OIIO::fast_sincos(phi, &sp, &cp);
         Vec3 sw = (c - x).normalize(), su, sv;
         ortho(sw, su, sv);
-        invpdf = TWOPI * (1 - cmax);
+        pdf = 1 / (TWOPI * (1 - cmax));
         return (su * (cp * sin_a) +
                 sv * (sp * sin_a) +
                 sw * cos_a).normalize();
@@ -195,11 +195,11 @@ struct Quad : public Primitive {
     }
 
     // return a direction towards a point on the sphere
-    Vec3 sample(const Vec3& x, float xi, float yi, float& invpdf) const {
+    Vec3 sample(const Vec3& x, float xi, float yi, float& pdf) const {
         Vec3 l = (p + xi * ex + yi * ey) - x;
         float d2 = l.length2();
         Vec3 dir = l.normalize();
-        invpdf = a * fabsf(dir.dot(n)) / d2;
+        pdf = d2 / (a * fabsf(dir.dot(n)));
         return dir;
     }
 
@@ -251,11 +251,11 @@ struct Scene {
         return primID >= 0;
     }
 
-    Vec3 sample(int primID, const Vec3& x, float xi, float yi, float& invpdf) const {
+    Vec3 sample(int primID, const Vec3& x, float xi, float yi, float& pdf) const {
         if (primID < int(spheres.size()))
-            return spheres[primID].sample(x, xi, yi, invpdf);
+            return spheres[primID].sample(x, xi, yi, pdf);
         primID -= spheres.size();
-        return quads[primID].sample(x, xi, yi, invpdf);
+        return quads[primID].sample(x, xi, yi, pdf);
     }
 
     float shapepdf(int primID, const Vec3& x, const Vec3& p) const {

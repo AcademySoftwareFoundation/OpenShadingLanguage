@@ -67,12 +67,97 @@ struct Sampling {
         y *= r;
     }
 
-    static void sample_cosine_hemisphere(const Vec3& N, float rndx, float rndy, Vec3& out, float& invpdf) {
+    static void sample_cosine_hemisphere(const Vec3& N, float rndx, float rndy, Vec3& out, float& pdf) {
         to_unit_disk(rndx, rndy);
         float cos_theta = sqrtf(std::max(1 - rndx * rndx - rndy * rndy, 0.0f));
         TangentFrame f(N);
         out = f.get(rndx, rndy, cos_theta);
-        invpdf = float(M_PI) / cos_theta;
+        pdf = cos_theta * float(M_1_PI);
+    }
+};
+
+// Multiple Importance Sampling helper functions
+struct MIS {
+    // for the function below, enumerate the cases for:
+    // the sampled function being a weight or eval,
+    // the "other" function being a weight or eval
+    enum MISMode {
+        WEIGHT_WEIGHT,
+        WEIGHT_EVAL,
+        EVAL_WEIGHT
+    };
+
+    // Evaluates the weight factor for doing MIS when computing a product of two
+    // functions such as light * brdf.
+    // Provides options depending how the functions being multiplied together are
+    // expressed (controlled by the enum above).
+    // Centralizing the handling of the pdfs this way ensures that all numerical
+    // cases can be enumerated and handled robustly without arbitrary epsilons.
+    template <MISMode mode>
+    static inline float power_heuristic(float sampled_pdf, float other_pdf)
+    {
+        // NOTE: inf is ok!
+        assert(sampled_pdf >= 0);
+        assert(  other_pdf >= 0);
+
+        float r, mis;
+        if (sampled_pdf > other_pdf) {
+            r = other_pdf / sampled_pdf;
+            mis = 1 / (1 + r * r);
+        } else if (sampled_pdf < other_pdf) {
+            r = sampled_pdf / other_pdf;
+            mis = 1 - 1 / (1 + r * r);
+        } else {
+            // avoid (possible, but extremely rare) inf/inf cases
+            assert(sampled_pdf == other_pdf);
+            r = 1.0f;
+            mis = 0.5f;
+        }
+        assert(r >= 0);
+        assert(r <= 1);
+        assert(mis >= 0);
+        assert(mis <= 1);
+        const float MAX = std::numeric_limits<float>::max();
+        switch (mode) {
+            case WEIGHT_WEIGHT: return std::min(other_pdf, MAX) * mis; // avoid inf * 0
+            case WEIGHT_EVAL:   return mis;
+            case EVAL_WEIGHT:   return mis * ((other_pdf > sampled_pdf) ? std::min(1 / r, MAX) : r); // NOTE: mis goes to 0 faster than 1/r goes to inf
+        }
+        return 0;
+    }
+
+    // Encapsulates the balance heuristic when evaluating a sum of functions
+    // such as a BRDF mixture. This updates a (weight, pdf) pair with a new one
+    // to represent the sum of both. b is the probability of choosing the provided
+    // weight. A running sum should be started with a weight and pdf of 0.
+    static inline void update_eval(Color3* w, float* pdf, Color3 ow, float opdf, float b)
+    {
+        // NOTE: inf is ok!
+        assert(*pdf >= 0);
+        assert(opdf >= 0);
+        assert(b >= 0);
+        assert(b <= 1);
+
+        // make sure 1 / b is not inf
+        // note that if the weight has components > 1 ow can still overflow, but
+        // well designed BSDFs should keep weight <= 1
+        if (b > std::numeric_limits<float>::min())
+        {
+            opdf *= b;
+            ow *= 1 / b;
+            float mis;
+            if (*pdf < opdf)
+                mis = 1 / (1 + *pdf / opdf);
+            else if (opdf < *pdf)
+                mis = 1 - 1 / (1 + opdf / *pdf);
+            else
+                mis = 0.5f; // avoid (rare) inf/inf
+
+            *w = *w * (1 - mis) + ow * mis;
+            *pdf += opdf;
+        }
+
+        assert(*pdf >= 0);
     }
 };
 
@@ -82,11 +167,12 @@ struct Sampling {
 struct Sampler {
 	Sampler(int px, int py, int si, int AA) : px(px), py(py), si(si), AA(AA), depth(0) {}
 
-	Vec2 get() {
+	Vec3 get() {
 	    const uint32_t scramble_x = depth ? scramble(px, py, depth + 0) : 0;
 	    const uint32_t scramble_y = depth ? scramble(px, py, depth + 1) : 0;
+	    const uint32_t scramble_z = depth ? scramble(px, py, depth + 2) : 0;
 	    const uint32_t sample_idx = depth ? cmj_permute(si, AA * AA,
-	    									scramble(px, py, depth + 2)) : si;
+	    									scramble(px, py, depth + 3)) : si;
 	    depth += 4; // advance depth for next call
 	    // fetch offset of scrambled LP pattern over the frame
 	    const int sx = sample_idx % AA;
@@ -102,7 +188,12 @@ struct Sampler {
 	    const uint32_t y = lpUpper ^ delta;
 	    const float jx = (x - (ex << 16)) * (1 / 65536.0f);
 	    const float jy = (y - (ey << 16)) * (1 / 65536.0f);
-	    return Vec2((sx + jx) / AA, (sy + jy) / AA);
+        uint32_t rz = scramble_z, ii = index;
+        for (uint64_t v2 = uint64_t(3) << 62; ii; ii >>= 1, v2 ^= v2 >> 1)
+            if (ii & 1)
+                rz ^= uint32_t(v2 >> 31);
+
+	    return Vec3((sx + jx) / AA, (sy + jy) / AA, rz * 2.3283063e-10f);
 	}
 
 private:

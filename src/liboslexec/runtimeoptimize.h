@@ -342,6 +342,13 @@ public:
 
     void stop_optimizing () { m_stop_optimizing = true; }
 
+    std::string op_string (const Opcode &op) {
+        std::string s = op.opname().string();
+        for (int a = 0;  a < op.nargs();  ++a)
+            s = s + ' ' + opargsym(op,a)->name().string();
+        return s;
+    }
+
 private:
     int m_optimize;                   ///< Current optimization level
     bool m_opt_simplify_param;            ///< Turn instance params into const?

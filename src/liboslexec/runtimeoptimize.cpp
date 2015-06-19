@@ -452,7 +452,8 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
                                const int *argsbegin, const int *argsend,
-                               bool recompute_rw_ranges, int relation)
+                               RecomputeRWRangesOption recompute_rw_ranges,
+                               InsertRelation relation)
 {
     OpcodeVec &code (inst()->ops());
     std::vector<int> &opargs (inst()->args());
@@ -555,7 +556,8 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
                                const std::vector<int> &args_to_add,
-                               bool recompute_rw_ranges, int relation)
+                               RecomputeRWRangesOption recompute_rw_ranges,
+                               InsertRelation relation)
 {
     const int *argsbegin = (args_to_add.size())? &args_to_add[0]: NULL;
     const int *argsend = argsbegin + args_to_add.size();
@@ -567,7 +569,8 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
 
 
 void
-RuntimeOptimizer::insert_code (int opnum, ustring opname, int relation,
+RuntimeOptimizer::insert_code (int opnum, ustring opname,
+                               InsertRelation relation,
                                int arg0, int arg1, int arg2, int arg3)
 {
     int args[4];
@@ -576,7 +579,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname, int relation,
     if (arg1 >= 0) args[nargs++] = arg1;
     if (arg2 >= 0) args[nargs++] = arg2;
     if (arg3 >= 0) args[nargs++] = arg3;
-    insert_code (opnum, opname, args, args+nargs, true, relation);
+    insert_code (opnum, opname, args, args+nargs, RecomputeRWRanges, relation);
 }
 
 
@@ -589,7 +592,8 @@ RuntimeOptimizer::insert_useparam (size_t opnum,
 {
     ASSERT (params_to_use.size() > 0);
     OpcodeVec &code (inst()->ops());
-    insert_code (opnum, u_useparam, params_to_use, 1);
+    insert_code (opnum, u_useparam, params_to_use,
+                 RecomputeRWRanges, GroupWithNext);
 
     // All ops are "read"
     code[opnum].argwrite (0, false);
@@ -1665,7 +1669,8 @@ RuntimeOptimizer::peephole2 (int opnum)
                 newargs.push_back (oparg(op,i));
             turn_into_nop (op, "combine closure+mul");
             turn_into_nop (next, "combine closure+mul");
-            insert_code (opnum, u_closure, newargs, true, 1);
+            insert_code (opnum, u_closure, newargs,
+                         RecomputeRWRanges, GroupWithNext);
             if (debug() > 1)
                 std::cout << "op " << opnum << "-" << (op2num) 
                           << " combined closure+mul\n";            

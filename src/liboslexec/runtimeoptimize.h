@@ -236,29 +236,35 @@ public:
 
     void make_symbol_room (int howmany=1);
 
-    /// Insert instruction 'opname' with arguments 'args_to_add' into the 
-    /// code at instruction 'opnum'.  The existing code and concatenated 
-    /// argument lists can be found in code and opargs, respectively, and
-    /// allsyms contains pointers to all symbols.  mainstart is a reference
-    /// to the address where the 'main' shader begins, and may be modified
-    /// if the new instruction is inserted before that point.
-    /// If recompute_rw_ranges is true, also adjust all symbols' read/write
-    /// ranges to take the new instruction into consideration.
-    /// Relation indicates its relation to surrounding instructions:
-    /// 0 means none, -1 means it should have the same method, sourcefile,
-    /// and sourceline as the preceeding instruction, 1 means it should
-    /// have the same method, sourcefile, and sourceline as the subsequent
-    /// instruction.
+    enum RecomputeRWRangesOption { DontRecomputeRWRanges, RecomputeRWRanges };
+    enum InsertRelation { NoRelation=0, GroupWithPrevious=-1, GroupWithNext=1 };
+    /// Insert instruction 'opname' with arguments 'args_to_add' into
+    /// the code at instruction 'opnum'.  The existing code and
+    /// concatenated argument lists can be found in code and opargs,
+    /// respectively, and allsyms contains pointers to all symbols.
+    /// mainstart is a reference to the address where the 'main' shader
+    /// begins, and may be modified if the new instruction is inserted
+    /// before that point.  The recompute_rw_ranges parameter determines
+    /// whether all symbols' read/write ranges should be adjusted to
+    /// take the new instruction into consideration.  Relation indicates
+    /// its relation to surrounding instructions: GroupWithPrevious
+    /// means it should have the same method, sourcefile, and sourceline
+    /// as the preceeding instruction; GroupWithNext means it should
+    /// have the same method, sourcefile, and sourceline as the
+    /// subsequent instruction; NoRelation means we have no information,
+    /// so don't copy that info from anywhere.
     void insert_code (int opnum, ustring opname,
                       const std::vector<int> &args_to_add,
-                      bool recompute_rw_ranges=false, int relation=0);
+                      RecomputeRWRangesOption recompute_rw_ranges,
+                      InsertRelation relation=GroupWithNext);
     /// insert_code with begin/end arg array pointers.
     void insert_code (int opnum, ustring opname,
                       const int *argsbegin, const int *argsend,
-                      bool recompute_rw_ranges=false, int relation=0);
+                      RecomputeRWRangesOption recompute_rw_ranges,
+                      InsertRelation relation=GroupWithNext);
     /// insert_code with explicit arguments (up to 4, a value of -1 means
     /// the arg isn't used).  Presume recompute_rw_ranges is true.
-    void insert_code (int opnum, ustring opname, int relation,
+    void insert_code (int opnum, ustring opname, InsertRelation relation,
                       int arg0=-1, int arg1=-1, int arg2=-1, int arg3=-1);
 
     void insert_useparam (size_t opnum, const std::vector<int> &params_to_use);

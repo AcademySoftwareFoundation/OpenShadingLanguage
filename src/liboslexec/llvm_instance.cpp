@@ -647,13 +647,15 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
                                 ll.constant(group().name()),
                                 ll.constant(layer()),
                                 ll.constant(inst()->layername()),
+                                ll.constant(inst()->shadername().c_str()),
                                 ll.constant(int(&op - &inst()->ops()[0])),
                                 ll.constant(op.opname()),
+                                ll.constant(i),
                                 ll.constant(sym.name()),
                                 offset,
                                 ncheck
                               };
-        ll.call_function ("osl_uninit_check", args, 13);
+        ll.call_function ("osl_uninit_check", args, 15);
     }
 }
 

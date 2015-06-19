@@ -1265,7 +1265,8 @@ DECLFOLDER(constfold_format)
         newargs[1] = rop.add_constant (ustring(prefix + suffix));
         ustring opname = op.opname();
         rop.turn_into_nop (op, "partial constant fold format()");
-        rop.insert_code (opnum, opname, newargs);
+        rop.insert_code (opnum, opname, newargs,
+                         RuntimeOptimizer::RecomputeRWRanges);
         return 1;
     }
 

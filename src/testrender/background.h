@@ -19,14 +19,14 @@ struct Background {
         res = resolution;
         if (res < 32) res = 32; // validate
         invres = 1.0f / res;
-        jacobian = invres * invres * float(4 * M_PI);
+        invjacobian = res * res / float(4 * M_PI);
         values = new Vec3[res * res];
         rows   = new float[res];
         cols   = new float[res * res];
         for (int y = 0, i = 0; y < res; y++) {
             for (int x = 0; x < res; x++, i++) {
                 values[i] = cb(map(x + 0.5f, y + 0.5f), data);
-                cols[i] = (values[i].x + values[i].y + values[i].z) + ((x > 0) ? cols[i - 1] : 0.0f);
+                cols[i] = std::max(std::max(values[i].x, values[i].y), values[i].z) + ((x > 0) ? cols[i - 1] : 0.0f);
             }
             rows[y] = cols[i - 1] + ((y > 0) ? rows[y - 1] : 0.0f);
             // normalize the pdf for this scanline (if it was non-zero)
@@ -38,6 +38,15 @@ struct Background {
         for (int y = 0; y < res; y++)
             rows[y] /= rows[res - 1];
 
+        // both eval and sample below return a "weight" that is
+        // value[i] / row*col_pdf, so might as well bake it into the table
+        for (int y = 0, i = 0; y < res; y++) {
+            float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
+            for (int x = 0; x < res; x++, i++) {
+                float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
+                values[i] /= row_pdf * col_pdf * invjacobian;
+            }
+        }
 #if 0  // DEBUG: visualize importance table
         using namespace OIIO;
         ImageOutput* out = ImageOutput::create("bg.exr");
@@ -59,17 +68,17 @@ struct Background {
         int i = y * res + x;
         float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
         float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
-        pdf = (row_pdf * col_pdf) / jacobian;
+        pdf = row_pdf * col_pdf * invjacobian;
         return values[i];
     }
 
-    Vec3 sample(float rx, float ry, Dual2<Vec3>& dir, float& invpdf) const {
+    Vec3 sample(float rx, float ry, Dual2<Vec3>& dir, float& pdf) const {
         float row_pdf, col_pdf;
         unsigned x, y;
         ry = sample_cdf(rows, res, ry, &y, &row_pdf);
         rx = sample_cdf(cols + y * res, res, rx, &x, &col_pdf);
         dir = map(x + rx, y + ry);
-        invpdf = jacobian / (row_pdf * col_pdf);
+        pdf = row_pdf * col_pdf * invjacobian;
         return values[y * res + x];
     }
 
@@ -112,7 +121,7 @@ private:
     float* cols;    // probability of choosing a given column 'x', given that we've chosen row 'y'
     int res;        // resolution in pixels of the precomputed table
     float invres;   // 1 / resolution
-    float jacobian;
+    float invjacobian;
 };
 
 OSL_NAMESPACE_EXIT

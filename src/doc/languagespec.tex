@@ -4474,9 +4474,9 @@ anisotropic case {\cf U} must be a vector orthogonal to {\cf N} to specify the
 direction.  These values are expected to be the alpha values of the distribution
 as it appears in the literature, not a universal roughness measure.
 The {\cf eta} parameter is the index of refraction of the material, and
-{\cf refract} is a boolean flag to make the BSDF refractive instead of
-reflective. The implementation must not rely on {\cf U} when the roughness is
-isotropic or the given vector is zero.
+{\cf refract} is a enumeration flag that controls if the BSDF is reflective ({\cf 0}),
+refractive ({\cf 1}) or both at once ({\cf 2}). The implementation must not rely on
+{\cf U} when the roughness is isotropic or the given vector is zero.
 
 The list of supported distributions will change from renderer to renderer, and
 also the behavior when an unsupported distribution is requested. It is up to the

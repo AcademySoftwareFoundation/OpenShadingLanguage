@@ -100,21 +100,21 @@ namespace { // anonymous namespace
 
 template <int trans>
 struct Diffuse : public BSDF, DiffuseParams {
-    Diffuse(const DiffuseParams& params) : BSDF(false), DiffuseParams(params) { if (trans) N = -N; }
+    Diffuse(const DiffuseParams& params) : BSDF(), DiffuseParams(params) { if (trans) N = -N; }
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         pdf = std::max(N.dot(wi), 0.0f) * float(M_1_PI);
-        return pdf;
+        return 1.0f;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         Vec3 out_dir;
-        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, invpdf);
+        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         wi = out_dir; // FIXME: leave derivs 0?
         return 1;
     }
 };
 
 struct OrenNayar : public BSDF, OrenNayarParams {
-   OrenNayar(const OrenNayarParams& params) : BSDF(false), OrenNayarParams(params) {
+   OrenNayar(const OrenNayarParams& params) : BSDF(), OrenNayarParams(params) {
       // precompute some constants
       float s2 = sigma * sigma;
       A = 1 - 0.50f * s2 / (s2 + 0.33f);
@@ -134,13 +134,13 @@ struct OrenNayar : public BSDF, OrenNayarParams {
          float LV = -sg.I.dot(wi);
          float s = LV - NL * NV;
          float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
-         return pdf * (A + B * stinv);
+         return A + B * stinv;
       }
       return pdf = 0;
    }
-   virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
-       Vec3 out_dir; float pdf;
-       Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, invpdf);
+   virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+       Vec3 out_dir;
+       Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
        wi = out_dir; // leave derivs 0?
        const float NL =  N.dot(wi.val());
        const float NV = -N.dot(sg.I);
@@ -150,14 +150,14 @@ struct OrenNayar : public BSDF, OrenNayarParams {
            float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
            return A + B * stinv;
        }
-       return pdf = 0;
+       return 0;
    }
 private:
    float A, B;
 };
 
 struct Phong : public BSDF, PhongParams {
-    Phong(const PhongParams& params) : BSDF(false), PhongParams(params) {}
+    Phong(const PhongParams& params) : BSDF(), PhongParams(params) {}
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         float cosNI =  N.dot(wi);
         float cosNO = -N.dot(sg.I);
@@ -166,15 +166,13 @@ struct Phong : public BSDF, PhongParams {
            Vec3 R = (2 * cosNO) * N + sg.I;
            float cosRI = R.dot(wi);
            if (cosRI > 0) {
-               float common = 0.5f * float(M_1_PI) * OIIO::fast_safe_pow(cosRI, exponent);
-               float out = cosNI * (exponent + 2) * common;
-               pdf = (exponent + 1) * common;
-               return out;
+               pdf = (exponent + 1) * float(M_1_PI / 2) * OIIO::fast_safe_pow(cosRI, exponent);
+               return cosNI * (exponent + 2) / (exponent + 1);
            }
         }
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0) {
             // reflect the view vector
@@ -191,17 +189,16 @@ struct Phong : public BSDF, PhongParams {
                         cosTheta); // leave derivs 0?
             float cosNI = N.dot(wi.val());
             if (cosNI > 0) {
-                float d = 1 / (exponent + 1);
-                invpdf = 2 * float(M_PI) * OIIO::fast_safe_pow(ry, -exponent * d) * d;
-                return cosNI * (exponent + 2) * d;
+                pdf = (exponent + 1) * float(M_1_PI / 2) * OIIO::fast_safe_pow(cosTheta, exponent);
+                return cosNI * (exponent + 2) / (exponent + 1);
             }
         }
-        return invpdf = 0;
+        return pdf = 0;
     }
 };
 
 struct Ward : public BSDF, WardParams {
-    Ward(const WardParams& params) : BSDF(false), WardParams(params) {}
+    Ward(const WardParams& params) : BSDF(), WardParams(params) {}
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         float cosNO = -N.dot(sg.I);
         float cosNI =  N.dot(wi);
@@ -214,18 +211,16 @@ struct Ward : public BSDF, WardParams {
             float dotx = tf.getx(H) / ax;
             float doty = tf.gety(H) / ay;
             float dotn = tf.getz(H);
-            float exp_arg = (dotx * dotx + doty * doty) / (dotn * dotn);
-            float denom = (4 * float(M_PI) * ax * ay * sqrtf(cosNO * cosNI));
-            float exp_val = OIIO::fast_exp(-exp_arg);
-            float out = cosNI * exp_val / denom;
             float oh = H.dot(wi);
-            denom = 4 * float(M_PI) * ax * ay * oh * dotn * dotn * dotn;
-            pdf = exp_val / denom;
-            return out;
+            float e = OIIO::fast_exp(-(dotx * dotx + doty * doty) / (dotn * dotn));
+            float c = float(4 * M_PI) * ax * ay;
+            float k = oh * dotn * dotn * dotn;
+            pdf = e / (c * k);
+            return k * sqrtf(cosNI / cosNO);
         }
         return 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
@@ -266,9 +261,9 @@ struct Ward : public BSDF, WardParams {
                 if (cosNI > 0) {
                     // eq. 9
                     float e = OIIO::fast_exp(-(dotx * dotx + doty * doty) / (dotn * dotn));
-                    float c = 4 * float(M_PI) * ax * ay;
+                    float c = float(4 * M_PI) * ax * ay;
                     float k = oh * dotn * dotn * dotn;
-                    invpdf = (c * k) / e;
+                    pdf = e / (c * k);
                     return k * sqrtf(cosNI / cosNO);
                 }
             }
@@ -387,19 +382,21 @@ struct BeckmannDist {
 
 template <typename Distribution, int Refract>
 struct Microfacet : public BSDF, MicrofacetParams {
-    Microfacet(const MicrofacetParams& params) : BSDF(false),
+    Microfacet(const MicrofacetParams& params) : BSDF(),
         MicrofacetParams(params),
         tf(U == Vec3(0) || xalpha == yalpha ? TangentFrame(N) : TangentFrame(N, U)) { }
     virtual float albedo(const ShaderGlobals& sg) const {
+        if (Refract == 2) return 1.0f;
+        // FIXME: this heuristic is not particularly good, and looses energy
+        // compared to the reference solution
         float fr = fresnel_dielectric(-N.dot(sg.I), eta);
         return Refract ? 1 - fr : fr;
     }
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
-        pdf = 0;
         Vec3 wo = -sg.I;
     	const Vec3 wo_l = tf.tolocal(wo);
     	const Vec3 wi_l = tf.tolocal(wi);
-        if (!Refract) {
+        if (Refract == 0 || Refract == 2) {
             if (wo_l.z > 0 && wi_l.z > 0) {
             	const Vec3 m = (wi_l + wo_l).normalize();
                 const float D = evalD(m);
@@ -408,13 +405,20 @@ struct Microfacet : public BSDF, MicrofacetParams {
                 const float G2 = evalG2(Lambda_o, Lambda_i);
                 const float G1 = evalG1(Lambda_o);
 
-                const float F = fresnel_dielectric(m.dot(wo_l), eta);
-                pdf =      (G1 * D * 0.25f) / wo_l.z;
-                return (F * G2 * D * 0.25f) / wo_l.z;
+                const float Fr = fresnel_dielectric(m.dot(wo_l), eta);
+                pdf = (G1 * D * 0.25f) / wo_l.z;
+                float out = G2 / G1;
+                if (Refract == 2) {
+                    pdf *= Fr;
+                    return out;
+                } else {
+                    return out * Fr;
+                }
+
             }
-        } else {
-           float cosNO = wo_l.z;
-           if (wi_l.dot(wo_l) <= 0 && cosNO > 0.0f) {
+        }
+        if (Refract == 1 || Refract == 2) {
+           if (wi_l.z < 0 && wo_l.z > 0.0f) {
                // compute half-vector of the refraction (eq. 16)
                Vec3 ht = -(eta * wi_l + wo_l);
                if (eta < 1.0f)
@@ -437,58 +441,71 @@ struct Microfacet : public BSDF, MicrofacetParams {
 
                   // probability
                   float invHt2 = 1 / ht.dot(ht);
-                  pdf =  (fabsf(cosHI * cosHO) * (eta * eta) * (     G1 * Dt) * invHt2) / fabsf(cosNO);
-                  return (fabsf(cosHI * cosHO) * (eta * eta) * (Ft * G2 * Dt) * invHt2) / fabsf(cosNO);
+                  pdf =  (fabsf(cosHI * cosHO) * (eta * eta) * (G1 * Dt) * invHt2) / wo_l.z;
+                  float out = G2 / G1;
+                  if (Refract == 2) {
+                      pdf *= Ft;
+                      return out;
+                  } else {
+                      return out * Ft;
+                  }
                }
            }
         }
-        return 0;
+        return pdf = 0;
     }
 
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
-    	Vec3 wo_l = tf.tolocal(-sg.I);
-        Vec3 m = sampleMicronormal(wo_l, rx, ry);
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    	const Vec3 wo_l = tf.tolocal(-sg.I);
+    	const float cosNO = wo_l.z;
+    	if (!(cosNO > 0)) return pdf = 0;
+        const Vec3 m = sampleMicronormal(wo_l, rx, ry);
+        const float cosMO = m.dot(wo_l);
+        const float F = fresnel_dielectric(cosMO, eta);
+        if (Refract == 0 || (Refract == 2 && rz < F)) {
+            // measure fresnel to decide which lobe to sample
+            const Vec3 wi_l = (2.0f * cosMO) * m - wo_l;
+            const float D = evalD(m);
+            const float Lambda_o = evalLambda(wo_l);
+            const float Lambda_i = evalLambda(wi_l);
 
-        if (!Refract) {
-        	float cosMO = m.dot(wo_l);
-            Vec3 wi_l = (2.0f * cosMO) * m - wo_l;
-            float cosNO = wo_l.z;
-            if (wi_l.z > 0) {
-            	float F = fresnel_dielectric(cosMO, eta);
-                float D = evalD(m);
-            	float Lambda_o = evalLambda(wo_l);
-                float Lambda_i = evalLambda(wi_l);
+            const float G2 = evalG2(Lambda_o, Lambda_i);
+            const float G1 = evalG1(Lambda_o);
 
-                float G2 = evalG2(Lambda_o, Lambda_i);
-                float G1 = evalG1(Lambda_o);
+            wi = tf.toworld(wi_l);
 
-                wi = tf.toworld(wi_l);
-
-                invpdf = cosNO / (G1 * D * 0.25f);
-                return F * G2 / G1;
-            }
+            pdf = (G1 * D * 0.25f) / cosNO;
+            float out = G2 / G1;
+            if (Refract == 2) {
+                pdf *= F;
+                return out;
+            } else
+                return F * out;
         } else {
-        	const Vec3 M = tf.toworld(m);
+            const Vec3 M = tf.toworld(m);
             float Ft = fresnel_refraction (sg.I, M, eta, wi);
-            if (Ft > 0) {
-            	const Vec3 wi_l = tf.tolocal(wi.val());
-            	const float cosHO = m.dot(wo_l);
-            	const float cosHI = m.dot(wi_l);
-                float D = evalD(m);
-            	float Lambda_o = evalLambda(wo_l);
-                float Lambda_i = evalLambda(wi_l);
+            const Vec3 wi_l = tf.tolocal(wi.val());
+            const float cosHO = m.dot(wo_l);
+            const float cosHI = m.dot(wi_l);
+            const float D = evalD(m);
+            const float Lambda_o = evalLambda(wo_l);
+            const float Lambda_i = evalLambda(wi_l);
 
-                float G2 = evalG2(Lambda_o, Lambda_i);
-                float G1 = evalG1(Lambda_o);
+            const float G2 = evalG2(Lambda_o, Lambda_i);
+            const float G1 = evalG1(Lambda_o);
 
-                const Vec3 ht = -(eta * wi_l + wo_l);
-                const float invHt2 = 1.0f / ht.dot(ht);
+            const Vec3 ht = -(eta * wi_l + wo_l);
+            const float invHt2 = 1.0f / ht.dot(ht);
 
-                invpdf = fabsf(wo_l.z) / (fabsf(cosHI * cosHO) * (eta * eta) * (G1 * D) * invHt2);
-                return Ft * G2 / G1;
-            }
+            pdf = (fabsf(cosHI * cosHO) * (eta * eta) * (G1 * D) * invHt2) / fabsf(wo_l.z);
+            float out = G2 / G1;
+            if (Refract == 2) {
+                pdf *= Ft;
+                return out;
+            } else
+                return Ft * out;
         }
-        return invpdf = 0;
+        return pdf = 0;
     }
 
 private:
@@ -569,11 +586,13 @@ private:
 
 typedef Microfacet<GGXDist, 0> MicrofacetGGXRefl;
 typedef Microfacet<GGXDist, 1> MicrofacetGGXRefr;
+typedef Microfacet<GGXDist, 2> MicrofacetGGXBoth;
 typedef Microfacet<BeckmannDist, 0> MicrofacetBeckmannRefl;
 typedef Microfacet<BeckmannDist, 1> MicrofacetBeckmannRefr;
+typedef Microfacet<BeckmannDist, 2> MicrofacetBeckmannBoth;
 
 struct Reflection : public BSDF, ReflectionParams {
-    Reflection(const ReflectionParams& params) : BSDF(true), ReflectionParams(params) {}
+    Reflection(const ReflectionParams& params) : BSDF(), ReflectionParams(params) {}
     virtual float albedo(const ShaderGlobals& sg) const {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0)
@@ -583,21 +602,21 @@ struct Reflection : public BSDF, ReflectionParams {
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         // only one direction is possible
         OSL::Dual2<OSL::Vec3> I = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
         OSL::Dual2<float> cosNO = -dot(N, I);
         if (cosNO.val() > 0) {
             wi = (2 * cosNO) * N + I;
-            invpdf = 0;
+            pdf = std::numeric_limits<float>::infinity();
             return fresnel_dielectric(cosNO.val(), eta);
         }
-        return invpdf = 0;
+        return pdf = 0;
     }
 };
 
 struct Refraction : public BSDF, RefractionParams {
-    Refraction(const RefractionParams& params) : BSDF(true), RefractionParams(params) {}
+    Refraction(const RefractionParams& params) : BSDF(), RefractionParams(params) {}
     virtual float albedo(const ShaderGlobals& sg) const {
         float cosNO = -N.dot(sg.I);
         return 1 - fresnel_dielectric(cosNO, eta);
@@ -605,21 +624,21 @@ struct Refraction : public BSDF, RefractionParams {
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         OSL::Dual2<OSL::Vec3> I = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
-        invpdf = 0;
+        pdf = std::numeric_limits<float>::infinity();
         return fresnel_refraction(I, N, eta, wi);
     }
 };
 
 struct Transparent : public BSDF {
-    Transparent(const int& dummy) : BSDF(true) {}
+    Transparent(const int& dummy) : BSDF() {}
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, OSL::Dual2<OSL::Vec3>& wi, float& invpdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         wi = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
-        invpdf = 0;
+        pdf = std::numeric_limits<float>::infinity();
         return 1;
     }
 };
@@ -658,16 +677,18 @@ void process_closure (ShadingResult& result, const ClosureColor* closure, const 
                    case WARD_ID:               ok = result.bsdf.add_bsdf<Ward      , WardParams      >(cw, *(const WardParams*      ) comp->data()); break;
                    case MICROFACET_ID:
                        if (((const MicrofacetParams*) comp->data())->dist == u_ggx) {
-                           if (((const MicrofacetParams*) comp->data())->refract)
-                               ok = result.bsdf.add_bsdf<MicrofacetGGXRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
-                           else
-                               ok = result.bsdf.add_bsdf<MicrofacetGGXRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
+                           switch (((const MicrofacetParams*) comp->data())->refract) {
+                               case 0: ok = result.bsdf.add_bsdf<MicrofacetGGXRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                               case 1: ok = result.bsdf.add_bsdf<MicrofacetGGXRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                               case 2: ok = result.bsdf.add_bsdf<MicrofacetGGXBoth, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                           }
                        } else if (((const MicrofacetParams*) comp->data())->dist == u_beckmann ||
                                   ((const MicrofacetParams*) comp->data())->dist == u_default) {
-                           if (((const MicrofacetParams*) comp->data())->refract)
-                               ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
-                           else
-                               ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data());
+                           switch (((const MicrofacetParams*) comp->data())->refract) {
+                               case 0: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                               case 1: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                               case 2: ok = result.bsdf.add_bsdf<MicrofacetBeckmannBoth, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                           }
                        }
                        break;
                    case REFLECTION_ID:

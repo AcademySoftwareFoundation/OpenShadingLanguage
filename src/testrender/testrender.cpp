@@ -69,6 +69,7 @@ bool runstats = false;
 bool profile = false;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
+static std::string extraoptions;
 int xres = 640, yres = 480, aa = 1, max_bounces = 1000000, rr_depth = 5;
 int num_threads = 0;
 ErrorHandler errhandler;
@@ -112,6 +113,7 @@ void getargs(int argc, const char *argv[])
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
+                "--options %s", &extraoptions, "Set extra OSL options",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -399,18 +401,12 @@ Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
     return process_background_closure(sg.Ci);
 }
 
-float mis_weight(float invpdf, float otherpdf) {
-    // power heuristic is: a^2 / (a^2+b^2)
-    // simplifying: 1 / (1 + (b/a)^2)
-    return 1 / (1 + otherpdf * otherpdf * invpdf * invpdf);
-}
-
 Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx) {
     Ray r = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
     int prev_id = -1;
-    float bsdf_invpdf = 0;
+    float bsdf_pdf = std::numeric_limits<float>::infinity(); // camera ray has only one possible direction
     bool flip = false;
     for (int b = 0; b <= max_bounces; b++) {
         // trace the ray against the scene
@@ -421,7 +417,7 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
                 if (backgroundResolution > 0) {
                     float bg_pdf = 0;
                     Vec3 bg = background.eval(r.d.val(), bg_pdf);
-                    path_radiance += path_weight * bg * mis_weight(bsdf_invpdf, bg_pdf);
+                    path_radiance += path_weight * bg * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf, bg_pdf);
                 } else {
                     // we aren't importance sampling the background - so just run it directly
                     path_radiance += path_weight * eval_background(r.d, ctx);
@@ -447,7 +443,7 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
         if (scene.islight(id)) {
             // figure out the probability of reaching this point
             float light_pdf = scene.shapepdf(id, r.o.val(), sg.P);
-            k = mis_weight(bsdf_invpdf, light_pdf);
+            k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
 
@@ -458,58 +454,60 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
         result.bsdf.prepare(sg, path_weight, b >= rr_depth);
 
         // get two random numbers
-        Vec2 s = sampler.get();
+        Vec3 s = sampler.get();
         float xi = s.x;
         float yi = s.y;
+        float zi = s.z;
 
         // trace one ray to the background
         if (backgroundResolution > 0) {
             Dual2<Vec3> bg_dir;
-            float bg_invpdf = 0, bsdf_pdf = 0;
-            Vec3 bg = background.sample(xi, yi, bg_dir, bg_invpdf);
-            Color3 bsdf_eval = result.bsdf.eval(sg, bg_dir.val(), bsdf_pdf);
-            bsdf_eval *= path_weight * bg * bg_invpdf * mis_weight(bg_invpdf, bsdf_pdf);
-            if ((bsdf_eval.x + bsdf_eval.y + bsdf_eval.z) > 0) {
+            float bg_pdf = 0, bsdf_pdf = 0;
+            Vec3 bg = background.sample(xi, yi, bg_dir, bg_pdf);
+            Color3 bsdf_weight = result.bsdf.eval(sg, bg_dir.val(), bsdf_pdf);
+            Color3 contrib = path_weight * bsdf_weight * bg * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf, bsdf_pdf);
+            if ((contrib.x + contrib.y + contrib.z) > 0) {
                 int shadow_id = id;
                 Ray shadow_ray = Ray(sg.P, bg_dir);
                 Dual2<float> shadow_dist;
                 if (!scene.intersect(shadow_ray, shadow_dist, shadow_id)) // ray reached the background?
-                    path_radiance += bsdf_eval;
+                    path_radiance += contrib;
             }
         }
 
         // trace one ray to each light
-        for (int lid = 0; !result.bsdf.singular() && lid < scene.num_prims(); lid++) {
+        for (int lid = 0; lid < scene.num_prims(); lid++) {
             if (lid == id) continue; // skip self
             if (!scene.islight(lid)) continue; // doesn't want to be sampled as a light
             int shaderID = scene.shaderid(lid);
             if (shaderID < 0 || !shaders[shaderID]) continue; // no shader attached to this light
             // sample a random direction towards the object
-            float invpdf;
-            Vec3 ldir = scene.sample(lid, sg.P, xi, yi, invpdf);
+            float light_pdf;
+            Vec3 ldir = scene.sample(lid, sg.P, xi, yi, light_pdf);
             float bsdf_pdf = 0;
-            Color3 bsdf_eval = path_weight * result.bsdf.eval(sg, ldir, bsdf_pdf);
-            if ((bsdf_eval.x + bsdf_eval.y + bsdf_eval.z) == 0) continue;
-            Ray shadow_ray = Ray(sg.P, ldir);
-            // trace a shadow ray and see if we actually hit the target
-            // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-            int shadow_id = id; // ignore self hit
-            Dual2<float> shadow_dist;
-            if (scene.intersect(shadow_ray, shadow_dist, shadow_id) && shadow_id == lid) {
-                // setup a shader global for the point on the light
-                ShaderGlobals light_sg;
-                globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
-                // execute the light shader (for emissive closures only)
-                shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
-                ShadingResult light_result;
-                process_closure(light_result, light_sg.Ci, true);
-                // run the result through the bsdfs attached to the current point
-                path_radiance += bsdf_eval * light_result.Le * invpdf * mis_weight(invpdf, bsdf_pdf);
+            Color3 contrib = path_weight * result.bsdf.eval(sg, ldir, bsdf_pdf) * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf, bsdf_pdf);
+            if ((contrib.x + contrib.y + contrib.z) > 0) {
+                Ray shadow_ray = Ray(sg.P, ldir);
+                // trace a shadow ray and see if we actually hit the target
+                // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
+                int shadow_id = id; // ignore self hit
+                Dual2<float> shadow_dist;
+                if (scene.intersect(shadow_ray, shadow_dist, shadow_id) && shadow_id == lid) {
+                    // setup a shader global for the point on the light
+                    ShaderGlobals light_sg;
+                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
+                    // execute the light shader (for emissive closures only)
+                    shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
+                    ShadingResult light_result;
+                    process_closure(light_result, light_sg.Ci, true);
+                    // accumulate contribution
+                    path_radiance += contrib * light_result.Le;
+                }
             }
         }
 
         // trace indirect ray and continue
-        path_weight *= result.bsdf.sample(sg, xi, yi, r.d, bsdf_invpdf);
+        path_weight *= result.bsdf.sample(sg, xi, yi, zi, r.d, bsdf_pdf);
         if (!(path_weight.x > 0) && !(path_weight.y > 0) && !(path_weight.z > 0))
             break; // filter out all 0's or NaNs
         prev_id = id;
@@ -525,7 +523,7 @@ Color3 antialias_pixel(int x, int y, ShadingContext* ctx) {
         for (int ax = 0; ax < aa; ax++, si++) {
         	Sampler sampler(x, y, si, aa);
             // jitter pixel coordinate [0,1)^2
-        	Vec2 j = sampler.get();
+        	Vec3 j = sampler.get();
             // warp distribution to approximate a tent filter [-1,+1)^2
             j.x *= 2; j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
             j.y *= 2; j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
@@ -613,6 +611,8 @@ int main (int argc, const char *argv[]) {
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
     shadingsys->attribute ("debugnan", debugnan);
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
 
     // Loads a scene, creating camera, geometry and assigning shaders
     parse_scene();

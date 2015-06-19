@@ -1,0 +1,43 @@
+void print_array_contents (string name, int arr[])
+{
+    printf ("%s array length %d\n", name, arraylength(arr));
+    for (int i = 0; i < arraylength(arr); ++i)
+        printf ("  [%d] = %d\n", i, arr[i]);
+}
+
+
+void print_array_contents (string name, float arr[])
+{
+    printf ("%s array length %d\n", name, arraylength(arr));
+    for (int i = 0; i < arraylength(arr); ++i)
+        printf ("  [%d] = %g\n", i, arr[i]);
+}
+
+
+void print_array_contents (string name, color arr[])
+{
+    printf ("%s array length %d\n", name, arraylength(arr));
+    for (int i = 0; i < arraylength(arr); ++i)
+        printf ("  [%d] = %g\n", i, arr[i]);
+}
+
+
+void print_array_contents (string name, string arr[])
+{
+    printf ("%s array length %d\n", name, arraylength(arr));
+    for (int i = 0; i < arraylength(arr); ++i)
+        printf ("  [%d] = \"%s\"\n", i, arr[i]);
+}
+
+
+shader test (float  farr[] = {0},
+             color  carr[] = {0},
+             int    iarr[] = {0},
+             string sarr[] = {""}
+    )
+{
+    print_array_contents ("farr", farr);
+    print_array_contents ("carr", carr);
+    print_array_contents ("iarr", iarr);
+    print_array_contents ("sarr", sarr);
+}

@@ -1919,7 +1919,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             break;  // error
         }
         if (Strutil::parse_char (p, '[')) {
-            int arraylen;
+            int arraylen = -1;
             Strutil::parse_int (p, arraylen);
             Strutil::parse_char (p, ']');
             type.arraylen = arraylen;
@@ -1936,27 +1936,59 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         }
         string_view paramname (paramname_string);
         int lockgeom = true;
-        int nvals = type.numelements() * type.aggregate;
+        // For speed, reserve space. Note that for "unsized" arrays,
+        // numelements() will return 1, so we only preallocate 1 slot
+        // and let it grow as needed. That's ok. For everything else, we
+        // will reserve the right amount up front.
+        int vals_to_preallocate = type.numelements() * type.aggregate;
+        // Stop parsing values when we hit the limit based on the
+        // declaration.
+        int max_vals = type.is_unsized_array() ? 1<<28 : vals_to_preallocate;
         if (type.basetype == TypeDesc::INT) {
             intvals.clear ();
-            intvals.resize (nvals, 0);
-            for (int i = 0; i < nvals; ++i) {
-                if (! Strutil::parse_int (p, intvals[i]))
+            intvals.reserve (vals_to_preallocate);
+            int i;
+            for (i = 0; i < max_vals; ++i) {
+                int val = 0;
+                if (Strutil::parse_int (p, val))
+                    intvals.push_back (val);
+                else
                     break;
             }
+            if (type.is_unsized_array()) {
+                // For unsized arrays, now set the size based on how many
+                // values we actually read.
+                type.arraylen = std::max (1, i/type.aggregate);
+            }
+            // Zero-pad if we parsed fewer values than we needed
+            intvals.resize (type.numelements()*type.aggregate, 0);
+            ASSERT (type.numelements()*type.aggregate == int(intvals.size()));
             Parameter (paramname, type, &intvals[0], lockgeom);
         } else if (type.basetype == TypeDesc::FLOAT) {
             floatvals.clear ();
-            floatvals.resize (nvals, 0.0f);
-            for (int i = 0; i < nvals; ++i) {
-                if (! Strutil::parse_float (p, floatvals[i]))
+            floatvals.reserve (vals_to_preallocate);
+            int i;
+            for (i = 0; i < max_vals; ++i) {
+                float val = 0;
+                if (Strutil::parse_float (p, val))
+                    floatvals.push_back (val);
+                else
                     break;
             }
+            if (type.is_unsized_array()) {
+                // For unsized arrays, now set the size based on how many
+                // values we actually read.
+                type.arraylen = std::max (1, i/type.aggregate);
+            }
+            // Zero-pad if we parsed fewer values than we needed
+            floatvals.resize (type.numelements()*type.aggregate, 0);
+            ASSERT (type.numelements()*type.aggregate == int(floatvals.size()));
             Parameter (paramname, type, &floatvals[0], lockgeom);
         } else if (type.basetype == TypeDesc::STRING) {
             stringvals.clear ();
-            stringvals.resize (nvals);
-            for (int i = 0; i < nvals; ++i) {
+            stringvals.reserve (vals_to_preallocate);
+            int i;
+            for (i = 0; i < max_vals; ++i) {
                 std::string unescaped;
                 string_view s;
                 Strutil::skip_whitespace (p);
@@ -1971,8 +2003,16 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
                     if (s.size() == 0)
                         break;
                 }
-                stringvals[i] = ustring(s);
+                stringvals.push_back (ustring(s));
             }
+            if (type.is_unsized_array()) {
+                // For unsized arrays, now set the size based on how many
+                // values we actually read.
+                type.arraylen = std::max (1, i/type.aggregate);
+            }
+            // Zero-pad if we parsed fewer values than we needed
+            stringvals.resize (type.numelements()*type.aggregate, ustring());
+            ASSERT (type.numelements()*type.aggregate == int(stringvals.size()));
             Parameter (paramname, type, &stringvals[0], lockgeom);
         }
 

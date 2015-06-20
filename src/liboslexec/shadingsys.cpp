@@ -2913,7 +2913,8 @@ OSL_SHADEOP void
 osl_uninit_check (long long typedesc_, void *vals_,
                   void *sg, const void *sourcefile, int sourceline,
                   const char *groupname, int layer, const char *layername,
-                  int opnum, const char *opname,
+                  const char *shadername,
+                  int opnum, const char *opname, int argnum,
                   void *symbolname, int firstcheck, int nchecks)
 {
     TypeDesc typedesc = TYPEDESC(typedesc_);
@@ -2944,11 +2945,11 @@ osl_uninit_check (long long typedesc_, void *vals_,
             }
     }
     if (uninit) {
-        ctx->error ("Detected possible use of uninitialized value in %s at %s:%d (group %s, layer %d %s, op %d '%s')",
-                    USTR(symbolname), USTR(sourcefile), sourceline,
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
+                    typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
                     groupname ? groupname: "<unnamed group>",
                     layer, layername ? layername : "<unnamed layer>",
-                    opnum, USTR(opname));
+                    shadername, opnum, USTR(opname), argnum);
     }
 }
 

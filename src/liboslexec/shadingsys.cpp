@@ -1312,6 +1312,34 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(ustring *)val = ustring(group->serialize());
         return true;
     }
+
+    if (name == "num_attributes_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_attributes_needed.size();
+        return true;
+    }
+    if (name == "attributes_needed" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_attributes_needed.size();
+        *(ustring **)val = n ? &group->m_attributes_needed[0] : NULL;
+        return true;
+    }
+    if (name == "attribute_scopes" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_attribute_scopes.size();
+        *(ustring **)val = n ? &group->m_attribute_scopes[0] : NULL;
+        return true;
+    }
+    if (name == "unknown_attributes_needed" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int)group->m_unknown_attributes_needed;
+        return true;
+    }
+
     return false;
 }
 
@@ -2463,6 +2491,11 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
         group.m_userdata_names.push_back (n.name);
         group.m_userdata_types.push_back (n.type);
         group.m_userdata_derivs.push_back (n.derivs);
+    }
+    group.m_unknown_attributes_needed = rop.m_unknown_attributes_needed;
+    BOOST_FOREACH (const AttributeNeeded &f, rop.m_attributes_needed) {
+        group.m_attributes_needed.push_back (f.name);
+        group.m_attribute_scopes.push_back (f.scope);
     }
 
     BackendLLVM lljitter (*this, group, ctx);

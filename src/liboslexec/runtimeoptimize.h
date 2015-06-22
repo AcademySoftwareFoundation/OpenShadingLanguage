@@ -388,8 +388,10 @@ private:
     std::set<ustring> m_textures_needed;
     std::set<ustring> m_closures_needed;
     std::set<ustring> m_globals_needed;
+    std::set<AttributeNeeded> m_attributes_needed;
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
+    bool m_unknown_attributes_needed;
     std::set<UserDataNeeded> m_userdata_needed;
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time

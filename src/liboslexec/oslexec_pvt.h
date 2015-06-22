@@ -185,8 +185,22 @@ struct UserDataNeeded {
     }
 };
 
+// Struct defining an attribute needed by a shader group
+struct AttributeNeeded {
+    ustring name;
+    ustring scope;
 
+    AttributeNeeded (ustring name, ustring scope = ustring())
+        : name(name), scope(scope) {}
 
+    friend bool operator< (const AttributeNeeded &a, const AttributeNeeded &b) {
+        if (a.name != b.name)
+            return a.name < b.name;
+        if (a.scope != b.scope)
+            return a.scope < b.scope;
+        return false;  // they are equal
+    }
+};
 
 // Prefix for OSL shade up declarations, so LLVM can find them
 #define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
@@ -1355,9 +1369,12 @@ private:
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;
     std::vector<char> m_userdata_derivs;
+    std::vector<ustring> m_attributes_needed;
+    std::vector<ustring> m_attribute_scopes;
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
+    bool m_unknown_attributes_needed;
     atomic_ll m_executions;          ///< Number of times the group executed
     atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
 

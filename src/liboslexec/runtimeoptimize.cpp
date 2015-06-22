@@ -58,7 +58,8 @@ static ustring u_nop    ("nop"),
                u_pointcloud_write ("pointcloud_write"),
                u_isconnected ("isconnected"),
                u_setmessage ("setmessage"),
-               u_getmessage ("getmessage");
+               u_getmessage ("getmessage"),
+               u_getattribute ("getattribute");
 
 
 OSL_NAMESPACE_ENTER
@@ -2806,10 +2807,12 @@ RuntimeOptimizer::run ()
 
     m_unknown_textures_needed = false;
     m_unknown_closures_needed = false;
+    m_unknown_attributes_needed = false;
     m_textures_needed.clear();
     m_closures_needed.clear();
     m_globals_needed.clear();
     m_userdata_needed.clear();
+    m_attributes_needed.clear();
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         if (inst()->unused())
@@ -2859,6 +2862,34 @@ RuntimeOptimizer::run ()
                 } else {
                     m_unknown_closures_needed = true;
                 }
+            } else if (op.opname() == u_getattribute) {
+                Symbol *sym1 = opargsym (op, 1);
+                ASSERT (sym1 && sym1->typespec().is_string());
+                if (sym1->is_constant()) {
+                    if (op.nargs() == 3) {
+                        // getattribute( attributename, result )
+                        m_attributes_needed.insert( AttributeNeeded( *(ustring *)sym1->data() ) );
+                    } else {
+                        ASSERT (op.nargs() == 4 || op.nargs() == 5);
+                        Symbol *sym2 = opargsym (op, 2);
+                        if (sym2->typespec().is_string()) {
+                            // getattribute( scopename, attributename, result ) or
+                            // getattribute( scopename, attributename, arrayindex, result )
+                            if (sym2->is_constant()) {
+                                m_attributes_needed.insert( AttributeNeeded(
+                                    *(ustring *)sym2->data(), *(ustring *)sym1->data()
+                                ) );
+                            } else {
+                                m_unknown_attributes_needed = true;
+                            }
+                        } else {
+                            // getattribute( attributename, arrayindex, result )
+                            m_attributes_needed.insert( AttributeNeeded( *(ustring *)sym1->data() ) );
+                        }
+                    }
+                } else { // sym1 not constant
+                    m_unknown_attributes_needed = true;
+                }
             }
         }
     }
@@ -2892,6 +2923,13 @@ RuntimeOptimizer::run ()
             BOOST_FOREACH (UserDataNeeded f, m_userdata_needed)
                 shadingcontext()->info ("    %s %s %s", f.name, f.type,
                                         f.derivs ? "(derivs)" : "");
+        }
+        if (m_attributes_needed.size()) {
+            shadingcontext()->info ("Group needs attributes:");
+            BOOST_FOREACH (const AttributeNeeded &f, m_attributes_needed)
+                shadingcontext()->info ("    %s %s", f.name, f.scope);
+            if (m_unknown_attributes_needed)
+                shadingcontext()->info ("    Also may construct attribute names on the fly.");
         }
     }
 }

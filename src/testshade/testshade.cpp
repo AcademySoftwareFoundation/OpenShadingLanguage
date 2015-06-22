@@ -767,6 +767,26 @@ test_group_attributes (ShaderGroup *group)
                       << userdata_offsets[i] << " deriv="
                       << userdata_derivs[i] << "\n";
     }
+    int nattr = 0;
+    if (shadingsys->getattribute (group, "num_attributes_needed", nattr) && nattr) {
+        std::cout << "Need " << nattr << " attributes:\n";
+        ustring *names = NULL;
+        ustring *scopes = NULL;
+        shadingsys->getattribute (group, "attributes_needed",
+                                  TypeDesc::PTR, &names);
+        shadingsys->getattribute (group, "attribute_scopes",
+                                  TypeDesc::PTR, &scopes);
+        DASSERT (names && scopes);
+        for (int i = 0; i < nattr; ++i)
+            std::cout << "    " << names[i] << ' '
+                      << scopes[i] << "\n";
+
+        int unk = 0;
+        shadingsys->getattribute (group, "unknown_attributes_needed", unk);
+        if (unk)
+            std::cout << "    and unknown attributes\n";
+    }
+
 }
 
 

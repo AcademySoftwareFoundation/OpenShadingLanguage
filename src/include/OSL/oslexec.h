@@ -263,6 +263,22 @@ public:
     ///   ptr userdata_offsets       Retrieves a pointer to the array of
     ///                                 int describing the userdata offsets
     ///                                 within the heap.
+    ///   int num_attributes_needed  The number of attribute/scope pairs that
+    ///                                are known to be queried by the group (the
+    ///                                length of the attributes_needed and
+    ///                                attribute_scopes arrays).
+    ///   ptr attributes_needed      Retrieves a pointer to the ustring array
+    ///                                containing the names of the needed attributes.
+    ///	                               Note that if the same attribute
+    ///                                is requested in multiple scopes, it will
+    ///                                appear in the array multiple times - once for
+    ///                                each scope in which is is queried.
+    ///   ptr attribute_scopes       Retrieves a pointer to a ustring array containing
+    ///                                the scopes associated with each attribute query
+    ///                                in the attributes_needed array.
+    ///   int unknown_attributes_needed  Nonzero if additonal attributes may be
+    ///                                  needed, whose names will not be known
+    ///                                  until the shader actually runs.
     ///   string pickle              Retrieves a serialized representation
     ///                                 of the shader group declaration.
     /// Note: the attributes referred to as "string" are actually on the app

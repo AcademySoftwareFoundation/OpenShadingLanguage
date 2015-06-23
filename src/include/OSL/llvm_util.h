@@ -317,6 +317,9 @@ public:
     llvm::Value *constant (const char *s) {
         return constant(OIIO::ustring(s));
     }
+    llvm::Value *constant (const std::string &s) {
+        return constant(OIIO::ustring(s));
+    }
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.
@@ -373,6 +376,10 @@ public:
     /// the function, if any.
     llvm::Value *call_function (const char *name,
                                 llvm::Value **args, int nargs);
+    template<size_t N>
+    llvm::Value* call_function (const char *name, llvm::Value* (&args)[N]) {
+        return call_function (name, &args[0], int(N));
+    }
 
     llvm::Value *call_function (const char *name, llvm::Value *arg0) {
         return call_function (name, &arg0, 1);

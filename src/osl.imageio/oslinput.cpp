@@ -87,9 +87,15 @@ public:
     OSLInput ();
     virtual ~OSLInput ();
     virtual const char * format_name (void) const { return "osl"; }
+#if OPENIMAGEIO_VERSION >= 10600
     virtual int supports (string_view feature) const {
         return (feature == "procedural");
     }
+#else  /* Remove the following when OIIO <= 1.5 is no longer needed */
+    virtual bool supports (const std::string& feature) const {
+        return (feature == "procedural");
+    }
+#endif
     virtual bool valid_file (const std::string &filename) const;
     virtual bool open (const std::string &name, ImageSpec &newspec);
     virtual bool open (const std::string &name, ImageSpec &newspec,

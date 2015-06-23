@@ -992,11 +992,16 @@ LLVMGEN (llvm_gen_compref)
     if (rop.shadingsys().range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
-            llvm::Value *args[5] = { c, rop.ll.constant(3),
-                                     rop.sg_void_ptr(),
-                                     rop.ll.constant(op.sourcefile()),
-                                     rop.ll.constant(op.sourceline()) };
-            c = rop.ll.call_function ("osl_range_check", args, 5);
+            llvm::Value *args[] = { c, rop.ll.constant(3),
+                                    rop.ll.constant(Val.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            c = rop.ll.call_function ("osl_range_check", args);
             ASSERT (c);
         }
     }
@@ -1031,11 +1036,16 @@ LLVMGEN (llvm_gen_compassign)
     if (rop.shadingsys().range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
-            llvm::Value *args[5] = { c, rop.ll.constant(3),
-                                     rop.sg_void_ptr(),
-                                     rop.ll.constant(op.sourcefile()),
-                                     rop.ll.constant(op.sourceline()) };
-            c = rop.ll.call_function ("osl_range_check", args, 5);
+            llvm::Value *args[] = { c, rop.ll.constant(3),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            c = rop.ll.call_function ("osl_range_check", args);
         }
     }
 
@@ -1068,13 +1078,18 @@ LLVMGEN (llvm_gen_mxcompref)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.shadingsys().range_checking()) {
-        llvm::Value *args[5] = { row, rop.ll.constant(4),
-                                 rop.sg_void_ptr(),
-                                 rop.ll.constant(op.sourcefile()),
-                                 rop.ll.constant(op.sourceline()) };
-        row = rop.ll.call_function ("osl_range_check", args, 5);
+        llvm::Value *args[] = { row, rop.ll.constant(4),
+                                rop.ll.constant(M.name()),
+                                rop.sg_void_ptr(),
+                                rop.ll.constant(op.sourcefile()),
+                                rop.ll.constant(op.sourceline()),
+                                rop.ll.constant(rop.group().name()),
+                                rop.ll.constant(rop.layer()),
+                                rop.ll.constant(rop.inst()->layername()),
+                                rop.ll.constant(rop.inst()->shadername()) };
+        row = rop.ll.call_function ("osl_range_check", args);
         args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args, 5);
+        col = rop.ll.call_function ("osl_range_check", args);
     }
 
     llvm::Value *val = NULL; 
@@ -1108,13 +1123,18 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.shadingsys().range_checking()) {
-        llvm::Value *args[5] = { row, rop.ll.constant(4),
-                                 rop.sg_void_ptr(),
-                                 rop.ll.constant(op.sourcefile()),
-                                 rop.ll.constant(op.sourceline()) };
-        row = rop.ll.call_function ("osl_range_check", args, 5);
+        llvm::Value *args[] = { row, rop.ll.constant(4),
+                                rop.ll.constant(Result.name()),
+                                rop.sg_void_ptr(),
+                                rop.ll.constant(op.sourcefile()),
+                                rop.ll.constant(op.sourceline()),
+                                rop.ll.constant(rop.group().name()),
+                                rop.ll.constant(rop.layer()),
+                                rop.ll.constant(rop.inst()->layername()),
+                                rop.ll.constant(rop.inst()->shadername()) };
+        row = rop.ll.call_function ("osl_range_check", args);
         args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args, 5);
+        col = rop.ll.call_function ("osl_range_check", args);
     }
 
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);
@@ -1165,12 +1185,17 @@ LLVMGEN (llvm_gen_aref)
     if (rop.shadingsys().range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < Src.typespec().arraylength())) {
-            llvm::Value *args[5] = { index,
-                                     rop.ll.constant(Src.typespec().arraylength()),
-                                     rop.sg_void_ptr(),
-                                     rop.ll.constant(op.sourcefile()),
-                                     rop.ll.constant(op.sourceline()) };
-            index = rop.ll.call_function ("osl_range_check", args, 5);
+            llvm::Value *args[] = { index,
+                                    rop.ll.constant(Src.typespec().arraylength()),
+                                    rop.ll.constant(Src.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            index = rop.ll.call_function ("osl_range_check", args);
         }
     }
 
@@ -1204,12 +1229,17 @@ LLVMGEN (llvm_gen_aassign)
     if (rop.shadingsys().range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < Result.typespec().arraylength())) {
-            llvm::Value *args[5] = { index,
-                                     rop.ll.constant(Result.typespec().arraylength()),
-                                     rop.sg_void_ptr(),
-                                     rop.ll.constant(op.sourcefile()),
-                                     rop.ll.constant(op.sourceline()) };
-            index = rop.ll.call_function ("osl_range_check", args, 5);
+            llvm::Value *args[] = { index,
+                                    rop.ll.constant(Result.typespec().arraylength()),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            index = rop.ll.call_function ("osl_range_check", args);
         }
     }
 

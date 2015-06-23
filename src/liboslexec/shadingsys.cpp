@@ -2956,13 +2956,20 @@ osl_uninit_check (long long typedesc_, void *vals_,
 
 
 OSL_SHADEOP int
-osl_range_check (int indexvalue, int length,
-                 void *sg, const void *sourcefile, int sourceline)
+osl_range_check (int indexvalue, int length, const char *symname,
+                 void *sg, const void *sourcefile, int sourceline,
+                 const char *groupname, int layer, const char *layername,
+                 const char *shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        ctx->error ("Index [%d] out of range [0..%d]: %s:%d",
-                    indexvalue, length-1, USTR(sourcefile), sourceline);
+        ctx->error ("Index [%d] out of range %s[0..%d]: %s:%d"
+                    " (group %s, layer %d %s, shader %s)",
+                    indexvalue, USTR(symname), length-1,
+                    USTR(sourcefile), sourceline,
+                    groupname ? groupname : "<unnamed group>", layer,
+                    (layername && layername[0]) ? layername : "<unnamed layer>",
+                    USTR(shadername));
         if (indexvalue >= length)
             indexvalue = length-1;
         else

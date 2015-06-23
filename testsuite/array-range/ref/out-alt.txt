@@ -2,7 +2,7 @@ Compiled test.osl -> test.oso
 constant index:
  reading:
   array[1] = 1
-ERROR: Index [10] out of range array[0..4]: test.osl:8 (group <unnamed group>, layer 0 <unnamed layer>, shader test)
+ERROR: Index [10] out of range $const1[0..4]: test.osl:8 (group <unnamed group>, layer 0 <unnamed layer>, shader test)
   array[10] = 4
  writing:
 ERROR: Index [10] out of range array[0..4]: test.osl:10 (group <unnamed group>, layer 0 <unnamed layer>, shader test)

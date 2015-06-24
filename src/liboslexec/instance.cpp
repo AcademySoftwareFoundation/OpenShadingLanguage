@@ -852,8 +852,16 @@ ShaderGroup::serialize () const
                                                    : inst->instoverride(p)->valuesource();
             if (vs == Symbol::InstanceVal) {
                 TypeDesc type = s->typespec().simpletype();
-                out << "param " << type << ' ' << s->name();
                 int offset = s->dataoffset();
+                if (type.is_unsized_array() && ! dstsyms_exist) {
+                    // If we're being asked to serialize a group that isn't
+                    // yet optimized, any "unsized" arrays will have their
+                    // concrete length and offset in the SymOverrideInfo,
+                    // not in the Symbol belonging to the instance.
+                    type.arraylen = inst->instoverride(p)->arraylen();
+                    offset = inst->instoverride(p)->dataoffset();
+                }
+                out << "param " << type << ' ' << s->name();
                 int nvals = type.numelements() * type.aggregate;
                 if (type.basetype == TypeDesc::INT) {
                     const int *vals = &inst->m_iparams[offset];

@@ -1,0 +1,10 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect alayer.CCout to blayer.CCin
+a: CCout = (0, 0.18, 0) * diffuse ((0, 0, 1))
+a: Ci = (0, 0.18, 0) * diffuse ((0, 0, 1))
+
+b: CCin = (0, 0.18, 0) * diffuse ((0, 0, 1))
+b: Ci = (0, 0.18, 0) * diffuse ((0, 0, 1))
+	+ (0.18, 0, 0) * diffuse ((0, 0, 1))
+

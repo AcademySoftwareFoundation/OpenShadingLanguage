@@ -361,7 +361,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             geomath getattribute-camera getsymbol-nonheap gettextureinfo
             group-outputs groupstring
             hyperb ieee_fp if incdec initops intbits isconnected
-            layers layers-Ciassign layers-lazy layers-repeatedoutputs
+            layers layers-Ciassign layers-lazy
+            layers-nonlazycopy layers-repeatedoutputs
             logic loop matrix message mergeinstances-nouserdata
             metadata-braces miscmath missing-shader
             noise noise-cell

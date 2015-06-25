@@ -1,0 +1,7 @@
+surface a ( output closure color CCout = 0 )
+{
+    CCout = diffuse(N) * color(0,0.18,0);
+    Ci = CCout;
+    printf ("a: CCout = %s\n", CCout);
+    printf ("a: Ci = %s\n", Ci);
+}

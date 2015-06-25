@@ -457,7 +457,7 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
         // called functions due to disagreement about whether a leading "_"
         // is part of the symbol name.
   #if OSL_LLVM_VERSION >= 35
-        llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::ParseBitcodeFile (buf, context());
+        llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile (buf, context());
         if (std::error_code EC = ModuleOrErr.getError())
             if (err)
               *err = EC.message();

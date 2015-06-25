@@ -1,0 +1,6 @@
+surface b ( closure color CCin = 0 )
+{
+    printf("\nb: CCin = %s\n", CCin);
+    Ci = CCin + diffuse(N) * color(.18,0,0);
+    printf("b: Ci = %s\n",Ci);
+}

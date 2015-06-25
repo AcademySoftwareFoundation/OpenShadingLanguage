@@ -761,9 +761,6 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                     }
                 }
             }
-            // Unconditionally execute earlier layers that are not lazy
-            if (! gi->run_lazily() && i < group().nlayers()-1)
-                llvm_call_layer (i, true /* unconditionally run */);
         }
     }
 
@@ -830,6 +827,17 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     }
 
     // All the symbols are stack allocated now.
+
+    if (groupentry) {
+        // Group entries also need to run any earlier layers that must be
+        // run unconditionally. It's important that we do this AFTER all the
+        // parameter initialization for this layer.
+        for (int i = 0;  i < group().nlayers()-1;  ++i) {
+            ShaderInstance *gi = group()[i];
+            if (!gi->unused() && !gi->empty_instance() && !gi->run_lazily())
+                llvm_call_layer (i, true /* unconditionally run */);
+        }
+    }
 
     // Mark all the basic blocks, including allocating llvm::BasicBlock
     // records for each.

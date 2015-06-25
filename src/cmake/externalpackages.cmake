@@ -192,6 +192,10 @@ if(NOT LLVM_DIRECTORY OR EXISTS ${LLVM_CONFIG})
        OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
+if (LLVM_VERSION VERSION_GREATER 3.4.9 AND NOT OSL_BUILD_CPP11)
+    message (FATAL_ERROR "LLVM ${LLVM_VERSION} requires C++11. You must build with USE_CPP11=1.")
+endif ()
+
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION}
                PATHS ${LLVM_LIB_DIR})
@@ -234,7 +238,6 @@ if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_
       message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
       message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
   endif ()
-
 
   if (NOT LLVM_LIBRARY)
     message (FATAL_ERROR "LLVM library not found.")

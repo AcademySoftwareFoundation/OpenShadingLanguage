@@ -32,6 +32,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
 
+#if OSL_LLVM_VERSION >= 35 && ! OSL_BUILD_CPP11
+#error "LLVM >= 3.5 requires USE_CPP11=1"
+#endif
+
 #ifndef USE_MCJIT
   // MCJIT first appeared with LLVM 3.3
 # define USE_MCJIT (OSL_LLVM_VERSION>=33)

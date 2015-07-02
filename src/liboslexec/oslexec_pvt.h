@@ -593,14 +593,14 @@ public:
             return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
         else
             return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0],
-                                               &i->m_instsymbols[i->m_instsymbols.size()]);
+                                               &i->m_instsymbols[0] + i->m_instsymbols.size());
     }
     friend std::pair<const Symbol *,const Symbol *> sym_range (const ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0)
             return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
         else
             return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0],
-                                               &i->m_instsymbols[i->m_instsymbols.size()]);
+                                               &i->m_instsymbols[0] + i->m_instsymbols.size());
     }
 
     int Psym () const { return m_Psym; }

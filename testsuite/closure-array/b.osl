@@ -1,0 +1,10 @@
+shader b (closure color input_closures[2] = {0})
+{
+    printf("Shader b \n");
+    for (int i = 0; i < 2 ; ++i)
+    {
+        printf("In %d : %s\n", i, input_closures[i]);
+        Ci += input_closures[i];
+    }
+    printf("Ci : %s \n", Ci);
+}

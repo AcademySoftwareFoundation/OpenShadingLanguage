@@ -168,7 +168,7 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name_
         } else if (typespec.simpletype().basetype == TypeDesc::STRING) {
             sym.dataoffset ((int) m_master->m_sdefaults.size());
             expand (m_master->m_sdefaults, nvals);
-        } else if (typespec.is_closure()) {
+        } else if (typespec.is_closure_based()) {
             // Closures are pointers, so we allocate a string default taking
             // adventage of their default being NULL as well.
             sym.dataoffset ((int) m_master->m_sdefaults.size());

@@ -1,0 +1,22 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Compiled c.osl -> c.oso
+Compiled d.osl -> d.oso
+Connect alayer.output_closure to clayer.in0
+Connect dlayer.output_closure to clayer.in1
+Connect clayer.output_closures to blayer.input_closures
+Shader b 
+Shader a 
+Shader d 
+Shader c 
+In 0 : (0.5, 2, 0) * diffuse ((0, 0, 1))
+	+ (0.25, 2, 0) * diffuse ((0, 0, 1))
+In 1 : (0.5, 0, 3) * diffuse ((0, 0, 1))
+	+ (0.25, 0, 3) * diffuse ((0, 0, 1))
+	+ (0.166667, 0, 3) * diffuse ((0, 0, 1))
+Ci : (0.5, 2, 0) * diffuse ((0, 0, 1))
+	+ (0.25, 2, 0) * diffuse ((0, 0, 1))
+	+ (0.5, 0, 3) * diffuse ((0, 0, 1))
+	+ (0.25, 0, 3) * diffuse ((0, 0, 1))
+	+ (0.166667, 0, 3) * diffuse ((0, 0, 1)) 
+

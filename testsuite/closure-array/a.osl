@@ -1,0 +1,8 @@
+shader a (output closure color output_closure = 0)
+{
+	printf("Shader a \n");
+    for (int i = 1; i < 3 ; ++i)
+    {
+        output_closure += color(u/i, 2.0, 0.0) * diffuse(N);
+    }
+}

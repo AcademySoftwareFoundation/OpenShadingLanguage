@@ -1,0 +1,8 @@
+shader c (
+    closure color in0 = 0,
+    closure color in1 = 0,
+    output closure color output_closures[2] = {in0, in1}
+    )
+{
+    printf("Shader c \n");
+}

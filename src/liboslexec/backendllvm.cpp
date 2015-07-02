@@ -779,8 +779,8 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
 
     llvm::Value *arrind = arrayindex >= 0 ? ll.constant (arrayindex) : NULL;
 
-    if (Result.typespec().is_closure_based() || Src.typespec().is_closure_based()) {
-        if (Src.typespec().is_closure_based()) {
+    if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
+        if (Src.typespec().is_closure()) {
             llvm::Value *srcval = llvm_load_value (Src, 0, arrind, 0);
             llvm_store_value (srcval, Result, 0, arrind, 0);
         } else {

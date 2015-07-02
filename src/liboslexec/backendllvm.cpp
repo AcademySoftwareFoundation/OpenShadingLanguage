@@ -221,10 +221,7 @@ BackendLLVM::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
     }
 }
 
-
-
-int
-BackendLLVM::ShaderGlobalNameToIndex (ustring name)
+namespace
 {
     // N.B. The order of names in this table MUST exactly match the
     // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
@@ -240,7 +237,11 @@ BackendLLVM::ShaderGlobalNameToIndex (ustring name)
         ustring("surfacearea"), ustring("raytype"),
         ustring("flipHandedness"), ustring("backfacing")
     };
+}
 
+int
+BackendLLVM::ShaderGlobalNameToIndex (ustring name)
+{
     for (int i = 0;  i < int(sizeof(fields)/sizeof(fields[0]));  ++i)
         if (name == fields[i])
             return i;

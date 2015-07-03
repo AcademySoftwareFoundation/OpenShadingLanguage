@@ -227,13 +227,14 @@ namespace
     // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
     // defined in llvm_type_sg().
     static ustring fields[] = {
-        Strings::P, ustring("_dPdz"), Strings::I, Strings::N, Strings::Ng,
-        Strings::u, Strings::v, Strings::dPdu, Strings::dPdv,
-        Strings::time, Strings::dtime, Strings::dPdtime, Strings::Ps,
+        ustring("P"), ustring("_dPdz"), ustring("I"),
+        ustring("N"), ustring("Ng"),
+        ustring("u"), ustring("v"), ustring("dPdu"), ustring("dPdv"),
+        ustring("time"), ustring("dtime"), ustring("dPdtime"), ustring("Ps"),
         ustring("renderstate"), ustring("tracedata"), ustring("objdata"),
         ustring("shadingcontext"), ustring("renderer"),
         ustring("object2common"), ustring("shader2common"),
-        Strings::Ci,
+        ustring("Ci"),
         ustring("surfacearea"), ustring("raytype"),
         ustring("flipHandedness"), ustring("backfacing")
     };

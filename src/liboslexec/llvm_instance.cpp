@@ -987,14 +987,14 @@ BackendLLVM::run ()
     int nlayers = group().nlayers();
     m_layer_remap.resize (nlayers);
     m_num_used_layers = 0;
-    if (shadingsys().debug() >= 1)
+    if (debug() >= 1)
         std::cout << "\nLayers used:\n";
     for (int layer = 0;  layer < nlayers;  ++layer) {
         bool lastlayer = (layer == (nlayers-1));
         if (lastlayer ||
             (! group()[layer]->unused() && !group()[layer]->empty_instance()))
         {
-            if (shadingsys().debug() >= 1)
+            if (debug() >= 1)
                 std::cout << "  " << layer << "\n";
             m_layer_remap[layer] = m_num_used_layers++;
         }

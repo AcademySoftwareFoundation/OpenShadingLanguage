@@ -631,6 +631,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_middlemen_eliminated = 0;
     m_stat_const_connections = 0;
     m_stat_global_connections = 0;
+    m_stat_tex_calls_codegened = 0;
+    m_stat_tex_calls_as_handles = 0;
     m_stat_master_load_time = 0;
     m_stat_optimization_time = 0;
     m_stat_getattribute_time = 0;
@@ -1133,6 +1135,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:middlemen_eliminated", int, m_stat_middlemen_eliminated);
     ATTR_DECODE ("stat:const_connections", int, m_stat_const_connections);
     ATTR_DECODE ("stat:global_connections", int, m_stat_global_connections);
+    ATTR_DECODE ("stat:tex_calls_codegened", int, m_stat_tex_calls_codegened);
+    ATTR_DECODE ("stat:tex_calls_as_handles", int, m_stat_tex_calls_as_handles);
     ATTR_DECODE ("stat:master_load_time", float, m_stat_master_load_time);
     ATTR_DECODE ("stat:optimization_time", float, m_stat_optimization_time);
     ATTR_DECODE ("stat:opt_locking_time", float, m_stat_opt_locking_time);
@@ -1563,6 +1567,9 @@ ShadingSystemImpl::getstats (int level) const
             << Strutil::timeintervalformat (m_stat_llvm_jit_time, 2) << "\n";
     }
 
+    out << "  Texture calls compiled: "
+        << (int)m_stat_tex_calls_codegened
+        << " (" << (int)m_stat_tex_calls_as_handles << " used handles)\n";
     out << "  Regex's compiled: " << m_stat_regexes << "\n";
     out << "  Largest generated function local memory size: "
         << m_stat_max_llvm_local_mem/1024 << " KB\n";

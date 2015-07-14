@@ -386,6 +386,13 @@ public:
 
     llvm::Function *layer_func () const { return ll.current_function(); }
 
+    /// Call this when JITing a texture-like call, to track how many.
+    void generated_texture_call (bool handle) {
+        shadingsys().m_stat_tex_calls_codegened += 1;
+        if (handle)
+            shadingsys().m_stat_tex_calls_as_handles += 1;
+    }
+
     LLVM_Util ll;
 
 private:

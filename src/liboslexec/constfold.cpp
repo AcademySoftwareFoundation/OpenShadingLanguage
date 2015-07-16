@@ -2511,7 +2511,8 @@ DECLFOLDER(constfold_noise)
     Symbol *Name = rop.opargsym (op, arg++);
     ustring name;
     if (Name->typespec().is_string()) {
-        name = Name->is_constant() ? *(ustring *)Name->data() : ustring();
+        if (Name->is_constant())
+            name = *(ustring *)Name->data();
     } else {
         // Not a string, must be the old-style noise/pnoise
         --arg;  // forget that arg
@@ -2525,6 +2526,26 @@ DECLFOLDER(constfold_noise)
     // turn its derivative taking off.
     if (op.argtakesderivs_all() &&  name.length() && name != "gabor")
         op.argtakesderivs_all(0);
+
+    // Gabor noise is the only one that takes optional arguments, so
+    // optimize them away for other noise types.
+    if (name.length() && name != "gabor") {
+        for (int a = arg; a < op.nargs(); ++a) {
+            // Advance until we hit a string argument, which will be the
+            // first optional token/value pair. Then just turn all arguments
+            // from that point on into empty strings, which will later be
+            // skipped, and in the mean time will eliminate the dependencies
+            // on whatever values were previously passed.
+            if (rop.opargsym(op,a)->typespec().is_string()) {
+                for ( ; a < op.nargs(); a += 2) {
+                    ASSERT (a+1 < op.nargs());
+                    int cind = rop.add_constant (ustring());
+                    rop.inst()->args()[op.firstarg()+a] = cind;
+                    rop.inst()->args()[op.firstarg()+a+1] = cind;
+                }
+            }
+        }
+    }
 
     // Early out: for now, we only fold cell noise
     if (name != u_cellnoise && name != u_cell)

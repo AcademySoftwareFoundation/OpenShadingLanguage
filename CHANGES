@@ -1,7 +1,10 @@
 Changes:
 
+Release 1.6.9 -- ?? 2015 (compared to 1.6.8)
+------------------------------------------------
+
 Release 1.6.8 -- 16 Jul 2015 (compared to 1.6.7)
------------------------------------------------
+------------------------------------------------
 * Support shader parameters that are arrays of closures. (Thanks,
   Ubisoft!) #544
 * New shader group ShadingSystem::getattribute() queries:

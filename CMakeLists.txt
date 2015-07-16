@@ -3,7 +3,7 @@ project (OSL)
 # Release version of the library
 set (OSL_LIBRARY_VERSION_MAJOR 1)
 set (OSL_LIBRARY_VERSION_MINOR 6)
-set (OSL_LIBRARY_VERSION_PATCH 8)
+set (OSL_LIBRARY_VERSION_PATCH 9)
 set (OSL_LIBRARY_VERSION_RELEASE_TYPE "")   # "dev", "betaX", "RCY", ""
 
 # Version of the OSO file format and instruction set

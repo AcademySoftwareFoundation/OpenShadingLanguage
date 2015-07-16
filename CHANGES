@@ -1,7 +1,25 @@
 Changes:
 
-Release 1.6.8 -- ?? 2015 (compared to 1.6.7)
+Release 1.6.8 -- 16 Jul 2015 (compared to 1.6.7)
 -----------------------------------------------
+* Support shader parameters that are arrays of closures. (Thanks,
+  Ubisoft!) #544
+* New shader group ShadingSystem::getattribute() queries:
+  num_attributes_needed, attributes_needed, attribute_scopes, and
+  unknown_attributes_needed. Collectively, these let you find out
+  exactly which getattribute tokens a compiled shader group may request.
+  (Works like the similar queries for userdata tokens.)
+  (Thanks, Image Engine!) #537
+* Fix bugs when deserializing shader group strings with unsized arrays. #534
+* Fix bugs when serializing shader groups with unsized arrays. #539
+* Fix format() constant folding. #536
+* Fix bug with unconditional running of earlier layers -- could botch
+  certain parameter initialization. #541
+* Make sure we build correctly against LLVM 3.5.
+* When building against LLVM 3.5, abort the build and give a clear error
+  message if not also using USE_CPP11=1 (because LLVM3.5 requres C++11). #542
+* Fixes for clean VS2012 builds. #545
+* Fix static array initialization problem with VS2012.
 
 
 Release 1.6.7 -- 11 Jun 2015 (compared to 1.6.6)

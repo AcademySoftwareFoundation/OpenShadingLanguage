@@ -58,6 +58,7 @@ static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
 static std::vector<OIIO::ImageBuf*> outputimgs;
 static std::string dataformatname = "";
+static std::string shaderpath;
 static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
@@ -121,6 +122,8 @@ set_shadingsys_options ()
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
+    if (! shaderpath.empty())
+        shadingsys->attribute ("searchpath:shader", shaderpath);
     shadingsys_options_set = true;
 }
 
@@ -416,6 +419,7 @@ getargs (int argc, const char *argv[])
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",
+                "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
@@ -457,9 +461,8 @@ getargs (int argc, const char *argv[])
         exit (EXIT_FAILURE);
     }
     if (help) {
-        std::cout <<
-            "testshade -- Test Open Shading Language\n"
-            "(c) Copyright 2009-2010 Sony Pictures Imageworks Inc. All Rights Reserved.\n";
+        std::cout << "testshade -- Test Open Shading Language\n"
+                     OSL_COPYRIGHT_STRING "\n";
         ap.usage ();
         exit (EXIT_SUCCESS);
     }

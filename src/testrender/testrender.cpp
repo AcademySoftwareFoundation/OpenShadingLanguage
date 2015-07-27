@@ -81,6 +81,8 @@ int backgroundResolution = 0;
 Background background;
 std::vector<ShaderGroupRef> shaders;
 std::string scenefile, imagefile;
+static std::string shaderpath;
+
 
 int get_filenames(int argc, const char *argv[])
 {
@@ -113,6 +115,7 @@ void getargs(int argc, const char *argv[])
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
+                "--path %s", &shaderpath, "Specify oso search path",
                 "--options %s", &extraoptions, "Set extra OSL options",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
@@ -123,7 +126,7 @@ void getargs(int argc, const char *argv[])
     if (help) {
         std::cout <<
             "testrender -- Test Renderer for Open Shading Language\n"
-            "(c) Copyright 2009-2010 Sony Pictures Imageworks Inc. All Rights Reserved.\n";
+             OSL_COPYRIGHT_STRING "\n";
         ap.usage ();
         exit (EXIT_SUCCESS);
     }
@@ -611,6 +614,8 @@ int main (int argc, const char *argv[]) {
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
     shadingsys->attribute ("debugnan", debugnan);
+    if (! shaderpath.empty())
+        shadingsys->attribute ("searchpath:shader", shaderpath);
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
 

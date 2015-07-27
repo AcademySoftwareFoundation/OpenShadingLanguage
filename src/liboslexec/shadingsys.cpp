@@ -1901,9 +1901,13 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         string_view keyword = Strutil::parse_word (p);
 
         if (keyword == "shader") {
-            string_view shadername = Strutil::parse_identifier (p);
-            Strutil::skip_whitespace (p);
-            string_view layername = Strutil::parse_until (p, " \t\r\n,;");
+            string_view shadername, layername;
+            if (! Strutil::parse_string (p, shadername) ||
+                ! Strutil::parse_string (p, layername)) {
+                err = true;
+                errdesc = "Badly formed shader name or layer name";
+                break;
+            }
             Shader (usage, shadername, layername);
             Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
             Strutil::skip_whitespace (p);

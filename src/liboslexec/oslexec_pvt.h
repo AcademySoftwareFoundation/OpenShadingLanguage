@@ -825,7 +825,6 @@ public:
     bool ShaderGroupEnd (void);
     bool ConnectShaders (string_view srclayer, string_view srcparam,
                          string_view dstlayer, string_view dstparam);
-    ShaderGroupRef state ();
     ShaderGroupRef ShaderGroupBegin (string_view groupname,
                                      string_view usage,
                                      string_view groupspec);

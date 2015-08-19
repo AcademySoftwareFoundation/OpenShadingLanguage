@@ -205,14 +205,6 @@ ShadingSystem::ConnectShaders (string_view srclayer, string_view srcparam,
 
 
 
-ShaderGroupRef
-ShadingSystem::state ()
-{
-    return m_impl->state();
-}
-
-
-
 bool
 ShadingSystem::ReParameter (ShaderGroup &group, string_view layername,
                             string_view paramname, TypeDesc type,
@@ -2138,20 +2130,6 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
     }
 
     return g;
-}
-
-
-
-ShaderGroupRef
-ShadingSystemImpl::state ()
-{
-    {
-        // Record the state for later greedy JITing
-        spin_lock lock (m_all_shader_groups_mutex);
-        m_all_shader_groups.push_back (m_curgroup);
-        ++m_groups_to_compile_count;
-    }
-    return m_curgroup;
 }
 
 

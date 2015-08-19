@@ -383,11 +383,6 @@ public:
     bool ConnectShaders (string_view srclayer, string_view srcparam,
                          string_view dstlayer, string_view dstparam);
 
-    /// Return a reference-counted (but opaque) reference to the current
-    /// shading attribute state maintained by the ShadingSystem.
-    /// DEPRECATED -- instead, retrive via ShaderGroupBegin().
-    ShaderGroupRef state ();
-
     /// Replace a parameter value in a previously-declared shader group.
     /// This is meant to called after the ShaderGroupBegin/End, but will
     /// fail if the shader has already been irrevocably optimized/compiled,

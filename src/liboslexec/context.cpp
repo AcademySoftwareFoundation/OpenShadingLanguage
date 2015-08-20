@@ -71,9 +71,12 @@ ShadingContext::~ShadingContext ()
 
 
 bool
-ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
+ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 {
+    if (m_attribs)
+        execute_cleanup ();
     m_attribs = &sgroup;
+    m_ticks = 0;
 
     // Optimize if we haven't already
     if (sgroup.nlayers()) {
@@ -123,23 +126,74 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
         ssg.context = this;
         ssg.renderer = renderer();
         ssg.Ci = NULL;
-        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_version();
+        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
         DASSERT (run_func);
         DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
         run_func (&ssg, &m_heap[0]);
     }
 
+    if (profile)
+        m_ticks += timer.ticks();
+    return true;
+}
+
+
+
+bool
+ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
+{
+    DASSERT (group() && group()->nlayers() && !group()->does_nothing());
+    DASSERT (ssg.context == this && ssg.renderer == renderer());
+
+    int profile = shadingsys().m_profile;
+    OIIO::Timer timer (profile);
+
+    RunLLVMGroupFunc run_func = group()->llvm_compiled_layer (layernumber);
+    if (! run_func)
+        return false;
+
+    run_func (&ssg, &m_heap[0]);
+
+    if (profile)
+        m_ticks += timer.ticks();
+
+    return true;
+}
+
+
+
+bool
+ShadingContext::execute_cleanup ()
+{
+    if (! group()) {
+        error ("execute_cleanup called again on a cleaned-up context");
+        return false;
+    }
+
     // Process any queued up error messages, warnings, printfs from shaders
     process_errors ();
 
-    if (profile) {
+    if (shadingsys().m_profile) {
         record_runtime_stats ();   // Transfer runtime stats to the shadingsys
-        long long ticks = timer.ticks();
-        shadingsys().m_stat_total_shading_time_ticks += ticks;
-        sgroup.m_stat_total_shading_time_ticks += ticks;
+        shadingsys().m_stat_total_shading_time_ticks += m_ticks;
+        group()->m_stat_total_shading_time_ticks += m_ticks;
     }
 
     return true;
+}
+
+
+
+bool
+ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
+{
+    if (! execute_init (sgroup, ssg, run))
+        return false;
+
+    if (run)
+        execute_layer (ssg, group()->nlayers()-1);
+
+    return execute_cleanup ();
 }
 
 

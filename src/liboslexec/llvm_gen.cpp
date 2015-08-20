@@ -113,14 +113,12 @@ void
 BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 {
     // Make code that looks like:
-    //     if (! groupdata->run[parentlayer]) {
-    //         groupdata->run[parentlayer] = 1;
+    //     if (! groupdata->run[parentlayer])
     //         parent_layer (sg, groupdata);
-    //     }
     // if it's a conditional call, or
-    //     groupdata->run[parentlayer] = 1;
     //     parent_layer (sg, groupdata);
     // if it's run unconditionally.
+    // The code in the parent layer itself will set its 'executed' flag.
 
     llvm::Value *args[2];
     args[0] = sg_ptr ();
@@ -139,12 +137,12 @@ BackendLLVM::llvm_call_layer (int layer, bool unconditional)
         // insert point is now then_block
     }
 
-    ll.op_store (trueval, layerfield);
     std::string name = Strutil::format ("%s_%d", parent->layername().c_str(),
                                         parent->id());
     // Mark the call as a fast call
     llvm::Value *funccall = ll.call_function (name.c_str(), args, 2);
-    ll.mark_fast_func_call (funccall);
+    if (!parent->entry_layer())
+        ll.mark_fast_func_call (funccall);
 
     if (! unconditional)
         ll.op_branch (after_block);  // also moves insert point

@@ -460,13 +460,14 @@ class Symbol {
 public:
     Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
             ASTNode *declaration_node=NULL) 
-        : m_data(NULL),
+        : m_data(NULL), m_name(name), m_typespec(datatype),
           m_size(datatype.is_unsized_array() ? 0 : (int)datatype.simpletype().size()),
-          m_name(name), m_typespec(datatype), m_symtype(symtype),
+          m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
           m_initialized(false), m_lockgeom(false), m_renderer_output(false),
-          m_valuesource(DefaultVal), m_free_data(false), m_fieldid(-1),
+          m_valuesource(DefaultVal), m_free_data(false),
+          m_fieldid(-1), m_layer(-1),
           m_scope(0), m_dataoffset(-1), m_initializers(0),
           m_node(declaration_node), m_alias(NULL),
           m_initbegin(0), m_initend(0),
@@ -596,6 +597,9 @@ public:
     int fieldid () const { return m_fieldid; }
     void fieldid (int id) { m_fieldid = id; }
 
+    int layer () const { return m_layer; }
+    void layer (int id) { m_layer = id; }
+
     int initbegin () const { return m_initbegin; }
     void initbegin (int i) { m_initbegin = i; }
     int initend () const { return m_initend; }
@@ -688,9 +692,9 @@ public:
 
 protected:
     void *m_data;               ///< Pointer to the data
-    int m_size;                 ///< Size of data (in bytes)
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
+    int m_size;                 ///< Size of data (in bytes)
     char m_symtype;             ///< Kind of symbol (param, local, etc.)
     unsigned m_has_derivs:1;    ///< Step to derivs (0 == has no derivs)
     unsigned m_const_initializer:1; ///< initializer is a constant expression
@@ -701,6 +705,7 @@ protected:
     char m_valuesource;         ///< Where did the value come from?
     bool m_free_data;           ///< Free m_data upon destruction?
     short m_fieldid;            ///< Struct field of this var (or -1)
+    short m_layer;              ///< Layer (within the group) this belongs to
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
     int m_initializers;         ///< Number of default initializers

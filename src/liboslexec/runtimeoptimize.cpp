@@ -2795,10 +2795,10 @@ RuntimeOptimizer::run ()
             std::cout << "After optimizing layer " << layer << " " 
                       << inst()->layername() << " (" << inst()->id() << ") :\n"
                       << " connections in=" << inst()->nconnections()
-                      << " out? " << (inst()->outgoing_connections()?'y':'n')
+                      << " out=" << inst()->outgoing_connections()
                       << (inst()->writes_globals() ? " writes_globals" : "")
                       << (inst()->userdata_params() ? " userdata_params" : "")
-                      << (inst()->run_lazily() ? " run_lazily" : "")
+                      << (inst()->run_lazily() ? " run_lazily" : " run_unconditionally")
                       << (inst()->outgoing_connections() ? " outgoing_connections" : "")
                       << (inst()->renderer_outputs() ? " renderer_outputs" : "")
                       << (inst()->writes_globals() ? " writes_globals" : "")
@@ -2818,12 +2818,15 @@ RuntimeOptimizer::run ()
     m_globals_needed.clear();
     m_userdata_needed.clear();
     m_attributes_needed.clear();
+    bool does_nothing = true;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         if (inst()->unused())
             continue;  // no need to print or gather stats for unused layers
-        // Find interpolated parameters
-        FOREACH_SYM (const Symbol &s, inst()) {
+        FOREACH_SYM (Symbol &s, inst()) {
+            // set the layer numbers
+            s.layer (layer);
+            // Find interpolated parameters
             if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
                 && ! s.lockgeom()) {
                 UserDataNeeded udn (s.name(), s.typespec().simpletype(), s.has_derivs());
@@ -2836,6 +2839,7 @@ RuntimeOptimizer::run ()
                     m_userdata_needed.insert (udn);
                 }
             }
+            // Track which globals the group needs
             if (s.symtype() == SymTypeGlobal) {
                 m_globals_needed.insert (s.name());
             }
@@ -2844,6 +2848,8 @@ RuntimeOptimizer::run ()
             const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
             if (! opd)
                 continue;
+            if (op.opname() != Strings::end && op.opname() != Strings::useparam)
+                does_nothing = false;  // a non-unused layer with a nontrivial op
             if (opd->flags & OpDescriptor::Tex) {
                 // for all the texture ops, arg 1 is the texture name
                 Symbol *sym = opargsym (op, 1);
@@ -2898,6 +2904,7 @@ RuntimeOptimizer::run ()
             }
         }
     }
+    group().does_nothing (does_nothing);
 
     m_stat_specialization_time = rop_timer();
     {
@@ -2908,6 +2915,8 @@ RuntimeOptimizer::run ()
         ss.m_stat_preopt_ops += old_nops;
         ss.m_stat_postopt_syms += new_nsyms;
         ss.m_stat_postopt_ops += new_nops;
+        if (does_nothing)
+            ss.m_stat_empty_groups += 1;
     }
     if (shadingsys().m_compile_report) {
         shadingcontext()->info ("Optimized shader group %s:", group().name());
@@ -2916,6 +2925,8 @@ RuntimeOptimizer::run ()
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
               new_nops, old_nops,
               100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
+        if (does_nothing)
+            shadingcontext()->info ("Group does nothing");
         if (m_textures_needed.size()) {
             shadingcontext()->info ("Group needs textures:");
             BOOST_FOREACH (ustring f, m_textures_needed)

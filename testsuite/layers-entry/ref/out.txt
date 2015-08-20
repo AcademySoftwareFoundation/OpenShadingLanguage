@@ -1,0 +1,86 @@
+Compiled node.osl -> node.oso
+
+
+default execution:
+Connect B.out to E.in
+Connect E.out to F.in
+Connect E.out to G.in
+
+Marking group outputs, not global renderer outputs.
+Output D.out to out.exr
+(node G) enter layer 6 G node
+(node A) enter layer 0 A node
+Running layer A:
+  layer A, in = 1, out = 2
+(node A) exit layer 0 A node
+(node C) enter layer 2 C node
+Running layer C:
+  layer C, in = 3, out = 6
+(node C) exit layer 2 C node
+(node D) enter layer 3 D node
+Running layer D:
+  layer D, in = 4, out = 8
+(node D) exit layer 3 D node
+(node F) enter layer 5 F node
+Running layer F:
+(node E) enter layer 4 E node
+Running layer E:
+(node B) enter layer 1 B node
+Running layer B:
+  layer B, in = 2, out = 4
+(node B) exit layer 1 B node
+  layer E, in = 4, out = 9
+(node E) exit layer 4 E node
+  layer F, in = 9, out = 15
+(node F) exit layer 5 F node
+Running layer G:
+  layer G, in = 9, out = 16
+(node G) exit layer 6 G node
+
+
+explicit execution by layer (BFE):
+Connect B.out to E.in
+Connect E.out to F.in
+Connect E.out to G.in
+
+Marking group outputs, not global renderer outputs.
+Entry layers: B(1) F(5) E(4)
+Output D.out to out.exr
+(node B) checking for already-run layer 1 B node
+(node B) enter layer 1 B node
+Running layer B:
+  layer B, in = 2, out = 4
+(node B) exit layer 1 B node
+(node F) checking for already-run layer 5 F node
+(node F) enter layer 5 F node
+Running layer F:
+(node E) checking for already-run layer 4 E node
+(node E) enter layer 4 E node
+Running layer E:
+  layer E, in = 4, out = 9
+(node E) exit layer 4 E node
+  layer F, in = 9, out = 15
+(node F) exit layer 5 F node
+(node E) checking for already-run layer 4 E node
+(node E)   taking early exit, already executed layer 4 E node
+
+
+explicit execution by output (E.out):
+Connect B.out to E.in
+Connect E.out to F.in
+Connect E.out to G.in
+
+Marking group outputs, not global renderer outputs.
+Entry layers: B(1) F(5) E(4)
+Entry outputs: E.out
+Output D.out to out.exr
+(node E) checking for already-run layer 4 E node
+(node E) enter layer 4 E node
+Running layer E:
+(node B) checking for already-run layer 1 B node
+(node B) enter layer 1 B node
+Running layer B:
+  layer B, in = 2, out = 4
+(node B) exit layer 1 B node
+  layer E, in = 4, out = 9
+(node E) exit layer 4 E node

@@ -104,7 +104,7 @@ namespace Strings {
     extern ustring op_dowhile, op_for, op_while, op_exit;
     extern ustring subimage, subimagename;
     extern ustring missingcolor, missingalpha;
-    extern ustring end;
+    extern ustring end, useparam;
     extern ustring uninitialized_string;
 }; // namespace Strings
 
@@ -578,6 +578,10 @@ public:
     /// Set whether this instance has renderer outputs
     void renderer_outputs (bool out) { m_renderer_outputs = out; }
 
+    /// Is this instance a callable entry point for the group?
+    bool entry_layer () const { return m_entry_layer; }
+    void entry_layer (bool val) { m_entry_layer = val; }
+
     /// Was this instance merged away and now no longer needed?
     bool merged_unused () const { return m_merged_unused; }
 
@@ -716,6 +720,7 @@ private:
     bool m_outgoing_connections;        ///< Any outgoing connections?
     bool m_renderer_outputs;            ///< Any outputs params render outputs?
     bool m_merged_unused;               ///< Unused because of a merge
+    bool m_entry_layer;                 ///< Is it an entry layer?
     ConnectionVec m_connections;        ///< Connected input params
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
@@ -1313,9 +1318,10 @@ public:
     ///
     int nlayers () const { return (int) m_layers.size(); }
 
+    ShaderInstance * layer (int i) const { return m_layers[i].get(); }
+
     /// Array indexing returns the i-th layer of the group
-    ///
-    ShaderInstance * operator[] (int i) const { return m_layers[i].get(); }
+    ShaderInstance * operator[] (int i) const { return layer(i); }
 
     int optimized () const { return m_optimized; }
     void optimized (int opt) { m_optimized = opt; }
@@ -1328,6 +1334,21 @@ public:
     }
     void llvm_compiled_version (RunLLVMGroupFunc func) {
         m_llvm_compiled_version = func;
+    }
+    RunLLVMGroupFunc llvm_compiled_init() const {
+        return m_llvm_compiled_init;
+    }
+    void llvm_compiled_init (RunLLVMGroupFunc func) {
+        m_llvm_compiled_init = func;
+    }
+    RunLLVMGroupFunc llvm_compiled_layer (int layer) const {
+        return layer < (int)m_llvm_compiled_layers.size()
+                            ? m_llvm_compiled_layers[layer] : NULL;
+    }
+    void llvm_compiled_layer (int layer, RunLLVMGroupFunc func) {
+        m_llvm_compiled_layers.resize ((size_t)nlayers(), NULL);
+        if (layer < nlayers())
+            m_llvm_compiled_layers[layer] = func;
     }
 
     /// Is this shader group equivalent to ret void?
@@ -1354,9 +1375,38 @@ public:
     void lock () const { m_mutex.lock(); }
     void unlock () const { m_mutex.unlock(); }
 
+    // Find which layer index corresponds to the layer name. Return -1 if
+    // not found.
+    int find_layer (ustring layername) const;
+
     // Retrieve the Symbol* by layer and symbol name. If the layer name is
     // empty, go back-to-front.
     const Symbol* find_symbol (ustring layername, ustring symbolname) const;
+
+    /// Return a unique ID of this group.
+    ///
+    int id () const { return m_id; }
+
+    /// Mark all layers as not entry points and set m_num_entry_layers to 0.
+    void clear_entry_layers ();
+
+    /// Mark the given layer number as an entry layer and increment
+    /// m_num_entry_layers if it wasn't already set. Has no effect if layer
+    /// is not a valid layer ID.
+    void mark_entry_layer (int layer);
+    void mark_entry_layer (ustring layername) {
+        mark_entry_layer (find_layer (layername));
+    }
+
+    int num_entry_layers () const { return m_num_entry_layers; }
+
+    /// Is the given layer an entry point? It is if explicitly tagged as
+    /// such, or if no layers are so tagged then the last layer is the one
+    /// entry.
+    bool is_entry_layer (int layer) const {
+        return num_entry_layers() ? m_layers[layer]->entry_layer()
+                                  : (layer == nlayers()-1);
+    }
 
 private:
     // Put all the things that are read-only (after optimization) and
@@ -1365,7 +1415,11 @@ private:
     volatile int m_optimized;        ///< Is it already optimized?
     bool m_does_nothing;             ///< Is the shading group just func() { return; }
     size_t m_llvm_groupdata_size;    ///< Heap size needed for its groupdata
+    int m_id;                        ///< Unique ID for the group
+    int m_num_entry_layers;          ///< Number of marked entry layers
     RunLLVMGroupFunc m_llvm_compiled_version;
+    RunLLVMGroupFunc m_llvm_compiled_init;
+    std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
     mutable mutex m_mutex;           ///< Thread-safe optimization
@@ -1407,12 +1461,21 @@ public:
     ///
     RendererServices *renderer () const { return m_renderer; }
 
-    /// Execute the shaders for the given use (for example,
-    /// ShadUseSurface).  If 'run' is false, do all the usual
-    /// preparation, but don't actually run the shader.  Return true if
-    /// the shader executed, false if it did not (including if the
-    /// shader itself was empty).
-    bool execute (ShaderGroup &sas, ShaderGlobals &ssg, bool run=true);
+    /// Bind a shader group and globals to this context and prepare to
+    /// execute. (See similarly named method of ShadingSystem.)
+    bool execute_init (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
+
+    /// Execute the layer whose index is specified. (See similarly named
+    /// method of ShadingSystem.)
+    bool execute_layer (ShaderGlobals &globals, int layer);
+
+    /// Signify that this context is done with the current execution of the
+    /// group. (See similarly named method of ShadingSystem.)
+    bool execute_cleanup ();
+
+    /// Execute the shader group, including init, run of single entry point
+    /// layer, and cleanup. (See similarly named method of ShadingSystem.)
+    bool execute (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs) {
         size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
@@ -1488,8 +1551,13 @@ public:
     /// aren't constantly compiling new ones.
     const boost::regex & find_regex (ustring r);
 
-    /// Return a pointer to the shading attribs for this context.
+    /// Return a pointer to the shading group for this context.
     ///
+    ShaderGroup *group () { return m_attribs; }
+    const ShaderGroup *group () const { return m_attribs; }
+
+    /// Return a pointer to the shading attribs for this context.
+    /// (DEPRECATED name)
     ShaderGroup *attribs () { return m_attribs; }
     const ShaderGroup *attribs () const { return m_attribs; }
 
@@ -1604,6 +1672,7 @@ private:
     int m_max_warnings;                 ///< To avoid processing too many warnings
     int m_stat_get_userdata_calls;      ///< Number of calls to get_userdata
     int m_stat_layers_executed;         ///< Number of layers executed
+    long long m_ticks;                  ///< Time executing the shader
 
     TextureOpt m_textureopt;            ///< texture call options
     RendererServices::NoiseOpt m_noiseopt; ///< noise call options

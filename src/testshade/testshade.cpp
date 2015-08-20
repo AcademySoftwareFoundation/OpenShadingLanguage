@@ -59,6 +59,10 @@ static std::vector<ustring> outputvarnames;
 static std::vector<OIIO::ImageBuf*> outputimgs;
 static std::string dataformatname = "";
 static std::string shaderpath;
+static std::vector<std::string> entrylayers;
+static std::vector<std::string> entryoutputs;
+static std::vector<int> entrylayer_index;
+static std::vector<const ShaderSymbol *> entrylayer_symbols;
 static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
@@ -115,7 +119,10 @@ set_shadingsys_options ()
         return;
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
-    int opt = O2 ? 2 : (O1 ? 1 : 0);
+    int opt = 2;  // default
+    if (O0) opt = 0;
+    if (O1) opt = 1;
+    if (O2) opt = 2;
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
@@ -443,6 +450,8 @@ getargs (int argc, const char *argv[])
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
+                "--entry %L", &entrylayers, "Add layer to the list of entry points",
+                "--entryoutput %L", &entryoutputs, "Add output symbol to the list of entry points",
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
                 "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
                 "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
@@ -599,16 +608,47 @@ setup_output_images (ShadingSystem *shadingsys,
             std::cout << "Marking group outputs, not global renderer outputs.\n";
     }
 
+    if (entrylayers.size()) {
+        std::vector<const char *> layers;
+        std::cout << "Entry layers:";
+        for (size_t i = 0; i < entrylayers.size(); ++i) {
+            ustring layername (entrylayers[i]);  // convert to ustring
+            int layid = shadingsys->find_layer (*shadergroup, layername);
+            layers.push_back (layername.c_str());
+            entrylayer_index.push_back (layid);
+            std::cout << ' ' << entrylayers[i] << "(" << layid << ")";
+        }
+        std::cout << "\n";
+        shadingsys->attribute (shadergroup.get(), "entry_layers",
+                               TypeDesc(TypeDesc::STRING,(int)entrylayers.size()),
+                               &layers[0]);
+    }
+
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
 
     ShadingContext *ctx = shadingsys->get_context ();
-    // Because we can only call get_symbol on something that has been
-    // set up to shade (or executed), we call execute() but tell it not
-    // to actually run the shader.
+    // Because we can only call find_symbol or get_symbol on something that
+    // has been set up to shade (or executed), we call execute() but tell it
+    // not to actually run the shader.
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
     shadingsys->execute (*ctx, *shadergroup, sg, false);
+
+    if (entryoutputs.size()) {
+        std::cout << "Entry outputs:";
+        for (size_t i = 0; i < entryoutputs.size(); ++i) {
+            ustring name (entryoutputs[i]);  // convert to ustring
+            const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, name);
+            if (!sym) {
+                std::cout << "\nEntry output " << entryoutputs[i] << " not found. Abording.\n";
+                exit (EXIT_FAILURE);
+            }
+            entrylayer_symbols.push_back (sym);
+            std::cout << ' ' << entryoutputs[i];
+        }
+        std::cout << "\n";
+    }
 
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
@@ -837,7 +877,21 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
             setup_shaderglobals (shaderglobals, shadingsys, x, y);
 
             // Actually run the shader for this point
-            shadingsys->execute (*ctx, *shadergroup, shaderglobals);
+            if (entrylayer_index.empty()) {
+                // Sole entry point for whole group, default behavior
+                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
+            } else {
+                // Explicit list of entries to call in order
+                shadingsys->execute_init (*ctx, *shadergroup, shaderglobals);
+                if (entrylayer_symbols.size()) {
+                    for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
+                        shadingsys->execute_layer (*ctx, shaderglobals, entrylayer_symbols[i]);
+                } else {
+                    for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
+                        shadingsys->execute_layer (*ctx, shaderglobals, entrylayer_index[i]);
+                }
+                shadingsys->execute_cleanup (*ctx);
+            }
 
             // Save all the designated outputs.  But only do so if we
             // are on the last iteration requested, so that if we are

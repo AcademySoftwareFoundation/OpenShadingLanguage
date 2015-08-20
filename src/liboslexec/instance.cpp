@@ -48,6 +48,8 @@ using OIIO::spin_lock;
 using OIIO::ParamValue;
 using OIIO::ParamValueList;
 
+static int next_id = 0; // We can statically init an int, not an atomic
+
 
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
@@ -59,11 +61,11 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
       m_writes_globals(false), m_run_lazily(false),
       m_outgoing_connections(false),
       m_renderer_outputs(false), m_merged_unused(false),
+      m_entry_layer(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
       m_maincodebegin(m_master->m_maincodebegin),
       m_maincodeend(m_master->m_maincodeend)
 {
-    static int next_id = 0; // We can statically init an int, not an atomic
     m_id = ++(*(atomic_int *)&next_id);
     shadingsys().m_stat_instances += 1;
 
@@ -776,25 +778,27 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
 ShaderGroup::ShaderGroup (string_view name)
   : m_optimized(0), m_does_nothing(false),
-    m_llvm_groupdata_size(0),
+    m_llvm_groupdata_size(0), m_num_entry_layers(0),
     m_llvm_compiled_version(NULL),
     m_name(name)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;
+    m_id = ++(*(atomic_int *)&next_id);
 }
 
 
 
 ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
   : m_optimized(0), m_does_nothing(false),
-    m_llvm_groupdata_size(0),
+    m_llvm_groupdata_size(0), m_num_entry_layers(g.m_num_entry_layers),
     m_llvm_compiled_version(NULL),
     m_layers(g.m_layers),
     m_name(name)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;
+    m_id = ++(*(atomic_int *)&next_id);
 }
 
 
@@ -817,6 +821,17 @@ ShaderGroup::~ShaderGroup ()
 
 
 
+int
+ShaderGroup::find_layer (ustring layername) const
+{
+    int i;
+    for (i = nlayers()-1; i >= 0 && layer(i)->layername() != layername; --i)
+        ;
+    return i;  // will be -1 if we never found a match
+}
+
+
+
 const Symbol *
 ShaderGroup::find_symbol (ustring layername, ustring symbolname) const
 {
@@ -829,6 +844,27 @@ ShaderGroup::find_symbol (ustring layername, ustring symbolname) const
             return inst->symbol (symidx);
     }
     return NULL;
+}
+
+
+
+void
+ShaderGroup::clear_entry_layers ()
+{
+    for (int i = 0;  i < nlayers();  ++i)
+        m_layers[i]->entry_layer (false);
+    m_num_entry_layers = 0;
+}
+
+
+
+void
+ShaderGroup::mark_entry_layer (int layer)
+{
+    if (layer >= 0 && layer < nlayers() && ! m_layers[layer]->entry_layer()) {
+        m_layers[layer]->entry_layer(true);
+        ++m_num_entry_layers;
+    }
 }
 
 

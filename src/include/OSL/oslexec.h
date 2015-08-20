@@ -179,9 +179,13 @@ public:
     /// Set an attribute for a specific shader group.  Return true if the
     /// name and type were recognized and the attrib was set. Documented
     /// attributes are as follows:
-    ///    string[] renderer_outputs   Array of names of renderer outputs
-    ///                                (AOVs) specific to this shader group
-    ///                                that should not be optimized away.
+    ///    string[] renderer_outputs  Array of names of renderer outputs
+    ///                                 (AOVs) specific to this shader group
+    ///                                 that should not be optimized away.
+    ///    string[] entry_layers      Array of names of layers that may be
+    ///                                 callable entry points. They won't
+    ///                                 be elided, but nor will they be
+    ///                                 called unconditionally.
     ///
     bool attribute (ShaderGroup *group, string_view name,
                     TypeDesc type, const void *val);
@@ -281,6 +285,10 @@ public:
     ///   int unknown_attributes_needed  Nonzero if additonal attributes may be
     ///                                  needed, whose names will not be known
     ///                                  until the shader actually runs.
+    ///   int num_renderer_outputs   Number of named renderer outputs.
+    ///   string renderer_outputs[]  List of renderer outputs.
+    ///   int num_entry_layers       Number of named entry point layers.
+    ///   string entry_layers[]      List of entry point layers.
     ///   string pickle              Retrieves a serialized representation
     ///                                 of the shader group declaration.
     /// Note: the attributes referred to as "string" are actually on the app
@@ -422,19 +430,51 @@ public:
     ///
     void release_context (ShadingContext *ctx);
 
-    /// Execute the shader bound to context ctx, with the given
-    /// ShaderGroup (that specifies the shader group to run) and
-    /// ShaderGlobals (specific information for this shade point).  If
-    /// 'run' is false, do all the usual preparation, but don't actually
-    /// run the shader.  Return true if the shader executed (or could
-    /// have executed, if 'run' had been true), false the shader turned
-    /// out to be empty. If ctx is NULL, then execute will request one
-    /// (based on the running thread) on its own and then return it when
-    /// it's done.
-    bool execute (ShadingContext *ctx, ShaderGroup &sas,
-                  ShaderGlobals &ssg, bool run=true);
-    bool execute (ShadingContext &ctx, ShaderGroup &sas,
-                  ShaderGlobals &ssg, bool run=true); // DEPRECATED (1.6)
+    /// Execute the shader group in this context. If ctx is NULL, then
+    /// execute will request one (based on the running thread) on its own
+    /// and then return it when it's done.  This is just a wrapper around
+    /// execute_init, execute_layer of the last (presumably group entry)
+    /// layer, and execute_cleanup. If run==false, just do the binding and
+    /// setup, don't actually run the shader.
+    bool execute (ShadingContext *ctx, ShaderGroup &group,
+                  ShaderGlobals &globals, bool run=true);
+    bool execute (ShadingContext &ctx, ShaderGroup &group,
+                  ShaderGlobals &globals, bool run=true); // DEPRECATED (1.6)
+
+    /// Bind a shader group and globals to the context, in preparation to
+    /// execute, including optimization and JIT of the group (if it has not
+    /// already been done).  If 'run' is true, also run any initialization
+    /// necessary. If 'run' is false, we are not planning to actually
+    /// execute any part of the shader, so do all the usual binding
+    /// preparation, but don't actually run the shader.  Return true if the
+    /// shader executed, false if it did not (including if the shader itself
+    /// was empty).
+    bool execute_init (ShadingContext &ctx, ShaderGroup &group,
+                       ShaderGlobals &globals, bool run=true);
+
+    /// Execute the layer whose index is specified, in this context. It is
+    /// presumed that execute_init() has already been called, with
+    /// run==true, and that the call to execute_init() returned true. (One
+    /// reason why it might have returned false is if the shader group
+    /// turned out, after optimization, to do nothing.)
+    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                        int layernumber);
+    /// Execute the layer by name.
+    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                        ustring layername);
+    /// Execute the layer that has the given ShaderSymbol as an output.
+    /// (The symbol is one returned by find_symbol()).
+    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                        const ShaderSymbol *symbol);
+
+    /// Signify that the context is done with the current execution of the
+    /// group that was kicked off by execute_init and one or more calls to
+    /// execute_layer.
+    bool execute_cleanup (ShadingContext &ctx);
+
+    /// Find the named layer within a group and return its index, or -1
+    /// if no such named layer exists.
+    int find_layer (const ShaderGroup &group, ustring layername) const;
 
     /// Get a raw pointer to a named symbol (such as you'd need to pull
     /// out the value of an output parameter).  ctx is the shading

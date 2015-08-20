@@ -249,19 +249,75 @@ ShadingSystem::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystem::execute (ShadingContext *ctx, ShaderGroup &sas,
-                        ShaderGlobals &ssg, bool run)
+ShadingSystem::execute (ShadingContext *ctx, ShaderGroup &group,
+                        ShaderGlobals &globals, bool run)
 {
-    return m_impl->execute (ctx, sas, ssg, run);
+    return m_impl->execute (ctx, group, globals, run);
 }
 
 
 
 bool
-ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &sas,
-                        ShaderGlobals &ssg, bool run)
+ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &group,
+                        ShaderGlobals &globals, bool run)
 {
-    return m_impl->execute (&ctx, sas, ssg, run);
+    return m_impl->execute (&ctx, group, globals, run);
+}
+
+
+
+bool
+ShadingSystem::execute_init (ShadingContext &ctx, ShaderGroup &group,
+                             ShaderGlobals &globals, bool run)
+{
+    return ctx.execute_init (group, globals, run);
+}
+
+
+
+bool
+ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                              int layernumber)
+{
+    return ctx.execute_layer (globals, layernumber);
+}
+
+
+
+bool
+ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                              ustring layername)
+{
+    int layernumber = find_layer (*ctx.group(), layername);
+    return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
+}
+
+
+
+bool
+ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                              const ShaderSymbol *symbol)
+{
+    ASSERT (symbol);
+    const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
+    int layernumber = sym->layer();
+    return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
+}
+
+
+
+bool
+ShadingSystem::execute_cleanup (ShadingContext &ctx)
+{
+    return ctx.execute_cleanup ();
+}
+
+
+
+int
+ShadingSystem::find_layer (const ShaderGroup &group, ustring layername) const
+{
+    return group.find_layer (layername);
 }
 
 
@@ -559,7 +615,7 @@ ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
 ustring op_exit("exit");
 ustring subimage("subimage"), subimagename("subimagename");
 ustring missingcolor("missingcolor"), missingalpha("missingalpha");
-ustring end("end");
+ustring end("end"), useparam("useparam");
 ustring uninitialized_string("!!!uninitialized!!!");
 };
 
@@ -1186,10 +1242,17 @@ ShadingSystemImpl::attribute (ShaderGroup *group, string_view name,
     // No current group attributes to set
     if (! group)
         return attribute (name, type, val);
+    lock_guard lock (group->m_mutex);
     if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
         group->m_renderer_outputs.clear ();
         for (size_t i = 0;  i < type.numelements();  ++i)
             group->m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
+        return true;
+    }
+    if (name == "entry_layers" && type.basetype == TypeDesc::STRING) {
+        group->clear_entry_layers ();
+        for (int i = 0;  i < (int)type.numelements();  ++i)
+            group->mark_entry_layer (ustring(((const char **)val)[i]));
         return true;
     }
     return false;
@@ -1215,6 +1278,34 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         size_t n = std::min (type.numelements(), (size_t)group->nlayers());
         for (size_t i = 0;  i < n;  ++i)
             ((ustring *)val)[i] = (*group)[i]->layername();
+        return true;
+    }
+    if (name == "num_renderer_outputs" && type.basetype == TypeDesc::INT) {
+        *(int *)val = (int) group->m_renderer_outputs.size();
+        return true;
+    }
+    if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
+        size_t n = std::min (type.numelements(), group->m_renderer_outputs.size());
+        for (size_t i = 0;  i < n;  ++i)
+            ((ustring *)val)[i] = group->m_renderer_outputs[i];
+        for (size_t i = n;  i < type.numelements();  ++i)
+            ((ustring *)val)[i] = ustring();
+        return true;
+    }
+    if (name == "num_entry_layers" && type.basetype == TypeDesc::INT) {
+        size_t n = 0;
+        for (size_t i = 0;  i < group->nlayers();  ++i)
+            n += group->layer(i)->entry_layer();
+        *(int *)val = n;
+        return true;
+    }
+    if (name == "entry_layers" && type.basetype == TypeDesc::STRING) {
+        size_t n = 0;
+        for (size_t i = 0;  i < group->nlayers() && i < type.numelements();  ++i)
+            if (group->layer(i)->entry_layer())
+                ((ustring *)val)[n++] = (*group)[i]->layername();
+        for (size_t i = n;  i < type.numelements();  ++i)
+            ((ustring *)val)[i] = ustring();
         return true;
     }
     if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
@@ -1703,8 +1794,8 @@ ShadingSystemImpl::ShaderGroupEnd (void)
 
     // Mark the layers that can be run lazily
     if (m_group_use != ShadUseUnknown) {
-        size_t nlayers = m_curgroup->nlayers ();
-        for (size_t layer = 0;  layer < nlayers;  ++layer) {
+        int nlayers = m_curgroup->nlayers ();
+        for (int layer = 0;  layer < nlayers;  ++layer) {
             ShaderInstance *inst = (*m_curgroup)[layer];
             if (! inst)
                 continue;

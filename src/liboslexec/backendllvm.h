@@ -75,6 +75,9 @@ public:
     /// This will end up being the group entry if 'groupentry' is true.
     llvm::Function* build_llvm_instance (bool groupentry);
 
+    /// Create an llvm function for group initialization code.
+    llvm::Function* build_llvm_init ();
+
     /// Build up LLVM IR code for the given range [begin,end) or
     /// opcodes, putting them (initially) into basic block bb (or the
     /// current basic block if bb==NULL).

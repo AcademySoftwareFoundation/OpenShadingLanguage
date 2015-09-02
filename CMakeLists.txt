@@ -416,7 +416,8 @@ macro ( TESTSUITE )
         # Run the test unoptimized, unless it's a "render_*" or "oslinfo_*"
         # test, which we don't bother testing unoptimized.
         if (NOT _testname MATCHES "^render" AND
-            NOT _testname MATCHES "^oslinfo")
+            NOT _testname MATCHES "^oslinfo" AND
+            NOT EXISTS "${_testdir}/OPTIMIZEONLY")
           set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
           add_test ( NAME ${_testname}
                      COMMAND env ${_env} ${_runtest} )

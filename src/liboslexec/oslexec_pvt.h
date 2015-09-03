@@ -894,6 +894,7 @@ public:
     int optimize () const { return m_optimize; }
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
+    int llvm_debug_layers () const { return m_llvm_debug_layers; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
@@ -1072,6 +1073,7 @@ private:
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output
     int m_llvm_debug;                     ///< More LLVM debugging output
+    int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_opt_layername;              ///< Name of sole layer to optimize

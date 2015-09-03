@@ -722,13 +722,11 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 
     // Set up a new IR builder
     ll.new_builder (entry_bb);
-#if 0 /* helpful for debugging */
     if (llvm_debug() && groupentry)
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
-    if (llvm_debug())
+    if (shadingsys().llvm_debug_layers())
         llvm_gen_debug_printf (Strutil::format("enter layer %d %s %s",
                                this->layer(), inst()->layername(), inst()->shadername()));
-#endif
     if (shadingsys().countlayerexecs())
         ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
 
@@ -871,11 +869,9 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // llvm_gen_debug_printf ("done copying connections");
 
     // All done
-#if 0 /* helpful for debugging */
-    if (llvm_debug())
+    if (shadingsys().llvm_debug_layers())
         llvm_gen_debug_printf (Strutil::format("exit layer %d %s %s",
                                this->layer(), inst()->layername(), inst()->shadername()));
-#endif
     ll.op_return();
 
     if (llvm_debug())

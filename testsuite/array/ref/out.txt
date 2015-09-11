@@ -31,14 +31,14 @@ Verify compile of functions with array parameters of unspecified length:
 Test message passing an array: imess = [10 11 12]
 
 Test array of closures:
-C[0] = (1, 1, 1) * diffuse ((0, 0, 1))
+C[0] = (1, 1, 1) * diffuse ((0, 0, 1), "label", "")
 C[1] = (0.5, 0.5, 0.5) * reflection ((0, 0, 1), 0)
 C[2] = (0.25, 0.25, 0.25) * refraction ((0, 0, 1), 1.5)
-pca  C[0] = (1, 1, 1) * diffuse ((0, 0, 1))
+pca  C[0] = (1, 1, 1) * diffuse ((0, 0, 1), "label", "")
 pca  C[1] = (0.5, 0.5, 0.5) * reflection ((0, 0, 1), 0)
 pca  C[2] = (0.25, 0.25, 0.25) * refraction ((0, 0, 1), 1.5)
 Testing message passing of array of closures:
-pca  C[0] = (1, 1, 1) * diffuse ((0, 0, 1))
+pca  C[0] = (1, 1, 1) * diffuse ((0, 0, 1), "label", "")
 pca  C[1] = (0.5, 0.5, 0.5) * reflection ((0, 0, 1), 0)
 pca  C[2] = (0.25, 0.25, 0.25) * refraction ((0, 0, 1), 1.5)
 

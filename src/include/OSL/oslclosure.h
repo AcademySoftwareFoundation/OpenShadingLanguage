@@ -64,6 +64,11 @@ public:
 
 };
 
+// Forward declarations
+struct ClosureComponent;
+struct ClosureMul;
+struct ClosureAdd;
+
 /// ClosureColor is the base class for a lightweight tree representation
 /// of OSL closures for the sake of the executing OSL shader.
 ///
@@ -85,9 +90,24 @@ public:
 /// definitely one of the three kinds of subclasses: ClosureComponent,
 /// ClosureMul, ClosureAdd.
 struct OSLEXECPUBLIC ClosureColor {
-    enum ClosureType { COMPONENT, MUL, ADD };
+    enum ClosureID { COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2 };
 
-    ClosureType type;
+    int id;
+
+    const ClosureComponent* as_comp() const {
+        DASSERT(id >= COMPONENT_BASE_ID);
+        return reinterpret_cast<const ClosureComponent*>(this);
+    }
+
+    const ClosureMul* as_mul() const {
+        DASSERT(id == MUL);
+        return reinterpret_cast<const ClosureMul*>(this);
+    }
+
+    const ClosureAdd* as_add() const {
+        DASSERT(id == ADD);
+        return reinterpret_cast<const ClosureAdd*>(this);
+    }
 };
 
 
@@ -100,7 +120,6 @@ struct OSLEXECPUBLIC ClosureColor {
 /// whatever type of custom primitive component it actually is.
 struct OSLEXECPUBLIC ClosureComponent : public ClosureColor
 {
-    int    id;       ///< Id of the component
     Vec3   w;        ///< Weight of this component
     char   mem[4];   ///< Memory for the primitive
                      ///  4 is the minimum, allocation
@@ -111,6 +130,13 @@ struct OSLEXECPUBLIC ClosureComponent : public ClosureColor
     ///
     void *data () { return &mem; }
     const void *data () const { return &mem; }
+
+    /// Handy methods for extracting the underlying parameters as a struct
+    template <typename T>
+    const T* as() const { return reinterpret_cast<const T*>(mem); }
+
+    template <typename T>
+    T* as() { return reinterpret_cast<const T*>(mem); }
 };
 
 

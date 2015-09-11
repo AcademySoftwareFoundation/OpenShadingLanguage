@@ -112,23 +112,21 @@ print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemI
 static void
 print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss, const Color3 &w, bool &first)
 {
-    ClosureComponent *comp;
     if (closure == NULL)
         return;
 
-    switch (closure->type) {
+    switch (closure->id) {
         case ClosureColor::MUL:
-            print_closure(out, ((ClosureMul *)closure)->closure, ss, ((ClosureMul *)closure)->weight * w, first);
+            print_closure(out, closure->as_mul()->closure, ss, closure->as_mul()->weight * w, first);
             break;
         case ClosureColor::ADD:
-            print_closure(out, ((ClosureAdd *)closure)->closureA, ss, w, first);
-            print_closure(out, ((ClosureAdd *)closure)->closureB, ss, w, first);
+            print_closure(out, closure->as_add()->closureA, ss, w, first);
+            print_closure(out, closure->as_add()->closureB, ss, w, first);
             break;
-        case ClosureColor::COMPONENT:
-            comp = (ClosureComponent *)closure;
+        default:
             if (!first)
                 out << "\n\t+ ";
-            print_component (out, comp, ss, w);
+            print_component (out, closure->as_comp(), ss, w);
             first = false;
             break;
     }

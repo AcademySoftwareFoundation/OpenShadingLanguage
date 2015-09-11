@@ -3083,8 +3083,8 @@ LLVMGEN (llvm_gen_closure)
     }
 
     llvm::Value *comp_ptr = rop.ll.ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
-    // Get the address of the primitive buffer, which is the 3rd field
-    llvm::Value *mem_void_ptr = rop.ll.GEP (comp_ptr, 0, 3);
+    // Get the address of the primitive buffer, which is the 2nd field
+    llvm::Value *mem_void_ptr = rop.ll.GEP (comp_ptr, 0, 2);
     mem_void_ptr = rop.ll.ptr_cast(mem_void_ptr, rop.ll.type_void_ptr());
 
     // If the closure has a "prepare" method, call

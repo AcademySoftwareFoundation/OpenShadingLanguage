@@ -651,50 +651,51 @@ void process_closure (ShadingResult& result, const ClosureColor* closure, const 
    static const ustring u_default("default");
    if (!closure)
        return;
-   switch (closure->type) {
+   switch (closure->id) {
        case ClosureColor::MUL: {
-           Color3 cw = w * ((const ClosureMul*) closure)->weight;
-           process_closure(result, ((const ClosureMul*) closure)->closure, cw, light_only);
+           Color3 cw = w * closure->as_mul()->weight;
+           process_closure(result, closure->as_mul()->closure, cw, light_only);
            break;
        }
        case ClosureColor::ADD: {
-           process_closure(result, ((const ClosureAdd*) closure)->closureA, w, light_only);
-           process_closure(result, ((const ClosureAdd*) closure)->closureB, w, light_only);
+           process_closure(result, closure->as_add()->closureA, w, light_only);
+           process_closure(result, closure->as_add()->closureB, w, light_only);
            break;
        }
-       case ClosureColor::COMPONENT: {
-           const ClosureComponent* comp = (const ClosureComponent*) closure;
+       default: {
+           const ClosureComponent* comp = closure->as_comp();
            Color3 cw = w * comp->w;
            if (comp->id == EMISSION_ID)
                result.Le += cw;
            else if (!light_only) {
                bool ok = false;
                switch (comp->id) {
-                   case DIFFUSE_ID:            ok = result.bsdf.add_bsdf<Diffuse<0>, DiffuseParams   >(cw, *(const DiffuseParams*   ) comp->data()); break;
-                   case OREN_NAYAR_ID:         ok = result.bsdf.add_bsdf<OrenNayar , OrenNayarParams >(cw, *(const OrenNayarParams* ) comp->data()); break;
-                   case TRANSLUCENT_ID:        ok = result.bsdf.add_bsdf<Diffuse<1>, DiffuseParams   >(cw, *(const DiffuseParams*   ) comp->data()); break;
-                   case PHONG_ID:              ok = result.bsdf.add_bsdf<Phong     , PhongParams     >(cw, *(const PhongParams*     ) comp->data()); break;
-                   case WARD_ID:               ok = result.bsdf.add_bsdf<Ward      , WardParams      >(cw, *(const WardParams*      ) comp->data()); break;
-                   case MICROFACET_ID:
-                       if (((const MicrofacetParams*) comp->data())->dist == u_ggx) {
-                           switch (((const MicrofacetParams*) comp->data())->refract) {
-                               case 0: ok = result.bsdf.add_bsdf<MicrofacetGGXRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                               case 1: ok = result.bsdf.add_bsdf<MicrofacetGGXRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                               case 2: ok = result.bsdf.add_bsdf<MicrofacetGGXBoth, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                   case DIFFUSE_ID:            ok = result.bsdf.add_bsdf<Diffuse<0>, DiffuseParams   >(cw, *comp->as<DiffuseParams>  ()); break;
+                   case OREN_NAYAR_ID:         ok = result.bsdf.add_bsdf<OrenNayar , OrenNayarParams >(cw, *comp->as<OrenNayarParams>()); break;
+                   case TRANSLUCENT_ID:        ok = result.bsdf.add_bsdf<Diffuse<1>, DiffuseParams   >(cw, *comp->as<DiffuseParams>  ()); break;
+                   case PHONG_ID:              ok = result.bsdf.add_bsdf<Phong     , PhongParams     >(cw, *comp->as<PhongParams>    ()); break;
+                   case WARD_ID:               ok = result.bsdf.add_bsdf<Ward      , WardParams      >(cw, *comp->as<WardParams>     ()); break;
+                   case MICROFACET_ID: {
+                       const MicrofacetParams* mp = comp->as<MicrofacetParams>();
+                       if (mp->dist == u_ggx) {
+                           switch (mp->refract) {
+                               case 0: ok = result.bsdf.add_bsdf<MicrofacetGGXRefl, MicrofacetParams>(cw, *mp); break;
+                               case 1: ok = result.bsdf.add_bsdf<MicrofacetGGXRefr, MicrofacetParams>(cw, *mp); break;
+                               case 2: ok = result.bsdf.add_bsdf<MicrofacetGGXBoth, MicrofacetParams>(cw, *mp); break;
                            }
-                       } else if (((const MicrofacetParams*) comp->data())->dist == u_beckmann ||
-                                  ((const MicrofacetParams*) comp->data())->dist == u_default) {
-                           switch (((const MicrofacetParams*) comp->data())->refract) {
-                               case 0: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                               case 1: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
-                               case 2: ok = result.bsdf.add_bsdf<MicrofacetBeckmannBoth, MicrofacetParams>(cw, *(const MicrofacetParams*) comp->data()); break;
+                       } else if (mp->dist == u_beckmann || mp->dist == u_default) {
+                           switch (mp->refract) {
+                               case 0: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl, MicrofacetParams>(cw, *mp); break;
+                               case 1: ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr, MicrofacetParams>(cw, *mp); break;
+                               case 2: ok = result.bsdf.add_bsdf<MicrofacetBeckmannBoth, MicrofacetParams>(cw, *mp); break;
                            }
                        }
                        break;
+                   }
                    case REFLECTION_ID:
-                   case FRESNEL_REFLECTION_ID: ok = result.bsdf.add_bsdf<Reflection, ReflectionParams>(cw, *(const ReflectionParams*) comp->data()); break;
-                   case REFRACTION_ID:         ok = result.bsdf.add_bsdf<Refraction, RefractionParams>(cw, *(const RefractionParams*) comp->data()); break;
-                   case TRANSPARENT_ID:        ok = result.bsdf.add_bsdf<Transparent, int            >(cw, 0); break;
+                   case FRESNEL_REFLECTION_ID: ok = result.bsdf.add_bsdf<Reflection , ReflectionParams>(cw, *comp->as<ReflectionParams>()); break;
+                   case REFRACTION_ID:         ok = result.bsdf.add_bsdf<Refraction , RefractionParams>(cw, *comp->as<RefractionParams>()); break;
+                   case TRANSPARENT_ID:        ok = result.bsdf.add_bsdf<Transparent, int             >(cw, 0); break;
                }
                ASSERT(ok && "Invalid closure invoked in surface shader");
            }
@@ -713,19 +714,17 @@ void process_closure(ShadingResult& result, const ClosureColor* Ci, bool light_o
 
 Vec3 process_background_closure(const ClosureColor* closure) {
     if (!closure) return Vec3(0, 0, 0);
-    switch (closure->type) {
+    switch (closure->id) {
            case ClosureColor::MUL: {
                Color3 cw = ((const ClosureMul*) closure)->weight;
-               return cw * process_background_closure(((const ClosureMul*) closure)->closure);
+               return closure->as_mul()->weight * process_background_closure(closure->as_mul()->closure);
            }
            case ClosureColor::ADD: {
-               return process_background_closure(((const ClosureAdd*) closure)->closureA) +
-                      process_background_closure(((const ClosureAdd*) closure)->closureB);
+               return process_background_closure(closure->as_add()->closureA) +
+                      process_background_closure(closure->as_add()->closureB);
            }
-           case ClosureColor::COMPONENT: {
-               const ClosureComponent* comp = (const ClosureComponent*) closure;
-               if (comp->id == BACKGROUND_ID)
-                   return comp->w;
+           case BACKGROUND_ID: {
+               return closure->as_comp()->w;
            }
     }
     // should never happen

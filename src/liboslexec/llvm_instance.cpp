@@ -347,7 +347,6 @@ BackendLLVM::llvm_type_closure_component ()
         return m_llvm_type_closure_component;
 
     std::vector<llvm::Type*> comp_types;
-    comp_types.push_back (ll.type_int());     // parent.type
     comp_types.push_back (ll.type_int());     // id
     comp_types.push_back (ll.type_triple());  // w
     comp_types.push_back (ll.type_int());     // fake field for char mem[4]

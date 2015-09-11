@@ -1483,7 +1483,6 @@ public:
         int alignment = m_shadingsys.find_closure(id)->alignment;
         size_t alignment_offset = closure_alignment_offset_calc(alignment);
         ClosureComponent *comp = (ClosureComponent *) (m_closure_pool.alloc(needed + alignment_offset, alignment) + alignment_offset);
-        comp->type = ClosureColor::COMPONENT;
         comp->id = id;
         comp->w = w;
         return comp;
@@ -1491,7 +1490,7 @@ public:
 
     ClosureMul *closure_mul_allot (const Color3 &w, const ClosureColor *c) {
         ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
-        mul->type = ClosureColor::MUL;
+        mul->id = ClosureColor::MUL;
         mul->weight = w;
         mul->closure = c;
         return mul;
@@ -1499,7 +1498,7 @@ public:
 
     ClosureMul *closure_mul_allot (float w, const ClosureColor *c) {
         ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
-        mul->type = ClosureColor::MUL;
+        mul->id = ClosureColor::MUL;
         mul->weight.setValue (w,w,w);
         mul->closure = c;
         return mul;
@@ -1507,7 +1506,7 @@ public:
 
     ClosureAdd *closure_add_allot (const ClosureColor *a, const ClosureColor *b) {
         ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd));
-        add->type = ClosureColor::ADD;
+        add->id = ClosureColor::ADD;
         add->closureA = a;
         add->closureB = b;
         return add;

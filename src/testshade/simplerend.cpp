@@ -57,9 +57,9 @@ enum ClosureIDs {
 // these structures hold the parameters of each closure type
 // they will be contained inside ClosureComponent
 struct EmptyParams      { };
-struct DiffuseParams    { Vec3 N; };
+struct DiffuseParams    { Vec3 N; ustring label; };
 struct OrenNayarParams  { Vec3 N; float sigma; };
-struct PhongParams      { Vec3 N; float exponent; };
+struct PhongParams      { Vec3 N; float exponent; ustring label; };
 struct WardParams       { Vec3 N, T; float ax, ay; };
 struct ReflectionParams { Vec3 N; float eta; };
 struct RefractionParams { Vec3 N; float eta; };
@@ -92,7 +92,7 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
         { "emission"   , EMISSION_ID,           { CLOSURE_FINISH_PARAM(EmptyParams) } },
         { "background" , BACKGROUND_ID,         { CLOSURE_FINISH_PARAM(EmptyParams) } },
         { "diffuse"    , DIFFUSE_ID,            { CLOSURE_VECTOR_PARAM(DiffuseParams, N),
-                                                  CLOSURE_STRING_KEYPARAM("label"), // example of custom key param
+                                                  CLOSURE_STRING_KEYPARAM(DiffuseParams, label, "label"), // example of custom key param
                                                   CLOSURE_FINISH_PARAM(DiffuseParams) } },
         { "oren_nayar" , OREN_NAYAR_ID,         { CLOSURE_VECTOR_PARAM(OrenNayarParams, N),
                                                   CLOSURE_FLOAT_PARAM (OrenNayarParams, sigma),
@@ -101,7 +101,7 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
                                                   CLOSURE_FINISH_PARAM(DiffuseParams) } },
         { "phong"      , PHONG_ID,              { CLOSURE_VECTOR_PARAM(PhongParams, N),
                                                   CLOSURE_FLOAT_PARAM (PhongParams, exponent),
-                                                  CLOSURE_STRING_KEYPARAM("label"), // example of custom key param
+                                                  CLOSURE_STRING_KEYPARAM(PhongParams, label, "label"), // example of custom key param
                                                   CLOSURE_FINISH_PARAM(PhongParams) } },
         { "ward"       , WARD_ID,               { CLOSURE_VECTOR_PARAM(WardParams, N),
                                                   CLOSURE_VECTOR_PARAM(WardParams, T),

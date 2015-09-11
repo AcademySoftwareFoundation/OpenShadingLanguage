@@ -250,8 +250,6 @@ public:
 
     llvm::Type *llvm_type_closure_component ();
     llvm::Type *llvm_type_closure_component_ptr ();
-    llvm::Type *llvm_type_closure_component_attr ();
-    llvm::Type *llvm_type_closure_component_attr_ptr ();
 
     /// Return the ShaderGlobals pointer cast as a void*.
     ///
@@ -418,7 +416,6 @@ private:
     llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
     llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
-    llvm::Type *m_llvm_type_closure_component_attr; // LLVM type for ClosureMeta::Attr
     llvm::PointerType *m_llvm_type_prepare_closure_func;
     llvm::PointerType *m_llvm_type_setup_closure_func;
     int m_llvm_local_mem;             // Amount of memory we use for locals

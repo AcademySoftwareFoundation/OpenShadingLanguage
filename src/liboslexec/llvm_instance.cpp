@@ -349,8 +349,6 @@ BackendLLVM::llvm_type_closure_component ()
     std::vector<llvm::Type*> comp_types;
     comp_types.push_back (ll.type_int());     // parent.type
     comp_types.push_back (ll.type_int());     // id
-    comp_types.push_back (ll.type_int());     // size
-    comp_types.push_back (ll.type_int());     // nattrs
     comp_types.push_back (ll.type_triple());  // w
     comp_types.push_back (ll.type_int());     // fake field for char mem[4]
 
@@ -363,35 +361,6 @@ llvm::Type *
 BackendLLVM::llvm_type_closure_component_ptr ()
 {
     return ll.type_ptr (llvm_type_closure_component());
-}
-
-
-llvm::Type *
-BackendLLVM::llvm_type_closure_component_attr ()
-{
-    if (m_llvm_type_closure_component_attr)
-        return m_llvm_type_closure_component_attr;
-
-    std::vector<llvm::Type*> attr_types;
-    attr_types.push_back ((llvm::Type *) ll.type_string());  // key
-
-    std::vector<llvm::Type*> union_types;
-    union_types.push_back (ll.type_int());
-    union_types.push_back (ll.type_float());
-    union_types.push_back (ll.type_triple());
-    union_types.push_back ((llvm::Type *) ll.type_void_ptr());
-
-    attr_types.push_back (ll.type_union (union_types)); // value union
-
-    return m_llvm_type_closure_component_attr = ll.type_struct (attr_types, "ClosureComponentAttr");
-}
-
-
-
-llvm::Type *
-BackendLLVM::llvm_type_closure_component_attr_ptr ()
-{
-    return ll.type_ptr (llvm_type_closure_component_attr());
 }
 
 
@@ -961,7 +930,6 @@ BackendLLVM::initialize_llvm_group ()
     m_llvm_type_sg = NULL;
     m_llvm_type_groupdata = NULL;
     m_llvm_type_closure_component = NULL;
-    m_llvm_type_closure_component_attr = NULL;
 
     initialize_llvm_helper_function_map();
     ll.InstallLazyFunctionCreator (helper_function_lookup);

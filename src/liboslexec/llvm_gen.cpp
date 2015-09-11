@@ -2994,7 +2994,7 @@ LLVMGEN (llvm_gen_spline)
 
 
 static void
-llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *attr_p, int argsoffset)
+llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *mem_void_ptr, int argsoffset)
 {
     DASSERT(((op.nargs() - argsoffset) % 2) == 0);
 
@@ -3012,30 +3012,22 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
         bool legal = false;
         // Make sure there is some keyword arg that has the name and the type
         for (int t = 0; t < clentry->nkeyword; ++t) {
-            const ClosureParam &param = clentry->params[clentry->nformal + t];
+            const ClosureParam &p = clentry->params[clentry->nformal + t];
             // strcmp might be too much, we could precompute the ustring for the param,
             // but in this part of the code is not a big deal
-            if (equivalent(param.type,ValueType) && !strcmp(key->c_str(), param.key))
+            if (equivalent(p.type,ValueType) && !strcmp(key->c_str(), p.key)) {
+            	// store data
+            	DASSERT(p.offset + p.field_size <= clentry->struct_size);
+                llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
+                llvm::Value* src = rop.llvm_void_ptr (Value);
+                rop.ll.op_memcpy (dst, src, (int)p.type.size(),
+                					4 /* use 4 byte alignment for now */);
                 legal = true;
+                break;
+            }
         }
         if (!legal) {
             rop.shadingcontext()->warning("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
-        }
-
-        // Store the keyword and copy the parameter value (or if there
-        // was no matching keyword, copy the empty string and zero out
-        // the value).
-        llvm::Value *key_to   = rop.ll.GEP (attr_p, attr_i, 0);
-        llvm::Value *value_to = rop.ll.void_ptr (rop.ll.GEP (attr_p, attr_i, 1));
-        if (legal) {
-            llvm::Value *key_const = rop.ll.constant_ptr(*((void **)key), rop.ll.type_string());
-            rop.ll.op_store (key_const, key_to);
-            llvm::Value *value_from = rop.llvm_void_ptr (Value);
-            rop.ll.op_memcpy (value_to, value_from, (int)ValueType.size(), 4);
-        } else {
-            llvm::Value *key_const = rop.ll.constant_ptr(*((void **)&u__empty), rop.ll.type_string());
-            rop.ll.op_store (key_const, key_to);
-            rop.ll.op_memset (value_to, 0, (int)ValueType.size(), 4);
         }
     }
 }
@@ -3063,7 +3055,6 @@ LLVMGEN (llvm_gen_closure)
     }
 
     ASSERT (op.nargs() >= (2 + weighted + clentry->nformal));
-    int nattrs = (op.nargs() - (2 + weighted + clentry->nformal)) / 2;
 
     // Call osl_allocate_closure_component(closure, id, size).  It returns
     // the memory for the closure parameter data.
@@ -3071,12 +3062,11 @@ LLVMGEN (llvm_gen_closure)
     llvm::Value *sg_ptr = rop.sg_void_ptr();
     llvm::Value *id_int = rop.ll.constant(clentry->id);
     llvm::Value *size_int = rop.ll.constant(clentry->struct_size);
-    llvm::Value *nattrs_int = rop.ll.constant(nattrs);
-    llvm::Value *alloc_args[5] = { sg_ptr, id_int, size_int, nattrs_int,
+    llvm::Value *alloc_args[4] = { sg_ptr, id_int, size_int,
                                    weighted ? rop.llvm_void_ptr(*weight) : NULL };
     llvm::Value *return_ptr = weighted ?
-          rop.ll.call_function ("osl_allocate_weighted_closure_component", alloc_args, 5)
-        : rop.ll.call_function ("osl_allocate_closure_component", alloc_args, 4);
+          rop.ll.call_function ("osl_allocate_weighted_closure_component", alloc_args, 4)
+        : rop.ll.call_function ("osl_allocate_closure_component", alloc_args, 3);
     llvm::Value *comp_void_ptr = return_ptr;
 
     // For the weighted closures, we need a surrounding "if" so that it's safe
@@ -3093,8 +3083,8 @@ LLVMGEN (llvm_gen_closure)
     }
 
     llvm::Value *comp_ptr = rop.ll.ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
-    // Get the address of the primitive buffer, which is the 5th field
-    llvm::Value *mem_void_ptr = rop.ll.GEP (comp_ptr, 0, 5);
+    // Get the address of the primitive buffer, which is the 3rd field
+    llvm::Value *mem_void_ptr = rop.ll.GEP (comp_ptr, 0, 3);
     mem_void_ptr = rop.ll.ptr_cast(mem_void_ptr, rop.ll.type_void_ptr());
 
     // If the closure has a "prepare" method, call
@@ -3113,7 +3103,7 @@ LLVMGEN (llvm_gen_closure)
     for (int carg = 0; carg < clentry->nformal; ++carg) {
         const ClosureParam &p = clentry->params[carg];
         if (p.key != NULL) break;
-        ASSERT(p.offset < clentry->struct_size);
+        DASSERT(p.offset + p.field_size <= clentry->struct_size);
         Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
         if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
@@ -3139,9 +3129,7 @@ LLVMGEN (llvm_gen_closure)
         rop.ll.call_function (funct_ptr, args, 3);
     }
 
-    llvm::Value *attrs_void_ptr = rop.ll.offset_ptr (mem_void_ptr, clentry->struct_size);
-    llvm::Value *attrs_ptr = rop.ll.ptr_cast(attrs_void_ptr, rop.llvm_type_closure_component_attr_ptr());
-    llvm_gen_keyword_fill(rop, op, clentry, closure_name, attrs_ptr,
+    llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
                           2 + weighted + clentry->nformal);
 
     if (next_block)

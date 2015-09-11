@@ -1477,33 +1477,14 @@ public:
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
     bool execute (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
 
-    ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs) {
-        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
-                                                 + sizeof(ClosureComponent::Attr) * nattrs;
-        int alignment = m_shadingsys.find_closure(id)->alignment;
-        size_t alignment_offset = closure_alignment_offset_calc(alignment);
-        ClosureComponent *comp = (ClosureComponent *) (m_closure_pool.alloc(needed + alignment_offset, alignment) + alignment_offset);
-        comp->type = ClosureColor::COMPONENT;
-        comp->id = id;
-        comp->size = prim_size;
-        comp->nattrs = nattrs;
-        comp->w[0] = 1.0f;
-        comp->w[1] = 1.0f;
-        comp->w[2] = 1.0f;
-        return comp;
-    }
-
-    ClosureComponent * closure_component_allot(int id, size_t prim_size, int nattrs, const Color3 &w) {
+    ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back
-        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0)
-                                                 + sizeof(ClosureComponent::Attr) * nattrs;
+        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
         int alignment = m_shadingsys.find_closure(id)->alignment;
         size_t alignment_offset = closure_alignment_offset_calc(alignment);
         ClosureComponent *comp = (ClosureComponent *) (m_closure_pool.alloc(needed + alignment_offset, alignment) + alignment_offset);
         comp->type = ClosureColor::COMPONENT;
         comp->id = id;
-        comp->size = prim_size;
-        comp->nattrs = nattrs;
         comp->w = w;
         return comp;
     }

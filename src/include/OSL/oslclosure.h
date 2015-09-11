@@ -100,36 +100,7 @@ struct OSLEXECPUBLIC ClosureColor {
 /// whatever type of custom primitive component it actually is.
 struct OSLEXECPUBLIC ClosureComponent : public ClosureColor
 {
-    struct Attr
-    {
-        ustring   key;
-        union {
-            int     integer;
-            float   flt;
-            float   triple[3];  // This will fake Color3 and Vec3 which C++ doesn't allow in unions
-            void   *str;        // And this fakes a ustring (not allowed in unions either)
-        }         value;
-
-        // This members are just to avoid having to typecast all the time
-        int           & integer()       { return value.integer; }
-        const int     & integer() const { return value.integer; }
-        float         & flt()           { return value.flt; }
-        const float   & flt()     const { return value.flt; }
-        Color3        & color()         { return *(Color3*)       raw_data(); }
-        const Color3  & color()   const { return *(const Color3*) raw_data(); }
-        Vec3          & vector()        { return *(Vec3*)         raw_data(); }
-        const Vec3    & vector()  const { return *(const Vec3*)   raw_data(); }
-        ustring       & str()           { return *(ustring*)      raw_data(); }
-        const ustring & str()     const { return *(const ustring*)raw_data(); }
-
-    private:
-        char*       raw_data()       { return reinterpret_cast<char*>(&value); }
-        const char* raw_data() const { return reinterpret_cast<const char*>(&value); }
-    };
-
     int    id;       ///< Id of the component
-    int    size;     ///< Memory used by the primitive
-    int    nattrs;   ///< Number of keyword attributes
     Vec3   w;        ///< Weight of this component
     char   mem[4];   ///< Memory for the primitive
                      ///  4 is the minimum, allocation
@@ -140,9 +111,6 @@ struct OSLEXECPUBLIC ClosureComponent : public ClosureColor
     ///
     void *data () { return &mem; }
     const void *data () const { return &mem; }
-    /// Attributes are always allocated at the end of the data block
-    Attr *attrs() { return (Attr *)((char *)data() + size); }
-    const Attr *attrs() const { return (Attr *)((char *)data() + size); }
 };
 
 

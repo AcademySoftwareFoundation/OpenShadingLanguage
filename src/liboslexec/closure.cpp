@@ -76,7 +76,7 @@ print_component_value(std::ostream &out, ShadingSystemImpl *ss,
     else if (type == TypeDesc::TypeVector)
         out << "(" << ((Vec3 *)data)->x << ", " << ((Vec3 *)data)->y << ", " << ((Vec3 *)data)->z << ")";
     else if (type == TypeDesc::TypeString)
-        out << "\"" << ((ustring *)data)->c_str() << "\"";
+        out << "\"" << ((ustring *)data)->string() << "\"";
     else if (type == TypeDesc::PTR)  // this only happens for closures
         print_closure (out, *(const ClosureColor **)data, ss);
 }
@@ -90,32 +90,19 @@ print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemI
     const ClosureRegistry::ClosureEntry *clentry = ss->find_closure(comp->id);
     ASSERT(clentry);
     out << clentry->name.c_str() << " (";
-    int i;
-    for (i = 0; i < clentry->nformal; ++i) {
+    for (int i = 0, nparams = clentry->params.size() - 1; i < nparams; ++i) {
         if (i) out << ", ";
-        if (clentry->params[i].type.numelements() > 1) out << "[";
-        for (size_t j = 0; j < clentry->params[i].type.numelements(); ++j) {
+        const ClosureParam& param = clentry->params[i];
+        if (param.key != 0)
+        	out << "\"" << param.key << "\", ";
+        if (param.type.numelements() > 1) out << "[";
+        for (size_t j = 0; j < param.type.numelements(); ++j) {
             if (j) out << ", ";
-            print_component_value(out, ss, clentry->params[i].type.elementtype(),
-                                  (const char *)comp->data() + clentry->params[i].offset
-                                                             + clentry->params[i].type.elementsize() * j);
+            print_component_value(out, ss, param.type.elementtype(),
+                                  (const char *)comp->data() + param.offset
+                                                             + param.type.elementsize() * j);
         }
         if (clentry->params[i].type.numelements() > 1) out << "]";
-    }
-    if (comp->nattrs) {
-        const ClosureComponent::Attr * attrs = comp->attrs();
-        for (int j = 0; j < comp->nattrs; ++j) {
-            if (i || j) out << ", ";
-            // find the type
-            TypeDesc td;
-            for (int p = 0; p < clentry->nkeyword; ++p)
-                if (!strcmp(clentry->params[clentry->nformal + p].key, attrs[j].key.c_str()))
-                    td = clentry->params[clentry->nformal + p].type;
-            if (td != TypeDesc()) {
-                out << "\"" << attrs[j].key.c_str() << "\", ";
-                print_component_value(out, ss, td, &attrs[j].value);
-            }
-        }
     }
     out << ")";
 }

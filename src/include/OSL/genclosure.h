@@ -70,16 +70,16 @@ struct ClosureParam {
     { TypeDesc(TypeDesc::STRING, TypeDesc::SCALAR, TypeDesc::NOXFORM, n),(int)reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
 
 // NOTE: this keyword args have to be always at the end of the list
-#define CLOSURE_INT_KEYPARAM(key) \
-    { TypeDesc::TypeInt, 0, key, 0 }
-#define CLOSURE_FLOAT_KEYPARAM(key) \
-    { TypeDesc::TypeFloat, 0, key, 0 }
-#define CLOSURE_COLOR_KEYPARAM(key) \
-    { TypeDesc::TypeColor, 0, key, 0 }
-#define CLOSURE_VECTOR_KEYPARAM(key) \
-    { TypeDesc::TypeVector, 0, key, 0 }
-#define CLOSURE_STRING_KEYPARAM(key) \
-    { TypeDesc::TypeString, 0, key, 0 }
+#define CLOSURE_INT_KEYPARAM(st, fld, key) \
+    { TypeDesc::TypeInt, (int)reckless_offsetof(st, fld), key, fieldsize(st, fld) }
+#define CLOSURE_FLOAT_KEYPARAM(st, fld, key) \
+    { TypeDesc::TypeFloat, (int)reckless_offsetof(st, fld), key, fieldsize(st, fld) }
+#define CLOSURE_COLOR_KEYPARAM(st, fld, key) \
+    { TypeDesc::TypeColor, (int)reckless_offsetof(st, fld), key, fieldsize(st, fld) }
+#define CLOSURE_VECTOR_KEYPARAM(st, fld, key) \
+    { TypeDesc::TypeVector, (int)reckless_offsetof(st, fld), key, fieldsize(st, fld) }
+#define CLOSURE_STRING_KEYPARAM(st, fld, key) \
+    { TypeDesc::TypeString, (int)reckless_offsetof(st, fld), key, fieldsize(st, fld) }
 
 #define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), NULL, 0 }
 

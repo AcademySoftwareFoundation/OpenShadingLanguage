@@ -76,7 +76,7 @@ print_component_value(std::ostream &out, ShadingSystemImpl *ss,
     else if (type == TypeDesc::TypeVector)
         out << "(" << ((Vec3 *)data)->x << ", " << ((Vec3 *)data)->y << ", " << ((Vec3 *)data)->z << ")";
     else if (type == TypeDesc::TypeString)
-        out << "\"" << ((ustring *)data)->string() << "\"";
+        out << "\"" << *((ustring *)data) << "\"";
     else if (type == TypeDesc::PTR)  // this only happens for closures
         print_closure (out, *(const ClosureColor **)data, ss);
 }

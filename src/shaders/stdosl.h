@@ -195,42 +195,37 @@ vector refract (vector I, vector N, float eta) {
     float k = 1 - eta*eta * (1 - IdotN*IdotN);
     return (k < 0) ? vector(0,0,0) : (eta*I - N * (eta*IdotN + sqrt(k)));
 }
-void fresnel (vector I, normal N, float eta,
-              output float Kr, output float Kt,
-              output vector R, output vector T)
-{
-    float sqr(float x) { return x*x; }
-    float c = dot(I, N);
-    if (c < 0)
-        c = -c;
-    R = reflect(I, N);
-    float g = 1.0 / sqr(eta) - 1.0 + c * c;
-    if (g >= 0.0) {
-        g = sqrt (g);
-        float beta = g - c;
-        float F = (c * (g+c) - 1.0) / (c * beta + 1.0);
-        F = 0.5 * (1.0 + sqr(F));
-        F *= sqr (beta / (g+c));
-        Kr = F;
-        Kt = (1.0 - Kr) * eta*eta;
-        // OPT: the following recomputes some of the above values, but it 
-        // gives us the same result as if the shader-writer called refract()
-        T = refract(I, N, eta);
-    } else {
-        // total internal reflection
-        Kr = 1.0;
-        Kt = 0.0;
-        T = vector (0,0,0);
-    }
-}
 
-void fresnel (vector I, normal N, float eta,
-              output float Kr, output float Kt)
-{
-    vector R, T;
-    fresnel(I, N, eta, Kr, Kt, R, T);
+float fresnel_reflection(vector I, normal N, float eta) {
+    float f = 1.0;
+    float c = abs(dot(I, N));
+    float g = eta * eta - 1.0 + c * c;
+    if (g > 0) {
+        g = sqrt(g);
+        float a = (g - c) / (g + c);
+        float b = (c * (g + c) - 1.0) / (c * (g - c) + 1.0);
+        f = 0.5 * a * a * (1.0 + b * b);
+    }
+    return f;
 }
-
+float fresnel_refraction(vector I, normal N, float eta) {
+    return 1.0 - fresnel_reflection(I, N, eta);
+}
+void fresnel(vector I, normal N, float eta, output float Kr, output float Kt, output vector R, output vector T) {
+    float c = abs(dot(I, N));
+    float g = eta * eta - 1.0 + c * c;
+    Kr = fresnel_reflection(I, N, eta);
+    Kt = fresnel_refraction(I, N, eta);
+    R = reflect(I, N);
+    T = vector(0);
+    if(g > 0) {
+        T = refract(I, N, eta);
+    }
+}
+void fresnel(vector I, normal N, float eta, output float Kr, output float Kt) {
+    Kr = fresnel_reflection(I, N, eta);
+    Kt = fresnel_refraction(I, N, eta);
+}
 
 normal transform (matrix Mto, normal p) BUILTIN;
 vector transform (matrix Mto, vector p) BUILTIN;

@@ -1,3 +1,3 @@
 #!/usr/bin/env python
 
-command += testshade("-layer alayer a --layer blayer b --connect alayer out blayer in")
+command += testshade("--options lazyglobals=0 -layer alayer a --layer blayer b --connect alayer out blayer in")

@@ -1021,8 +1021,10 @@ BackendLLVM::run ()
     for (int layer = 0;  layer < nlayers;  ++layer) {
         // Skip unused or empty layers, unless they are callable entry
         // points.
-        if (group().is_entry_layer(layer) ||
-            (! group()[layer]->unused() && !group()[layer]->empty_instance())) {
+        ShaderInstance *inst = group()[layer];
+        bool is_single_entry = (layer == (nlayers-1) && group().num_entry_layers() == 0);
+        if (inst->entry_layer() || is_single_entry ||
+            (! inst->unused() && !inst->empty_instance())) {
             if (debug() >= 1)
                 std::cout << "  " << layer << "\n";
             m_layer_remap[layer] = m_num_used_layers++;
@@ -1096,8 +1098,9 @@ BackendLLVM::run ()
     // for the initialization and all public entry points.
     group().llvm_compiled_init ((RunLLVMGroupFunc) ll.getPointerToFunction(init_func));
     for (int layer = 0; layer < nlayers; ++layer) {
-        if (group().is_entry_layer (layer))
-            group().llvm_compiled_layer (layer, (RunLLVMGroupFunc) ll.getPointerToFunction(funcs[layer]));
+        llvm::Function* f = funcs[layer];
+        if (f && group().is_entry_layer (layer))
+            group().llvm_compiled_layer (layer, (RunLLVMGroupFunc) ll.getPointerToFunction(f));
     }
     if (group().num_entry_layers())
         group().llvm_compiled_version (NULL);

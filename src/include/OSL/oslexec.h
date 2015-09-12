@@ -116,7 +116,9 @@ public:
     ///    int lazylayers         Evaluate shader layers only when their
     ///                              outputs are first needed (1)
     ///    int lazyglobals        Run layers lazily even if they write to
-    ///                              globals (0)
+    ///                              globals (1)
+    ///    int lazyunconnected    Run layers lazily even if they have no
+    ///                              output connections (1). For debugging.
     ///    int lazy_userdata      Retrieve userdata lazily (0).
     ///    int greedyjit          Optimize and compile all shaders up front,
     ///                              versus only as needed (0).

@@ -701,6 +701,7 @@ private:
     int m_statslevel;                     ///< Statistics level
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
+    bool m_lazyunconnected;               ///< Run lazily even if not connected?
     bool m_lazy_userdata;                 ///< Retrieve userdata lazily?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
@@ -919,6 +920,7 @@ class ShaderInstance {
 public:
     typedef ShaderInstanceRef ref;
     ShaderInstance (ShaderMaster::ref master, string_view layername = string_view());
+    ShaderInstance (const ShaderInstance &copy);  // not defined
     ~ShaderInstance ();
 
     /// Return the layer name of this instance
@@ -1015,11 +1017,28 @@ public:
 
     /// Should this instance only be run lazily (i.e., not
     /// unconditionally)?
-    bool run_lazily () const { return m_run_lazily; }
-    void run_lazily (bool lazy) { m_run_lazily = lazy; }
+    bool run_lazily () const {
+        // if lazy is turned off entirely, nobody can be lazy
+        if (! shadingsys().m_lazylayers)
+            return false;
+        // Main group entry is never lazy
+        if (last_layer())
+            return false;
+        // Shaders that set globals are not lazy unless lazyglobals is on
+        if (writes_globals() && !shadingsys().m_lazyglobals)
+            return false;
+        // Shaders that write renderer outputs (AOVs) can't be lazy
+        if (renderer_outputs())
+            return false;
+        // Shaders without any downstream connections are not lazy unless
+        // lazyunconnected is on.
+        if (!outgoing_connections() && !shadingsys().m_lazyunconnected)
+            return false;
+        return true;
+    }
 
-    /// Figure out whether the instance runs lazily, set m_run_lazily.
-    void compute_run_lazily (const ShaderGroup &group);
+    bool last_layer () const { return m_last_layer; }
+    void last_layer (bool last) { m_last_layer = last; }
 
     /// Does this instance have any outgoing connections?
     ///
@@ -1101,8 +1120,19 @@ public:
 
     /// Does it appear that the layer is completely unused?
     ///
-    bool unused () const { return run_lazily() && ! outgoing_connections()
-                                               && ! renderer_outputs(); }
+    bool unused () const {
+        // Entry layers are used no matter what
+        if (last_layer() || entry_layer())
+            return false;
+        // It will be used if it has outgoing connections or sets renderer
+        // outputs, or if it sets globals (but only if lazyglobals is off),
+        // or if it has no downstream connections (but only if
+        // lazyunconnected is off).
+        bool used = (outgoing_connections() || renderer_outputs() ||
+                     (writes_globals() && !shadingsys().m_lazyglobals) ||
+                     (!outgoing_connections() && !shadingsys().m_lazyunconnected));
+        return !used || merged_unused();
+    }
 
     /// Is the instance reduced to nothing but an 'end' instruction and no
     /// symbols?
@@ -1171,10 +1201,10 @@ private:
     int m_id;                           ///< Unique ID for the instance
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_userdata_params;             ///< Might I read userdata for params?
-    bool m_run_lazily;                  ///< OK to run this layer lazily?
     bool m_outgoing_connections;        ///< Any outgoing connections?
     bool m_renderer_outputs;            ///< Any outputs params render outputs?
     bool m_merged_unused;               ///< Unused because of a merge
+    bool m_last_layer;                  ///< Is it the group's last layer?
     bool m_entry_layer;                 ///< Is it an entry layer?
     ConnectionVec m_connections;        ///< Connected input params
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params

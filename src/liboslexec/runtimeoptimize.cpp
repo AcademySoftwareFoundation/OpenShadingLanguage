@@ -2702,8 +2702,6 @@ RuntimeOptimizer::run ()
 
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
-        if (inst()->unused())
-            continue;
         // These need to happen before merge_instances
         inst()->copy_code_from_master (group());
         mark_outgoing_connections();
@@ -2722,8 +2720,18 @@ RuntimeOptimizer::run ()
         if (debug() && optimize() >= 1) {
             std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 
-                      << inst()->layername() 
-                      << ", I get:\n" << inst()->print(group())
+                      << inst()->layername() << " (" << inst()->id() << ") :\n"
+                      << " connections in=" << inst()->nconnections()
+                      << " out=" << inst()->outgoing_connections()
+                      << (inst()->writes_globals() ? " writes_globals" : "")
+                      << (inst()->userdata_params() ? " userdata_params" : "")
+                      << (inst()->run_lazily() ? " run_lazily" : " run_unconditionally")
+                      << (inst()->outgoing_connections() ? " outgoing_connections" : "")
+                      << (inst()->renderer_outputs() ? " renderer_outputs" : "")
+                      << (inst()->writes_globals() ? " writes_globals" : "")
+                      << (inst()->entry_layer() ? " entry_layer" : "")
+                      << (inst()->last_layer() ? " last_layer" : "")
+                      << "\n" << inst()->print(group())
                       << "\n--------------------------------\n\n";
             std::cout.flush ();
         }
@@ -2789,7 +2797,6 @@ RuntimeOptimizer::run ()
             collapse_syms ();
             collapse_ops ();
         }
-        inst()->compute_run_lazily (group());
         if (debug() && !inst()->unused()) {
             track_variable_lifetimes ();
             std::cout << "After optimizing layer " << layer << " " 
@@ -2802,6 +2809,8 @@ RuntimeOptimizer::run ()
                       << (inst()->outgoing_connections() ? " outgoing_connections" : "")
                       << (inst()->renderer_outputs() ? " renderer_outputs" : "")
                       << (inst()->writes_globals() ? " writes_globals" : "")
+                      << (inst()->entry_layer() ? " entry_layer" : "")
+                      << (inst()->last_layer() ? " last_layer" : "")
                       << "\n" << inst()->print(group()) 
                       << "\n--------------------------------\n\n";
             std::cout.flush ();

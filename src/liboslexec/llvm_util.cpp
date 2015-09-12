@@ -561,6 +561,7 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
+    DASSERT (func && "passed NULL to getPointerToFunction");
     llvm::ExecutionEngine *exec = execengine();
 #if OSL_LLVM_VERSION >= 33
     if (USE_MCJIT)

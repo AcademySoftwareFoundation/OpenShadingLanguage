@@ -30,13 +30,11 @@
 #
 #
 # So by the default execution rules, the execution sequence will be:
-#   A   (because it sets a global)
-#   C   (because it's not connected to anything)
+#   A   (because it sets a global) [presuming lazyglobls == 0]
 #   D   (because it sets a renderer output)
-#   F   (because it's not connected to anything)
+#   G   (because it's the last layer -- presumed group entry point)
 #   E   (because F pulls its output)
 #   B   (because E pulls its output)
-#   G   (because it's the last layer -- presumed group entry point)
 #
 # But if we give explicit entry points and ask to execute layers B, F, E,
 # then the call sequence will be:
@@ -60,7 +58,7 @@ groupsetup = ("-layer A -param name A -param id 1 -param in 1.0 -param set_Ci 1 
               "-layer E -param name E -param id 5 -param in 5.0 node -connect B out E in " +
               "-layer F -param name F -param id 6 -param in 6.0 node -connect E out F in " +
               "-layer G -param name G -param id 7 -param in 7.0 node -connect E out G in " +
-              "--options llvm_debug_layers=1 "
+              "--options llvm_debug_layers=1,lazyglobals=0 "
               )
 
 command += "echo '\n' >> out.txt 2>&1 ; \n"

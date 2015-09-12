@@ -629,7 +629,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
-      m_lazyglobals (false), m_lazy_userdata(false),
+      m_lazyglobals (true), m_lazyunconnected(true),
+      m_lazy_userdata(false),
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (true), m_strict_messages(true),
       m_range_checking(true), m_unknown_coordsys_error(true),
@@ -1023,6 +1024,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("debug", int, m_debug);
     ATTR_SET ("lazylayers", int, m_lazylayers);
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
+    ATTR_SET ("lazyunconnected", int, m_lazyunconnected);
     ATTR_SET ("lazy_userdata", int, m_lazy_userdata);
     ATTR_SET ("clearmemory", int, m_clearmemory);
     ATTR_SET ("debug_nan", int, m_debugnan);
@@ -1122,6 +1124,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("statistics:level", int, m_statslevel);
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
+    ATTR_DECODE ("lazyunconnected", int, m_lazyunconnected);
     ATTR_DECODE ("lazy_userdata", int, m_lazy_userdata);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
     ATTR_DECODE ("debug_nan", int, m_debugnan);
@@ -1539,6 +1542,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (llvm_debug_layers);
     BOOLOPT (lazylayers);
     BOOLOPT (lazyglobals);
+    BOOLOPT (lazyunconnected);
     BOOLOPT (lazy_userdata);
     BOOLOPT (clearmemory);
     BOOLOPT (debugnan);
@@ -1799,7 +1803,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
             ShaderInstance *inst = (*m_curgroup)[layer];
             if (! inst)
                 continue;
-            inst->compute_run_lazily (*m_curgroup);
+            inst->last_layer (layer == nlayers-1);
         }
 
         // Merge instances now if they really want it bad, otherwise wait
@@ -2749,7 +2753,6 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
             // no longer used).
             ASSERT (B->merged_unused() == false);
             B->outgoing_connections (false);
-            B->run_lazily (true);
             connectionmem += B->clear_connections ();
             B->m_merged_unused = true;
             ASSERT (B->unused());

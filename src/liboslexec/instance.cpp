@@ -58,10 +58,10 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
       //DON'T COPY  m_instsymbols(m_master->m_symbols),
       //DON'T COPY  m_instops(m_master->m_ops), m_instargs(m_master->m_args),
       m_layername(layername),
-      m_writes_globals(false), m_run_lazily(false),
+      m_writes_globals(false),
       m_outgoing_connections(false),
       m_renderer_outputs(false), m_merged_unused(false),
-      m_entry_layer(false),
+      m_last_layer(false), m_entry_layer(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
       m_maincodebegin(m_master->m_maincodebegin),
       m_maincodeend(m_master->m_maincodeend)
@@ -565,41 +565,6 @@ ShaderInstance::print (const ShaderGroup &group)
 
 
 
-void
-ShaderInstance::compute_run_lazily (const ShaderGroup &group)
-{
-    if (shadingsys().m_lazylayers) {
-        // lazylayers option turned on: unconditionally run shaders with no
-        // outgoing connections ("root" nodes, including the last in the
-        // group) or shaders that alter global variables (unless
-        // 'lazyglobals' is turned on).
-        if (shadingsys().m_lazyglobals) {
-            if (group[group.nlayers()-1] == this)
-                run_lazily (false);  // force run of last group
-            else
-                run_lazily ((outgoing_connections() && ! renderer_outputs())
-                            || empty_instance() || merged_unused());
-        }
-        else
-            run_lazily (outgoing_connections() && ! writes_globals()
-                                               && ! renderer_outputs());
-#if 0
-        // Suggested warning below... but are there use cases where people
-        // want these to run (because they will extract the results they
-        // want from output params)?
-        if (! outgoing_connections() && ! empty_instance() &&
-            ! writes_globals() && ! renderer_outputs())
-            shadingsys().warning ("Layer \"%s\" (shader %s) will run even though it appears to have no used results",
-                     layername(), shadername());
-#endif
-    } else {
-        // lazylayers option turned off: never run lazily
-        run_lazily (false);
-    }
-}
-
-
-
 // Are the two vectors equivalent(a[i],b[i]) in each of their members?
 template<class T>
 inline bool
@@ -715,7 +680,7 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
         }
     }
 
-    if (m_run_lazily != b.m_run_lazily) {
+    if (run_lazily() != b.run_lazily()) {
         return false;
     }
 

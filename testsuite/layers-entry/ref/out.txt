@@ -13,16 +13,11 @@ Output D.out to out.exr
 Running layer A:
   layer A, in = 1, out = 2
 (node A) exit layer 0 A node
-(node C) enter layer 2 C node
-Running layer C:
-  layer C, in = 3, out = 6
-(node C) exit layer 2 C node
 (node D) enter layer 3 D node
 Running layer D:
   layer D, in = 4, out = 8
 (node D) exit layer 3 D node
-(node F) enter layer 5 F node
-Running layer F:
+Running layer G:
 (node E) enter layer 4 E node
 Running layer E:
 (node B) enter layer 1 B node
@@ -31,9 +26,6 @@ Running layer B:
 (node B) exit layer 1 B node
   layer E, in = 4, out = 9
 (node E) exit layer 4 E node
-  layer F, in = 9, out = 15
-(node F) exit layer 5 F node
-Running layer G:
   layer G, in = 9, out = 16
 (node G) exit layer 6 G node
 

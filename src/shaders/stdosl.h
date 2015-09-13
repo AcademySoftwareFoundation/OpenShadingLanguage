@@ -242,6 +242,10 @@ float fresnel(vector I, normal N, float eta) {
     }
     return f;
 }
+float schlick(vector I, normal N, float r) {
+    float IdotN = fabs(dot(I, N));
+    return r + (1.0 - r) * pow(1.0 - IdotN, 5.0);
+}
 
 normal transform (matrix Mto, normal p) BUILTIN;
 vector transform (matrix Mto, vector p) BUILTIN;

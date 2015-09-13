@@ -189,8 +189,8 @@ normal normalize (normal v) BUILTIN;
 vector normalize (vector v) BUILTIN;
 vector faceforward (vector N, vector I, vector Nref) BUILTIN;
 vector faceforward (vector N, vector I) BUILTIN;
-vector reflect (vector I, vector N) { return I - 2*dot(N,I)*N; }
-vector refract(vector I, normal N, float eta) {
+vector reflect (vector I, vector N) { return I - 2 * dot(N, I) * N; }
+vector refract(vector I, vector N, float eta) {
     float IdotN = dot(I, N);
     float k = 1.0 - eta * eta * (1.0 - IdotN * IdotN);
     return (k < 0) ? vector(0) : eta * I - N * (eta * IdotN + sqrt(k));
@@ -243,8 +243,8 @@ float fresnel(vector I, normal N, float eta) {
     return f;
 }
 float schlick(vector I, normal N, float r) {
-    float IdotN = fabs(dot(I, N));
-    return r + (1.0 - r) * pow(1.0 - IdotN, 5.0);
+    float c = fabs(dot(I, N));
+    return r + (1.0 - r) * pow(1.0 - c, 5.0);
 }
 
 normal transform (matrix Mto, normal p) BUILTIN;

@@ -30,12 +30,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 
-#include <boost/filesystem.hpp>
-
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
 
 #include <OpenImageIO/dassert.h>
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
@@ -317,9 +316,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (f  &&  ! m_ismetadata) {
         std::string e = Strutil::format ("\"%s\" already declared in this scope", name.c_str());
         if (f->node()) {
-            boost::filesystem::path p(f->node()->sourcefile().string());
+            std::string filename = OIIO::Filesystem::filename(f->node()->sourcefile().string());
             e += Strutil::format ("\n\t\tprevious declaration was at %s:%d",
-                                  p.filename().c_str(), f->node()->sourceline());
+                                  filename, f->node()->sourceline());
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function

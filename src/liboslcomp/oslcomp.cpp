@@ -44,7 +44,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
 
-#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 
 #include <boost/wave.hpp>
@@ -342,7 +341,7 @@ OSLCompilerImpl::compile (string_view filename,
 
     std::vector<std::string> defines;
     std::vector<std::string> includepaths;
-    m_cwd = boost::filesystem::initial_path().string();
+    m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = filename;
 
     // Determine where the installed shader include directory is, and
@@ -351,11 +350,11 @@ OSLCompilerImpl::compile (string_view filename,
         // look in $OSLHOME/shaders
         const char *OSLHOME = getenv ("OSLHOME");
         if (OSLHOME && OSLHOME[0]) {
-            boost::filesystem::path path = boost::filesystem::path(OSLHOME) / "shaders";
-            if (OIIO::Filesystem::exists (path.string())) {
-                path = path / "stdosl.h";
-                if (OIIO::Filesystem::exists (path.string()))
-                    stdoslpath = ustring(path.string());
+            std::string path = std::string(OSLHOME) + "/shaders";
+            if (OIIO::Filesystem::exists (path)) {
+                path = path + "/stdosl.h";
+                if (OIIO::Filesystem::exists (path))
+                    stdoslpath = ustring(path);
             }
         }
     }
@@ -432,7 +431,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 {
     string_view filename ("<buffer>");
 
-    m_cwd = boost::filesystem::initial_path().string();
+    m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = filename;
 
     // Determine where the installed shader include directory is, and
@@ -441,11 +440,11 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
         // look in $OSLHOME/shaders
         const char *OSLHOME = getenv ("OSLHOME");
         if (OSLHOME && OSLHOME[0]) {
-            boost::filesystem::path path = boost::filesystem::path(OSLHOME) / "shaders";
-            if (OIIO::Filesystem::exists (path.string())) {
-                path = path / "stdosl.h";
-                if (OIIO::Filesystem::exists (path.string()))
-                    stdoslpath = ustring(path.string());
+            std::string path = std::string(OSLHOME) + "/shaders";
+            if (OIIO::Filesystem::exists (path)) {
+                path = path + "/stdosl.h";
+                if (OIIO::Filesystem::exists (path))
+                    stdoslpath = ustring(path);
             }
         }
     }

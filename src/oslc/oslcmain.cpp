@@ -34,7 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 
 #include <boost/scoped_ptr.hpp>
-#include <boost/filesystem.hpp>
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
@@ -75,22 +74,22 @@ stdoslpath ()
 {
     std::string program = OIIO::Sysutil::this_program_path ();
     if (program.size()) {
-        boost::filesystem::path path (program);  // our program
-        path = path.parent_path ();  // now the bin dir of our program
-        path = path.parent_path ();  // now the parent dir
-        boost::filesystem::path savepath = path;
+        std::string path (program);  // our program
+        path = OIIO::Filesystem::parent_path(path);  // the bin dir of our program
+        path = OIIO::Filesystem::parent_path(path);  // now the parent dir
+        std::string savepath = path;
         // We search two spots: ../../lib/osl/include, and ../shaders
-        path = savepath / "lib" / "osl" / "include";
-        if (OIIO::Filesystem::exists (path.string())) {
-            path = path / "stdosl.h";
-            if (OIIO::Filesystem::exists (path.string()))
-                return path.string();
+        path = savepath + "/lib/osl/include";
+        if (OIIO::Filesystem::exists (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return path;
         }
-        path = savepath / "shaders";
-        if (OIIO::Filesystem::exists (path.string())) {
-            path = path / "stdosl.h";
-            if (OIIO::Filesystem::exists (path.string()))
-                return path.string();
+        path = savepath + "/shaders";
+        if (OIIO::Filesystem::exists (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return path;
         }
     }
     return std::string();

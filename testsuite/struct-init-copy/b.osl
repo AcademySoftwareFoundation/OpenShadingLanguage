@@ -1,0 +1,9 @@
+#include "Astruct.h"
+
+shader b (Astruct Ain = {0,0},
+          output Astruct Bout = Ain,
+          output color Cout = 0)
+{
+    Cout = color (Bout.s, Bout.t, 0);
+    printf ("%g  : should be %g %g 0\n", Cout, u, v);
+}

@@ -1720,13 +1720,13 @@ RuntimeOptimizer::remove_unused_params ()
     // Get rid of unused params' init ops and clear their read/write ranges
     FOREACH_PARAM (Symbol &s, inst()) {
         if (param_never_used(s) && s.has_init_ops()) {
-            turn_into_nop (s.initbegin(), s.initend(),
-                           "remove init ops of unused param");
+            std::string why;
+            if (debug() > 1)
+                why = Strutil::format ("remove init ops of unused param %s %s", s.typespec().c_str(), s.name());
+            turn_into_nop (s.initbegin(), s.initend(), why);
             s.set_initrange (0, 0);
             s.clear_rw();   // mark as totally unused
             ++alterations;
-            if (debug() > 1)
-                std::cout << "Realized that param " << s.name() << " is not needed\n";
         }
     }
 
@@ -2707,21 +2707,16 @@ RuntimeOptimizer::run ()
         inst()->copy_code_from_master (group());
         mark_outgoing_connections();
     }
-    if (shadingsys().m_opt_merge_instances == 1)
-        shadingsys().merge_instances (group());
 
-    m_params_holding_globals.resize (nlayers);
-
-    // Optimize each layer, from first to last
+    // Inventory the network and print pre-optimized debug info
     size_t old_nsyms = 0, old_nops = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
-        if (inst()->unused())
-            continue;
-        if (debug() && optimize() >= 1) {
+        if (debug() /* && optimize() >= 1*/) {
             std::cout.flush ();
             std::cout << "Before optimizing layer " << layer << " " 
                       << inst()->layername() << " (" << inst()->id() << ") :\n"
+                      << (inst()->unused() ? " UNUSED" : "")
                       << " connections in=" << inst()->nconnections()
                       << " out=" << inst()->outgoing_connections()
                       << (inst()->writes_globals() ? " writes_globals" : "")
@@ -2736,15 +2731,24 @@ RuntimeOptimizer::run ()
                       << "\n--------------------------------\n\n";
             std::cout.flush ();
         }
-
         old_nsyms += inst()->symbols().size();
         old_nops += inst()->ops().size();
+    }
 
+    if (shadingsys().m_opt_merge_instances == 1)
+        shadingsys().merge_instances (group());
+
+    m_params_holding_globals.resize (nlayers);
+
+    // Optimize each layer, from first to last
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        set_inst (layer);
+        if (inst()->unused())
+            continue;
         // N.B. we need to resolve isconnected() calls before the instance
         // is otherwise optimized, or else isconnected() may not reflect
         // the original connectivity after substitutions are made.
         resolve_isconnected ();
-
         optimize_instance ();
     }
 
@@ -2802,6 +2806,7 @@ RuntimeOptimizer::run ()
             track_variable_lifetimes ();
             std::cout << "After optimizing layer " << layer << " " 
                       << inst()->layername() << " (" << inst()->id() << ") :\n"
+                      << (inst()->unused() ? " UNUSED" : "")
                       << " connections in=" << inst()->nconnections()
                       << " out=" << inst()->outgoing_connections()
                       << (inst()->writes_globals() ? " writes_globals" : "")

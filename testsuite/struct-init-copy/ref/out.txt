@@ -1,0 +1,6 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect a.Aout to b.Ain
+
+Output Cout to out.exr
+0.5 0.5 0  : should be 0.5 0.5 0

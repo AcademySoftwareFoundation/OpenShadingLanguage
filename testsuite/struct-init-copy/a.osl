@@ -1,0 +1,7 @@
+#include "Astruct.h"
+
+shader a (output Astruct Aout = {-1, -1})
+{
+    Aout.s = u;
+    Aout.t = v;
+}

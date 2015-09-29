@@ -1827,7 +1827,7 @@ RuntimeOptimizer::eliminate_middleman ()
                             dsym = downinst->mastersymbol(c.dst.param);
                         const Symbol *usym = upinst->symbol(upstream_symbol);
                         if (! usym)
-                            usym = downinst->mastersymbol(upstream_symbol);
+                            usym = upinst->mastersymbol(upstream_symbol);
                         ASSERT (dsym && usym);
                         std::cout << "Removed " << inst()->layername() << "."
                                   << s.name() << " middleman for " 

@@ -202,6 +202,13 @@ BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
 
 
 
+LLVMGEN (llvm_gen_nop)
+{
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_useparam)
 {
     ASSERT (! rop.inst()->unused() &&

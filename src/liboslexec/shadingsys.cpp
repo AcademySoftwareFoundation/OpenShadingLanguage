@@ -868,6 +868,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (neg,         neg,                 neg,           true,      0);
     OP (neq,         compare_op,          neq,           true,      0);
     OP (noise,       noise,               noise,         true,      0);
+    OP (nop,         nop,                 none,          true,      0);
     OP (normal,      construct_triple,    triple,        true,      0);
     OP (normalize,   generic,             normalize,     true,      0);
     OP (or,          andor,               or,            true,      0);

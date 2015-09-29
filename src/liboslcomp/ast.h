@@ -311,11 +311,14 @@ protected:
     /// true, we are (perhaps recursively) copying entire arrays, of
     /// or within the struct, and intindex is the element number if we
     /// know it -- these two items let us take some interesting shortcuts
-    /// with whole arrays (copyarray versus assigning elements).
+    /// with whole arrays (copyarray versus assigning elements). Pass
+    /// paraminit=true if we're doing the assignment as init ops of a
+    /// shader param.
     void codegen_assign_struct (StructSpec *structspec,
                                 ustring dstsym, ustring srcsym,
                                 Symbol *arrayindex,
-                                bool copywholearrays, int intindex);
+                                bool copywholearrays, int intindex,
+                                bool paraminit);
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is

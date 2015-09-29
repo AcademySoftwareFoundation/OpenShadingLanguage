@@ -488,7 +488,7 @@ ASTassign_expression::codegen (Symbol *dest)
             StructSpec *structspec = typespec().structspec ();
             codegen_assign_struct (structspec, ustring(dest->mangled()),
                                    ustring(operand->mangled()), NULL,
-                                   true, 0);
+                                   true, 0, false /*not a shader param init*/);
         }
         return dest;
     }
@@ -505,13 +505,15 @@ ASTassign_expression::codegen (Symbol *dest)
                 Symbol *v = index->lvalue()->codegen();
                 codegen_assign_struct (structspec, ustring(v->mangled()),
                                        ustring(operand->mangled()), arrayindex,
-                                       false, -1 /* means we don't know */);
+                                       false, -1 /* means we don't know */,
+                                       false /*not a shader param init*/);
             } else {
                 // Assignment of one scalar struct to another scalar struct
                 ASSERT (dest);
                 codegen_assign_struct (structspec, ustring(dest->mangled()),
                                        ustring(operand->mangled()), NULL,
-                                       true, 0);
+                                       true, 0,
+                                       false /*not a shader param init*/);
             }
         }
         return dest;
@@ -537,7 +539,8 @@ void
 ASTNode::codegen_assign_struct (StructSpec *structspec,
                                 ustring dstsym, ustring srcsym,
                                 Symbol *arrayindex,
-                                bool copywholearrays, int intindex)
+                                bool copywholearrays, int intindex,
+                                bool paraminit)
 {
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         const TypeSpec &fieldtype (structspec->field(i).type);
@@ -547,7 +550,7 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
             codegen_assign_struct (fieldtype.structspec(),
                                    ustring::format ("%s.%s", dstsym, fieldname),
                                    ustring::format ("%s.%s", srcsym, fieldname),
-                                   arrayindex, copywholearrays, 0);
+                                   arrayindex, copywholearrays, 0, paraminit);
             continue;
         }
 
@@ -561,7 +564,7 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
                 codegen_assign_struct (fieldtype.structspec(),
                                        dstfield, srcfield,
                                        m_compiler->make_constant(i),
-                                       copywholearrays, i);
+                                       copywholearrays, i, paraminit);
             }
             continue;
         }
@@ -569,6 +572,10 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
         Symbol *dfield, *ofield;
         m_compiler->struct_field_pair (structspec, i, dstsym, srcsym,
                                        dfield, ofield);
+        if (paraminit) {
+            m_compiler->codegen_method (ustring(dfield->mangled()));
+            dfield->initbegin (m_compiler->next_op_label ());
+        }
         if (arrayindex) {
             // field is a scalar, but we're assigning to one element of
             // an array of structs.
@@ -598,6 +605,8 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
             // field is a scalar, struct is a scalar
             emitcode ("assign", dfield, ofield);
         }
+        if (paraminit)
+            dfield->initend (m_compiler->next_op_label ());
     }
 }
 
@@ -886,6 +895,13 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
 Symbol *
 ASTvariable_declaration::codegen_struct_initializers (ref init)
 {
+    // If we're doing this initialization for shader params for their
+    // init ops, we need to take care to set the codegen method names
+    // properly.
+    bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
+                      (m_sym->symtype() == SymTypeParam ||
+                       m_sym->symtype() == SymTypeOutputParam));
+
     if (! init->next() && init->typespec() == m_typespec &&
             init->nodetype() != compound_initializer_node) {
         // Special case: just one initializer, it's a whole struct of
@@ -894,16 +910,13 @@ ASTvariable_declaration::codegen_struct_initializers (ref init)
         if (initsym != m_sym) {
             StructSpec *structspec (m_typespec.structspec());
             codegen_assign_struct (structspec, ustring(m_sym->mangled()),
-                                   ustring(initsym->mangled()), NULL, true, 0);
+                                   ustring(initsym->mangled()), NULL, true, 0,
+                                   paraminit);
         }
         return m_sym;
     }
 
     // General case -- per-field initializers
-
-    bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
-                      (m_sym->symtype() == SymTypeParam ||
-                       m_sym->symtype() == SymTypeOutputParam));
     for (int i = 0;  init;  init = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
         StructSpec *structspec (m_typespec.structspec());

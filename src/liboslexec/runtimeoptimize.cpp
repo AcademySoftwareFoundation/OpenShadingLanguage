@@ -2120,7 +2120,8 @@ RuntimeOptimizer::optimize_instance ()
         }
 
         // Elide unconnected parameters that are never read.
-        changed += remove_unused_params ();
+        if (optimize() >= 1)
+            changed += remove_unused_params ();
 
         // FIXME -- we should re-evaluate whether writes_globals() is still
         // true for this layer.

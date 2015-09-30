@@ -97,6 +97,8 @@ static ShaderGroupRef shadergroup;
 static std::string archivegroup;
 static int exprcount = 0;
 static bool shadingsys_options_set = false;
+static float sscale = 1, tscale = 1;
+static float soffset = 0, toffset = 0;
 
 
 
@@ -428,6 +430,7 @@ getargs (int argc, const char *argv[])
                 "--profile", &profile, "Print profile information",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
+                "-res %d %d", &xres, &yres, "", // synonym for -g
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
@@ -462,6 +465,8 @@ getargs (int argc, const char *argv[])
                 "--shadeimage", &use_shade_image, "Use shade_image utility",
                 "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
                 "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
+                "--offsetst %f %f", &soffset, &toffset, "Offset s & t texture coordinates (default: 0 0)",
+                "--scalest %f %f", &sscale, &tscale, "Scale s & t texture lookups (default: 1, 1)",
                 "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
@@ -550,17 +555,17 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     if (pixelcenters) {
         // Our patch is like an "image" with shading samples at the
         // centers of each pixel.
-        sg.u = (float)(x+0.5f) / xres;
-        sg.v = (float)(y+0.5f) / yres;
-        sg.dudx = 1.0f / xres;
-        sg.dvdy = 1.0f / yres;
+        sg.u = sscale * (float)(x+0.5f) / xres + soffset;
+        sg.v = tscale * (float)(y+0.5f) / yres + toffset;
+        sg.dudx = sscale / xres;
+        sg.dvdy = tscale / yres;
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
-        sg.u = (xres == 1) ? 0.5f : (float) x / (xres - 1);
-        sg.v = (yres == 1) ? 0.5f : (float) y / (yres - 1);
-        sg.dudx = 1.0f / std::max (1, xres-1);
-        sg.dvdy = 1.0f / std::max (1, yres-1);
+        sg.u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
+        sg.v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
+        sg.dudx = sscale / std::max (1, xres-1);
+        sg.dvdy = tscale / std::max (1, yres-1);
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie

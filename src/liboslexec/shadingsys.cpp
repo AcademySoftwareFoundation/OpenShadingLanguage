@@ -1573,6 +1573,7 @@ ShadingSystemImpl::getstats (int level) const
     STROPT (archive_filename);
 #undef BOOLOPT
 #undef INTOPT
+#undef STROPT
     out << "  Options:  " << Strutil::wordwrap(opt, 75, 12) << "\n";
 
     out << "  Shaders:\n";

@@ -61,7 +61,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 6 May, 2015 \\
+\date{{\large Date: 9 Oct, 2015 \\
 %~ (with corrections, 2 Oct 2014)
 }
 \bigskip
@@ -3315,6 +3315,14 @@ The \emph{type} may be any of of \float, \color, \point, \vector, or
 performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
+\apiitem{float {\ce linearstep} (float edge0, float edge1, float x)}
+\indexapi{linearstep()}
+\NEW % 1.7
+Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
+and performs a linear
+interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
+\apiend
+
 \apiitem{float {\ce smoothstep} (float edge0, float edge1, float x)}
 \indexapi{smoothstep()}
 Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
@@ -3323,6 +3331,18 @@ interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
 This is useful in cases where you would want a thresholding function
 with a smooth transition.
 \apiend
+
+\apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps)}
+\indexapi{smooth_linearstep()}
+\NEW % 1.7
+This function is strictly linear between ${\mathit edge0}+{\mathit eps}$ and ${\mathit edge1}-{\mathit eps}$
+but smoothly ramps to 0 between ${\mathit edge0}-{\mathit eps}$ and ${\mathit edge0}+{\mathit eps}$
+and smoothly ramps to 1 between ${\mathit edge1}-{\mathit eps}$ and ${\mathit edge1}+{\mathit eps}$.
+It is 0 when $x \le {\mathit edge0}-{\mathit eps}$, and 1 if $x \ge {\mathit edge1}+{\mathit eps}$,
+and performs a linear
+interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
+\apiend
+
 
 %\section{Noise functions}
 %\label{sec:stdlib:noise}

@@ -419,6 +419,25 @@ normal step (normal edge, normal x) BUILTIN;
 float step (float edge, float x) BUILTIN;
 float smoothstep (float edge0, float edge1, float x) BUILTIN;
 
+float linearstep (float edge0, float edge1, float x) {
+    float xclamped = clamp (x, edge0, edge1);
+    return (xclamped - edge0) / (edge1 - edge0);
+}
+
+float smooth_linearstep (float edge0, float edge1, float x_, float eps_) {
+    float rampup (float x, float r) { return 0.5/r * x*x; }
+    float width_inv = 1.0 / (edge1 - edge0);
+    float eps = eps_ * width_inv;
+    float x = (x_ - edge0) * width_inv;
+    float result;
+    if      (x < -eps)    result = 0;
+    else if (x < eps)     result = rampup (x+eps, 2.0*eps);
+    else if (x < 1.0-eps) result = x;
+    else if (x < 1.0+eps) result = 1.0 - rampup (1.0+eps - x, 2.0*eps);
+    else                  result = 1;
+    return result;
+}
+
 float aastep (float edge, float s, float dedge, float ds) {
     // Box filtered AA step
     float width = fabs(dedge) + fabs(ds);

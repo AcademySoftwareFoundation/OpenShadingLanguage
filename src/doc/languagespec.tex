@@ -2717,9 +2717,10 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 {\cf Nl}      &       &    &  & R \\
 \hline 
 \end{tabular}
+\end{table}
 \end{comment}
 
-\begin{table}[c]
+\begin{table}
 \begin{tabular}{|p{1in}p{0.75in}p{0.75in}p{0.75in}|}
 \hline
 {\bf Variable} & surface & displacement & volume  \\
@@ -4149,7 +4150,7 @@ parameters recognized are listed below:
 
 \smallskip
 
-\begin{tabular}{p{1.2in} p{0.5in} p{3.3in}}
+\begin{tabular}{p{1.1in} p{0.5in} p{3.4in}}
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
 
@@ -4171,16 +4172,16 @@ volumetric texture, the third component ($z$ resolution) will be
 map. \\[0.75ex]
 
 \qkw{type} & {\cf string} & Returns the semantic type of the texture,
-one of: \qkw{Plain Texture}, \qkw{Shadow}, \qkw{Environment},
-\qkw{Volume Texture}. \\[0.75ex]
+one of: \qkws{Plain Texture}, \qkws{Shadow}, \qkws{Environment},
+\qkws{Volume Texture}. \\[0.75ex]
 
 \qkw{subimages} & {\cf int} & Returns the number of subimages in the
 texture file. \\[0.75ex]
 
 \qkw{textureformat} & {\cf string} & Returns the texture format, one of:
-\qkw{Plain Texture}, \qkw{Shadow}, \qkw{CubeFace Shadow}, \qkw{Volume
-  Shadow}, \qkw{CubeFace Environment}, \qkw{LatLong Environment},
-\qkw{Volume Texture}. Note that this differs from \qkw{type} in that it
+\qkws{Plain Texture}, \qkws{Shadow}, \qkws{CubeFace Shadow}, \qkws{Volume
+  Shadow}, \qkws{CubeFace Environment}, \qkws{LatLong Environment},
+\qkws{Volume Texture}. Note that this differs from \qkw{type} in that it
 specifically distinguishes between the different types of shadows and
 environment maps.  \\[0.75ex]
 
@@ -4201,9 +4202,10 @@ they will be 0). \\[0.75ex]
 \noindent ...continued...
 \end{tabular}
 
-\begin{tabular}{p{1.2in} p{0.5in} p{3.3in}}
+\begin{tabular}{p{1.1in} p{0.5in} p{3.4in}}
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
+
 \qkw{worldtocamera} & \matrix & If the texture is a rendered image,
 retrieves the world-to-camera 3D transformation matrix that was used when it
 was created.\\[0.75ex]

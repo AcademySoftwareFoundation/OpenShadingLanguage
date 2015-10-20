@@ -63,37 +63,52 @@ osl_strlen_is (const char *s)
 }
 
 OSL_SHADEOP int
-osl_startswith_iss (const char *s, const char *substr)
+osl_startswith_iss (const char *s_, const char *substr_)
 {
-    return strncmp (s, substr, USTR(substr).length()) == 0;
+    ustring substr (USTR(substr_));
+    size_t substr_len = substr.length();
+    if (substr_len == 0)         // empty substr always matches
+        return 1;
+    ustring s (USTR(s_));
+    size_t s_len = s.length();
+    if (substr_len > s_len)      // longer needle than haystack can't
+        return 0;                // match (including empty s)
+    return strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
 }
 
 OSL_SHADEOP int
-osl_endswith_iss (const char *s, const char *substr)
+osl_endswith_iss (const char *s_, const char *substr_)
 {
-    size_t len = USTR(substr).length();
-    if (len > USTR(s).length())
-        return 0;
-    else
-        return strncmp (s+USTR(s).length()-len, substr, len) == 0;
+    ustring substr (USTR(substr_));
+    size_t substr_len = substr.length();
+    if (substr_len == 0)         // empty substr always matches
+        return 1;
+    ustring s (USTR(s_));
+    size_t s_len = s.length();
+    if (substr_len > s_len)      // longer needle than haystack can't
+        return 0;                // match (including empty s)
+    return strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
 }
 
 OSL_SHADEOP int
 osl_stoi_is (const char *str)
 {
-    return strtol(str, NULL, 10);
+    return str ? strtol(str, NULL, 10) : 0;
 }
 
 OSL_SHADEOP float
 osl_stof_fs (const char *str)
 {
-    return (float)strtod(str, NULL);
+    return str ? (float)strtod(str, NULL) : 0.0f;
 }
 
 OSL_SHADEOP const char *
-osl_substr_ssii (const char *s, int start, int length)
+osl_substr_ssii (const char *s_, int start, int length)
 {
-    int slen = (int) USTR(s).length();
+    ustring s (USTR(s_));
+    int slen = int (s.length());
+    if (slen == 0)
+        return NULL;  // No substring of empty string
     int b = start;
     if (b < 0)
         b += slen;

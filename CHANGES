@@ -2,10 +2,94 @@ Changes:
 
 Release 1.7 (in progress - dev) -- ?? 2015 (compared to 1.6)
 -----------------------------------------------
+Language, standard libary, and compiler changes (for shader writers):
+* Support for closure arrays in shader inputs. (1.7.0)
+* Removed from stdosl.h all closure function declarations that were not
+  documented in the spec and not implemented in testrender. (1.7.0)
+* New linearstep() and smooth_linearstep() functions in the standard
+  OSL library. (1.7.0)
+
+API changes, new options, new ShadingSystem features (for renderer writers):
+* shade_image() utility runs a shader to generate every pixel of an ImageBuf.
+  (1.7.0)
+* ShadingSystem attribute "lockgeom" default changed to 1. (1.7.0)
+* ShaingSystem::optimize_group() is a new method that lets you force a
+  shader group to optimize/JIT (without executing it). (1.7.0)
+* osl.imageio.so -- an OIIO image reader plusin that runs OSL shaders to
+  generate pixels in an image (or texture). (1.7.0)
+* SS::getattribute new attributes "num_attributes_needed", "attributes_needed",
+  "attribute_scopes", and "unknown_attributes_needed" can be used to query
+  for a shader group what OSL getattribute queries it might make. (1.7.0)
+* Remove deprecated ShadingSystem::state() method. (1.7.0)
+* "llvm_debug_layers" controls debug printfs for layer enter/exit (strictly
+  for our debugging of the system; not intended for users). (1.7.0)
+* Group attribute "entry_layers" can explicitly provide a list of which
+  layers within the group (specified by layer names) are "entry points",
+  and then new ShadingSystem methods execute_init(), execute_layer(), and
+  execute_cleanup() can be used to call them individually in any order.
+  The old execute(), which executes starting with the "root" and lazily
+  evaluating any upstream nodes needed, still works and is still the usual
+  way to run shaders for most purposes. (1.7.0)
+* Changed logic of lazy shader layer evaluation: "unconnected" layers
+  are now lazy. That means that shaders that appear to have no connected
+  outputs, and don't set globals or set renderer outputs, are no longer
+  run unconditionally. (1.7.0)
+
+Performance improvements:
+* Much faster (10x or more, for large shaders) parsing of oso files (and
+  .osl source as well). #511 (1.7.0)
+* Optimize away unused optional arguments to noise functions. (1.7.0)
+
+Bug fixes and other improvements:
+* oslinfo now has a "--runstats" flag to report how much time it takes
+  to OSLQuery the shaders. (Mostly used for benchmarking the speed of
+  OSLQuery internals.) #510 (1.7.0)
+* Improved "debug_uninit" mode eliminates certain false alarms, and when
+  uninitialized values are found, the error messages is more clear about
+  which shader group and layer were involved (in addition to the previous
+  reporting of the OSL source file ane line number). #512 (1.7.0)
+* Bug fix serializing shader groups with "unsized arrays." (1.7.0)
+* Make sure OSL works fine with LLVM 3.5. (1.7.0)
+* Bug fix with unconditional running of earlier layers. (1.7.0)
+* Improved error message for range errors and uninitialized variable errors
+  (when using "range_checking" and "debug_uninit", respectively). (1.7.0)
+* Fixed oslc bug where shader parameters that were structs and whose
+  values were initialized by copying another struct whole, generated
+  incorrect initialization code. (1.7.0)
+
+Under the hood:
+* Better tracking of layers that are the unused duplicates after an
+  instance merge. This allows us to be sure those layers are skipped,
+  and avoid situations where they look like they should run
+  unconditionally.  #506 (1.7.0)
+
+Build & test system improvements and developer goodies:
+* Allow testshade to test OSL snippets without whole full shaders. (1.7.0)
+* Much less verbose builds, when not using VERBOSE=1. (1.7.0)
+* New build-time options:
+  * USE_NINJA=1 will use Ninja rather than Make (faster!). (1.7.0)
+  * USE_fPIC=1 will build with -fPIC. (1.7.0)
+  * OSL_BUILD_TESTS=0 will cause it to not build unit tests, testshade,
+    or testrender. (1.7.0)
+  * OSL_NO_DEFAULT_TEXTURESYSTEM=1 will cause the ShadingSystem to not
+    create a raw OIIO::TextureSystem, and instead hit an assertion if
+    a TextureSystem is not passed to the ShadingSystem constructor.
+    Use this when building OSL to embed in renderers that supply their
+    own TextureSystem class rather than using OIIO's. (1.7.0)
+* Fixes when building for VS2012. (1.7.0)
+* Add --path to testshade and testrender to allow setting search path
+  to find oso files. (1.7.0)
+* Testsuite: the presence of a file called "OPTIMIZEONLY" in a test
+  directory will cause that test to run only in optimized mode. (1.7.0)
+* Better detection of clang version. (1.7.0)
+* testshade --offsetst and --scalest let you make custom st ranges for
+  the image being sampled (not restricted to 0-1 defaults). (1.7.0)
+
+Documentation:
 
 
 
-Release 1.6 (1.6.5 - beta) -- 20 May 2015 (compared to 1.5)
+Release 1.6 (1.6.6 - RC1) -- 26 May 2015 (compared to 1.5)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * It is now supported to have shader parameters that are arrays of
@@ -220,6 +304,11 @@ Build & test system improvements and developer goodies:
   #487 #488 (1.6.4)
 * Fixes to work with LLVM 3.5 and 3.6, though 3.6 especially has not yet
   been very thoroughly tested for OSL. #487 (1.6.4)
+* C++11 support: the preprocessor symbol OSL_BUILD_CPP11 is set to 1 if
+  OSL was built with C++11 (or higher) support, and the separate
+  OSL_USING_CPP11 is set to 1 if C++11 is detected right now. (These can
+  be different from the point of view of an app using OSL headers.)
+  #508 (1.6.6RC1)
 
 Documentation:
 * Short chapter added to spec describing the syntax of our serialization

@@ -493,6 +493,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             hyperb ieee_fp if incdec initops intbits isconnected
             layers layers-Ciassign layers-entry layers-lazy
             layers-nonlazycopy layers-repeatedoutputs
+            linearstep
             logic loop matrix message mergeinstances-nouserdata
             metadata-braces miscmath missing-shader
             noise noise-cell

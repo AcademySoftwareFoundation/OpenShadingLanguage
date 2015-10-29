@@ -1,0 +1,16 @@
+shader
+test (output color Cout = 0)
+{
+    Cout = 0;
+    if (v < 0.2)    // degenerate linearstep with coincident edges
+        Cout = linearstep (0.5, 0.5, u);
+    else if (v < 0.4)  // ordinary linearstep
+        Cout = linearstep (0.25, 0.75, u);
+    else if (v < 0.6)  // deginerate sls with eps==0
+        Cout = smooth_linearstep (0.25, 0.75, u, 0.0);
+    else if (v < 0.8)  // regular sls
+        Cout = smooth_linearstep (0.25, 0.75, u, 0.05);
+    else if (v < 1.0)  // degenerate sls with coincident edges
+        Cout = smooth_linearstep (0.5, 0.5, u, 0.0);
+    Cout = 0.1 + Cout * 0.8;
+}

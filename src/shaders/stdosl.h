@@ -430,11 +430,11 @@ float smooth_linearstep (float edge0, float edge1, float x_, float eps_) {
     float eps = eps_ * width_inv;
     float x = (x_ - edge0) * width_inv;
     float result;
-    if      (x < -eps)    result = 0;
-    else if (x < eps)     result = rampup (x+eps, 2.0*eps);
-    else if (x < 1.0-eps) result = x;
-    else if (x < 1.0+eps) result = 1.0 - rampup (1.0+eps - x, 2.0*eps);
-    else                  result = 1;
+    if      (x <= -eps)                result = 0;
+    else if (x >= eps && x <= 1.0-eps) result = x;
+    else if (x >= 1.0+eps)             result = 1;
+    else if (x < eps)                  result = rampup (x+eps, 2.0*eps);
+    else /* if (x < 1.0+eps) */        result = 1.0 - rampup (1.0+eps - x, 2.0*eps);
     return result;
 }
 

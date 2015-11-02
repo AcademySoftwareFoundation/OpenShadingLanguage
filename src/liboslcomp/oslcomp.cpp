@@ -418,7 +418,7 @@ OSLCompilerImpl::compile (string_view filename,
             ASSERT (m_osofile == NULL);
             m_osofile = &oso_output;
 
-            write_oso_file (m_output_filename);
+            write_oso_file (m_output_filename, OIIO::Strutil::join(options," "));
             ASSERT (m_osofile == NULL);
         }
 
@@ -504,7 +504,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
             ASSERT (m_osofile == NULL);
             m_osofile = &oso_output;
 
-            write_oso_file (m_output_filename);
+            write_oso_file (m_output_filename, OIIO::Strutil::join(options," "));
             osobuffer = oso_output.str();
             ASSERT (m_osofile == NULL);
         }
@@ -740,12 +740,14 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 
 
 void
-OSLCompilerImpl::write_oso_file (const std::string &outfilename)
+OSLCompilerImpl::write_oso_file (const std::string &outfilename,
+                                 string_view options)
 {
     ASSERT (m_osofile != NULL && m_osofile->good());
     oso ("OpenShadingLanguage %d.%02d\n",
          OSO_FILE_VERSION_MAJOR, OSO_FILE_VERSION_MINOR);
     oso ("# Compiled by oslc %s\n", OSL_LIBRARY_VERSION_STRING);
+    oso ("# options: %s\n", options);
 
     ASTshader_declaration *shaderdecl = shader_decl();
     oso ("%s %s", shaderdecl->shadertypename(), 

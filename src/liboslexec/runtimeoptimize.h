@@ -139,6 +139,11 @@ public:
     /// of instructions that were altered.
     int turn_into_nop (int begin, int end, string_view why=NULL);
 
+    void debug_opt (int opbegin, int opend, string_view message);
+    void debug_turn_into (const Opcode &op, int numops,
+                          string_view newop, int newarg0,
+                          int newarg1, int newarg2, string_view why);
+
     void simplify_params ();
 
     void find_params_holding_globals ();

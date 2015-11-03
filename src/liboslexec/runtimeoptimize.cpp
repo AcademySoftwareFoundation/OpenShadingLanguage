@@ -329,18 +329,55 @@ RuntimeOptimizer::add_symbol (const Symbol &sym)
 
 
 void
+RuntimeOptimizer::debug_opt (int opbegin, int opend, string_view message)
+{
+    const Opcode &op (inst()->ops()[opbegin]);
+    std::string oprange;
+    if (opbegin >= 0 && opend-opbegin > 1)
+        oprange = Strutil::format ("ops %d-%d ", opbegin, opend);
+    else if (opbegin >= 0)
+        oprange = Strutil::format ("op %d ", opbegin);
+    std::string out = Strutil::format ("%s%s (@ %s:%d)\n", oprange, message,
+                                       op.sourcefile(), op.sourceline());
+    std::cout << out;
+}
+
+
+
+void
+RuntimeOptimizer::debug_turn_into (const Opcode &op, int numops,
+                                   string_view newop,
+                                   int newarg0, int newarg1, int newarg2,
+                                   string_view why)
+{
+    int opnum = &op - &(inst()->ops()[0]);
+    std::string msg;
+    if (numops == 1)
+        msg = Strutil::format ("turned '%s' to '%s", op_string(op), newop);
+    else
+        msg = Strutil::format ("turned to '%s", newop);
+    if (newarg0 >= 0)
+        msg += Strutil::format (" %s", inst()->symbol(newarg0)->name());
+    if (newarg1 >= 0)
+        msg += Strutil::format (" %s", inst()->symbol(newarg1)->name());
+    if (newarg2 >= 0)
+        msg += Strutil::format (" %s", inst()->symbol(newarg2)->name());
+    msg += "'";
+    if (why.size())
+        msg += Strutil::format (" : %s", why);
+    debug_opt (opnum, opnum+numops, msg);
+}
+
+
+
+void
 RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg0,
                                     int newarg1, int newarg2, string_view why)
 {
     int opnum = &op - &(inst()->ops()[0]);
     DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
     if (debug() > 1)
-        std::cout << "turned op " << opnum
-                  << " from '" << op_string(op) << "' to '"
-                  << newop << ' ' << inst()->symbol(newarg0)->name() << ' '
-                  << inst()->symbol(newarg1)->name() << ' '
-                  << (newarg2<0 ? "" : inst()->symbol(newarg2)->name().c_str())
-                  << (why.size() ? "' : " : "'") << why << "\n";
+        debug_turn_into (op, 1, newop, newarg0, newarg1, newarg2, why);
     op.reset (newop, newarg2<0 ? 2 : 3);
     inst()->args()[op.firstarg()+0] = newarg0;
     op.argwriteonly (0);
@@ -363,11 +400,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, string_view why)
     // We don't know the op num here, so we subtract the pointers
     int opnum = &op - &(inst()->ops()[0]);
     if (debug() > 1)
-        std::cout << "turned op " << opnum
-                  << " from '" << op_string(op) << "' to '"
-                  << opargsym(op,0)->name() << " = " 
-                  << inst()->symbol(newarg)->name() << "'"
-                  << (why.size() ? " : " : "") << why << "\n";
+        debug_turn_into (op, 1, "assign", oparg(op,0), newarg, -1, why);
     op.reset (u_assign, 2);
     inst()->args()[op.firstarg()+1] = newarg;
     op.argwriteonly (0);
@@ -420,9 +453,7 @@ RuntimeOptimizer::turn_into_nop (Opcode &op, string_view why)
 {
     if (op.opname() != u_nop) {
         if (debug() > 1)
-            std::cout << "turned op " << (&op - &(inst()->ops()[0]))
-                      << " from '" << op_string(op) << "' to 'nop'"
-                      << (why.size() ? " : " : "") << why << "\n";
+            debug_turn_into (op, 1, "nop", -1, -1, -1, why);
         op.reset (u_nop, 0);
         return 1;
     }
@@ -443,8 +474,7 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
         }
     }
     if (debug() > 1 && changed)
-        std::cout << "turned ops " << begin << "-" << (end-1) << " into 'nop'"
-                  << (why.size() ? " : " : "") << why << "\n";
+        debug_turn_into (inst()->ops()[begin], end-begin, "nop", -1, -1, -1, why);
     return changed;
 }
 
@@ -1616,6 +1646,7 @@ RuntimeOptimizer::peephole2 (int opnum)
         if (a->firstuse() >= opnum && a->lastuse() <= op2num &&
               (a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam) &&
               equivalent (a->typespec(), c->typespec())) {
+            // FIXME: no debug output for the following code alteration
             inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
             c->mark_rw (opnum, false, true);
             // Any time we write to a variable that wasn't written to at
@@ -2701,6 +2732,8 @@ RuntimeOptimizer::run ()
     if (debug())
         shadingcontext()->info ("About to optimize shader group %s (%d layers):",
                            group().name(), nlayers);
+    if (debug())
+        std::cout << "About to optimize shader group " << group().name() << "\n";
 
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);

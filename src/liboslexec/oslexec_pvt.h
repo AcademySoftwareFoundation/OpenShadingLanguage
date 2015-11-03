@@ -557,6 +557,7 @@ public:
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
+    int opt_passes() const { return m_opt_passes; }
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata () const { return m_lazy_userdata; }
@@ -731,6 +732,7 @@ private:
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_opt_texture_handle;            ///< Use texture handles?
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
+    int m_opt_passes;                     ///< Opt passes per layer
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output
     int m_llvm_debug;                     ///< More LLVM debugging output

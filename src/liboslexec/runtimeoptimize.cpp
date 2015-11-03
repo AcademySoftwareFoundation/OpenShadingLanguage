@@ -2067,12 +2067,13 @@ RuntimeOptimizer::optimize_instance ()
 
     // Try to fold constants.  We take several passes, until we get to
     // the point that not much is improving.  It rarely goes beyond 3-4
-    // passes, but we have a hard cutoff at 10 just to be sure we don't
+    // passes, but we have a hard cutoff just to be sure we don't
     // ever get into an infinite loop from an unforseen cycle where we
     // end up inadvertently transforming A => B => A => etc.
     int totalchanged = 0;
     int reallydone = 0;   // Force a few passes after we think we're done
-    for (m_pass = 0;  m_pass < 10;  ++m_pass) {
+    int npasses = shadingsys().opt_passes();
+    for (m_pass = 0;  m_pass < npasses;  ++m_pass) {
 
         // Once we've made one pass (and therefore called
         // mark_outgoing_connections), we may notice that the layer is

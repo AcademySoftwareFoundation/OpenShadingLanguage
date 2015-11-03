@@ -647,6 +647,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_fold_getattribute(true),
       m_opt_middleman(true), m_opt_texture_handle(true),
       m_optimize_nondebug(false),
+      m_opt_passes(10),
       m_llvm_optimize(0),
       m_debug(0), m_llvm_debug(0), m_llvm_debug_layers(0),
       m_commonspace_synonym("world"),
@@ -1048,6 +1049,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("opt_texture_handle", int, m_opt_texture_handle);
+    ATTR_SET ("opt_passes", int, m_opt_passes);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
@@ -1148,6 +1150,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
     ATTR_DECODE ("opt_texture_handle", int, m_opt_texture_handle);
+    ATTR_DECODE ("opt_passes", int, m_opt_passes);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
     ATTR_DECODE ("debug", int, m_debug);
@@ -1567,6 +1570,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (opt_fold_getattribute);
     BOOLOPT (opt_middleman);
     BOOLOPT (opt_texture_handle);
+    INTOPT  (opt_passes);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);

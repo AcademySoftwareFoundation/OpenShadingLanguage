@@ -1017,7 +1017,7 @@ BackendLLVM::run ()
     m_layer_remap.resize (nlayers, -1);
     m_num_used_layers = 0;
     if (debug() >= 1)
-        std::cout << "\nLayers used:\n";
+        std::cout << "\nLayers used: (group " << group().name() << ")\n";
     for (int layer = 0;  layer < nlayers;  ++layer) {
         // Skip unused or empty layers, unless they are callable entry
         // points.
@@ -1026,7 +1026,7 @@ BackendLLVM::run ()
         if (inst->entry_layer() || is_single_entry ||
             (! inst->unused() && !inst->empty_instance())) {
             if (debug() >= 1)
-                std::cout << "  " << layer << "\n";
+                std::cout << "  " << layer << ' ' << inst->layername() << "\n";
             m_layer_remap[layer] = m_num_used_layers++;
         }
     }

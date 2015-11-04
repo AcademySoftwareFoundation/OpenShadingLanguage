@@ -1238,6 +1238,7 @@ static const char * builtin_func_args [] = {
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
     "isconnected", "i?", NULL,
+    "isconstant", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,
     "pnoise", PGNOISE_ARGS, PNOISE_ARGS, "!deriv", NULL,
     "pointcloud_search", "ispfi.", "ispfii.", "!rw", NULL,

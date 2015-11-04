@@ -2725,6 +2725,21 @@ DECLFOLDER(constfold_deriv)
 
 
 
+DECLFOLDER(constfold_isconstant)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
+    // If at this point we know it's a constant, it's certainly a constant,
+    // so we can constant fold it. Note that if it's not known to be a
+    // constant at this point, that doesn't mean we won't detect it to be
+    // constant after further optimization, so we never fold this to 0.
+    if (A.is_constant()) {
+        rop.turn_into_assign_one (op, "isconstant => 1");
+        return 1;
+    }
+    return 0;
+}
+
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

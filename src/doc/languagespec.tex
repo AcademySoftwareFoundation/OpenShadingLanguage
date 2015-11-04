@@ -4905,6 +4905,17 @@ so {\cf isconnected()} applied to a function parameter will depend on
 what was passed in as the actual parameter.
 \apiend
 
+\apiitem{int {\ce isconstant} (\emph{type} expr)}
+\indexapi{isconstant()}
+Returns {\cf 1} if the expression can, at runtime (knowing the values of all
+the shader group's parameter values and connections), be discerned to be
+reducible to a constant value, otherwise returns {\cf 0}.
+
+This is primarily a debugging aid for advanced shader writers to verify
+their assumptions about what expressions can end up being constant-folded
+by the runtime optimizer.
+\apiend
+
 
 \section{Dictionary Lookups}
 \label{sec:stdlib:dictionaries}

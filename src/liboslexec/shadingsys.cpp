@@ -847,6 +847,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (if,          if,                  if,            false,     0);
     OP (inversesqrt, generic,             inversesqrt,   true,      0);
     OP (isconnected, generic,             none,          true,      0);
+    OP (isconstant,  isconstant,          isconstant,    true,      0);
     OP (isfinite,    generic,             none,          true,      0);
     OP (isinf,       generic,             none,          true,      0);
     OP (isnan,       generic,             none,          true,      0);

@@ -3583,6 +3583,19 @@ LLVMGEN (llvm_gen_luminance)
 
 
 
+LLVMGEN (llvm_gen_isconstant)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 2);
+    Symbol &Result (*rop.opargsym (op, 0));
+    ASSERT (Result.typespec().is_int());
+    Symbol &A (*rop.opargsym (op, 1));
+    rop.llvm_store_value (rop.ll.constant(A.is_constant() ? 1 : 0), Result);
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_functioncall)
 {
     Opcode &op (rop.inst()->ops()[opnum]);

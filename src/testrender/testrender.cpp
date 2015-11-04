@@ -56,7 +56,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "util.h"
 
 
-using namespace OIIO;
 using namespace OSL;
 
 namespace { // anonymous namespace
@@ -98,7 +97,7 @@ int get_filenames(int argc, const char *argv[])
 void getargs(int argc, const char *argv[])
 {
     bool help = false;
-    ArgParse ap;
+    OIIO::ArgParse ap;
     ap.options ("Usage:  testrender [options] scene.xml output.exr",
                 "%*", get_filenames, "",
                 "--help", &help, "Print help message",
@@ -227,22 +226,22 @@ void parse_scene() {
     text.push_back(0); // make sure text ends with trailing 0
 
     // build DOM tree
-    pugi::xml_document doc;
-    pugi::xml_parse_result parse_result = doc.load_file(scenefile.c_str());
+    OIIO::pugi::xml_document doc;
+    OIIO::pugi::xml_parse_result parse_result = doc.load_file(scenefile.c_str());
     if (!parse_result) {
         std::cerr << "XML parsed with errors: " << parse_result.description() << ", at offset " << parse_result.offset << "\n";
         exit (EXIT_FAILURE);
     }
-    pugi::xml_node root = doc.child("World");
+    OIIO::pugi::xml_node root = doc.child("World");
     if (!root) {
         std::cerr << "Error reading " << scenefile << "\n"
                   << "Root element <World> is missing\n";
         exit (EXIT_FAILURE);
     }
     // loop over all children of world
-    for (pugi::xml_node node = root.first_child(); node; node = node.next_sibling()) {
+    for (OIIO::pugi::xml_node node = root.first_child(); node; node = node.next_sibling()) {
         if (strcmp(node.name(), "Option") == 0) {
-            for (pugi::xml_attribute attr = node.first_attribute(); attr; attr = attr.next_attribute()) {
+            for (OIIO::pugi::xml_attribute attr = node.first_attribute(); attr; attr = attr.next_attribute()) {
                 int i = 0;
                 if (sscanf(attr.value(), " int %d ", &i) == 1) {
                     if (strcmp(attr.name(), "max_bounces") == 0)
@@ -260,11 +259,11 @@ void parse_scene() {
             float fov = 90.f;
 
             // load camera (only first attribute counts if duplicates)
-            pugi::xml_attribute eye_attr = node.attribute("eye");
-            pugi::xml_attribute dir_attr = node.attribute("dir");
-            pugi::xml_attribute  at_attr = node.attribute("look_at");
-            pugi::xml_attribute  up_attr = node.attribute("up");
-            pugi::xml_attribute fov_attr = node.attribute("fov");
+            OIIO::pugi::xml_attribute eye_attr = node.attribute("eye");
+            OIIO::pugi::xml_attribute dir_attr = node.attribute("dir");
+            OIIO::pugi::xml_attribute  at_attr = node.attribute("look_at");
+            OIIO::pugi::xml_attribute  up_attr = node.attribute("up");
+            OIIO::pugi::xml_attribute fov_attr = node.attribute("fov");
 
             if (eye_attr) eye = strtovec(eye_attr.value());
             if (dir_attr) dir = strtovec(dir_attr.value()); else
@@ -276,24 +275,24 @@ void parse_scene() {
             camera = Camera(eye, dir, up, fov, xres, yres);
         } else if (strcmp(node.name(), "Sphere") == 0) {
             // load sphere
-            pugi::xml_attribute center_attr = node.attribute("center");
-            pugi::xml_attribute radius_attr = node.attribute("radius");
+            OIIO::pugi::xml_attribute center_attr = node.attribute("center");
+            OIIO::pugi::xml_attribute radius_attr = node.attribute("radius");
             if (center_attr && radius_attr) {
                 Vec3  center = strtovec(center_attr.value());
                 float radius = strtoflt(radius_attr.value());
                 if (radius > 0) {
-                    pugi::xml_attribute light_attr = node.attribute("is_light");
+                    OIIO::pugi::xml_attribute light_attr = node.attribute("is_light");
                     bool is_light = light_attr ? strtobool(light_attr.value()) : false;
                     scene.add_sphere(Sphere(center, radius, int(shaders.size()) - 1, is_light));
                 }
             }
         } else if (strcmp(node.name(), "Quad") == 0) {
             // load quad
-            pugi::xml_attribute corner_attr = node.attribute("corner");
-            pugi::xml_attribute edge_x_attr = node.attribute("edge_x");
-            pugi::xml_attribute edge_y_attr = node.attribute("edge_y");
+            OIIO::pugi::xml_attribute corner_attr = node.attribute("corner");
+            OIIO::pugi::xml_attribute edge_x_attr = node.attribute("edge_x");
+            OIIO::pugi::xml_attribute edge_y_attr = node.attribute("edge_y");
             if (corner_attr && edge_x_attr && edge_y_attr) {
-                pugi::xml_attribute light_attr = node.attribute("is_light");
+                OIIO::pugi::xml_attribute light_attr = node.attribute("is_light");
                 bool is_light = light_attr ? strtobool(light_attr.value()) : false;
                 Vec3 co = strtovec(corner_attr.value());
                 Vec3 ex = strtovec(edge_x_attr.value());
@@ -301,27 +300,27 @@ void parse_scene() {
                 scene.add_quad(Quad(co, ex, ey, int(shaders.size()) - 1, is_light));
             }
         } else if (strcmp(node.name(), "Background") == 0) {
-            pugi::xml_attribute res_attr = node.attribute("resolution");
+            OIIO::pugi::xml_attribute res_attr = node.attribute("resolution");
             if (res_attr)
                 backgroundResolution = strtoint(res_attr.value());
             backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
             ShaderGroupRef group;
-            pugi::xml_attribute name_attr = node.attribute("name");
+            OIIO::pugi::xml_attribute name_attr = node.attribute("name");
             std::string name = name_attr? name_attr.value() : "";
-            pugi::xml_attribute type_attr = node.attribute("type");
+            OIIO::pugi::xml_attribute type_attr = node.attribute("type");
             std::string shadertype = type_attr ? type_attr.value() : "surface";
-            pugi::xml_attribute commands_attr = node.attribute("commands");
+            OIIO::pugi::xml_attribute commands_attr = node.attribute("commands");
             std::string commands = commands_attr ? commands_attr.value() : node.text().get();
             if (commands.size())
                 group = shadingsys->ShaderGroupBegin (name, shadertype, commands);
             else
                 group = shadingsys->ShaderGroupBegin();
             ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
-            for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
+            for (OIIO::pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
                 if (strcmp(gnode.name(), "Parameter") == 0) {
                     // handle parameters
-                    for (pugi::xml_attribute attr = gnode.first_attribute(); attr; attr = attr.next_attribute()) {
+                    for (OIIO::pugi::xml_attribute attr = gnode.first_attribute(); attr; attr = attr.next_attribute()) {
                         int i = 0; float x = 0, y = 0, z = 0;
                         if (sscanf(attr.value(), " int %d ", &i) == 1)
                             shadingsys->Parameter(attr.name(), TypeDesc::TypeInt, store.Int(i));
@@ -337,18 +336,18 @@ void parse_scene() {
                             shadingsys->Parameter(attr.name(), TypeDesc::TypeString, store.Str(attr.value()));
                     }
                 } else if (strcmp(gnode.name(), "Shader") == 0) {
-                    pugi::xml_attribute  type_attr = gnode.attribute("type");
-                    pugi::xml_attribute  name_attr = gnode.attribute("name");
-                    pugi::xml_attribute layer_attr = gnode.attribute("layer");
+                    OIIO::pugi::xml_attribute  type_attr = gnode.attribute("type");
+                    OIIO::pugi::xml_attribute  name_attr = gnode.attribute("name");
+                    OIIO::pugi::xml_attribute layer_attr = gnode.attribute("layer");
                     const char* type = type_attr ? type_attr.value() : "surface";
                     if (name_attr && layer_attr)
                         shadingsys->Shader(type, name_attr.value(), layer_attr.value());
                 } else if (strcmp(gnode.name(), "ConnectShaders") == 0) {
                     // FIXME: find a more elegant way to encode this
-                    pugi::xml_attribute  sl = gnode.attribute("srclayer");
-                    pugi::xml_attribute  sp = gnode.attribute("srcparam");
-                    pugi::xml_attribute  dl = gnode.attribute("dstlayer");
-                    pugi::xml_attribute  dp = gnode.attribute("dstparam");
+                    OIIO::pugi::xml_attribute  sl = gnode.attribute("srclayer");
+                    OIIO::pugi::xml_attribute  sp = gnode.attribute("srcparam");
+                    OIIO::pugi::xml_attribute  dl = gnode.attribute("dstlayer");
+                    OIIO::pugi::xml_attribute  dp = gnode.attribute("dstparam");
                     if (sl && sp && dl && dp)
                         shadingsys->ConnectShaders(sl.value(), sp.value(),
                                                    dl.value(), dp.value());
@@ -575,7 +574,7 @@ void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
 } // anonymous namespace
 
 int main (int argc, const char *argv[]) {
-    Timer timer;
+    OIIO::Timer timer;
 
     // Create a new shading system.  We pass it the RendererServices
     // object that services callbacks from the shading system, NULL for
@@ -657,8 +656,8 @@ int main (int argc, const char *argv[]) {
     workers.join_all();
 
     // Write image to disk
-    ImageOutput* out = ImageOutput::create(imagefile);
-    ImageSpec spec(xres, yres, 3, TypeDesc::HALF);
+    OIIO::ImageOutput* out = OIIO::ImageOutput::create(imagefile);
+    OIIO::ImageSpec spec(xres, yres, 3, TypeDesc::HALF);
     if (out && out->open(imagefile, spec)) {
         out->write_image(TypeDesc::TypeFloat, &pixels[0]);
     } else {

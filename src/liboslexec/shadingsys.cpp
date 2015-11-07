@@ -634,7 +634,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lazy_userdata(false),
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (true), m_strict_messages(true),
-      m_range_checking(true), m_unknown_coordsys_error(true),
+      m_range_checking(true),
+      m_unknown_coordsys_error(true), m_connection_error(true),
       m_greedyjit(false), m_llvm_mcjit(false), m_countlayerexecs(false),
       m_max_warnings_per_thread(100),
       m_profile(0),
@@ -1059,6 +1060,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_SET ("connection_error", int, m_connection_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
     ATTR_SET ("llvm_mcjit", int, m_llvm_mcjit);
     ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
@@ -1161,6 +1163,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_DECODE ("connection_error", int, m_connection_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
     ATTR_DECODE ("llvm_mcjit", int, m_llvm_mcjit);
     ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
@@ -1936,8 +1939,12 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     ConnectedParam srccon = decode_connected_param(srcparam, srclayer, srcinst);
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
     if (! (srccon.valid() && dstcon.valid())) {
-        error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection",
-               srccon.type, srcparam, dstcon.type, dstparam);
+        if (connection_error())
+            error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection",
+                   srccon.type, srcparam, dstcon.type, dstparam);
+        else
+            warning ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection",
+                     srccon.type, srcparam, dstcon.type, dstparam);
         return false;
     }
 
@@ -1957,8 +1964,12 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     }
 
     if (! assignable (dstcon.type, srccon.type)) {
-        error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",
-               srccon.type.c_str(), srcparam, dstcon.type.c_str(), dstparam);
+        if (connection_error())
+            error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",
+                   srccon.type.c_str(), srcparam, dstcon.type.c_str(), dstparam);
+        else
+            warning ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",
+                     srccon.type.c_str(), srcparam, dstcon.type.c_str(), dstparam);
         return false;
     }
 
@@ -2396,8 +2407,12 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
     // Search for the param with that name, fail if not found
     c.param = inst->findsymbol (param);
     if (c.param < 0) {
-        error ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
-               param.c_str(), layername, inst->shadername().c_str());
+        if (connection_error())
+            error ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
+                   param.c_str(), layername, inst->shadername().c_str());
+        else
+            warning ("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
+                     param.c_str(), layername, inst->shadername().c_str());
         return c;
     }
 

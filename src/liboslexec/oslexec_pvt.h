@@ -551,6 +551,7 @@ public:
     bool strict_messages() const { return m_strict_messages; }
     bool range_checking() const { return m_range_checking; }
     bool unknown_coordsys_error() const { return m_unknown_coordsys_error; }
+    bool connection_error() const { return m_connection_error; }
     int optimize () const { return m_optimize; }
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
@@ -711,6 +712,7 @@ private:
     bool m_strict_messages;               ///< Strict checking of message passing usage?
     bool m_range_checking;                ///< Range check arrays & components?
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
+    bool m_connection_error;              ///< Error for ConnectShaders to fail?
     bool m_greedyjit;                     ///< JIT as much as we can?
     bool m_llvm_mcjit;                    ///< Use MCJIT if available?
     bool m_countlayerexecs;               ///< Count number of layer execs?

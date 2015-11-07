@@ -110,7 +110,9 @@ public:
     ///                           Array of names of renderer outputs (AOVs)
     ///                              that should not be optimized away.
     ///    int unknown_coordsys_error  Should errors be issued when unknown
-    ///                                   coord system names are used?
+    ///                              coord system names are used? (1)
+    ///    int connection_error   Should errors be issued when ConnectShaders
+    ///                              fails to find the layer or parameter? (1)
     ///    int strict_messages    Issue error if a message is set after
     ///                              being queried (1).
     ///    int lazylayers         Evaluate shader layers only when their

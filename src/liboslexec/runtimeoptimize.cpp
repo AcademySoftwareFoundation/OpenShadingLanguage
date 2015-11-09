@@ -1520,17 +1520,9 @@ RuntimeOptimizer::next_block_instruction (int opnum)
 
 
 int
-RuntimeOptimizer::peephole2 (int opnum)
+RuntimeOptimizer::peephole2 (int opnum, int op2num)
 {
     Opcode &op (inst()->ops()[opnum]);
-    if (op.opname() == u_nop)
-        return 0;   // Wasn't a real instruction to start with
-
-    // Find the next instruction
-    int op2num = next_block_instruction (opnum);
-    if (! op2num)
-        return 0;    // Not a next instruction within the same block
-
     Opcode &next (inst()->ops()[op2num]);
 
     // N.B. Some of these transformations may look strange, you may
@@ -1877,6 +1869,81 @@ RuntimeOptimizer::eliminate_middleman ()
 
 
 int
+RuntimeOptimizer::optimize_assignment (Opcode &op, int opnum)
+{
+    // Various optimizations specific to assignment statements
+    ASSERT (op.opname() == u_assign);
+    int changed = 0;
+    Symbol *R (inst()->argsymbol(op.firstarg()+0));
+    Symbol *A (inst()->argsymbol(op.firstarg()+1));
+    bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||
+                           R->symtype() == SymTypeTemp);
+    if (block_alias(inst()->arg(op.firstarg())) == inst()->arg(op.firstarg()+1) ||
+        block_alias(inst()->arg(op.firstarg()+1)) == inst()->arg(op.firstarg())) {
+        // We're re-assigning something already aliased, skip it
+        turn_into_nop (op, "reassignment of current value (2)");
+        return ++changed;
+    }
+    if (coerce_assigned_constant (op)) {
+        // A may have changed, so we need to reset it
+        A = inst()->argsymbol(op.firstarg()+1);
+        ++changed;
+    }
+    // NOW do assignment constant folding, only after we
+    // have performed all the other transformations that may
+    // turn this op into an assignment.
+    changed += constfold_assign (*this, opnum);
+    if (op.opname() != u_assign) {
+        // The const fold has changed the assignment to something
+        // other than assign (presumably nop), so skip the other
+        // assignment transformations below.
+        return 0;
+    }
+    if ((A->is_constant() || A->lastwrite() < opnum) &&
+        equivalent(R->typespec(), A->typespec())) {
+        // Safe to alias R to A for this block, if A is a
+        // constant or if it's never written to again.
+        block_alias (inst()->arg(op.firstarg()),
+                         inst()->arg(op.firstarg()+1));
+        // std::cerr << opnum << " aliasing " << R->mangled() << " to "
+        //       << inst()->argsymbol(op.firstarg()+1)->mangled() << "\n";
+    }
+    if (A->is_constant() && R->typespec() == A->typespec() &&
+        R_local_or_tmp &&
+        R->firstwrite() == opnum && R->lastwrite() == opnum) {
+        // This local or temp is written only once in the
+        // whole shader -- on this statement -- and it's
+        // assigned a constant.  So just alias it to the
+        // constant.
+        int cind = inst()->args()[op.firstarg()+1];
+        global_alias (inst()->args()[op.firstarg()], cind);
+        turn_into_nop (op, "replace symbol with constant");
+        return ++changed;
+    }
+    if (R_local_or_tmp && ! R->everread()) {
+        // This local is written but NEVER READ.  nop it.
+        turn_into_nop (op, "local/tmp never read");
+        return ++changed;
+    }
+    if (outparam_assign_elision (opnum, op)) {
+        return ++changed;
+    }
+    if (R == A) {
+        // Just an assignment to itself -- turn into NOP!
+        turn_into_nop (op, "self-assignment");
+        return ++changed;
+    } else if (R_local_or_tmp && R->lastread() < opnum
+               && ! m_in_loop[opnum]) {
+        // Don't bother assigning if we never read it again
+        turn_into_nop (op, "symbol never read again");
+        return ++changed;
+    }
+    return changed;
+}
+
+
+
+int
 RuntimeOptimizer::optimize_ops (int beginop, int endop)
 {
     int lastblock = -1;
@@ -1967,93 +2034,27 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
             }
         }
         // Now we handle assignments.
-        if (optimize() >= 2 && op.opname() == u_assign &&
-                m_opt_assign) {
-            Symbol *R (inst()->argsymbol(op.firstarg()+0));
-            Symbol *A (inst()->argsymbol(op.firstarg()+1));
-            bool R_local_or_tmp = (R->symtype() == SymTypeLocal ||
-                                   R->symtype() == SymTypeTemp);
-            if (block_alias(inst()->arg(op.firstarg())) == inst()->arg(op.firstarg()+1) ||
-                block_alias(inst()->arg(op.firstarg()+1)) == inst()->arg(op.firstarg())) {
-                // We're re-assigning something already aliased, skip it
-                turn_into_nop (op, "reassignment of current value (2)");
-                ++changed;
-                continue;
-            }
-            if (coerce_assigned_constant (op)) {
-                // A may have changed, so we need to reset it
-                A = inst()->argsymbol(op.firstarg()+1);
-                ++changed;
-            }
-            // NOW do assignment constant folding, only after we
-            // have performed all the other transformations that may
-            // turn this op into an assignment.
-            changed += constfold_assign (*this, opnum);
-            if (op.opname() != u_assign) {
-                // The const fold has changed the assignment to something
-                // other than assign (presumably nop), so skip the other
-                // assignment transformations below.
-                continue;
-            }
-            if ((A->is_constant() || A->lastwrite() < opnum) &&
-                equivalent(R->typespec(), A->typespec())) {
-                // Safe to alias R to A for this block, if A is a
-                // constant or if it's never written to again.
-                block_alias (inst()->arg(op.firstarg()),
-                                 inst()->arg(op.firstarg()+1));
-                // std::cerr << opnum << " aliasing " << R->mangled() << " to "
-                //       << inst()->argsymbol(op.firstarg()+1)->mangled() << "\n";
-            }
-            if (A->is_constant() && R->typespec() == A->typespec() &&
-                R_local_or_tmp &&
-                R->firstwrite() == opnum && R->lastwrite() == opnum) {
-                // This local or temp is written only once in the
-                // whole shader -- on this statement -- and it's
-                // assigned a constant.  So just alias it to the
-                // constant.
-                int cind = inst()->args()[op.firstarg()+1];
-                global_alias (inst()->args()[op.firstarg()], cind);
-                turn_into_nop (op, "replace symbol with constant");
-                ++changed;
-                continue;
-            }
-            if (R_local_or_tmp && ! R->everread()) {
-                // This local is written but NEVER READ.  nop it.
-                turn_into_nop (op, "local/tmp never read");
-                ++changed;
-                continue;
-            }
-            if (outparam_assign_elision (opnum, op)) {
-                ++changed;
-                continue;
-            }
-            if (R == A) {
-                // Just an assignment to itself -- turn into NOP!
-                turn_into_nop (op, "self-assignment");
-                ++changed;
-                continue;
-            } else if (R_local_or_tmp && R->lastread() < opnum
-                       && ! m_in_loop[opnum]) {
-                // Don't bother assigning if we never read it again
-                turn_into_nop (op, "symbol never read again");
-                ++changed;
-                continue;
-            }
-        }
+        if (optimize() >= 2 && op.opname() == u_assign && m_opt_assign)
+            changed += optimize_assignment (op, opnum);
         if (optimize() >= 2 && m_opt_elide_useless_ops)
             changed += useless_op_elision (op, opnum);
         if (m_stop_optimizing)
             break;
-        // Peephole optimization involving pair of instructions
-        if (optimize() >= 2 && m_opt_peephole) {
-            int c = peephole2 (opnum);
-            if (c) {
-                changed += c;
-                // Re-check num_ops in case the folder inserted something
-                num_ops = inst()->ops().size();
-                // skipops = num_ops - old_num_ops;
-                endop += num_ops - old_num_ops; // adjust how far we loop
-                old_num_ops = num_ops;
+        // Peephole optimization involving pair of instructions (the second
+        // instruction will be in the same basic block.
+        if (optimize() >= 2 && m_opt_peephole && op.opname() != u_nop) {
+            // Find the next instruction in the same basic block
+            int op2num = next_block_instruction (opnum);
+            if (op2num) {
+                int c = peephole2 (opnum, op2num);
+                if (c) {
+                    changed += c;
+                    // Re-check num_ops in case the folder inserted something
+                    num_ops = inst()->ops().size();
+                    // skipops = num_ops - old_num_ops;
+                    endop += num_ops - old_num_ops; // adjust how far we loop
+                    old_num_ops = num_ops;
+                }
             }
         }
     }

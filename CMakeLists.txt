@@ -149,7 +149,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
         add_definitions ("-Wno-unused-function -Wno-unused-variable")
     endif ()
     if (CLANG_VERSION_STRING VERSION_GREATER 3.5 OR
-        APPLECLANG_VERSION_STRING VERSION_GREATER 6.0)
+        APPLECLANG_VERSION_STRING VERSION_GREATER 6.1)
         add_definitions ("-Wno-unused-local-typedefs")
     endif ()
 endif ()

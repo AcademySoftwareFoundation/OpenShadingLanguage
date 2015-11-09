@@ -2020,19 +2020,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
         // Clear local block aliases for any args that were written
         // by this op
         block_unalias_written_args (op);
-        // Get rid of an 'if' if it contains no statements to execute
-        if (optimize() >= 2 && op.opname() == u_if &&
-                m_opt_constant_fold) {
-            int jump = op.farthest_jump ();
-            bool only_nops = true;
-            for (int i = opnum+1;  i < jump && only_nops;  ++i)
-                only_nops &= (inst()->ops()[i].opname() == u_nop);
-            if (only_nops) {
-                turn_into_nop (op, "'if' with no body");
-                ++changed;
-                continue;
-            }
-        }
+
         // Now we handle assignments.
         if (optimize() >= 2 && op.opname() == u_assign && m_opt_assign)
             changed += optimize_assignment (op, opnum);
@@ -2057,6 +2045,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
                 }
             }
         }
+
     }
     return changed;
 }

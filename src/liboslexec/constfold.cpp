@@ -637,6 +637,17 @@ DECLFOLDER(constfold_if)
         }
         return changed;
     }
+
+    // Eliminate 'if' that contains no statements to execute
+    int jump = op.farthest_jump ();
+    bool only_nops = true;
+    for (int i = opnum+1;  i < jump && only_nops;  ++i)
+        only_nops &= (rop.inst()->ops()[i].opname() == u_nop);
+    if (only_nops) {
+        rop.turn_into_nop (op, "'if' with no body");
+        return 1;
+    }
+
     return 0;
 }
 

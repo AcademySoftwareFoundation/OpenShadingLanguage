@@ -1105,15 +1105,13 @@ public:
     int Psym () const { return m_Psym; }
     int Nsym () const { return m_Nsym; }
 
-
     const std::vector<int> & args () const { return m_instargs; }
     std::vector<int> & args () { return m_instargs; }
-    int arg (int argnum) { return args()[argnum]; }
+    int arg (int argnum) const { return args()[argnum]; }
+    const Symbol *argsymbol (int argnum) const { return symbol(arg(argnum)); }
     Symbol *argsymbol (int argnum) { return symbol(arg(argnum)); }
     const OpcodeVec & ops () const { return m_instops; }
     OpcodeVec & ops () { return m_instops; }
-
-    std::string print (const ShaderGroup &group);  // Debugging
 
     SymbolVec &symbols () { return m_instsymbols; }
     const SymbolVec &symbols () const { return m_instsymbols; }
@@ -1853,6 +1851,11 @@ public:
     /// possible early exit from the shader.)
     bool op_is_unconditionally_executed (int opnum) const {
         return !m_in_conditional[opnum] && opnum < m_first_return;
+    }
+
+    /// Return the basic block ID for the given instruction.
+    int bblockid (int opnum) const {
+        return m_bblockids[opnum];
     }
 
 protected:

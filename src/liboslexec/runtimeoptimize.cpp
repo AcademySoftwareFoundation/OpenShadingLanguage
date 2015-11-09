@@ -2724,6 +2724,100 @@ RuntimeOptimizer::collapse_ops ()
 
 
 
+std::ostream &
+RuntimeOptimizer::printinst (std::ostream &out) const
+{
+    out << "Shader " << inst()->shadername() << "\n";
+    out << (inst()->unused() ? " UNUSED" : "");
+    out << " connections in=" << inst()->nconnections();
+    out << " out=" << inst()->outgoing_connections();
+    out << (inst()->writes_globals() ? " writes_globals" : "");
+    out << (inst()->userdata_params() ? " userdata_params" : "");
+    out << (inst()->run_lazily() ? " run_lazily" : " run_unconditionally");
+    out << (inst()->outgoing_connections() ? " outgoing_connections" : "");
+    out << (inst()->renderer_outputs() ? " renderer_outputs" : "");
+    out << (inst()->writes_globals() ? " writes_globals" : "");
+    out << (inst()->entry_layer() ? " entry_layer" : "");
+    out << (inst()->last_layer() ? " last_layer" : "");
+    out << "\n";
+    out << "  symbols:\n";
+    for (size_t i = 0, e = inst()->symbols().size();  i < e;  ++i)
+        inst()->symbol(i)->print (out, 256);
+#if 0
+    out << "  int consts:\n    ";
+    for (size_t i = 0;  i < inst()->m_iconsts.size();  ++i)
+        out << inst()->m_iconsts[i] << ' ';
+    out << "\n";
+    out << "  float consts:\n    ";
+    for (size_t i = 0;  i < inst()->m_fconsts.size();  ++i)
+        out << inst()->m_fconsts[i] << ' ';
+    out << "\n";
+    out << "  string consts:\n    ";
+    for (size_t i = 0;  i < inst()->m_sconsts.size();  ++i)
+        out << "\"" << Strutil::escape_chars(inst()->m_sconsts[i]) << "\" ";
+    out << "\n";
+#endif
+    out << "  code:\n";
+    for (size_t i = 0, e = inst()->ops().size();  i < e;  ++i) {
+        const Opcode &op (inst()->ops()[i]);
+        if (i == (size_t)inst()->maincodebegin())
+            out << "(main)\n";
+        out << "    " << i << ": " << op.opname();
+        bool allconst = true;
+        for (int a = 0;  a < op.nargs();  ++a) {
+            const Symbol *s (inst()->argsymbol(op.firstarg()+a));
+            out << " " << s->name();
+            if (s->symtype() == SymTypeConst) {
+                out << " (";
+                s->print_vals(out,16);
+                out << ")";
+            }
+            if (op.argread(a))
+                allconst &= s->is_constant();
+        }
+        for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
+            if (op.jump(j) >= 0)
+                out << " " << op.jump(j);
+        out << "\t# ";
+//        out << "    rw " << Strutil::format("%x",op.argread_bits())
+//            << ' ' << op.argwrite_bits();
+        if (op.argtakesderivs_all())
+            out << " %derivs(" << op.argtakesderivs_all() << ") ";
+        if (allconst)
+            out << "  CONST";
+        if (i == 0 || bblockid(i) != bblockid(i-1))
+            out << "  BBLOCK-START";
+        std::string filename = op.sourcefile().string();
+        size_t slash = filename.find_last_of ("/");
+        if (slash != std::string::npos)
+            filename.erase (0, slash+1);
+        if (filename.length())
+            out << "  (" << filename << ":" << op.sourceline() << ")";
+        out << "\n";
+    }
+    if (inst()->nconnections()) {
+        out << "  connections upstream:\n";
+        for (int i = 0, e = inst()->nconnections(); i < e; ++i) {
+            const Connection &c (inst()->connection(i));
+            out << "    " << c.dst.type.c_str() << ' '
+                << inst()->symbol(c.dst.param)->name();
+            if (c.dst.arrayindex >= 0)
+                out << '[' << c.dst.arrayindex << ']';
+            out << " upconnected from layer " << c.srclayer << ' ';
+            const ShaderInstance *up = group()[c.srclayer];
+            out << "(" << up->layername() << ") ";
+            out << "    " << c.src.type.c_str() << ' '
+                << up->symbol(c.src.param)->name();
+            if (c.src.arrayindex >= 0)
+                out << '[' << c.src.arrayindex << ']';
+            out << "\n";
+        }
+    }
+    return out;
+}
+
+
+
 void
 RuntimeOptimizer::run ()
 {
@@ -2747,23 +2841,12 @@ RuntimeOptimizer::run ()
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         if (debug() /* && optimize() >= 1*/) {
+            find_basic_blocks ();
             std::cout.flush ();
-            std::cout << "Before optimizing layer " << layer << " " 
-                      << inst()->layername() << " (" << inst()->id() << ") :\n"
-                      << (inst()->unused() ? " UNUSED" : "")
-                      << " connections in=" << inst()->nconnections()
-                      << " out=" << inst()->outgoing_connections()
-                      << (inst()->writes_globals() ? " writes_globals" : "")
-                      << (inst()->userdata_params() ? " userdata_params" : "")
-                      << (inst()->run_lazily() ? " run_lazily" : " run_unconditionally")
-                      << (inst()->outgoing_connections() ? " outgoing_connections" : "")
-                      << (inst()->renderer_outputs() ? " renderer_outputs" : "")
-                      << (inst()->writes_globals() ? " writes_globals" : "")
-                      << (inst()->entry_layer() ? " entry_layer" : "")
-                      << (inst()->last_layer() ? " last_layer" : "")
-                      << "\n" << inst()->print(group())
-                      << "\n--------------------------------\n\n";
-            std::cout.flush ();
+            std::cout << "Before optimizing layer " << layer << " \"" 
+                      << inst()->layername() << "\" (ID " << inst()->id() << ") :\n";
+            printinst (std::cout);
+            std::cout << "\n--------------------------------\n" << std::endl;
         }
         old_nsyms += inst()->symbols().size();
         old_nops += inst()->ops().size();
@@ -2838,22 +2921,11 @@ RuntimeOptimizer::run ()
         }
         if (debug() && !inst()->unused()) {
             track_variable_lifetimes ();
-            std::cout << "After optimizing layer " << layer << " " 
-                      << inst()->layername() << " (" << inst()->id() << ") :\n"
-                      << (inst()->unused() ? " UNUSED" : "")
-                      << " connections in=" << inst()->nconnections()
-                      << " out=" << inst()->outgoing_connections()
-                      << (inst()->writes_globals() ? " writes_globals" : "")
-                      << (inst()->userdata_params() ? " userdata_params" : "")
-                      << (inst()->run_lazily() ? " run_lazily" : " run_unconditionally")
-                      << (inst()->outgoing_connections() ? " outgoing_connections" : "")
-                      << (inst()->renderer_outputs() ? " renderer_outputs" : "")
-                      << (inst()->writes_globals() ? " writes_globals" : "")
-                      << (inst()->entry_layer() ? " entry_layer" : "")
-                      << (inst()->last_layer() ? " last_layer" : "")
-                      << "\n" << inst()->print(group()) 
-                      << "\n--------------------------------\n\n";
-            std::cout.flush ();
+            find_basic_blocks ();
+            std::cout << "After optimizing layer " << layer << " \"" 
+                      << inst()->layername() << "\" (ID " << inst()->id() << ") :\n";
+            printinst (std::cout);
+            std::cout << "\n--------------------------------\n" << std::endl;
         }
         new_nsyms += inst()->symbols().size();
         new_nops += inst()->ops().size();

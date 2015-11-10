@@ -329,7 +329,17 @@ RuntimeOptimizer::add_symbol (const Symbol &sym)
 
 
 void
-RuntimeOptimizer::debug_opt (int opbegin, int opend, string_view message)
+RuntimeOptimizer::debug_opt_impl (string_view message) const
+{
+    static OIIO::spin_mutex mutex;
+    OIIO::spin_lock lock (mutex);
+    std::cout << message;
+}
+
+
+
+void
+RuntimeOptimizer::debug_opt_ops (int opbegin, int opend, string_view message) const
 {
     const Opcode &op (inst()->ops()[opbegin]);
     std::string oprange;
@@ -337,9 +347,8 @@ RuntimeOptimizer::debug_opt (int opbegin, int opend, string_view message)
         oprange = Strutil::format ("ops %d-%d ", opbegin, opend);
     else if (opbegin >= 0)
         oprange = Strutil::format ("op %d ", opbegin);
-    std::string out = Strutil::format ("%s%s (@ %s:%d)\n", oprange, message,
-                                       op.sourcefile(), op.sourceline());
-    std::cout << out;
+    debug_opt ("%s%s (@ %s:%d)\n", oprange, message,
+               op.sourcefile(), op.sourceline());
 }
 
 
@@ -365,7 +374,7 @@ RuntimeOptimizer::debug_turn_into (const Opcode &op, int numops,
     msg += "'";
     if (why.size())
         msg += Strutil::format (" : %s", why);
-    debug_opt (opnum, opnum+numops, msg);
+    debug_opt_ops (opnum, opnum+numops, msg);
 }
 
 
@@ -897,10 +906,11 @@ RuntimeOptimizer::simplify_params ()
                     f = g.find (srcsym->name());
                     if (f != g.end()) {
                         if (debug() > 1)
-                            std::cout << "Remapping " << inst()->layername()
-                              << "." << s->name() << " because it's connected to "
-                              << uplayer->layername() << "." << srcsym->name()
-                              << ", which is known to be " << f->second << "\n";
+                            debug_opt ("Remapping %s.%s because it's connected to "
+                                       "%s.%s, which is known to be %s\n",
+                                       inst()->layername(), s->name(),
+                                       uplayer->layername(), srcsym->name(),
+                                       f->second);
                         make_symbol_room (1);
                         s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
                         int ind = add_global (f->second, srcsym->typespec());
@@ -961,8 +971,8 @@ RuntimeOptimizer::find_params_holding_globals ()
             continue;   // only interested in global assignments
 
         if (debug() > 1)
-            std::cout << "I think that " << inst()->layername() << "."
-                      << s.name() << " will always be " << src->name() << "\n";
+            debug_opt ("I think that %s.%s will always be %s\n",
+                       inst()->layername(), s.name(), src->name());
         m_params_holding_globals[layer()][s.name()] = src->name();
     }
 }
@@ -2104,6 +2114,10 @@ RuntimeOptimizer::optimize_instance ()
 
         if (m_stop_optimizing)
             break;
+
+        if (debug() > 1)
+            debug_opt ("layer %d \"%s\", pass %d:\n",
+                       layer(), inst()->layername(), m_pass);
 
         // Track basic blocks and conditional states
         find_conditionals ();

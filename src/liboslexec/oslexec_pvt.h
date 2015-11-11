@@ -733,6 +733,7 @@ private:
     bool m_opt_fold_getattribute;         ///< Constant-fold getattribute()?
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_opt_texture_handle;            ///< Use texture handles?
+    bool m_opt_seed_bblock_aliases;       ///< Turn on basic block alias seeds
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
     int m_opt_passes;                     ///< Opt passes per layer
     int m_llvm_optimize;                  ///< OSL optimization strategy
@@ -1112,7 +1113,8 @@ public:
     Symbol *argsymbol (int argnum) { return symbol(arg(argnum)); }
     const OpcodeVec & ops () const { return m_instops; }
     OpcodeVec & ops () { return m_instops; }
-
+    const Opcode & op (int opnum) const { return ops()[opnum]; }
+    Opcode & op (int opnum) { return ops()[opnum]; }
     SymbolVec &symbols () { return m_instsymbols; }
     const SymbolVec &symbols () const { return m_instsymbols; }
 

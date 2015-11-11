@@ -648,6 +648,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_merge_instances(1), m_opt_merge_instances_with_userdata(true),
       m_opt_fold_getattribute(true),
       m_opt_middleman(true), m_opt_texture_handle(true),
+      m_opt_seed_bblock_aliases(true),
       m_optimize_nondebug(false),
       m_opt_passes(10),
       m_llvm_optimize(0),
@@ -1052,6 +1053,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("opt_texture_handle", int, m_opt_texture_handle);
+    ATTR_SET ("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
     ATTR_SET ("opt_passes", int, m_opt_passes);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
@@ -1154,6 +1156,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("opt_fold_getattribute", int, m_opt_fold_getattribute);
     ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
     ATTR_DECODE ("opt_texture_handle", int, m_opt_texture_handle);
+    ATTR_DECODE ("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
     ATTR_DECODE ("opt_passes", int, m_opt_passes);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);

@@ -145,6 +145,7 @@ public:
     ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
     ///         opt_merge_instances, opt_merge_instance_with_userdata,
     ///         opt_fold_getattribute, opt_middleman, opt_texture_handle
+    ///         opt_seed_bblock_aliases
     ///    int opt_passes         Number of optimization passes per layer (10)
     ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
     ///    int llvm_debug         Set LLVM extra debug level (0)

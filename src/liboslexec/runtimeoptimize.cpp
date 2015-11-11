@@ -50,6 +50,10 @@ static ustring u_nop    ("nop"),
                u_sub    ("sub"),
                u_mul    ("mul"),
                u_if     ("if"),
+               u_for    ("for"),
+               u_while  ("while"),
+               u_dowhile("dowhile"),
+               u_functioncall ("functioncall"),
                u_break ("break"),
                u_continue ("continue"),
                u_return ("return"),
@@ -1771,6 +1775,22 @@ RuntimeOptimizer::remove_unused_params ()
 
 
 
+void
+RuntimeOptimizer::catalog_symbol_writes (int opbegin, int opend,
+                                         FastIntSet &syms)
+{
+    syms.clear ();
+    for (int i = opbegin; i < opend; ++i) {
+        const Opcode &op (inst()->ops()[i]);
+        for (int a = 0, nargs = op.nargs();  a < nargs;  ++a) {
+            if (op.argwrite(a))
+                syms.insert (oparg (op, a));
+        }
+    }
+}
+
+
+
 /// Find situations where an output is simply a copy of a connected
 /// input, and eliminate the middleman.
 int
@@ -1953,9 +1973,34 @@ RuntimeOptimizer::optimize_assignment (Opcode &op, int opnum)
 
 
 
-int
-RuntimeOptimizer::optimize_ops (int beginop, int endop)
+void
+RuntimeOptimizer::copy_unwritten_block_aliases (const FastIntMap &old_block_aliases,
+                                       FastIntMap &new_block_aliases,
+                                       int beginop, int endop)
 {
+    ASSERT (&old_block_aliases != &new_block_aliases &&
+            "copy_unwritten_block_aliases does not work in-place");
+    // Find all symbols written anywhere in the instruction range
+    FastIntSet symwrites;
+    catalog_symbol_writes (beginop, endop, symwrites);
+    new_block_aliases.clear ();
+    for (FastIntMap::const_iterator alias = old_block_aliases.begin();
+         alias != old_block_aliases.end();  ++alias) {
+        if (symwrites.find(alias->first) == symwrites.end() &&
+            symwrites.find(alias->second) == symwrites.end())
+            new_block_aliases[alias->first] = alias->second;
+    }
+}
+
+
+
+int
+RuntimeOptimizer::optimize_ops (int beginop, int endop,
+                                FastIntMap *seed_block_aliases)
+{
+    if (beginop >= endop)
+        return 0;
+    FastIntMap saved_block_aliases;
     int lastblock = -1;
     int skipops = 0;   // extra inserted ops to skip over
     int changed = 0;
@@ -1985,7 +2030,8 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
         }
         // Things to do if we've just moved to a new basic block
         if (lastblock != m_bblockids[opnum]) {
-            clear_block_aliases ();
+            clear_block_aliases (seed_block_aliases);
+            seed_block_aliases = NULL; // only the first time
             clear_stale_syms ();
             lastblock = m_bblockids[opnum];
         }
@@ -2056,6 +2102,49 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop)
             }
         }
 
+        // Special cases for "if", "functioncall", and loops: Optimize the
+        // sequences of instructions in the bodies recursively in a way that
+        // allows us to be clever about the basic block alias tracking.
+        ustring opname = op.opname();
+        if ((opname == u_if || opname == u_functioncall ||
+             opname == u_for || opname == u_while || opname == u_dowhile)
+              && shadingsys().m_opt_seed_bblock_aliases) {
+            // Save the aliases from the basic block we are exiting.
+            // If & function call: save all prior aliases.
+            // Loops: dont save aliases involving syms written in the loop.
+            if (opname == u_if || opname == u_functioncall)
+                saved_block_aliases.swap (m_block_aliases);
+            else
+                copy_unwritten_block_aliases (m_block_aliases, saved_block_aliases,
+                                              opnum+1, op.farthest_jump());
+            // 'if' has 2 blocks (then, else), function call has just
+            // one (the body), loops have 4 (init, cond, body, incr),
+            int njumps = (opname == u_if) ? 2 : (opname == u_functioncall ? 1 : 4);
+            // Recursively optimize each body block.
+            // Don't use op after inserstions! Use inst()->op(opnum).
+            for (int j = 0; j < njumps; ++j)
+                changed += optimize_ops (j==0 ? opnum+1 : inst()->op(opnum).jump(j-1),
+                                         inst()->op(opnum).jump(j),
+                                         &saved_block_aliases);
+            // Adjust optimization loop end if any instructions were added
+            num_ops = inst()->ops().size();
+            endop += num_ops - old_num_ops;
+            old_num_ops = num_ops;
+            // Now we can restore the original aliases to seed the basic
+            // block that follows. For if/function, we need to remove all
+            // aliases referencing syms written within the conditional or
+            // function body. For loops, recall that we already excluded
+            // the written syms from the saved_block_aliases.
+            if (opname == u_if || opname == u_functioncall) {
+                FastIntMap restored_aliases;
+                restored_aliases.swap (saved_block_aliases);
+                copy_unwritten_block_aliases (restored_aliases, saved_block_aliases,
+                                              opnum+1, inst()->op(opnum).farthest_jump());
+            }
+            seed_block_aliases = &saved_block_aliases;
+            // Get ready to increment to the next instruction
+            opnum = inst()->op(opnum).farthest_jump() - 1;
+        }
     }
     return changed;
 }

@@ -30,10 +30,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <map>
+#include <set>
 
 #include <boost/version.hpp>
 #if BOOST_VERSION >= 104900
 # include <boost/container/flat_map.hpp>
+# include <boost/container/flat_set.hpp>
 # define USE_FLAT_MAP 1
 #endif
 
@@ -48,8 +50,10 @@ namespace pvt {   // OSL::pvt
 
 #if USE_FLAT_MAP
 typedef boost::container::flat_map<int,int> FastIntMap;
+typedef boost::container::flat_set<int> FastIntSet;
 #else
 typedef std::map<int,int> FastIntMap;
+typedef std::set<int> FastIntSet;
 #endif
 
 
@@ -73,8 +77,10 @@ public:
     void optimize_instance ();
 
     /// One optimization pass over a range of instructions [begin, end).
-    /// Return the number of changes made.
-    int optimize_ops (int beginop, int endop);
+    /// Return the number of changes made. If seed_block_aliases is not
+    /// NULL, use that as the initial set of block_aliases.
+    int optimize_ops (int beginop, int endop,
+                      FastIntMap *seed_block_aliases = NULL);
 
     /// Post-optimization cleanup of a layer: add 'useparam' instructions,
     /// track variable lifetimes, coalesce temporaries.
@@ -190,9 +196,15 @@ public:
     }
 
     /// Reset all block-local aliases (done when we enter a new basic
-    /// block).
-    void clear_block_aliases () {
-        m_block_aliases.clear ();
+    /// block).  If new_block_aliases is non-NULL, copy its contents to the
+    /// current block aliases.
+    void clear_block_aliases (FastIntMap *new_block_aliases=NULL) {
+        if (new_block_aliases) {
+            if (new_block_aliases != &m_block_aliases)
+                m_block_aliases = *new_block_aliases;
+        } else {
+            m_block_aliases.clear ();
+        }
     }
 
     /// Set the new global alias of 'symindex' to 'alias'.
@@ -373,6 +385,16 @@ public:
     }
 
     std::ostream & printinst (std::ostream &out) const;
+
+    /// Fill syms with the indices of all symbols that may be written by
+    /// instructions in the half-closed range [opbegin, opend).
+    void catalog_symbol_writes (int opbegin, int opend, FastIntSet &syms);
+
+    /// Copy block_aliases from old to new, but eliminating all aliases
+    /// involving symbols written within the instruction range.
+    void copy_unwritten_block_aliases (const FastIntMap &old_block_aliases,
+                                       FastIntMap &new_block_aliases,
+                                       int beginop, int endop);
 
 private:
     int m_optimize;                   ///< Current optimization level

@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/regex_fwd.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/intrusive_ptr.hpp>
+#include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/thread.h>
@@ -62,7 +63,6 @@ using OIIO::mutex;
 using OIIO::lock_guard;
 using OIIO::spin_mutex;
 using OIIO::spin_lock;
-using OIIO::thread_specific_ptr;
 using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
 
@@ -1099,7 +1099,7 @@ private:
     ParamValueList m_pending_params;      ///< Pending Parameter() values
     ShaderGroupRef m_curgroup;            ///< Current shading attribute state
     mutable mutex m_mutex;                ///< Thread safety
-    mutable thread_specific_ptr<PerThreadInfo> m_perthread_info;
+    mutable boost::thread_specific_ptr<PerThreadInfo> m_perthread_info;
 
     // Stats
     atomic_int m_stat_shaders_loaded;     ///< Stat: shaders loaded

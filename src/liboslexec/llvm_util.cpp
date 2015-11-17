@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <OpenImageIO/thread.h>
+#include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
@@ -124,7 +125,7 @@ namespace pvt {
 namespace {
 static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
-static OIIO::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
+static boost::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
 static std::vector<shared_ptr<llvm::JITMemoryManager> > jitmm_hold;
 };
 

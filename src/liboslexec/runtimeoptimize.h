@@ -335,9 +335,12 @@ public:
     /// instructions in the same basic block as opnum, return 0.
     int next_block_instruction (int opnum);
 
-    /// Search for pairs of ops to perform peephole optimization on.
-    /// 
-    int peephole2 (int opnum);
+    /// Perform peephole optimization on pairs of adjacent instructions
+    /// within the same basic block.
+    int peephole2 (int opnum, int op2num);
+
+    /// Perform various optimizations specific to assignments.
+    int optimize_assignment (Opcode &op, int opnum);
 
     bool opt_elide_unconnected_outputs () const {
         return m_opt_elide_unconnected_outputs;
@@ -364,6 +367,8 @@ public:
             s = s + ' ' + opargsym(op,a)->name().string();
         return s;
     }
+
+    std::ostream & printinst (std::ostream &out) const;
 
 private:
     int m_optimize;                   ///< Current optimization level

@@ -1,7 +1,11 @@
 Changes:
 
-Release 1.6.9 -- ?? 2015 (compared to 1.6.8)
+Release 1.6.9 -- 18 Nov 2015 (compared to 1.6.8)
 ------------------------------------------------
+* Bug fix for code generation of struct parameters copied whole. #564
+* Fix Windows build issues. #561
+* Some changes that will allow us to build against OIIO 1.6 trunk (a few
+  declarations have changed there). #581, #582
 
 Release 1.6.8 -- 16 Jul 2015 (compared to 1.6.7)
 ------------------------------------------------

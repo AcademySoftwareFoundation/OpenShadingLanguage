@@ -189,48 +189,59 @@ normal normalize (normal v) BUILTIN;
 vector normalize (vector v) BUILTIN;
 vector faceforward (vector N, vector I, vector Nref) BUILTIN;
 vector faceforward (vector N, vector I) BUILTIN;
-vector reflect (vector I, vector N) { return I - 2*dot(N,I)*N; }
-vector refract (vector I, vector N, float eta) {
-    float IdotN = dot (I, N);
-    float k = 1 - eta*eta * (1 - IdotN*IdotN);
-    return (k < 0) ? vector(0,0,0) : (eta*I - N * (eta*IdotN + sqrt(k)));
+vector reflect (vector I, vector N) { return I - 2 * dot(N, I) * N; }
+vector refract(vector I, vector N, float eta) {
+    float IdotN = dot(I, N);
+    float k = 1.0 - eta * eta * (1.0 - IdotN * IdotN);
+    return (k < 0) ? vector(0) : eta * I - N * (eta * IdotN + sqrt(k));
 }
-void fresnel (vector I, normal N, float eta,
-              output float Kr, output float Kt,
-              output vector R, output vector T)
+
+void fresnel(vector I, normal N, float eta,
+    output float Kr, output float Kt,
+    output vector R, output vector T)
 {
-    float sqr(float x) { return x*x; }
-    float c = dot(I, N);
-    if (c < 0)
-        c = -c;
+    Kr = 1.0;
+    Kt = 0;
     R = reflect(I, N);
-    float g = 1.0 / sqr(eta) - 1.0 + c * c;
-    if (g >= 0.0) {
-        g = sqrt (g);
-        float beta = g - c;
-        float F = (c * (g+c) - 1.0) / (c * beta + 1.0);
-        F = 0.5 * (1.0 + sqr(F));
-        F *= sqr (beta / (g+c));
-        Kr = F;
-        Kt = (1.0 - Kr) * eta*eta;
-        // OPT: the following recomputes some of the above values, but it 
-        // gives us the same result as if the shader-writer called refract()
+    T = vector(0);
+    float c = fabs(dot(I, N));
+    float g = 1.0 / (eta * eta) - 1.0 + c * c;
+    if(g > 0) {
+        g = sqrt(g);
+        float a = (g - c) / (g + c);
+        float b = (c * (g + c) - 1.0) / (c * (g - c) + 1.0);
+        Kr = 0.5 * a * a * (1.0 + b * b);
+        Kt = 1.0 - Kr;
         T = refract(I, N, eta);
-    } else {
-        // total internal reflection
-        Kr = 1.0;
-        Kt = 0.0;
-        T = vector (0,0,0);
     }
 }
-
-void fresnel (vector I, normal N, float eta,
-              output float Kr, output float Kt)
+void fresnel(vector I, normal N, float eta,
+    output float Kr, output float Kt)
 {
-    vector R, T;
-    fresnel(I, N, eta, Kr, Kt, R, T);
+    Kr = 1.0;
+    Kt = 0;
+    float c = fabs(dot(I, N));
+    float g = 1.0 / (eta * eta) - 1.0 + c * c;
+    if(g > 0) {
+        g = sqrt(g);
+        float a = (g - c) / (g + c);
+        float b = (c * (g + c) - 1.0) / (c * (g - c) + 1.0);
+        Kr = 0.5 * a * a * (1.0 + b * b);
+        Kt = 1.0 - Kr;
+   }
 }
-
+float fresnel(vector I, normal N, float eta) {
+    float f = 1.0;
+    float c = fabs(dot(I, N));
+    float g = 1.0 / (eta * eta) - 1.0 + c * c;
+    if(g > 0) {
+        g = sqrt(g);
+        float a = (g - c) / (g + c);
+        float b = (c * (g + c) - 1.0) / (c * (g - c) + 1.0);
+        f = 0.5 * a * a * (1.0 + b * b);
+    }
+    return f;
+}
 
 normal transform (matrix Mto, normal p) BUILTIN;
 vector transform (matrix Mto, vector p) BUILTIN;

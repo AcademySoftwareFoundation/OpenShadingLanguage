@@ -139,7 +139,11 @@ public:
     /// of instructions that were altered.
     int turn_into_nop (int begin, int end, string_view why=NULL);
 
-    void debug_opt (int opbegin, int opend, string_view message);
+    void debug_opt_impl (string_view message) const;
+    TINYFORMAT_WRAP_FORMAT (void, debug_opt, const,
+                            std::ostringstream msg;, msg,
+                            debug_opt_impl(msg.str());)
+    void debug_opt_ops (int opbegin, int opend, string_view message) const;
     void debug_turn_into (const Opcode &op, int numops,
                           string_view newop, int newarg0,
                           int newarg1, int newarg2, string_view why);

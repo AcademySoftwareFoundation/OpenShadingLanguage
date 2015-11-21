@@ -231,6 +231,7 @@ set (OSL_BUILD_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
+set (OSL_BUILD_PLUGINS ON CACHE BOOL "Bool OSL plugins, for example OIIO plugin")
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
@@ -419,7 +420,9 @@ add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
 endif ()
 
+if (OSL_BUILD_PLUGINS)
 add_subdirectory (src/osl.imageio)
+endif ()
 
 add_subdirectory (src/include)
 add_subdirectory (src/doc)

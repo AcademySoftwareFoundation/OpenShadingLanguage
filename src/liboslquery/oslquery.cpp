@@ -306,5 +306,12 @@ OSLQuery::open (string_view shadername,
     return ok;
 }
 
+bool
+OSLQuery::open_bytecode (string_view buffer)
+{
+    OSOReaderQuery oso (*this);
+    bool ok = oso.parse_memory (buffer);
+    return ok;
+}
 
 OSL_NAMESPACE_EXIT

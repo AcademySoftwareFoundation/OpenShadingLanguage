@@ -716,7 +716,6 @@ Vec3 process_background_closure(const ClosureColor* closure) {
     if (!closure) return Vec3(0, 0, 0);
     switch (closure->id) {
            case ClosureColor::MUL: {
-               Color3 cw = ((const ClosureMul*) closure)->weight;
                return closure->as_mul()->weight * process_background_closure(closure->as_mul()->closure);
            }
            case ClosureColor::ADD: {

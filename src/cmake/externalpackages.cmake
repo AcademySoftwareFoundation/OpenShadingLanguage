@@ -199,20 +199,27 @@ endif ()
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION}
                PATHS ${LLVM_LIB_DIR})
+find_library ( LLVM_MCJIT_LIBRARY
+               NAMES LLVMMCJIT
+               PATHS ${LLVM_LIB_DIR})
+execute_process (COMMAND ${LLVM_CONFIG} --ldflags
+                 OUTPUT_VARIABLE LLVM_LDFLAGS
+                 OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# if (NOT LLVM_LIBRARY)
+#     execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine
+#                      OUTPUT_VARIABLE LLVM_LIBRARIES
+#                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+# endif ()
+
 if (NOT LLVM_FIND_QUIETLY)
     message (STATUS "LLVM version  = ${LLVM_VERSION}")
     message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
-endif ()
-
-find_library ( LLVM_MCJIT_LIBRARY
-                   NAMES LLVMMCJIT
-                   PATHS ${LLVM_LIB_DIR})
-
-if (NOT LLVM_FIND_QUIETLY)
     message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
     message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
     message (STATUS "LLVM MCJIT library  = ${LLVM_MCJIT_LIBRARY}")
     message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
+    message (STATUS "LLVM libraries = ${LLVM_LIBRARIES}")
 endif ()
 
 # shared llvm library may not be available, this is not an error if we use LLVM_STATIC.

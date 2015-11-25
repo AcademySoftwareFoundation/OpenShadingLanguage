@@ -161,6 +161,9 @@ if (CMAKE_COMPILER_IS_GNUCC AND (NOT CMAKE_COMPILER_IS_CLANG))
         add_definitions ("-Wno-error=unused-local-typedefs")
         add_definitions ("-Wno-unused-local-typedefs")
     endif ()
+    if (NOT ${GCC_VERSION} VERSION_LESS 4.5)
+        add_definitions ("-Wno-unused-result")
+    endif ()
 endif ()
 
 
@@ -512,7 +515,6 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-variadic-macro
             oslinfo-arrayparams oslinfo-metadata oslinfo-noparams
             osl-imageio
-            pointcloud pointcloud-fold
             printf-whole-array
             raytype reparam
             render-background render-bumptest
@@ -524,7 +526,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             struct-with-array struct-within-struct
             ternary
             testshade-expr
-            texture-alpha texture-blur texture-derivs texture-field3d
+            texture-alpha texture-blur texture-derivs
             texture-firstchannel texture-interp 
             texture-missingcolor texture-simple
             texture-smallderivs texture-swirl
@@ -535,7 +537,20 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             vararray-deserialize vararray-param
             vecctr vector
             wavelength_color xml )
+
+# Only run field3d-related tests if the local OIIO was built with f3d support.
+EXECUTE_PROCESS ( COMMAND ${OPENIMAGEIO_BIN}/oiiotool --help
+                  OUTPUT_VARIABLE oiiotool_help )
+if (oiiotool_help MATCHES "field3d")
+    TESTSUITE ( texture-field3d )
+endif()
+
+# Only run pointcloud tests if Partio is found
+if (PARTIO_FOUND)
+    TESTSUITE ( pointcloud pointcloud-fold )
 endif ()
+
+endif (OSL_BUILD_TESTS)
 
 
 

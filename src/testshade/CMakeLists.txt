@@ -12,7 +12,7 @@ else ()
     ADD_LIBRARY ( "libtestshade" SHARED ${testshade_srcs} )
 endif ()
 
-TARGET_LINK_LIBRARIES (libtestshade oslexec oslcomp oslquery ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${LLVM_LIBRARY} )
+TARGET_LINK_LIBRARIES (libtestshade oslexec oslcomp oslquery ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
 SET_TARGET_PROPERTIES (libtestshade PROPERTIES PREFIX "")
 
 INSTALL ( TARGETS libtestshade RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)

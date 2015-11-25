@@ -158,6 +158,7 @@ public:
     ///    string debug_layername Name of shader layer -- debug only this one
     ///    int optimize_nondebug  If 1, fully optimize shaders that are not
     ///                              designated as the debug shaders.
+    ///    string opt_layername   If set, only optimize the named layer
     ///    string only_groupname  Compile only this one group (skip all others)
     ///
     /// Note: the attributes referred to as "string" are actually on the app

@@ -685,6 +685,7 @@ public:
     void renderer_output (bool v) { m_renderer_output = v; }
 
     bool is_constant () const { return symtype() == SymTypeConst; }
+    bool is_temp () const { return symtype() == SymTypeTemp; }
 
     /// Stream output
     std::ostream& print (std::ostream& out, int maxvals=100000000) const;

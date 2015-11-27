@@ -181,12 +181,9 @@ public:
     }
 
     /// Reset the block-local alias of 'symindex' so it doesn't alias to
-    /// anything.
-    void block_unalias (int symindex) {
-        FastIntMap::iterator i = m_block_aliases.find (symindex);
-        if (i != m_block_aliases.end())
-            i->second = -1;
-    }
+    /// anything. Also will unalias from any saved alias lists on the
+    /// m_block_aliases_stack.
+    void block_unalias (int symindex);
 
     /// Clear local block aliases for any args that are written by this op.
     void block_unalias_written_args (Opcode &op) {
@@ -386,15 +383,18 @@ public:
 
     std::ostream & printinst (std::ostream &out) const;
 
-    /// Fill syms with the indices of all symbols that may be written by
+    /// Add to syms the indices of all symbols that may be written by
     /// instructions in the half-closed range [opbegin, opend).
     void catalog_symbol_writes (int opbegin, int opend, FastIntSet &syms);
 
-    /// Copy block_aliases from old to new, but eliminating all aliases
-    /// involving symbols written within the instruction range.
-    void copy_unwritten_block_aliases (const FastIntMap &old_block_aliases,
-                                       FastIntMap &new_block_aliases,
-                                       int beginop, int endop);
+    /// Copy block_aliases from old to new, except any aliases involving
+    /// symbols in the excluded list (which may be NULL if there no
+    /// exclusions). If copy_temps is false, aliases involving temp symbols
+    /// will not be copied.
+    void copy_block_aliases (const FastIntMap &old_block_aliases,
+                             FastIntMap &new_block_aliases,
+                             const FastIntSet *excluded=NULL,
+                             bool copy_temps=false);
 
 private:
     int m_optimize;                   ///< Current optimization level
@@ -422,6 +422,7 @@ private:
     int m_next_newtemp;               ///< Unique ID for next new temp we add
     FastIntMap m_symbol_aliases;      ///< Global symbol aliases
     FastIntMap m_block_aliases;         ///< Local block aliases
+    std::vector<FastIntMap *> m_block_aliases_stack; ///< Stack of saved local block aliases
     FastIntMap m_param_aliases;         ///< Params aliasing to params/globals
     FastIntMap m_stale_syms;            ///< Stale symbols for this block
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst

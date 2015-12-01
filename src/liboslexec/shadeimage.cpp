@@ -198,7 +198,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
                 for (int c = 0; c < tvals; ++c)
                     p[chan++] = ((const float *)data)[c];
             } else if (t.basetype == TypeDesc::INT) {
-                for (int c = 0; c < t.numelements()*t.aggregate; ++c)
+                for (int c = 0; c < int(t.numelements())*t.aggregate; ++c)
                     p[chan++] = ((const int *)data)[c];
             }
             // N.B. Drop any outputs that aren't float- or int-based

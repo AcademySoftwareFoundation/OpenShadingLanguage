@@ -2353,10 +2353,9 @@ RuntimeOptimizer::resolve_isconnected ()
                 ASSERT (fieldsymid >= 0);
                 s = inst()->symbol(fieldsymid);
             }
-            if (s->connected())
-                turn_into_assign_one (op, "resolve isconnected() [1]");
-            else
-                turn_into_assign_zero (op, "resolve isconnected() [0]");
+            int val = (s->connected() ? 1 : 0) + (s->connected_down() ? 2 : 0);
+            turn_into_assign (op, add_constant(TypeDesc::TypeInt, &val),
+                              "resolve isconnected()");
         }
     }
 }

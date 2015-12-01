@@ -2,13 +2,15 @@
 
 void status (float variable, string name)
 {
-    printf ("%s %s connected\n", name, isconnected(variable) ? "is" : "is not");
+    printf ("%s connected: %d  (value=%g)\n",
+            name, isconnected(variable), variable);
 }
 
 
 void status (MyStruct variable, string name)
 {
-    printf ("%s %s connected\n", name, isconnected(variable) ? "is" : "is not");
+    printf ("%s connected: %d  (value=%g)\n",
+            name, isconnected(variable), variable);
     status (variable.x, concat(name, ".x"));
 }
 
@@ -17,6 +19,8 @@ shader test (float a = 0, float b = 0,
              MyStruct mystruct1 = {0,0},
              MyStruct mystruct2 = {0,0})
 {
+    printf ("a=%g\n", a);   // force retrieval/execution of upstream layer
+    printf ("Downstream:\n");
     status (a, "a");
     status (b, "b");
     status (mystruct1, "mystruct1");

@@ -4899,7 +4899,10 @@ from the ``front'' or the ``outside'' of a closed object.
 \apiitem{int {\ce isconnected} (\emph{type} parameter)}
 \indexapi{isconnected()}
 Returns {\cf 1} if the argument is a shader parameter and is connected
-to an earlier layer in the shader group, otherwise returns {\cf 0}.
+to an earlier layer in the shader group, 
+{\cf 2} if the argument is a shader output parameter connected
+to a later layer in the shader group, {\cf 3} if connected to both
+earlier and later layers, otherwise returns {\cf 0}.
 Remember that function arguments in OSL are always pass-by-reference,
 so {\cf isconnected()} applied to a function parameter will depend on
 what was passed in as the actual parameter.

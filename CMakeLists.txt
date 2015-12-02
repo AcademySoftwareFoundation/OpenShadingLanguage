@@ -157,6 +157,7 @@ endif ()
 # gcc specific options
 if (CMAKE_COMPILER_IS_GNUCC AND (NOT CMAKE_COMPILER_IS_CLANG))
     if (NOT ${GCC_VERSION} VERSION_LESS 4.8)
+        add_definitions ("-Wno-error=strict-overflow")
         # suppress a warning that Boost::Python hits in g++ 4.8
         add_definitions ("-Wno-error=unused-local-typedefs")
         add_definitions ("-Wno-unused-local-typedefs")

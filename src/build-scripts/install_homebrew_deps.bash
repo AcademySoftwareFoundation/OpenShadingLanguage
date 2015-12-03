@@ -19,12 +19,11 @@ brew update >/dev/null
 echo ""
 echo "Before my brew installs:"
 brew list --versions
+brew install ccache
 brew install flex bison
 brew install ilmbase openexr
 brew install boost-python
 brew install opencolorio partio
-#brew install homebrew/science/hdf5 --with-threadsafe
-#brew install field3d
 brew install freetype libraw libpng webp
 brew install llvm34
 #brew install homebrew/science/hdf5 --with-threadsafe
@@ -32,6 +31,3 @@ brew install llvm34
 echo ""
 echo "After brew installs:"
 brew list --versions
-
-echo "testing llvm:"
-ls -R /usr/local/Cellar/llvm34

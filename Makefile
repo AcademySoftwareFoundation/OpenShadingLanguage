@@ -9,7 +9,7 @@
 #########################################################################
 
 
-.PHONY: all debug profile clean realclean nuke doxygen
+.PHONY: all debug profile clean realclean nuke
 
 working_dir	:= ${shell pwd}
 INSTALLDIR	=${working_dir}
@@ -285,9 +285,6 @@ nuke:
 	${CMAKE} -E remove_directory ${top_build_dir}
 	${CMAKE} -E remove_directory ${top_dist_dir}
 
-doxygen:
-	doxygen src/doc/Doxyfile
-
 #########################################################################
 
 
@@ -306,7 +303,6 @@ help:
 	@echo "  make nuke         Remove ALL of build and dist (not just ${platform})"
 	@echo "  make test         Run tests"
 	@echo "  make testall      Run all tests, even broken ones"
-	@echo "  make doxygen      Build the Doxygen docs in ${top_build_dir}/doxygen"
 	@echo ""
 	@echo "Helpful modifiers:"
 	@echo "  C++ compiler and build process:"

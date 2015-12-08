@@ -13,6 +13,7 @@ test ()
         printf ("  %g / %g = %g\n", a, b, a/b);
         printf ("  %g / %g = %g\n", a, z, a/z);
         printf ("  - %g = %g\n", a, -a);
+        printf ("  %g / 0 = %g\n", a, a/0.0);
 
         printf (" varying: u=%g, v=%g\n", u, v);
         a += u;
@@ -22,6 +23,7 @@ test ()
         printf ("  %g / %g = %g\n", a, b, a/b);
         printf ("  %g / %g = %g\n", a, z, a/z);
         printf ("  - %g = %g\n", a, -a);
+        printf ("  %g / 0 = %g\n", a, a/0.0);
         printf ("\n");
     }
 
@@ -88,17 +90,19 @@ test ()
         printf ("  %d / %d = %d\n", a, b, a/b);
         printf ("  %d %% %d = %d\n", a, b, a%b);
         printf ("  - %d = %d\n", a, -a);
+        printf ("  %d / 0 = %d\n", a, a/0);
 
         printf (" varying: u=%g, v=%g\n", u, v);
-#if 0
+#if 1
         // FIXME -- restore this after we have integer casts
-        a += u;
+        a += int(u);
         printf ("  %d + %d = %d\n", a, b, a+b);
         printf ("  %d - %d = %d\n", a, b, a-b);
         printf ("  %d * %d = %d\n", a, b, a*b);
         printf ("  %d / %d = %d\n", a, b, a/b);
-//FIXME        printf ("  %d %% %d = %d\n", a, b, a%b);
+        printf ("  %d %% %d = %d\n", a, b, a%b);
         printf ("  - %d = %d\n", a, -a);
+        printf ("  %d / 0 = %d\n", a, a/0);
 #endif
         printf ("\n");
     }

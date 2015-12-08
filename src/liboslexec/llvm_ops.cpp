@@ -519,11 +519,12 @@ inline Dual2<float> fabsf (const Dual2<float> &x) {
 MAKE_UNARY_PERCOMPONENT_OP (abs, fabsf, fabsf);
 MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
 
+OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
+    return (b != 0) ? (a % b) : 0;
+}
+
 inline float safe_fmod (float a, float b) {
-    if (b == 0.0f)
-        return 0.0f;
-    else
-        return std::fmod (a, b);
+    return (b != 0.0f) ? std::fmod (a,b) : 0.0f;
 }
 
 inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
@@ -532,6 +533,14 @@ inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
 
 MAKE_BINARY_PERCOMPONENT_OP (fmod, safe_fmod, safe_fmod);
 MAKE_BINARY_PERCOMPONENT_VF_OP (fmod, safe_fmod, safe_fmod)
+
+OSL_SHADEOP float osl_safe_div_fff (float a, float b) {
+    return (b != 0.0f) ? (a / b) : 0.0f;
+}
+
+OSL_SHADEOP int osl_safe_div_iii (int a, int b) {
+    return (b != 0) ? (a / b) : 0;
+}
 
 OSL_SHADEOP float osl_smoothstep_ffff(float e0, float e1, float x) { return smoothstep(e0, e1, x); }
 

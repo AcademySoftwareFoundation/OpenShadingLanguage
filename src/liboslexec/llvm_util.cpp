@@ -1383,6 +1383,30 @@ LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
 
 
 llvm::Value *
+LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_float() && b->getType() == type_float())
+        return builder().CreateFDiv (a, b);
+    if (a->getType() == type_int() && b->getType() == type_int())
+        return builder().CreateSDiv (a, b);
+    ASSERT (0 && "Op has bad value type combination");
+}
+
+
+
+llvm::Value *
+LLVM_Util::op_mod (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_float() && b->getType() == type_float())
+        return builder().CreateFRem (a, b);
+    if (a->getType() == type_int() && b->getType() == type_int())
+        return builder().CreateSRem (a, b);
+    ASSERT (0 && "Op has bad value type combination");
+}
+
+
+
+llvm::Value *
 LLVM_Util::op_float_to_int (llvm::Value* a)
 {
     if (a->getType() == type_float())
@@ -1423,42 +1447,6 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
     if (a->getType() == type_int())
         return a;
     ASSERT (0 && "Op has bad value type combination");
-}
-
-
-
-llvm::Value *
-LLVM_Util::op_make_safe_div (TypeDesc type, llvm::Value *a, llvm::Value *b)
-{
-    if (type.basetype == TypeDesc::FLOAT) {
-        llvm::Value *div = builder().CreateFDiv (a, b);
-        llvm::Value *zero = constant (0.0f);
-        llvm::Value *iszero = builder().CreateFCmpOEQ (b, zero);
-        return builder().CreateSelect (iszero, zero, div);
-    } else {
-        llvm::Value *div = builder().CreateSDiv (a, b);
-        llvm::Value *zero = constant (0);
-        llvm::Value *iszero = builder().CreateICmpEQ (b, zero);
-        return builder().CreateSelect (iszero, zero, div);
-    }
-}
-
-
-
-llvm::Value *
-LLVM_Util::op_make_safe_mod (TypeDesc type, llvm::Value *a, llvm::Value *b)
-{
-    if (type.basetype == TypeDesc::FLOAT) {
-        llvm::Value *mod = builder().CreateFRem (a, b);
-        llvm::Value *zero = constant (0.0f);
-        llvm::Value *iszero = builder().CreateFCmpOEQ (b, zero);
-        return builder().CreateSelect (iszero, zero, mod);
-    } else {
-        llvm::Value *mod = builder().CreateSRem (a, b);
-        llvm::Value *zero = constant (0);
-        llvm::Value *iszero = builder().CreateICmpEQ (b, zero);
-        return builder().CreateSelect (iszero, zero, mod);
-    }
 }
 
 

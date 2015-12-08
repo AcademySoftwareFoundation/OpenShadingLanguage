@@ -610,19 +610,28 @@ LLVMGEN (llvm_gen_div)
 
     // The following should handle f/f, v/v, v/f, f/v, i/i
     // That's all that should be allowed by oslc.
+    const char *safe_div = is_float ? "osl_safe_div_fff" : "osl_safe_div_iii";
     bool deriv = (Result.has_derivs() && (A.has_derivs() || B.has_derivs()));
     for (int i = 0; i < num_components; i++) {
         llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
         llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
         if (!a || !b)
             return false;
-        llvm::Value *a_div_b = rop.ll.op_make_safe_div (type, a, b);
+        llvm::Value *a_div_b;
+        if (B.is_constant() && ! rop.is_zero(B))
+            a_div_b = rop.ll.op_div (a, b);
+        else
+            a_div_b = rop.ll.call_function (safe_div, a, b);
         llvm::Value *rx = NULL, *ry = NULL;
 
         if (deriv) {
             // Division of duals: (a/b, 1/b*(ax-a/b*bx), 1/b*(ay-a/b*by))
             ASSERT (is_float);
-            llvm::Value *binv = rop.ll.op_make_safe_div (type, rop.ll.constant(1.0f), b);
+            llvm::Value *binv;
+            if (B.is_constant() && ! rop.is_zero(B))
+                binv = rop.ll.op_div (rop.ll.constant(1.0f), b);
+            else
+                binv = rop.ll.call_function (safe_div, rop.ll.constant(1.0f), b);
             llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
             llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
             llvm::Value *a_div_b_mul_bx = rop.ll.op_mul (a_div_b, bx);
@@ -672,12 +681,17 @@ LLVMGEN (llvm_gen_modulus)
 
     // The following should handle f%f, v%v, v%f, i%i
     // That's all that should be allowed by oslc.
+    const char *safe_mod = is_float ? "osl_fmod_fff" : "osl_safe_mod_iii";
     for (int i = 0; i < num_components; i++) {
         llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
         llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
         if (!a || !b)
             return false;
-        llvm::Value *r = rop.ll.op_make_safe_mod (type, a, b);
+        llvm::Value *r;
+        if (B.is_constant() && ! rop.is_zero(B))
+            r = rop.ll.op_mod (a, b);
+        else
+            r = rop.ll.call_function (safe_mod, a, b);
         rop.storeLLVMValue (r, Result, i, 0);
     }
 

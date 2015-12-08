@@ -463,20 +463,12 @@ public:
     llvm::Value *op_sub (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_neg (llvm::Value *a);
     llvm::Value *op_mul (llvm::Value *a, llvm::Value *b);
+    llvm::Value *op_div (llvm::Value *a, llvm::Value *b);
+    llvm::Value *op_mod (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_float_to_int (llvm::Value *a);
     llvm::Value *op_int_to_float (llvm::Value *a);
     llvm::Value *op_bool_to_int (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
-
-    /// Generate IR code for simple a/b, but considering OSL's semantics
-    /// that x/0 = 0, not inf.
-    llvm::Value *op_make_safe_div (OIIO::TypeDesc type,
-                                   llvm::Value *a, llvm::Value *b);
-
-    /// Generate IR code for simple a mod b, but considering OSL's
-    /// semantics that x mod 0 = 0, not inf.
-    llvm::Value *op_make_safe_mod (OIIO::TypeDesc type,
-                                   llvm::Value *a, llvm::Value *b);
 
     llvm::Value *op_and (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_or (llvm::Value *a, llvm::Value *b);

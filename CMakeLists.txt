@@ -214,13 +214,6 @@ if (EXISTS "/usr/lib/libc++.dylib")
     set (OSL_SYSTEM_HAS_LIBCPP ON)
 endif ()
 
-# Use ccache if found
-find_program (CCACHE_FOUND ccache)
-if (CCACHE_FOUND)
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-endif ()
-
 
 set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
 set (OSL_BUILD_TESTS ON CACHE BOOL "Build the unit tests, testshade, testrender")
@@ -243,6 +236,15 @@ set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 set (OSL_BUILD_PLUGINS ON CACHE BOOL "Bool OSL plugins, for example OIIO plugin")
+set (USE_CCACHE ON CACHE BOOL "Use ccache if found")
+
+# Use ccache if found
+find_program (CCACHE_FOUND ccache)
+if (CCACHE_FOUND AND USE_CCACHE)
+    set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif ()
+
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")

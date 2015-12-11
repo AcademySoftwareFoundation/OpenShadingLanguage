@@ -1669,8 +1669,9 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
               (a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam) &&
               equivalent (a->typespec(), c->typespec())) {
             if (debug() > 1)
-                debug_opt ("turned '%s %s...' to '%s %s...' as part of daisy-chain\n",
-                           op.opname(), a->name(), op.opname(), c->name());
+                debug_opt_ops (opnum, opnum+1,
+                               Strutil::format ("turned '%s %s...' to '%s %s...' as part of daisy-chain",
+                                 op.opname(), a->name(), op.opname(), c->name()));
             inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
             c->mark_rw (opnum, false, true);
             // Any time we write to a variable that wasn't written to at

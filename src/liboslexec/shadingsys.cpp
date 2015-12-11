@@ -1544,7 +1544,7 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     std::string opt;
-#define BOOLOPT(name) if (m_##name) opt += #name " "
+#define BOOLOPT(name) opt += Strutil::format(#name "=%d ", m_##name)
 #define INTOPT(name) opt += Strutil::format(#name "=%d ", m_##name)
 #define STROPT(name) if (m_##name.size()) opt += Strutil::format(#name "=\"%s\" ", m_##name)
     INTOPT (optimize);

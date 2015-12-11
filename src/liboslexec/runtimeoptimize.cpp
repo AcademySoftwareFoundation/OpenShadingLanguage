@@ -157,6 +157,7 @@ RuntimeOptimizer::set_inst (int newlayer)
     m_symbol_aliases.clear ();
     m_block_aliases.clear ();
     m_param_aliases.clear ();
+    m_bblockids.clear ();
 }
 
 
@@ -738,6 +739,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
 
     // Re-track variable lifetimes, since the inserted useparam
     // instructions will have change the instruction numbers.
+    find_basic_blocks ();
     track_variable_lifetimes (allsyms);
 }
 
@@ -2371,8 +2373,11 @@ RuntimeOptimizer::track_variable_lifetimes (const SymbolPtrVec &allsymptrs)
     BOOST_FOREACH (int a, inst()->args())
         oparg_ptrs.push_back (inst()->symbol (a));
 
+    if (m_bblockids.size() != inst()->ops().size())
+        find_basic_blocks ();
+
     OSLCompilerImpl::track_variable_lifetimes (inst()->ops(), oparg_ptrs,
-                                               allsymptrs);
+                                               allsymptrs, &m_bblockids);
 }
 
 
@@ -3018,6 +3023,7 @@ RuntimeOptimizer::run ()
         set_inst (layer);
         if (inst()->unused())
             continue;
+        find_basic_blocks ();
         track_variable_dependencies ();
 
         // For our parameters that require derivatives, mark their
@@ -3054,7 +3060,6 @@ RuntimeOptimizer::run ()
         }
         if (debug() && !inst()->unused()) {
             track_variable_lifetimes ();
-            find_basic_blocks ();
             std::cout << "After optimizing layer " << layer << " \"" 
                       << inst()->layername() << "\" (ID " << inst()->id() << ") :\n";
             printinst (std::cout);

@@ -1047,7 +1047,8 @@ OSLCompilerImpl::check_for_illegal_writes ()
 void
 OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
                                            const SymbolPtrVec &opargs,
-                                           const SymbolPtrVec &allsyms)
+                                           const SymbolPtrVec &allsyms,
+                                           std::vector<int> *bblockids)
 {
     // Clear the lifetimes for all symbols
     BOOST_FOREACH (Symbol *s, allsyms)
@@ -1083,25 +1084,34 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
             ASSERT (s->dealias() == s);  // Make sure it's de-aliased
 
             // Mark that it's read and/or written for this op
-            s->mark_rw (opnum, op.argread(a), op.argwrite(a));
+            bool readhere = op.argread(a);
+            bool writtenhere = op.argwrite(a);
+            s->mark_rw (opnum, readhere, writtenhere);
 
-            // Locals that are written within a loop should have their usage
-            // conservatively expanded to the whole loop (for any of the
-            // nested loops we're part of). This is not a worry for temps,
-            // because they CAN'T be read in the next iteration unless they
-            // were set before the loop, handled above.  Ideally, we could
-            // be less conservative if we knew that the variable in question
-            // was declared/scoped internal to the loop, in which case it
-            // can't carry values to the next iteration (FIXME).
-            if (s->symtype() == SymTypeLocal) {
-                BOOST_FOREACH (intpair oprange, loop_bounds) {
-                    int loopcond = oprange.first;
-                    int loopend = oprange.second;
-                    if (s->firstuse() <= loopend && s->lastwrite() >= loopcond) {
-                        bool read = (s->lastread() >= loopcond);
-                        s->mark_rw (loopcond, read, true);
-                        s->mark_rw (loopend, read, true);
-                    }
+            // Adjust lifetimes of symbols whose values need to be preserved
+            // between loop iterations.
+            BOOST_FOREACH (intpair oprange, loop_bounds) {
+                int loopcond = oprange.first;
+                int loopend = oprange.second;
+                DASSERT (s->firstuse() <= loopend);
+                // Special case: a temp or local, even if written inside a
+                // loop, if it's entire lifetime is within one basic block
+                // and it's strictly written before being read, then its
+                // lifetime is truly local and doesn't need to be expanded
+                // for the duration of the loop.
+                if (bblockids &&
+                    (s->symtype()==SymTypeLocal || s->symtype()==SymTypeTemp) &&
+                    (*bblockids)[s->firstuse()] == (*bblockids)[s->lastuse()] &&
+                    s->lastwrite() < s->firstread()) {
+                    continue;
+                }
+                // Syms written before or inside the loop, and referenced
+                // inside or after the loop, need to preserve their value
+                // for the duration of the loop. We know it's referenced
+                // inside the loop because we're here examining it!
+                if (s->firstwrite() <= loopend) {
+                    s->mark_rw (loopcond, readhere, writtenhere);
+                    s->mark_rw (loopend, readhere, writtenhere);
                 }
             }
         }

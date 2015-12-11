@@ -302,7 +302,8 @@ public:
 
     static void track_variable_lifetimes (const OpcodeVec &ircode,
                                           const SymbolPtrVec &opargs,
-                                          const SymbolPtrVec &allsyms);
+                                          const SymbolPtrVec &allsyms,
+                                          std::vector<int> *bblock_ids=NULL);
     static void coalesce_temporaries (SymbolPtrVec &symtab);
 
     const std::string main_filename () const { return m_main_filename; }

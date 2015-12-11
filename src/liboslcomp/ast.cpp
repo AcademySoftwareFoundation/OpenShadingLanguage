@@ -333,6 +333,10 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     }
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;
+    // Sneaky debugging aid: a local that starts with "__debug_tmp__"
+    // gets declared as a temp. Don't do this on purpose!!!
+    if (symtype == SymTypeLocal && Strutil::starts_with (name, "__debug_tmp__"))
+        symtype = SymTypeTemp;
     m_sym = new Symbol (name, type, symtype, this);
     if (! m_ismetadata)
         oslcompiler->symtab().insert (m_sym);

@@ -1578,6 +1578,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (opt_fold_getattribute);
     BOOLOPT (opt_middleman);
     BOOLOPT (opt_texture_handle);
+    BOOLOPT (opt_seed_bblock_aliases);
     INTOPT  (opt_passes);
     STROPT (debug_groupname);
     STROPT (debug_layername);

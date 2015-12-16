@@ -125,13 +125,22 @@ public:
     // count number of active bits
     OSL_FORCEINLINE int count() const
     {
+        // FIXME(C++20)
+        // return std::popcount(m_value);
 #if __INTEL_COMPILER
         if (value_width <= 32)
             return _mm_popcnt_u32(m_value);
         else
             return _mm_popcnt_u64(m_value);
+#elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_popcount(m_value);
+#elif defined(_MSC_VER)
+        if (value_width <= 32)
+            return __popcnt(m_value);
+        else
+            return __popcnt64(m_value);
 #else
-        // Compiler recognized idiom, can map to 1 instruction
+        // Compiler recognizable idiom, could map to 1 instruction
         ValueType m(m_value);
         int count = 0;
         for (count = 0; m != 0; ++count) {
@@ -144,10 +153,8 @@ public:
     // NOTE: undefined result if no bits are on
     OSL_FORCEINLINE int first_on() const
     {
-        // Simple naive implementation
-        // int lane=-1;
-        // while ( (m_value >> (++lane)) != 0 );
-        // return lane;
+        // FIXME(C++20)
+        // return std::countr_zero(m_value);
 
         if (value_width <= 32) {
 #if __INTEL_COMPILER
@@ -160,8 +167,10 @@ public:
             unsigned long index;
             _BitScanForward64(&index, m_value);
             return static_cast<int>(index);
-#else  // Linux, OS X, gcc or clang
+#elif defined(__GNUC__) || defined(__clang__)
             return __builtin_ctzll(m_value);
+#else
+#    error unknown compiler, update Mask<int WidthT>::first_on() to support compiler
 #endif
         } else {
             // reference implementation, use if ctzl is not available

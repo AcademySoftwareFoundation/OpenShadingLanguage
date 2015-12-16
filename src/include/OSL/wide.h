@@ -50,7 +50,6 @@ OSL_NAMESPACE_ENTER
 // IE:  std::cout << unproxy(proxy_obj);
 
 
-template<typename DataT, int WidthT> struct Block;
 // A Block provides physical storage for WidthT entries of DataT,
 // WidthT is typically set to the # of physical SIMD data lanes
 // on a system.
@@ -80,189 +79,30 @@ template<typename DataT, int WidthT> struct Block;
 //
 //    void dump(const char *name) const;
 //};
+template<typename DataT, int WidthT> struct Block;
 
+// Typically Block's of data aren't passed around, instead
+// a Wide<DataT, WidthT> or Masked<DataT, WidthT> are passed
+// by value.  These wrapper's hold onto a reference to a Block
+// and provide the necessary proxies to access the underlying
+// data and enforce masking.
 template<typename DataT, int WidthT> struct Wide;
-// Reference to Block that provides a proxy to access to DataT
-// for an individual data lane inside the Block.
-// Respects const correctness DataT, ie: Wide<const float, 16>.
-// Handles DataT being fixed size array [7], Wide: wide<const float[7], 16>
-// Handles DataT being unbounded array [], Wide: wide<cpmst float[], 16>
-// Implementations should support the following interface:
-//{
-//    static constexpr int width = WidthT;
-//
-//    impl-defined-proxy operator[](int lane);  // when DataT is not const
-//    impl-defined-const-proxy operator[](int lane) const
-//
-//    // When DataT is ElementType[] unbounded array
-//    typedef impl-defined ElementType;
-//    typedef impl-defined NonConstElementType;
-//    int length() const; // length of unbounded array
-//
-//    // Provide Wide access to individual array element
-//    Wide<ElementType, WidthT> get_element(int array_index) const
-//};
-
-
 template<typename DataT, int WidthT> struct Masked;
-// Reference to Block and Mask value to indicate which data
-// lanes are active inside the Block.
-// NOTE: Masks are note stored with/inside Blocks as they
-// are a result of shader control flow/logic often originate
-// on the stack.
-//
-// Provides Proxy access to DataT for an individual data lane
-// inside the Block.  The proxy will ignore assignments
-// to inactive data lanes.  Users cannot forget to test
-// the mask, because the Proxy does it for them.
-// Handles DataT being bounded array [13], ie: Masked<float[13], 16>
-// Handles DataT being unbounded array [], ie: Masked<float[], 16>
-// DataT must NOT be const.
-// Implementations should support the following interface:
-//{
-//    static constexpr int width = WidthT;
-//
-//    impl-defined-proxy operator[](int lane);
-//
-//    // When DataT is ElementType[] unbounded array
-//    int length() const; // length of unbounded array
-//
-//    // When DataT is ElementType[] unbounded array
-//    // provide Wide access to individual array element
-//    Wide<ElementType, WidthT> get_element(int array_index) const
-//
-//    // Build an accessor combining current mask with another
-//    Masked operator & (const Mask<WidthT> &) const
-//
-//    // Test MaskedData (could by any data type) if it match this DataT
-//    static bool is(const MaskedData<WidthT> &)
-//};
 
-// Block<Dual2<DataT>> actually stores val, dx, dy in separate adjacent Blocks.
-// Masked<> should not be instantiated with a Dual2, but instead
-// use these additional wrappers to get at derivative data
-//
-//     template <typename DataT, int WidthT>
-//     struct MaskedDx;
-//
-//     template <typename DataT, int WidthT>
-//     struct MaskedDy;
-//
-// Same interface as Masked, but treats Block & as array and accesses
-// Block[1] for Dx, Block[2] for Dy
-
-
+// For variant blocks of data (where the type is unknown,
+// we have a special wrapper MaskedData.  Intent is type
+// specific wrapper Masked<DataT, WidthT> be used to
+// access the underlying data;
 template<int WidthT> class MaskedData;
-// Combination of a pointer to a Block unknown DataT,
-// a TypeDesc to identify it, and a flag to indicate if derivatives are present.
-// Used to pass a Block of data whose type could anything to a function.
-// The receiving function must test a specific set Masked<DataT> to see if
-// it can be constructed from the MaskedData.
-// Although the underlying TypeDesc has its own ways of being tested,
-// we have provided trait classes to perform the testing based on DataT.
-// IE:  void myFunction(MaskedData<16> any) {
-//          if (Masked<Vec3>::is(any) {
-//              Masked<Vec3> vecVal(any);
-//              process(vecVal);
-//              if (any.has_derivs()) {
-//                  MaskedDx<Vec3> vecDx(any);
-//                  MaskedDy<Vec3> vecDy(any);
-//                  processDerivs(vecDx, vecDy);
-//              }
-//          } else if (Masked<int[2]>::is(any) {
-//              Masked<int[2]> resolution(any);
-//              process(resolution);
-//          }
-//      }
-// Implementations should support the following interface:
-//{
-//    void *ptr() const;
-//    const TypeDesc & type() const;
-//    bool has_derivs() const;
-//    const Mask<WidthT> & mask();
-//
-//    // Test to see if pointer to block has been set
-//    bool valid() const;
-//
-//    // Build an accessor combining current mask with another
-//    MaskedData operator & (const Mask<WidthT> &mask) const;
-//};
 
-
-// For consistency, for passing unknown uniform data, RefData can be used
-// in a similar fashion to MaskedData
-class RefData;
-// Combination of a pointer to uniform unknown DataT,
-// a TypeDesc to identify it, and a flag to indicate if derivatives are present.
-// Used to pass data whose type could anything to a function.
-// The receiving function must test a specific set Ref<DataT> to see if
-// it can be constructed from the RefData.
-// Although the underlying TypeDesc has its own ways of being tested,
-// we have provided trait classes to perform the testing based on DataT.
-// IE:  void myFunction(RefData any) {
-//          if (Ref<Vec3>::is(any) {
-//              Ref<Vec3> vecVal(any);
-//              process(vecVal);
-//              if (any.has_derivs()) {
-//                  RefDx<Vec3> vecDx(any);
-//                  RefDy<Vec3> vecDy(any);
-//                  processDerivs(vecDx, vecDy);
-//              }
-//          } else if (Ref<ustring>::is(any) {
-//              Ref<ustring> msg(any);
-//              process(msg);
-//          }
-//      }
-// Implementations of should support the following interface:
-//{
-//    void *ptr() const;
-//    const TypeDesc & type() const;
-//    bool has_derivs() const;
-//
-//    // Test to see if pointer to data has been set
-//    bool valid() const;
-//};
-
+// For type specific access to uniform variant data
 template<typename DataT> struct Ref;
-// Reference to DataT
-//
-// Provides type specific Proxy access to DataT.
-// Usually constructed from RefData.
-// Handles DataT being bounded array [13], ie: Ref<float[13]>
-// Handles DataT being unbounded array [], ie: Ref<float[]>
-// DataT must NOT be const.
-// Implementations should support the following interface:
-//{
-//    operator DataT & () const
-//    impl-defined operator = (const DataT & value) const
-//
-//    // When DataT is ElementType[] or ElementType[int]
-//    int length() const; // length of unbounded array
-//
-//    // When DataT is ElementType[] or ElementType[int]
-//    // provide Wide access to individual array element
-//    ElementType & operator[](int array_index) const
-//
-//    // Test RefData (could by any data type) if it match this DataT
-//    static bool is(const RefData &)
-//};
 
-// Ref<> should not be instantiated with a Dual2, but instead
-// use these additional wrappers to get at derivative data
-//
-//     template <typename DataT>
-//     struct RefDx;
-//
-//     template <typename DataT>
-//     struct RefDy;
-//
-// Same interface as Ref, but treats DataT & as array and accesses
-// DataT*[1] for Dx, DataT*[2] for Dy
-
-
-// More wrappers will be added here
-
-
+// For variant uniform data (where the type is unknown,
+// we have a special wrapper RefData.  Intent is type
+// specific wrapper Ref<DataT> be used to
+// access the underlying data;
+class RefData;
 
 // Utilities to assign all data lanes to the same value
 template<typename DataT, int WidthT>
@@ -271,7 +111,6 @@ assign_all(Masked<DataT, WidthT>, const DataT&);
 template<typename DataT, int WidthT>
 OSL_FORCEINLINE void
 assign_all(Block<DataT, WidthT>&, const DataT&);
-
 
 
 // IMPLEMENTATION BELOW
@@ -298,7 +137,7 @@ template<typename ConstDataT, int WidthT> struct ConstLaneProxy;
 // its own alignment restrictions
 template<int WidthT> struct alignas(WidthT * sizeof(float)) VecReg {
     // NOTE: regardless of the actual type, our goal is to
-    // establish the # of bytes a vector registor holds
+    // establish the # of bytes a vector register holds
     // for that purpose we just use float.
     // Should OSL::Float change to double this would need
     // to as well.
@@ -1970,6 +1809,26 @@ private:
         using Base::Base;
 #endif
 
+// Wide wraps a reference to Block and provides a proxy to access to DataT
+// for an individual data lane inside the Block.
+// Respects const correctness DataT, ie: Wide<const float, 16>.
+// Handles DataT being fixed size array [7], Wide: wide<const float[7], 16>
+// Handles DataT being unbounded array [], Wide: wide<cpmst float[], 16>
+// Implementations should support the following interface:
+//{
+//    static constexpr int width = WidthT;
+//
+//    impl-defined-proxy operator[](int lane);  // when DataT is not const
+//    impl-defined-const-proxy operator[](int lane) const
+//
+//    // When DataT is ElementType[] unbounded array
+//    typedef impl-defined ElementType;
+//    typedef impl-defined NonConstElementType;
+//    int length() const; // length of unbounded array
+//
+//    // Provide Wide access to individual array element
+//    Wide<ElementType, WidthT> get_element(int array_index) const
+//};
 template<typename DataT, int WidthT>
 struct Wide : pvt::WideImpl<DataT, WidthT, std::is_const<DataT>::value> {
     __OSL_INHERIT_BASE_CTORS(Wide, WideImpl)
@@ -2496,6 +2355,39 @@ private:
 
 }  // namespace pvt
 
+
+// Masked has a reference to Block and Mask value to indicate which data
+// lanes are active inside the Block.
+// NOTE: Masks values are not stored with/inside Blocks as they
+// are a result of shader control flow/logic often originate
+// on the stack.
+//
+// Provides Proxy access to DataT for an individual data lane
+// inside the Block.  The proxy will ignore assignments
+// to inactive data lanes.  Users cannot forget to test
+// the mask, because the Proxy does it for them.
+// Handles DataT being bounded array [13], ie: Masked<float[13], 16>
+// Handles DataT being unbounded array [], ie: Masked<float[], 16>
+// DataT must NOT be const.
+// Implementations should support the following interface:
+//{
+//    static constexpr int width = WidthT;
+//
+//    impl-defined-proxy operator[](int lane);
+//
+//    // When DataT is ElementType[] unbounded array
+//    int length() const; // length of unbounded array
+//
+//    // When DataT is ElementType[] unbounded array
+//    // provide Wide access to individual array element
+//    Wide<ElementType, WidthT> get_element(int array_index) const
+//
+//    // Build an accessor combining current mask with another
+//    Masked operator & (const Mask<WidthT> &) const
+//
+//    // Test MaskedData (could by any data type) if it match this DataT
+//    static bool is(const MaskedData<WidthT> &)
+//};
 template<typename DataT, int WidthT>
 struct Masked : public pvt::MaskedImpl<DataT, WidthT> {
     static_assert(std::is_const<DataT>::value == false,
@@ -2544,6 +2436,18 @@ struct MaskedDeriv : public Masked<DataT, WidthT> {
 };
 }  // namespace pvt
 
+// Block<Dual2<DataT>> actually stores val, dx, dy in separate adjacent Blocks.
+// Masked<> should not be instantiated with a Dual2, but instead
+// use these additional wrappers to get at derivative data
+//
+//     template <typename DataT, int WidthT>
+//     struct MaskedDx;
+//
+//     template <typename DataT, int WidthT>
+//     struct MaskedDy;
+//
+// Same interface as Masked, but treats Block & as array and accesses
+// Block[1] for Dx, Block[2] for Dy
 template<typename DataT, int WidthT>
 using MaskedDx = pvt::MaskedDeriv<DataT, WidthT, 1 /*DerivIndexT*/>;
 template<typename DataT, int WidthT>
@@ -2574,7 +2478,27 @@ assign_all(Masked<DataT[], WidthT> wide_data, const DataT* value_array)
 }
 
 
-
+// MaskedData is a combination of a pointer to a Block unknown DataT,
+// a TypeDesc to identify it, and a flag to indicate if derivatives are present.
+// Used to pass a Block of data whose type could anything to a function.
+// The receiving function must test a specific set Masked<DataT> to see if
+// it can be constructed from the MaskedData.
+// Although the underlying TypeDesc has its own ways of being tested,
+// we have provided trait classes to perform the testing based on DataT.
+// IE:  void myFunction(MaskedData<16> any) {
+//          if (Masked<Vec3>::is(any) {
+//              Masked<Vec3> vecVal(any);
+//              process(vecVal);
+//              if (any.has_derivs()) {
+//                  MaskedDx<Vec3> vecDx(any);
+//                  MaskedDy<Vec3> vecDy(any);
+//                  processDerivs(vecDx, vecDy);
+//              }
+//          } else if (Masked<int[2]>::is(any) {
+//              Masked<int[2]> resolution(any);
+//              process(resolution);
+//          }
+//      }
 template<int WidthT> class MaskedData {
     mutable void* m_ptr;
     TypeDesc m_type;
@@ -2623,6 +2547,29 @@ public:
 };
 
 
+// For consistency, for passing unknown uniform data, RefData can be used
+// in a similar fashion to MaskedData
+// RefData is a combination of a pointer to uniform unknown DataT,
+// a TypeDesc to identify it, and a flag to indicate if derivatives are present.
+// Used to pass data whose type could anything to a function.
+// The receiving function must test a specific set Ref<DataT> to see if
+// it can be constructed from the RefData.
+// Although the underlying TypeDesc has its own ways of being tested,
+// we have provided trait classes to perform the testing based on DataT.
+// IE:  void myFunction(RefData any) {
+//          if (Ref<Vec3>::is(any) {
+//              Ref<Vec3> vecVal(any);
+//              process(vecVal);
+//              if (any.has_derivs()) {
+//                  RefDx<Vec3> vecDx(any);
+//                  RefDy<Vec3> vecDy(any);
+//                  processDerivs(vecDx, vecDy);
+//              }
+//          } else if (Ref<ustring>::is(any) {
+//              Ref<ustring> msg(any);
+//              process(msg);
+//          }
+//      }
 class RefData {
     mutable void* m_ptr;
     TypeDesc m_type;
@@ -2658,9 +2605,6 @@ public:
     // RefDx<DataT>(const RefData &)
     // RefDy<DataT>(const RefData &)
 };
-
-
-template<typename DataT> struct Ref;
 
 namespace pvt {
 
@@ -2827,6 +2771,28 @@ private:
 }  // namespace pvt
 
 
+// Reference to DataT
+//
+// Provides type specific Proxy access to DataT.
+// Usually constructed from RefData.
+// Handles DataT being bounded array [13], ie: Ref<float[13]>
+// Handles DataT being unbounded array [], ie: Ref<float[]>
+// DataT must NOT be const.
+// Implementations should support the following interface:
+//{
+//    operator DataT & () const
+//    impl-defined operator = (const DataT & value) const
+//
+//    // When DataT is ElementType[] or ElementType[int]
+//    int length() const; // length of unbounded array
+//
+//    // When DataT is ElementType[] or ElementType[int]
+//    // provide Wide access to individual array element
+//    ElementType & operator[](int array_index) const
+//
+//    // Test RefData (could by any data type) if it match this DataT
+//    static bool is(const RefData &)
+//};
 template<typename DataT> struct Ref : public pvt::RefImpl<DataT> {
     __OSL_INHERIT_BASE_CTORS(Ref, RefImpl)
     using Base::operator=;
@@ -2852,6 +2818,18 @@ template<typename DataT, int DerivIndexT> struct RefDeriv : public Ref<DataT> {
 };
 }  // namespace pvt
 
+
+// Ref<> should not be instantiated with a Dual2, but instead
+// use these additional wrappers to get at derivative data
+//
+//     template <typename DataT>
+//     struct RefDx;
+//
+//     template <typename DataT>
+//     struct RefDy;
+//
+// Same interface as Ref, but treats DataT & as array and accesses
+// DataT*[1] for Dx, DataT*[2] for Dy
 template<typename DataT> using RefDx = pvt::RefDeriv<DataT, 1 /*DerivIndexT*/>;
 template<typename DataT> using RefDy = pvt::RefDeriv<DataT, 2 /*DerivIndexT*/>;
 

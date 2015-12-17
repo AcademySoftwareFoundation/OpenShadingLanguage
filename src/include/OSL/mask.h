@@ -133,7 +133,10 @@ public:
         else
             return _mm_popcnt_u64(m_value);
 #elif defined(__GNUC__) || defined(__clang__)
-        return __builtin_popcount(m_value);
+        if (value_width <= 32)
+            return __builtin_popcount(m_value);
+        else
+            return __builtin_popcountll(m_value);
 #elif defined(_MSC_VER)
         if (value_width <= 32)
             return __popcnt(m_value);

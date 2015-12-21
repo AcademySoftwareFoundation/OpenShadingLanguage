@@ -16,10 +16,12 @@ dist: trusty
 # excluded).
 env:
     matrix:
-      - WHICHGCC=4.8 OIIOBRANCH=master BUILD_FLAGS=""
-      - WHICHGCC=4.8 OIIOBRANCH=master BUILD_FLAGS="USE_CPP=1"
-      - WHICHGCC=4.9 OIIOBRANCH=master BUILD_FLAGS=""
-      # - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS=""
+      - WHICHGCC=4.8 BUILD_FLAGS=""
+      - WHICHGCC=4.8 BUILD_FLAGS="USE_CPP11=1"
+      - WHICHGCC=4.9 BUILD_FLAGS=""
+      - WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
+      - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS=""
+      - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=1"
 
 # Add-ons: specify apt packages for Linux
 addons:
@@ -32,6 +34,8 @@ addons:
       - g++-4.8
       - gcc-4.9
       - g++-4.9
+      - gcc-5
+      - g++-5
       - libboost1.55-all-dev
       - libtiff4-dev
       - llvm3.4
@@ -55,6 +59,8 @@ before_install:
 
 install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
+    - export USE_CCACHE=1
+    - export CCACHE_CPP2=1
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           src/build-scripts/install_homebrew_deps.bash ;
           export LLVM_DIRECTORY=/usr/local/Cellar/llvm34/3.4.2/lib/llvm-3.4 ;
@@ -91,10 +97,11 @@ script:
 after_failure:
 # FIXME: find failed logs, stash them or send them to lg?
 
-#branches:
-#  only:
-#    - master
-#    - /^v\d+\./
+branches:
+  only:
+    - master
+    - /RB-/
+    - /lg-/
 
 matrix:
     exclude:
@@ -104,7 +111,10 @@ matrix:
         compiler: clang
       - os: osx
         compiler: clang
-        env: WHICHGCC=4.9 OIIOBRANCH=master BUILD_FLAGS=""
+        env: WHICHGCC=4.9 BUILD_FLAGS=""
+      - os: osx
+        compiler: clang
+        env: WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
 
 notifications:
     email:

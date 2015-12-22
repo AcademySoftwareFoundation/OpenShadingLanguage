@@ -33,8 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
 
-#if OSL_LLVM_VERSION >= 35 && ! OSL_BUILD_CPP11
-#error "LLVM >= 3.5 requires USE_CPP11=1"
+#if OSL_LLVM_VERSION >= 35 && (! OSL_BUILD_CPP11 && ! OSL_BUILD_CPP14)
+#error "LLVM >= 3.5 requires USE_CPP11=1 or USE_CPP14=1"
 #endif
 
 #ifndef USE_MCJIT

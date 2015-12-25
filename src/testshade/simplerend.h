@@ -12,7 +12,8 @@
 #include <OpenImageIO/imagebuf.h>
 
 #include <OSL/oslexec.h>
-#include <OSL/rendererservices.h>
+
+#include "batched_simplerend.h"
 
 
 OSL_NAMESPACE_ENTER
@@ -24,12 +25,15 @@ void register_closures(OSL::ShadingSystem* shadingsys);
 
 class SimpleRenderer : public RendererServices
 {
+    template<int>
+    friend class BatchedSimpleRenderer;
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
 
     SimpleRenderer ();
-    ~SimpleRenderer () { }
+    // Ensure destructor is in .cpp
+    ~SimpleRenderer ();
 
     virtual int supports (string_view feature) const;
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
@@ -110,7 +114,13 @@ public:
     ShadingSystem *shadingsys = nullptr;
     OIIO::ParamValueList options;
 
+    virtual BatchedRendererServices<16> * batched(WidthOf<16>) { return &m_batch_16_simple_renderer; }
+    virtual BatchedRendererServices<8> * batched(WidthOf<8>) { return &m_batch_8_simple_renderer; }
+
 protected:
+    BatchedSimpleRenderer<16> m_batch_16_simple_renderer;
+    BatchedSimpleRenderer<8> m_batch_8_simple_renderer;
+
     // Camera parameters
     Matrix44 m_world_to_camera;
     ustring m_projection;

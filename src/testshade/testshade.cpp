@@ -1066,7 +1066,7 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
                     }
                 }
             } else {
-                // TODO: Do we need to really need to handle handle more int chanels than 1?
+                // We don't expect this to happen, but leaving as example for others
                 Wide<const int[], WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol), nchans);
                 // TODO:  Try not to do alloca's inside a loop
                 int *intPixel = OIIO_ALLOCA(int, nchans);
@@ -1452,6 +1452,7 @@ batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI 
         // TODO: vectorize this loop
         for(int bi=0; bi < batchSize; ++bi) {
             int lHitIndex = oHitIndex + bi;
+            // A real renderer would use the hit index to access data to populate shader globals
             int lx = lHitIndex%rwidth;
             int ly = lHitIndex/rwidth;
             int rx = roi.xbegin + ly;
@@ -1722,6 +1723,7 @@ test_shade (int argc, const char *argv[])
         if (use_optix) {
             rend->render (xres, yres);
         } else if (use_shade_image) {
+            // TODO: do we need a batched option/version of shade_image?
             OSL::shade_image (*shadingsys, *shadergroup, NULL,
                               *rend->outputbuf(0), outputvarnames,
                               pixelcenters ? ShadePixelCenters : ShadePixelGrid,

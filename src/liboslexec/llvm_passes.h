@@ -63,8 +63,8 @@ public:
         llvm::Type* llvm_type_bool = llvm::Type::getInt1Ty (M.getContext());
         llvm::Type* llvm_type_int32 = llvm::Type::getInt32Ty (M.getContext());
 
-        m_llvm_mask_type = llvm::VectorType::get(llvm_type_bool, WidthT);
-
+#if OSL_LLVM_VERSION >= 110
+        m_llvm_mask_type = llvm::FixedVectorType::get(llvm_type_bool, WidthT);
         // NOTE:  OSL doesn't have any 16 bit data types, so 32bit version
         // of the mask promotion will always be correct here.  Should 16 bit
         // support be needed, this pass could be extended to look at the
@@ -72,10 +72,15 @@ public:
         // what the native mask type should be.  And if necessary maintain a
         // 16 bit and 32 bit native mask representation to be passed as a
         // livein.
+        m_native_mask_type = llvm::FixedVectorType::get(llvm_type_int32, WidthT);
+        m_wide_zero_initializer = llvm::ConstantVector::getSplat(
+                                    llvm::ElementCount(WidthT, false),
+                                    llvm::ConstantInt::get (M.getContext(), llvm::APInt(32,0)));
+#else
+        m_llvm_mask_type = llvm::VectorType::get(llvm_type_bool, WidthT);
         m_native_mask_type = llvm::VectorType::get(llvm_type_int32, WidthT);
-
         m_wide_zero_initializer = llvm::ConstantVector::getSplat(WidthT, llvm::ConstantInt::get (M.getContext(), llvm::APInt(32,0)));
-
+#endif
         return false; // I don't think we modified the module
     }
 
@@ -330,14 +335,20 @@ public:
         llvm::Type* llvm_type_bool = llvm::Type::getInt1Ty(M.getContext());
         llvm::Type* llvm_type_int32 = llvm::Type::getInt32Ty(M.getContext());
 
-        m_llvm_mask_type = llvm::VectorType::get(llvm_type_bool, WidthT);
-
+#if OSL_LLVM_VERSION >= 110
+        m_llvm_mask_type = llvm::FixedVectorType::get(llvm_type_bool, WidthT);
         // NOTE:  OSL doesn't have any 16 bit data types, so 32bit version
         // of the mask promotion will always be correct here.  Should 16 bit
         // support be needed, this pass could be extended.
+        m_native_mask_type = llvm::FixedVectorType::get(llvm_type_int32, WidthT);
+        m_wide_zero_initializer = llvm::ConstantVector::getSplat(
+                                    llvm::ElementCount(WidthT, false),
+                                    llvm::ConstantInt::get (M.getContext(), llvm::APInt(32,0)));
+#else
+        m_llvm_mask_type = llvm::VectorType::get(llvm_type_bool, WidthT);
         m_native_mask_type = llvm::VectorType::get(llvm_type_int32, WidthT);
-
         m_wide_zero_initializer = llvm::ConstantVector::getSplat(WidthT, llvm::ConstantInt::get (M.getContext(), llvm::APInt(32,0)));
+#endif
         return false; // I don't think we modified the module
     }
 

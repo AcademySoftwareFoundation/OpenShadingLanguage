@@ -26,14 +26,23 @@ sudo yum install -y Field3D Field3D-devel && true
 #sudo yum install -y ffmpeg ffmpeg-devel && true
 
 
-
-if [[ "$LLVM_BRANCH" != ""  || "$LLVM_VERSION" != "" ]] ; then
-    source src/build-scripts/build_llvm.bash
+if [[ "$OPTIX_VERSION" != "" ]] ; then
+    echo "Requested OPTIX_VERSION = '${OPTIX_VERSION}'"
+    mkdir -p $LOCAL_DEPS_DIR/dist/include/internal
+    OPTIXLOC=https://developer.download.nvidia.com/redist/optix/v${OPTIX_VERSION}
+    for f in optix.h optix_device.h optix_function_table.h \
+             optix_function_table_definition.h optix_host.h \
+             optix_stack_size.h optix_stubs.h optix_types.h optix_7_device.h \
+             optix_7_host.h optix_7_types.h \
+             internal/optix_7_device_impl.h \
+             internal/optix_7_device_impl_exception.h \
+             internal/optix_7_device_impl_transformations.h
+        do
+        curl --retry 100 -m 120 --connect-timeout 30 \
+            $OPTIXLOC/include/$f > $LOCAL_DEPS_DIR/dist/include/$f
+    done
+    export OptiX_ROOT=$LOCAL_DEPS_DIR/dist
 fi
-
-
-# Build or download LLVM
-#source src/build-scripts/build_llvm.bash
 
 source src/build-scripts/build_pybind11.bash
 

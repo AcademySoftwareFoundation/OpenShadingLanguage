@@ -112,6 +112,9 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
           -Wno-deprecated-register
+          # the following 2 warnings can be restored when all 3rd parties have fixed their export macros
+          # (dllimport attribute is not supported when compiling for Cuda and triggers a ton of warnings)
+          -Wno-ignored-attributes -Wno-unknown-attributes
           -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
       COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} "osl_llvm_compiled_ops"
@@ -186,6 +189,7 @@ target_include_directories (${local_lib}
 target_compile_definitions (${local_lib}
     PRIVATE
         OSL_EXPORTS
+        CUDA_TARGET_ARCH="${CUDA_TARGET_ARCH}"
         OSL_CUDA_VERSION="${CUDA_VERSION}"
         OSL_OPTIX_VERSION="${OPTIX_VERSION}"
     )

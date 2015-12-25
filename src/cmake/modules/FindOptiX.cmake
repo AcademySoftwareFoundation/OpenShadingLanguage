@@ -7,7 +7,7 @@
 #
 # This module will set
 #   OPTIX_FOUND          True, if OptiX is found
-#   OPTIX_INCLUDE_DIR    directory where OptiX headers are found
+#   OPTIX_INCLUDES       directory where OptiX headers are found
 #   OPTIX_LIBRARIES      libraries for OptiX
 #
 # Special inputs:
@@ -52,16 +52,18 @@ macro(OPTIX_find_api_library name version)
     endif()
 endmacro()
 
-# Pull out the API version from optix.h
-file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX "define OPTIX_VERSION")
-string(REGEX MATCH "([0-9]+)" OPTIX_VERSION_STRING "${OPTIX_VERSION_LINE}")
-math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION_STRING}/10000")
-math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION_STRING}%10000)/100")
-math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION_STRING}%100")
-set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
+if (OPTIX_INCLUDE_DIR)
+    # Pull out the API version from optix.h
+    file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX "define OPTIX_VERSION")
+    string(REGEX MATCH "([0-9]+)" OPTIX_VERSION_STRING "${OPTIX_VERSION_LINE}")
+    math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION_STRING}/10000")
+    math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION_STRING}%10000)/100")
+    math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION_STRING}%100")
+    set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
+endif ()
 
 # OptiX 7 doesn't link to any libraries
-if (${OPTIX_VERSION_MAJOR} LESS 7)
+if (OPTIX_VERSION VERSION_LESS 7)
     OPTIX_find_api_library(optix ${OPTIX_VERSION})
     OPTIX_find_api_library(optixu ${OPTIX_VERSION})
     OPTIX_find_api_library(optix_prime ${OPTIX_VERSION})

@@ -20,6 +20,7 @@ if [[ `which brew` == "" ]] ; then
 fi
 
 
+brew uninstall openssl
 brew update >/dev/null
 echo ""
 echo "Before my brew installs:"

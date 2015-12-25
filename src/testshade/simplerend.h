@@ -113,6 +113,7 @@ public:
 
     ShadingSystem *shadingsys = nullptr;
     OIIO::ParamValueList options;
+    OIIO::ParamValueList userdata;
 
     virtual BatchedRendererServices<16> * batched(WidthOf<16>) { return &m_batch_16_simple_renderer; }
     virtual BatchedRendererServices<8> * batched(WidthOf<8>) { return &m_batch_8_simple_renderer; }

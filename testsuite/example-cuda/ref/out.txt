@@ -1,0 +1,4 @@
+Compiled test_add.osl -> test_add.oso
+/home/anders/code/osl-al/src/liboslexec/llvm_instance.cpp:1406: run: Assertion 'bitcode.size() && "Library bitcode is empty"' failed.
+MUL 0.525516 0.474484 0.000000
+    COMP 3 (1.000000 1.000000 1.000000)

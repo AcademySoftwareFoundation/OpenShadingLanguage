@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+
+Output Cd to Cd.tif
+Pixel (0, 0):
+  Cd : 1 1 1

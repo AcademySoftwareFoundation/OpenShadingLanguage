@@ -460,7 +460,7 @@ using std::assume_aligned;
 
 // Until we have c++20, we can provide our own version of std::assume_aligned
 // http://open-std.org/JTC1/SC22/WG21/docs/papers/2018/p1007r0.pdf
-template<int AlignmentT, class DataT>
+template<int Alignment, class DataT>
 OSL_NODISCARD
 #ifndef __INTEL_COMPILER // constexpr not compatible with ICC's __assume_aligned
     constexpr
@@ -468,18 +468,18 @@ OSL_NODISCARD
 DataT* assume_aligned(DataT* ptr)
 {
 #ifdef __INTEL_COMPILER
-    __assume_aligned(ptr, AlignmentT);
+    __assume_aligned(ptr, Alignment);
     return ptr;
 #elif defined(__clang__) || defined(__GNUC__)
-    return reinterpret_cast<DataT*>(__builtin_assume_aligned(ptr, AlignmentT));
+    return reinterpret_cast<DataT*>(__builtin_assume_aligned(ptr, Alignment));
 #elif defined(_MSC_VER)
-    constexpr std::uintptr_t unaligned_bit_mask = ((1 << N) - 1);
+    constexpr std::uintptr_t unaligned_bit_mask = (Alignment - 1);
     if ((reinterpret_cast<std::uintptr_t>(ptr) & unaligned_bit_mask) == 0)
         return ptr;
     else
         __assume(0); // let compiler know we should never reach this branch
 #else
-    #error unknown compiler, update osl_assume_aligned to handle (or explicitly ignore) emitting a pointer alignment hint
+    #error unknown compiler, update assume_aligned to handle (or explicitly ignore) emitting a pointer alignment hint
     return ptr;
 #endif
 }

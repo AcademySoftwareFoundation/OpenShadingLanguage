@@ -3,7 +3,7 @@
 # https://github.com/imageworks/OpenShadingLanguage
 
 cmake_minimum_required (VERSION 3.12)
-project (OSL VERSION 1.12.0.1
+project (OSL VERSION 1.12.0.2
          LANGUAGES CXX C
          HOMEPAGE_URL "https://github.com/imageworks/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name
@@ -77,7 +77,7 @@ option (OSL_BUILD_MATERIALX "Build MaterialX shaders" OFF)
 option (USE_OPTIX "Include OptiX support" OFF)
 set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 set (CUDA_EXTRA_LIBS CACHE STRING "Extra lib targets needed for CUDA")
-set (CUDA_TARGET_ARCH "sm_35" CACHE STRING "CUDA GPU architecture (e.g. sm_35)")
+set (CUDA_TARGET_ARCH "sm_60" CACHE STRING "CUDA GPU architecture (e.g. sm_50)")
 set (OSL_SHADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/shaders"
      CACHE STRING "Directory where shaders will be installed")
 set (OSL_PTX_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/ptx"
@@ -472,7 +472,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             transitive-assign
             transform transformc trig typecast
             unknown-instruction
-            userdata
+            userdata userdata-passthrough
             vararray-connect vararray-default
             vararray-deserialize vararray-param
             vecctr vector
@@ -500,7 +500,7 @@ endif ()
 
 # Only run the OptiX tests if OptiX and CUDA are found
 if (OPTIX_FOUND AND CUDA_FOUND)
-    TESTSUITE ( testoptix testoptix-noise )
+    TESTSUITE ( testoptix testoptix-noise example-cuda)
 endif ()
 
 # FIXME: still working on MaterialX testsuite

@@ -27,7 +27,6 @@ namespace pvt {
 template <size_t ByteAlignmentT, typename T>
 inline bool is_aligned(const T *pointer)
 {
-    static_assert(OSL_CPLUSPLUS_VERSION >= 11, "std::uintptr_t is optional yet ubiquitous C++11 feature");
     std::uintptr_t ptrAsUint = reinterpret_cast<std::uintptr_t>(pointer);
     return (ptrAsUint%ByteAlignmentT==0);
 }
@@ -38,7 +37,7 @@ ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
                                 PerThreadInfo *threadinfo)
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
       m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()),
-      m_dictionary(NULL), m_execution_is_batched(false)
+      m_dictionary(NULL), batch_size_executed(0)
 {
     m_shadingsys.m_stat_contexts += 1;
     m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
@@ -61,7 +60,7 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 {
     if (m_group)
         execute_cleanup ();
-    m_execution_is_batched = false;
+    batch_size_executed = 0;
     m_group = &sgroup;
     m_ticks = 0;
 
@@ -212,7 +211,7 @@ ShadingContext::Batched<WidthT>::execute_init
     if (context().m_group)
         context().execute_cleanup ();
 
-    context().m_execution_is_batched = true;
+    context().batch_size_executed = batch_size;
     context().m_group = &sgroup;
     context().m_ticks = 0;
 
@@ -274,10 +273,7 @@ ShadingContext::Batched<WidthT>::execute_init
 
         if(batch_size > 0) {
             Mask<WidthT> run_mask(false);
-            for(int ri=0; ri < batch_size; ++ri)
-            {
-                run_mask.set_on(ri);
-            }
+            run_mask.set_count_on(batch_size);
 
             run_func (&bsg, context().m_heap.get(), run_mask.value());
         }
@@ -292,14 +288,12 @@ template<int WidthT>
 bool
 ShadingContext::Batched<WidthT>::execute_layer (int batch_size, BatchedShaderGlobals<WidthT> &bsg, int layernumber)
 {
-    if (!group() || group()->nlayers() == 0 || group()->does_nothing())
+    if (!group() || group()->nlayers() == 0 || group()->does_nothing() || (context().batch_size_executed != batch_size))
         return false;
     OSL_DASSERT (bsg.uniform.context == &context() && bsg.uniform.renderer == context().renderer());
 
     int profile = shadingsys().m_profile;
     OIIO::Timer timer (profile ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
-
-    size_t prev_end_of_errors = context().m_buffered_errors.size();
 
     RunLLVMGroupFuncWide run_func = group()->llvm_compiled_wide_layer (layernumber);
     if (! run_func)
@@ -310,23 +304,13 @@ ShadingContext::Batched<WidthT>::execute_layer (int batch_size, BatchedShaderGlo
 
     if (batch_size > 0) {
         Mask<WidthT> run_mask(false);
-        for(int ri=0; ri < batch_size; ++ri)
-        {
-            run_mask.set_on(ri);
-        }
+        run_mask.set_count_on(batch_size);
 
         run_func (&bsg, context().m_heap.get(), run_mask.value());
     }
 
     if (profile)
         context().m_ticks += timer.ticks();
-
-    size_t new_end_of_errors = context().m_buffered_errors.size();
-    if (new_end_of_errors != prev_end_of_errors) {
-        context().m_buffered_error_batches.push_back(
-            ErrorBatch{static_cast<int>(prev_end_of_errors),
-                       static_cast<int>(new_end_of_errors)});
-    }
 
     return true;
 }
@@ -432,69 +416,27 @@ ShadingContext::process_errors () const
     // interleaved with other threads.
     lock_guard lock (buffered_errors_mutex);
 
-    if (false == m_execution_is_batched) {
-        // Non-batch errors are recorded with a mask with all lanes on.
-        // Ignore the mask, just print them out once
+    if (execution_is_batched()) {
+        OSL_DASSERT(batch_size_executed <= MaxSupportedSimdLaneCount);
+        // Process each data lane separately and in the correct order
+        for(int lane_mask=0; lane_mask < batch_size_executed; ++lane_mask) {
+            OSL_INTEL_PRAGMA(noinline)
+            process_errors_helper(shadingsys(), m_buffered_errors, 0, nerrors,
+                // Test Function returns true to process the ErrorItem
+                [=](Mask<MaxSupportedSimdLaneCount> mask)->bool
+                {
+                    return mask.is_on(lane_mask);
+                });
+        }
+    } else {
+        // Non-batch errors: ignore the mask, just print them out once
         OSL_INTEL_PRAGMA(noinline)
         process_errors_helper(shadingsys(), m_buffered_errors, 0, nerrors,
             // Test Function returns true to process the ErrorItem
-            [=](Mask<MaxSupportedSimdLaneCount> mask OSL_MAYBE_UNUSED)->bool
+            [=](Mask<MaxSupportedSimdLaneCount> /*mask*/)->bool
             {
-                OSL_DASSERT(mask.all_on());
                 return true;
             });
-    } else {
-
-        int boundaryIndex = 0;
-        int errorIndex=0;
-        do {
-
-            // We need to process all errors belonging to the same batch before moving on
-            // to the next to get the output order correct.
-            ErrorBatch error_batch;
-            if (boundaryIndex < static_cast<int>(m_buffered_error_batches.size())) {
-                error_batch = m_buffered_error_batches[boundaryIndex++];
-            } else {
-                // No further batches are explicitly defined,
-                // We we must not be buffering, so process the errors as batch
-                // otherwise process as unbatched (so no need to print once per
-                // data lane
-                error_batch.startAt = 0;
-                error_batch.endBefore = nerrors;
-            }
-
-            OSL_DASSERT(error_batch.startAt == errorIndex);
-            OSL_DASSERT(error_batch.endBefore >= errorIndex);
-            OSL_DASSERT(error_batch.endBefore >= error_batch.startAt);
-
-            // Process non-batched errors up to the start of the batch
-
-            OSL_INTEL_PRAGMA(noinline)
-            process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.startAt,
-                // Test Function returns true to process the ErrorItem
-                [=](Mask<MaxSupportedSimdLaneCount> mask OSL_MAYBE_UNUSED)->bool
-                {
-                    OSL_DASSERT(mask.all_on());
-                    return true;
-                });
-            errorIndex = error_batch.startAt;
-
-            // the printf call always sends a valid mask over, it could be 0x0000 to 0xFFFF
-
-            // Now for batched, process each data lane separately and in the correct order
-            for(int lane_mask=0; lane_mask < MaxSupportedSimdLaneCount; ++lane_mask) {
-                OSL_INTEL_PRAGMA(noinline)
-                process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore,
-                    // Test Function returns true to process the ErrorItem
-                    [=](Mask<MaxSupportedSimdLaneCount> mask)->bool
-                    {
-                        return mask.is_on(lane_mask);
-                    });
-            }
-            errorIndex = error_batch.endBefore;
-        } while (errorIndex < nerrors);
-
-        m_buffered_error_batches.clear();
     }
     m_buffered_errors.clear();
 }
@@ -513,15 +455,18 @@ const void *
 ShadingContext::symbol_data (const Symbol &sym) const
 {
     const ShaderGroup &sgroup (*group());
-    if (! sgroup.optimized())
-        return NULL;   // can't retrieve symbol if we didn't optimize it
+    if (execution_is_batched()) {
+        if (! sgroup.batch_jitted())
+            return NULL;   // can't retrieve symbol if we didn't optimize & batched jit
 
-    if (m_execution_is_batched) {
         if (sym.wide_dataoffset() >= 0 && (int)m_heapsize > sym.wide_dataoffset()) {
             // lives on the heap
             return m_heap.get() + sym.wide_dataoffset();
         }
     } else {
+        if (! sgroup.jitted())
+            return NULL;   // can't retrieve symbol if we didn't optimize & jit
+
         if (sym.dataoffset() >= 0 && (int)m_heapsize > sym.dataoffset()) {
             // lives on the heap
             return m_heap.get() + sym.dataoffset();

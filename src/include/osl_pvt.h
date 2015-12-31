@@ -609,8 +609,8 @@ public:
     void dataoffset(int d) { m_dataoffset = d; }
     int dataoffset() const { return m_dataoffset; }
 
-    void wide_dataoffset (int d) { m_wide_dataoffset = d; }
-    int wide_dataoffset () const { return m_wide_dataoffset; }
+    void wide_dataoffset(int d) { m_wide_dataoffset = d; }
+    int wide_dataoffset() const { return m_wide_dataoffset; }
 
     void initializers(int d) { m_initializers = d; }
     int initializers() const { return m_initializers; }

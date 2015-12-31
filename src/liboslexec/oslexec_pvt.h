@@ -1952,19 +1952,11 @@ private:
         Mask<MaxSupportedSimdLaneCount> mask;
     };
     mutable std::vector<ErrorItem> m_buffered_errors;
-    // Track which entries in m_buffered_errors came from
-    // batched execution as those ranges need to processed multiple
-    // times, once per active data lane
-    struct ErrorBatch
-    {
-        int startAt;
-        int endBefore;
-    };
-    mutable std::vector<ErrorBatch> m_buffered_error_batches;
 
     // When interpreting symbol addresses we need to know if the
     // wide data offsets should be used
-    bool m_execution_is_batched;
+    int batch_size_executed;
+    bool execution_is_batched() const { return batch_size_executed != 0; }
 };
 
 

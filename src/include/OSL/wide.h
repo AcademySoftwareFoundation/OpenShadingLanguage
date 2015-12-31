@@ -119,8 +119,6 @@ assign_all(Block<DataT, WidthT>&, const DataT&);
 // NOTE: additional constructors & helpers functions exist in the implementation
 // that were not specified in the descriptions above for brevity.
 
-static constexpr int MaxSupportedSimdLaneCount = 16;
-
 /// Type for an opaque pointer to whatever the renderer uses to represent a
 /// coordinate transformation.
 typedef const void* TransformationPtr;

@@ -1,0 +1,23 @@
+Compiled test.osl -> test.oso
+Test vector functions
+
+  V = vector (0 1 2) has components 0, 1, 2
+  After V[1] = 8, V = (0 8 2)
+  After V[2] = 0.5, V = (0 8 0.5)
+  dot ((0 8 0.5), (0 8 0.5)) = 64.25
+  dot ((0 8 0.5), (0 1 0)) = 8
+  cross ((1 0 0), (0 1 0)) = 0 0 1
+  length (0 1 0) = 1
+  length (1 1 0) = 1.41421
+  distance ((1 0 0), (0 1 0)) = 1.41421
+  distance ((1 0 0), (1 1 0)) = 1
+  distance ((1 0 0), (0 1 0), (1 0 0)) = 0
+  distance ((1 0 0), (0 1 0), (0 1 0)) = 0
+  distance ((1 0 0), (0 1 0), (0.5 0.5 0)) = 0
+  distance ((1 0 0), (0 1 0), (0.5 0.5 0.5)) = 0.5
+  distance ((1 0 0), (0 1 0), (2 1 0)) = 1.41421
+  normalize (1 1 0) = 0.707107 0.707107 0
+  normalize (0 8 0.5) = 0 0.998053 0.0623783
+  normalize (0 0 0) = 0 0 0
+  rotate(1 0 0, PI/2, (0,0,0), (0,0,1)) = -2.38419e-07 1 0
+

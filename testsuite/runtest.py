@@ -47,7 +47,13 @@ command = ""
 outputs = [ "out.txt" ]    # default
 failureok = 0
 failthresh = 0.004
-failpercent = 0.03
+hardfail = 0.01
+failpercent = 0.02
+
+if "TRAVIS" in os.environ and os.environ["TRAVIS"] :
+    failthresh *= 2.0
+    hardfail *= 2.0
+    failpercent *= 2.0
 
 compile_osl_files = True
 splitsymbol = ';'
@@ -199,9 +205,9 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             if extension == ".tif" or extension == ".exr" :
                 # images -- use idiff
                 cmpcommand = (os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", "idiff")
-                              + " -fail 0" 
+                              + " -fail " + str(failthresh)
                               + " -failpercent " + str(failpercent)
-                              + " -hardfail " + str(failthresh)
+                              + " -hardfail " + str(hardfail)
                               + " -warn " + str(2*failthresh)
                               + " " + out + " " + testfile)
                 # print "cmpcommand = " + cmpcommand

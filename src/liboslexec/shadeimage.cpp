@@ -182,7 +182,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
         }
 
         // Actually run the shader for this point
-        shadingsys.execute (*ctx, group, sg);
+        shadingsys.execute (ctx, group, sg);
 
         // Save all the designated outputs.
         int chan = 0;

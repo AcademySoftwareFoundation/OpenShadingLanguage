@@ -2094,11 +2094,11 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         }
         string_view paramname (paramname_string);
         int lockgeom = true;
-        // For speed, reserve space. Note that for "unsized" arrays,
-        // numelements() will return 1, so we only preallocate 1 slot
-        // and let it grow as needed. That's ok. For everything else, we
-        // will reserve the right amount up front.
-        int vals_to_preallocate = type.numelements() * type.aggregate;
+        // For speed, reserve space. Note that for "unsized" arrays, we only
+        // preallocate 1 slot and let it grow as needed. That's ok. For
+        // everything else, we will reserve the right amount up front.
+        int vals_to_preallocate = type.is_unsized_array()
+                                ? 1 : type.numelements() * type.aggregate;
         // Stop parsing values when we hit the limit based on the
         // declaration.
         int max_vals = type.is_unsized_array() ? 1<<28 : vals_to_preallocate;

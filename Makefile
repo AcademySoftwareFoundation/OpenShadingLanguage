@@ -264,16 +264,18 @@ endif
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
 
+TEST_FLAGS += --force-new-ctest-process --output-on-failure
+
 # 'make test' does a full build and then runs all tests
 test: cmake
 	${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
-	( cd ${build_dir} ; ctest --force-new-ctest-process -E broken ${TEST_FLAGS} )
+	( cd ${build_dir} ; ctest -E broken ${TEST_FLAGS} )
 
 # 'make testall' does a full build and then runs all tests (even the ones
 # that are expected to fail on some platforms)
 testall: cmake
 	${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
-	( cd ${build_dir} ; ctest --force-new-ctest-process ${TEST_FLAGS} )
+	( cd ${build_dir} ; ctest ${TEST_FLAGS} )
 
 #clean: testclean
 # 'make clean' clears out the build directory for this platform

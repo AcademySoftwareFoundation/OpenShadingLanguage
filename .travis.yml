@@ -22,6 +22,7 @@ env:
       - WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
       - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS=""
       - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=1"
+      - WHICHGCC=4.8 BUILD_FLAGS="" DEBUG=1
 
 # Add-ons: specify apt packages for Linux
 addons:
@@ -55,6 +56,7 @@ before_install:
           export PLATFORM=linux64 ;
           cat /proc/cpuinfo ;
       fi
+    - if [ $DEBUG == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
     - echo "Build platform name is $PLATFORM"
 
 install:

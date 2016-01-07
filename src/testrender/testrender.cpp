@@ -400,7 +400,7 @@ Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
     sg.I = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
-    shadingsys->execute(*ctx, *shaders[backgroundShaderID], sg);
+    shadingsys->execute(ctx, *shaders[backgroundShaderID], sg);
     return process_background_closure(sg.Ci);
 }
 
@@ -436,7 +436,7 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
         if (shaderID < 0 || !shaders[shaderID]) break; // no shader attached? done
 
         // execute shader and process the resulting list of closures
-        shadingsys->execute (*ctx, *shaders[shaderID], sg);
+        shadingsys->execute (ctx, *shaders[shaderID], sg);
         ShadingResult result;
         bool last_bounce = b == max_bounces;
         process_closure(result, sg.Ci, last_bounce);
@@ -500,7 +500,7 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
                     ShaderGlobals light_sg;
                     globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
                     // execute the light shader (for emissive closures only)
-                    shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
+                    shadingsys->execute (ctx, *shaders[shaderID], light_sg);
                     ShadingResult light_result;
                     process_closure(light_result, light_sg.Ci, true);
                     // accumulate contribution

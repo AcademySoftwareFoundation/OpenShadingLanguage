@@ -280,15 +280,6 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 }
 
 
-
-bool
-SimpleRenderer::has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg)
-{
-    return false;
-}
-
-
-
 bool
 SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)

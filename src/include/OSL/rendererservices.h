@@ -198,9 +198,6 @@ public:
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
                                ShaderGlobals *sg, void *val) = 0;
 
-    /// Does the current object have the named user-data associated with it?
-    virtual bool has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg) = 0;
-
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle (ustring filename);

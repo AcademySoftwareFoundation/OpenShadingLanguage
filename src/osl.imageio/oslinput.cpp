@@ -187,9 +187,6 @@ public:
                                ShaderGlobals *sg, void *val) {
         return false;   // FIXME?
     }
-    virtual bool has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg) {
-        return false;   // FIXME?
-    }
 };
 
 

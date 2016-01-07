@@ -69,7 +69,6 @@ public:
                                 TypeDesc type, ustring name, void *val);
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
                                ShaderGlobals *sg, void *val);
-    virtual bool has_userdata (ustring name, TypeDesc type, ShaderGlobals *sg);
 
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.

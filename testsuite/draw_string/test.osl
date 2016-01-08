@@ -1,0 +1,12 @@
+#include <oslutil.h>
+
+shader
+test (float K = 512, string text = "Hello World!", output color Cout = 0)
+{
+    float ds = u - 0.5;
+    float dt = v - 0.5;
+    if (ds * ds + dt * dt < 0.25)
+        Cout = draw_string(text, ds * K, dt * K, 1, 1, 0);
+    else
+        Cout = abs(color(ds, dt, 0));
+}

@@ -503,7 +503,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             compile-buffer
             component-range const-array-params const-array-fill
             debugnan debug-uninit
-            derivs derivs-muldiv-clobber error-dupes exit exponential
+            derivs derivs-muldiv-clobber
+            draw_string
+            error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
             geomath getattribute-camera getsymbol-nonheap gettextureinfo
             group-outputs groupstring

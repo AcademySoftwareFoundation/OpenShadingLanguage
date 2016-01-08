@@ -63,6 +63,19 @@ osl_strlen_is (const char *s)
 }
 
 OSL_SHADEOP int
+osl_hash_is (const char *s)
+{
+    return (int) USTR(s).hash();
+}
+
+OSL_SHADEOP int
+osl_getchar_isi (const char *str, int index)
+{
+    return str && unsigned(index) < USTR(str).length() ? str[index] : 0;
+}
+
+
+    OSL_SHADEOP int
 osl_startswith_iss (const char *s_, const char *substr_)
 {
     ustring substr (USTR(substr_));

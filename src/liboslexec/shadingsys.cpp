@@ -843,10 +843,12 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (functioncall, functioncall,       functioncall,  false,     0);
     OP (ge,          compare_op,          ge,            true,      0);
     OP (getattribute, getattribute,       getattribute,  false,     0);
+    OP (getchar,      generic,            getchar,       true,      0);
     OP (getmatrix,   getmatrix,           getmatrix,     false,     0);
     OP (getmessage,  getmessage,          getmessage,    false,     0);
     OP (gettextureinfo, gettextureinfo,   gettextureinfo,false,     TEX);
     OP (gt,          compare_op,          gt,            true,      0);
+    OP (hash,        generic,             hash,          true,      0);
     OP (if,          if,                  if,            false,     0);
     OP (inversesqrt, generic,             inversesqrt,   true,      0);
     OP (isconnected, generic,             none,          true,      0);

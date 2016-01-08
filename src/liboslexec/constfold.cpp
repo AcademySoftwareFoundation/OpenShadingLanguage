@@ -1053,8 +1053,46 @@ DECLFOLDER(constfold_strlen)
     if (S.is_constant()) {
         ASSERT (S.typespec().is_string());
         int result = (int) (*(ustring *)S.data()).length();
-        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
+        int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold strlen");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_hash)
+{
+    // Try to turn R=hash(s) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
+    if (S.is_constant()) {
+        ASSERT (S.typespec().is_string());
+        int result = (int) (*(ustring *)S.data()).hash();
+        int cind = rop.add_constant (result);
+        rop.turn_into_assign (op, cind, "const fold hash");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_getchar)
+{
+    // Try to turn R=getchar(s,i) into R=C
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol &I (*rop.inst()->argsymbol(op.firstarg()+2));
+    if (S.is_constant() && I.is_constant()) {
+        ASSERT (S.typespec().is_string());
+        ASSERT (I.typespec().is_int());
+        int idx = (int) (*(int *)I.data());
+        int len = (int) (*(ustring *)S.data()).length();
+        int result = idx >= 0 && idx < len ? (*(ustring *)S.data()).c_str()[idx] : 0;
+        int cind = rop.add_constant (result);
+        rop.turn_into_assign (op, cind, "const fold getchar");
         return 1;
     }
     return 0;
@@ -1076,7 +1114,7 @@ DECLFOLDER(constfold_endswith)
         int result = 0;
         if (elen <= slen)
             result = (strncmp (s.c_str()+slen-elen, e.c_str(), elen) == 0);
-        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
+        int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold endswith");
         return 1;
     }
@@ -1327,7 +1365,7 @@ DECLFOLDER(constfold_regex_search)
         const ustring &r (*(ustring *)Reg.data());
         boost::regex reg (r.string());
         int result = boost::regex_search (s.string(), reg);
-        int cind = rop.add_constant (TypeDesc::TypeInt, &result);
+        int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold regex_search");
         return 1;
     }

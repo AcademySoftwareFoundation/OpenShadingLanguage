@@ -470,8 +470,9 @@ float aastep (float edge, float s) {
 
 
 // String functions
-
 int strlen (string s) BUILTIN;
+int hash (string s) BUILTIN;
+int getchar (string s, int index) BUILTIN;
 int startswith (string s, string prefix) BUILTIN;
 int endswith (string s, string suffix) BUILTIN;
 string substr (string s, int start, int len) BUILTIN;

@@ -335,6 +335,8 @@ DECL (osl_determinant_fm, "fX")
 
 DECL (osl_concat_sss, "sss")
 DECL (osl_strlen_is, "is")
+DECL (osl_hash_is, "is")
+DECL (osl_getchar_isi, "isi");
 DECL (osl_startswith_iss, "iss")
 DECL (osl_endswith_iss, "iss")
 DECL (osl_stoi_is, "is")

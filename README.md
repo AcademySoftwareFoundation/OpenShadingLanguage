@@ -3,7 +3,7 @@ README for Open Shading Language
 
 Build status:
 
-[![Build Status](https://travis-ci.org/lgritz/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/lgritz/OpenShadingLanguage)
+[![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
 
 Table of contents
 ------------------

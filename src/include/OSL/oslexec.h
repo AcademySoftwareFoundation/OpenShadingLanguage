@@ -42,8 +42,10 @@ OSL_NAMESPACE_ENTER
 class RendererServices;
 class ShaderGroup;
 typedef shared_ptr<ShaderGroup> ShaderGroupRef;
-typedef ShaderGroup ShadingAttribState;       // DEPRECATED name
-typedef ShaderGroupRef ShadingAttribStateRef; // DEPRECATED name
+OSL_DEPRECATED("Use ShaderGroupRef instead")
+typedef ShaderGroup ShadingAttribState;
+OSL_DEPRECATED("Use ShaderGroupRef instead")
+typedef ShaderGroupRef ShadingAttribStateRef;
 struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
@@ -75,11 +77,12 @@ public:
                    ErrorHandler *err=NULL);
     ~ShadingSystem ();
 
-    /// DEPRECATED -- it's ok now to just construct a ShadingSystem.
+    OSL_DEPRECATED("It's ok now to just construct a ShadingSystem")
     static ShadingSystem *create (RendererServices *renderer=NULL,
                                   TextureSystem *texturesystem=NULL,
                                   ErrorHandler *err=NULL);
-    /// DEPRECATED -- it's ok now to just destroy a ShadingSystem.
+
+    OSL_DEPRECATED("It's ok now to just destroy a ShadingSystem")
     static void destroy (ShadingSystem *x);
 
     /// Set an attribute controlling the shading system.  Return true
@@ -445,8 +448,9 @@ public:
     /// setup, don't actually run the shader.
     bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &globals, bool run=true);
+    OSL_DEPRECATED("Deprecated since 1.6")
     bool execute (ShadingContext &ctx, ShaderGroup &group,
-                  ShaderGlobals &globals, bool run=true); // DEPRECATED (1.6)
+                  ShaderGlobals &globals, bool run=true);
 
     /// Bind a shader group and globals to the context, in preparation to
     /// execute, including optimization and JIT of the group (if it has not

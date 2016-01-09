@@ -640,7 +640,7 @@ setup_output_images (ShadingSystem *shadingsys,
     // not to actually run the shader.
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
-    shadingsys->execute (*ctx, *shadergroup, sg, false);
+    shadingsys->execute (ctx, *shadergroup, sg, false);
 
     if (entryoutputs.size()) {
         std::cout << "Entry outputs:";
@@ -886,7 +886,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
             // Actually run the shader for this point
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
-                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
+                shadingsys->execute (ctx, *shadergroup, shaderglobals);
             } else {
                 // Explicit list of entries to call in order
                 shadingsys->execute_init (*ctx, *shadergroup, shaderglobals);

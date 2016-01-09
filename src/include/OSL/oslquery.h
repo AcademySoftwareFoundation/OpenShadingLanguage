@@ -156,7 +156,7 @@ public:
         return e;
     }
 
-    /// DEPRECATED(1.5) -- included for back compatibility
+    OSL_DEPRECATED("Deprecated since 1.5, included for back compatibility")
     std::string error (void) { return geterror(); }
 
 private:

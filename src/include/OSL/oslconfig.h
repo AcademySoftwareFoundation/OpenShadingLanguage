@@ -130,5 +130,18 @@ using OIIO::string_view;
   using boost::weak_ptr;
 #endif
 
+#ifndef __has_attribute
+#  define __has_attribute(x) 0
+#endif
+
+#if __cplusplus >= 201402L || (__cplusplus >= 201103L && __has_attribute(deprecated))
+#  define OSL_DEPRECATED(msg) [[deprecated(msg)]]
+#elif defined(__GNUC__)
+#  define OSL_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#elif defined(_MSC_VER)
+#  define OSL_DEPRECATED(msg) __declspec(deprecated(msg))
+#else
+#  define OSL_DEPRECATED(msg)
+#endif
 
 OSL_NAMESPACE_EXIT

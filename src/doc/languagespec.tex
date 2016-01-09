@@ -3809,6 +3809,19 @@ is omitted, return the rest of \emph{s}, starting with \emph{start}.  If
 \emph{s}).
 \apiend
 
+\apiitem{int {\ce getchar} (string s, int n)}
+\indexapi{getchar()}
+\NEW % 1.7
+Returns the numeric value of the $n^{\text{th}}$ character of the string,
+or {\cf 0} if {\cf n} does not index a valid character of the string.
+\apiend
+
+\apiitem{int {\ce hash} (string s)}
+\indexapi{hash()}
+\NEW % 1.7
+Returns a deterministic, repeatable \emph{hash} of the string.
+\apiend
+
 \apiitem{int {\ce regex_search} (string subject, string regex) \\
 int {\ce regex_search} (string subject, int results[], string regex)}
 \indexapi{regex_search()}

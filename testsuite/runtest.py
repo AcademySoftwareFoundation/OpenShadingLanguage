@@ -119,7 +119,7 @@ def oiio_app (app):
 # Construct a command that will compile the shader file, appending output to
 # the file "out.txt".
 def oslc (args) :
-    return (osl_app("oslc") + " -I../../src/shaders/ " + args + " >> out.txt 2>&1 ;\n")
+    return (osl_app("oslc") + args + " >> out.txt 2>&1 ;\n")
 
 
 # Construct a command that will run oslinfo, appending output to

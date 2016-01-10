@@ -257,7 +257,7 @@ RendererServices::get_texture_info (ShaderGlobals *sg, ustring filename,
     bool status;
 #if OIIO_VERSION >= 10602
     if (texture_handle)
-        status = texturesys()->get_texture_info (texture_handle, subimage,
+        status = texturesys()->get_texture_info (texture_handle, NULL, subimage,
                                                  dataname, datatype, data);
     else
 #endif

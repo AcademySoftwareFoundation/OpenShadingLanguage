@@ -96,7 +96,11 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     }
 
     int profile = shadingsys().m_profile;
+#if OIIO_VERSION >= 10608
+    OIIO::Timer timer (profile ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
+#else
     OIIO::Timer timer (profile);
+#endif
 
     // Allocate enough space on the heap
     size_t heap_size_needed = sgroup.llvm_groupdata_size();
@@ -146,7 +150,11 @@ ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
     DASSERT (ssg.context == this && ssg.renderer == renderer());
 
     int profile = shadingsys().m_profile;
+#if OIIO_VERSION >= 10608
+    OIIO::Timer timer (profile ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
+#else
     OIIO::Timer timer (profile);
+#endif
 
     RunLLVMGroupFunc run_func = group()->llvm_compiled_layer (layernumber);
     if (! run_func)

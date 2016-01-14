@@ -134,9 +134,9 @@ using OIIO::string_view;
 #  define __has_attribute(x) 0
 #endif
 
-#if __cplusplus >= 201402L || (__cplusplus >= 201103L && __has_attribute(deprecated))
+#if OSL_CPLUSPLUS_VERSION >= 14 && __has_attribute(deprecated)
 #  define OSL_DEPRECATED(msg) [[deprecated(msg)]]
-#elif defined(__GNUC__) && OIIO_GNUC_VERSION >= 40600
+#elif (defined(__GNUC__) && OIIO_GNUC_VERSION >= 40600) || defined(__clang__)
 #  define OSL_DEPRECATED(msg) __attribute__((deprecated(msg)))
 #elif defined(__GNUC__) /* older gcc -- only the one with no message */
 #  define OSL_DEPRECATED(msg) __attribute__((deprecated))

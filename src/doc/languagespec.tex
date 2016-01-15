@@ -55,14 +55,14 @@ Language Specification
 %\\ \large (CONFIDENTIAL --- draft in progress) 
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2015 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2016 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 9 Oct, 2015 \\
-%~ (with corrections, 2 Oct 2014)
+\date{{\large Date: 14 Jan, 2016 \\
+%~ (with corrections, 14 Jan 2016)
 }
 \bigskip
 \bigskip
@@ -92,7 +92,6 @@ Editor: Larry Gritz \\
 \def\P{{\cf P}\xspace}
 \def\dPdu{{\cf dPdu}\xspace}
 \def\dPdv{{\cf dPdv}\xspace}
-\def\currentspace{{\cf "current"} space\xspace}
 \def\commonspace{{\cf "common"} space\xspace}
 \def\shaderspace{{\cf "shader"} space\xspace}
 \def\worldspace{{\cf "world"} space\xspace}
@@ -130,7 +129,7 @@ documentation are:
 
 \vspace*{0.2in}
 
-Copyright (c) 2009-2015 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2016 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 \vspace{0.5in}
@@ -1746,9 +1745,9 @@ The choice of \commonspace is renderer-dependent, though will usually
 be equivalent to either \cameraspace or \worldspace.
 
 Some computations may be easier in a coordinate system other than
-\currentspace.  For example, it is much more convenient to apply a
+\commonspace.  For example, it is much more convenient to apply a
 ``solid texture'' to a moving object in its \objectspace than in
-\currentspace.  For these reasons, SL provides a built-in 
+\commonspace.  For these reasons, OSL provides a built-in
 {\cf transform} function that
 allows you to transform points, vectors, and normals 
 among different coordinate systems (see Section~\ref{sec:stdlib:geom}).  Note,
@@ -1889,7 +1888,7 @@ reference to a named space:
 \end{code}
 
 \noindent The first form creates the matrix that transforms points from
-\currentspace to \shaderspace.  Transforming points by this matrix
+\commonspace to \shaderspace.  Transforming points by this matrix
 is identical to calling {\cf transform("shader",...)}.
 The second form prepends the current-to-world transformation matrix
 onto the $4 \times 4$ matrix with components $m_{0,0} ... m_{3,3}$.
@@ -3677,7 +3676,7 @@ void {\ce displace} (vector offset)}
 \indexapi{displace()}
 
 Displace the surface in the direction of the shading normal \N by
-\emph{amp} units as measured in the named \emph{space} (or \currentspace
+\emph{amp} units as measured in the named \emph{space} (or \commonspace
 if none is specified).  Alternately, the surface may be moved by a fully
 general \emph{offset}, which does not need to be in the direction of the
 surface normal.
@@ -3812,7 +3811,7 @@ is omitted, return the rest of \emph{s}, starting with \emph{start}.  If
 \apiitem{int {\ce getchar} (string s, int n)}
 \indexapi{getchar()}
 \NEW % 1.7
-Returns the numeric value of the $n^{\text{th}}$ character of the string,
+Returns the numeric value of the $n^{\mathrm{th}}$ character of the string,
 or {\cf 0} if {\cf n} does not index a valid character of the string.
 \apiend
 

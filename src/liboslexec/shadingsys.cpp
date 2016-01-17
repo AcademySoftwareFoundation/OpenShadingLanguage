@@ -1405,6 +1405,11 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
         OIIO::Filesystem::searchpath_split (m_searchpath, m_searchpath_dirs);
         return true;
     }
+    if (name == "searchpath:library" && type == TypeDesc::STRING) {
+        m_library_searchpath = std::string (*(const char **)val);
+        OIIO::Filesystem::searchpath_split (m_library_searchpath, m_library_searchpath_dirs);
+        return true;
+    }
     if (name == "colorspace" && type == TypeDesc::STRING) {
         ustring c = ustring (*(const char **)val);
         if (colorsystem().set_colorspace(c))
@@ -1473,6 +1478,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     lock_guard guard (m_mutex);  // Thread safety
 
     ATTR_DECODE_STRING ("searchpath:shader", m_searchpath);
+    ATTR_DECODE_STRING ("searchpath:library", m_library_searchpath);
     ATTR_DECODE ("statistics:level", int, m_statslevel);
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);

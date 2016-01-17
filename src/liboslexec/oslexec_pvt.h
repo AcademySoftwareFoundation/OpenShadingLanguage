@@ -582,6 +582,9 @@ public:
     ustring debug_groupname() const { return m_debug_groupname; }
     ustring debug_layername() const { return m_debug_layername; }
 
+    std::string library_searchpath() const { return m_library_searchpath; }
+    const std::vector<std::string> & library_searchpath_dirs() const { return m_library_searchpath_dirs; }
+
     /// Look within the group for separate nodes that are actually
     /// duplicates of each other and combine them.  Return the number of
     /// instances that were eliminated.
@@ -790,6 +793,8 @@ private:
     ustring m_archive_filename;           ///< Name of filename for group archive
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
+    std::string m_library_searchpath;     ///< Library search path
+    std::vector<std::string> m_library_searchpath_dirs; ///< All library searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs

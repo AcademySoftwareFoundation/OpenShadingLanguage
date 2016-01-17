@@ -46,6 +46,7 @@ static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
 static std::string dataformatname = "";
 static std::string shaderpath;
+static std::string librarypath;
 static std::vector<std::string> entrylayers;
 static std::vector<std::string> entryoutputs;
 static std::vector<int> entrylayer_index;
@@ -113,7 +114,36 @@ inject_params ()
                                pv.interp() == ParamValue::INTERP_CONSTANT);
 }
 
-
+static std::string get_executable_directory() {
+    #if (defined(_WIN32) || defined(_WIN64))
+        // TODO: test on windows
+        char path_to_exec[PATH_MAX+1];
+        int len =  GetModuleFileNameA(NULL, path_to_exec, PATH_MAX);
+        ASSERT(len < (PATH_MAX+1));
+        for(;;) {
+            if (success[--len] == '\\') {
+                path_to_exec[len] = 0;
+                break;
+            }
+        }
+        //std::cout << path_to_exec << std::endl;
+        return path_to_exec;
+    #else
+        char path_to_exec[PATH_MAX+1];
+        char * success = realpath("/proc/self/exe", path_to_exec);
+        ASSERT(success);
+        int len = strlen(path_to_exec);
+        ASSERT(len < (PATH_MAX+1));
+        for(;;) {
+            if (success[--len] == '/') {
+                path_to_exec[len] = 0;
+                break;
+            }
+        }
+        //std::cout << path_to_exec << std::endl;
+        return path_to_exec;
+    #endif
+}
 
 // Set shading system global attributes based on command line options.
 static void
@@ -159,6 +189,18 @@ set_shadingsys_options ()
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
+    if (librarypath.empty()) {
+        // Look in expected dist directory tree,
+        // also look in expected build tree for the unittests
+        // TODO: test on windows
+#if (defined(_WIN32) || defined(_WIN64))
+        static const char * relative_lib_dir = "\\..\\lib64:\\..\\liboslexec";
+#else
+        static const char * relative_lib_dir = "/../lib64:/../liboslexec";
+#endif
+        librarypath = get_executable_directory() + relative_lib_dir;
+    }
+    shadingsys->attribute ("searchpath:library", librarypath);
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
@@ -571,6 +613,7 @@ getargs (int argc, const char *argv[])
                 "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
                 "--path %s", &shaderpath, "Specify oso search path",
+                "--library %s", &librarypath, "Specify library search path",
                 "--res %d %d", &xres, &yres, "Make an W x H image",
                 "-g %d %d", &xres, &yres, "", // synonym for -res
                 "--options %s", &extraoptions, "Set extra OSL options",

@@ -7,6 +7,7 @@ import platform
 import subprocess
 import difflib
 import filecmp
+import shutil
 
 from optparse import OptionParser
 
@@ -42,6 +43,7 @@ tmpdir = os.path.abspath (tmpdir)
 
 refdir = "ref/"
 parent = "../../../../../"
+test_source_dir = "../../../../testsuite/" + os.path.basename(os.path.abspath(srcdir))
 
 command = ""
 outputs = [ "out.txt" ]    # default
@@ -57,6 +59,16 @@ splitsymbol = ';'
 #print ("tmpdir = " + tmpdir)
 #print ("path = " + path)
 #print ("refdir = " + refdir)
+print ("test source dir = " + test_source_dir)
+
+if not os.path.exists("./ref") :
+    os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
+if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
+    os.symlink (os.path.join (test_source_dir, "src"), "./src")
+if not os.path.exists("./data") :
+    os.symlink (test_source_dir, "./data")
+if not os.path.exists("../common") :
+    os.symlink ("../../../testsuite/common", "../common")
 
 ###########################################################################
 
@@ -255,7 +267,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
                 # If we failed to get a match for an image, send the idiff
                 # results to the console
-                os.system (oiiodiff (out, os.path.join ("ref", out), silent=False))
+                os.system (oiiodiff (out, os.path.join (refdir, out), silent=False))
 
     return (err)
 
@@ -268,8 +280,11 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
 # Read the individual run.py file for this test, which will define 
 # command and outputs.
 #
-if os.path.exists("run.py") :
-    execfile ("run.py")
+with open(os.path.join(test_source_dir,"run.py")) as f:
+    code = compile(f.read(), "run.py", 'exec')
+    exec (code)
+# if os.path.exists("run.py") :
+#     execfile ("run.py")
 
 # Allow a little more slop for slight pixel differences when in DEBUG
 # mode or when running on remote Travis-CI machines.
@@ -285,6 +300,12 @@ if (("TRAVIS" in os.environ and os.environ["TRAVIS"]) or
 
 # Force any local shaders to compile automatically, prepending the
 # compilation onto whatever else the individual run.py file requested.
+for testfile in glob.glob (os.path.join (test_source_dir, "*.osl")) :
+    shutil.copyfile (testfile, os.path.basename(testfile))
+for testfile in glob.glob (os.path.join (test_source_dir, "*.h")) :
+    shutil.copyfile (testfile, os.path.basename(testfile))
+for testfile in glob.glob (os.path.join (test_source_dir, "*.xml")) :
+    shutil.copyfile (testfile, os.path.basename(testfile))
 if compile_osl_files :
     compiles = ""
     oslfiles = glob.glob ("*.osl")

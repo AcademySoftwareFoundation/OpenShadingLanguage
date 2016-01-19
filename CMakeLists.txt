@@ -445,11 +445,15 @@ add_subdirectory (src/doc)
 #########################################################################
 # Testing
 
-# Make a copy of the testsuite into the build area
-if (DEFINED CMAKE_VERSION AND NOT CMAKE_VERSION VERSION_LESS 2.8)
-    file (COPY "${PROJECT_SOURCE_DIR}/testsuite"
-          DESTINATION "${CMAKE_BINARY_DIR}")
-endif()
+# Make a build/platform/testsuite directory, and copy the master runtest.py
+# there. The rest is up to the tests themselves.
+file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/testsuite")
+add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${CMAKE_SOURCE_DIR}/testsuite/runtest.py"
+                        "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
+                    MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/testsuite/runtest.py")
+add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
 
 macro ( TESTSUITE )
     parse_arguments (_ats "LABEL" "" ${ARGN})
@@ -460,6 +464,7 @@ macro ( TESTSUITE )
     endif ()
     # Add the tests if all is well.
     foreach (_testname ${_ats_DEFAULT_ARGS})
+        set (_testsrcdir "${CMAKE_SOURCE_DIR}/testsuite/${_testname}")
         set (_testdir "${CMAKE_BINARY_DIR}/testsuite/${_testname}")
         if (_ats_LABEL MATCHES "broken")
             set (_testname "${_testname}-broken")
@@ -475,11 +480,13 @@ macro ( TESTSUITE )
             message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
         endif ()
 
+        file (MAKE_DIRECTORY "${_testdir}")
+
         # Run the test unoptimized, unless it's a "render_*" or "oslinfo_*"
         # test, which we don't bother testing unoptimized.
         if (NOT _testname MATCHES "^render" AND
             NOT _testname MATCHES "^oslinfo" AND
-            NOT EXISTS "${_testdir}/OPTIMIZEONLY")
+            NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
           set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
           add_test ( NAME ${_testname}
                      COMMAND env ${_env} ${_runtest} )

@@ -52,9 +52,12 @@ endif ()
 ###########################################################################
 # IlmBase setup
 
-find_package (IlmBase REQUIRED)
+if (NOT ILMBASE_INCLUDE_DIR)
+    find_package (IlmBase REQUIRED)
+endif ()
 
 include_directories ("${ILMBASE_INCLUDE_DIR}")
+include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
 
 macro (LINK_ILMBASE target)
     target_link_libraries (${target} ${ILMBASE_LIBRARIES})
@@ -72,7 +75,7 @@ if (NOT Boost_FIND_QUIETLY)
 endif ()
 
 if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
-  set (Boost_ADDITIONAL_VERSIONS "1.57" "1.56"
+  set (Boost_ADDITIONAL_VERSIONS "1.60" "1.59" "1.58" "1.57" "1.56"
                                  "1.55" "1.54" "1.53" "1.52" "1.51" "1.50"
                                  "1.49" "1.48" "1.47" "1.46" "1.45" "1.44"
                                  "1.43" "1.43.0" "1.42" "1.42.0")

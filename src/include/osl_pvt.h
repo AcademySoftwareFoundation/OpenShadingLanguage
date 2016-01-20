@@ -481,6 +481,7 @@ public:
         , m_allowconnect(true)
         , m_renderer_output(false)
         , m_readonly(false)
+        , m_is_uniform(true)
         , m_valuesource(DefaultVal)
         , m_free_data(false)
         , m_fieldid(-1)
@@ -744,6 +745,12 @@ public:
     bool renderer_output() const { return m_renderer_output; }
     void renderer_output(bool v) { m_renderer_output = v; }
 
+    // When not uniform a symbol will have a varying value under batched
+    // execution and must use a Wide data type to hold different values
+    // for each data lane executing
+    bool is_uniform() const { return m_is_uniform; }
+    void make_varying() { m_is_uniform = false; }
+
     bool readonly() const { return m_readonly; }
     void readonly(bool v) { m_readonly = v; }
 
@@ -826,6 +833,7 @@ protected:
     unsigned m_allowconnect : 1;     ///< Is the param not overridden by geom?
     unsigned m_renderer_output : 1;  ///< Is this sym a renderer output?
     unsigned m_readonly : 1;         ///< read-only symbol
+    unsigned m_is_uniform : 1;       ///< symbol is uniform under batched execution
     char m_valuesource;              ///< Where did the value come from?
     bool m_free_data;                ///< Free m_data upon destruction?
     short m_fieldid;                 ///< Struct field of this var (or -1)
@@ -867,6 +875,7 @@ public:
         m_argread        = ~1;  // Default - all args are read except the first
         m_argwrite       = 1;   // Default - first arg only is written by the op
         m_argtakesderivs = 0;   // Default - doesn't take derivs
+        m_requires_masking = 0; // Default - doesn't require masking
     }
 
     ustring opname() const { return m_op; }
@@ -1028,6 +1037,18 @@ public:
     /// different form.  Only opname is changed.
     void transmute_opname(ustring opname) { m_op = opname; }
 
+    /// Op would require masking under batched execution
+    /// when its arguments are not uniform (varying)
+    bool requires_masking() const { return m_requires_masking; }
+    void require_masking() { m_requires_masking = true; }
+
+    /// Analysis might need to tag specific operations with flags that
+    /// are later used in code generation.  The meaning of these flags
+    /// are dependent on the type of operation.  Choose to embed a flag
+    /// here so that it is stable when a OpcodeVec is modified.
+    bool analysis_flag() const { return m_analysis_flag; }
+    void analysis_flag(bool v) { m_analysis_flag = v; }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument
@@ -1044,6 +1065,8 @@ private:
     // more than 32 args, and those that do are read-only that far out.
     // Seems silly to add complexity here to deal with arbitrary param
     // counts and read/write-ability for cases that never come up.
+    unsigned m_requires_masking : 1;///< Op requires masking under batched execution when its arguments are not uniform
+    unsigned m_analysis_flag : 1;   ///< Op specific analysis flag, meaning depends on op
 };
 
 

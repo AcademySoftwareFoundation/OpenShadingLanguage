@@ -168,7 +168,7 @@ set_shadingsys_options ()
         {"/../lib64", "/../lib"};
 #endif
     auto executable_directory = OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path());
-    bool dirNum = 0;
+    int dirNum = 0;
 	std::string librarypath;
     for (const char * relative_lib_dir:relative_lib_dirs) {
         if(dirNum++ > 0) librarypath	+= ":";

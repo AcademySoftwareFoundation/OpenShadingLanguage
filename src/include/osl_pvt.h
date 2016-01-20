@@ -749,6 +749,7 @@ public:
     // execution and must use a Wide data type to hold different values
     // for each data lane executing
     bool is_uniform() const { return m_is_uniform; }
+    bool is_varying() const { return (m_is_uniform == 0); }
     void make_varying() { m_is_uniform = false; }
 
     bool readonly() const { return m_readonly; }

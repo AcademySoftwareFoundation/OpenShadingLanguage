@@ -877,6 +877,7 @@ public:
         m_argwrite       = 1;   // Default - first arg only is written by the op
         m_argtakesderivs = 0;   // Default - doesn't take derivs
         m_requires_masking = 0; // Default - doesn't require masking
+        m_analysis_flag = 0;    // Default - optional analysis flag is not set
     }
 
     ustring opname() const { return m_op; }

@@ -1042,7 +1042,7 @@ public:
     /// Op would require masking under batched execution
     /// when its arguments are not uniform (varying)
     bool requires_masking() const { return m_requires_masking; }
-    void require_masking() { m_requires_masking = true; }
+    void requires_masking(bool v) { m_requires_masking = v; }
 
     /// Analysis might need to tag specific operations with flags that
     /// are later used in code generation.  The meaning of these flags

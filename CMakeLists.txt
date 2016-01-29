@@ -4,7 +4,7 @@ project (OSL)
 set (OSL_LIBRARY_VERSION_MAJOR 1)
 set (OSL_LIBRARY_VERSION_MINOR 7)
 set (OSL_LIBRARY_VERSION_PATCH 1)
-set (OSL_LIBRARY_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
+set (OSL_LIBRARY_VERSION_RELEASE_TYPE "")   # "dev", "betaX", "RCY", ""
 
 # Version of the OSO file format and instruction set
 set (OSO_FILE_VERSION_MAJOR 1)

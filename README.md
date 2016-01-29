@@ -227,7 +227,7 @@ Current state of the project and road map
 -----------------------------------------
 
 At Sony Pictures Imageworks, we are exclusively using OSL in our
-proprietary renderer, "Arnold."  Completed productions that used OSL for
+proprietary renderer, "Arnold." Completed productions that used OSL for
 shading have included:
 
     Men in Black 3
@@ -245,6 +245,9 @@ shading have included:
     Fury
     American Sniper
     Pixels
+    Hotel Transylvania 2
+    Concussion
+    Alice in Wonderland: Through the Looking Glass
 
 And more are currently in production. Our shader-writing team works
 entirely in OSL, all productions use OSL, and we've even removed all the

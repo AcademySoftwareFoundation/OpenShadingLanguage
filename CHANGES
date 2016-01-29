@@ -1,6 +1,10 @@
 Changes:
 
-Release 1.7 -- 29 Jan 2016 (compared to 1.6)
+Release 1.7.2 -- in progress (compared to 1.7.2)
+--------------------------------------------------
+
+
+Release 1.7 [1.7.2] -- 29 Jan 2016 (compared to 1.6)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:

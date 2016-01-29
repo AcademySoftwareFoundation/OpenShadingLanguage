@@ -1,5 +1,21 @@
 Changes:
 
+Release 1.8 -- (in progress - dev) ?? 2016 (compared to 1.7)
+-----------------------------------------------
+Language, standard libary, and compiler changes (for shader writers):
+* Language features:
+* Standard library additions/changes:
+API changes, new options, new ShadingSystem features (for renderer writers):
+* ShadingSystem attribute additions/changes:
+* Shader group attribute additions/changes:
+* RendererServices:
+Performance improvements:
+Bug fixes and other improvements:
+Build & test system improvements and developer goodies:
+Documentation:
+
+
+
 Release 1.7 -- 29 Jan 2016 (compared to 1.6)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):

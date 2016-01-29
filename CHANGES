@@ -1,44 +1,75 @@
 Changes:
 
-Release 1.7 (in progress - dev) -- ?? 2015 (compared to 1.6)
+Release 1.7 -- 29 Jan 2016 (compared to 1.6)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
-* Support for closure arrays in shader inputs. (1.7.0)
+* Language features:
+   * Support for closure arrays in shader inputs. #544 (1.7.0)
+   * Disallow quote strings from spanning lines (just like you can't in
+     C).  This was never intended, but was accidentally allowed by the
+     oslc lexer.  #613 (1.7.1)
+* Standard library additions/changes:
+   * linearstep() and smooth_linearstep() functions. #566 (1.7.0)
+   * isconstant(expr) returns 1 if the expression can be turned into
+     a constant at runtime (with full knowledge of the shader group's
+     parameter values and connections). This is helpful mostly for advanced
+     shader writers to verify their assuptions about which expressions can
+     end up being fully constant-folded by the runtime optimizer. #578 (1.7.1)
+   * New behavior of isconnected(parmaname): return 1 if the parameter
+     is connected to an upstream layer, 2 if connected to a downstream layer,
+     3 if both, 0 of neither. #589 (1.7.1)
+   * int hash(string) returns an integer hash of a string. #605 (1.7.1)
+   * int getchar(string s,int i) returns the integer character code of the
+     i-th character in string s. #589 (1.7.1)
 * Removed from stdosl.h all closure function declarations that were not
   documented in the spec and not implemented in testrender. (1.7.0)
-* New linearstep() and smooth_linearstep() functions in the standard
-  OSL library. #566 (1.7.0)
+* osutil.h changes:
+   * New draw_string() rasterizes a string! #606 (1.7.1)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * shade_image() utility runs a shader to generate every pixel of an ImageBuf.
   (1.7.0)
-* ShadingSystem attribute "lockgeom" default changed to 1. (1.7.0)
 * ShaingSystem::optimize_group() is a new method that lets you force a
   shader group to optimize/JIT (without executing it). (1.7.0)
-* osl.imageio.so -- an OIIO image reader plusin that runs OSL shaders to
-  generate pixels in an image (or texture). (1.7.0)
-* SS::getattribute new attributes "num_attributes_needed", "attributes_needed",
-  "attribute_scopes", and "unknown_attributes_needed" can be used to query
-  for a shader group what OSL getattribute queries it might make. #537 (1.7.0)
 * Remove deprecated ShadingSystem::state() method. #551 (1.7.0)
-* "llvm_debug_layers" controls debug printfs for layer enter/exit (strictly
-  for our debugging of the system; not intended for users). (1.7.0)
-* Group attribute "entry_layers" can explicitly provide a list of which
-  layers within the group (specified by layer names) are "entry points",
-  and then new ShadingSystem methods execute_init(), execute_layer(), and
-  execute_cleanup() can be used to call them individually in any order.
-  The old execute(), which executes starting with the "root" and lazily
-  evaluating any upstream nodes needed, still works and is still the usual
-  way to run shaders for most purposes. #553 (1.7.0)
 * Changed logic of lazy shader layer evaluation: "unconnected" layers
   are now lazy. That means that shaders that appear to have no connected
   outputs, and don't set globals or set renderer outputs, are no longer
   run unconditionally. #560 (1.7.0)
+* ShadingSystem attribute additions/changes:
+   * ShadingSystem attribute "lockgeom" default changed to 1. (1.7.0)
+   * SS::getattribute new attributes "num_attributes_needed",
+     "attributes_needed", "attribute_scopes", and
+     "unknown_attributes_needed" can be used to query for a shader group
+     what OSL getattribute queries it might make. #537 (1.7.0)
+   * "llvm_debug_layers" controls debug printfs for layer enter/exit
+     (strictly for our debugging of the system; not intended for
+     users). (1.7.0)
+   * "opt_passes" controls the number of optimization passes over each
+     instance (default: 10). This is mainly for developer debugging, you
+     should not need to change or expost this. #576 (1.7.1)
+   * "connection_error" controls whether a bad connection is considered
+     a true error (or is just ignored). #583 (1.7.1)
+* Shader group attribute additions/changes:
+   * Group attribute "entry_layers" can explicitly provide a list of
+     which layers within the group (specified by layer names) are "entry
+     points", and then new ShadingSystem methods execute_init(),
+     execute_layer(), and execute_cleanup() can be used to call them
+     individually in any order.  The old execute(), which executes
+     starting with the "root" and lazily evaluating any upstream nodes
+     needed, still works and is still the usual way to run shaders for
+     most purposes. #553 (1.7.0)
+* RendererServices:
+   * Remove has_userdata() method, which was unused. #603 (1.7.1)
+* osl.imageio.so -- an OIIO image reader plugin that runs OSL shaders to
+  generate pixels in an image (or texture). #531 (1.7.0)
 
 Performance improvements:
 * Much faster (10x or more, for large shaders) parsing of oso files (and
   .osl source as well). #511 (1.7.0)
 * Optimize away unused optional arguments to noise functions. #548 (1.7.0)
+* Improved runtime optimization via better tracking of variable aliasing
+  across certain basic block boundaries. #585,588 (1.7.1)
 
 Bug fixes and other improvements:
 * oslinfo now has a "--runstats" flag to report how much time it takes
@@ -56,12 +87,16 @@ Bug fixes and other improvements:
 * Fixed oslc bug where shader parameters that were structs and whose
   values were initialized by copying another struct whole, generated
   incorrect initialization code. (1.7.0)
-
-Under the hood:
 * Better tracking of layers that are the unused duplicates after an
   instance merge. This allows us to be sure those layers are skipped,
   and avoid situations where they look like they should run
   unconditionally.  #506 (1.7.0)
+* Record oslc options in a comment at the start of the oso file. #575 (1.7.1)
+* Better error messages when an closure is used that is unknown to the
+  renderer. #576 (1.7.1)
+* Fix potential SIGFPE from divide-by-zero in shaders. #596 (1.7.1)
+* Improve optimizer logic behind lifetime analysis inside loops, fixing some
+  subtle optimizer bugs. #598 (1.7.1)
 
 Build & test system improvements and developer goodies:
 * Allow testshade to test OSL snippets without whole full shaders. #564 (1.7.0)
@@ -84,12 +119,31 @@ Build & test system improvements and developer goodies:
 * Better detection of clang version. #559 (1.7.0)
 * testshade --offsetst and --scalest let you make custom st ranges for
   the image being sampled (not restricted to 0-1 defaults). #565 (1.7.0)
+* C++11 compatibility. #573 (1.7.1)
+* Ensure proper build on Apple Clang 6.1. #580 (1.7.1)
+* CMake build option OSL_BUILD_PLUGINS, if set to OFF, will disable building
+  of any OSL plugins (such as the osl.imageio.so). #587 (1.7.1)
+* CMake build option OSL_BUILD_TESTS, if set to OFF, will disable building
+  of standalone test programs. #587 (1.7.1)
+* We now use Travis-CI to do continuous integration and testing of every
+  checkin and PR for a variety of platform / compiler / option combinations.
+  #592,595,600 (1.7.1)
+* Get rid of the "make doxygen" targer, which did nothing. (1.7.1)
+* Build scripts automatically use ccache if available and in an obvious
+  location. This can be forcefully disabled by setting USE_CCACHE=0.
+  #595,597 (1.7.1)
+* Use deprecation attribute for the methods that are considered deprecated.
+  #602,607,608 (1.7.1)
+* Testsuite organization overhaul now avoids copying test source to build.
+  #612 (1.7.1)
+* New macro OSL_CPLUSPLUS_VERSION (set to 03, 11, 14, etc) rather than
+  using OSL_USING_CPP11. #581 (1.7.1)
 
 Documentation:
 
 
 
-Release 1.6 (1.6.6 - RC1) -- 26 May 2015 (compared to 1.5)
+Release 1.6 -- 26 May 2015 (compared to 1.5)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * It is now supported to have shader parameters that are arrays of

@@ -3315,7 +3315,6 @@ performed component-by-component (separately for $x$, $y$, and $z$).
 
 \apiitem{float {\ce linearstep} (float edge0, float edge1, float x)}
 \indexapi{linearstep()}
-\NEW % 1.7
 Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
 and performs a linear
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
@@ -3332,7 +3331,6 @@ with a smooth transition.
 
 \apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps)}
 \indexapi{smooth_linearstep()}
-\NEW % 1.7
 This function is strictly linear between ${\mathit edge0}+{\mathit eps}$ and ${\mathit edge1}-{\mathit eps}$
 but smoothly ramps to 0 between ${\mathit edge0}-{\mathit eps}$ and ${\mathit edge0}+{\mathit eps}$
 and smoothly ramps to 1 between ${\mathit edge1}-{\mathit eps}$ and ${\mathit edge1}+{\mathit eps}$.
@@ -3809,14 +3807,12 @@ is omitted, return the rest of \emph{s}, starting with \emph{start}.  If
 
 \apiitem{int {\ce getchar} (string s, int n)}
 \indexapi{getchar()}
-\NEW % 1.7
 Returns the numeric value of the $n^{\mathrm{th}}$ character of the string,
 or {\cf 0} if {\cf n} does not index a valid character of the string.
 \apiend
 
 \apiitem{int {\ce hash} (string s)}
 \indexapi{hash()}
-\NEW % 1.7
 Returns a deterministic, repeatable \emph{hash} of the string.
 \apiend
 

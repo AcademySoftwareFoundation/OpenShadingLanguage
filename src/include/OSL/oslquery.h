@@ -156,9 +156,6 @@ public:
         return e;
     }
 
-    OSL_DEPRECATED("Use geterror(). (Deprecated since 1.5)")
-    std::string error (void) { return geterror(); }
-
 private:
     ustring m_shadername;              ///< Name of shader
     ustring m_shadertypename;          ///< Type of shader

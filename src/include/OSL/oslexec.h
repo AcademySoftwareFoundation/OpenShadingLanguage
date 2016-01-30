@@ -42,8 +42,6 @@ OSL_NAMESPACE_ENTER
 class RendererServices;
 class ShaderGroup;
 typedef shared_ptr<ShaderGroup> ShaderGroupRef;
-OSL_DEPRECATED("Use ShaderGroup instead") typedef ShaderGroup ShadingAttribState;
-OSL_DEPRECATED("Use ShaderGroupRef instead") typedef ShaderGroupRef ShadingAttribStateRef;
 struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
@@ -74,14 +72,6 @@ public:
                    TextureSystem *texturesystem=NULL,
                    ErrorHandler *err=NULL);
     ~ShadingSystem ();
-
-    OSL_DEPRECATED("Directly new or construct a ShadingSystem")
-    static ShadingSystem *create (RendererServices *renderer=NULL,
-                                  TextureSystem *texturesystem=NULL,
-                                  ErrorHandler *err=NULL);
-
-    OSL_DEPRECATED("Delete or destroy a ShadingSystem")
-    static void destroy (ShadingSystem *x);
 
     /// Set an attribute controlling the shading system.  Return true
     /// if the name and type were recognized and the attrib was set.

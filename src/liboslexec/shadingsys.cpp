@@ -61,24 +61,6 @@ OSL_NAMESPACE_ENTER
 
 
 
-ShadingSystem *
-ShadingSystem::create (RendererServices *renderer,
-                       TextureSystem *texturesystem,
-                       ErrorHandler *err)
-{
-    return new ShadingSystem (renderer, texturesystem, err);
-}
-
-
-
-void
-ShadingSystem::destroy (ShadingSystem *x)
-{
-    delete x;
-}
-
-
-
 ShadingSystem::ShadingSystem (RendererServices *renderer,
                               TextureSystem *texturesystem,
                               ErrorHandler *err)
@@ -327,7 +309,7 @@ const void*
 ShadingSystem::get_symbol (const ShadingContext &ctx, ustring layername,
                            ustring symbolname, TypeDesc &type) const
 {
-    const ShaderSymbol *sym = find_symbol (*ctx.attribs(), layername,
+    const ShaderSymbol *sym = find_symbol (*ctx.group(), layername,
                                            symbolname);
     if (sym) {
         type = symbol_typedesc (sym);

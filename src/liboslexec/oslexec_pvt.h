@@ -1566,13 +1566,8 @@ public:
 
     /// Return a pointer to the shading group for this context.
     ///
-    ShaderGroup *group () { return m_attribs; }
-    const ShaderGroup *group () const { return m_attribs; }
-
-    /// Return a pointer to the shading attribs for this context.
-    /// (DEPRECATED name)
-    ShaderGroup *attribs () { return m_attribs; }
-    const ShaderGroup *attribs () const { return m_attribs; }
+    ShaderGroup *group () { return m_group; }
+    const ShaderGroup *group () const { return m_group; }
 
     /// Return a reference to the MessageList containing messages.
     ///
@@ -1677,7 +1672,7 @@ private:
     RendererServices *m_renderer;       ///< Ptr to renderer services
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
-    ShaderGroup *m_attribs;             ///< Ptr to shading attrib state
+    ShaderGroup *m_group;               ///< Ptr to shader group
     std::vector<char> m_heap;           ///< Heap memory
     typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's

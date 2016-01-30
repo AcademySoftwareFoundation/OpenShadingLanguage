@@ -850,11 +850,11 @@ protected:
     unsigned m_allowconnect : 1;     ///< Is the param not overridden by geom?
     unsigned m_renderer_output : 1;  ///< Is this sym a renderer output?
     unsigned m_readonly : 1;         ///< read-only symbol
-    unsigned m_is_uniform : 1;    ///< symbol is uniform under batched execution
-    unsigned m_forced_llvm_bool : 1;///< symbol is forced to be boolean in LLVM codgen
-    char m_valuesource;           ///< Where did the value come from?
-    bool m_free_data;             ///< Free m_data upon destruction?
-    short m_fieldid;              ///< Struct field of this var (or -1)
+    unsigned m_is_uniform : 1;  ///< symbol is uniform under batched execution
+    unsigned m_forced_llvm_bool : 1;  ///< Is this sym forced to be llvm bool?
+    char m_valuesource;               ///< Where did the value come from?
+    bool m_free_data;                 ///< Free m_data upon destruction?
+    short m_fieldid;                  ///< Struct field of this var (or -1)
     short m_layer;                ///< Layer (within the group) this belongs to
     int m_scope;                  ///< Scope where this symbol was declared
     int m_dataoffset;             ///< Offset of the data (-1 for unknown)

@@ -11,18 +11,13 @@ os:
 #osx_image: xcode7
 dist: trusty
 
-# Do a default build (C++03, sse2), an sse4.2 build, and a C++11 build.
-# Also try with both gcc 4.8 and 4.9 (on Linux; on OSX these will be
-# excluded).
 env:
     matrix:
-      - WHICHGCC=4.8 BUILD_FLAGS=""
-      - WHICHGCC=4.8 BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=4.9 BUILD_FLAGS=""
-      - WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS=""
-      - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=4.8 BUILD_FLAGS="" DEBUG=1
+      - BUILD_FLAGS="USE_CPP11=0"
+      - BUILD_FLAGS="USE_CPP11=1"
+      - BUILD_FLAGS="USE_CPP11=1" DEBUG=1
+      - OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=0"
+      - OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=1"
 
 # Add-ons: specify apt packages for Linux
 addons:
@@ -33,8 +28,6 @@ addons:
    packages:
       - gcc-4.8
       - g++-4.8
-      - gcc-4.9
-      - g++-4.9
       - gcc-5
       - g++-5
       - libboost1.55-all-dev
@@ -49,6 +42,7 @@ cache:
       - $HOME/.ccache
 
 before_install:
+    - if [ "$WHICHGCC" == "" ]; then export WHICHGCC="4.8" ; fi
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           export PLATFORM=macosx ;
           sysctl machdep.cpu.features ;
@@ -112,11 +106,9 @@ matrix:
         compiler: gcc
       - os: linux
         compiler: clang
-      - os: osx
-        compiler: clang
-        env: WHICHGCC=4.9 BUILD_FLAGS=""
-      - os: osx
-        compiler: clang
+    include:
+      - os: linux
+        compiler: gcc
         env: WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
 
 notifications:

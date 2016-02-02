@@ -23,6 +23,7 @@ endif
 ## Spinux (current)
 ifeq ($(SP_OS), spinux1)
     platform=spinux1
+    USE_CPP11 ?= 0
     USE_NINJA := 1
     NINJA := /net/soft_scratch/apps/arnold/tools/spinux1/bin/ninja
     CMAKE := /net/soft_scratch/apps/arnold/tools/spinux1/bin/cmake
@@ -124,6 +125,7 @@ endif  # endif spinux1
 ## Rhel7 (current)
 ifeq ($(SP_OS), rhel7)
     platform=rhel7
+    USE_CPP11 ?= 1
     USE_NINJA := 1
     NINJA := /net/soft_scratch/apps/arnold/tools/spinux1/bin/ninja
     CMAKE := /net/soft_scratch/apps/arnold/tools/spinux1/bin/cmake

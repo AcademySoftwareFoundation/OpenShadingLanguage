@@ -225,13 +225,12 @@ set_shadingsys_options ()
     }
 
     if (batched) {
-        // For batched operations turn off coalesce temps
-        // Currently analysis of uniform vs. varying symbols happens in the wide backend.
-        // If we allowed temps to coalesce it creates situations where we
-        // coalesce a uniform symbol over a varying symbol and data layouts do not match
-        // TODO:  Remedy by moving the uniform vs. varying symbols out of the backend
-        // so uniform/varying can be used as part of coalesce_temps.
-        shadingsys->attribute ("opt_coalesce_temps", 0);
+        // NOTE:  When opt_batched_analysis is enabled,
+        // uniform and varying temps will not coalesce
+        // with each other.  Neither will symbols
+        // with differing forced_llvm_bool() values.
+        // This might reduce observed symbol reduction
+        shadingsys->attribute ("opt_batched_analysis", 1);
     }
 
     shadingsys_options_set = true;

@@ -97,6 +97,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
       m_opt_middleman(shadingsys.m_opt_middleman),
+      m_opt_batched_analysis(shadingsys.m_opt_batched_analysis),
       m_keep_no_return_function_calls(shadingsys.m_llvm_debugging_symbols),
       m_pass(0),
       m_next_newconst(0), m_next_newtemp(0),
@@ -2718,7 +2719,10 @@ RuntimeOptimizer::coalesce_temporaries ()
                 if (coalescable (*t) &&
                       equivalent (s->typespec(), t->typespec()) &&
                       s->has_derivs() == t->has_derivs() &&
-                      (slast < t->firstuse() || sfirst > t->lastuse())) {
+                      (slast < t->firstuse() || sfirst > t->lastuse()) &&
+                      ( (!m_opt_batched_analysis) ||
+                        ((s->is_uniform() == t->is_uniform()) &&
+                         (s->forced_llvm_bool() == t->forced_llvm_bool())))) {
                     // Make all future t references alias to s
                     t->alias (&(*s));
                     // s gets union of the lifetimes
@@ -2764,6 +2768,14 @@ RuntimeOptimizer::post_optimize_instance ()
     m_in_loop.clear ();
 
     add_useparam (allsymptrs);
+
+    // We must identify which symbols are uniform before
+    // trying to coalesce to avoid merging a varying with
+    // a uniform symbol or forced_llvm_bool with an integer
+    if (m_opt_batched_analysis) {
+        // TODO:  add m_batched_analysis in upcoming pull request
+        //m_batched_analysis.analyze_layer(inst());
+    }
 
     if (optimize() >= 1 && m_opt_coalesce_temps)
         coalesce_temporaries ();

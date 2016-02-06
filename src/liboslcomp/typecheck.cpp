@@ -993,7 +993,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (1);
             argwriteonly (2);
         } else if (m_name == "getattribute" || m_name == "getmessage" ||
-                   m_name == "gettextureinfo" || m_name == "dict_value") {
+                   m_name == "gettextureinfo" || m_name == "getmatrix" ||
+                   m_name == "dict_value") {
             // these all write to their last argument
             argwriteonly ((int)listlength(args()));
         } else if (m_name == "pointcloud_get") {

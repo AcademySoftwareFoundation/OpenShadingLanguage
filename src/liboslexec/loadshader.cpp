@@ -435,6 +435,10 @@ OSOReaderToMaster::hint (string_view hintstring)
             m_master->m_ops.back().argread(i, *str == 'r' || *str =='W');
         }
         ASSERT(m_nargs == i);
+        // Fix old bug where oslc forgot to mark getmatrix last arg as write
+        static ustring getmatrix("getmatrix");
+        if (m_master->m_ops.back().opname() == getmatrix)
+            m_master->m_ops.back().argwrite(m_nargs-1, true);
     }
     if (extract_prefix(h, "%argderivs{")) {
         while (1) {

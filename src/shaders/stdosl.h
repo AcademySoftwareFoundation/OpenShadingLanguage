@@ -52,7 +52,6 @@
 // Declaration of built-in functions and closures
 #define BUILTIN [[ int builtin = 1 ]]
 #define BUILTIN_DERIV [[ int builtin = 1, int deriv = 1 ]]
-#define BUILTIN_NONSTANDARD_RW [[ int builtin = 1, int rw = 1 ]]
 
 #define PERCOMP1(name)                          \
     normal name (normal x) BUILTIN;             \
@@ -531,7 +530,7 @@ int iscameraray () { return raytype("camera"); }
 int isdiffuseray () { return raytype("diffuse"); }
 int isglossyray () { return raytype("glossy"); }
 int isshadowray () { return raytype("shadow"); }
-int getmatrix (string fromspace, string tospace, output matrix M) BUILTIN_NONSTANDARD_RW;
+int getmatrix (string fromspace, string tospace, output matrix M) BUILTIN;
 int getmatrix (string fromspace, output matrix M) {
     return getmatrix (fromspace, "common", M);
 }

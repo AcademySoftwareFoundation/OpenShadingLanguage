@@ -260,10 +260,18 @@ ASTfunction_declaration::add_meta (ASTNode *meta)
         Symbol *metasym = metavar->sym();
         if (metasym->name() == "builtin") {
             m_is_builtin = true;
-            if (func()->typespec().is_closure()) // It is a builtin closure
+            if (func()->typespec().is_closure())  { // It is a builtin closure
                 // Force keyword arguments at the end
                 func()->argcodes(ustring(std::string(func()->argcodes().c_str()) + "."));
-
+            }
+            // For built-in functions, if any of the params are output,
+            // also automatically mark it as readwrite_special_case.
+            for (ASTNode *f = formals().get(); f; f = f->nextptr()) {
+                ASSERT (f->nodetype() == variable_declaration_node);
+                ASTvariable_declaration *v = (ASTvariable_declaration *)f;
+                if (v->is_output())
+                    func()->readwrite_special_case (true);
+            }
         }
         else if (metasym->name() == "derivs")
             func()->takes_derivs (true);

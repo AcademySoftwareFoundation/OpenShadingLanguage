@@ -56,6 +56,7 @@ before_install:
           export PLATFORM=linux64 ;
           cat /proc/cpuinfo ;
       fi
+    - export OIIOPLATFORM=$PLATFORM
     - if [ $DEBUG == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
     - echo "Build platform name is $PLATFORM"
 
@@ -71,9 +72,9 @@ install:
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
       fi
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2"
+    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
     - src/build-scripts/build_openimageio.bash
-    - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$PLATFORM
+    - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
     - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
     - export PATH=$OPENIMAGEIOHOME/bin:$PATH

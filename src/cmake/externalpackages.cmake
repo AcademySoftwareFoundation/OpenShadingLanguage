@@ -6,8 +6,8 @@ if (NOT VERBOSE)
     set (Bison_FIND_QUIETLY true)
     set (Boost_FIND_QUIETLY true)
     set (Flex_FIND_QUIETLY true)
-    set (IlmBase_FIND_QUIETLY true)
     set (LLVM_FIND_QUIETLY true)
+    set (OpenEXR_FIND_QUIETLY true)
     set (OpenImageIO_FIND_QUIETLY true)
     set (Partio_FIND_QUIETLY true)
     set (PkgConfig_FIND_QUIETLY true)
@@ -52,16 +52,21 @@ endif ()
 ###########################################################################
 # IlmBase setup
 
-if (NOT ILMBASE_INCLUDE_DIR)
-    find_package (IlmBase REQUIRED)
+if (NOT OPENEXR_FOUND)
+    find_package (OpenEXR REQUIRED)
 endif ()
 
-include_directories ("${ILMBASE_INCLUDE_DIR}")
-include_directories ("${ILMBASE_INCLUDE_DIR}/OpenEXR")
+include_directories ("${OPENEXR_INCLUDE_DIR}")
 
-macro (LINK_ILMBASE target)
-    target_link_libraries (${target} ${ILMBASE_LIBRARIES})
-endmacro ()
+if (${OPENEXR_VERSION} VERSION_LESS 2.0.0)
+    # OpenEXR 1.x had weird #include dirctives, this is also necessary:
+    include_directories ("${OPENEXR_INCLUDE_DIR}/OpenEXR")
+endif ()
+
+if (NOT OpenEXR_FIND_QUIETLY)
+    message (STATUS "ILMBASE_INCLUDE_DIR = ${ILMBASE_INCLUDE_DIR}")
+    message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
+endif ()
 
 # end IlmBase setup
 ###########################################################################

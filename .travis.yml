@@ -51,7 +51,7 @@ before_install:
           cat /proc/cpuinfo ;
       fi
     - export OIIOPLATFORM=$PLATFORM
-    - if [ $DEBUG == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
+    - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
     - echo "Build platform name is $PLATFORM"
 
 install:
@@ -89,7 +89,8 @@ script:
     - make $BUILD_FLAGS test
 
 
-# after_success:
+after_success:
+    - if [ "$CODECOV" == 1 ]; then bash <(curl -s https://codecov.io/bash) ; fi
 
 after_failure:
 # FIXME: find failed logs, stash them or send them to lg?

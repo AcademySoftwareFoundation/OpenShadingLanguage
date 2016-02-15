@@ -237,6 +237,7 @@ set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 set (OSL_BUILD_PLUGINS ON CACHE BOOL "Bool OSL plugins, for example OIIO plugin")
 set (USE_CCACHE ON CACHE BOOL "Use ccache if found")
+set (CODECOV OFF CACHE BOOL "Build code coverage tests")
 
 # Use ccache if found
 find_program (CCACHE_FOUND ccache)
@@ -287,6 +288,19 @@ endif ()
 if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
     message (STATUS "Using libc++")
     add_definitions ("-stdlib=libc++")
+endif ()
+
+# Options common to gcc and clang
+if (CODECOV AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
+    message (STATUS "Compiling for code coverage analysis")
+    add_definitions ("-ftest-coverage -fprofile-arcs -O0 -DOSL_CODE_COVERAGE=1")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ftest-coverage -fprofile-arcs")
+    set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -ftest-coverage -fprofile-arcs")
+    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -ftest-coverage -fprofile-arcs")
+endif ()
+
+if (DEFINED ENV{TRAVIS})
+    add_definitions ("-DOSL_TRAVIS=1")
 endif ()
 
 set (OSL_SIMD_FLAGS "")

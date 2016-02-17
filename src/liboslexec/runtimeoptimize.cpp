@@ -2720,9 +2720,8 @@ RuntimeOptimizer::coalesce_temporaries ()
                       equivalent (s->typespec(), t->typespec()) &&
                       s->has_derivs() == t->has_derivs() &&
                       (slast < t->firstuse() || sfirst > t->lastuse()) &&
-                      ( (!m_opt_batched_analysis) ||
-                        ((s->is_uniform() == t->is_uniform()) &&
-                         (s->forced_llvm_bool() == t->forced_llvm_bool())))) {
+                      (s->is_uniform() == t->is_uniform()) &&
+                      (s->forced_llvm_bool() == t->forced_llvm_bool())) {
                     // Make all future t references alias to s
                     t->alias (&(*s));
                     // s gets union of the lifetimes

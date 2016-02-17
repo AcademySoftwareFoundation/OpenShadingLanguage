@@ -224,13 +224,15 @@ set_shadingsys_options ()
         }
     }
 
-    if (batched) {
+    if (!batched) {
         // NOTE:  When opt_batched_analysis is enabled,
         // uniform and varying temps will not coalesce
         // with each other.  Neither will symbols
         // with differing forced_llvm_bool() values.
-        // This might reduce observed symbol reduction
-        shadingsys->attribute ("opt_batched_analysis", 1);
+        // This might reduce observed symbol reduction.
+        // So disable the analysis when we are not
+        // performing batched execution
+        shadingsys->attribute ("opt_batched_analysis", 0);
     }
 
     shadingsys_options_set = true;

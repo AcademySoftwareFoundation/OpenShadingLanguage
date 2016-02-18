@@ -20,6 +20,8 @@ set (lib_src
           shadeimage.cpp
           backendllvm.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
+          batched_analysis.cpp
+          batched_backendllvm.cpp
           ../liboslnoise/gabornoise.cpp
           ../liboslnoise/simplexnoise.cpp
     )

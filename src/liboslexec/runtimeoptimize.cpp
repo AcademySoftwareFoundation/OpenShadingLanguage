@@ -12,6 +12,7 @@
 
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
+#include "batched_analysis.h"
 #include "../liboslcomp/oslcomp_pvt.h"
 using namespace OSL;
 using namespace OSL::pvt;
@@ -2772,8 +2773,8 @@ RuntimeOptimizer::post_optimize_instance ()
     // trying to coalesce to avoid merging a varying with
     // a uniform symbol or forced_llvm_bool with an integer
     if (m_opt_batched_analysis) {
-        // TODO:  add m_batched_analysis in upcoming pull request
-        //m_batched_analysis.analyze_layer(inst());
+        BatchedAnalysis batched_analysis(shadingsys(), group());
+        batched_analysis.analyze_layer(inst());
     }
 
     if (optimize() >= 1 && m_opt_coalesce_temps)

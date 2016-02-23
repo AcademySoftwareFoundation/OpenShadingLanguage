@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 14 Jan, 2016 \\
-%~ (with corrections, 14 Jan 2016)
+ (with corrections, 22 Feb 2016)
 }
 \bigskip
 \bigskip
@@ -2573,7 +2573,7 @@ loop:
 
 \indexapi{for}
 As in C++, a {\cf for} loop's initialization may contain variable
-declarations and initializations, which are scoped locally to {\cf for}
+declarations and initializations, which are scoped locally to the {\cf for}
 loop itself.  For example,
 
 \begin{code}
@@ -2656,9 +2656,9 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 %         {\cf Pl}). \\
 %\hline
 %\color\ {\ce Cl} & Incoming light color at P. \\
-%\hline
+\hline
 \point\ {\ce Ps} & Position at which the light is being queried 
-    (currently only used for light attentuation shaders) \\
+    (currently only used for light attenuation shaders) \\
 %\\
 %\hline
 %\normal\ {\ce Ns} & Axis about which the light is being queried
@@ -2729,6 +2729,7 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 {\cf Ng}      & R     & R  &    \\
 {\cf dPdu}    & R     & R  &    \\
 {\cf dPdv}    & R     & R  &    \\
+{\cf Ps}      &       &    & R   \\
 {\cf u, v}    & R     & R  & R   \\
 {\cf time}    & R     & R  & R       \\
 {\cf dtime}   & R     & R  & R       \\
@@ -4269,7 +4270,7 @@ given {\cf data} arrays.  If the optional {\cf sort} parameter is present
 and is nonzero, the ordering of the points
 found will be sorted by distance from {\cf pos}, from closest to farthest;
 otherwise, the results are guaranteed to be the {\cf maxpoints} closest
-to {\cf pos}, but not necessarily softed by distance (this may be
+to {\cf pos}, but not necessarily sorted by distance (this may be
 faster for some implementations than when sorted results are
 required).  The return value is the number of points returned, ranging
 from 0 (nothing found in the neighborhood) to the lesser of {\cf maxpoints}

@@ -1433,12 +1433,16 @@ public:
 
     int num_entry_layers () const { return m_num_entry_layers; }
 
+    bool is_last_layer (int layer) const {
+        return layer == nlayers()-1;
+    }
+
     /// Is the given layer an entry point? It is if explicitly tagged as
     /// such, or if no layers are so tagged then the last layer is the one
     /// entry.
     bool is_entry_layer (int layer) const {
         return num_entry_layers() ? m_layers[layer]->entry_layer()
-                                  : (layer == nlayers()-1);
+                                  : is_last_layer(layer);
     }
 
 private:

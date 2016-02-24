@@ -750,9 +750,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Note that the GroupData* is passed as a void*.
     std::string unique_layer_name = Strutil::format ("%s_%d", inst()->layername(), inst()->id());
 
+    bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function (
            ll.make_function (unique_layer_name,
-                             !inst()->entry_layer(), // fastcall for non-entry layer functions
+                             !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
                              llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
 
@@ -767,7 +768,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     ll.new_builder (entry_bb);
 
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer()));
-    if (inst()->entry_layer()) {
+    if (is_entry_layer && ! group().is_last_layer(layer())) {
         // For entry layers, we need an extra check to see if it already
         // ran. If it has, do an early return. Otherwise, set the 'ran' flag
         // and then run the layer.
@@ -791,9 +792,11 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         llvm_gen_debug_printf (Strutil::format("enter layer %d %s %s",
                                this->layer(), inst()->layername(), inst()->shadername()));
     // Mark this layer as executed
-    ll.op_store (ll.constant_bool(true), layerfield);
-    if (shadingsys().countlayerexecs())
-        ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
+    if (! group().is_last_layer(layer())) {
+        ll.op_store (ll.constant_bool(true), layerfield);
+        if (shadingsys().countlayerexecs())
+            ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
+    }
 
     // Setup the symbols
     m_named_values.clear ();

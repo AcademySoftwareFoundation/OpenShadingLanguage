@@ -4,6 +4,7 @@
 
 //#define OSL_DEV
 
+#include <boost/container/flat_set.hpp>
 #include <iterator>
 #include <type_traits>
 #include <unordered_map>
@@ -100,14 +101,13 @@ namespace  // Unnamed
 bool
 are_op_results_always_implicitly_varying(ustring opname)
 {
-    // Test if explicit comparison is faster or not
-    static std::unordered_set<ustring, ustringHash> lazy_lookup(
-        { // Renderer might identify result of getattribute as always uniform
-          // depending on the attribute itself, so will have a special
-          // handler for it during discovery
-          Strings::op_getmessage, Strings::op_trace, Strings::op_texture,
-          Strings::op_texture3d });
-    return lazy_lookup.find(opname) != lazy_lookup.end();
+    return (opname == Strings::op_getmessage) | (opname == Strings::op_trace)
+           | (opname == Strings::op_texture)
+           | (opname == Strings::op_texture3d);
+    // Renderer might identify result of getattribute as always uniform
+    // depending on the attribute itself, so it cannot
+    // be "always" implicitly varying based solely on the opname.
+    // We consider getattribute during discovery.
 }
 
 // Even when all inputs to an operation are varying,
@@ -135,7 +135,7 @@ does_op_implementation_require_masking(ustring opname)
 {
     // TODO: should OpDescriptor handle identifying operations that always
     // require masking vs. this lazy_lookup?  Perhaps a BatchedOpDescriptor?
-    static std::unordered_set<ustring, ustringHash> lazy_lookup(
+    static boost::container::flat_set<ustring> lazy_lookup(
         { // safe_pows's implementation uses an OSL_UNLIKELY
           // which will perform a horizontal operation to check if
           // a condition is false for all data lane in order to skip
@@ -360,7 +360,7 @@ bool
 is_op_result_always_logically_boolean(ustring opname)
 {
     // Test if explicit comparison is faster or not
-    static std::unordered_set<ustring, ustringHash> lazy_lookup(
+    static boost::container::flat_set<ustring> lazy_lookup(
         { Strings::op_getattribute, Strings::op_compl, Strings::op_eq,
           Strings::op_ge, Strings::op_gt, Strings::op_le, Strings::op_lt,
           Strings::op_neq, Strings::op_and, Strings::op_or });
@@ -1106,7 +1106,6 @@ public:
     bool is_inside_loop() const { return !m_loop_info_by_depth.empty(); }
 
     int depth() const { return m_loop_info_by_depth.size(); }
-
 
     int current_loop_op_index() const
     {

@@ -14,9 +14,7 @@ namespace pvt {
 
 class BatchedAnalysis {
 public:
-    using ShaderGroup       = OSL::ShaderGroup;
-    using ShadingSystemImpl = OSL::pvt::ShadingSystemImpl;
-    using ShaderInstance    = OSL::pvt::ShaderInstance;
+    using ShaderGroup = OSL::ShaderGroup;
 
     BatchedAnalysis(ShadingSystemImpl& shadingsys, ShaderGroup& group);
 

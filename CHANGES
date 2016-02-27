@@ -1,10 +1,14 @@
 Changes:
 
-Release 1.7.2 -- in progress (compared to 1.7.2)
+Release 1.7.2 -- 1 Mar 2016 (compared to 1.7.1)
 --------------------------------------------------
+* Build: better handling of multiple USE_SIMD options. #617
+* oslc bug: getmatrix() failed to note that the matrix argument was
+  written. #618
+* CMake FindOpenEXR.cmake totally rewritten, much simpler and better. #621
 
 
-Release 1.7 [1.7.2] -- 29 Jan 2016 (compared to 1.6)
+Release 1.7 [1.7.1] -- 29 Jan 2016 (compared to 1.6)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:

@@ -102,6 +102,10 @@ ifneq (${OPENEXR_HOME},)
 MY_CMAKE_FLAGS += -DOPENEXR_HOME:STRING=${OPENEXR_HOME}
 endif
 
+ifneq (${ILMBASE_HOME},)
+MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
+endif
+
 ifneq (${USE_PARTIO},)
 MY_CMAKE_FLAGS += -DUSE_PARTIO:BOOL=${USE_PARTIO}
 endif
@@ -328,7 +332,8 @@ help:
 	@echo "      LINKSTATIC=1             Link with static external libraries when possible"
 	@echo "  Finding and Using Dependencies:"
 	@echo "      BOOST_HOME=path          Custom Boost installation"
-	@echo "      OPENEXR_HOME=path        Custom Ilmbase/OpenEXR installation"
+	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
+	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
 	@echo "      PARTIO_HOME=             Use Partio from the given location"
 	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"
 	@echo "  LLVM-related options:"

@@ -2,21 +2,52 @@ Changes:
 
 Release 1.8 -- (in progress - dev) ?? 2016 (compared to 1.7)
 -----------------------------------------------
+
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:
 * Standard library additions/changes:
+
 API changes, new options, new ShadingSystem features (for renderer writers):
+* ShadingSystem API changes:
+   * Long-deprecated ShadingAttribState type has been removed (now called
+     ShaderGroup).
+   * ShadingSystem::create() and destroy() are no longer necessary and have
+     been removed.
 * ShadingSystem attribute additions/changes:
 * Shader group attribute additions/changes:
 * RendererServices:
+
 Performance improvements:
+
 Bug fixes and other improvements:
+* oslc bug: getmatrix() failed to note that the matrix argument was
+  written. #618 (1.8.0/1.7.2)
+
 Build & test system improvements and developer goodies:
+* Default build is now C++11! Currently, the project will still build as
+  C++03, but to do so you must explicitly 'make USE_CPP11=0'. #615 (1.8.0)
+* Build: better handling of multiple USE_SIMD options. #617 (1.8.0/1.7.2)
+* CMake FindOpenEXR.cmake totally rewritten, much simpler and better.
+  #621 (1.8.0/1.7.2)
+* 'make CODECOV=1' on a gcc/clang system will run the testsuite and
+   generate a code coverage report in build/$PLATFORM/cov/index.html
+   #624 (1.8.0)
+
 Documentation:
+* Various typos fixed.
 
 
 
-Release 1.7 -- 29 Jan 2016 (compared to 1.6)
+
+Release 1.7.2 -- 1 Mar 2016 (compared to 1.7.1)
+--------------------------------------------------
+* Build: better handling of multiple USE_SIMD options. #617
+* oslc bug: getmatrix() failed to note that the matrix argument was
+  written. #618
+* CMake FindOpenEXR.cmake totally rewritten, much simpler and better. #621
+
+
+Release 1.7 [1.7.1] -- 29 Jan 2016 (compared to 1.6)
 -----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:

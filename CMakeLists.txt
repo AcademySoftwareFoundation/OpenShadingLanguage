@@ -155,7 +155,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
 endif ()
 
 # gcc specific options
-if (CMAKE_COMPILER_IS_GNUCC AND (NOT CMAKE_COMPILER_IS_CLANG))
+if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG))
     if (NOT ${GCC_VERSION} VERSION_LESS 4.8)
         add_definitions ("-Wno-error=strict-overflow")
         # suppress a warning that Boost::Python hits in g++ 4.8
@@ -245,7 +245,6 @@ if (CCACHE_FOUND AND USE_CCACHE)
     set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
     set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif ()
-
 
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")

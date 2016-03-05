@@ -268,7 +268,6 @@ package_source: cmakeinstall
 
 endif
 
-
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
 
@@ -277,8 +276,8 @@ TEST_FLAGS += --force-new-ctest-process --output-on-failure
 # 'make test' does a full build and then runs all tests
 test: cmake
 	@ ${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
-	@ #if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
-	@ ( cd ${build_dir} ; ctest -E broken ${TEST_FLAGS} )
+	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
+	@ ( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest -E broken ${TEST_FLAGS} )
 	@ ( if [ "${CODECOV}" == "1" ] ; then \
 	      cd ${build_dir} ; \
 	      lcov -b . -d . -c -o cov.info ; \
@@ -290,9 +289,8 @@ test: cmake
 # that are expected to fail on some platforms)
 testall: cmake
 	${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
-	( cd ${build_dir} ; ctest ${TEST_FLAGS} )
+	( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest ${TEST_FLAGS} )
 
-#clean: testclean
 # 'make clean' clears out the build directory for this platform
 clean:
 	${CMAKE} -E remove_directory ${build_dir}
@@ -341,7 +339,7 @@ help:
 	@echo "  Linking and libraries:"
 	@echo "      HIDE_SYMBOLS=1           Hide symbols not in the public API"
 	@echo "      BUILDSTATIC=1            Build static library instead of shared"
-	@echo "      LINKSTATIC=1             Link with static external libraries when possible"
+	@echo "      LINKSTATIC=1             Link with static external libs when possible"
 	@echo "  Finding and Using Dependencies:"
 	@echo "      BOOST_HOME=path          Custom Boost installation"
 	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
@@ -359,6 +357,9 @@ help:
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      OSL_BUILD_TESTS=0        Skip building the unit tests, testshade, testrender"
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
-	@echo "                                    ssse3, sse4.1, sse4.2, f16c, comma-separated ok)"
+	@echo "                                  ssse3, sse4.1, sse4.2, f16c,"
+	@echo "                                  comma-separated ok)"
+	@echo "  make test, extra options:"
+	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""
 

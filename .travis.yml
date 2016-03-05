@@ -86,6 +86,7 @@ script:
     - export OSLHOME=$PWD/dist/$PLATFORM
     - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
     - export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
+    - export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
     - make $BUILD_FLAGS test
 
 
@@ -111,6 +112,12 @@ matrix:
       - os: linux
         compiler: gcc
         env: WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
+      - os: linux
+        compiler: gcc
+        env: WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1 USE_SIMD=avx,f16c"
+      - os: linux
+        compiler: gcc
+        env: BUILD_FLAGS="USE_CPP11=1 USE_SIMD=0"
 
 notifications:
     email:

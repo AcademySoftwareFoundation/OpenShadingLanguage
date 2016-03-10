@@ -33,8 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
 
-#if OSL_LLVM_VERSION < 33
-#error "LLVM minimum version required for OSL is 3.3"
+#if OSL_LLVM_VERSION < 34
+#error "LLVM minimum version required for OSL is 3.4"
 #endif
 
 #if OSL_LLVM_VERSION >= 35 && OSL_CPLUSPLUS_VERSION < 11
@@ -71,12 +71,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #  include <llvm/Linker.h>
 #endif
-#if OSL_LLVM_VERSION >= 34
-#  include <llvm/Support/ErrorOr.h>
-#  include <llvm/IR/LegacyPassManager.h>
-#else
-#  include <llvm/PassManager.h>
-#endif
+#include <llvm/Support/ErrorOr.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetRegistry.h>
 
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -209,19 +205,6 @@ public:
     virtual void deallocateFunctionBody(void *Body) {
         // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
     }
-#if OSL_LLVM_VERSION <= 33
-    virtual uint8_t* startExceptionTable(const llvm::Function* F,
-                                         uintptr_t &ActualSize) {
-        return mm->startExceptionTable (F, ActualSize);
-    }
-    virtual void endExceptionTable(const llvm::Function *F, uint8_t *TableStart,
-                                   uint8_t *TableEnd, uint8_t* FrameRegister) {
-        mm->endExceptionTable (F, TableStart, TableEnd, FrameRegister);
-    }
-    virtual void deallocateExceptionTable(void *ET) {
-        // DON'T DEALLOCATE mm->deallocateExceptionTable(ET);
-    }
-#endif
     virtual bool CheckInvariants(std::string &s) {
         return mm->CheckInvariants(s);
     }
@@ -237,8 +220,6 @@ public:
     virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
     virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
     virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
-
-#if OSL_LLVM_VERSION >= 34
 
     virtual void *getPointerToNamedFunction(const std::string &Name,
                                             bool AbortOnFailure = true) {
@@ -269,26 +250,6 @@ public:
     virtual bool finalizeMemory(std::string *ErrMsg = 0) {
         return mm->finalizeMemory (ErrMsg);
     }
-
-#elif OSL_LLVM_VERSION == 33
-
-    virtual void *getPointerToNamedFunction(const std::string &Name,
-                                            bool AbortOnFailure = true) {
-        return mm->getPointerToNamedFunction (Name, AbortOnFailure);
-    }
-    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                                         unsigned SectionID) {
-        return mm->allocateCodeSection(Size, Alignment, SectionID);
-    }
-    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                                         unsigned SectionID, bool IsReadOnly) {
-        return mm->allocateDataSection(Size, Alignment, SectionID, IsReadOnly);
-    }
-    virtual bool applyPermissions(std::string *ErrMsg = 0) {
-        return mm->applyPermissions(ErrMsg);
-    }
-
-#endif
 };
 
 #endif
@@ -377,12 +338,6 @@ LLVM_Util::SetupLLVM ()
         return;
     // Some global LLVM initialization for the first thread that
     // gets here.
-
-#if OSL_LLVM_VERSION <= 33
-    // Starting with LLVM 3.4, the pretty stack trace was opt-in rather
-    // than opt-out, and the following variable was removed.
-    llvm::DisablePrettyStackTrace = true;
-#endif
 
 #if OSL_LLVM_VERSION < 35
     // enable it to be thread-safe
@@ -613,16 +568,6 @@ LLVM_Util::setup_optimization_passes (int optlevel)
     llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
     mpm.add (new llvm::DataLayout(module()));
 
-#elif OSL_LLVM_VERSION <= 33
-
-    m_llvm_func_passes = new llvm::FunctionPassManager(module());
-    llvm::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayout(module()));
-
-    m_llvm_module_passes = new llvm::PassManager;
-    llvm::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayout(module()));
-
 #endif
 
     if (optlevel >= 1 && optlevel <= 3) {
@@ -635,10 +580,12 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         // builder.DisableUnrollLoops = true;
         builder.populateFunctionPassManager (fpm);
         builder.populateModulePassManager (mpm);
+#else
+        // FIXME -- should we have the equivalent for LLVM >= 35?
 #endif
 
     } else {
-        // LLVM 2.x, or unknown choices for llvm_optimize: use the same basic
+        // Unknown choices for llvm_optimize: use the same basic
         // set of passes that we always have.
 
         // Always add verifier?
@@ -676,11 +623,7 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 void
 LLVM_Util::do_optimize ()
 {
-#if OSL_LLVM_VERSION >= 34
     m_llvm_module_passes->run (*module());
-#else
-    m_llvm_module_passes->run (*module());
-#endif
 }
 
 

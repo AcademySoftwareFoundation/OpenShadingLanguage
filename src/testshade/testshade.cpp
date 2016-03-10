@@ -78,6 +78,7 @@ static bool use_group_outputs = false;
 static bool do_oslquery = false;
 static bool inbuffer = false;
 static bool use_shade_image = false;
+static bool userdata_isconnected = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -133,6 +134,7 @@ set_shadingsys_options ()
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
+    shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
     shadingsys_options_set = true;
@@ -469,6 +471,7 @@ getargs (int argc, const char *argv[])
                 "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
                 "--offsetst %f %f", &soffset, &toffset, "Offset s & t texture coordinates (default: 0 0)",
                 "--scalest %f %f", &sscale, &tscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {

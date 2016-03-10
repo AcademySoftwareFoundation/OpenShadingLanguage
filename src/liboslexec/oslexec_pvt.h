@@ -562,6 +562,7 @@ public:
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata () const { return m_lazy_userdata; }
+    bool userdata_isconnected () const { return m_userdata_isconnected; }
 
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
@@ -705,6 +706,7 @@ private:
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_lazyunconnected;               ///< Run lazily even if not connected?
     bool m_lazy_userdata;                 ///< Retrieve userdata lazily?
+    bool m_userdata_isconnected;          ///< Userdata params isconnected()?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_debug_uninit;                  ///< Find use of uninitialized vars?

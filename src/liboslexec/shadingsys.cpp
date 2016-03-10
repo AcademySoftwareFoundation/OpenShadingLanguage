@@ -631,7 +631,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
       m_lazyglobals (true), m_lazyunconnected(true),
-      m_lazy_userdata(false),
+      m_lazy_userdata(false), m_userdata_isconnected(false),
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (true), m_strict_messages(true),
       m_range_checking(true),
@@ -1034,6 +1034,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
     ATTR_SET ("lazyunconnected", int, m_lazyunconnected);
     ATTR_SET ("lazy_userdata", int, m_lazy_userdata);
+    ATTR_SET ("userdata_isconnected", int, m_userdata_isconnected);
     ATTR_SET ("clearmemory", int, m_clearmemory);
     ATTR_SET ("debug_nan", int, m_debugnan);
     ATTR_SET ("debugnan", int, m_debugnan);  // back-compatible alias
@@ -1137,6 +1138,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE ("lazyunconnected", int, m_lazyunconnected);
     ATTR_DECODE ("lazy_userdata", int, m_lazy_userdata);
+    ATTR_DECODE ("userdata_isconnected", int, m_userdata_isconnected);
     ATTR_DECODE ("clearmemory", int, m_clearmemory);
     ATTR_DECODE ("debug_nan", int, m_debugnan);
     ATTR_DECODE ("debugnan", int, m_debugnan);  // back-compatible alias
@@ -1558,6 +1560,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (lazyglobals);
     BOOLOPT (lazyunconnected);
     BOOLOPT (lazy_userdata);
+    BOOLOPT (userdata_isconnected);
     BOOLOPT (clearmemory);
     BOOLOPT (debugnan);
     BOOLOPT (debug_uninit);

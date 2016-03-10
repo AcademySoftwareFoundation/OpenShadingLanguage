@@ -113,6 +113,9 @@ public:
     ///    int lazyunconnected    Run layers lazily even if they have no
     ///                              output connections (1). For debugging.
     ///    int lazy_userdata      Retrieve userdata lazily (0).
+    ///    int userdata_isconnected  Should lockgeom=0 params (that may
+    ///                              receive userdata) return true from
+    ///                              isconnected()? (0)
     ///    int greedyjit          Optimize and compile all shaders up front,
     ///                              versus only as needed (0).
     ///    int lockgeom           Default 'lockgeom' value for shader params

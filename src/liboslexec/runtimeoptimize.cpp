@@ -2356,7 +2356,10 @@ RuntimeOptimizer::resolve_isconnected ()
                 ASSERT (fieldsymid >= 0);
                 s = inst()->symbol(fieldsymid);
             }
-            int val = (s->connected() ? 1 : 0) + (s->connected_down() ? 2 : 0);
+            bool upconnected = s->connected();
+            if (!s->lockgeom() && shadingsys().userdata_isconnected())
+                upconnected = true;
+            int val = (upconnected ? 1 : 0) + (s->connected_down() ? 2 : 0);
             turn_into_assign (op, add_constant(TypeDesc::TypeInt, &val),
                               "resolve isconnected()");
         }

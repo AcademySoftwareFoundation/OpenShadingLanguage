@@ -41,21 +41,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error "LLVM >= 3.5 requires C++11 or newer"
 #endif
 
-#ifndef USE_MCJIT
-  // MCJIT first appeared with LLVM 3.3
-# define USE_MCJIT (OSL_LLVM_VERSION>=33)
-#endif
-
-// MCJIT is mandatory for LLVM 3.6 and beyond, no more old JIT
-#define MCJIT_REQUIRED (USE_MCJIT >= 2 || OSL_LLVM_VERSION >= 36)
-
-// The old JIT disappeared starting in LLVM 3.6
-#define USE_OLD_JIT (OSL_LLVM_VERSION<36)
-
-#if MCJIT_REQUIRED
-# undef USE_MCJIT
-# define USE_MCJIT 2
-#endif
+// Use MCJIT for LLVM 3.6 and beyind, old JIT for earlier
+#define USE_MCJIT   (OSL_LLVM_VERSION >= 36)
+#define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -258,7 +246,7 @@ public:
 
 
 LLVM_Util::LLVM_Util (int debuglevel)
-    : m_debug(debuglevel), m_mcjit(MCJIT_REQUIRED), m_thread(NULL),
+    : m_debug(debuglevel), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
@@ -280,13 +268,11 @@ LLVM_Util::LLVM_Util (int debuglevel)
             ASSERT (m_thread->llvm_jitmm);
             jitmm_hold.push_back (shared_ptr<llvm::JITMemoryManager>(m_thread->llvm_jitmm));
         }
+        m_llvm_jitmm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
 #endif
     }
 
     m_llvm_context = m_thread->llvm_context;
-#if USE_OLD_JIT
-    m_llvm_jitmm = new OSL_Dummy_JITMemoryManager(m_thread->llvm_jitmm);
-#endif
 
     // Set up aliases for types we use over and over
     m_llvm_type_float = (llvm::Type *) llvm::Type::getFloatTy (*m_llvm_context);
@@ -396,36 +382,28 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     // Load the LLVM bitcode and parse it into a Module
     llvm::Module *m = NULL;
 
-    if (mcjit() || MCJIT_REQUIRED) {
-        // FIXME!! Using MCJIT should not require unconditionally parsing
-        // the bitcode. But for now, when using getLazyBitcodeModule to
-        // lazily deserialize the bitcode, MCJIT is unable to find the
-        // called functions due to disagreement about whether a leading "_"
-        // is part of the symbol name.
-  #if OSL_LLVM_VERSION >= 35
-        llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile (buf, context());
-        if (std::error_code EC = ModuleOrErr.getError())
-            if (err)
-              *err = EC.message();
-        m = ModuleOrErr.get();
-  #else
-        m = llvm::ParseBitcodeFile (buf, context(), err);
-  #endif
-  #if OSL_LLVM_VERSION < 36
-        delete buf;
-  #endif
-    }
+#if USE_MCJIT
+    // FIXME!! Using MCJIT should not require unconditionally parsing
+    // the bitcode. But for now, when using getLazyBitcodeModule to
+    // lazily deserialize the bitcode, MCJIT is unable to find the
+    // called functions due to disagreement about whether a leading "_"
+    // is part of the symbol name.
+    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile (buf, context());
+    if (std::error_code EC = ModuleOrErr.getError())
+        if (err)
+          *err = EC.message();
+    m = ModuleOrErr.get();
+#endif
+
 #if USE_OLD_JIT
-    else {
-        // Create a lazily deserialized IR module
-        // This can only be done for old JIT
+    // Create a lazily deserialized IR module
+    // This can only be done for old JIT
 # if OSL_LLVM_VERSION >= 35
-        m = llvm::getLazyBitcodeModule (buf, context()).get();
+    m = llvm::getLazyBitcodeModule (buf, context()).get();
 # else
-        m = llvm::getLazyBitcodeModule (buf, context(), err);
+    m = llvm::getLazyBitcodeModule (buf, context(), err);
 # endif
-        // don't delete buf, the module has taken ownership of it
-    }
+    // don't delete buf, the module has taken ownership of it
 #endif /*USE_OLD_JIT*/
 
     // Debugging: print all functions in the module
@@ -466,23 +444,23 @@ LLVM_Util::make_jit_execengine (std::string *err)
     llvm::EngineBuilder engine_builder ((std::unique_ptr<llvm::Module>(module())));
 # else /* < 36: */
     llvm::EngineBuilder engine_builder (module());
-# endif /* >=35 */
+# endif
+
     engine_builder.setEngineKind (llvm::EngineKind::JIT);
     engine_builder.setErrorStr (err);
+
 #if USE_OLD_JIT
     engine_builder.setJITMemoryManager (jitmm());
+    // N.B. createJIT will take ownership of the the JITMemoryManager!
+    engine_builder.setUseMCJIT (0);
 #else
     // FIXME -- no memory manager for MCJIT yet
     // engine_builder.setMemoryManager (jitmm());
 #endif /* USE_OLD_JIT */
+
     engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
-#if OSL_LLVM_VERSION <= 35
-    engine_builder.setUseMCJIT (mcjit() || MCJIT_REQUIRED);
-#endif
+
     m_llvm_exec = engine_builder.create();
-
-    // N.B. createJIT will take ownership of the the JITMemoryManager!
-
     if (! m_llvm_exec)
         return NULL;
 

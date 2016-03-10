@@ -86,10 +86,6 @@ public:
     void debug (int d) { m_debug = d; }
     int debug () const { return m_debug; }
 
-    /// Use MCJIT?
-    void mcjit (int on) { m_mcjit = on; }
-    int mcjit () const { return m_mcjit; }
-
     /// Return a reference to the current context.
     llvm::LLVMContext &context () const { return *m_llvm_context; }
 
@@ -514,7 +510,6 @@ private:
 
 
     int m_debug;
-    int m_mcjit;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;

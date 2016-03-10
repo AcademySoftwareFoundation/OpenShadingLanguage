@@ -714,7 +714,6 @@ private:
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     bool m_connection_error;              ///< Error for ConnectShaders to fail?
     bool m_greedyjit;                     ///< JIT as much as we can?
-    bool m_llvm_mcjit;                    ///< Use MCJIT if available?
     bool m_countlayerexecs;               ///< Count number of layer execs?
     int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
     int m_profile;                        ///< Level of profiling of shader execution

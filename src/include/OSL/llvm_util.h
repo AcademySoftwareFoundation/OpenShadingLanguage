@@ -52,15 +52,10 @@ namespace llvm {
   class Value;
   template<bool preserveNames, typename T, typename Inserter> class IRBuilder;
   template<bool preserveNames> class IRBuilderDefaultInserter;
-#if OSL_LLVM_VERSION >= 34
   namespace legacy {
     class FunctionPassManager;
     class PassManager;
   }
-#else
-  class FunctionPassManager;
-  class PassManager;
-#endif
 }
 
 
@@ -90,10 +85,6 @@ public:
     /// Set debug level
     void debug (int d) { m_debug = d; }
     int debug () const { return m_debug; }
-
-    /// Use MCJIT?
-    void mcjit (int on) { m_mcjit = on; }
-    int mcjit () const { return m_mcjit; }
 
     /// Return a reference to the current context.
     llvm::LLVMContext &context () const { return *m_llvm_context; }
@@ -519,20 +510,14 @@ private:
 
 
     int m_debug;
-    int m_mcjit;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
     IRBuilder *m_builder;
     OSL_Dummy_JITMemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
-#if OSL_LLVM_VERSION >= 34
     llvm::legacy::PassManager *m_llvm_module_passes;
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;
-#else
-    llvm::PassManager *m_llvm_module_passes;
-    llvm::FunctionPassManager *m_llvm_func_passes;
-#endif
     llvm::ExecutionEngine *m_llvm_exec;
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break

@@ -1011,9 +1011,12 @@ static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
 #define OP2(alias,name,ll,fold,simp,flag)                                \
+    extern bool llvm_gen_##ll (BatchedBackendLLVM &rop, int opnum);      \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
+    /* future PR will populate batched_llvm_gen.cpp */                   \
+                                /* llvm_gen_##ll*/nullptr,               \
                                                   constfold_##fold, simp, flag);
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex

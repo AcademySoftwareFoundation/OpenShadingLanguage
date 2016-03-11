@@ -128,9 +128,10 @@ struct OpDescriptor {
                             //     no side effects
     int flags;              // other flags
     OpDescriptor () { }
-    OpDescriptor (const char *n, OpLLVMGen ll, OpFolder fold=NULL,
-                  bool simple=false, int flags=0)
-        : name(n), llvmgen(ll), folder(fold), simple_assign(simple), flags(flags)
+    OpDescriptor (const char *n, OpLLVMGen ll, OpLLVMGenWide llw,
+                  OpFolder fold=NULL, bool simple=false, int flags=0)
+        : name(n), llvmgen(ll), llvmgenwide(llw), folder(fold),
+          simple_assign(simple), flags(flags)
     {}
 
     enum FlagValues { None=0, Tex=1, SideEffects=2 };

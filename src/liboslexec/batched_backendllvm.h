@@ -732,7 +732,7 @@ private:
     int m_true_mask_value;
 
     // Interface and Factory method to construct a Concrete TargetLibraryHelper
-    // that provides a prefex string that all function calls will start with
+    // that provides a prefix string that all function calls will start with
     // and correctly initialize a function map for the shading system with
     // the functions from the target ISA library.
     class TargetLibraryHelper {
@@ -744,6 +744,9 @@ private:
         static std::unique_ptr<TargetLibraryHelper> build(int vector_width,
                                                           TargetISA target_isa);
     };
+    // TargetLibraryHelper is private, so need to be friend with Concrete
+    template <int WidthT, TargetISA IsaT>
+    friend class ConcreteTargetLibraryHelper;
 
     std::unique_ptr<TargetLibraryHelper> m_target_lib_helper;
     const char* m_library_selector;

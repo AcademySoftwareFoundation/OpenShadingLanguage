@@ -12,6 +12,7 @@
 #include "oslexec_pvt.h"
 #include <OSL/genclosure.h>
 #include "backendllvm.h"
+#include "batched_backendllvm.h"
 #include <OSL/oslquery.h>
 
 #include <OpenImageIO/filesystem.h>
@@ -3346,8 +3347,8 @@ ShadingSystemImpl::Batched<WidthT>::jit_group (ShaderGroup &group, ShadingContex
     double locking_time = timer();
 
     // TODO:  Add BatchedBackendLLVM in subsequent pull request
-    // BatchedBackendLLVM lljitter (m_ssi, group, ctx, WidthT);
-    // lljitter.run ();
+    BatchedBackendLLVM lljitter (m_ssi, group, ctx, WidthT);
+    lljitter.run ();
 
     // Keep OSL instructions around in case someone
     // wants the scalar version jitted
@@ -3364,13 +3365,13 @@ ShadingSystemImpl::Batched<WidthT>::jit_group (ShaderGroup &group, ShadingContex
     spin_lock stat_lock (m_ssi.m_stat_mutex);
     m_ssi.m_stat_opt_locking_time += locking_time;
     m_ssi.m_stat_optimization_time += timer();
-//    m_ssi.m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
-//    m_ssi.m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
-//    m_ssi.m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
-//    m_ssi.m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
-//    m_ssi.m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
-//    m_ssi.m_stat_max_llvm_local_mem = std::max (m_ssi.m_stat_max_llvm_local_mem,
-//                                          lljitter.m_llvm_local_mem);
+    m_ssi.m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
+    m_ssi.m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
+    m_ssi.m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
+    m_ssi.m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
+    m_ssi.m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
+    m_ssi.m_stat_max_llvm_local_mem = std::max (m_ssi.m_stat_max_llvm_local_mem,
+                                          lljitter.m_llvm_local_mem);
 
     // TODO: not sure how to count these given batched vs. not
     m_ssi.m_stat_groups_compiled += 1;

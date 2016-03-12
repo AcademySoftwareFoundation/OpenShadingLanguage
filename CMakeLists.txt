@@ -260,6 +260,11 @@ else ()
 	add_definitions ("-DOSL_FAST_MATH=0")
 endif ()
 
+set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
+if (USE_OIIO_STATIC)
+    add_definitions ("-DOIIO_STATIC_BUILD=1")
+endif ()
+
 if (OSL_NO_DEFAULT_TEXTURESYSTEM)
     add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
 endif ()

@@ -106,6 +106,11 @@ using namespace OSL::pvt;
 #define YY_NO_UNISTD_H
 #endif
 
+#ifdef _MSC_VER
+#include <io.h>
+#define isatty _isatty
+#endif
+
 %}
 
 /* Declare modes */

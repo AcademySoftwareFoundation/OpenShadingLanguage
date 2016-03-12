@@ -104,6 +104,12 @@ using namespace OSL::pvt;
 
 #ifdef _WIN32
 #define YY_NO_UNISTD_H
+
+#ifdef _MSC_VER
+#include <io.h>
+#define isatty _isatty
+#endif
+
 #endif
 
 %}

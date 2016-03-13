@@ -448,6 +448,12 @@ endif ()
 add_subdirectory (src/include)
 add_subdirectory (src/doc)
 
+# Add Elara core
+set (USE_ELARA OFF CACHE BOOL "Build Elara core with OSL")
+add_subdirectory (src/liber)
+add_subdirectory (src/liber_shader)
+add_subdirectory (src/er)
+
 
 
 #########################################################################

@@ -3020,7 +3020,7 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 // we are checking the entire contents of the symbol.  More restrictive
 // firstcheck,nchecks are used to check just one element of an array.
 OSL_SHADEOP void
-osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
+ei_osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
                   void *sg, const void *sourcefile, int sourceline,
                   void *symbolname, int firstcheck, int nchecks,
                   const void *opname)
@@ -3053,7 +3053,7 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
 // More restrictive firstcheck,nchecks are used to check just one
 // element of an array.
 OSL_SHADEOP void
-osl_uninit_check (long long typedesc_, void *vals_,
+ei_osl_uninit_check (long long typedesc_, void *vals_,
                   void *sg, const void *sourcefile, int sourceline,
                   const char *groupname, int layer, const char *layername,
                   const char *shadername,
@@ -3099,7 +3099,7 @@ osl_uninit_check (long long typedesc_, void *vals_,
 
 
 OSL_SHADEOP int
-osl_range_check (int indexvalue, int length, const char *symname,
+ei_osl_range_check (int indexvalue, int length, const char *symname,
                  void *sg, const void *sourcefile, int sourceline,
                  const char *groupname, int layer, const char *layername,
                  const char *shadername)
@@ -3124,7 +3124,7 @@ osl_range_check (int indexvalue, int length, const char *symname,
 
 
 // Asked if the raytype is a name we can't know until mid-shader.
-OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
+OSL_SHADEOP int ei_osl_raytype_name (void *sg_, void *name)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     int bit = sg->context->shadingsys().raytype_bit (USTR(name));
@@ -3132,7 +3132,7 @@ OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
 }
 
 
-OSL_SHADEOP int osl_get_attribute(void *sg_,
+OSL_SHADEOP int ei_osl_get_attribute(void *sg_,
                              int   dest_derivs,
                              void *obj_name_,
                              void *attr_name_,
@@ -3155,7 +3155,7 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
 
 
 OSL_SHADEOP int
-osl_bind_interpolated_param (void *sg_, const void *name, long long type,
+ei_osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int userdata_has_derivs, void *userdata_data,
                              int symbol_has_derivs, void *symbol_data,
                              int symbol_data_size,

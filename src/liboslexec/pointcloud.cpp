@@ -437,7 +437,7 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
 
 
 OSL_SHADEOP int
-osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
+ei_osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
                        int max_points, int sort, void *out_indices, void *out_distances, int derivs_offset,
                        int nattrs, ...)
 {
@@ -481,7 +481,7 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
 
 
 OSL_SHADEOP int
-osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, int count,
+ei_osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, int count,
                     const char *attr_name, long long attr_type, void *out_data)
 {
     size_t *indices = (size_t *)alloca (sizeof(size_t) * count);
@@ -499,7 +499,7 @@ osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, i
 
 
 OSL_SHADEOP void
-osl_pointcloud_write_helper (ustring *names, TypeDesc *types, void **values,
+ei_osl_pointcloud_write_helper (ustring *names, TypeDesc *types, void **values,
                              int index, const char *name, long long type,
                              void *val)
 {
@@ -511,7 +511,7 @@ osl_pointcloud_write_helper (ustring *names, TypeDesc *types, void **values,
 
 
 OSL_SHADEOP int
-osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
+ei_osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
                       int nattribs, const ustring *names,
                       const TypeDesc *types, const void **values)
 {

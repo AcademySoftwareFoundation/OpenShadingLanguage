@@ -459,7 +459,7 @@ ShadingContext::free_dict_resources ()
 #define TYPEDESC(x) (*(TypeDesc *)&x)
 
 
-OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
+OSL_SHADEOP int ei_osl_dict_find_iis (void *sg_, int nodeID, void *query)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_find (nodeID, USTR(query));
@@ -467,7 +467,7 @@ OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
 
 
 
-OSL_SHADEOP int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
+OSL_SHADEOP int ei_osl_dict_find_iss (void *sg_, void *dictionary, void *query)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_find (USTR(dictionary), USTR(query));
@@ -475,7 +475,7 @@ OSL_SHADEOP int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
 
 
 
-OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
+OSL_SHADEOP int ei_osl_dict_next (void *sg_, int nodeID)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return sg->context->dict_next (nodeID);
@@ -483,7 +483,7 @@ OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
 
 
 
-OSL_SHADEOP int osl_dict_value (void *sg_, int nodeID, void *attribname,
+OSL_SHADEOP int ei_osl_dict_value (void *sg_, int nodeID, void *attribname,
                                long long type, void *data)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;

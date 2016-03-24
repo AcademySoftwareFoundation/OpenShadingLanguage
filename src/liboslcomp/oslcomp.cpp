@@ -791,7 +791,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
             lastline = -1;
         }
 
-        if (/*m_debug &&*/ op->sourcefile()) {
+        if (m_debug && op->sourcefile()) {
             ustring file = op->sourcefile();
             int line = op->sourceline();
             if (file != lastfile || line != lastline)

@@ -53,7 +53,7 @@ namespace pvt {
 #define USTR(cstr) (*((ustring *)&cstr))
 
 OSL_SHADEOP void
-osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val, int layeridx, const char* sourcefile_, int sourceline)
+ei_osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val, int layeridx, const char* sourcefile_, int sourceline)
 {
     const ustring &name (USTR(name_));
     const ustring &sourcefile (USTR(sourcefile_));
@@ -96,7 +96,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
 
 
 OSL_SHADEOP int
-osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
+ei_osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
                 long long type_, void *val, int derivs,
                 int layeridx, const char* sourcefile_, int sourceline)
 {

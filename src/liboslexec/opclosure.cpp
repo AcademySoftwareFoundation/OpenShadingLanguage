@@ -39,7 +39,7 @@ namespace pvt {
 
 
 OSL_SHADEOP const ClosureColor *
-osl_add_closure_closure (ShaderGlobals *sg,
+ei_osl_add_closure_closure (ShaderGlobals *sg,
                          const ClosureColor *a, const ClosureColor *b)
 {
     if (a == NULL) return b;
@@ -49,7 +49,7 @@ osl_add_closure_closure (ShaderGlobals *sg,
 
 
 OSL_SHADEOP const ClosureColor *
-osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
+ei_osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
 {
     if (a == NULL) return NULL;
     if (w->x == 0.0f &&
@@ -63,7 +63,7 @@ osl_mul_closure_color (ShaderGlobals *sg, ClosureColor *a, const Color3 *w)
 
 
 OSL_SHADEOP const ClosureColor *
-osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
+ei_osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 {
     if (a == NULL) return NULL;
     if (w == 0.0f) return NULL;
@@ -73,7 +73,7 @@ osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 
 
 OSL_SHADEOP ClosureComponent *
-osl_allocate_closure_component (ShaderGlobals *sg, int id, int size)
+ei_osl_allocate_closure_component (ShaderGlobals *sg, int id, int size)
 {
     return sg->context->closure_component_allot(id, size, Color3(1.0f));
 }
@@ -81,7 +81,7 @@ osl_allocate_closure_component (ShaderGlobals *sg, int id, int size)
 
 
 OSL_SHADEOP ClosureColor *
-osl_allocate_weighted_closure_component (ShaderGlobals *sg, int id, int size, const Color3 *w)
+ei_osl_allocate_weighted_closure_component (ShaderGlobals *sg, int id, int size, const Color3 *w)
 {
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
@@ -89,7 +89,7 @@ osl_allocate_weighted_closure_component (ShaderGlobals *sg, int id, int size, co
 }
 
 OSL_SHADEOP const char *
-osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)
+ei_osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)
 {
     // Special case for printing closures
     std::stringstream stream;

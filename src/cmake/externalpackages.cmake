@@ -180,9 +180,9 @@ endif()
 
 # try to find llvm-config, with a specific version if specified
 if(LLVM_DIRECTORY)
-  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION} HINTS "${LLVM_DIRECTORY}/bin" NO_CMAKE_PATH)
+  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION} HINTS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH)
   if(NOT LLVM_CONFIG)
-    FIND_PROGRAM(LLVM_CONFIG llvm-config HINTS "${LLVM_DIRECTORY}/bin" NO_CMAKE_PATH)
+    FIND_PROGRAM(LLVM_CONFIG llvm-config HINTS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH)
   endif()
 else()
   FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION})

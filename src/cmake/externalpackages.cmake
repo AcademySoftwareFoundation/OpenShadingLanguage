@@ -207,7 +207,7 @@ if(NOT LLVM_DIRECTORY OR EXISTS ${LLVM_CONFIG})
 endif()
 
 if (LLVM_VERSION VERSION_GREATER 3.4.9 AND (NOT OSL_BUILD_CPP11 AND NOT OSL_BUILD_CPP14))
-    message (FATAL_ERROR "LLVM ${LLVM_VERSION} requires C++11. You must build with USE_CPP11=1 or USE_CPP14=1.")
+    message (FATAL_ERROR "LLVM ${LLVM_VERSION} requires C++11. You must build with OSL_BUILD_CPP11=1 or OSL_BUILD_CPP14=1.")
 endif ()
 
 find_library ( LLVM_LIBRARY

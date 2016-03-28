@@ -534,6 +534,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-dup
+            oslc-warn-commainit
             oslc-variadic-macro
             oslinfo-arrayparams oslinfo-metadata oslinfo-noparams
             osl-imageio

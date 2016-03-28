@@ -1,6 +1,8 @@
 file (GLOB public_headers OSL/*.h)
 
 message (STATUS "Create oslversion.h from oslversion.h.in")
+set (OSL_BUILD_CPP11 ${USE_CPP11})
+set (OSL_BUILD_CPP14 ${USE_CPP14})
 configure_file (OSL/oslversion.h.in "${CMAKE_BINARY_DIR}/include/OSL/oslversion.h" @ONLY)
 list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/OSL/oslversion.h")
 

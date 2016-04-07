@@ -437,9 +437,21 @@ ASTreturn_statement::codegen (Symbol *dest)
             // but if that's not possible, let it go wherever and then
             // copy it.
             ASSERT (myfunc->return_location() != NULL);
-            dest = expr()->codegen (myfunc->return_location ());
-            if (dest != myfunc->return_location ())
-                emitcode ("assign", myfunc->return_location(), dest);
+            Symbol *retloc = myfunc->return_location ();
+            dest = expr()->codegen (retloc);
+            if (dest != retloc) {
+                if (retloc->typespec().is_structure()) {
+                    StructSpec *structspec = retloc->typespec().structspec ();
+                    ASSERT (dest && structspec);
+                    codegen_assign_struct (structspec, ustring(retloc->mangled()),
+                                           ustring(dest->mangled()), NULL,
+                                           true, 0,
+                                           false /*not a shader param init*/);
+                } else {
+                    // Simple type
+                    emitcode ("assign", myfunc->return_location(), dest);
+                }
+            }
         }
         // Unless this was the unconditional last statement of the
         // function, emit a "return" op.
@@ -1580,7 +1592,10 @@ ASTfunction_call::codegen (Symbol *dest)
     }
 
     std::vector<TypeSpec> polyargs;
-    m_compiler->typespecs_from_codes (func()->argcodes().c_str()+1, polyargs);
+    const char *param_argcodes = func()->argcodes().c_str();
+    int len;
+    m_compiler->type_from_code (param_argcodes, &len);  // skip ret type
+    m_compiler->typespecs_from_codes (param_argcodes+len, polyargs);
 
     // Generate code for all the individual arguments.  Remember the
     // individual indices for arguments that are array elements or
@@ -1616,10 +1631,13 @@ ASTfunction_call::codegen (Symbol *dest)
             if (ftype.is_structure() || ftype.is_structure_array()) {
                 // If the formal parameter is a struct, we also need to
                 // alias each of the fields
-                if (a->nodetype() == variable_ref_node) {
+                if (a->nodetype() == variable_ref_node ||
+                    a->nodetype() == function_call_node) {
                     // Passed a variable that is a struct ; make the struct
                     // fields of the formal param alias to the struct fields
-                    // of the actual param.
+                    // of the actual param. Exact same logic if passed the
+                    // result location of a call to a function that returns
+                    // a struct.
                     struct_pair_all_fields (ftype.structspec(),
                                             ustring(f->sym()->mangled()),
                                             ustring(argdest[i]->mangled()));

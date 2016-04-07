@@ -340,10 +340,7 @@ class ASTshader_declaration : public ASTNode
 {
 public:
     ASTshader_declaration (OSLCompilerImpl *comp, int stype, ustring name,
-                           ASTNode *form, ASTNode *stmts, ASTNode *meta)
-        : ASTNode (shader_declaration_node, comp, stype, meta, form, stmts),
-          m_shadername(name)
-    { }
+                           ASTNode *form, ASTNode *stmts, ASTNode *meta);
     const char *nodetypename () const { return "shader_declaration"; }
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;

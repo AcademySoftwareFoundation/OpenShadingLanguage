@@ -43,7 +43,7 @@ class StructSpec;
 /// Kinds of shaders
 ///
 enum ShaderType {
-    ShadTypeUnknown, ShadTypeGeneric, ShadTypeSurface, 
+    ShadTypeUnknown=0, ShadTypeGeneric, ShadTypeSurface,
     ShadTypeDisplacement, ShadTypeVolume, ShadTypeLight,
     ShadTypeLast
 };

@@ -150,6 +150,9 @@ public:
     bool current_output () const { return m_current_output; }
     void current_output (bool b) { m_current_output = b; }
 
+    void declaring_shader_formals (bool val) { m_declaring_shader_formals = val; }
+    bool declaring_shader_formals () const { return m_declaring_shader_formals; }
+
     /// Given a pointer to a type code string that we use for argument
     /// checking ("p", "v", etc.) return the TypeSpec of the first type
     /// described by the string (UNKNOWN if it couldn't be recognized).
@@ -402,6 +405,7 @@ private:
     SymDependencyMap m_symdeps; ///< Symbol-to-symbol dependencies
     Symbol *m_derivsym;       ///< Pseudo-symbol to track deriv dependencies
     int m_main_method_start;  ///< Instruction where 'main' starts
+    bool m_declaring_shader_formals; ///< Are we declaring shader formals?
 };
 
 

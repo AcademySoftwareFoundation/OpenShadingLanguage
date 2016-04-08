@@ -120,7 +120,8 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
-      m_main_method_start(-1)
+      m_main_method_start(-1),
+      m_declaring_shader_formals(false)
 {
     initialize_globals ();
     initialize_builtin_funcs ();

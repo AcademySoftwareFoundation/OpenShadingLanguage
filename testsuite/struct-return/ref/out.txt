@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+test struct return
+{2 3} + {10 20} = {12 23}
+square({2 3}) = {4 9}
+Complicated example: [ f=3.141593, v={10 20}, a=[1, 2, 3], v=[{20 40}, {40 80}] ]
+

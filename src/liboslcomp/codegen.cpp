@@ -663,12 +663,15 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
                 val = val->next();
                 completed = false;
             }
+            bool one_arg = (val && ! val->nextptr());
             for (int c = 0;  c < 3;  ++c) {
                 if (val.get())
                     ++nargs;
                 if (val.get() && val->nodetype() == ASTNode::literal_node) {
                     f[c] = ((ASTliteral *)val.get())->floatval ();
                     val = val->next();
+                } else if (c > 0 && one_arg) {
+                    f[c] = f[0];
                 } else {
                     f[c] = 0;
                     completed = false;

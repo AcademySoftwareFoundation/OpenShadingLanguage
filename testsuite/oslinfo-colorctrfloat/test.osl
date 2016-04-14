@@ -1,0 +1,5 @@
+shader test (color foo=color(0.1, 0.2, 0.3),
+             color bar=color(0.75))
+{
+    printf ("foo=%f, bar=%f\n", foo, bar);
+}

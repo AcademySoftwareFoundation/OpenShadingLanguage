@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+shader "test"
+    "foo" "color"
+		Default value: [ 0.1 0.2 0.3 ]
+    "bar" "color"
+		Default value: [ 0.75 0.75 0.75 ]

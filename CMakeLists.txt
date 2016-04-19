@@ -560,8 +560,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture
-            struct-err struct-in-struct-init struct-init-copy struct-layers
-            struct-return struct-with-array struct-within-struct
+            struct-err struct-init-copy struct-layers
+            struct-return struct-with-array
+            struct-nested struct-nested-assign struct-nested-deep
             ternary
             testshade-expr
             texture-alpha texture-blur texture-derivs

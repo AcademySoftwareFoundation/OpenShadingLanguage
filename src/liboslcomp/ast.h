@@ -180,6 +180,7 @@ public:
 
     void sourceline (int line) { m_sourceline = line; }
 
+    // FIXME - some day, replace this with TinyFormat-based version.
     void error (const char *format, ...);
     void warning (const char *format, ...);
 
@@ -419,11 +420,17 @@ public:
     /// initialization of literal values and place it in 'out'.
     /// Return whether the full initialization is comprised only of
     /// literals (and no init ops are needed).
-    bool param_default_literals (const Symbol *sym, std::string &out,
-                                 const std::string &separator=" ") const;
+    bool param_default_literals (const Symbol *sym, ASTNode *init,
+                 std::string &out, string_view separator=" ") const;
+
+    void codegen_initializer (ref init, Symbol *sym);
 
     // Special code generation for structure initializers
-    Symbol *codegen_struct_initializers (ref init);
+    Symbol *codegen_struct_initializers (ref init, Symbol *sym);
+
+    void register_struct_init (ustring name, ASTNode *init) {
+        m_struct_field_inits.push_back (NamedInit (name, init));
+    }
 
 private:
     // Helper: type check an initializer list -- either a single item to
@@ -431,7 +438,8 @@ private:
     void typecheck_initlist (ref init, TypeSpec type, const char *name);
 
     // Special type checking for structure initializers
-    TypeSpec typecheck_struct_initializers (ref init);
+    TypeSpec typecheck_struct_initializers (ref init, TypeSpec type,
+                                            const char *name);
 
     // Helper: generate code for an initializer list -- either a single
     // item to a scalar, or a list to an array.
@@ -450,6 +458,10 @@ private:
     bool m_isoutput;    ///< Is this an output parameter?
     bool m_ismetadata;  ///< Is this declaration a piece of metadata?
     bool m_initlist;    ///< Was initialized with a list (versus just an expr)
+    // For structures, map the field names (even recursively!) to the
+    // specific initializers.
+    typedef std::pair<ustring,ASTNode *> NamedInit;
+    std::vector<NamedInit> m_struct_field_inits;
 };
 
 

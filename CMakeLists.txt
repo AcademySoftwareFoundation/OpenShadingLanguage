@@ -231,7 +231,7 @@ set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 set (USE_FAST_MATH ON CACHE BOOL "Use fast math approximations (if no, then use system math library)")
 set (USE_CPP11 ON CACHE BOOL "Compile in C++11 mode")
 set (USE_CPP14 OFF CACHE BOOL "Compile in C++14 mode")
-set (OSL_BUILD_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
+set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
@@ -287,7 +287,7 @@ endif ()
 
 if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
     message (STATUS "Using libc++")
-    add_definitions ("-stdlib=libc++")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif ()
 
 # Options common to gcc and clang

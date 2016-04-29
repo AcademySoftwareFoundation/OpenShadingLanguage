@@ -182,7 +182,8 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
                                   std::string &result)
 {
     // Read file contents into a string
-    std::ifstream instream (filename.c_str());
+    std::ifstream instream;
+    OIIO::Filesystem::open(instream, filename);
     if (! instream.is_open()) {
         error (ustring(filename), 0, "Could not open \"%s\"\n", filename.c_str());
         return false;
@@ -410,7 +411,8 @@ OSLCompilerImpl::compile (string_view filename,
             if (m_output_filename.size() == 0)
                 m_output_filename = default_output_filename ();
 
-            std::ofstream oso_output (m_output_filename.c_str());
+            std::ofstream oso_output;
+            OIIO::Filesystem::open (oso_output, m_output_filename);
             if (! oso_output.good()) {
                 error (ustring(), 0, "Could not open \"%s\"",
                        m_output_filename.c_str());
@@ -887,7 +889,7 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
         if (m_sourcefile)
             fclose (m_sourcefile);
         m_last_sourcefile = filename;
-        m_sourcefile = fopen (filename.c_str(), "r");
+        m_sourcefile = OIIO::Filesystem::fopen (filename, "r");
         if (! m_sourcefile) {
             m_last_sourcefile = ustring();
             return "<not found>";

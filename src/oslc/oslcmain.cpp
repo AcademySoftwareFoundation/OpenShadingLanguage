@@ -143,6 +143,8 @@ static OSLC_ErrorHandler default_oslc_error_handler;
 int
 main (int argc, const char *argv[])
 {
+    OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
+
     std::vector<std::string> args;
     bool quiet = false;
     if (argc <= 1) {

@@ -2843,7 +2843,8 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
 
     bool ok = true;
     std::string groupfilename = tmpdir + "/shadergroup";
-    std::ofstream groupfile (groupfilename.c_str());
+    std::ofstream groupfile;
+	OIIO::Filesystem::open(groupfile, groupfilename.c_str());
     if (groupfile.good()) {
         groupfile << group->serialize();
         groupfile.close ();

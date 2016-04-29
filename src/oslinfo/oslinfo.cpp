@@ -44,6 +44,7 @@ Sony Pictures Imageworks terms, above.
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/filesystem.h>
 
 #include "OSL/oslquery.h"
 using namespace OSL;
@@ -240,6 +241,8 @@ input_file (int argc, const char *argv[])
 int
 main (int argc, char *argv[])
 {
+	OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
+
     OIIO::ArgParse ap (argc, (const char **)argv);
     ap.options ("oslinfo -- list parameters of a compiled OSL shader\n"
                 OSL_INTRO_STRING "\n"

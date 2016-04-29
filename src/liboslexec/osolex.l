@@ -93,6 +93,7 @@ HINTPATTERN     \%{IDENT}(\{({IDORLITERAL}(\,{IDORLITERAL})*)?\})?
 
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/filesystem.h>
 
 #include "osoreader.h"
 using namespace OSL;
@@ -249,7 +250,7 @@ OSOReader::parse_file (const std::string &filename)
     // can actually be reading a .oso file at a time.
     OIIO::lock_guard guard (osoread_mutex);
 
-    osoin = fopen (filename.c_str(), "r");
+    osoin = OIIO::Filesystem::fopen (filename.c_str(), "r");
     if (! osoin) {
         m_err.error ("File %s not found", filename.c_str());
         return false;

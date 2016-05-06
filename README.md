@@ -8,13 +8,13 @@ Build status:
 Table of contents
 ------------------
 
-* Introduction
-* How OSL is different
-* What OSL consists of
-* Building OSL
-* Current state of the project and road map
-* Contacts
-* Credits
+* [Introduction](#introduction)
+* [How OSL is different](#how-osl-is-different)
+* [What OSL consists of](#what-osl-consists-of)
+* [Building OSL](#building-osl)
+* [Current state of the project and road map](#current-state-of-the-project-and-road-map)
+* [Contacts](#contacts)
+* [Credits](#credits)
 
 
 Introduction

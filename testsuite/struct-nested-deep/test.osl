@@ -1,0 +1,55 @@
+struct Astruct {
+    int i, j;
+};
+
+struct Bstruct {
+    Astruct a;
+    float f;
+    color c;
+};
+
+struct Cstruct {
+    int a[2];
+    float f;
+};
+
+struct Dstruct {
+    Astruct A;
+    Bstruct B;
+    Cstruct C;
+};
+
+
+
+void
+print_D (string name, Dstruct D)
+{
+    printf ("%s = { A:{%d, %d}  B:{{%d, %d}, %g, [%g]}  C:{{%d, %d}, %g}}\n",
+            name,
+            D.A.i, D.A.j,
+            D.B.a.i, D.B.a.j, D.B.f, D.B.c,
+            D.C.a[0], D.C.a[1], D.C.f);
+}
+
+
+
+surface test (
+              // Initialize with all constants
+              Dstruct Dconst = { { 1, 2 },
+                                 { { 21, 22 }, M_E, color(0.25, 0.5, 0.75) },
+                                 { {101, 102}, 42.1 }
+                               },
+              // Initialize with computations that require init ops.
+              Dstruct Dvar = { { 1*1, 1*2 },
+                               { { 1*21, 1*22 }, 1*M_E, color(1*0.25, 0.5, 0.75) },
+                               { {1*101, 1*102}, 1*42.1 }
+                             }
+              )
+{
+    print_D ("Dconst", Dconst);
+    print_D ("Dvar  ", Dvar);
+
+    Dstruct Dcopy;
+    Dcopy = Dconst;
+    print_D ("Dcopy ", Dcopy);
+}

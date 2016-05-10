@@ -244,7 +244,8 @@ public:
     // Make and add individual symbols for each field of a structure,
     // using the given basename.
     void add_struct_fields (StructSpec *structspec, ustring basename,
-                            SymType symtype, int arraylen, ASTNode *node=NULL);
+                            SymType symtype, int arraylen,
+                            ASTNode *node=NULL, ASTNode *init=NULL);
 
     string_view output_filename () const { return m_output_filename; }
 
@@ -311,6 +312,8 @@ public:
 
     const std::string main_filename () const { return m_main_filename; }
     const std::string cwd () const { return m_cwd; }
+
+    bool debug () const { return m_debug; }
 
 private:
     void initialize_globals ();

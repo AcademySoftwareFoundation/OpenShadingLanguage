@@ -117,7 +117,7 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
     if (m_typespec.is_structure()) {
         // struct initialization handled separately
-        return typecheck_struct_initializers (init);
+        return typecheck_struct_initializers (init, m_typespec, m_name.c_str());
     }
 
     typecheck_initlist (init, m_typespec, m_name.c_str());
@@ -172,24 +172,25 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
 
 
 TypeSpec
-ASTvariable_declaration::typecheck_struct_initializers (ref init)
+ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
+                                                        const char *name)
 {
-    ASSERT (m_typespec.is_structure());
+    ASSERT (type.is_structure());
 
-    if (! init->next() && init->typespec() == m_typespec) {
+    if (! init->next() && init->typespec() == type) {
         // Special case: just one initializer, it's a whole struct of
         // the right type.
-        return m_typespec;
+        return type;
     }
 
     // General case -- per-field initializers
 
-    const StructSpec *structspec (m_typespec.structspec());
+    const StructSpec *structspec (type.structspec());
     int numfields = (int)structspec->numfields();
     for (int i = 0;  init;  init = init->next(), ++i) {
         if (i >= numfields) {
             error ("Too many initializers for '%s %s'",
-                   type_c_str(m_typespec), m_name.c_str());
+                   type_c_str(type), name);
             break;
         }
         const StructSpec::FieldSpec &field (structspec->field(i));
@@ -197,11 +198,17 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
         if (init->nodetype() == compound_initializer_node) {
             // Initializer is itself a compound, it ought to be initializing
             // a field that is an array.
+            ASTcompound_initializer *cinit = (ASTcompound_initializer *)init.get();
             if (field.type.is_array ()) {
-                ustring fieldname = ustring::format ("%s.%s", m_sym->name().c_str(),
+                ustring fieldname = ustring::format ("%s.%s", name,
                                                      field.name.c_str());
-                typecheck_initlist (((ASTcompound_initializer *)init.get())->initlist(),
+                typecheck_initlist (cinit->initlist(),
                                     field.type, fieldname.c_str());
+            } else if (field.type.is_structure()) {
+                ustring fieldname = ustring::format ("%s.%s", name,
+                                                     field.name.c_str());
+                typecheck_struct_initializers (cinit->initlist(), field.type,
+                                               fieldname.c_str());
             } else {
                 error ("Can't use '{...}' for a struct field that is not an array");
             }
@@ -220,9 +227,9 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
         if (! assignable(field.type, init->typespec()))
             error ("Can't assign '%s' to '%s %s.%s'",
                    type_c_str(init->typespec()),
-                   type_c_str(field.type), m_name.c_str(), field.name.c_str());
+                   type_c_str(field.type), name, field.name.c_str());
     }
-    return m_typespec;
+    return type;
 }
 
 

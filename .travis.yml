@@ -14,11 +14,14 @@ dist: precise
 
 # Add-ons: specify apt packages for Linux
 addons:
-  apt: 
+  apt:
    sources:
       - boost-latest
       - ubuntu-toolchain-r-test
+      - george-edison55-precise-backports
    packages:
+      - cmake
+      - cmake-data
       - gcc-4.8
       - g++-4.8
       - gcc-6
@@ -100,25 +103,23 @@ matrix:
       # Build with C++11, optimized build, against OIIO master
       - os: linux
         compiler: gcc
-        env: USE_CPP11=1 USE_CPP=11
       - os: osx
         compiler: clang
-        env: USE_CPP11=1 USE_CPP=11
       # Build with C++11, DEBUG build, against OIIO master
       - os: linux
         compiler: gcc
-        env: DEBUG=1 USE_CPP11=1 USE_CPP=11
+        env: DEBUG=1
       - os: osx
         compiler: clang
-        env: DEBUG=1 USE_CPP11=1 USE_CPP=11
+        env: DEBUG=1
     # Test against the older release branch of OIIO (all the other tests
-    # are against OIIO master), and also use C++03.
+    # are against OIIO master).
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=release USE_CPP11=0
+        env: OIIOBRANCH=release USE_CPP11=1
       - os: osx
         compiler: clang
-        env: OIIOBRANCH=release USE_CPP11=0
+        env: OIIOBRANCH=release USE_CPP11=1
     # Linux only: test gcc 6 (catch new warnings hot off the presses) and
     # also use a higher SIMD level, avx and f16c, to make sure all is well.
     # TravisCI's OSX images don't yet support avx/f16c, so we only do this
@@ -126,13 +127,13 @@ matrix:
     # into separate tests.
       - os: linux
         compiler: gcc
-        env: WHICHGCC=6 USE_SIMD=avx,f16c USE_CPP11=1 USE_CPP=11
+        env: WHICHGCC=6 USE_SIMD=avx,f16c
     # One more, just for the heck of it, turn all SIMD off.  I guess this
     # should/could be both platforms, but in the interest of making the
     # tests go faster, don't bother doing it on OSX.
       - os: linux
         compiler: gcc
-        env: USE_SIMD=0 USE_CPP11=1 USE_CPP=11
+        env: USE_SIMD=0
 
 notifications:
     email:

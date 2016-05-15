@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                             OSL_LIBRARY_VERSION_PATCH, \
                             OSL_LIBRARY_VERSION_RELEASE_TYPE)
 #define OSL_INTRO_STRING "OpenShadingLanguage " OSL_LIBRARY_VERSION_STRING
-#define OSL_COPYRIGHT_STRING "(c) Copyright 2009-2014 Sony Pictures Imageworks, et al. All rights reserved."
+#define OSL_COPYRIGHT_STRING "(c) Copyright 2009-2017 Sony Pictures Imageworks, et al. All rights reserved."
 
 
 // Version numbers for the compiled shader format.  The major number
@@ -87,9 +87,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSL_NAMESPACE_EXIT };
 #endif
 
-// OSL_BUILD_CPP11 will be 1 if this OSL was built using C++11
-#cmakedefine01 OSL_BUILD_CPP11
+#define OSL_BUILD_CPP11 1 /* Always build for C++ >= 11 */
 // OSL_BUILD_CPP14 will be 1 if this OSL was built using C++14
 #cmakedefine01 OSL_BUILD_CPP14
+// OSL_BUILD_CPP17 will be 1 if this OSL was built using C++17
+#cmakedefine01 OSL_BUILD_CPP17
 
 #endif /* OSLVERSION_H */

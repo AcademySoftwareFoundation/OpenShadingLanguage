@@ -8,7 +8,7 @@ MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS="-DOSL_SPI=1"
 ## Rhel7 (current)
 ifeq ($(SP_OS), rhel7)
     platform=rhel7
-    USE_CPP11 ?= 1
+    USE_CPP ?= 11
     USE_SIMD = sse4.1
     COMPILER ?= clang40
     CMAKE ?= cmake
@@ -79,7 +79,7 @@ ifeq ($(SP_OS), rhel7)
 
 ## Generic OSX machines (including LG's laptop)
 else ifeq (${platform}, macosx)
-    USE_CPP11 ?= 1
+    USE_CPP ?= 11
     USE_SIMD ?= sse4.2
     MY_CMAKE_FLAGS += \
         -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \

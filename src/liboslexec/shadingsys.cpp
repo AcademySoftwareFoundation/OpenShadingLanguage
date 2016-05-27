@@ -600,6 +600,7 @@ ustring subimage("subimage"), subimagename("subimagename");
 ustring missingcolor("missingcolor"), missingalpha("missingalpha");
 ustring end("end"), useparam("useparam");
 ustring uninitialized_string("!!!uninitialized!!!");
+ustring unull("unull");
 };
 
 
@@ -640,6 +641,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_max_local_mem_KB(2048),
       m_compile_report(false),
       m_buffer_printf(true),
+      m_no_noise(false),
+      m_no_pointcloud(false),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
@@ -674,6 +677,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_getattribute_fail_time = 0;
     m_stat_getattribute_calls = 0;
     m_stat_get_userdata_calls = 0;
+    m_stat_noise_calls = 0;
     m_stat_pointcloud_searches = 0;
     m_stat_pointcloud_searches_total_results = 0;
     m_stat_pointcloud_max_results = 0;
@@ -1054,6 +1058,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET ("compile_report", int, m_compile_report);
     ATTR_SET ("buffer_printf", int, m_buffer_printf);
+    ATTR_SET ("no_noise", int, m_no_noise);
+    ATTR_SET ("no_pointcloud", int, m_no_pointcloud);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -1166,6 +1172,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_DECODE ("compile_report", int, m_compile_report);
     ATTR_DECODE ("buffer_printf", int, m_buffer_printf);
+    ATTR_DECODE ("no_noise", int, m_no_noise);
+    ATTR_DECODE ("no_pointcloud", int, m_no_pointcloud);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
@@ -1198,6 +1206,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:inst_merge_time", float, m_stat_inst_merge_time);
     ATTR_DECODE ("stat:getattribute_calls", long long, m_stat_getattribute_calls);
     ATTR_DECODE ("stat:get_userdata_calls", long long, m_stat_get_userdata_calls);
+    ATTR_DECODE ("stat:noise_calls", long long, m_stat_noise_calls);
     ATTR_DECODE ("stat:pointcloud_searches", long long, m_stat_pointcloud_searches);
     ATTR_DECODE ("stat:pointcloud_gets", long long, m_stat_pointcloud_gets);
     ATTR_DECODE ("stat:pointcloud_writes", long long, m_stat_pointcloud_writes);
@@ -1534,6 +1543,7 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (optimize);
     INTOPT (llvm_optimize);
     INTOPT (debug);
+    INTOPT (profile);
     INTOPT (llvm_debug);
     BOOLOPT (llvm_debug_layers);
     BOOLOPT (lazylayers);
@@ -1564,6 +1574,8 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (opt_texture_handle);
     BOOLOPT (opt_seed_bblock_aliases);
     INTOPT  (opt_passes);
+    INTOPT (no_noise);
+    INTOPT (no_pointcloud);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);
@@ -1668,6 +1680,8 @@ ShadingSystemImpl::getstats (int level) const
             << Strutil::timeintervalformat (m_stat_getattribute_fail_time, 2) << ")\n";
     }
     out << "  Number of get_userdata calls: " << m_stat_get_userdata_calls << "\n";
+    if (profile() > 1)
+        out << "  Number of noise calls: " << m_stat_noise_calls << "\n";
     if (m_stat_pointcloud_searches || m_stat_pointcloud_writes) {
         out << "  Pointcloud operations:\n";
         out << "    pointcloud_search calls: " << m_stat_pointcloud_searches << "\n";

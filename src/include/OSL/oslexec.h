@@ -93,6 +93,9 @@ public:
     ///    int buffer_printf      Buffer printf output from shaders and
     ///                              output atomically, to prevent threads
     ///                              from interleaving lines. (1)
+    ///    int profile            Perform some rudimentary profiling (0)
+    ///    int no_noise           Replace noise with constant value. (0)
+    ///    int no_pointcloud      Skip pointcloud lookups. (0)
     /// 2. Attributes that should be set by applications/renderers that
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")

@@ -69,7 +69,7 @@ static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool runstats = false;
-static bool profile = false;
+static int profile = 0;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
@@ -418,6 +418,15 @@ action_groupspec (int argc, const char *argv[])
 
 
 static void
+set_profile (int argc, const char *argv[])
+{
+    profile = 1;
+    shadingsys->attribute ("profile", profile);
+}
+
+
+
+static void
 getargs (int argc, const char *argv[])
 {
     static bool help = false;
@@ -431,7 +440,7 @@ getargs (int argc, const char *argv[])
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
-                "--profile", &profile, "Print profile information",
+                "--profile %@", &set_profile, NULL, "Print profile information",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-res %d %d", &xres, &yres, "", // synonym for -g
@@ -1061,8 +1070,6 @@ test_shade (int argc, const char *argv[])
 
     if (debug)
         test_group_attributes (shadergroup.get());
-    if (profile)
-        shadingsys->attribute ("profile", 1);
 
     if (num_threads < 1)
         num_threads = boost::thread::hardware_concurrency();

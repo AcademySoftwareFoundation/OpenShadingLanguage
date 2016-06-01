@@ -106,6 +106,8 @@ using namespace OSL::pvt;
 
 #ifdef _MSC_VER
 #define strtoll _strtoi64
+#include <io.h>
+#define isatty _isatty
 #endif
 #endif
 

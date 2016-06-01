@@ -117,10 +117,23 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
     if (m_typespec.is_structure()) {
         // struct initialization handled separately
-        return typecheck_struct_initializers (init);
+        return typecheck_struct_initializers (init, m_typespec, m_name.c_str());
     }
 
     typecheck_initlist (init, m_typespec, m_name.c_str());
+
+    // Warning to catch confusing comma operator in variable initializers.
+    // One place this comes up is when somebody forgets the proper syntax
+    // for constructors, for example
+    //     color x = (a, b, c);   // Sets x to (c,c,c)!
+    // when they really meant
+    //     color x = color(a, b, c);
+    if (init->nodetype() == comma_operator_node && !typespec().is_closure() &&
+        (typespec().is_triple() || typespec().is_matrix())) {
+        warning ("Comma operator is very confusing here. "
+                 "Did you mean to use a constructor: %s = %s(...)?",
+                 m_name.c_str(), typespec().c_str());
+    }
 
     return m_typespec;
 }
@@ -159,24 +172,25 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
 
 
 TypeSpec
-ASTvariable_declaration::typecheck_struct_initializers (ref init)
+ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
+                                                        const char *name)
 {
-    ASSERT (m_typespec.is_structure());
+    ASSERT (type.is_structure());
 
-    if (! init->next() && init->typespec() == m_typespec) {
+    if (! init->next() && init->typespec() == type) {
         // Special case: just one initializer, it's a whole struct of
         // the right type.
-        return m_typespec;
+        return type;
     }
 
     // General case -- per-field initializers
 
-    const StructSpec *structspec (m_typespec.structspec());
+    const StructSpec *structspec (type.structspec());
     int numfields = (int)structspec->numfields();
     for (int i = 0;  init;  init = init->next(), ++i) {
         if (i >= numfields) {
             error ("Too many initializers for '%s %s'",
-                   type_c_str(m_typespec), m_name.c_str());
+                   type_c_str(type), name);
             break;
         }
         const StructSpec::FieldSpec &field (structspec->field(i));
@@ -184,11 +198,17 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
         if (init->nodetype() == compound_initializer_node) {
             // Initializer is itself a compound, it ought to be initializing
             // a field that is an array.
+            ASTcompound_initializer *cinit = (ASTcompound_initializer *)init.get();
             if (field.type.is_array ()) {
-                ustring fieldname = ustring::format ("%s.%s", m_sym->name().c_str(),
+                ustring fieldname = ustring::format ("%s.%s", name,
                                                      field.name.c_str());
-                typecheck_initlist (((ASTcompound_initializer *)init.get())->initlist(),
+                typecheck_initlist (cinit->initlist(),
                                     field.type, fieldname.c_str());
+            } else if (field.type.is_structure()) {
+                ustring fieldname = ustring::format ("%s.%s", name,
+                                                     field.name.c_str());
+                typecheck_struct_initializers (cinit->initlist(), field.type,
+                                               fieldname.c_str());
             } else {
                 error ("Can't use '{...}' for a struct field that is not an array");
             }
@@ -207,9 +227,9 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
         if (! assignable(field.type, init->typespec()))
             error ("Can't assign '%s' to '%s %s.%s'",
                    type_c_str(init->typespec()),
-                   type_c_str(field.type), m_name.c_str(), field.name.c_str());
+                   type_c_str(field.type), name, field.name.c_str());
     }
-    return m_typespec;
+    return type;
 }
 
 
@@ -430,6 +450,19 @@ ASTassign_expression::typecheck (TypeSpec expected)
         error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         // FIXME - can we print the variable in question?
         return TypeSpec();
+    }
+
+    // Warning to catch confusing comma operator in assignment.
+    // One place this comes up is when somebody forgets the proper syntax
+    // for constructors, for example
+    //     color x = (a, b, c);   // Sets x to (c,c,c)!
+    // when they really meant
+    //     color x = color(a, b, c);
+    if (expr()->nodetype() == comma_operator_node && !vt.is_closure() &&
+        (vt.is_triple() || vt.is_matrix())) {
+        warning ("Comma operator is very confusing here. "
+                 "Did you mean to use a constructor: = %s(...)?",
+                 vt.c_str());
     }
 
     return m_typespec = vt;

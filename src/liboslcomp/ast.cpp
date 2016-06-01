@@ -178,6 +178,27 @@ ASTNode::type_c_str (const TypeSpec &type) const
 
 
 
+ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
+                                int stype, ustring name, ASTNode *form,
+                                ASTNode *stmts, ASTNode *meta)
+    : ASTNode (shader_declaration_node, comp, stype, meta, form, stmts),
+      m_shadername(name)
+{
+    // Double check some requirements of shader parameters
+    for (ASTNode *arg = form;  arg;  arg = arg->nextptr()) {
+        ASSERT (arg->nodetype() == variable_declaration_node);
+        ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
+        if (! v->init())
+            v->error ("shader parameter '%s' MUST have a default initializer",
+                      v->name().c_str());
+        if (v->is_output() && v->typespec().is_unsized_array())
+            v->error ("shader output parameter '%s' can't be unsized array",
+                      v->name().c_str());
+    }
+}
+
+
+
 const char *
 ASTshader_declaration::childname (size_t i) const
 {
@@ -234,13 +255,18 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
     m_sym = new FunctionSymbol (name, type, this);
     func()->nextpoly ((FunctionSymbol *)f);
     std::string argcodes = oslcompiler->code_from_type (m_typespec);
-    for (ref arg = formals();  arg;  arg = arg->next()) {
+    for (ASTNode *arg = form;  arg;  arg = arg->nextptr()) {
         const TypeSpec &t (arg->typespec());
         if (t == TypeSpec() /* UNKNOWN */) {
             m_typespec = TypeDesc::UNKNOWN;
             return;
         }
         argcodes += oslcompiler->code_from_type (t);
+        ASSERT (arg->nodetype() == variable_declaration_node);
+        ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
+        if (v->init())
+            v->error ("function parameter '%s' may not have a default initializer.",
+                      v->name().c_str());
     }
     func()->argcodes (ustring (argcodes));
     oslcompiler->symtab().insert (m_sym);
@@ -355,7 +381,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         // Add the fields as individual declarations
         m_compiler->add_struct_fields (type.structspec(), m_sym->name(), symtype,
                                        type.is_unsized_array() ? -1 : type.arraylength(),
-                                       this);
+                                       this, init);
     }
 }
 

@@ -120,7 +120,8 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
-      m_main_method_start(-1)
+      m_main_method_start(-1),
+      m_declaring_shader_formals(false)
 {
     initialize_globals ();
     initialize_builtin_funcs ();
@@ -580,7 +581,7 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
     ASSERT (metasym);
     TypeSpec ts = metasym->typespec();
     std::string pdl;
-    bool ok = metavar->param_default_literals (metasym, pdl, ",");
+    bool ok = metavar->param_default_literals (metasym, metavar->init().get(), pdl, ",");
     if (ok) {
         oso ("%%meta{%s,%s,%s} ", ts.string().c_str(), metasym->name(), pdl);
     } else {
@@ -640,7 +641,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
         oso ("\t");
     } else if (v && isparam) {
         std::string out;
-        v->param_default_literals (sym, out);
+        v->param_default_literals (sym, v->init().get(), out);
         oso ("\t%s\t", out.c_str());
     }
 

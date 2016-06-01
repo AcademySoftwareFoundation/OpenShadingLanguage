@@ -1,0 +1,72 @@
+struct Vec2i {
+    int x;
+    int y;
+};
+
+
+string to_str (Vec2i a)
+{
+    return format ("{%d %d}", a.x, a.y);
+}
+
+
+// Example of a function returning a struct at the outer scope
+Vec2i add (Vec2i a, Vec2i b)
+{
+    Vec2i r;
+    r.x = a.x + b.x;
+    r.y = a.y + b.y;
+    return r;
+}
+
+
+
+struct Complicated {
+    float f;
+    Vec2i v;
+    int   a[3];
+    Vec2i q[2];
+};
+
+
+Complicated ugly ()
+{
+    Complicated r;
+    r.f = M_PI;
+    r.v.x = 10;
+    r.v.y = 20;
+    for (int i = 0; i < 3; ++i)
+        r.a[i] = i+1;
+    r.q[0] = add(r.v, r.v);
+    r.q[1] = add(r.q[0], r.q[0]);
+    return r;
+}
+
+
+
+shader
+test ()
+{
+    // Example of a function returning a struct in an inner scope
+    Vec2i square (Vec2i a) {
+        Vec2i r;
+        r.x = a.x * a.x;
+        r.y = a.y * a.y;
+        return r;
+    }
+
+    printf ("test struct return\n");
+
+    Vec2i a;   a.x = 2;   a.y = 3;
+    Vec2i b;   b.x = 10;  b.y = 20;
+
+    Vec2i c = add (a, b);
+    printf ("%s + %s = %s\n", to_str(a), to_str(b), to_str(c));
+
+    printf ("square(%s) = %s\n", to_str(a), to_str(square(a)));
+
+    Complicated r = ugly();
+    printf ("Complicated example: [ f=%f, v=%s, a=[%d, %d, %d], v=[%s, %s] ]\n",
+            r.f, to_str(r.v), r.a[0], r.a[1], r.a[2],
+            to_str(r.q[0]), to_str(r.q[1]));
+}

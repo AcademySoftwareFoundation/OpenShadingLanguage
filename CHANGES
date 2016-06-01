@@ -5,6 +5,11 @@ Release 1.8 -- (in progress - dev) ?? 2016 (compared to 1.7)
 
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:
+   * Function return values are now allowed by be structs. (#636)
+   * oslc now will warn when assigning the result of a "comma operator",
+     which almost always is a programming error where the shader writer
+     omitted the type name when attempting to construct a vector or matrix.
+     (#635) (1.8.0/1.7.3)
 * Standard library additions/changes:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
@@ -14,6 +19,12 @@ API changes, new options, new ShadingSystem features (for renderer writers):
    * ShadingSystem::create() and destroy() are no longer necessary and have
      been removed.
 * ShadingSystem attribute additions/changes:
+    * Attribute "userdata_isconnected", if set to a nonzero integer, causes
+      a shader call to isconnected(param) to return 1 if the parameter is
+      potentially connected to userdata (that is, if lockgeom=0 for that
+      parameter). This if for particular renderer needs, and the default
+      remains for isconnected() to return 1 only if there is an actual
+      connection. #629 (1.8.0/1.7.3)
 * Shader group attribute additions/changes:
 * RendererServices:
 
@@ -32,6 +43,10 @@ Build & test system improvements and developer goodies:
 * 'make CODECOV=1' on a gcc/clang system will run the testsuite and
    generate a code coverage report in build/$PLATFORM/cov/index.html
    #624 (1.8.0)
+* Remove support for LLVM 3.2 or 3.3. Now the minimum supported version
+  is LLVM 3.4. #627 (1.8.0)
+* Changed the CMake variable OSL_BUILD_CPP11 to simply USE_CPP11 (matching
+  the name used for the Makefile wrapper). #634 (1.8.0)
 
 Documentation:
 * Various typos fixed.

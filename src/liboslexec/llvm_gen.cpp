@@ -2564,7 +2564,8 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
 LLVMGEN (llvm_gen_noise)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    bool periodic = (op.opname() == Strings::pnoise);
+    bool periodic = (op.opname() == Strings::pnoise ||
+                     op.opname() == Strings::psnoise);
 
     int arg = 0;   // Next arg to read
     Symbol &Result = *rop.opargsym (op, arg++);
@@ -2645,6 +2646,23 @@ LLVMGEN (llvm_gen_noise)
         return false;
     }
 
+    if (rop.shadingsys().no_noise()) {
+        // renderer option to replace noise with constant value. This can be
+        // useful as a profiling aid, to see how much it speeds up to have
+        // trivial expense for noise calls.
+        if (name == Strings::uperlin || name == Strings::noise ||
+            name == Strings::usimplexnoise || name == Strings::usimplex ||
+            name == Strings::cell || name == Strings::cellnoise ||
+            name == Strings::pcellnoise || name == Strings::pnoise)
+            name = ustring("unullnoise");
+        else
+            name = ustring("nullnoise");
+        pass_name = false;
+        periodic = false;
+        pass_sg = false;
+        pass_options = false;
+    }
+
     llvm::Value *opt = NULL;
     if (pass_options) {
         opt = llvm_gen_noise_options (rop, opnum, arg);
@@ -2710,6 +2728,9 @@ LLVMGEN (llvm_gen_noise)
     // Clear derivs if result has them but we couldn't compute them
     if (Result.has_derivs() && !derivs)
         rop.llvm_zero_derivs (Result);
+
+    if (rop.shadingsys().profile() >= 1)
+        rop.ll.call_function ("osl_count_noise", rop.sg_void_ptr());
 
     return true;
 }

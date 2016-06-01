@@ -106,6 +106,7 @@ namespace Strings {
     extern ustring missingcolor, missingalpha;
     extern ustring end, useparam;
     extern ustring uninitialized_string;
+    extern ustring unull;
 }; // namespace Strings
 
 
@@ -562,7 +563,10 @@ public:
     int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata () const { return m_lazy_userdata; }
-
+    bool userdata_isconnected () const { return m_userdata_isconnected; }
+    int profile() const { return m_profile; }
+    int no_noise() const { return m_no_noise; }
+    int no_pointcloud() const { return m_no_pointcloud; }
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
     ustring debug_groupname() const { return m_debug_groupname; }
@@ -649,6 +653,8 @@ public:
     /// archive.
     bool archive_shadergroup (ShaderGroup *group, string_view filename);
 
+    void count_noise () { m_stat_noise_calls += 1; }
+
 private:
     void printstats () const;
 
@@ -705,6 +711,7 @@ private:
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_lazyunconnected;               ///< Run lazily even if not connected?
     bool m_lazy_userdata;                 ///< Retrieve userdata lazily?
+    bool m_userdata_isconnected;          ///< Userdata params isconnected()?
     bool m_clearmemory;                   ///< Zero mem before running shader?
     bool m_debugnan;                      ///< Root out NaN's?
     bool m_debug_uninit;                  ///< Find use of uninitialized vars?
@@ -754,6 +761,8 @@ private:
     int m_max_local_mem_KB;               ///< Local storage can a shader use
     bool m_compile_report;                ///< Print compilation report?
     bool m_buffer_printf;                 ///< Buffer/batch printf output?
+    bool m_no_noise;                      ///< Substitute trivial noise calls
+    bool m_no_pointcloud;                 ///< Substitute trivial pointcloud calls
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
@@ -808,6 +817,7 @@ private:
     double m_stat_getattribute_fail_time; ///< Stat: time spent in getattribute
     atomic_ll m_stat_getattribute_calls;  ///< Stat: Number of getattribute
     atomic_ll m_stat_get_userdata_calls;  ///< Stat: # of get_userdata calls
+    atomic_ll m_stat_noise_calls;         ///< Stat: # of noise calls
     long long m_stat_pointcloud_searches;
     long long m_stat_pointcloud_searches_total_results;
     int m_stat_pointcloud_max_results;

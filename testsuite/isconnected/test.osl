@@ -16,6 +16,7 @@ void status (MyStruct variable, string name)
 
 
 shader test (float a = 0, float b = 0,
+             float c = 0 [[ int lockgeom=0 ]],
              MyStruct mystruct1 = {0,0},
              MyStruct mystruct2 = {0,0})
 {
@@ -23,6 +24,7 @@ shader test (float a = 0, float b = 0,
     printf ("Downstream:\n");
     status (a, "a");
     status (b, "b");
+    status (c, "c");
     status (mystruct1, "mystruct1");
     status (mystruct2, "mystruct2");
 }

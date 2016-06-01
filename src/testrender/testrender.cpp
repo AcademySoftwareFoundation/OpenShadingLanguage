@@ -66,7 +66,7 @@ bool debug = false;
 bool debug2 = false;
 bool verbose = false;
 bool runstats = false;
-bool profile = false;
+int profile = 0;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
 static std::string extraoptions;
@@ -82,6 +82,15 @@ Background background;
 std::vector<ShaderGroupRef> shaders;
 std::string scenefile, imagefile;
 static std::string shaderpath;
+
+
+static void
+set_profile (int argc, const char *argv[])
+{
+    profile = 1;
+    shadingsys->attribute ("profile", profile);
+}
+
 
 
 int get_filenames(int argc, const char *argv[])
@@ -107,7 +116,7 @@ void getargs(int argc, const char *argv[])
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "", // DEPRECATED 1.7
-                "--profile", &profile, "Print profile information",
+                "--profile %@", &set_profile, NULL, "Print profile information",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -608,7 +617,6 @@ int main (int argc, const char *argv[]) {
     // Setup common attributes
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
-    shadingsys->attribute("profile", 1);
     int opt = O2 ? 2 : (O1 ? 1 : 0);
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);

@@ -148,13 +148,19 @@ OSLCompilerImpl::make_temporary (const TypeSpec &type)
 void
 OSLCompilerImpl::add_struct_fields (StructSpec *structspec,
                                     ustring basename, SymType symtype,
-                                    int arraylen, ASTNode *node)
+                                    int arraylen, ASTNode *node,
+                                    ASTNode *init)
 {
+    if (init) {
+        if (init->nodetype() == ASTNode::variable_ref_node)
+            init = NULL;   // So we don't register whole-struct assignment
+        else if (init->nodetype() == ASTNode::compound_initializer_node)
+            init = ((ASTcompound_initializer *)init)->initlist().get();
+    }
     // arraylen is the length of the array of the surrounding data type
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         const StructSpec::FieldSpec &field (structspec->field(i));
-        ustring fieldname = ustring::format ("%s.%s", basename.c_str(),
-                                             field.name.c_str());
+        ustring fieldname = ustring::format ("%s.%s", basename, field.name);
         TypeSpec type = field.type;
         int arr = type.arraylength();
         if (arr && arraylen) {
@@ -173,8 +179,16 @@ OSLCompilerImpl::add_struct_fields (StructSpec *structspec,
         oslcompiler->symtab().insert (sym);
         if (field.type.is_structure() || field.type.is_structure_array()) {
             // nested structures -- recurse!
-            add_struct_fields (type.structspec(), fieldname, symtype, arr, node);
+            add_struct_fields (type.structspec(), fieldname, symtype, arr, node,
+                               arr ? NULL : init);
+        } else {
+            if (node && init && !arr) {
+                // Remember the pairing of this field and the iniial expr.
+                ((ASTvariable_declaration *)node)->register_struct_init (fieldname, init);
+            }
         }
+        if (init)
+            init = init->nextptr();
     }
 }
 
@@ -388,34 +402,17 @@ ASTNode::codegen_int (Symbol *, bool boolify, bool invert)
 
 
 Symbol *
-ASTshader_declaration::codegen (Symbol *dest)
+ASTshader_declaration::codegen (Symbol *)
 {
     for (ref f = formals();  f;  f = f->next()) {
         ASSERT (f->nodetype() == ASTNode::variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *) f.get();
-        if (v->init()) {
-            // If the initializer is a literal and we output it as a
-            // constant in the symbol definition, no need for ops.
-            std::string out;
-            if (v->param_default_literals (v->sym(), out))
-                continue;
-
-            m_compiler->codegen_method (v->name());
-
-            if (v->sym()->typespec().is_structure()) {
-                // Special case for structs: call codegen_struct_initializers,
-                // which will generate init ops for the fields that need them.
-                ASTNode::ref finit = v->init();
-                if (finit->nodetype() == compound_initializer_node)
-                    finit = ((ASTcompound_initializer *)finit.get())->initlist();
-                v->codegen_struct_initializers (finit);
-                continue;
-            }
-
-            v->sym()->initbegin (m_compiler->next_op_label ());
+        ASSERT (v->init());  // Shader formals MUST have initializers
+        // If the initializer is a literal and we output it as a
+        // constant in the symbol definition, no need for ops.
+        std::string out;
+        if (! v->param_default_literals (v->sym(), v->init().get(), out))
             v->codegen ();
-            v->sym()->initend (m_compiler->next_op_label ());
-        }
     }
 
     m_compiler->codegen_method (m_compiler->main_method_name());
@@ -437,9 +434,21 @@ ASTreturn_statement::codegen (Symbol *dest)
             // but if that's not possible, let it go wherever and then
             // copy it.
             ASSERT (myfunc->return_location() != NULL);
-            dest = expr()->codegen (myfunc->return_location ());
-            if (dest != myfunc->return_location ())
-                emitcode ("assign", myfunc->return_location(), dest);
+            Symbol *retloc = myfunc->return_location ();
+            dest = expr()->codegen (retloc);
+            if (dest != retloc) {
+                if (retloc->typespec().is_structure()) {
+                    StructSpec *structspec = retloc->typespec().structspec ();
+                    ASSERT (dest && structspec);
+                    codegen_assign_struct (structspec, ustring(retloc->mangled()),
+                                           ustring(dest->mangled()), NULL,
+                                           true, 0,
+                                           false /*not a shader param init*/);
+                } else {
+                    // Simple type
+                    emitcode ("assign", myfunc->return_location(), dest);
+                }
+            }
         }
         // Unless this was the unconditional last statement of the
         // function, emit a "return" op.
@@ -663,12 +672,15 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
                 val = val->next();
                 completed = false;
             }
+            bool one_arg = (val && ! val->nextptr());
             for (int c = 0;  c < 3;  ++c) {
                 if (val.get())
                     ++nargs;
                 if (val.get() && val->nodetype() == ASTNode::literal_node) {
                     f[c] = ((ASTliteral *)val.get())->floatval ();
                     val = val->next();
+                } else if (c > 0 && one_arg) {
+                    f[c] = f[0];
                 } else {
                     f[c] = 0;
                     completed = false;
@@ -743,77 +755,74 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
 
 bool
 ASTvariable_declaration::param_default_literals (const Symbol *sym,
-                             std::string &out, const std::string &separator) const
+                             ASTNode *init, std::string &out,
+                             string_view separator) const
 {
     out.clear ();
 
-    // Case 1: Normal vars with initializers, not a struct field --
-    // generate them (but handle arrays)
-    if (init() && sym->fieldid() < 0) {
-        // If it's a compound initializer, look at the individual pieces
-        ref init = this->init();
-        if (init->nodetype() == compound_initializer_node)
-            init = ((ASTcompound_initializer *)init.get())->initlist();
-        bool completed = true;  // have we output the full initialization?
-        int i = 0;
-        for (ASTNode::ref n = init;  n;  n = n->next(), ++i) {
-            if (i)
-                out += separator;
-            completed &= param_one_default_literal (sym, n.get(), out, separator);
-        }
-        return completed;
+    if (sym->typespec().is_structure() || sym->typespec().is_structure_array()) {
+        // Structures are just placeholders, they don't get initialized.
+        // The defaults will get associated with their individual member
+        // fields.
+        return false;
     }
 
-    // Case 2: it's a structure field, we need to walk down the init
-    // list for the right field initializer (which may itself be compound
-    // if that struct element is an array)
-    if (init() && sym->fieldid() >= 0 &&
-            init()->nodetype() == compound_initializer_node) {
-        ref init = ((ASTcompound_initializer *)this->init().get())->initlist();
-        for (int field = 0;  init && field < sym->fieldid();  ++field)
-            init = init->next();
-        if (init) {
-            if (init->nodetype() == compound_initializer_node) {
-                // The field is itself an array
-                init = ((ASTcompound_initializer *)init.get())->initlist();
-                bool completed = true;
-                for (ASTNode::ref i = init;  i;  i = i->next())
-                    completed &= param_one_default_literal (sym, i.get(), out);
-                return completed;
-            } else {
-                // Simple initializer for the field
-                return param_one_default_literal (sym, init.get(), out);
+    if (sym->fieldid() >= 0) {
+        // A structure field has already had its individual init stashed in
+        // the node that defined its parameter (i.e., *this). Look in that
+        // list for the initializer for this specific field.
+        init = NULL;
+        BOOST_FOREACH (const NamedInit &n, m_struct_field_inits) {
+            if (n.first == sym->name()) {
+                init = n.second;
+                break;
             }
         }
     }
 
-    // If there are NO initializers, or if we fell through by not
-    // knowing how to handle the cases above, we still need to make a
-    // usable default.
-    return param_one_default_literal (sym, NULL, out);
+    bool compound = (init && init->nodetype() == compound_initializer_node);
+    if (compound) {
+        init = ((ASTcompound_initializer *)init)->initlist().get();
+    }
+
+    bool completed = true;  // have we output the full initialization?
+    for (int i = 0;  i==0 || init;  ++i, init = init->nextptr()) {
+        if (i)
+            out += separator;
+        completed &= param_one_default_literal (sym, init, out, separator);
+        if (! compound || ! init)
+            break;
+    }
+    return completed;
 }
 
 
 
 Symbol *
-ASTvariable_declaration::codegen (Symbol *)
+ASTvariable_declaration::codegen (Symbol *dst)
 {
-    if (! init())
-        return m_sym;
-
-    // If it's a compound initializer, look at the individual pieces
-    ref init = this->init();
-    if (init->nodetype() == compound_initializer_node) {
-        init = ((ASTcompound_initializer *)init.get())->initlist();
-    }
-
-    // Handle structure initialization separately
-    if (m_sym->typespec().is_structure())
-        return codegen_struct_initializers (init);
-
-    codegen_initlist (init, m_typespec, m_sym);
-
+    if (init())
+        codegen_initializer (init(), m_sym);
     return m_sym;
+}
+
+
+
+void
+ASTvariable_declaration::codegen_initializer (ref init, Symbol *sym)
+{
+    // Cases: simple, struct (go field by field), array (go element by element)
+    if (typespec().is_structure()) {
+        codegen_struct_initializers (init, sym);
+    } else if (typespec().is_array()) {
+        ASSERT (init->nodetype() == compound_initializer_node);
+        init = ((ASTcompound_initializer *)init.get())->initlist();
+        codegen_initlist (init, typespec(), sym);
+    } else {
+        if (init->nodetype() == compound_initializer_node)
+            init = ((ASTcompound_initializer *)init.get())->initlist();
+        codegen_initlist (init, m_typespec, m_sym);
+    }
 }
 
 
@@ -822,6 +831,37 @@ void
 ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
                                            Symbol *sym)
 {
+    // If we're doing this initialization for shader params for their
+    // init ops, we need to take care to set the codegen method names
+    // properly.
+    bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
+                      (m_sym->symtype() == SymTypeParam ||
+                       m_sym->symtype() == SymTypeOutputParam));
+
+    if (type.is_structure()) {
+        // Special case -- structure : Recurse to handle each field
+        // individually.
+        StructSpec *structspec (type.structspec());
+        for (int i = 0;  init && i < structspec->numfields();  init = init->next(), ++i) {
+            const StructSpec::FieldSpec &field (structspec->field(i));
+            ustring fieldname = ustring::format ("%s.%s", sym->mangled(),
+                                                 field.name);
+            Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
+            std::string out;
+            if (paraminit && param_default_literals(fieldsym, init.get(), out))
+                continue;  // Skip if we had a static initalizer
+            codegen_initlist (init, fieldsym->typespec(), fieldsym);
+        }
+        return;
+    }
+
+    if (paraminit) {
+        // For parameter initialization, don't really generate ops if it
+        // can be statically initialized.
+        m_compiler->codegen_method (sym->name());
+        sym->initbegin (m_compiler->next_op_label ());
+    }
+
     // Special case for arrays initialized by only constants of the
     // right type.
     ASSERT (sym->typespec() == type);
@@ -861,12 +901,25 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
             Symbol *c = m_compiler->make_constant (type.simpletype(),
                                                    &arrayvals[0]);
             emitcode ("assign", sym, c);
+            // Tag end of init ops because of the early return
+            if (paraminit)
+                sym->initend (m_compiler->next_op_label ());
             return;
         }
     }
 
     // Loop over a list of initializers (it's just 1 if not an array)...
+    if (init->nodetype() == compound_initializer_node)
+        init = ((ASTcompound_initializer *)init.get())->initlist();
     for (int i = 0;  init;  init = init->next(), ++i) {
+        if (sym->typespec().is_structure() &&
+                init->nodetype() == compound_initializer_node) {
+            // Nested structure
+            ASTNode::ref finit = ((ASTcompound_initializer *)init.get())->initlist();
+            codegen_struct_initializers (finit, sym);
+            break;
+        }
+
         Symbol *dest = init->codegen (sym);
         if (dest != sym) {
             if (sym->typespec().is_array()) {
@@ -887,13 +940,18 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
                 emitcode ("assign", sym, dest);
             }
         }
-    }        
+        if (! sym->typespec().is_array()) // non-array type shouldn't loop
+            break;                        //  even if init is a list
+    }   
+
+    if (paraminit)
+        sym->initend (m_compiler->next_op_label ());
 }
 
 
 
 Symbol *
-ASTvariable_declaration::codegen_struct_initializers (ref init)
+ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
@@ -902,34 +960,39 @@ ASTvariable_declaration::codegen_struct_initializers (ref init)
                       (m_sym->symtype() == SymTypeParam ||
                        m_sym->symtype() == SymTypeOutputParam));
 
-    if (! init->next() && init->typespec() == m_typespec &&
-            init->nodetype() != compound_initializer_node) {
-        // Special case: just one initializer, it's a whole struct of
-        // the right type.
-        Symbol *initsym = init->codegen (m_sym);
-        if (initsym != m_sym) {
-            StructSpec *structspec (m_typespec.structspec());
-            codegen_assign_struct (structspec, ustring(m_sym->mangled()),
+    ASSERT (sym->typespec().is_structure());
+    if (init->nodetype() != compound_initializer_node) {
+        // Just one initializer, it's a whole struct of the right type.
+        Symbol *initsym = init->codegen (sym);
+        if (initsym != sym) {
+            StructSpec *structspec (sym->typespec().structspec());
+            codegen_assign_struct (structspec, ustring(sym->mangled()),
                                    ustring(initsym->mangled()), NULL, true, 0,
                                    paraminit);
         }
-        return m_sym;
+        return sym;
     }
 
     // General case -- per-field initializers
-    for (int i = 0;  init;  init = init->next(), ++i) {
+    init = ((ASTcompound_initializer *)init.get())->initlist();
+    StructSpec *structspec (sym->typespec().structspec());
+    for (int i = 0; init && i < structspec->numfields(); init = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
-        StructSpec *structspec (m_typespec.structspec());
         const StructSpec::FieldSpec &field (structspec->field(i));
-        ustring fieldname = ustring::format ("%s.%s", m_sym->mangled().c_str(),
+        ustring fieldname = ustring::format ("%s.%s", sym->mangled().c_str(),
                                              field.name.c_str());
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
+        if (fieldsym->typespec().is_structure()) {
+            // The field is itself a nested struct, so recurse
+            codegen_struct_initializers (init, fieldsym);
+            continue;
+        }
 
         if (paraminit) {
             // For parameter initialization, don't really generate ops if it
             // can be statically initialized.
             std::string out;
-            if (param_one_default_literal (fieldsym, init.get(), out))
+            if (param_default_literals (fieldsym, init.get(), out))
                 continue;
 
             // Delineate and remember the init ops for this field individually
@@ -951,7 +1014,7 @@ ASTvariable_declaration::codegen_struct_initializers (ref init)
         if (paraminit)
             fieldsym->initend (m_compiler->next_op_label ());
     }
-    return m_sym;
+    return sym;
 }
 
 
@@ -1580,7 +1643,10 @@ ASTfunction_call::codegen (Symbol *dest)
     }
 
     std::vector<TypeSpec> polyargs;
-    m_compiler->typespecs_from_codes (func()->argcodes().c_str()+1, polyargs);
+    const char *param_argcodes = func()->argcodes().c_str();
+    int len;
+    m_compiler->type_from_code (param_argcodes, &len);  // skip ret type
+    m_compiler->typespecs_from_codes (param_argcodes+len, polyargs);
 
     // Generate code for all the individual arguments.  Remember the
     // individual indices for arguments that are array elements or
@@ -1616,10 +1682,13 @@ ASTfunction_call::codegen (Symbol *dest)
             if (ftype.is_structure() || ftype.is_structure_array()) {
                 // If the formal parameter is a struct, we also need to
                 // alias each of the fields
-                if (a->nodetype() == variable_ref_node) {
+                if (a->nodetype() == variable_ref_node ||
+                    a->nodetype() == function_call_node) {
                     // Passed a variable that is a struct ; make the struct
                     // fields of the formal param alias to the struct fields
-                    // of the actual param.
+                    // of the actual param. Exact same logic if passed the
+                    // result location of a call to a function that returns
+                    // a struct.
                     struct_pair_all_fields (ftype.structspec(),
                                             ustring(f->sym()->mangled()),
                                             ustring(argdest[i]->mangled()));

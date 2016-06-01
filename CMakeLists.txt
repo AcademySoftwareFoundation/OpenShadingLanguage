@@ -229,9 +229,9 @@ else ()
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 set (USE_FAST_MATH ON CACHE BOOL "Use fast math approximations (if no, then use system math library)")
-set (OSL_BUILD_CPP11 ON CACHE BOOL "Compile in C++11 mode")
-set (OSL_BUILD_CPP14 OFF CACHE BOOL "Compile in C++14 mode")
-set (OSL_BUILD_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
+set (USE_CPP11 ON CACHE BOOL "Compile in C++11 mode")
+set (USE_CPP14 OFF CACHE BOOL "Compile in C++14 mode")
+set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
@@ -269,24 +269,25 @@ if (EXTRA_CPP_ARGS)
     add_definitions ("${EXTRA_CPP_ARGS}")
 endif()
 
-if (OSL_BUILD_CPP11 OR OSL_BUILD_CPP14)
-    if (OSL_BUILD_CPP11)
-        message (STATUS "Building for C++11")
-        add_definitions ("-std=c++11")
-    endif()
-    if (OSL_BUILD_CPP14)
+if (USE_CPP11 OR USE_CPP14)
+    if (USE_CPP14)
         message (STATUS "Building for C++14")
         add_definitions ("-std=c++14")
-    endif()
+    elseif (USE_CPP11)
+        message (STATUS "Building for C++11")
+        add_definitions ("-std=c++11")
+    endif ()
     if (CMAKE_COMPILER_IS_CLANG)
         # C++ >= 11 doesn't like 'register' keyword, which is in Qt headers
         add_definitions ("-Wno-deprecated-register")
     endif ()
+else ()
+    message (STATUS "Building for C++98!")
 endif ()
 
 if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
     message (STATUS "Using libc++")
-    add_definitions ("-stdlib=libc++")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif ()
 
 # Options common to gcc and clang
@@ -547,8 +548,10 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-dup
+            oslc-warn-commainit
             oslc-variadic-macro
-            oslinfo-arrayparams oslinfo-metadata oslinfo-noparams
+            oslinfo-arrayparams oslinfo-colorctrfloat
+            oslinfo-metadata oslinfo-noparams
             osl-imageio
             printf-whole-array
             raytype reparam
@@ -557,8 +560,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             render-microfacet render-oren-nayar render-veachmis render-ward
             shortcircuit spline splineinverse string 
             struct struct-array struct-array-mixture
-            struct-err struct-in-struct-init struct-init-copy struct-layers
-            struct-with-array struct-within-struct
+            struct-err struct-init-copy struct-layers
+            struct-return struct-with-array
+            struct-nested struct-nested-assign struct-nested-deep
             ternary
             testshade-expr
             texture-alpha texture-blur texture-derivs

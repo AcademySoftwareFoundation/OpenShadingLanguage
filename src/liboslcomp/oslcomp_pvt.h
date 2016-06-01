@@ -150,6 +150,9 @@ public:
     bool current_output () const { return m_current_output; }
     void current_output (bool b) { m_current_output = b; }
 
+    void declaring_shader_formals (bool val) { m_declaring_shader_formals = val; }
+    bool declaring_shader_formals () const { return m_declaring_shader_formals; }
+
     /// Given a pointer to a type code string that we use for argument
     /// checking ("p", "v", etc.) return the TypeSpec of the first type
     /// described by the string (UNKNOWN if it couldn't be recognized).
@@ -241,7 +244,8 @@ public:
     // Make and add individual symbols for each field of a structure,
     // using the given basename.
     void add_struct_fields (StructSpec *structspec, ustring basename,
-                            SymType symtype, int arraylen, ASTNode *node=NULL);
+                            SymType symtype, int arraylen,
+                            ASTNode *node=NULL, ASTNode *init=NULL);
 
     string_view output_filename () const { return m_output_filename; }
 
@@ -308,6 +312,8 @@ public:
 
     const std::string main_filename () const { return m_main_filename; }
     const std::string cwd () const { return m_cwd; }
+
+    bool debug () const { return m_debug; }
 
 private:
     void initialize_globals ();
@@ -402,6 +408,7 @@ private:
     SymDependencyMap m_symdeps; ///< Symbol-to-symbol dependencies
     Symbol *m_derivsym;       ///< Pseudo-symbol to track deriv dependencies
     int m_main_method_start;  ///< Instruction where 'main' starts
+    bool m_declaring_shader_formals; ///< Are we declaring shader formals?
 };
 
 

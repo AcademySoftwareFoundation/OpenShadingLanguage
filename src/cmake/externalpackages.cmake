@@ -52,23 +52,18 @@ endif ()
 ###########################################################################
 # IlmBase setup
 
-if (NOT OPENEXR_FOUND)
-    find_package (OpenEXR REQUIRED)
-endif ()
-
+find_package (OpenEXR REQUIRED)
 #OpenEXR 2.2 still has problems with importing ImathInt64.h unqualified
 #thus need for ilmbase/OpenEXR
 include_directories ("${OPENEXR_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}/OpenEXR")
-
 if (${OPENEXR_VERSION} VERSION_LESS 2.0.0)
     # OpenEXR 1.x had weird #include dirctives, this is also necessary:
     include_directories ("${OPENEXR_INCLUDE_DIR}/OpenEXR")
 else ()
     add_definitions (-DUSE_OPENEXR_VERSION2=1)
 endif ()
-
 if (NOT OpenEXR_FIND_QUIETLY)
     message (STATUS "ILMBASE_INCLUDE_DIR = ${ILMBASE_INCLUDE_DIR}")
     message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")

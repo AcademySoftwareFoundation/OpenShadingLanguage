@@ -41,6 +41,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %option noyywrap
 %option nounput noinput
 
+/* never-interactive fixes a Windows compatibility problem where the
+ * lexer emits isatty calls that don't exist.
+ */
+%option never-interactive
+
  /* Option 'prefix' creates a C++ lexer with the given prefix, so that
   * we can link with other flex-generated lexers in the same application
   * without name conflicts.

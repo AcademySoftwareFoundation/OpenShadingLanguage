@@ -20,6 +20,7 @@ env:
       - WHICHGCC=4.8 BUILD_FLAGS="USE_CPP11=1"
       - WHICHGCC=4.9 BUILD_FLAGS=""
       - WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
+      - WHICHGCC=6 BUILD_FLAGS="USE_CPP11=1"
       - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS=""
       - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=1"
       - WHICHGCC=4.8 BUILD_FLAGS="" DEBUG=1
@@ -37,6 +38,8 @@ addons:
       - g++-4.9
       - gcc-5
       - g++-5
+      - gcc-6
+      - g++-6
       - libboost1.55-all-dev
       - libtiff4-dev
       - llvm3.4
@@ -118,6 +121,9 @@ matrix:
       - os: osx
         compiler: clang
         env: WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
+      - os: osx
+        compiler: clang
+        env: WHICHGCC=6 BUILD_FLAGS="USE_CPP11=1"
 
 notifications:
     email:

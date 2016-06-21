@@ -215,7 +215,7 @@ struct AttributeNeeded {
 #define DVEC(x) (*(Dual2<Vec3> *)x)
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
-#define TYPEDESC(x) (*(TypeDesc *)&x)
+#define TYPEDESC(x) OIIO::bit_cast<long long,TypeDesc>(x)
 
 
 

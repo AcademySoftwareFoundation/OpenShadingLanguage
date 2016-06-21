@@ -193,7 +193,7 @@ struct Sampler {
             if (ii & 1)
                 rz ^= uint32_t(v2 >> 31);
 
-	    return Vec3((sx + jx) / AA, (sy + jy) / AA, rz * 2.3283063e-10f);
+        return Vec3((sx + jx) / AA, (sy + jy) / AA, rz * 2.3283063e-10f);
 	}
 
 private:

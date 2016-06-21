@@ -138,7 +138,6 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 #define DVEC(x) (*(Dual2<Vec3> *)x)
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
-#define TYPEDESC(x) (*(TypeDesc *)&x)
 
 
 #ifndef OSL_SHADEOP
@@ -823,5 +822,3 @@ OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return (sg->raytype & bit) != 0;
 }
-
-

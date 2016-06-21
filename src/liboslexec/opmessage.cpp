@@ -50,15 +50,13 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-#define USTR(cstr) (*((ustring *)&cstr))
-
 OSL_SHADEOP void
 osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val, int layeridx, const char* sourcefile_, int sourceline)
 {
     const ustring &name (USTR(name_));
     const ustring &sourcefile (USTR(sourcefile_));
     // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type (*(TypeDesc *)&type_);
+    TypeDesc type = TYPEDESC(type_);
     bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
@@ -105,7 +103,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
     const ustring &sourcefile (USTR(sourcefile_));
 
     // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type (*(TypeDesc *)&type_);
+    TypeDesc type = TYPEDESC(type_);
     bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer

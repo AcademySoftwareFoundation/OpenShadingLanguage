@@ -27,6 +27,8 @@ addons:
       - g++-4.8
       - gcc-5
       - g++-5
+      - gcc-6
+      - g++-6
       - libboost1.55-all-dev
       - libtiff4-dev
       - llvm-3.4-dev
@@ -124,20 +126,20 @@ matrix:
       - os: osx
         compiler: clang
         env: OIIOBRANCH=release USE_CPP11=1
-    # Temporary: try head of RB-1.6
+    # Linux only: test gcc 6 (catch new warnings hot off the presses) and
+    # also use a higher SIMD level, avx and f16c, to make sure all is well.
+    # TravisCI's OSX images don't yet support avx/f16c, so we only do this
+    # on Linux for now, but eventually we'll want to separate these concerns
+    # into separate tests.
       - os: linux
         dist: trusty
         compiler: gcc
-        env: OIIOBRANCH=RB-1.6 USE_CPP11=1
-    # Linux only: test gcc 5 (sometimes it has new warnings that weren't
-    # issues for gcc 4.x or clang) and also use a higher SIMD level, avx and
-    # f16c, to make sure all is well. TravisCI's OSX images don't yet
-    # support avx/f16c, so we only do this on Linux for now, but eventually
-    # we'll want to separate these concerns into separate tests.
+        env: WHICHGCC=6 USE_SIMD=avx,f16c
+    # Linux only: test gcc 5
       - os: linux
         dist: trusty
         compiler: gcc
-        env: WHICHGCC=5 USE_SIMD=avx,f16c
+        env: WHICHGCC=5
     # One more, just for the heck of it, turn all SIMD off.  I guess this
     # should/could be both platforms, but in the interest of making the
     # tests go faster, don't bother doing it on OSX.

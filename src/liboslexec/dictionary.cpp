@@ -455,9 +455,6 @@ ShadingContext::free_dict_resources ()
 }
 
 
-#define USTR(cstr) (*((ustring *)&cstr))
-#define TYPEDESC(x) (*(TypeDesc *)&x)
-
 
 OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
 {

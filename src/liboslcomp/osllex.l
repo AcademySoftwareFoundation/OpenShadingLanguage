@@ -96,6 +96,7 @@ CPLUSCOMMENT    \/\/.*\n
 #include <vector>
 #include <string>
 
+#include <OpenImageIO/thread.h>
 #include "oslcomp_pvt.h"
 
 using namespace OSL;

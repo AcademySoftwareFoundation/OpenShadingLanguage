@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/thread.h>
 
 #ifdef USE_EXTERNAL_PUGIXML
 # include <pugixml.hpp>

@@ -2044,20 +2044,17 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
     for (int opnum = beginop;  opnum < endop;  opnum += 1) {
         ASSERT (old_num_ops == num_ops); // better not happen unknowingly
         DASSERT (num_ops == inst()->ops().size());
+        DASSERT (size_t(opnum) < inst()->ops().size());
         if (m_stop_optimizing)
             break;
-        // Before getting a reference to this op, be sure that a space
-        // is reserved at the end in case a folding routine inserts an
-        // op.  That ensures that the reference won't be invalid.
-        inst()->ops().reserve (num_ops+1);
-        Opcode &op (inst()->ops()[opnum]);
+        Opcode *op = &inst()->ops()[opnum];
         if (skipops) {
             // If a previous optimization inserted ops and told us
             // to skip over the new ones, we still need to unalias
             // any symbols written by this op, but otherwise skip
             // all subsequent optimizations until we run down the
             // skipops counter.
-            block_unalias_written_args (op);
+            block_unalias_written_args (*op);
             ASSERT (lastblock == m_bblockids[opnum] &&
                     "this should not be a new basic block");
             --skipops;
@@ -2071,23 +2068,23 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             lastblock = m_bblockids[opnum];
         }
         // Nothing below here to do for no-ops, take early out.
-        if (op.opname() == u_nop)
+        if (op->opname() == u_nop)
             continue;
         // De-alias the readable args to the op and figure out if
         // there are any constants involved.
-        for (int i = 0, e = op.nargs();  i < e;  ++i) {
-            if (! op.argwrite(i)) { // Don't de-alias args that are written
-                int argindex = op.firstarg() + i;
+        for (int i = 0, e = op->nargs();  i < e;  ++i) {
+            if (! op->argwrite(i)) { // Don't de-alias args that are written
+                int argindex = op->firstarg() + i;
                 int argsymindex = dealias_symbol (inst()->arg(argindex), opnum);
                 inst()->args()[argindex] = argsymindex;
             }
-            if (op.argread(i))
-                use_stale_sym (oparg(op,i));
+            if (op->argread(i))
+                use_stale_sym (oparg(*op,i));
         }
         // If it's a simple assignment and the lvalue is "stale", go
         // back and eliminate its last assignment.
-        if (is_simple_assign(op))
-            simple_sym_assign (oparg (op, 0), opnum);
+        if (is_simple_assign(*op))
+            simple_sym_assign (oparg (*op, 0), opnum);
         // Make sure there's room for several more symbols, so that we
         // can add a few consts if we need to, without worrying about
         // the addresses of symbols changing when we add a new one below.
@@ -2095,7 +2092,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
         // For various ops that we know how to effectively
         // constant-fold, dispatch to the appropriate routine.
         if (optimize() >= 2 && m_opt_constant_fold) {
-            const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
+            const OpDescriptor *opd = shadingsys().op_descriptor (op->opname());
             if (opd && opd->folder) {
                 int c = (*opd->folder) (*this, opnum);
                 if (c) {
@@ -2105,23 +2102,24 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
                     skipops = num_ops - old_num_ops;
                     endop += num_ops - old_num_ops; // adjust how far we loop
                     old_num_ops = num_ops;
+                    op = &inst()->ops()[opnum];  // in case ops resized
                 }
             }
         }
         // Clear local block aliases for any args that were written
         // by this op
-        block_unalias_written_args (op);
+        block_unalias_written_args (*op);
 
         // Now we handle assignments.
-        if (optimize() >= 2 && op.opname() == u_assign && m_opt_assign)
-            changed += optimize_assignment (op, opnum);
+        if (optimize() >= 2 && op->opname() == u_assign && m_opt_assign)
+            changed += optimize_assignment (*op, opnum);
         if (optimize() >= 2 && m_opt_elide_useless_ops)
-            changed += useless_op_elision (op, opnum);
+            changed += useless_op_elision (*op, opnum);
         if (m_stop_optimizing)
             break;
         // Peephole optimization involving pair of instructions (the second
         // instruction will be in the same basic block.
-        if (optimize() >= 2 && m_opt_peephole && op.opname() != u_nop) {
+        if (optimize() >= 2 && m_opt_peephole && op->opname() != u_nop) {
             // Find the next instruction in the same basic block
             int op2num = next_block_instruction (opnum);
             if (op2num) {
@@ -2133,6 +2131,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
                     // skipops = num_ops - old_num_ops;
                     endop += num_ops - old_num_ops; // adjust how far we loop
                     old_num_ops = num_ops;
+                    op = &inst()->ops()[opnum];  // in case ops resized
                 }
             }
         }
@@ -2140,14 +2139,14 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
         // Special cases for "if", "functioncall", and loops: Optimize the
         // sequences of instructions in the bodies recursively in a way that
         // allows us to be clever about the basic block alias tracking.
-        ustring opname = op.opname();
+        ustring opname = op->opname();
         if ((opname == u_if || opname == u_functioncall ||
              opname == u_for || opname == u_while || opname == u_dowhile)
               && shadingsys().m_opt_seed_bblock_aliases) {
             // Find all symbols written anywhere in the instruction range
             // of the bodies.
             FastIntSet symwrites;
-            catalog_symbol_writes (opnum+1, op.farthest_jump(), symwrites);
+            catalog_symbol_writes (opnum+1, op->farthest_jump(), symwrites);
             // Save the aliases from the basic block we are exiting.
             // If & function call: save all prior aliases.
             // Loops: dont save aliases involving syms written in the loop.
@@ -2163,11 +2162,11 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             // one (the body), loops have 4 (init, cond, body, incr),
             int njumps = (opname == u_if) ? 2 : (opname == u_functioncall ? 1 : 4);
             // Recursively optimize each body block.
-            // Don't use op after inserstions! Use inst()->op(opnum).
-            for (int j = 0; j < njumps; ++j)
-                changed += optimize_ops (j==0 ? opnum+1 : inst()->op(opnum).jump(j-1),
-                                         inst()->op(opnum).jump(j),
-                                         &saved_block_aliases);
+            for (int j = 0; j < njumps; ++j) {
+                changed += optimize_ops (j==0 ? opnum+1 : op->jump(j-1),
+                                         op->jump(j), &saved_block_aliases);
+                op = &inst()->ops()[opnum];  // in case ops resized
+            }
             // Adjust optimization loop end if any instructions were added
             num_ops = inst()->ops().size();
             endop += num_ops - old_num_ops;
@@ -2182,13 +2181,13 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
                 restored_aliases.swap (saved_block_aliases);
                 // catalog again, in case optimizations in those blocks
                 // caused writes that weren't apparent before.
-                catalog_symbol_writes (opnum+1, inst()->op(opnum).farthest_jump(), symwrites);
+                catalog_symbol_writes (opnum+1, op->farthest_jump(), symwrites);
                 copy_block_aliases (restored_aliases, saved_block_aliases,
                                     &symwrites);
             }
             seed_block_aliases = &saved_block_aliases;
             // Get ready to increment to the next instruction
-            opnum = inst()->op(opnum).farthest_jump() - 1;
+            opnum = op->farthest_jump() - 1;
         }
     }
     m_block_aliases_stack.pop_back();  // Done with saved_block_aliases

@@ -1,5 +1,25 @@
 Changes:
 
+Release 1.7.3 -- 1 Jul 2016 (compared to 1.7.2)
+--------------------------------------------------
+* ShadingSystem attribute "userdata_isconnected", if set to a nonzero
+  integer, causes a shader call to isconnected(param) to return 1 if the
+  parameter is potentially connected to userdata (that is, if lockgeom=0
+  for that parameter). This if for particular renderer needs, and the
+  default remains for isconnected() to return 1 only if there is an
+  actual connection. #629 (1.8.0/1.7.3)
+* oslc now will warn when assigning the result of a "comma operator",
+  which almost always is a programming error where the shader writer
+  omitted the type name when attempting to construct a vector or matrix.
+  #635 (1.8.0/1.7.3)
+* Fix oslc incorrectly emitting init ops for constructor color(float).
+  #637 (1.8.0/1.7.3)
+* Bug fix: don't test or set the "layer ran bits" on the last layer of the
+  group. #626 (1.8.0/1.7.3)
+* Windows fixes: build breaks #643; fixes for lexer #646.
+* Fixes for clean compile with gcc 6.x. #647
+* Fix subtle bug in runtime optimizer that could seg fault. #651
+
 Release 1.7.2 -- 1 Mar 2016 (compared to 1.7.1)
 --------------------------------------------------
 * Build: better handling of multiple USE_SIMD options. #617

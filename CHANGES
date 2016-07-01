@@ -1,5 +1,9 @@
 Changes:
 
+Release 1.7.4 -- ?? 2016 (compared to 1.7.3)
+--------------------------------------------------
+
+
 Release 1.7.3 -- 1 Jul 2016 (compared to 1.7.2)
 --------------------------------------------------
 * ShadingSystem attribute "userdata_isconnected", if set to a nonzero

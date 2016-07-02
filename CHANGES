@@ -1,7 +1,7 @@
 Changes:
 
 Release 1.8 -- (in progress - dev) ?? 2016 (compared to 1.7)
------------------------------------------------
+=====================================================
 
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:
@@ -10,6 +10,11 @@ Language, standard libary, and compiler changes (for shader writers):
      which almost always is a programming error where the shader writer
      omitted the type name when attempting to construct a vector or matrix.
      (#635) (1.8.0/1.7.3)
+   * Nested structs (structs containing other structs) are now functional
+     as shader parameters, with initialization working as expected with
+     nested `{ {...}, {...} }`.  #640 (1.8.0)
+   * oslc (and liboslcomp) now supports UTF-8 filenames, including on
+     Windows. #643 (1.8.0)
 * Standard library additions/changes:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
@@ -25,6 +30,15 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       parameter). This if for particular renderer needs, and the default
       remains for isconnected() to return 1 only if there is an actual
       connection. #629 (1.8.0/1.7.3)
+    * Attribute "no_noise" will replace all noise calls with an inexpensive
+      function that returns 0 (for signed noise) or 0.5 (for unsigned noise).
+      This can be helpful in understanding how much render time is due to
+      noise calls. #642 (1.8.0)
+    * Attribute "no_pointcloud" will short-circuit all pointcloud lookups.
+      This can be helpful in understanding how much render time is due to
+      pointcloud queries. #642 (1.8.0)
+    * When the attribute "profile" is set, the statistics report will
+      include a count of the total number of noise calls. #642 (1.8.0)
 * Shader group attribute additions/changes:
 * RendererServices:
 
@@ -33,6 +47,9 @@ Performance improvements:
 Bug fixes and other improvements:
 * oslc bug: getmatrix() failed to note that the matrix argument was
   written. #618 (1.8.0/1.7.2)
+* Fix oslc incorrectly emitting init ops for constructor color(float).
+  #637 (1.8.0/1.7.3)
+* Fix subtle bug in runtime optimizer that could seg fault. #651 (1.8.0)
 
 Build & test system improvements and developer goodies:
 * Default build is now C++11! Currently, the project will still build as
@@ -47,12 +64,39 @@ Build & test system improvements and developer goodies:
   is LLVM 3.4. #627 (1.8.0)
 * Changed the CMake variable OSL_BUILD_CPP11 to simply USE_CPP11 (matching
   the name used for the Makefile wrapper). #634 (1.8.0)
+* Clear up inconsistencies with USE_LIBCPLUSPLUS vs OSL_BUILD_USECPLUSPLUS
+  #639 (1.8.0)
+* Windows build improvements: Fixed build breaks #643 (1.8.0); fix problems
+  with lexer #646 (1.8.0/1.7.3).
+* Improvements in finding OpenEXR installations. #645 (1.8.0)
+* Travis tests now include gcc 6 tests. #647 (1.8.0)
+* Fixes for build breaks and warnings for gcc6. #647 (1.8.0/1.7.3)
 
 Documentation:
 * Various typos fixed.
+* Explain rules for connections.
+* Explain that getattribute retrieves userdata.
+* Document that `#once` works in shader source code.
 
 
-
+Release 1.7.3 -- 1 Jul 2016 (compared to 1.7.2)
+--------------------------------------------------
+* ShadingSystem attribute "userdata_isconnected", if set to a nonzero
+  integer, causes a shader call to isconnected(param) to return 1 if the
+  parameter is potentially connected to userdata (that is, if lockgeom=0
+  for that parameter). This if for particular renderer needs, and the
+  default remains for isconnected() to return 1 only if there is an
+  actual connection. #629 (1.8.0/1.7.3)
+* oslc now will warn when assigning the result of a "comma operator",
+  which almost always is a programming error where the shader writer
+  omitted the type name when attempting to construct a vector or matrix.
+  #635 (1.8.0/1.7.3)
+* Fix oslc incorrectly emitting init ops for constructor color(float).
+  #637 (1.8.0/1.7.3)
+* Bug fix: don't test or set the "layer ran bits" on the last layer of the
+  group. #626 (1.8.0/1.7.3)
+* Windows fixes: build breaks #643; fixes for lexer #646.
+* Fixes for clean compile with gcc 6.x. #647
 
 Release 1.7.2 -- 1 Mar 2016 (compared to 1.7.1)
 --------------------------------------------------
@@ -63,7 +107,7 @@ Release 1.7.2 -- 1 Mar 2016 (compared to 1.7.1)
 
 
 Release 1.7 [1.7.1] -- 29 Jan 2016 (compared to 1.6)
------------------------------------------------
+====================================================
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:
    * Support for closure arrays in shader inputs. #544 (1.7.0)

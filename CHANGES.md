@@ -1,7 +1,5 @@
-Changes:
-
 Release 1.8 -- (in progress - dev) ?? 2016 (compared to 1.7)
-=====================================================
+--------------------------------------------------
 
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:
@@ -107,7 +105,7 @@ Release 1.7.2 -- 1 Mar 2016 (compared to 1.7.1)
 
 
 Release 1.7 [1.7.1] -- 29 Jan 2016 (compared to 1.6)
-====================================================
+--------------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * Language features:
    * Support for closure arrays in shader inputs. #544 (1.7.0)
@@ -516,9 +514,9 @@ Release 1.5 (1.5.10) -- July 30, 2014 (compared to 1.4)
 ----------------------------------------------
 Language, standard libary, and compiler changes (for shader writers):
 * New closure function for microfacet BSDFs:
-    closure color microfacet (string distribution, normal N,
+      closure color microfacet (string distribution, normal N,
                               float alpha, float eta, int refract)
-    closure color microfacet (string distribution, normal N, vector U,
+      closure color microfacet (string distribution, normal N, vector U,
                           float xalpha, float yalpha, float eta, int refract)
   These replace the growing zoo of microfacet_blah functions (using
   different distribution values such as "beckmann" or "ggx", as well as
@@ -558,11 +556,11 @@ API changes, new options, new ShadingSystem features (for renderer writers):
      SEE SECTION BELOW ON GROUP-SPECIFIC ATTRIBUTES
    * New ShaderGroupBegin() variant takes a text description of a shader
      group. (3.5.8) (#379) For example:
-        ShaderGroupBegin ("groupname", "surface",
-                             "param float fin 3.14; " /*concatenate string*/
-                             "shader a alayer;"
-                             "shader b blayer;"
-                             "connect alayer.f_out blayer.f_in;");
+         ShaderGroupBegin ("groupname", "surface",
+                           "param float fin 3.14; " /*concatenate string*/
+                           "shader a alayer;"
+                           "shader b blayer;"
+                            "connect alayer.f_out blayer.f_in;");
    * ShadingSystem methods renderer() and texturesys() retrieve the
      RendererServices and TextureSystem, respectively. (1.5.8)
    * ShadingSystem statistics output now prints the version and major
@@ -1433,6 +1431,3 @@ Release 0.5.2 - Mar 14, 2011
   "smartcubic", "cubic", "linear", "closest").
 * Bug fixes to getmessage() and its handling of derivatives, which includes
   a slight RendererServices API change.
-
-
-

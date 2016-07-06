@@ -59,6 +59,7 @@ ALPHA           [A-Za-z]
 DIGIT           [0-9]
  /* Integer literal */
 INTEGER         {DIGIT}+
+HEXINTEGER      0[xX][0-9a-fA-F]+
  /* floating point literal (E, FLT1, FLT2, FLT3 are just helpers)
   * NB: we don't allow leading +/- due to ambiguity between
   * whether "a-0.5" is really "a -0.5" or "a - 0.5".  Resolve this
@@ -198,6 +199,22 @@ void preprocess (const char *yytext);
                             SETLINE;
                             return INT_LITERAL;
                         }
+{HEXINTEGER}            {
+                            long long llval = strtoll (yytext, (char**)NULL, 16);
+                            // we do not detect overflow when the value is INT_MAX+1,
+                            // because negation happens later and -(INT_MAX+1) == INT_MIN
+                            if (llval > ((long long)UINT_MAX)+1) {
+                                oslcompiler->error (oslcompiler->filename(),
+                                                    oslcompiler->lineno(),
+                                                    "integer overflow, value must be between %d and %d.",
+                                                    INT_MIN, INT_MAX);
+                            }
+                            yylval.i = (int)llval;
+                            SETLINE;
+                            return INT_LITERAL;
+                        }
+
+
 
 {FLT}                   {
                             yylval.f = atof (yytext);

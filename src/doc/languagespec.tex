@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 14 Jan, 2016 \\
- (with corrections, 22 Feb 2016)
+ (with corrections, 5 Jul 2016)
 }
 \bigskip
 \bigskip
@@ -472,15 +472,15 @@ overridden with an instance-specific value of {\cf 2.2}.
 
 
 
-\subsection*{Shader groups and layers}
+\subsection*{Shader groups, layers, and connections}
 
-A \emph{shader group} is an ordered sequence of individual shaders
-called \emph{layers} that are executed in turn.  Output parameters of an
-earlier-executed layer may be \emph{connected} to an input parameter of
-a later-executed layer.  This connected network of layers is sometimes
-called a \emph{shader network} or a \emph{shader DAG} (directed acyclic
-graph).  Of course, it is fine for the shader group to consist of a
-single shader layer.
+A \emph{shader group}\index{shader group} is an ordered sequence of
+individual shaders called \emph{layers}\index{layer}\index{shader layer}
+that are executed in turn.  Output parameters of an earlier-executed layer
+may be \emph{connected} to an input parameter of a later-executed layer.
+This connected network of layers is sometimes called a \emph{shader network}
+or a \emph{shader DAG} (directed acyclic graph).  Of course, it is fine for
+the shader group to consist of a single shader layer.
 
 Below is a schematic showing how several shader instances may be
 connected to form a shader group.
@@ -517,7 +517,7 @@ it might be done.}:
 \end{code}
 
 \noindent Or, expressed as serialized text (as detailed in
-Appendix~\ref{chap:serialize}):
+Chapter~\ref{sec:serialize}):
 
 \begin{code}
     param string name "rings.tx" ;
@@ -535,7 +535,18 @@ Appendix~\ref{chap:serialize}):
     connect gam2.Cout wood1.grain ;
 \end{code}
 
-
+The rules for which data types may be connected are generally the same as
+the rules determining which variables may be assigned to each other in OSL
+source code:
+\begin{itemize}
+\item {\cf source} and {\cf dest} are the same data type.
+\item {\cf source} and {\cf dest} are both \emph{triples} (\color, \point,
+\vector, or \normal), even if they are not the same kind of triple.
+\item {\cf source} is an {\cf int} and {\cf dest} is a {\cf float}.
+\item {\cf source} is a {\cf float} or {\cf int} and {\cf dest} is a
+\emph{triple} (the scalar value will be replicated for all three components
+of the triple).
+\end{itemize}
 
 \subsection*{Geometric primitives}
 
@@ -547,7 +558,8 @@ polygons, and curves.  The exact set of supported primitives may vary
 from renderer to renderer.
 
 Each geometric primitive carries around a set of named \emph{primitive
-  variables}.  Nearly all shape types will have, among their primitive
+variables} (also sometimes called \emph{interpolated values} or
+\emph{user data}).  Nearly all shape types will have, among their primitive
 variables, control point positions that, when interpolated, actually
 designate the shape.  Some shapes will also allow the specification of
 normals or other shape-specific data.  Arbitrary user data may also be
@@ -842,6 +854,7 @@ uniform union unsigned varying virtual volatile
 \indexapi{\#else}
 \indexapi{\#endif}
 \indexapi{\#include}
+\indexapi{\#pragma}
 
 Shader source code is passed through a standard C preprocessor as a
 first step in parsing.  
@@ -864,6 +877,7 @@ directives, including:
     #else
     #endif
     #include
+    #pragma once
 \end{code}
 
 
@@ -1450,7 +1464,8 @@ the {\cf int} type is renderer-dependent, but is guaranteed to be at
 least 32 bits.
 
 Integer constants are constructed the same way as in C.  The following
-are examples of {\cf int} constants: {\cf 1}, {\cf -32}, etc.
+are examples of {\cf int} constants: {\cf 1}, {\cf -32}, etc. Integer
+constants may be specified as hexidecimal, for example: {\cf 0x01cf}.
 
 Unlike C, no unsigned, bool, char, short, or long types are supplied.
 This is to simplify the process of writing shaders (as well as
@@ -3316,7 +3331,6 @@ performed component-by-component (separately for $x$, $y$, and $z$).
 
 \apiitem{float {\ce linearstep} (float edge0, float edge1, float x)}
 \indexapi{linearstep()}
-\NEW % 1.7
 Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
 and performs a linear
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
@@ -3333,7 +3347,6 @@ with a smooth transition.
 
 \apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps)}
 \indexapi{smooth_linearstep()}
-\NEW % 1.7
 This function is strictly linear between ${\mathit edge0}+{\mathit eps}$ and ${\mathit edge1}-{\mathit eps}$
 but smoothly ramps to 0 between ${\mathit edge0}-{\mathit eps}$ and ${\mathit edge0}+{\mathit eps}$
 and smoothly ramps to 1 between ${\mathit edge1}-{\mathit eps}$ and ${\mathit edge1}+{\mathit eps}$.
@@ -3810,14 +3823,12 @@ is omitted, return the rest of \emph{s}, starting with \emph{start}.  If
 
 \apiitem{int {\ce getchar} (string s, int n)}
 \indexapi{getchar()}
-\NEW % 1.7
 Returns the numeric value of the $n^{\mathrm{th}}$ character of the string,
 or {\cf 0} if {\cf n} does not index a valid character of the string.
 \apiend
 
 \apiitem{int {\ce hash} (string s)}
 \indexapi{hash()}
-\NEW % 1.7
 Returns a deterministic, repeatable \emph{hash} of the string.
 \apiend
 
@@ -4715,7 +4726,8 @@ int {\ce getattribute} (string object, string name, output \emph{type} destinati
 int {\ce getattribute} (string object, string name, int arrayindex, \\
 \bigspc\spc\spc output \emph{type} destination)}
 \indexapi{getattribute()}
-Searches for the renderer attribute with the given \emph{name}.
+Retrieves a named renderer attribute or the value of an interpolated
+geometric variable.
 If an object is explicitly named, that is the only place that will be
 searched (\qkw{global} means the global scene-wide attributes).  For the
 forms of the function with no object name, or if the object name is the
@@ -5078,7 +5090,12 @@ nothing (empty, no token).
 
 <digit-sequence> ::= <digit> \{ <digit> \}
 
+<hexdigit> ::= <digit> | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e" | "E" | "f" | "F"
+
+<hexdigit-sequence> ::= <hexdigit> \{ <hexdigit> \}
+
 <integer> ::= <sign> <digit-sequence>
+\alt <sign> "0x" <hexdigit-sequence>
 
 <floating-point> ::= <digit-sequence> <decimal-part-opt> <exponent-opt>
 \alt <decimal-part> <exponent-opt>

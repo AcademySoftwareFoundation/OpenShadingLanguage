@@ -1,0 +1,7 @@
+shader
+test ()
+{
+    int a = 0x001a;
+    int b = 0xffffffff;
+    printf ("a = %d (hex %x), b = %d (hex %x)\n", a, a, b, b);
+}

@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+a = 26 (hex 1a), b = -1 (hex ffffffff)
+

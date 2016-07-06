@@ -1359,6 +1359,3 @@ Release 0.5.2 - Mar 14, 2011
   "smartcubic", "cubic", "linear", "closest").
 * Bug fixes to getmessage() and its handling of derivatives, which includes
   a slight RendererServices API change.
-
-
-

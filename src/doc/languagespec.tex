@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 14 Jan, 2016 \\
- (with corrections, 14 Jun 2016)
+ (with corrections, 5 Jul 2016)
 }
 \bigskip
 \bigskip
@@ -1464,7 +1464,8 @@ the {\cf int} type is renderer-dependent, but is guaranteed to be at
 least 32 bits.
 
 Integer constants are constructed the same way as in C.  The following
-are examples of {\cf int} constants: {\cf 1}, {\cf -32}, etc.
+are examples of {\cf int} constants: {\cf 1}, {\cf -32}, etc. Integer
+constants may be specified as hexidecimal, for example: {\cf 0x01cf}.
 
 Unlike C, no unsigned, bool, char, short, or long types are supplied.
 This is to simplify the process of writing shaders (as well as
@@ -5089,7 +5090,12 @@ nothing (empty, no token).
 
 <digit-sequence> ::= <digit> \{ <digit> \}
 
+<hexdigit> ::= <digit> | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e" | "E" | "f" | "F"
+
+<hexdigit-sequence> ::= <hexdigit> \{ <hexdigit> \}
+
 <integer> ::= <sign> <digit-sequence>
+\alt <sign> "0x" <hexdigit-sequence>
 
 <floating-point> ::= <digit-sequence> <decimal-part-opt> <exponent-opt>
 \alt <decimal-part> <exponent-opt>

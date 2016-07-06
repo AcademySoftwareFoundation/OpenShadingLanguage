@@ -13,6 +13,8 @@ Language, standard libary, and compiler changes (for shader writers):
      nested `{ {...}, {...} }`.  #640 (1.8.0)
    * oslc (and liboslcomp) now supports UTF-8 filenames, including on
      Windows. #643 (1.8.0)
+   * osl now accepts hexidecimal integer constants (such as `0x01ff`).
+     #653 (1.8.1)
 * Standard library additions/changes:
 
 API changes, new options, new ShadingSystem features (for renderer writers):

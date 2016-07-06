@@ -543,7 +543,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             layers layers-Ciassign layers-entry layers-lazy
             layers-nonlazycopy layers-repeatedoutputs
             linearstep
-            logic loop matrix message mergeinstances-nouserdata
+            logic loop matrix message
+            mergeinstances-nouserdata mergeinstances-vararray
             metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter

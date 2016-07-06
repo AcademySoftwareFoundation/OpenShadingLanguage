@@ -1,0 +1,7 @@
+param color[1] in_value 0 0 1 ;
+shader arrayparam param_node_2 ;
+param color[1] in_value 1 0 0 ;
+shader arrayparam param_node_1 ;
+shader simple simple_surface ;
+connect param_node_1.out_value simple_surface.a ;
+connect param_node_2.out_value simple_surface.b ;

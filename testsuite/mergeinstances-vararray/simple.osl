@@ -1,0 +1,7 @@
+surface simple(
+	color a = color(0),
+	color b = color(0) )
+{
+	printf("%f\n", a + b);
+	Ci = emission() * (a + b);
+}

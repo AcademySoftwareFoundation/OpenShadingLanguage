@@ -837,7 +837,6 @@ RuntimeOptimizer::simplify_params ()
         Symbol *s (inst()->symbol(i));
         if (s->symtype() != SymTypeParam)
             continue;  // Skip non-params
-                       // FIXME - clever things we can do for OutputParams?
         if (! s->lockgeom())
             continue;  // Don't mess with params that can change with the geom
         if (s->typespec().is_structure() || s->typespec().is_closure_based())
@@ -2066,6 +2065,24 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             seed_block_aliases = NULL; // only the first time
             clear_stale_syms ();
             lastblock = m_bblockids[opnum];
+        }
+        // Things to do at the start of main code:
+        // * Alias output params to their initial values, if known.
+        if (opnum == inst()->m_maincodebegin) {
+            for (int i = inst()->firstparam();  i < inst()->lastparam();  ++i) {
+                Symbol *s (inst()->symbol(i));
+                if (s->symtype() == SymTypeOutputParam && s->lockgeom() &&
+                      (s->valuesource() == Symbol::DefaultVal ||
+                       s->valuesource() == Symbol::InstanceVal) &&
+                      ! s->has_init_ops() &&
+                      ! s->typespec().is_closure_based() &&
+                      ! s->typespec().is_structure_based()) {
+                    make_symbol_room (1);  // Make sure add_constant is ok
+                    s = inst()->symbol(i);
+                    int cind = add_constant (s->typespec(), s->data());
+                    block_alias (i, cind); // Alias this symbol to the new const
+                }
+            }
         }
         // Nothing below here to do for no-ops, take early out.
         if (op->opname() == u_nop)

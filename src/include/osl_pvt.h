@@ -173,6 +173,10 @@ public:
     ///
     bool is_structure_array () const { return m_structure > 0 && is_array(); }
 
+    /// Is this typespec an array of structures?
+    ///
+    bool is_structure_based () const { return m_structure > 0; }
+
     /// Return the structure ID of this typespec, or 0 if it's not a
     /// struct.
     int structure () const { return m_structure; }

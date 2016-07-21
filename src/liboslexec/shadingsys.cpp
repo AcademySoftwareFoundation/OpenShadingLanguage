@@ -643,6 +643,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_buffer_printf(true),
       m_no_noise(false),
       m_no_pointcloud(false),
+      m_exec_repeat(1),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
@@ -1060,6 +1061,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("buffer_printf", int, m_buffer_printf);
     ATTR_SET ("no_noise", int, m_no_noise);
     ATTR_SET ("no_pointcloud", int, m_no_pointcloud);
+    ATTR_SET ("exec_repeat", int, m_exec_repeat);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -1174,6 +1176,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("buffer_printf", int, m_buffer_printf);
     ATTR_DECODE ("no_noise", int, m_no_noise);
     ATTR_DECODE ("no_pointcloud", int, m_no_pointcloud);
+    ATTR_DECODE ("exec_repeat", int, m_exec_repeat);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
@@ -1261,6 +1264,10 @@ ShadingSystemImpl::attribute (ShaderGroup *group, string_view name,
         group->clear_entry_layers ();
         for (int i = 0;  i < (int)type.numelements();  ++i)
             group->mark_entry_layer (ustring(((const char **)val)[i]));
+        return true;
+    }
+    if (name == "exec_repeat" && type == TypeDesc::TypeInt) {
+        group->m_exec_repeat = *(const int *)val;
         return true;
     }
     return false;
@@ -1433,6 +1440,10 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         if (! group->optimized())
             optimize_group (*group);
         *(int *)val = (int)group->m_unknown_attributes_needed;
+        return true;
+    }
+    if (name == "exec_repeat" && type == TypeDesc::TypeInt) {
+        *(int *)val = group->m_exec_repeat;
         return true;
     }
 
@@ -1796,6 +1807,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
     m_in_group = true;
     m_group_use = ShadUseUnknown;
     m_curgroup.reset (new ShaderGroup(groupname));
+    m_curgroup->m_exec_repeat = m_exec_repeat;
     return m_curgroup;
 }
 
@@ -1853,8 +1865,9 @@ ShadingSystemImpl::Shader (string_view shaderusage,
                            string_view layername)
 {
     // Make sure we have a current attrib state
-    if (! m_curgroup)
-        m_curgroup.reset (new ShaderGroup (""));
+    bool singleton = (! m_curgroup);
+    if (singleton)
+        ShaderGroupBegin ("");
 
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
@@ -1872,12 +1885,12 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
 
-    if (! m_in_group || m_group_use == ShadUseUnknown) {
+    if (singleton || m_group_use == ShadUseUnknown) {
         // A singleton, or the first in a group
         m_curgroup->clear ();
         m_stat_groups += 1;
     }
-    if (m_in_group) {
+    if (! singleton) {
         if (m_group_use == ShadUseUnknown) {  // First shader in group
             m_group_use = use;
         } else if (use != m_group_use) {

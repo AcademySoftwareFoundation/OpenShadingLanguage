@@ -528,6 +528,13 @@ LLVM_Util::make_jit_execengine (std::string *err)
                             .setJITMemoryManager(jitmm())
                             .setOptLevel(llvm::CodeGenOpt::Default)
                             .setUseMCJIT(mcjit() || MCJIT_REQUIRED)
+#if defined(_M_X64) || defined(__x86_64) || defined(__amd64)
+							.setMArch("x86-64")
+							.setMCPU("x86-64")
+#else
+							.setMArch("x86")
+							.setMCPU("pentium4m")
+#endif
                             .create();
 #else
     m_llvm_exec = llvm::ExecutionEngine::createJIT (module(), err,

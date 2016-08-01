@@ -43,6 +43,9 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * RendererServices:
 
 Performance improvements:
+* New runtime optimization: better at understanding the initial values of
+  output parameters and what optimizations can be done based on that. #657
+  (1.8.1)
 
 Bug fixes and other improvements:
 * oslc bug: getmatrix() failed to note that the matrix argument was
@@ -50,6 +53,8 @@ Bug fixes and other improvements:
 * Fix oslc incorrectly emitting init ops for constructor color(float).
   #637 (1.8.0/1.7.3)
 * Fix subtle bug in runtime optimizer that could seg fault. #651 (1.8.0)
+* Fixed incorrect instance merging when unspecified-length arrays
+  differed. #656 (1.8.1/1.7.4)
 
 Build & test system improvements and developer goodies:
 * Default build is now C++11! Currently, the project will still build as
@@ -77,7 +82,15 @@ Documentation:
 * Explain rules for connections.
 * Explain that getattribute retrieves userdata.
 * Document that `#once` works in shader source code.
+* The CHANGES and INSTALL files have been changed from plain text to Markdown.
 
+
+
+Release 1.7.4 -- 1 Aug 2016 (compared to 1.7.3)
+--------------------------------------------------
+* Bug fix: incorrect instance merging when unspecified-length arrays
+  differed. (#656)
+* Make oslc understand hex integer constants (like 0x01fc). #653
 
 Release 1.7.3 -- 1 Jul 2016 (compared to 1.7.2)
 --------------------------------------------------

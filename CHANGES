@@ -1,5 +1,9 @@
 Changes:
 
+Release 1.7.5 -- ?? 2016 (compared to 1.7.4)
+--------------------------------------------------
+
+
 Release 1.7.4 -- 1 Aug 2016 (compared to 1.7.3)
 --------------------------------------------------
 * Bug fix: incorrect instance merging when unspecified-length arrays

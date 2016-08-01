@@ -1,8 +1,10 @@
 Changes:
 
-Release 1.7.4 -- ?? 2016 (compared to 1.7.3)
+Release 1.7.4 -- 1 Aug 2016 (compared to 1.7.3)
 --------------------------------------------------
-
+* Bug fix: incorrect instance merging when unspecified-length arrays
+  differed. (#656)
+* Make oslc understand hex integer constants (like 0x01fc). #653
 
 Release 1.7.3 -- 1 Jul 2016 (compared to 1.7.2)
 --------------------------------------------------

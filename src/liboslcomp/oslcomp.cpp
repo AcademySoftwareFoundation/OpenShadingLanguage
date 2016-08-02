@@ -197,7 +197,46 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
                               includepaths, result);
 }
 
+struct utf8_load_file_to_string
+{
+    template <typename IterContextT>
+    class inner
+    {
+    public:
+        template <typename PositionT>
+        static void init_iterators(IterContextT &iter_ctx,
+            PositionT const &act_pos, boost::wave::language_support language)
+        {
+            typedef typename IterContextT::iterator_type iterator_type;
 
+            // read in the file using Unicode on Windows
+#ifdef _WIN32
+			std::wstring wpath = OIIO::Strutil::utf8_to_utf16(iter_ctx.filename.c_str());
+			std::ifstream instream(wpath);
+#else
+            std::ifstream instream(iter_ctx.filename.c_str());
+#endif
+            if (!instream.is_open()) {
+                BOOST_WAVE_THROW_CTX(iter_ctx.ctx, boost::wave::preprocess_exception,
+                    bad_include_file, iter_ctx.filename.c_str(), act_pos);
+                return;
+            }
+            instream.unsetf(std::ios::skipws);
+
+            iter_ctx.instring.assign(
+                std::istreambuf_iterator<char>(instream.rdbuf()),
+                std::istreambuf_iterator<char>());
+
+            iter_ctx.first = iterator_type(
+                iter_ctx.instring.begin(), iter_ctx.instring.end(),
+                PositionT(iter_ctx.filename), language);
+            iter_ctx.last = iterator_type();
+        }
+
+    private:
+        std::string instring;
+    };
+};
 
 bool
 OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
@@ -220,7 +259,11 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
     try {
         typedef boost::wave::cpplexer::lex_token<> token_type;
         typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
-        typedef boost::wave::context<std::string::iterator, lex_iterator_type> context_type;
+        typedef boost::wave::context<
+			std::string::iterator, 
+			lex_iterator_type, 
+			utf8_load_file_to_string
+		> context_type;
 
         // Setup wave context
         context_type ctx (instring.begin(), instring.end(), filename.c_str());

@@ -650,14 +650,14 @@ OSL_SHADEOP void osl_transformn_vmv(void *result, void* M_, void* v_)
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
-   M.inverse().transpose().multDirMatrix (v, VEC(result));
+   M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
 OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    const Matrix44    &M = MAT(M_);
-   multDirMatrix (M.inverse().transpose(), v, DVEC(result));
+   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
 }
 
 

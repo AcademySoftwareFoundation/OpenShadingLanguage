@@ -763,6 +763,7 @@ private:
     bool m_buffer_printf;                 ///< Buffer/batch printf output?
     bool m_no_noise;                      ///< Substitute trivial noise calls
     bool m_no_pointcloud;                 ///< Substitute trivial pointcloud calls
+    int m_exec_repeat;                   ///< How many times to execute group
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
@@ -1468,6 +1469,7 @@ private:
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
+    int m_exec_repeat;              ///< How many times to execute group
     mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
     std::vector<ustring> m_closures_needed;

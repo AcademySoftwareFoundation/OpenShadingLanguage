@@ -444,6 +444,7 @@ getargs (int argc, const char *argv[])
                 "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-res %d %d", &xres, &yres, "", // synonym for -g
+                "--options %s", &extraoptions, "Set extra OSL options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
@@ -471,7 +472,6 @@ getargs (int argc, const char *argv[])
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
                 "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
                 "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
-                "--options %s", &extraoptions, "Set extra OSL options",
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
                 "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
                 "--inbuffer", &inbuffer, "Compile osl source from and to buffer",

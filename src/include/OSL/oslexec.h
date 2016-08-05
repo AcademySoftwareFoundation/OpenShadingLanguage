@@ -96,6 +96,7 @@ public:
     ///    int profile            Perform some rudimentary profiling (0)
     ///    int no_noise           Replace noise with constant value. (0)
     ///    int no_pointcloud      Skip pointcloud lookups. (0)
+    ///    int exec_repeat        How many times to run each group (1).
     /// 2. Attributes that should be set by applications/renderers that
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")
@@ -189,6 +190,7 @@ public:
     ///                                 callable entry points. They won't
     ///                                 be elided, but nor will they be
     ///                                 called unconditionally.
+    ///    int exec_repeat            How many times to run the group (1).
     ///
     bool attribute (ShaderGroup *group, string_view name,
                     TypeDesc type, const void *val);

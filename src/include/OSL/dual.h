@@ -548,9 +548,9 @@ inline Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
     // NOTE: this function won't return exactly the same as pow(x,y) because we
     // use the identity u^v=u * u^(v-1) which does not hold in all cases for our
     // "safe" variant (nor does it hold in general in floating point arithmetic).
-    T powuvm1 = safe_pow(u.val(), v.val() - T(1));
+    T powuvm1 = OIIO::safe_pow(u.val(), v.val() - T(1));
     T powuv   = powuvm1 * u.val();
-    T logu    = u.val() > 0 ? safe_log(u.val()) : T(0);
+    T logu    = u.val() > 0 ? OIIO::safe_log(u.val()) : T(0);
     return Dual2<T> ( powuv, v.val()*powuvm1 * u.dx() + logu*powuv * v.dx(),
                              v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
 }

@@ -90,39 +90,19 @@ examples), as you are just coding in C++, but there are some rules:
 
 */
 
+#include "llvm_ops_math.h"
+#include "llvm_ops_vec.h"
+#include "llvm_ops_dual.h"
+#include "llvm_ops_dual_vec.h"
 
-#include <iostream>
 
-#include "OSL/oslconfig.h"
+#ifndef OSL_NAMESPACE_ENTER
+#define OSL_NAMESPACE_ENTER
+#endif
+#ifndef OSL_NAMESPACE_EXIT
+#define OSL_NAMESPACE_EXIT
+#endif
 #include "OSL/shaderglobals.h"
-#include "OSL/dual.h"
-#include "OSL/dual_vec.h"
-using namespace OSL;
-
-#include <OpenEXR/ImathFun.h>
-#include <OpenImageIO/fmath.h>
-#if OIIO_VERSION >= 10505
-#  include <OpenImageIO/simd.h>
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER < 1700
-using OIIO::isinf;
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER < 1800
-using OIIO::roundf;
-using OIIO::truncf;
-using OIIO::erff;
-using OIIO::erfcf;
-#endif
-
-#if defined(__FreeBSD__)
-#include <sys/param.h>
-#if __FreeBSD_version < 803000
-// freebsd before 8.3 doesn't have log2f - use OIIO lib replacement
-using OIIO::log2f;
-#endif
-#endif
 
 
 #ifdef OSL_COMPILING_TO_BITCODE
@@ -134,17 +114,24 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 #define USTR(cstr) (*((ustring *)&cstr))
 #define MAT(m) (*(Matrix44 *)m)
 #define VEC(v) (*(Vec3 *)v)
-#define DFLOAT(x) (*(Dual2<Float> *)x)
+#define DFLOAT(x) (*(Dual2<float> *)x)
 #define DVEC(x) (*(Dual2<Vec3> *)x)
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
 #define TYPEDESC(x) (*(TypeDesc *)&x)
 
 
+#ifndef OSL_LLVM_EXPORT
+#ifdef _MSC_VER
+#define OSL_LLVM_EXPORT __declspec(dllexport)
+#else
+#define OSL_LLVM_EXPORT __attribute__ ((visibility ("default")))
+#endif
+#endif
+
 #ifndef OSL_SHADEOP
 #define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
 #endif
-
 
 
 #define MAKE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
@@ -283,37 +270,21 @@ OSL_SHADEOP void ei_osl_##name##_dvdvf (void *r_, void *a_, float b_)   \
 }
 
 
-#if OSL_FAST_MATH
-MAKE_UNARY_PERCOMPONENT_OP (sin  , OIIO::fast_sin  , fast_sin )
-MAKE_UNARY_PERCOMPONENT_OP (cos  , OIIO::fast_cos  , fast_cos )
-MAKE_UNARY_PERCOMPONENT_OP (tan  , OIIO::fast_tan  , fast_tan )
-MAKE_UNARY_PERCOMPONENT_OP (asin , OIIO::fast_asin , fast_asin)
-MAKE_UNARY_PERCOMPONENT_OP (acos , OIIO::fast_acos , fast_acos)
-MAKE_UNARY_PERCOMPONENT_OP (atan , OIIO::fast_atan , fast_atan)
-MAKE_BINARY_PERCOMPONENT_OP(atan2, OIIO::fast_atan2, fast_atan2)
-MAKE_UNARY_PERCOMPONENT_OP (sinh , OIIO::fast_sinh , fast_sinh)
-MAKE_UNARY_PERCOMPONENT_OP (cosh , OIIO::fast_cosh , fast_cosh)
-MAKE_UNARY_PERCOMPONENT_OP (tanh , OIIO::fast_tanh , fast_tanh)
-#else
-MAKE_UNARY_PERCOMPONENT_OP (sin  , sinf      , sin  )
-MAKE_UNARY_PERCOMPONENT_OP (cos  , cosf      , cos  )
-MAKE_UNARY_PERCOMPONENT_OP (tan  , tanf      , tan  )
-MAKE_UNARY_PERCOMPONENT_OP (asin , safe_asin , safe_asin )
-MAKE_UNARY_PERCOMPONENT_OP (acos , safe_acos , safe_acos )
-MAKE_UNARY_PERCOMPONENT_OP (atan , atanf     , atan )
-MAKE_BINARY_PERCOMPONENT_OP(atan2, atan2f    , atan2)
-MAKE_UNARY_PERCOMPONENT_OP (sinh , sinhf     , sinh )
-MAKE_UNARY_PERCOMPONENT_OP (cosh , coshf     , cosh )
-MAKE_UNARY_PERCOMPONENT_OP (tanh , tanhf     , tanh )
-#endif
+MAKE_UNARY_PERCOMPONENT_OP (sin  , fast_sin  , fast_sin )
+MAKE_UNARY_PERCOMPONENT_OP (cos  , fast_cos  , fast_cos )
+MAKE_UNARY_PERCOMPONENT_OP (tan  , fast_tan  , fast_tan )
+MAKE_UNARY_PERCOMPONENT_OP (asin , fast_asin , fast_asin)
+MAKE_UNARY_PERCOMPONENT_OP (acos , fast_acos , fast_acos)
+MAKE_UNARY_PERCOMPONENT_OP (atan , fast_atan , fast_atan)
+MAKE_BINARY_PERCOMPONENT_OP(atan2, fast_atan2, fast_atan2)
+MAKE_UNARY_PERCOMPONENT_OP (sinh , fast_sinh , fast_sinh)
+MAKE_UNARY_PERCOMPONENT_OP (cosh , fast_cosh , fast_cosh)
+MAKE_UNARY_PERCOMPONENT_OP (tanh , fast_tanh , fast_tanh)
+
 
 OSL_SHADEOP void ei_osl_sincos_fff(float x, void *s_, void *c_)
 {
-#if OSL_FAST_MATH
-    OIIO::fast_sincos(x, (float *)s_, (float *)c_);
-#else
-    OIIO::sincos(x, (float *)s_, (float *)c_);
-#endif
+    fast_sincos(x, (float *)s_, (float *)c_);
 }
 
 OSL_SHADEOP void ei_osl_sincos_dfdff(void *x_, void *s_, void *c_)
@@ -323,11 +294,7 @@ OSL_SHADEOP void ei_osl_sincos_dfdff(void *x_, void *s_, void *c_)
     float        &cosine = *(float *)c_;
 
     float s_f, c_f;
-#if OSL_FAST_MATH
-    OIIO::fast_sincos(x.val(), &s_f, &c_f);
-#else
-    OIIO::sincos(x.val(), &s_f, &c_f);
-#endif
+    fast_sincos(x.val(), &s_f, &c_f);
 
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
@@ -341,11 +308,7 @@ OSL_SHADEOP void ei_osl_sincos_dffdf(void *x_, void *s_, void *c_)
     Dual2<float> &cosine = DFLOAT(c_);
 
     float s_f, c_f;
-#if OSL_FAST_MATH
-    OIIO::fast_sincos(x.val(), &s_f, &c_f);
-#else
-    OIIO::sincos(x.val(), &s_f, &c_f);
-#endif
+    fast_sincos(x.val(), &s_f, &c_f);
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = s_f;
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
@@ -358,11 +321,7 @@ OSL_SHADEOP void ei_osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
     Dual2<float> &cosine = DFLOAT(c_);
 
     float s_f, c_f;
-#if OSL_FAST_MATH
-    OIIO::fast_sincos(x.val(), &s_f, &c_f);
-#else
-    OIIO::sincos(x.val(), &s_f, &c_f);
-#endif
+    fast_sincos(x.val(), &s_f, &c_f);
     float xdx = x.dx(), xdy = x.dy(); // x might be aliased
     sine   = Dual2<float>(s_f,  c_f * xdx,  c_f * xdy);
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
@@ -371,11 +330,7 @@ OSL_SHADEOP void ei_osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 OSL_SHADEOP void ei_osl_sincos_vvv(void *x_, void *s_, void *c_)
 {
     for (int i = 0; i < 3; i++)
-#if OSL_FAST_MATH
-        OIIO::fast_sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
-#else
-        OIIO::sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
-#endif
+        fast_sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
 }
 
 OSL_SHADEOP void ei_osl_sincos_dvdvv(void *x_, void *s_, void *c_)
@@ -386,11 +341,7 @@ OSL_SHADEOP void ei_osl_sincos_dvdvv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
-#if OSL_FAST_MATH
-        OIIO::fast_sincos(x.val()[i], &s_f, &c_f);
-#else
-        OIIO::sincos(x.val()[i], &s_f, &c_f);
-#endif
+        fast_sincos(x.val()[i], &s_f, &c_f);
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
         sine.val()[i] = s_f; sine.dx()[i] =  c_f * xdx; sine.dy()[i] =  c_f * xdy;
         cosine[i] = c_f;
@@ -405,11 +356,7 @@ OSL_SHADEOP void ei_osl_sincos_dvvdv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
-#if OSL_FAST_MATH
-        OIIO::fast_sincos(x.val()[i], &s_f, &c_f);
-#else
-        OIIO::sincos(x.val()[i], &s_f, &c_f);
-#endif
+        fast_sincos(x.val()[i], &s_f, &c_f);
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
         sine[i] = s_f;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
@@ -424,68 +371,53 @@ OSL_SHADEOP void ei_osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
 
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
-#if OSL_FAST_MATH
-        OIIO::fast_sincos(x.val()[i], &s_f, &c_f);
-#else
-        OIIO::sincos(x.val()[i], &s_f, &c_f);
-#endif
+        fast_sincos(x.val()[i], &s_f, &c_f);
         float xdx = x.dx()[i], xdy = x.dy()[i]; // x might be aliased
           sine.val()[i] = s_f;   sine.dx()[i] =  c_f * xdx;   sine.dy()[i] =  c_f * xdy;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
     }
 }
 
-#if OSL_FAST_MATH
-MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::fast_log       , fast_log)
-MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::fast_log2      , fast_log2)
-MAKE_UNARY_PERCOMPONENT_OP     (log10      , OIIO::fast_log10     , fast_log10)
-MAKE_UNARY_PERCOMPONENT_OP     (exp        , OIIO::fast_exp       , fast_exp)
-MAKE_UNARY_PERCOMPONENT_OP     (exp2       , OIIO::fast_exp2      , fast_exp2)
-MAKE_UNARY_PERCOMPONENT_OP     (expm1      , OIIO::fast_expm1     , fast_expm1)
-MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
-MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
-MAKE_UNARY_PERCOMPONENT_OP     (erf        , OIIO::fast_erf       , erf)
-MAKE_UNARY_PERCOMPONENT_OP     (erfc       , OIIO::fast_erfc      , erfc)
-#else
-MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::safe_log       , safe_log)
-MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::safe_log2      , safe_log2)
-MAKE_UNARY_PERCOMPONENT_OP     (log10      , OIIO::safe_log10     , safe_log10)
-MAKE_UNARY_PERCOMPONENT_OP     (exp        , expf                 , exp)
-MAKE_UNARY_PERCOMPONENT_OP     (exp2       , exp2f                , exp2)
-MAKE_UNARY_PERCOMPONENT_OP     (expm1      , expm1f               , expm1)
-MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::safe_pow       , safe_pow)
-MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::safe_pow       , safe_pow)
-MAKE_UNARY_PERCOMPONENT_OP     (erf        , erff                 , erf)
-MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf                , erfc)
-#endif
-MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , OIIO::safe_sqrt      , sqrt)
-MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, OIIO::safe_inversesqrt, inversesqrt)
 
-OSL_SHADEOP float ei_osl_logb_ff (float x) { return OIIO::fast_logb(x); }
+MAKE_UNARY_PERCOMPONENT_OP     (log        , fast_log       , fast_log)
+MAKE_UNARY_PERCOMPONENT_OP     (log2       , fast_log2      , fast_log2)
+MAKE_UNARY_PERCOMPONENT_OP     (log10      , fast_log10     , fast_log10)
+MAKE_UNARY_PERCOMPONENT_OP     (exp        , fast_exp       , fast_exp)
+MAKE_UNARY_PERCOMPONENT_OP     (exp2       , fast_exp2      , fast_exp2)
+MAKE_UNARY_PERCOMPONENT_OP     (expm1      , fast_expm1     , fast_expm1)
+MAKE_BINARY_PERCOMPONENT_OP    (pow        , fast_safe_pow  , fast_safe_pow)
+MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , fast_safe_pow  , fast_safe_pow)
+MAKE_UNARY_PERCOMPONENT_OP     (erf        , fast_erf       , fast_erf)
+MAKE_UNARY_PERCOMPONENT_OP     (erfc       , fast_erfc      , fast_erfc)
+MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , safe_sqrt      , sqrt)
+MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, safe_inversesqrt, inversesqrt)
+
+
+OSL_SHADEOP float ei_osl_logb_ff (float x) { return fast_logb(x); }
 OSL_SHADEOP void ei_osl_logb_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (OIIO::fast_logb(x[0]), OIIO::fast_logb(x[1]), OIIO::fast_logb(x[2]));
+    VEC(r).setValue (fast_logb(x[0]), fast_logb(x[1]), fast_logb(x[2]));
 }
 
-OSL_SHADEOP float ei_osl_floor_ff (float x) { return floorf(x); }
+OSL_SHADEOP float ei_osl_floor_ff (float x) { return Imath::floor(x); }
 OSL_SHADEOP void ei_osl_floor_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (floorf(x[0]), floorf(x[1]), floorf(x[2]));
+    VEC(r).setValue (Imath::floor(x[0]), Imath::floor(x[1]), Imath::floor(x[2]));
 }
-OSL_SHADEOP float ei_osl_ceil_ff (float x) { return ceilf(x); }
+OSL_SHADEOP float ei_osl_ceil_ff (float x) { return Imath::ceil(x); }
 OSL_SHADEOP void ei_osl_ceil_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (ceilf(x[0]), ceilf(x[1]), ceilf(x[2]));
+    VEC(r).setValue (Imath::ceil(x[0]), Imath::ceil(x[1]), Imath::ceil(x[2]));
 }
-OSL_SHADEOP float ei_osl_round_ff (float x) { return roundf(x); }
+OSL_SHADEOP float ei_osl_round_ff (float x) { return Imath::round(x); }
 OSL_SHADEOP void ei_osl_round_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (roundf(x[0]), roundf(x[1]), roundf(x[2]));
+    VEC(r).setValue (Imath::round(x[0]), Imath::round(x[1]), Imath::round(x[2]));
 }
-OSL_SHADEOP float ei_osl_trunc_ff (float x) { return truncf(x); }
+OSL_SHADEOP float ei_osl_trunc_ff (float x) { return Imath::trunc(x); }
 OSL_SHADEOP void ei_osl_trunc_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (truncf(x[0]), truncf(x[1]), truncf(x[2]));
+    VEC(r).setValue (Imath::trunc(x[0]), Imath::trunc(x[1]), Imath::trunc(x[2]));
 }
 OSL_SHADEOP float ei_osl_sign_ff (float x) {
     return x < 0.0f ? -1.0f : (x==0.0f ? 0.0f : 1.0f);
@@ -501,30 +433,30 @@ OSL_SHADEOP void ei_osl_step_vvv (void *result, void *edge, void *x) {
     VEC(result).setValue (((float *)x)[0] < ((float *)edge)[0] ? 0.0f : 1.0f,
                           ((float *)x)[1] < ((float *)edge)[1] ? 0.0f : 1.0f,
                           ((float *)x)[2] < ((float *)edge)[2] ? 0.0f : 1.0f);
-
 }
 
-OSL_SHADEOP int ei_osl_isnan_if (float f) { return OIIO::isnan (f); }
-OSL_SHADEOP int ei_osl_isinf_if (float f) { return OIIO::isinf (f); }
-OSL_SHADEOP int ei_osl_isfinite_if (float f) { return OIIO::isfinite (f); }
+
+OSL_SHADEOP int ei_osl_isnan_if (float f) { return !Imath::finitef (f); }
+OSL_SHADEOP int ei_osl_isinf_if (float f) { return !Imath::finitef (f); }
+OSL_SHADEOP int ei_osl_isfinite_if (float f) { return Imath::finitef (f); }
 
 
-OSL_SHADEOP int ei_osl_abs_ii (int x) { return abs(x); }
-OSL_SHADEOP int ei_osl_fabs_ii (int x) { return abs(x); }
+OSL_SHADEOP int ei_osl_abs_ii (int x) { return Imath::abs(x); }
+OSL_SHADEOP int ei_osl_fabs_ii (int x) { return Imath::abs(x); }
 
-inline Dual2<float> fabsf (const Dual2<float> &x) {
+inline Dual2<float> fast_fabs (const Dual2<float> &x) {
     return x.val() >= 0 ? x : -x;
 }
 
-MAKE_UNARY_PERCOMPONENT_OP (abs, fabsf, fabsf);
-MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
+MAKE_UNARY_PERCOMPONENT_OP (abs, fast_fabs, fast_fabs);
+MAKE_UNARY_PERCOMPONENT_OP (fabs, fast_fabs, fast_fabs);
 
 OSL_SHADEOP int ei_osl_safe_mod_iii (int a, int b) {
     return (b != 0) ? (a % b) : 0;
 }
 
 inline float safe_fmod (float a, float b) {
-    return (b != 0.0f) ? std::fmod (a,b) : 0.0f;
+    return (b != 0.0f) ? Imath::fmod (a,b) : 0.0f;
 }
 
 inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
@@ -654,9 +586,7 @@ OSL_SHADEOP void ei_osl_transformn_dvmdv(void *result, void* M_, void* v_)
 }
 
 
-
 // Vector ops
-
 OSL_SHADEOP float
 ei_osl_dot_fvv (void *a, void *b)
 {
@@ -732,7 +662,7 @@ ei_osl_distance_fvv (void *a_, void *b_)
     float x = a[0] - b[0];
     float y = a[1] - b[1];
     float z = a[2] - b[2];
-    return sqrtf (x*x + y*y + z*z);
+    return fast_sqrt (x*x + y*y + z*z);
 }
 
 OSL_SHADEOP void
@@ -767,7 +697,6 @@ ei_osl_normalize_dvdv (void *result, void *a)
 }
 
 
-
 inline Vec3 calculatenormal(void *P_, bool flipHandedness)
 {
     Dual2<Vec3> &tmpP (DVEC(P_));
@@ -792,10 +721,9 @@ OSL_SHADEOP float ei_osl_area(void *P_)
 }
 
 
-
 inline float filter_width(float dx, float dy)
 {
-    return sqrtf(dx*dx + dy*dy);
+    return fast_sqrt(dx*dx + dy*dy);
 }
 
 OSL_SHADEOP float ei_osl_filterwidth_fdf(void *x_)
@@ -814,14 +742,10 @@ OSL_SHADEOP void ei_osl_filterwidth_vdv(void *out, void *x_)
 }
 
 
-
-
-
 // Asked if the raytype includes a bit pattern.
 OSL_SHADEOP int ei_osl_raytype_bit (void *sg_, int bit)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return (sg->raytype & bit) != 0;
 }
-
 

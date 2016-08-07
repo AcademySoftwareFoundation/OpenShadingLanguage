@@ -104,6 +104,23 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
 
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
+if (WIN32)
+    ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
+      COMMAND ${LLVM_BC_GENERATOR}
+          ${LLVM_COMPILE_FLAGS}
+          "-I${CMAKE_CURRENT_SOURCE_DIR}"
+          "-I${CMAKE_SOURCE_DIR}/src/include"
+          "-I${CMAKE_BINARY_DIR}/include/OSL"
+          "-I${OPENIMAGEIO_INCLUDES}"
+          "-I${ILMBASE_INCLUDE_DIR}"
+          "-I${Boost_INCLUDE_DIRS}"
+          -DOSL_COMPILING_TO_BITCODE=1
+		  -target x86_64-pc-mingw64
+          -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
+      COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
+      COMMAND "git-bash" ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc-win.bash ${llvm_bc} ${llvm_bc_cpp}
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+else ()
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
       COMMAND ${LLVM_BC_GENERATOR}
           ${LLVM_COMPILE_FLAGS}
@@ -120,6 +137,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+endif ()
 ENDMACRO ( )
 
 if (USE_LLVM_BITCODE)

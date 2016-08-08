@@ -233,6 +233,7 @@ inline float fast_copysign(float x, float y)
 
 inline float fast_sqrt(float x)
 {
+#ifdef _MSC_VER
     // prevent from division by zero
     if (x <= 0.0f) { return 0.0f; }
     union {
@@ -248,6 +249,9 @@ inline float fast_sqrt(float x)
     y = 0.5f * (y + x / y); // absolute error within 0.07
     y = 0.5f * (y + x / y); // absolute error within 0.000031
     return y;
+#else
+	return __builtin_sqrt(x);
+#endif
 }
 
 /// clamp a to bounds [low,high].

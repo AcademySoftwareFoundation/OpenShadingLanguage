@@ -1715,19 +1715,21 @@ DECLFOLDER(constfold_pow)
         rop.turn_into_assign_zero (op, "pow(0,x) => 0");
         return 1;
     }
-    if (X.is_constant() && Y.is_constant() && Y.typespec().is_float() &&
-            (X.typespec().is_float() || X.typespec().is_triple())) {
+    if (X.is_constant() && Y.is_constant()) {
         // if x and y are both constant, pre-compute x^y
         const float *x = (const float *) X.data();
-        float y = *(const float *) Y.data();
-        int ncomps = X.typespec().is_triple() ? 3 : 1;
+        const float *y = (const float *) Y.data();
+        int nxcomps = X.typespec().is_triple() ? 3 : 1;
+        int nycomps = Y.typespec().is_triple() ? 3 : 1;
         float result[3];
-        for (int i = 0;  i < ncomps;  ++i)
+        for (int i = 0;  i < nxcomps;  ++i) {
+            int j = std::min (i, nycomps-1);
 #if OSL_FAST_MATH
-            result[i] = OIIO::fast_safe_pow (x[i], y);
+            result[i] = OIIO::fast_safe_pow (x[i], y[j]);
 #else
-            result[i] = OIIO::safe_pow (x[i], y);
+            result[i] = OIIO::safe_pow (x[i], y[j]);
 #endif
+        }
         int cind = rop.add_constant (X.typespec(), &result);
         rop.turn_into_assign (op, cind, "const fold pow");
         return 1;

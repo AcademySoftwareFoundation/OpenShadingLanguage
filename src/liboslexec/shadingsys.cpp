@@ -1566,6 +1566,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (debugnan);
     BOOLOPT (debug_uninit);
     BOOLOPT (lockgeom_default);
+    BOOLOPT (strict_messages);
     BOOLOPT (range_checking);
     BOOLOPT (greedyjit);
     BOOLOPT (countlayerexecs);
@@ -1587,6 +1588,7 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT  (opt_passes);
     INTOPT (no_noise);
     INTOPT (no_pointcloud);
+    INTOPT (exec_repeat);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);

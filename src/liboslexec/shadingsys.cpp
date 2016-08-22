@@ -643,6 +643,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_buffer_printf(true),
       m_no_noise(false),
       m_no_pointcloud(false),
+      m_force_derivs(false),
       m_exec_repeat(1),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
@@ -665,6 +666,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     m_stat_regexes = 0;
     m_stat_preopt_syms = 0;
     m_stat_postopt_syms = 0;
+    m_stat_syms_with_derivs = 0;
     m_stat_preopt_ops = 0;
     m_stat_postopt_ops = 0;
     m_stat_middlemen_eliminated = 0;
@@ -1061,6 +1063,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("buffer_printf", int, m_buffer_printf);
     ATTR_SET ("no_noise", int, m_no_noise);
     ATTR_SET ("no_pointcloud", int, m_no_pointcloud);
+    ATTR_SET ("force_derivs", int, m_force_derivs);
     ATTR_SET ("exec_repeat", int, m_exec_repeat);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
@@ -1176,6 +1179,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("buffer_printf", int, m_buffer_printf);
     ATTR_DECODE ("no_noise", int, m_no_noise);
     ATTR_DECODE ("no_pointcloud", int, m_no_pointcloud);
+    ATTR_DECODE ("force_derivs", int, m_force_derivs);
     ATTR_DECODE ("exec_repeat", int, m_exec_repeat);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
@@ -1190,6 +1194,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:regexes", int, m_stat_regexes);
     ATTR_DECODE ("stat:preopt_syms", int, m_stat_preopt_syms);
     ATTR_DECODE ("stat:postopt_syms", int, m_stat_postopt_syms);
+    ATTR_DECODE ("stat:syms_with_derivs", int, m_stat_syms_with_derivs);
     ATTR_DECODE ("stat:preopt_ops", int, m_stat_preopt_ops);
     ATTR_DECODE ("stat:postopt_ops", int, m_stat_postopt_ops);
     ATTR_DECODE ("stat:middlemen_eliminated", int, m_stat_middlemen_eliminated);
@@ -1588,6 +1593,7 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT  (opt_passes);
     INTOPT (no_noise);
     INTOPT (no_pointcloud);
+    INTOPT (force_derivs);
     INTOPT (exec_repeat);
     STROPT (debug_groupname);
     STROPT (debug_layername);
@@ -1629,9 +1635,6 @@ ShadingSystemImpl::getstats (int level) const
                             (long long)m_layers_executed_never,
                             (100.0*m_layers_executed_never) * inv_totalexec);
 
-    out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
-                            (int)m_stat_syms_with_derivs, (int)m_stat_total_syms,
-                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_total_syms,1));
 #endif
 
     out << "  Compiled " << m_stat_groups_compiled << " groups, "
@@ -1663,6 +1666,9 @@ ShadingSystemImpl::getstats (int level) const
                             (int)m_stat_global_connections);
     out << Strutil::format ("  Middlemen eliminated: %d\n",
                             (int)m_stat_middlemen_eliminated);
+    out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
+                            (int)m_stat_syms_with_derivs, (int)m_stat_postopt_syms,
+                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_postopt_syms,1));
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "

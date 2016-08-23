@@ -2516,6 +2516,7 @@ RuntimeOptimizer::track_variable_dependencies ()
     symdeps.clear ();
 
     std::vector<int> read, written;
+    bool forcederivs = shadingsys().force_derivs();
     // Loop over all ops...
     BOOST_FOREACH (Opcode &op, inst()->ops()) {
         // Gather the list of syms read and written by the op.  Reuse the
@@ -2536,12 +2537,16 @@ RuntimeOptimizer::track_variable_dependencies ()
                     add_dependency (symdeps, w, r);
             // If the op takes derivs, make the pseudo-symbol DerivSym
             // depend on those arguments.
-            if (op.argtakesderivs_all()) {
+            if (op.argtakesderivs_all() || forcederivs) {
                 for (int a = 0;  a < op.nargs();  ++a)
-                    if (op.argtakesderivs(a)) {
+                    if (op.argtakesderivs(a) || forcederivs) {
                         Symbol &s (*opargsym (op, a));
                         // Constants can't take derivs
                         if (s.symtype() == SymTypeConst)
+                            continue;
+                        // Non-float types can't take derivs
+                        if (s.typespec().is_closure() ||
+                            s.typespec().simpletype().basetype != TypeDesc::FLOAT)
                             continue;
                         // Careful -- not all globals can take derivs
                         if (s.symtype() == SymTypeGlobal &&
@@ -3068,7 +3073,7 @@ RuntimeOptimizer::run ()
     shadingsys().merge_instances (group(), true);
 
     // Get rid of nop instructions and unused symbols.
-    size_t new_nsyms = 0, new_nops = 0;
+    size_t new_nsyms = 0, new_nops = 0, new_deriv_syms = 0;
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
         if (inst()->unused())
@@ -3121,6 +3126,8 @@ RuntimeOptimizer::run ()
             if (s.symtype() == SymTypeGlobal) {
                 m_globals_needed.insert (s.name());
             }
+            if (s.has_derivs())
+                ++new_deriv_syms;
         }
         BOOST_FOREACH (const Opcode &op, inst()->ops()) {
             const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
@@ -3193,6 +3200,7 @@ RuntimeOptimizer::run ()
         ss.m_stat_preopt_ops += old_nops;
         ss.m_stat_postopt_syms += new_nsyms;
         ss.m_stat_postopt_ops += new_nops;
+        ss.m_stat_syms_with_derivs += new_deriv_syms;
         if (does_nothing)
             ss.m_stat_empty_groups += 1;
     }

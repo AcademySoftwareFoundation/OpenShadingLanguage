@@ -565,8 +565,9 @@ public:
     bool lazy_userdata () const { return m_lazy_userdata; }
     bool userdata_isconnected () const { return m_userdata_isconnected; }
     int profile() const { return m_profile; }
-    int no_noise() const { return m_no_noise; }
-    int no_pointcloud() const { return m_no_pointcloud; }
+    bool no_noise() const { return m_no_noise; }
+    bool no_pointcloud() const { return m_no_pointcloud; }
+    bool force_derivs() const { return m_force_derivs; }
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
     ustring debug_groupname() const { return m_debug_groupname; }
@@ -763,7 +764,8 @@ private:
     bool m_buffer_printf;                 ///< Buffer/batch printf output?
     bool m_no_noise;                      ///< Substitute trivial noise calls
     bool m_no_pointcloud;                 ///< Substitute trivial pointcloud calls
-    int m_exec_repeat;                   ///< How many times to execute group
+    bool m_force_derivs;                  ///< Force derivs on everything
+    int m_exec_repeat;                    ///< How many times to execute group
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
@@ -797,6 +799,7 @@ private:
     atomic_int m_stat_regexes;            ///< Stat: how many regex's compiled
     atomic_int m_stat_preopt_syms;        ///< Stat: pre-optimization symbols
     atomic_int m_stat_postopt_syms;       ///< Stat: post-optimization symbols
+    atomic_int m_stat_syms_with_derivs;   ///< Stat: post-opt syms with derivs
     atomic_int m_stat_preopt_ops;         ///< Stat: pre-optimization ops
     atomic_int m_stat_postopt_ops;        ///< Stat: post-optimization ops
     atomic_int m_stat_middlemen_eliminated; ///< Stat: middlemen eliminated

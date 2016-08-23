@@ -157,6 +157,8 @@ public:
     ///                              designated as the debug shaders.
     ///    string opt_layername   If set, only optimize the named layer
     ///    string only_groupname  Compile only this one group (skip all others)
+    ///    int force_derivs       Force all float-based variables to compute
+    ///                              and store derivatives. (0)
     ///
     /// Note: the attributes referred to as "string" are actually on the app
     /// side as ustring or const char* (they have the same data layout), NOT

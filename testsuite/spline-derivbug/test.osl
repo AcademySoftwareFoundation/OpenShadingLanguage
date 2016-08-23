@@ -1,0 +1,27 @@
+shader test
+  (
+    float in = u,
+    string basis = "bspline",
+    int knots = 8,
+    color values[8] = {
+                        color(0,0,0),
+                        color(0,0,0),
+                        color(1,0,0),
+                        color(0,1,0),
+                        color(0,0,1),
+                        color(0,1,1),
+                        color(1,1,1),
+                        color(1,1,1)
+                      },
+    output color Cout = 0,
+    output color Cout_dx = 0,
+    output color Cout_dy = 0,
+  )
+{
+    Cout = spline (basis, in, knots, values);
+    if (u > 0.49 && u < 0.51 && v > 0.49 && v < 0.51)
+        printf ("spline in=%.3g, result = %.3g    dx = %.3g   dy = %.3g\n",
+                in, Cout, Dx(Cout), Dy(Cout));
+    Cout_dx = 0.5 + 10 * Dx(Cout);
+    Cout_dy = 0.5 + 10 * Dy(Cout);
+}

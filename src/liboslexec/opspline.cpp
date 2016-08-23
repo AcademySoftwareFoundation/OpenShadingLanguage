@@ -154,8 +154,8 @@ OSL_SHADEOP void  osl_spline_dvdfv(void *out, const char *spline_, void *x,
                                    Vec3 *knots, int knot_count, int knot_arraylen)
 {
    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
-   Spline::spline_evaluate<Vec3, float, Vec3, Vec3, false>
-      (spline, *(Vec3 *)out, *(float *)x, knots, knot_count, knot_arraylen);
+   Spline::spline_evaluate<Dual2<Vec3>, Dual2<float>, Vec3, Vec3, false>
+      (spline, DVEC(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
 
 OSL_SHADEOP void  osl_spline_dvfdv(void *out, const char *spline_, void *x, 

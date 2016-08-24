@@ -294,6 +294,7 @@ public:
     ///                                  until the shader actually runs.
     ///   int num_renderer_outputs   Number of named renderer outputs.
     ///   string renderer_outputs[]  List of renderer outputs.
+    ///   int raytype_queries        Bit field of all possible rayquery
     ///   int num_entry_layers       Number of named entry point layers.
     ///   string entry_layers[]      List of entry point layers.
     ///   string pickle              Retrieves a serialized representation
@@ -554,7 +555,16 @@ public:
     int raytype_bit (ustring name);
 
     /// Ensure that the group has been optimized and JITed.
+    /// Ensure that the group has been optimized and JITed.
     void optimize_group (ShaderGroup *group);
+
+    /// Ensure that the group has been optimized and JITed. The raytypes_on
+    /// gives a bitfield describing which ray flags are known to be 1, and
+    /// raytypes_off describes which ray flags are known to be 0. Bits that
+    /// are not set in either set of flags are not known to the optimizer,
+    /// and will be determined strictly at execution time.
+    void optimize_group (ShaderGroup *group, int raytypes_on,
+                         int raytypes_off);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the

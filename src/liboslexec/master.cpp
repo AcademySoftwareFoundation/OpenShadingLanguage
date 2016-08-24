@@ -182,6 +182,20 @@ ShaderMaster::resolve_syms ()
         oparg_ptrs.push_back (symbol (a));
     OSLCompilerImpl::track_variable_lifetimes (m_ops, oparg_ptrs, allsymptrs);
 
+    // Figure out which ray types are queried
+    m_raytype_queries = 0;
+    BOOST_FOREACH (const Opcode& op, m_ops) {
+        if (op.opname() == Strings::raytype) {
+            int bit = -1;   // could be any
+            const Symbol *Name (symbol(m_args[op.firstarg()+1]));
+            if (Name->is_constant())
+                if (int b = shadingsys().raytype_bit (*(ustring *)Name->data()))
+                    bit = b;
+            m_raytype_queries |= bit;
+        }
+    }
+    // std::cout << shadername() << " has raytypes bits " << m_raytype_queries << "\n";
+
     // Adjust statistics
     size_t opmem = vectorbytes (m_ops);
     size_t argmem = vectorbytes (m_args);

@@ -436,9 +436,9 @@ OSL_SHADEOP void ei_osl_step_vvv (void *result, void *edge, void *x) {
 }
 
 
-OSL_SHADEOP int ei_osl_isnan_if (float f) { return !Imath::finitef (f); }
-OSL_SHADEOP int ei_osl_isinf_if (float f) { return !Imath::finitef (f); }
-OSL_SHADEOP int ei_osl_isfinite_if (float f) { return Imath::finitef (f); }
+OSL_SHADEOP int ei_osl_isnan_if (float f) { return Imath::isNAN(f); }
+OSL_SHADEOP int ei_osl_isinf_if (float f) { return !Imath::finitef(f); }
+OSL_SHADEOP int ei_osl_isfinite_if (float f) { return Imath::finitef(f); }
 
 
 OSL_SHADEOP int ei_osl_abs_ii (int x) { return Imath::abs(x); }

@@ -1107,6 +1107,13 @@ finitef (float f)
     return (u.i & 0x7f800000) != 0x7f800000;
 }
 
+inline bool 
+isNaN (double value)
+{
+    unsigned long long int jvalue = ((*(long long int *)&value) & ~0x8000000000000000uLL);
+    return (jvalue > 0x7ff0000000000000uLL);
+}
+
 template <class T> struct limits
 {
     static T	min();

@@ -72,6 +72,15 @@ public:
 
     virtual void set_debug ();
 
+    /// Optionally set which ray types are known to be on or off (0 means
+    /// not known at optimize time).
+    void set_raytypes (int raytypes_on, int raytypes_off) {
+        m_raytypes_on  = raytypes_on;
+        m_raytypes_off = raytypes_off;
+    }
+    int raytypes_on ()  const { return m_raytypes_on; }
+    int raytypes_off () const { return m_raytypes_off; }
+
     /// Optimize one layer of a group, given what we know about its
     /// instance variables and connections.
     void optimize_instance ();
@@ -438,6 +447,8 @@ private:
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time
     bool m_stop_optimizing;           ///< for debugging
+    int m_raytypes_on;                ///< Ray types known to be on
+    int m_raytypes_off;               ///< Ray types known to be off
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage

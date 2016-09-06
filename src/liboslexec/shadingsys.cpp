@@ -451,8 +451,17 @@ ShadingSystem::archive_shadergroup (ShaderGroup *group, string_view filename)
 void
 ShadingSystem::optimize_group (ShaderGroup *group)
 {
+    optimize_group (group, 0, 0);   // No knowledge of the ray flags
+}
+
+
+
+void
+ShadingSystem::optimize_group (ShaderGroup *group,
+                               int raytypes_on, int raytypes_off)
+{
     ASSERT (group);
-    m_impl->optimize_group (*group);
+    m_impl->optimize_group (*group, raytypes_on, raytypes_off);
 }
 
 
@@ -601,6 +610,7 @@ ustring missingcolor("missingcolor"), missingalpha("missingalpha");
 ustring end("end"), useparam("useparam");
 ustring uninitialized_string("!!!uninitialized!!!");
 ustring unull("unull");
+ustring raytype("raytype");
 };
 
 
@@ -739,7 +749,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     // if this default ordering is not to its liking.
     static const char *raytypes[] = {
         /*1*/ "camera", /*2*/ "shadow", /*4*/ "reflection", /*8*/ "refraction",
-        /*16*/ "diffuse", /*32*/ "glossy"
+        /*16*/ "diffuse", /*32*/ "glossy", /*64*/ "subsurface",
+        /*128*/ "displacement"
     };
     const int nraytypes = sizeof(raytypes)/sizeof(raytypes[0]);
     attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
@@ -878,7 +889,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (printf,      printf,              none,          false,     0);
     OP (psnoise,     noise,               noise,         true,      0);
     OP (radians,     generic,             radians,       true,      0);
-    OP (raytype,     raytype,             none,          true,      0);
+    OP (raytype,     raytype,             raytype,       true,      0);
     OP (regex_match, regex,               none,          false,     0);
     OP (regex_search, regex,              regex_search,  false,     0);
     OP (return,      return,              none,          false,     0);
@@ -1310,6 +1321,10 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
             ((ustring *)val)[i] = group->m_renderer_outputs[i];
         for (size_t i = n;  i < type.numelements();  ++i)
             ((ustring *)val)[i] = ustring();
+        return true;
+    }
+    if (name == "raytype_queries" && type.basetype == TypeDesc::INT) {
+        *(int *)val = group->raytype_queries();
         return true;
     }
     if (name == "num_entry_layers" && type.basetype == TypeDesc::INT) {
@@ -1844,6 +1859,16 @@ ShadingSystemImpl::ShaderGroupEnd (void)
         if (m_opt_merge_instances >= 2)
             merge_instances (*m_curgroup);
     }
+
+    // Merge the raytype_queries of all the individual layers
+    m_curgroup->m_raytype_queries = 0;
+    for (int layer = 0, n = m_curgroup->nlayers();  layer < n;  ++layer) {
+        ASSERT ((*m_curgroup)[layer]);
+        if (ShaderInstance *inst = (*m_curgroup)[layer])
+            m_curgroup->m_raytype_queries |= inst->master()->raytype_queries();
+    }
+    // std::cout << "Group " << m_curgroup->name() << " ray query bits "
+    //         << m_curgroup->m_raytype_queries << "\n";
 
     {
         // Record the group in the SS's census of all extant groups
@@ -2563,8 +2588,12 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 
 void
-ShadingSystemImpl::optimize_group (ShaderGroup &group)
+ShadingSystemImpl::optimize_group (ShaderGroup &group,
+                                   int raytypes_on, int raytypes_off)
 {
+    if (group.optimized())
+        return;    // already optimized
+
     OIIO::Timer timer;
     lock_guard lock (group.m_mutex);
     if (group.optimized()) {
@@ -2596,6 +2625,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
 
     ShadingContext *ctx = get_context ();
     RuntimeOptimizer rop (*this, group, ctx);
+    rop.set_raytypes (raytypes_on, raytypes_off);
     rop.run ();
 
     // Copy some info recorted by the RuntimeOptimizer into the group

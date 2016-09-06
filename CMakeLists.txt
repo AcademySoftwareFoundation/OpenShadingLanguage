@@ -549,7 +549,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslinfo-arrayparams oslinfo-metadata oslinfo-noparams
             osl-imageio
             printf-whole-array
-            raytype reparam
+            raytype raytype-specialized reparam
             render-background render-bumptest
             render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward

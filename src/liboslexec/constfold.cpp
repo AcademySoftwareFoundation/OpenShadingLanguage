@@ -2888,5 +2888,27 @@ DECLFOLDER(constfold_isconstant)
 }
 
 
+
+DECLFOLDER(constfold_raytype)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Name = *rop.opargsym (op, 1);
+    DASSERT (Name.typespec().is_string());
+    if (! Name.is_constant())
+        return 0;   // Can't optimize non-constant raytype name
+
+    int bit = rop.shadingsys().raytype_bit (*(ustring *)Name.data());
+    if (bit & rop.raytypes_on()) {
+        rop.turn_into_assign_one (op, "raytype => 1");
+        return 1;
+    }
+    if (bit & rop.raytypes_off()) {
+        rop.turn_into_assign_zero (op, "raytype => 0");
+        return 1;
+    }
+    return 0;  // indeterminite until execution time
+}
+
+
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

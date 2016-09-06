@@ -106,6 +106,7 @@ namespace Strings {
     extern ustring missingcolor, missingalpha;
     extern ustring end, useparam;
     extern ustring uninitialized_string;
+    extern ustring raytype;
 }; // namespace Strings
 
 
@@ -378,6 +379,8 @@ public:
 
     int num_params () const { return m_lastparam - m_firstparam; }
 
+    int raytype_queries () const { return m_raytype_queries; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Back-ptr to the shading system
     ShaderType m_shadertype;            ///< Type of shader
@@ -395,6 +398,7 @@ private:
     std::vector<ustring> m_sconsts;     ///< string constant values
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
+    int m_raytype_queries;              ///< Bitmask of raytypes queried
 
     friend class OSOReaderToMaster;
     friend class ShaderInstance;
@@ -576,7 +580,8 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group);
+    void optimize_group (ShaderGroup &group,
+                         int raytypes_on=0, int raytypes_off=0);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -1441,6 +1446,8 @@ public:
                                   : (layer == nlayers()-1);
     }
 
+    int raytype_queries () const { return m_raytype_queries; }
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1455,6 +1462,8 @@ private:
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
+    int m_exec_repeat;               ///< How many times to execute group
+    int m_raytype_queries;           ///< Bitmask of raytypes queried
     mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
     std::vector<ustring> m_closures_needed;

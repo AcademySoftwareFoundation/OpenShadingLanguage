@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
-#include "OSL/dual.h"
-#include "noiseimpl.h"
+#include <OSL/dual.h>
+#include <OSL/oslnoise.h>
 using namespace OSL;
 using namespace OSL::pvt;
 

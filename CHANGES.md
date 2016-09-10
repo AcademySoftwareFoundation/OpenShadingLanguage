@@ -18,6 +18,10 @@ Language, standard libary, and compiler changes (for shader writers):
 * Standard library additions/changes:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
+* New library: `liboslnoise` and header `oslnoise.h` expose OSL's noise
+  functions to C++ apps. Currently, only signed and unsigned perlin, and
+  cellnoise, are exposed, but other varieties and options may be added if
+  desired. #669 (1.8.2)
 * ShadingSystem API changes:
    * Long-deprecated ShadingAttribState type has been removed (now called
      ShaderGroup).

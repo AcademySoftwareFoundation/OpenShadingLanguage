@@ -1,13 +1,13 @@
 SET ( liboslexec_srcs
           shadingsys.cpp closure.cpp
           dictionary.cpp
-          context.cpp instance.cpp 
-          loadshader.cpp master.cpp 
+          context.cpp instance.cpp
+          loadshader.cpp master.cpp
           opcolor.cpp opmatrix.cpp opmessage.cpp
-          opnoise.cpp simplexnoise.cpp gabornoise.cpp
+          opnoise.cpp
           opspline.cpp opstring.cpp optexture.cpp
-          oslexec.cpp 
-          pointcloud.cpp rendservices.cpp 
+          oslexec.cpp
+          pointcloud.cpp rendservices.cpp
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
@@ -24,6 +24,14 @@ if (NOT BUILDSTATIC)
         ../liboslcomp/oslcomp.cpp
         ../liboslcomp/symtab.cpp
         ../liboslcomp/typecheck.cpp
+        )
+endif ()
+
+# oslnoise symbols used in oslexec
+if (NOT BUILDSTATIC)
+    LIST(APPEND liboslexec_srcs
+        ../liboslnoise/gabornoise.cpp
+        ../liboslnoise/simplexnoise.cpp
         )
 endif ()
 

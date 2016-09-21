@@ -2023,8 +2023,8 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
 
         Symbol &Val (*rop.opargsym(op,a));
         TypeDesc valtype = Val.typespec().simpletype ();
-        const int *ival = Val.typespec().is_int() ? (const int *)Val.data() : NULL;
-        const float *fval = Val.typespec().is_float() ? (const float *)Val.data() : NULL;
+        const int *ival = Val.typespec().is_int() && Val.is_constant() ? (const int *)Val.data() : NULL;
+        const float *fval = Val.typespec().is_float() && Val.is_constant() ? (const float *)Val.data() : NULL;
 
 #define PARAM_INT(paramname)                                            \
         if (name == Strings::paramname && valtype == TypeDesc::INT)   { \

@@ -558,8 +558,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             struct-with-array struct-within-struct
             ternary
             testshade-expr
-            texture-alpha texture-blur texture-derivs
-            texture-firstchannel texture-interp 
+            texture-alpha texture-blur texture-connected-options
+            texture-derivs texture-firstchannel texture-interp
             texture-missingcolor texture-simple
             texture-smallderivs texture-swirl
             texture-width texture-withderivs texture-wrap

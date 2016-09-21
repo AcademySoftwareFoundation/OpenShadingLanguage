@@ -51,6 +51,9 @@ const float eps = 0.001;   // Comparison threshold for results
 const Vec3 veps (eps,eps,eps);
 
 
+// The benchmarks require C++11 lambdas and OIIO 1.7 time_trial function
+#define DO_BENCHMARKS (OIIO_CPLUSPLUS_VERSION >= 11 && OIIO_VERSION >= 10700)
+
 
 
 namespace std {   // hack!
@@ -99,7 +102,7 @@ inline float abs (const Vec3& a) {
 
 
 
-#if OIIO_CPLUSPLUS_VERSION >= 11  /* So easy with lambdas */
+#if DO_BENCHMARKS
 
 template <typename FUNC, typename T>
 void benchmark1 (string_view funcname, FUNC func, T x)
@@ -223,7 +226,7 @@ test_perlin ()
         MAKE_IMAGE (noise);
     }
 
-#if OIIO_CPLUSPLUS_VERSION >= 11  /* So easy with lambdas */
+#if DO_BENCHMARKS
     // Time trials
     benchmark1 ("snoise(f)      ", snoise<float>, 0.5f);
     benchmark2 ("snoise(f,f)    ", snoise<float,float>, 0.5f, 0.5f);
@@ -299,7 +302,7 @@ test_cell ()
         MAKE_IMAGE (cellnoise);
     }
 
-#if OIIO_CPLUSPLUS_VERSION >= 11  /* So easy with lambdas */
+#if DO_BENCHMARKS
     // Time trials
     benchmark1 ("cellnoise(f)   ", cellnoise<float>, 0.5f);
     benchmark2 ("cellnoise(f,f) ", cellnoise<float,float>, 0.5f, 0.5f);

@@ -1,0 +1,4 @@
+shader attribs (output float value = 0)
+{
+    value = v * 10;
+}

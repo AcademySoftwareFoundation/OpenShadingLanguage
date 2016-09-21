@@ -1,0 +1,7 @@
+surface test (string filename = "",
+              float s = u, float t = v,
+              float swidth = 1.0, float twidth = 1.0,
+              output color Cout = 0 )
+{
+    Cout = texture (filename, s, t, "swidth", swidth, "twidth", twidth);
+}

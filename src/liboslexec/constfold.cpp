@@ -2093,35 +2093,53 @@ DECLFOLDER(constfold_getattribute)
     Symbol& Destination = *rop.opargsym (op, dest_slot);
 
     if (! Attribute.is_constant() ||
-        ! ObjectName.is_constant() ||
+        (object_lookup && ! ObjectName.is_constant()) ||
         (array_lookup && ! Index.is_constant()))
         return 0;   // Non-constant things prevent a fold
     if (Destination.typespec().is_array())
         return 0;   // Punt on arrays for now
 
-    // If the object name is not supplied, it implies that we are
-    // supposed to search the shaded object first, then if that fails,
-    // the scene-wide namespace.  We can't do that yet, have to wait
-    // until shade time.
-    ustring obj_name;
-    if (object_lookup)
-        obj_name = *(const ustring *)ObjectName.data();
-    if (! obj_name)
-        return 0;
-
+    ustring attr_name = *(const ustring *)Attribute.data();
     const size_t maxbufsize = 1024;
     char buf[maxbufsize];
     TypeDesc attr_type = Destination.typespec().simpletype();
     if (attr_type.size() > maxbufsize)
         return 0;  // Don't constant fold humongous things
-    ustring attr_name = *(const ustring *)Attribute.data();
-    bool found = array_lookup
-        ? rop.renderer()->get_array_attribute (NULL, false,
-                                               obj_name, attr_type, attr_name,
-                                               *(const int *)Index.data(), buf)
-        : rop.renderer()->get_attribute (NULL, false,
-                                         obj_name, attr_type, attr_name,
-                                         buf);
+
+    bool found = false;
+
+    // Check global things first
+    if (attr_name == "shader:shadername" && attr_type == TypeDesc::TypeString) {
+        *((ustring *)buf) = ustring(rop.inst()->shadername());
+        found = true;
+    } else if (attr_name == "shader:layername" && attr_type == TypeDesc::TypeString) {
+        *((ustring *)buf) = rop.inst()->layername();
+        found = true;
+    } else if (attr_name == "shader:groupname" && attr_type == TypeDesc::TypeString) {
+        *((ustring *)buf) = rop.group().name();
+        found = true;
+    }
+
+    if (!found) {
+        // If the object name is not supplied, it implies that we are
+        // supposed to search the shaded object first, then if that fails,
+        // the scene-wide namespace.  We can't do that yet, have to wait
+        // until shade time.
+        ustring obj_name;
+        if (object_lookup)
+            obj_name = *(const ustring *)ObjectName.data();
+        if (! obj_name)
+            return 0;
+
+        found = array_lookup
+            ? rop.renderer()->get_array_attribute (NULL, false,
+                                                   obj_name, attr_type, attr_name,
+                                                   *(const int *)Index.data(), buf)
+            : rop.renderer()->get_attribute (NULL, false,
+                                             obj_name, attr_type, attr_name,
+                                             buf);
+    }
+
     if (found) {
         // Now we turn the existing getattribute op into this for success:
         //       assign result 1

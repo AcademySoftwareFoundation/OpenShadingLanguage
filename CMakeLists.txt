@@ -509,6 +509,7 @@ macro ( TESTSUITE )
         # test, which we don't bother testing unoptimized.
         if (NOT _testname MATCHES "^render" AND
             NOT _testname MATCHES "^oslinfo" AND
+            NOT _testname MATCHES "^getattribute-shader" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
           set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
           add_test ( NAME ${_testname}
@@ -537,7 +538,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             draw_string
             error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
-            geomath getattribute-camera getsymbol-nonheap gettextureinfo
+            geomath getattribute-camera getattribute-shader
+            getsymbol-nonheap gettextureinfo
             group-outputs groupstring
             hex hyperb
             ieee_fp if incdec initops intbits isconnected isconstant

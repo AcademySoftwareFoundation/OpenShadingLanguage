@@ -326,7 +326,7 @@ void parse_scene() {
             if (commands.size())
                 group = shadingsys->ShaderGroupBegin (name, shadertype, commands);
             else
-                group = shadingsys->ShaderGroupBegin();
+                group = shadingsys->ShaderGroupBegin (name);
             ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
             for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
                 if (strcmp(gnode.name(), "Parameter") == 0) {

@@ -1286,6 +1286,10 @@ ShadingSystemImpl::attribute (ShaderGroup *group, string_view name,
         group->m_exec_repeat = *(const int *)val;
         return true;
     }
+    if (name == "groupname" && type == TypeDesc::TypeString) {
+        group->name (ustring(((const char **)val)[0]));
+        return true;
+    }
     return false;
 }
 
@@ -3135,8 +3139,8 @@ osl_uninit_check (long long typedesc_, void *vals_,
     if (uninit) {
         ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
                     typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
-                    groupname ? groupname: "<unnamed group>",
-                    layer, layername ? layername : "<unnamed layer>",
+                    (groupname && groupname[0]) ? groupname: "<unnamed group>",
+                    layer, (layername && layername[0]) ? layername : "<unnamed layer>",
                     shadername, opnum, USTR(opname), argnum);
     }
 }
@@ -3155,7 +3159,7 @@ osl_range_check (int indexvalue, int length, const char *symname,
                     " (group %s, layer %d %s, shader %s)",
                     indexvalue, USTR(symname), length-1,
                     USTR(sourcefile), sourceline,
-                    groupname ? groupname : "<unnamed group>", layer,
+                    (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
                     (layername && layername[0]) ? layername : "<unnamed layer>",
                     USTR(shadername));
         if (indexvalue >= length)

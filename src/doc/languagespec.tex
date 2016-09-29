@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 14 Jan, 2016 \\
- (with corrections, 5 Jul 2016)
+ (with corrections, 27 Sep 2016)
 }
 \bigskip
 \bigskip
@@ -4763,7 +4763,21 @@ Tables giving ``standardized'' names for different kinds of attributes may
 be found below. All renderers are expected to use the same names for these
 attributes, but are free to choose any names for additional attributes they
 wish to make queryable.
+
 \apiend
+
+\begin{table}[htbp]
+\caption{Names of standard attributes that may be retrieved.}\label{tab:cameraattributes}
+\begin{tabular}{|p{1.8in}|p{0.6in}|p{2.8in}|}
+\hline
+{\bf Name} & {\bf Type} & {\bf Description} \\
+\hline
+{\cf "shader:shadername"}     & {\cf string}    & Name of the shader master. \\
+{\cf "shader:layername"}      & {\cf string}    & Name of the layer instance. \\
+{\cf "shader:groupname"}      & {\cf string}    & Name of the shader group. \\
+\hline
+\end{tabular}
+\end{table}
 
 \begin{table}[htbp]
 \caption{Names of standard camera attributes that may be retrieved.

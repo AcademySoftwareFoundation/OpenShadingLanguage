@@ -1001,7 +1001,7 @@ test_shade (int argc, const char *argv[])
     // to be processed at the end.  Bear with us.
     
     // Start the shader group and grab a reference to it.
-    shadergroup = shadingsys->ShaderGroupBegin ();
+    shadergroup = shadingsys->ShaderGroupBegin (groupname);
 
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
@@ -1011,6 +1011,8 @@ test_shade (int argc, const char *argv[])
         std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";
         return EXIT_FAILURE;
     }
+
+    shadingsys->attribute (shadergroup.get(), "groupname", groupname);
 
     // Now set up the connections
     for (size_t i = 0;  i < connections.size();  i += 4) {

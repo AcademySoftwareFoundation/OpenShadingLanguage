@@ -2110,13 +2110,16 @@ DECLFOLDER(constfold_getattribute)
 
     // Check global things first
     if (attr_name == "shader:shadername" && attr_type == TypeDesc::TypeString) {
-        *((ustring *)buf) = ustring(rop.inst()->shadername());
+        ustring *up = (ustring *)(char *)buf;
+        *up = ustring(rop.inst()->shadername());
         found = true;
     } else if (attr_name == "shader:layername" && attr_type == TypeDesc::TypeString) {
-        *((ustring *)buf) = rop.inst()->layername();
+        ustring *up = (ustring *)(char *)buf;
+        *up = rop.inst()->layername();
         found = true;
     } else if (attr_name == "shader:groupname" && attr_type == TypeDesc::TypeString) {
-        *((ustring *)buf) = rop.group().name();
+        ustring *up = (ustring *)(char *)buf;
+        *up = rop.group().name();
         found = true;
     }
 

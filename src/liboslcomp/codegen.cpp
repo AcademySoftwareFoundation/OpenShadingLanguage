@@ -712,9 +712,7 @@ ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
             float f[16];
             int nargs = 0;
             DASSERT (val.get());
-            bool has_space_name = false;
             if (val->nodetype() == ASTNode::literal_node && val->typespec().is_string()) {
-                has_space_name = true;
                 val = val->next();
                 completed = false;
             }

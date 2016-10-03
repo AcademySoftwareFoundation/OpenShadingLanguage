@@ -628,6 +628,8 @@ ustring missingcolor("missingcolor"), missingalpha("missingalpha");
 ustring end("end"), useparam("useparam");
 ustring uninitialized_string("!!!uninitialized!!!");
 ustring raytype("raytype");
+ustring color("color"), point("point"), vector("vector"), normal("normal");
+ustring matrix("matrix");
 };
 
 

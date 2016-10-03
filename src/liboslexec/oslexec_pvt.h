@@ -107,6 +107,7 @@ namespace Strings {
     extern ustring end, useparam;
     extern ustring uninitialized_string;
     extern ustring raytype;
+    extern ustring color, point, vector, normal, matrix;
 }; // namespace Strings
 
 

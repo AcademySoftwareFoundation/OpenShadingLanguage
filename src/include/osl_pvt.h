@@ -306,6 +306,12 @@ public:
         return m_simple.basetype == TypeDesc::INT;
     }
 
+    /// Is it somehow based on floats?
+    ///
+    bool is_float_based () const {
+        return m_simple.basetype == TypeDesc::FLOAT && !m_closure;
+    }
+
     /// Is it a void?
     ///
     bool is_void () const {
@@ -690,6 +696,24 @@ public:
 
     bool is_constant () const { return symtype() == SymTypeConst; }
     bool is_temp () const { return symtype() == SymTypeTemp; }
+
+    // Retrieve the const float value (will ASSERT if not a const float!)
+    float get_float (int index = 0) {
+        ASSERT (data() && typespec().is_float_based());
+        return ((const float *)data())[index];
+    }
+
+    // Retrieve the const int value (will ASSERT if not a const int!)
+    int get_int (int index = 0) {
+        ASSERT (data() && typespec().is_int_based());
+        return ((const int *)data())[index];
+    }
+
+    // Retrieve the const string value (will ASSERT if not a const string!)
+    ustring get_string () {
+        ASSERT (data() && typespec().is_string());
+        return ((const ustring *)data())[0];
+    }
 
     /// Stream output
     std::ostream& print (std::ostream& out, int maxvals=100000000) const;

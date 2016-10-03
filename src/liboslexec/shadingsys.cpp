@@ -611,6 +611,8 @@ ustring end("end"), useparam("useparam");
 ustring uninitialized_string("!!!uninitialized!!!");
 ustring unull("unull");
 ustring raytype("raytype");
+ustring color("color"), point("point"), vector("vector"), normal("normal");
+ustring matrix("matrix");
 };
 
 

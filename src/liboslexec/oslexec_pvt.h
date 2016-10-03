@@ -108,6 +108,7 @@ namespace Strings {
     extern ustring uninitialized_string;
     extern ustring unull;
     extern ustring raytype;
+    extern ustring color, point, vector, normal, matrix;
 }; // namespace Strings
 
 

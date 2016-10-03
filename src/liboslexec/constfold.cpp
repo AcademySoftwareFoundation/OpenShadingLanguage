@@ -1845,31 +1845,36 @@ DECLFOLDER(constfold_triple)
 
 DECLFOLDER(constfold_matrix)
 {
-    // Try to turn R=matrix(from,to) into R=const if it's an identity
-    // transform or if the result is a non-time-varying matrix.
     Opcode &op (rop.inst()->ops()[opnum]);
     int nargs = op.nargs();
-    bool using_space = (nargs == 3 || nargs == 18);
-    // bool using_two_spaces = (nargs == 3 && rop.opargsym(op,2)->typespec().is_string());
-    int nfloats = nargs - 1 - (int)using_space;
-    ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
-    if (op.nargs() == 3) {
+    int using_space = rop.opargsym(op,1)->typespec().is_string() ? 1 : 0;
+    if (using_space && nargs > 2 && rop.opargsym(op,2)->typespec().is_string())
+        using_space = 2;
+    int nfloats = nargs - 1 - using_space;
+    ASSERT (nfloats == 1 || nfloats == 16 || (nfloats == 0 && using_space == 2));
+    if (nargs == 3 && using_space == 2) {
+        // Try to simplify R=matrix(from,to) in cases of an identify
+        // transform: if From and To are the same variable (even if not a
+        // constant), or if their values are the same, or if one is "common"
+        // and the other is the designated common space synonym.
         Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
         Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
-        if (! (From.is_constant() && From.typespec().is_string() &&
-               To.is_constant() && To.typespec().is_string()))
-            return 0;
-        // OK, From and To are constant strings.
-        ustring from = *(ustring *)From.data();
-        ustring to = *(ustring *)To.data();
+        ustring from = From.is_constant() ? *(ustring *)From.data() : ustring("$unknown1$");
+        ustring to   = To.is_constant()   ? *(ustring *)To.data()   : ustring("$unknown2$");
         ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
-        if (from == to || (from == Strings::common && to == commonsyn) ||
-            (from == commonsyn && to == Strings::common)) {
+        if (&From == &To || from == to ||
+            ((from == Strings::common && to == commonsyn) ||
+             (from == commonsyn && to == Strings::common))) {
             static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-            int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
-            rop.turn_into_assign (op, cind, "matrix(spaceA,spaceA) => identity matrix");
+            rop.turn_into_assign (op, rop.add_constant (ident),
+                                  "matrix(spaceA,spaceA) => identity matrix");
             return 1;
         }
+        // Try to simplify R=matrix(from,to) in cases of an constant (but
+        // different) names -- do the matrix retrieval now, if not time-
+        // varying matrices.
+        if (! (From.is_constant() && To.is_constant()))
+            return 0;
         // Shader and object spaces will vary from execution to execution,
         // so we can't optimize those away.
         if (from == Strings::shader || from == Strings::object ||
@@ -1898,7 +1903,23 @@ DECLFOLDER(constfold_matrix)
             return 1;
         }
     }
-    if (nfloats == 16 && ! using_space) {
+    if (using_space == 1 && nfloats == 1) {
+        // Turn matrix("common",1) info identity matrix.
+        Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
+        Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+2));
+        if (From.is_constant() && Val.is_constant() && *(float *)Val.data() == 1.0f) {
+            ustring from = *(ustring *)From.data();
+            if (from == Strings::common ||
+                from == rop.inst()->shadingsys().commonspace_synonym()) {
+                static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+                rop.turn_into_assign (op, rop.add_constant (ident),
+                                      "matrix(\"common\",1) => identity matrix");
+            }
+        }
+    }
+    if (nfloats == 16 && using_space == 0) {
+        // Try to turn matrix(...16 float consts...) into just a const
+        // matrix assign.
         bool all_const = true;
         float M[16];
         for (int i = 0; i < 16; ++i) {
@@ -1913,6 +1934,16 @@ DECLFOLDER(constfold_matrix)
         if (all_const) {
             rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeMatrix, M),
                                   "const fold matrix");
+            return 1;
+        }
+    }
+    if (nfloats == 1 && using_space == 0) {
+        // Try to turn matrix(const float) into just a const matrix assign.
+        Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+1));
+        if (Val.is_constant()) {
+            float val = *(float *)Val.data();
+            Matrix44 M (val,0,0,0, 0,val,0,0, 0,0,val,0, 0,0,0,val);
+            rop.turn_into_assign (op, rop.add_constant (M), "const fold matrix");
             return 1;
         }
     }

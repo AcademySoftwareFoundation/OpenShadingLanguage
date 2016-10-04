@@ -584,7 +584,7 @@ DECLFOLDER(constfold_or)
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
                                      val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const | const");
+        rop.turn_into_assign (op, cind, "const || const");
         return 1;
     }
     return 0;
@@ -604,7 +604,74 @@ DECLFOLDER(constfold_and)
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
                                      val ? &int_one : &int_zero);
+        rop.turn_into_assign (op, cind, "const && const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_bitand)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    Symbol &B (*rop.opargsym(op, 2));
+    if (A.is_constant() && B.is_constant()) {
+        // Turn the 'bitand R A B' into 'assign R X'.
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        int cind = rop.add_constant (A.get_int() & B.get_int());
         rop.turn_into_assign (op, cind, "const & const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_bitor)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    Symbol &B (*rop.opargsym(op, 2));
+    if (A.is_constant() && B.is_constant()) {
+        // Turn the 'bitor R A B' into 'assign R X'.
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        int cind = rop.add_constant (A.get_int() | B.get_int());
+        rop.turn_into_assign (op, cind, "const | const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_xor)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    Symbol &B (*rop.opargsym(op, 2));
+    if (A.is_constant() && B.is_constant()) {
+        // Turn the 'xor R A B' into 'assign R X'.
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        int cind = rop.add_constant (A.get_int() ^ B.get_int());
+        rop.turn_into_assign (op, cind, "const ^ const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_compl)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    if (A.is_constant()) {
+        // Turn the 'compl R A' into 'assign R X'.
+        DASSERT (A.typespec().is_int());
+        int cind = rop.add_constant (~(A.get_int()));
+        rop.turn_into_assign (op, cind, "~const");
         return 1;
     }
     return 0;

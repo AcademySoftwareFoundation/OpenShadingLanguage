@@ -7,6 +7,7 @@ MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS="-DOSL_SPI=1"
 
 ## Generic OSX machines (including LG's laptop)
 ifeq (${platform}, macosx)
+    USE_CPP11 ?= 1
     MY_CMAKE_FLAGS += \
         -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
         -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"

@@ -91,7 +91,15 @@ examples), as you are just coding in C++, but there are some rules:
 */
 
 
+// Some gcc versions on some platforms seem to have max_align_t missing from
+// their <cstddef>. Putting this here appears to make it build cleanly on
+// those platforms while not hurting anything elsewhere.
+namespace {
+typedef long double max_align_t;
+}
+
 #include <iostream>
+#include <cstddef>
 
 #include "OSL/oslconfig.h"
 #include "OSL/shaderglobals.h"

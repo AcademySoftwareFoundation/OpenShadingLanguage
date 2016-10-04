@@ -795,8 +795,8 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (atan,        generic,             none,          true,      0);
     OP (atan2,       generic,             none,          true,      0);
     OP (backfacing,  get_simple_SG_field, none,          true,      0);
-    OP (bitand,      bitwise_binary_op,   none,          true,      0);
-    OP (bitor,       bitwise_binary_op,   none,          true,      0);
+    OP (bitand,      bitwise_binary_op,   bitand,        true,      0);
+    OP (bitor,       bitwise_binary_op,   bitor,         true,      0);
     OP (blackbody,   blackbody,           none,          true,      0);
     OP (break,       loopmod_op,          none,          false,     0);
     OP (calculatenormal, calculatenormal, none,          true,      0);
@@ -806,7 +806,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (closure,     closure,             none,          true,      0);
     OP (color,       construct_color,     triple,        true,      0);
     OP (compassign,  compassign,          compassign,    false,     0);
-    OP (compl,       unary_op,            none,          true,      0);
+    OP (compl,       unary_op,            compl,         true,      0);
     OP (compref,     compref,             compref,       true,      0);
     OP (concat,      generic,             concat,        true,      0);
     OP (continue,    loopmod_op,          none,          false,     0);
@@ -934,7 +934,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (warning,     printf,              warning,       false,     0);
     OP (wavelength_color, blackbody,      none,          true,      0);
     OP (while,       loop_op,             none,          false,     0);
-    OP (xor,         bitwise_binary_op,   none,          true,      0);
+    OP (xor,         bitwise_binary_op,   xor,           true,      0);
 #undef OP
 #undef TEX
 }

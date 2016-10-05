@@ -449,9 +449,9 @@ add_subdirectory (src/doc)
 set (USE_ELARA ON CACHE BOOL "Build Elara core with OSL")
 if (USE_ELARA)
 find_path (ELARA_SRC_DIR REQUIRED)
-add_subdirectory (${ELARA_SRC_DIR}/liber)
-add_subdirectory (${ELARA_SRC_DIR}/liber_shader)
-add_subdirectory (${ELARA_SRC_DIR}/er)
+add_subdirectory (src/liber)
+add_subdirectory (src/liber_shader)
+add_subdirectory (src/er)
 endif ()
 
 

@@ -157,6 +157,11 @@ else ()
     ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
 endif ()
 
+if (MSVC)
+	# Enable PDB generation for Release build
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /DEBUG")
+endif ()
+
 TARGET_LINK_LIBRARIES ( oslexec
                         ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
                         ${OPENIMAGEIO_LIBRARY} ${ILMBASE_LIBRARIES}

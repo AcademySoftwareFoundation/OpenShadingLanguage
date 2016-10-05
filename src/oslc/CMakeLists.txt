@@ -7,6 +7,11 @@ if (BUILDSTATIC)
         ../liboslexec/typespec.cpp)
 endif ()
 
+if (MSVC)
+	# Enable PDB generation for Release build
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /DEBUG")
+endif ()
+
 ADD_EXECUTABLE ( oslc ${oslc_srcs} )
 TARGET_LINK_LIBRARIES ( oslc oslcomp ${OPENIMAGEIO_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS oslc RUNTIME DESTINATION bin )

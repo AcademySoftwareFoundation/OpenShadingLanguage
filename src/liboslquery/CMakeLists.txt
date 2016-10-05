@@ -6,6 +6,11 @@ INCLUDE_DIRECTORIES ( ../liboslexec )
 
 FLEX_BISON ( ../liboslexec/osolex.l ../liboslexec/osogram.y oso liboslquery_srcs compiler_headers )
 
+if (MSVC)
+	# Enable PDB generation for Release build
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /DEBUG")
+endif ()
+
 if (BUILDSTATIC)
     ADD_LIBRARY ( oslquery STATIC ${liboslquery_srcs} )
 else ()

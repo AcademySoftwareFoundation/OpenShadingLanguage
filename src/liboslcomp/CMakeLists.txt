@@ -20,6 +20,11 @@ else ()
     ADD_LIBRARY ( oslcomp SHARED ${liboslcomp_srcs} )
 endif ()
 
+if (MSVC)
+	# Enable PDB generation for Release build
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /DEBUG")
+endif ()
+
 TARGET_LINK_LIBRARIES ( oslcomp ${OPENIMAGEIO_LIBRARY} ${ILMBASE_LIBRARIES}
                        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 

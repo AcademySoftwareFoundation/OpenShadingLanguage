@@ -28,12 +28,10 @@ if (NOT BUILDSTATIC)
 endif ()
 
 # oslnoise symbols used in oslexec
-if (NOT BUILDSTATIC)
-    LIST(APPEND liboslexec_srcs
-        ../liboslnoise/gabornoise.cpp
-        ../liboslnoise/simplexnoise.cpp
-        )
-endif ()
+LIST(APPEND liboslexec_srcs
+   ../liboslnoise/gabornoise.cpp
+   ../liboslnoise/simplexnoise.cpp
+   )
 
 # oslquery symbols used in oslexec
 if (NOT BUILDSTATIC)

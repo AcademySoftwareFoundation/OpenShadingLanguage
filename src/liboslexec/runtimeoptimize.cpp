@@ -863,6 +863,12 @@ RuntimeOptimizer::simplify_params ()
             // if it's a simple assignment from a global whose value is
             // not reassigned later, we can just alias it, and if we're
             // lucky that may eliminate all uses of the parameter.
+
+            // First, trim init ops in case nops have accumulated
+            while (s->has_init_ops() && op(s->initbegin()).opname() == u_nop)
+                s->initbegin (s->initbegin()+1);
+            while (s->has_init_ops() && op(s->initend()-1).opname() == u_nop)
+                s->initend (s->initend()-1);
             if (s->initbegin() == s->initend()-1) {  // just one op
                 Opcode &op (inst()->ops()[s->initbegin()]);
                 if (op.opname() == u_assign) {
@@ -3011,7 +3017,7 @@ RuntimeOptimizer::run ()
     // Optimize each layer again, from last to first (because some
     // optimizations are only apparent when the subsequent shaders have
     // been simplified).
-    for (int layer = nlayers-2;  layer >= 0;  --layer) {
+    for (int layer = nlayers-1;  layer >= 0;  --layer) {
         set_inst (layer);
         if (! inst()->unused())
             optimize_instance ();

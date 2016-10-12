@@ -588,7 +588,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             texture-derivs texture-errormsg
             texture-firstchannel texture-interp
             texture-missingcolor texture-simple
-            texture-smallderivs texture-swirl
+            texture-smallderivs texture-swirl texture-udim
             texture-width texture-withderivs texture-wrap
             trailing-commas transform transformc trig typecast
             unknown-instruction

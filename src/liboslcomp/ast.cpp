@@ -909,6 +909,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
     }
     if (m_sym->symtype() != SymTypeFunction) {
         error ("'%s' is not a function", name.c_str());
+        m_sym = NULL;
         return;
     }
 }

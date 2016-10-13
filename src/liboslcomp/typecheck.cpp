@@ -1194,8 +1194,12 @@ ASTfunction_call::typecheck (TypeSpec expected)
         actualargs += arg->typespec().string();
     }
 
-    error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s", 
-           m_name.c_str(), actualargs.c_str(), choices.c_str());
+    if (choices.size())
+        error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s",
+               m_name.c_str(), actualargs.c_str(), choices.c_str());
+    else
+        error ("No matching function call to '%s (%s)'",
+               m_name.c_str(), actualargs.c_str());
     return TypeSpec();
 }
 

@@ -8,7 +8,7 @@ compiler:
 os:
     - linux
     - osx
-#osx_image: xcode7
+osx_image: xcode6.4
 dist: trusty
 
 # Do a default build (C++03, sse2), an sse4.2 build, and a C++11 build.
@@ -16,14 +16,13 @@ dist: trusty
 # excluded).
 env:
     matrix:
-      - WHICHGCC=4.8 BUILD_FLAGS=""
-      - WHICHGCC=4.8 BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=4.9 BUILD_FLAGS=""
-      - WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=6 BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS=""
-      - WHICHGCC=4.8 OIIOBRANCH=release BUILD_FLAGS="USE_CPP11=1"
-      - WHICHGCC=4.8 BUILD_FLAGS="" DEBUG=1
+      - WHICHGCC=4.8 USE_CPP11=1
+      - WHICHGCC=4.9 USE_CPP11=1
+      - WHICHGCC=5 USE_CPP11=1
+      - WHICHGCC=6 USE_CPP11=1
+      - WHICHGCC=4.8 OIIOBRANCH=RB-1.7 USE_CPP11=0
+      - WHICHGCC=4.8 OIIOBRANCH=RB-1.7 USE_CPP11=1
+      - WHICHGCC=4.8 DEBUG=1 USE_CPP11=1
 
 # Add-ons: specify apt packages for Linux
 addons:
@@ -117,13 +116,13 @@ matrix:
         compiler: clang
       - os: osx
         compiler: clang
-        env: WHICHGCC=4.9 BUILD_FLAGS=""
+        env: WHICHGCC=4.9 USE_CPP11=1
       - os: osx
         compiler: clang
-        env: WHICHGCC=5 BUILD_FLAGS="USE_CPP11=1"
+        env: WHICHGCC=5 USE_CPP11=1
       - os: osx
         compiler: clang
-        env: WHICHGCC=6 BUILD_FLAGS="USE_CPP11=1"
+        env: WHICHGCC=6 USE_CPP11=1
 
 notifications:
     email:

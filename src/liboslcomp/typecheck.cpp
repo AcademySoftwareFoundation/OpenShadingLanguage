@@ -1003,7 +1003,7 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
 void
 ASTfunction_call::typecheck_builtin_specialcase ()
 {
-    const char *tex_out_args[] = {"alpha", NULL};
+    const char *tex_out_args[] = {"alpha", "errormessage", NULL};
     const char *pointcloud_out_args[] = {"*", NULL};
 
     if (m_name == "transform") {

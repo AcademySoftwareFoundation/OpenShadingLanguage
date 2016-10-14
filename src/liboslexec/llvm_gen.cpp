@@ -1997,7 +1997,7 @@ static llvm::Value *
 llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                           int first_optional_arg, bool tex3d, int nchans,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
-                          llvm::Value* &dalphady)
+                          llvm::Value* &dalphady, llvm::Value* &errormessage)
 {
     llvm::Value* opt = rop.ll.call_function ("osl_get_texture_options",
                                              rop.sg_void_ptr());
@@ -2141,7 +2141,10 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                 // NO z derivs!  dalphadz = rop.llvm_get_pointer (Val, 3);
             }
             continue;
-
+        }
+        if (name == Strings::errormessage && valtype == TypeDesc::STRING) {
+            errormessage = rop.llvm_get_pointer (Val);
+            continue;
         }
         if (name == Strings::missingcolor &&
                    equivalent(valtype,TypeDesc::TypeColor)) {
@@ -2218,9 +2221,10 @@ LLVMGEN (llvm_gen_texture)
 
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    llvm::Value *errormessage = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, nchans,
-                                    alpha, dalphadx, dalphady);
+                                    alpha, dalphadx, dalphady, errormessage);
 
     // Now call the osl_texture function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2258,6 +2262,7 @@ LLVMGEN (llvm_gen_texture)
     args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     rop.ll.call_function ("osl_texture", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);
     return true;
@@ -2284,9 +2289,10 @@ LLVMGEN (llvm_gen_texture3d)
 
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    llvm::Value *errormessage = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     true /*3d*/, nchans,
-                                    alpha, dalphadx, dalphady);
+                                    alpha, dalphadx, dalphady, errormessage);
 
     // Now call the osl_texture3d function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2333,6 +2339,7 @@ LLVMGEN (llvm_gen_texture3d)
     args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr_null());  // No dalphadz for now
+    args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     rop.ll.call_function ("osl_texture3d", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);
     return true;
@@ -2358,9 +2365,10 @@ LLVMGEN (llvm_gen_environment)
 
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    llvm::Value *errormessage = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, nchans,
-                                    alpha, dalphadx, dalphady);
+                                    alpha, dalphadx, dalphady, errormessage);
 
     // Now call the osl_environment function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2399,6 +2407,7 @@ LLVMGEN (llvm_gen_environment)
         args.push_back (rop.ll.void_ptr_null());
         args.push_back (rop.ll.void_ptr_null());
     }
+    args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     rop.ll.call_function ("osl_environment", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);
     return true;

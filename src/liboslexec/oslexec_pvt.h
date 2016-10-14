@@ -94,7 +94,7 @@ namespace Strings {
     extern ustring blur, sblur, tblur, rblur;
     extern ustring wrap, swrap, twrap, rwrap;
     extern ustring black, clamp, periodic, mirror;
-    extern ustring firstchannel, fill, alpha;
+    extern ustring firstchannel, fill, alpha, errormessage;
     extern ustring interp, closest, linear, cubic, smartcubic;
     extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern ustring cell, cellnoise, pcellnoise;
@@ -109,6 +109,8 @@ namespace Strings {
     extern ustring unull;
     extern ustring raytype;
     extern ustring color, point, vector, normal, matrix;
+    extern ustring unknown;
+    extern ustring _emptystring_;
 }; // namespace Strings
 
 

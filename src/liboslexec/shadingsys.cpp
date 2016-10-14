@@ -591,6 +591,7 @@ ustring wrap ("wrap"), swrap ("swrap"), twrap ("twrap"), rwrap ("rwrap");
 ustring black ("black"), clamp ("clamp");
 ustring periodic ("periodic"), mirror ("mirror");
 ustring firstchannel ("firstchannel"), fill ("fill"), alpha ("alpha");
+ustring errormessage ("errormessage");
 ustring interp("interp"), closest("closest"), linear("linear");
 ustring cubic("cubic"), smartcubic("smartcubic");
 ustring perlin("perlin"), uperlin("uperlin");
@@ -613,6 +614,8 @@ ustring unull("unull");
 ustring raytype("raytype");
 ustring color("color"), point("point"), vector("vector"), normal("normal");
 ustring matrix("matrix");
+ustring unknown ("unknown");
+ustring _emptystring_ ("");
 };
 
 

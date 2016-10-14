@@ -1889,10 +1889,17 @@ DECLFOLDER(constfold_triple)
     DASSERT (op.nargs() == 4 || op.nargs() == 5);
     bool using_space = (op.nargs() == 5);
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
-//    Symbol &Space (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1+using_space));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2+using_space));
     Symbol &C (*rop.inst()->argsymbol(op.firstarg()+3+using_space));
+    if (using_space) {
+        // If we're using a space name and it's equivalent to "common",
+        // just pretend it doesn't exist.
+        Symbol &Space (*rop.inst()->argsymbol(op.firstarg()+1));
+        if (Space.is_constant() && (Space.get_string() == Strings::common ||
+                                    Space.get_string() == rop.shadingsys().commonspace_synonym()))
+            using_space = false;
+    }
     if (A.is_constant() && A.typespec().is_float() &&
             B.is_constant() && C.is_constant() && !using_space) {
         DASSERT (A.typespec().is_float() &&

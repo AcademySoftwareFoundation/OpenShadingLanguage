@@ -249,7 +249,8 @@ osl_texture (void *sg_, const char *name, void *handle,
              void *opt_, float s, float t,
              float dsdx, float dtdx, float dsdy, float dtdy,
              int chans, void *result, void *dresultdx, void *dresultdy,
-             void *alpha, void *dalphadx, void *dalphady)
+             void *alpha, void *dalphadx, void *dalphady,
+             ustring *errormessage)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
@@ -262,7 +263,8 @@ osl_texture (void *sg_, const char *name, void *handle,
                                      *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
                                      (float *)&result_simd,
                                      derivs ? (float *)&dresultds_simd : NULL,
-                                     derivs ? (float *)&dresultdt_simd : NULL);
+                                     derivs ? (float *)&dresultdt_simd : NULL,
+                                     errormessage);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = result_simd[i];
@@ -283,6 +285,8 @@ osl_texture (void *sg_, const char *name, void *handle,
         }
     }
 
+    if (ok && errormessage)
+        *errormessage = Strings::_emptystring_;
     return ok;
 }
 
@@ -295,7 +299,8 @@ osl_texture3d (void *sg_, const char *name, void *handle,
                void *result, void *dresultdx,
                void *dresultdy, void *dresultdz,
                void *alpha, void *dalphadx,
-               void *dalphady, void *dalphadz)
+               void *dalphady, void *dalphadz,
+               ustring *errormessage)
 {
     const Vec3 &P (*(Vec3 *)P_);
     const Vec3 &dPdx (*(Vec3 *)dPdx_);
@@ -313,7 +318,8 @@ osl_texture3d (void *sg_, const char *name, void *handle,
                                        4, (float *)&result_simd,
                                        derivs ? (float *)&dresultds_simd : NULL,
                                        derivs ? (float *)&dresultdt_simd : NULL,
-                                       derivs ? (float *)&dresultdr_simd : NULL);
+                                       derivs ? (float *)&dresultdr_simd : NULL,
+                                       errormessage);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = result_simd[i];
@@ -339,6 +345,9 @@ osl_texture3d (void *sg_, const char *name, void *handle,
             ((float *)dalphadz)[0] = dresultdz_simd[chans];
         }
     }
+
+    if (ok && errormessage)
+        *errormessage = Strings::_emptystring_;
     return ok;
 }
 
@@ -349,7 +358,8 @@ osl_environment (void *sg_, const char *name, void *handle,
                  void *opt_, void *R_,
                  void *dRdx_, void *dRdy_, int chans,
                  void *result, void *dresultdx, void *dresultdy,
-                 void *alpha, void *dalphadx, void *dalphady)
+                 void *alpha, void *dalphadx, void *dalphady,
+                 ustring *errormessage)
 {
     const Vec3 &R (*(Vec3 *)R_);
     const Vec3 &dRdx (*(Vec3 *)dRdx_);
@@ -362,7 +372,8 @@ osl_environment (void *sg_, const char *name, void *handle,
     bool ok = sg->renderer->environment (USTR(name),
                                          (TextureSystem::TextureHandle *)handle,
                                          NULL, *opt, sg, R, dRdx, dRdy, 4,
-                                         (float *)&local_result, NULL, NULL);
+                                         (float *)&local_result, NULL, NULL,
+                                         errormessage);
 
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = local_result[i];
@@ -389,6 +400,8 @@ osl_environment (void *sg_, const char *name, void *handle,
             ((float *)dalphady)[0] = 0.0f;
     }
 
+    if (ok && errormessage)
+        *errormessage = Strings::_emptystring_;
     return ok;
 }
 

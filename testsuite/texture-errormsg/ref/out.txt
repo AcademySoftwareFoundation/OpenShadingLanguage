@@ -1,0 +1,4 @@
+Compiled test.osl -> test.oso
+
+Output Cout to out.tif
+err 0.508 0.00781: Could not open file: bad.tif: No such file or directory

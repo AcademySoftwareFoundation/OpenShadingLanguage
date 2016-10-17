@@ -230,6 +230,22 @@ public:
     ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
+    ///
+    /// If the errormessage parameter is NULL, this method is expected to
+    /// handle the errors fully, including forwarding them to the renderer
+    /// or shading system. If errormessage is non-NULL, any resulting error
+    /// messages (in case of failure, when the function returns false) will
+    /// be stored there, leaving it up to the caller/shader to handle the
+    /// error.
+    virtual bool texture (ustring filename, TextureHandle *texture_handle,
+                          TexturePerthread *texture_thread_info,
+                          TextureOpt &options, ShaderGlobals *sg,
+                          float s, float t, float dsdx, float dtdx,
+                          float dsdy, float dtdy, int nchannels,
+                          float *result, float *dresultds, float *dresultdt,
+                          ustring *errormessage);
+    // Deprecated version, with no errormessage parameter. This will
+    // eventually disappear.
     virtual bool texture (ustring filename, TextureHandle *texture_handle,
                           TexturePerthread *texture_thread_info,
                           TextureOpt &options, ShaderGlobals *sg,
@@ -255,6 +271,23 @@ public:
     ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
+    ///
+    /// If the errormessage parameter is NULL, this method is expected to
+    /// handle the errors fully, including forwarding them to the renderer
+    /// or shading system. If errormessage is non-NULL, any resulting error
+    /// messages (in case of failure, when the function returns false) will
+    /// be stored there, leaving it up to the caller/shader to handle the
+    /// error.
+    virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
+                            TexturePerthread *texture_thread_info,
+                            TextureOpt &options, ShaderGlobals *sg,
+                            const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
+                            const Vec3 &dPdz, int nchannels,
+                            float *result, float *dresultds,
+                            float *dresultdt, float *dresultdr,
+                            ustring *errormessage);
+    // Deprecated version, with no errormessage parameter. This will
+    // eventually disappear.
     virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
                             TexturePerthread *texture_thread_info,
                             TextureOpt &options, ShaderGlobals *sg,
@@ -278,6 +311,22 @@ public:
     ///
     /// Return true if the file is found and could be opened, otherwise
     /// return false.
+    ///
+    /// If the errormessage parameter is NULL, this method is expected to
+    /// handle the errors fully, including forwarding them to the renderer
+    /// or shading system. If errormessage is non-NULL, any resulting error
+    /// messages (in case of failure, when the function returns false) will
+    /// be stored there, leaving it up to the caller/shader to handle the
+    /// error.
+    virtual bool environment (ustring filename, TextureHandle *texture_handle,
+                              TexturePerthread *texture_thread_info,
+                              TextureOpt &options, ShaderGlobals *sg,
+                              const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
+                              int nchannels, float *result,
+                              float *dresultds, float *dresultdt,
+                              ustring *errormessage);
+    // Deprecated version, with no errormessage parameter. This will
+    // eventually disappear.
     virtual bool environment (ustring filename, TextureHandle *texture_handle,
                               TexturePerthread *texture_thread_info,
                               TextureOpt &options, ShaderGlobals *sg,

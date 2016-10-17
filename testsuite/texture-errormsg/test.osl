@@ -1,0 +1,14 @@
+shader
+test (output color Cout = 0)
+{
+    string err = "uninitialized";
+    string filename = (u > 0.5) ? "bad.tif" : "../common/textures/mandrill.tif";
+    color C = (color) texture (filename, u, v, "errormessage", err);
+    if (err == "") {
+        Cout = mix (color(0,1,0), C, 0.75);
+    } else {
+        Cout = color(1,0,0);
+        if (err != "unknown")
+            printf ("err %0.03g %0.03g: %s\n", u, v, err);
+    }
+}

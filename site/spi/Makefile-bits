@@ -5,52 +5,20 @@ OPENIMAGEIO_NAMESPACE ?= 'OpenImageIO_Arnold'
 
 MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS="-DOSL_SPI=1"
 
-## Generic OSX machines (including LG's laptop)
-ifeq (${platform}, macosx)
-    USE_CPP11 ?= 1
-    MY_CMAKE_FLAGS += \
-        -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
-        -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
-    ifeq (${COMPILER}, clang)
-	MY_CMAKE_FLAGS += \
-	    -DCMAKE_C_COMPILER=clang \
-	    -DCMAKE_CXX_COMPILER=clang++
-    endif
-    # All our Mac laptops seem to be at least SSE 4.2
-    USE_SIMD = sse4.2
-endif
-
-
 ## Rhel7 (current)
 ifeq ($(SP_OS), rhel7)
     platform=rhel7
     USE_CPP11 ?= 1
+    USE_SIMD = sse4.1
+    COMPILER ?= clang35
+    CMAKE ?= cmake
     USE_NINJA := 1
     NINJA := /net/soft_scratch/apps/arnold/tools/spinux1/bin/ninja
-    CMAKE := /net/soft_scratch/apps/arnold/tools/spinux1/bin/cmake
     MY_CMAKE_FLAGS += -DCMAKE_MAKE_PROGRAM=${NINJA}
 
     ## If not overridden, here is our preferred LLVM installation
     ## (may be changed as new versions are rolled out to the facility)
-    ifeq (${LLVM_DIRECTORY},)
-        LLVM_DIRECTORY := /shots/spi/home/lib/arnold/spinux1/llvm_3.4.2
-    endif
-
-    # default compiler is clang, taken from the LLVM directory
-    ifeq (${COMPILER},)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
-    endif
-
-    # requesting 'clang' or 'gcc' (no version) means the first clang or
-    # gcc in your path
-    ifeq (${COMPILER},clang)
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-    endif
-    ifeq (${COMPILER},gcc)
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-    endif
+    LLVM_DIRECTORY ?= /shots/spi/home/lib/arnold/spinux1/llvm_3.5
 
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
@@ -58,27 +26,32 @@ ifeq ($(SP_OS), rhel7)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_3.4.2/bin/clang \
            -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_3.4.2/bin/clang++
-    endif
-    ifeq (${COMPILER}, gcc472)
-      MY_CMAKE_FLAGS += \
-         -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.2-test/bin/gcc \
-         -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.7.2-test/bin/g++
-    endif
-    ifeq (${COMPILER}, gcc490)
+    else ifeq (${COMPILER}, clang35)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_3.5/bin/clang \
+           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_3.5/bin/clang++
+    else ifeq (${COMPILER},clang38)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang-3.8 -DCMAKE_CXX_COMPILER=clang++-3.8
+    else ifeq (${COMPILER},clang)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+    else ifeq (${COMPILER}, gcc490)
       MY_CMAKE_FLAGS += \
          -DCMAKE_C_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.9-20130512-test/bin/gcc \
          -DCMAKE_CXX_COMPILER=/net/soft_scratch/apps/arnold/tools/gcc-4.9-20130512-test/bin/g++
+    else ifeq (${COMPILER},gcc)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+    else ifeq (${COMPILER},)
+        # default compiler is clang, taken from the LLVM directory
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
+           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     endif
-
-    # Our minimal architecture for workstations and farm supports SSE 4.1
-    USE_SIMD = sse4.1
 
     MY_CMAKE_FLAGS += \
 	-DOPENEXR_CUSTOM_INCLUDE_DIR=/usr/include/OpenEXR2 \
 	-DOPENEXR_CUSTOM_LIB_DIR=/usr/lib64/OpenEXR2 \
 	-DEXTRA_OSLEXEC_LIBRARIES="/usr/lib64/libpthread.so" \
 	-DEXTRA_OSLEXEC_LIBRARIES="/usr/lib64/libcurses.so" \
-        -DLLVM_CUSTOM=1 \
 	-DLLVM_STATIC=1 \
         -DLLVM_VERSION=${LLVM_VERSION} \
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
@@ -97,7 +70,47 @@ ifeq ($(SP_OS), rhel7)
 	-DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS} \
 	-DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_filesystem-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_filesystem-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_regex-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_system-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_thread-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_wave-gcc48-mt${BOOSTVERS_SUFFIX}.so"
 
-endif  # endif rhel7
+    # end rhel7
+
+## Generic OSX machines (including LG's laptop)
+else ifeq (${platform}, macosx)
+    USE_CPP11 ?= 1
+    COMPILER ?= clang
+    USE_SIMD ?= sse4.2
+    MY_CMAKE_FLAGS += \
+        -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
+        -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
+
+    # A variety of tags can be used to try specific versions of gcc or
+    # clang from the site-specific places we have installed them.
+    ifeq (${COMPILER}, gcc5)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/usr/local/bin/gcc-5 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-5
+    else ifeq (${COMPILER}, gcc6)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/usr/local/bin/gcc-6 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-6
+    else ifeq (${COMPILER},clang35)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang-3.5 -DCMAKE_CXX_COMPILER=clang++-3.5
+    else ifeq (${COMPILER},clang38)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang-3.8 -DCMAKE_CXX_COMPILER=clang++-3.8
+    else ifeq (${COMPILER},clang)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+    else ifeq (${COMPILER},gcc)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+    else ifeq (${COMPILER},)
+        # default compiler is clang, taken from the LLVM directory
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
+           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+    endif
+
+    # end generic OSX
+
+else
+    $(error Unknown SP_OS)
+endif  # endif $(SP_OS)
+
+
 
 # set up OpenImageIO distribution environment
 ifeq (${OPENIMAGEIOHOME},)

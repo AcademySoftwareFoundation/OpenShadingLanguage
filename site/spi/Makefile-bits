@@ -75,11 +75,12 @@ ifeq ($(SP_OS), rhel7)
 ## Generic OSX machines (including LG's laptop)
 else ifeq (${platform}, macosx)
     USE_CPP11 ?= 1
-    COMPILER ?= clang
     USE_SIMD ?= sse4.2
     MY_CMAKE_FLAGS += \
         -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
         -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
+
+    LLVM_DIRECTORY ?= /usr/local/Cellar/llvm35/3.5.1/lib/llvm-3.5
 
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
@@ -100,8 +101,7 @@ else ifeq (${platform}, macosx)
     else ifeq (${COMPILER},)
         # default compiler is clang, taken from the LLVM directory
         MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+           -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     endif
 
     # end generic OSX

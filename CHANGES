@@ -1,5 +1,9 @@
 Changes:
 
+Release 1.7.5 -- ?? (compared to 1.7.5)
+--------------------------------------------------
+
+
 Release 1.7.5 -- 1 Nov 2016 (compared to 1.7.4)
 --------------------------------------------------
 * Fix oslc crash/assertion when indexing into a closure type. #663

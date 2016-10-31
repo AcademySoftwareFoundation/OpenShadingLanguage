@@ -1,8 +1,19 @@
 Changes:
 
-Release 1.7.5 -- ?? 2016 (compared to 1.7.4)
+Release 1.7.5 -- 1 Nov 2016 (compared to 1.7.4)
 --------------------------------------------------
-
+* Fix oslc crash/assertion when indexing into a closure type. #663
+* A version of spline() where the knots were colors without derivs
+  and the abscissa was a float with derivs, computed its result
+  derivatives incorrectly. #666
+* Incorrect dropping of certain optional texture arguments. #671
+* Bug fix: matrix parameters initialized with matrix(space,1) did not
+  initialize properly. #675
+* Suppress warnings when compiling with clang 3.9. #683
+* oslc: better error reporting for use of non-function symbol as a
+  function. #684
+* Filed to properly propagate the C++ standard flags (e.g. -std=c++11)
+  when turning llvm_ops.cpp into LLVM bitcode. #674
 
 Release 1.7.4 -- 1 Aug 2016 (compared to 1.7.3)
 --------------------------------------------------

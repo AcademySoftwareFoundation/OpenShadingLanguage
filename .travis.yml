@@ -9,7 +9,7 @@ os:
     - linux
     - osx
 osx_image: xcode6.4
-dist: trusty
+dist: precise
 
 env:
     matrix:
@@ -111,7 +111,6 @@ matrix:
     include:
     # Make sure we can still build C++03, both platforms
       - os: linux
-        dist: trusty
         compiler: gcc
         env: USE_CPP11=0
       - os: osx
@@ -120,7 +119,6 @@ matrix:
     # Test against the older release branch of OIIO (all the other tests
     # are against OIIO master)
       - os: linux
-        dist: trusty
         compiler: gcc
         env: OIIOBRANCH=release USE_CPP11=1
       - os: osx
@@ -132,19 +130,16 @@ matrix:
     # on Linux for now, but eventually we'll want to separate these concerns
     # into separate tests.
       - os: linux
-        dist: trusty
         compiler: gcc
         env: WHICHGCC=6 USE_SIMD=avx,f16c
     # Linux only: test gcc 5
       - os: linux
-        dist: trusty
         compiler: gcc
         env: WHICHGCC=5
     # One more, just for the heck of it, turn all SIMD off.  I guess this
     # should/could be both platforms, but in the interest of making the
     # tests go faster, don't bother doing it on OSX.
       - os: linux
-        dist: trusty
         compiler: gcc
         env: USE_SIMD=0
 

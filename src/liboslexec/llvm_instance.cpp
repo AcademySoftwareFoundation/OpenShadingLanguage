@@ -150,7 +150,7 @@ initialize_llvm_helper_function_map ()
     if (llvm_helper_function_map_initialized)
         return;  // already done
     spin_lock lock (llvm_helper_function_map_mutex);
-    if (llvm_helper_function_map_initialized())
+    if (llvm_helper_function_map_initialized)
         return;
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \

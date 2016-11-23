@@ -127,29 +127,13 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 find_package (ZLIB)
 if (USE_PARTIO)
-    find_library (PARTIO_LIBRARIES
-                  NAMES partio
-                  PATHS "${PARTIO_HOME}/lib")
-    find_path (PARTIO_INCLUDE_DIR
-               NAMES Partio.h
-               PATHS "${PARTIO_HOME}/include")
-    if (PARTIO_INCLUDE_DIR AND PARTIO_LIBRARIES)
-        set (PARTIO_FOUND TRUE)
+    find_package (Partio)
+    if (PARTIO_FOUND)
         add_definitions ("-DUSE_PARTIO=1")
         include_directories ("${PARTIO_INCLUDE_DIR}")
-        if (NOT Partio_FIND_QUIETLY)
-            message (STATUS "Partio include = ${PARTIO_INCLUDE_DIR}")
-            message (STATUS "Partio library = ${PARTIO_LIBRARIES}")
-        endif ()
     else ()
         add_definitions ("-DUSE_PARTIO=0")
-        set (PARTIO_FOUND FALSE)
-        set (PARTIO_LIBRARIES "")
-        message (STATUS "Partio not found")
     endif ()
-else ()
-    set (PARTIO_FOUND FALSE)
-    set (PARTIO_LIBRARIES "")
 endif (USE_PARTIO)
 
 # end GL Extension Wrangler library setup

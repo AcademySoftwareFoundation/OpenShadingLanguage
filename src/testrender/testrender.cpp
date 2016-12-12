@@ -63,7 +63,7 @@ using namespace OSL;
 namespace { // anonymous namespace
 
 ShadingSystem *shadingsys = NULL;
-bool debug = false;
+bool debug1 = false;
 bool debug2 = false;
 bool verbose = false;
 bool runstats = false;
@@ -108,12 +108,12 @@ int get_filenames(int argc, const char *argv[])
 void getargs(int argc, const char *argv[])
 {
     bool help = false;
-    ArgParse ap;
+    OIIO::ArgParse ap;
     ap.options ("Usage:  testrender [options] scene.xml output.exr",
                 "%*", get_filenames, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
-                "--debug", &debug, "Lots of debugging info",
+                "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "", // DEPRECATED 1.7
@@ -150,7 +150,7 @@ void getargs(int argc, const char *argv[])
         ap.usage();
         exit (EXIT_FAILURE);
     }
-    if (debug || verbose)
+    if (debug1 || verbose)
         errhandler.verbosity (ErrorHandler::VERBOSE);
 }
 
@@ -616,8 +616,8 @@ int main (int argc, const char *argv[]) {
     getargs (argc, argv);
 
     // Setup common attributes
-    shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
-    shadingsys->attribute ("compile_report", debug|debug2);
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug1|debug2);
     int opt = O2 ? 2 : (O1 ? 1 : 0);
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
@@ -676,7 +676,7 @@ int main (int argc, const char *argv[]) {
     delete out;
 
     // Print some debugging info
-    if (debug || runstats || profile) {
+    if (debug1 || runstats || profile) {
         double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";

@@ -313,13 +313,13 @@ public:
     void llvm_zero_derivs (const Symbol &sym, llvm::Value *count);
 
     /// Generate a debugging printf at shader execution time.
-    void llvm_gen_debug_printf (const std::string &message);
+    void llvm_gen_debug_printf (string_view message);
 
     /// Generate a warning message at shader execution time.
-    void llvm_gen_warning (const std::string &message);
+    void llvm_gen_warning (string_view message);
 
     /// Generate an error message at shader execution time.
-    void llvm_gen_error (const std::string &message);
+    void llvm_gen_error (string_view message);
 
     /// Generate code to call the given layer.  If 'unconditional' is
     /// true, call it without even testing if the layer has already been

@@ -564,6 +564,7 @@ public:
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
+    int llvm_debug_ops () const { return m_llvm_debug_ops; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
     int opt_passes() const { return m_opt_passes; }
@@ -755,6 +756,7 @@ private:
     int m_debug;                          ///< Debugging output
     int m_llvm_debug;                     ///< More LLVM debugging output
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
+    int m_llvm_debug_ops;                 ///< Add printfs to every op
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_opt_layername;              ///< Name of sole layer to optimize

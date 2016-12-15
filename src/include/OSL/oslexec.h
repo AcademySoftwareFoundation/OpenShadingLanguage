@@ -149,6 +149,8 @@ public:
     ///    int llvm_debug         Set LLVM extra debug level (0)
     ///    int llvm_debug_layers  Extra printfs upon entering and leaving
     ///                              layer functions.
+    ///    int llvm_debug_ops     Extra printfs for each OSL op (helpful
+    ///                              for devs to find crashes)
     ///    int max_local_mem_KB   Error if shader group needs more than this
     ///                              much local storage to execute (1024K)
     ///    string debug_groupname Name of shader group -- debug only this one

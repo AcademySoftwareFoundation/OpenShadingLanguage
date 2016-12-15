@@ -391,6 +391,8 @@ public:
     void llvm_generate_debugnan (const Opcode &op);
     /// Check for uninitialized values in all read-from arguments to the op
     void llvm_generate_debug_uninit (const Opcode &op);
+    /// Print debugging line for the op
+    void llvm_generate_debug_op_printf (const Opcode &op);
 
     llvm::Function *layer_func () const { return ll.current_function(); }
 

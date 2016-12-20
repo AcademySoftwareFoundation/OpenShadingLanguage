@@ -494,6 +494,7 @@ macro ( TESTSUITE )
         set (_ats_LABEL "broken")
     endif ()
     # Add the tests if all is well.
+    set (ALL_TEST_LIST "")
     foreach (_testname ${_ats_DEFAULT_ARGS})
         set (_testsrcdir "${CMAKE_SOURCE_DIR}/testsuite/${_testname}")
         set (_testdir "${CMAKE_BINARY_DIR}/testsuite/${_testname}")
@@ -505,10 +506,6 @@ macro ( TESTSUITE )
         if (MSVC_IDE)
             set (_runtest ${_runtest} --devenv-config $<CONFIGURATION>
                                       --solution-path "${CMAKE_BINARY_DIR}" )
-        endif ()
-
-        if (VERBOSE)
-            message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
         endif ()
 
         file (MAKE_DIRECTORY "${_testdir}")
@@ -526,9 +523,13 @@ macro ( TESTSUITE )
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
         set (_env TESTSHADE_OPT=2 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
+        set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
         add_test ( NAME ${_testname}.opt
                    COMMAND env ${_env} ${_runtest} )
     endforeach ()
+    if (VERBOSE)
+        message (STATUS "Added tests: ${ALL_TEST_LIST}")
+    endif ()
 endmacro ()
 
 if (OSL_BUILD_TESTS)
